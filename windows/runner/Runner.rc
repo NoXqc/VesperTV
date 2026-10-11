@@ -90,11 +90,11 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.nox" "\0"
-            VALUE "FileDescription", "nox_iptv" "\0"
+            VALUE "FileDescription", "VesperTV" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "nox_iptv" "\0"
+            VALUE "InternalName", "VesperTV" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.nox. All rights reserved." "\0"
-            VALUE "OriginalFilename", "nox_iptv.exe" "\0"
+            VALUE "OriginalFilename", "VesperTV.exe" "\0"
             VALUE "ProductName", "nox_iptv" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END

@@ -14,7 +14,7 @@ Check this before investigating a bug: it may already have been root-caused. Sec
 | Windows: Minimize did nothing / Close did nothing / Alt+Tab-away fine | minimize blocked in fullscreen; `SystemNavigator.pop` no-op | see §10 Windows |
 | Windows: hold-to-menu only worked with keyboard Enter | no pointer long-press | `RawGestureDetector` in `HoldToActivate` |
 | Windows: last channel not resumed at launch | nothing recorded it | `DesktopPlayerScreen` records `setLastChannelId`; `_autoResumeLastChannel` pushes it |
-| Windows build `LNK1104` | exe still running | kill `nox_iptv` first |
+| Windows build `LNK1104` | exe still running | kill `VesperTV` first |
 | Rebranded APK still purple (default theme) | Platinum's accent pair + splash were hardcoded purple/magenta | gold values in `constants.dart` and `main.dart` splash |
 | Fire TV home tile still shows the old purple "N" after updating (phones show the gold V) | Fire OS keeps the launcher icon captured at first install | **not fixable in-app**; renaming the icon resources (3.53.1) did not help; only uninstall + reinstall refreshes it |
 | Updater never offers a lower-numbered release (1.0.0 < 3.x) | strict "newer" compare | `_isDifferent` (§6.7) |

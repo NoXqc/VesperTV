@@ -202,6 +202,25 @@ class PlaybackService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// The last [limit] distinct *live* channels watched, newest first — the
+  /// TV layout's "History" popup. [recentlyPlayed] also carries movies/
+  /// episodes (Continue Watching), so it's filtered here.
+  List<Channel> recentLiveChannels({int limit = 10}) {
+    final seen = <String>{};
+    final result = <Channel>[];
+    for (final c in _recentlyPlayed) {
+      if (!Channel.isLiveId(c.rawId) || !seen.add(c.id)) continue;
+      result.add(c);
+      if (result.length >= limit) break;
+    }
+    return result;
+  }
+
+  /// Records [channel] in [recentlyPlayed] without playing it — for the
+  /// Windows player, which never goes through [play] (see
+  /// `DesktopPlayerScreen`'s doc comment) but should still feed History.
+  Future<void> recordWatched(Channel channel) => _recordRecentlyPlayed(channel);
+
   Future<void> _recordRecentlyPlayed(Channel channel) async {
     _recentlyPlayed.removeWhere((c) => c.id == channel.id);
     _recentlyPlayed.insert(0, channel);

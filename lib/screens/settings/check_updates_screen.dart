@@ -226,7 +226,7 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
             const SizedBox(height: 4),
             Text(
               'Opens in your browser — unzip the download and run '
-              'nox_iptv.exe to update, replacing the old folder.',
+              'VesperTV.exe to update, replacing the old folder.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ] else

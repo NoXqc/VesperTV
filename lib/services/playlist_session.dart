@@ -83,6 +83,10 @@ class PlaylistSession {
   Set<String> hiddenGroups = {};
   Set<String> favoritedGroups = {};
 
+  /// User-chosen group order per content type ('tv'/'vod'/'series') — see
+  /// [moveGroup]. Missing/empty = provider order.
+  Map<String, List<String>> groupOrder = {};
+
   /// Live TV only — see [AppConstants.keyHiddenChannels]'s doc comment
   /// for why this exists alongside whole-group hiding. Keyed by
   /// [Channel.rawId].
@@ -221,6 +225,10 @@ class PlaylistSession {
   /// possibly be in a stored allowlist yet, defaults to hidden for them).
   void _loadViewerScopedState() {
     favoritedGroups = storage.getFavoritedGroups(profile.id);
+    groupOrder = {
+      for (final type in const ['tv', 'vod', 'series'])
+        type: storage.getGroupOrder(profile.id, type),
+    };
     hiddenChannels = storage.getHiddenChannels(profile.id);
     if (isRestrictedViewer()) {
       hiddenGroups =
@@ -1155,7 +1163,69 @@ class PlaylistSession {
     return api.getVodDescription(rawStreamId);
   }
 
-  List<M3uGroup> get tvGroups {
+  /// Applies [groupOrder] for [type]: titles the user has ordered come
+  /// first in that order, anything not in it yet (e.g. a category the
+  /// provider added since) follows in provider order.
+  List<M3uGroup> _ordered(String type, List<M3uGroup> groups) {
+    final order = groupOrder[type];
+    if (order == null || order.isEmpty) return groups;
+    final byTitle = <String, List<M3uGroup>>{};
+    for (final g in groups) {
+      (byTitle[g.title] ??= []).add(g);
+    }
+    final result = <M3uGroup>[];
+    for (final title in order) {
+      final matches = byTitle.remove(title);
+      if (matches != null) result.addAll(matches);
+    }
+    for (final g in groups) {
+      if (byTitle.containsKey(g.title)) result.add(g);
+    }
+    return result;
+  }
+
+  /// Moves [title] by [delta] places among the *visible* (non-hidden)
+  /// groups of [type] — a hidden neighbour in between would otherwise make
+  /// a press look like it did nothing. Clamped to the ends, so a big
+  /// negative delta means "move to top". Returns the new visible index, or
+  /// null if [title] isn't a visible group of [type]. [shown], when given,
+  /// is the exact list of titles on screen (the Movies/TV Shows rail also
+  /// leaves out categories that haven't loaded anything yet) and is used
+  /// as the "visible" list instead.
+  Future<int?> moveGroup(String type, String title, int delta,
+      {List<String>? shown}) async {
+    final all = switch (type) {
+      'tv' => tvGroups,
+      'vod' => vodGroups,
+      _ => seriesGroups,
+    }
+        .map((g) => g.title)
+        .toSet()
+        .toList();
+    // Order always comes from [all] (the current saved order); [shown] only
+    // decides membership, so a stale copy from a quick double-press is fine.
+    final shownSet = shown?.toSet();
+    final visible = all
+        .where((t) =>
+            shownSet != null ? shownSet.contains(t) : !hiddenGroups.contains(t))
+        .toList();
+    final from = visible.indexOf(title);
+    if (from < 0) return null;
+    final to = (from + delta).clamp(0, visible.length - 1);
+    if (to == from) return from;
+    final anchor = visible[to];
+    all.remove(title);
+    final anchorIndex = all.indexOf(anchor);
+    all.insert(delta < 0 ? anchorIndex : anchorIndex + 1, title);
+    groupOrder[type] = all;
+    await storage.setGroupOrder(profile.id, type, all);
+    onNotify();
+    return to;
+  }
+
+  List<M3uGroup> get tvGroups => _ordered('tv', _providerTvGroups);
+
+  List<M3uGroup> get _providerTvGroups {
     if (isXtream) {
       return liveCategories
           .map((c) => M3uGroup(
@@ -1169,7 +1239,9 @@ class PlaylistSession {
     return allGroups.where((g) => _classifyGroup(g.title) == 'tv').toList();
   }
 
-  List<M3uGroup> get vodGroups {
+  List<M3uGroup> get vodGroups => _ordered('vod', _providerVodGroups);
+
+  List<M3uGroup> get _providerVodGroups {
     if (isXtream) {
       return vodCategories
           .map((c) => M3uGroup(
@@ -1183,7 +1255,9 @@ class PlaylistSession {
     return allGroups.where((g) => _classifyGroup(g.title) == 'vod').toList();
   }
 
-  List<M3uGroup> get seriesGroups {
+  List<M3uGroup> get seriesGroups => _ordered('series', _providerSeriesGroups);
+
+  List<M3uGroup> get _providerSeriesGroups {
     if (isXtream) {
       return seriesCategories
           .map((c) => M3uGroup(

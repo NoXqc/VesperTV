@@ -30,6 +30,7 @@ import 'utils/route_observer.dart';
 import 'utils/tv_theme.dart';
 import 'widgets/desktop_live_resume_hint.dart';
 import 'widgets/live_resume_hint.dart';
+import 'widgets/splash_stars.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -626,63 +627,70 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         debugShowCheckedModeBanner: false,
         home: Scaffold(
           backgroundColor: Colors.black,
-          body: Center(
-            child: AnimatedBuilder(
-              animation: _splashController,
-              builder: (context, child) {
-                // 0..1..0 over the controller's duration — eased so the
-                // pulse breathes rather than bouncing linearly.
-                final t = Curves.easeInOut.transform(_splashController.value);
-                final scale = 0.94 + (t * 0.12); // 0.94 .. 1.06
-                final glow = 0.25 + (t * 0.45); // 0.25 .. 0.70
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color:
-                                const Color(0xFFF0C75E).withValues(alpha: glow),
-                            blurRadius: 40,
-                            spreadRadius: 6,
+          body: Stack(
+            fit: StackFit.expand,
+            children: [
+              const SplashStars(),
+              Center(
+                child: AnimatedBuilder(
+                  animation: _splashController,
+                  builder: (context, child) {
+                    // 0..1..0 over the controller's duration — eased so the
+                    // pulse breathes rather than bouncing linearly.
+                    final t =
+                        Curves.easeInOut.transform(_splashController.value);
+                    final scale = 0.94 + (t * 0.12); // 0.94 .. 1.06
+                    final glow = 0.25 + (t * 0.45); // 0.25 .. 0.70
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFF0C75E)
+                                    .withValues(alpha: glow),
+                                blurRadius: 40,
+                                spreadRadius: 6,
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: Transform.scale(
-                        scale: scale,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(28),
-                          child: Image.asset(
-                            'assets/icon/icon_flat.png',
-                            width: 120,
-                            height: 120,
+                          child: Transform.scale(
+                            scale: scale,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(28),
+                              child: Image.asset(
+                                'assets/icon/icon_flat.png',
+                                width: 120,
+                                height: 120,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    ShaderMask(
-                      blendMode: BlendMode.srcIn,
-                      shaderCallback: (bounds) => const LinearGradient(
-                        colors: [Color(0xFFF0C75E), Color(0xFFC9781A)],
-                      ).createShader(bounds),
-                      child: const Text(
-                        AppConstants.appName,
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(_splashStatus,
-                        style: const TextStyle(color: Colors.white70)),
-                  ],
-                );
-              },
-            ),
+                        const SizedBox(height: 24),
+                        ShaderMask(
+                          blendMode: BlendMode.srcIn,
+                          shaderCallback: (bounds) => const LinearGradient(
+                            colors: [Color(0xFFF0C75E), Color(0xFFC9781A)],
+                          ).createShader(bounds),
+                          child: const Text(
+                            AppConstants.appName,
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(_splashStatus,
+                            style: const TextStyle(color: Colors.white70)),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
         ),
       );

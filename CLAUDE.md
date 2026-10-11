@@ -22,7 +22,7 @@ tracking, bring-your-own playlist (the app ships no channels).
 - **Community:** Discord https://discord.gg/DDeGDHvFY. **Downloader (AFTVnews) code: `1760256`**.
 - **Package / identifiers deliberately NOT renamed** (renaming would orphan every install's data and
   break in-place updates): Android `applicationId` `com.nox.nox_iptv`, Dart package `nox_iptv`,
-  Windows exe `nox_iptv.exe`, signing alias `noxplayer`, SharedPreferences keys, cache names like
+  Windows exe `VesperTV.exe` (was `nox_iptv.exe` until the post-3.53.1 build; CMake `BINARY_NAME`; `ProductName`/`CompanyName` in Runner.rc stay `nox_iptv`/`com.nox` because they name the user-data folder), signing alias `noxplayer`, SharedPreferences keys, cache names like
   `noxplayer_posters`. Only user-visible strings, icons, URLs and docs were renamed.
 
 **The owner** tests on real devices and sends phone photos/screenshots of the TV. Most bugs only show
@@ -78,9 +78,9 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
 ## 4. Build / check
 - `flutter analyze` — baseline **22** info issues, none errors.
 - Android: `flutter build apk --release` → `build/app/outputs/flutter-apk/app-release.apk` (~68 MB).
-- Windows: **kill the running app first** (`Get-Process nox_iptv | Stop-Process -Force`) or the link
-  step fails with `LNK1104: cannot open nox_iptv.exe`. Then `flutter build windows --release`
-  (output `build\windows\x64\runner\Release\nox_iptv.exe`) and zip the **whole Release folder** as
+- Windows: **kill the running app first** (`Get-Process VesperTV | Stop-Process -Force`) or the link
+  step fails with `LNK1104: cannot open VesperTV.exe`. Then `flutter build windows --release`
+  (output `build\windows\x64\runner\Release\VesperTV.exe`) and zip the **whole Release folder** as
   `VesperTV-windows-x64.zip` (the exe needs the DLLs/`data` folder beside it — a bare .exe will
   not run, which is why the site links the zip, not the exe).
 - Only run `dart format` on files you edited (`dart format lib` reformats unrelated files).
@@ -185,7 +185,7 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   still on ≤3.52.3 can't see 1.0.0 and must reinstall from vespertv.app), and **ask before deleting**.
 - **Ideas discussed, not started:** Sports tab with live scores (needs a free API key, BYO; hard
   part is matching games to channels); OpenSubtitles integration (BYO key); Windows player-controls
-  secondary-row parity; EPG speed rework for weak boxes; a rename of `nox_iptv.exe`→`VesperTV.exe`
+  secondary-row parity; EPG speed rework for weak boxes; (done) rename of `nox_iptv.exe`→`VesperTV.exe`
   (CMake `BINARY_NAME`; user data location is unaffected).
 - Competitor reference: **LokTV** (paid) — cached EPG, sports tab, multiview, simple add-playlist.
 

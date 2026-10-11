@@ -107,6 +107,11 @@ class AppConstants {
   static const String keyAutoPairedChannelLinks = 'nox_auto_paired_links';
   static const String keyAutoPairedEpgOverrides = 'nox_auto_paired_epg';
   static const String keyFavoritedGroups = 'nox_favorited_groups';
+
+  /// User-chosen group order (long-press a group → Move), per playlist and
+  /// per viewer, one list per content type ('tv'/'vod'/'series'): the key
+  /// gets a `_<type>` suffix before the usual playlist/viewer suffixes.
+  static const String keyGroupOrder = 'nox_group_order';
   static const String keyRecentSearches = 'nox_recent_searches';
 
   /// The JSON-encoded `List<PlaylistProfile>` — the whole multi-playlist

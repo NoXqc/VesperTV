@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../models/channel.dart';
 import '../services/desktop_mini_player.dart';
 import '../services/epg_service.dart';
+import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../services/storage_service.dart';
 
@@ -25,11 +26,12 @@ import '../services/storage_service.dart';
 /// `Player`, its own controls (favorite, reload, recall, skip ±10s,
 /// previous/next episode), no shared state with `PlaybackService` at all.
 /// Two consequences of that worth knowing: opening this screen does not
-/// feed Continue Watching/resume position/recently-played (all
+/// feed Continue Watching/resume position (both
 /// `PlaybackService` features), and Recall's history
 /// ([_DesktopLiveHistory]) is its own in-memory, session-only list rather
 /// than `PlaybackService.recentlyPlayed` — it never calls
-/// `PlaybackService.play()`, so that list is never populated from here.
+/// `PlaybackService.play()`. Live channels are still written to that list
+/// via `PlaybackService.recordWatched`, for the TV home's History group.
 ///
 /// Leaving a *live* channel via the back button doesn't stop it — same
 /// "keeps playing in the background" idea as `PlaybackService` already
@@ -166,6 +168,9 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     // where I left off on launch" concept to begin with.
     if (_isLive) {
       context.read<StorageService>().setLastChannelId(_currentChannel.id);
+      // Feeds the TV home's "History" group (live channels only, so
+      // Continue Watching is unaffected).
+      context.read<PlaybackService>().recordWatched(_currentChannel);
     }
     if (_isLive) {
       _completedSubscription = _player.stream.completed.listen((completed) {
@@ -203,7 +208,10 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     if (_isLive) _DesktopLiveHistory.record(channel);
     // See initState's identical call for why — keeps it current across a
     // channel switch too, not just the one this screen opened with.
-    if (_isLive) context.read<StorageService>().setLastChannelId(channel.id);
+    if (_isLive) {
+      context.read<StorageService>().setLastChannelId(channel.id);
+      context.read<PlaybackService>().recordWatched(channel);
+    }
   }
 
   /// Manual reconnect for a stalled live stream — this screen has none of

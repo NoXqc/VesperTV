@@ -303,6 +303,14 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
             child: Text(isPending ? 'Cancel Hide' : 'Hide Group'),
           ),
           SimpleDialogOption(
+            onPressed: () => Navigator.of(context).pop('move'),
+            child: const Text('Move Up / Down'),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.of(context).pop('move_top'),
+            child: const Text('Move to Top'),
+          ),
+          SimpleDialogOption(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Cancel'),
           ),
@@ -312,6 +320,13 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     if (!mounted) return;
 
     switch (choice) {
+      case 'move':
+        setState(() {
+          _movingGroupKey = _groupKey(playlistId, title);
+          _movingGroupType = category ?? 'tv';
+        });
+      case 'move_top':
+        await _moveGroupToTop(playlistId, title, category ?? 'tv');
       case 'expand':
         // Flutter's default "restore previous focus on pop" doesn't land
         // back correctly here — reported directly: back from the catalog
@@ -337,6 +352,70 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       case 'cancel_hide':
         _cancelPendingHide(playlistId, title);
     }
+  }
+
+  /// Titles of [playlistId]'s groups exactly as the groups column shows
+  /// them right now, in order — what "position N of M" and a move step are
+  /// measured against (see [PlaylistSession.moveGroup]'s `shown`).
+  List<String> _shownGroupTitles(
+      PlaylistManager playlist, String playlistId, String type) {
+    final groups = type == 'tv'
+        ? playlist.tvGroups.where((g) => !g.isHidden)
+        : _browseRailGroups(playlist);
+    return groups
+        .where((g) => g.playlistId == playlistId)
+        .map((g) => g.title)
+        .toList();
+  }
+
+  /// Group currently in "Move Up / Down" mode (a [_groupKey]), or null.
+  /// While set, that row's own key handler turns Up/Down into moves and
+  /// Select/Back into "done" — focus never leaves the row, so the user just
+  /// follows the highlighted group to where it should go. No dialog.
+  String? _movingGroupKey;
+  String _movingGroupType = 'tv';
+
+  Future<void> _moveGroupStep(
+      String playlistId, String title, int delta) async {
+    final playlist = context.read<PlaylistManager>();
+    await playlist.moveGroup(playlistId, _movingGroupType, title, delta,
+        shown: _shownGroupTitles(playlist, playlistId, _movingGroupType));
+    if (!mounted) return;
+    // The row is keyed, so it keeps its Element and focus as the list
+    // reorders — just keep it on screen. Zero duration = jump, never
+    // animate (CLAUDE.md §10).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final focused = FocusManager.instance.primaryFocus?.context;
+      if (focused != null && focused.mounted) {
+        Scrollable.ensureVisible(focused,
+            alignmentPolicy: delta < 0
+                ? ScrollPositionAlignmentPolicy.keepVisibleAtStart
+                : ScrollPositionAlignmentPolicy.keepVisibleAtEnd);
+      }
+    });
+  }
+
+  void _endGroupMove() {
+    if (_movingGroupKey == null) return;
+    setState(() => _movingGroupKey = null);
+  }
+
+  /// Group to grab focus on its next build — used by [_moveGroupToTop],
+  /// whose row usually isn't built at all at its old scroll position.
+  String? _focusGroupKeyOnBuild;
+
+  /// "Move to Top" from [_showGroupOptions]: first among its playlist's
+  /// visible groups. Scrolls the column to the top and keeps focus on it.
+  Future<void> _moveGroupToTop(
+      String playlistId, String title, String type) async {
+    final playlist = context.read<PlaylistManager>();
+    final shown = _shownGroupTitles(playlist, playlistId, type);
+    await playlist.moveGroup(playlistId, type, title, -shown.length,
+        shown: shown);
+    if (!mounted) return;
+    setState(() => _focusGroupKeyOnBuild = _groupKey(playlistId, title));
+    final topRow = _firstGroupRowFocusNode.context;
+    if (topRow != null && topRow.mounted) Scrollable.ensureVisible(topRow);
   }
 
   /// Timeline Guide equivalent of [_showGroupOptions] — reported directly:
@@ -1585,6 +1664,75 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// so `_hardExit`'s own final step — and the restricted-viewer plain-
   /// close path above — both close the window for real on Windows,
   /// instead of silently leaving it open after disabling every playlist.
+  bool _exitPromptOpen = false;
+
+  /// Back from the tabs column: "Are you sure?" instead of closing at once.
+  /// Stay is focused by default so a stray extra Back/Select press can't
+  /// close the app by accident.
+  Future<void> _confirmExit() async {
+    if (_exitPromptOpen) return;
+    _exitPromptOpen = true;
+    final exit = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Exit ${AppConstants.appName}?'),
+        content: const Text(
+            'Are you sure you want to exit ${AppConstants.appName}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Exit'),
+          ),
+          TextButton(
+            autofocus: true,
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Stay'),
+          ),
+        ],
+      ),
+    );
+    _exitPromptOpen = false;
+    if (exit == true && mounted) _closeApp();
+  }
+
+  /// "History" row under Favourites: a popup of the last 10 live channels
+  /// watched (same source as the player's Recall, which shows 4). Picking
+  /// one plays it like picking it from the channel list.
+  Future<void> _showHistoryPopup() async {
+    final channels =
+        context.read<PlaybackService>().recentLiveChannels(limit: 10);
+    final picked = await showDialog<Channel>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: const Text('History'),
+        children: [
+          if (channels.isEmpty)
+            const Padding(
+              padding: EdgeInsets.fromLTRB(24, 8, 24, 16),
+              child: Text('No channels watched yet.',
+                  style: TextStyle(color: Colors.white70)),
+            ),
+          for (final c in channels)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(dialogContext).pop(c),
+              child: Row(
+                children: [
+                  const Icon(Icons.tv, size: 18, color: Colors.white54),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(c.name,
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+    if (picked == null || !mounted) return;
+    await _selectChannel(picked);
+  }
+
   void _closeApp() {
     if (Platform.isWindows) {
       windowManager.close();
@@ -1642,9 +1790,20 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       // and only exits the app from the tabs column (it used to exit
       // straight from anywhere, including deep inside the guide).
       child: PopScope(
-        canPop: _focusDepth == 0,
+        // Never pops on its own: Back from the tabs column asks first
+        // (_confirmExit) instead of closing the app straight away.
+        canPop: false,
         onPopInvokedWithResult: (didPop, _) {
           if (didPop) return;
+          // Back mid "Move Up / Down" just finishes the move.
+          if (_movingGroupKey != null) {
+            _endGroupMove();
+            return;
+          }
+          if (_focusDepth == 0) {
+            _confirmExit();
+            return;
+          }
           // Back while focus is literally inside the Timeline keyboard
           // closes it and drops into the guide instead of the normal
           // column-by-column walk below — requested directly. Clears the
@@ -2192,11 +2351,22 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
           focusNode: _firstGroupRowFocusNode,
           onTap: () => _onGroupSelected(_favoritesGroupSentinel),
         ),
+        _SelectableRow(
+          icon: Icons.history,
+          label: 'History',
+          selected: false,
+          collapsed: collapsed,
+          fontSize: _groupFontSize,
+          onTap: _showHistoryPopup,
+        ),
         ..._groupRowsWithPlaylistDividers(
           groups,
           playlist,
           collapsed: collapsed,
           rowBuilder: (group) => _GroupRow(
+            // Keyed so a moved group keeps its row Element (and focus)
+            // when the list reorders — see _movingGroupKey.
+            key: ValueKey(_groupKey(group.playlistId, group.title)),
             icon: Icons.grid_view_rounded,
             label: group.title,
             selected: effectiveGroup == group.title,
@@ -2209,6 +2379,13 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
             onTap: () =>
                 _onGroupSelected(group.title, playlistId: group.playlistId),
             onLongPress: () => _showGroupOptions(group.playlistId, group.title),
+            moving: _movingGroupKey == _groupKey(group.playlistId, group.title),
+            onMove: (delta) =>
+                _moveGroupStep(group.playlistId, group.title, delta),
+            onMoveDone: _endGroupMove,
+            focusOnBuild: _focusGroupKeyOnBuild ==
+                _groupKey(group.playlistId, group.title),
+            onFocusedOnBuild: () => _focusGroupKeyOnBuild = null,
           ),
         ),
       ],
@@ -2223,18 +2400,21 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// that actually have a row to jump to right now — one that's still
   /// loading in the background isn't selectable here until it appears in
   /// the catalog below, at which point it shows up here too.
+  List<M3uGroup> _browseRailGroups(PlaylistManager playlist) =>
+      (_tab == 'Movies'
+              ? playlist.vodGroups
+                  .where((g) => !g.isHidden && g.channels.isNotEmpty)
+              : playlist.seriesGroups.where((g) =>
+                  !g.isHidden &&
+                  playlist
+                      .visibleSeries(
+                          playlistId: g.playlistId, categoryName: g.title)
+                      .isNotEmpty))
+          .toList();
+
   Widget _buildBrowseGroupsColumn(PlaylistManager playlist,
       {required bool collapsed}) {
-    final groups = (_tab == 'Movies'
-            ? playlist.vodGroups
-                .where((g) => !g.isHidden && g.channels.isNotEmpty)
-            : playlist.seriesGroups.where((g) =>
-                !g.isHidden &&
-                playlist
-                    .visibleSeries(
-                        playlistId: g.playlistId, categoryName: g.title)
-                    .isNotEmpty))
-        .toList();
+    final groups = _browseRailGroups(playlist);
 
     // Keyed by tab — reported directly, live: simply *scrolling* down the
     // groups column (never tapping/selecting a group at all) in Movies,
@@ -2279,6 +2459,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
           playlist,
           collapsed: collapsed,
           rowBuilder: (group) => _GroupRow(
+            key: ValueKey(_groupKey(group.playlistId, group.title)),
             icon: Icons.grid_view_rounded,
             label: group.title,
             selected: false,
@@ -2292,6 +2473,13 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                 () => _scrollToBrowseGroup(group.playlistId, group.title)),
             onLongPress: () => _showGroupOptions(group.playlistId, group.title,
                 category: _tab == 'Movies' ? 'vod' : 'series'),
+            moving: _movingGroupKey == _groupKey(group.playlistId, group.title),
+            onMove: (delta) =>
+                _moveGroupStep(group.playlistId, group.title, delta),
+            onMoveDone: _endGroupMove,
+            focusOnBuild: _focusGroupKeyOnBuild ==
+                _groupKey(group.playlistId, group.title),
+            onFocusedOnBuild: () => _focusGroupKeyOnBuild = null,
           ),
         ),
       ],
@@ -3890,6 +4078,7 @@ class _PlaylistDividerRow extends StatelessWidget {
 /// untouched.
 class _GroupRow extends StatefulWidget {
   const _GroupRow({
+    super.key,
     required this.icon,
     required this.label,
     required this.selected,
@@ -3899,6 +4088,11 @@ class _GroupRow extends StatefulWidget {
     this.isFavorited = false,
     this.isPendingHide = false,
     this.fontSize,
+    this.moving = false,
+    this.onMove,
+    this.onMoveDone,
+    this.focusOnBuild = false,
+    this.onFocusedOnBuild,
   });
 
   final IconData icon;
@@ -3910,6 +4104,15 @@ class _GroupRow extends StatefulWidget {
   final bool isFavorited;
   final bool isPendingHide;
   final double? fontSize;
+
+  /// "Move Up / Down" mode — see `_TvHomeScreenState._movingGroupKey`.
+  final bool moving;
+  final ValueChanged<int>? onMove;
+  final VoidCallback? onMoveDone;
+
+  /// Request focus once built (after "Move to Top"), then report back.
+  final bool focusOnBuild;
+  final VoidCallback? onFocusedOnBuild;
 
   @override
   State<_GroupRow> createState() => _GroupRowState();
@@ -3925,7 +4128,68 @@ class _GroupRowState extends State<_GroupRow> {
   @override
   void dispose() {
     _longPressTimer?.cancel();
+    _focusNode.dispose();
     super.dispose();
+  }
+
+  /// Set by an activate-key *down* while moving, so the key-*up* left over
+  /// from picking "Move Up / Down" in the menu doesn't instantly confirm.
+  bool _activateDownWhileMoving = false;
+
+  final FocusNode _focusNode = FocusNode(debugLabel: 'group-row');
+
+  @override
+  void initState() {
+    super.initState();
+    _maybeFocusOnBuild();
+  }
+
+  @override
+  void didUpdateWidget(_GroupRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.moving) _activateDownWhileMoving = false;
+    if (widget.focusOnBuild && !oldWidget.focusOnBuild) _maybeFocusOnBuild();
+  }
+
+  void _maybeFocusOnBuild() {
+    if (!widget.focusOnBuild) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _focusNode.requestFocus();
+      widget.onFocusedOnBuild?.call();
+    });
+  }
+
+  KeyEventResult _handleMovingKey(KeyEvent event, bool isActivateKey) {
+    final key = event.logicalKey;
+    final isPress = event is KeyDownEvent || event is KeyRepeatEvent;
+    if (key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowDown) {
+      if (isPress) {
+        widget.onMove?.call(key == LogicalKeyboardKey.arrowUp ? -1 : 1);
+      }
+      return KeyEventResult.handled;
+    }
+    // Stay on the row while moving.
+    if (key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight) {
+      return KeyEventResult.handled;
+    }
+    if (isActivateKey) {
+      if (event is KeyDownEvent) _activateDownWhileMoving = true;
+      if (event is KeyUpEvent && _activateDownWhileMoving) {
+        _activateDownWhileMoving = false;
+        widget.onMoveDone?.call();
+      }
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.escape ||
+        key == LogicalKeyboardKey.goBack ||
+        key == LogicalKeyboardKey.browserBack) {
+      if (event is KeyUpEvent) widget.onMoveDone?.call();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
@@ -3933,6 +4197,7 @@ class _GroupRowState extends State<_GroupRow> {
         event.logicalKey == LogicalKeyboardKey.enter ||
         event.logicalKey == LogicalKeyboardKey.numpadEnter ||
         event.logicalKey == LogicalKeyboardKey.gameButtonA;
+    if (widget.moving) return _handleMovingKey(event, isActivateKey);
     if (!isActivateKey) return KeyEventResult.ignored;
 
     if (event is KeyDownEvent) {
@@ -3981,7 +4246,8 @@ class _GroupRowState extends State<_GroupRow> {
     final iconWidget = Stack(
       clipBehavior: Clip.none,
       children: [
-        Icon(widget.icon, color: iconColor, size: 20),
+        Icon(widget.moving ? Icons.swap_vert : widget.icon,
+            color: iconColor, size: 20),
         if (widget.isFavorited)
           Positioned(
             right: -4,
@@ -3997,14 +4263,17 @@ class _GroupRowState extends State<_GroupRow> {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         child: Focus(
+          focusNode: _focusNode,
           onKeyEvent: _handleKeyEvent,
           onFocusChange: (f) {
             setState(() => _focused = f);
             if (f) _ensureVisible(context);
+            // Clicked/tapped away mid-move: treat as done.
+            if (!f && widget.moving) widget.onMoveDone?.call();
           },
           child: GestureDetector(
-            onTap: widget.onTap,
-            onLongPress: widget.onLongPress,
+            onTap: widget.moving ? widget.onMoveDone : widget.onTap,
+            onLongPress: widget.moving ? null : widget.onLongPress,
             child: Container(
               // Always present (even with an empty shadow list) rather
               // than conditionally wrapped — MinimalGlassFocus's own doc
@@ -4050,11 +4319,13 @@ class _GroupRowState extends State<_GroupRow> {
                     borderRadius: BorderRadius.circular(8),
                     // Same persistent-marker reasoning as `_SelectableRow`'s
                     // own `side:` — see its doc comment.
-                    side: _focused
-                        ? BorderSide(color: scheme.primary, width: 2.5)
-                        : widget.selected
-                            ? BorderSide(color: scheme.primary, width: 1.5)
-                            : BorderSide.none,
+                    side: widget.moving
+                        ? BorderSide(color: scheme.tertiary, width: 3)
+                        : _focused
+                            ? BorderSide(color: scheme.primary, width: 2.5)
+                            : widget.selected
+                                ? BorderSide(color: scheme.primary, width: 1.5)
+                                : BorderSide.none,
                   ),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -4079,6 +4350,18 @@ class _GroupRowState extends State<_GroupRow> {
                                   ),
                                 ),
                               ),
+                              // Mouse/touch equivalents of the remote's
+                              // Up/Down/Select while moving — not
+                              // focusable, so they never steal the row's
+                              // focus from the remote.
+                              if (widget.moving) ...[
+                                _moveTapIcon(Icons.keyboard_arrow_up,
+                                    () => widget.onMove?.call(-1), iconColor),
+                                _moveTapIcon(Icons.keyboard_arrow_down,
+                                    () => widget.onMove?.call(1), iconColor),
+                                _moveTapIcon(Icons.check,
+                                    () => widget.onMoveDone?.call(), iconColor),
+                              ],
                             ],
                           ),
                   ),
@@ -4090,6 +4373,16 @@ class _GroupRowState extends State<_GroupRow> {
       ),
     );
   }
+
+  Widget _moveTapIcon(IconData icon, VoidCallback onTap, Color color) =>
+      GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Icon(icon, size: 22, color: color),
+        ),
+      );
 }
 
 /// Windows gets noticeably larger browse posters than the TV-tuned

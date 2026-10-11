@@ -335,6 +335,17 @@ class StorageService {
       _prefs.setStringList(
           _vkp(AppConstants.keyFavoritedGroups, playlistId), groups.toList());
 
+  /// [type] is 'tv'/'vod'/'series' — see [AppConstants.keyGroupOrder].
+  /// Empty = provider order (nothing moved yet).
+  List<String> getGroupOrder(String playlistId, String type) =>
+      _prefs.getStringList(
+          _vkp('${AppConstants.keyGroupOrder}_$type', playlistId)) ??
+      [];
+  Future<void> setGroupOrder(
+          String playlistId, String type, List<String> titles) =>
+      _prefs.setStringList(
+          _vkp('${AppConstants.keyGroupOrder}_$type', playlistId), titles);
+
   // --- Search history (per viewer) ------------------------------------------
 
   static const _maxRecentSearches = 10;

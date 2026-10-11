@@ -607,7 +607,8 @@ class PlaylistManager extends ChangeNotifier {
             (c.backdropUrl?.isNotEmpty ?? false) ||
             (c.posterUrl?.isNotEmpty ?? false));
     if (_storage.getTmdbApiKey()?.isNotEmpty ?? false) {
-      picked.sort((a, b) => _compareNullableDates(a.releaseDate, b.releaseDate));
+      picked
+          .sort((a, b) => _compareNullableDates(a.releaseDate, b.releaseDate));
     }
     return picked;
   }
@@ -655,7 +656,8 @@ class PlaylistManager extends ChangeNotifier {
             (s.backdropUrl?.isNotEmpty ?? false) ||
             (s.posterUrl?.isNotEmpty ?? false));
     if (_storage.getTmdbApiKey()?.isNotEmpty ?? false) {
-      picked.sort((a, b) => _compareNullableDates(a.releaseDate, b.releaseDate));
+      picked
+          .sort((a, b) => _compareNullableDates(a.releaseDate, b.releaseDate));
     }
     return picked;
   }
@@ -695,8 +697,8 @@ class PlaylistManager extends ChangeNotifier {
   /// candidates *within* either tier would undo the ordering this is
   /// built on top of; partitioning with `.where()` (which does preserve
   /// order) and concatenating keeps each tier's relative order intact.
-  static List<T> _preferEnriched<T>(
-      List<T> candidates, int limit, {required bool Function(T) hasArt}) {
+  static List<T> _preferEnriched<T>(List<T> candidates, int limit,
+      {required bool Function(T) hasArt}) {
     final enriched = candidates.where(hasArt).toList();
     final unenriched = candidates.where((c) => !hasArt(c)).toList();
     return [...enriched, ...unenriched].take(limit).toList();
@@ -796,9 +798,8 @@ class PlaylistManager extends ChangeNotifier {
         if (!seenTmdbIds.add(item.tmdbId)) continue;
         final clean = service.cleanTitleForMatching(item.title);
         if (clean.isEmpty) continue;
-        final results = await _catalogDb.searchVod(
-            clean, _enabledXtreamPlaylistIds,
-            limit: 10);
+        final results = await _catalogDb
+            .searchVod(clean, _enabledXtreamPlaylistIds, limit: 10);
         Channel? match;
         for (final r in results) {
           if (!_isHiddenForActiveViewer(r.playlistId, r.group)) {
@@ -847,9 +848,8 @@ class PlaylistManager extends ChangeNotifier {
         if (!seenTmdbIds.add(item.tmdbId)) continue;
         final clean = service.cleanTitleForMatching(item.title);
         if (clean.isEmpty) continue;
-        final results = await _catalogDb.searchSeries(
-            clean, _enabledXtreamPlaylistIds,
-            limit: 10);
+        final results = await _catalogDb
+            .searchSeries(clean, _enabledXtreamPlaylistIds, limit: 10);
         XtreamSeries? match;
         for (final r in results) {
           if (!_isHiddenForActiveViewer(r.playlistId, r.categoryId)) {
@@ -1410,6 +1410,13 @@ class PlaylistManager extends ChangeNotifier {
           String playlistId, String title, bool favorited) =>
       _sessionFor(playlistId)?.setGroupFavorited(title, favorited) ??
       Future.value();
+
+  /// See [PlaylistSession.moveGroup].
+  Future<int?> moveGroup(
+          String playlistId, String type, String title, int delta,
+          {List<String>? shown}) =>
+      _sessionFor(playlistId)?.moveGroup(type, title, delta, shown: shown) ??
+      Future.value(null);
 
   // --- Full catalog sync ------------------------------------------------
 
