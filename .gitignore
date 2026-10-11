@@ -63,3 +63,6 @@ app.*.map.json
 
 # Local release artifacts
 *-windows-x64.zip
+
+# Per-session handoff notes (may contain in-progress details)
+/HANDOFF.md

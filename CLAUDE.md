@@ -98,90 +98,14 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
 - Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+183**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
-## 6. Release workflow
-Only release when the owner asks ("update the latest", "cut it", "fully release").
-1. Bump `version:` in `pubspec.yaml` (`x.y.z+build`). Settings shows it.
-2. `flutter analyze`, build APK, **verify signature (§5)**, build Windows + zip, **commit + push
-   source first** (the tag must land on HEAD).
-3. Update the latest release in place (don't cut a new release per test build):
-   `gh release upload <tag> build/app/outputs/flutter-apk/app-release.apk VesperTV-windows-x64.zip --clobber`
-   then `gh release edit <tag> --tag <new-version> --title "VesperTV <ver>" --notes-file <file>`.
-   **`--notes` replaces the whole body** — write self-contained notes (never "see below").
-4. **Gotcha:** `gh release edit --tag` leaves the old git tag behind and may put the new tag on a
-   stale commit — confirm `git ls-remote --tags origin <ver>` equals `git rev-parse HEAD`. Repoint
-   with `gh api -X PATCH repos/NoXqc/VesperTV/git/refs/tags/<tag> -f sha=<full-sha> -F force=true`.
-5. Experimental builds → `--prerelease` (skipped by `/releases/latest`, so Downloader and Check for
-   Updates ignore them). Promote with `gh release edit <tag> --prerelease=false --latest`.
-6. **Verify what users get:** download
-   `https://github.com/NoXqc/VesperTV/releases/latest/download/app-release.apk` and
-   `.../VesperTV-windows-x64.zip`, `sha256sum` against the local files; also check the OLD
-   `https://github.com/NoXqc/NoXPlayer/releases/latest/download/app-release.apk` and
-   `https://api.github.com/repos/NoXqc/NoXPlayer/releases/latest` still redirect to the new repo,
-   and `curl -sL http://go.aftvnews.com/1760256 | grep -o 'https://github[^"'"'"' ]*'` resolves
-   (AFTVnews still stores the **old** `NoXqc/NoXPlayer/...` URL — it works only through GitHub's
-   redirect, so that redirect is load-bearing).
-7. **Updater semantics (changed in 3.53.0):** `AppUpdateService` offers a release when its
-   `tag_name` is **different** from the installed version (`_isDifferent`), no longer only when
-   newer. Reason: versioning is meant to restart at 1.0.0, which is numerically lower than the old
-   3.x tags. Any Android asset ending `.apk` / Windows asset ending `.zip` is picked by extension —
-   never leave two `.zip` (or two `.apk`) assets on the latest release.
+## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
+Only release when the owner asks ("update the latest", "cut it", "fully release"). Outline: bump `pubspec.yaml` (versionCode `+N` must always rise) → `flutter analyze` → build APK + verify signature (§5) → build Windows + zip → **commit & push first** → `gh release upload <tag> app-release.apk VesperTV-windows-x64.zip --clobber` → `gh release edit <tag> --tag <new> --notes-file …` → make sure the tag equals HEAD → verify downloads/hashes, the OLD `NoXqc/NoXPlayer` redirect links and AFTVnews code `1760256`. The updater offers any *different* tag (`_isDifferent`), never leave two `.zip`/`.apk` assets on the latest release.
 
-## 7. Test devices (adb over LAN)
-- Formuler Z11 Pro MAX `10.0.0.46:5555` — **IP changes** with VPN/network toggles/reboots (often
-  `192.168.1.46:5555`). Fire Stick `192.168.1.33:5555` (was `10.0.0.94:5555`). This PC is authorized.
-- First connect from a new PC pops an "Allow USB/ADB debugging?" dialog on the TV — accept "always".
-- Install with `adb install -r` (GUI installers silently fail on the Formuler):
-  ```
-  adb connect 192.168.1.46:5555
-  adb -s 192.168.1.46:5555 install -r build/app/outputs/flutter-apk/app-release.apk
-  adb -s 192.168.1.46:5555 shell am start -n com.nox.nox_iptv/.MainActivity
-  ```
-  Verify: `adb shell pm path com.nox.nox_iptv` then `adb shell sha256sum <path>` vs local build.
-- Formuler restrictions: not rooted, app not debuggable → **no logcat of the app, no `run-as`, no
-  access to `Android/data`** (scoped storage). Don't plan on log-file instrumentation there.
-- "Crashes" on these boxes are usually **ANRs**: `adb shell dumpsys dropbox --print data_app_anr`
-  (and `data_app_crash`); `top -H -b -n 1 -p <pid>` shows busy threads.
-- Driving the UI over adb for screenshots: `adb exec-out screencap -p > x.png` (video surfaces show
-  **black** in screencaps — that's normal while a stream plays). `input keyevent DPAD_*`/`BACK` work.
-  **`input keyevent --longpress` does NOT trigger HoldToActivate; use a touch hold instead:**
-  `adb shell input swipe X Y X Y 1800` on the item (pointer long-press is supported on
-  `HoldToActivate`). `input tap X Y` works for touch targets. **The sidebar "Exit App" row is focusable
-  at the bottom — never press Select there by accident.**
-- Don't `adb install` when the owner says not to (they sometimes test from a separate box).
-- The owner sets the Formuler's theme to **Dark / Gold** on purpose; leave it unless asked.
+## 7. Test devices (details in `dev-notes/devices.md`)
+Formuler Z11 Pro MAX `192.168.1.46:5555` (IP changes; also seen `10.0.0.46`), Fire Stick `192.168.1.33:5555`. Install with `adb install -r` after verifying the signature. Not rooted: no logcat/run-as on the Formuler. Never press Select on "Exit App". Hold-Select via adb needs `input swipe X Y X Y 1800`, not `--longpress`. The owner keeps the Formuler on **Dark / Gold**.
 
-## 8. Branding assets & website
-- **Logo:** `python assets/icon/gen_icon.py` (Pillow) regenerates `icon_flat/background/foreground.png`,
-  `tv_banner.png` and the five `android/app/src/main/res/drawable-*/vespertv_banner.png`. Then
-  `dart run flutter_launcher_icons` for launcher icons (Android adaptive, iOS, Windows `.ico`, web,
-  macOS). The splash and welcome screen load `assets/icon/icon_flat.png`. Revert incidental
-  line-ending-only diffs the icon tool causes (e.g. `ios/Runner.xcodeproj/project.pbxproj`).
-  **Android icon/banner resource names were changed on purpose** (3.53.1) to
-  `@mipmap/vespertv_launcher` and `@drawable/vespertv_banner` (pubspec `flutter_launcher_icons.android:
-  "vespertv_launcher"`) as an attempt to make the Fire TV home screen drop the old purple "N" tile.
-  **It did not work:** on the owner's Fire Stick the tile stays purple after updating to 3.53.1,
-  clearing caches and restarting, while phones show the new gold V. The APK is correct (verified by
-  extracting the icon/banner); Fire OS keeps the icon it captured at first install. Only an
-  uninstall + reinstall refreshes it (which wipes that device's playlists/settings) — known,
-  unfixable from the app. Leave the new resource names as they are.
-- **Palettes:** the default fresh-install theme is **Platinum** (`id: 'minimal'`, first entry of
-  `cyberpunkPalettes`); its `primary`/`secondary` only drive the wordmark and small accent bars and
-  are now brand gold `F0C75E`/`C9781A` (they used to be the old purple/magenta — that was the bug
-  behind "still purple after the rename"). The splash screen's glow/wordmark in `main.dart` are gold
-  too. **Dark / Gold** (`dark_gold`) is the full gold theme. Don't move `dark_gold` to first place:
-  fresh-install fallback is `cyberpunkPalettes.first`, and users who never picked a palette would
-  silently switch theme on update.
-- **Site (`docs/index.html`):** one file, design tokens on `:root` (gold = `--violet*` names kept
-  from the old purple palette; text on gold fills must be dark `#1A1205`, not white). Hero has a
-  `.sky` layer (CSS sun rays + twinkling stars, honours `prefers-reduced-motion`). Under the hero is
-  the **swipeable screenshot carousel** (`#galTrack`: native scroll-snap + arrows, dots, ←/→ keys,
-  mouse drag; JS at the top of the `<script>`). Windows is advertised in the hero (kicker, "Windows
-  (.zip)" button), FAQ and Install section 04. Inline screenshots were deliberately removed in
-  favour of the carousel.
-- **Screenshots** (`docs/assets/shot-*.png|jpg`, also used in `README.md`): captured from the
-  Formuler via `adb screencap` (1920×1080) in Dark / Gold, the **"Hold to resume" pill blurred out**
-  (Pillow: crop box (740,902)-(1180,1064), Gaussian blur 30, brightness ×0.5, feathered paste), then
-  resized to 1600×900. Retake them after any big UI change.
+## 8. Branding & website (details in `dev-notes/branding-and-site.md`)
+Brand = black + gold, gold "V" + star logo. Regenerate icons with `python assets/icon/gen_icon.py` then `dart run flutter_launcher_icons`. Default Platinum theme accent = gold. Site is the single file `docs/index.html` (carousel, hero sky). Fire OS keeps old launcher icons after updates — known, unfixable in-app.
 
 ## 9. Vendored ExoPlayer plugin
 `third_party/video_player_android` is a patched copy of `video_player_android` **2.12.2** (matches
@@ -245,69 +169,11 @@ rejected (HDR + Android-TV hardware-decode risk).
 - Open-source principle: **no embedded API keys.** Anything needing a key (TMDB, a future
   OpenSubtitles) is bring-your-own-key in Settings.
 
-## 11. Known bugs & their fixes (history — don't regress these)
-| Symptom | Cause | Fix / where |
-|---|---|---|
-| Add Playlist: Back to close the keyboard on the **Name** field jumped to fullscreen live; Back again returned | `LiveResumeHint`'s global hold-Right (1200 ms) timer was armed while a text field had focus, and the Fire/remote keyboard sequence fired it | `LiveResumeHint._textFieldFocused` gates both arming **and** `_resume()` (`live_resume_hint.dart`) |
-| Cold launch opened the first live group instead of Favourites | `_effectiveLiveGroup` used only `currentChannel`, which is null on cold launch | favourites-first using `currentChannel ?? pendingResumeChannel` (`tv_home_screen.dart`) |
-| Add Playlist: Right from fields never reached the Add button; up/down escapes buggy | focus escape logic per field | explicit `_modeScope/_fieldsScope/_statusScope`, `_handleFieldEscapeKey` with a unified field list; mode rows use `TvMenuTile(focusNode:)` |
-| Multiview: main stream/audio kept playing after "Open in Multiview" | player not stopped | `await _playback.stop()` before push |
-| Multiview: in-place audio toggle stalled / no audio | see §10 | reverted to recreate-via-`_assign` |
-| Windows: "can't go truly full screen" (title bar + taskbar, ~98%) | native runner only shows a bordered window | `window_manager` always-fullscreen launch |
-| Windows: Minimize did nothing / Close did nothing / Alt+Tab-away fine | minimize blocked in fullscreen; `SystemNavigator.pop` no-op | see §10 Windows |
-| Windows: hold-to-menu only worked with keyboard Enter | no pointer long-press | `RawGestureDetector` in `HoldToActivate` |
-| Windows: last channel not resumed at launch | nothing recorded it | `DesktopPlayerScreen` records `setLastChannelId`; `_autoResumeLastChannel` pushes it |
-| Windows build `LNK1104` | exe still running | kill `nox_iptv` first |
-| Rebranded APK still purple (default theme) | Platinum's accent pair + splash were hardcoded purple/magenta | gold values in `constants.dart` and `main.dart` splash |
-| Fire TV home tile still shows the old purple "N" after updating (phones show the gold V) | Fire OS keeps the launcher icon captured at first install | **not fixable in-app**; renaming the icon resources (3.53.1) did not help; only uninstall + reinstall refreshes it |
-| Updater never offers a lower-numbered release (1.0.0 < 3.x) | strict "newer" compare | `_isDifferent` (§6.7) |
-| `gh release edit --notes` referenced "notes below" and wiped them | `--notes` replaces body | write self-contained notes with `--notes-file` |
-| Release asset update didn't change what `/latest` serves | tag left on old commit | repoint tag to HEAD (§6.4) |
-| Formuler adb "device not found" | its IP changed | reconnect on `192.168.1.46:5555` / check its Settings > Network |
-| **Open: EPG not ready for ~58 s after the UI appears on the Formuler** (PC: 1-2 s; LokTV is near-instant) | unproven — hypothesis: eager full in-memory decode vs a lazily-queried DB, on weak hardware | not fixed. Concurrent-init attempt gave no improvement. `traceEpgTiming` in `epg_service.dart`/`main.dart` is **TEMPORARY instrumentation** (its output file is unreadable on the Formuler) — remove it when this is resolved or abandoned |
+## 11. Known bugs & fixes (full table in `dev-notes/bugs-and-fixes.md`)
+Look there before debugging. Still-open items: **EPG takes ~58 s to be ready on the Formuler** (PC 1-2 s; not fixed; `traceEpgTiming` in `epg_service.dart`/`main.dart` is temporary instrumentation to remove) and the **Fire OS stale launcher icon** (not fixable).
 
-## 12. Features worth knowing
-- **Timeline guide** (Settings > Theme > Live TV guide = `guideViewMode` 'live'|'timeline'):
-  `_TimelineGuide*` in tv_home_screen.dart. Left/Right step 30-minute slots (`moveHorizontal`),
-  Up/Down keep the time column (live "now" for a currently-airing block), entering from groups and
-  returning from fullscreen restore focus at the current time, long blocks keep a sticky label, rows
-  with no EPG show a placeholder, hold-Select opens a favourite/hide menu. "Live" = compact
-  now/next list with details below.
-- **Player controls:** a primary row plus a secondary row revealed by pressing Down again (a chevron
-  hints it exists); every icon button has a text label; top row shows quality (HD/FHD/4K), FPS and
-  audio-channel (e.g. 5.1) badges. "Multiview" button opens Multiview with this channel preloaded.
-- **Multiview:** two stacked cells, warnings in the left sidebar, channel picker with group list +
-  search and the current programme under each channel.
-- **Welcome prompt:** brand-new users (no playlists) get "Hey beautiful Human, Welcome to
-  VesperTV" with Add Playlist / Skip for now.
-- **Hide individual live channels** (per playlist, `hiddenChannels`), unhide in
-  Settings > Playlist Manager > Hidden Channels. Group hiding is separate. Hold Select on a movie/
-  TV group offers **Expand catalog** (full-screen poster grid), Favourite, Hide.
-- **Movies/TV Shows:** hero + poster rows; hero description fetched after a 400 ms dwell and cached
-  in `PlaylistManager` (shared with the detail screens).
-- **Backup servers:** connect tries last-working → main → backups (one pass); live stream *open*
-  failures retry other servers. Mid-stream drops do not fail over. Sticks to last-working server.
-- **Palettes:** duo-tone `primary`/`secondary`; optional `highlight` is wordmark/swatch decoration
-  only (Habs uses white). Old id `green_orange` maps to `habs`. `isMinimal` (Platinum) = flat black
-  with translucent-white glass focus; `trueBlack` (Dark / Gold) = hand-built scheme.
-- **Viewer profiles** (`ViewerProfile`, `ViewerProfileService`): several viewers sharing one
-  device's playlists, each with their own favorites/hidden-groups/watch-history. Main's data lives
-  under every *existing* unsuffixed storage key, completely unchanged — never add a step that
-  rewrites Main's keys on upgrade; a second-or-later viewer's keys get `__vp_<id>` appended by
-  `StorageService._vk`/`_vkp` instead (position/duration keys keep the suffix at the very end, not
-  after the prefix, so `clearCache()`'s `startsWith` sweep still catches every viewer's). A
-  restricted ("kid") viewer uses a *shown-groups allowlist* (`keyShownGroups`), not the blocklist
-  every other viewer uses — see `PlaylistSession._loadViewerScopedState`'s doc comment for why a
-  new category must default to hidden for them, not visible. `CatalogDatabase`'s own `is_favorite`
-  column stopped being the favorite source of truth — `PlaylistManager` injects a live callback
-  (`isVodFavorite`/`isSeriesFavorite`) instead; only write that column while Main is active.
-  `ViewerProfileService.requireUnlock` is the single PIN choke point for *opening Settings at all*
-  from a restricted profile; any direct, non-Settings control that can un-hide something (the TV
-  live-channel long-press menu's "Unhide") needs its own `requireUnlock` check. A profile switch
-  (`switchTo`) stops playback *before* flipping the active viewer id, then calls
-  `PlaylistManager.applyActiveViewer`/`PlaybackService.reloadForViewer`; it only shows because
-  `main.dart` wraps the home screen in `Consumer<ViewerProfileService>` keyed by the active viewer's
-  id, which remounts the home screen from scratch.
+## 12. Features (details in `dev-notes/features.md`)
+Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-10)
 - **Shipped:** rebrand to VesperTV, logo, gold site with carousel + Windows section, release
@@ -328,3 +194,14 @@ rejected (HDR + Android-TV hardware-decode risk).
 - Never `--no-verify`, never force-push `main` (force-moving a **tag** to HEAD is the one sanctioned
   exception, §6.4).
 - Local junk is git-ignored/untracked on purpose (`nox_*.png` screenshots, `*.apk`, `*-windows-x64.zip`).
+
+## 15. Session hygiene (token efficiency)
+- **One task per session.** Long sessions get lossy compaction and re-read the whole history after the
+  1-hour prompt-cache expires. Finish a task, commit, then start fresh (`/clear` or a new session).
+- **Hand off, don't drag.** Before a session ends or compacts, run `/handoff` (project command in
+  `.claude/commands/handoff.md`): it writes `HANDOFF.md` (git-ignored). **If `HANDOFF.md` exists, read it
+  first**, then delete or overwrite it once its contents are done/obsolete.
+- Don't read giant files whole (`tv_home_screen.dart` is huge): `Grep` for the symbol, then `Read` only
+  the needed line range. Use the `dev-notes/` files on demand, not all at once.
+- Keep CLAUDE.md lean: put details in `dev-notes/`, put in-progress state in `HANDOFF.md`, and
+  record only lessons that prevent a repeat mistake.
