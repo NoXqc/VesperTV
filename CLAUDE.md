@@ -62,7 +62,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   not affect the other; features must be built twice.
 - `lib/services/playlist_manager.dart` / `playlist_session.dart` — per-playlist state, catalog
   loading, hidden groups/channels, backup-server failover. `playback_service.dart`,
-  `epg_service.dart`, `catalog_database.dart` (sqflite), `storage_service.dart` (prefs/cache),
+  `epg_service.dart` + `epg_database.dart` (guide in sqflite), `catalog_database.dart` (sqflite), `storage_service.dart` (prefs/cache),
   `app_update_service.dart` (GitHub release updater).
 - `lib/screens/settings/*` — Settings screens (Add Playlist is a 3-pane LokTV-style layout).
 - `lib/screens/welcome_add_playlist_screen.dart` — first-launch "Hey beautiful Human" prompt.
@@ -95,7 +95,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+183**) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+190**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
@@ -145,6 +145,10 @@ rejected (HDR + Android-TV hardware-decode risk).
   `EditableText` swallows arrow keys internally. For a non-text-field widget (e.g. `ModeButton`,
   `TvMenuTile`), default traversal still runs and overrides a raw handler's `requestFocus()`. Use
   `CallbackShortcuts` for that case — it intercepts before default traversal.
+- **EPG lives in `EpgDatabase`, never fully in memory.** `EpgService` getters stay synchronous:
+  now/next from a preloaded ~4 h slice, `getPrograms` loads Timeline rows on demand and signals via
+  `guideRowsLoaded` (not `notifyListeners` — `TvHomeScreen` watches the whole service, so that would
+  rebuild the entire TV screen per scrolled row). Don't reintroduce a whole-guide load or save.
 - **Never call `notifyListeners()` mid-build.** `PlaylistManager.notifyListeners` defers anything
   fired during the build phase (fixed Group Management checkmarks not repainting).
 - Composite `Channel.id` (`playlistId::rawId`) vs raw `Channel.rawId`: EPG lookups and
@@ -170,22 +174,26 @@ rejected (HDR + Android-TV hardware-decode risk).
   OpenSubtitles) is bring-your-own-key in Settings.
 
 ## 11. Known bugs & fixes (full table in `dev-notes/bugs-and-fixes.md`)
-Look there before debugging. Still-open items: **EPG takes ~58 s to be ready on the Formuler** (PC 1-2 s; not fixed; `traceEpgTiming` in `epg_service.dart`/`main.dart` is temporary instrumentation to remove) and the **Fire OS stale launcher icon** (not fixable).
+Look there before debugging. Still-open items: the **Fire OS stale launcher icon** (not fixable). The
+old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler) — Windows check pending.
 
 ## 12. Features (details in `dev-notes/features.md`)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys). Read the file before changing any of these.
 
-## 13. Status & open items (as of 2026-10-10)
-- **Shipped:** rebrand to VesperTV, logo, gold site with carousel + Windows section, release
-  **3.53.1** (`+183`; 3.53.0 was the "bridge" release carrying the rename TL;DR; 3.53.1 renamed the
-  Android icon resources to beat the Fire TV icon cache).
+## 13. Status & open items (as of 2026-10-12)
+- **Shipped:** rebrand to VesperTV, logo, gold site with carousel + Windows section, releases
+  3.53.0/3.53.1 (bridge + Fire TV icon fix) and **3.53.2** (`+188`, latest on GitHub).
+- **On `main`, not released (`+190`):** SQLite EPG store (see §11), visible password in Add Playlist.
+  Next: verify on Windows (Phase 3), Fire Stick "Update EPG Now" crash check, then remove the
+  temporary timing lines in EPG Settings before a release.
 - **Planned, waiting on the owner's go:** a clean **1.0.0** release — delete the old releases
-  (`gh release delete <tag> --cleanup-tag`), set `pubspec` to `1.0.0+N` with **N > 183**, keep the
+  (`gh release delete <tag> --cleanup-tag`), set `pubspec` to `1.0.0+N` with **N > 190**, keep the
   rename TL;DR in the notes. Do this only after people have had time to update to 3.53.0 (anyone
   still on ≤3.52.3 can't see 1.0.0 and must reinstall from vespertv.app), and **ask before deleting**.
 - **Ideas discussed, not started:** Sports tab with live scores (needs a free API key, BYO; hard
   part is matching games to channels); OpenSubtitles integration (BYO key); Windows player-controls
-  secondary-row parity; EPG speed rework for weak boxes; (done) rename of `nox_iptv.exe`→`VesperTV.exe`
+  secondary-row parity; widen `epgPastRetention` for catch-up later (owner wants it, after basics/
+  stability); (done) EPG speed rework; (done) rename of `nox_iptv.exe`→`VesperTV.exe`
   (CMake `BINARY_NAME`; user data location is unaffected).
 - Competitor reference: **LokTV** (paid) — cached EPG, sports tab, multiview, simple add-playlist.
 

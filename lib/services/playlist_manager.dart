@@ -1133,7 +1133,7 @@ class PlaylistManager extends ChangeNotifier {
       for (final channel
           in visibleChannels(playlistId: session.profile.id, category: 'tv')) {
         if (channel.epgIdOverride != null) continue;
-        if (epg.getPrograms(channel.epgId).isNotEmpty) continue;
+        if (epg.hasPrograms(channel.epgId)) continue;
         final key = canonicalChannelKey(channel.name);
         if (key.isEmpty) continue;
         final candidates = byKey[key];

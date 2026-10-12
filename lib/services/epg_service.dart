@@ -4,41 +4,12 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 import 'package:xml/xml_events.dart';
 
 import '../models/epg_program.dart';
 import '../utils/constants.dart';
+import 'epg_database.dart';
 import 'storage_service.dart';
-
-/// TEMPORARY — tracing a reported "EPG not ready for ~a minute after the
-/// UI is already up" gap on real hardware (confirmed: 57s on a Formuler).
-/// `debugPrint` alone turned out not reliable enough to actually capture —
-/// this box's logcat "main" buffer measured as rotating within seconds,
-/// losing these lines before they could be read even via a live stream.
-/// Appends to a plain file instead so `adb pull` gets the full trace
-/// regardless of logcat — [getExternalStorageDirectory], not
-/// [getTemporaryDirectory]: this device's `adb` has no root and isn't a
-/// debuggable build (`run-as` refuses it), both confirmed directly, so the
-/// app's private internal storage isn't reachable from the host at all.
-/// The app-scoped *external* directory (`/sdcard/Android/data/<pkg>/
-/// files`) needs no extra permission to write to and `adb pull` can reach
-/// it without root. Shared by `main.dart`'s matching trace calls — one
-/// file, one combined timeline. Delete this function and every call site
-/// once the real bottleneck is found.
-Future<void> traceEpgTiming(String msg) async {
-  final line = '${DateTime.now().toIso8601String()} $msg';
-  debugPrint('NOX_EPG_TIMING: $msg');
-  try {
-    final dir = await getExternalStorageDirectory();
-    if (dir == null) return;
-    final file = File('${dir.path}/nox_epg_trace.txt');
-    await file.writeAsString('$line\n', mode: FileMode.append, flush: true);
-  } catch (_) {
-    // Best-effort — this is throwaway diagnostic code, not something
-    // worth its own error handling.
-  }
-}
 
 /// One playlist's EPG URL plus the channel ids it's allowed to populate
 /// programmes for — see [EpgService.refresh]'s doc comment.
@@ -54,119 +25,79 @@ typedef EpgSource = ({String url, Set<String> knownChannelIds});
 /// it — indistinguishable from "the feed just doesn't have this channel".
 String normalizeEpgId(String id) => id.trim().toLowerCase();
 
-/// Top-level (isolate-safe) so [compute] can run them off the main
-/// isolate — a full-catalog EPG cache is easily tens of thousands of
-/// programmes, and decoding/encoding that much JSON synchronously on the
-/// UI isolate was blocking every single app start (cold launch, and any
-/// resume after Android killed the backgrounded process) for a
-/// noticeable, janky stretch.
-/// Isolate entry point: reads the EPG cache straight from disk so the file
-/// read and UTF-8 decode happen off the main thread too.
+EpgProgram _toProgram(EpgRow r) => EpgProgram(
+      channelId: r.channelId,
+      title: r.title,
+      description: r.description,
+      start: DateTime.fromMillisecondsSinceEpoch(r.startMs),
+      stop: DateTime.fromMillisecondsSinceEpoch(r.stopMs),
+    );
+
+Map<String, List<EpgProgram>> _toPrograms(Map<String, List<EpgRow>> rows) =>
+    rows.map((id, list) => MapEntry(id, list.map(_toProgram).toList()));
+
+/// Fetches and parses XMLTV EPG data into [EpgDatabase], and serves it.
 ///
-/// Streams the file through the decoder rather than `readAsStringSync()` +
-/// `jsonDecode()` on the whole thing — the same class of problem as
-/// [_writeEpgCacheFile]'s doc comment describes for the write side: the
-/// old approach meant the full raw JSON text and the full decoded object
-/// tree were both resident at once, and this read happens unconditionally
-/// on *every* cold start (not just a manual "Update EPG Now"), so a stale,
-/// pre-fix cache file left over from before this change could still hit
-/// the same low-memory kill on launch alone. `Stream<String>.transform`ing
-/// through `JsonDecoder` consumes the text incrementally as it's decoded
-/// instead of needing it all pre-loaded.
-Future<Map<String, List<EpgProgram>>> _readEpgCacheFile(String path) async {
-  final decoded = await File(path)
-      .openRead()
-      .transform(const Utf8Decoder())
-      .transform(const JsonDecoder())
-      .single as Map<String, dynamic>;
-  return _decodeEpgCache(decoded);
-}
-
-Map<String, List<EpgProgram>> _decodeEpgCache(Map<String, dynamic> decoded) {
-  final result = <String, List<EpgProgram>>{};
-  decoded.forEach((channelId, list) {
-    result[channelId] = (list as List)
-        .map((e) => EpgProgram.fromJson(e as Map<String, dynamic>))
-        .toList();
-  });
-  return result;
-}
-
-/// Isolate entry point for [EpgService._persistCache] — writes straight to
-/// disk one channel's programme list at a time instead of building one
-/// `jsonEncode` `String` for the *entire* combined cache first. Confirmed
-/// on real hardware (Fire Stick) as a real OOM cause: a full-catalog EPG
-/// cache is tens of MB, and the old approach meant a full copy of every
-/// [EpgProgram] object *plus* the complete JSON `String` *plus* its
-/// UTF-8-encoded byte buffer were all alive simultaneously at the exact
-/// moment the app's own working set was already at its peak from parsing —
-/// confirmed by a live memory trace showing the crash landing right after
-/// "update complete", during this exact step. Streaming keeps only one
-/// channel's small JSON fragment in memory at a time.
-Future<void> _writeEpgCacheFile(
-    ({Map<String, List<EpgProgram>> programs, String path}) args) async {
-  final sink = File(args.path).openWrite();
-  sink.write('{');
-  var first = true;
-  for (final entry in args.programs.entries) {
-    if (!first) sink.write(',');
-    first = false;
-    sink.write(jsonEncode(entry.key));
-    sink.write(':');
-    sink.write(jsonEncode(entry.value.map((p) => p.toJson()).toList()));
-  }
-  sink.write('}');
-  await sink.flush();
-  await sink.close();
-}
-
-/// Fetches, parses, caches, and serves XMLTV EPG data.
+/// Programmes live on disk in [EpgDatabase] and are only ever *queried* —
+/// the old design decoded one big JSON cache of every programme into memory
+/// on each cold start (measured on a Formuler: 24.8 s for 167k programmes,
+/// after the splash) and rewrote the whole file after every refresh (20 s,
+/// and the step that ran Fire Sticks out of memory).
 ///
-/// Programmes are cached to [StorageService] as JSON so the guide has
-/// something to show immediately on launch, before the first network
-/// refresh completes.
+/// The getters stay synchronous so no caller had to change:
+/// - [getCurrentProgram]/[getNextProgram] read [_soon] — every channel's
+///   programmes for the next few hours, preloaded at startup in one query.
+/// - [getPrograms] (the Timeline guide) returns a cached full window for a
+///   channel, or queues a batched load for the channels being built and
+///   returns the [_soon] slice meanwhile; [guideRowsLoaded] ticks when the
+///   rows arrive.
+/// - [hasPrograms] reads [_withData].
 class EpgService extends ChangeNotifier {
   EpgService(this._storage);
 
   final StorageService _storage;
+  final EpgDatabase _db = EpgDatabase();
 
-  final Map<String, List<EpgProgram>> _programs = {};
+  /// How far ahead [_soon] reaches — comfortably past "next" for any
+  /// channel, and reloaded every [_soonReloadEvery] so it never runs dry.
+  static const _soonAhead = Duration(hours: 4);
+  static const _soonReloadEvery = Duration(minutes: 15);
 
-  /// Every URL's own most recently parsed set of channel ids — lets
-  /// [_refreshOne] clear only the ids *that exact URL* actually produced
-  /// last time, instead of every id the owning playlist happens to know
-  /// about (which used to include a channel's manually-assigned
-  /// [Channel.epgIdOverride] even when that id actually belongs to a
-  /// *different* playlist's own EPG source). Reported directly: assigning
-  /// Trex's channel to a candidate id from a different, already-loaded
-  /// feed worked at first (that id's cached programme data was already
-  /// there from the other feed's own refresh), then silently emptied out
-  /// the next time Trex's own source refreshed — its filter now included
-  /// that id (an override is still part of "my known ids" for parse-time
-  /// filtering, which is correct), so the stale-removal step deleted it
-  /// before Trex's own feed's parse, which never defined that id at all,
-  /// could put anything back. Scoping removal to what the URL itself last
-  /// contributed means a source only ever clears its *own* prior
-  /// contribution, never another source's. Not persisted to disk — same
-  /// "rebuilt fresh each launch" tradeoff as [_channelCatalog]: the first
-  /// refresh of a URL each session skips stale-removal entirely (nothing
-  /// recorded yet), so a channel genuinely dropped from a feed keeps
-  /// showing its last cached programme data until that URL's second
-  /// refresh this session, rather than risking any correctness issue.
-  final Map<String, Set<String>> _idsByUrl = {};
+  /// Cap on [_full] — the Timeline only ever shows a screenful of rows, so
+  /// this is just a bound on memory while scrolling a big channel list.
+  static const _fullCacheLimit = 400;
+
+  static const _minFirstRefreshDelay = Duration(seconds: 30);
+
+  Map<String, List<EpgProgram>> _soon = {};
+  final Map<String, List<EpgProgram>> _full = {};
+  Set<String> _withData = {};
+
+  final Set<String> _pendingLoads = {};
+  final Set<String> _inFlightLoads = {};
+  bool _loadScheduled = false;
+
+  /// Bumped whenever the database changes under the caches, so a load that
+  /// was in flight across a refresh doesn't put old rows back into [_full].
+  int _cacheEpoch = 0;
+
+  Timer? _soonTimer;
+  Future<void>? _initFuture;
+
+  /// Ticks when [getPrograms] rows finish loading — see [_loadPending].
+  final ValueNotifier<int> guideRowsLoaded = ValueNotifier(0);
 
   /// Every `<channel id>` -> its first `<display-name>` this session has
   /// seen, across every source refreshed so far — *not* scoped to any one
-  /// playlist's [EpgSource.knownChannelIds] the way [_programs] itself is
+  /// playlist's [EpgSource.knownChannelIds] the way stored programmes are
   /// (see [refresh]'s doc comment): the whole point is letting "Assign
   /// EPG channel" browse the *feed's* full channel directory to search
   /// for a match, independent of which ids a given playlist happens to
   /// already own. Small either way (a few thousand short strings, not
   /// full programme data) so keeping every source's entries around at
   /// once costs nothing worth guarding. Rebuilt fresh each app launch
-  /// (not cached to disk like [_programs] is) — acceptable for now since
-  /// "Update EPG Now" is right there in the same settings screen that
-  /// would use this.
+  /// (not stored in [EpgDatabase]) — "Update EPG Now" is right there in
+  /// the same settings screen that would use this.
   final Map<String, String> _channelCatalog = {};
   Map<String, String> get channelCatalog => Map.unmodifiable(_channelCatalog);
 
@@ -187,6 +118,19 @@ class EpgService extends ChangeNotifier {
   bool isLoading = false;
   String? error;
 
+  /// TEMPORARY — EPG load-time measurement, shown in EPG Settings so the
+  /// owner can photograph it on a real box. Baseline (JSON cache, Formuler):
+  /// ready 51.3 s after launch, load began at 26.5 s and took 24.8 s;
+  /// refresh = parse 26.9 s + save 20.3 s. Remove once the database version
+  /// is confirmed on the Formuler and Fire Stick.
+  /// [appLaunchedAt] is set first thing in `main()`.
+  static DateTime? appLaunchedAt;
+  String? startupTiming;
+  String? refreshTiming;
+
+  static String _secs(Duration d) =>
+      '${(d.inMilliseconds / 1000).toStringAsFixed(1)} s';
+
   Timer? _refreshTimer;
 
   /// Evaluated fresh on every auto-refresh tick (not a frozen snapshot
@@ -196,46 +140,81 @@ class EpgService extends ChangeNotifier {
   /// whatever was true when the timer was first started.
   List<EpgSource> Function()? _sourcesProvider;
 
-  Future<void> init() async {
-    await traceEpgTiming('EpgService.init() start');
+  /// Opens the database and preloads the small always-in-memory slices.
+  /// Idempotent: `main.dart` starts it during the splash (cheap — a few
+  /// thousand rows, and SQLite does the work on its own thread) and awaits
+  /// the same future after the splash.
+  Future<void> init() => _initFuture ??= _init();
+
+  Future<void> _init() async {
+    final initStart = DateTime.now();
+    final launch = appLaunchedAt ?? initStart;
     lastUpdated = _storage.getEpgLastUpdated();
-    // Path, not contents — see StorageService.cacheFilePath. The EPG
-    // cache (every programme for every channel) is one of the two largest
-    // files this app reads at startup.
-    final cachedPath =
-        await _storage.cacheFilePath(AppConstants.cacheFileEpgPrograms);
-    await traceEpgTiming('cachedPath resolved (path=${cachedPath != null})');
-    if (cachedPath != null) {
-      try {
-        final decoded = await compute(_readEpgCacheFile, cachedPath);
-        _programs
-          ..clear()
-          ..addAll(decoded);
-        final programCount =
-            _programs.values.fold<int>(0, (sum, list) => sum + list.length);
-        await traceEpgTiming('compute() decode done — ${_programs.length} '
-            'channels, $programCount programmes');
-      } catch (e) {
-        // Corrupt/old cache format — ignore, it will be repopulated on the
-        // next successful refresh.
-        await traceEpgTiming('compute() decode FAILED — $e');
-      }
+    // Leftover from the pre-database JSON cache — tens of MB on a big feed.
+    unawaited(_storage
+        .deleteCacheFile(AppConstants.cacheFileEpgPrograms)
+        .catchError((_) {}));
+    var programCount = 0;
+    try {
+      await _db.open();
+      await _reloadCaches();
+      programCount = await _db.count();
+    } catch (e) {
+      debugPrint('EpgService.init: $e');
     }
+    _soonTimer = Timer.periodic(_soonReloadEvery, (_) async {
+      await _reloadCaches();
+      notifyListeners();
+    });
+    final ready = DateTime.now();
+    startupTiming = 'Startup: EPG ready ${_secs(ready.difference(launch))} '
+        'after launch (load began at ${_secs(initStart.difference(launch))}, '
+        'took ${_secs(ready.difference(initStart))}) — '
+        '${_withData.length} channels, $programCount programmes stored';
     notifyListeners();
-    await traceEpgTiming('EpgService.init() notifyListeners done');
   }
 
-  /// (Re)starts the periodic auto-refresh timer, refreshing every source
+  /// Reloads [_soon]/[_withData] from the database and drops [_full], so
+  /// every guide row re-queries on its next build.
+  Future<void> _reloadCaches() async {
+    final now = DateTime.now();
+    final soon = await _db.programmesBetween(
+        now.millisecondsSinceEpoch, now.add(_soonAhead).millisecondsSinceEpoch);
+    final withData = await _db.channelIdsWithData(now.millisecondsSinceEpoch);
+    _soon = _toPrograms(soon);
+    _withData = withData;
+    _full.clear();
+    _cacheEpoch++;
+  }
+
+  /// (Re)starts auto-refresh every [minutes], refreshing every source
   /// [sourcesProvider] returns (one per enabled playlist with a non-empty
-  /// EPG URL — see [EpgSource]) each tick. Call again whenever the
-  /// interval changes. Safe to call unconditionally; a tick with no
-  /// sources just no-ops.
+  /// EPG URL — see [EpgSource]). The first tick is due when the stored data
+  /// reaches [minutes] old — immediately if it already is, or if the
+  /// database is empty (first launch after upgrading from the JSON cache) —
+  /// so a box that was off for a day refreshes at launch instead of waiting
+  /// a full interval. Call again whenever the interval changes.
+  ///
+  /// Never sooner than [_minFirstRefreshDelay]: a refresh parses on the UI
+  /// isolate for ~30 s on a Formuler, and the first seconds after the
+  /// splash are when weak boxes used to crash under load (see main.dart's
+  /// splash comments). The stored guide is already on screen meanwhile.
   void startAutoRefresh(
       int minutes, List<EpgSource> Function() sourcesProvider) {
     _refreshTimer?.cancel();
     _sourcesProvider = sourcesProvider;
-    _refreshTimer =
-        Timer.periodic(Duration(minutes: minutes), (_) => refreshAll());
+    final interval = Duration(minutes: minutes);
+    final age = lastUpdated == null
+        ? interval
+        : DateTime.now().difference(lastUpdated!);
+    var firstDelay = _withData.isEmpty ? Duration.zero : interval - age;
+    if (firstDelay < _minFirstRefreshDelay) {
+      firstDelay = _minFirstRefreshDelay;
+    }
+    _refreshTimer = Timer(firstDelay, () {
+      refreshAll();
+      _refreshTimer = Timer.periodic(interval, (_) => refreshAll());
+    });
   }
 
   void stopAutoRefresh() {
@@ -244,90 +223,83 @@ class EpgService extends ChangeNotifier {
   }
 
   /// Refreshes every source [_sourcesProvider] currently returns, one at a
-  /// time (each call to [refresh] below only ever replaces *that* source's
-  /// own channels' programmes — see its doc comment — so there's no
-  /// correctness reason these need to run concurrently, and running them
-  /// one at a time keeps `isLoading`/`error` meaningful for whichever one
-  /// is actually in flight).
-  /// Refreshes every source, persisting the combined cache to disk exactly
-  /// once at the end — not once per source. Each individual source's data
-  /// can be tens of MB once parsed (a real 8kStrong feed: 3,080 channels,
-  /// ~216,000 programmes), and [_persistCache] re-encodes the *entire*
-  /// combined `_programs` map from scratch every time it runs. Calling it
-  /// after every single source in a multi-playlist setup meant a 3-4
-  /// playlist refresh cycle re-serialized the whole, ever-growing dataset
-  /// 3-4 times over — full JSON string plus full object graph alive at
-  /// once in the compute isolate, repeatedly, for no benefit over doing it
-  /// once at the end.
+  /// time — each source only ever replaces its own rows (see
+  /// [EpgDatabase.deleteStaleFromSource]), and running them sequentially
+  /// keeps `isLoading`/`error` meaningful for whichever one is in flight.
+  /// Skipped while another refresh is already running.
   Future<void> refreshAll() async {
+    if (isLoading) return;
     final sources = _sourcesProvider?.call() ?? const [];
-    isLoading = true;
-    notifyListeners();
-    try {
-      for (final source in sources) {
-        await _refreshOne(source.url, knownChannelIds: source.knownChannelIds);
-      }
-      await _persistCache();
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
+    if (sources.isEmpty) return;
+    await _runRefresh(sources);
   }
 
-  /// Refreshes one EPG source and immediately persists the result — the
-  /// entry point for every *single*-playlist caller (adding a playlist,
-  /// "Update EPG Now" on one playlist). [refreshAll] above uses
-  /// [_refreshOne] directly instead, so a multi-playlist refresh persists
-  /// once at the end rather than once per source.
-  ///
-  /// [isLoading] spans the persist step too, not just [_refreshOne] — that
-  /// used to flip back to false the moment parsing finished, so the UI
-  /// reported "done" while the (heaviest) disk-write step was still
-  /// actively running in the background. Confirmed on real hardware as
-  /// genuinely misleading: a low-memory kill landed *after* the on-screen
-  /// "EPG update completed" moment, during exactly that still-running
-  /// write.
+  /// Refreshes one EPG source — the entry point for every *single*-playlist
+  /// caller (adding a playlist).
   Future<void> refresh(String url,
       {required Set<String> knownChannelIds}) async {
+    await _runRefresh([(url: url, knownChannelIds: knownChannelIds)]);
+  }
+
+  Future<void> _runRefresh(List<EpgSource> sources) async {
     isLoading = true;
     notifyListeners();
     try {
-      await _refreshOne(url, knownChannelIds: knownChannelIds);
-      await _persistCache();
+      await init();
+      final t0 = DateTime.now();
+      var stored = 0;
+      var anySucceeded = false;
+      for (final source in sources) {
+        final count = await _refreshOne(source.url,
+            knownChannelIds: source.knownChannelIds);
+        if (count != null) {
+          stored += count;
+          anySucceeded = true;
+        }
+      }
+      if (anySucceeded) {
+        await _db.deleteEndedBefore(DateTime.now()
+            .subtract(AppConstants.epgPastRetention)
+            .millisecondsSinceEpoch);
+        lastUpdated = DateTime.now();
+        await _storage.setEpgLastUpdated(lastUpdated!);
+      }
+      await _reloadCaches();
+      refreshTiming = 'Last update: download + parse + save '
+          '${_secs(DateTime.now().difference(t0))} — $stored programmes '
+          'stored${error != null ? ' (error: $error)' : ''}';
     } finally {
       isLoading = false;
       notifyListeners();
     }
   }
 
-  Future<void> _persistCache() async {
-    final path =
-        await _storage.cacheFilePathForWrite(AppConstants.cacheFileEpgPrograms);
-    await compute(_writeEpgCacheFile, (programs: _programs, path: path));
-    await _storage.setEpgLastUpdated(lastUpdated ?? DateTime.now());
+  /// Wipes every stored programme ("Clear Cache" in EPG settings).
+  Future<void> clearAll() async {
+    await _db.clearAll();
+    lastUpdated = null;
+    _soon = {};
+    _withData = {};
+    _full.clear();
+    _cacheEpoch++;
+    notifyListeners();
   }
 
-  /// Refreshes one EPG source's data into [_programs]/[_channelCatalog]/
-  /// [_nowPlayingCatalog] without persisting anything to disk — see
-  /// [refresh] and [refreshAll] for the two callers that each handle
-  /// persistence at the point that actually makes sense for them.
-  /// [knownChannelIds] scopes both the parse filter (see
-  /// [_parseXmltvStream]'s doc comment) *and* which existing entries in
-  /// [_programs] get replaced — a shared multi-provider EPG source can
-  /// cover vastly more channels than one playlist actually has, and
-  /// refreshing one playlist's source must never wipe another playlist's
-  /// already-cached programmes (an earlier single-playlist-only version of
-  /// this unconditionally cleared the whole map on every call, which is
-  /// exactly wrong once there's more than one source). Empty
-  /// [knownChannelIds] disables filtering entirely rather than risking an
-  /// empty guide if this ever races ahead of the playlist's own channels
-  /// finishing their load.
-  Future<void> _refreshOne(String url,
+  /// Downloads and parses one EPG source, writing its programmes into
+  /// [EpgDatabase] in small batches *while* parsing — the full feed is
+  /// never held in memory. Returns how many programmes were stored, or null
+  /// on failure. A failed/aborted refresh leaves that source's previous
+  /// rows alone (stale-removal only runs after a complete parse), so a
+  /// network error never empties the guide.
+  ///
+  /// [knownChannelIds] scopes the stored programmes — a shared
+  /// multi-provider EPG source can cover vastly more channels than one
+  /// playlist actually has. Empty [knownChannelIds] disables filtering
+  /// entirely rather than risking an empty guide if this ever races ahead
+  /// of the playlist's own channels finishing their load.
+  Future<int?> _refreshOne(String url,
       {required Set<String> knownChannelIds}) async {
-    if (url.isEmpty) return;
-    // isLoading is the caller's responsibility (see [refresh]/[refreshAll])
-    // — it needs to stay true across the persist step that follows this,
-    // not just this one source's parse.
+    if (url.isEmpty) return null;
     error = null;
     notifyListeners();
 
@@ -349,11 +321,14 @@ class EpgService extends ChangeNotifier {
       final effectiveFilter = knownChannelIds.isEmpty
           ? null
           : knownChannelIds.map(normalizeEpgId).toSet();
+      // Unique per refresh across app restarts — see
+      // [EpgDatabase.deleteStaleFromSource].
+      final gen = DateTime.now().millisecondsSinceEpoch;
       final result = await _parseXmltvStream(
         await _autoGunzip(streamedResponse.stream),
         knownChannelIds: effectiveFilter,
+        onRows: (rows) => _db.insertBatch(rows, url, gen),
       ).timeout(const Duration(minutes: 10));
-      final parsed = result.programs;
       // First-seen wins on a duplicate id across sources — an arbitrary
       // but harmless tie-break; these are just display labels for a
       // picker, not something correctness depends on.
@@ -365,27 +340,18 @@ class EpgService extends ChangeNotifier {
       // should replace whatever an earlier one found.
       _nowPlayingCatalog.addAll(result.nowPlaying);
 
-      // Only ever removes *this URL's own* previously-seen ids (channels
-      // this exact source used to have programmes for but no longer does)
-      // before merging the new ones in — never the owning playlist's whole
-      // known-id set (see [_idsByUrl]'s doc comment for why that used to
-      // wrongly delete a different source's data when a channel's override
-      // pointed at it), and never a blanket clear, since more than one URL
-      // shares this same `_programs` map.
-      final previousIds = _idsByUrl[url];
-      if (previousIds != null) {
-        _programs.removeWhere((id, _) => previousIds.contains(id));
-      }
-      _programs.addAll(parsed);
-      _idsByUrl[url] = parsed.keys.toSet();
-
-      lastUpdated = DateTime.now();
+      // Only this URL's own rows from earlier refreshes that it didn't
+      // re-send (channel dropped, programme rescheduled) — never another
+      // source's, which used to wrongly wipe a manual override pointing at
+      // a different playlist's feed.
+      await _db.deleteStaleFromSource(url, gen);
+      return result.stored;
     } catch (e) {
       error = e.toString();
       debugPrint('EpgService error: $e');
+      return null;
     } finally {
       client.close();
-      notifyListeners();
     }
   }
 
@@ -423,27 +389,29 @@ class EpgService extends ChangeNotifier {
   /// [XmlDocument] tree is exactly the kind of allocation that triggers an
   /// OutOfMemoryError on a phone's capped per-app heap.
   ///
-  /// [knownChannelIds], when non-null, discards a `<programme>` for any
-  /// channel not in it right at parse time instead of retaining it — a
-  /// shared multi-provider EPG source routinely covers far more channels
-  /// than any one playlist actually has, and retaining every one of them
-  /// is the one *unbounded* allocation left in this otherwise-streaming
-  /// pipeline (see this method's own doc comment above, and
-  /// [EpgService._knownChannelIds]).
+  /// Programmes are handed to [onRows] in batches as they're parsed, never
+  /// accumulated — only those inside the stored window
+  /// ([AppConstants.epgPastRetention]/[AppConstants.epgFutureWindow]) and,
+  /// when [knownChannelIds] is non-null, only for channels in it (a shared
+  /// multi-provider source routinely covers far more channels than any
+  /// one playlist actually has).
   Future<
       ({
-        Map<String, List<EpgProgram>> programs,
+        int stored,
         Map<String, String> channelNames,
         Map<String, EpgProgram> nowPlaying
       })> _parseXmltvStream(
     Stream<List<int>> byteStream, {
     Set<String>? knownChannelIds,
+    required Future<void> Function(List<EpgRow> rows) onRows,
   }) async {
-    final result = <String, List<EpgProgram>>{};
-    // Every <channel id>'s first <display-name> — unlike [result] above,
-    // never filtered by [knownChannelIds]: see [EpgService._channelCatalog]'s
-    // doc comment for why the *whole* feed's directory matters here, not
-    // just whatever one playlist already owns.
+    const batchSize = 1000;
+    var pending = <EpgRow>[];
+    var stored = 0;
+    // Every <channel id>'s first <display-name> — never filtered by
+    // [knownChannelIds]: see [EpgService._channelCatalog]'s doc comment for
+    // why the *whole* feed's directory matters here, not just whatever one
+    // playlist already owns.
     final channelNames = <String, String>{};
     // Every <channel id>'s own currently-airing programme, same
     // unfiltered-by-design reasoning as [channelNames] — "Assign EPG
@@ -454,6 +422,10 @@ class EpgService extends ChangeNotifier {
     // so keeping it unfiltered costs nothing worth guarding against.
     final nowPlaying = <String, EpgProgram>{};
     final now = DateTime.now();
+    final minStopMs =
+        now.subtract(AppConstants.epgPastRetention).millisecondsSinceEpoch;
+    final maxStartMs =
+        now.add(AppConstants.epgFutureWindow).millisecondsSinceEpoch;
 
     String? channelId;
     String? startRaw;
@@ -472,20 +444,43 @@ class EpgService extends ChangeNotifier {
       try {
         final start = _parseXmltvTime(startRaw);
         final stop = _parseXmltvTime(stopRaw);
-        final program = EpgProgram(
-          channelId: channelId,
-          title: title?.trim().isNotEmpty == true ? title!.trim() : 'No Title',
-          description: (desc?.trim().isNotEmpty ?? false) ? desc!.trim() : null,
-          start: start,
-          stop: stop,
-        );
-        if (program.isNowPlaying(now)) nowPlaying[channelId] = program;
-        if (knownChannelIds == null || knownChannelIds.contains(channelId)) {
-          result.putIfAbsent(channelId, () => []).add(program);
+        final cleanTitle =
+            title?.trim().isNotEmpty == true ? title!.trim() : 'No Title';
+        final cleanDesc =
+            (desc?.trim().isNotEmpty ?? false) ? desc!.trim() : null;
+        if (!now.isBefore(start) && now.isBefore(stop)) {
+          nowPlaying[channelId] = EpgProgram(
+            channelId: channelId,
+            title: cleanTitle,
+            description: cleanDesc,
+            start: start,
+            stop: stop,
+          );
         }
+        if (knownChannelIds != null && !knownChannelIds.contains(channelId)) {
+          return;
+        }
+        final startMs = start.millisecondsSinceEpoch;
+        final stopMs = stop.millisecondsSinceEpoch;
+        if (stopMs <= minStopMs || startMs >= maxStartMs) return;
+        pending.add((
+          channelId: channelId,
+          startMs: startMs,
+          stopMs: stopMs,
+          title: cleanTitle,
+          description: cleanDesc,
+        ));
       } catch (_) {
         // Unparseable timestamp — skip this one programme, keep going.
       }
+    }
+
+    Future<void> flush() async {
+      if (pending.isEmpty) return;
+      final rows = pending;
+      pending = <EpgRow>[];
+      stored += rows.length;
+      await onRows(rows);
     }
 
     final events = byteStream
@@ -571,17 +566,11 @@ class EpgService extends ChangeNotifier {
           }
         }
       }
+      if (pending.length >= batchSize) await flush();
     }
+    await flush();
 
-    for (final list in result.values) {
-      list.sort((a, b) => a.start.compareTo(b.start));
-    }
-
-    return (
-      programs: result,
-      channelNames: channelNames,
-      nowPlaying: nowPlaying
-    );
+    return (stored: stored, channelNames: channelNames, nowPlaying: nowPlaying);
   }
 
   /// Parses XMLTV timestamps such as `20240101120000 +0000`.
@@ -612,8 +601,10 @@ class EpgService extends ChangeNotifier {
         .toLocal();
   }
 
+  List<EpgProgram>? _cached(String id) => _full[id] ?? _soon[id];
+
   EpgProgram? getCurrentProgram(String channelId) {
-    final list = _programs[normalizeEpgId(channelId)];
+    final list = _cached(normalizeEpgId(channelId));
     if (list == null) return null;
     final now = DateTime.now();
     for (final p in list) {
@@ -623,7 +614,7 @@ class EpgService extends ChangeNotifier {
   }
 
   EpgProgram? getNextProgram(String channelId) {
-    final list = _programs[normalizeEpgId(channelId)];
+    final list = _cached(normalizeEpgId(channelId));
     if (list == null) return null;
     final now = DateTime.now();
     for (final p in list) {
@@ -632,12 +623,66 @@ class EpgService extends ChangeNotifier {
     return null;
   }
 
-  List<EpgProgram> getPrograms(String channelId) =>
-      _programs[normalizeEpgId(channelId)] ?? [];
+  /// Whether [channelId] has any programme that hasn't ended — without
+  /// loading its rows.
+  bool hasPrograms(String channelId) =>
+      _withData.contains(normalizeEpgId(channelId));
+
+  /// Every stored programme for [channelId], ordered by start. Served from
+  /// memory when loaded; otherwise queues a batched database load (every
+  /// channel requested in the same frame shares one query) and returns the
+  /// preloaded next-few-hours slice meanwhile — [guideRowsLoaded] ticks when
+  /// the full rows arrive. Safe to call from `build`: the load and its
+  /// notification always happen after the current frame.
+  List<EpgProgram> getPrograms(String channelId) {
+    final id = normalizeEpgId(channelId);
+    final full = _full[id];
+    if (full != null) return full;
+    if (!_withData.contains(id)) return _soon[id] ?? const [];
+    if (!_inFlightLoads.contains(id)) {
+      _pendingLoads.add(id);
+      if (!_loadScheduled) {
+        _loadScheduled = true;
+        Timer.run(_loadPending);
+      }
+    }
+    return _soon[id] ?? const [];
+  }
+
+  Future<void> _loadPending() async {
+    _loadScheduled = false;
+    if (_pendingLoads.isEmpty) return;
+    final ids = _pendingLoads.toList();
+    _pendingLoads.clear();
+    _inFlightLoads.addAll(ids);
+    final epoch = _cacheEpoch;
+    try {
+      final rows = await _db.programmesFor(
+          ids,
+          DateTime.now()
+              .subtract(AppConstants.epgPastRetention)
+              .millisecondsSinceEpoch);
+      if (epoch != _cacheEpoch) return;
+      if (_full.length + ids.length > _fullCacheLimit) _full.clear();
+      for (final id in ids) {
+        _full[id] = (rows[id] ?? const []).map(_toProgram).toList();
+      }
+      // Not notifyListeners(): TvHomeScreen watches this whole service, and
+      // rebuilding all of it for every guide row scrolled into view would
+      // jank a weak box. Only the Timeline listens to this.
+      guideRowsLoaded.value++;
+    } catch (e) {
+      debugPrint('EpgService: guide load failed: $e');
+    } finally {
+      _inFlightLoads.removeAll(ids);
+    }
+  }
 
   @override
   void dispose() {
     _refreshTimer?.cancel();
+    _soonTimer?.cancel();
+    guideRowsLoaded.dispose();
     super.dispose();
   }
 }

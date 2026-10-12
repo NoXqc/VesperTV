@@ -51,16 +51,6 @@ class StorageService {
     await File('${dir.path}/$name.json').writeAsString(content);
   }
 
-  /// The path a cache file should be written to, creating the cache dir
-  /// if needed — for a caller that streams its own content straight to
-  /// disk (an [IOSink]) rather than building one full `String` and handing
-  /// it to [writeCacheFile]. See `EpgService._persistCache`'s doc comment
-  /// for why that distinction matters for a large payload.
-  Future<String> cacheFilePathForWrite(String name) async {
-    final dir = await _ensureCacheDir();
-    return '${dir.path}/$name.json';
-  }
-
   /// Path of a cache file if it exists, for callers that read *and*
   /// decode it on a background isolate. [readCacheFile] reads on the
   /// calling isolate, and `File.readAsString` does its whole UTF-8 decode
@@ -146,9 +136,14 @@ class StorageService {
     return raw == null ? null : DateTime.tryParse(raw);
   }
 
-  int getRefreshInterval() =>
-      _prefs.getInt(AppConstants.keyRefreshInterval) ??
-      AppConstants.defaultRefreshIntervalMinutes;
+  int getRefreshInterval() {
+    final stored = _prefs.getInt(AppConstants.keyRefreshInterval);
+    // A pre-database install stored 15-120 min — not an option any more.
+    return AppConstants.refreshIntervalOptions.contains(stored)
+        ? stored!
+        : AppConstants.defaultRefreshIntervalMinutes;
+  }
+
   Future<void> setRefreshInterval(int minutes) =>
       _prefs.setInt(AppConstants.keyRefreshInterval, minutes);
 
@@ -372,11 +367,8 @@ class StorageService {
       _prefs.remove(_vk(AppConstants.keyRecentSearches));
 
   // --- EPG cache -------------------------------------------------------------
-  // The programme data itself lives in the disk-file cache now (see
-  // AppConstants.cacheFileEpgPrograms) — a full-catalog EPG blob can be
-  // many MB, and SharedPreferences backs onto a single XML file the OS
-  // loads whole, which made every cold start pay for parsing that giant
-  // string on the main isolate. Only the last-updated timestamp stays here.
+  // The programme data itself lives in `EpgDatabase`. Only the last-updated
+  // timestamp stays here.
 
   DateTime? getEpgLastUpdated() {
     final raw = _prefs.getString(AppConstants.keyEpgLastUpdated);

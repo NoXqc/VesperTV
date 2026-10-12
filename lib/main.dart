@@ -33,6 +33,7 @@ import 'widgets/live_resume_hint.dart';
 import 'widgets/splash_stars.dart';
 
 Future<void> main() async {
+  EpgService.appLaunchedAt = DateTime.now();
   WidgetsFlutterBinding.ensureInitialized();
   // Plain `sqflite` has no Windows/Linux implementation at all — confirmed
   // via .flutter-plugins-dependencies: sqflite_android/sqflite_darwin exist
@@ -286,6 +287,13 @@ class _NoxIptvAppState extends State<NoxIptvApp>
 
       _playlistManager = PlaylistManager(_storage, _catalogDb);
       _epgService = EpgService(_storage);
+      // Started during the splash, not after it: it only opens the EPG
+      // database and preloads now/next for every channel (a few thousand
+      // rows, SQLite on its own thread), so it doesn't compete with the
+      // catalog for the CPU the way the old full JSON decode would have.
+      // Not awaited — the splash never waits on it; the post-splash chain
+      // below awaits the same future.
+      unawaited(_epgService.init());
       _playbackService = PlaybackService(_storage, _playlistManager);
       _parentalPin = ParentalPin(_storage);
       _viewerProfileService =
@@ -398,9 +406,6 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         await Future.delayed(_minSplashDuration - elapsed);
       }
       if (mounted) setState(() => _ready = true);
-      // TEMPORARY — see the matching traceEpgTiming block below; this is
-      // the reference point "UI active" actually means for that trace.
-      unawaited(traceEpgTiming('_ready=true (splash gone, UI active)'));
       if (didSync) {
         // The toast needs the real MaterialApp's ScaffoldMessengerKey,
         // which doesn't exist until the tree above actually builds.
@@ -416,39 +421,15 @@ class _NoxIptvAppState extends State<NoxIptvApp>
               MaterialPageRoute(builder: (_) => const AddPlaylistScreen()));
         });
       }
-      // `_epgService.init()` used to run strictly after
-      // `_autoResumeLastChannel`, on the reasoning that it's "a heavy EPG
-      // XML parse" that shouldn't run alongside the catalog still
-      // settling — that reasoning no longer matches what `init()` actually
-      // does: it reads the already-downloaded EPG cache from disk (a
-      // `compute()`-decoded JSON file), not a live XML parse at all — the
-      // real XML parse only happens in `refresh()`/`refreshAll()`, the
-      // network-triggered update this call never touches. Reported
-      // directly as EPG not appearing until ~58s after the UI was already
-      // up and interactive — with no correctness reason left for EPG to
-      // wait its turn behind auto-resume, running them concurrently
-      // instead of strictly sequentially should recover whatever time was
-      // lost purely to queue position, leaving only genuine decode time
-      // (if any) as the real remaining cost.
-      // TEMPORARY — tracing that same gap, alongside the matching
-      // traceEpgTiming calls in EpgService.init() itself — both append to
-      // the same file (nox_epg_trace.txt in the OS temp dir), though that
-      // file turned out unreachable from this test device (no root, not
-      // debuggable, and Android's own scoped-storage restriction blocks
-      // adb from even its app-external directory) — kept only for
-      // `debugPrint`'s own logcat line, on the chance a less locked-down
-      // device can read it. Remove every traceEpgTiming call in this block
-      // once the real bottleneck is confirmed found.
+      // `_epgService.init()` was started during the splash (see above);
+      // awaiting it here only makes sure startAutoRefresh sees whether the
+      // database has data — which decides if a refresh is due right away.
       unawaited(() async {
-        await traceEpgTiming('post-splash chain start');
         await _playbackService.init();
-        await traceEpgTiming('playbackService.init done');
         await Future.wait([
           _autoResumeLastChannel(),
           _epgService.init(),
         ]);
-        await traceEpgTiming(
-            'autoResumeLastChannel + epgService.init done (concurrent)');
         _epgService.startAutoRefresh(
             _storage.getRefreshInterval(), _epgSources);
         // No-op for most launches (no key set, or already refreshed this

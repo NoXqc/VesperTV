@@ -202,8 +202,7 @@ class _EpgChannelMatchingScreenState extends State<EpgChannelMatchingScreen> {
                   itemBuilder: (context, i) {
                     final channel = filtered[i];
                     final overrideId = channel.epgIdOverride;
-                    final hasPrograms =
-                        epg.getPrograms(channel.epgId).isNotEmpty;
+                    final hasPrograms = epg.hasPrograms(channel.epgId);
                     final String status;
                     final bool ok;
                     if (overrideId != null) {

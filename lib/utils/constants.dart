@@ -291,8 +291,22 @@ class AppConstants {
   /// file the OS loads whole, which is a bad fit for a full-catalog EPG
   /// blob that can be many MB; moved to the same disk-file cache the
   /// playlist/catalog data already uses.
+  /// Superseded by `EpgDatabase` — kept only so `EpgService.init` can
+  /// delete the leftover file on upgrading installs.
   static const String cacheFileEpgPrograms = 'epg_programs';
 
-  static const int defaultRefreshIntervalMinutes = 30;
-  static const List<int> refreshIntervalOptions = [15, 30, 60, 120];
+  /// Rolling window `EpgDatabase` keeps. Past: the Timeline guide shows 1 h
+  /// back, so 2 h covers it; a future catch-up feature widens just this
+  /// (no schema change). Future: anything *starting* within 36 h — with the
+  /// 12 h default refresh that leaves ~24 h of guide if refreshes fail or
+  /// the box stays off.
+  static const Duration epgPastRetention = Duration(hours: 2);
+  static const Duration epgFutureWindow = Duration(hours: 36);
+
+  /// EPG auto-refresh. Was 15-120 min — each refresh is ~45 s of heavy
+  /// work on a Formuler (measured), so every 30 min cost a quarter of the
+  /// box's time. A stored legacy value falls back to the default (see
+  /// `StorageService.getRefreshInterval`).
+  static const int defaultRefreshIntervalMinutes = 720;
+  static const List<int> refreshIntervalOptions = [360, 720, 1440];
 }

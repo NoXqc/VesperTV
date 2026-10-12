@@ -56,7 +56,6 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
   late TextEditingController _xtreamServerController;
   late TextEditingController _xtreamUsernameController;
   late TextEditingController _xtreamPasswordController;
-  bool _obscurePassword = true;
 
   /// Smart Add: paste-and-parse for the common case of copying a
   /// provider's whole welcome message off a phone and typing it in via
@@ -753,8 +752,8 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                 // EditableText claims Left/Right for caret movement
                 // whenever a text field has focus, so these only ever
                 // actually fire while focus is on a mode row, a field's
-                // own non-text-field sibling (e.g. the radio list, the
-                // visibility toggle), or the status/Add-Playlist pane —
+                // own non-text-field sibling (e.g. the radio list), or
+                // the status/Add-Playlist pane —
                 // never mid-typing.
                 const SingleActivator(LogicalKeyboardKey.arrowLeft): () {
                   if (_statusScope.hasFocus) {
@@ -995,17 +994,12 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                             TextField(
                               controller: _xtreamPasswordController,
                               focusNode: _passwordFocus,
-                              obscureText: _obscurePassword,
-                              decoration: InputDecoration(
+                              // Shown in plain text on purpose: provider
+                              // passwords are long and random, and typing
+                              // them blind with a remote is error-prone.
+                              decoration: const InputDecoration(
                                 labelText: 'Password',
-                                border: const OutlineInputBorder(),
-                                suffixIcon: IconButton(
-                                  icon: Icon(_obscurePassword
-                                      ? Icons.visibility
-                                      : Icons.visibility_off),
-                                  onPressed: () => setState(() =>
-                                      _obscurePassword = !_obscurePassword),
-                                ),
+                                border: OutlineInputBorder(),
                               ),
                               textInputAction: TextInputAction.next,
                               onSubmitted: (_) => _epgFocus.requestFocus(),
@@ -1067,17 +1061,12 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                             TextField(
                               controller: _xtreamPasswordController,
                               focusNode: _passwordFocus,
-                              obscureText: _obscurePassword,
-                              decoration: InputDecoration(
+                              // Shown in plain text on purpose: provider
+                              // passwords are long and random, and typing
+                              // them blind with a remote is error-prone.
+                              decoration: const InputDecoration(
                                 labelText: 'Password',
-                                border: const OutlineInputBorder(),
-                                suffixIcon: IconButton(
-                                  icon: Icon(_obscurePassword
-                                      ? Icons.visibility
-                                      : Icons.visibility_off),
-                                  onPressed: () => setState(() =>
-                                      _obscurePassword = !_obscurePassword),
-                                ),
+                                border: OutlineInputBorder(),
                               ),
                               textInputAction: TextInputAction.next,
                               onSubmitted: (_) => _epgFocus.requestFocus(),

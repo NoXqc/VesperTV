@@ -144,8 +144,6 @@ class _HomeScreenState extends State<HomeScreen> {
       _promptForSettings();
       return;
     }
-    // refreshAll() persists the combined cache once at the end, not once
-    // per playlist — see EpgService.refreshAll's doc comment.
     await epg.refreshAll();
   }
 
@@ -177,8 +175,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _openProfilePicker() {
-    Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const ProfilePickerScreen()));
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const ProfilePickerScreen()));
   }
 
   /// A horizontal "Continue Watching" strip for the Movies/TV Shows tabs,

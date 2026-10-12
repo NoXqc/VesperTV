@@ -16,20 +16,4 @@ class EpgProgram {
   final DateTime stop;
 
   bool isNowPlaying(DateTime now) => !now.isBefore(start) && now.isBefore(stop);
-
-  Map<String, dynamic> toJson() => {
-        'channelId': channelId,
-        'title': title,
-        'description': description,
-        'start': start.toIso8601String(),
-        'stop': stop.toIso8601String(),
-      };
-
-  factory EpgProgram.fromJson(Map<String, dynamic> json) => EpgProgram(
-        channelId: json['channelId'] as String,
-        title: json['title'] as String,
-        description: json['description'] as String?,
-        start: DateTime.parse(json['start'] as String),
-        stop: DateTime.parse(json['stop'] as String),
-      );
 }

@@ -123,9 +123,6 @@ class _EpgSettingsScreenState extends State<EpgSettingsScreen>
       );
       return;
     }
-    // refreshAll() persists the combined cache once at the end — looping
-    // this screen's own calls to refresh() here would persist (re-encode
-    // the whole, ever-growing _programs map) once per playlist instead.
     await context.read<EpgService>().refreshAll();
   }
 
@@ -133,7 +130,10 @@ class _EpgSettingsScreenState extends State<EpgSettingsScreen>
     final storage = context.read<StorageService>();
     final catalogDb = context.read<CatalogDatabase>();
     final playlist = context.read<PlaylistManager>();
+    final epg = context.read<EpgService>();
     await storage.clearCache();
+    // Programmes live in EpgDatabase, not the cache dir clearCache() wipes.
+    await epg.clearAll();
     // The VOD/series catalog itself lives in its own local database now
     // (not the JSON-file cache `storage.clearCache()` wipes) — see
     // CatalogDatabase's doc comment.
@@ -199,7 +199,8 @@ class _EpgSettingsScreenState extends State<EpgSettingsScreen>
                               ),
                               items: AppConstants.refreshIntervalOptions
                                   .map((m) => DropdownMenuItem(
-                                      value: m, child: Text('$m minutes')))
+                                      value: m,
+                                      child: Text('${m ~/ 60} hours')))
                                   .toList(),
                               onChanged: (value) {
                                 if (value != null) _applyInterval(value);
@@ -212,6 +213,20 @@ class _EpgSettingsScreenState extends State<EpgSettingsScreen>
                                   : 'EPG last updated: ${DateFormat('yyyy-MM-dd HH:mm').format(epg.lastUpdated!)}',
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
+                            // TEMPORARY — EPG load-time measurement, see
+                            // EpgService.startupTiming.
+                            for (final line in [
+                              epg.startupTiming,
+                              epg.refreshTiming
+                            ])
+                              if (line != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(line,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall),
+                                ),
                             const SizedBox(height: 12),
                             OutlinedButton.icon(
                               icon: epg.isLoading

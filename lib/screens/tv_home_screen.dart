@@ -5573,6 +5573,9 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
         _windowEnd.difference(_windowStart).inMinutes * _pixelsPerMinute;
     _gridHScroll.addListener(_mirrorRuler);
     _gridVScroll.addListener(_mirrorLabels);
+    // Guide rows load from the EPG database on demand — see
+    // EpgService.getPrograms. Repaints only this guide when they arrive.
+    widget.epg.guideRowsLoaded.addListener(_onGuideRowsLoaded);
     _startNowTimer();
     // Opens scrolled to "now", not the window's start — matching what the
     // user actually wants to see first. jumpTo, not animateTo: an
@@ -5642,6 +5645,10 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
     if (_labelVScroll.hasClients) _labelVScroll.jumpTo(_gridVScroll.offset);
   }
 
+  void _onGuideRowsLoaded() {
+    if (mounted) setState(() {});
+  }
+
   void _startNowTimer() {
     _nowTimer?.cancel();
     _nowTimer = Timer.periodic(_nowTickInterval, (_) {
@@ -5691,6 +5698,7 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   void dispose() {
     appRouteObserver.unsubscribe(this);
     _nowTimer?.cancel();
+    widget.epg.guideRowsLoaded.removeListener(_onGuideRowsLoaded);
     _gridHScroll.removeListener(_mirrorRuler);
     _gridVScroll.removeListener(_mirrorLabels);
     _gridHScroll.dispose();
