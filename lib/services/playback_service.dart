@@ -221,6 +221,19 @@ class PlaybackService extends ChangeNotifier {
   /// `DesktopPlayerScreen`'s doc comment) but should still feed History.
   Future<void> recordWatched(Channel channel) => _recordRecentlyPlayed(channel);
 
+  /// Settings > General history clearing, for the active viewer. [live]
+  /// true drops the live channels (the "History" popup); false drops the
+  /// movies/episodes (Continue Watching) plus their saved positions.
+  Future<void> clearRecentlyPlayed({required bool live}) async {
+    _recentlyPlayed.removeWhere((c) => Channel.isLiveId(c.rawId) == live);
+    await _storage.writeCacheFile(
+      _recentlyPlayedCacheKeyForViewer,
+      jsonEncode(_recentlyPlayed.map((c) => c.toJson()).toList()),
+    );
+    if (!live) await _storage.clearPlaybackPositions();
+    notifyListeners();
+  }
+
   Future<void> _recordRecentlyPlayed(Channel channel) async {
     _recentlyPlayed.removeWhere((c) => c.id == channel.id);
     _recentlyPlayed.insert(0, channel);

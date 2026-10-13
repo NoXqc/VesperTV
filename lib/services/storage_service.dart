@@ -457,6 +457,28 @@ class StorageService {
     return fraction != null && fraction >= 0.95;
   }
 
+  /// The active viewer's saved positions/durations — the movie/episode
+  /// progress bars and Continue Watching resume points (Settings > General
+  /// "Clear Movies & TV Shows history"). Other viewers' keys are untouched:
+  /// Main's are the bare keys (no viewer suffix), everyone else's end with
+  /// their own suffix (see [_vk]).
+  Future<void> clearPlaybackPositions() async {
+    final ownSuffix = '${AppConstants.viewerKeySuffix}$_activeViewerId';
+    final isMain = _activeViewerId == AppConstants.mainViewerId;
+    final keys = _prefs
+        .getKeys()
+        .where((k) =>
+            (k.startsWith(AppConstants.keyLastPositionPrefix) ||
+                k.startsWith(AppConstants.keyLastDurationPrefix)) &&
+            (isMain
+                ? !k.contains(AppConstants.viewerKeySuffix)
+                : k.endsWith(ownSuffix)))
+        .toList();
+    for (final key in keys) {
+      await _prefs.remove(key);
+    }
+  }
+
   /// Clears EPG cache, the entire on-disk playlist/catalog cache (including
   /// the per-category files — there's one per VOD/series category, named
   /// dynamically by category id, so wiping the whole directory is simpler

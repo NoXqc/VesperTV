@@ -135,6 +135,12 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   FocusScopeNode _col1Scope = FocusScopeNode(debugLabel: 'tv-col1');
   FocusScopeNode _col2Scope = FocusScopeNode(debugLabel: 'tv-col2');
 
+  /// The "TV" row in the tabs rail. Focused once at launch (see initState)
+  /// so the D-pad cursor starts somewhere visible — before, nothing was
+  /// focused until the first key press, which then landed at an arbitrary
+  /// spot (top, bottom or inside the channel list).
+  final FocusNode _tvTabFocusNode = FocusNode(debugLabel: 'tv-tab-TV');
+
   /// The groups column's own top row — whichever of Favourites/"All"/
   /// "What's New" renders first for the currently active tab (only one of
   /// those three ever mounts at once, so one shared node is safe).
@@ -1132,6 +1138,22 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   }
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // Only when this screen is on top (the startup auto-resume or the
+      // welcome prompt may already have pushed a route over it) and nothing
+      // real holds focus yet — never steal focus from another screen.
+      if (ModalRoute.of(context)?.isCurrent == false) return;
+      final primary = FocusManager.instance.primaryFocus;
+      if (primary == null || primary is FocusScopeNode) {
+        _tvTabFocusNode.requestFocus();
+      }
+    });
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final route = ModalRoute.of(context);
@@ -1141,6 +1163,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   @override
   void dispose() {
     appRouteObserver.unsubscribe(this);
+    _tvTabFocusNode.dispose();
     _leftEdgeArmTimer?.cancel();
     _descriptionDwellTimer?.cancel();
     _leftEdgeHintOverlay?.remove();
@@ -2185,6 +2208,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
             label: tab,
             selected: _tab == tab,
             collapsed: collapsed,
+            focusNode: tab == 'TV' ? _tvTabFocusNode : null,
             onTap: () => _onTabChanged(tab),
           ),
         const Divider(height: 16, color: Colors.white24),

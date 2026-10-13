@@ -18,8 +18,11 @@ Read before changing guide/Multiview/profiles/palettes/backup-server logic.
   Select = move audio (volume only), hold Select = Full screen / Reload / Change channel / Remove.
   Keeps the screen awake. Channel picker: group list + search + the current programme under each
   channel; Right from a group lands on the first channel (not the search field — Fire OS keyboard).
-- **Settings > General** (Android only, `general_settings_screen.dart`): "Resume last channel at
-  startup" (default on, `vesper_resume_last_channel_at_startup`) and "Show the Multiview tip". Home
+- **Settings > General** (`general_settings_screen.dart`): Android-only "Resume last channel at
+  startup" (default on, `vesper_resume_last_channel_at_startup`) and "Show the Multiview tip"; on
+  every platform a **History** section: "Clear search & channel history" (recent searches + live
+  channels in History) and "Clear Movies & TV Shows history" (VOD/episode entries in the recently-
+  played file + the active viewer's saved positions/durations). Active viewer only. Home
   for future small switches (candidates: start-on tab, picture fit, audio language, 12/24 h, confirm
   on exit). Channel up/down in the player is deliberately not done yet — owner wants a better
   scheme adapted to this app first.

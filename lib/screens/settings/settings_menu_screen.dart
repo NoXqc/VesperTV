@@ -63,14 +63,15 @@ class SettingsMenuScreen extends StatelessWidget {
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(
                         builder: (_) => const ProfilesScreen())),
                   ),
-                  if (!Platform.isWindows)
-                    TvMenuTile(
-                      icon: Icons.tune,
-                      title: 'General',
-                      subtitle: 'Startup and Multiview options',
-                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => const GeneralSettingsScreen())),
-                    ),
+                  TvMenuTile(
+                    icon: Icons.tune,
+                    title: 'General',
+                    subtitle: Platform.isWindows
+                        ? 'Clear search and watch history'
+                        : 'Startup, Multiview and history options',
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => const GeneralSettingsScreen())),
+                  ),
                   TvMenuTile(
                     icon: Icons.palette_outlined,
                     title: 'Theme',
