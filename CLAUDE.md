@@ -208,7 +208,7 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   Still to check: SQLite EPG on Windows, Fire Stick "Update EPG Now" crash.
 - **Test builds** for the owner's Fire Stick go to a GitHub **pre-release** (skipped by the updater
   and `/latest`), sideloaded via Downloader with the direct asset URL; delete it once shipped.
-- **Roadmap (owner, 2026-10-12):** ~~fix Multiview~~ (done 2026-10-13). **Next:** a **Sports tab**
+- **Roadmap (owner, 2026-10-12):** ~~fix Multiview~~ (done 2026-10-13). **Next:** a **Sports tab** (design draft: `dev-notes/sports-tab.md`)
   with live scores, BYOK supporting **two** sports APIs (user picks/pastes a key in Settings; hard
   part is matching games to channels).
 - **Ideas discussed, not started:** OpenSubtitles integration (BYO key); Windows player-controls
