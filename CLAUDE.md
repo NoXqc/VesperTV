@@ -43,7 +43,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
 4. `flutter analyze` must report the baseline **22** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `3.53.0` unless noted
+5. Check the current state of releases: `gh release list` (latest should be `3.53.3` unless noted
    in §11).
 
 ## 3. Layout (what matters)
@@ -95,7 +95,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+190**) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+195**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
@@ -180,12 +180,10 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 ## 12. Features (details in `dev-notes/features.md`)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys). Read the file before changing any of these.
 
-## 13. Status & open items (as of 2026-10-12)
+## 13. Status & open items (as of 2026-10-13)
 - **Shipped:** rebrand to VesperTV, logo, gold site with carousel + Windows section, releases
-  3.53.0/3.53.1 (bridge + Fire TV icon fix) and **3.53.2** (`+188`, latest on GitHub).
-- **On `main`, not released (`+190`):** SQLite EPG store (see §11), visible password in Add Playlist.
-  Next: verify on Windows (Phase 3), Fire Stick "Update EPG Now" crash check, then remove the
-  temporary timing lines in EPG Settings before a release.
+  3.53.0-3.53.2 and **3.53.3** (`+195`, latest on GitHub: SQLite EPG store, visible password in
+  Add Playlist). Still to check: SQLite EPG on Windows, Fire Stick "Update EPG Now" crash.
 - **Planned, waiting on the owner's go:** a clean **1.0.0** release — delete the old releases
   (`gh release delete <tag> --cleanup-tag`), set `pubspec` to `1.0.0+N` with **N > 190**, keep the
   rename TL;DR in the notes. Do this only after people have had time to update to 3.53.0 (anyone

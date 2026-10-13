@@ -213,20 +213,6 @@ class _EpgSettingsScreenState extends State<EpgSettingsScreen>
                                   : 'EPG last updated: ${DateFormat('yyyy-MM-dd HH:mm').format(epg.lastUpdated!)}',
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
-                            // TEMPORARY — EPG load-time measurement, see
-                            // EpgService.startupTiming.
-                            for (final line in [
-                              epg.startupTiming,
-                              epg.refreshTiming
-                            ])
-                              if (line != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Text(line,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall),
-                                ),
                             const SizedBox(height: 12),
                             OutlinedButton.icon(
                               icon: epg.isLoading

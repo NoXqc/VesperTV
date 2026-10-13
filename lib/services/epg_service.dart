@@ -118,19 +118,6 @@ class EpgService extends ChangeNotifier {
   bool isLoading = false;
   String? error;
 
-  /// TEMPORARY — EPG load-time measurement, shown in EPG Settings so the
-  /// owner can photograph it on a real box. Baseline (JSON cache, Formuler):
-  /// ready 51.3 s after launch, load began at 26.5 s and took 24.8 s;
-  /// refresh = parse 26.9 s + save 20.3 s. Remove once the database version
-  /// is confirmed on the Formuler and Fire Stick.
-  /// [appLaunchedAt] is set first thing in `main()`.
-  static DateTime? appLaunchedAt;
-  String? startupTiming;
-  String? refreshTiming;
-
-  static String _secs(Duration d) =>
-      '${(d.inMilliseconds / 1000).toStringAsFixed(1)} s';
-
   Timer? _refreshTimer;
 
   /// Evaluated fresh on every auto-refresh tick (not a frozen snapshot
@@ -147,18 +134,14 @@ class EpgService extends ChangeNotifier {
   Future<void> init() => _initFuture ??= _init();
 
   Future<void> _init() async {
-    final initStart = DateTime.now();
-    final launch = appLaunchedAt ?? initStart;
     lastUpdated = _storage.getEpgLastUpdated();
     // Leftover from the pre-database JSON cache — tens of MB on a big feed.
     unawaited(_storage
         .deleteCacheFile(AppConstants.cacheFileEpgPrograms)
         .catchError((_) {}));
-    var programCount = 0;
     try {
       await _db.open();
       await _reloadCaches();
-      programCount = await _db.count();
     } catch (e) {
       debugPrint('EpgService.init: $e');
     }
@@ -166,11 +149,6 @@ class EpgService extends ChangeNotifier {
       await _reloadCaches();
       notifyListeners();
     });
-    final ready = DateTime.now();
-    startupTiming = 'Startup: EPG ready ${_secs(ready.difference(launch))} '
-        'after launch (load began at ${_secs(initStart.difference(launch))}, '
-        'took ${_secs(ready.difference(initStart))}) — '
-        '${_withData.length} channels, $programCount programmes stored';
     notifyListeners();
   }
 
@@ -246,16 +224,11 @@ class EpgService extends ChangeNotifier {
     notifyListeners();
     try {
       await init();
-      final t0 = DateTime.now();
-      var stored = 0;
       var anySucceeded = false;
       for (final source in sources) {
         final count = await _refreshOne(source.url,
             knownChannelIds: source.knownChannelIds);
-        if (count != null) {
-          stored += count;
-          anySucceeded = true;
-        }
+        if (count != null) anySucceeded = true;
       }
       if (anySucceeded) {
         await _db.deleteEndedBefore(DateTime.now()
@@ -265,9 +238,6 @@ class EpgService extends ChangeNotifier {
         await _storage.setEpgLastUpdated(lastUpdated!);
       }
       await _reloadCaches();
-      refreshTiming = 'Last update: download + parse + save '
-          '${_secs(DateTime.now().difference(t0))} — $stored programmes '
-          'stored${error != null ? ' (error: $error)' : ''}';
     } finally {
       isLoading = false;
       notifyListeners();

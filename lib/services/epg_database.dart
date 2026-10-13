@@ -133,12 +133,6 @@ class EpgDatabase {
     return result;
   }
 
-  Future<int> count() async {
-    final db = await _database;
-    final rows = await db.rawQuery('SELECT COUNT(*) AS n FROM programme');
-    return rows.first['n'] as int;
-  }
-
   /// Distinct channel ids that still have any programme ending after
   /// [minStopMs] — the "does this channel have EPG at all" answer for
   /// callers that need it for every channel at once (auto-pair).

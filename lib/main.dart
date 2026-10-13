@@ -33,7 +33,6 @@ import 'widgets/live_resume_hint.dart';
 import 'widgets/splash_stars.dart';
 
 Future<void> main() async {
-  EpgService.appLaunchedAt = DateTime.now();
   WidgetsFlutterBinding.ensureInitialized();
   // Plain `sqflite` has no Windows/Linux implementation at all — confirmed
   // via .flutter-plugins-dependencies: sqflite_android/sqflite_darwin exist
