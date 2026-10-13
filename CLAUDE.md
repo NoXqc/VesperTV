@@ -43,7 +43,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
 4. `flutter analyze` must report the baseline **22** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `3.53.3` unless noted
+5. Check the current state of releases: `gh release list` (latest should be `1.0.0` unless noted
    in §11).
 
 ## 3. Layout (what matters)
@@ -95,7 +95,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+203**) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+204**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
@@ -195,17 +195,15 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-13)
-- **Shipped:** rebrand to VesperTV, logo, gold site with carousel + Windows section, releases
-  3.53.0-3.53.2 and **3.53.3** (`+195`, latest on GitHub: SQLite EPG store, visible password in
-  Add Playlist). Still to check: SQLite EPG on Windows, Fire Stick "Update EPG Now" crash.
-- **Multiview fixed (on `main`, not released; test builds go to the GitHub pre-release
-  `mv-test-196`, asset replaced per build):** volume-only audio swap, buffers, auto-recovery
-  (errors / ENDED / frozen video / 4 s stuck), SurfaceTexture fix for the green area, wakelock,
-  picker Right → first channel, connection-tip popup, 2/4-screen layout. See §9-§10.
-- **Planned, waiting on the owner's go:** a clean **1.0.0** release — delete the old releases
-  (`gh release delete <tag> --cleanup-tag`), set `pubspec` to `1.0.0+N` with **N > 190**, keep the
-  rename TL;DR in the notes. Do this only after people have had time to update to 3.53.0 (anyone
-  still on ≤3.52.3 can't see 1.0.0 and must reinstall from vespertv.app), and **ask before deleting**.
+- **Shipped: 1.0.0 (`+204`, 2026-10-13, latest on GitHub)** — version numbers restarted. Includes
+  the SQLite EPG store, visible playlist password and the Multiview fixes (volume-only audio swap,
+  auto-recovery, SurfaceTexture green fix, wakelock, connection-tip popup, 2/4-screen layout; see
+  §9-§10). Releases/tags older than 3.52 were deleted; their history is in `previousreleases.md`.
+  Tags 3.52.0-3.53.3 and the 3.53.3 release remain. Apps on ≤3.52.3 can't see 1.0.0 (old updater
+  wants a higher number) — they reinstall from vespertv.app / Downloader `1760256`.
+  Still to check: SQLite EPG on Windows, Fire Stick "Update EPG Now" crash.
+- **Test builds** for the owner's Fire Stick go to a GitHub **pre-release** (skipped by the updater
+  and `/latest`), sideloaded via Downloader with the direct asset URL; delete it once shipped.
 - **Roadmap (owner, 2026-10-12):** ~~fix Multiview~~ (done 2026-10-13). **Next:** a **Sports tab**
   with live scores, BYOK supporting **two** sports APIs (user picks/pastes a key in Settings; hard
   part is matching games to channels).
