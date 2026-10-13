@@ -189,6 +189,14 @@ class StorageService {
   Future<void> setMultiviewHideTips(bool value) =>
       _prefs.setBool(AppConstants.keyMultiviewHideTips, value);
 
+  /// Settings > General: open the last live channel fullscreen right after
+  /// the splash (Android; Windows always does). Off = the "Hold > to resume"
+  /// pill only.
+  bool getResumeLastChannelAtStartup() =>
+      _prefs.getBool(AppConstants.keyResumeLastChannelAtStartup) ?? true;
+  Future<void> setResumeLastChannelAtStartup(bool value) =>
+      _prefs.setBool(AppConstants.keyResumeLastChannelAtStartup, value);
+
   /// Last Multiview layout: true = 4 screens (2x2), false = 2 stacked.
   bool getMultiviewQuad() =>
       _prefs.getBool(AppConstants.keyMultiviewQuad) ?? false;

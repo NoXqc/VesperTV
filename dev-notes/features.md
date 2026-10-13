@@ -18,6 +18,11 @@ Read before changing guide/Multiview/profiles/palettes/backup-server logic.
   Select = move audio (volume only), hold Select = Full screen / Reload / Change channel / Remove.
   Keeps the screen awake. Channel picker: group list + search + the current programme under each
   channel; Right from a group lands on the first channel (not the search field — Fire OS keyboard).
+- **Settings > General** (Android only, `general_settings_screen.dart`): "Resume last channel at
+  startup" (default on, `vesper_resume_last_channel_at_startup`) and "Show the Multiview tip". Home
+  for future small switches (candidates: start-on tab, picture fit, audio language, 12/24 h, confirm
+  on exit). Channel up/down in the player is deliberately not done yet — owner wants a better
+  scheme adapted to this app first.
 - **Welcome prompt:** brand-new users (no playlists) get "Hey beautiful Human, Welcome to
   VesperTV" with Add Playlist / Skip for now.
 - **Hide individual live channels** (per playlist, `hiddenChannels`), unhide in

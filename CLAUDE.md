@@ -95,7 +95,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+204**) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+205**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
@@ -127,8 +127,10 @@ rejected (HDR + Android-TV hardware-decode risk).
 ## 10. Hard-won rules (don't re-learn these)
 - **Cold-start splash is deliberately slow (~20-25s with a big second playlist).** Entering the UI
   early lets remote input crash weak boxes. Do not cap/shorten it (`_bootstrap` in main.dart). The
-  Android last-channel auto-resume is also deliberately NOT done at cold launch (only a pending
-  "Hold > to resume" pill); on **Windows** it does auto-resume.
+  Android last-channel auto-resume after the splash was once removed (decoder start + the old ~25 s
+  EPG decode made cold start sluggish); since the SQLite EPG it's back, **on by default** behind
+  Settings > General > "Resume last channel at startup" (off = the "Hold > to resume" pill).
+  **Windows** always auto-resumes.
 - **D-pad focus:** default directional traversal is unreliable across differently shaped columns/
   rows — use explicit dispatch (`_moveColumnFocus`, the Timeline guide's own Up/Down/Left/Right,
   one `FocusScopeNode` per zone + `CallbackShortcuts`). No per-row `FocusScope`. Any programmatic

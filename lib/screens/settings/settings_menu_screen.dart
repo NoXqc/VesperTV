@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -7,6 +9,7 @@ import '../../widgets/tv_menu_tile.dart';
 import 'add_playlist_screen.dart';
 import 'check_updates_screen.dart';
 import 'epg_settings_screen.dart';
+import 'general_settings_screen.dart';
 import 'playlist_manager_screen.dart';
 import 'profiles_screen.dart';
 import 'theme_screen.dart';
@@ -60,6 +63,14 @@ class SettingsMenuScreen extends StatelessWidget {
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(
                         builder: (_) => const ProfilesScreen())),
                   ),
+                  if (!Platform.isWindows)
+                    TvMenuTile(
+                      icon: Icons.tune,
+                      title: 'General',
+                      subtitle: 'Startup and Multiview options',
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => const GeneralSettingsScreen())),
+                    ),
                   TvMenuTile(
                     icon: Icons.palette_outlined,
                     title: 'Theme',

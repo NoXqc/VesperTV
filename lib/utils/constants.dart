@@ -184,6 +184,8 @@ class AppConstants {
   static const String keyShowClock = 'nox_show_clock';
   static const String keyMultiviewHideTips = 'vesper_multiview_hide_tips';
   static const String keyMultiviewQuad = 'vesper_multiview_quad';
+  static const String keyResumeLastChannelAtStartup =
+      'vesper_resume_last_channel_at_startup';
   static const String keyPaletteId = 'nox_palette_id';
 
   /// UI layout: 'auto' picks phone vs TV by screen size, 'phone'/'tv' force

@@ -12,6 +12,7 @@ import 'screens/catalog_sync_prompt_screen.dart';
 import 'screens/catalog_sync_screen.dart';
 import 'screens/desktop_player_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/player_screen.dart';
 import 'screens/settings/add_playlist_screen.dart';
 import 'screens/tv_home_screen.dart';
 import 'screens/welcome_add_playlist_screen.dart';
@@ -458,16 +459,14 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     }
   }
 
-  /// Used to start playing straight into whatever live channel was last
-  /// playing — the same "turn it on and it's on the last channel" behavior
-  /// MyTvOnline has — but that meant opening a real decoder and starting a
-  /// network stream concurrently with the catalog/EPG load already running
-  /// behind the splash, which was itself enough extra work to make the
-  /// first 10-20s of a cold start feel sluggish. Reported directly, and
-  /// scaled back to just finding the channel and handing it to
-  /// [PlaybackService.setPendingResumeChannel] instead — `LiveResumeHint`
-  /// surfaces it as a pill the user can act on (hold Right to actually
-  /// start it), nothing opens unless they do.
+  /// Starts playing straight into whatever live channel was last playing —
+  /// the same "turn it on and it's on the last channel" behavior MyTvOnline
+  /// has. On Android this was once scaled back to a pill only
+  /// ([PlaybackService.setPendingResumeChannel] + `LiveResumeHint`, hold
+  /// Right to start) because opening a decoder concurrently with the
+  /// catalog/EPG load made the first 10-20 s of a cold start sluggish; with
+  /// the EPG now in SQLite it's back, behind Settings > General > "Resume
+  /// last channel at startup" (on by default). Off = the pill again.
   ///
   /// Windows only, restored to the original direct-open behavior —
   /// requested directly: a PC doesn't pay the same cold-launch cost a weak
@@ -510,6 +509,16 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         if (Platform.isWindows) {
           _navigatorKey.currentState?.push(MaterialPageRoute(
               builder: (_) => DesktopPlayerScreen(channel: channel)));
+        } else if (_storage.getResumeLastChannelAtStartup()) {
+          // Back on by default since 1.0.x: the heavy part of the old
+          // cold-start load (decoding the whole EPG, ~25 s) is gone — the
+          // guide now opens from SQLite in ~0.3 s during the splash, and the
+          // first EPG refresh waits >= 30 s. Settings > General turns it off
+          // (then only the pill below). Same push the pill's own resume
+          // does; PlayerScreen.initState starts playback.
+          if (_playbackService.isPlayingSomething) return;
+          _navigatorKey.currentState?.push(MaterialPageRoute(
+              builder: (_) => PlayerScreen(channel: channel)));
         } else {
           _playbackService.setPendingResumeChannel(channel);
         }
