@@ -62,30 +62,21 @@ public final class TextureVideoPlayer extends VideoPlayer implements SurfaceProd
         () -> {
           ExoPlayer.Builder builder = new ExoPlayer.Builder(context);
           DefaultLoadControl.Builder loadControlBuilder = new DefaultLoadControl.Builder();
-          // A live IPTV relay stream occasionally throws a fatal renderer
-          // error (an audio AudioSink$UnexpectedDiscontinuityException, or
-          // a video MediaCodecRenderer IndexOutOfBoundsException from
-          // garbled buffer offsets — see ExoPlayerEventListener's own doc
-          // comment) that ExoPlayerEventListener.onPlayerError recovers
-          // from by re-preparing this same player instance, but confirmed
-          // on real hardware that recovering faster doesn't help much —
-          // the stream still visibly freezes for 10-15s because the
-          // underlying corruption/discontinuity already happened well
-          // before the exception is even thrown. Raising the min/max
-          // buffer far past media3's default (50s) gives the player much
-          // more cushion against whatever network jitter under Multiview's
-          // concurrent-connection load is causing that corruption in the
-          // first place — this is a prevention attempt, not yet confirmed
-          // to help; if it doesn't reduce how often this happens, revert
-          // it rather than keep carrying the extra memory/latency cost.
-          // The playback-start thresholds stay cut down from the default
-          // (5000ms after a rebuffer) so that when a freeze does happen,
-          // at least the resume itself isn't adding its own extra delay.
+          // Only Multiview uses texture players (the main player is a
+          // platform view), so this is Multiview's buffer policy.
+          // Xtream live is progressive .ts: it arrives at real-time speed,
+          // so the cushion never grows beyond what's held before playback
+          // (re)starts. The old 500 ms start thresholds meant any network
+          // hiccup over ~0.5 s rebuffered, then resumed after another
+          // 0.5 s — repeated micro-stutter. ~2.5 s to start / 4 s after a
+          // rebuffer is in line with what other IPTV players hold. The old
+          // 90-120 s min/max did nothing for progressive live (it can never
+          // fill ahead of real time) — back to modest values.
           loadControlBuilder.setBufferDurationsMs(
-              /* minBufferMs= */ 90_000,
-              /* maxBufferMs= */ 120_000,
-              /* bufferForPlaybackMs= */ 500,
-              /* bufferForPlaybackAfterRebufferMs= */ 500);
+              /* minBufferMs= */ 15_000,
+              /* maxBufferMs= */ 30_000,
+              /* bufferForPlaybackMs= */ 2_500,
+              /* bufferForPlaybackAfterRebufferMs= */ 4_000);
           if (options.backBufferDurationMs != null) {
             if (options.backBufferDurationMs < 0) {
               throw new IllegalArgumentException("backBufferDurationMs must be at least 0");
@@ -132,6 +123,9 @@ public final class TextureVideoPlayer extends VideoPlayer implements SurfaceProd
           // using the hardware decoder).
           renderersFactory.setExtensionRendererMode(
               DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON);
+          // A frozen live tile (playing, clock not advancing) is failed after 4 s instead of
+          // media3's default 10 s, so ExoPlayerEventListener's in-place recovery kicks in sooner.
+          builder.setStuckPlayingDetectionTimeoutMs(4_000);
           builder
               .setTrackSelector(trackSelector)
               .setMediaSourceFactory(asset.getMediaSourceFactory(context))

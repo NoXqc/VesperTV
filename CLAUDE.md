@@ -54,8 +54,8 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   comments. Read them.
 - `lib/screens/player_screen.dart` + `lib/widgets/player_controls.dart` — Android/TV fullscreen
   player (primary row, chevron-revealed secondary row, quality/FPS/audio-channel badges).
-- `lib/screens/multiview_screen.dart` — 2-stream Multiview (sidebar warnings, channel picker with
-  group+search+EPG-now subtitle). Windows has its own `desktop_multiview_screen.dart`.
+- `lib/screens/multiview_screen.dart` — Multiview, 2 stacked or 4 (2x2) screens (remembered),
+  connection-tip popup with "Don't show again", channel picker with group+search+EPG-now subtitle. Windows has its own `desktop_multiview_screen.dart`.
 - `lib/screens/desktop_player_screen.dart`, `lib/services/desktop_mini_player.dart`,
   `lib/widgets/desktop_live_resume_hint.dart` — the **entirely separate Windows playback stack**
   (`media_kit`). Android uses `video_player_hdr` + `PlaybackService`/`PlayerScreen`. Changes to one do
@@ -95,7 +95,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+195**) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+203**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
@@ -110,11 +110,18 @@ Brand = black + gold, gold "V" + star logo. Regenerate icons with `python assets
 ## 9. Vendored ExoPlayer plugin
 `third_party/video_player_android` is a patched copy of `video_player_android` **2.12.2** (matches
 what `video_player_hdr ^1.2.0` resolves to), wired in through `dependency_overrides`. Patch adds
-`org.jellyfin.media3:media3-ffmpeg-decoder` and `EXTENSION_RENDERER_MODE_PREFER` in
-`PlatformViewVideoPlayer.java`, fixing silent **AC3/E-AC3 5.1** audio on boxes without a licensed
-Dolby decoder. **If `video_player_hdr` or its constraint is ever bumped**, re-sync the vendored copy
-to the new version and re-apply both patches (the `ExoPlayer.Builder`/`DefaultRenderersFactory`
-change and the gradle dependency line). Migrating to `media_kit` on Android was researched and
+`org.jellyfin.media3:media3-ffmpeg-decoder` with `EXTENSION_RENDERER_MODE_ON` (was PREFER until
+`dbc88fc` — PREFER software-decoded plain AAC) plus a context-less `AudioSink` (so `setVolume`
+works, no HDMI passthrough) in `PlatformViewVideoPlayer.java` **and** `TextureVideoPlayer.java`,
+fixing silent **AC3/E-AC3 5.1** audio on boxes without a licensed Dolby decoder. Also patched:
+Multiview-only buffer sizes + 4 s stuck-playing detection (`TextureVideoPlayer`), in-place
+error/ENDED/frozen-video recovery (`ExoPlayerEventListener`, delayed + frozen-video watchdog only for
+texture players), and **`VideoPlayerPlugin.createForTextureView` forces the SurfaceTexture-backed
+producer** (`FlutterRenderer.debugForceSurfaceProducerGlTextures`) — the ImageReader producer
+ignores the decoder's crop rect, which showed 720p Multiview tiles with a green area on a Fire Stick
+(MTK). Only safe while Impeller stays off (Skia/GL). **If `video_player_hdr` or its constraint
+is ever bumped**, re-sync the vendored copy to the new version and re-apply all of these patches
+plus the gradle dependency line. Migrating to `media_kit` on Android was researched and
 rejected (HDR + Android-TV hardware-decode risk).
 
 ## 10. Hard-won rules (don't re-learn these)
@@ -157,10 +164,17 @@ rejected (HDR + Android-TV hardware-decode risk).
   in TvHomeScreen).
 - The "live island" pill / mini player share **one controller** across preview/fullscreen/pill; see
   the comments before touching `PlaybackService`.
-- **Multiview audio swap = recreate the controller (`_assign`), not toggle in place.** Toggling audio
-  tracks in place (`_setAudioEnabled`) was tried **twice** and was worse both times (stalls; audio
-  would not activate). Keep the reload and the stall watchdogs. Multiview freezing is mostly the
-  IPTV provider's connection limit, not the app (warnings are shown in the left sidebar).
+- **Multiview audio swap = `setVolume` only (confirmed on Formuler + Fire Stick).** Never toggle
+  audio *tracks* in place (`setAudioTrackTypeDisabled`) — tried twice, worse both times (frozen
+  frame + looping audio, stalls). The "recreate both controllers on every swap" workaround
+  reconnected two streams per Select press and fought the provider's connection limit; it's gone.
+- **Multiview needs one provider connection per screen — that was the real cause of the old
+  "freezes every ~40-60 s".** Most accounts behind the owner's Tuliprox really allow **1**
+  connection (provider `user_info`), whatever Tuliprox's `max_connections` says. Two tiles on one
+  such account kick each other; Tuliprox reconnects and splices the new upstream into the same
+  socket (TS sync lost, timestamps jump back 15-26 s) → ExoPlayer audio discontinuity → freeze.
+  No player can fix that; don't chase it again. One tile per account, or a 2+-connection provider,
+  ran clean 25+ min. The popup on entering Multiview explains this to users.
 - **"Open in Multiview" from the player must `await _playback.stop()` before pushing**, otherwise
   the fullscreen stream and its audio keep playing underneath.
 - **Windows** is a separate world: `window_manager` makes the app **always fullscreen** at launch
@@ -184,12 +198,18 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 - **Shipped:** rebrand to VesperTV, logo, gold site with carousel + Windows section, releases
   3.53.0-3.53.2 and **3.53.3** (`+195`, latest on GitHub: SQLite EPG store, visible password in
   Add Playlist). Still to check: SQLite EPG on Windows, Fire Stick "Update EPG Now" crash.
+- **Multiview fixed (on `main`, not released; test builds go to the GitHub pre-release
+  `mv-test-196`, asset replaced per build):** volume-only audio swap, buffers, auto-recovery
+  (errors / ENDED / frozen video / 4 s stuck), SurfaceTexture fix for the green area, wakelock,
+  picker Right → first channel, connection-tip popup, 2/4-screen layout. See §9-§10.
 - **Planned, waiting on the owner's go:** a clean **1.0.0** release — delete the old releases
   (`gh release delete <tag> --cleanup-tag`), set `pubspec` to `1.0.0+N` with **N > 190**, keep the
   rename TL;DR in the notes. Do this only after people have had time to update to 3.53.0 (anyone
   still on ≤3.52.3 can't see 1.0.0 and must reinstall from vespertv.app), and **ask before deleting**.
-- **Ideas discussed, not started:** Sports tab with live scores (needs a free API key, BYO; hard
-  part is matching games to channels); OpenSubtitles integration (BYO key); Windows player-controls
+- **Roadmap (owner, 2026-10-12):** ~~fix Multiview~~ (done 2026-10-13). **Next:** a **Sports tab**
+  with live scores, BYOK supporting **two** sports APIs (user picks/pastes a key in Settings; hard
+  part is matching games to channels).
+- **Ideas discussed, not started:** OpenSubtitles integration (BYO key); Windows player-controls
   secondary-row parity; widen `epgPastRetention` for catch-up later (owner wants it, after basics/
   stability); (done) EPG speed rework; (done) rename of `nox_iptv.exe`→`VesperTV.exe`
   (CMake `BINARY_NAME`; user data location is unaffected).

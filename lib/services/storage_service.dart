@@ -183,6 +183,18 @@ class StorageService {
   Future<void> setShowClock(bool value) =>
       _prefs.setBool(AppConstants.keyShowClock, value);
 
+  /// "Don't show this again" on the Multiview connections tip.
+  bool getMultiviewHideTips() =>
+      _prefs.getBool(AppConstants.keyMultiviewHideTips) ?? false;
+  Future<void> setMultiviewHideTips(bool value) =>
+      _prefs.setBool(AppConstants.keyMultiviewHideTips, value);
+
+  /// Last Multiview layout: true = 4 screens (2x2), false = 2 stacked.
+  bool getMultiviewQuad() =>
+      _prefs.getBool(AppConstants.keyMultiviewQuad) ?? false;
+  Future<void> setMultiviewQuad(bool value) =>
+      _prefs.setBool(AppConstants.keyMultiviewQuad, value);
+
   /// Falls back to the first entry (Minimalist) when unset or when the
   /// stored id doesn't match a known palette — no migration attempted from
   /// the old single-seed-color storage, a fresh sensible default is simpler

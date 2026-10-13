@@ -3,13 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:video_player_android/video_player_android.dart';
 import 'package:video_player_hdr/video_player_hdr.dart';
-import 'package:video_player_platform_interface/video_player_platform_interface.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../models/channel.dart';
 import '../services/epg_service.dart';
 import '../services/playlist_manager.dart';
+import '../services/storage_service.dart';
 import '../widgets/hold_to_activate.dart';
 import '../widgets/tv_menu_tile.dart';
 
@@ -61,61 +61,19 @@ class MultiviewScreen extends StatefulWidget {
   State<MultiviewScreen> createState() => _MultiviewScreenState();
 }
 
-/// Not part of the upstream [VideoPlayerPlatform] interface — callers
-/// reach this by casting [VideoPlayerPlatform.instance] to our vendored
-/// [AndroidVideoPlayer]. Stops ExoPlayer from decoding/mixing audio for
-/// this instance at all (unlike [VideoPlayerHdrController.setVolume],
-/// which still pays that cost at zero gain) — background Multiview audio
-/// was overloading this device class's audio mixer once several slots
-/// were open at once (confirmed via a live `dumpsys media.audio_flinger`
-/// capture on a Formuler showing constant AudioTrack churn/teardown).
-///
-/// Only ever called once, from [_assign], right after a controller is
-/// created — never to toggle an already-playing instance's state. That
-/// was tried first (toggling whichever cell became active/inactive) and
-/// reliably destabilized the toggled cell a few seconds later (a frozen
-/// frame with looping audio, or vice versa) on real hardware, even
-/// delayed and debounced. [_setActive] now recreates a cell via [_assign]
-/// instead of toggling it in place whenever its role needs to change,
-/// specifically so this is never called against a controller that's
-/// already stable/playing.
-///
-/// Re-confirmed directly a second time: tried again on the theory that
-/// recent stability gains pointed more at the upstream provider than this
-/// mechanism, but toggling in place made things measurably *worse* (worse
-/// stalling, and audio sometimes not activating on switch at all) — not
-/// provider-related after all. Leave this alone.
-Future<void> _setAudioEnabled(
-    VideoPlayerHdrController controller, bool enabled) async {
-  final platform = VideoPlayerPlatform.instance;
-  if (platform is! AndroidVideoPlayer) return;
-  // video_player_hdr marks `textureId` @visibleForTesting — its own doc
-  // comment says "shouldn't be used by anyone depending on the plugin".
-  // Deliberate here anyway: it's the same int video_player_android calls
-  // playerId (both sides of that call are our own vendored copy), and
-  // there's no other way to address a specific instance from outside the
-  // controller. Re-check this if video_player_hdr's version ever bumps.
-  // ignore: invalid_use_of_visible_for_testing_member
-  await platform.setAudioTrackTypeDisabled(controller.textureId, !enabled);
-}
-
-/// One line of the sidebar's two connection/stability caveats — no
-/// `maxLines`/`overflow` here unlike their old full-width version: the
-/// sidebar column has as much vertical room as it needs, so the text just
-/// wraps naturally instead of needing to fit two lines at a wider width.
-Widget _warningLine(String text) {
-  return Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const Icon(Icons.info_outline, color: Colors.amber, size: 14),
-      const SizedBox(width: 6),
-      Expanded(
-        child: Text(text,
-            style: const TextStyle(color: Colors.white54, fontSize: 11)),
-      ),
-    ],
-  );
-}
+// Audio swap history (don't re-learn): switching the audio *track* off/on
+// in place (`setAudioTrackTypeDisabled`) was tried twice and destabilized
+// the cell both times — re-enabling audio mid-play re-runs track selection,
+// the audio renderer takes over the playback clock (frozen frame + looping
+// audio) and on a progressive live .ts stream it can force a reload. The
+// workaround that replaced it — recreating *both* cells on every swap —
+// cost two disconnects + two reconnects per Select press, colliding with
+// the provider's connection limit. Swapping now only changes *volume*
+// (TiviMate-style): both cells keep their audio track and their connection.
+// The old reasons volume couldn't be used are gone: AC3 passthrough
+// ignoring setVolume was fixed by the context-less AudioSink (24f7bcd), and
+// the audio-mixer overload was seen with 3-4 cells + PREFER mode, both
+// removed since (dbc88fc).
 
 class _MultiviewCell {
   Channel? channel;
@@ -123,16 +81,108 @@ class _MultiviewCell {
   final FocusNode focusNode = FocusNode(debugLabel: 'multiview-cell');
 }
 
-/// The 4-channel grid was removed — every extra concurrent stream raises
-/// how often two cells' independent reconnect cycles collide and trip the
-/// provider-side discontinuity documented on `ExoPlayerEventListener
-/// .onPlayerError`, and 2 cells measurably held up far better in testing
-/// than 3-4. Fixed at 2 now rather than configurable.
+/// 2 stacked screens (default) or a 2x2 grid of 4. The 4-screen grid was
+/// removed once because cells kept freezing; that was traced (2026-10) to
+/// provider accounts with fewer connections than open screens (they kick
+/// each other off) plus plugin bugs since fixed — with enough connections
+/// 2 screens ran clean for 25+ min on a Fire Stick. So it's back as an
+/// option, with the connection rule explained in [_showTips]. All 4 cells
+/// stay allocated; switching to 2 disposes cells 2-3 to free their
+/// connections and decoders rather than just hiding them.
+enum _MultiviewLayout { dual, quad }
+
 class _MultiviewScreenState extends State<MultiviewScreen> {
-  static const _cellCount = 2;
+  static const _cellCount = 4;
   final List<_MultiviewCell> _cells =
       List.generate(_cellCount, (_) => _MultiviewCell());
   int _activeCell = 0;
+  _MultiviewLayout _layout = _MultiviewLayout.dual;
+
+  void _toggleLayout() {
+    final next = _layout == _MultiviewLayout.quad
+        ? _MultiviewLayout.dual
+        : _MultiviewLayout.quad;
+    if (next == _MultiviewLayout.dual) {
+      for (var i = 2; i < _cellCount; i++) {
+        final cell = _cells[i];
+        final old = cell.controller;
+        cell.channel = null;
+        cell.controller = null;
+        unawaited(old?.dispose());
+      }
+      if (_activeCell >= 2) {
+        _activeCell = 0;
+        unawaited(_cells[0].controller?.setVolume(1.0));
+      }
+    }
+    setState(() => _layout = next);
+    unawaited(context
+        .read<StorageService>()
+        .setMultiviewQuad(next == _MultiviewLayout.quad));
+  }
+
+  /// Shown on entering Multiview until the user ticks "Don't show this
+  /// again" — replaced the old always-on sidebar caveats (requested
+  /// directly), which cost the grid width.
+  Future<void> _showTips() async {
+    final storage = context.read<StorageService>();
+    if (storage.getMultiviewHideTips()) return;
+    var dontShow = false;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF1A1A1A),
+          title: const Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.amber),
+              SizedBox(width: 8),
+              Text('Before you start', style: TextStyle(color: Colors.white)),
+            ],
+          ),
+          content: SizedBox(
+            width: 520,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Every screen in Multiview is its own connection to your '
+                  'provider. Your playlist must allow at least as many '
+                  'connections as screens you open (see Max connections in '
+                  'Playlist Manager).\n\n'
+                  'If two screens share an account that allows only one '
+                  'connection, they keep kicking each other off and will '
+                  'freeze or buffer. Tip: use channels from different '
+                  'playlists, one per account.\n\n'
+                  'A screen that freezes restarts on its own. If it '
+                  'doesn\'t, hold Select on it and choose Reload.',
+                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+                const SizedBox(height: 12),
+                CheckboxListTile(
+                  value: dontShow,
+                  onChanged: (v) => setDialogState(() => dontShow = v ?? false),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Don\'t show this again',
+                      style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              autofocus: true,
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (dontShow) await storage.setMultiviewHideTips(true);
+  }
 
   /// The cell index currently promoted to [_MultiviewFullscreenView], if
   /// any — see [_openFullscreen]'s own doc comment for why its grid tile
@@ -143,9 +193,20 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
   @override
   void initState() {
     super.initState();
+    // Keep the screen awake for the whole Multiview session. PlaybackService
+    // only does this for the main player, and "Open in Multiview" stops that
+    // player first (which releases its wakelock) — a Fire Stick fell into
+    // its screensaver mid-test.
+    unawaited(WakelockPlus.enable());
+    if (context.read<StorageService>().getMultiviewQuad()) {
+      _layout = _MultiviewLayout.quad;
+    }
     final initial = widget.initialChannel;
     if (initial != null) unawaited(_assign(0, initial));
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      _cells[0].focusNode.requestFocus();
+      await _showTips();
       if (mounted) _cells[0].focusNode.requestFocus();
     });
   }
@@ -156,6 +217,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
       cell.controller?.dispose();
       cell.focusNode.dispose();
     }
+    unawaited(WakelockPlus.disable());
     super.dispose();
   }
 
@@ -198,29 +260,12 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
         unawaited(newController.dispose());
         return;
       }
-      final isActive = index == _activeCell;
-      await newController.setVolume(isActive ? 1.0 : 0.0);
+      await newController.setVolume(index == _activeCell ? 1.0 : 0.0);
       await newController.play();
       setState(() {
         cell.channel = channel;
         cell.controller = newController;
       });
-      // See this file's own doc comment on `_setAudioEnabled` for why
-      // this is only ever applied once, right here at creation — never to
-      // an already-playing cell. Still delayed (not called immediately
-      // after creation): doing so corrupted the video surface solid green
-      // on real hardware, the same renderer-reset risk the vendored
-      // player's own video-dimension-change workaround already documents
-      // for this exact trackSelector API. 300ms mirrors that workaround's
-      // own delay. The `cell.controller == newController` check guards
-      // against this cell having already been reassigned again by the
-      // time this fires.
-      if (!isActive) {
-        await Future.delayed(const Duration(milliseconds: 300));
-        if (cell.controller == newController) {
-          await _setAudioEnabled(newController, false);
-        }
-      }
     } catch (_) {
       unawaited(newController.dispose());
       if (mounted) {
@@ -251,25 +296,19 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     unawaited(old?.dispose());
   }
 
-  /// Recreates both the newly- and previously-active cells via [_assign]
-  /// rather than toggling either one's audio state in place — see this
-  /// file's own doc comment on `_setAudioEnabled` for why, confirmed
-  /// twice now (an in-place attempt was re-tried directly and made things
-  /// measurably worse: worse stalling, and audio sometimes not activating
-  /// on switch at all). Costs a brief reconnect/rebuffer on both instead
-  /// of an instant mute/unmute, the accepted trade-off for never touching
-  /// an already-stable cell's audio state again. A no-op if [index] is
-  /// already the active cell.
+  /// Moves audio to [index] by volume alone — no reconnect, no track
+  /// change (see the "Audio swap history" note at the top of this file).
+  /// A no-op if [index] is already the active cell.
   Future<void> _setActive(int index) async {
-    final newChannel = _cells[index].channel;
-    if (newChannel == null) return;
+    if (_cells[index].channel == null) return;
     final previousActive = _activeCell;
     if (previousActive == index) return;
     setState(() => _activeCell = index);
-    final previousChannel = _cells[previousActive].channel;
     await Future.wait([
-      _assign(index, newChannel),
-      if (previousChannel != null) _assign(previousActive, previousChannel),
+      if (_cells[previousActive].controller != null)
+        _cells[previousActive].controller!.setVolume(0.0),
+      if (_cells[index].controller != null)
+        _cells[index].controller!.setVolume(1.0),
     ]);
   }
 
@@ -369,10 +408,8 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     final cell = _cells[index];
     final channel = cell.channel;
     if (channel == null) return;
-    // Awaited — if this index wasn't already active, `_setActive` tears
-    // down and recreates it (see that method's own doc comment), so the
-    // controller to actually show fullscreen doesn't exist yet until this
-    // finishes.
+    // Fullscreen carries the audio — a volume swap, the stream itself keeps
+    // playing (see _setActive).
     await _setActive(index);
     final controller = cell.controller;
     if (!mounted || controller == null) return;
@@ -398,159 +435,91 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
       canPop: true,
       child: Scaffold(
         backgroundColor: Colors.black,
-        body: SafeArea(
-          child: Column(
+        body: SafeArea(child: _buildBody()),
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    final quad = _layout == _MultiviewLayout.quad;
+    Widget cell(int i) =>
+        Padding(padding: const EdgeInsets.all(3), child: _buildCell(i));
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
+          child: Row(
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                    const Text('Multiview',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600)),
-                    const Spacer(),
-                    const Icon(Icons.volume_up, color: Colors.amber, size: 16),
-                    const SizedBox(width: 4),
-                    const Text(
-                        '= audio — Select to switch, hold Select for options',
-                        style: TextStyle(color: Colors.white54, fontSize: 12)),
-                  ],
-                ),
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.of(context).pop(),
               ),
-              // The two caveats below used to sit full-width above the
-              // grid, costing the grid real vertical space for two lines
-              // of text — moved into a left sidebar instead (requested
-              // directly), freeing that height back to the cells. Since
-              // each cell's frame is aspect-locked to 16:9 (see
-              // `_MultiviewCellTile`), more available height also grows
-              // the frame's *width* proportionally — the sidebar's ~190px
-              // comes back many times over once the cells are taller, net
-              // bigger even though the row is narrower.
-              Expanded(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: 190,
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Not a theoretical caveat — confirmed
-                            // directly on real hardware: a provider's own
-                            // backend enforcing its connection cap *per
-                            // stream* (not per device) looks exactly like
-                            // a local playback bug otherwise. A slot
-                            // beyond the account's limit just stalls a
-                            // few seconds in, silently, no error shown.
-                            // See PlaylistProfile.maxConnections' own doc
-                            // comment, and that field's "Max connections"
-                            // row in Playlist Manager, for the actual
-                            // number a given account allows.
-                            _warningLine(
-                                'Multiview is limited by each playlist\'s '
-                                'maximum connections — check Playlist '
-                                'Manager if channels stall after a few '
-                                'seconds.'),
-                            const SizedBox(height: 10),
-                            // Requested directly, after an extensive
-                            // real-hardware investigation traced
-                            // Multiview's periodic freezes/buffering to
-                            // the upstream provider's own server closing
-                            // and re-establishing each stream's
-                            // connection every few seconds — concurrent
-                            // cells' independent reconnect cycles
-                            // occasionally collide, which media3 detects
-                            // and fails fast on (see
-                            // ExoPlayerEventListener.onPlayerError). That
-                            // failure is now caught and auto-recovered,
-                            // but the provider-side cause itself isn't
-                            // something this app can fix — this sets the
-                            // right expectation instead of letting a
-                            // stall look like a silent bug.
-                            _warningLine(
-                                'Freezing or buffering can happen — the '
-                                'app will relaunch that channel '
-                                'automatically. If it doesn\'t, hold '
-                                'Select on the stream and choose Reload.'),
-                          ],
-                        ),
-                      ),
-                    ),
-                    // A fixed 2x2 Row-of-Rows, not GridView — GridView is
-                    // a Scrollable, and its own `childAspectRatio: 16/9`
-                    // didn't exactly match every real TV's actual
-                    // available height, making it genuinely scrollable by
-                    // a few pixels. Reported directly: moving D-pad focus
-                    // down to the bottom row then triggered Flutter's
-                    // default "scroll the newly-focused widget into view"
-                    // behavior, shifting the top row partially
-                    // off-screen. A plain Row/Column+Expanded layout
-                    // always exactly fills whatever space is actually
-                    // available, with no Scrollable involved at all —
-                    // nothing left for that default behavior to act on.
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(6),
-                        // Stacked (Column), not side-by-side — requested
-                        // directly: splitting a landscape screen into
-                        // left/right halves squeezes each cell into a
-                        // tall, narrow near-square, badly distorting a
-                        // widescreen video's actual shape. Splitting
-                        // top/bottom instead lets each cell span the
-                        // full available width, keeping something much
-                        // closer to its real aspect ratio even though
-                        // it's shorter.
-                        // The cell *frame* (border/header/buttons) fills
-                        // the whole row, same as a quad cell fills its
-                        // quarter — reported directly that constraining
-                        // the whole frame to 16:9 (an earlier version of
-                        // this fix) made dual cells look noticeably
-                        // smaller than quad's. Only the video itself is
-                        // aspect-constrained now (inside `_buildCell`),
-                        // letterboxing within the full-size frame instead
-                        // of shrinking the frame around it.
-                        // Flex 13:7 instead of a flat 50/50 split when
-                        // only one of the two cells actually has a
-                        // channel in it — a plain even split made a
-                        // single active stream look small (letterboxed
-                        // within an exactly-half-height row), reported
-                        // directly as needing to be "bigger by 30%". 13:7
-                        // gives the occupied row exactly 65% of the
-                        // available height, i.e. 1.3x the even-split
-                        // baseline — once both cells are filled they're
-                        // back to equal flex (13:13) and split evenly
-                        // like a normal multiview grid.
-                        child: Column(
-                          children: [
-                            Expanded(
-                                flex: _cells[0].channel != null ? 13 : 7,
-                                child: Padding(
-                                    padding: const EdgeInsets.all(3),
-                                    child: _buildCell(0))),
-                            Expanded(
-                                flex: _cells[1].channel != null ? 13 : 7,
-                                child: Padding(
-                                    padding: const EdgeInsets.all(3),
-                                    child: _buildCell(1))),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              const Text('Multiview',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600)),
+              const SizedBox(width: 12),
+              // Toggles 2 <-> 4 screens (remembered). Reached with Up from
+              // the top row of screens.
+              TextButton.icon(
+                onPressed: _toggleLayout,
+                icon: Icon(quad ? Icons.grid_view : Icons.view_agenda,
+                    color: Colors.white, size: 18),
+                label: Text(quad ? '4 screens' : '2 screens',
+                    style: const TextStyle(color: Colors.white)),
               ),
+              const Spacer(),
+              const Icon(Icons.volume_up, color: Colors.amber, size: 16),
+              const SizedBox(width: 4),
+              const Text('= audio — Select to switch, hold Select for options',
+                  style: TextStyle(color: Colors.white54, fontSize: 12)),
             ],
           ),
         ),
-      ),
+        // A fixed Row/Column+Expanded layout, not GridView — GridView is a
+        // Scrollable, and its `childAspectRatio: 16/9` didn't exactly match
+        // every real TV's available height, making it scrollable by a few
+        // pixels; D-pad focus moving to the bottom row then scrolled the top
+        // row partly off-screen. Row/Column+Expanded always exactly fills
+        // the space, with nothing left to scroll.
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(6),
+            child: quad
+                ? Column(
+                    children: [
+                      Expanded(
+                          child: Row(children: [
+                        Expanded(child: cell(0)),
+                        Expanded(child: cell(1)),
+                      ])),
+                      Expanded(
+                          child: Row(children: [
+                        Expanded(child: cell(2)),
+                        Expanded(child: cell(3)),
+                      ])),
+                    ],
+                  )
+                // 2 screens are stacked (Column), not side-by-side —
+                // requested directly: left/right halves squeeze each cell
+                // into a tall near-square, distorting widescreen video.
+                // Flex 13:7 when only one cell has a channel gives the
+                // occupied row 65% of the height (1.3x an even split,
+                // requested as "bigger by 30%"); both filled = even split.
+                : Column(
+                    children: [
+                      Expanded(
+                          flex: _cells[0].channel != null ? 13 : 7,
+                          child: cell(0)),
+                      Expanded(
+                          flex: _cells[1].channel != null ? 13 : 7,
+                          child: cell(1)),
+                    ],
+                  ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -572,6 +541,9 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
         onTap: onTap,
         onLongPress:
             cell.channel == null ? null : () => _showCellActions(index),
+        // Stacked 2-screen rows are much wider than 16:9; quad's quarter
+        // cells aren't.
+        widthBoost: _layout == _MultiviewLayout.quad ? 1.0 : 1.15,
       ),
     );
   }
@@ -585,12 +557,18 @@ class _MultiviewCellTile extends StatefulWidget {
     required this.active,
     required this.onTap,
     required this.onLongPress,
+    required this.widthBoost,
   });
 
   final FocusNode focusNode;
   final Channel? channel;
   final VideoPlayerHdrController? controller;
   final bool active;
+
+  /// How far past the video's true aspect ratio the frame is stretched — see
+  /// [_MultiviewCellTileState.build]. 1.0 in the 2x2 layout, whose quarter
+  /// cells are already about 16:9.
+  final double widthBoost;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
 
@@ -601,19 +579,13 @@ class _MultiviewCellTile extends StatefulWidget {
 class _MultiviewCellTileState extends State<_MultiviewCellTile> {
   bool _focused = false;
 
-  /// How far past the video's true aspect ratio the frame is stretched to
-  /// reclaim some of the unused width stacking leaves on each cell — see
-  /// this class's own `build` doc comment. A first value to judge on real
-  /// hardware, not a measured "right" one.
-  static const _widthBoost = 1.15;
-
   @override
   Widget build(BuildContext context) {
-    // The frame (border included) is now aspect-constrained to the video's
-    // own ratio, not just the video inside it — requested directly: an
-    // earlier version of this was reverted for looking "noticeably
-    // smaller" next to the quad grid, but quad is gone now, so there's
-    // nothing left for a full-row frame to visually match against.
+    // The frame (border included) is aspect-constrained to the video's own
+    // ratio, not just the video inside it — requested directly. (An earlier
+    // version was reverted for looking "noticeably smaller" next to the
+    // quad grid; quad was then removed, and is back as an option with no
+    // width boost — its quarter cells are already about 16:9.)
     // (A wider-than-native frame with a BoxFit.cover crop was tried first
     // to also widen the picture itself, but VideoPlayerHdr has no
     // intrinsic size for FittedBox to scale from — it rendered blank.)
@@ -623,7 +595,7 @@ class _MultiviewCellTileState extends State<_MultiviewCellTile> {
     // native-ratio frame leaves real unused width on both sides, visibly
     // marked up directly on a real screenshot and confirmed as worth
     // reclaiming even at the cost of some stretch, explicitly *not* full
-    // edge-to-edge ("probably not as much but enough"). `_widthBoost`
+    // edge-to-edge ("probably not as much but enough"). `widthBoost`
     // widens the locked ratio beyond the video's true shape — since this
     // widget's own `Stack(fit: StackFit.expand, ...)` below has no
     // internal letterboxing (the frame IS the video's rendered shape),
@@ -636,7 +608,7 @@ class _MultiviewCellTileState extends State<_MultiviewCellTile> {
         (widget.controller != null && widget.controller!.value.aspectRatio != 0
                 ? widget.controller!.value.aspectRatio
                 : 16 / 9) *
-            _widthBoost;
+            widget.widthBoost;
     return Center(
       child: AspectRatio(
         aspectRatio: ratio,
@@ -855,6 +827,7 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
   final _searchController = TextEditingController();
   final _searchFocus = FocusNode();
   final _firstResultFocus = FocusNode();
+  final _resultsScroll = ScrollController();
 
   final _groupScope = FocusScopeNode(debugLabel: 'picker-groups');
   final _contentScope = FocusScopeNode(debugLabel: 'picker-content');
@@ -892,6 +865,7 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
     _searchController.dispose();
     _searchFocus.dispose();
     _firstResultFocus.dispose();
+    _resultsScroll.dispose();
     _groupScope.dispose();
     _contentScope.dispose();
     for (final node in _groupFocusNodes) {
@@ -953,7 +927,17 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
             }
           },
           const SingleActivator(LogicalKeyboardKey.arrowRight): () {
-            if (!_contentScope.hasFocus) _searchFocus.requestFocus();
+            // Into the channel list, not the search field: focusing the
+            // field pops the on-screen keyboard, and on Fire OS that
+            // keyboard swallows Back and then traps D-pad focus (CLAUDE.md
+            // §10). Search stays one Up press away.
+            if (_contentScope.hasFocus) return;
+            if (_filteredChannels.isNotEmpty &&
+                _firstResultFocus.context != null) {
+              _firstResultFocus.requestFocus();
+            } else {
+              _searchFocus.requestFocus();
+            }
           },
         },
         child: Row(
@@ -985,7 +969,14 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
                       // this is modeled on, where picking a group only
                       // updates the list on the right; "change pane" stays
                       // a separate, deliberate Right press.
-                      onTap: () => setState(() => _selectedGroupIndex = i),
+                      onTap: () {
+                        setState(() => _selectedGroupIndex = i);
+                        // Back to the top so Right lands on the new
+                        // group's first channel (row 0 must be built).
+                        if (_resultsScroll.hasClients) {
+                          _resultsScroll.jumpTo(0);
+                        }
+                      },
                     );
                   },
                 ),
@@ -1019,6 +1010,7 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
                                   style: TextStyle(color: Colors.white54)),
                             )
                           : ListView.builder(
+                              controller: _resultsScroll,
                               itemCount: filtered.length,
                               itemBuilder: (context, i) {
                                 final c = filtered[i];

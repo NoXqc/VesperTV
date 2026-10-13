@@ -108,7 +108,23 @@ public class VideoPlayerPlugin implements FlutterPlugin, AndroidVideoPlayerApi {
 
     long id = nextPlayerIdentifier++;
     final String streamInstance = Long.toString(id);
-    TextureRegistry.SurfaceProducer handle = flutterState.textureRegistry.createSurfaceProducer();
+    // Force the SurfaceTexture-backed producer instead of the ImageReader one Flutter picks on
+    // API 29+. The ImageReader path doesn't apply the decoder's crop rectangle
+    // (handlesCropAndRotation() == false, and nothing downstream applies it either): a Fire
+    // Stick's MTK decoder hands 720p frames in a 1920x1080 buffer, so Multiview tiles showed the
+    // picture in the top-left 2/3 and the rest solid green. SurfaceTexture applies the crop through
+    // its transform matrix. The flag is read only at creation, so it's set just for this call.
+    // Safe here: the app runs the Skia/OpenGL renderer (Impeller is off in AndroidManifest), which
+    // is what SurfaceTexture is native to. Texture players are Multiview-only (the main player is
+    // a platform view).
+    io.flutter.embedding.engine.renderer.FlutterRenderer.debugForceSurfaceProducerGlTextures = true;
+    TextureRegistry.SurfaceProducer handle;
+    try {
+      handle = flutterState.textureRegistry.createSurfaceProducer();
+    } finally {
+      io.flutter.embedding.engine.renderer.FlutterRenderer.debugForceSurfaceProducerGlTextures =
+          false;
+    }
     VideoPlayerOptions playerOptions = new VideoPlayerOptions(sharedOptions);
     playerOptions.backBufferDurationMs = options.getBackBufferDurationMs();
 

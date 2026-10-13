@@ -12,8 +12,12 @@ Read before changing guide/Multiview/profiles/palettes/backup-server logic.
 - **Player controls:** a primary row plus a secondary row revealed by pressing Down again (a chevron
   hints it exists); every icon button has a text label; top row shows quality (HD/FHD/4K), FPS and
   audio-channel (e.g. 5.1) badges. "Multiview" button opens Multiview with this channel preloaded.
-- **Multiview:** two stacked cells, warnings in the left sidebar, channel picker with group list +
-  search and the current programme under each channel.
+- **Multiview:** 2 stacked screens or 4 (2x2), toggled by the "2 screens / 4 screens" button in
+  the top bar (Up from the top row; remembered in `vesper_multiview_quad`). On entry a popup
+  explains one-connection-per-screen, with "Don't show this again" (`vesper_multiview_hide_tips`).
+  Select = move audio (volume only), hold Select = Full screen / Reload / Change channel / Remove.
+  Keeps the screen awake. Channel picker: group list + search + the current programme under each
+  channel; Right from a group lands on the first channel (not the search field — Fire OS keyboard).
 - **Welcome prompt:** brand-new users (no playlists) get "Hey beautiful Human, Welcome to
   VesperTV" with Add Playlist / Skip for now.
 - **Hide individual live channels** (per playlist, `hiddenChannels`), unhide in

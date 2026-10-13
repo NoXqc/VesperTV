@@ -24,6 +24,27 @@ public final class TextureExoPlayerEventListener extends ExoPlayerEventListener 
     this.surfaceProducerHandlesCropAndRotation = surfaceProducerHandlesCropAndRotation;
   }
 
+  // Multiview (the only texture-player user): several streams share the
+  // provider's connection limit, so a fatal-error recovery waits a moment
+  // instead of reconnecting instantly (an instant retry can land while the
+  // provider still counts the dropped socket), a live stream the server
+  // simply closed is reconnected instead of sitting in ENDED forever, and a
+  // tile whose hardware decoder stops producing frames is restarted.
+  @Override
+  protected long errorRetryDelayMs() {
+    return 2_000;
+  }
+
+  @Override
+  protected boolean reconnectWhenLiveEnds() {
+    return true;
+  }
+
+  @Override
+  protected boolean recoverFrozenVideo() {
+    return true;
+  }
+
   @Override
   protected void sendInitialized() {
     VideoSize videoSize = exoPlayer.getVideoSize();

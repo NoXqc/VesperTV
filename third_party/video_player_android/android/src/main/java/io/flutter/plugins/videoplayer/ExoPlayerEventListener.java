@@ -48,8 +48,54 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
           sendInitialized();
         }
       };
+  private final Runnable recover;
   protected final ExoPlayer exoPlayer;
   protected final VideoPlayerCallbacks events;
+
+  /** Delay before an in-place error recovery; 0 = immediately. */
+  protected long errorRetryDelayMs() {
+    return 0;
+  }
+
+  /**
+   * Whether a live stream reaching STATE_ENDED (the server closed a progressive stream) should be
+   * reconnected in place instead of reported as ended.
+   */
+  protected boolean reconnectWhenLiveEnds() {
+    return false;
+  }
+
+  /**
+   * Whether a playing stream whose video output stops (no new frames for ~4 s while the clock
+   * keeps moving) should be reconnected in place. Seen on a Fire Stick's hardware decoder in
+   * Multiview: the picture froze, audio played on, and ~2 min later the undecoded video filled the
+   * load budget, audio starved and the player flipped BUFFERING/READY forever. media3's own
+   * stuck-player check never fires for this because the (audio) clock is still advancing.
+   */
+  protected boolean recoverFrozenVideo() {
+    return false;
+  }
+
+  /** Counts a failure in the retry window; true if another in-place recovery is allowed. */
+  private boolean allowRetry() {
+    long now = SystemClock.elapsedRealtime();
+    if (now - errorWindowStartMs > ERROR_RETRY_WINDOW_MS) {
+      errorWindowStartMs = now;
+      errorsInWindow = 0;
+    }
+    errorsInWindow++;
+    return errorsInWindow <= MAX_ERRORS_IN_WINDOW;
+  }
+
+  private void scheduleRecovery() {
+    mainHandler.removeCallbacks(recover);
+    long delay = errorRetryDelayMs();
+    if (delay <= 0) {
+      recover.run();
+    } else {
+      mainHandler.postDelayed(recover, delay);
+    }
+  }
 
   protected enum RotationDegrees {
     ROTATE_0(0),
@@ -81,7 +127,51 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
       @NonNull ExoPlayer exoPlayer, @NonNull VideoPlayerCallbacks events) {
     this.exoPlayer = exoPlayer;
     this.events = events;
+    this.recover =
+        () -> {
+          exoPlayer.seekToDefaultPosition();
+          exoPlayer.prepare();
+        };
+    if (recoverFrozenVideo()) {
+      mainHandler.postDelayed(frozenVideoCheck, FROZEN_CHECK_INTERVAL_MS);
+    }
   }
+
+  // Frozen-video watchdog (see recoverFrozenVideo): rendered video frames and position, sampled
+  // every 2 s; frozen = no new frame across two samples (~4 s) while the position moved >= 3 s.
+  private static final long FROZEN_CHECK_INTERVAL_MS = 2000;
+  private long[] olderSample;
+  private long[] lastSample;
+  private final Runnable frozenVideoCheck =
+      new Runnable() {
+        @Override
+        public void run() {
+          androidx.media3.exoplayer.DecoderCounters counters = exoPlayer.getVideoDecoderCounters();
+          long frames = -1;
+          if (counters != null) {
+            counters.ensureUpdated();
+            frames = counters.renderedOutputBufferCount;
+          }
+          long[] now = {frames, exoPlayer.getCurrentPosition()};
+          if (olderSample != null
+              && exoPlayer.isPlaying()
+              && frames >= 0
+              && now[0] == olderSample[0]
+              && now[1] - olderSample[1] >= 3000
+              && allowRetry()) {
+            // stop() closes the connection first, so the retry delay keeps the provider's
+            // connection count honest (see TextureExoPlayerEventListener.errorRetryDelayMs).
+            exoPlayer.stop();
+            scheduleRecovery();
+            olderSample = null;
+            lastSample = null;
+          } else {
+            olderSample = lastSample;
+            lastSample = now;
+          }
+          mainHandler.postDelayed(this, FROZEN_CHECK_INTERVAL_MS);
+        }
+      };
 
   protected abstract void sendInitialized();
 
@@ -89,6 +179,8 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
   public void dispose() {
     isWaitingForValidDuration = false;
     mainHandler.removeCallbacks(initializationFallback);
+    mainHandler.removeCallbacks(recover);
+    mainHandler.removeCallbacks(frozenVideoCheck);
   }
 
   private boolean hasValidDuration() {
@@ -130,7 +222,16 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
         maybeSendInitialized();
         break;
       case Player.STATE_ENDED:
-        platformState = PlatformPlaybackState.ENDED;
+        if (reconnectWhenLiveEnds()
+            && (exoPlayer.isCurrentMediaItemLive() || exoPlayer.getDuration() == C.TIME_UNSET)
+            && allowRetry()) {
+          // Reported to Dart as buffering, not ENDED — ENDED would mark the
+          // controller completed/paused on the Dart side.
+          platformState = PlatformPlaybackState.BUFFERING;
+          scheduleRecovery();
+        } else {
+          platformState = PlatformPlaybackState.ENDED;
+        }
         break;
       case Player.STATE_IDLE:
         platformState = PlatformPlaybackState.IDLE;
@@ -156,21 +257,14 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
       return;
     }
 
-    long now = SystemClock.elapsedRealtime();
-    if (now - errorWindowStartMs > ERROR_RETRY_WINDOW_MS) {
-      errorWindowStartMs = now;
-      errorsInWindow = 0;
-    }
-    errorsInWindow++;
-
-    if (errorsInWindow <= MAX_ERRORS_IN_WINDOW) {
+    if (allowRetry()) {
       // In-place recovery: re-preparing the same ExoPlayer instance resets
       // its internal renderers (including recreating the MediaCodec
       // decoders) without releasing the Surface/texture, so playback just
       // briefly blanks and resumes near the live edge instead of a full
-      // widget-level reload.
-      exoPlayer.seekToDefaultPosition();
-      exoPlayer.prepare();
+      // widget-level reload. Delayed for Multiview — see
+      // TextureExoPlayerEventListener.errorRetryDelayMs.
+      scheduleRecovery();
     } else {
       events.onError("VideoError", "Video player had error " + error, null);
     }
