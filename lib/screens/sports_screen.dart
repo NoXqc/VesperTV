@@ -262,11 +262,17 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   void _focusZone(int zone, List<_Section> sections) {
     if (zone == 0) {
-      _chipNode(_leagueChipId).requestFocus();
+      // requestFocus alone doesn't scroll the chip row to it.
+      final node = _chipNode(_leagueChipId);
+      node.requestFocus();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final ctx = node.context;
+        if (ctx != null) Scrollable.ensureVisible(ctx, alignment: 0.5);
+      });
     } else if (zone == 1) {
       _chipNode(_dayChipId).requestFocus();
     } else if (zone == 2) {
-      _chipNode('standings').requestFocus();
+      _chipNode(_showStandingsChip ? 'standings' : 'myteams').requestFocus();
     } else if (sections.isEmpty) {
       _chipNode('nextgame').requestFocus();
     } else {
@@ -492,6 +498,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     switch (scope) {
       case _PickScope.game:
         await _picks.pickForGame(game, channel.id);
+      case _PickScope.first when game.league.kind != SportsKind.team:
+        await _picks.pickForSeries(game, channel.id);
       case _PickScope.first:
         await _picks.pickForTeam(game, game.first, channel.id);
       case _PickScope.second:
@@ -601,58 +609,64 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                   ?.copyWith(fontWeight: FontWeight.w800)),
           const SizedBox(width: 16),
           Expanded(
-            child: ListView(
+            // Not a lazy ListView: Up from the day row focuses the selected
+            // league's chip, and once enough leagues are added it sat off
+            // screen, unbuilt — Up did nothing. ~20 chips, all built is fine.
+            child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              children: [
-                SportsChip(
-                  key: const ValueKey('league:all'),
-                  focusNode: _chipNode('league:all'),
-                  enabled: _movingLeague == null,
-                  label: tr('All'),
-                  selected: _leagueFilter == null,
-                  onFocus: () => _zone = 0,
-                  onTap: () => _setLeagueFilter(null),
-                ),
-                for (final l in _leagues)
-                  HoldToActivate(
-                    // Keyed: the list reorders in move mode, and unkeyed chips
-                    // swapped focus nodes — focus dropped and stale "focused"
-                    // outlines stuck on other chips (owner: three focuses).
-                    key: ValueKey('league:${l.id}'),
-                    onTap: () => _tapLeague(l.id),
-                    onHold: () => _startLeagueMove(l.id),
-                    child: SportsChip(
-                      focusNode: _chipNode('league:${l.id}'),
-                      enabled: _movingLeague == null || _movingLeague == l.id,
-                      label: l.name,
-                      logoUrl: l.logoUrl,
-                      selected: _leagueFilter == l.id,
-                      moving: _movingLeague == l.id,
-                      onFocus: () => _zone = 0,
-                      onTap: () => _tapLeague(l.id),
-                    ),
+              child: Row(
+                children: [
+                  SportsChip(
+                    key: const ValueKey('league:all'),
+                    focusNode: _chipNode('league:all'),
+                    enabled: _movingLeague == null,
+                    label: tr('All'),
+                    selected: _leagueFilter == null,
+                    onFocus: () => _zone = 0,
+                    onTap: () => _setLeagueFilter(null),
                   ),
-                SportsChip(
-                  key: const ValueKey('league:edit'),
-                  focusNode: _chipNode('league:edit'),
-                  enabled: _movingLeague == null,
-                  label: tr('Edit leagues'),
-                  icon: Icons.tune,
-                  selected: false,
-                  onFocus: () => _zone = 0,
-                  onTap: _editLeagues,
-                ),
-                SportsChip(
-                  key: const ValueKey('league:scores'),
-                  focusNode: _chipNode('league:scores'),
-                  enabled: _movingLeague == null,
-                  label: _hideScores ? tr('Scores hidden') : tr('Scores shown'),
-                  icon: _hideScores ? Icons.visibility_off : Icons.visibility,
-                  selected: false,
-                  onFocus: () => _zone = 0,
-                  onTap: _toggleScores,
-                ),
-              ],
+                  for (final l in _leagues)
+                    HoldToActivate(
+                      // Keyed: the list reorders in move mode, and unkeyed chips
+                      // swapped focus nodes — focus dropped and stale "focused"
+                      // outlines stuck on other chips (owner: three focuses).
+                      key: ValueKey('league:${l.id}'),
+                      onTap: () => _tapLeague(l.id),
+                      onHold: () => _startLeagueMove(l.id),
+                      child: SportsChip(
+                        focusNode: _chipNode('league:${l.id}'),
+                        enabled: _movingLeague == null || _movingLeague == l.id,
+                        label: l.name,
+                        logoUrl: l.logoUrl,
+                        selected: _leagueFilter == l.id,
+                        moving: _movingLeague == l.id,
+                        onFocus: () => _zone = 0,
+                        onTap: () => _tapLeague(l.id),
+                      ),
+                    ),
+                  SportsChip(
+                    key: const ValueKey('league:edit'),
+                    focusNode: _chipNode('league:edit'),
+                    enabled: _movingLeague == null,
+                    label: tr('Edit leagues'),
+                    icon: Icons.tune,
+                    selected: false,
+                    onFocus: () => _zone = 0,
+                    onTap: _editLeagues,
+                  ),
+                  SportsChip(
+                    key: const ValueKey('league:scores'),
+                    focusNode: _chipNode('league:scores'),
+                    enabled: _movingLeague == null,
+                    label:
+                        _hideScores ? tr('Scores hidden') : tr('Scores shown'),
+                    icon: _hideScores ? Icons.visibility_off : Icons.visibility,
+                    selected: false,
+                    onFocus: () => _zone = 0,
+                    onTap: _toggleScores,
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -714,23 +728,30 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   /// Its own centered spot under the day row (was the last chip of the
   /// league bar — owner: hard to find there). Names the filtered league so
   /// it's clear which table opens.
+  /// Golf, fighting, racing and cups have no table.
+  bool get _showStandingsChip =>
+      sportsLeagueById(_leagueFilter ?? '')?.hasStandings ?? true;
+
   Widget _buildStandingsButton() {
     final league = sportsLeagueById(_leagueFilter ?? '');
     return Center(
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SportsChip(
-            focusNode: _chipNode('standings'),
-            label: league == null
-                ? tr('Standings')
-                : tr('{name} standings', {'name': league.name}),
-            icon: Icons.leaderboard,
-            selected: false,
-            compact: true,
-            onFocus: () => _zone = 2,
-            onTap: _openStandings,
-          ),
+          if (_showStandingsChip)
+            SportsChip(
+              focusNode: _chipNode('standings'),
+              label: league == null
+                  ? tr('Standings')
+                  : league.kind == SportsKind.racing
+                      ? tr('{name} championship', {'name': league.name})
+                      : tr('{name} standings', {'name': league.name}),
+              icon: Icons.leaderboard,
+              selected: false,
+              compact: true,
+              onFocus: () => _zone = 2,
+              onTap: _openStandings,
+            ),
           SportsChip(
             focusNode: _chipNode('myteams'),
             label: tr('My Teams'),
@@ -856,6 +877,179 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
 String _timeLabel(DateTime utc) => DateFormat.jm().format(utc.toLocal());
 
+/// What a not-yet-started card shows: the start time — except golf, which
+/// ESPN dates at midnight with no tee time; it reads "Oct 15 – 18" (US
+/// Eastern dates, see SportsService._tournamentDay).
+String _preLabel(SportsGame g) {
+  final end = g.end;
+  if (end == null) return _timeLabel(g.start);
+  DateTime eastern(DateTime utc) => utc.subtract(const Duration(hours: 4));
+  final a = eastern(g.start);
+  final b = eastern(end);
+  final first = DateFormat.MMMd().format(a);
+  if (a.year == b.year && a.month == b.month && a.day == b.day) return first;
+  return '$first – ${a.month == b.month ? DateFormat.d().format(b) : DateFormat.MMMd().format(b)}';
+}
+
+/// Golf / racing card body: the event's name, then the top three — or,
+/// before it starts (or with scores hidden), the session and venue.
+class _EventCardBody extends StatelessWidget {
+  const _EventCardBody({required this.game, required this.hideScores});
+  final SportsGame game;
+  final bool hideScores;
+
+  @override
+  Widget build(BuildContext context) {
+    final ev = game.event;
+    final leaders =
+        hideScores ? const <SportsEventEntry>[] : (ev?.leaders ?? const []);
+    var details = [
+      if (ev?.session != null) trSports(ev!.session!),
+      if (ev?.venue != null) ev!.venue!,
+    ].join(' · ');
+    // Golf lists no course; the network is the next useful thing.
+    if (details.isEmpty) details = game.broadcasts.take(2).join(' · ');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(game.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: Colors.white)),
+        const SizedBox(height: 3),
+        if (leaders.isEmpty)
+          Text(details,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12, color: Colors.white60))
+        else
+          for (final e in leaders.take(3))
+            _EventLeaderLine(entry: e, fontSize: 12.5, flagSize: 13),
+      ],
+    );
+  }
+}
+
+class _EventLeaderLine extends StatelessWidget {
+  const _EventLeaderLine(
+      {required this.entry, required this.fontSize, required this.flagSize});
+  final SportsEventEntry entry;
+  final double fontSize;
+  final double flagSize;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = TextStyle(fontSize: fontSize, color: Colors.white);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 1),
+      child: Row(
+        children: [
+          SizedBox(
+            width: fontSize * 2.2,
+            child: Text(entry.position,
+                style: style.copyWith(color: Colors.white54)),
+          ),
+          if (entry.flagUrl != null) ...[
+            CachedNetworkImage(
+              imageUrl: sportsLogoUrl(entry.flagUrl, size: 64) ?? '',
+              width: flagSize * 1.4,
+              height: flagSize,
+              fit: BoxFit.cover,
+              memCacheWidth: 64,
+              errorWidget: (_, __, ___) => SizedBox(width: flagSize * 1.4),
+            ),
+            const SizedBox(width: 6),
+          ],
+          Expanded(
+            child: Text(entry.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: style.copyWith(fontWeight: FontWeight.w600)),
+          ),
+          if (entry.value != null)
+            Text(entry.value!,
+                style: style.copyWith(fontWeight: FontWeight.w800)),
+        ],
+      ),
+    );
+  }
+}
+
+/// The hero for golf / racing: league logo and the event on the left, the
+/// status and channel in the middle (same as a game), the top five right.
+class _EventHero extends StatelessWidget {
+  const _EventHero(
+      {required this.game, required this.center, required this.hideScores});
+  final SportsGame game;
+  final Widget center;
+  final bool hideScores;
+
+  @override
+  Widget build(BuildContext context) {
+    final ev = game.event;
+    final leaders =
+        hideScores ? const <SportsEventEntry>[] : (ev?.leaders ?? const []);
+    return SizedBox(
+      height: 168,
+      child: Row(
+        children: [
+          Expanded(
+            child: Row(
+              children: [
+                SportsLogo(
+                    url: game.league.logoUrl,
+                    size: 92,
+                    fallback: game.league.shortName),
+                const SizedBox(width: 14),
+                Flexible(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(game.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white)),
+                      if (ev?.session != null)
+                        Text(trSports(ev!.session!),
+                            style: const TextStyle(
+                                fontSize: 15, color: Colors.white70)),
+                      if (ev?.venue != null)
+                        Text(ev!.venue!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 13, color: Colors.white54)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: 230, child: center),
+          Expanded(
+            child: leaders.isEmpty
+                ? const SizedBox()
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      for (final e in leaders.take(5))
+                        _EventLeaderLine(entry: e, fontSize: 15, flagSize: 15),
+                    ],
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Soft glow of the focused game's two team colours behind everything —
 /// the screen takes on the matchup's identity instead of a flat panel.
 class _TeamGlow extends StatelessWidget {
@@ -947,6 +1141,10 @@ class _Hero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final showScore = game.state != GameState.pre && !hideScores;
+    if (game.league.isField) {
+      return _EventHero(
+          game: game, center: _center(context, false), hideScores: hideScores);
+    }
     return SizedBox(
       height: 168,
       child: Row(
@@ -1003,22 +1201,47 @@ class _Hero extends StatelessWidget {
             game.statusText.isEmpty ? tr('Final') : trSports(game.statusText);
       case GameState.pre:
         final until = game.start.difference(DateTime.now().toUtc());
-        status = until.inMinutes > 0 && until.inHours < 24
-            ? tr('Starts in {p}{p2}m', {
-                'p': until.inHours > 0 ? tr('{h}h ', {'h': until.inHours}) : '',
-                'p2': until.inMinutes % 60
-              })
-            : DateFormat.MMMEd().format(game.start.toLocal());
+        status = game.end != null
+            // Golf: no tee time to count down to.
+            ? DateFormat.MMMEd()
+                .format(game.start.subtract(const Duration(hours: 4)))
+            : until.inMinutes > 0 && until.inHours < 24
+                ? tr('Starts in {p}{p2}m', {
+                    'p': until.inHours > 0
+                        ? tr('{h}h ', {'h': until.inHours})
+                        : '',
+                    'p2': until.inMinutes % 60
+                  })
+                : DateFormat.MMMEd().format(game.start.toLocal());
         statusColor = scheme.primary;
     }
+    final ev = game.event;
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(game.league.name.toUpperCase(),
+        // A fight card's name ("UFC 320: Ankalaev vs. Pereira 2") says more
+        // than "UFC".
+        Text(
+            game.league.kind == SportsKind.fight && ev != null
+                ? ev.title
+                : game.league.name.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
                 fontSize: 12, letterSpacing: 1.2, color: Colors.white54)),
         const SizedBox(height: 4),
-        if (showScore)
+        if (game.league.isField)
+          Text(
+              game.state == GameState.pre
+                  ? _preLabel(game)
+                  : trSports(ev?.session ?? game.league.shortName),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white))
+        else if (showScore)
           Text('${game.first.score ?? '-'}  -  ${game.second.score ?? '-'}',
               style: const TextStyle(
                   fontSize: 38,
@@ -1159,7 +1382,7 @@ class _GameCardState extends State<_GameCard> {
     final live = g.state == GameState.live;
     final showScore = g.state != GameState.pre && !widget.hideScores;
     final status = switch (g.state) {
-      GameState.pre => _timeLabel(g.start),
+      GameState.pre => _preLabel(g),
       GameState.live =>
         g.statusText.isEmpty ? tr('LIVE') : trSports(g.statusText),
       GameState.post =>
@@ -1172,9 +1395,7 @@ class _GameCardState extends State<_GameCard> {
       final mine = int.tryParse(t.score ?? '');
       final other = identical(t, g.first) ? secondScore : firstScore;
       final winning = g.state == GameState.post &&
-          mine != null &&
-          other != null &&
-          mine > other;
+          (t.score == 'W' || (mine != null && other != null && mine > other));
       return Row(
         children: [
           SizedBox(
@@ -1300,9 +1521,13 @@ class _GameCardState extends State<_GameCard> {
                         ],
                       ),
                       const SizedBox(height: 5),
-                      teamLine(g.first, leading: true),
-                      const SizedBox(height: 4),
-                      teamLine(g.second, leading: false),
+                      if (g.league.isField)
+                        _EventCardBody(game: g, hideScores: widget.hideScores)
+                      else ...[
+                        teamLine(g.first, leading: true),
+                        const SizedBox(height: 4),
+                        teamLine(g.second, leading: false),
+                      ],
                       const Spacer(),
                       Row(
                         children: [
@@ -1376,7 +1601,8 @@ class _GameDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final showScore = game.state != GameState.pre && !hideScores;
+    final showScore =
+        game.state != GameState.pre && !hideScores && !game.league.isField;
     return Dialog(
       backgroundColor: const Color(0xFF15151A),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -1420,12 +1646,15 @@ class _GameDialog extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  SportsLogo(
-                      url: game.second.logoUrl,
-                      size: 44,
-                      fallback: game.second.abbreviation,
-                      color: game.second.color),
+                  // Golf/racing: both "sides" are the league placeholder.
+                  if (!game.league.isField) ...[
+                    const SizedBox(width: 10),
+                    SportsLogo(
+                        url: game.second.logoUrl,
+                        size: 44,
+                        fallback: game.second.abbreviation,
+                        color: game.second.color),
+                  ],
                 ],
               ),
               const SizedBox(height: 14),
@@ -1544,22 +1773,37 @@ class _PickScopeDialog extends StatelessWidget {
               subtitle: tr('Best for channels named after one game'),
               onTap: () => Navigator.of(context).pop(_PickScope.game),
             ),
-            for (final (scope, team) in [
-              (_PickScope.first, game.first),
-              (_PickScope.second, game.second),
-            ])
+            // Event sports: one "always" choice for the whole series (Sky
+            // Sports F1, Golf Channel) — remembering a channel per golfer or
+            // fighter would never come up again.
+            if (game.league.kind != SportsKind.team)
               TvMenuTile(
                 leading: SportsLogo(
-                    url: team.logoUrl,
+                    url: game.league.logoUrl,
                     size: 36,
-                    fallback: team.abbreviation,
-                    color: team.color),
-                title: tr('Always for the {shortName}',
-                    {'shortName': team.shortName}),
+                    fallback: game.league.shortName),
+                title: tr('Always for {name}', {'name': game.league.name}),
                 subtitle:
-                    tr('Best for a regular channel, like a regional network'),
-                onTap: () => Navigator.of(context).pop(scope),
-              ),
+                    tr('Best for a channel that carries the whole series'),
+                onTap: () => Navigator.of(context).pop(_PickScope.first),
+              )
+            else
+              for (final (scope, team) in [
+                (_PickScope.first, game.first),
+                (_PickScope.second, game.second),
+              ])
+                TvMenuTile(
+                  leading: SportsLogo(
+                      url: team.logoUrl,
+                      size: 36,
+                      fallback: team.abbreviation,
+                      color: team.color),
+                  title: tr('Always for the {shortName}',
+                      {'shortName': team.shortName}),
+                  subtitle:
+                      tr('Best for a regular channel, like a regional network'),
+                  onTap: () => Navigator.of(context).pop(scope),
+                ),
           ],
         ),
       ),
@@ -1592,14 +1836,34 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
   void initState() {
     super.initState();
     final g = widget.game;
-    _suggestions = {
-      g.first.shortName,
-      g.second.shortName,
-      g.league.shortName,
-      ...g.broadcasts.take(4),
-    }.toList();
+    // Golf/racing have no team names: offer the series ("Formula 1", "PGA
+    // Tour") and the network. Fighters go by last name on event channels.
+    String lastName(SportsTeam t) =>
+        t.name.split(' ').where((w) => w.length > 3).lastOrNull ?? t.name;
+    _suggestions = (g.league.isField
+            ? {
+                g.league.name,
+                g.league.shortName,
+                ...g.broadcasts.take(4),
+              }
+            : g.league.kind == SportsKind.fight
+                ? {
+                    lastName(g.second),
+                    lastName(g.first),
+                    g.league.shortName,
+                    ...g.broadcasts.take(4),
+                  }
+                : {
+                    g.first.shortName,
+                    g.second.shortName,
+                    g.league.shortName,
+                    ...g.broadcasts.take(4),
+                  })
+        .toList();
     _chipNodes = [for (final _ in _suggestions) FocusNode()];
-    _query = g.second.shortName;
+    _query = _suggestions.first == g.first.shortName
+        ? g.second.shortName
+        : _suggestions.first;
     _controller.text = _query;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _chipNodes[_suggestions.indexOf(_query)].requestFocus();

@@ -71,11 +71,23 @@ class SportsChannelPicks {
   static String eventKey(SportsGame g) => '${g.league.id}:${g.id}';
   static String teamKey(SportsGame g, SportsTeam t) => '${g.league.id}:${t.id}';
 
-  /// Channel id the user chose for [g], game pick first, then either team.
+  /// Event sports' "always for this series" pick (Sky Sports F1 for every
+  /// F1 session). Stored with the team picks, under an empty team id.
+  static String seriesKey(SportsGame g) => '${g.league.id}:*';
+
+  /// Channel id the user chose for [g], game pick first, then either team
+  /// (event sports: the series).
   String? channelIdFor(SportsGame g) =>
       _events[eventKey(g)]?.channelId ??
-      teams[teamKey(g, g.first)] ??
-      teams[teamKey(g, g.second)];
+      (g.league.kind != SportsKind.team
+          ? teams[seriesKey(g)]
+          : teams[teamKey(g, g.first)] ?? teams[teamKey(g, g.second)]);
+
+  Future<void> pickForSeries(SportsGame g, String channelId) {
+    teams[seriesKey(g)] = channelId;
+    _events.remove(eventKey(g));
+    return _save();
+  }
 
   Future<void> pickForGame(SportsGame g, String channelId) {
     _events[eventKey(g)] =
@@ -96,6 +108,7 @@ class SportsChannelPicks {
     final d = teams[teamKey(g, g.second)];
     if (c != null) teams.remove(teamKey(g, g.first));
     if (d != null) teams.remove(teamKey(g, g.second));
+    teams.remove(seriesKey(g));
     return _save();
   }
 
@@ -318,6 +331,65 @@ class SportsChannelMatcher {
     return out.toList();
   }
 
+  /// The name groups a channel name or guide title must all contain (one
+  /// phrase from each). Team sports: the two teams. Fights: the two
+  /// fighters, by full or last name — event channels say "Allen vs Duncan".
+  /// Golf/racing: the event alone ("singapore grand prix").
+  static List<List<String>> _nameGroups(SportsGame g) {
+    switch (g.league.kind) {
+      case SportsKind.team:
+        return [_teamPhrases(g.home), _teamPhrases(g.away)];
+      case SportsKind.fight:
+        return [_fighterPhrases(g.home), _fighterPhrases(g.away)];
+      case SportsKind.golf:
+      case SportsKind.racing:
+        final title = sportsNormalize(g.event?.title ?? g.home.name);
+        final out = <String>{if (title.trim().length >= 6) title};
+        // Sponsors pad the names ("Singapore Airlines Singapore Grand
+        // Prix", "Butterfield Bermuda Championship"); guides use the core.
+        final words = title.trim().split(' ');
+        final gp = title.indexOf(' grand prix ');
+        if (gp > 0) {
+          final before = title.substring(0, gp).trim().split(' ').last;
+          out.add(' $before grand prix ');
+        } else if (g.league.kind == SportsKind.golf && words.length > 2) {
+          out.add(' ${words.sublist(words.length - 2).join(' ')} ');
+        }
+        return [out.toList()];
+    }
+  }
+
+  static const _nameSuffixes = {'jr', 'sr', 'ii', 'iii', 'iv'};
+
+  static List<String> _fighterPhrases(SportsTeam t) {
+    final full = sportsNormalize(t.name);
+    final words =
+        full.trim().split(' ').where((w) => !_nameSuffixes.contains(w));
+    final last = words.isEmpty ? null : words.last;
+    return {
+      if (full.trim().length >= 4) full,
+      if (last != null && last.length >= 4) ' $last ',
+    }.toList();
+  }
+
+  /// When a guide programme for [g] may start: around a game's start; a
+  /// fight card's main event comes hours after the prelims; a golf round
+  /// runs all day, so its day (today's, while it's on).
+  static (DateTime, DateTime) _guideWindow(SportsGame g) {
+    if (g.end != null) {
+      final now = DateTime.now().toUtc();
+      final from = now.isAfter(g.start) &&
+              now.isBefore(g.end!.add(const Duration(days: 1)))
+          ? now.subtract(const Duration(hours: 2))
+          : g.start;
+      return (from, from.add(const Duration(hours: 24)));
+    }
+    final after = g.league.kind == SportsKind.fight
+        ? const Duration(hours: 5)
+        : const Duration(minutes: 30);
+    return (g.start.subtract(const Duration(minutes: 60)), g.start.add(after));
+  }
+
   /// Channel indexes whose name contains one of [phrases] as whole words.
   Set<int> _channelsNaming(List<String> phrases) {
     final hits = <int>{};
@@ -402,27 +474,28 @@ class SportsChannelMatcher {
     final out = <String, List<ChannelMatch>>{};
     if (games.isEmpty) return out;
 
-    // One guide query for the whole day: every team phrase at once.
+    // One guide query for the whole day: every team/event phrase at once.
     final terms = <String>{};
     for (final g in games) {
-      for (final t in [g.home, g.away]) {
-        for (final p in _teamPhrases(t)) {
+      for (final group in _nameGroups(g)) {
+        for (final p in group) {
           terms.add(p.trim());
         }
       }
+      for (final p in g.league.seriesPhrases) {
+        terms.add(p.trim());
+      }
     }
-    var earliest = games.first.start;
-    var latest = games.first.start;
+    var earliest = _guideWindow(games.first).$1;
+    var latest = _guideWindow(games.first).$2;
     for (final g in games) {
-      if (g.start.isBefore(earliest)) earliest = g.start;
-      if (g.start.isAfter(latest)) latest = g.start;
+      final (from, to) = _guideWindow(g);
+      if (from.isBefore(earliest)) earliest = from;
+      if (to.isAfter(latest)) latest = to;
     }
     final List<EpgProgram> programmes = _byEpgId.isEmpty
         ? const []
-        : await _epg.findProgrammesByTitle(
-            earliest.subtract(const Duration(minutes: 60)),
-            latest.add(const Duration(minutes: 30)),
-            terms.toList());
+        : await _epg.findProgrammesByTitle(earliest, latest, terms.toList());
 
     for (final g in games) {
       final found = <String, ChannelMatch>{};
@@ -440,28 +513,56 @@ class SportsChannelMatcher {
         if (i != null) add(i, MatchReason.pick, 1000);
       }
 
-      // 2. Event channels naming both teams.
-      final a = _channelsNaming(_teamPhrases(g.home));
-      if (a.isNotEmpty) {
-        final b = _channelsNaming(_teamPhrases(g.away));
-        for (final i in a.intersection(b)) {
-          final d = _dateInName(_names[i]);
-          if (d != null && !_dateFits(d, g.start)) continue;
-          add(i, MatchReason.name, (d != null ? 120 : 100) + _regionBias(i));
+      // 2. Event channels naming both teams (event sports: the event).
+      final groups = _nameGroups(g);
+      Set<int>? named;
+      for (final group in groups) {
+        final hits = _channelsNaming(group);
+        named = named == null ? hits : named.intersection(hits);
+        if (named.isEmpty) break;
+      }
+      for (final i in named ?? const <int>{}) {
+        final d = _dateInName(_names[i]);
+        if (d != null && !_dateFits(d, g.start)) continue;
+        add(i, MatchReason.name, (d != null ? 120 : 100) + _regionBias(i));
+      }
+
+      // 3. Guide programmes naming both teams near the start time — or,
+      // for event sports, the event or its series ("Formula 1: Qualifying",
+      // "PGA Tour Golf").
+      final (from, to) = _guideWindow(g);
+      final series = [
+        for (final p in g.league.seriesPhrases) sportsNormalize(p)
+      ];
+      for (final p in programmes) {
+        final start = p.start.toUtc();
+        if (start.isBefore(from) || !start.isBefore(to)) continue;
+        final title = sportsNormalize(p.title);
+        final byName = groups.every((group) => group.any(title.contains));
+        if (!byName && !series.any(title.contains)) continue;
+        final diff = g.end != null
+            ? 0 // golf: all day, nothing to be early or late for
+            : start.difference(g.start).inMinutes;
+        for (final i in _byEpgId[p.channelId] ?? const <int>[]) {
+          add(
+              i,
+              MatchReason.guide,
+              (byName ? 80 : 70) -
+                  math.min(diff.abs(), 60) ~/ 6 +
+                  _regionBias(i),
+              p.title);
         }
       }
 
-      // 3. Guide programmes naming both teams near the start time.
-      final home = _teamPhrases(g.home);
-      final away = _teamPhrases(g.away);
-      for (final p in programmes) {
-        final diff = p.start.toUtc().difference(g.start).inMinutes;
-        if (diff < -60 || diff > 30) continue;
-        final title = sportsNormalize(p.title);
-        if (!home.any(title.contains) || !away.any(title.contains)) continue;
-        for (final i in _byEpgId[p.channelId] ?? const <int>[]) {
-          add(i, MatchReason.guide,
-              80 - math.min(diff.abs(), 60) ~/ 6 + _regionBias(i), p.title);
+      // 3b. Event sports: channels named after the series ("Sky Sports F1",
+      // "NASCAR"), a few at most — they carry it, if not always live.
+      if (series.isNotEmpty) {
+        var taken = 0;
+        for (final i in _channelsNaming(series)) {
+          if (taken >= 3) break;
+          if (_regionBias(i) < 0) continue;
+          add(i, MatchReason.name, 60 + _regionBias(i));
+          taken++;
         }
       }
 

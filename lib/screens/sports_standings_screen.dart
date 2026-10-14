@@ -64,6 +64,9 @@ List<SportsStandingColumn> sportsStandingColumns(SportsLeague league) {
       SportsStandingColumn('PTS', 'points', width: 50),
     ];
   }
+  if (league.kind == SportsKind.racing) {
+    return const [SportsStandingColumn('PTS', 'championshipPts', width: 60)];
+  }
   final sport = league.espnPath.split('/').first;
   switch (sport) {
     case 'hockey':
@@ -132,9 +135,13 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
   void initState() {
     super.initState();
     // Cups ESPN has no table for are left out (see SportsLeague.hasStandings).
+    // Racing tables list drivers, who can't be followed — not offered
+    // when the point is adding a team.
+    bool usable(SportsLeague l) =>
+        l.hasStandings && !(widget.addingTeam && l.kind != SportsKind.team);
     _leagues = [
       for (final l in widget.leagues)
-        if (l.hasStandings) l
+        if (usable(l)) l
     ];
     if (_leagues.isEmpty) {
       _leagues = [
@@ -142,9 +149,8 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
           if (l.hasStandings) l
       ];
     }
-    _league = widget.initialLeague.hasStandings
-        ? widget.initialLeague
-        : _leagues.first;
+    _league =
+        usable(widget.initialLeague) ? widget.initialLeague : _leagues.first;
     unawaited(_load());
   }
 
@@ -281,7 +287,11 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
     }
   }
 
+  /// My Teams holds teams; a driver or constructor has no schedule there.
+  bool get _canFollow => _league.kind == SportsKind.team;
+
   Future<void> _toggleFollow(SportsTeam team) async {
+    if (!_canFollow) return;
     final follows = widget.follows;
     final followed = follows.isFollowed(_league.id, team.id);
     final confirmed =
@@ -546,16 +556,21 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
                     const Icon(Icons.chevron_right,
                         size: 16, color: Colors.white38),
                     const SizedBox(width: 4),
-                    Text(tr('switch conference'),
+                    Text(
+                        _canFollow
+                            ? tr('switch conference')
+                            : tr('switch table'),
                         style: const TextStyle(
                             color: Colors.white38, fontSize: 12)),
                     const SizedBox(width: 20),
                   ],
-                  const Icon(Icons.star, size: 14, color: Colors.white38),
-                  const SizedBox(width: 4),
-                  Text(tr('Hold OK on a team to follow it (My Teams)'),
-                      style:
-                          const TextStyle(color: Colors.white38, fontSize: 12)),
+                  if (_canFollow) ...[
+                    const Icon(Icons.star, size: 14, color: Colors.white38),
+                    const SizedBox(width: 4),
+                    Text(tr('Hold OK on a team to follow it (My Teams)'),
+                        style: const TextStyle(
+                            color: Colors.white38, fontSize: 12)),
+                  ],
                 ],
               ),
             ),

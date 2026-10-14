@@ -107,11 +107,44 @@ Kotlin Android TV app (fork of OwnTV, GPL-3.0 like us), files under
   scoreboard = current/next round) → "Next game: <date>" chip; the day strip grows a chip for
   dates past +6. **Bank vetting:** an ESPN feed can answer but be dead — CFL's newest event is
   the 2022 Grey Cup, Swiss Super League stopped Sept 2025; both removed. Check the default
-  window's event dates (not just HTTP 200) before adding a league. Event sports (golf/F1/UFC/
-  tennis) still not in the bank.
+  window's event dates (not just HTTP 200) before adding a league. Event sports: golf/UFC/PFL/F1/
+  NASCAR/IndyCar added in 1.0.9 (see "Event sports" below); tennis not yet.
 - **Takeaway for us:** adding leagues is cheap: one `SportsLeague(espnPath: ...)` entry each (we have 13).
   To scale past a handful we'd need what they built: a lazy catalogue (active vs available), a
   searchable "all leagues" picker, and event-sport (athlete) parsing for golf/F1/UFC/tennis.
+
+## Event sports (1.0.9+246, 2026-10-14)
+`SportsLeague.kind` (`SportsKind.team|golf|racing|fight`) + `seriesPhrases`; bank regions Golf
+(PGA `golf/pga`, LPGA, DP World `golf/eur`, LIV), Fighting (UFC `mma/ufc`, PFL), Motorsport (F1,
+NASCAR Cup `racing/nascar-premier`, IndyCar `racing/irl`). Parsing in `sports_service.dart`:
+- **Golf** (`_parseGolf`): one game per tournament, `SportsGame.end` = ESPN `endDate`; dated at
+  US-Eastern midnight (`04:00Z`), so `_tournamentDay` shows it on every Eastern date start..end
+  (not `sameDay`, which put it on the previous evening in California). Leaders top 5 with ties
+  ("T2"), only once started; pre cards read "Oct 15 – 18" (`_preLabel`), no tee time exists.
+- **Racing** (`_parseRacing`): one game per *session* (comp id), `FP1-3` skipped, `SS`/`SR`/`Qual`/
+  `Race` → "Sprint Qualifying"/"Sprint"/"Qualifying"/"Race"; untyped single comp = Race.
+- **Fight** (`_parseFightCard`): one game per card; the main event = the comp whose two last names
+  are in the event name, else the last comp. Fighters are home/away (flag as logo, record, score
+  "W"/"L" when decided); `SportsGame.first/joiner` read "A vs B" for non-team kinds.
+- Golf/racing use placeholder sides (`_placeholderSide`, id '') + `SportsEventInfo` (title,
+  session, venue, leaders): `_EventCardBody` / `_EventHero` in sports_screen.dart. Hide scores
+  hides leaderboards.
+- Matching: `_nameGroups` (team pair / fighter full+last names / event title + "x grand prix" or
+  the last two words for golf), guide window `_guideWindow` (fights +5 h, golf = today while on),
+  then series phrases (guide 70, channel names 60, max 3). Picks: event sports offer one
+  "Always for {league}" (`SportsChannelPicks.seriesKey` = `league:*`).
+- "Next game" for event sports queries a 60-day `?dates=a-b` range (the dateless scoreboard is the
+  *last* event — UFC said "no upcoming games"); team leagues keep the dateless call (NHL range failed).
+- **Standings:** racing only (`hasStandings: true`) — driver (athlete + flag) and F1 constructor
+  tables, sorted by `rank`, one PTS column (`championshipPts`, constructors' `points` aliased);
+  button "{name} championship"; no Follow on racing rows; hidden from My Teams' Add team.
+  **Not done:** UFC rankings (ESPN's are frozen ~2021: Usman P4P #1), golf points race (core API:
+  600 unsorted athlete `$ref`s — top 30 would need 30 extra calls). Owner: racing only for now.
+- Wrestling / horse racing: no free source (TheSportsDB free key truncates to 5, no horse racing).
+  Idea offered, not built: an EPG-driven "From your guide" category (WWE/AEW, racing channels).
+- Lazy-list focus gotcha (fixed twice here): `requestFocus` on a chip/tile that a lazy `ListView`
+  hasn't built does nothing — League manager `_bank` is now in screen (region) order; the Sports
+  league chip row is a `SingleChildScrollView` + `ensureVisible`.
 
 ## Goals
 - A Sports tab with: **league filter** (NHL, NFL, NBA, MLB, PGA, ...), **My Teams**, **Standings**,

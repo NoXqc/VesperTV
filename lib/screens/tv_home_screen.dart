@@ -1548,6 +1548,94 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         MaterialPageRoute(builder: (_) => PlayerScreen(channel: channel)));
   }
 
+  /// The last channel [_previewOrOpenChannel] started, and its still-running
+  /// `PlaybackService.play` — set synchronously so a quick second press
+  /// (before `play` has torn down the old stream and set currentChannel)
+  /// still counts as "again" and goes fullscreen instead of starting the
+  /// same channel twice. Android only; Windows' DesktopMiniPlayer.play sets
+  /// its channel synchronously.
+  String? _previewChannelId;
+  Future<void>? _previewFuture;
+
+  /// Live list / Timeline guide Select (remote, touch and mouse alike):
+  /// the first press plays the channel in the preview box and stays in the
+  /// guide; pressing it again while it's the one playing goes fullscreen.
+  /// Owner's request — changing channel used to mean going fullscreen and
+  /// backing out. Deliberately not a timed double-press: telling a single
+  /// from a double would delay every press ~300 ms, and D-pad remotes
+  /// (Fire Stick, Bluetooth lag, key repeat) misread the timing; "again"
+  /// needs none, and a double click/press still reads as two presses.
+  /// Other entry points (History dialog, Continue Watching) keep
+  /// [_selectChannel]'s straight-to-fullscreen behaviour.
+  Future<void> _previewOrOpenChannel(Channel channel) async {
+    if (Platform.isWindows) {
+      final mini = DesktopMiniPlayer.instance;
+      if (mini.channel.value?.id == channel.id) {
+        final session = mini.take();
+        if (session == null) return;
+        Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => DesktopPlayerScreen(
+                  channel: channel,
+                  existingPlayer: session.$1,
+                  existingController: session.$2,
+                )));
+        return;
+      }
+      mini.play(channel);
+      // DesktopPlayerScreen records these itself; a preview that never goes
+      // fullscreen must too, or Windows' startup auto-resume and the History
+      // group never see it.
+      context.read<StorageService>().setLastChannelId(channel.id);
+      context.read<PlaybackService>().recordWatched(channel);
+      return;
+    }
+    final playback = context.read<PlaybackService>();
+    final pending = _previewChannelId == channel.id ? _previewFuture : null;
+    if (pending != null || playback.currentChannel?.id == channel.id) {
+      // Wait for the preview's play() to finish first — same
+      // create/dispose race _selectChannel's own comment describes.
+      if (pending != null) await pending;
+      if (!mounted || playback.currentChannel?.id != channel.id) return;
+      Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => PlayerScreen(channel: channel)));
+      return;
+    }
+    // The plain Live list hands the playing row `_currentChannelFocusNode`
+    // instead of its own internal node, so the row just pressed swaps nodes
+    // the moment currentChannel changes and the D-pad cursor would drop
+    // (it used to be gone into fullscreen by then). Re-focus it once that
+    // rebuild lands — only if the pressed node actually lost focus, so the
+    // Timeline guide (no swap) and a cursor already moved elsewhere are
+    // left alone.
+    final pressed = FocusManager.instance.primaryFocus;
+    void refocus() {
+      if (playback.currentChannel?.id != channel.id) return;
+      playback.removeListener(refocus);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || pressed == null || pressed.hasPrimaryFocus) return;
+        final now = FocusManager.instance.primaryFocus;
+        if (now != null && now is! FocusScopeNode) return;
+        if (_currentChannelFocusNode.context != null) {
+          _currentChannelFocusNode.requestFocus();
+        }
+      });
+    }
+
+    playback.addListener(refocus);
+    final future = playback.play(channel);
+    _previewChannelId = channel.id;
+    _previewFuture = future;
+    try {
+      await future;
+    } finally {
+      playback.removeListener(refocus);
+      if (_previewFuture == future) {
+        _previewChannelId = null;
+        _previewFuture = null;
+      }
+    }
+  }
+
   /// Right, once there's no further column to move into, jumps straight to
   /// fullscreen on whatever's actually playing (PlaybackService's
   /// currentChannel) — not whichever row the D-pad cursor happens to be
@@ -3103,7 +3191,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         // _timelineFilterActive on its own.
         onOpen: (channel) {
           if (_timelineFilterActive) _closeTimelineFilter();
-          _selectChannel(channel);
+          _previewOrOpenChannel(channel);
         },
         onFocusChanged: _onGuideFocusChanged,
         onShowOptions: _showChannelOptions,
@@ -3533,14 +3621,14 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
           // HoldToActivate adds the equivalent for a *held* remote Select
           // key, which is the case that actually matters on real hardware.
           return HoldToActivate(
-            onTap: () => _selectChannel(channel),
+            onTap: () => _previewOrOpenChannel(channel),
             onHold: () => _toggleFavoriteWithFeedback(context, channel),
             child: _SelectableRow(
               selected: isSelected,
               focusNode: isSelected
                   ? _currentChannelFocusNode
                   : (i == 0 ? _firstLiveChannelFocusNode : null),
-              onTap: () => _selectChannel(channel),
+              onTap: () => _previewOrOpenChannel(channel),
               onLongPress: () => _toggleFavoriteWithFeedback(context, channel),
               leading: SizedBox(
                 width: 40,
@@ -7019,21 +7107,18 @@ class _ProgramBlockState extends State<_ProgramBlock> {
             }
           },
           child: InkWell(
-            // Windows only — gating actual playback behind a second click
-            // instead of the first lets a single click act as a pure
-            // preview, reported directly as the expected mouse behavior
-            // (click = look, double-click = commit); a D-pad remote has
-            // no such ambiguity (one press IS the commit), so
-            // HoldToActivate above and a touch tap are untouched, only
-            // this widget's own mouse-click path changes. `onTap: null`
-            // was tried first on the assumption InkWell requests focus on
-            // any tap-down regardless of its own callbacks — reported
-            // directly as not actually true here (no focus, no details
-            // panel, on a single click at all); `_node.requestFocus()`
-            // makes the single click focus this block explicitly instead
-            // of trusting that.
-            onTap: Platform.isWindows ? _node.requestFocus : widget.onOpen,
-            onDoubleTap: Platform.isWindows ? widget.onOpen : null,
+            // One click/tap = preview in the corner box, a second one on
+            // the now-playing channel = fullscreen — that logic lives in
+            // onOpen (TvHomeScreen._previewOrOpenChannel), so a mouse
+            // double-click is simply two clicks and no onDoubleTap is
+            // needed (it would also delay every single click). The
+            // explicit requestFocus is still needed: InkWell doesn't focus
+            // a block on click by itself here (checked on Windows — no
+            // focus, no details panel).
+            onTap: () {
+              _node.requestFocus();
+              widget.onOpen();
+            },
             child: Container(
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(

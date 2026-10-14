@@ -192,6 +192,7 @@ const Map<String, String> kIt = {
   'Today': "Oggi",
   'Standings': "Classifica",
   '{name} standings': "Classifica {name}",
+  '{name} championship': "Campionato {name}",
   'No games on this day for your leagues':
       "Nessuna partita in questo giorno nei tuoi campionati",
   'Try another day, or add leagues with Edit leagues.':
@@ -233,6 +234,7 @@ const Map<String, String> kIt = {
   'Standings could not be loaded. Check the connection.':
       "Impossibile caricare la classifica. Controlla la connessione.",
   'switch conference': "cambia conference",
+  'switch table': "cambia tabella",
   'Hold OK on a team to follow it (My Teams)':
       "Tieni premuto OK su una squadra per seguirla (Le mie squadre)",
   'Your pick': "La tua scelta",
@@ -787,6 +789,11 @@ const Map<String, String> kIt = {
   'Hockey': "Hockey",
   'Baseball': "Baseball",
   'Other': "Altri",
+  'Golf': "Golf",
+  'Fighting': "Combattimento",
+  'Motorsport': "Motori",
+  'Always for {name}': "Sempre per {name}",
+  'Best for a channel that carries the whole series': "Ideale per un canale che trasmette tutta la serie",
   'Next game: {date}': "Prossima partita: {date}",
   'No upcoming games listed yet for this league.':
       "Ancora nessuna partita in programma per questo campionato.",

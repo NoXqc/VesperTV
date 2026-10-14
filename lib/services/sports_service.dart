@@ -55,13 +55,14 @@ class SportsService {
       for (final g in list) {
         if (!seen.add('${g.league.id}:${g.id}')) continue;
         final start = g.start.toLocal();
-        final sameDay = start.year == local.year &&
+        final sameDay = g.end == null &&
+            start.year == local.year &&
             start.month == local.month &&
             start.day == local.day;
         final carriedOver = local == today &&
             g.state == GameState.live &&
             start.isBefore(local);
-        if (sameDay || carriedOver) games.add(g);
+        if (sameDay || carriedOver || _tournamentDay(g, local)) games.add(g);
       }
     }
     games.sort((a, b) {
@@ -69,6 +70,24 @@ class SportsService {
       return byStart != 0 ? byStart : a.league.id.compareTo(b.league.id);
     });
     return games;
+  }
+
+  /// A golf tournament runs Thursday to Sunday but ESPN dates it once, at
+  /// US-Eastern midnight of day one (`04:00Z`/`05:00Z`), with `endDate` the
+  /// last day's midnight. Shown on each of its days: those are Eastern
+  /// calendar dates, so read them 4 h back from UTC rather than in the
+  /// viewer's zone (midnight Eastern is the evening before in California).
+  static bool _tournamentDay(SportsGame g, DateTime localDay) {
+    final end = g.end;
+    if (end == null) return false;
+    DateTime easternDate(DateTime utc) {
+      final t = utc.subtract(const Duration(hours: 4));
+      return DateTime(t.year, t.month, t.day);
+    }
+
+    final first = easternDate(g.start);
+    final last = easternDate(end);
+    return !localDay.isBefore(first) && !localDay.isAfter(last);
   }
 
   /// Set when the most recent load had at least one failed request.
@@ -183,8 +202,15 @@ class SportsService {
     if (hit == null ||
         DateTime.now().difference(hit.$2) > const Duration(minutes: 30)) {
       try {
+        // Event sports' dateless scoreboard is the *last* event (UFC showed
+        // last week's card, so "no upcoming games"); a 60-day range lists
+        // what's next. Team leagues keep the dateless call — a range there
+        // is hundreds of games (NHL's failed outright).
+        final range = league.kind == SportsKind.team
+            ? ''
+            : '?dates=${_espnDate(day)}-${_espnDate(day.add(const Duration(days: 60)))}';
         final response = await _client
-            .get(Uri.parse('$_base/${league.espnPath}/scoreboard'))
+            .get(Uri.parse('$_base/${league.espnPath}/scoreboard$range'))
             .timeout(const Duration(seconds: 15));
         if (response.statusCode != 200) return null;
         final games =
@@ -270,13 +296,286 @@ List<SportsGame> parseEspnScoreboard((String, SportsLeague) args) {
   final games = <SportsGame>[];
   for (final e in events) {
     try {
-      final game = _parseEvent(e as Map<String, dynamic>, league);
-      if (game != null) games.add(game);
+      final m = e as Map<String, dynamic>;
+      switch (league.kind) {
+        case SportsKind.team:
+          final game = _parseEvent(m, league);
+          if (game != null) games.add(game);
+        case SportsKind.golf:
+          final game = _parseGolf(m, league);
+          if (game != null) games.add(game);
+        case SportsKind.racing:
+          games.addAll(_parseRacing(m, league));
+        case SportsKind.fight:
+          final game = _parseFightCard(m, league);
+          if (game != null) games.add(game);
+      }
     } catch (_) {
       // One malformed event shouldn't drop the whole league.
     }
   }
   return games;
+}
+
+// ------------------------------------------------------------ event sports
+
+GameState _stateOf(Map<String, dynamic>? status) =>
+    switch ((status?['type'] as Map?)?['state']) {
+      'in' => GameState.live,
+      'post' => GameState.post,
+      _ => GameState.pre,
+    };
+
+String _statusTextOf(Map<String, dynamic>? status) {
+  final type = status?['type'] as Map?;
+  return (type?['shortDetail'] ?? type?['detail'] ?? '').toString();
+}
+
+List<String> _broadcastsOf(Iterable<Map<String, dynamic>> comps) {
+  final out = <String>{};
+  for (final comp in comps) {
+    for (final b in (comp['broadcasts'] as List?) ?? const []) {
+      for (final n in ((b as Map)['names'] as List?) ?? const []) {
+        out.add(n.toString());
+      }
+    }
+    for (final g in (comp['geoBroadcasts'] as List?) ?? const []) {
+      final name = ((g as Map)['media'] as Map?)?['shortName']?.toString();
+      if (name != null && name.isNotEmpty) out.add(name);
+    }
+  }
+  return out.toList();
+}
+
+String? _venueOf(Map<String, dynamic> e, Map<String, dynamic>? comp) {
+  Object? v = e['circuit'] ?? comp?['venue'] ?? e['venues'];
+  if (v is List) v = v.isEmpty ? null : v.first;
+  if (v is! Map) return null;
+  final name = v['fullName']?.toString();
+  final city = (v['address'] as Map?)?['city']?.toString();
+  if (name == null || name.isEmpty) return city;
+  return city == null || city.isEmpty || name.contains(city)
+      ? name
+      : '$name, $city';
+}
+
+List<Map<String, dynamic>> _competitorsByOrder(Map<String, dynamic> comp) {
+  final list = [
+    for (final c in (comp['competitors'] as List?) ?? const [])
+      (c as Map).cast<String, dynamic>()
+  ];
+  int order(Map<String, dynamic> c) => (c['order'] as num?)?.toInt() ?? 1 << 20;
+  list.sort((a, b) => order(a).compareTo(order(b)));
+  return list;
+}
+
+String? _flagOf(Map<String, dynamic> c) =>
+    ((c['athlete'] as Map?)?['flag'] as Map?)?['href']?.toString();
+
+String _athleteName(Map<String, dynamic> c, {bool short = false}) {
+  final a = (c['athlete'] as Map?) ?? const {};
+  return ((short ? a['shortName'] : null) ??
+          a['displayName'] ??
+          a['fullName'] ??
+          '')
+      .toString();
+}
+
+/// Golf and racing have no sides; the cards read the event instead, but the
+/// rest of the tab (glow, picks, search) still expects two teams.
+SportsTeam _placeholderSide(SportsLeague league, String title) => SportsTeam(
+      id: '',
+      name: title,
+      shortName: title,
+      abbreviation: league.shortName,
+      logoUrl: league.logoUrl,
+    );
+
+SportsGame? _parseGolf(Map<String, dynamic> e, SportsLeague league) {
+  final comp = ((e['competitions'] as List?)?.firstOrNull as Map?)
+      ?.cast<String, dynamic>();
+  if (comp == null) return null;
+  final status = (comp['status'] ?? e['status']) as Map<String, dynamic>?;
+  final state = _stateOf(status);
+  final title = (e['name'] ?? '').toString();
+  final players = _competitorsByOrder(comp);
+  // Ties share a place ("T3"), the way every leaderboard shows them.
+  final leaders = <SportsEventEntry>[];
+  if (state != GameState.pre) {
+    for (var i = 0; i < players.length && leaders.length < 5; i++) {
+      final score = players[i]['score']?.toString();
+      var first = i;
+      while (first > 0 && players[first - 1]['score']?.toString() == score) {
+        first--;
+      }
+      final tied = (i + 1 < players.length &&
+              players[i + 1]['score']?.toString() == score) ||
+          first != i;
+      leaders.add(SportsEventEntry(
+        position: '${tied ? 'T' : ''}${first + 1}',
+        name: _athleteName(players[i], short: true),
+        flagUrl: _flagOf(players[i]),
+        value: score,
+      ));
+    }
+  }
+  final round = (status?['period'] as num?)?.toInt();
+  final side = _placeholderSide(league, title);
+  final endRaw = e['endDate']?.toString();
+  return SportsGame(
+    id: e['id'].toString(),
+    league: league,
+    start: DateTime.parse((e['date'] ?? comp['date']).toString()).toUtc(),
+    end: endRaw == null ? null : DateTime.tryParse(endRaw)?.toUtc(),
+    state: state,
+    statusText: state == GameState.pre ? '' : _statusTextOf(status),
+    home: side,
+    away: side,
+    broadcasts: _broadcastsOf([comp]),
+    event: SportsEventInfo(
+      title: title,
+      session: state != GameState.pre && round != null && round > 0
+          ? 'Round $round'
+          : null,
+      venue: _venueOf(e, comp),
+      leaders: leaders,
+    ),
+  );
+}
+
+/// ESPN's session abbreviations. Practice sessions are left out: they'd
+/// triple the cards of a race weekend for something few people tune in to.
+const Map<String, String?> _racingSessions = {
+  'FP1': null,
+  'FP2': null,
+  'FP3': null,
+  'SS': 'Sprint Qualifying',
+  'SR': 'Sprint',
+  'Qual': 'Qualifying',
+  'Race': 'Race',
+};
+
+List<SportsGame> _parseRacing(Map<String, dynamic> e, SportsLeague league) {
+  final title = (e['name'] ?? '').toString();
+  final side = _placeholderSide(league, title);
+  final out = <SportsGame>[];
+  for (final raw in (e['competitions'] as List?) ?? const []) {
+    final comp = (raw as Map).cast<String, dynamic>();
+    final abbr = (comp['type'] as Map?)?['abbreviation']?.toString();
+    // NASCAR/IndyCar events are one untyped competition: the race.
+    final session = abbr == null
+        ? 'Race'
+        : (_racingSessions.containsKey(abbr) ? _racingSessions[abbr] : abbr);
+    if (session == null) continue;
+    final status = (comp['status'] ?? e['status']) as Map<String, dynamic>?;
+    final state = _stateOf(status);
+    final drivers = _competitorsByOrder(comp);
+    out.add(SportsGame(
+      id: (comp['id'] ?? e['id']).toString(),
+      league: league,
+      start: DateTime.parse((comp['date'] ?? e['date']).toString()).toUtc(),
+      state: state,
+      statusText: _statusTextOf(status),
+      home: side,
+      away: side,
+      broadcasts: _broadcastsOf([comp]),
+      event: SportsEventInfo(
+        title: title,
+        session: session,
+        venue: _venueOf(e, comp),
+        // Before the start the order is just the entry list.
+        leaders: state == GameState.pre
+            ? const []
+            : [
+                for (var i = 0; i < drivers.length && i < 5; i++)
+                  SportsEventEntry(
+                    position: '${i + 1}',
+                    name: _athleteName(drivers[i], short: true),
+                    flagUrl: _flagOf(drivers[i]),
+                  ),
+              ],
+      ),
+    ));
+  }
+  return out;
+}
+
+/// A fight card is one ESPN event with a competition per fight. The card
+/// shows the main event: the fight whose two names are in the event's name
+/// ("UFC Fight Night: Allen vs. Duncan"), else the last one listed.
+SportsGame? _parseFightCard(Map<String, dynamic> e, SportsLeague league) {
+  final comps = [
+    for (final c in (e['competitions'] as List?) ?? const [])
+      (c as Map).cast<String, dynamic>()
+  ];
+  if (comps.isEmpty) return null;
+  final name = (e['name'] ?? '').toString();
+  final lowerName = name.toLowerCase();
+  bool billed(Map<String, dynamic> comp) {
+    final fighters = (comp['competitors'] as List?) ?? const [];
+    return fighters.length == 2 &&
+        fighters.every((f) {
+          final full = _athleteName((f as Map).cast<String, dynamic>());
+          final parts = full.toLowerCase().split(' ');
+          return parts.isNotEmpty && lowerName.contains(parts.last);
+        });
+  }
+
+  final main = comps.where(billed).lastOrNull ?? comps.last;
+  final fighters = _competitorsByOrder(main);
+  if (fighters.length != 2) return null;
+  final status = (e['status'] ?? main['status']) as Map<String, dynamic>?;
+  final mainState = _stateOf(main['status'] as Map<String, dynamic>?);
+  SportsTeam fighter(Map<String, dynamic> c) {
+    final full = _athleteName(c);
+    final records = c['records'] as List?;
+    return SportsTeam(
+      id: ((c['athlete'] as Map?)?['id'] ?? c['id'] ?? full).toString(),
+      name: full,
+      shortName: full,
+      abbreviation: full
+          .split(' ')
+          .where((w) => w.isNotEmpty)
+          .map((w) => w[0])
+          .take(2)
+          .join()
+          .toUpperCase(),
+      logoUrl: _flagOf(c),
+      record: (records != null && records.isNotEmpty)
+          ? (records.first as Map)['summary']?.toString()
+          : null,
+      // W / L once the main event is decided (no score in MMA). A draw or
+      // no contest has no winner, so no letters.
+      score: mainState == GameState.post &&
+              fighters.any((f) => f['winner'] == true)
+          ? (c['winner'] == true ? 'W' : 'L')
+          : null,
+    );
+  }
+
+  DateTime start =
+      DateTime.parse((comps.first['date'] ?? e['date']).toString());
+  for (final c in comps) {
+    final d = DateTime.tryParse((c['date'] ?? '').toString());
+    if (d != null && d.isBefore(start)) start = d;
+  }
+  final type = main['type'] as Map?;
+  final weightClass = (type?['text'] ?? type?['abbreviation'])?.toString();
+  return SportsGame(
+    id: e['id'].toString(),
+    league: league,
+    start: start.toUtc(),
+    state: _stateOf(status),
+    statusText: _statusTextOf(status),
+    home: fighter(fighters[0]),
+    away: fighter(fighters[1]),
+    broadcasts: _broadcastsOf(comps),
+    event: SportsEventInfo(
+      title: name,
+      session: weightClass,
+      venue: _venueOf(e, null),
+    ),
+  );
 }
 
 /// Top-level so [compute] can run it on a background isolate. [bodies] are
@@ -457,8 +756,10 @@ SportsStandings parseEspnStandings((String, SportsLeague) args) {
 }
 
 SportsStandingRow _parseStandingRow(Map<String, dynamic> e) {
-  final t = (e['team'] as Map).cast<String, dynamic>();
-  final logos = t['logos'] as List?;
+  // Racing's driver table lists athletes (with a flag) instead of teams.
+  final t = ((e['team'] ?? e['athlete']) as Map).cast<String, dynamic>();
+  final logos = t['logos'] as List? ??
+      [if (t['flag'] is Map) t['flag']]; // href, same shape as a logo
   final name = (t['displayName'] ?? t['name'] ?? '').toString();
   final stats = <String, String>{};
   for (final s in (e['stats'] as List?) ?? const []) {
@@ -472,6 +773,11 @@ SportsStandingRow _parseStandingRow(Map<String, dynamic> e) {
     if (key == 'Last Ten Games') value = value.split(',').first.trim();
     stats.putIfAbsent(key, () => value);
   }
+  // Racing: drivers have `championshipPts`, F1 constructors `points` — one
+  // column reads both.
+  if (stats['points'] != null) {
+    stats.putIfAbsent('championshipPts', () => stats['points']!);
+  }
   final note = e['note'] as Map?;
   return SportsStandingRow(
     team: SportsTeam(
@@ -479,9 +785,8 @@ SportsStandingRow _parseStandingRow(Map<String, dynamic> e) {
       name: name,
       shortName: (t['shortDisplayName'] ?? t['name'] ?? name).toString(),
       abbreviation: (t['abbreviation'] ?? '').toString(),
-      logoUrl: (logos != null && logos.isNotEmpty)
-          ? (logos.first as Map)['href']?.toString()
-          : null,
+      logoUrl:
+          logos.isNotEmpty ? (logos.first as Map)['href']?.toString() : null,
       color: t['color']?.toString(),
     ),
     position: 0,
@@ -499,7 +804,9 @@ List<SportsStandingRow> _sortStandings(
     List<SportsStandingRow> rows, SportsLeague league) {
   double num(SportsStandingRow r, String k) =>
       double.tryParse(r.stat(k).replaceAll('+', '')) ?? 0;
-  final key = league.soccer ? 'rank' : 'playoffSeed';
+  final key = league.soccer || league.kind == SportsKind.racing
+      ? 'rank'
+      : 'playoffSeed';
   final ranked = rows.every((r) => num(r, key) > 0);
   final sorted = [...rows];
   sorted.sort((a, b) {

@@ -122,6 +122,15 @@ const Map<String, _SportsLanguage> _sportsLanguages = {
       'Quarter': 'quart',
       'Period': 'période',
       'Inning': 'manche',
+      // Golf / racing.
+      'Round': 'Ronde',
+      'Race': 'Course',
+      'Qualifying': 'Qualifications',
+      'Complete': 'Terminé',
+      'In Progress': 'En cours',
+      'Play Complete': 'Ronde terminée',
+      'Scheduled': 'Prévu',
+      'Lap': 'Tour',
     },
   ),
   'es': _SportsLanguage(
@@ -156,6 +165,15 @@ const Map<String, _SportsLanguage> _sportsLanguages = {
       'Quarter': 'cuarto',
       'Period': 'periodo',
       'Inning': 'entrada',
+      // Golf / racing.
+      'Round': 'Ronda',
+      'Race': 'Carrera',
+      'Qualifying': 'Clasificación',
+      'Complete': 'Terminado',
+      'In Progress': 'En curso',
+      'Play Complete': 'Ronda terminada',
+      'Scheduled': 'Programado',
+      'Lap': 'Vuelta',
     },
   ),
   'it': _SportsLanguage(
@@ -190,6 +208,15 @@ const Map<String, _SportsLanguage> _sportsLanguages = {
       'Quarter': 'quarto',
       'Period': 'periodo',
       'Inning': 'inning',
+      // Golf / racing.
+      'Round': 'Giro',
+      'Race': 'Gara',
+      'Qualifying': 'Qualifiche',
+      'Complete': 'Concluso',
+      'In Progress': 'In corso',
+      'Play Complete': 'Giro concluso',
+      'Scheduled': 'In programma',
+      'Lap': 'Giro',
     },
   ),
 };
@@ -211,7 +238,8 @@ String trSports(String s) {
   out = out.replaceAllMapped(
       RegExp(r'\b(\d+)(st|nd|rd|th)\b'), (m) => lang.ordinal(m[1]!));
   out = out.replaceAllMapped(
-      RegExp(r'\b(Rain Delay|End of|[A-Z][a-z]+|OT|SO|FT|HT|AET)\b'),
+      RegExp(r'\b(Rain Delay|End of|In Progress|Play Complete|'
+          r'[A-Z][a-z]+|OT|SO|FT|HT|AET)\b'),
       (m) => lang.words[m[0]] ?? m[0]!);
   return out;
 }

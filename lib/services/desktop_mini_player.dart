@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
@@ -35,7 +37,42 @@ class DesktopMiniPlayer {
   /// supports multiple simultaneous `Video` widgets on one controller.
   VideoController? get controller => _controller;
 
+  /// Re-opens a live preview that reports `completed` — same app-level
+  /// safety net as `DesktopPlayerScreen`'s own, since mpv's reconnect
+  /// options don't catch every way a live stream ends. Only set for a
+  /// session started by [play]; [take]/[clear] cancel it.
+  StreamSubscription<bool>? _completedSub;
+
+  /// Starts [ch] straight into this holder, without opening
+  /// `DesktopPlayerScreen` — the guide's "first click previews, second
+  /// click goes fullscreen" path. Reuses the current `Player` when there is
+  /// one (just opens the new stream on it) so switching channels in the
+  /// preview box never stacks up decoders.
+  void play(Channel ch) {
+    if (_player == null || _controller == null) {
+      final created = Player();
+      // Same reconnect tuning as DesktopPlayerScreen.initState — see its
+      // comment.
+      (created.platform as NativePlayer).setProperty('demuxer-lavf-o',
+          'reconnect=1,reconnect_at_eof=1,reconnect_streamed=1,reconnect_delay_max=5,rw_timeout=15000000');
+      _player = created;
+      _controller = VideoController(created);
+    }
+    final player = _player!;
+    _completedSub?.cancel();
+    _completedSub = player.stream.completed.listen((completed) {
+      final current = channel.value;
+      if (completed && current != null && _player == player) {
+        player.open(Media(current.url));
+      }
+    });
+    player.open(Media(ch.url));
+    channel.value = ch;
+  }
+
   void minimize(Channel ch, Player player, VideoController controller) {
+    _completedSub?.cancel();
+    _completedSub = null;
     // Only one minimized session can exist at a time (there's only one
     // pill) — if something else was already minimized, it has no other
     // reference anywhere, so it must be disposed here or it'd keep
@@ -54,6 +91,8 @@ class DesktopMiniPlayer {
     final player = _player;
     final controller = _controller;
     if (player == null || controller == null) return null;
+    _completedSub?.cancel();
+    _completedSub = null;
     _player = null;
     _controller = null;
     channel.value = null;
@@ -71,6 +110,8 @@ class DesktopMiniPlayer {
   /// audio in the background forever, with the resume pill still pointed
   /// at it even though a different channel was now also playing on top.
   void clear() {
+    _completedSub?.cancel();
+    _completedSub = null;
     _player?.dispose();
     _player = null;
     _controller = null;

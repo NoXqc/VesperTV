@@ -193,6 +193,7 @@ const Map<String, String> kFr = {
   'Today': "Aujourd'hui",
   'Standings': "Classement",
   '{name} standings': "Classement {name}",
+  '{name} championship': "Championnat {name}",
   'No games on this day for your leagues':
       "Aucun match ce jour-là dans vos ligues",
   'Try another day, or add leagues with Edit leagues.':
@@ -234,6 +235,7 @@ const Map<String, String> kFr = {
   'Standings could not be loaded. Check the connection.':
       "Impossible de charger le classement. Vérifiez la connexion.",
   'switch conference': "changer d'association",
+  'switch table': "changer de tableau",
   'Hold OK on a team to follow it (My Teams)':
       "Maintenir OK sur une équipe pour la suivre (Mes équipes)",
   'Your pick': "Votre choix",
@@ -788,6 +790,11 @@ const Map<String, String> kFr = {
   'Hockey': "Hockey",
   'Baseball': "Baseball",
   'Other': "Autres",
+  'Golf': "Golf",
+  'Fighting': "Combat",
+  'Motorsport': "Sport automobile",
+  'Always for {name}': "Toujours pour {name}",
+  'Best for a channel that carries the whole series': "Idéal pour une chaîne qui diffuse toute la série",
   'Next game: {date}': "Prochain match : {date}",
   'No upcoming games listed yet for this league.':
       "Aucun match à venir pour cette ligue pour l'instant.",

@@ -43,7 +43,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
 4. `flutter analyze` must report the baseline **20** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `1.0.8` unless noted
+5. Check the current state of releases: `gh release list` (latest should be `1.0.9` unless noted
    in §11).
 
 ## 3. Layout (what matters)
@@ -95,7 +95,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+240**) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+246**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
@@ -158,6 +158,9 @@ rejected (HDR + Android-TV hardware-decode risk).
   now/next from a preloaded ~4 h slice, `getPrograms` loads Timeline rows on demand and signals via
   `guideRowsLoaded` (not `notifyListeners` — `TvHomeScreen` watches the whole service, so that would
   rebuild the entire TV screen per scrolled row). Don't reintroduce a whole-guide load or save.
+- **`requestFocus` on an item a lazy `ListView` hasn't built does nothing** (off-screen chip/tile
+  has no context). Jumping focus to "the selected one" needs a non-lazy row
+  (`SingleChildScrollView`) + `Scrollable.ensureVisible`, or a target that is on screen.
 - **Never call `notifyListeners()` mid-build.** `PlaylistManager.notifyListeners` defers anything
   fired during the build phase (fixed Group Management checkmarks not repainting).
 - Composite `Channel.id` (`playlistId::rawId`) vs raw `Channel.rawId`: EPG lookups and
@@ -201,7 +204,14 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-14)
-- **Shipped: 1.0.8 (`+240`, 2026-10-14, latest on GitHub)** — **Spanish + Italian** (es.dart/it.dart,
+- **Shipped: 1.0.9 (`+246`, 2026-10-14, latest on GitHub)** — **Select = preview, Select again =
+  fullscreen** on the Timeline guide + Live list (Android and Windows, `_previewOrOpenChannel`,
+  `DesktopMiniPlayer.play`; see `dev-notes/features.md`), **event sports** in the League bank
+  (golf PGA/LPGA/DP World/LIV, UFC/PFL, F1/NASCAR/IndyCar — leaderboard cards, F1 per session,
+  fight cards = main event) and **racing championship standings** (drivers + F1 constructors).
+  Details: `dev-notes/sports-tab.md` (Event sports). Not done: UFC rankings / golf points race
+  (no usable free data), wrestling / horse racing (only an EPG-based idea). **Next:** ask the owner.
+- 1.0.8 (`+240`, 2026-10-14) — **Spanish + Italian** (es.dart/it.dart,
   same 614 keys as fr.dart), **Transfer to another device** (Settings, last row: copies the
   whole setup over the home network, `services/device_transfer.dart` +
   `screens/settings/transfer_screen.dart`, see `dev-notes/features.md` → Transfer), Settings menu

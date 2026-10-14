@@ -3,6 +3,24 @@
 /// these, not a UI change. All times are UTC; convert only for display.
 library;
 
+/// Team sports are two sides with a score. The others are "event sports":
+/// ESPN lists athletes instead of teams, so they get their own parsing and
+/// cards (see [SportsEventInfo]).
+enum SportsKind {
+  team,
+
+  /// One multi-day tournament per event, a leaderboard of 70-150 players.
+  golf,
+
+  /// One event per race weekend; each session (qualifying, sprint, race)
+  /// becomes its own card.
+  racing,
+
+  /// One event per fight card; the main event's two fighters play the part
+  /// of the two teams.
+  fight,
+}
+
 class SportsLeague {
   const SportsLeague({
     required this.id,
@@ -13,7 +31,19 @@ class SportsLeague {
     this.soccer = false,
     this.region,
     this.hasStandings = true,
+    this.kind = SportsKind.team,
+    this.seriesPhrases = const [],
   });
+
+  final SportsKind kind;
+
+  /// Event sports: how channels and guide titles name the series ("formula
+  /// 1", "nascar", "pga tour"), lower-case — the channel matcher's fallback
+  /// when no channel names the event itself.
+  final List<String> seriesPhrases;
+
+  /// Golf and racing — no two sides, a leaderboard instead.
+  bool get isField => kind == SportsKind.golf || kind == SportsKind.racing;
 
   /// Stable id stored in prefs (`nhl`, `eng.1`, ...).
   final String id;
@@ -141,10 +171,106 @@ const List<String> kDefaultSportsLeagueIds = [
 ];
 
 /// Extra leagues the user can add in the League manager (and remove again,
-/// which sends them back here). Team sports only — golf/F1/UFC/tennis need
-/// player-based parsing first. Every entry was checked against ESPN's
-/// scoreboard + standings on 2026-10-14 (see dev-notes/sports-tab.md).
+/// which sends them back here). Every entry was checked against ESPN's
+/// scoreboard (+ standings for team sports) on 2026-10-14 (see
+/// dev-notes/sports-tab.md). Golf, fighting and motorsport are event sports
+/// ([SportsKind]); of those only motorsport has standings (the drivers' /
+/// constructors' championship). ESPN's UFC rankings are frozen around 2021
+/// and golf's points race lists 600 unsorted athlete links — both left out.
 const List<SportsLeague> kSportsLeagueBank = [
+  SportsLeague(
+      id: 'golf.pga',
+      espnPath: 'golf/pga',
+      name: 'PGA Tour',
+      shortName: 'PGA',
+      logoUrl: 'https://a.espncdn.com/i/teamlogos/leagues/500/pgatour.png',
+      region: 'Golf',
+      hasStandings: false,
+      kind: SportsKind.golf,
+      seriesPhrases: ['pga tour', 'golf channel']),
+  SportsLeague(
+      id: 'golf.lpga',
+      espnPath: 'golf/lpga',
+      name: 'LPGA Tour',
+      shortName: 'LPGA',
+      logoUrl: 'https://a.espncdn.com/i/teamlogos/leagues/500/lpga.png',
+      region: 'Golf',
+      hasStandings: false,
+      kind: SportsKind.golf,
+      seriesPhrases: ['lpga', 'golf channel']),
+  SportsLeague(
+      id: 'golf.eur',
+      espnPath: 'golf/eur',
+      name: 'DP World Tour',
+      shortName: 'DPWT',
+      logoUrl:
+          'https://a.espncdn.com/combiner/i?img=/i/espn/teamlogos/500/european_tour.png',
+      region: 'Golf',
+      hasStandings: false,
+      kind: SportsKind.golf,
+      seriesPhrases: ['dp world tour', 'golf channel']),
+  SportsLeague(
+      id: 'golf.liv',
+      espnPath: 'golf/liv',
+      name: 'LIV Golf',
+      shortName: 'LIV',
+      logoUrl: 'https://a.espncdn.com/i/teamlogos/leagues/500/livgolf.png',
+      region: 'Golf',
+      hasStandings: false,
+      kind: SportsKind.golf,
+      seriesPhrases: ['liv golf', 'golf channel']),
+  SportsLeague(
+      id: 'mma.ufc',
+      espnPath: 'mma/ufc',
+      name: 'UFC',
+      shortName: 'UFC',
+      logoUrl: 'https://a.espncdn.com/i/teamlogos/leagues/500/ufc.png',
+      region: 'Fighting',
+      hasStandings: false,
+      kind: SportsKind.fight,
+      seriesPhrases: ['ufc']),
+  SportsLeague(
+      id: 'mma.pfl',
+      espnPath: 'mma/pfl',
+      name: 'PFL',
+      shortName: 'PFL',
+      logoUrl: 'https://a.espncdn.com/i/teamlogos/leagues/500/pfl.png',
+      region: 'Fighting',
+      hasStandings: false,
+      kind: SportsKind.fight,
+      seriesPhrases: ['pfl']),
+  SportsLeague(
+      id: 'racing.f1',
+      espnPath: 'racing/f1',
+      name: 'Formula 1',
+      shortName: 'F1',
+      logoUrl: 'https://a.espncdn.com/i/teamlogos/leagues/500/f1.png',
+      region: 'Motorsport',
+      hasStandings: true,
+      kind: SportsKind.racing,
+      seriesPhrases: ['formula 1', 'formula one', 'sky sports f1']),
+  SportsLeague(
+      id: 'racing.nascar-premier',
+      espnPath: 'racing/nascar-premier',
+      name: 'NASCAR Cup Series',
+      shortName: 'NASCAR',
+      logoUrl:
+          'https://a.espncdn.com/combiner/i?img=/redesign/assets/img/icons/ESPN-icon-NASCAR.png',
+      region: 'Motorsport',
+      hasStandings: true,
+      kind: SportsKind.racing,
+      seriesPhrases: ['nascar cup', 'nascar']),
+  SportsLeague(
+      id: 'racing.irl',
+      espnPath: 'racing/irl',
+      name: 'IndyCar',
+      shortName: 'INDYCAR',
+      logoUrl:
+          'https://a.espncdn.com/combiner/i?img=/i/espn/teamlogos/500/indycar_series.png',
+      region: 'Motorsport',
+      hasStandings: true,
+      kind: SportsKind.racing,
+      seriesPhrases: ['indycar']),
   SportsLeague(
       id: 'ger.2',
       espnPath: 'soccer/ger.2',
@@ -682,6 +808,9 @@ const List<String> kSportsLeagueRegions = [
   'Basketball',
   'Hockey',
   'Baseball',
+  'Golf',
+  'Fighting',
+  'Motorsport',
   'Other',
 ];
 
@@ -759,11 +888,22 @@ class SportsGame {
     required this.home,
     required this.away,
     this.broadcasts = const [],
+    this.event,
+    this.end,
   });
 
   final String id;
   final SportsLeague league;
   final DateTime start;
+
+  /// Golf only: the tournament's last day (ESPN's US-Eastern midnight). The
+  /// event shows on every day from [start] to here.
+  final DateTime? end;
+
+  /// Event sports only (golf / racing / fight): what the card shows instead
+  /// of two teams. For golf and racing [home]/[away] are placeholders named
+  /// after the event; for a fight card they're the main event's fighters.
+  final SportsEventInfo? event;
   final GameState state;
 
   /// Provider's short status ("End of 2nd", "73'", "Final", "7:00 PM").
@@ -775,11 +915,59 @@ class SportsGame {
   final List<String> broadcasts;
 
   /// The two sides in on-screen order (see [SportsLeague.soccer]).
-  SportsTeam get first => league.soccer ? home : away;
-  SportsTeam get second => league.soccer ? away : home;
-  String get joiner => league.soccer ? 'vs' : 'at';
+  /// Fights read "A vs B" in the order ESPN bills them, like soccer.
+  bool get _homeFirst => league.soccer || league.kind != SportsKind.team;
+  SportsTeam get first => _homeFirst ? home : away;
+  SportsTeam get second => _homeFirst ? away : home;
+  String get joiner => _homeFirst ? 'vs' : 'at';
 
-  String get title => '${first.shortName} $joiner ${second.shortName}';
+  String get title => league.isField
+      ? (event?.title ?? first.name)
+      : '${first.shortName} $joiner ${second.shortName}';
+}
+
+/// One line of an event's leaderboard / running order.
+class SportsEventEntry {
+  const SportsEventEntry({
+    required this.position,
+    required this.name,
+    this.flagUrl,
+    this.value,
+  });
+
+  /// "1", "T3" (golf ties).
+  final String position;
+
+  /// "M. Verstappen".
+  final String name;
+  final String? flagUrl;
+
+  /// Golf: score to par ("-12", "E"). Racing: none.
+  final String? value;
+}
+
+/// What an event-sport card shows ([SportsKind.golf], `racing`, `fight`).
+class SportsEventInfo {
+  const SportsEventInfo({
+    required this.title,
+    this.session,
+    this.venue,
+    this.leaders = const [],
+  });
+
+  /// "Singapore Airlines Singapore Grand Prix", "UFC Fight Night: Allen vs.
+  /// Duncan", "Butterfield Bermuda Championship".
+  final String title;
+
+  /// "Race", "Qualifying", "Round 2" (English, shown through `tr`), or a
+  /// fight's weight class.
+  final String? session;
+
+  /// Circuit / arena / city.
+  final String? venue;
+
+  /// Top of the leaderboard (golf, racing), best first. Empty for fights.
+  final List<SportsEventEntry> leaders;
 }
 
 /// One team's line in a standings table. [stats] is keyed by the provider's

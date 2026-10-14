@@ -194,6 +194,7 @@ const Map<String, String> kEs = {
   'Today': "Hoy",
   'Standings': "Clasificación",
   '{name} standings': "Clasificación {name}",
+  '{name} championship': "Campeonato de {name}",
   'No games on this day for your leagues':
       "No hay partidos este día en tus ligas",
   'Try another day, or add leagues with Edit leagues.':
@@ -235,6 +236,7 @@ const Map<String, String> kEs = {
   'Standings could not be loaded. Check the connection.':
       "No se pudo cargar la clasificación. Revisa la conexión.",
   'switch conference': "cambiar conferencia",
+  'switch table': "cambiar de tabla",
   'Hold OK on a team to follow it (My Teams)':
       "Mantén OK en un equipo para seguirlo (Mis equipos)",
   'Your pick': "Tu elección",
@@ -784,6 +786,11 @@ const Map<String, String> kEs = {
   'Hockey': "Hockey",
   'Baseball': "Béisbol",
   'Other': "Otros",
+  'Golf': "Golf",
+  'Fighting': "Combate",
+  'Motorsport': "Motor",
+  'Always for {name}': "Siempre para {name}",
+  'Best for a channel that carries the whole series': "Ideal para un canal que emite toda la serie",
   'Next game: {date}': "Próximo partido: {date}",
   'No upcoming games listed yet for this league.':
       "Todavía no hay próximos partidos para esta liga.",

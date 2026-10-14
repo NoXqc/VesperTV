@@ -78,9 +78,14 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
         for (final id in _added) sportsLeagueById(id)!,
       ];
 
+  /// In screen order (grouped by region), not [kSportsLeagueBank]'s order:
+  /// Right focuses the first one and adding one focuses its neighbour. With
+  /// list order, Right aimed at golf — far down, not built yet in the lazy
+  /// list — and did nothing.
   List<SportsLeague> get _bank => [
-        for (final l in kSportsLeagueBank)
-          if (!_added.contains(l.id)) l
+        for (final region in kSportsLeagueRegions)
+          for (final l in kSportsLeagueBank)
+            if (l.region == region && !_added.contains(l.id)) l
       ];
 
   Future<void> _save() async {

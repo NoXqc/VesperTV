@@ -9,6 +9,17 @@ Read before changing guide/Multiview/profiles/palettes/backup-server logic.
   returning from fullscreen restore focus at the current time, long blocks keep a sticky label, rows
   with no EPG show a placeholder, hold-Select opens a favourite/hide menu. "Live" = compact
   now/next list with details below.
+- **Select = preview, Select again = fullscreen (1.0.9+246):** on the Timeline guide and the plain
+  Live list (remote, touch, mouse alike) `TvHomeScreen._previewOrOpenChannel` plays the channel
+  in the corner preview box; pressing the *now-playing* channel again goes fullscreen. Owner's
+  request (changing channel meant fullscreen + back). Deliberately **not** a timed double-press
+  (would delay every press ~300 ms, remotes misread timing); a quick double press still works
+  as two presses. `_previewChannelId/_previewFuture` make a fast second press await the first
+  `play()` (black-screen race). The plain list hands the playing row `_currentChannelFocusNode`,
+  so focus is re-requested after the swap. Windows: `DesktopMiniPlayer.play()` starts the stream
+  in the holder (reuses its `Player`, own completed→reopen), fullscreen = `take()` + push
+  `DesktopPlayerScreen(existingPlayer:)` — no restart. History dialog / Continue Watching still
+  go straight to fullscreen (`_selectChannel`).
 - **Player controls:** a primary row plus a secondary row revealed by pressing Down again (a chevron
   hints it exists); every icon button has a text label; top row shows quality (HD/FHD/4K), FPS and
   audio-channel (e.g. 5.1) badges. "Multiview" button opens Multiview with this channel preloaded.
