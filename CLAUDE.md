@@ -43,7 +43,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
 4. `flutter analyze` must report the baseline **20** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `1.0.6` unless noted
+5. Check the current state of releases: `gh release list` (latest should be `1.0.7` unless noted
    in §11).
 
 ## 3. Layout (what matters)
@@ -95,7 +95,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+232**) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+235**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
@@ -201,12 +201,16 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-14)
-- **Shipped: 1.0.6 (`+232`, 2026-10-14, latest on GitHub)** — **phone mode**: `TvHomeScreen`
+- **Shipped: 1.0.7 (`+235`, 2026-10-14, latest on GitHub)** — Sports **League manager**
+  (replaces the Edit leagues dialog): 13 base leagues + a bank of 63 ESPN leagues
+  (`kSportsLeagueBank`, add / hold-to-send-back, per viewer), cups without a table kept out of
+  Standings, and an empty single-league day offers "Next game: <date>". Details:
+  `dev-notes/sports-tab.md` (League manager). **Next:** ask the owner.
+- 1.0.6 (`+232`, 2026-10-14) — **phone mode**: `TvHomeScreen`
   adapts to portrait phones (one column at a time, `_compact`/`_phonePage`; "auto" layout now
   uses it on phones — the old `HomeScreen` is only reachable via Layout = "Phone" and is slated
   for deletion), touch/mouse group pick collapses the side columns, Add Playlist / My Teams stack
   in portrait, Standings scrolls sideways on touch. Details: `dev-notes/features.md` (Phone mode).
-  **Next:** ask the owner (phone-mode polish ideas listed there).
 - 1.0.5 (`+230`, 2026-10-14) — Sports on Windows: back arrow + Esc
   on the Sports screens, the whole Sports UI scales up on big displays (`SportsScreenFrame`,
   design width 1440, never shrinks — owner checked on a 4K monitor), and mouse ‹ › arrows on the

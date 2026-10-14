@@ -171,6 +171,38 @@ class SportsService {
       '${d.month.toString().padLeft(2, '0')}'
       '${d.day.toString().padLeft(2, '0')}';
 
+  final Map<String, (List<DateTime>, DateTime)> _windowStarts = {};
+
+  /// Start of [league]'s first game on or after the local day [from], from
+  /// ESPN's dateless scoreboard (the league's current or next round). Lets
+  /// an empty day offer "Next game: ..." — cups and off-season leagues can
+  /// go weeks without a game. Null when ESPN lists nothing upcoming.
+  Future<DateTime?> nextGameStart(SportsLeague league, DateTime from) async {
+    final day = DateTime(from.year, from.month, from.day);
+    var hit = _windowStarts[league.id];
+    if (hit == null ||
+        DateTime.now().difference(hit.$2) > const Duration(minutes: 30)) {
+      try {
+        final response = await _client
+            .get(Uri.parse('$_base/${league.espnPath}/scoreboard'))
+            .timeout(const Duration(seconds: 15));
+        if (response.statusCode != 200) return null;
+        final games =
+            await compute(parseEspnScoreboard, (response.body, league));
+        hit = ([for (final g in games) g.start.toLocal()], DateTime.now());
+        _windowStarts[league.id] = hit;
+      } catch (e) {
+        debugPrint('SportsService: ${league.id} next game failed: $e');
+        return null;
+      }
+    }
+    final upcoming = [
+      for (final s in hit.$1)
+        if (!s.isBefore(day)) s
+    ]..sort();
+    return upcoming.firstOrNull;
+  }
+
   Future<List<SportsGame>> _fetch(SportsLeague league, DateTime date) {
     final key = '${league.id}|${_espnDate(date)}';
     final cached = _cache[key];

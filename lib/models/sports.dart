@@ -11,6 +11,8 @@ class SportsLeague {
     required this.shortName,
     required this.logoUrl,
     this.soccer = false,
+    this.region,
+    this.hasStandings = true,
   });
 
   /// Stable id stored in prefs (`nhl`, `eng.1`, ...).
@@ -25,9 +27,20 @@ class SportsLeague {
   /// Soccer reads "Home vs Away" and shows a minute clock; North American
   /// leagues read "Away at Home".
   final bool soccer;
+
+  /// Bank leagues only: the League manager's group heading (English, shown
+  /// through `tr`). Null for the base leagues.
+  final String? region;
+
+  /// False for cups/tournaments ESPN has no table for — kept out of
+  /// Standings instead of showing "could not be loaded".
+  final bool hasStandings;
+
+  bool get isBase => region == null;
 }
 
-/// Every league the tab knows about, in the default order.
+/// The base leagues — always available in the League manager, in the
+/// default order. Extra leagues come from [kSportsLeagueBank].
 const List<SportsLeague> kSportsLeagues = [
   SportsLeague(
       id: 'nhl',
@@ -127,8 +140,556 @@ const List<String> kDefaultSportsLeagueIds = [
   'uefa.champions',
 ];
 
+/// Extra leagues the user can add in the League manager (and remove again,
+/// which sends them back here). Team sports only — golf/F1/UFC/tennis need
+/// player-based parsing first. Every entry was checked against ESPN's
+/// scoreboard + standings on 2026-10-14 (see dev-notes/sports-tab.md).
+const List<SportsLeague> kSportsLeagueBank = [
+  SportsLeague(
+      id: 'ger.2',
+      espnPath: 'soccer/ger.2',
+      name: '2. Bundesliga',
+      shortName: 'BUN2',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/97.png',
+      region: 'Germany',
+      soccer: true),
+  SportsLeague(
+      id: 'eng.2',
+      espnPath: 'soccer/eng.2',
+      name: 'EFL Championship',
+      shortName: 'EFL',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/24.png',
+      region: 'England',
+      soccer: true),
+  SportsLeague(
+      id: 'esp.2',
+      espnPath: 'soccer/esp.2',
+      name: 'LALIGA 2',
+      shortName: 'LALIGA2',
+      logoUrl: 'http://a.espncdn.com/i/leaguelogos/soccer/500/107.png',
+      region: 'Spain',
+      soccer: true),
+  SportsLeague(
+      id: 'ita.2',
+      espnPath: 'soccer/ita.2',
+      name: 'Serie B',
+      shortName: 'SB',
+      logoUrl: 'http://a.espncdn.com/i/leaguelogos/soccer/500/99.png',
+      region: 'Italy',
+      soccer: true),
+  SportsLeague(
+      id: 'fra.2',
+      espnPath: 'soccer/fra.2',
+      name: 'Ligue 2',
+      shortName: 'L2',
+      logoUrl: 'http://a.espncdn.com/i/leaguelogos/soccer/500/96.png',
+      region: 'France',
+      soccer: true),
+  SportsLeague(
+      id: 'ned.1',
+      espnPath: 'soccer/ned.1',
+      name: 'Eredivisie',
+      shortName: 'ERE',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/11.png',
+      region: 'Europe',
+      soccer: true),
+  SportsLeague(
+      id: 'por.1',
+      espnPath: 'soccer/por.1',
+      name: 'Primeira Liga',
+      shortName: 'LIGA PT',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/14.png',
+      region: 'Europe',
+      soccer: true),
+  SportsLeague(
+      id: 'tur.1',
+      espnPath: 'soccer/tur.1',
+      name: 'Turkish Super Lig',
+      shortName: 'SÜPER LIG',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/18.png',
+      region: 'Europe',
+      soccer: true),
+  SportsLeague(
+      id: 'sco.1',
+      espnPath: 'soccer/sco.1',
+      name: 'Scottish Premiership',
+      shortName: 'SPFL',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/45.png',
+      region: 'Europe',
+      soccer: true),
+  SportsLeague(
+      id: 'bel.1',
+      espnPath: 'soccer/bel.1',
+      name: 'Belgian Pro League',
+      shortName: 'JPL',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/6.png',
+      region: 'Europe',
+      soccer: true),
+  SportsLeague(
+      id: 'aut.1',
+      espnPath: 'soccer/aut.1',
+      name: 'Austrian Bundesliga',
+      shortName: 'AUT',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/5.png',
+      region: 'Europe',
+      soccer: true),
+  SportsLeague(
+      id: 'gre.1',
+      espnPath: 'soccer/gre.1',
+      name: 'Greek Super League',
+      shortName: 'GRE',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/98.png',
+      region: 'Europe',
+      soccer: true),
+  SportsLeague(
+      id: 'rus.1',
+      espnPath: 'soccer/rus.1',
+      name: 'Russian Premier League',
+      shortName: 'RPL',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/106.png',
+      region: 'Europe',
+      soccer: true),
+  SportsLeague(
+      id: 'den.1',
+      espnPath: 'soccer/den.1',
+      name: 'Danish Superliga',
+      shortName: 'DEN',
+      logoUrl:
+          'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/default-team-logo-500.png&w=100&h=100',
+      region: 'Europe',
+      soccer: true),
+  SportsLeague(
+      id: 'nor.1',
+      espnPath: 'soccer/nor.1',
+      name: 'Norwegian Eliteserien',
+      shortName: 'NOR',
+      logoUrl:
+          'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/default-team-logo-500.png&w=100&h=100',
+      region: 'Europe',
+      soccer: true),
+  SportsLeague(
+      id: 'swe.1',
+      espnPath: 'soccer/swe.1',
+      name: 'Swedish Allsvenskan',
+      shortName: 'ALLSV',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/16.png',
+      region: 'Europe',
+      soccer: true),
+  SportsLeague(
+      id: 'mex.1',
+      espnPath: 'soccer/mex.1',
+      name: 'Liga MX',
+      shortName: 'LIGA MX',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/22.png',
+      region: 'Americas',
+      soccer: true),
+  SportsLeague(
+      id: 'arg.1',
+      espnPath: 'soccer/arg.1',
+      name: 'Liga Profesional (ARG)',
+      shortName: 'LPF',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/1.png',
+      region: 'Americas',
+      soccer: true),
+  SportsLeague(
+      id: 'bra.1',
+      espnPath: 'soccer/bra.1',
+      name: 'Brasileirão Série A',
+      shortName: 'BRA',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/85.png',
+      region: 'Americas',
+      soccer: true),
+  SportsLeague(
+      id: 'jpn.1',
+      espnPath: 'soccer/jpn.1',
+      name: 'J1 League',
+      shortName: 'J1',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2199.png',
+      region: 'World',
+      soccer: true),
+  SportsLeague(
+      id: 'chn.1',
+      espnPath: 'soccer/chn.1',
+      name: 'Chinese Super League',
+      shortName: 'CSL',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2350.png',
+      region: 'World',
+      soccer: true),
+  SportsLeague(
+      id: 'aus.1',
+      espnPath: 'soccer/aus.1',
+      name: 'A-League Men',
+      shortName: 'A-LEAGUE',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/1308.png',
+      region: 'World',
+      soccer: true),
+  SportsLeague(
+      id: 'ind.1',
+      espnPath: 'soccer/ind.1',
+      name: 'Indian Super League',
+      shortName: 'ISL',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2334.png',
+      region: 'World',
+      soccer: true),
+  SportsLeague(
+      id: 'rsa.1',
+      espnPath: 'soccer/rsa.1',
+      name: 'South African Premiership',
+      shortName: 'RSA',
+      logoUrl:
+          'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/default-team-logo-500.png&w=100&h=100',
+      region: 'World',
+      soccer: true),
+  SportsLeague(
+      id: 'uefa.europa',
+      espnPath: 'soccer/uefa.europa',
+      name: 'UEFA Europa League',
+      shortName: 'UEL',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2310.png',
+      region: 'Cups',
+      soccer: true),
+  SportsLeague(
+      id: 'uefa.europa.conf',
+      espnPath: 'soccer/uefa.europa.conf',
+      name: 'UEFA Conference League',
+      shortName: 'UECL',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/20296.png',
+      region: 'Cups',
+      soccer: true),
+  SportsLeague(
+      id: 'uefa.champions_qual',
+      espnPath: 'soccer/uefa.champions_qual',
+      name: 'UEFA Champions League Qualifying',
+      shortName: 'UCL Q',
+      logoUrl: '',
+      region: 'Cups',
+      soccer: true,
+      hasStandings: false),
+  SportsLeague(
+      id: 'uefa.super_cup',
+      espnPath: 'soccer/uefa.super_cup',
+      name: 'UEFA Super Cup',
+      shortName: 'SUPER CUP',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/1272.png',
+      region: 'Cups',
+      soccer: true,
+      hasStandings: false),
+  SportsLeague(
+      id: 'uefa.euro',
+      espnPath: 'soccer/uefa.euro',
+      name: 'UEFA EURO',
+      shortName: 'EURO',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/74.png',
+      region: 'Cups',
+      soccer: true),
+  SportsLeague(
+      id: 'uefa.nations',
+      espnPath: 'soccer/uefa.nations',
+      name: 'UEFA Nations League',
+      shortName: 'UNL',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2395.png',
+      region: 'Cups',
+      soccer: true),
+  SportsLeague(
+      id: 'eng.fa',
+      espnPath: 'soccer/eng.fa',
+      name: 'English FA Cup',
+      shortName: 'FA CUP',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/40.png',
+      region: 'England',
+      soccer: true,
+      hasStandings: false),
+  SportsLeague(
+      id: 'eng.league_cup',
+      espnPath: 'soccer/eng.league_cup',
+      name: 'Carabao Cup',
+      shortName: 'EFL CUP',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/41.png',
+      region: 'England',
+      soccer: true,
+      hasStandings: false),
+  SportsLeague(
+      id: 'ger.dfb_pokal',
+      espnPath: 'soccer/ger.dfb_pokal',
+      name: 'DFB-Pokal',
+      shortName: 'POKAL',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2061.png',
+      region: 'Germany',
+      soccer: true,
+      hasStandings: false),
+  SportsLeague(
+      id: 'esp.copa_del_rey',
+      espnPath: 'soccer/esp.copa_del_rey',
+      name: 'Spanish Copa del Rey',
+      shortName: 'COPA',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/80.png',
+      region: 'Spain',
+      soccer: true,
+      hasStandings: false),
+  SportsLeague(
+      id: 'ita.coppa_italia',
+      espnPath: 'soccer/ita.coppa_italia',
+      name: 'Coppa Italia',
+      shortName: 'COPPA',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2192.png',
+      region: 'Italy',
+      soccer: true,
+      hasStandings: false),
+  SportsLeague(
+      id: 'esp.super_cup',
+      espnPath: 'soccer/esp.super_cup',
+      name: 'Spanish Supercopa',
+      shortName: 'SUPERCOPA',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/431.png',
+      region: 'Spain',
+      soccer: true,
+      hasStandings: false),
+  SportsLeague(
+      id: 'ita.super_cup',
+      espnPath: 'soccer/ita.super_cup',
+      name: 'Italian Supercoppa',
+      shortName: 'SUPERCOPPA',
+      logoUrl:
+          'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/default-team-logo-500.png&w=100&h=100',
+      region: 'Italy',
+      soccer: true,
+      hasStandings: false),
+  SportsLeague(
+      id: 'fra.coupe_de_france',
+      espnPath: 'soccer/fra.coupe_de_france',
+      name: 'Coupe de France',
+      shortName: 'CDF',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/182.png',
+      region: 'France',
+      soccer: true,
+      hasStandings: false),
+  SportsLeague(
+      id: 'fifa.world',
+      espnPath: 'soccer/fifa.world',
+      name: 'FIFA World Cup',
+      shortName: 'WORLD CUP',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/4.png',
+      region: 'Cups',
+      soccer: true),
+  SportsLeague(
+      id: 'fifa.wwc',
+      espnPath: 'soccer/fifa.wwc',
+      name: "FIFA Women's World Cup",
+      shortName: 'WWC',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/60.png',
+      region: 'Cups',
+      soccer: true),
+  SportsLeague(
+      id: 'fifa.worldq.concacaf',
+      espnPath: 'soccer/fifa.worldq.concacaf',
+      name: 'World Cup Qualifying (Concacaf)',
+      shortName: 'WCQ',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/64.png',
+      region: 'Cups',
+      soccer: true),
+  SportsLeague(
+      id: 'afc.champions',
+      espnPath: 'soccer/afc.champions',
+      name: 'AFC Champions League Elite',
+      shortName: 'ACL',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2200.png',
+      region: 'World',
+      soccer: true),
+  SportsLeague(
+      id: 'caf.champions',
+      espnPath: 'soccer/caf.champions',
+      name: 'CAF Champions League',
+      shortName: 'CAF CL',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2391.png',
+      region: 'World',
+      soccer: true),
+  SportsLeague(
+      id: 'afc.asian.cup',
+      espnPath: 'soccer/afc.asian.cup',
+      name: 'AFC Asian Cup',
+      shortName: 'ASIAN CUP',
+      logoUrl:
+          'https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/2243.png',
+      region: 'World',
+      soccer: true),
+  SportsLeague(
+      id: 'caf.nations',
+      espnPath: 'soccer/caf.nations',
+      name: 'Africa Cup of Nations',
+      shortName: 'AFCON',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/76.png',
+      region: 'World',
+      soccer: true),
+  SportsLeague(
+      id: 'concacaf.champions',
+      espnPath: 'soccer/concacaf.champions',
+      name: 'Concacaf Champions Cup',
+      shortName: 'CCC',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2298.png',
+      region: 'Americas',
+      soccer: true,
+      hasStandings: false),
+  SportsLeague(
+      id: 'concacaf.gold',
+      espnPath: 'soccer/concacaf.gold',
+      name: 'Concacaf Gold Cup',
+      shortName: 'GOLD CUP',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/59.png',
+      region: 'Americas',
+      soccer: true),
+  SportsLeague(
+      id: 'conmebol.libertadores',
+      espnPath: 'soccer/conmebol.libertadores',
+      name: 'CONMEBOL Libertadores',
+      shortName: 'LIBERTADORES',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/58.png',
+      region: 'Americas',
+      soccer: true),
+  SportsLeague(
+      id: 'usa.open',
+      espnPath: 'soccer/usa.open',
+      name: 'U.S. Open Cup',
+      shortName: 'US OPEN CUP',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/69.png',
+      region: 'Americas',
+      soccer: true,
+      hasStandings: false),
+  SportsLeague(
+      id: 'eng.w.1',
+      espnPath: 'soccer/eng.w.1',
+      name: "Women's Super League",
+      shortName: 'WSL',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2314.png',
+      region: 'Women',
+      soccer: true),
+  SportsLeague(
+      id: 'esp.w.1',
+      espnPath: 'soccer/esp.w.1',
+      name: 'Liga F',
+      shortName: 'LIGA F',
+      logoUrl: '',
+      region: 'Women',
+      soccer: true),
+  SportsLeague(
+      id: 'fra.w.1',
+      espnPath: 'soccer/fra.w.1',
+      name: 'Première Ligue (women)',
+      shortName: 'D1F',
+      logoUrl: '',
+      region: 'Women',
+      soccer: true),
+  SportsLeague(
+      id: 'usa.nwsl',
+      espnPath: 'soccer/usa.nwsl',
+      name: 'NWSL',
+      shortName: 'NWSL',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2323.png',
+      region: 'Women',
+      soccer: true),
+  SportsLeague(
+      id: 'uefa.wchampions',
+      espnPath: 'soccer/uefa.wchampions',
+      name: "UEFA Women's Champions League",
+      shortName: 'UWCL',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2408.png',
+      region: 'Women',
+      soccer: true),
+  SportsLeague(
+      id: 'basketball.mens-college-basketball',
+      espnPath: 'basketball/mens-college-basketball',
+      name: "NCAA Men's Basketball",
+      shortName: 'NCAAM',
+      logoUrl:
+          'https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-basketball.png',
+      region: 'Basketball'),
+  SportsLeague(
+      id: 'basketball.womens-college-basketball',
+      espnPath: 'basketball/womens-college-basketball',
+      name: "NCAA Women's Basketball",
+      shortName: 'NCAAW',
+      logoUrl:
+          'https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-basketball.png',
+      region: 'Basketball'),
+  SportsLeague(
+      id: 'baseball.college-baseball',
+      espnPath: 'baseball/college-baseball',
+      name: 'NCAA Baseball',
+      shortName: 'CBASE',
+      logoUrl:
+          'https://a.espncdn.com/combiner/i?img=/redesign/assets/img/icons/ESPN-icon-baseball.png',
+      region: 'Baseball'),
+  SportsLeague(
+      id: 'hockey.mens-college-hockey',
+      espnPath: 'hockey/mens-college-hockey',
+      name: "NCAA Men's Ice Hockey",
+      shortName: 'NCAAH',
+      logoUrl:
+          'https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-hockey.png',
+      region: 'Hockey'),
+  SportsLeague(
+      id: 'hockey.womens-college-hockey',
+      espnPath: 'hockey/womens-college-hockey',
+      name: "NCAA Women's Hockey",
+      shortName: 'CWHOC',
+      logoUrl:
+          'https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-hockey.png',
+      region: 'Hockey'),
+  SportsLeague(
+      id: 'australian-football.afl',
+      espnPath: 'australian-football/afl',
+      name: 'AFL',
+      shortName: 'AFL',
+      logoUrl: 'https://a.espncdn.com/i/teamlogos/leagues/500/afl.png',
+      region: 'Other'),
+  SportsLeague(
+      id: 'rugby.270557',
+      espnPath: 'rugby/270557',
+      name: 'United Rugby Championship',
+      shortName: 'URC',
+      logoUrl:
+          'https://a.espncdn.com/combiner/i?img=/redesign/assets/img/icons/ESPN-icon-rugby.png',
+      region: 'Other'),
+  SportsLeague(
+      id: 'rugby.164205',
+      espnPath: 'rugby/164205',
+      name: 'Rugby World Cup',
+      shortName: 'RWC',
+      logoUrl:
+          'https://a.espncdn.com/combiner/i?img=/redesign/assets/img/icons/ESPN-icon-rugby.png',
+      region: 'Other'),
+  SportsLeague(
+      id: 'volleyball.womens-college-volleyball',
+      espnPath: 'volleyball/womens-college-volleyball',
+      name: "NCAA Women's Volleyball",
+      shortName: 'NCAA WVB',
+      logoUrl:
+          'https://a.espncdn.com/combiner/i?img=/redesign/assets/img/icons/sports-volleyball-solid.png',
+      region: 'Other'),
+];
+
+/// Bank group headings, in display order.
+const List<String> kSportsLeagueRegions = [
+  'England',
+  'Spain',
+  'Germany',
+  'Italy',
+  'France',
+  'Europe',
+  'Cups',
+  'Americas',
+  'World',
+  'Women',
+  'Basketball',
+  'Hockey',
+  'Baseball',
+  'Other',
+];
+
 SportsLeague? sportsLeagueById(String id) {
   for (final l in kSportsLeagues) {
+    if (l.id == id) return l;
+  }
+  for (final l in kSportsLeagueBank) {
     if (l.id == id) return l;
   }
   return null;

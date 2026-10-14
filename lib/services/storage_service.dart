@@ -211,6 +211,13 @@ class StorageService {
   Future<void> setSportsLeagues(List<String> ids) =>
       _prefs.setStringList(_vk(AppConstants.keySportsLeagues), ids);
 
+  /// Leagues the user added from the bank (League manager), in the order
+  /// added. Removing one sends it back to the bank.
+  List<String> getSportsAddedLeagues() =>
+      _prefs.getStringList(_vk(AppConstants.keySportsAddedLeagues)) ?? const [];
+  Future<void> setSportsAddedLeagues(List<String> ids) =>
+      _prefs.setStringList(_vk(AppConstants.keySportsAddedLeagues), ids);
+
   bool getSportsHideScores() =>
       _prefs.getBool(_vk(AppConstants.keySportsHideScores)) ?? false;
   Future<void> setSportsHideScores(bool value) =>

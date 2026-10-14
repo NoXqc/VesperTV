@@ -73,7 +73,45 @@ right below; the rest of this file is the design and the tests behind it.
     teams per viewer as `{leagueId, teamId}`.
 - Not yet: Sports Multiview, phone layout (only My Teams + Standings adapted in 1.0.6), BYOK providers, division view for standings.
 - Reference (owner, 2026-10-14): **SportioTV** https://github.com/trenntl/SportioTV/releases/tag/v1.0.6
-  has 81 leagues in its sports hub — study how it sources/covers them before adding more leagues.
+  has 81 leagues in its sports hub — investigated, see "SportioTV comparison" below.
+
+## SportioTV comparison (2026-10-14)
+Kotlin Android TV app (fork of OwnTV, GPL-3.0 like us), files under
+`app/src/main/java/tv/own/owntv/features/sport/` (`SportsLeagues.kt`, `EspnApi.kt`, `SportsMatcher.kt`), doc `docs/SPORTS_HUB.md`.
+- **Same data source as ours**: ESPN's key-less site API. No key, no backend. The "81 leagues" is a
+  **static catalogue of ESPN slugs**. Only **16 are active by default**. The rest are metadata (no
+  request until the user activates one) behind a "Manage all" page with search. Region tags
+  (Europe/Americas/Germany/International/Rest) group them.
+- Breakdown: **57 soccer** (top-2 tiers of big countries, NED/POR/TUR/SCO/BEL/AUT/SUI/GRE/RUS/DEN/
+  NOR/SWE, MEX/ARG/BRA, JPN/CHN/AUS/IND/RSA, UEFA cups + super cup + Euro + Nations, FA/League Cup,
+  DFB-Pokal, Copa del Rey, Coppa Italia, FIFA World Cup/WWC, AFC/CAF/CONCACAF, women's leagues + NWSL),
+  basketball 5 (NBA, WNBA, Euroleague, men's/women's college), football 2, baseball 2 (MLB, college),
+  hockey 1, golf 4 (PGA, LPGA, LIV, DP World `eur`), tennis 2, mma 2 (UFC, PFL), racing 2 (F1, NHRA),
+  AFL, rugby (`rugby/270557`), cricket (`cricket/8039`), women's college volleyball.
+- **Event sports** (`kind = EVENT`: golf/F1/UFC/tennis): competitors parsed from `athlete`
+  (headshot/flag) instead of home/away teams. That's the same need as our planned PGA leaderboard.
+- Matching: channel-name `LIKE` search on team abbrev/name/first word + broadcast words, plus EPG
+  title in [start −2 h, +4 h]; scores +2/+2/+3/+5, no threshold, top 6. Our approach (provider event
+  channel names first, see "Channel-matching test") is already stronger. Their good idea: pass the
+  matched channels as the **zap list**, so CH+/CH− cycles through the channels showing that game.
+- Their gotcha: standings must use host `site.web.api.espn.com` (`site.api` returned an empty body
+  for them). Ours uses `site.api.espn.com/apis/v2/.../standings` and works. Keep this in mind if
+  standings ever come back empty.
+- **Built (1.0.7+235): League manager** — `screens/sports_league_manager_screen.dart`, opened by
+  the Edit leagues chip. "Your leagues" = 13 base (`kSportsLeagues`, hide only) + added bank
+  leagues (OK = show/hide, hold = send back to the bank); "League bank" = `kSportsLeagueBank`
+  (63, grouped by `region`, `kSportsLeagueRegions`), OK = add + show. Two columns with explicit
+  Left/Right on TV, one list on phones. Stored per viewer: `vesper_sports_added_leagues` +
+  the existing shown/order list. `SportsLeague.hasStandings=false` (cups) keeps a league out of
+  Standings. Empty day with one league selected → `SportsService.nextGameStart` (dateless
+  scoreboard = current/next round) → "Next game: <date>" chip; the day strip grows a chip for
+  dates past +6. **Bank vetting:** an ESPN feed can answer but be dead — CFL's newest event is
+  the 2022 Grey Cup, Swiss Super League stopped Sept 2025; both removed. Check the default
+  window's event dates (not just HTTP 200) before adding a league. Event sports (golf/F1/UFC/
+  tennis) still not in the bank.
+- **Takeaway for us:** adding leagues is cheap: one `SportsLeague(espnPath: ...)` entry each (we have 13).
+  To scale past a handful we'd need what they built: a lazy catalogue (active vs available), a
+  searchable "all leagues" picker, and event-sport (athlete) parsing for golf/F1/UFC/tennis.
 
 ## Goals
 - A Sports tab with: **league filter** (NHL, NFL, NBA, MLB, PGA, ...), **My Teams**, **Standings**,

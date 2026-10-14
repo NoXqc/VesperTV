@@ -113,6 +113,7 @@ List<SportsStandingColumn> sportsStandingColumns(SportsLeague league) {
 }
 
 class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
+  late final List<SportsLeague> _leagues;
   static const double _rowHeight = 44;
 
   late SportsLeague _league;
@@ -130,7 +131,20 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
   @override
   void initState() {
     super.initState();
-    _league = widget.initialLeague;
+    // Cups ESPN has no table for are left out (see SportsLeague.hasStandings).
+    _leagues = [
+      for (final l in widget.leagues)
+        if (l.hasStandings) l
+    ];
+    if (_leagues.isEmpty) {
+      _leagues = [
+        for (final l in kSportsLeagues)
+          if (l.hasStandings) l
+      ];
+    }
+    _league = widget.initialLeague.hasStandings
+        ? widget.initialLeague
+        : _leagues.first;
     unawaited(_load());
   }
 
@@ -339,7 +353,7 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [
-                for (final l in widget.leagues)
+                for (final l in _leagues)
                   SportsChip(
                     focusNode: _chipNode('league:${l.id}'),
                     label: l.name,

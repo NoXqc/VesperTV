@@ -27,6 +27,7 @@ import '../widgets/tv_menu_tile.dart';
 import 'desktop_player_screen.dart';
 import 'player_screen.dart';
 import 'sports_my_teams_screen.dart';
+import 'sports_league_manager_screen.dart';
 import 'sports_standings_screen.dart';
 import '../l10n/l10n.dart';
 
@@ -63,6 +64,11 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   late List<SportsLeague> _leagues;
   String? _leagueFilter;
   int _dayOffset = 0;
+
+  /// Empty day with one league picked: that league's next game (from
+  /// [SportsService.nextGameStart]), offered as a jump. Null = none found.
+  DateTime? _nextGame;
+  bool _nextGameLooked = false;
   bool _hideScores = false;
 
   List<SportsGame> _games = const [];
@@ -101,16 +107,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     _matcher = SportsChannelMatcher(context.read<EpgService>());
     _picks = SportsChannelPicks.load(_storage);
     _follows = SportsFollows.load(_storage);
-    final saved = _storage.getSportsLeagues();
-    _leagues = [
-      for (final id in saved ?? kDefaultSportsLeagueIds)
-        if (sportsLeagueById(id) != null) sportsLeagueById(id)!,
-    ];
-    if (_leagues.isEmpty) {
-      _leagues = [
-        for (final id in kDefaultSportsLeagueIds) sportsLeagueById(id)!
-      ];
-    }
+    _leagues = _savedLeagues();
     _hideScores = _storage.getSportsHideScores();
     unawaited(_load());
     // Live scores tick while the screen is visible; SportsService's own
@@ -172,7 +169,15 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     }
     final games = await SportsService.instance.gamesForDay(_shownLeagues, _day);
     if (!mounted || token != _loadToken) return;
+    final filtered = sportsLeagueById(_leagueFilter ?? '');
+    DateTime? next;
+    if (games.isEmpty && filtered != null) {
+      next = await SportsService.instance.nextGameStart(filtered, _day);
+      if (!mounted || token != _loadToken) return;
+    }
     setState(() {
+      _nextGame = next;
+      _nextGameLooked = games.isEmpty && filtered != null;
       _games = games;
       _loading = false;
       _error = games.isEmpty ? SportsService.instance.lastError : null;
@@ -262,6 +267,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       _chipNode(_dayChipId).requestFocus();
     } else if (zone == 2) {
       _chipNode('standings').requestFocus();
+    } else if (sections.isEmpty) {
+      _chipNode('nextgame').requestFocus();
     } else {
       final s = sections[zone - _firstRowZone];
       final remembered = _lastCardInRow[s.id];
@@ -276,7 +283,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   void _moveZone(int delta) {
     final sections = _sections;
     final target = _zone + delta;
-    if (target < 0 || target >= _firstRowZone + sections.length) return;
+    final rows = sections.isEmpty && _nextGame != null ? 1 : sections.length;
+    if (target < 0 || target >= _firstRowZone + rows) return;
     _focusZone(target, sections);
   }
 
@@ -300,6 +308,20 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     unawaited(_load());
   }
 
+  void _jumpToNextGame() {
+    final next = _nextGame;
+    if (next == null) return;
+    final n = DateTime.now();
+    final today = DateTime(n.year, n.month, n.day);
+    final day = DateTime(next.year, next.month, next.day);
+    // Calendar-day difference, safe across a DST change.
+    final offset = (day.difference(today).inHours / 24).round();
+    _setDay(offset);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _chipNode('day:$offset').requestFocus();
+    });
+  }
+
   void _setDay(int offset) {
     if (_dayOffset == offset) return;
     setState(() {
@@ -314,17 +336,28 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     await _storage.setSportsHideScores(_hideScores);
   }
 
+  /// Shown leagues from storage: base leagues plus bank leagues the user
+  /// added (a bank id that was sent back is dropped).
+  List<SportsLeague> _savedLeagues() {
+    final added = _storage.getSportsAddedLeagues();
+    final leagues = [
+      for (final id in _storage.getSportsLeagues() ?? kDefaultSportsLeagueIds)
+        if (sportsLeagueById(id) case final l?)
+          if (l.isBase || added.contains(id)) l,
+    ];
+    return leagues.isNotEmpty
+        ? leagues
+        : [for (final id in kDefaultSportsLeagueIds) sportsLeagueById(id)!];
+  }
+
   Future<void> _editLeagues() async {
-    final chosen = await showDialog<List<String>>(
-      context: context,
-      builder: (_) =>
-          _EditLeaguesDialog(selected: [for (final l in _leagues) l.id]),
-    );
-    if (chosen == null || chosen.isEmpty || !mounted) return;
-    await _storage.setSportsLeagues(chosen);
+    final changed = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(builder: (_) => const SportsLeagueManagerScreen()));
+    if (changed != true || !mounted) return;
     setState(() {
-      _leagues = [for (final id in chosen) sportsLeagueById(id)!];
-      if (_leagueFilter != null && !chosen.contains(_leagueFilter)) {
+      _leagues = _savedLeagues();
+      if (_leagueFilter != null &&
+          !_leagues.any((l) => l.id == _leagueFilter)) {
         _leagueFilter = null;
       }
     });
@@ -660,6 +693,16 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                     onFocus: () => _zone = 1,
                     onTap: () => _setDay(o),
                   ),
+                // A day reached through "Next game" beyond the strip.
+                if (_dayOffset < -1 || _dayOffset > 6)
+                  SportsChip(
+                    focusNode: _chipNode('day:$_dayOffset'),
+                    label: DateFormat('EEE d MMM').format(_day),
+                    selected: true,
+                    compact: true,
+                    onFocus: () => _zone = 1,
+                    onTap: () {},
+                  ),
               ],
             ),
           ),
@@ -716,7 +759,23 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
             const SizedBox(height: 10),
             Text(_error ?? tr('No games on this day for your leagues'),
                 style: const TextStyle(color: Colors.white70, fontSize: 16)),
-            if (_error == null) ...[
+            if (_error == null && _nextGame != null) ...[
+              const SizedBox(height: 14),
+              SportsChip(
+                focusNode: _chipNode('nextgame'),
+                label: tr('Next game: {date}', {
+                  'date': DateFormat('EEE d MMM').format(_nextGame!),
+                }),
+                icon: Icons.event,
+                selected: false,
+                onFocus: () => _zone = _firstRowZone,
+                onTap: _jumpToNextGame,
+              ),
+            ] else if (_error == null && _nextGameLooked) ...[
+              const SizedBox(height: 4),
+              Text(tr('No upcoming games listed yet for this league.'),
+                  style: const TextStyle(color: Colors.white38, fontSize: 13)),
+            ] else if (_error == null) ...[
               const SizedBox(height: 4),
               Text(tr('Try another day, or add leagues with Edit leagues.'),
                   style: const TextStyle(color: Colors.white38, fontSize: 13)),
@@ -1504,64 +1563,6 @@ class _PickScopeDialog extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _EditLeaguesDialog extends StatefulWidget {
-  const _EditLeaguesDialog({required this.selected});
-  final List<String> selected;
-
-  @override
-  State<_EditLeaguesDialog> createState() => _EditLeaguesDialogState();
-}
-
-class _EditLeaguesDialogState extends State<_EditLeaguesDialog> {
-  late final Set<String> _on = widget.selected.toSet();
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return AlertDialog(
-      backgroundColor: const Color(0xFF15151A),
-      title: Text(tr('Leagues')),
-      content: SizedBox(
-        width: 460,
-        height: 420,
-        child: ListView(
-          children: [
-            for (final (i, l) in kSportsLeagues.indexed)
-              TvMenuTile(
-                autofocus: i == 0,
-                leading: SportsLogo(url: l.logoUrl, size: 36),
-                title: l.name,
-                trailing: Icon(
-                    _on.contains(l.id)
-                        ? Icons.check_circle
-                        : Icons.radio_button_unchecked,
-                    color:
-                        _on.contains(l.id) ? scheme.primary : Colors.white38),
-                onTap: () => setState(() {
-                  if (!_on.remove(l.id)) _on.add(l.id);
-                }),
-              ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(tr('Cancel'))),
-        FilledButton(
-          onPressed: _on.isEmpty
-              ? null
-              : () => Navigator.of(context).pop([
-                    for (final l in kSportsLeagues)
-                      if (_on.contains(l.id)) l.id,
-                  ]),
-          child: Text(tr('Save')),
-        ),
-      ],
     );
   }
 }
