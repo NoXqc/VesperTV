@@ -201,7 +201,7 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-14)
-- **Shipped: 1.0.4 (`+229`, 2026-10-14, latest on GitHub)** — French + language picker (Settings > General > Language, `lib/l10n/`, see `dev-notes/features.md`) and the "Hey beautiful Human" splash greeting. **Next: Discord integration with GitHub updates.**
+- **Shipped: 1.0.4 (`+229`, 2026-10-14, latest on GitHub)** — French + language picker (Settings > General > Language, `lib/l10n/`, see `dev-notes/features.md`) and the "Hey beautiful Human" splash greeting. Releases are announced on Discord (gold embed, `.github/workflows/discord-release.yml`, run by hand after an in-place release — `dev-notes/release.md` step 8).
 - 1.0.3 (`+226`, 2026-10-14, tag on `d02200e`) — the Sports tab:
   scores, channel matching, Standings, **My Teams** (see `dev-notes/sports-tab.md`), plus Add
   Playlist "From phone" and the resume-pill fixes/switch (details below). Site + README advertise it
