@@ -197,6 +197,13 @@ class StorageService {
   Future<void> setResumeLastChannelAtStartup(bool value) =>
       _prefs.setBool(AppConstants.keyResumeLastChannelAtStartup, value);
 
+  /// Settings > General: the "Hold > to resume" reminder pill (Android and
+  /// Windows). Off hides only the pill; hold-Right still resumes.
+  bool getShowResumePill() =>
+      _prefs.getBool(AppConstants.keyShowResumePill) ?? true;
+  Future<void> setShowResumePill(bool value) =>
+      _prefs.setBool(AppConstants.keyShowResumePill, value);
+
   /// Last Multiview layout: true = 4 screens (2x2), false = 2 stacked.
   bool getMultiviewQuad() =>
       _prefs.getBool(AppConstants.keyMultiviewQuad) ?? false;

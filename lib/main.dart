@@ -276,6 +276,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     try {
       _storage = StorageService();
       await _storage.init();
+      LiveResumeHint.pillEnabled.value = _storage.getShowResumePill();
 
       _preferences = AppPreferences(_storage);
       await _preferences.init();

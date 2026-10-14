@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../services/playback_service.dart';
 import '../../services/storage_service.dart';
 import '../../utils/tv_theme.dart';
+import '../../widgets/live_resume_hint.dart';
 import '../../widgets/section_label.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_menu_tile.dart';
@@ -30,6 +31,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
   late final StorageService _storage = context.read<StorageService>();
   late bool _resumeAtStartup = _storage.getResumeLastChannelAtStartup();
   late bool _showMultiviewTip = !_storage.getMultiviewHideTips();
+  late bool _showResumePill = _storage.getShowResumePill();
 
   /// Cancel is focused by default so a stray Select can't wipe anything.
   Future<bool> _confirm(String title, String message) async {
@@ -121,6 +123,24 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                     ),
                     const Divider(height: 32),
                   ],
+                  const SectionLabel('Resume reminder'),
+                  const SizedBox(height: 4),
+                  TvSwitchListTile(
+                    title: const Text('Show the "Hold > to resume" reminder'),
+                    subtitle: Text(Platform.isWindows
+                        ? 'The pill at the bottom while a channel plays in the '
+                            'background. Off: hidden.'
+                        : 'The pill at the bottom while a channel plays in the '
+                            'background. Off: hidden — holding Right still '
+                            'resumes.'),
+                    value: _showResumePill,
+                    onChanged: (v) {
+                      setState(() => _showResumePill = v);
+                      LiveResumeHint.pillEnabled.value = v;
+                      _storage.setShowResumePill(v);
+                    },
+                  ),
+                  const Divider(height: 32),
                   const SectionLabel('History'),
                   const SizedBox(height: 4),
                   TvMenuTile(

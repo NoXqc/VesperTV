@@ -56,3 +56,21 @@ Read before changing guide/Multiview/profiles/palettes/backup-server logic.
   `PlaylistManager.applyActiveViewer`/`PlaybackService.reloadForViewer`; it only shows because
   `main.dart` wraps the home screen in `Consumer<ViewerProfileService>` keyed by the active viewer's
   id, which remounts the home screen from scratch.
+
+- **Add Playlist > "From phone"** (test build +216, uncommitted): the TV shows a QR code; the phone
+  fills `assets/pair/pair.html` and the details land in the M3U/Xtream fields (nothing is saved
+  until the user presses Add Playlist). `PhonePairingSession` (`lib/services/phone_pairing_service.dart`),
+  UI `widgets/phone_pair_panel.dart`. **Wi-Fi path (default):** a one-session `HttpServer` on the
+  TV's private IPv4, random port, 8-char token URL `http://<ip>:<port>/p/<token>`; deliver the
+  result only *after* the HTTP response is closed (closing the server force-drops the connection —
+  the phone showed a failure for a send that worked). **Relay path** (button "Phone not on this
+  Wi-Fi?"): QR = `kPairRelayBase/p#<sessionId>.<key>`; the phone AES-GCM-encrypts in WebCrypto
+  (needs HTTPS), PUTs ciphertext; the TV polls every 2 s only while that code is shown and decrypts
+  with `cryptography`. Relay server = `tools/pair_relay/` (stdlib Python, memory-only, no logs), live at
+  `https://pair.vespertv.app` since 2026-10-13 (own nginx block + cert; see that folder's README).
+  An HTTPS page can't call the TV's plain-HTTP LAN address (mixed content), so the two paths need
+  two codes — no automatic fallback. The panel hides the Status pane and the resume pill.
+- **Resume pill switch:** Settings > General > "Show the 'Hold > to resume' reminder"
+  (`vesper_show_resume_pill`, device-wide, default on) → `LiveResumeHint.pillEnabled`; screens hide
+  it temporarily with `LiveResumeHint.hideWhileMounted()` (Sports, the phone-pairing panel). Both
+  pills check `LiveResumeHint.pillAllowed`. Hold-Right still resumes when hidden.

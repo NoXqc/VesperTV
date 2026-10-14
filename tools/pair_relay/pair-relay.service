@@ -1,0 +1,19 @@
+[Unit]
+Description=VesperTV pairing relay (Add Playlist > From my phone)
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /opt/pair-relay/relay.py
+Environment=PAIR_HOST=127.0.0.1 PAIR_PORT=8930 PAIR_PAGE=/opt/pair-relay/pair.html
+Restart=always
+RestartSec=2
+# Runs as a throwaway user with no write access anywhere; memory only.
+DynamicUser=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+MemoryMax=128M
+
+[Install]
+WantedBy=multi-user.target

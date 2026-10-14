@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
@@ -47,8 +48,50 @@ class LiveResumeHint extends StatefulWidget {
 
   final GlobalKey<NavigatorState> navigatorKey;
 
+  /// Screens that hide the reminder pill while they're open (Sports and
+  /// Standings — it covered their tables). A count, not a bool, so stacked
+  /// screens don't un-hide each other; use [hideWhileMounted]. Only the
+  /// pill goes away; hold-Right still resumes. Shared with
+  /// `DesktopLiveResumeHint`.
+  static final ValueNotifier<int> hiddenBy = ValueNotifier(0);
+
+  /// Settings > General > "Show the resume reminder" (set from storage at
+  /// startup and by that switch). Off hides the pill everywhere; the
+  /// hold-Right gesture keeps working.
+  static final ValueNotifier<bool> pillEnabled = ValueNotifier(true);
+
+  /// Whether a pill may be drawn right now (setting on, no screen hiding it).
+  static bool get pillAllowed => pillEnabled.value && hiddenBy.value == 0;
+
+  /// Call from a screen's initState; call the returned function from its
+  /// dispose.
+  static VoidCallback hideWhileMounted() {
+    hiddenBy.value++;
+    var released = false;
+    return () {
+      if (released) return;
+      released = true;
+      hiddenBy.value--;
+    };
+  }
+
   @override
   State<LiveResumeHint> createState() => _LiveResumeHintState();
+}
+
+/// setState for a pill listening to [LiveResumeHint.hiddenBy]: screens bump
+/// it from initState/dispose, i.e. mid-frame, where a direct setState on
+/// another widget asserts — defer to after the frame then.
+void rebuildResumeHintSafely(State state, VoidCallback rebuild) {
+  final phase = SchedulerBinding.instance.schedulerPhase;
+  if (phase == SchedulerPhase.idle ||
+      phase == SchedulerPhase.postFrameCallbacks) {
+    rebuild();
+  } else {
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (state.mounted) rebuild();
+    });
+  }
 }
 
 class _LiveResumeHintState extends State<LiveResumeHint> {
@@ -65,6 +108,8 @@ class _LiveResumeHintState extends State<LiveResumeHint> {
     super.initState();
     _playback = context.read<PlaybackService>();
     _playback.addListener(_onPlaybackChanged);
+    LiveResumeHint.hiddenBy.addListener(_onHiddenChanged);
+    LiveResumeHint.pillEnabled.addListener(_onHiddenChanged);
     // Two earlier versions of this each got half of it right and not the
     // other — see [_handleGlobalKey] for why neither the pill's own
     // "consume everything, synthesize a substitute on release" pattern
@@ -77,9 +122,14 @@ class _LiveResumeHintState extends State<LiveResumeHint> {
     if (mounted) setState(() {});
   }
 
+  void _onHiddenChanged() =>
+      rebuildResumeHintSafely(this, () => setState(() {}));
+
   @override
   void dispose() {
     _playback.removeListener(_onPlaybackChanged);
+    LiveResumeHint.hiddenBy.removeListener(_onHiddenChanged);
+    LiveResumeHint.pillEnabled.removeListener(_onHiddenChanged);
     FocusManager.instance.removeEarlyKeyEventHandler(_handleGlobalKey);
     _holdTimer?.cancel();
     super.dispose();
@@ -218,7 +268,7 @@ class _LiveResumeHintState extends State<LiveResumeHint> {
   @override
   Widget build(BuildContext context) {
     final channel = _resumableChannel;
-    final show = _canResume && channel != null;
+    final show = _canResume && channel != null && LiveResumeHint.pillAllowed;
 
     // Always Positioned, shown or not — a bare non-Positioned child here
     // would collapse this whole Stack (and the Navigator painted
@@ -236,68 +286,76 @@ class _LiveResumeHintState extends State<LiveResumeHint> {
       child: Center(
         child: SafeArea(
           top: false,
-          child: GestureDetector(
-            onTap: _resume,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.black87,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                    color: Theme.of(context).colorScheme.primary, width: 1.5),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.circle, color: Colors.redAccent, size: 10),
-                  const SizedBox(width: 8),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 320),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          channel.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600),
-                        ),
-                        // Was a single line ending in "— hold ▶ to resume"
-                        // — reported directly as confusing on two counts:
-                        // the ▶ glyph reads as "the remote's physical
-                        // Play/Pause button", not "the D-pad's Right
-                        // button" (what actually resumes here — see
-                        // [_handleGlobalKey]), and a long channel name
-                        // pushed the instruction itself off the end,
-                        // truncated. A real right-arrow icon, on its own
-                        // smaller second line, fixes both — nothing left
-                        // to truncate away, and the icon actually matches
-                        // the key being held.
-                        const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Hold ',
-                              style: TextStyle(
-                                  color: Colors.white70, fontSize: 11),
-                            ),
-                            Icon(Icons.keyboard_arrow_right,
-                                color: Colors.white70, size: 14),
-                            Text(
-                              ' to resume',
-                              style: TextStyle(
-                                  color: Colors.white70, fontSize: 11),
-                            ),
-                          ],
-                        ),
-                      ],
+          // A sibling of the Navigator has no Material ancestor, so plain
+          // Text here fell back to Flutter's debug style (yellow double
+          // underline, monospace). The transparent Material supplies the
+          // app's normal text style.
+          child: Material(
+            type: MaterialType.transparency,
+            child: GestureDetector(
+              onTap: _resume,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black87,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                      color: Theme.of(context).colorScheme.primary, width: 1.5),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.circle, color: Colors.redAccent, size: 10),
+                    const SizedBox(width: 8),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 320),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            channel.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600),
+                          ),
+                          // Was a single line ending in "— hold ▶ to resume"
+                          // — reported directly as confusing on two counts:
+                          // the ▶ glyph reads as "the remote's physical
+                          // Play/Pause button", not "the D-pad's Right
+                          // button" (what actually resumes here — see
+                          // [_handleGlobalKey]), and a long channel name
+                          // pushed the instruction itself off the end,
+                          // truncated. A real right-arrow icon, on its own
+                          // smaller second line, fixes both — nothing left
+                          // to truncate away, and the icon actually matches
+                          // the key being held.
+                          const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Hold ',
+                                style: TextStyle(
+                                    color: Colors.white70, fontSize: 11),
+                              ),
+                              Icon(Icons.keyboard_arrow_right,
+                                  color: Colors.white70, size: 14),
+                              Text(
+                                ' to resume',
+                                style: TextStyle(
+                                    color: Colors.white70, fontSize: 11),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/channel.dart';
 import '../screens/desktop_player_screen.dart';
 import '../services/desktop_mini_player.dart';
+import 'live_resume_hint.dart';
 
 /// Windows equivalent of `LiveResumeHint` — same "small reminder pill,
 /// tap to resume fullscreen" idea, driven by `DesktopMiniPlayer` instead
@@ -31,17 +32,24 @@ class _DesktopLiveResumeHintState extends State<DesktopLiveResumeHint> {
   void initState() {
     super.initState();
     DesktopMiniPlayer.instance.channel.addListener(_onChanged);
+    LiveResumeHint.hiddenBy.addListener(_onHiddenChanged);
+    LiveResumeHint.pillEnabled.addListener(_onHiddenChanged);
   }
 
   @override
   void dispose() {
     DesktopMiniPlayer.instance.channel.removeListener(_onChanged);
+    LiveResumeHint.hiddenBy.removeListener(_onHiddenChanged);
+    LiveResumeHint.pillEnabled.removeListener(_onHiddenChanged);
     super.dispose();
   }
 
   void _onChanged() {
     if (mounted) setState(() {});
   }
+
+  void _onHiddenChanged() =>
+      rebuildResumeHintSafely(this, () => setState(() {}));
 
   void _resume() {
     final channel = DesktopMiniPlayer.instance.channel.value;
@@ -65,7 +73,7 @@ class _DesktopLiveResumeHintState extends State<DesktopLiveResumeHint> {
     // Always Positioned, shown or not — see LiveResumeHint's identical
     // comment: a bare non-Positioned child here collapses this whole
     // Stack (the Navigator painted alongside it included) to 0x0.
-    if (channel == null) {
+    if (channel == null || !LiveResumeHint.pillAllowed) {
       return const Positioned(
           bottom: 24, left: 0, right: 0, child: SizedBox.shrink());
     }
@@ -75,50 +83,56 @@ class _DesktopLiveResumeHintState extends State<DesktopLiveResumeHint> {
       left: 0,
       right: 0,
       child: Center(
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: GestureDetector(
-            onTap: _resume,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.black87,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                    color: Theme.of(context).colorScheme.primary, width: 1.5),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.circle, color: Colors.redAccent, size: 10),
-                  const SizedBox(width: 8),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 320),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          channel.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600),
-                        ),
-                        const Text(
-                          'Click to resume',
-                          style:
-                              TextStyle(color: Colors.white70, fontSize: 11),
-                        ),
-                      ],
+        // Transparent Material: see LiveResumeHint — without it the Text
+        // falls back to Flutter's yellow-underline debug style.
+        child: Material(
+          type: MaterialType.transparency,
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: _resume,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black87,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                      color: Theme.of(context).colorScheme.primary, width: 1.5),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.circle, color: Colors.redAccent, size: 10),
+                    const SizedBox(width: 8),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 320),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            channel.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600),
+                          ),
+                          const Text(
+                            'Click to resume',
+                            style:
+                                TextStyle(color: Colors.white70, fontSize: 11),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  const Icon(Icons.fullscreen,
-                      color: Colors.white70, size: 18),
-                ],
+                    const SizedBox(width: 10),
+                    const Icon(Icons.fullscreen,
+                        color: Colors.white70, size: 18),
+                  ],
+                ),
               ),
             ),
           ),

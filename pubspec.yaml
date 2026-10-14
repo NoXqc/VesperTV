@@ -1,7 +1,7 @@
 name: nox_iptv
 description: "VesperTV - an M3U/EPG IPTV player for Android phones, boxes, and Firesticks."
 publish_to: 'none'
-version: 1.0.2+207
+version: 1.0.3+216
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -69,6 +69,12 @@ dependencies:
   # a real, well-tested `fullScreen`/`show` instead of hand-rolling raw
   # Win32 window-style changes.
   window_manager: ^0.5.2
+  # Add Playlist > "From my phone": the QR code the phone scans, and the
+  # AES-GCM decrypt for the VPS-relay path (the phone encrypts with
+  # WebCrypto; the key only ever travels inside the QR). Both pure Dart.
+  # See lib/services/phone_pairing_service.dart.
+  qr_flutter: ^4.1.0
+  cryptography: ^2.9.0
 
 dev_dependencies:
   flutter_test:
@@ -84,6 +90,9 @@ flutter:
   # the adaptive-icon foreground/background layers composited by hand.
   assets:
     - assets/icon/icon_flat.png
+    # The phone-side form for Add Playlist > "From my phone" — served by the
+    # TV over Wi-Fi; the same file is deployed to the pairing relay.
+    - assets/pair/pair.html
 
 # Generates android/ic_launcher (legacy + adaptive) and the ios/web/macos/
 # windows app icons from assets/icon/*.png (see assets/icon/gen_icon.py for
