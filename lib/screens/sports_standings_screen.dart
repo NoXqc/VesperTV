@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 import '../models/sports.dart';
+import '../services/app_preferences.dart';
 import '../services/sports_follows.dart';
 import '../services/sports_service.dart';
 import '../utils/tv_theme.dart';
@@ -447,11 +449,18 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
       final all = sportsStandingColumns(_league);
       final columns = <SportsStandingColumn>[];
       var used = 36.0 + 40 + 160; // position + logo + minimum name width
+      // Touch screens (a phone in portrait) keep every column and let the
+      // table scroll sideways instead; a remote can't scroll sideways
+      // (Left/Right switch conference), so TV boxes still drop columns.
+      final scrollSideways = !context.read<AppPreferences>().isTelevision;
       for (final c in all) {
-        if (used + c.width > constraints.maxWidth) break;
+        if (!scrollSideways && used + c.width > constraints.maxWidth) break;
         used += c.width;
         columns.add(c);
       }
+      // Slack for the row's own padding/accent bar beyond the estimate.
+      final tableWidth =
+          used + 40 > constraints.maxWidth ? used + 40 : constraints.maxWidth;
       final notes = <String, String>{};
       for (final r in group.rows) {
         if (r.note != null && r.noteColor != null) {
@@ -468,38 +477,54 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _HeaderRow(columns: columns),
             Expanded(
-              child: ListView.builder(
-                controller: _scroll,
-                itemExtent: _rowHeight,
-                padding: EdgeInsets.zero,
-                itemCount: group.rows.length,
-                itemBuilder: (context, i) {
-                  final team = group.rows[i].team;
-                  return HoldToActivate(
-                    key: ValueKey(i),
-                    onTap: () => _toggleFollow(team),
-                    onHold: () => _toggleFollow(team),
-                    child: _StandingRow(
-                      focusNode: _rowNode(i),
-                      row: group.rows[i],
-                      columns: columns,
-                      followed: widget.follows.isFollowed(_league.id, team.id),
-                      onFocus: () {
-                        _zone = 2;
-                        _row = i;
-                      },
-                    ),
-                  );
-                },
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: tableWidth,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _HeaderRow(columns: columns),
+                      Expanded(
+                        child: ListView.builder(
+                          controller: _scroll,
+                          itemExtent: _rowHeight,
+                          padding: EdgeInsets.zero,
+                          itemCount: group.rows.length,
+                          itemBuilder: (context, i) {
+                            final team = group.rows[i].team;
+                            return HoldToActivate(
+                              key: ValueKey(i),
+                              onTap: () => _toggleFollow(team),
+                              onHold: () => _toggleFollow(team),
+                              child: _StandingRow(
+                                focusNode: _rowNode(i),
+                                row: group.rows[i],
+                                columns: columns,
+                                followed: widget.follows
+                                    .isFollowed(_league.id, team.id),
+                                onFocus: () {
+                                  _zone = 2;
+                                  _row = i;
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
             if (notes.isNotEmpty) _Legend(notes: notes),
             // Icons, not ◀ ▶ characters: Android draws those as emoji.
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Row(
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                runSpacing: 4,
                 children: [
                   if (_hasGroupBar) ...[
                     const Icon(Icons.chevron_left,

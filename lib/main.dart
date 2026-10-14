@@ -786,11 +786,10 @@ class _NoxIptvAppState extends State<NoxIptvApp>
           ),
           home: Builder(
             builder: (context) {
-              final useTv = prefs.layoutMode == 'tv' ||
-                  (prefs.layoutMode == 'auto' &&
-                      (prefs.isTelevision ||
-                          MediaQuery.of(context).size.width >=
-                              AppConstants.tvLayoutWidthThreshold));
+              // TvHomeScreen adapts to phones itself now (one column at a
+              // time in portrait), so only an explicit "phone" choice still
+              // gets the old HomeScreen.
+              final useTv = prefs.layoutMode != 'phone';
               // `Consumer<ViewerProfileService>` plus a `ValueKey` on the
               // active viewer's id is what actually makes a profile switch
               // take effect on screen — nothing else in this ancestor

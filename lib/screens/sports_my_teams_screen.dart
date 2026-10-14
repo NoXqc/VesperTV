@@ -360,14 +360,28 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
                       ),
                       const SizedBox(height: 8),
                       Expanded(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SizedBox(width: 300, child: _buildTeamList()),
-                            const SizedBox(width: 20),
-                            Expanded(child: _buildDetails(team, schedule)),
-                          ],
-                        ),
+                        // Phone in portrait: team list on top, details
+                        // below, instead of side by side.
+                        child: _narrow(context)
+                            ? Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Flexible(flex: 2, child: _buildTeamList()),
+                                  const SizedBox(height: 12),
+                                  Expanded(
+                                      flex: 5,
+                                      child: _buildDetails(team, schedule)),
+                                ],
+                              )
+                            : Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SizedBox(width: 300, child: _buildTeamList()),
+                                  const SizedBox(width: 20),
+                                  Expanded(
+                                      child: _buildDetails(team, schedule)),
+                                ],
+                              ),
                       ),
                     ],
                   ),
@@ -379,6 +393,10 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
       ),
     ));
   }
+
+  /// Phone in portrait — see [build].
+  static bool _narrow(BuildContext context) =>
+      MediaQuery.sizeOf(context).width < 600;
 
   Widget _buildTeamList() {
     final teams = _teams;
@@ -500,10 +518,12 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
                 _teams.isEmpty
                     ? tr('Follow your teams to see them here')
                     : tr('Follow another team'),
+                textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white70, fontSize: 17)),
             const SizedBox(height: 4),
             Text(
                 tr('Add team opens Standings: hold OK on a team to follow it.'),
+                textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white38, fontSize: 13)),
           ],
         ),
@@ -562,19 +582,31 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
         ),
         const SizedBox(height: 16),
         Expanded(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Flex(
+            direction: _narrow(context) ? Axis.vertical : Axis.horizontal,
+            crossAxisAlignment: _narrow(context)
+                ? CrossAxisAlignment.stretch
+                : CrossAxisAlignment.start,
             children: [
-              Expanded(child: _buildGames(t, s)),
-              const SizedBox(width: 20),
-              SizedBox(
-                width: 310,
-                child: _MiniTable(
-                  standings: _standings[s.league.id],
-                  league: s.league,
-                  teamId: team.id,
-                ),
-              ),
+              Expanded(flex: 3, child: _buildGames(t, s)),
+              const SizedBox(width: 20, height: 12),
+              _narrow(context)
+                  ? Expanded(
+                      flex: 2,
+                      child: _MiniTable(
+                        standings: _standings[s.league.id],
+                        league: s.league,
+                        teamId: team.id,
+                      ),
+                    )
+                  : SizedBox(
+                      width: 310,
+                      child: _MiniTable(
+                        standings: _standings[s.league.id],
+                        league: s.league,
+                        teamId: team.id,
+                      ),
+                    ),
             ],
           ),
         ),

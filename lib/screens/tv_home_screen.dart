@@ -83,6 +83,12 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   String _tab = 'TV';
   bool _retrying = false;
 
+  /// Phone held in portrait: the side-by-side columns don't fit, so only
+  /// one is shown at a time (tabs -> groups -> content), [_phonePage]
+  /// picks which, and Back walks back through them. Refreshed every build.
+  bool _compact = false;
+  int _phonePage = 2;
+
   /// Group identity is `(playlistId, title)` now that more than one
   /// playlist can exist (two providers can share a category name), but
   /// this field itself stays a bare title — every place that reads it
@@ -675,6 +681,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       _focusedId = null;
       _focusedDescription = null;
       _focusDepth = 0;
+      _phonePage = _compact ? 1 : 0;
       // Opt-in only, not the default view — groups + Continue Watching
       // come up first on entering either tab, same as before this
       // feature existed. The pinned "What's New" row in the groups
@@ -805,6 +812,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   void _onGroupSelected(String? group, {String? playlistId}) {
     setState(() {
       _selectedGroup = group;
+      if (_compact) _phonePage = 2;
       // Otherwise the Timeline Guide's header keeps describing a program
       // from whichever group was focused before this switch, until the
       // D-pad happens to land on something in the new one.
@@ -828,6 +836,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       // directly as the first favourite channel launching into fullscreen
       // on its own, with nothing actually tapped.
       _resetLiveListFocus();
+      _collapseAfterTouchPick();
       return;
     }
     if (_tab == 'Favorites') {
@@ -851,6 +860,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     }
     if (_tab == 'TV') {
       _resetLiveListFocus();
+      _collapseAfterTouchPick();
       return;
     }
     context
@@ -867,6 +877,21 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// [_scrollToBrowseGroup] uses for Movies/TV Shows, and
   /// `_TimelineGuideState.didUpdateWidget`'s matching fix for the other
   /// live guide layout.
+  /// Touch/mouse (not a remote): picking a group moves into the content
+  /// column, so the tabs and groups collapse and the guide/video get the
+  /// room. A remote keeps focus on the group (Right enters the guide).
+  void _collapseAfterTouchPick() {
+    if (_compact || context.read<AppPreferences>().isTelevision) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!(_timelineGuideKey.currentState?.focusEntry() ?? false) &&
+          !_col2Scope.hasFocus) {
+        _col2Scope.requestFocus();
+      }
+      if (_focusDepth != 2) setState(() => _focusDepth = 2);
+    });
+  }
+
   void _resetLiveListFocus() {
     if (_liveListController.hasClients) _liveListController.jumpTo(0);
     final playlist = context.read<PlaylistManager>();
@@ -1027,6 +1052,14 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// no-op — and the list, once it does remount, restores its previous
   /// offset from `PageStorage` rather than starting at the top.
   void _leaveWhatsNewThen(VoidCallback jump) {
+    // Portrait phone: show the catalog page first, then jump within it.
+    if (_compact && _phonePage != 2) {
+      setState(() => _phonePage = 2);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _leaveWhatsNewThen(jump);
+      });
+      return;
+    }
     if (!_showWhatsNew) {
       jump();
       return;
@@ -1794,6 +1827,11 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     final playlist = context.watch<PlaylistManager>();
     final epg = context.watch<EpgService>();
     final prefs = context.watch<AppPreferences>();
+    final screen = MediaQuery.sizeOf(context);
+    _compact = screen.width < 600 && screen.height > screen.width;
+    // Turning the phone to portrait lands on the content page (what was
+    // on the right in landscape); Back then walks to groups and tabs.
+    if (!_compact) _phonePage = 2;
 
     // Streaming-app convention: always dark on the TV screen, regardless of
     // the phone's light/dark setting, but still keyed off the user's chosen
@@ -1827,6 +1865,15 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
           // Back mid "Move Up / Down" just finishes the move.
           if (_movingGroupKey != null) {
             _endGroupMove();
+            return;
+          }
+          if (_compact) {
+            if (_phonePage > 0) {
+              if (_timelineFilterActive) _closeTimelineFilter();
+              setState(() => _phonePage--);
+            } else {
+              _confirmExit();
+            }
             return;
           }
           if (_focusDepth == 0) {
@@ -2052,83 +2099,33 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                                                 ?.moveVertical(-1),
                                       },
                                     },
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  _collapsible(
-                                    depth: 0,
-                                    expandedWidth: 160,
-                                    child: FocusTraversalGroup(
-                                      child: FocusScope(
-                                        node: _col0Scope,
-                                        onFocusChange: (has) {
-                                          if (has) _onColumnFocus(0);
-                                        },
-                                        child: _buildTabsColumn(
-                                            collapsed: _focusDepth > 0),
-                                      ),
-                                    ),
-                                  ),
-                                  const VerticalDivider(width: 1),
-                                  if (isBrowseTab) ...[
-                                    _collapsible(
-                                      depth: 1,
-                                      expandedWidth: 260,
-                                      child: FocusTraversalGroup(
-                                        child: FocusScope(
-                                          node: _col1Scope,
-                                          onFocusChange: (has) {
-                                            if (has) _onColumnFocus(1);
-                                          },
-                                          child: _buildBrowseGroupsColumn(
-                                              playlist,
+                              child: _compact
+                                  ? _buildPhoneColumns(
+                                      playlist, epg, isBrowseTab)
+                                  : Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        _collapsible(
+                                          depth: 0,
+                                          expandedWidth: 160,
+                                          child: _tabsScope(
+                                              collapsed: _focusDepth > 0),
+                                        ),
+                                        const VerticalDivider(width: 1),
+                                        _collapsible(
+                                          depth: 1,
+                                          expandedWidth: 260,
+                                          child: _groupsScope(
+                                              playlist, isBrowseTab,
                                               collapsed: _focusDepth > 1),
                                         ),
-                                      ),
+                                        const VerticalDivider(width: 1),
+                                        Expanded(
+                                            child: _contentScope(
+                                                playlist, epg, isBrowseTab)),
+                                      ],
                                     ),
-                                    const VerticalDivider(width: 1),
-                                    Expanded(
-                                      child: FocusTraversalGroup(
-                                        child: FocusScope(
-                                          node: _col2Scope,
-                                          onFocusChange: (has) {
-                                            if (has) _onColumnFocus(2);
-                                          },
-                                          child: _buildMainArea(playlist, epg),
-                                        ),
-                                      ),
-                                    ),
-                                  ] else ...[
-                                    _collapsible(
-                                      depth: 1,
-                                      expandedWidth: 260,
-                                      child: FocusTraversalGroup(
-                                        child: FocusScope(
-                                          node: _col1Scope,
-                                          onFocusChange: (has) {
-                                            if (has) _onColumnFocus(1);
-                                          },
-                                          child: _buildGroupsColumn(playlist,
-                                              collapsed: _focusDepth > 1),
-                                        ),
-                                      ),
-                                    ),
-                                    const VerticalDivider(width: 1),
-                                    Expanded(
-                                      child: FocusTraversalGroup(
-                                        child: FocusScope(
-                                          node: _col2Scope,
-                                          onFocusChange: (has) {
-                                            if (has) _onColumnFocus(2);
-                                          },
-                                          child:
-                                              _buildLiveRegion(playlist, epg),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
                             ),
                     ),
                   ],
@@ -2141,6 +2138,102 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     );
   }
 
+  Widget _tabsScope({required bool collapsed}) => FocusTraversalGroup(
+        child: FocusScope(
+          node: _col0Scope,
+          onFocusChange: (has) {
+            if (has) _onColumnFocus(0);
+          },
+          child: _buildTabsColumn(collapsed: collapsed),
+        ),
+      );
+
+  Widget _groupsScope(PlaylistManager playlist, bool isBrowseTab,
+          {required bool collapsed}) =>
+      FocusTraversalGroup(
+        child: FocusScope(
+          node: _col1Scope,
+          onFocusChange: (has) {
+            if (has) _onColumnFocus(1);
+          },
+          child: isBrowseTab
+              ? _buildBrowseGroupsColumn(playlist, collapsed: collapsed)
+              : _buildGroupsColumn(playlist, collapsed: collapsed),
+        ),
+      );
+
+  Widget _contentScope(
+          PlaylistManager playlist, EpgService epg, bool isBrowseTab) =>
+      FocusTraversalGroup(
+        child: FocusScope(
+          node: _col2Scope,
+          onFocusChange: (has) {
+            if (has) _onColumnFocus(2);
+          },
+          child: isBrowseTab
+              ? _buildMainArea(playlist, epg)
+              : _buildLiveRegion(playlist, epg),
+        ),
+      );
+
+  /// Portrait phone: the same three columns, one page at a time (see
+  /// [_compact]). An IndexedStack, not just the visible column, so the
+  /// long groups list keeps its scroll position across Back.
+  Widget _buildPhoneColumns(
+      PlaylistManager playlist, EpgService epg, bool isBrowseTab) {
+    final String? title = switch (_phonePage) {
+      0 => null,
+      1 => tr(_tab),
+      _ => isBrowseTab
+          ? tr(_tab)
+          : switch (
+              _tab == 'TV' ? _effectiveLiveGroup(playlist) : _selectedGroup) {
+              null => tr(_tab == 'TV' ? 'TV' : 'All'),
+              _favoritesGroupSentinel => tr('Favourites'),
+              final group => group,
+            },
+    };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (title != null)
+          InkWell(
+            canRequestFocus: false,
+            onTap: () => setState(() => _phonePage--),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                children: [
+                  const Icon(Icons.arrow_back, color: Colors.white),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        Expanded(
+          child: IndexedStack(
+            index: _phonePage,
+            sizing: StackFit.expand,
+            children: [
+              _tabsScope(collapsed: false),
+              _groupsScope(playlist, isBrowseTab, collapsed: false),
+              _contentScope(playlist, epg, isBrowseTab),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   /// A column that animates between [expandedWidth] and a narrow icon-only
   /// strip once D-pad focus has moved past it (`_focusDepth > depth`).
   Widget _collapsible({
@@ -2149,10 +2242,21 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     required Widget child,
     double collapsedWidth = 56,
   }) {
+    final collapsed = _focusDepth > depth;
+    // Touch/mouse: a tap on a collapsed strip opens it back up instead of
+    // hitting one of its look-alike icons. Always the same wrappers (only
+    // their flags change) so the column never remounts and keeps its
+    // scroll position.
+    final tapToExpand =
+        collapsed && !context.read<AppPreferences>().isTelevision;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
-      width: _focusDepth > depth ? collapsedWidth : expandedWidth,
-      child: child,
+      width: collapsed ? collapsedWidth : expandedWidth,
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: tapToExpand ? () => setState(() => _focusDepth = depth) : null,
+        child: AbsorbPointer(absorbing: tapToExpand, child: child),
+      ),
     );
   }
 
@@ -2485,7 +2589,10 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
           collapsed: collapsed,
           fontSize: _groupFontSize,
           focusNode: _firstGroupRowFocusNode,
-          onTap: () => setState(() => _showWhatsNew = true),
+          onTap: () => setState(() {
+            _showWhatsNew = true;
+            if (_compact) _phonePage = 2;
+          }),
         ),
         _SelectableRow(
           icon: Icons.apps,
@@ -2920,57 +3027,70 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       // _buildTimelineFilterBar's own doc comment).
       final previewRow = _timelineFilterActive
           ? _buildTimelineFilterBar(channel)
-          : Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Windows gets a proportionally wider video box (Expanded,
-                // instead of a fixed 284px) to match its own taller preview
-                // row below — a fixed width sized for the Android TV box's
-                // fixed 160px-tall row would look like a thin sliver once that
-                // row is several times taller on a resizable desktop window.
-                Platform.isWindows
-                    ? Expanded(
-                        // flex 2:1 against the description panel's flex 1 below
-                        // (was 2:3, i.e. 40% of the row) — requested directly:
-                        // extend the mini player right by at least 50%; 2:1
-                        // gives it roughly two-thirds of the row (a ~67%
-                        // increase from 40%), well past that minimum, since the
-                        // live program description next to it doesn't need to
-                        // be nearly that wide to stay readable.
-                        flex: 2,
-                        child: Container(
-                          clipBehavior: Clip.antiAlias,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.18),
-                                width: 1.5),
-                          ),
-                          child: _buildTimelinePreviewBox(channel),
-                        ),
-                      )
-                    : Container(
-                        width: 284,
-                        clipBehavior: Clip.antiAlias,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.18),
-                              width: 1.5),
-                        ),
-                        child: _buildTimelinePreviewBox(channel),
-                      ),
-                Expanded(
-                  flex: 1,
-                  child: _GuideNowPanel(
-                    focusedChannel: _guideFocusedChannel,
-                    focusedProgram: _guideFocusedProgram,
-                    playingChannel: channel,
-                    epg: epg,
+          : _compact
+              // Portrait phone: no room beside the video for the
+              // description panel — just the video, full width.
+              ? Container(
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        width: 1.5),
                   ),
-                ),
-              ],
-            );
+                  child: _buildTimelinePreviewBox(channel),
+                )
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Windows gets a proportionally wider video box (Expanded,
+                    // instead of a fixed 284px) to match its own taller preview
+                    // row below — a fixed width sized for the Android TV box's
+                    // fixed 160px-tall row would look like a thin sliver once that
+                    // row is several times taller on a resizable desktop window.
+                    Platform.isWindows
+                        ? Expanded(
+                            // flex 2:1 against the description panel's flex 1 below
+                            // (was 2:3, i.e. 40% of the row) — requested directly:
+                            // extend the mini player right by at least 50%; 2:1
+                            // gives it roughly two-thirds of the row (a ~67%
+                            // increase from 40%), well past that minimum, since the
+                            // live program description next to it doesn't need to
+                            // be nearly that wide to stay readable.
+                            flex: 2,
+                            child: Container(
+                              clipBehavior: Clip.antiAlias,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.18),
+                                    width: 1.5),
+                              ),
+                              child: _buildTimelinePreviewBox(channel),
+                            ),
+                          )
+                        : Container(
+                            width: 284,
+                            clipBehavior: Clip.antiAlias,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.18),
+                                  width: 1.5),
+                            ),
+                            child: _buildTimelinePreviewBox(channel),
+                          ),
+                    Expanded(
+                      flex: 1,
+                      child: _GuideNowPanel(
+                        focusedChannel: _guideFocusedChannel,
+                        focusedProgram: _guideFocusedProgram,
+                        playingChannel: channel,
+                        epg: epg,
+                      ),
+                    ),
+                  ],
+                );
 
       final guide = _TimelineGuide(
         key: _timelineGuideKey,
@@ -3022,8 +3142,16 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         // preview row is ~50% of the window (flex-based, see below) and
         // collapsing that to a small bar was a far more drastic, jarring
         // change than Android TV's fixed-160px starting point warranted.
-        children:
-            _timelineFilterActive && context.read<AppPreferences>().isTelevision
+        children: _compact
+            ? [
+                _timelineFilterActive
+                    ? SizedBox(height: 64, child: previewRow)
+                    : AspectRatio(aspectRatio: 16 / 9, child: previewRow),
+                const Divider(height: 12),
+                Expanded(child: guide),
+              ]
+            : _timelineFilterActive &&
+                    context.read<AppPreferences>().isTelevision
                 ? [
                     SizedBox(height: 200, child: previewRow),
                     const Divider(height: 12),
@@ -3067,6 +3195,30 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     // rounding for free. Reported as looking unpolished next to the
     // brighter Settings redesign — this pane is the one part of the main
     // screen that's still full-bleed video.
+    // Portrait phone: the list can't float beside the video (it would
+    // cover all of it) — video on top, list below.
+    if (_compact) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: Container(
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.18), width: 1.5),
+              ),
+              child: _buildTimelinePreviewBox(channel),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(child: _buildLiveList(playlist)),
+        ],
+      );
+    }
+
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(

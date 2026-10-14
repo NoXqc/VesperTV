@@ -90,3 +90,19 @@ Read before changing guide/Multiview/profiles/palettes/backup-server logic.
   labels) — translate those at the display site (`Text(tr(tab))`). Québec French, short forms on
   narrow TV labels (MAJ, PJ/V/D/DP, NIP). Data from providers/ESPN (channel, team, league names)
   stays as-is.
+- **Phone mode (1.0.6+232, 2026-10-14):** one APK for everything — no separate phone build
+  (same `applicationId`, one updater asset, one Downloader code). `TvHomeScreen` adapts:
+  portrait + width < 600 (`_compact`) shows one column at a time via an `IndexedStack`
+  (`_phonePage` 0 tabs / 1 groups / 2 content, keeps scroll positions), a "← title" header, Back
+  walks 2→1→0 then asks to exit; tab tap → groups, group tap → content; starts (and lands after
+  rotating to portrait) on the content page. Live region in portrait = 16:9 video on top, list or
+  Timeline below. Landscape phone = the TV layout; on touch/mouse (`!isTelevision`) picking a group
+  moves focus into the content so the tabs/groups collapse, and tapping a collapsed strip expands
+  it (`_collapsible`, wrappers always present so the column never remounts). Layout "auto" now
+  always uses `TvHomeScreen`; only Layout = "Phone" still shows the old `HomeScreen` (to delete).
+  Add Playlist stacks its 3 panes in one scroll page when width < 600; My Teams stacks list over
+  details; Standings keeps every column and scrolls sideways on touch (TV still drops columns —
+  a remote can't scroll sideways). Tested on the owner's Xiaomi (`2509FPN0BC`, 1200x2608 @480dpi,
+  adb serial `4ec647bc`). Ideas not done: narrower Timeline channel column in portrait, hide the
+  resume pill when the preview already plays that channel, other Sports screens in portrait,
+  delete `HomeScreen`.

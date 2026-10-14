@@ -71,7 +71,9 @@ right below; the rest of this file is the design and the tests behind it.
     broadcasts, `team.recordSummary` and `team.standingSummary` ("7th in Pacific Division"), one call
     per team. Check the soccer variant (may need `?fixture=true` for upcoming games). Store followed
     teams per viewer as `{leagueId, teamId}`.
-- Not yet: Sports Multiview, phone layout, BYOK providers, division view for standings.
+- Not yet: Sports Multiview, phone layout (only My Teams + Standings adapted in 1.0.6), BYOK providers, division view for standings.
+- Reference (owner, 2026-10-14): **SportioTV** https://github.com/trenntl/SportioTV/releases/tag/v1.0.6
+  has 81 leagues in its sports hub — study how it sources/covers them before adding more leagues.
 
 ## Goals
 - A Sports tab with: **league filter** (NHL, NFL, NBA, MLB, PGA, ...), **My Teams**, **Standings**,
