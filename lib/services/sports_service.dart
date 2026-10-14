@@ -6,6 +6,22 @@ import 'package:http/http.dart' as http;
 
 import '../models/sports.dart';
 import '../l10n/l10n.dart';
+import 'storage_service.dart';
+
+/// The viewer's active leagues, in their order: base leagues plus the ones
+/// added from the League bank (defaults when nothing usable is saved).
+/// Shared by the Sports tab and the player's side panel.
+List<SportsLeague> savedSportsLeagues(StorageService storage) {
+  final added = storage.getSportsAddedLeagues();
+  final leagues = [
+    for (final id in storage.getSportsLeagues() ?? kDefaultSportsLeagueIds)
+      if (sportsLeagueById(id) case final l?)
+        if (l.isBase || added.contains(id)) l,
+  ];
+  return leagues.isNotEmpty
+      ? leagues
+      : [for (final id in kDefaultSportsLeagueIds) sportsLeagueById(id)!];
+}
 
 /// Scores and schedules from ESPN's public site API — key-less, so the
 /// Sports tab works for everyone without signing up anywhere (see

@@ -20,6 +20,24 @@ Read before changing guide/Multiview/profiles/palettes/backup-server logic.
   in the holder (reuses its `Player`, own completed→reopen), fullscreen = `take()` + push
   `DesktopPlayerScreen(existingPlayer:)` — no restart. History dialog / Continue Watching still
   go straight to fullscreen (`_selectChannel`).
+- **Full-screen video behind the guide (1.0.10, Android only):** Settings > Theme, shown when
+  the guide is Timeline (`guideFullVideo`, key `vesper_guide_full_video`, off by default).
+  `TvHomeScreen._fullVideo` (TV tab, landscape, not Windows — playing or not): the video is one
+  `Positioned.fill` layer behind the whole screen and the corner box is left **empty** (never two
+  views of the same controller — the filter bar skips its box too). Guide = 3 rows at the bottom
+  (SafeArea bottom 4), `_fullVideoScrim` (same wrapper always, only the colour changes, so columns
+  never remount), lighter "now" blocks (`translucent`), tabs/groups columns hidden completely at
+  depth > their own (`_collapsible` width 0, child laid out at >= 56 px and clipped), description =
+  small card pinned top-right (`_buildFullVideoNowCard`, pending-resume channel when idle).
+- **Fullscreen side panel (1.0.10, Android):** Left in `PlayerScreen` (live, no bar focused) opens
+  `PlayerSidePanel` — Last channels / My Teams (today's games of followed teams) / Live now (live
+  games of active leagues). Left no longer exits: **Back only** (PopScope closes the panel first).
+  Explicit key dispatch from one Focus (Left/Right tabs, Up/Down rows, OK plays the channel or the
+  game's best match). `savedSportsLeagues()` is shared with the Sports tab; one static
+  `SportsChannelMatcher` per session.
+- **Movies/TV Shows tab stops a background live channel (1.0.10, Android):**
+  `_parkLiveChannel` stops it and makes it the pending-resume channel, so the pill + hold-Right
+  restart it. Windows not done (its pill only resumes a running session).
 - **Player controls:** a primary row plus a secondary row revealed by pressing Down again (a chevron
   hints it exists); every icon button has a text label; top row shows quality (HD/FHD/4K), FPS and
   audio-channel (e.g. 5.1) badges. "Multiview" button opens Multiview with this channel preloaded.

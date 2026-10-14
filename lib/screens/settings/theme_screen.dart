@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -110,6 +112,19 @@ class ThemeScreen extends StatelessWidget {
                       ],
                     ],
                   ),
+                  // Android only for now — Windows' preview runs on its
+                  // own media_kit player and isn't wired for this yet.
+                  if (prefs.guideViewMode == 'timeline' &&
+                      !Platform.isWindows) ...[
+                    const SizedBox(height: 8),
+                    TvSwitchListTile(
+                      title: Text(tr('Full-screen video behind the guide')),
+                      subtitle: Text(tr(
+                          'The live channel fills the screen behind a see-through guide showing 3 rows')),
+                      value: prefs.guideFullVideo,
+                      onChanged: prefs.setGuideFullVideo,
+                    ),
+                  ],
                 ],
               ),
             ));

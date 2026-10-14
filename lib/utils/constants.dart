@@ -211,6 +211,10 @@ class AppConstants {
   /// (cable-guide grid, all visible channels at once).
   static const String keyGuideViewMode = 'nox_guide_view_mode';
 
+  /// Timeline guide only: the live video fills the whole screen behind a
+  /// translucent guide (and a 3-row grid) instead of the small corner box.
+  static const String keyGuideFullVideo = 'vesper_guide_full_video';
+
   /// LEGACY global scalar — "enable/disable playlist" (freeing a
   /// provider's connection slot for another device without touching
   /// cached catalog/credentials). Per-playlist now, as

@@ -23,6 +23,9 @@ class AppPreferences extends ChangeNotifier {
   late String layoutMode; // 'auto', 'phone', 'tv'
   late String guideViewMode; // 'live', 'timeline'
 
+  /// Timeline guide: video full screen behind a translucent guide.
+  late bool guideFullVideo;
+
   /// Set once at startup from Android's own UI mode (see
   /// DeviceTypeService) — what 'auto' actually keys off now. Not
   /// persisted: it's a property of the device, re-detected every launch,
@@ -34,6 +37,7 @@ class AppPreferences extends ChangeNotifier {
     palette = _paletteById(_storage.getPaletteId());
     layoutMode = _storage.getLayoutMode();
     guideViewMode = _storage.getGuideViewMode();
+    guideFullVideo = _storage.getGuideFullVideo();
   }
 
   CyberpunkPalette _paletteById(String id) {
@@ -77,6 +81,12 @@ class AppPreferences extends ChangeNotifier {
   void setGuideViewMode(String mode) {
     guideViewMode = mode;
     _storage.setGuideViewMode(mode);
+    notifyListeners();
+  }
+
+  void setGuideFullVideo(bool value) {
+    guideFullVideo = value;
+    _storage.setGuideFullVideo(value);
     notifyListeners();
   }
 }

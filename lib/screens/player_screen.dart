@@ -14,6 +14,7 @@ import '../utils/constants.dart';
 import '../utils/tv_theme.dart';
 import '../widgets/epg_guide.dart';
 import '../widgets/player_controls.dart';
+import '../widgets/player_side_panel.dart';
 import 'multiview_screen.dart';
 import 'search_screen.dart';
 import '../l10n/l10n.dart';
@@ -36,9 +37,9 @@ import '../l10n/l10n.dart';
 ///
 /// D-pad navigation is a small explicit state machine rather than default
 /// focus traversal, mirroring the fix applied to [TvHomeScreen]'s columns:
-/// - **Left**, whenever focus hasn't been deliberately moved into the top
-///   or bottom bar, exits back to the channel/catalog list — the primary
-///   way out on a remote, not just the physical device Back button.
+/// - **Left** (live only, no bar focused) opens [PlayerSidePanel] — Last
+///   channels / My Teams / Live now. It used to exit back to the list; the
+///   owner moved that to Back only (2026-10-14).
 /// - **Up** first reveals the top bar (back/search/fullscreen + the
 ///   current/next EPG line for live channels); pressed again, it moves
 ///   focus onto the back button so Left/Right can reach Search too.
@@ -73,6 +74,30 @@ class _PlayerScreenState extends State<PlayerScreen> {
   /// collapsed again next time it's revealed.
   bool _moreVisible = false;
   Timer? _hideTimer;
+
+  /// [PlayerSidePanel] showing (Left on a live channel). Back closes it
+  /// instead of leaving the player (see the PopScope in [build]).
+  bool _panelOpen = false;
+
+  /// The screen's own key-catching Focus — focus goes back here when the
+  /// panel closes, so Up/Down/Left work again straight away.
+  final FocusNode _rootFocus = FocusNode(debugLabel: 'player-root');
+
+  void _openPanel() {
+    _hideTimer?.cancel();
+    setState(() {
+      _panelOpen = true;
+      _topVisible = false;
+      _bottomVisible = false;
+      _moreVisible = false;
+    });
+  }
+
+  void _closePanel() {
+    if (!_panelOpen) return;
+    setState(() => _panelOpen = false);
+    _rootFocus.requestFocus();
+  }
 
   /// Refreshed on every build (see [build]) and read from [_toggleImmersive]
   /// / [_restoreChrome] / [dispose] — those don't call [build] themselves,
@@ -358,6 +383,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _topScope.dispose();
     _bottomScope.dispose();
     _switchButtonFocus.dispose();
+    _rootFocus.dispose();
     // Defensive: never leave the whole app stuck in landscape/immersive
     // mode if this screen is popped while _immersive was still on.
     if (_immersive) _restoreChrome();
@@ -397,7 +423,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
     return withTvThemeIfNeeded(
         context,
-        (context) => Scaffold(
+        (context) => PopScope(
+            // Back with the side panel open just closes the panel.
+            canPop: !_panelOpen,
+            onPopInvokedWithResult: (didPop, _) {
+              if (!didPop) _closePanel();
+            },
+            child: Scaffold(
               backgroundColor: Colors.black,
               body: CallbackShortcuts(
                 bindings: <ShortcutActivator, VoidCallback>{
@@ -415,8 +447,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   const SingleActivator(LogicalKeyboardKey.mediaPause):
                       _handlePlayPause,
                   if (!_focusInBar) ...{
-                    const SingleActivator(LogicalKeyboardKey.arrowLeft): () =>
-                        Navigator.of(context).pop(),
+                    // Back is the only way out now; Left opens the side
+                    // panel on a live channel (a no-op on movies/episodes).
+                    const SingleActivator(LogicalKeyboardKey.arrowLeft): () {
+                      if (Channel.isLiveId(channel.rawId)) _openPanel();
+                    },
                     // Right never had any established purpose here — it simply had
                     // no handler at all, so with no bar focused (nothing else on
                     // this screen to move to) it fell through to Flutter's
@@ -436,6 +471,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   },
                 },
                 child: Focus(
+                  focusNode: _rootFocus,
                   autofocus: true,
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
@@ -612,12 +648,24 @@ class _PlayerScreenState extends State<PlayerScreen> {
                             },
                             onDismiss: playback.dismissAutoAdvance,
                           ),
+
+                        // Always Positioned (see the Stack comment above).
+                        Positioned(
+                          left: 0,
+                          top: 0,
+                          bottom: 0,
+                          width: _panelOpen ? PlayerSidePanel.width : 0,
+                          child: _panelOpen
+                              ? PlayerSidePanel(
+                                  current: channel, onClose: _closePanel)
+                              : const SizedBox.shrink(),
+                        ),
                       ],
                     ),
                   ),
                 ),
               ),
-            ));
+            )));
   }
 }
 

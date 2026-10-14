@@ -155,6 +155,15 @@ const Map<String, String> kFr = {
   'Sports': "Sports",
   'this team': "cette équipe",
   'My Teams': "Mes équipes",
+  'Last channels': "Dernières chaînes",
+  '◀ ▶ tabs  ·  OK to watch  ·  Back to close':
+      "◀ ▶ onglets  ·  OK pour regarder  ·  Retour pour fermer",
+  'None of your teams play today.':
+      "Aucune de vos équipes ne joue aujourd'hui.",
+  'Follow teams from Sports > Standings to see them here.':
+      "Suivez des équipes dans Sports > Classement pour les voir ici.",
+  'No games from your leagues are live right now.':
+      "Aucun match de vos ligues n'est en direct pour l'instant.",
   'Hold OK on a team to unfollow · on a game to pick the channel':
       "Maintenir OK sur une équipe pour ne plus la suivre · sur un match pour choisir la chaîne",
   'Add team': "Ajouter une équipe",
@@ -691,6 +700,9 @@ const Map<String, String> kFr = {
   'Live TV guide': "Guide télé en direct",
   'Timeline shows every channel at once, on a scrollable schedule grid, instead of one channel\'s now/next at a time.':
       "« Horaire » affiche toutes les chaînes en même temps dans une grille défilante, au lieu de l'en cours/ensuite d'une seule chaîne.",
+  'Full-screen video behind the guide': "Vidéo plein écran derrière le guide",
+  'The live channel fills the screen behind a see-through guide showing 3 rows':
+      "La chaîne en direct remplit l'écran derrière un guide transparent de 3 rangées",
   'Auto': "Auto",
   'Phone': "Téléphone",
   'Timeline': "Horaire",
@@ -794,7 +806,8 @@ const Map<String, String> kFr = {
   'Fighting': "Combat",
   'Motorsport': "Sport automobile",
   'Always for {name}': "Toujours pour {name}",
-  'Best for a channel that carries the whole series': "Idéal pour une chaîne qui diffuse toute la série",
+  'Best for a channel that carries the whole series':
+      "Idéal pour une chaîne qui diffuse toute la série",
   'Next game: {date}': "Prochain match : {date}",
   'No upcoming games listed yet for this league.':
       "Aucun match à venir pour cette ligue pour l'instant.",

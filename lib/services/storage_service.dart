@@ -273,6 +273,11 @@ class StorageService {
   Future<void> setGuideViewMode(String mode) =>
       _prefs.setString(AppConstants.keyGuideViewMode, mode);
 
+  bool getGuideFullVideo() =>
+      _prefs.getBool(AppConstants.keyGuideFullVideo) ?? false;
+  Future<void> setGuideFullVideo(bool value) =>
+      _prefs.setBool(AppConstants.keyGuideFullVideo, value);
+
   // --- Favorites (per viewer, shared across every playlist) -----------------
   // Favorites aren't namespaced by playlist (a favorited channel is just a
   // composite playlistId::rawId already, so there's no collision risk the

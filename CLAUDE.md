@@ -43,7 +43,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
 4. `flutter analyze` must report the baseline **20** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `1.0.9` unless noted
+5. Check the current state of releases: `gh release list` (latest should be `1.0.10` unless noted
    in §11).
 
 ## 3. Layout (what matters)
@@ -95,7 +95,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+246**) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+254**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
@@ -204,7 +204,13 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-14)
-- **Shipped: 1.0.9 (`+246`, 2026-10-14, latest on GitHub)** — **Select = preview, Select again =
+- **Shipped: 1.0.10 (`+254`, 2026-10-14, latest on GitHub, 4 Formuler screenshots attached)** —
+  **full-screen video behind the Timeline guide** (Theme toggle, 3-row translucent guide, side
+  columns hidden in the guide, corner description card), **fullscreen side panel** on Left (Last
+  channels / My Teams / Live now; Left no longer exits the player — Back only), and Movies/TV Shows
+  stopping a background live channel but keeping it resumable. All Android only — Windows parity
+  not done. Details: `dev-notes/features.md`. **Next:** ask the owner.
+- 1.0.9 (`+246`, 2026-10-14) — **Select = preview, Select again =
   fullscreen** on the Timeline guide + Live list (Android and Windows, `_previewOrOpenChannel`,
   `DesktopMiniPlayer.play`; see `dev-notes/features.md`), **event sports** in the League bank
   (golf PGA/LPGA/DP World/LIV, UFC/PFL, F1/NASCAR/IndyCar — leaderboard cards, F1 per session,

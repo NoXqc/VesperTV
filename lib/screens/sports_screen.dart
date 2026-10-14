@@ -344,17 +344,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   /// Shown leagues from storage: base leagues plus bank leagues the user
   /// added (a bank id that was sent back is dropped).
-  List<SportsLeague> _savedLeagues() {
-    final added = _storage.getSportsAddedLeagues();
-    final leagues = [
-      for (final id in _storage.getSportsLeagues() ?? kDefaultSportsLeagueIds)
-        if (sportsLeagueById(id) case final l?)
-          if (l.isBase || added.contains(id)) l,
-    ];
-    return leagues.isNotEmpty
-        ? leagues
-        : [for (final id in kDefaultSportsLeagueIds) sportsLeagueById(id)!];
-  }
+  List<SportsLeague> _savedLeagues() => savedSportsLeagues(_storage);
 
   Future<void> _editLeagues() async {
     final changed = await Navigator.of(context).push<bool>(

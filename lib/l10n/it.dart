@@ -154,6 +154,14 @@ const Map<String, String> kIt = {
   'Sports': "Sport",
   'this team': "questa squadra",
   'My Teams': "Le mie squadre",
+  'Last channels': "Ultimi canali",
+  '◀ ▶ tabs  ·  OK to watch  ·  Back to close':
+      "◀ ▶ schede  ·  OK per guardare  ·  Indietro per chiudere",
+  'None of your teams play today.': "Nessuna delle tue squadre gioca oggi.",
+  'Follow teams from Sports > Standings to see them here.':
+      "Segui le squadre da Sport > Classifica per vederle qui.",
+  'No games from your leagues are live right now.':
+      "Nessuna partita dei tuoi campionati è in diretta ora.",
   'Hold OK on a team to unfollow · on a game to pick the channel':
       "Tieni premuto OK su una squadra per non seguirla più · su una partita per scegliere il canale",
   'Add team': "Aggiungi squadra",
@@ -689,6 +697,10 @@ const Map<String, String> kIt = {
   'Live TV guide': "Guida TV in diretta",
   'Timeline shows every channel at once, on a scrollable schedule grid, instead of one channel\'s now/next at a time.':
       "«Palinsesto» mostra tutti i canali insieme in una griglia scorrevole, invece dell'ora/dopo di un canale alla volta.",
+  'Full-screen video behind the guide':
+      "Video a schermo intero dietro la guida",
+  'The live channel fills the screen behind a see-through guide showing 3 rows':
+      "Il canale in diretta riempie lo schermo dietro una guida trasparente a 3 righe",
   'Auto': "Auto",
   'Phone': "Telefono",
   'Timeline': "Palinsesto",
@@ -793,7 +805,8 @@ const Map<String, String> kIt = {
   'Fighting': "Combattimento",
   'Motorsport': "Motori",
   'Always for {name}': "Sempre per {name}",
-  'Best for a channel that carries the whole series': "Ideale per un canale che trasmette tutta la serie",
+  'Best for a channel that carries the whole series':
+      "Ideale per un canale che trasmette tutta la serie",
   'Next game: {date}': "Prossima partita: {date}",
   'No upcoming games listed yet for this league.':
       "Ancora nessuna partita in programma per questo campionato.",

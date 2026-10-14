@@ -156,6 +156,14 @@ const Map<String, String> kEs = {
   'Sports': "Deportes",
   'this team': "este equipo",
   'My Teams': "Mis equipos",
+  'Last channels': "Últimos canales",
+  '◀ ▶ tabs  ·  OK to watch  ·  Back to close':
+      "◀ ▶ pestañas  ·  OK para ver  ·  Atrás para cerrar",
+  'None of your teams play today.': "Ninguno de tus equipos juega hoy.",
+  'Follow teams from Sports > Standings to see them here.':
+      "Sigue equipos desde Deportes > Clasificación para verlos aquí.",
+  'No games from your leagues are live right now.':
+      "Ningún partido de tus ligas está en directo ahora.",
   'Hold OK on a team to unfollow · on a game to pick the channel':
       "Mantén OK en un equipo para dejar de seguirlo · en un partido para elegir el canal",
   'Add team': "Añadir equipo",
@@ -688,6 +696,10 @@ const Map<String, String> kEs = {
   'Live TV guide': "Guía de TV en vivo",
   'Timeline shows every channel at once, on a scrollable schedule grid, instead of one channel\'s now/next at a time.':
       "«Parrilla» muestra todos los canales a la vez en una cuadrícula desplazable, en lugar del ahora/después de un solo canal.",
+  'Full-screen video behind the guide':
+      "Vídeo a pantalla completa detrás de la guía",
+  'The live channel fills the screen behind a see-through guide showing 3 rows':
+      "El canal en directo llena la pantalla detrás de una guía transparente de 3 filas",
   'Auto': "Auto",
   'Phone': "Teléfono",
   'Timeline': "Parrilla",
@@ -790,7 +802,8 @@ const Map<String, String> kEs = {
   'Fighting': "Combate",
   'Motorsport': "Motor",
   'Always for {name}': "Siempre para {name}",
-  'Best for a channel that carries the whole series': "Ideal para un canal que emite toda la serie",
+  'Best for a channel that carries the whole series':
+      "Ideal para un canal que emite toda la serie",
   'Next game: {date}': "Próximo partido: {date}",
   'No upcoming games listed yet for this league.':
       "Todavía no hay próximos partidos para esta liga.",

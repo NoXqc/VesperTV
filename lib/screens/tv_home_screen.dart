@@ -83,6 +83,14 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   String _tab = 'TV';
   bool _retrying = false;
 
+  /// Settings > Theme "Full-screen video behind the guide", in effect right
+  /// now: Timeline guide on the TV tab, landscape, Android — playing or
+  /// not (a dark screen until a channel starts). Set each build. The video then lives in one
+  /// full-screen layer behind everything (see [build]) and the corner box
+  /// is left empty — never both, a second platform view of the same
+  /// controller is the bug LiveResumeHint's doc comment describes.
+  bool _fullVideo = false;
+
   /// Phone held in portrait: the side-by-side columns don't fit, so only
   /// one is shown at a time (tabs -> groups -> content), [_phonePage]
   /// picks which, and Back walks back through them. Refreshed every build.
@@ -705,6 +713,25 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         if (mounted) _restoreLiveFocus();
       });
     }
+    if (tab == 'Movies' || tab == 'TV Shows') _parkLiveChannel();
+  }
+
+  /// Browsing Movies/TV Shows stops a live channel playing in the background
+  /// (no hidden audio, frees the decoder + provider connection) but keeps it
+  /// resumable: it becomes the pending-resume channel, so the "Hold > to
+  /// resume" pill and hold-Right still bring it back (a fresh start, same as
+  /// the cold-launch resume). Android only — Windows has its own stack.
+  Future<void> _parkLiveChannel() async {
+    final playback = context.read<PlaybackService>();
+    final channel = playback.currentChannel;
+    if (channel == null ||
+        playback.isFullscreenActive ||
+        !Channel.isLiveId(channel.rawId)) {
+      return;
+    }
+    await playback.stop();
+    // stop() clears the pending channel, so set it after.
+    playback.setPendingResumeChannel(channel);
   }
 
   /// Left inside the poster grid should still move card-to-card normally.
@@ -1938,6 +1965,17 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     // Left/Right binding override just below for why the depth-2 column's
     // own key handling needs to know about it too.
     final showTimelineGuide = !isBrowseTab && prefs.guideViewMode == 'timeline';
+    final playbackState = context.watch<PlaybackService>();
+    final playing = playbackState.currentChannel;
+    final liveChannel =
+        playing != null && Channel.isLiveId(playing.rawId) ? playing : null;
+    _fullVideo = _tab == 'TV' &&
+        showTimelineGuide &&
+        prefs.guideFullVideo &&
+        !_compact &&
+        // Also with nothing playing (owner's choice): the layout stays put
+        // over a dark background instead of jumping when a channel starts.
+        !Platform.isWindows;
 
     return Theme(
       data: ThemeData(colorScheme: darkScheme, useMaterial3: true),
@@ -1991,8 +2029,19 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
               // second copy of the same gradient math keeps both screens in
               // sync automatically if the recipe ever changes again.
               const Positioned.fill(child: SettingsGradientBackground()),
+              if (_fullVideo)
+                Positioned.fill(
+                  child: ColoredBox(
+                    color: Colors.black,
+                    child: _buildTimelinePreviewBox(liveChannel),
+                  ),
+                ),
               SafeArea(
-                minimum: const EdgeInsets.all(16),
+                // Full-video mode: the guide sits right down at the TV's
+                // bottom edge (owner's request) instead of 16px above it.
+                minimum: _fullVideo
+                    ? const EdgeInsets.fromLTRB(16, 16, 16, 4)
+                    : const EdgeInsets.all(16),
                 child: Column(
                   children: [
                     _TvTopBar(
@@ -2197,18 +2246,26 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                                         _collapsible(
                                           depth: 0,
                                           expandedWidth: 160,
-                                          child: _tabsScope(
-                                              collapsed: _focusDepth > 0),
+                                          child: _fullVideoScrim(_tabsScope(
+                                              collapsed: _focusDepth > 0)),
                                         ),
-                                        const VerticalDivider(width: 1),
+                                        VerticalDivider(
+                                            width: 1,
+                                            color: _fullVideo && _focusDepth > 0
+                                                ? Colors.transparent
+                                                : null),
                                         _collapsible(
                                           depth: 1,
                                           expandedWidth: 260,
-                                          child: _groupsScope(
+                                          child: _fullVideoScrim(_groupsScope(
                                               playlist, isBrowseTab,
-                                              collapsed: _focusDepth > 1),
+                                              collapsed: _focusDepth > 1)),
                                         ),
-                                        const VerticalDivider(width: 1),
+                                        VerticalDivider(
+                                            width: 1,
+                                            color: _fullVideo && _focusDepth > 1
+                                                ? Colors.transparent
+                                                : null),
                                         Expanded(
                                             child: _contentScope(
                                                 playlist, epg, isBrowseTab)),
@@ -2219,12 +2276,55 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                   ],
                 ),
               ),
+              // Hidden while filtering: the filter keyboard uses that area.
+              if (_fullVideo && !_timelineFilterActive)
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: SafeArea(
+                    child: IgnorePointer(
+                        // Nothing playing yet: the cold-launch resume
+                        // channel, so the card isn't empty.
+                        child: _buildFullVideoNowCard(
+                            liveChannel ?? playbackState.pendingResumeChannel,
+                            epg)),
+                  ),
+                ),
             ],
           ),
         ),
       ),
     );
   }
+
+  /// Full-video mode's description card, pinned in the screen's top-right
+  /// corner (above the top bar's row — owner wanted it up in the corner).
+  Widget _buildFullVideoNowCard(Channel? channel, EpgService epg) => Container(
+        constraints: const BoxConstraints(maxWidth: 420),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.55),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: _GuideNowPanel(
+          focusedChannel: _guideFocusedChannel,
+          focusedProgram: _guideFocusedProgram,
+          playingChannel: channel,
+          epg: epg,
+          compact: true,
+        ),
+      );
+
+  /// Dark see-through fill behind a column while [_fullVideo] puts the
+  /// video behind the whole screen; transparent otherwise. Always the same
+  /// wrapper (only the color changes) so flipping the mode never remounts
+  /// the column and loses its focus or scroll position.
+  Widget _fullVideoScrim(Widget child, {double alpha = 0.55}) => DecoratedBox(
+        decoration: BoxDecoration(
+            color: _fullVideo
+                ? Colors.black.withValues(alpha: alpha)
+                : Colors.transparent),
+        child: child,
+      );
 
   Widget _tabsScope({required bool collapsed}) => FocusTraversalGroup(
         child: FocusScope(
@@ -2331,6 +2431,10 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     double collapsedWidth = 56,
   }) {
     final collapsed = _focusDepth > depth;
+    // Full-video mode hides a passed column completely instead of leaving
+    // the icon strip (owner's request) — Back/Left still walk out to it,
+    // and it opens up again as soon as it's the focused column.
+    if (_fullVideo) collapsedWidth = 0;
     // Touch/mouse: a tap on a collapsed strip opens it back up instead of
     // hitting one of its look-alike icons. Always the same wrappers (only
     // their flags change) so the column never remounts and keeps its
@@ -2343,7 +2447,24 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTap: tapToExpand ? () => setState(() => _focusDepth = depth) : null,
-        child: AbsorbPointer(absorbing: tapToExpand, child: child),
+        child: AbsorbPointer(
+          absorbing: tapToExpand,
+          // Never lays the column out narrower than the icon strip — at
+          // 0 width (full-video mode) its rows would overflow; it's just
+          // clipped away instead. Always present so the tree never changes.
+          child: ClipRect(
+            child: LayoutBuilder(builder: (context, constraints) {
+              final width =
+                  constraints.maxWidth < 56 ? 56.0 : constraints.maxWidth;
+              return OverflowBox(
+                alignment: Alignment.centerLeft,
+                minWidth: width,
+                maxWidth: width,
+                child: child,
+              );
+            }),
+          ),
+        ),
       ),
     );
   }
@@ -2964,15 +3085,20 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
-          child: Container(
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.18), width: 1.5),
-            ),
-            child: _buildTimelinePreviewBox(channel),
-          ),
+          // Full-video mode: the video is already the full-screen layer
+          // behind this — leave the slot empty instead of a second view.
+          child: _fullVideo
+              ? const SizedBox.shrink()
+              : Container(
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        width: 1.5),
+                  ),
+                  child: _buildTimelinePreviewBox(channel),
+                ),
         ),
         const SizedBox(width: 8),
         Expanded(
@@ -3157,25 +3283,36 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                               child: _buildTimelinePreviewBox(channel),
                             ),
                           )
-                        : Container(
-                            width: 284,
-                            clipBehavior: Clip.antiAlias,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.18),
-                                  width: 1.5),
-                            ),
-                            child: _buildTimelinePreviewBox(channel),
-                          ),
+                        // Full-video mode: the video is the screen-wide
+                        // layer behind everything, this slot stays empty.
+                        : _fullVideo
+                            ? const SizedBox(width: 284)
+                            : Container(
+                                width: 284,
+                                clipBehavior: Clip.antiAlias,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                      color:
+                                          Colors.white.withValues(alpha: 0.18),
+                                      width: 1.5),
+                                ),
+                                child: _buildTimelinePreviewBox(channel),
+                              ),
                     Expanded(
                       flex: 1,
-                      child: _GuideNowPanel(
-                        focusedChannel: _guideFocusedChannel,
-                        focusedProgram: _guideFocusedProgram,
-                        playingChannel: channel,
-                        epg: epg,
-                      ),
+                      // Full-video mode: the description is a small card
+                      // in the screen's top-right corner instead (drawn by
+                      // build, _buildFullVideoNowCard) — this slot stays
+                      // empty so the picture shows.
+                      child: _fullVideo
+                          ? const SizedBox.shrink()
+                          : _GuideNowPanel(
+                              focusedChannel: _guideFocusedChannel,
+                              focusedProgram: _guideFocusedProgram,
+                              playingChannel: channel,
+                              epg: epg,
+                            ),
                     ),
                   ],
                 );
@@ -3196,6 +3333,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         onFocusChanged: _onGuideFocusChanged,
         onShowOptions: _showChannelOptions,
         onWindowStale: () => setState(() => _timelineGuideKey = GlobalKey()),
+        translucent: _fullVideo,
         filterFocusNode: _timelineFilterButtonFocusNode,
         onFilterToggle: _openTimelineFilter,
         // While filtering, focus belongs to whichever input is actually
@@ -3243,7 +3381,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                 ? [
                     SizedBox(height: 200, child: previewRow),
                     const Divider(height: 12),
-                    Expanded(child: guide),
+                    Expanded(child: _fullVideoScrim(guide)),
                   ]
                 : Platform.isWindows
                     ? [
@@ -3264,11 +3402,24 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                         const Divider(height: 12),
                         Expanded(flex: 1, child: guide),
                       ]
-                    : [
-                        SizedBox(height: 160, child: previewRow),
-                        const Divider(height: 12),
-                        Expanded(child: guide),
-                      ],
+                    : _fullVideo
+                        // Full-video mode: a 3-row guide at the bottom,
+                        // the video showing through everything above it.
+                        ? [
+                            Expanded(child: previewRow),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              height: _TimelineGuideState._rulerHeight +
+                                  1 +
+                                  3 * _TimelineGuideState._rowHeight,
+                              child: _fullVideoScrim(guide),
+                            ),
+                          ]
+                        : [
+                            SizedBox(height: 160, child: previewRow),
+                            const Divider(height: 12),
+                            Expanded(child: _fullVideoScrim(guide)),
+                          ],
       );
     }
 
@@ -5631,7 +5782,12 @@ class _GuideNowPanel extends StatelessWidget {
     required this.focusedProgram,
     required this.playingChannel,
     required this.epg,
+    this.compact = false,
   });
+
+  /// Full-video mode: a small shrink-wrapped card (smaller title, two
+  /// description lines) instead of filling the 160px header row.
+  final bool compact;
 
   final Channel? focusedChannel;
   final EpgProgram? focusedProgram;
@@ -5664,14 +5820,17 @@ class _GuideNowPanel extends StatelessWidget {
 
     final now = DateTime.now();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      padding: compact
+          ? const EdgeInsets.fromLTRB(12, 6, 12, 8)
+          : const EdgeInsets.fromLTRB(16, 8, 16, 4),
       child: Column(
+        mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(program?.title ?? channel!.name,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
+              style: (compact
+                      ? Theme.of(context).textTheme.titleSmall
+                      : Theme.of(context).textTheme.titleLarge)
                   ?.copyWith(color: Colors.white),
               maxLines: 1,
               overflow: TextOverflow.ellipsis),
@@ -5686,7 +5845,8 @@ class _GuideNowPanel extends StatelessWidget {
               children: [
                 Text(
                     '${timeFormat.format(program.start)} - ${timeFormat.format(program.stop)}',
-                    style: const TextStyle(color: Colors.white70)),
+                    style: TextStyle(
+                        color: Colors.white70, fontSize: compact ? 12 : null)),
                 if (program.isNowPlaying(now)) ...[
                   const SizedBox(width: 12),
                   Expanded(
@@ -5704,7 +5864,13 @@ class _GuideNowPanel extends StatelessWidget {
                 ],
               ],
             ),
-            if (program.description != null) ...[
+            if (program.description != null && compact) ...[
+              const SizedBox(height: 4),
+              Text(program.description!,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
+            ] else if (program.description != null) ...[
               const SizedBox(height: 6),
               Expanded(
                 child: SingleChildScrollView(
@@ -5745,7 +5911,12 @@ class _TimelineGuide extends StatefulWidget {
       required this.filterFocusNode,
       required this.onFilterToggle,
       this.onReachedTop,
-      this.onWindowStale});
+      this.onWindowStale,
+      this.translucent = false});
+
+  /// Full-video mode (`_TvHomeScreenState._fullVideo`): lighter "now"
+  /// blocks so the video shows through the grid.
+  final bool translucent;
 
   final List<Channel> channels;
   final EpgService epg;
@@ -6394,6 +6565,7 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
                               onUnregisterBlock: _unregisterBlock,
                               hScroll: _gridHScroll,
                               epgLoading: epgLoading,
+                              translucent: widget.translucent,
                             ),
                           ),
                           Positioned(
@@ -6834,8 +7006,10 @@ class _TimelineRow extends StatelessWidget {
     required this.onUnregisterBlock,
     required this.hScroll,
     required this.epgLoading,
+    this.translucent = false,
   });
 
+  final bool translucent;
   final int rowIndex;
   final Channel channel;
   final List<EpgProgram> programs;
@@ -6902,6 +7076,7 @@ class _TimelineRow extends StatelessWidget {
                 ? tr('Loading EPG…')
                 : tr('No program data available'),
             isNow: false,
+            translucent: translucent,
             onOpen: onOpen,
             onShowOptions: onShowOptions,
             blockLeft: 0,
@@ -6947,6 +7122,7 @@ class _TimelineRow extends StatelessWidget {
               child: _ProgramBlock(
                 program: program,
                 isNow: program.isNowPlaying(now),
+                translucent: translucent,
                 onOpen: onOpen,
                 onShowOptions: onShowOptions,
                 blockLeft: leftFor(program),
@@ -6980,7 +7156,10 @@ class _ProgramBlock extends StatefulWidget {
       this.onFocusGained,
       this.placeholderLabel,
       this.onRegister,
-      this.onUnregister});
+      this.onUnregister,
+      this.translucent = false});
+
+  final bool translucent;
 
   /// Null for a row with no EPG data at all — [placeholderLabel] is shown
   /// instead of a title, but this block is still focusable and selectable
@@ -7125,7 +7304,9 @@ class _ProgramBlockState extends State<_ProgramBlock> {
                 color: _focused
                     ? null
                     : widget.isNow
-                        ? Colors.black87
+                        ? (widget.translucent
+                            ? Colors.black.withValues(alpha: 0.45)
+                            : Colors.black87)
                         : Colors.white.withValues(alpha: 0.06),
                 // Same real diagonal sheen as `_SelectableRow`'s own focus
                 // fix — see its doc comment for why a flat `black87` fill
@@ -7195,7 +7376,13 @@ class _ProgramBlockState extends State<_ProgramBlock> {
                           fontSize: 12,
                           fontStyle: widget.program == null
                               ? FontStyle.italic
-                              : FontStyle.normal),
+                              : FontStyle.normal,
+                          // Readable over the video in full-video mode.
+                          shadows: widget.translucent
+                              ? const [
+                                  Shadow(color: Colors.black, blurRadius: 4)
+                                ]
+                              : null),
                     ),
                   );
                 },
