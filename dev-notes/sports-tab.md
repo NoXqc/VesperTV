@@ -223,3 +223,14 @@ Owner: a QR code is impractical for a TV app. Instead:
 - [x] Check ESPN scoreboard broadcaster names against the owner's EPG channel names (match quality). (Done — see above.)
 - [x] Confirm API-SPORTS key format (hex?) for the custom key pad. (32 lowercase hex.)
 - [ ] Pick BYOK #2 for sure (TheSportsDB premium vs. another).
+
+## Windows (1.0.5, 2026-10-14)
+Owner tested Sports on a 4K Windows display: no way out (no remote Back) and everything tiny. Fixed in
+`widgets/sports_widgets.dart`, all Windows-only or a no-op on TV boxes:
+- `SportsScreenFrame` wraps Sports, Standings, My Teams and the channel picker: when the logical
+  width exceeds 1440 it lays the screen out at 1440 px and scales it up (FittedBox + MediaQuery
+  with scaled size/devicePixelRatio, so logos decode sharp); never shrinks. Esc = maybePop on Windows.
+- `SportsBackButton`: a back arrow before each screen title (ExcludeFocus — stays out of the D-pad zones).
+- `SportsRowArrows`: mouse ‹ › over each game-card row (per-row ScrollController `_rowScrolls`),
+  shown only when there's more that way, ~one screen per click via jumpTo.
+- Dialogs (game menu, pick scope) are separate routes and are not scaled.

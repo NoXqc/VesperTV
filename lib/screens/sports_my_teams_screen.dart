@@ -309,7 +309,8 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
   Widget build(BuildContext context) {
     final team = _selectedTeam;
     final schedule = team == null ? null : _schedules[team.key];
-    return withTvThemeIfNeeded(
+    return SportsScreenFrame(
+        child: withTvThemeIfNeeded(
       context,
       (context) => Stack(
         children: [
@@ -338,6 +339,7 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
                         height: 44,
                         child: Row(
                           children: [
+                            const SportsBackButton(),
                             Text(tr('My Teams'),
                                 style: Theme.of(context)
                                     .textTheme
@@ -375,7 +377,7 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
           ),
         ],
       ),
-    );
+    ));
   }
 
   Widget _buildTeamList() {

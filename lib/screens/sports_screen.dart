@@ -88,6 +88,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   final Map<String, FocusNode> _cardNodes = {};
   final Map<String, String> _lastCardInRow = {};
   final Map<String, GlobalKey> _rowKeys = {};
+
+  /// Per card row, for the Windows ‹ › mouse arrows (SportsRowArrows).
+  final Map<String, ScrollController> _rowScrolls = {};
   bool _initialFocusDone = false;
 
   @override
@@ -143,6 +146,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     }
     for (final n in _cardNodes.values) {
       n.dispose();
+    }
+    for (final c in _rowScrolls.values) {
+      c.dispose();
     }
     super.dispose();
   }
@@ -489,7 +495,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _endLeagueMove();
       },
-      child: withTvThemeIfNeeded(
+      child: SportsScreenFrame(
+          child: withTvThemeIfNeeded(
         context,
         (context) => Stack(
           children: [
@@ -544,7 +551,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
             ),
           ],
         ),
-      ),
+      )),
     );
   }
 
@@ -553,6 +560,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       height: 44,
       child: Row(
         children: [
+          const SportsBackButton(),
           Text(tr('Sports'),
               style: Theme.of(context)
                   .textTheme
@@ -749,29 +757,34 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           const SizedBox(height: 8),
           SizedBox(
             height: _GameCard.height + 18 + _HoldHint.height,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              clipBehavior: Clip.none,
-              children: [
-                for (final g in s.games)
-                  _GameCard(
-                    key: ValueKey('card-${_gameKey(g)}'),
-                    focusNode: _cardNode(_gameKey(g)),
-                    game: g,
-                    match: _matches[_gameKey(g)]?.firstOrNull,
-                    matching: _matching,
-                    hideScores: _hideScores,
-                    starred: _follows.involves(g),
-                    onFocus: () {
-                      _zone = zoneIndex;
-                      _lastCardInRow[s.id] = _gameKey(g);
-                      _ensureRowVisible(s.id);
-                      if (_heroGame != g) setState(() => _heroGame = g);
-                    },
-                    onTap: () => _activateGame(g),
-                    onHold: () => _openGame(g),
-                  ),
-              ],
+            child: SportsRowArrows(
+              controller: _rowScrolls[s.id] ??= ScrollController(),
+              arrowAreaHeight: _GameCard.height,
+              child: ListView(
+                controller: _rowScrolls[s.id],
+                scrollDirection: Axis.horizontal,
+                clipBehavior: Clip.none,
+                children: [
+                  for (final g in s.games)
+                    _GameCard(
+                      key: ValueKey('card-${_gameKey(g)}'),
+                      focusNode: _cardNode(_gameKey(g)),
+                      game: g,
+                      match: _matches[_gameKey(g)]?.firstOrNull,
+                      matching: _matching,
+                      hideScores: _hideScores,
+                      starred: _follows.involves(g),
+                      onFocus: () {
+                        _zone = zoneIndex;
+                        _lastCardInRow[s.id] = _gameKey(g);
+                        _ensureRowVisible(s.id);
+                        if (_heroGame != g) setState(() => _heroGame = g);
+                      },
+                      onTap: () => _activateGame(g),
+                      onHold: () => _openGame(g),
+                    ),
+                ],
+              ),
             ),
           ),
         ],
@@ -1641,7 +1654,8 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
   Widget build(BuildContext context) {
     final results = widget.matcher.search(_query);
     final epg = context.read<EpgService>();
-    return withTvThemeIfNeeded(
+    return SportsScreenFrame(
+        child: withTvThemeIfNeeded(
       context,
       (context) => SettingsScaffold(
         title: tr('Pick the channel for {title}', {'title': widget.game.title}),
@@ -1711,6 +1725,6 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
           ),
         ),
       ),
-    );
+    ));
   }
 }

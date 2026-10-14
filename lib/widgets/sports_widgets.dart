@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../models/sports.dart';
 import 'hold_to_activate.dart';
@@ -267,6 +270,195 @@ class _SportsChipState extends State<SportsChip> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// The Sports screens were laid out for a TV (~960 logical px wide). A big
+/// desktop display (4K at 150 % = 2560 px) showed everything tiny, so wider
+/// screens render the same layout at [_designWidth] and scale it up — the
+/// whole screen grows together, like on the TV. Never shrinks (TV boxes and
+/// smaller windows are untouched). Logos decode at the scaled density so
+/// they stay sharp. Windows also gets Esc = Back here (no remote there).
+class SportsScreenFrame extends StatelessWidget {
+  const SportsScreenFrame({super.key, required this.child});
+
+  final Widget child;
+
+  static const double _designWidth = 1440;
+
+  @override
+  Widget build(BuildContext context) {
+    final mq = MediaQuery.of(context);
+    final scale = (mq.size.width / _designWidth).clamp(1.0, 3.0);
+    Widget content = child;
+    if (scale > 1.0) {
+      final size = mq.size / scale;
+      content = FittedBox(
+        fit: BoxFit.fill,
+        alignment: Alignment.topLeft,
+        child: SizedBox.fromSize(
+          size: size,
+          child: MediaQuery(
+            data: mq.copyWith(
+              size: size,
+              devicePixelRatio: mq.devicePixelRatio * scale,
+              padding: mq.padding / scale,
+              viewPadding: mq.viewPadding / scale,
+              viewInsets: mq.viewInsets / scale,
+            ),
+            child: child,
+          ),
+        ),
+      );
+    }
+    if (!Platform.isWindows) return content;
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.escape): () =>
+            Navigator.of(context).maybePop(),
+      },
+      child: content,
+    );
+  }
+}
+
+/// Windows has no remote Back button: a mouse-clickable back arrow before a
+/// Sports screen's title. Kept out of D-pad traversal so the screens'
+/// explicit zone navigation is unchanged. Nothing on Android.
+class SportsBackButton extends StatelessWidget {
+  const SportsBackButton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!Platform.isWindows) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ExcludeFocus(
+        child: IconButton(
+          tooltip: tr('Back'),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
+      ),
+    );
+  }
+}
+
+/// Windows (mouse): ‹ › buttons over a horizontal row of cards, each click
+/// scrolls about one screen. Only shown when there's more that way. jumpTo,
+/// not animateTo (CLAUDE.md §10). Kept out of D-pad focus; on Android this is
+/// just [child].
+class SportsRowArrows extends StatefulWidget {
+  const SportsRowArrows({
+    super.key,
+    required this.controller,
+    required this.arrowAreaHeight,
+    required this.child,
+  });
+
+  final ScrollController controller;
+
+  /// Height (from the top) the arrows are centred in — the cards themselves,
+  /// not the hint line below them.
+  final double arrowAreaHeight;
+  final Widget child;
+
+  @override
+  State<SportsRowArrows> createState() => _SportsRowArrowsState();
+}
+
+class _SportsRowArrowsState extends State<SportsRowArrows> {
+  bool _canLeft = false;
+  bool _canRight = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_update);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _update());
+  }
+
+  @override
+  void didUpdateWidget(SportsRowArrows old) {
+    super.didUpdateWidget(old);
+    if (old.controller != widget.controller) {
+      old.controller.removeListener(_update);
+      widget.controller.addListener(_update);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_update);
+    super.dispose();
+  }
+
+  void _update() {
+    if (!mounted || !widget.controller.hasClients) return;
+    final p = widget.controller.position;
+    final left = p.pixels > p.minScrollExtent + 1;
+    final right = p.pixels < p.maxScrollExtent - 1;
+    if (left != _canLeft || right != _canRight) {
+      setState(() {
+        _canLeft = left;
+        _canRight = right;
+      });
+    }
+  }
+
+  void _page(int direction) {
+    final c = widget.controller;
+    if (!c.hasClients) return;
+    final p = c.position;
+    c.jumpTo((p.pixels + direction * p.viewportDimension * 0.8)
+        .clamp(p.minScrollExtent, p.maxScrollExtent));
+  }
+
+  Widget _arrow(IconData icon, int direction) => ExcludeFocus(
+        child: Material(
+          color: Colors.black.withValues(alpha: 0.65),
+          shape: const CircleBorder(
+              side: BorderSide(color: Colors.white24, width: 1)),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: () => _page(direction),
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Icon(icon, color: Colors.white, size: 28),
+            ),
+          ),
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    if (!Platform.isWindows) return widget.child;
+    return NotificationListener<ScrollMetricsNotification>(
+      onNotification: (_) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _update());
+        return false;
+      },
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          widget.child,
+          if (_canLeft)
+            Positioned(
+              left: 0,
+              top: 0,
+              height: widget.arrowAreaHeight,
+              child: Center(child: _arrow(Icons.chevron_left, -1)),
+            ),
+          if (_canRight)
+            Positioned(
+              right: 0,
+              top: 0,
+              height: widget.arrowAreaHeight,
+              child: Center(child: _arrow(Icons.chevron_right, 1)),
+            ),
+        ],
       ),
     );
   }

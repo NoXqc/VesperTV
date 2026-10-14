@@ -283,7 +283,8 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return withTvThemeIfNeeded(
+    return SportsScreenFrame(
+        child: withTvThemeIfNeeded(
       context,
       (context) => Stack(
         children: [
@@ -317,7 +318,7 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
           ),
         ],
       ),
-    );
+    ));
   }
 
   Widget _buildLeagueBar() {
@@ -325,6 +326,7 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
       height: 44,
       child: Row(
         children: [
+          const SportsBackButton(),
           Text(tr('Standings'),
               style: Theme.of(context)
                   .textTheme
