@@ -261,7 +261,7 @@ class StorageService {
   Future<void> setLayoutMode(String mode) =>
       _prefs.setString(AppConstants.keyLayoutMode, mode);
 
-  /// 'auto', 'en' or 'fr'. main.dart reads the key directly before `runApp`
+  /// 'auto' or a language code ('en', 'fr', 'es', 'it'). main.dart reads the key directly before `runApp`
   /// (the splash text is already translated), this only writes it.
   Future<void> setLanguage(String value) =>
       _prefs.setString(AppConstants.keyLanguage, value);

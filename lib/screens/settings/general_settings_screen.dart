@@ -90,6 +90,8 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
     ('auto', ''),
     ('en', 'English'),
     ('fr', 'Français'),
+    ('es', 'Español'),
+    ('it', 'Italiano'),
   ];
 
   String _languageLabel(String setting) => setting == 'auto'

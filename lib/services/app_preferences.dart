@@ -63,7 +63,7 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 'auto', 'en' or 'fr' (see L10n). Applied before `runApp` in main.dart;
+  /// 'auto' or a language code ('en', 'fr', 'es', 'it') (see L10n). Applied before `runApp` in main.dart;
   /// changing it here re-resolves the language and notifies, and main.dart
   /// remounts the home screen so every string is rebuilt.
   String get language => L10n.setting;

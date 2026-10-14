@@ -74,7 +74,7 @@ Read before changing guide/Multiview/profiles/palettes/backup-server logic.
   (`vesper_show_resume_pill`, device-wide, default on) → `LiveResumeHint.pillEnabled`; screens hide
   it temporarily with `LiveResumeHint.hideWhileMounted()` (Sports, the phone-pairing panel). Both
   pills check `LiveResumeHint.pillAllowed`. Hold-Right still resumes when hidden.
-- **Languages (English + French, 2026-10-14, 1.0.4+227):** `lib/l10n/l10n.dart` — English text in
+- **Languages (English + French 1.0.4+227; Spanish + Italian added 2026-10-14, +236, unreleased):** es.dart/it.dart mirror fr.dart's 588 keys (check with a key/placeholder diff); `{s}` plural strings are rephrased in es/it (canal/canales, giorno/giorni don't take an 's'); `trSports` has per-language words/ordinals (`_sportsLanguages`); `trPlural` treats 0 as singular only in French. `lib/l10n/l10n.dart` — English text in
   the code is the key: `tr('Settings')`, placeholders `tr('Season {season}', {'season': n})`,
   `trPlural(n, one, other)` (French treats 0 as singular), `trSports()` pattern-translates ESPN's
   English statuses/standing lines ("Final/OT" → "Fin/Prol.", "Top 5th" → "Haut 5e").

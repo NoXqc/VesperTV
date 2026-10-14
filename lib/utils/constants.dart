@@ -204,7 +204,7 @@ class AppConstants {
   static const String keyLayoutMode = 'nox_layout_mode';
 
   /// UI language for the whole device (not per viewer): 'auto' follows the
-  /// system language, or 'en' / 'fr'. See lib/l10n/l10n.dart.
+  /// system language, or a language code ('en', 'fr', 'es', 'it'). See lib/l10n/l10n.dart.
   static const String keyLanguage = 'vesper_language';
 
   /// Live TV presentation: 'live' (single-channel now/next) or 'timeline'
