@@ -106,3 +106,20 @@ Read before changing guide/Multiview/profiles/palettes/backup-server logic.
   adb serial `4ec647bc`). Ideas not done: narrower Timeline channel column in portrait, hide the
   resume pill when the preview already plays that channel, other Sports screens in portrait,
   delete `HomeScreen`.
+- **Transfer to another device (1.0.8+240, 2026-10-14):** Settings (last row) > Transfer to another
+  device > Send / Receive. No account, no VPS: the sender runs a one-time HTTP server
+  (`TransferSendSession`, ports 47821-47825, 10 min, one use) on its LAN IPv4. Code = 9 digits:
+  last octet of the sender's IPv4 (3) + a 6-digit secret; the receiver assumes its own first three
+  octets. **Two-router homes** (owner: PC on TP-Link 192.168.1.x, Formuler on Helix 10.0.0.x) break
+  that assumption → after "Couldn't find the other device" the receiver offers "Type the address
+  instead" (keypad gets a dot key; the sender shows "This device: <ip>"). Crypto: receiver sends an
+  X25519 public key + HMAC(code); sender checks it (5 wrong → session ends), replies with its key +
+  HMAC + AES-GCM payload keyed by HKDF(X25519 shared secret, code). Payload =
+  `StorageService.exportForTransfer()` (every SharedPreferences key, type-tagged) minus device-only
+  keys (`_transferSkipExact`/`_transferSkipPrefixes`: layout mode, legacy enabled flag, PIN lockout,
+  EPG/What's New caches, full-sync timestamps). Receiving: clearCache + EPG + catalog DB wiped,
+  `importForTransfer` replaces every transferable key, then `exit(0)` (services hold old state;
+  a fresh start is the clean reload). Real-world size: ~0.8 MB for the owner's setup (channel links
+  + hidden groups across several playlists). Tested: unit tests (round trip, wrong code, lockout) +
+  Formuler → PC send. The **receive UI on a real box and the replace step on a real device are not
+  yet tested** — watch for reports.

@@ -6,12 +6,12 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../../utils/tv_theme.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_menu_tile.dart';
-import 'add_playlist_screen.dart';
 import 'check_updates_screen.dart';
 import 'epg_settings_screen.dart';
 import 'general_settings_screen.dart';
 import 'playlist_manager_screen.dart';
 import 'profiles_screen.dart';
+import 'transfer_screen.dart';
 import 'theme_screen.dart';
 import 'tmdb_settings_screen.dart';
 import '../../l10n/l10n.dart';
@@ -42,13 +42,6 @@ class SettingsMenuScreen extends StatelessWidget {
               title: tr('Settings'),
               body: ListView(
                 children: [
-                  TvMenuTile(
-                    icon: Icons.playlist_add,
-                    title: tr('Add Playlist'),
-                    subtitle: tr('M3U URL or Xtream Codes login'),
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => const AddPlaylistScreen())),
-                  ),
                   TvMenuTile(
                     icon: Icons.video_library_outlined,
                     title: tr('Playlist Manager'),
@@ -103,6 +96,14 @@ class SettingsMenuScreen extends StatelessWidget {
                     subtitle: tr('Download and install the latest release'),
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(
                         builder: (_) => const CheckUpdatesScreen())),
+                  ),
+                  TvMenuTile(
+                    icon: Icons.devices,
+                    title: tr('Transfer to another device'),
+                    subtitle:
+                        tr('Copy playlists, favorites and settings over Wi-Fi'),
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => const TransferScreen())),
                   ),
                   // Reads whatever code is actually running via
                   // PackageInfo (same source CheckUpdatesScreen's

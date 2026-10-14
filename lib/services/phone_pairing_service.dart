@@ -311,3 +311,7 @@ class PhonePairingSession {
         .join();
   }
 }
+
+/// The device's private LAN IPv4 (see [PhonePairingSession]); shared with
+/// the device-to-device transfer.
+Future<InternetAddress?> privateLanIpv4() => PhonePairingSession._privateIpv4();

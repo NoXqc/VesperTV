@@ -43,7 +43,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
 4. `flutter analyze` must report the baseline **20** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `1.0.7` unless noted
+5. Check the current state of releases: `gh release list` (latest should be `1.0.8` unless noted
    in §11).
 
 ## 3. Layout (what matters)
@@ -76,7 +76,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
 - `windows/runner/main.cpp`, `Runner.rc` — Windows runner (window title "VesperTV").
 
 ## 4. Build / check
-- `flutter analyze` — baseline **20** info issues, none errors.
+- `flutter analyze` — baseline **20** info issues, none errors. `flutter test` — `test/device_transfer_test.dart` (real LAN sockets).
 - Android: `flutter build apk --release` → `build/app/outputs/flutter-apk/app-release.apk` (~68 MB).
 - Windows: **kill the running app first** (`Get-Process VesperTV | Stop-Process -Force`) or the link
   step fails with `LNK1104: cannot open VesperTV.exe`. Then `flutter build windows --release`
@@ -95,7 +95,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+235**) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+240**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
@@ -201,11 +201,17 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-14)
-- **Shipped: 1.0.7 (`+235`, 2026-10-14, latest on GitHub)** — Sports **League manager**
+- **Shipped: 1.0.8 (`+240`, 2026-10-14, latest on GitHub)** — **Spanish + Italian** (es.dart/it.dart,
+  same 614 keys as fr.dart), **Transfer to another device** (Settings, last row: copies the
+  whole setup over the home network, `services/device_transfer.dart` +
+  `screens/settings/transfer_screen.dart`, see `dev-notes/features.md` → Transfer), Settings menu
+  lost its Add Playlist row (it's in Playlist Manager). Owner prefers **batched releases** (a few
+  features per cut). **Next:** ask the owner.
+- 1.0.7 (`+235`, 2026-10-14) — Sports **League manager**
   (replaces the Edit leagues dialog): 13 base leagues + a bank of 63 ESPN leagues
   (`kSportsLeagueBank`, add / hold-to-send-back, per viewer), cups without a table kept out of
   Standings, and an empty single-league day offers "Next game: <date>". Details:
-  `dev-notes/sports-tab.md` (League manager). **Next:** ask the owner.
+  `dev-notes/sports-tab.md` (League manager).
 - 1.0.6 (`+232`, 2026-10-14) — **phone mode**: `TvHomeScreen`
   adapts to portrait phones (one column at a time, `_compact`/`_phonePage`; "auto" layout now
   uses it on phones — the old `HomeScreen` is only reachable via Layout = "Phone" and is slated

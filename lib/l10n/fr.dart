@@ -791,4 +791,47 @@ const Map<String, String> kFr = {
   'Next game: {date}': "Prochain match : {date}",
   'No upcoming games listed yet for this league.':
       "Aucun match à venir pour cette ligue pour l'instant.",
+  'Transfer to another device': "Transférer vers un autre appareil",
+  'Copy playlists, favorites and settings over Wi-Fi':
+      "Copier listes, favoris et réglages par Wi-Fi",
+  'Copies your playlists, favorites, hidden groups, profiles, watch progress and settings over your home Wi-Fi. Both devices must be on the same Wi-Fi. Channels, movies and the guide download again on the new device.':
+      "Copie vos listes, favoris, groupes masqués, profils, progression et réglages par le Wi-Fi de la maison. Les deux appareils doivent être sur le même Wi-Fi. Les chaînes, films et le guide se téléchargent de nouveau sur le nouvel appareil.",
+  'Send from this device': "Envoyer depuis cet appareil",
+  'Shows a code to enter on the other device':
+      "Affiche un code à entrer sur l'autre appareil",
+  'Receive on this device': "Recevoir sur cet appareil",
+  'Replaces this device\'s setup with the other one\'s':
+      "Remplace la configuration de cet appareil par celle de l'autre",
+  'This device isn\'t on a Wi-Fi or wired home network.':
+      "Cet appareil n'est pas sur un réseau Wi-Fi ou filaire.",
+  'Sent! Finish on the other device.': "Envoyé! Terminez sur l'autre appareil.",
+  'This code has expired. Go back and start again.':
+      "Ce code a expiré. Revenez en arrière et recommencez.",
+  'On the other device, open Settings > Transfer to another device > Receive, and enter:':
+      "Sur l'autre appareil, ouvrez Paramètres > Transférer vers un autre appareil > Recevoir, et entrez :",
+  'This device: {address} · the code works once, for 10 minutes':
+      "Cet appareil : {address} · le code sert une fois, pendant 10 minutes",
+  'Couldn\'t find the other device. Check the code, and that both devices are on the same Wi-Fi with the code still showing.':
+      "Impossible de trouver l'autre appareil. Vérifiez le code, et que les deux appareils sont sur le même Wi-Fi avec le code encore affiché.",
+  'That code isn\'t right. Check it on the other device.':
+      "Ce code n'est pas bon. Vérifiez-le sur l'autre appareil.",
+  'That code has expired or was already used. Start again on the other device.':
+      "Ce code a expiré ou a déjà servi. Recommencez sur l'autre appareil.",
+  'The transfer didn\'t go through. Try again.':
+      "Le transfert n'a pas fonctionné. Réessayez.",
+  'Transfer complete': "Transfert terminé",
+  'VesperTV will close now. Open it again to load your playlists.':
+      "VesperTV va se fermer. Rouvrez-le pour charger vos listes.",
+  'Enter the code shown on the other device':
+      "Entrez le code affiché sur l'autre appareil",
+  'Ready to copy': "Prêt à copier",
+  '{playlists} playlists · {profiles} profiles · {favorites} favorites':
+      "{playlists} listes · {profiles} profils · {favorites} favoris",
+  'This replaces the playlists, favorites and settings on this device.':
+      "Ceci remplace les listes, favoris et réglages de cet appareil.",
+  'Replace my data': "Remplacer mes données",
+  'Enter the address shown under the code on the other device (This device: …)':
+      "Entrez l'adresse affichée sous le code sur l'autre appareil (Cet appareil : …)",
+  'Code: {code}': "Code : {code}",
+  'Type the address instead': "Entrer l'adresse à la place",
 };

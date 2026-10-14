@@ -531,6 +531,85 @@ class StorageService {
   /// and more thorough than trying to enumerate them), and saved playback
   /// positions. Playlist/EPG source settings, favorites, and hidden-group
   /// choices are left untouched.
+  // --- Device transfer (Settings > Transfer to another device) -----------
+
+  /// Keys that describe *this device* or a cache, never the user's setup:
+  /// left out of a transfer and kept as-is on the receiving device.
+  static const _transferSkipExact = {
+    AppConstants.keyEpgCache,
+    AppConstants.keyEpgLastUpdated,
+    AppConstants.keyLayoutMode,
+    AppConstants.keyPlaylistEnabled,
+    AppConstants.keyPinFailCount,
+    AppConstants.keyPinLockedUntil,
+    AppConstants.keyFavoritesDbReconciled,
+    AppConstants.keyWhatsNewTmdbLastRefreshed,
+    AppConstants.keyWhatsNewVodIds,
+    AppConstants.keyWhatsNewSeriesIds,
+  };
+
+  /// Prefix-matched skips: the per-playlist full-sync timestamps (a copied
+  /// one would tell the new, empty device its catalog is fresh).
+  static const _transferSkipPrefixes = [AppConstants.keyLastFullSyncAt];
+
+  static bool _transferable(String key) =>
+      !_transferSkipExact.contains(key) &&
+      !_transferSkipPrefixes.any(key.startsWith);
+
+  /// Everything the user set up — playlists, every viewer's favorites,
+  /// hidden groups, progress, history, Sports, settings — as a
+  /// type-tagged map (`{"t": "s"|"b"|"i"|"d"|"l", "v": ...}` per key) that
+  /// [importForTransfer] restores exactly. Catalog/EPG caches aren't in
+  /// here: the receiving device downloads them from the provider.
+  Map<String, Object> exportForTransfer() {
+    final out = <String, Object>{};
+    for (final key in _prefs.getKeys()) {
+      if (!_transferable(key)) continue;
+      final v = _prefs.get(key);
+      final tagged = switch (v) {
+        String s => {'t': 's', 'v': s},
+        bool b => {'t': 'b', 'v': b},
+        int i => {'t': 'i', 'v': i},
+        double x => {'t': 'd', 'v': x},
+        List<String> l => {'t': 'l', 'v': l},
+        _ => null,
+      };
+      if (tagged != null) out[key] = tagged;
+    }
+    return out;
+  }
+
+  /// Replaces this device's setup with [values] from [exportForTransfer].
+  /// Device-only keys ([_transferable] = false) are kept; everything else
+  /// is removed first so nothing from the old setup lingers. The app must
+  /// restart afterwards — services hold the old state in memory.
+  Future<void> importForTransfer(Map<String, Object?> values) async {
+    for (final key in _prefs.getKeys().toList()) {
+      if (_transferable(key)) await _prefs.remove(key);
+    }
+    for (final entry in values.entries) {
+      if (!_transferable(entry.key)) continue;
+      final tagged = entry.value;
+      if (tagged is! Map) continue;
+      final v = tagged['v'];
+      switch (tagged['t']) {
+        case 's' when v is String:
+          await _prefs.setString(entry.key, v);
+        case 'b' when v is bool:
+          await _prefs.setBool(entry.key, v);
+        case 'i' when v is int:
+          await _prefs.setInt(entry.key, v);
+        case 'd' when v is num:
+          await _prefs.setDouble(entry.key, v.toDouble());
+        case 'l' when v is List:
+          await _prefs.setStringList(entry.key, [
+            for (final s in v)
+              if (s is String) s
+          ]);
+      }
+    }
+  }
+
   Future<void> clearCache() async {
     await _prefs.remove(AppConstants.keyEpgCache);
     await _prefs.remove(AppConstants.keyEpgLastUpdated);
