@@ -56,7 +56,7 @@ class SportsMyTeamsScreen extends StatefulWidget {
 class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
     with RouteAware {
   static const double _teamRowHeight = 78;
-  static const double _gameRowHeight = 66;
+  static const double _gameRowHeight = 76;
   static const _addKey = 'add';
 
   final Map<String, SportsTeamSchedule?> _schedules = {};
@@ -356,7 +356,7 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            SizedBox(width: 340, child: _buildTeamList()),
+                            SizedBox(width: 300, child: _buildTeamList()),
                             const SizedBox(width: 20),
                             Expanded(child: _buildDetails(team, schedule)),
                           ],
@@ -403,7 +403,7 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
                               color: Colors.white,
                               fontSize: 16,
                               fontWeight: FontWeight.w700)),
-                      Text('Opens Standings — hold OK on a team there',
+                      Text('Follow one from Standings',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style:
@@ -560,7 +560,7 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
               Expanded(child: _buildGames(t, s)),
               const SizedBox(width: 20),
               SizedBox(
-                width: 330,
+                width: 310,
                 child: _MiniTable(
                   standings: _standings[s.league.id],
                   league: s.league,
@@ -880,69 +880,77 @@ class _GameRowState extends State<_GameRow> {
       child: _FocusBox(
         focused: _focused,
         selected: false,
+        // Two lines: the column is only ~300 px wide on a 1080p TV (owner's
+        // Formuler) — a one-line row cut off the opponent and channel.
         child: Row(
           children: [
-            SizedBox(
-              width: 190,
-              child: Row(
-                children: [
-                  if (live)
-                    Container(
-                      width: 7,
-                      height: 7,
-                      margin: const EdgeInsets.only(right: 6),
-                      decoration: const BoxDecoration(
-                          shape: BoxShape.circle, color: Colors.redAccent),
-                    ),
-                  Flexible(
-                    child: Text(when,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: live ? Colors.redAccent : Colors.white)),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(
-              width: 26,
-              child: Text(home ? 'vs' : 'at',
-                  style: const TextStyle(fontSize: 13, color: Colors.white54)),
-            ),
             SportsLogo(
                 url: opponent.logoUrl,
-                size: 34,
+                size: 38,
                 fallback: opponent.abbreviation,
                 color: opponent.color),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(opponent.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white)),
-            ),
-            const SizedBox(width: 10),
-            Icon(
-                widget.match != null ? Icons.live_tv : Icons.add_circle_outline,
-                size: 14,
-                color: widget.match != null ? scheme.primary : Colors.white38),
-            const SizedBox(width: 5),
-            SizedBox(
-              width: 170,
-              child: Text(
-                widget.match?.channel.name ??
-                    (widget.matching ? 'Looking…' : 'Pick a channel'),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    fontSize: 12,
-                    color:
-                        widget.match != null ? scheme.primary : Colors.white38),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('${home ? 'vs' : 'at'} ${opponent.shortName}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white)),
+                  Row(
+                    children: [
+                      if (live)
+                        Container(
+                          width: 7,
+                          height: 7,
+                          margin: const EdgeInsets.only(right: 6),
+                          decoration: const BoxDecoration(
+                              shape: BoxShape.circle, color: Colors.redAccent),
+                        ),
+                      Flexible(
+                        child: Text(when,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color:
+                                    live ? Colors.redAccent : Colors.white70)),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Icon(
+                          widget.match != null
+                              ? Icons.live_tv
+                              : Icons.add_circle_outline,
+                          size: 13,
+                          color: widget.match != null
+                              ? scheme.primary
+                              : Colors.white38),
+                      const SizedBox(width: 5),
+                      Flexible(
+                        child: Text(
+                          widget.match?.channel.name ??
+                              (widget.matching ? 'Looking…' : 'Pick a channel'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: widget.match != null
+                                  ? scheme.primary
+                                  : Colors.white38),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ],
@@ -1023,7 +1031,7 @@ class _MiniTable extends StatelessWidget {
               const Expanded(child: Text('TEAM', style: head)),
               for (final c in columns)
                 SizedBox(
-                    width: 42,
+                    width: 36,
                     child: Text(c.label,
                         textAlign: TextAlign.center, style: head)),
             ],
@@ -1071,7 +1079,7 @@ class _MiniTable extends StatelessWidget {
                   ),
                   for (final c in columns)
                     SizedBox(
-                      width: 42,
+                      width: 36,
                       child: Text(r.stat(c.stat),
                           textAlign: TextAlign.center,
                           maxLines: 1,

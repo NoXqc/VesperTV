@@ -48,7 +48,9 @@ right below; the rest of this file is the design and the tests behind it.
     "focused" outlines (three at once). `SportsChip` also re-seeds `_focused` when its node changes.
   - Channel picker: the search field's own `FocusNode.onKeyEvent` maps Down → first result, Up →
     suggestion chips, OK → reopen keyboard (Back closes the keyboard but EditableText kept the arrows).
-- **My Teams — built 2026-10-14, test build +222 on the Formuler, awaiting owner test.** Code:
+- **My Teams — built 2026-10-14 (+222..+225), owner approved.** On the real 1080p TV the details
+  column is only ~300 logical px wide: game rows are three lines (opponent / date / channel) and the
+  mini table uses short names and 36 px stat columns — don't widen them back into one line. Code:
   `sports_my_teams_screen.dart` (gets play/menu/match callbacks from `SportsScreen`, so picks and
   player are shared), `SportsFollows` (`sports_follows.dart`, prefs `vesper_sports_followed_teams`,
   `leagueId|teamId` per viewer), `SportsService.teamSchedule` + `parseEspnTeamSchedule`. Schedule JSON
