@@ -8,6 +8,7 @@ import '../models/sports.dart';
 import '../utils/channel_name_matching.dart';
 import 'epg_service.dart';
 import 'storage_service.dart';
+import '../l10n/l10n.dart';
 
 /// Why a channel was suggested for a game — shown next to it so the user
 /// can judge a match at a glance.
@@ -15,10 +16,10 @@ enum MatchReason { pick, name, guide, network }
 
 extension MatchReasonLabel on MatchReason {
   String get label => switch (this) {
-        MatchReason.pick => 'Your pick',
-        MatchReason.name => 'Found by its name',
-        MatchReason.guide => 'Found in the guide',
-        MatchReason.network => 'National broadcast',
+        MatchReason.pick => tr('Your pick'),
+        MatchReason.name => tr('Found by its name'),
+        MatchReason.guide => tr('Found in the guide'),
+        MatchReason.network => tr('National broadcast'),
       };
 }
 

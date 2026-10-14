@@ -13,6 +13,7 @@ import '../../widgets/settings_scaffold.dart';
 import '../catalog_sync_screen.dart';
 import 'channel_linking_screen.dart';
 import 'epg_channel_matching_screen.dart';
+import '../../l10n/l10n.dart';
 
 /// Three tabs — General / EPG Matching / Channel Pairing — one entry
 /// point for everything to do with getting a channel's programme guide
@@ -118,8 +119,8 @@ class _EpgSettingsScreenState extends State<EpgSettingsScreen>
     final sources = _sources();
     if (sources.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('No EPG URL set yet — add a playlist first.')),
+        SnackBar(
+            content: Text(tr('No EPG URL set yet — add a playlist first.'))),
       );
       return;
     }
@@ -140,7 +141,7 @@ class _EpgSettingsScreenState extends State<EpgSettingsScreen>
     await catalogDb.clearAll();
     if (!mounted) return;
     ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Cache cleared.')));
+        .showSnackBar(SnackBar(content: Text(tr('Cache cleared.'))));
     // clearCache() also wipes the last-full-sync timestamp, so the
     // catalog is unconditionally stale right after this — reported
     // directly as confusing when clearing cache showed no reaction at
@@ -159,13 +160,13 @@ class _EpgSettingsScreenState extends State<EpgSettingsScreen>
     return withTvThemeIfNeeded(
         context,
         (context) => SettingsScaffold(
-              title: 'EPG',
+              title: tr('EPG'),
               bottom: TabBar(
                 controller: _tabController,
-                tabs: const [
-                  Tab(text: 'General'),
-                  Tab(text: 'EPG Matching'),
-                  Tab(text: 'Channel Pairing'),
+                tabs: [
+                  Tab(text: tr('General')),
+                  Tab(text: tr('EPG Matching')),
+                  Tab(text: tr('Channel Pairing')),
                 ],
               ),
               body: CallbackShortcuts(
@@ -193,14 +194,15 @@ class _EpgSettingsScreenState extends State<EpgSettingsScreen>
                           children: [
                             DropdownButtonFormField<int>(
                               initialValue: _refreshInterval,
-                              decoration: const InputDecoration(
-                                labelText: 'Auto-refresh interval',
-                                border: OutlineInputBorder(),
+                              decoration: InputDecoration(
+                                labelText: tr('Auto-refresh interval'),
+                                border: const OutlineInputBorder(),
                               ),
                               items: AppConstants.refreshIntervalOptions
                                   .map((m) => DropdownMenuItem(
                                       value: m,
-                                      child: Text('${m ~/ 60} hours')))
+                                      child: Text(
+                                          tr('{p} hours', {'p': m ~/ 60}))))
                                   .toList(),
                               onChanged: (value) {
                                 if (value != null) _applyInterval(value);
@@ -209,8 +211,11 @@ class _EpgSettingsScreenState extends State<EpgSettingsScreen>
                             const SizedBox(height: 12),
                             Text(
                               epg.lastUpdated == null
-                                  ? 'EPG never updated'
-                                  : 'EPG last updated: ${DateFormat('yyyy-MM-dd HH:mm').format(epg.lastUpdated!)}',
+                                  ? tr('EPG never updated')
+                                  : tr('EPG last updated: {p}', {
+                                      'p': DateFormat('yyyy-MM-dd HH:mm')
+                                          .format(epg.lastUpdated!)
+                                    }),
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                             const SizedBox(height: 12),
@@ -222,19 +227,17 @@ class _EpgSettingsScreenState extends State<EpgSettingsScreen>
                                       child: CircularProgressIndicator(
                                           strokeWidth: 2))
                                   : const Icon(Icons.calendar_month),
-                              label: const Text('Update EPG Now'),
+                              label: Text(tr('Update EPG Now')),
                               onPressed: epg.isLoading ? null : _updateNow,
                             ),
                             const Divider(height: 32),
                             OutlinedButton(
                               onPressed: _clearCache,
-                              child: const Text('Clear Cache'),
+                              child: Text(tr('Clear Cache')),
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Clears the cached EPG and catalog data — '
-                              'playlist source, favorites, and group '
-                              'visibility are kept.',
+                              tr('Clears the cached EPG and catalog data — playlist source, favorites, and group visibility are kept.'),
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                           ],
@@ -245,20 +248,17 @@ class _EpgSettingsScreenState extends State<EpgSettingsScreen>
                       excluding: _tabController.index != 1,
                       child: FocusScope(
                         node: _tabScopes[1],
-                        child: const Column(
+                        child: Column(
                           children: [
                             Padding(
-                              padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                               child: _TabIntro(
-                                title: 'EPG Matching',
-                                body: 'Fixes a channel with no program data by '
-                                    'manually assigning it to an entry in '
-                                    'the loaded EPG feed — useful when a '
-                                    'provider\'s own id doesn\'t match a '
-                                    'third-party source.',
+                                title: tr('EPG Matching'),
+                                body: tr(
+                                    'Fixes a channel with no program data by manually assigning it to an entry in the loaded EPG feed — useful when a provider\'s own id doesn\'t match a third-party source.'),
                               ),
                             ),
-                            Expanded(child: EpgChannelMatchingScreen()),
+                            const Expanded(child: EpgChannelMatchingScreen()),
                           ],
                         ),
                       ),
@@ -267,21 +267,17 @@ class _EpgSettingsScreenState extends State<EpgSettingsScreen>
                       excluding: _tabController.index != 2,
                       child: FocusScope(
                         node: _tabScopes[2],
-                        child: const Column(
+                        child: Column(
                           children: [
                             Padding(
-                              padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                               child: _TabIntro(
-                                title: 'Channel Pairing',
-                                body: 'Links a channel on one playlist to its '
-                                    'equivalent on another. If a live channel '
-                                    'fails to load, or you switch to it '
-                                    'yourself from the player, playback can '
-                                    'fall back to the paired channel on the '
-                                    'other playlist instead.',
+                                title: tr('Channel Pairing'),
+                                body: tr(
+                                    'Links a channel on one playlist to its equivalent on another. If a live channel fails to load, or you switch to it yourself from the player, playback can fall back to the paired channel on the other playlist instead.'),
                               ),
                             ),
-                            Expanded(child: ChannelLinkingScreen()),
+                            const Expanded(child: ChannelLinkingScreen()),
                           ],
                         ),
                       ),

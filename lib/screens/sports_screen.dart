@@ -28,6 +28,7 @@ import 'desktop_player_screen.dart';
 import 'player_screen.dart';
 import 'sports_my_teams_screen.dart';
 import 'sports_standings_screen.dart';
+import '../l10n/l10n.dart';
 
 /// Sports: today's games across the user's leagues with logos, records,
 /// live scores and the IPTV channel each game is on (see
@@ -211,15 +212,15 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final pre = followedFirst(_games.where((g) => g.state == GameState.pre));
     final post = _games.where((g) => g.state == GameState.post).toList();
     final laterLabel = switch (_dayOffset) {
-      0 => 'Later today',
-      1 => 'Tomorrow',
-      _ when _dayOffset < 0 => 'Not played',
-      _ => 'Scheduled',
+      0 => tr('Later today'),
+      1 => tr('Tomorrow'),
+      _ when _dayOffset < 0 => tr('Not played'),
+      _ => tr('Scheduled'),
     };
     return [
-      if (live.isNotEmpty) _Section('live', 'Live now', live),
+      if (live.isNotEmpty) _Section('live', tr('Live now'), live),
       if (pre.isNotEmpty) _Section('pre', laterLabel, pre),
-      if (post.isNotEmpty) _Section('post', 'Final', post),
+      if (post.isNotEmpty) _Section('post', tr('Final'), post),
     ];
   }
 
@@ -552,7 +553,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       height: 44,
       child: Row(
         children: [
-          Text('Sports',
+          Text(tr('Sports'),
               style: Theme.of(context)
                   .textTheme
                   .headlineSmall
@@ -566,7 +567,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                   key: const ValueKey('league:all'),
                   focusNode: _chipNode('league:all'),
                   enabled: _movingLeague == null,
-                  label: 'All',
+                  label: tr('All'),
                   selected: _leagueFilter == null,
                   onFocus: () => _zone = 0,
                   onTap: () => _setLeagueFilter(null),
@@ -594,7 +595,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                   key: const ValueKey('league:edit'),
                   focusNode: _chipNode('league:edit'),
                   enabled: _movingLeague == null,
-                  label: 'Edit leagues',
+                  label: tr('Edit leagues'),
                   icon: Icons.tune,
                   selected: false,
                   onFocus: () => _zone = 0,
@@ -604,7 +605,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                   key: const ValueKey('league:scores'),
                   focusNode: _chipNode('league:scores'),
                   enabled: _movingLeague == null,
-                  label: _hideScores ? 'Scores hidden' : 'Scores shown',
+                  label: _hideScores ? tr('Scores hidden') : tr('Scores shown'),
                   icon: _hideScores ? Icons.visibility_off : Icons.visibility,
                   selected: false,
                   onFocus: () => _zone = 0,
@@ -620,9 +621,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   Widget _buildDayBar() {
     String label(int offset) {
-      if (offset == -1) return 'Yesterday';
-      if (offset == 0) return 'Today';
-      if (offset == 1) return 'Tomorrow';
+      if (offset == -1) return tr('Yesterday');
+      if (offset == 0) return tr('Today');
+      if (offset == 1) return tr('Tomorrow');
       final n = DateTime.now();
       return DateFormat('EEE d')
           .format(DateTime(n.year, n.month, n.day + offset));
@@ -670,7 +671,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         children: [
           SportsChip(
             focusNode: _chipNode('standings'),
-            label: league == null ? 'Standings' : '${league.name} standings',
+            label: league == null
+                ? tr('Standings')
+                : tr('{name} standings', {'name': league.name}),
             icon: Icons.leaderboard,
             selected: false,
             compact: true,
@@ -679,7 +682,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           ),
           SportsChip(
             focusNode: _chipNode('myteams'),
-            label: 'My Teams',
+            label: tr('My Teams'),
             icon: Icons.star,
             selected: false,
             compact: true,
@@ -703,12 +706,12 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
             Icon(_error != null ? Icons.cloud_off : Icons.event_busy,
                 size: 44, color: Colors.white38),
             const SizedBox(height: 10),
-            Text(_error ?? 'No games on this day for your leagues',
+            Text(_error ?? tr('No games on this day for your leagues'),
                 style: const TextStyle(color: Colors.white70, fontSize: 16)),
             if (_error == null) ...[
               const SizedBox(height: 4),
-              const Text('Try another day, or add leagues with Edit leagues.',
-                  style: TextStyle(color: Colors.white38, fontSize: 13)),
+              Text(tr('Try another day, or add leagues with Edit leagues.'),
+                  style: const TextStyle(color: Colors.white38, fontSize: 13)),
             ],
           ],
         ),
@@ -846,7 +849,7 @@ class _LiveCount extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 6),
-        Text('Live now  $count',
+        Text(tr('Live now  {count}', {'count': count}),
             style: TextStyle(
                 color: on ? Colors.white : Colors.white54,
                 fontWeight: FontWeight.w600)),
@@ -920,15 +923,20 @@ class _Hero extends StatelessWidget {
     Color statusColor = Colors.white70;
     switch (game.state) {
       case GameState.live:
-        status = game.statusText.isEmpty ? 'Live' : game.statusText;
+        status =
+            game.statusText.isEmpty ? tr('Live') : trSports(game.statusText);
         statusColor = Colors.redAccent;
       case GameState.post:
-        status = game.statusText.isEmpty ? 'Final' : game.statusText;
+        status =
+            game.statusText.isEmpty ? tr('Final') : trSports(game.statusText);
       case GameState.pre:
         final until = game.start.difference(DateTime.now().toUtc());
         status = until.inMinutes > 0 && until.inHours < 24
-            ? 'Starts in ${until.inHours > 0 ? '${until.inHours}h ' : ''}${until.inMinutes % 60}m'
-            : DateFormat('EEE, MMM d').format(game.start.toLocal());
+            ? tr('Starts in {p}{p2}m', {
+                'p': until.inHours > 0 ? tr('{h}h ', {'h': until.inHours}) : '',
+                'p2': until.inMinutes % 60
+              })
+            : DateFormat.MMMEd().format(game.start.toLocal());
         statusColor = scheme.primary;
     }
     return Column(
@@ -984,8 +992,8 @@ class _Hero extends StatelessWidget {
         else
           Text(
               matching
-                  ? 'Looking for the channel…'
-                  : 'No channel found — OK to pick one',
+                  ? tr('Looking for the channel…')
+                  : tr('No channel found — OK to pick one'),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 12, color: Colors.white54)),
@@ -1024,8 +1032,9 @@ class _HoldHint extends StatelessWidget {
               children: [
                 Icon(Icons.touch_app, size: 11, color: scheme.primary),
                 const SizedBox(width: 4),
-                const Text('Hold OK to pick or swap the channel',
-                    style: TextStyle(fontSize: 10, color: Colors.white70)),
+                Text(tr('Hold OK to pick or swap the channel'),
+                    style:
+                        const TextStyle(fontSize: 10, color: Colors.white70)),
               ],
             ),
           ),
@@ -1079,8 +1088,10 @@ class _GameCardState extends State<_GameCard> {
     final showScore = g.state != GameState.pre && !widget.hideScores;
     final status = switch (g.state) {
       GameState.pre => _timeLabel(g.start),
-      GameState.live => g.statusText.isEmpty ? 'LIVE' : g.statusText,
-      GameState.post => g.statusText.isEmpty ? 'Final' : g.statusText,
+      GameState.live =>
+        g.statusText.isEmpty ? tr('LIVE') : trSports(g.statusText),
+      GameState.post =>
+        g.statusText.isEmpty ? tr('Final') : trSports(g.statusText),
     };
 
     Widget teamLine(SportsTeam t, {required bool leading}) {
@@ -1236,8 +1247,8 @@ class _GameCardState extends State<_GameCard> {
                             child: Text(
                               widget.match?.channel.name ??
                                   (widget.matching
-                                      ? 'Looking…'
-                                      : 'Pick a channel'),
+                                      ? tr('Looking…')
+                                      : tr('Pick a channel')),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -1328,7 +1339,7 @@ class _GameDialog extends StatelessWidget {
                                 fontWeight: FontWeight.w800,
                                 color: Colors.white)),
                         Text(
-                            '${game.league.name} · ${game.state == GameState.pre ? '${DateFormat('EEE').format(game.start.toLocal())} ${_timeLabel(game.start)}' : game.statusText}'
+                            '${game.league.name} · ${game.state == GameState.pre ? '${DateFormat('EEE').format(game.start.toLocal())} ${_timeLabel(game.start)}' : trSports(game.statusText)}'
                             '${game.broadcasts.isEmpty ? '' : ' · ${game.broadcasts.take(3).join(', ')}'}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -1349,9 +1360,12 @@ class _GameDialog extends StatelessWidget {
               Text(
                   matches.isEmpty
                       ? (matching
-                          ? 'Still looking for channels…'
-                          : 'No channel found for this game')
-                      : 'On ${matches.length} channel${matches.length == 1 ? '' : 's'}',
+                          ? tr('Still looking for channels…')
+                          : tr('No channel found for this game'))
+                      : tr('On {matches} channel{s}', {
+                          'matches': matches.length,
+                          's': matches.length == 1 ? '' : 's'
+                        }),
                   style: const TextStyle(
                       fontSize: 12, letterSpacing: 1, color: Colors.white54)),
               const SizedBox(height: 6),
@@ -1376,17 +1390,17 @@ class _GameDialog extends StatelessWidget {
                       autofocus: matches.isEmpty,
                       icon: Icons.search,
                       title: matches.isEmpty
-                          ? 'Pick the channel'
-                          : 'Choose a different channel',
-                      subtitle: 'Search your channels — it can be remembered '
-                          'for this game or team',
+                          ? tr('Pick the channel')
+                          : tr('Choose a different channel'),
+                      subtitle: tr(
+                          'Search your channels — it can be remembered for this game or team'),
                       onTap: () => Navigator.of(context).pop(_PickAction()),
                     ),
                     if (hasPick)
                       TvMenuTile(
                         icon: Icons.restart_alt,
-                        title: 'Forget my pick',
-                        subtitle: 'Go back to the automatic match',
+                        title: tr('Forget my pick'),
+                        subtitle: tr('Go back to the automatic match'),
                         onTap: () =>
                             Navigator.of(context).pop(_ForgetPickAction()),
                       ),
@@ -1440,7 +1454,7 @@ class _PickScopeDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return AlertDialog(
       backgroundColor: const Color(0xFF15151A),
-      title: const Text('Remember this channel?'),
+      title: Text(tr('Remember this channel?')),
       content: SizedBox(
         width: 460,
         child: Column(
@@ -1454,8 +1468,8 @@ class _PickScopeDialog extends StatelessWidget {
             TvMenuTile(
               autofocus: true,
               icon: Icons.event,
-              title: 'Just this game',
-              subtitle: 'Best for channels named after one game',
+              title: tr('Just this game'),
+              subtitle: tr('Best for channels named after one game'),
               onTap: () => Navigator.of(context).pop(_PickScope.game),
             ),
             for (final (scope, team) in [
@@ -1468,8 +1482,10 @@ class _PickScopeDialog extends StatelessWidget {
                     size: 36,
                     fallback: team.abbreviation,
                     color: team.color),
-                title: 'Always for the ${team.shortName}',
-                subtitle: 'Best for a regular channel, like a regional network',
+                title: tr('Always for the {shortName}',
+                    {'shortName': team.shortName}),
+                subtitle:
+                    tr('Best for a regular channel, like a regional network'),
                 onTap: () => Navigator.of(context).pop(scope),
               ),
           ],
@@ -1495,7 +1511,7 @@ class _EditLeaguesDialogState extends State<_EditLeaguesDialog> {
     final scheme = Theme.of(context).colorScheme;
     return AlertDialog(
       backgroundColor: const Color(0xFF15151A),
-      title: const Text('Leagues'),
+      title: Text(tr('Leagues')),
       content: SizedBox(
         width: 460,
         height: 420,
@@ -1522,7 +1538,7 @@ class _EditLeaguesDialogState extends State<_EditLeaguesDialog> {
       actions: [
         TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel')),
+            child: Text(tr('Cancel'))),
         FilledButton(
           onPressed: _on.isEmpty
               ? null
@@ -1530,7 +1546,7 @@ class _EditLeaguesDialogState extends State<_EditLeaguesDialog> {
                     for (final l in kSportsLeagues)
                       if (_on.contains(l.id)) l.id,
                   ]),
-          child: const Text('Save'),
+          child: Text(tr('Save')),
         ),
       ],
     );
@@ -1628,7 +1644,7 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
     return withTvThemeIfNeeded(
       context,
       (context) => SettingsScaffold(
-        title: 'Pick the channel for ${widget.game.title}',
+        title: tr('Pick the channel for {title}', {'title': widget.game.title}),
         body: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
@@ -1655,17 +1671,20 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
               TextField(
                 controller: _controller,
                 focusNode: _fieldNode,
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.search),
-                  hintText: 'Search channels',
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.search),
+                  hintText: tr('Search channels'),
                 ),
                 onChanged: (v) => setState(() => _query = v),
               ),
               const SizedBox(height: 8),
               Text(
                   results.isEmpty
-                      ? 'No channels match "$_query"'
-                      : '${results.length}${results.length >= 200 ? '+' : ''} channels',
+                      ? tr('No channels match "{query}"', {'query': _query})
+                      : tr('{results}{p} channels', {
+                          'results': results.length,
+                          'p': results.length >= 200 ? '+' : ''
+                        }),
                   style: const TextStyle(color: Colors.white54, fontSize: 12)),
               const SizedBox(height: 4),
               Expanded(
@@ -1679,8 +1698,10 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
                       titleMaxLines: 2,
                       leading: _ChannelLogo(channel: c),
                       title: c.name,
-                      subtitle:
-                          now == null ? c.group : '${c.group} · Now: $now',
+                      subtitle: now == null
+                          ? c.group
+                          : tr('{group} · Now: {now}',
+                              {'group': c.group, 'now': now}),
                       onTap: () => Navigator.of(context).pop(c),
                     );
                   },

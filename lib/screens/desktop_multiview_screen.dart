@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../models/channel.dart';
 import '../services/playlist_manager.dart';
+import '../l10n/l10n.dart';
 
 /// Windows-only: a grid of simultaneously-playing live channels —
 /// requested directly, citing TiviMate's own multiview (proven to run
@@ -173,34 +174,35 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
-                    const Text('Multiview',
-                        style: TextStyle(
+                    Text(tr('Multiview'),
+                        style: const TextStyle(
                             color: Colors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.w600)),
                     const SizedBox(width: 8),
                     PopupMenuButton<_MultiviewLayout>(
-                      tooltip: 'Layout',
+                      tooltip: tr('Layout'),
                       icon: const Icon(Icons.grid_view, color: Colors.white),
                       onSelected: _setLayout,
                       itemBuilder: (context) => [
                         CheckedPopupMenuItem(
                           value: _MultiviewLayout.dual,
                           checked: _layout == _MultiviewLayout.dual,
-                          child: const Text('2 channels'),
+                          child: Text(tr('2 channels')),
                         ),
                         CheckedPopupMenuItem(
                           value: _MultiviewLayout.quad,
                           checked: _layout == _MultiviewLayout.quad,
-                          child: const Text('4 channels'),
+                          child: Text(tr('4 channels')),
                         ),
                       ],
                     ),
                     const Spacer(),
                     const Icon(Icons.volume_up, color: Colors.amber, size: 16),
                     const SizedBox(width: 4),
-                    const Text('= audio — click a channel to switch',
-                        style: TextStyle(color: Colors.white54, fontSize: 12)),
+                    Text(tr('= audio — click a channel to switch'),
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 12)),
                   ],
                 ),
               ),
@@ -385,7 +387,7 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
                             color: Colors.white70, size: 18),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
-                        tooltip: 'Reload',
+                        tooltip: tr('Reload'),
                         onPressed: () => _reload(index),
                       ),
                       const SizedBox(width: 6),
@@ -394,7 +396,7 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
                             color: Colors.white70, size: 18),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
-                        tooltip: 'Change channel',
+                        tooltip: tr('Change channel'),
                         onPressed: () => _openPicker(index),
                       ),
                       const SizedBox(width: 6),
@@ -403,7 +405,7 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
                             color: Colors.white70, size: 18),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
-                        tooltip: 'Remove',
+                        tooltip: tr('Remove'),
                         onPressed: () => _clear(index),
                       ),
                     ],
@@ -461,11 +463,11 @@ class _ChannelPickerDialogState extends State<_ChannelPickerDialog> {
                 controller: _searchController,
                 autofocus: true,
                 style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  hintText: 'Search channels...',
-                  hintStyle: TextStyle(color: Colors.white54),
-                  prefixIcon: Icon(Icons.search, color: Colors.white54),
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  hintText: tr('Search channels...'),
+                  hintStyle: const TextStyle(color: Colors.white54),
+                  prefixIcon: const Icon(Icons.search, color: Colors.white54),
+                  border: const OutlineInputBorder(),
                 ),
                 onChanged: (v) => setState(() => _query = v),
               ),

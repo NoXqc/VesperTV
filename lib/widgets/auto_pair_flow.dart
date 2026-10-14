@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 
 /// Shared "Auto-Pair Channels" UX for both the EPG Channel Matching
 /// screen and the cross-playlist Channel Linking screen — requested
@@ -20,18 +21,18 @@ Future<({Set<String> paired, bool review})> runAutoPairFlow(
   showDialog<void>(
     context: context,
     barrierDismissible: false,
-    builder: (_) => const Dialog(
+    builder: (_) => Dialog(
       child: Padding(
-        padding: EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(
+            const SizedBox(
                 width: 20,
                 height: 20,
                 child: CircularProgressIndicator(strokeWidth: 2)),
-            SizedBox(width: 16),
-            Flexible(child: Text('Channels are pairing, please wait…')),
+            const SizedBox(width: 16),
+            Flexible(child: Text(tr('Channels are pairing, please wait…'))),
           ],
         ),
       ),
@@ -47,19 +48,20 @@ Future<({Set<String> paired, bool review})> runAutoPairFlow(
   final review = await showDialog<bool>(
     context: context,
     builder: (_) => AlertDialog(
-      title: const Text('Auto-Pair Channels'),
+      title: Text(tr('Auto-Pair Channels')),
       content: Text(paired.isEmpty
-          ? 'No new matches found — anything still unmatched needs a manual pick.'
-          : 'Paired ${paired.length} channel${paired.length == 1 ? '' : 's'} '
-              'automatically.'),
+          ? tr(
+              'No new matches found — anything still unmatched needs a manual pick.')
+          : tr('Paired {paired} channel{s} automatically.',
+              {'paired': paired.length, 's': paired.length == 1 ? '' : 's'})),
       actions: [
         if (paired.isNotEmpty)
           TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Review')),
+              child: Text(tr('Review'))),
         FilledButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Continue')),
+            child: Text(tr('Continue'))),
       ],
     ),
   );
@@ -79,13 +81,13 @@ Future<bool> confirmAndUnpair(
     await showDialog<void>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Unpair Channels'),
+        title: Text(tr('Unpair Channels')),
         content:
-            const Text('Nothing was auto-paired — there\'s nothing to undo.'),
+            Text(tr('Nothing was auto-paired — there\'s nothing to undo.')),
         actions: [
           TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK')),
+              child: Text(tr('OK'))),
         ],
       ),
     );
@@ -94,17 +96,20 @@ Future<bool> confirmAndUnpair(
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (_) => AlertDialog(
-      title: const Text('Unpair Channels'),
-      content: Text(
-          'Undo $autoPairedCount automatic pairing${autoPairedCount == 1 ? '' : 's'}? '
-          'Anything you\'ve set by hand is kept.'),
+      title: Text(tr('Unpair Channels')),
+      content: Text(tr(
+          'Undo {autoPairedCount} automatic pairing{s}? Anything you\'ve set by hand is kept.',
+          {
+            'autoPairedCount': autoPairedCount,
+            's': autoPairedCount == 1 ? '' : 's'
+          })),
       actions: [
         TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel')),
+            child: Text(tr('Cancel'))),
         FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Unpair')),
+            child: Text(tr('Unpair'))),
       ],
     ),
   );

@@ -14,6 +14,7 @@ import '../widgets/poster_card.dart';
 import '../widgets/section_label.dart';
 import 'desktop_player_screen.dart';
 import 'player_screen.dart';
+import '../l10n/l10n.dart';
 
 /// Shows a series' seasons as stacked horizontally-scrolling rows of
 /// episode cards — the same catalog pattern as the Movies/TV Shows browse
@@ -49,8 +50,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   void initState() {
     super.initState();
     final playlist = context.read<PlaylistManager>();
-    _episodesFuture =
-        playlist.loadSeriesEpisodes(widget.series).then((result) {
+    _episodesFuture = playlist.loadSeriesEpisodes(widget.series).then((result) {
       // Shares its plot with the Movies/TV Shows browse hero's
       // description cache — this screen still needs the real episode
       // list (so plotOnly stays false above), but caching the plot here
@@ -91,8 +91,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
       // in the background behind this unrelated episode.
       DesktopMiniPlayer.instance.clear();
       Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) =>
-              DesktopPlayerScreen(channel: episode, queue: queue)));
+          builder: (_) => DesktopPlayerScreen(channel: episode, queue: queue)));
       return;
     }
     context.read<PlaybackService>().setUpNextQueue(queue);
@@ -131,8 +130,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                     return const Center(child: CircularProgressIndicator());
                   }
                   if (snapshot.hasError) {
-                    return const Center(
-                        child: Text('Failed to load episodes.'));
+                    return Center(child: Text(tr('Failed to load episodes.')));
                   }
 
                   final episodesBySeason = snapshot.data?.episodes ?? {};
@@ -140,7 +138,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                   final seasons = episodesBySeason.keys.toList()..sort();
 
                   if (seasons.isEmpty) {
-                    return const Center(child: Text('No episodes found.'));
+                    return Center(child: Text(tr('No episodes found.')));
                   }
 
                   final allEpisodesInOrder = [
@@ -171,7 +169,8 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                             Padding(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 6),
-                              child: SectionLabel('Season $season'),
+                              child: SectionLabel(
+                                  tr('Season {season}', {'season': season})),
                             ),
                             SizedBox(
                               // Was a stale 210 left over from before PosterCard

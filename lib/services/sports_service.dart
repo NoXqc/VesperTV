@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/sports.dart';
+import '../l10n/l10n.dart';
 
 /// Scores and schedules from ESPN's public site API — key-less, so the
 /// Sports tab works for everyone without signing up anywhere (see
@@ -200,7 +201,7 @@ class SportsService {
       return games;
     } catch (e) {
       debugPrint('SportsService: ${league.id} ${_espnDate(date)} failed: $e');
-      lastError = 'Some scores could not be loaded. Check the connection.';
+      lastError = tr('Some scores could not be loaded. Check the connection.');
       return _cache[key]?.games ?? const [];
     }
   }

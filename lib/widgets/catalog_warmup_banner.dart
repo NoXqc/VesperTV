@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../services/playlist_manager.dart';
+import '../l10n/l10n.dart';
 
 /// Prominent, persistent banner showing background catalog warm-up
 /// progress — shown above the content on every tab (not just tucked away
@@ -36,8 +37,10 @@ class CatalogWarmupBanner extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Loading full catalog in the background — '
-                    '${progress == null ? '' : '${(progress * 100).round()}%'}',
+                    tr('Loading full catalog in the background — {p}', {
+                      'p':
+                          progress == null ? '' : '${(progress * 100).round()}%'
+                    }),
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
                 ),
@@ -51,24 +54,24 @@ class CatalogWarmupBanner extends StatelessWidget {
             const SizedBox(height: 8),
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: _TypeProgress(
-                    label: 'Live TV',
+                    label: tr('Live TV'),
                     done: 1,
                     total: 1,
-                    doneOverride: 'Ready',
+                    doneOverride: tr('Ready'),
                   ),
                 ),
                 Expanded(
                   child: _TypeProgress(
-                    label: 'Movies',
+                    label: tr('Movies'),
                     done: playlist.vodCatalogDone,
                     total: playlist.vodCatalogTotal,
                   ),
                 ),
                 Expanded(
                   child: _TypeProgress(
-                    label: 'TV Shows',
+                    label: tr('TV Shows'),
                     done: playlist.seriesCatalogDone,
                     total: playlist.seriesCatalogTotal,
                   ),
@@ -97,8 +100,10 @@ class _TypeProgress extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final text =
-        doneOverride ?? (total == 0 ? '$done' : '$done/$total categories');
+    final text = doneOverride ??
+        (total == 0
+            ? '$done'
+            : tr('{done}/{total} categories', {'done': done, 'total': total}));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

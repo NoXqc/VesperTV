@@ -5,6 +5,7 @@ import '../services/viewer_profile_service.dart';
 import '../utils/tv_theme.dart';
 import '../widgets/settings_scaffold.dart';
 import '../widgets/tv_menu_tile.dart';
+import '../l10n/l10n.dart';
 
 /// Switch between viewer profiles — reached from the tabs column's own
 /// profile row (TV) or the equivalent action on the phone layout. A plain
@@ -24,7 +25,7 @@ class ProfilePickerScreen extends StatelessWidget {
     return withTvThemeIfNeeded(
       context,
       (context) => SettingsScaffold(
-        title: 'Switch Profile',
+        title: tr('Switch Profile'),
         body: ListView(
           children: [
             for (final profile in viewers.profiles)
@@ -35,8 +36,8 @@ class ProfilePickerScreen extends StatelessWidget {
                       ? '?'
                       : profile.name[0].toUpperCase()),
                 ),
-                title: profile.name,
-                subtitle: profile.isRestricted ? 'Restricted' : null,
+                title: profile.displayName,
+                subtitle: profile.isRestricted ? tr('Restricted') : null,
                 trailing: profile.id == viewers.active.id
                     ? const Icon(Icons.check_circle)
                     : const SizedBox.shrink(),

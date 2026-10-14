@@ -42,8 +42,8 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
 3. Use Bash (Git Bash) or PowerShell. In Git Bash, **prefix adb commands that take `/sdcard`-style
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
-4. `flutter analyze` must report the baseline **22** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `1.0.3` unless noted
+4. `flutter analyze` must report the baseline **20** info-level issues (no errors). Don't add new ones.
+5. Check the current state of releases: `gh release list` (latest should be `1.0.4` unless noted
    in §11).
 
 ## 3. Layout (what matters)
@@ -76,7 +76,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
 - `windows/runner/main.cpp`, `Runner.rc` — Windows runner (window title "VesperTV").
 
 ## 4. Build / check
-- `flutter analyze` — baseline **22** info issues, none errors.
+- `flutter analyze` — baseline **20** info issues, none errors.
 - Android: `flutter build apk --release` → `build/app/outputs/flutter-apk/app-release.apk` (~68 MB).
 - Windows: **kill the running app first** (`Get-Process VesperTV | Stop-Process -Force`) or the link
   step fails with `LNK1104: cannot open VesperTV.exe`. Then `flutter build windows --release`
@@ -95,7 +95,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+226**) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+229**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
@@ -186,6 +186,10 @@ rejected (HDR + Android-TV hardware-decode risk).
   the pointer `LongPressGestureRecognizer` inside `HoldToActivate` (keyboard Enter-hold alone did not
   work for mouse users); the last live channel is saved in `DesktopPlayerScreen`
   (`setLastChannelId`) because nothing else writes it on Windows.
+- **Every user-visible string goes through `tr()` with a French entry in `lib/l10n/fr.dart`**
+  (same `{placeholders}`). Never `tr()` a string that is also an id in logic (tab ids, 'All'/
+  'Favorites' group entries, standings column labels) — translate at the display site. Details in
+  `dev-notes/features.md` (Languages).
 - Open-source principle: **no embedded API keys.** Anything needing a key (TMDB, a future
   OpenSubtitles) is bring-your-own-key in Settings.
 
@@ -194,10 +198,11 @@ Look there before debugging. Still-open items: the **Fire OS stale launcher icon
 old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler) — Windows check pending.
 
 ## 12. Features (details in `dev-notes/features.md`)
-Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys). Read the file before changing any of these.
+Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-14)
-- **Shipped: 1.0.3 (`+226`, 2026-10-14, latest on GitHub, tag on `d02200e`)** — the Sports tab:
+- **Shipped: 1.0.4 (`+229`, 2026-10-14, latest on GitHub)** — French + language picker (Settings > General > Language, `lib/l10n/`, see `dev-notes/features.md`) and the "Hey beautiful Human" splash greeting. **Next: Discord integration with GitHub updates.**
+- 1.0.3 (`+226`, 2026-10-14, tag on `d02200e`) — the Sports tab:
   scores, channel matching, Standings, **My Teams** (see `dev-notes/sports-tab.md`), plus Add
   Playlist "From phone" and the resume-pill fixes/switch (details below). Site + README advertise it
   with Formuler screenshots (`docs/assets/shot-sports.jpg`, `shot-my-teams.jpg`,

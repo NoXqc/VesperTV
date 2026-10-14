@@ -43,6 +43,7 @@ import 'search_screen.dart';
 import 'sports_screen.dart';
 import 'series_detail_screen.dart';
 import 'settings/settings_menu_screen.dart';
+import '../l10n/l10n.dart';
 
 /// Directional D-pad focus movement between widgets (arrow keys via the
 /// default `FocusTraversalPolicy`) does *not* automatically scroll a newly
@@ -297,29 +298,30 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
           if (category != null)
             SimpleDialogOption(
               onPressed: () => Navigator.of(context).pop('expand'),
-              child: const Text('Expand catalog'),
+              child: Text(tr('Expand catalog')),
             ),
           SimpleDialogOption(
             onPressed: () => Navigator.of(context).pop('favorite'),
-            child: Text(
-                isFavorited ? 'Remove from Favourites' : 'Add to Favourites'),
+            child: Text(isFavorited
+                ? tr('Remove from Favourites')
+                : tr('Add to Favourites')),
           ),
           SimpleDialogOption(
             onPressed: () =>
                 Navigator.of(context).pop(isPending ? 'cancel_hide' : 'hide'),
-            child: Text(isPending ? 'Cancel Hide' : 'Hide Group'),
+            child: Text(isPending ? tr('Cancel Hide') : tr('Hide Group')),
           ),
           SimpleDialogOption(
             onPressed: () => Navigator.of(context).pop('move'),
-            child: const Text('Move Up / Down'),
+            child: Text(tr('Move Up / Down')),
           ),
           SimpleDialogOption(
             onPressed: () => Navigator.of(context).pop('move_top'),
-            child: const Text('Move to Top'),
+            child: Text(tr('Move to Top')),
           ),
           SimpleDialogOption(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(tr('Cancel')),
           ),
         ],
       ),
@@ -446,16 +448,18 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         children: [
           SimpleDialogOption(
             onPressed: () => Navigator.of(context).pop('favorite'),
-            child: Text(
-                isFavorited ? 'Remove from Favourites' : 'Add to Favourites'),
+            child: Text(isFavorited
+                ? tr('Remove from Favourites')
+                : tr('Add to Favourites')),
           ),
           SimpleDialogOption(
             onPressed: () => Navigator.of(context).pop('hide'),
-            child: Text(isHidden ? 'Unhide this channel' : 'Hide this channel'),
+            child: Text(
+                isHidden ? tr('Unhide this channel') : tr('Hide this channel')),
           ),
           SimpleDialogOption(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(tr('Cancel')),
           ),
         ],
       ),
@@ -765,15 +769,17 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('Double',
-                      style: TextStyle(color: Colors.white, fontSize: 12)),
+                  Text(tr('Double'),
+                      style:
+                          const TextStyle(color: Colors.white, fontSize: 12)),
                   const Icon(Icons.keyboard_arrow_left,
                       color: Colors.white, size: 16),
                   const Icon(Icons.keyboard_arrow_left,
                       color: Colors.white, size: 16),
                   const SizedBox(width: 4),
-                  const Text('for groups',
-                      style: TextStyle(color: Colors.white, fontSize: 12)),
+                  Text(tr('for groups'),
+                      style:
+                          const TextStyle(color: Colors.white, fontSize: 12)),
                 ],
               ),
             ),
@@ -1598,16 +1604,16 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Update content now?'),
+        title: Text(tr('Update content now?')),
         content:
-            const Text('Re-checks your M3U playlist URL(s) for new content.'),
+            Text(tr('Re-checks your M3U playlist URL(s) for new content.')),
         actions: [
           ModeButton(
-              label: 'Cancel',
+              label: tr('Cancel'),
               selected: false,
               onTap: () => Navigator.of(context).pop(false)),
           ModeButton(
-              label: 'Update',
+              label: tr('Update'),
               selected: false,
               onTap: () => Navigator.of(context).pop(true)),
         ],
@@ -1642,20 +1648,18 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Exit and free up this login?'),
-        content: const Text(
-          'This disconnects your login here so it can be used on another '
-          'device, then fully closes VesperTV. Your channels/movies will '
-          'need to reload next time you open it.',
+        title: Text(tr('Exit and free up this login?')),
+        content: Text(
+          tr('This disconnects your login here so it can be used on another device, then fully closes VesperTV. Your channels/movies will need to reload next time you open it.'),
         ),
         actions: [
           ModeButton(
-            label: 'Cancel',
+            label: tr('Cancel'),
             selected: false,
             onTap: () => Navigator.of(context).pop(false),
           ),
           ModeButton(
-            label: 'Exit',
+            label: tr('Exit'),
             selected: false,
             onTap: () => Navigator.of(context).pop(true),
           ),
@@ -1699,18 +1703,18 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     final exit = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Exit ${AppConstants.appName}?'),
-        content: const Text(
-            'Are you sure you want to exit ${AppConstants.appName}?'),
+        title: Text(tr('Exit {appName}?', {'appName': AppConstants.appName})),
+        content: Text(tr('Are you sure you want to exit {appName}?',
+            {'appName': AppConstants.appName})),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Exit'),
+            child: Text(tr('Exit')),
           ),
           TextButton(
             autofocus: true,
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Stay'),
+            child: Text(tr('Stay')),
           ),
         ],
       ),
@@ -1728,13 +1732,13 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     final picked = await showDialog<Channel>(
       context: context,
       builder: (dialogContext) => SimpleDialog(
-        title: const Text('History'),
+        title: Text(tr('History')),
         children: [
           if (channels.isEmpty)
-            const Padding(
-              padding: EdgeInsets.fromLTRB(24, 8, 24, 16),
-              child: Text('No channels watched yet.',
-                  style: TextStyle(color: Colors.white70)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+              child: Text(tr('No channels watched yet.'),
+                  style: const TextStyle(color: Colors.white70)),
             ),
           for (final c in channels)
             SimpleDialogOption(
@@ -1779,8 +1783,9 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   void _showUpdateToast() {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-          content: Text('Content updated'), duration: Duration(seconds: 2)),
+      SnackBar(
+          content: Text(tr('Content updated')),
+          duration: const Duration(seconds: 2)),
     );
   }
 
@@ -1902,12 +1907,12 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                                                   child:
                                                       CircularProgressIndicator(
                                                           strokeWidth: 2))
-                                              : const Text('Retry'),
+                                              : Text(tr('Retry')),
                                         ),
                                         const SizedBox(width: 12),
                                         FilledButton(
                                             onPressed: _openSettings,
-                                            child: const Text('Open Settings')),
+                                            child: Text(tr('Open Settings'))),
                                       ],
                                     ),
                                   ],
@@ -2156,7 +2161,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       children: [
         _SelectableRow(
           icon: Icons.search,
-          label: 'Search',
+          label: tr('Search'),
           selected: false,
           collapsed: collapsed,
           onTap: _openSearch,
@@ -2177,7 +2182,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         // engine in this app — see pubspec.yaml's media_kit comment).
         _SelectableRow(
           icon: Icons.grid_view,
-          label: 'Multiview',
+          label: tr('Multiview'),
           selected: false,
           collapsed: collapsed,
           onTap: () {
@@ -2207,17 +2212,17 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         // column model.
         _SelectableRow(
           icon: Icons.sports_hockey,
-          label: 'Sports',
+          label: tr('Sports'),
           selected: false,
           collapsed: collapsed,
-          onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const SportsScreen())),
+          onTap: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const SportsScreen())),
         ),
         const Divider(height: 16, color: Colors.white24),
         for (final tab in _tabs)
           _SelectableRow(
             icon: _tabIcons[tab]!,
-            label: tab,
+            label: tr(tab),
             selected: _tab == tab,
             collapsed: collapsed,
             focusNode: tab == 'TV' ? _tvTabFocusNode : null,
@@ -2226,21 +2231,21 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         const Divider(height: 16, color: Colors.white24),
         _SelectableRow(
           icon: Icons.playlist_add_check,
-          label: 'Update Content',
+          label: tr('Update Content'),
           selected: false,
           collapsed: collapsed,
           onTap: () => _refreshPlaylist(context),
         ),
         _SelectableRow(
           icon: Icons.account_circle_outlined,
-          label: context.watch<ViewerProfileService>().active.name,
+          label: context.watch<ViewerProfileService>().active.displayName,
           selected: false,
           collapsed: collapsed,
           onTap: _openProfilePicker,
         ),
         _SelectableRow(
           icon: Icons.settings,
-          label: 'Settings',
+          label: tr('Settings'),
           selected: false,
           collapsed: collapsed,
           onTap: _openSettings,
@@ -2263,14 +2268,14 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         if (Platform.isWindows) ...[
           _SelectableRow(
             icon: Icons.remove,
-            label: 'Minimize',
+            label: tr('Minimize'),
             selected: false,
             collapsed: collapsed,
             onTap: _minimizeWindow,
           ),
           _SelectableRow(
             icon: Icons.close,
-            label: 'Close',
+            label: tr('Close'),
             selected: false,
             collapsed: collapsed,
             onTap: _closeApp,
@@ -2281,7 +2286,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         // tab list above it.
         _SelectableRow(
           icon: Icons.power_settings_new,
-          label: 'Exit App',
+          label: tr('Exit App'),
           selected: false,
           collapsed: collapsed,
           onTap: _confirmHardExit,
@@ -2339,7 +2344,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         children: [
           _SelectableRow(
             icon: Icons.apps,
-            label: 'All',
+            label: tr('All'),
             selected: _selectedGroup == null,
             collapsed: collapsed,
             fontSize: _groupFontSize,
@@ -2356,12 +2361,12 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
               onTap: () => _onGroupSelected(title),
             ),
           if (favoritedGroupTitles.isEmpty && !collapsed)
-            const Padding(
-              padding: EdgeInsets.all(12),
+            Padding(
+              padding: const EdgeInsets.all(12),
               child: Text(
-                'Long-press a group elsewhere to favorite the whole thing.',
+                tr('Long-press a group elsewhere to favorite the whole thing.'),
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white54, fontSize: 12),
+                style: const TextStyle(color: Colors.white54, fontSize: 12),
               ),
             ),
         ],
@@ -2380,7 +2385,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       children: [
         _SelectableRow(
           icon: Icons.star,
-          label: 'Favourites',
+          label: tr('Favourites'),
           selected: effectiveGroup == _favoritesGroupSentinel,
           collapsed: collapsed,
           fontSize: _groupFontSize,
@@ -2389,7 +2394,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         ),
         _SelectableRow(
           icon: Icons.history,
-          label: 'History',
+          label: tr('History'),
           selected: false,
           collapsed: collapsed,
           fontSize: _groupFontSize,
@@ -2475,7 +2480,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         // column's own "Favourites" entry — not a category, a view.
         _SelectableRow(
           icon: Icons.new_releases,
-          label: "What's New",
+          label: tr("What's New"),
           selected: _showWhatsNew,
           collapsed: collapsed,
           fontSize: _groupFontSize,
@@ -2484,7 +2489,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         ),
         _SelectableRow(
           icon: Icons.apps,
-          label: 'All',
+          label: tr('All'),
           selected: false,
           collapsed: collapsed,
           fontSize: _groupFontSize,
@@ -2575,14 +2580,14 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         valueListenable: DesktopMiniPlayer.instance.channel,
         builder: (context, minimized, _) {
           if (minimized == null) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.tv_off, color: Colors.white54),
-                  SizedBox(height: 6),
-                  Text('Nothing playing',
-                      style: TextStyle(color: Colors.white70)),
+                  const Icon(Icons.tv_off, color: Colors.white54),
+                  const SizedBox(height: 6),
+                  Text(tr('Nothing playing'),
+                      style: const TextStyle(color: Colors.white70)),
                 ],
               ),
             );
@@ -2634,8 +2639,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                                   color: Colors.white,
                                   fontWeight: FontWeight.w600,
                                   fontSize: 13)),
-                          const Text('Click to resume',
-                              style: TextStyle(
+                          Text(tr('Click to resume'),
+                              style: const TextStyle(
                                   color: Colors.white70, fontSize: 11)),
                         ],
                       ),
@@ -2650,13 +2655,14 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     }
 
     if (channel == null) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.tv_off, color: Colors.white54),
-            SizedBox(height: 6),
-            Text('Nothing playing', style: TextStyle(color: Colors.white70)),
+            const Icon(Icons.tv_off, color: Colors.white54),
+            const SizedBox(height: 6),
+            Text(tr('Nothing playing'),
+                style: const TextStyle(color: Colors.white70)),
           ],
         ),
       );
@@ -2736,9 +2742,9 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                 focusNode: _timelineFilterFieldFocusNode,
                 autofocus: true,
                 style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  hintText: 'Filter channels in this group...',
-                  hintStyle: TextStyle(color: Colors.white54),
+                decoration: InputDecoration(
+                  hintText: tr('Filter channels in this group...'),
+                  hintStyle: const TextStyle(color: Colors.white54),
                   border: InputBorder.none,
                 ),
                 onChanged: (value) =>
@@ -2746,7 +2752,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
               ),
             ),
             IconButton(
-              tooltip: 'Close filter',
+              tooltip: tr('Close filter'),
               icon: const Icon(Icons.close, color: Colors.white70, size: 18),
               onPressed: _closeTimelineFilter,
             ),
@@ -2798,7 +2804,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                     Expanded(
                       child: Text(
                         _timelineFilterQuery.isEmpty
-                            ? 'Filter channels in this group...'
+                            ? tr('Filter channels in this group...')
                             : _timelineFilterQuery,
                         style: TextStyle(
                             color: _timelineFilterQuery.isEmpty
@@ -2807,7 +2813,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                       ),
                     ),
                     IconButton(
-                      tooltip: 'Close filter',
+                      tooltip: tr('Close filter'),
                       icon: const Icon(Icons.close,
                           color: Colors.white70, size: 18),
                       onPressed: _closeTimelineFilter,
@@ -3128,8 +3134,9 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   void _toggleFavoriteWithFeedback(BuildContext context, Channel channel) {
     context.read<PlaylistManager>().toggleFavorite(channel);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(
-          channel.isFavorite ? 'Added to Favorites' : 'Removed from Favorites'),
+      content: Text(channel.isFavorite
+          ? tr('Added to Favorites')
+          : tr('Removed from Favorites')),
       duration: const Duration(seconds: 2),
     ));
   }
@@ -3145,9 +3152,9 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     playlist.toggleChannelHidden(channel);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(playlist.isChannelHidden(channel)
-          ? 'Hidden — find it again in Settings > Playlist Manager > '
-              'Hidden Channels'
-          : 'Unhidden'),
+          ? tr(
+              'Hidden — find it again in Settings > Playlist Manager > Hidden Channels')
+          : tr('Unhidden')),
       duration: const Duration(seconds: 2),
     ));
   }
@@ -3156,8 +3163,9 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       BuildContext context, XtreamSeries series) {
     context.read<PlaylistManager>().toggleSeriesFavorite(series);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(
-          series.isFavorite ? 'Added to Favorites' : 'Removed from Favorites'),
+      content: Text(series.isFavorite
+          ? tr('Added to Favorites')
+          : tr('Removed from Favorites')),
       duration: const Duration(seconds: 2),
     ));
   }
@@ -3175,13 +3183,13 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     final showsEmpty = isXtream ? series!.isEmpty : showChannels!.isEmpty;
 
     if (movies.isEmpty && showsEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
+          padding: const EdgeInsets.all(24),
           child: Text(
-            'No favorited movies or TV shows yet.\nHold Select on a poster to add one.',
+            tr('No favorited movies or TV shows yet.\nHold Select on a poster to add one.'),
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white70),
+            style: const TextStyle(color: Colors.white70),
           ),
         ),
       );
@@ -3190,14 +3198,14 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     return ListView(
       padding: const EdgeInsets.only(bottom: 16),
       children: [
-        const Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: SectionLabel('Movies')),
+        Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: SectionLabel(tr('Movies'))),
         if (movies.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: Text('No favorited movies yet.',
-                style: TextStyle(color: Colors.white54)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(tr('No favorited movies yet.'),
+                style: const TextStyle(color: Colors.white54)),
           )
         else
           _posterGrid(
@@ -3215,14 +3223,14 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
             ),
             shrinkWrap: true,
           ),
-        const Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: SectionLabel('TV Shows')),
+        Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: SectionLabel(tr('TV Shows'))),
         if (showsEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: Text('No favorited TV shows yet.',
-                style: TextStyle(color: Colors.white54)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(tr('No favorited TV shows yet.'),
+                style: const TextStyle(color: Colors.white54)),
           )
         else if (isXtream)
           _posterGrid(
@@ -3311,7 +3319,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   Widget _posterGrid<T>(List<T> items, Widget Function(T) posterBuilder,
       {bool shrinkWrap = false}) {
     if (items.isEmpty)
-      return const Center(child: Text('No items in this group.'));
+      return Center(child: Text(tr('No items in this group.')));
     return GridView.builder(
       padding: const EdgeInsets.all(16),
       shrinkWrap: shrinkWrap,
@@ -3332,8 +3340,9 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       return Center(
         child: Text(
           _selectedGroup == _favoritesGroupSentinel
-              ? 'No favorite channels yet — press Down while watching one to add it.'
-              : 'No channels found.',
+              ? tr(
+                  'No favorite channels yet — press Down while watching one to add it.')
+              : tr('No channels found.'),
           textAlign: TextAlign.center,
         ),
       );
@@ -3412,7 +3421,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                     IconButton(
                       icon: const Icon(Icons.visibility_off_outlined,
                           color: Colors.white70),
-                      tooltip: 'Hide this channel',
+                      tooltip: tr('Hide this channel'),
                       onPressed: () =>
                           _toggleHiddenWithFeedback(context, channel),
                     ),
@@ -3476,7 +3485,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     return KeyedSubtree(
       key: _continueWatchingRowKey,
       child: _CategoryRow<Channel>(
-        title: 'Continue Watching',
+        title: tr('Continue Watching'),
         items: items,
         itemBuilder: (c, index) {
           // A show resumes into its season/episode list (so the user can
@@ -3598,7 +3607,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         backdropUrlOf: (c) => c.backdropUrl,
         onOpen: _openMovie,
         playFocusNode: _moviesWhatsNewPlayFocusNode,
-        emptyText: 'No recently added movies yet',
+        emptyText: tr('No recently added movies yet'),
       );
     }
     final groupsWithItems =
@@ -3661,7 +3670,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
             ),
           ),
       ],
-      emptyText: groupsWithItems.isEmpty ? 'Loading movie categories...' : null,
+      emptyText:
+          groupsWithItems.isEmpty ? tr('Loading movie categories...') : null,
     );
   }
 
@@ -3716,7 +3726,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         backdropUrlOf: (s) => s.backdropUrl,
         onOpen: _openSeries,
         playFocusNode: _showsWhatsNewPlayFocusNode,
-        emptyText: 'No recently added shows yet',
+        emptyText: tr('No recently added shows yet'),
       );
     }
     for (final group in groups) {
@@ -3766,7 +3776,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     _browseRowKeys = rowKeys;
     return _buildBrowseScaffold(
       rows: rows,
-      emptyText: rows.isEmpty ? 'Loading TV show categories...' : null,
+      emptyText: rows.isEmpty ? tr('Loading TV show categories...') : null,
     );
   }
 
@@ -4083,7 +4093,7 @@ class _PlaylistDividerRow extends StatelessWidget {
           borderRadius: BorderRadius.circular(6),
         ),
         child: Text(
-          name.isEmpty ? 'Playlist' : name,
+          name.isEmpty ? tr('Playlist') : name,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
@@ -4694,7 +4704,7 @@ class _BrowseHero extends StatelessWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            title ?? 'Browse',
+                            title ?? tr('Browse'),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -4797,7 +4807,7 @@ class _BrowseHero extends StatelessWidget {
                   SizedBox(width: big ? 12 : 10),
                   Expanded(
                     child: Text(
-                      title ?? 'Browse',
+                      title ?? tr('Browse'),
                       maxLines: big ? 2 : 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -4972,7 +4982,7 @@ class _WhatsNewCarouselState<T> extends State<_WhatsNewCarousel<T>>
       future: _itemsFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: Text('Loading...'));
+          return Center(child: Text(tr('Loading...')));
         }
         final items = snapshot.data ?? <T>[];
         if (items.isEmpty) return Center(child: Text(widget.emptyText));
@@ -5146,7 +5156,7 @@ class _WhatsNewCarouselState<T> extends State<_WhatsNewCarousel<T>>
             width: 130,
             child: ModeButton(
               icon: Icons.chevron_left,
-              label: 'Previous',
+              label: tr('Previous'),
               selected: false,
               onTap: () => _step(-1),
             ),
@@ -5156,7 +5166,7 @@ class _WhatsNewCarouselState<T> extends State<_WhatsNewCarousel<T>>
             width: 160,
             child: ModeButton(
               icon: Icons.play_arrow,
-              label: 'Play',
+              label: tr('Play'),
               selected: false,
               focusNode: widget.playFocusNode,
               onTap: () => widget.onOpen(current),
@@ -5167,7 +5177,7 @@ class _WhatsNewCarouselState<T> extends State<_WhatsNewCarousel<T>>
             width: 130,
             child: ModeButton(
               icon: Icons.chevron_right,
-              label: 'Next',
+              label: tr('Next'),
               selected: false,
               onTap: () => _step(1),
             ),
@@ -5242,8 +5252,8 @@ class _TvTopBar extends StatelessWidget {
                   strokeWidth: 2, color: Colors.white70),
             ),
             const SizedBox(width: 8),
-            const Text('Updating…',
-                style: TextStyle(color: Colors.white70, fontSize: 12)),
+            Text(tr('Updating…'),
+                style: const TextStyle(color: Colors.white70, fontSize: 12)),
           ],
         ],
       ),
@@ -5285,7 +5295,7 @@ class _CurrentProgramLine extends StatelessWidget {
     final epg = context.watch<EpgService>();
     final current = epg.getCurrentProgram(channelId);
     if (current == null)
-      return const Text('No program data', style: TextStyle(fontSize: 12));
+      return Text(tr('No program data'), style: const TextStyle(fontSize: 12));
     return Text(current.title,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
@@ -5354,11 +5364,13 @@ class _ProgramDetails extends StatelessWidget {
               ),
             ],
           ] else
-            const Text('No program data available',
-                style: TextStyle(color: Colors.white70)),
+            Text(tr('No program data available'),
+                style: const TextStyle(color: Colors.white70)),
           if (next != null) ...[
             const SizedBox(height: 8),
-            Text('Next: ${next.title} (${timeFormat.format(next.start)})',
+            Text(
+                tr('Next: {title} ({p})',
+                    {'title': next.title, 'p': timeFormat.format(next.start)}),
                 style: const TextStyle(color: Colors.white54, fontSize: 12)),
           ],
         ],
@@ -5404,9 +5416,9 @@ class _GuideNowPanel extends StatelessWidget {
                 epg.getNextProgram(channel.epgId));
 
     if (channel == null && program == null) {
-      return const Center(
-        child: Text('Focus a program to see details',
-            style: TextStyle(color: Colors.white70)),
+      return Center(
+        child: Text(tr('Focus a program to see details'),
+            style: const TextStyle(color: Colors.white70)),
       );
     }
 
@@ -5462,8 +5474,8 @@ class _GuideNowPanel extends StatelessWidget {
               ),
             ],
           ] else
-            const Text('No program data available',
-                style: TextStyle(color: Colors.white70)),
+            Text(tr('No program data available'),
+                style: const TextStyle(color: Colors.white70)),
         ],
       ),
     );
@@ -6051,7 +6063,7 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   @override
   Widget build(BuildContext context) {
     if (widget.channels.isEmpty) {
-      return const Center(child: Text('No channels found.'));
+      return Center(child: Text(tr('No channels found.')));
     }
     final nowX = _xFor(DateTime.now()).clamp(0.0, _totalWidth);
     // Distinguishes "still fetching, give it a moment" from "this channel
@@ -6184,7 +6196,7 @@ class _TimeRuler extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final timeFormat = DateFormat('h:mm a');
+    final timeFormat = DateFormat.jm();
     final firstTick = DateTime(
             windowStart.year,
             windowStart.month,
@@ -6467,7 +6479,7 @@ class _TimelineKeyboardKeyState extends State<_TimelineKeyboardKey> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final display = switch (widget.label) {
-      'space' => 'Space',
+      'space' => tr('Space'),
       'back' => '⌫',
       'close' => '✕',
       final c => c,
@@ -6646,8 +6658,9 @@ class _TimelineRow extends StatelessWidget {
           padding: const EdgeInsets.only(top: 4, bottom: 4),
           child: _ProgramBlock(
             program: null,
-            placeholderLabel:
-                epgLoading ? 'Loading EPG…' : 'No program data available',
+            placeholderLabel: epgLoading
+                ? tr('Loading EPG…')
+                : tr('No program data available'),
             isNow: false,
             onOpen: onOpen,
             onShowOptions: onShowOptions,

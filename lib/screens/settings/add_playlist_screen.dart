@@ -19,6 +19,7 @@ import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_menu_tile.dart';
 import '../catalog_sync_screen.dart';
 import 'group_management_screen.dart';
+import '../../l10n/l10n.dart';
 
 /// `TextField`/`EditableText` scrolls itself into view on focus for free —
 /// plain buttons don't. Reported directly: once Smart Add's Stage 2 review
@@ -437,15 +438,15 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
     final raw = _smartPasteController.text.trim();
     if (raw.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Paste some text first.')),
+        SnackBar(content: Text(tr('Paste some text first.'))),
       );
       return;
     }
     final result = parseSmartAddText(raw);
     if (result.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text("Couldn't find anything usable in that text.")),
+        SnackBar(
+            content: Text(tr("Couldn't find anything usable in that text."))),
       );
       return;
     }
@@ -479,9 +480,9 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
         _xtreamPasswordController.text = r.password;
       }
     });
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Received from your phone — check the details, then '
-            'press Add Playlist.')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(tr(
+            'Received from your phone — check the details, then press Add Playlist.'))));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       (_nameController.text.trim().isEmpty ? _nameFocus : _addButtonFocus)
@@ -500,15 +501,15 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
   Future<void> _save() async {
     if (_saving) return;
     if (_mode == 'phone') {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Scan the code with your phone and send the form '
-              'first.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              tr('Scan the code with your phone and send the form first.'))));
       return;
     }
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Playlist name is required.')),
+        SnackBar(content: Text(tr('Playlist name is required.'))),
       );
       return;
     }
@@ -537,9 +538,9 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
 
         if (server.isEmpty || username.isEmpty || password.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content:
-                    Text('Server, username, and password are all required.')),
+            SnackBar(
+                content: Text(
+                    tr('Server, username, and password are all required.'))),
           );
           return;
         }
@@ -581,7 +582,7 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
         epgUrl = _epgController.text.trim();
         if (m3uUrl.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('M3U playlist URL is required.')),
+            SnackBar(content: Text(tr('M3U playlist URL is required.'))),
           );
           return;
         }
@@ -664,7 +665,8 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(isEditing ? 'Playlist updated.' : 'Playlist added.')));
+          content: Text(
+              isEditing ? tr('Playlist updated.') : tr('Playlist added.'))));
       if (isEditing) {
         // Back to PlaylistManagerScreen's detail panel, which is what
         // pushed this screen in edit mode — one level up, not all the way
@@ -697,10 +699,9 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('Download content'),
-        content: const Text(
-          'This provider has a large catalog. Download everything in the '
-          'background, or choose which groups to include first?',
+        title: Text(tr('Download content')),
+        content: Text(
+          tr('This provider has a large catalog. Download everything in the background, or choose which groups to include first?'),
         ),
         // Plain TextButton/FilledButton left which one has D-pad focus
         // ambiguous — same fix as everywhere else this was found (the
@@ -708,12 +709,12 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
         // of actual focus): ModeButton only fills solid on real focus.
         actions: [
           ModeButton(
-            label: 'Choose Groups First',
+            label: tr('Choose Groups First'),
             selected: false,
             onTap: () => Navigator.of(context).pop('choose'),
           ),
           ModeButton(
-              label: 'Download All',
+              label: tr('Download All'),
               selected: false,
               onTap: () => Navigator.of(context).pop('all')),
         ],
@@ -768,7 +769,9 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
     return withTvThemeIfNeeded(
         context,
         (context) => SettingsScaffold(
-            title: _editingProfile != null ? 'Edit Playlist' : 'Add Playlist',
+            title: _editingProfile != null
+                ? tr('Edit Playlist')
+                : tr('Add Playlist'),
             // Left/Right switch between the mode list and the fields —
             // same explicit-zone pattern `PlayerScreen`'s own top/bottom
             // bars use, not default traversal (see [_modeScope]/
@@ -832,16 +835,16 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                       child: ListView(
                         padding: const EdgeInsets.all(8),
                         children: [
-                          const Padding(
-                            padding: EdgeInsets.symmetric(
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 4),
-                            child: SectionLabel('Playlist source'),
+                            child: SectionLabel(tr('Playlist source')),
                           ),
                           const SizedBox(height: 4),
                           TvMenuTile(
                             focusNode: _modeM3uFocus,
                             icon: Icons.link,
-                            title: 'M3U URL',
+                            title: tr('M3U URL'),
                             trailing: _mode == 'm3u'
                                 ? Icon(Icons.check,
                                     color:
@@ -852,7 +855,7 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                           TvMenuTile(
                             focusNode: _modeXtreamFocus,
                             icon: Icons.dns,
-                            title: 'Xtream Codes',
+                            title: tr('Xtream Codes'),
                             trailing: _mode == 'xtream'
                                 ? Icon(Icons.check,
                                     color:
@@ -863,7 +866,7 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                           TvMenuTile(
                             focusNode: _modeSmartFocus,
                             icon: Icons.auto_fix_high,
-                            title: 'Smart Add',
+                            title: tr('Smart Add'),
                             trailing: _mode == 'smart'
                                 ? Icon(Icons.check,
                                     color:
@@ -874,7 +877,7 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                           TvMenuTile(
                             focusNode: _modePhoneFocus,
                             icon: Icons.qr_code_2,
-                            title: 'From phone',
+                            title: tr('From phone'),
                             trailing: _mode == 'phone'
                                 ? Icon(Icons.check,
                                     color:
@@ -899,15 +902,15 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                               onResult: _applyPhoneResult,
                             )
                           else ...[
-                            const SectionLabel('Playlist name'),
+                            SectionLabel(tr('Playlist name')),
                             const SizedBox(height: 8),
                             TextField(
                               controller: _nameController,
                               focusNode: _nameFocus,
-                              decoration: const InputDecoration(
-                                labelText: 'Name',
-                                hintText: 'e.g. My Provider, or 8kStrong',
-                                border: OutlineInputBorder(),
+                              decoration: InputDecoration(
+                                labelText: tr('Name'),
+                                hintText: tr('e.g. My Provider, or 8kStrong'),
+                                border: const OutlineInputBorder(),
                               ),
                               textInputAction: TextInputAction.next,
                               // Goes to the first field *of the current
@@ -923,9 +926,9 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                               TextField(
                                 controller: _m3uController,
                                 focusNode: _m3uFocus,
-                                decoration: const InputDecoration(
-                                  labelText: 'M3U Playlist URL',
-                                  border: OutlineInputBorder(),
+                                decoration: InputDecoration(
+                                  labelText: tr('M3U Playlist URL'),
+                                  border: const OutlineInputBorder(),
                                 ),
                                 keyboardType: TextInputType.url,
                                 textInputAction: TextInputAction.next,
@@ -935,9 +938,9 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                               TextField(
                                 controller: _epgController,
                                 focusNode: _epgFocus,
-                                decoration: const InputDecoration(
-                                  labelText: 'EPG (XMLTV) URL',
-                                  border: OutlineInputBorder(),
+                                decoration: InputDecoration(
+                                  labelText: tr('EPG (XMLTV) URL'),
+                                  border: const OutlineInputBorder(),
                                 ),
                                 keyboardType: TextInputType.url,
                                 textInputAction: TextInputAction.done,
@@ -950,8 +953,7 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                               // all — server/username/password are the only fields this
                               // screen has, unlike iptv-manager's subscription tracker.
                               Text(
-                                'Paste the message your provider sent you — we\'ll pull out '
-                                'the server, username, and password.',
+                                tr('Paste the message your provider sent you — we\'ll pull out the server, username, and password.'),
                                 style: Theme.of(context).textTheme.bodySmall,
                               ),
                               const SizedBox(height: 8),
@@ -960,12 +962,12 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                                 focusNode: _smartPasteFocus,
                                 maxLines: 6,
                                 minLines: 3,
-                                decoration: const InputDecoration(
-                                  labelText: 'Paste provider message',
+                                decoration: InputDecoration(
+                                  labelText: tr('Paste provider message'),
                                   hintText:
                                       'username=...\npassword=...\nhttp://server.example.com/get.php?...',
                                   alignLabelWithHint: true,
-                                  border: OutlineInputBorder(),
+                                  border: const OutlineInputBorder(),
                                 ),
                                 // A paste (the normal way this field gets filled, via the
                                 // Fire Stick's QR-code-to-phone-keyboard relay) inserts the
@@ -981,7 +983,7 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                               FilledButton.icon(
                                 focusNode: _parseButtonFocus,
                                 icon: const Icon(Icons.auto_fix_high),
-                                label: const Text('Parse'),
+                                label: Text(tr('Parse')),
                                 onPressed: _handleSmartParse,
                                 onFocusChange: (f) {
                                   if (f) _ensureVisible(context);
@@ -992,7 +994,7 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                               // password controllers (and fields, below) the Xtream tab
                               // has — Smart Add is just a different way to fill them in,
                               // not a different destination for the data.
-                              Text('Confirm the server',
+                              Text(tr('Confirm the server'),
                                   style:
                                       Theme.of(context).textTheme.titleSmall),
                               const SizedBox(height: 4),
@@ -1000,7 +1002,7 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                                 Padding(
                                   padding: const EdgeInsets.only(bottom: 8),
                                   child: Text(
-                                    'No server URL found in that text — enter it below.',
+                                    tr('No server URL found in that text — enter it below.'),
                                     style: TextStyle(
                                         color: Theme.of(context)
                                             .colorScheme
@@ -1040,10 +1042,10 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                               TextField(
                                 controller: _xtreamServerController,
                                 focusNode: _serverFocus,
-                                decoration: const InputDecoration(
+                                decoration: InputDecoration(
                                   labelText:
-                                      'Server URL (e.g. http://host:port)',
-                                  border: OutlineInputBorder(),
+                                      tr('Server URL (e.g. http://host:port)'),
+                                  border: const OutlineInputBorder(),
                                 ),
                                 keyboardType: TextInputType.url,
                                 textInputAction: TextInputAction.next,
@@ -1054,9 +1056,9 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                               TextField(
                                 controller: _xtreamUsernameController,
                                 focusNode: _usernameFocus,
-                                decoration: const InputDecoration(
-                                  labelText: 'Username',
-                                  border: OutlineInputBorder(),
+                                decoration: InputDecoration(
+                                  labelText: tr('Username'),
+                                  border: const OutlineInputBorder(),
                                 ),
                                 textInputAction: TextInputAction.next,
                                 onSubmitted: (_) =>
@@ -1069,9 +1071,9 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                                 // Shown in plain text on purpose: provider
                                 // passwords are long and random, and typing
                                 // them blind with a remote is error-prone.
-                                decoration: const InputDecoration(
-                                  labelText: 'Password',
-                                  border: OutlineInputBorder(),
+                                decoration: InputDecoration(
+                                  labelText: tr('Password'),
+                                  border: const OutlineInputBorder(),
                                 ),
                                 textInputAction: TextInputAction.next,
                                 onSubmitted: (_) => _epgFocus.requestFocus(),
@@ -1080,10 +1082,10 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                               TextField(
                                 controller: _epgController,
                                 focusNode: _epgFocus,
-                                decoration: const InputDecoration(
+                                decoration: InputDecoration(
                                   labelText:
-                                      'Custom EPG (XMLTV) URL — optional',
-                                  border: OutlineInputBorder(),
+                                      tr('Custom EPG (XMLTV) URL — optional'),
+                                  border: const OutlineInputBorder(),
                                 ),
                                 keyboardType: TextInputType.url,
                                 textInputAction: TextInputAction.done,
@@ -1092,16 +1094,13 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Leave blank to use the panel\'s own xmltv.php. Set this '
-                                'if your provider\'s EPG is empty or unreliable (e.g. a '
-                                'third-party feed like EPGgenius) — it only fills in a '
-                                'channel if that feed\'s ids match this panel\'s.',
+                                tr('Leave blank to use the panel\'s own xmltv.php. Set this if your provider\'s EPG is empty or unreliable (e.g. a third-party feed like EPGgenius) — it only fills in a channel if that feed\'s ids match this panel\'s.'),
                                 style: Theme.of(context).textTheme.bodySmall,
                               ),
                               const SizedBox(height: 8),
                               TextButton.icon(
                                 icon: const Icon(Icons.arrow_back),
-                                label: const Text('Paste different text'),
+                                label: Text(tr('Paste different text')),
                                 onPressed: _resetSmartAdd,
                                 onFocusChange: (f) {
                                   if (f) _ensureVisible(context);
@@ -1111,10 +1110,10 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                               TextField(
                                 controller: _xtreamServerController,
                                 focusNode: _serverFocus,
-                                decoration: const InputDecoration(
+                                decoration: InputDecoration(
                                   labelText:
-                                      'Server URL (e.g. http://host:port)',
-                                  border: OutlineInputBorder(),
+                                      tr('Server URL (e.g. http://host:port)'),
+                                  border: const OutlineInputBorder(),
                                 ),
                                 keyboardType: TextInputType.url,
                                 textInputAction: TextInputAction.next,
@@ -1125,9 +1124,9 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                               TextField(
                                 controller: _xtreamUsernameController,
                                 focusNode: _usernameFocus,
-                                decoration: const InputDecoration(
-                                  labelText: 'Username',
-                                  border: OutlineInputBorder(),
+                                decoration: InputDecoration(
+                                  labelText: tr('Username'),
+                                  border: const OutlineInputBorder(),
                                 ),
                                 textInputAction: TextInputAction.next,
                                 onSubmitted: (_) =>
@@ -1140,9 +1139,9 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                                 // Shown in plain text on purpose: provider
                                 // passwords are long and random, and typing
                                 // them blind with a remote is error-prone.
-                                decoration: const InputDecoration(
-                                  labelText: 'Password',
-                                  border: OutlineInputBorder(),
+                                decoration: InputDecoration(
+                                  labelText: tr('Password'),
+                                  border: const OutlineInputBorder(),
                                 ),
                                 textInputAction: TextInputAction.next,
                                 onSubmitted: (_) => _epgFocus.requestFocus(),
@@ -1151,10 +1150,10 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                               TextField(
                                 controller: _epgController,
                                 focusNode: _epgFocus,
-                                decoration: const InputDecoration(
+                                decoration: InputDecoration(
                                   labelText:
-                                      'Custom EPG (XMLTV) URL — optional',
-                                  border: OutlineInputBorder(),
+                                      tr('Custom EPG (XMLTV) URL — optional'),
+                                  border: const OutlineInputBorder(),
                                 ),
                                 keyboardType: TextInputType.url,
                                 textInputAction: TextInputAction.done,
@@ -1163,10 +1162,7 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Leave blank to use the panel\'s own xmltv.php. Set this '
-                                'if your provider\'s EPG is empty or unreliable (e.g. a '
-                                'third-party feed like EPGgenius) — it only fills in a '
-                                'channel if that feed\'s ids match this panel\'s.',
+                                tr('Leave blank to use the panel\'s own xmltv.php. Set this if your provider\'s EPG is empty or unreliable (e.g. a third-party feed like EPGgenius) — it only fills in a channel if that feed\'s ids match this panel\'s.'),
                                 style: Theme.of(context).textTheme.bodySmall,
                               ),
                             ],
@@ -1190,7 +1186,7 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            const SectionLabel('Status'),
+                            SectionLabel(tr('Status')),
                             const SizedBox(height: 8),
                             // A colored accent bar + bold text when something's
                             // actually happening (connecting or failed) instead
@@ -1234,7 +1230,8 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                                       const SizedBox(width: 12),
                                       Expanded(
                                         child: Text(
-                                          playlist.loadingPhase ?? 'Loading...',
+                                          playlist.loadingPhase ??
+                                              tr('Loading...'),
                                           style: const TextStyle(
                                               fontWeight: FontWeight.bold),
                                         ),
@@ -1252,7 +1249,9 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                                     // shown instead of a generic "failed" message
                                     // so a typo can actually be told apart from a
                                     // genuinely bad server without guessing.
-                                    'Failed to add playlist: ${error.replaceFirst('Exception: ', '')}',
+                                    tr('Failed to add playlist: {p}', {
+                                      'p': error.replaceFirst('Exception: ', '')
+                                    }),
                                     style: TextStyle(
                                         color: accent,
                                         fontWeight: FontWeight.bold),
@@ -1286,13 +1285,18 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                                   ? null
                                   : _save,
                               child: Text(_editingProfile != null
-                                  ? 'Save Changes'
-                                  : 'Add Playlist'),
+                                  ? tr('Save Changes')
+                                  : tr('Add Playlist')),
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Fill in the form on the left, then press '
-                              '${_editingProfile != null ? 'Save Changes' : 'Add Playlist'} above.',
+                              tr(
+                                  'Fill in the form on the left, then press {p} above.',
+                                  {
+                                    'p': _editingProfile != null
+                                        ? tr('Save Changes')
+                                        : tr('Add Playlist')
+                                  }),
                               textAlign: TextAlign.center,
                               style: Theme.of(context).textTheme.bodySmall,
                             ),

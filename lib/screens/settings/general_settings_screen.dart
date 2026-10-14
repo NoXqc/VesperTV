@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../services/app_preferences.dart';
 import '../../services/playback_service.dart';
 import '../../services/storage_service.dart';
 import '../../utils/tv_theme.dart';
@@ -11,6 +12,7 @@ import '../../widgets/section_label.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_menu_tile.dart';
 import '../../widgets/tv_switch_list_tile.dart';
+import '../../l10n/l10n.dart';
 
 /// Small behaviour switches that don't belong to one feature's own screen —
 /// a home for future ones too (planned candidates: start-on tab, default
@@ -43,12 +45,12 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Clear'),
+            child: Text(tr('Clear')),
           ),
           TextButton(
             autofocus: true,
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
+            child: Text(tr('Cancel')),
           ),
         ],
       ),
@@ -57,8 +59,8 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
   }
 
   Future<void> _clearSearchAndChannelHistory() async {
-    if (!await _confirm('Clear search & channel history?',
-        'Removes your recent searches and the History list of live channels.')) {
+    if (!await _confirm(tr('Clear search & channel history?'),
+        tr('Removes your recent searches and the History list of live channels.'))) {
       return;
     }
     if (!mounted) return;
@@ -67,21 +69,66 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
     await playback.clearRecentlyPlayed(live: true);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Search and channel history cleared.')));
+        SnackBar(content: Text(tr('Search and channel history cleared.'))));
   }
 
   Future<void> _clearMoviesAndShowsHistory() async {
-    if (!await _confirm(
-        'Clear Movies & TV Shows history?',
-        'Removes Continue Watching and the saved progress of every movie and '
-            'episode.')) {
+    if (!await _confirm(tr('Clear Movies & TV Shows history?'),
+        tr('Removes Continue Watching and the saved progress of every movie and episode.'))) {
       return;
     }
     if (!mounted) return;
     await context.read<PlaybackService>().clearRecentlyPlayed(live: false);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Movies & TV Shows history cleared.')));
+        SnackBar(content: Text(tr('Movies & TV Shows history cleared.'))));
+  }
+
+  /// Language settings in the picker, in order. A new language = one entry
+  /// here (native name, never translated) plus its dictionary in l10n.
+  static const _languages = [
+    ('auto', ''),
+    ('en', 'English'),
+    ('fr', 'Français'),
+  ];
+
+  String _languageLabel(String setting) => setting == 'auto'
+      ? tr('Automatic')
+      : _languages.firstWhere((l) => l.$1 == setting).$2;
+
+  /// One row + a short pop-up list (current one focused) instead of a
+  /// button per language, so the row stays small as languages are added.
+  Future<void> _pickLanguage() async {
+    final picked = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: Text(tr('Language')),
+        children: [
+          for (final (code, _) in _languages)
+            TvMenuTile(
+              autofocus: code == L10n.setting,
+              title: _languageLabel(code),
+              subtitle:
+                  code == 'auto' ? tr('Follows the device language') : null,
+              trailing: code == L10n.setting
+                  ? Icon(Icons.check,
+                      color: Theme.of(dialogContext).colorScheme.primary)
+                  : null,
+              onTap: () => Navigator.of(dialogContext).pop(code),
+            ),
+        ],
+      ),
+    );
+    if (picked != null) await _setLanguage(picked);
+  }
+
+  /// Back to home first: main.dart remounts home on a language change, but
+  /// routes already pushed above it would keep their old-language strings.
+  Future<void> _setLanguage(String value) async {
+    if (value == L10n.setting || !mounted) return;
+    final prefs = context.read<AppPreferences>();
+    Navigator.of(context).popUntil((route) => route.isFirst);
+    await prefs.setLanguage(value);
   }
 
   @override
@@ -89,18 +136,28 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
     return withTvThemeIfNeeded(
         context,
         (context) => SettingsScaffold(
-              title: 'General',
+              title: tr('General'),
               body: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  SectionLabel(tr('Language')),
+                  const SizedBox(height: 4),
+                  TvMenuTile(
+                    icon: Icons.translate,
+                    title: _languageLabel(L10n.setting),
+                    subtitle: L10n.setting == 'auto'
+                        ? tr('Follows the device language')
+                        : null,
+                    onTap: _pickLanguage,
+                  ),
+                  const Divider(height: 32),
                   if (!Platform.isWindows) ...[
-                    const SectionLabel('Startup'),
+                    SectionLabel(tr('Startup')),
                     const SizedBox(height: 4),
                     TvSwitchListTile(
-                      title: const Text('Resume last channel at startup'),
-                      subtitle: const Text(
-                          'Opens the last live channel full screen after the '
-                          'splash. Off: a "Hold > to resume" reminder instead.'),
+                      title: Text(tr('Resume last channel at startup')),
+                      subtitle: Text(tr(
+                          'Opens the last live channel full screen after the splash. Off: a "Hold > to resume" reminder instead.')),
                       value: _resumeAtStartup,
                       onChanged: (v) {
                         setState(() => _resumeAtStartup = v);
@@ -108,13 +165,12 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                       },
                     ),
                     const Divider(height: 32),
-                    const SectionLabel('Multiview'),
+                    SectionLabel(tr('Multiview')),
                     const SizedBox(height: 4),
                     TvSwitchListTile(
-                      title: const Text('Show the Multiview tip'),
-                      subtitle: const Text(
-                          'The connections reminder shown when opening '
-                          'Multiview.'),
+                      title: Text(tr('Show the Multiview tip')),
+                      subtitle: Text(tr(
+                          'The connections reminder shown when opening Multiview.')),
                       value: _showMultiviewTip,
                       onChanged: (v) {
                         setState(() => _showMultiviewTip = v);
@@ -123,16 +179,15 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                     ),
                     const Divider(height: 32),
                   ],
-                  const SectionLabel('Resume reminder'),
+                  SectionLabel(tr('Resume reminder')),
                   const SizedBox(height: 4),
                   TvSwitchListTile(
-                    title: const Text('Show the "Hold > to resume" reminder'),
+                    title: Text(tr('Show the "Hold > to resume" reminder')),
                     subtitle: Text(Platform.isWindows
-                        ? 'The pill at the bottom while a channel plays in the '
-                            'background. Off: hidden.'
-                        : 'The pill at the bottom while a channel plays in the '
-                            'background. Off: hidden — holding Right still '
-                            'resumes.'),
+                        ? tr(
+                            'The pill at the bottom while a channel plays in the background. Off: hidden.')
+                        : tr(
+                            'The pill at the bottom while a channel plays in the background. Off: hidden — holding Right still resumes.')),
                     value: _showResumePill,
                     onChanged: (v) {
                       setState(() => _showResumePill = v);
@@ -141,18 +196,19 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                     },
                   ),
                   const Divider(height: 32),
-                  const SectionLabel('History'),
+                  SectionLabel(tr('History')),
                   const SizedBox(height: 4),
                   TvMenuTile(
                     icon: Icons.manage_search,
-                    title: 'Clear search & channel history',
-                    subtitle: 'Recent searches and the live channel History',
+                    title: tr('Clear search & channel history'),
+                    subtitle:
+                        tr('Recent searches and the live channel History'),
                     onTap: _clearSearchAndChannelHistory,
                   ),
                   TvMenuTile(
                     icon: Icons.movie_outlined,
-                    title: 'Clear Movies & TV Shows history',
-                    subtitle: 'Continue Watching and saved progress',
+                    title: tr('Clear Movies & TV Shows history'),
+                    subtitle: tr('Continue Watching and saved progress'),
                     onTap: _clearMoviesAndShowsHistory,
                   ),
                 ],

@@ -202,6 +202,10 @@ class AppConstants {
   /// there's no fully reliable automatic signal for "this is a TV".
   static const String keyLayoutMode = 'nox_layout_mode';
 
+  /// UI language for the whole device (not per viewer): 'auto' follows the
+  /// system language, or 'en' / 'fr'. See lib/l10n/l10n.dart.
+  static const String keyLanguage = 'vesper_language';
+
   /// Live TV presentation: 'live' (single-channel now/next) or 'timeline'
   /// (cable-guide grid, all visible channels at once).
   static const String keyGuideViewMode = 'nox_guide_view_mode';

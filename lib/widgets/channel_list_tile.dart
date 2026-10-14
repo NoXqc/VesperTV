@@ -6,6 +6,7 @@ import '../models/channel.dart';
 import '../services/playlist_manager.dart';
 import 'epg_guide.dart';
 import 'hold_to_activate.dart';
+import '../l10n/l10n.dart';
 
 /// One row in the channel/program list: logo, name, current EPG program,
 /// and a favorite (pin) toggle.
@@ -30,8 +31,9 @@ class ChannelListTile extends StatelessWidget {
   void _toggleFavorite(BuildContext context) {
     context.read<PlaylistManager>().toggleFavorite(channel);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(
-          channel.isFavorite ? 'Added to Favorites' : 'Removed from Favorites'),
+      content: Text(channel.isFavorite
+          ? tr('Added to Favorites')
+          : tr('Removed from Favorites')),
       duration: const Duration(seconds: 2),
     ));
   }
@@ -78,7 +80,7 @@ class ChannelListTile extends StatelessWidget {
               channel.isFavorite ? Icons.star : Icons.star_border,
               color: channel.isFavorite ? Colors.amber : null,
             ),
-            tooltip: channel.isFavorite ? 'Unpin' : 'Pin as favorite',
+            tooltip: channel.isFavorite ? tr('Unpin') : tr('Pin as favorite'),
             onPressed: () => _toggleFavorite(context),
           ),
         ),

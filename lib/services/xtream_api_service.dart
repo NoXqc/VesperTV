@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import '../models/channel.dart';
 import '../models/xtream_category.dart';
 import '../models/xtream_series.dart';
+import '../l10n/l10n.dart';
 
 /// Talks to a real Xtream Codes ("XC API") panel via `player_api.php`.
 ///
@@ -72,8 +73,9 @@ class XtreamApiService {
         .get(_apiUri(action, extra))
         .timeout(const Duration(seconds: 30));
     if (response.statusCode != 200) {
-      throw Exception(
-          'Xtream request to $server failed: $action (HTTP ${response.statusCode})');
+      throw Exception(tr(
+          'Xtream request to {server} failed: {action} (HTTP {code})',
+          {'server': server, 'action': action, 'code': response.statusCode}));
     }
     // Off the UI thread — this is the shared decode path for every single
     // API call, including the per-category VOD/series fetches that fire
@@ -98,15 +100,16 @@ class XtreamApiService {
   Future<void> authenticate() async {
     final decoded = await _getJson('');
     if (decoded is! Map<String, dynamic>) {
-      throw Exception('Unexpected Xtream API response');
+      throw Exception(tr('Unexpected Xtream API response'));
     }
     final userInfo = decoded['user_info'] as Map<String, dynamic>?;
     if (userInfo == null || userInfo['auth'] != 1) {
-      throw Exception('Invalid Xtream username/password');
+      throw Exception(tr('Invalid Xtream username/password'));
     }
     final status = userInfo['status'] as String?;
     if (status != 'Active') {
-      throw Exception('Xtream account is not active (status: $status)');
+      throw Exception(tr('Xtream account is not active (status: {status})',
+          {'status': status}));
     }
     final rawMaxConnections =
         int.tryParse(userInfo['max_connections']?.toString() ?? '');
@@ -324,8 +327,7 @@ List<Channel> _buildLiveChannels(_LiveStreamsArgs args) {
       // Plain TS is one continuous connection with no periodic refetch to
       // fail in the first place, and a dropped TS connection is treated
       // as a fresh stream open by the relay — which *does* get retried.
-      url:
-          '${args.server}/live/${args.username}/${args.password}/$streamId.ts',
+      url: '${args.server}/live/${args.username}/${args.password}/$streamId.ts',
       logoUrl: item['stream_icon']?.toString(),
     );
   }).toList();

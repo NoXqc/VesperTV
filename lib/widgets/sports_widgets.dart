@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/sports.dart';
 import 'hold_to_activate.dart';
 import 'tv_menu_tile.dart';
+import '../l10n/l10n.dart';
 
 // Pieces shared by the Sports screen and its Standings / My Teams screens.
 
@@ -35,15 +36,15 @@ Future<bool> showSportsFollowDialog(BuildContext context,
               TvMenuTile(
                 autofocus: true,
                 icon: followed ? Icons.star_border : Icons.star,
-                title: followed ? 'Unfollow' : 'Follow',
+                title: followed ? tr('Unfollow') : tr('Follow'),
                 subtitle: followed
-                    ? 'Remove from My Teams'
-                    : 'Add to My Teams — their games show first in Sports',
+                    ? tr('Remove from My Teams')
+                    : tr('Add to My Teams — their games show first in Sports'),
                 onTap: () => Navigator.of(context).pop(true),
               ),
               TvMenuTile(
                 icon: Icons.close,
-                title: 'Cancel',
+                title: tr('Cancel'),
                 onTap: () => Navigator.of(context).pop(false),
               ),
             ],

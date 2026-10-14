@@ -18,6 +18,7 @@ import 'add_playlist_screen.dart';
 import 'group_management_screen.dart';
 import 'hidden_channels_screen.dart';
 import 'playlist_priority_screen.dart';
+import '../../l10n/l10n.dart';
 
 /// Replaces the old single-playlist `ContentManagerScreen` — a
 /// MyTVOnline3-style list of every playlist (unlimited, not capped),
@@ -44,7 +45,7 @@ class PlaylistManagerScreen extends StatelessWidget {
     return withTvThemeIfNeeded(
         context,
         (context) => SettingsScaffold(
-              title: 'Playlist Manager',
+              title: tr('Playlist Manager'),
               body: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
@@ -53,7 +54,7 @@ class PlaylistManagerScreen extends StatelessWidget {
                     children: [
                       TvMenuTile(
                         icon: Icons.add,
-                        title: 'Add Playlist',
+                        title: tr('Add Playlist'),
                         onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
                                 builder: (_) => const AddPlaylistScreen())),
@@ -62,9 +63,9 @@ class PlaylistManagerScreen extends StatelessWidget {
                         const Divider(height: 1),
                         TvMenuTile(
                           icon: Icons.low_priority,
-                          title: 'Playlist Priority',
-                          subtitle:
-                              'Which playlist\'s groups show first, per tab',
+                          title: tr('Playlist Priority'),
+                          subtitle: tr(
+                              'Which playlist\'s groups show first, per tab'),
                           onTap: () => Navigator.of(context).push(
                               MaterialPageRoute(
                                   builder: (_) =>
@@ -82,7 +83,7 @@ class PlaylistManagerScreen extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(top: 16),
                       child: Text(
-                        'No playlists yet — tap "Add Playlist" above to get started.',
+                        tr('No playlists yet — tap "Add Playlist" above to get started.'),
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),
@@ -102,7 +103,7 @@ class _PlaylistRow extends StatelessWidget {
     return TvMenuTile(
       icon: profile.isXtream ? Icons.dns : Icons.link,
       title: profile.name,
-      subtitle: profile.isXtream ? 'Xtream Codes' : 'M3U',
+      subtitle: profile.isXtream ? tr('Xtream Codes') : 'M3U',
       trailing: Icon(
         profile.enabled ? Icons.check_circle : Icons.pause_circle_outline,
         color: profile.enabled ? Colors.greenAccent : Colors.white38,
@@ -131,11 +132,10 @@ class _PlaylistDetailScreenState extends State<_PlaylistDetailScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete playlist?'),
+        title: Text(tr('Delete playlist?')),
         content: Text(
-          'This removes "${profile.name}"\'s login and cached catalog from this '
-          'device. Its favorited channels/movies stay in your shared Favorites '
-          'list, but will no longer play unless you add this playlist back.',
+          tr('This removes "{name}"\'s login and cached catalog from this device. Its favorited channels/movies stay in your shared Favorites list, but will no longer play unless you add this playlist back.',
+              {'name': profile.name}),
         ),
         // Plain TextButton/FilledButton left which one has D-pad focus
         // ambiguous — FilledButton's permanent solid fill looks the same
@@ -143,12 +143,12 @@ class _PlaylistDetailScreenState extends State<_PlaylistDetailScreen> {
         // established fix elsewhere for exactly this.
         actions: [
           ModeButton(
-            label: 'Cancel',
+            label: tr('Cancel'),
             selected: false,
             onTap: () => Navigator.of(context).pop(false),
           ),
           ModeButton(
-            label: 'Delete',
+            label: tr('Delete'),
             selected: false,
             onTap: () => Navigator.of(context).pop(true),
           ),
@@ -166,22 +166,21 @@ class _PlaylistDetailScreenState extends State<_PlaylistDetailScreen> {
     final entered = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Add backup server'),
+        title: Text(tr('Add backup server')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'The full address, exactly like the main one — for example '
-              'http://backup.example.com:8080',
+            Text(
+              tr('The full address, exactly like the main one — for example http://backup.example.com:8080'),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: controller,
               autofocus: true,
               keyboardType: TextInputType.url,
-              decoration: const InputDecoration(
-                labelText: 'Server address',
+              decoration: InputDecoration(
+                labelText: tr('Server address'),
                 hintText: 'http://',
               ),
               onSubmitted: (value) => Navigator.of(context).pop(value),
@@ -191,12 +190,12 @@ class _PlaylistDetailScreenState extends State<_PlaylistDetailScreen> {
         // Same ModeButton reasoning as _confirmDelete above.
         actions: [
           ModeButton(
-            label: 'Cancel',
+            label: tr('Cancel'),
             selected: false,
             onTap: () => Navigator.of(context).pop(),
           ),
           ModeButton(
-            label: 'Add',
+            label: tr('Add'),
             selected: false,
             onTap: () => Navigator.of(context).pop(controller.text),
           ),
@@ -248,7 +247,7 @@ class _PlaylistDetailScreenState extends State<_PlaylistDetailScreen> {
               actions: [
                 TvAppBarButton.icon(
                   icon: Icons.edit_outlined,
-                  tooltip: 'Edit login',
+                  tooltip: tr('Edit login'),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                         builder: (_) =>
@@ -257,7 +256,7 @@ class _PlaylistDetailScreenState extends State<_PlaylistDetailScreen> {
                 ),
                 TvAppBarButton.icon(
                   icon: Icons.delete_outline,
-                  tooltip: 'Delete playlist',
+                  tooltip: tr('Delete playlist'),
                   onTap: () => _confirmDelete(playlist, profile),
                 ),
               ],
@@ -279,16 +278,15 @@ class _PlaylistDetailScreenState extends State<_PlaylistDetailScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SectionLabel('This Playlist'),
+                          SectionLabel(tr('This Playlist')),
                           const SizedBox(height: 8),
                           SettingsPanel(
                             padding: EdgeInsets.zero,
                             children: [
                               TvSwitchListTile(
-                                title: const Text('Playlist enabled'),
-                                subtitle: const Text(
-                                  'Frees up this account\'s stream slot for another device — '
-                                  'stops playback here immediately, keeps everything else intact.',
+                                title: Text(tr('Playlist enabled')),
+                                subtitle: Text(
+                                  tr('Frees up this account\'s stream slot for another device — stops playback here immediately, keeps everything else intact.'),
                                 ),
                                 value: profile.enabled,
                                 onChanged: (value) {
@@ -302,19 +300,19 @@ class _PlaylistDetailScreenState extends State<_PlaylistDetailScreen> {
                             ],
                           ),
                           const SizedBox(height: 20),
-                          const SectionLabel('Login Details'),
+                          SectionLabel(tr('Login Details')),
                           const SizedBox(height: 8),
                           SettingsPanel(
                             children: [
                               if (profile.isXtream) ...[
                                 _DetailRow(
-                                    label: 'Server',
+                                    label: tr('Server'),
                                     value: profile.xtreamServer ?? ''),
                                 _DetailRow(
-                                    label: 'Username',
+                                    label: tr('Username'),
                                     value: profile.xtreamUsername ?? ''),
                                 _DetailRow(
-                                    label: 'Password',
+                                    label: tr('Password'),
                                     value: '•' *
                                         (profile.xtreamPassword?.length ?? 0)),
                                 // Only ever shown once a connect has
@@ -327,7 +325,7 @@ class _PlaylistDetailScreenState extends State<_PlaylistDetailScreen> {
                                 // a fabricated placeholder.
                                 if (profile.expiresAt != null)
                                   _DetailRow(
-                                    label: 'Expires',
+                                    label: tr('Expires'),
                                     value: DateFormat('yyyy-MM-dd')
                                         .format(profile.expiresAt!),
                                     valueColor: profile.expiresAt!
@@ -344,28 +342,24 @@ class _PlaylistDetailScreenState extends State<_PlaylistDetailScreen> {
                                 // bug, especially in Multiview.
                                 if (profile.maxConnections != null)
                                   _DetailRow(
-                                    label: 'Max connections',
+                                    label: tr('Max connections'),
                                     value: '${profile.maxConnections}',
                                   ),
                               ] else
                                 _DetailRow(
-                                    label: 'M3U URL',
+                                    label: tr('M3U URL'),
                                     value: profile.m3uUrl ?? ''),
                             ],
                           ),
                           if (profile.isXtream) ...[
                             const SizedBox(height: 20),
-                            const SectionLabel('Backup Servers'),
+                            SectionLabel(tr('Backup Servers')),
                             const SizedBox(height: 8),
                             SettingsPanel(
                               children: [
                                 if (profile.backupServers.isEmpty)
                                   Text(
-                                    'None yet. If your provider gave you more '
-                                    'than one server address for this same '
-                                    'account, add them here and this playlist '
-                                    'will try them in order whenever the main '
-                                    'one can\'t be reached.',
+                                    tr('None yet. If your provider gave you more than one server address for this same account, add them here and this playlist will try them in order whenever the main one can\'t be reached.'),
                                     style:
                                         Theme.of(context).textTheme.bodySmall,
                                   )
@@ -386,17 +380,14 @@ class _PlaylistDetailScreenState extends State<_PlaylistDetailScreen> {
                                 const SizedBox(height: 16),
                                 OutlinedButton.icon(
                                   icon: const Icon(Icons.dns_outlined),
-                                  label: const Text('Add backup server'),
+                                  label: Text(tr('Add backup server')),
                                   onPressed: () =>
                                       _promptForBackupServer(context, playlist),
                                 ),
                                 Padding(
                                   padding: const EdgeInsets.only(top: 4),
                                   child: Text(
-                                    'Same username and password as above — only '
-                                    'the address differs. Tried in order, a few '
-                                    'seconds apart, and whichever answers is '
-                                    'used first next time.',
+                                    tr('Same username and password as above — only the address differs. Tried in order, a few seconds apart, and whichever answers is used first next time.'),
                                     style:
                                         Theme.of(context).textTheme.bodySmall,
                                   ),
@@ -412,26 +403,38 @@ class _PlaylistDetailScreenState extends State<_PlaylistDetailScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SectionLabel('Content Overview'),
+                          SectionLabel(tr('Content Overview')),
                           const SizedBox(height: 8),
                           SettingsPanel(
                             children: [
                               if (summary == null)
-                                const Text('Not loaded yet.')
+                                Text(tr('Not loaded yet.'))
                               else
                                 Text(
                                   profile.isXtream
-                                      ? '${summary['tv']} live channels · '
-                                          '${summary['vod']} movie categories · '
-                                          '${summary['series']} TV show categories'
-                                      : '${summary['tv']} live · ${summary['vod']} movies · '
-                                          '${summary['series']} TV shows',
+                                      ? tr(
+                                          '{p} live channels · {p2} movie categories · {p3} TV show categories',
+                                          {
+                                              'p': summary['tv'],
+                                              'p2': summary['vod'],
+                                              'p3': summary['series']
+                                            })
+                                      : tr(
+                                          '{p} live · {p2} movies · {p3} TV shows',
+                                          {
+                                              'p': summary['tv'],
+                                              'p2': summary['vod'],
+                                              'p3': summary['series']
+                                            }),
                                 ),
                               if (lastLoaded != null)
                                 Padding(
                                   padding: const EdgeInsets.only(top: 4),
                                   child: Text(
-                                    'Last updated: ${DateFormat('yyyy-MM-dd HH:mm').format(lastLoaded)}',
+                                    tr('Last updated: {p}', {
+                                      'p': DateFormat('yyyy-MM-dd HH:mm')
+                                          .format(lastLoaded)
+                                    }),
                                     style:
                                         Theme.of(context).textTheme.bodySmall,
                                   ),
@@ -452,14 +455,17 @@ class _PlaylistDetailScreenState extends State<_PlaylistDetailScreen> {
                               Padding(
                                 padding: const EdgeInsets.only(top: 4),
                                 child: Text(
-                                  'Added: ${DateFormat('yyyy-MM-dd HH:mm').format(profile.createdAt)}',
+                                  tr('Added: {p}', {
+                                    'p': DateFormat('yyyy-MM-dd HH:mm')
+                                        .format(profile.createdAt)
+                                  }),
                                   style: Theme.of(context).textTheme.bodySmall,
                                 ),
                               ),
                               const SizedBox(height: 16),
                               OutlinedButton.icon(
                                 icon: const Icon(Icons.visibility_outlined),
-                                label: const Text('Group Management'),
+                                label: Text(tr('Group Management')),
                                 onPressed: () => Navigator.of(context).push(
                                   MaterialPageRoute(
                                       builder: (_) => GroupManagementScreen(
@@ -471,7 +477,7 @@ class _PlaylistDetailScreenState extends State<_PlaylistDetailScreen> {
                                 child: OutlinedButton.icon(
                                   icon:
                                       const Icon(Icons.visibility_off_outlined),
-                                  label: const Text('Hidden Channels'),
+                                  label: Text(tr('Hidden Channels')),
                                   onPressed: () => Navigator.of(context).push(
                                     MaterialPageRoute(
                                         builder: (_) => HiddenChannelsScreen(
@@ -482,8 +488,7 @@ class _PlaylistDetailScreenState extends State<_PlaylistDetailScreen> {
                               Padding(
                                 padding: const EdgeInsets.only(top: 4),
                                 child: Text(
-                                  'Hide a group here and it\'s excluded from the background '
-                                  'download too, not just the browse tabs.',
+                                  tr('Hide a group here and it\'s excluded from the background download too, not just the browse tabs.'),
                                   style: Theme.of(context).textTheme.bodySmall,
                                 ),
                               ),
@@ -491,21 +496,22 @@ class _PlaylistDetailScreenState extends State<_PlaylistDetailScreen> {
                           ),
                           if (profile.isXtream) ...[
                             const SizedBox(height: 20),
-                            const SectionLabel('Full Catalog Sync'),
+                            SectionLabel(tr('Full Catalog Sync')),
                             const SizedBox(height: 8),
                             SettingsPanel(
                               children: [
                                 DropdownButtonFormField<int>(
                                   initialValue: profile.syncFrequencyDays,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Update content every',
-                                    border: OutlineInputBorder(),
+                                  decoration: InputDecoration(
+                                    labelText: tr('Update content every'),
+                                    border: const OutlineInputBorder(),
                                   ),
                                   items: AppConstants.syncFrequencyDaysOptions
                                       .map((d) => DropdownMenuItem(
                                           value: d,
-                                          child: Text(
-                                              d == 1 ? '1 day' : '$d days')))
+                                          child: Text(d == 1
+                                              ? tr('1 day')
+                                              : tr('{d} days', {'d': d}))))
                                       .toList(),
                                   onChanged: (value) {
                                     if (value != null) {
@@ -517,8 +523,7 @@ class _PlaylistDetailScreenState extends State<_PlaylistDetailScreen> {
                                 Padding(
                                   padding: const EdgeInsets.only(top: 4),
                                   child: Text(
-                                    'A stale sync prompts "Update content now?" on launch '
-                                    'instead of running automatically.',
+                                    tr('A stale sync prompts "Update content now?" on launch instead of running automatically.'),
                                     style:
                                         Theme.of(context).textTheme.bodySmall,
                                   ),
@@ -569,7 +574,7 @@ class _BackupServerRow extends StatelessWidget {
                   Icon(Icons.check_circle,
                       size: 16, color: Theme.of(context).colorScheme.primary),
                   const SizedBox(width: 4),
-                  Text('in use',
+                  Text(tr('in use'),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context).colorScheme.primary)),
                 ],
@@ -578,7 +583,7 @@ class _BackupServerRow extends StatelessWidget {
           ),
           TvAppBarButton.icon(
             icon: Icons.close,
-            tooltip: 'Remove $server',
+            tooltip: tr('Remove {server}', {'server': server}),
             onTap: onRemove,
           ),
         ],

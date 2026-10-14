@@ -74,3 +74,19 @@ Read before changing guide/Multiview/profiles/palettes/backup-server logic.
   (`vesper_show_resume_pill`, device-wide, default on) → `LiveResumeHint.pillEnabled`; screens hide
   it temporarily with `LiveResumeHint.hideWhileMounted()` (Sports, the phone-pairing panel). Both
   pills check `LiveResumeHint.pillAllowed`. Hold-Right still resumes when hidden.
+- **Languages (English + French, 2026-10-14, 1.0.4+227):** `lib/l10n/l10n.dart` — English text in
+  the code is the key: `tr('Settings')`, placeholders `tr('Season {season}', {'season': n})`,
+  `trPlural(n, one, other)` (French treats 0 as singular), `trSports()` pattern-translates ESPN's
+  English statuses/standing lines ("Final/OT" → "Fin/Prol.", "Top 5th" → "Haut 5e").
+  `lib/l10n/fr.dart` (`kFr`) holds the French; a missing key falls back to English. Not gen-l10n
+  on purpose: many strings live in services/dialogs without a BuildContext. Setting: Settings >
+  General > Language (Automatic / English / Français), device-wide key `vesper_language`, applied in
+  `main()` before `runApp` (splash is translated too). Changing it pops to home, and main.dart keys
+  home on `viewerId|L10n.code` so the whole UI remounts. `Intl.defaultLocale` follows it (dates via
+  `DateFormat.MMMEd()`/`jm()` are locale-aware; French gets 24 h). `flutter_localizations` (needed
+  `intl` ^0.20) translates Flutter's own widgets. **Rules:** wrap every new user-visible string in
+  `tr()` and add its French to `fr.dart` (same placeholders); never `tr()` a string that is also an
+  id in logic (tab ids 'TV'/'Movies'/…, group 'All'/'Favorites', standings column labels, palette
+  labels) — translate those at the display site (`Text(tr(tab))`). Québec French, short forms on
+  narrow TV labels (MAJ, PJ/V/D/DP, NIP). Data from providers/ESPN (channel, team, league names)
+  stays as-is.

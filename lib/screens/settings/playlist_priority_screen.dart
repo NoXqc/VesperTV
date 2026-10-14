@@ -8,6 +8,7 @@ import '../../widgets/mode_button.dart';
 import '../../widgets/section_label.dart';
 import '../../widgets/settings_panel.dart';
 import '../../widgets/settings_scaffold.dart';
+import '../../l10n/l10n.dart';
 
 /// Lets a user with more than one playlist set which one's groups show
 /// first in a given tab — independently per tab. Requested directly: an
@@ -26,8 +27,7 @@ class PlaylistPriorityScreen extends StatefulWidget {
   const PlaylistPriorityScreen({super.key});
 
   @override
-  State<PlaylistPriorityScreen> createState() =>
-      _PlaylistPriorityScreenState();
+  State<PlaylistPriorityScreen> createState() => _PlaylistPriorityScreenState();
 }
 
 class _PlaylistPriorityScreenState extends State<PlaylistPriorityScreen> {
@@ -43,13 +43,12 @@ class _PlaylistPriorityScreenState extends State<PlaylistPriorityScreen> {
     return withTvThemeIfNeeded(
         context,
         (context) => SettingsScaffold(
-              title: 'Playlist Priority',
+              title: tr('Playlist Priority'),
               body: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
                   Text(
-                    'Which playlist\'s groups show first — set independently '
-                    'for each tab below.',
+                    tr('Which playlist\'s groups show first — set independently for each tab below.'),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const SizedBox(height: 16),
@@ -57,7 +56,7 @@ class _PlaylistPriorityScreenState extends State<PlaylistPriorityScreen> {
                     children: [
                       Expanded(
                         child: ModeButton(
-                          label: 'Live TV',
+                          label: tr('Live TV'),
                           selected: _tabCategory == 'tv',
                           onTap: () => setState(() => _tabCategory = 'tv'),
                         ),
@@ -65,7 +64,7 @@ class _PlaylistPriorityScreenState extends State<PlaylistPriorityScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: ModeButton(
-                          label: 'Movies',
+                          label: tr('Movies'),
                           selected: _tabCategory == 'vod',
                           onTap: () => setState(() => _tabCategory = 'vod'),
                         ),
@@ -73,7 +72,7 @@ class _PlaylistPriorityScreenState extends State<PlaylistPriorityScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: ModeButton(
-                          label: 'TV Shows',
+                          label: tr('TV Shows'),
                           selected: _tabCategory == 'series',
                           onTap: () => setState(() => _tabCategory = 'series'),
                         ),
@@ -85,16 +84,15 @@ class _PlaylistPriorityScreenState extends State<PlaylistPriorityScreen> {
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
                       child: Text(
-                        'Add another enabled playlist to set a priority '
-                        'between them.',
+                        tr('Add another enabled playlist to set a priority between them.'),
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     )
                   else ...[
                     SectionLabel(switch (_tabCategory) {
-                      'tv' => 'Live TV order',
-                      'vod' => 'Movies order',
-                      _ => 'TV Shows order',
+                      'tv' => tr('Live TV order'),
+                      'vod' => tr('Movies order'),
+                      _ => tr('TV Shows order'),
                     }),
                     const SizedBox(height: 8),
                     SettingsPanel(
@@ -160,12 +158,12 @@ class _PriorityRow extends StatelessWidget {
         children: [
           IconButton(
             icon: const Icon(Icons.arrow_upward),
-            tooltip: 'Move up',
+            tooltip: tr('Move up'),
             onPressed: canMoveUp ? onMoveUp : null,
           ),
           IconButton(
             icon: const Icon(Icons.arrow_downward),
-            tooltip: 'Move down',
+            tooltip: tr('Move down'),
             onPressed: canMoveDown ? onMoveDown : null,
           ),
         ],

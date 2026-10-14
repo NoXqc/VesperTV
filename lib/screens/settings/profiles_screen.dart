@@ -14,6 +14,7 @@ import '../../widgets/tv_menu_tile.dart';
 import '../../widgets/tv_switch_list_tile.dart';
 import 'group_management_screen.dart';
 import 'hidden_channels_screen.dart';
+import '../../l10n/l10n.dart';
 
 /// Every color swatch a profile's avatar can use — just `colorIndex` into
 /// this fixed list rather than a full color picker, which would be a lot
@@ -104,7 +105,7 @@ class ProfilesScreen extends StatelessWidget {
     return withTvThemeIfNeeded(
       context,
       (context) => SettingsScaffold(
-        title: 'Profiles',
+        title: tr('Profiles'),
         body: ListView(
           children: [
             for (final profile in viewers.profiles)
@@ -112,7 +113,7 @@ class ProfilesScreen extends StatelessWidget {
                   profile: profile, isActive: profile.id == viewers.active.id),
             TvMenuTile(
               leading: const CircleAvatar(child: Icon(Icons.add)),
-              title: 'Add Profile',
+              title: tr('Add Profile'),
               onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const _AddProfileScreen())),
             ),
@@ -136,8 +137,8 @@ class _ProfileTile extends StatelessWidget {
             _profileColors[profile.colorIndex % _profileColors.length],
         child: Text(profile.name.isEmpty ? '?' : profile.name[0].toUpperCase()),
       ),
-      title: profile.name,
-      subtitle: profile.isRestricted ? 'Restricted' : null,
+      title: profile.displayName,
+      subtitle: profile.isRestricted ? tr('Restricted') : null,
       trailing:
           isActive ? const Icon(Icons.check_circle) : const SizedBox.shrink(),
       onTap: () => Navigator.of(context).push(MaterialPageRoute(
@@ -160,15 +161,15 @@ class _ProfileDetailScreenState extends State<_ProfileDetailScreen> {
     final name = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Rename profile'),
+        title: Text(tr('Rename profile')),
         content: TextField(controller: controller, autofocus: true),
         actions: [
           TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel')),
+              child: Text(tr('Cancel'))),
           TextButton(
             onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Save'),
+            child: Text(tr('Save')),
           ),
         ],
       ),
@@ -195,17 +196,16 @@ class _ProfileDetailScreenState extends State<_ProfileDetailScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Delete "${profile.name}"?'),
-        content: const Text(
-            'Their favorites, hidden groups, and watch history are deleted '
-            'too. This can\'t be undone.'),
+        title: Text(tr('Delete "{name}"?', {'name': profile.name})),
+        content: Text(tr(
+            'Their favorites, hidden groups, and watch history are deleted too. This can\'t be undone.')),
         actions: [
           TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel')),
+              child: Text(tr('Cancel'))),
           TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Delete')),
+              child: Text(tr('Delete'))),
         ],
       ),
     );
@@ -216,8 +216,9 @@ class _ProfileDetailScreenState extends State<_ProfileDetailScreen> {
     if (deleted) {
       Navigator.of(context).pop();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Switch to another profile before deleting this one')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content:
+              Text(tr('Switch to another profile before deleting this one'))));
     }
   }
 
@@ -233,7 +234,7 @@ class _ProfileDetailScreenState extends State<_ProfileDetailScreen> {
     return withTvThemeIfNeeded(
       context,
       (context) => SettingsScaffold(
-        title: profile.name,
+        title: profile.displayName,
         // Top bar, not the bottom of the list — reported directly: with
         // the "What this profile can see" section (potentially several
         // playlists long) between here and the old bottom-of-list
@@ -244,7 +245,7 @@ class _ProfileDetailScreenState extends State<_ProfileDetailScreen> {
             : [
                 TvAppBarButton.icon(
                   icon: Icons.delete_outline,
-                  tooltip: 'Delete profile',
+                  tooltip: tr('Delete profile'),
                   onTap: () => _delete(profile),
                 ),
               ],
@@ -253,26 +254,26 @@ class _ProfileDetailScreenState extends State<_ProfileDetailScreen> {
             TvMenuTile(
               icon: Icons.swap_horiz,
               title: isActive
-                  ? 'This is the active profile'
-                  : 'Switch to this profile',
+                  ? tr('This is the active profile')
+                  : tr('Switch to this profile'),
               enabled: !isActive,
               onTap: () => viewers.switchTo(context, profile.id),
             ),
             TvMenuTile(
               icon: Icons.edit,
-              title: 'Rename',
+              title: tr('Rename'),
               onTap: () => _rename(profile),
             ),
             const Divider(),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
-              child: Text('What this profile can see',
-                  style: TextStyle(fontWeight: FontWeight.w600)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: Text(tr('What this profile can see'),
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
             ),
             for (final p in playlist.profiles) ...[
               TvMenuTile(
                 icon: Icons.folder_outlined,
-                title: 'Groups — ${p.name}',
+                title: tr('Groups — {name}', {'name': p.name}),
                 onTap: () async {
                   final ok = await _ensureActive(profile);
                   if (!ok) return;
@@ -283,7 +284,7 @@ class _ProfileDetailScreenState extends State<_ProfileDetailScreen> {
               ),
               TvMenuTile(
                 icon: Icons.visibility_off_outlined,
-                title: 'Hidden channels — ${p.name}',
+                title: tr('Hidden channels — {name}', {'name': p.name}),
                 onTap: () async {
                   final ok = await _ensureActive(profile);
                   if (!ok) return;
@@ -400,7 +401,7 @@ class _AddProfileScreenState extends State<_AddProfileScreen> {
     return withTvThemeIfNeeded(
       context,
       (context) => SettingsScaffold(
-        title: 'Add Profile',
+        title: tr('Add Profile'),
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -408,9 +409,9 @@ class _AddProfileScreenState extends State<_AddProfileScreen> {
               controller: _nameController,
               focusNode: _nameFocus,
               autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Name',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: tr('Name'),
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 16),
@@ -427,13 +428,9 @@ class _AddProfileScreenState extends State<_AddProfileScreen> {
             ),
             const SizedBox(height: 16),
             TvSwitchListTile(
-              title: const Text('Restricted'),
-              subtitle:
-                  const Text('For a child — hides every group, including adult '
-                      'content, by default. A parent unhides specific '
-                      'categories per playlist afterward in Group Management. '
-                      'A PIN is required to switch away from this profile or '
-                      'to open Settings while it\'s active.'),
+              title: Text(tr('Restricted')),
+              subtitle: Text(tr(
+                  'For a child — hides every group, including adult content, by default. A parent unhides specific categories per playlist afterward in Group Management. A PIN is required to switch away from this profile or to open Settings while it\'s active.')),
               value: _isRestricted,
               onChanged: (v) => setState(() => _isRestricted = v),
             ),
@@ -445,7 +442,7 @@ class _AddProfileScreenState extends State<_AddProfileScreen> {
                       width: 16,
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Create'),
+                  : Text(tr('Create')),
             ),
           ],
         ),

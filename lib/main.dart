@@ -3,8 +3,10 @@ import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -32,6 +34,7 @@ import 'utils/tv_theme.dart';
 import 'widgets/desktop_live_resume_hint.dart';
 import 'widgets/live_resume_hint.dart';
 import 'widgets/splash_stars.dart';
+import 'l10n/l10n.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -71,6 +74,14 @@ Future<void> main() async {
       await windowManager.show();
       await windowManager.focus();
     });
+  }
+  // Before runApp so the splash text is already in the right language.
+  // Read straight from SharedPreferences: StorageService isn't up yet.
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    await L10n.apply(prefs.getString(AppConstants.keyLanguage) ?? 'auto');
+  } catch (_) {
+    await L10n.apply('auto');
   }
   await _configureImageCache();
   // See persistent_image_cache.dart's doc comment — the package default
@@ -218,7 +229,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   /// ancestors.
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
-  final String _splashStatus = 'Starting...';
+  final String _splashStatus = tr('Starting...');
   String? _bootstrapError;
 
   /// Drives the cold-start splash's "firing up" pulse (logo breathing
@@ -411,7 +422,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         // The toast needs the real MaterialApp's ScaffoldMessengerKey,
         // which doesn't exist until the tree above actually builds.
         WidgetsBinding.instance
-            .addPostFrameCallback((_) => _showToast('Content updated'));
+            .addPostFrameCallback((_) => _showToast(tr('Content updated')));
       }
       if (_pendingAutoOpenAddPlaylist) {
         // Same reasoning as the toast above — the real Navigator this
@@ -578,13 +589,13 @@ class _NoxIptvAppState extends State<NoxIptvApp>
                       color: Colors.white70, size: 48),
                   const SizedBox(height: 16),
                   Text(
-                    'Startup failed:\n$_bootstrapError',
+                    tr('Startup failed:\n{bootstrapError}',
+                        {'bootstrapError': _bootstrapError}),
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: Colors.white70),
                   ),
                   const SizedBox(height: 16),
-                  FilledButton(
-                      onPressed: _bootstrap, child: const Text('Retry')),
+                  FilledButton(onPressed: _bootstrap, child: Text(tr('Retry'))),
                 ],
               ),
             ),
@@ -672,6 +683,14 @@ class _NoxIptvAppState extends State<NoxIptvApp>
                                 fontWeight: FontWeight.bold),
                           ),
                         ),
+                        const SizedBox(height: 10),
+                        // A small kind word on every cold start (owner's
+                        // wish) — same greeting as the welcome screen.
+                        Text(tr('Hey beautiful Human'),
+                            style: const TextStyle(
+                                color: Color(0xFFF0C75E),
+                                fontSize: 16,
+                                fontStyle: FontStyle.italic)),
                         const SizedBox(height: 20),
                         Text(_splashStatus,
                             style: const TextStyle(color: Colors.white70)),
@@ -733,6 +752,11 @@ class _NoxIptvAppState extends State<NoxIptvApp>
           scaffoldMessengerKey: _scaffoldMessengerKey,
           navigatorKey: _navigatorKey,
           navigatorObservers: [appRouteObserver],
+          // Flutter's own widget strings (text-selection menu, tooltips)
+          // follow the app language, not the device's (see L10n).
+          locale: L10n.locale,
+          supportedLocales: L10n.supportedLocales,
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
           // Renders above the Navigator's own output rather than inside
           // it, so the hold-Right-to-resume gesture and reminder text
           // work from any screen instead of only the one route they
@@ -782,7 +806,11 @@ class _NoxIptvAppState extends State<NoxIptvApp>
               // instead of needing dozens of fields manually reset.
               return Consumer<ViewerProfileService>(
                 builder: (context, viewerService, _) {
-                  final key = ValueKey(viewerService.active.id);
+                  // The language is part of the key for the same reason:
+                  // a language change remounts home so every tr() string
+                  // is rebuilt (General settings pops back here first).
+                  final key =
+                      ValueKey('${viewerService.active.id}|${L10n.code}');
                   return useTv ? TvHomeScreen(key: key) : HomeScreen(key: key);
                 },
               );

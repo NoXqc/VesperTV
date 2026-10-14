@@ -7,6 +7,7 @@ import '../../services/app_update_service.dart';
 import '../../utils/tv_theme.dart';
 import '../../widgets/mode_button.dart';
 import '../../widgets/settings_scaffold.dart';
+import '../../l10n/l10n.dart';
 
 /// Settings > Check for Updates — the in-app replacement for a Play Store
 /// auto-update, since this is a sideloaded app with no store distribution.
@@ -81,7 +82,7 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
     if (!mounted || opened) return;
     setState(() {
       _status = _Status.error;
-      _errorMessage = 'Couldn\'t open the download link.';
+      _errorMessage = tr('Couldn\'t open the download link.');
     });
   }
 
@@ -122,12 +123,9 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
       final proceed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Allow installing updates'),
-          content: const Text(
-            'Android needs one-time permission for VesperTV to install an '
-            'update it downloaded. The next screen is Android\'s own '
-            'settings — turn the toggle on, then come back here and press '
-            'Install again.',
+          title: Text(tr('Allow installing updates')),
+          content: Text(
+            tr('Android needs one-time permission for VesperTV to install an update it downloaded. The next screen is Android\'s own settings — turn the toggle on, then come back here and press Install again.'),
           ),
           // Plain TextButton/FilledButton left which one has D-pad focus
           // ambiguous — FilledButton's permanent solid fill looks the
@@ -135,12 +133,12 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
           // app's established fix elsewhere for exactly this.
           actions: [
             ModeButton(
-              label: 'Cancel',
+              label: tr('Cancel'),
               selected: false,
               onTap: () => Navigator.of(context).pop(false),
             ),
             ModeButton(
-              label: 'Open Settings',
+              label: tr('Open Settings'),
               selected: false,
               onTap: () => Navigator.of(context).pop(true),
             ),
@@ -158,14 +156,15 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
     return withTvThemeIfNeeded(
         context,
         (context) => SettingsScaffold(
-              title: 'Check for Updates',
+              title: tr('Check for Updates'),
               body: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
                   Text(
                     _currentVersion.isEmpty
-                        ? 'Current version: —'
-                        : 'Current version: $_currentVersion',
+                        ? tr('Current version: —')
+                        : tr('Current version: {currentVersion}',
+                            {'currentVersion': _currentVersion}),
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 16),
@@ -181,34 +180,34 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
         return [
           OutlinedButton.icon(
             icon: const Icon(Icons.system_update),
-            label: const Text('Check for Updates'),
+            label: Text(tr('Check for Updates')),
             onPressed: _check,
           ),
         ];
       case _Status.checking:
         return [
-          const Row(
+          Row(
             children: [
-              SizedBox(
+              const SizedBox(
                   width: 16,
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2)),
-              SizedBox(width: 12),
-              Text('Checking...'),
+              const SizedBox(width: 12),
+              Text(tr('Checking...')),
             ],
           ),
         ];
       case _Status.upToDate:
         return [
-          const Text('You\'re on the latest version.'),
+          Text(tr('You\'re on the latest version.')),
           const SizedBox(height: 12),
-          OutlinedButton(onPressed: _check, child: const Text('Check Again')),
+          OutlinedButton(onPressed: _check, child: Text(tr('Check Again'))),
         ];
       case _Status.updateAvailable:
         final update = _update!;
         return [
           Text(
-            'Version ${update.version} is available',
+            tr('Version {version} is available', {'version': update.version}),
             style: Theme.of(context).textTheme.titleMedium,
           ),
           if (update.releaseNotes.isNotEmpty) ...[
@@ -220,52 +219,52 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
           if (Platform.isWindows) ...[
             FilledButton.icon(
               icon: const Icon(Icons.open_in_browser),
-              label: const Text('Open Download Page'),
+              label: Text(tr('Open Download Page')),
               onPressed: _openWindowsDownload,
             ),
             const SizedBox(height: 4),
             Text(
-              'Opens in your browser — unzip the download and run '
-              'VesperTV.exe to update, replacing the old folder.',
+              tr('Opens in your browser — unzip the download and run VesperTV.exe to update, replacing the old folder.'),
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ] else
             FilledButton.icon(
               icon: const Icon(Icons.download),
-              label: const Text('Download & Install'),
+              label: Text(tr('Download & Install')),
               onPressed: _download,
             ),
         ];
       case _Status.downloading:
         return [
-          Text(
-              'Downloading update... ${(_downloadProgress * 100).toStringAsFixed(0)}%'),
+          Text(tr('Downloading update... {p}%',
+              {'p': (_downloadProgress * 100).toStringAsFixed(0)})),
           const SizedBox(height: 12),
           LinearProgressIndicator(
               value: _downloadProgress > 0 ? _downloadProgress : null),
         ];
       case _Status.readyToInstall:
         return [
-          const Text('Download complete.'),
+          Text(tr('Download complete.')),
           const SizedBox(height: 16),
           FilledButton.icon(
             icon: const Icon(Icons.install_mobile),
-            label: const Text('Install'),
+            label: Text(tr('Install')),
             onPressed: _install,
           ),
           const SizedBox(height: 4),
           Text(
-            'Android will ask you to confirm the install — that\'s normal, '
-            'not every app can skip it.',
+            tr('Android will ask you to confirm the install — that\'s normal, not every app can skip it.'),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ];
       case _Status.error:
         return [
-          Text('Something went wrong: ${_errorMessage ?? 'unknown error'}',
+          Text(
+              tr('Something went wrong: {p}',
+                  {'p': _errorMessage ?? tr('unknown error')}),
               style: TextStyle(color: Theme.of(context).colorScheme.error)),
           const SizedBox(height: 12),
-          OutlinedButton(onPressed: _check, child: const Text('Try Again')),
+          OutlinedButton(onPressed: _check, child: Text(tr('Try Again'))),
         ];
     }
   }

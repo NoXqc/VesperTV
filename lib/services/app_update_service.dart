@@ -8,6 +8,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../l10n/l10n.dart';
+
 /// A GitHub release newer than what's currently installed.
 class UpdateInfo {
   const UpdateInfo({
@@ -97,10 +99,13 @@ class AppUpdateService {
                         .inSeconds) /
                     60)
                 .ceil();
-        throw Exception(
-          'GitHub is temporarily rate-limiting update checks from this '
-          'network${waitMinutes != null && waitMinutes > 0 ? ' — try again in about $waitMinutes minute${waitMinutes == 1 ? '' : 's'}' : ' — try again shortly'}.',
-        );
+        throw Exception(waitMinutes != null && waitMinutes > 0
+            ? trPlural(
+                waitMinutes,
+                'GitHub is temporarily rate-limiting update checks from this network — try again in about {n} minute.',
+                'GitHub is temporarily rate-limiting update checks from this network — try again in about {n} minutes.')
+            : tr(
+                'GitHub is temporarily rate-limiting update checks from this network — try again shortly.'));
       }
       throw Exception('GitHub returned HTTP ${response.statusCode}');
     }

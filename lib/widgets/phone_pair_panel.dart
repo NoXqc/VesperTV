@@ -5,6 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../services/phone_pairing_service.dart';
 import 'live_resume_hint.dart';
+import '../l10n/l10n.dart';
 
 /// The middle pane of Add Playlist > "From my phone": a QR code to scan,
 /// what to do, and a switch to the relay code for a phone that isn't on the
@@ -109,7 +110,7 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
         width: 220,
         height: 220,
         child: Center(
-          child: Text('Code expired', style: theme.textTheme.titleMedium),
+          child: Text(tr('Code expired'), style: theme.textTheme.titleMedium),
         ),
       );
     } else {
@@ -133,12 +134,10 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Add from your phone', style: theme.textTheme.titleLarge),
+        Text(tr('Add from your phone'), style: theme.textTheme.titleLarge),
         const SizedBox(height: 4),
         Text(
-          'Typing a long password with a remote is painful. Scan this code '
-          'with your phone camera and fill in the form there — it appears '
-          'here for you to check and add.',
+          tr('Typing a long password with a remote is painful. Scan this code with your phone camera and fill in the form there — it appears here for you to check and add.'),
           style: muted,
         ),
         const SizedBox(height: 16),
@@ -154,14 +153,14 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
                   _Step(
                       n: 1,
                       text: _relay
-                          ? 'Scan with your phone (mobile data is fine).'
-                          : 'Connect your phone to the same Wi-Fi as this TV, '
-                              'then scan.'),
-                  const _Step(
-                      n: 2, text: 'Fill in the form and tap Send to TV.'),
-                  const _Step(
+                          ? tr('Scan with your phone (mobile data is fine).')
+                          : tr(
+                              'Connect your phone to the same Wi-Fi as this TV, then scan.')),
+                  _Step(n: 2, text: tr('Fill in the form and tap Send to TV.')),
+                  _Step(
                       n: 3,
-                      text: 'Check the details here, then press Add Playlist.'),
+                      text: tr(
+                          'Check the details here, then press Add Playlist.')),
                   const SizedBox(height: 12),
                   if (!_starting && !_expired)
                     Row(
@@ -171,12 +170,12 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
                             height: 14,
                             child: CircularProgressIndicator(strokeWidth: 2)),
                         const SizedBox(width: 10),
-                        Text('Waiting for your phone…', style: muted),
+                        Text(tr('Waiting for your phone…'), style: muted),
                       ],
                     ),
                   if (!_relay && url != null && !_expired) ...[
                     const SizedBox(height: 10),
-                    Text('Or open on the phone:', style: muted),
+                    Text(tr('Or open on the phone:'), style: muted),
                     SelectableText(url,
                         style: const TextStyle(
                             fontFamily: 'monospace', fontSize: 13)),
@@ -185,8 +184,7 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
                     Padding(
                       padding: const EdgeInsets.only(top: 10),
                       child: Text(
-                        'Your details are encrypted on the phone; the relay '
-                        'only passes along scrambled data and deletes it.',
+                        tr('Your details are encrypted on the phone; the relay only passes along scrambled data and deletes it.'),
                         style: muted,
                       ),
                     ),
@@ -203,10 +201,10 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
               ? Icons.refresh
               : (_relay ? Icons.wifi : Icons.signal_cellular_alt)),
           label: Text(_expired
-              ? 'New code'
+              ? tr('New code')
               : (_relay
-                  ? 'Phone on this Wi-Fi? Use the Wi-Fi code'
-                  : 'Phone not on this Wi-Fi? Use the other code')),
+                  ? tr('Phone on this Wi-Fi? Use the Wi-Fi code')
+                  : tr('Phone not on this Wi-Fi? Use the other code'))),
         ),
       ],
     );

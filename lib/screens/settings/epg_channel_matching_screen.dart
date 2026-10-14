@@ -6,6 +6,7 @@ import '../../services/epg_service.dart';
 import '../../services/playlist_manager.dart';
 import '../../widgets/auto_pair_flow.dart';
 import '../../widgets/settings_scaffold.dart';
+import '../../l10n/l10n.dart';
 
 /// Lets the user fix a channel whose EPG programme data is missing or
 /// wrong even though a third-party XMLTV source is configured and parses
@@ -79,15 +80,13 @@ class _EpgChannelMatchingScreenState extends State<EpgChannelMatchingScreen> {
       await showDialog<void>(
         context: context,
         builder: (_) => AlertDialog(
-          title: const Text('Auto-Pair Channels'),
-          content:
-              const Text('No EPG feed has been loaded yet this session — run '
-                  '"Update EPG Now" first so there\'s a channel directory to '
-                  'match against.'),
+          title: Text(tr('Auto-Pair Channels')),
+          content: Text(tr(
+              'No EPG feed has been loaded yet this session — run "Update EPG Now" first so there\'s a channel directory to match against.')),
           actions: [
             TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('OK')),
+                child: Text(tr('OK'))),
           ],
         ),
       );
@@ -149,7 +148,7 @@ class _EpgChannelMatchingScreenState extends State<EpgChannelMatchingScreen> {
                 child: OutlinedButton.icon(
                   focusNode: _autoPairFocus,
                   icon: const Icon(Icons.auto_fix_high),
-                  label: const Text('Auto-Pair Channels'),
+                  label: Text(tr('Auto-Pair Channels')),
                   onPressed: () => _autoPair(playlist, epg),
                 ),
               ),
@@ -157,7 +156,7 @@ class _EpgChannelMatchingScreenState extends State<EpgChannelMatchingScreen> {
               Expanded(
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.undo),
-                  label: const Text('Unpair Channels'),
+                  label: Text(tr('Unpair Channels')),
                   onPressed: () => _unpair(playlist),
                 ),
               ),
@@ -171,8 +170,13 @@ class _EpgChannelMatchingScreenState extends State<EpgChannelMatchingScreen> {
             focusNode: _searchFocus,
             decoration: InputDecoration(
               labelText: reviewFilter != null
-                  ? 'Reviewing ${reviewFilter.length} auto-paired channel${reviewFilter.length == 1 ? '' : 's'} — type to search all instead'
-                  : 'Search your channels',
+                  ? tr(
+                      'Reviewing {reviewFilter} auto-paired channel{s} — type to search all instead',
+                      {
+                          'reviewFilter': reviewFilter.length,
+                          's': reviewFilter.length == 1 ? '' : 's'
+                        })
+                  : tr('Search your channels'),
               prefixIcon: const Icon(Icons.search),
               border: const OutlineInputBorder(),
             ),
@@ -185,9 +189,7 @@ class _EpgChannelMatchingScreenState extends State<EpgChannelMatchingScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: Text(
-              'No EPG feed has been loaded yet this session — run '
-              '"Update EPG Now" above first so there\'s a channel '
-              'directory to search.',
+              tr('No EPG feed has been loaded yet this session — run "Update EPG Now" above first so there\'s a channel directory to search.'),
               style: Theme.of(context)
                   .textTheme
                   .bodySmall
@@ -196,7 +198,7 @@ class _EpgChannelMatchingScreenState extends State<EpgChannelMatchingScreen> {
           ),
         Expanded(
           child: filtered.isEmpty
-              ? const Center(child: Text('No channels found.'))
+              ? Center(child: Text(tr('No channels found.')))
               : ListView.builder(
                   itemCount: filtered.length,
                   itemBuilder: (context, i) {
@@ -206,14 +208,14 @@ class _EpgChannelMatchingScreenState extends State<EpgChannelMatchingScreen> {
                     final String status;
                     final bool ok;
                     if (overrideId != null) {
-                      status =
-                          'Assigned: ${epg.channelCatalog[overrideId] ?? overrideId}';
+                      status = tr('Assigned: {p}',
+                          {'p': epg.channelCatalog[overrideId] ?? overrideId});
                       ok = true;
                     } else if (hasPrograms) {
-                      status = 'Matched automatically';
+                      status = tr('Matched automatically');
                       ok = true;
                     } else {
-                      status = 'No program data';
+                      status = tr('No program data');
                       ok = false;
                     }
                     return ListTile(
@@ -228,7 +230,7 @@ class _EpgChannelMatchingScreenState extends State<EpgChannelMatchingScreen> {
                       trailing: overrideId != null
                           ? IconButton(
                               icon: const Icon(Icons.clear),
-                              tooltip: 'Clear assignment',
+                              tooltip: tr('Clear assignment'),
                               onPressed: () =>
                                   playlist.setEpgIdOverride(channel, null),
                             )
@@ -293,7 +295,7 @@ class _AssignEpgScreenState extends State<_AssignEpgScreen> {
       });
 
     return SettingsScaffold(
-      title: 'Assign "${widget.channelName}"',
+      title: tr('Assign "{channelName}"', {'channelName': widget.channelName}),
       body: Column(
         children: [
           Padding(
@@ -302,7 +304,7 @@ class _AssignEpgScreenState extends State<_AssignEpgScreen> {
               controller: _searchController,
               autofocus: true,
               decoration: InputDecoration(
-                labelText: 'Search the EPG feed\'s channels',
+                labelText: tr('Search the EPG feed\'s channels'),
                 hintText: widget.channelName,
                 prefixIcon: const Icon(Icons.search),
                 border: const OutlineInputBorder(),
@@ -322,14 +324,13 @@ class _AssignEpgScreenState extends State<_AssignEpgScreen> {
                 ? Padding(
                     padding: const EdgeInsets.all(16),
                     child: Text(
-                      'No EPG feed has been loaded yet this app session — '
-                      'go back and run "Update EPG Now" first.',
+                      tr('No EPG feed has been loaded yet this app session — go back and run "Update EPG Now" first.'),
                       style:
                           TextStyle(color: Theme.of(context).colorScheme.error),
                     ),
                   )
                 : entries.isEmpty
-                    ? const Center(child: Text('No matches.'))
+                    ? Center(child: Text(tr('No matches.')))
                     : ListView.builder(
                         itemCount: entries.length,
                         itemBuilder: (context, i) {
@@ -353,8 +354,9 @@ class _AssignEpgScreenState extends State<_AssignEpgScreen> {
                                         fontFamily: 'monospace', fontSize: 11)),
                                 Text(
                                   nowPlaying != null
-                                      ? 'Now: ${nowPlaying.title}'
-                                      : 'No current program data',
+                                      ? tr('Now: {title}',
+                                          {'title': nowPlaying.title})
+                                      : tr('No current program data'),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(

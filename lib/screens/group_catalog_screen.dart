@@ -12,6 +12,7 @@ import '../widgets/poster_card.dart';
 import '../widgets/settings_scaffold.dart';
 import 'movie_detail_screen.dart';
 import 'series_detail_screen.dart';
+import '../l10n/l10n.dart';
 
 /// How a [GroupCatalogScreen] orders its grid — see
 /// [_GroupCatalogScreenState._sort]'s doc comment. [addedDate] and [tmdb]
@@ -155,23 +156,24 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
                     actions: [
                       PopupMenuButton<_SortMode>(
                         icon: const Icon(Icons.sort),
-                        tooltip: 'Sort',
+                        tooltip: tr('Sort'),
                         initialValue: _sort,
                         onSelected: _onSortSelected,
-                        itemBuilder: (context) => const [
+                        itemBuilder: (context) => [
                           PopupMenuItem(
-                              value: _SortMode.none, child: Text('Default')),
+                              value: _SortMode.none,
+                              child: Text(tr('Default'))),
                           PopupMenuItem(
-                              value: _SortMode.aToZ, child: Text('A to Z')),
+                              value: _SortMode.aToZ, child: Text(tr('A to Z'))),
                           PopupMenuItem(
-                              value: _SortMode.zToA, child: Text('Z to A')),
+                              value: _SortMode.zToA, child: Text(tr('Z to A'))),
                           PopupMenuItem(
                               value: _SortMode.rating,
-                              child: Text('Rating (high to low)')),
+                              child: Text(tr('Rating (high to low)'))),
                           PopupMenuItem(
                               value: _SortMode.addedDate,
-                              child: Text('Date added/updated')),
-                          PopupMenuItem(
+                              child: Text(tr('Date added/updated'))),
+                          const PopupMenuItem(
                               value: _SortMode.tmdb, child: Text('TMDB')),
                         ],
                       ),
@@ -263,7 +265,9 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Fetching TMDB release dates... $done/$total',
+          Text(
+              tr('Fetching TMDB release dates... {done}/{total}',
+                  {'done': done, 'total': total}),
               style: const TextStyle(fontSize: 12)),
           const SizedBox(height: 4),
           LinearProgressIndicator(value: total == 0 ? null : done / total),
@@ -287,7 +291,8 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
         watched: storage.isFullyWatched(c.id),
         progressFraction: storage.getWatchedFraction(c.id),
         isFavorite: c.isFavorite,
-        onToggleFavorite: () => _toggleFavoriteWithFeedback(context, playlist, c),
+        onToggleFavorite: () =>
+            _toggleFavoriteWithFeedback(context, playlist, c),
         onTap: () => Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => MovieDetailScreen(channel: c))),
         onFocusGained: () {},
@@ -323,16 +328,16 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
       case _SortMode.none:
         break;
       case _SortMode.aToZ:
-        sorted.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-      case _SortMode.zToA:
-        sorted.sort((a, b) => b.name.toLowerCase().compareTo(a.name.toLowerCase()));
-      case _SortMode.rating:
-        sorted.sort((a, b) =>
-            (double.tryParse(b.rating ?? '') ?? -1)
-                .compareTo(double.tryParse(a.rating ?? '') ?? -1));
-      case _SortMode.addedDate:
         sorted.sort(
-            (a, b) => _compareNullableDates(a.addedAt, b.addedAt));
+            (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      case _SortMode.zToA:
+        sorted.sort(
+            (a, b) => b.name.toLowerCase().compareTo(a.name.toLowerCase()));
+      case _SortMode.rating:
+        sorted.sort((a, b) => (double.tryParse(b.rating ?? '') ?? -1)
+            .compareTo(double.tryParse(a.rating ?? '') ?? -1));
+      case _SortMode.addedDate:
+        sorted.sort((a, b) => _compareNullableDates(a.addedAt, b.addedAt));
       case _SortMode.tmdb:
         // No release date yet (lookup still running, or TMDB had nothing
         // for it) sorts to the end rather than being treated as "ancient"
@@ -359,16 +364,16 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
       case _SortMode.none:
         break;
       case _SortMode.aToZ:
-        sorted.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-      case _SortMode.zToA:
-        sorted.sort((a, b) => b.name.toLowerCase().compareTo(a.name.toLowerCase()));
-      case _SortMode.rating:
-        sorted.sort((a, b) =>
-            (double.tryParse(b.rating ?? '') ?? -1)
-                .compareTo(double.tryParse(a.rating ?? '') ?? -1));
-      case _SortMode.addedDate:
         sorted.sort(
-            (a, b) => _compareNullableDates(a.addedAt, b.addedAt));
+            (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      case _SortMode.zToA:
+        sorted.sort(
+            (a, b) => b.name.toLowerCase().compareTo(a.name.toLowerCase()));
+      case _SortMode.rating:
+        sorted.sort((a, b) => (double.tryParse(b.rating ?? '') ?? -1)
+            .compareTo(double.tryParse(a.rating ?? '') ?? -1));
+      case _SortMode.addedDate:
+        sorted.sort((a, b) => _compareNullableDates(a.addedAt, b.addedAt));
       case _SortMode.tmdb:
         sorted.sort(
             (a, b) => _compareNullableDates(a.releaseDate, b.releaseDate));
@@ -387,8 +392,9 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
     playlist.toggleFavorite(channel);
     setState(() {});
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(
-          channel.isFavorite ? 'Added to Favorites' : 'Removed from Favorites'),
+      content: Text(channel.isFavorite
+          ? tr('Added to Favorites')
+          : tr('Removed from Favorites')),
       duration: const Duration(seconds: 2),
     ));
   }
@@ -406,7 +412,7 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
   /// differing length*, not a single regular grid like this one.
   Widget _posterGrid<T>(List<T> items, Widget Function(T) posterBuilder) {
     if (items.isEmpty) {
-      return const Center(child: Text('No items in this group.'));
+      return Center(child: Text(tr('No items in this group.')));
     }
     return GridView.builder(
       padding: const EdgeInsets.all(16),

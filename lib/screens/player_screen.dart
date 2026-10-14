@@ -16,6 +16,7 @@ import '../widgets/epg_guide.dart';
 import '../widgets/player_controls.dart';
 import 'multiview_screen.dart';
 import 'search_screen.dart';
+import '../l10n/l10n.dart';
 
 /// Fullscreen playback screen. Pushed when a channel is tapped on a phone,
 /// or when the mini-player bar is tapped to expand back into fullscreen —
@@ -495,7 +496,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                         children: [
                                           _TopBarIconButton(
                                             icon: Icons.arrow_back,
-                                            tooltip: 'Back',
+                                            tooltip: tr('Back'),
                                             onPressed: () =>
                                                 Navigator.of(context).pop(),
                                           ),
@@ -520,7 +521,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                           ),
                                           _TopBarIconButton(
                                             icon: Icons.search,
-                                            tooltip: 'Search',
+                                            tooltip: tr('Search'),
                                             onPressed: () =>
                                                 Navigator.of(context).push(
                                               MaterialPageRoute(
@@ -534,8 +535,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                                 ? Icons.fullscreen_exit
                                                 : Icons.fullscreen,
                                             tooltip: _immersive
-                                                ? 'Exit fullscreen'
-                                                : 'Fullscreen',
+                                                ? tr('Exit fullscreen')
+                                                : tr('Fullscreen'),
                                             onPressed: _toggleImmersive,
                                           ),
                                         ],
@@ -707,9 +708,9 @@ class _UpNextBubble extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text('Up Next',
-                            style:
-                                TextStyle(color: Colors.white70, fontSize: 12)),
+                        Text(tr('Up Next'),
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 12)),
                         Text(
                           next.name,
                           maxLines: 2,
@@ -720,8 +721,9 @@ class _UpNextBubble extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           countdown > 0
-                              ? 'Playing in ${countdown}s'
-                              : 'Playing now...',
+                              ? tr('Playing in {countdown}s',
+                                  {'countdown': countdown})
+                              : tr('Playing now...'),
                           style: const TextStyle(
                               color: Colors.white54, fontSize: 12),
                         ),
@@ -734,13 +736,13 @@ class _UpNextBubble extends StatelessWidget {
                       IconButton(
                         icon: const Icon(Icons.play_circle_fill,
                             color: Colors.white, size: 30),
-                        tooltip: 'Play now',
+                        tooltip: tr('Play now'),
                         onPressed: onPlayNow,
                       ),
                       IconButton(
                         icon: const Icon(Icons.close,
                             color: Colors.white54, size: 18),
-                        tooltip: 'Dismiss',
+                        tooltip: tr('Dismiss'),
                         onPressed: onDismiss,
                       ),
                     ],

@@ -10,6 +10,7 @@ import '../models/epg_program.dart';
 import '../utils/constants.dart';
 import 'epg_database.dart';
 import 'storage_service.dart';
+import '../l10n/l10n.dart';
 
 /// One playlist's EPG URL plus the channel ids it's allowed to populate
 /// programmes for — see [EpgService.refresh]'s doc comment.
@@ -279,8 +280,8 @@ class EpgService extends ChangeNotifier {
       final streamedResponse =
           await client.send(request).timeout(const Duration(seconds: 30));
       if (streamedResponse.statusCode != 200) {
-        throw Exception(
-            'Failed to load EPG (HTTP ${streamedResponse.statusCode})');
+        throw Exception(tr('Failed to load EPG (HTTP {code})',
+            {'code': streamedResponse.statusCode}));
       }
 
       // Normalized the same way the parser normalizes the feed's own ids
@@ -415,7 +416,7 @@ class EpgService extends ChangeNotifier {
         final start = _parseXmltvTime(startRaw);
         final stop = _parseXmltvTime(stopRaw);
         final cleanTitle =
-            title?.trim().isNotEmpty == true ? title!.trim() : 'No Title';
+            title?.trim().isNotEmpty == true ? title!.trim() : tr('No Title');
         final cleanDesc =
             (desc?.trim().isNotEmpty ?? false) ? desc!.trim() : null;
         if (!now.isBefore(start) && now.isBefore(stop)) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'tv_app_bar_button.dart';
+import '../l10n/l10n.dart';
 
 /// Every Settings-family screen's background used to be whatever flat,
 /// near-black surface `ThemeData.scaffoldBackgroundColor` happened to
@@ -57,7 +58,7 @@ class SettingsScaffold extends StatelessWidget {
                   ? Center(
                       child: TvAppBarButton.icon(
                         icon: Icons.arrow_back,
-                        tooltip: 'Back',
+                        tooltip: tr('Back'),
                         onTap: () => Navigator.of(context).pop(),
                       ),
                     )

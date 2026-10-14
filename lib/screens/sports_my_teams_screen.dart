@@ -14,6 +14,7 @@ import '../widgets/hold_to_activate.dart';
 import '../widgets/settings_scaffold.dart';
 import '../widgets/sports_widgets.dart';
 import 'sports_standings_screen.dart';
+import '../l10n/l10n.dart';
 
 /// Signature of the Sports screen's game actions, so My Teams plays and
 /// picks channels exactly like the game cards do (same picks, same player).
@@ -274,7 +275,10 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
     final schedule = _schedules[t.key];
     final team = schedule?.team ??
         SportsTeam(
-            id: t.teamId, name: 'this team', shortName: '', abbreviation: '');
+            id: t.teamId,
+            name: tr('this team'),
+            shortName: '',
+            abbreviation: '');
     final confirmed =
         await showSportsFollowDialog(context, team: team, followed: true);
     if (!confirmed || !mounted) return;
@@ -334,18 +338,19 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
                         height: 44,
                         child: Row(
                           children: [
-                            Text('My Teams',
+                            Text(tr('My Teams'),
                                 style: Theme.of(context)
                                     .textTheme
                                     .headlineSmall
                                     ?.copyWith(fontWeight: FontWeight.w800)),
                             const SizedBox(width: 16),
-                            const Expanded(
+                            Expanded(
                               child: Text(
-                                  'Hold OK on a team to unfollow · on a game to pick the channel',
+                                  tr(
+                                      'Hold OK on a team to unfollow · on a game to pick the channel'),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                       color: Colors.white38, fontSize: 12)),
                             ),
                           ],
@@ -393,21 +398,21 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
                 Icon(Icons.add_circle_outline,
                     size: 34, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Add team',
-                          style: TextStyle(
+                      Text(tr('Add team'),
+                          style: const TextStyle(
                               color: Colors.white,
                               fontSize: 16,
                               fontWeight: FontWeight.w700)),
-                      Text('Follow one from Standings',
+                      Text(tr('Follow one from Standings'),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style:
-                              TextStyle(color: Colors.white54, fontSize: 12)),
+                          style: const TextStyle(
+                              color: Colors.white54, fontSize: 12)),
                     ],
                   ),
                 ),
@@ -446,8 +451,8 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
                             child: Text(
                                 s?.team.name ??
                                     (_loadingTeams.contains(t.key)
-                                        ? 'Loading…'
-                                        : 'Could not load'),
+                                        ? tr('Loading…')
+                                        : tr('Could not load')),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
@@ -491,13 +496,13 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
             const SizedBox(height: 10),
             Text(
                 _teams.isEmpty
-                    ? 'Follow your teams to see them here'
-                    : 'Follow another team',
+                    ? tr('Follow your teams to see them here')
+                    : tr('Follow another team'),
                 style: const TextStyle(color: Colors.white70, fontSize: 17)),
             const SizedBox(height: 4),
-            const Text(
-                'Add team opens Standings: hold OK on a team to follow it.',
-                style: TextStyle(color: Colors.white38, fontSize: 13)),
+            Text(
+                tr('Add team opens Standings: hold OK on a team to follow it.'),
+                style: const TextStyle(color: Colors.white38, fontSize: 13)),
           ],
         ),
       );
@@ -506,8 +511,8 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
       return Center(
         child: _loadingTeams.contains(t.key)
             ? const CircularProgressIndicator()
-            : const Text('This team could not be loaded. Check the connection.',
-                style: TextStyle(color: Colors.white70, fontSize: 16)),
+            : Text(tr('This team could not be loaded. Check the connection.'),
+                style: const TextStyle(color: Colors.white70, fontSize: 16)),
       );
     }
     final team = s.team;
@@ -537,7 +542,8 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
                   Text(
                       [
                         if (team.record != null) team.record!,
-                        if (s.standingSummary != null) s.standingSummary!,
+                        if (s.standingSummary != null)
+                          trSports(s.standingSummary!),
                       ].join('  ·  '),
                       style:
                           const TextStyle(fontSize: 16, color: Colors.white70)),
@@ -580,18 +586,19 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Next 2 weeks',
-            style: TextStyle(
+        Text(tr('Next 2 weeks'),
+            style: const TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
                 color: Colors.white)),
         const SizedBox(height: 6),
         Expanded(
           child: games.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.only(top: 8),
-                  child: Text('No games in the next two weeks.',
-                      style: TextStyle(color: Colors.white54, fontSize: 15)),
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(tr('No games in the next two weeks.'),
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 15)),
                 )
               : ListView.builder(
                   controller: _gameScroll,
@@ -633,7 +640,7 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
 String _opponentLabel(SportsGame g, String teamId) {
   final home = g.home.id == teamId;
   final other = home ? g.away : g.home;
-  return '${home ? 'vs' : 'at'} ${other.shortName}';
+  return '${home ? tr('vs') : tr('at')} ${other.shortName}';
 }
 
 String _whenLabel(DateTime utc) {
@@ -643,22 +650,31 @@ String _whenLabel(DateTime utc) {
   final day = DateTime(local.year, local.month, local.day);
   final time = DateFormat.jm().format(local);
   final diff = day.difference(today).inDays;
-  if (diff == 0) return 'Today $time';
-  if (diff == 1) return 'Tomorrow $time';
-  return '${DateFormat('EEE MMM d').format(local)} · $time';
+  if (diff == 0) return tr('Today {time}', {'time': time});
+  if (diff == 1) return tr('Tomorrow {time}', {'time': time});
+  return '${DateFormat.MMMEd().format(local)} · $time';
 }
 
 /// "W 4-2 vs Bruins" (scores hidden: "Final vs Bruins").
 String _lastGameLabel(SportsGame g, String teamId, bool hideScores) {
   final opponent = _opponentLabel(g, teamId);
-  if (hideScores) return 'Last game: $opponent · Final';
+  if (hideScores) {
+    return tr('Last game: {opponent} · Final', {'opponent': opponent});
+  }
   final mineTeam = g.home.id == teamId ? g.home : g.away;
   final otherTeam = g.home.id == teamId ? g.away : g.home;
   final mine = int.tryParse(mineTeam.score ?? '');
   final other = int.tryParse(otherTeam.score ?? '');
-  if (mine == null || other == null) return 'Last game: $opponent · Final';
+  if (mine == null || other == null) {
+    return tr('Last game: {opponent} · Final', {'opponent': opponent});
+  }
   final result = mine > other ? 'W' : (mine < other ? 'L' : 'D');
-  return 'Last game: $result $mine-$other $opponent';
+  return tr('Last game: {result} {mine}-{other} {opponent}', {
+    'result': tr(result),
+    'mine': mine,
+    'other': other,
+    'opponent': opponent
+  });
 }
 
 class _NextGameLine extends StatelessWidget {
@@ -675,7 +691,7 @@ class _NextGameLine extends StatelessWidget {
     final other = game.home.id == teamId ? game.away : game.home;
     final text = live
         ? [
-            'LIVE',
+            tr('LIVE'),
             if (!hideScores) '${mine.score ?? '-'}-${other.score ?? '-'}',
             _opponentLabel(game, teamId),
           ].join(' ')
@@ -864,7 +880,7 @@ class _GameRowState extends State<_GameRow> {
     final mine = home ? g.home : g.away;
     final when = live
         ? [
-            if (g.statusText.isNotEmpty) g.statusText else 'LIVE',
+            if (g.statusText.isNotEmpty) trSports(g.statusText) else tr('LIVE'),
             if (!widget.hideScores)
               '${mine.score ?? '-'}-${opponent.score ?? '-'}',
           ].join('  ')
@@ -895,7 +911,7 @@ class _GameRowState extends State<_GameRow> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('${home ? 'vs' : 'at'} ${opponent.shortName}',
+                  Text('${home ? tr('vs') : tr('at')} ${opponent.shortName}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -938,7 +954,9 @@ class _GameRowState extends State<_GameRow> {
                       Flexible(
                         child: Text(
                           widget.match?.channel.name ??
-                              (widget.matching ? 'Looking…' : 'Pick a channel'),
+                              (widget.matching
+                                  ? tr('Looking…')
+                                  : tr('Pick a channel')),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -1028,11 +1046,11 @@ class _MiniTable extends StatelessWidget {
           Row(
             children: [
               const SizedBox(width: 26, child: Text('#', style: head)),
-              const Expanded(child: Text('TEAM', style: head)),
+              Expanded(child: Text(tr('TEAM'), style: head)),
               for (final c in columns)
                 SizedBox(
                     width: 36,
-                    child: Text(c.label,
+                    child: Text(tr(c.label),
                         textAlign: TextAlign.center, style: head)),
             ],
           ),

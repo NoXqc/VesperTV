@@ -14,6 +14,7 @@ import 'catalog_database.dart';
 import 'm3u_parser.dart';
 import 'storage_service.dart';
 import 'xtream_api_service.dart';
+import '../l10n/l10n.dart';
 
 /// One playlist's own load/cache state — extracted from what used to be
 /// `PlaylistManager`'s entire body, back when only one playlist could
@@ -404,7 +405,7 @@ class PlaylistSession {
     isLoading = true;
     error = null;
     lastLoadSummary = null;
-    loadingPhase = 'Connecting to server...';
+    loadingPhase = tr('Connecting to server...');
     onNotify();
 
     try {
@@ -422,15 +423,17 @@ class PlaylistSession {
 
       // Brief staged reveal so the counts are readable, rather than flashing
       // by instantly — the parsing above is already done at this point.
-      loadingPhase = 'Finding live channels... (${counts['tv']} found)';
+      loadingPhase =
+          tr('Finding live channels... ({p} found)', {'p': counts['tv']});
       onNotify();
       await Future.delayed(const Duration(milliseconds: 400));
 
-      loadingPhase = 'Finding movies... (${counts['vod']} found)';
+      loadingPhase = tr('Finding movies... ({p} found)', {'p': counts['vod']});
       onNotify();
       await Future.delayed(const Duration(milliseconds: 400));
 
-      loadingPhase = 'Finding TV shows... (${counts['series']} found)';
+      loadingPhase =
+          tr('Finding TV shows... ({p} found)', {'p': counts['series']});
       onNotify();
       await Future.delayed(const Duration(milliseconds: 400));
 
@@ -443,7 +446,7 @@ class PlaylistSession {
         await compute(_encodeJsonList, parsed.map((c) => c.toJson()).toList()),
       );
 
-      loadingPhase = 'Playlist added';
+      loadingPhase = tr('Playlist added');
       onNotify();
       await Future.delayed(const Duration(milliseconds: 600));
     } catch (e) {
@@ -656,8 +659,8 @@ class PlaylistSession {
       final server = candidates[i];
       final label = _hostLabel(server);
       if (candidates.length > 1) {
-        loadingPhase =
-            'Connecting to $label (${i + 1}/${candidates.length})...';
+        loadingPhase = tr('Connecting to {label} ({p}/{candidates})...',
+            {'label': label, 'p': i + 1, 'candidates': candidates.length});
         onNotify();
       }
       final api = XtreamApiService(
@@ -668,7 +671,7 @@ class PlaylistSession {
       try {
         await api.authenticate();
         if (candidates.length > 1) {
-          loadingPhase = 'Connected to $label';
+          loadingPhase = tr('Connected to {label}', {'label': label});
           onNotify();
         }
         await _rememberWorkingServer(server);
@@ -677,8 +680,9 @@ class PlaylistSession {
         lastError = e;
         if (_isAccountRejection(e)) rethrow;
         if (candidates.length > 1) {
-          loadingPhase = 'Connecting to $label (${i + 1}/'
-              '${candidates.length})... failed';
+          loadingPhase = tr(
+              'Connecting to {label} ({p}/{candidates})... failed',
+              {'label': label, 'p': i + 1, 'candidates': candidates.length});
           onNotify();
         }
         final hasMore = i < candidates.length - 1;
@@ -706,7 +710,7 @@ class PlaylistSession {
     isLoading = true;
     error = null;
     lastLoadSummary = null;
-    loadingPhase = 'Connecting to server...';
+    loadingPhase = tr('Connecting to server...');
     onNotify();
 
     try {
@@ -750,7 +754,7 @@ class PlaylistSession {
             _encodeJsonList, liveCategories.map((c) => c.toJson()).toList()),
       );
 
-      loadingPhase = 'Finding live channels...';
+      loadingPhase = tr('Finding live channels...');
       onNotify();
       final loadedLive =
           await api.getLiveStreams(categoryNames: liveCategoryNames);
@@ -764,11 +768,12 @@ class PlaylistSession {
         await compute(
             _encodeJsonList, loadedLive.map((c) => c.toJson()).toList()),
       );
-      loadingPhase = 'Finding live channels... (${loadedLive.length} found)';
+      loadingPhase = tr('Finding live channels... ({loadedLive} found)',
+          {'loadedLive': loadedLive.length});
       onNotify();
       await Future.delayed(const Duration(milliseconds: 400));
 
-      loadingPhase = 'Finding movie categories...';
+      loadingPhase = tr('Finding movie categories...');
       onNotify();
       vodCategories = await api.getVodCategories();
       vodCategoryIdByName
@@ -781,12 +786,12 @@ class PlaylistSession {
         await compute(
             _encodeJsonList, vodCategories.map((c) => c.toJson()).toList()),
       );
-      loadingPhase =
-          'Finding movies... (${vodCategories.length} categories found)';
+      loadingPhase = tr('Finding movies... ({vodCategories} categories found)',
+          {'vodCategories': vodCategories.length});
       onNotify();
       await Future.delayed(const Duration(milliseconds: 400));
 
-      loadingPhase = 'Finding TV show categories...';
+      loadingPhase = tr('Finding TV show categories...');
       onNotify();
       seriesCategories = await api.getSeriesCategories();
       seriesCategoryIdByName
@@ -799,8 +804,9 @@ class PlaylistSession {
         await compute(
             _encodeJsonList, seriesCategories.map((c) => c.toJson()).toList()),
       );
-      loadingPhase =
-          'Finding TV shows... (${seriesCategories.length} categories found)';
+      loadingPhase = tr(
+          'Finding TV shows... ({seriesCategories} categories found)',
+          {'seriesCategories': seriesCategories.length});
       onNotify();
       await Future.delayed(const Duration(milliseconds: 400));
 
@@ -811,7 +817,7 @@ class PlaylistSession {
       };
       lastLoaded = DateTime.now();
 
-      loadingPhase = 'Playlist added';
+      loadingPhase = tr('Playlist added');
       onNotify();
       await Future.delayed(const Duration(milliseconds: 600));
     } catch (e) {

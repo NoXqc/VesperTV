@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../models/m3u_group.dart';
 import '../services/playlist_manager.dart';
+import '../l10n/l10n.dart';
 
 /// Left navigation: TV / VOD / Favorites tabs plus a collapsible group list
 /// with per-group hide/show toggles. Remote/D-pad friendly — every row is a
@@ -58,7 +59,7 @@ class Sidebar extends StatelessWidget {
       children: [
         IconButton(
           icon: Icon(collapsed ? Icons.chevron_right : Icons.chevron_left),
-          tooltip: collapsed ? 'Expand sidebar' : 'Collapse sidebar',
+          tooltip: collapsed ? tr('Expand sidebar') : tr('Collapse sidebar'),
           onPressed: onToggleCollapse,
         ),
         const Divider(height: 1),
@@ -66,17 +67,17 @@ class Sidebar extends StatelessWidget {
           ListTile(
             dense: true,
             leading: Icon(_tabIcons[tab]),
-            title: collapsed ? null : Text(tab),
+            title: collapsed ? null : Text(tr(tab)),
             selected: selectedTab == tab,
             onTap: () => onTabChanged(tab),
           ),
         const Divider(height: 1),
         if (selectedTab == 'Favorites')
-          const Expanded(
+          Expanded(
             child: Center(
               child: Padding(
-                padding: EdgeInsets.all(8),
-                child: Text('Pinned channels', textAlign: TextAlign.center),
+                padding: const EdgeInsets.all(8),
+                child: Text(tr('Pinned channels'), textAlign: TextAlign.center),
               ),
             ),
           )
@@ -87,7 +88,7 @@ class Sidebar extends StatelessWidget {
                 ListTile(
                   dense: true,
                   leading: const Icon(Icons.apps),
-                  title: collapsed ? null : const Text('All'),
+                  title: collapsed ? null : Text(tr('All')),
                   selected: selectedGroup == null,
                   onTap: () => onGroupSelected(null),
                 ),
@@ -125,8 +126,9 @@ class Sidebar extends StatelessWidget {
                             icon: Icon(group.isHidden
                                 ? Icons.visibility_off
                                 : Icons.visibility),
-                            tooltip:
-                                group.isHidden ? 'Show group' : 'Hide group',
+                            tooltip: group.isHidden
+                                ? tr('Show group')
+                                : tr('Hide group'),
                             onPressed: () => playlist.toggleGroupHidden(
                                 group.playlistId, group.title),
                           ),

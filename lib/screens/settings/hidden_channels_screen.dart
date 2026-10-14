@@ -6,6 +6,7 @@ import '../../models/channel.dart';
 import '../../services/playlist_manager.dart';
 import '../../utils/tv_theme.dart';
 import '../../widgets/settings_scaffold.dart';
+import '../../l10n/l10n.dart';
 
 /// Individually-hidden live channels for one playlist — the counterpart
 /// to `GroupManagementScreen`'s whole-group hide/show, for a duplicate
@@ -29,14 +30,13 @@ class HiddenChannelsScreen extends StatelessWidget {
     return withTvThemeIfNeeded(
       context,
       (context) => SettingsScaffold(
-        title: 'Hidden channels',
+        title: tr('Hidden channels'),
         body: channels.isEmpty
-            ? const Center(
+            ? Center(
                 child: Padding(
-                  padding: EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(24),
                   child: Text(
-                    'No channels are individually hidden. Hide one from '
-                    'its row in the Live TV list.',
+                    tr('No channels are individually hidden. Hide one from its row in the Live TV list.'),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -82,7 +82,7 @@ class _HiddenChannelRow extends StatelessWidget {
         subtitle: Text(channel.group),
         trailing: OutlinedButton(
           onPressed: onUnhide,
-          child: const Text('Unhide'),
+          child: Text(tr('Unhide')),
         ),
       ),
     );

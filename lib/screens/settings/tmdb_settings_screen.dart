@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../services/playlist_manager.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/settings_scaffold.dart';
+import '../../l10n/l10n.dart';
 
 /// Where a user supplies their own free TMDB (The Movie Database) API
 /// key — see `TmdbEnrichmentService`'s doc comment for why this can't
@@ -78,7 +79,7 @@ class _TmdbSettingsScreenState extends State<TmdbSettingsScreen> {
     if (!mounted) return;
     if (key.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Cleared — TMDB sorting is now off')));
+          SnackBar(content: Text(tr('Cleared — TMDB sorting is now off'))));
       return;
     }
     setState(() => _validating = true);
@@ -87,8 +88,9 @@ class _TmdbSettingsScreenState extends State<TmdbSettingsScreen> {
     setState(() => _validating = false);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(valid
-          ? 'Saved — key verified with TMDB ✓'
-          : 'Saved, but TMDB rejected this key — double-check it\'s correct'),
+          ? tr('Saved — key verified with TMDB ✓')
+          : tr(
+              'Saved, but TMDB rejected this key — double-check it\'s correct')),
       backgroundColor: valid ? null : Colors.red.shade900,
     ));
   }
@@ -105,8 +107,8 @@ class _TmdbSettingsScreenState extends State<TmdbSettingsScreen> {
     await context.read<PlaylistManager>().refreshWhatsNewTmdbIfDue(force: true);
     if (!mounted) return;
     setState(() => _refreshing = false);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('What\'s New refreshed from TMDB')));
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(tr('What\'s New refreshed from TMDB'))));
   }
 
   Future<bool> _checkKey(String key) async {
@@ -125,34 +127,22 @@ class _TmdbSettingsScreenState extends State<TmdbSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return SettingsScaffold(
-      title: 'TMDB (Release Dates)',
+      title: tr('TMDB (Release Dates)'),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text(
-            'TMDB (The Movie Database) is a free, independent movie and TV '
-            'database — not your IPTV provider. Adding your own free TMDB '
-            'key lets VesperTV look up a title\'s actual real-world '
-            'release date, which powers two things: a "TMDB" sort option '
-            'on any group\'s "Expand catalog" screen, and a more accurate '
-            '"What\'s New" row (ordered by real release date instead of '
-            'just when your provider added the title).',
+          Text(
+            tr('TMDB (The Movie Database) is a free, independent movie and TV database — not your IPTV provider. Adding your own free TMDB key lets VesperTV look up a title\'s actual real-world release date, which powers two things: a "TMDB" sort option on any group\'s "Expand catalog" screen, and a more accurate "What\'s New" row (ordered by real release date instead of just when your provider added the title).'),
           ),
           const SizedBox(height: 12),
-          const Text(
-            'This is completely optional and free — VesperTV works '
-            '100% without it. Without a key, sorting just falls back to '
-            'whenever your provider added or updated each title, which is '
-            'still available and works fine on its own.',
-            style: TextStyle(fontWeight: FontWeight.w600),
+          Text(
+            tr('This is completely optional and free — VesperTV works 100% without it. Without a key, sorting just falls back to whenever your provider added or updated each title, which is still available and works fine on its own.'),
+            style: const TextStyle(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 12),
-          const Text(
-            'To get one: create a free account at themoviedb.org, then '
-            'generate an API key under Settings > API (choose "Personal '
-            'use" when asked) and paste it below. VesperTV never collects '
-            'or shares it — it\'s stored only on this device.',
-            style: TextStyle(fontSize: 12, color: Colors.white60),
+          Text(
+            tr('To get one: create a free account at themoviedb.org, then generate an API key under Settings > API (choose "Personal use" when asked) and paste it below. VesperTV never collects or shares it — it\'s stored only on this device.'),
+            style: const TextStyle(fontSize: 12, color: Colors.white60),
           ),
           const SizedBox(height: 20),
           TextField(
@@ -170,9 +160,9 @@ class _TmdbSettingsScreenState extends State<TmdbSettingsScreen> {
             // such overlay.
             textInputAction: TextInputAction.done,
             onSubmitted: (_) => _save(),
-            decoration: const InputDecoration(
-              labelText: 'TMDB API Key',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: tr('TMDB API Key'),
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 16),
@@ -193,16 +183,14 @@ class _TmdbSettingsScreenState extends State<TmdbSettingsScreen> {
                     width: 16,
                     height: 16,
                     child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Save'),
+                : Text(tr('Save')),
           ),
           if (context.watch<StorageService>().getTmdbApiKey()?.isNotEmpty ??
               false) ...[
             const SizedBox(height: 16),
-            const Text(
-                'What\'s New only re-checks TMDB about once a week on its '
-                'own. Use this to force it right now instead of waiting — '
-                'useful right after saving a key for the first time.',
-                style: TextStyle(fontSize: 12, color: Colors.white60)),
+            Text(
+                tr('What\'s New only re-checks TMDB about once a week on its own. Use this to force it right now instead of waiting — useful right after saving a key for the first time.'),
+                style: const TextStyle(fontSize: 12, color: Colors.white60)),
             const SizedBox(height: 8),
             OutlinedButton.icon(
               onPressed: _refreshing ? null : _refreshWhatsNew,
@@ -212,16 +200,15 @@ class _TmdbSettingsScreenState extends State<TmdbSettingsScreen> {
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(Icons.refresh),
-              label: const Text('Refresh What\'s New Now'),
+              label: Text(tr('Refresh What\'s New Now')),
             ),
           ],
           const SizedBox(height: 24),
           // TMDB's own terms require this attribution wherever their API
           // is actually used — not optional/cosmetic.
-          const Text(
-            'This product uses the TMDB API but is not endorsed or '
-            'certified by TMDB.',
-            style: TextStyle(fontSize: 11, color: Colors.white38),
+          Text(
+            tr('This product uses the TMDB API but is not endorsed or certified by TMDB.'),
+            style: const TextStyle(fontSize: 11, color: Colors.white38),
           ),
         ],
       ),

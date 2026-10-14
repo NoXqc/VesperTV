@@ -14,6 +14,7 @@ import 'playlist_manager_screen.dart';
 import 'profiles_screen.dart';
 import 'theme_screen.dart';
 import 'tmdb_settings_screen.dart';
+import '../../l10n/l10n.dart';
 
 /// Settings entry point — a plain menu of destinations instead of one long
 /// scrollable form. Much easier to navigate with a D-pad (a handful of big
@@ -38,66 +39,68 @@ class SettingsMenuScreen extends StatelessWidget {
     return withTvThemeIfNeeded(
         context,
         (context) => SettingsScaffold(
-              title: 'Settings',
+              title: tr('Settings'),
               body: ListView(
                 children: [
                   TvMenuTile(
                     icon: Icons.playlist_add,
-                    title: 'Add Playlist',
-                    subtitle: 'M3U URL or Xtream Codes login',
+                    title: tr('Add Playlist'),
+                    subtitle: tr('M3U URL or Xtream Codes login'),
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(
                         builder: (_) => const AddPlaylistScreen())),
                   ),
                   TvMenuTile(
                     icon: Icons.video_library_outlined,
-                    title: 'Playlist Manager',
-                    subtitle: 'Every playlist: login, groups, enable/disable',
+                    title: tr('Playlist Manager'),
+                    subtitle:
+                        tr('Every playlist: login, groups, enable/disable'),
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(
                         builder: (_) => const PlaylistManagerScreen())),
                   ),
                   TvMenuTile(
                     icon: Icons.people_outline,
-                    title: 'Profiles',
-                    subtitle:
-                        'Separate favorites, history & hidden groups per viewer',
+                    title: tr('Profiles'),
+                    subtitle: tr(
+                        'Separate favorites, history & hidden groups per viewer'),
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(
                         builder: (_) => const ProfilesScreen())),
                   ),
                   TvMenuTile(
                     icon: Icons.tune,
-                    title: 'General',
+                    title: tr('General'),
                     subtitle: Platform.isWindows
-                        ? 'Clear search and watch history'
-                        : 'Startup, Multiview and history options',
+                        ? tr('Language and history')
+                        : tr('Language, startup, Multiview and history'),
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(
                         builder: (_) => const GeneralSettingsScreen())),
                   ),
                   TvMenuTile(
                     icon: Icons.palette_outlined,
-                    title: 'Theme',
-                    subtitle: 'Clock, accent color, layout',
+                    title: tr('Theme'),
+                    subtitle: tr('Clock, accent color, layout'),
                     onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const ThemeScreen())),
                   ),
                   TvMenuTile(
                     icon: Icons.calendar_month_outlined,
-                    title: 'EPG',
-                    subtitle:
-                        'Auto-refresh, channel matching & pairing, clear cache',
+                    title: tr('EPG'),
+                    subtitle: tr(
+                        'Auto-refresh, channel matching & pairing, clear cache'),
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(
                         builder: (_) => const EpgSettingsScreen())),
                   ),
                   TvMenuTile(
                     icon: Icons.movie_filter_outlined,
-                    title: 'TMDB (Release Dates)',
-                    subtitle: 'Optional key for sorting by real release date',
+                    title: tr('TMDB (Release Dates)'),
+                    subtitle:
+                        tr('Optional key for sorting by real release date'),
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(
                         builder: (_) => const TmdbSettingsScreen())),
                   ),
                   TvMenuTile(
                     icon: Icons.system_update_outlined,
-                    title: 'Check for Updates',
-                    subtitle: 'Download and install the latest release',
+                    title: tr('Check for Updates'),
+                    subtitle: tr('Download and install the latest release'),
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(
                         builder: (_) => const CheckUpdatesScreen())),
                   ),
@@ -117,18 +120,20 @@ class SettingsMenuScreen extends StatelessWidget {
                       builder: (context, snapshot) {
                         final version = snapshot.data?.version;
                         return Text(
-                          version == null ? 'Version —' : 'Version $version',
+                          version == null
+                              ? tr('Version —')
+                              : tr('Version {version}', {'version': version}),
                           style:
                               const TextStyle(fontSize: 11, color: Colors.grey),
                         );
                       },
                     ),
                   ),
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                     child: Text(
-                      'Report any bugs or glitches to noxqcx@gmail.com',
-                      style: TextStyle(fontSize: 11, color: Colors.grey),
+                      tr('Report any bugs or glitches to noxqcx@gmail.com'),
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
                     ),
                   ),
                 ],

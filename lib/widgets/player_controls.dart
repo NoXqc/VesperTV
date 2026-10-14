@@ -11,6 +11,7 @@ import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../utils/video_quality.dart';
 import 'epg_guide.dart';
+import '../l10n/l10n.dart';
 
 /// Renders whatever [PlaybackService] is currently playing.
 ///
@@ -53,7 +54,7 @@ class VideoPlayerPane extends StatelessWidget {
     final controller = playback.controller;
 
     if (channel == null || controller == null) {
-      return const Center(child: Text('Select a channel to start watching'));
+      return Center(child: Text(tr('Select a channel to start watching')));
     }
 
     if (playback.error != null) {
@@ -80,16 +81,20 @@ class VideoPlayerPane extends StatelessWidget {
                 const SizedBox(height: 16),
                 _SwitchToLinkedChannelButton(
                   focusNode: switchButtonFocusNode,
-                  label:
-                      'Switch to ${context.read<PlaylistManager>().playlistNameFor(linkedChannel.playlistId)}: ${linkedChannel.name}',
+                  label: tr('Switch to {p}: {name}', {
+                    'p': context
+                        .read<PlaylistManager>()
+                        .playlistNameFor(linkedChannel.playlistId),
+                    'name': linkedChannel.name
+                  }),
                   onPressed: () =>
                       context.read<PlaybackService>().play(linkedChannel),
                 ),
               ],
               const SizedBox(height: 12),
               ExpansionTile(
-                title: const Text('Technical details',
-                    style: TextStyle(fontSize: 12)),
+                title: Text(tr('Technical details'),
+                    style: const TextStyle(fontSize: 12)),
                 children: [
                   Padding(
                     padding: const EdgeInsets.all(8),
@@ -281,13 +286,10 @@ class _SwitchToLinkedChannelButtonState
 /// stops surfacing that as a raw stack-trace-shaped string.
 String _friendlyPlaybackError(String raw) {
   if (isDecoderPlaybackError(raw)) {
-    return 'This device\'s hardware video decoder can\'t play this stream — '
-        'likely a 4K HDR (HEVC 10-bit) format it doesn\'t support, even '
-        'though it claims to. This is a hardware limitation, not something '
-        'the app can fix. If your provider offers a non-4K/HD version of '
-        'this channel or title, try that instead.';
+    return tr(
+        'This device\'s hardware video decoder can\'t play this stream — likely a 4K HDR (HEVC 10-bit) format it doesn\'t support, even though it claims to. This is a hardware limitation, not something the app can fix. If your provider offers a non-4K/HD version of this channel or title, try that instead.');
   }
-  return 'Playback error:\n$raw';
+  return tr('Playback error:\n{raw}', {'raw': raw});
 }
 
 /// Bottom-anchored playback controls: play/pause, seek bar, elapsed/total
@@ -487,8 +489,8 @@ class PlayerControls extends StatelessWidget {
                         color: isFavorite == true ? Colors.amber : Colors.white,
                       ),
                       tooltip: isFavorite == true
-                          ? 'Remove from favorites'
-                          : 'Add to favorites',
+                          ? tr('Remove from favorites')
+                          : tr('Add to favorites'),
                       onPressed: onToggleFavorite,
                     ),
                   // Episode nav — distinct icon shape (skip_previous/next,
@@ -499,7 +501,7 @@ class PlayerControls extends StatelessWidget {
                     IconButton(
                       icon:
                           const Icon(Icons.skip_previous, color: Colors.white),
-                      tooltip: 'Previous episode',
+                      tooltip: tr('Previous episode'),
                       onPressed: onPrevious,
                     ),
                   // Skip/fast-seek only makes sense for VOD.
@@ -533,7 +535,7 @@ class PlayerControls extends StatelessWidget {
                   if (onNext != null)
                     IconButton(
                       icon: const Icon(Icons.skip_next, color: Colors.white),
-                      tooltip: 'Next episode',
+                      tooltip: tr('Next episode'),
                       onPressed: onNext,
                     ),
                 ],
@@ -580,7 +582,7 @@ class PlayerControls extends StatelessWidget {
                     if (isLive && channel != null)
                       _LabeledIconButton(
                         icon: Icons.history,
-                        label: 'Recall — go back to a recent channel',
+                        label: tr('Recall — go back to a recent channel'),
                         onPressed: () {
                           onActivity?.call();
                           showRecallPicker(context, channel!);
@@ -595,7 +597,7 @@ class PlayerControls extends StatelessWidget {
                     if (isLive && channel != null)
                       _LabeledIconButton(
                         icon: Icons.refresh,
-                        label: 'Reload channel',
+                        label: tr('Reload channel'),
                         onPressed: () {
                           onActivity?.call();
                           context
@@ -609,7 +611,7 @@ class PlayerControls extends StatelessWidget {
                     if (isLive && onOpenMultiview != null)
                       _LabeledIconButton(
                         icon: Icons.grid_view,
-                        label: 'Open in Multiview',
+                        label: tr('Open in Multiview'),
                         onPressed: () {
                           onActivity?.call();
                           onOpenMultiview!();
@@ -677,22 +679,22 @@ class _RecallPickerSheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
               child: Text(
-                'Recall — recently watched',
-                style: TextStyle(
+                tr('Recall — recently watched'),
+                style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
                     fontWeight: FontWeight.bold),
               ),
             ),
             if (channels.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(16),
+              Padding(
+                padding: const EdgeInsets.all(16),
                 child: Text(
-                  'No other live channels watched yet this session.',
-                  style: TextStyle(color: Colors.white70, fontSize: 13),
+                  tr('No other live channels watched yet this session.'),
+                  style: const TextStyle(color: Colors.white70, fontSize: 13),
                 ),
               )
             else
@@ -742,7 +744,9 @@ class _LiveRemainingLabel extends StatelessWidget {
     if (remaining.isNegative) return const SizedBox.shrink();
     final minutes = remaining.inMinutes;
     return Text(
-      minutes < 1 ? 'Ending now' : '$minutes min left',
+      minutes < 1
+          ? tr('Ending now')
+          : tr('{minutes} min left', {'minutes': minutes}),
       style: const TextStyle(color: Colors.white70, fontSize: 12),
     );
   }
@@ -1016,7 +1020,7 @@ class _AudioTrackButtonState extends State<_AudioTrackButton> {
     final language = track.language;
     if (language != null && language.isNotEmpty && language != 'und')
       return language.toUpperCase();
-    return 'Track ${track.id}';
+    return tr('Track {id}', {'id': track.id});
   }
 
   Future<void> _openPicker() async {
@@ -1039,11 +1043,11 @@ class _AudioTrackButtonState extends State<_AudioTrackButton> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Text(
-                'Audio Track',
-                style: TextStyle(
+                tr('Audio Track'),
+                style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 16),
@@ -1074,7 +1078,7 @@ class _AudioTrackButtonState extends State<_AudioTrackButton> {
     if (tracks == null || tracks.length < 2) return const SizedBox.shrink();
     return _LabeledIconButton(
       icon: Icons.multitrack_audio,
-      label: 'Audio track',
+      label: tr('Audio track'),
       onPressed: _openPicker,
     );
   }
@@ -1101,7 +1105,8 @@ class _LinkedChannelButton extends StatelessWidget {
         .playlistNameFor(linkedChannel.playlistId);
     return _LabeledIconButton(
       icon: Icons.swap_horiz,
-      label: 'Switch to $playlistName: ${linkedChannel.name}',
+      label: tr('Switch to {playlistName}: {name}',
+          {'playlistName': playlistName, 'name': linkedChannel.name}),
       onPressed: () => context.read<PlaybackService>().play(linkedChannel),
     );
   }

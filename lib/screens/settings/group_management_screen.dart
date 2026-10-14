@@ -8,6 +8,7 @@ import '../../utils/tv_theme.dart';
 import '../../widgets/mode_button.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_app_bar_button.dart';
+import '../../l10n/l10n.dart';
 
 /// Lists every group/category (live, movies, TV shows) — including hidden
 /// ones, which is the whole point of this screen — with per-group and
@@ -51,10 +52,9 @@ class _GroupManagementScreenState extends State<GroupManagementScreen>
     final leave = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Leave group selection?'),
-        content: const Text(
-          'Your show/hide choices are saved, and anything still visible '
-          'will start downloading — same as pressing Done.',
+        title: Text(tr('Leave group selection?')),
+        content: Text(
+          tr('Your show/hide choices are saved, and anything still visible will start downloading — same as pressing Done.'),
         ),
         // Plain TextButton/FilledButton left which one has D-pad focus
         // ambiguous — reported directly: FilledButton's permanent solid
@@ -65,12 +65,12 @@ class _GroupManagementScreenState extends State<GroupManagementScreen>
         // this one dialog.
         actions: [
           ModeButton(
-            label: 'Stay',
+            label: tr('Stay'),
             selected: false,
             onTap: () => Navigator.of(context).pop(false),
           ),
           ModeButton(
-            label: 'Leave',
+            label: tr('Leave'),
             selected: false,
             onTap: () => Navigator.of(context).pop(true),
           ),
@@ -92,20 +92,19 @@ class _GroupManagementScreenState extends State<GroupManagementScreen>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Save playlist?'),
-        content: const Text(
-          'Your playlist will be saved with the selected groups. You can '
-          'always add or remove groups later in Settings > Group Management.',
+        title: Text(tr('Save playlist?')),
+        content: Text(
+          tr('Your playlist will be saved with the selected groups. You can always add or remove groups later in Settings > Group Management.'),
         ),
         // Same ModeButton fix as _confirmLeave above — see its comment.
         actions: [
           ModeButton(
-            label: 'Cancel',
+            label: tr('Cancel'),
             selected: false,
             onTap: () => Navigator.of(context).pop(false),
           ),
           ModeButton(
-            label: 'Confirm',
+            label: tr('Confirm'),
             selected: false,
             onTap: () => Navigator.of(context).pop(true),
           ),
@@ -204,7 +203,7 @@ class _GroupManagementScreenState extends State<GroupManagementScreen>
               Navigator.of(context).pop(true);
             },
             child: SettingsScaffold(
-              title: 'Group Management',
+              title: tr('Group Management'),
               // Explicit "Done" so the caller can tell a deliberate finish apart
               // from just leaving the screen some other way (physical back, an
               // accidental pop, or confirming "leave" in the prompt above
@@ -214,7 +213,7 @@ class _GroupManagementScreenState extends State<GroupManagementScreen>
               // downloading everything not yet hidden.
               actions: [
                 TvAppBarButton.label(
-                  label: 'Done',
+                  label: tr('Done'),
                   focusNode: _doneButtonFocusNode,
                   onTap: () {
                     setState(() => _allowPop = true);
@@ -224,11 +223,11 @@ class _GroupManagementScreenState extends State<GroupManagementScreen>
               ],
               bottom: TabBar(
                 controller: _tabController,
-                tabs: const [
-                  Tab(text: 'TV'),
-                  Tab(text: 'Movies'),
-                  Tab(text: 'TV Shows'),
-                  Tab(text: 'Confirm'),
+                tabs: [
+                  Tab(text: tr('TV')),
+                  Tab(text: tr('Movies')),
+                  Tab(text: tr('TV Shows')),
+                  Tab(text: tr('Confirm')),
                 ],
               ),
               body: CallbackShortcuts(
@@ -311,17 +310,16 @@ class _ConfirmTab extends StatelessWidget {
             const Icon(Icons.check_circle_outline,
                 size: 48, color: Colors.white70),
             const SizedBox(height: 16),
-            const Text(
-              'If you are done selecting your groups, press Confirm below.\n\n'
-              'If you are not done yet, press Left to go back to your categories.',
+            Text(
+              tr('If you are done selecting your groups, press Confirm below.\n\nIf you are not done yet, press Left to go back to your categories.'),
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white70),
+              style: const TextStyle(color: Colors.white70),
             ),
             const SizedBox(height: 24),
             FilledButton(
               autofocus: true,
               onPressed: onConfirm,
-              child: const Text('Confirm'),
+              child: Text(tr('Confirm')),
             ),
           ],
         ),
@@ -346,8 +344,8 @@ class _GroupList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (groups.isEmpty) {
-      return const Center(
-          child: Text('No categories yet — load a playlist first.'));
+      return Center(
+          child: Text(tr('No categories yet — load a playlist first.')));
     }
 
     final titles = groups.map((g) => g.title);
@@ -363,7 +361,7 @@ class _GroupList extends StatelessWidget {
                   onPressed: () => playlist.setGroupsHidden(
                       playlistId, titles, false,
                       loadImmediately: !deferLoading),
-                  child: const Text('Show All'),
+                  child: Text(tr('Show All')),
                 ),
               ),
               const SizedBox(width: 12),
@@ -371,7 +369,7 @@ class _GroupList extends StatelessWidget {
                 child: OutlinedButton(
                   onPressed: () =>
                       playlist.setGroupsHidden(playlistId, titles, true),
-                  child: const Text('Hide All'),
+                  child: Text(tr('Hide All')),
                 ),
               ),
             ],

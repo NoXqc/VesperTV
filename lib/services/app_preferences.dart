@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../models/cyberpunk_palette.dart';
 import '../utils/constants.dart';
 import 'storage_service.dart';
@@ -59,6 +60,17 @@ class AppPreferences extends ChangeNotifier {
   void setLayoutMode(String mode) {
     layoutMode = mode;
     _storage.setLayoutMode(mode);
+    notifyListeners();
+  }
+
+  /// 'auto', 'en' or 'fr' (see L10n). Applied before `runApp` in main.dart;
+  /// changing it here re-resolves the language and notifies, and main.dart
+  /// remounts the home screen so every string is rebuilt.
+  String get language => L10n.setting;
+
+  Future<void> setLanguage(String value) async {
+    await L10n.apply(value);
+    await _storage.setLanguage(value);
     notifyListeners();
   }
 

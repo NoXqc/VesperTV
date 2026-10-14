@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../services/epg_service.dart';
+import '../l10n/l10n.dart';
 
 /// Shows the current and next program for a channel.
 ///
@@ -23,14 +24,14 @@ class EpgGuide extends StatelessWidget {
 
     if (current == null && next == null) {
       return compact
-          ? const Text('No program data', style: TextStyle(fontSize: 12))
+          ? Text(tr('No program data'), style: const TextStyle(fontSize: 12))
           : const SizedBox.shrink();
     }
 
     if (compact) {
       final text = current != null
           ? '${timeFormat.format(current.start)} ${current.title}'
-          : 'Next: ${next!.title}';
+          : tr('Next: {p}', {'p': next!.title});
       return Text(
         text,
         maxLines: 1,
@@ -48,14 +49,19 @@ class EpgGuide extends StatelessWidget {
           if (current != null)
             Expanded(
               child: Text(
-                'NOW: ${current.title} (${timeFormat.format(current.start)}-${timeFormat.format(current.stop)})',
+                tr('NOW: {title} ({p}-{p2})', {
+                  'title': current.title,
+                  'p': timeFormat.format(current.start),
+                  'p2': timeFormat.format(current.stop)
+                }),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
           if (next != null)
             Expanded(
               child: Text(
-                'NEXT: ${next.title} (${timeFormat.format(next.start)})',
+                tr('NEXT: {title} ({p})',
+                    {'title': next.title, 'p': timeFormat.format(next.start)}),
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.right,
               ),

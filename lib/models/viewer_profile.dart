@@ -1,3 +1,5 @@
+import '../l10n/l10n.dart';
+
 /// One of several viewers sharing this device's playlists — the same
 /// catalog/credentials, but each with their own favorites, hidden groups/
 /// channels, and watch history. Deliberately a distinct name from
@@ -37,6 +39,10 @@ class ViewerProfile {
 
   bool get isMain => id == mainId;
 
+  /// The stored default name 'Main' is shown translated; a name the user
+  /// typed is shown as-is. Never write this back to storage.
+  String get displayName => isMain && name == 'Main' ? tr('Main') : name;
+
   factory ViewerProfile.main() => ViewerProfile(
         id: mainId,
         name: 'Main',
@@ -66,7 +72,7 @@ class ViewerProfile {
         name: json['name'] as String,
         colorIndex: json['colorIndex'] as int? ?? 0,
         isRestricted: json['isRestricted'] as bool? ?? false,
-        createdAt: DateTime.fromMillisecondsSinceEpoch(
-            json['createdAt'] as int? ?? 0),
+        createdAt:
+            DateTime.fromMillisecondsSinceEpoch(json['createdAt'] as int? ?? 0),
       );
 }

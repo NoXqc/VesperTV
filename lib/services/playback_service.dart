@@ -11,6 +11,7 @@ import '../models/playlist_profile.dart';
 import '../utils/constants.dart';
 import 'playlist_manager.dart';
 import 'storage_service.dart';
+import '../l10n/l10n.dart';
 
 /// Owns the single, app-wide [VideoPlayerHdrController] for whatever channel
 /// is currently playing.
@@ -252,8 +253,8 @@ class PlaybackService extends ChangeNotifier {
   /// already showing doesn't restart it).
   Future<void> play(Channel channel) async {
     if (!_playlistManager.isPlaylistEnabled(channel.playlistId)) {
-      error =
-          'This playlist is disabled on this device — enable it in Settings > Playlist Manager to watch.';
+      error = tr(
+          'This playlist is disabled on this device — enable it in Settings > Playlist Manager to watch.');
       notifyListeners();
       return;
     }
@@ -382,7 +383,7 @@ class PlaybackService extends ChangeNotifier {
       return;
     }
     _reloadingCurrentChannel = true;
-    reconnectStatus = 'Reconnecting...';
+    reconnectStatus = tr('Reconnecting...');
     error = null;
     notifyListeners();
 
@@ -464,8 +465,9 @@ class PlaybackService extends ChangeNotifier {
       if (currentChannel?.id != channel.id) return false;
 
       final server = candidates[i];
-      reconnectStatus = 'Trying to reconnect on backup servers '
-          '(${i + 1}/${candidates.length})...';
+      reconnectStatus = tr(
+          'Trying to reconnect on backup servers ({p}/{candidates})...',
+          {'p': i + 1, 'candidates': candidates.length});
       error = null;
       notifyListeners();
       await Future<void>.delayed(_backupServerDelay);

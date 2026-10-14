@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/channel.dart';
+import '../l10n/l10n.dart';
 
 /// Parses M3U / M3U8 playlists into [Channel] objects.
 ///
@@ -26,9 +27,11 @@ class M3uParser {
           await client.send(request).timeout(const Duration(seconds: 30));
 
       if (streamedResponse.statusCode != 200) {
-        throw Exception(
-            'Failed to load playlist from ${Uri.parse(url).host} '
-            '(HTTP ${streamedResponse.statusCode})');
+        throw Exception(tr(
+            'Failed to load playlist from {host} (HTTP {code})', {
+          'host': Uri.parse(url).host,
+          'code': streamedResponse.statusCode
+        }));
       }
 
       final state = _ParseState(playlistId: playlistId);

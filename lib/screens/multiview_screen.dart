@@ -12,6 +12,7 @@ import '../services/playlist_manager.dart';
 import '../services/storage_service.dart';
 import '../widgets/hold_to_activate.dart';
 import '../widgets/tv_menu_tile.dart';
+import '../l10n/l10n.dart';
 
 /// TV-remote-first multiview grid — several live channels playing at
 /// once, one with audio focus at a time. Same idea/UX as
@@ -133,11 +134,12 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setDialogState) => AlertDialog(
           backgroundColor: const Color(0xFF1A1A1A),
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.info_outline, color: Colors.amber),
-              SizedBox(width: 8),
-              Text('Before you start', style: TextStyle(color: Colors.white)),
+              const Icon(Icons.info_outline, color: Colors.amber),
+              const SizedBox(width: 8),
+              Text(tr('Before you start'),
+                  style: const TextStyle(color: Colors.white)),
             ],
           ),
           content: SizedBox(
@@ -146,18 +148,9 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Every screen in Multiview is its own connection to your '
-                  'provider. Your playlist must allow at least as many '
-                  'connections as screens you open (see Max connections in '
-                  'Playlist Manager).\n\n'
-                  'If two screens share an account that allows only one '
-                  'connection, they keep kicking each other off and will '
-                  'freeze or buffer. Tip: use channels from different '
-                  'playlists, one per account.\n\n'
-                  'A screen that freezes restarts on its own. If it '
-                  'doesn\'t, hold Select on it and choose Reload.',
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                Text(
+                  tr('Every screen in Multiview is its own connection to your provider. Your playlist must allow at least as many connections as screens you open (see Max connections in Playlist Manager).\n\nIf two screens share an account that allows only one connection, they keep kicking each other off and will freeze or buffer. Tip: use channels from different playlists, one per account.\n\nA screen that freezes restarts on its own. If it doesn\'t, hold Select on it and choose Reload.'),
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),
                 const SizedBox(height: 12),
                 CheckboxListTile(
@@ -165,8 +158,8 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
                   onChanged: (v) => setDialogState(() => dontShow = v ?? false),
                   controlAffinity: ListTileControlAffinity.leading,
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Don\'t show this again',
-                      style: TextStyle(color: Colors.white)),
+                  title: Text(tr('Don\'t show this again'),
+                      style: const TextStyle(color: Colors.white)),
                 ),
               ],
             ),
@@ -175,7 +168,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
             TextButton(
               autofocus: true,
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('OK'),
+              child: Text(tr('OK')),
             ),
           ],
         ),
@@ -270,7 +263,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
       unawaited(newController.dispose());
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Couldn\'t start that channel')));
+            SnackBar(content: Text(tr('Couldn\'t start that channel'))));
       }
     }
   }
@@ -357,26 +350,26 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.fullscreen, color: Colors.white),
-              title: const Text('Full screen',
-                  style: TextStyle(color: Colors.white)),
+              title: Text(tr('Full screen'),
+                  style: const TextStyle(color: Colors.white)),
               onTap: () => Navigator.of(sheetContext).pop('fullscreen'),
             ),
             ListTile(
               leading: const Icon(Icons.refresh, color: Colors.white),
-              title:
-                  const Text('Reload', style: TextStyle(color: Colors.white)),
+              title: Text(tr('Reload'),
+                  style: const TextStyle(color: Colors.white)),
               onTap: () => Navigator.of(sheetContext).pop('reload'),
             ),
             ListTile(
               leading: const Icon(Icons.swap_horiz, color: Colors.white),
-              title: const Text('Change channel',
-                  style: TextStyle(color: Colors.white)),
+              title: Text(tr('Change channel'),
+                  style: const TextStyle(color: Colors.white)),
               onTap: () => Navigator.of(sheetContext).pop('swap'),
             ),
             ListTile(
               leading: const Icon(Icons.close, color: Colors.white),
-              title:
-                  const Text('Remove', style: TextStyle(color: Colors.white)),
+              title: Text(tr('Remove'),
+                  style: const TextStyle(color: Colors.white)),
               onTap: () => Navigator.of(sheetContext).pop('remove'),
             ),
           ],
@@ -454,8 +447,8 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
                 onPressed: () => Navigator.of(context).pop(),
               ),
-              const Text('Multiview',
-                  style: TextStyle(
+              Text(tr('Multiview'),
+                  style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
                       fontWeight: FontWeight.w600)),
@@ -466,14 +459,14 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
                 onPressed: _toggleLayout,
                 icon: Icon(quad ? Icons.grid_view : Icons.view_agenda,
                     color: Colors.white, size: 18),
-                label: Text(quad ? '4 screens' : '2 screens',
+                label: Text(quad ? tr('4 screens') : tr('2 screens'),
                     style: const TextStyle(color: Colors.white)),
               ),
               const Spacer(),
               const Icon(Icons.volume_up, color: Colors.amber, size: 16),
               const SizedBox(width: 4),
-              const Text('= audio — Select to switch, hold Select for options',
-                  style: TextStyle(color: Colors.white54, fontSize: 12)),
+              Text(tr('= audio — Select to switch, hold Select for options'),
+                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
             ],
           ),
         ),
@@ -913,7 +906,7 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title: const Text('Pick a channel'),
+        title: Text(tr('Pick a channel')),
       ),
       body: CallbackShortcuts(
         bindings: <ShortcutActivator, VoidCallback>{
@@ -960,7 +953,9 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
                           : entry == 'Favorites'
                               ? Icons.star
                               : Icons.live_tv,
-                      title: entry,
+                      title: entry == 'All' || entry == 'Favorites'
+                          ? tr(entry)
+                          : entry,
                       trailing: selected
                           ? Icon(Icons.check, color: scheme.primary)
                           : const SizedBox.shrink(),
@@ -994,20 +989,22 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
                         controller: _searchController,
                         focusNode: _searchFocus,
                         style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
-                          hintText: 'Search channels...',
-                          hintStyle: TextStyle(color: Colors.white54),
-                          prefixIcon: Icon(Icons.search, color: Colors.white54),
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          hintText: tr('Search channels...'),
+                          hintStyle: const TextStyle(color: Colors.white54),
+                          prefixIcon:
+                              const Icon(Icons.search, color: Colors.white54),
+                          border: const OutlineInputBorder(),
                         ),
                         onChanged: (v) => setState(() => _query = v),
                       ),
                     ),
                     Expanded(
                       child: filtered.isEmpty
-                          ? const Center(
-                              child: Text('No channels found',
-                                  style: TextStyle(color: Colors.white54)),
+                          ? Center(
+                              child: Text(tr('No channels found'),
+                                  style:
+                                      const TextStyle(color: Colors.white54)),
                             )
                           : ListView.builder(
                               controller: _resultsScroll,

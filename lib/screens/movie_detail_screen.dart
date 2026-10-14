@@ -12,6 +12,7 @@ import '../services/storage_service.dart';
 import '../utils/tv_theme.dart';
 import 'desktop_player_screen.dart';
 import 'player_screen.dart';
+import '../l10n/l10n.dart';
 
 /// A stop between "tap a movie" and "it starts playing" — a poster, rating,
 /// plot, and an explicit Play/Resume choice, rather than autoplaying the
@@ -192,7 +193,8 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    '${(watchedFraction * 100).round()}% watched',
+                                    tr('{p}% watched',
+                                        {'p': (watchedFraction * 100).round()}),
                                     style: const TextStyle(
                                         color: Colors.white70, fontSize: 12),
                                   ),
@@ -205,20 +207,20 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                               if (resumeMs > 0)
                                 FilledButton.icon(
                                   icon: const Icon(Icons.play_arrow),
-                                  label: const Text('Resume'),
+                                  label: Text(tr('Resume')),
                                   onPressed: () => play(resume: true),
                                 )
                               else
                                 FilledButton.icon(
                                   icon: const Icon(Icons.play_arrow),
-                                  label: const Text('Play'),
+                                  label: Text(tr('Play')),
                                   onPressed: () => play(resume: true),
                                 ),
                               const SizedBox(width: 12),
                               if (resumeMs > 0)
                                 OutlinedButton.icon(
                                   icon: const Icon(Icons.replay),
-                                  label: const Text('Restart'),
+                                  label: Text(tr('Restart')),
                                   onPressed: () => play(resume: false),
                                 ),
                               const SizedBox(width: 12),

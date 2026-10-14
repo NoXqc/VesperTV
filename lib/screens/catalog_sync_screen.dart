@@ -7,6 +7,7 @@ import '../services/app_preferences.dart';
 import '../services/playlist_manager.dart';
 import '../utils/tv_theme.dart';
 import '../widgets/mode_button.dart';
+import '../l10n/l10n.dart';
 
 /// The actual progress UI for a full catalog sync — phase text + a
 /// progress bar off [PlaylistManager]'s existing warm-up counters.
@@ -41,17 +42,17 @@ class CatalogSyncBody extends StatelessWidget {
                   hasProgress ? (done / total).clamp(0.0, 1.0) : null;
               final phase = playlist.loadingPhase ??
                   (hasProgress
-                      ? 'Loading movies & TV shows...'
-                      : 'Connecting to server...');
+                      ? tr('Loading movies & TV shows...')
+                      : tr('Connecting to server...'));
               return Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.cloud_sync_outlined,
                       color: Colors.white70, size: 48),
                   const SizedBox(height: 24),
-                  const Text(
-                    'Updating Content',
-                    style: TextStyle(
+                  Text(
+                    tr('Updating Content'),
+                    style: const TextStyle(
                         color: Colors.white,
                         fontSize: 20,
                         fontWeight: FontWeight.bold),
@@ -70,7 +71,8 @@ class CatalogSyncBody extends StatelessWidget {
                   if (hasProgress) ...[
                     const SizedBox(height: 8),
                     Text(
-                      '$done / $total categories',
+                      tr('{done} / {total} categories',
+                          {'done': done, 'total': total}),
                       style:
                           const TextStyle(color: Colors.white38, fontSize: 12),
                     ),
@@ -122,8 +124,8 @@ class CatalogSyncScreen extends StatelessWidget {
         backgroundColor: Colors.black,
         body: CatalogSyncBody(
           playlist: playlist,
-          footer: 'This happens every few days to keep your catalog current — '
-              'everyday launches open straight in.',
+          footer: tr(
+              'This happens every few days to keep your catalog current — everyday launches open straight in.'),
         ),
       ),
     );
@@ -149,10 +151,9 @@ Future<bool> confirmAndRunFullCatalogSync(
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Update content now?'),
-      content: const Text(
-        'Re-checks every visible category for new content. This can take '
-        'a few minutes on a large catalog.',
+      title: Text(tr('Update content now?')),
+      content: Text(
+        tr('Re-checks every visible category for new content. This can take a few minutes on a large catalog.'),
       ),
       // Plain TextButton/FilledButton left which one has D-pad focus
       // ambiguous — confirmed directly on hardware (the FilledButton's
@@ -161,11 +162,11 @@ Future<bool> confirmAndRunFullCatalogSync(
       // *only* on real focus.
       actions: [
         ModeButton(
-            label: 'Cancel',
+            label: tr('Cancel'),
             selected: false,
             onTap: () => Navigator.of(context).pop(false)),
         ModeButton(
-            label: 'Update',
+            label: tr('Update'),
             selected: false,
             onTap: () => Navigator.of(context).pop(true)),
       ],

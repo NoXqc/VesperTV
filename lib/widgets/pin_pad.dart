@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../services/parental_pin.dart';
+import '../l10n/l10n.dart';
 
 /// Index-matched 0-9 so a remote with a physical number pad (Formuler) can
 /// type a PIN directly without ever moving focus around the on-screen grid.
@@ -38,7 +39,8 @@ const _numpadKeys = [
 /// they're not the kid (leaving the profile, opening Settings).
 Future<bool> promptForPin(BuildContext context) async {
   final result = await Navigator.of(context).push<bool>(
-    MaterialPageRoute(builder: (_) => const _PinPadScreen(mode: _PinPadMode.verify)),
+    MaterialPageRoute(
+        builder: (_) => const _PinPadScreen(mode: _PinPadMode.verify)),
   );
   return result ?? false;
 }
@@ -48,7 +50,8 @@ Future<bool> promptForPin(BuildContext context) async {
 /// was actually set; false on cancel at either step.
 Future<bool> setupPinFlow(BuildContext context) async {
   final result = await Navigator.of(context).push<bool>(
-    MaterialPageRoute(builder: (_) => const _PinPadScreen(mode: _PinPadMode.setup)),
+    MaterialPageRoute(
+        builder: (_) => const _PinPadScreen(mode: _PinPadMode.setup)),
   );
   return result ?? false;
 }
@@ -173,7 +176,7 @@ class _PinPadScreenState extends State<_PinPadScreen> {
       _checkLockout();
       setState(() {
         _buffer = '';
-        _error = _lockedFor != null ? null : 'Incorrect PIN';
+        _error = _lockedFor != null ? null : tr('Incorrect PIN');
       });
       return;
     }
@@ -189,7 +192,7 @@ class _PinPadScreenState extends State<_PinPadScreen> {
     }
     if (entered != _firstEntry) {
       setState(() {
-        _error = "PINs didn't match — try again";
+        _error = tr("PINs didn't match — try again");
         _firstEntry = null;
         _isSecondSetupEntry = false;
         _buffer = '';
@@ -202,8 +205,8 @@ class _PinPadScreenState extends State<_PinPadScreen> {
   }
 
   String get _title {
-    if (widget.mode == _PinPadMode.verify) return 'Enter PIN';
-    return _isSecondSetupEntry ? 'Confirm PIN' : 'Set a PIN';
+    if (widget.mode == _PinPadMode.verify) return tr('Enter PIN');
+    return _isSecondSetupEntry ? tr('Confirm PIN') : tr('Set a PIN');
   }
 
   @override
@@ -250,7 +253,8 @@ class _PinPadScreenState extends State<_PinPadScreen> {
                     height: 20,
                     child: Text(
                       locked
-                          ? 'Too many attempts — try again in ${_lockedFor!.inSeconds}s'
+                          ? tr('Too many attempts — try again in {p}s',
+                              {'p': _lockedFor!.inSeconds})
                           : (_error ?? ''),
                       style: TextStyle(
                           color: Colors.redAccent.shade100, fontSize: 13),
@@ -265,12 +269,13 @@ class _PinPadScreenState extends State<_PinPadScreen> {
                           _moveFocus(1, 0),
                       const SingleActivator(LogicalKeyboardKey.arrowLeft): () =>
                           _moveFocus(0, -1),
-                      const SingleActivator(LogicalKeyboardKey.arrowRight): () =>
-                          _moveFocus(0, 1),
+                      const SingleActivator(LogicalKeyboardKey.arrowRight):
+                          () => _moveFocus(0, 1),
                       for (var d = 0; d <= 9; d++)
                         SingleActivator(_digitKeys[d]): () => _pressDigit('$d'),
                       for (var d = 0; d <= 9; d++)
-                        SingleActivator(_numpadKeys[d]): () => _pressDigit('$d'),
+                        SingleActivator(_numpadKeys[d]): () =>
+                            _pressDigit('$d'),
                     },
                     child: Focus(
                       autofocus: true,

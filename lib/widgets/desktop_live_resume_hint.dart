@@ -4,6 +4,7 @@ import '../models/channel.dart';
 import '../screens/desktop_player_screen.dart';
 import '../services/desktop_mini_player.dart';
 import 'live_resume_hint.dart';
+import '../l10n/l10n.dart';
 
 /// Windows equivalent of `LiveResumeHint` — same "small reminder pill,
 /// tap to resume fullscreen" idea, driven by `DesktopMiniPlayer` instead
@@ -120,10 +121,10 @@ class _DesktopLiveResumeHintState extends State<DesktopLiveResumeHint> {
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600),
                           ),
-                          const Text(
-                            'Click to resume',
-                            style:
-                                TextStyle(color: Colors.white70, fontSize: 11),
+                          Text(
+                            tr('Click to resume'),
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 11),
                           ),
                         ],
                       ),

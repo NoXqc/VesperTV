@@ -27,6 +27,7 @@ import 'profile_picker_screen.dart';
 import 'search_screen.dart';
 import 'series_detail_screen.dart';
 import 'settings/settings_menu_screen.dart';
+import '../l10n/l10n.dart';
 
 /// Main screen: collapsible sidebar + channel/program list, with the video
 /// player shown inline on wide layouts (tablets/Android boxes) or, on
@@ -109,16 +110,16 @@ class _HomeScreenState extends State<HomeScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Update content now?'),
+        title: Text(tr('Update content now?')),
         content:
-            const Text('Re-checks your M3U playlist URL(s) for new content.'),
+            Text(tr('Re-checks your M3U playlist URL(s) for new content.')),
         actions: [
           ModeButton(
-              label: 'Cancel',
+              label: tr('Cancel'),
               selected: false,
               onTap: () => Navigator.of(context).pop(false)),
           ModeButton(
-              label: 'Update',
+              label: tr('Update'),
               selected: false,
               onTap: () => Navigator.of(context).pop(true)),
         ],
@@ -149,8 +150,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _promptForSettings() {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-          content: Text('Set your playlist source in Settings first.')),
+      SnackBar(
+          content: Text(tr('Set your playlist source in Settings first.'))),
     );
     _openSettings();
   }
@@ -158,8 +159,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showUpdateToast() {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-          content: Text('Content updated'), duration: Duration(seconds: 2)),
+      SnackBar(
+          content: Text(tr('Content updated')),
+          duration: const Duration(seconds: 2)),
     );
   }
 
@@ -202,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-            child: Text('Continue Watching',
+            child: Text(tr('Continue Watching'),
                 style: Theme.of(context).textTheme.labelLarge),
           ),
           Expanded(
@@ -284,12 +286,12 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         actions: [
           IconButton(
-            tooltip: 'Search',
+            tooltip: tr('Search'),
             icon: const Icon(Icons.search),
             onPressed: _openSearch,
           ),
           IconButton(
-            tooltip: 'Update content',
+            tooltip: tr('Update content'),
             icon: playlist.isLoading
                 ? const SizedBox(
                     width: 20,
@@ -299,7 +301,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: playlist.isLoading ? null : _refreshPlaylist,
           ),
           IconButton(
-            tooltip: 'Update EPG now',
+            tooltip: tr('Update EPG now'),
             icon: epg.isLoading
                 ? const SizedBox(
                     width: 20,
@@ -309,12 +311,12 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: epg.isLoading ? null : _refreshEpg,
           ),
           IconButton(
-            tooltip: context.watch<ViewerProfileService>().active.name,
+            tooltip: context.watch<ViewerProfileService>().active.displayName,
             icon: const Icon(Icons.account_circle_outlined),
             onPressed: _openProfilePicker,
           ),
           IconButton(
-            tooltip: 'Settings',
+            tooltip: tr('Settings'),
             icon: const Icon(Icons.settings),
             onPressed: _openSettings,
           ),
@@ -423,8 +425,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return const Center(child: CircularProgressIndicator());
       }
       if (series.isEmpty) {
-        return const Center(
-            child: Text('No TV shows found. Pick a category on the left.'));
+        return Center(
+            child: Text(tr('No TV shows found. Pick a category on the left.')));
       }
       return ListView.builder(
         itemCount: series.length,
@@ -467,7 +469,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (channels.isEmpty) {
-      return const Center(child: Text('No channels found.'));
+      return Center(child: Text(tr('No channels found.')));
     }
 
     return Consumer<PlaybackService>(
@@ -501,7 +503,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             const CircularProgressIndicator(),
             const SizedBox(height: 16),
-            Text(playlist.loadingPhase ?? 'Loading playlist...',
+            Text(playlist.loadingPhase ?? tr('Loading playlist...'),
                 textAlign: TextAlign.center),
           ],
         ),
@@ -518,7 +520,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             const Icon(Icons.live_tv, size: 64),
             const SizedBox(height: 16),
-            const Text('Failed to load playlist.', textAlign: TextAlign.center),
+            Text(tr('Failed to load playlist.'), textAlign: TextAlign.center),
             if (playlist.error != null) ...[
               const SizedBox(height: 8),
               Text(playlist.error!,
@@ -545,12 +547,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Text('Retry'),
+                      : Text(tr('Retry')),
                 ),
                 const SizedBox(width: 12),
                 FilledButton(
-                    onPressed: _openSettings,
-                    child: const Text('Open Settings')),
+                    onPressed: _openSettings, child: Text(tr('Open Settings'))),
               ],
             ),
           ],

@@ -6,6 +6,7 @@ import '../../models/channel.dart';
 import '../../services/playlist_manager.dart';
 import '../../widgets/auto_pair_flow.dart';
 import '../../widgets/settings_scaffold.dart';
+import '../../l10n/l10n.dart';
 
 /// Manual cross-playlist "same real-world channel" linking — see
 /// `AppConstants.keyChannelLinks`'s doc comment for why this has to be
@@ -127,8 +128,7 @@ class _ChannelLinkingScreenState extends State<ChannelLinkingScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: Text(
-              'Add and enable a second playlist first — a link connects '
-              'a channel on one playlist to its equivalent on another.',
+              tr('Add and enable a second playlist first — a link connects a channel on one playlist to its equivalent on another.'),
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ),
@@ -141,7 +141,7 @@ class _ChannelLinkingScreenState extends State<ChannelLinkingScreen> {
                   child: OutlinedButton.icon(
                     focusNode: _autoPairFocus,
                     icon: const Icon(Icons.auto_fix_high),
-                    label: const Text('Auto-Pair Channels'),
+                    label: Text(tr('Auto-Pair Channels')),
                     onPressed: () => _autoPair(playlist),
                   ),
                 ),
@@ -149,7 +149,7 @@ class _ChannelLinkingScreenState extends State<ChannelLinkingScreen> {
                 Expanded(
                   child: OutlinedButton.icon(
                     icon: const Icon(Icons.undo),
-                    label: const Text('Unpair Channels'),
+                    label: Text(tr('Unpair Channels')),
                     onPressed: () => _unpair(playlist),
                   ),
                 ),
@@ -163,8 +163,13 @@ class _ChannelLinkingScreenState extends State<ChannelLinkingScreen> {
             focusNode: _searchFocus,
             decoration: InputDecoration(
               labelText: reviewFilter != null
-                  ? 'Reviewing ${reviewFilter.length} auto-paired channel${reviewFilter.length == 1 ? '' : 's'} — type to search all instead'
-                  : 'Search your channels',
+                  ? tr(
+                      'Reviewing {reviewFilter} auto-paired channel{s} — type to search all instead',
+                      {
+                          'reviewFilter': reviewFilter.length,
+                          's': reviewFilter.length == 1 ? '' : 's'
+                        })
+                  : tr('Search your channels'),
               prefixIcon: const Icon(Icons.search),
               border: const OutlineInputBorder(),
             ),
@@ -175,7 +180,7 @@ class _ChannelLinkingScreenState extends State<ChannelLinkingScreen> {
         ),
         Expanded(
           child: filtered.isEmpty
-              ? const Center(child: Text('No channels found.'))
+              ? Center(child: Text(tr('No channels found.')))
               : ListView.builder(
                   itemCount: filtered.length,
                   itemBuilder: (context, i) {
@@ -188,18 +193,20 @@ class _ChannelLinkingScreenState extends State<ChannelLinkingScreen> {
                     final String status;
                     final bool isError;
                     if (link == null) {
-                      status = 'Not linked';
+                      status = tr('Not linked');
                       isError = false;
                     } else if (linkedChannel == null) {
                       // The linked playlist was removed/disabled, or that
                       // channel disappeared from a refreshed catalog —
                       // surfaced rather than silently resolving to
                       // nothing the next time playback actually needs it.
-                      status = 'Linked channel no longer available';
+                      status = tr('Linked channel no longer available');
                       isError = true;
                     } else {
-                      status =
-                          'Linked to ${playlist.playlistNameFor(link.playlistId)}: ${linkedChannel.name}';
+                      status = tr('Linked to {p}: {name}', {
+                        'p': playlist.playlistNameFor(link.playlistId),
+                        'name': linkedChannel.name
+                      });
                       isError = false;
                     }
                     return ListTile(
@@ -214,7 +221,7 @@ class _ChannelLinkingScreenState extends State<ChannelLinkingScreen> {
                       trailing: link != null
                           ? IconButton(
                               icon: const Icon(Icons.clear),
-                              tooltip: 'Clear link',
+                              tooltip: tr('Clear link'),
                               onPressed: () =>
                                   playlist.setChannelLink(channel, null),
                             )
@@ -282,7 +289,7 @@ class _PickLinkedChannelScreenState extends State<_PickLinkedChannelScreen> {
             .toList();
 
     return SettingsScaffold(
-      title: 'Link "${widget.source.name}"',
+      title: tr('Link "{name}"', {'name': widget.source.name}),
       body: Column(
         children: [
           Padding(
@@ -290,17 +297,17 @@ class _PickLinkedChannelScreenState extends State<_PickLinkedChannelScreen> {
             child: TextField(
               controller: _searchController,
               autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Search other playlists\' channels',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: tr('Search other playlists\' channels'),
+                prefixIcon: const Icon(Icons.search),
+                border: const OutlineInputBorder(),
               ),
               onChanged: (_) => setState(() {}),
             ),
           ),
           Expanded(
             child: filtered.isEmpty
-                ? const Center(child: Text('No matches.'))
+                ? Center(child: Text(tr('No matches.')))
                 : ListView.builder(
                     itemCount: filtered.length,
                     itemBuilder: (context, i) {

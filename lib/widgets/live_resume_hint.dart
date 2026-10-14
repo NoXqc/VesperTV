@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../models/channel.dart';
 import '../screens/player_screen.dart';
 import '../services/playback_service.dart';
+import '../l10n/l10n.dart';
 
 /// Replaces the earlier "Live Island" floating pill (see git history on
 /// the `backup/live-island-attempt` branch for that whole attempt) —
@@ -334,19 +335,19 @@ class _LiveResumeHintState extends State<LiveResumeHint> {
                           // smaller second line, fixes both — nothing left
                           // to truncate away, and the icon actually matches
                           // the key being held.
-                          const Row(
+                          Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                'Hold ',
-                                style: TextStyle(
+                                tr('Hold '),
+                                style: const TextStyle(
                                     color: Colors.white70, fontSize: 11),
                               ),
-                              Icon(Icons.keyboard_arrow_right,
+                              const Icon(Icons.keyboard_arrow_right,
                                   color: Colors.white70, size: 14),
                               Text(
-                                ' to resume',
-                                style: TextStyle(
+                                tr(' to resume'),
+                                style: const TextStyle(
                                     color: Colors.white70, fontSize: 11),
                               ),
                             ],

@@ -11,6 +11,7 @@ import '../services/epg_service.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../services/storage_service.dart';
+import '../l10n/l10n.dart';
 
 /// A deliberately standalone, Windows-only playback screen — see
 /// `pubspec.yaml`'s media_kit comment for why this exists at all:
@@ -245,22 +246,22 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                 child: Text(
-                  'Recall — recently watched',
-                  style: TextStyle(
+                  tr('Recall — recently watched'),
+                  style: const TextStyle(
                       color: Colors.white,
                       fontSize: 14,
                       fontWeight: FontWeight.bold),
                 ),
               ),
               if (history.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(16),
+                Padding(
+                  padding: const EdgeInsets.all(16),
                   child: Text(
-                    'No other live channels watched yet this session.',
-                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                    tr('No other live channels watched yet this session.'),
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
                   ),
                 )
               else
@@ -438,8 +439,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                                   IconButton(
                                     icon: const Icon(Icons.history,
                                         color: Colors.white),
-                                    tooltip:
-                                        'Recall — go back to a recent channel',
+                                    tooltip: tr(
+                                        'Recall — go back to a recent channel'),
                                     onPressed: _openRecallPicker,
                                   ),
                                 IconButton(
@@ -452,8 +453,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                                         : Colors.white,
                                   ),
                                   tooltip: _currentChannel.isFavorite
-                                      ? 'Remove from favorites'
-                                      : 'Add to favorites',
+                                      ? tr('Remove from favorites')
+                                      : tr('Add to favorites'),
                                   onPressed: () {
                                     playlist.toggleFavorite(_currentChannel);
                                     setState(() {});
@@ -463,14 +464,14 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                                   IconButton(
                                     icon: const Icon(Icons.refresh,
                                         color: Colors.white),
-                                    tooltip: 'Reload channel',
+                                    tooltip: tr('Reload channel'),
                                     onPressed: _reload,
                                   ),
                                 if (_previousEpisode != null)
                                   IconButton(
                                     icon: const Icon(Icons.skip_previous,
                                         color: Colors.white),
-                                    tooltip: 'Previous episode',
+                                    tooltip: tr('Previous episode'),
                                     onPressed: () =>
                                         _switchTo(_previousEpisode!),
                                   ),
@@ -501,7 +502,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                                   IconButton(
                                     icon: const Icon(Icons.skip_next,
                                         color: Colors.white),
-                                    tooltip: 'Next episode',
+                                    tooltip: tr('Next episode'),
                                     onPressed: () => _switchTo(_nextEpisode!),
                                   ),
                               ],
@@ -541,7 +542,9 @@ class _LiveRemainingLabel extends StatelessWidget {
     return Align(
       alignment: Alignment.centerLeft,
       child: Text(
-        minutes < 1 ? 'Ending now' : '$minutes min left',
+        minutes < 1
+            ? tr('Ending now')
+            : tr('{minutes} min left', {'minutes': minutes}),
         style: const TextStyle(color: Colors.white70, fontSize: 12),
       ),
     );

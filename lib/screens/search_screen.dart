@@ -18,6 +18,7 @@ import '../widgets/settings_scaffold.dart';
 import 'desktop_player_screen.dart';
 import 'player_screen.dart';
 import 'series_detail_screen.dart';
+import '../l10n/l10n.dart';
 
 /// Full-screen search — a search bar plus every matching result grouped
 /// into its own horizontally-scrolling poster row (Live TV, Movies, TV
@@ -48,6 +49,7 @@ class SearchScreen extends StatefulWidget {
 class _ResultRow {
   _ResultRow(this.label, this.rowKey, this.firstFocusNode, this.children);
   final String label;
+
   /// Wraps this row's header + horizontal list — see
   /// [_SearchScreenState._ensureRowVisible]'s doc comment for why this
   /// needs to be the whole row, not just whichever card is focused. Built
@@ -294,7 +296,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       autofocus: true,
                       textInputAction: TextInputAction.search,
                       decoration: InputDecoration(
-                        hintText: 'Search everything...',
+                        hintText: tr('Search everything...'),
                         border: InputBorder.none,
                         hintStyle: TextStyle(
                             color: Theme.of(context)
@@ -330,8 +332,8 @@ class _SearchScreenState extends State<SearchScreen> {
                     bindings: {
                       const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
                           _moveRowFocus(-1, rows),
-                      const SingleActivator(LogicalKeyboardKey.arrowDown):
-                          () => _moveRowFocus(1, rows),
+                      const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
+                          _moveRowFocus(1, rows),
                     },
                     child: Column(
                       children: [
@@ -350,9 +352,14 @@ class _SearchScreenState extends State<SearchScreen> {
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
-                                    'Still loading the full catalog in the background '
-                                    '(${playlist.warmCatalogDone}/${playlist.warmCatalogTotal} categories) — '
-                                    'some results may not show up yet.',
+                                    tr(
+                                        'Still loading the full catalog in the background ({warmCatalogDone}/{warmCatalogTotal} categories) — some results may not show up yet.',
+                                        {
+                                          'warmCatalogDone':
+                                              playlist.warmCatalogDone,
+                                          'warmCatalogTotal':
+                                              playlist.warmCatalogTotal
+                                        }),
                                     style:
                                         Theme.of(context).textTheme.bodySmall,
                                   ),
@@ -363,9 +370,9 @@ class _SearchScreenState extends State<SearchScreen> {
                         Expanded(
                           child: q.isEmpty
                               ? (_recentSearches.isEmpty
-                                  ? const Center(
-                                      child: Text(
-                                          'Search Live TV, Movies & TV Shows'))
+                                  ? Center(
+                                      child: Text(tr(
+                                          'Search Live TV, Movies & TV Shows')))
                                   : const SizedBox())
                               : _buildResultRows(rows),
                         ),
@@ -387,7 +394,7 @@ class _SearchScreenState extends State<SearchScreen> {
           Row(
             children: [
               Expanded(
-                child: Text('Recent searches',
+                child: Text(tr('Recent searches'),
                     style: Theme.of(context).textTheme.labelLarge),
               ),
               TextButton(
@@ -395,7 +402,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   context.read<StorageService>().clearRecentSearches();
                   setState(() => _recentSearches = []);
                 },
-                child: const Text('Clear'),
+                child: Text(tr('Clear')),
               ),
             ],
           ),
@@ -437,7 +444,7 @@ class _SearchScreenState extends State<SearchScreen> {
         .where((c) => c.name.toLowerCase().contains(q))
         .toList();
     if (channelMatches.isNotEmpty) {
-      rows.add(_buildChannelRow(rows.length, 'Live TV', channelMatches));
+      rows.add(_buildChannelRow(rows.length, tr('Live TV'), channelMatches));
     }
 
     final vodMatches = playlist.isXtream
@@ -447,14 +454,14 @@ class _SearchScreenState extends State<SearchScreen> {
             .where((c) => c.name.toLowerCase().contains(q))
             .toList();
     if (vodMatches != null && vodMatches.isNotEmpty) {
-      rows.add(_buildChannelRow(rows.length, 'Movies', vodMatches,
+      rows.add(_buildChannelRow(rows.length, tr('Movies'), vodMatches,
           isPoster: true));
     }
 
     if (playlist.isXtream) {
       final seriesMatches = _dbSeriesResults;
       if (seriesMatches != null && seriesMatches.isNotEmpty) {
-        rows.add(_buildSeriesRow(rows.length, 'TV Shows', seriesMatches));
+        rows.add(_buildSeriesRow(rows.length, tr('TV Shows'), seriesMatches));
       }
     } else {
       final seriesMatches = playlist
@@ -462,7 +469,7 @@ class _SearchScreenState extends State<SearchScreen> {
           .where((c) => c.name.toLowerCase().contains(q))
           .toList();
       if (seriesMatches.isNotEmpty) {
-        rows.add(_buildChannelRow(rows.length, 'TV Shows', seriesMatches,
+        rows.add(_buildChannelRow(rows.length, tr('TV Shows'), seriesMatches,
             isPoster: true));
       }
     }
@@ -477,8 +484,7 @@ class _SearchScreenState extends State<SearchScreen> {
   /// whatever `ListView.builder` happened to lay out most recently (which
   /// doesn't reliably match the focused widget's actual row once lazy
   /// building and scrolling are involved).
-  _ResultRow _buildChannelRow(
-      int rowIndex, String label, List<Channel> items,
+  _ResultRow _buildChannelRow(int rowIndex, String label, List<Channel> items,
       {bool isPoster = false}) {
     final rowKey = GlobalKey();
     final firstFocusNode = FocusNode();
@@ -537,7 +543,7 @@ class _SearchScreenState extends State<SearchScreen> {
               Icon(Icons.search_off,
                   size: 48, color: Theme.of(context).disabledColor),
               const SizedBox(height: 12),
-              const Text('Nothing found'),
+              Text(tr('Nothing found')),
             ],
           ),
         ),

@@ -9,6 +9,7 @@ import '../../widgets/mode_button.dart';
 import '../../widgets/section_label.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_switch_list_tile.dart';
+import '../../l10n/l10n.dart';
 
 /// Appearance + layout — grouped together since "what does this look like"
 /// is really one concern spanning theme mode, accent color, and whether
@@ -29,19 +30,19 @@ class ThemeScreen extends StatelessWidget {
     return withTvThemeIfNeeded(
         context,
         (context) => SettingsScaffold(
-              title: 'Theme',
+              title: tr('Theme'),
               body: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
                   TvSwitchListTile(
-                    title: const Text('Show clock'),
+                    title: Text(tr('Show clock')),
                     subtitle:
-                        const Text('Displays the current time in the top bar'),
+                        Text(tr('Displays the current time in the top bar')),
                     value: prefs.showClock,
                     onChanged: prefs.setShowClock,
                   ),
                   const SizedBox(height: 16),
-                  const SectionLabel('Theme color'),
+                  SectionLabel(tr('Theme color')),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 12,
@@ -56,11 +57,10 @@ class ThemeScreen extends StatelessWidget {
                     ],
                   ),
                   const Divider(height: 32),
-                  const SectionLabel('Layout'),
+                  SectionLabel(tr('Layout')),
                   const SizedBox(height: 4),
                   Text(
-                    'Auto picks phone vs TV layout by screen size — force one if '
-                    'your box isn\'t detected correctly.',
+                    tr('Auto picks phone vs TV layout by screen size — force one if your box isn\'t detected correctly.'),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const SizedBox(height: 8),
@@ -76,7 +76,7 @@ class ThemeScreen extends StatelessWidget {
                       ]) ...[
                         Expanded(
                           child: ModeButton(
-                            label: option.$2,
+                            label: tr(option.$2),
                             selected: prefs.layoutMode == option.$1,
                             onTap: () => prefs.setLayoutMode(option.$1),
                           ),
@@ -86,11 +86,10 @@ class ThemeScreen extends StatelessWidget {
                     ],
                   ),
                   const Divider(height: 32),
-                  const SectionLabel('Live TV guide'),
+                  SectionLabel(tr('Live TV guide')),
                   const SizedBox(height: 4),
                   Text(
-                    'Timeline shows every channel at once, on a scrollable '
-                    'schedule grid, instead of one channel\'s now/next at a time.',
+                    tr('Timeline shows every channel at once, on a scrollable schedule grid, instead of one channel\'s now/next at a time.'),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const SizedBox(height: 8),
@@ -102,7 +101,7 @@ class ThemeScreen extends StatelessWidget {
                       ]) ...[
                         Expanded(
                           child: ModeButton(
-                            label: option.$2,
+                            label: tr(option.$2),
                             selected: prefs.guideViewMode == option.$1,
                             onTap: () => prefs.setGuideViewMode(option.$1),
                           ),
@@ -207,7 +206,7 @@ class _PaletteSwatchState extends State<_PaletteSwatch> {
             ),
             const SizedBox(height: 4),
             Text(
-              widget.palette.label,
+              tr(widget.palette.label),
               style: Theme.of(context).textTheme.bodySmall,
               textAlign: TextAlign.center,
             ),

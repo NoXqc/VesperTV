@@ -10,6 +10,7 @@ import '../utils/tv_theme.dart';
 import '../widgets/hold_to_activate.dart';
 import '../widgets/settings_scaffold.dart';
 import '../widgets/sports_widgets.dart';
+import '../l10n/l10n.dart';
 
 /// Conference / league tables for the user's Sports leagues.
 ///
@@ -324,7 +325,7 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
       height: 44,
       child: Row(
         children: [
-          Text('Standings',
+          Text(tr('Standings'),
               style: Theme.of(context)
                   .textTheme
                   .headlineSmall
@@ -356,7 +357,7 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
     final groups = s?.groups ?? const <SportsStandingGroup>[];
     final label = [
       if (s?.season != null) s!.season!,
-      if (s?.preseason ?? false) 'Preseason',
+      if (s?.preseason ?? false) tr('Preseason'),
     ].join('  ·  ');
     return SizedBox(
       height: 40,
@@ -411,11 +412,10 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
         children: [
           Icon(Icons.star, size: 18, color: scheme.primary),
           const SizedBox(width: 8),
-          const Expanded(
+          Expanded(
             child: Text(
-                'Pick a league above, then hold OK on a team to follow it. '
-                'Back returns to My Teams.',
-                style: TextStyle(color: Colors.white, fontSize: 14)),
+                tr('Pick a league above, then hold OK on a team to follow it. Back returns to My Teams.'),
+                style: const TextStyle(color: Colors.white, fontSize: 14)),
           ),
         ],
       ),
@@ -428,14 +428,14 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (group == null) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.cloud_off, size: 44, color: Colors.white38),
-            SizedBox(height: 10),
-            Text('Standings could not be loaded. Check the connection.',
-                style: TextStyle(color: Colors.white70, fontSize: 16)),
+            const Icon(Icons.cloud_off, size: 44, color: Colors.white38),
+            const SizedBox(height: 10),
+            Text(tr('Standings could not be loaded. Check the connection.'),
+                style: const TextStyle(color: Colors.white70, fontSize: 16)),
           ],
         ),
       );
@@ -499,18 +499,22 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(
                 children: [
-                  if (_hasGroupBar) ...const [
-                    Icon(Icons.chevron_left, size: 16, color: Colors.white38),
-                    Icon(Icons.chevron_right, size: 16, color: Colors.white38),
-                    SizedBox(width: 4),
-                    Text('switch conference',
-                        style: TextStyle(color: Colors.white38, fontSize: 12)),
-                    SizedBox(width: 20),
+                  if (_hasGroupBar) ...[
+                    const Icon(Icons.chevron_left,
+                        size: 16, color: Colors.white38),
+                    const Icon(Icons.chevron_right,
+                        size: 16, color: Colors.white38),
+                    const SizedBox(width: 4),
+                    Text(tr('switch conference'),
+                        style: const TextStyle(
+                            color: Colors.white38, fontSize: 12)),
+                    const SizedBox(width: 20),
                   ],
                   const Icon(Icons.star, size: 14, color: Colors.white38),
                   const SizedBox(width: 4),
-                  const Text('Hold OK on a team to follow it (My Teams)',
-                      style: TextStyle(color: Colors.white38, fontSize: 12)),
+                  Text(tr('Hold OK on a team to follow it (My Teams)'),
+                      style:
+                          const TextStyle(color: Colors.white38, fontSize: 12)),
                 ],
               ),
             ),
@@ -535,11 +539,12 @@ class _HeaderRow extends StatelessWidget {
         children: [
           const SizedBox(width: 36, child: Text('#', style: style)),
           const SizedBox(width: 40),
-          const Expanded(child: Text('TEAM', style: style)),
+          Expanded(child: Text(tr('TEAM'), style: style)),
           for (final c in columns)
             SizedBox(
               width: c.width,
-              child: Text(c.label, textAlign: TextAlign.center, style: style),
+              child:
+                  Text(tr(c.label), textAlign: TextAlign.center, style: style),
             ),
         ],
       ),
