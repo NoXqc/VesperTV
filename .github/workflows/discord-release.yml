@@ -1,0 +1,37 @@
+# Posts a gold "VesperTV x.y.z is out!" embed to the project Discord.
+#
+# Our release workflow usually *edits the latest release in place*
+# (dev-notes/release.md), and an edit does not fire `published` - so after
+# each release, run this by hand once:
+#   gh workflow run discord-release.yml -f tag=1.0.4
+# A brand-new (non-pre-)release announces itself automatically.
+# The webhook URL lives only in the repo secret DISCORD_RELEASE_WEBHOOK.
+name: Announce release on Discord
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to announce (e.g. 1.0.4)
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  announce:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts
+      - name: Post to Discord
+        env:
+          DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          gh api "repos/${{ github.repository }}/releases/tags/$TAG" > release.json
+          python3 .github/scripts/discord_release.py release.json

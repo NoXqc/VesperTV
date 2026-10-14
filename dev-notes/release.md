@@ -29,3 +29,9 @@ Only release when the owner asks ("update the latest", "cut it", "fully release"
    newer. Reason: versioning is meant to restart at 1.0.0, which is numerically lower than the old
    3.x tags. Any Android asset ending `.apk` / Windows asset ending `.zip` is picked by extension —
    never leave two `.zip` (or two `.apk`) assets on the latest release.
+8. **Announce on Discord** (after step 6 checks out): `gh workflow run discord-release.yml -f tag=<ver>`
+   — posts the gold release embed (notes + APK/zip links + Downloader code) via the
+   `DISCORD_RELEASE_WEBHOOK` repo secret. Needed because an in-place edit doesn't fire the
+   `published` event; a brand-new non-pre-release announces itself. Preview the post locally:
+   `gh api repos/NoXqc/VesperTV/releases/tags/<ver> > r.json && python .github/scripts/discord_release.py r.json --dry-run`.
+   The workflow skips drafts and pre-releases (test builds never get announced).
