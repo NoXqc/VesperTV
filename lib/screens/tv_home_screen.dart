@@ -40,6 +40,7 @@ import 'movie_detail_screen.dart';
 import 'player_screen.dart';
 import 'profile_picker_screen.dart';
 import 'search_screen.dart';
+import 'sports_screen.dart';
 import 'series_detail_screen.dart';
 import 'settings/settings_menu_screen.dart';
 
@@ -2200,6 +2201,17 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                   MaterialPageRoute(builder: (_) => const MultiviewScreen()));
             }
           },
+        ),
+        // Its own full-screen page (like Search), not a tab in these
+        // columns: league/day/game rows don't fit the groups -> content
+        // column model.
+        _SelectableRow(
+          icon: Icons.sports_hockey,
+          label: 'Sports',
+          selected: false,
+          collapsed: collapsed,
+          onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const SportsScreen())),
         ),
         const Divider(height: 16, color: Colors.white24),
         for (final tab in _tabs)

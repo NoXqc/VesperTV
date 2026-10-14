@@ -187,6 +187,12 @@ class AppConstants {
   static const String keyResumeLastChannelAtStartup =
       'vesper_resume_last_channel_at_startup';
   static const String keyShowResumePill = 'vesper_show_resume_pill';
+
+  /// Sports tab, per viewer: leagues shown (ordered ids), spoiler mode, and
+  /// the user's own game -> channel picks (JSON, see `SportsChannelPicks`).
+  static const String keySportsLeagues = 'vesper_sports_leagues';
+  static const String keySportsHideScores = 'vesper_sports_hide_scores';
+  static const String keySportsChannelPicks = 'vesper_sports_channel_picks';
   static const String keyPaletteId = 'nox_palette_id';
 
   /// UI layout: 'auto' picks phone vs TV by screen size, 'phone'/'tv' force

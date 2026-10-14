@@ -1,7 +1,67 @@
-# Sports tab — design (draft, 2026-10-13, not started)
+# Sports tab — design + v1 status (2026-10-13)
 
-Roadmap item from CLAUDE.md §13. This is the agreed direction so far; nothing is built. Update it as
-decisions are made. Status of open questions is at the bottom.
+Roadmap item from CLAUDE.md §13. **v1 is built and committed (test build 1.0.3+221 on the Formuler, not released)** — see "v1 as built"
+right below; the rest of this file is the design and the tests behind it.
+
+## v1 as built
+- Entry: a **Sports** row in the TV tabs column (under Multiview) opens `SportsScreen` full-screen
+  (`lib/screens/sports_screen.dart`). Phone layout has no entry yet.
+- Data: `SportsService` (ESPN scoreboard, key-less, one call per league per ESPN date; fetches the day
+  either side and filters by *local* date; in-memory cache, 50 s freshness while a game is live).
+  Leagues in `models/sports.dart` (`kSportsLeagues`): NHL, NFL, NBA, MLB, NCAAF, WNBA, MLS, EPL, UCL,
+  LaLiga, Bundesliga, Serie A, Ligue 1. Logos via ESPN's resizer (~8 KB) and the `/500-dark/` variant
+  (falls back to the normal logo on 404) so navy/black logos show on black.
+- Matching: `SportsChannelMatcher` — user pick > event channel name (both team names, a date in the
+  name must fit) > guide title (one SQL `LIKE` scan per day, `EpgService.findProgrammesByTitle`) >
+  exact national-network name. Region bias ranks US/CA/UK feeds first, sinks foreign-tagged ones,
+  and drops foreign networks ("RU: TNT"). Measured on trex_5 (57k channels): index 0.3 s on PC,
+  32 games matched in 13 ms; NHL 18/18 today, NBA 7/12 (misses = tomorrow, no event channels yet).
+- Manual: game dialog lists channels + "Choose a different channel" (chips for team names /
+  league / networks, plus a text field) → "Just this game" or "Always for <team>"; stored per viewer
+  (`vesper_sports_channel_picks`, game picks expire after 7 days). "Forget my pick" undoes it.
+- UI: league chips (+ Edit leagues, Scores shown/hidden), day strip (Yesterday..+6), hero of the
+  focused game with team-colour glow, rows Live now / Later today / Final. Explicit Up/Down zones.
+- Standings: a centered **Standings** button between the day strip and the hero (was the last league
+  chip — owner: hard to find; label names the filtered league, e.g. "NHL standings") opens
+  `SportsStandingsScreen` (shared widgets live in `widgets/sports_widgets.dart`). Data:
+  `site.api.espn.com/apis/v2/sports/{path}/standings` (note `/apis/v2`, not `/apis/site/v2`), 15 min
+  cache, parsed off-isolate (`parseEspnStandings`). ESPN's entries are **not in table order** — sorted
+  by `rank` (soccer) / `playoffSeed`, falling back to points/win % when seeds are all 0. Season label
+  from the table's `seasonDisplayName` (top-level `season` says 2027 for a finished MLB 2026);
+  "Preseason" only for non-soccer `seasonType == 1` (soccer always reports 1). College football
+  repeats its stat set per split — keep the first (overall). NHL "Last Ten" has a trailing ", 0".
+  Columns per sport, trimmed to fit the width; soccer zone stripes + legend from `note`. D-pad: league
+  chips / conference chips / rows (explicit Up/Down, jumpTo scrolling), Left/Right on rows flips
+  conference.
+- Owner feedback round (2026-10-14, +217..+221):
+  - Focus look = the app's gold sheen (`sportsFocusSheen`, same as `_SelectableRow`) on chips and
+    cards; *selected* chip = gold text + faint outline, clearly quieter than focus.
+  - Game card: **OK plays** the best match (user pick ranks first); no match → the game menu.
+    **Hold OK** = game menu (other channels / pick / forget). A small hint under the focused card says
+    "Hold OK to pick or swap the channel" (height always reserved, so rows don't jump).
+  - Hold-opened menus must swallow the held press: the remote keeps sending Select *repeats* and the
+    ambient ActivateIntent accepts repeats, so the menu's first item fired instantly ("hold does
+    nothing"). `SwallowHeldActivate` (hold_to_activate.dart) wraps the game menu.
+  - League chips: **hold OK = move mode** (‹ › arrows, Left/Right moves, OK/Back done, saved each
+    step to `setSportsLeagues`); other chips dimmed + unfocusable meanwhile. Chips are **keyed by
+    league id** — unkeyed, the reorder swapped focus nodes between States: focus lost and stale
+    "focused" outlines (three at once). `SportsChip` also re-seeds `_focused` when its node changes.
+  - Channel picker: the search field's own `FocusNode.onKeyEvent` maps Down → first result, Up →
+    suggestion chips, OK → reopen keyboard (Back closes the keyboard but EditableText kept the arrows).
+- **Next task: My Teams** (decided with the owner 2026-10-14, not started):
+  - Entry: a **My Teams** button next to Standings.
+  - Layout: **team list on the left + details on the right** (like Standings). Rows: logo, name,
+    record, next game. Details: record + standing line, a mini table around the team, the **next
+    2 weeks** of games (OK to watch, hold to pick, same as cards). Details pane takes the **team's
+    colours** (glow like the hero's `_TeamGlow`).
+  - Adding: **from Standings** — hold OK on a team row → Follow/Unfollow. A "+ Add team" row in My
+    Teams just opens Standings with that hint. (No separate team picker, no game-menu follow.)
+  - **Star** followed teams' games on the cards and sort them first in Live now / Later today.
+  - Data: `site.api.espn.com/apis/site/v2/sports/{path}/teams/{id}/schedule` = full season, with
+    broadcasts, `team.recordSummary` and `team.standingSummary` ("7th in Pacific Division"), one call
+    per team. Check the soccer variant (may need `?fixture=true` for upcoming games). Store followed
+    teams per viewer as `{leagueId, teamId}`.
+- Not yet: Sports Multiview, phone layout, BYOK providers, division view for standings.
 
 ## Goals
 - A Sports tab with: **league filter** (NHL, NFL, NBA, MLB, PGA, ...), **My Teams**, **Standings**,
@@ -107,8 +167,42 @@ Owner: a QR code is impractical for a TV app. Instead:
 - Focus: one `FocusScopeNode` per zone (chips, dates, grid) + explicit D-pad dispatch (CLAUDE.md §10).
 - Windows needs its own entry points where the desktop stack differs; the data layer is shared Dart.
 
+## Test results (2026-10-13, owner's free key)
+- **API-SPORTS free plan has NO current season**: `games?league=57&season=2026` (NHL) and NFL
+  `season=2026` both return `{"plan": "Free plans do not have access to this season, try from 2022 to
+  2024."}`. `games?date=` alone fails ("The Season field is required"). → The free tier is useless
+  for live scores/schedules; API-SPORTS can only be a *paid* BYOK option. Key-less ESPN default is
+  now the plan of record.
+- Confirmed: quota is per sport (hockey and american-football each 100/day, separate counters);
+  `/status` did not consume quota; rate-limit headers `x-ratelimit-requests-remaining/-limit` are
+  present on counted calls (absent on plan errors); keys are 32 lowercase hex chars → the 16-key
+  hex pad works.
+
+## Channel-matching test (2026-10-13, ESPN week Oct 13-19 vs trex_5 / BlckTV via Tuliprox)
+- ESPN scoreboard (`site.api.espn.com/apis/site/v2/sports/{hockey/nhl|basketball/nba|football/nfl}/scoreboard?dates=YYYYMMDD`,
+  one day per call — a `dates=A-B` range returned an error) works key-less: 91 games, broadcasters
+  in `competitions[0].broadcasts[].names` + `geoBroadcasts[].media.shortName`. **US networks only**
+  (no TSN/Sportsnet/RDS/TVA) — e.g. Sabres @ Canadiens listed only MSGB.
+- Provider: 57k live channels, only 8.3k with an EPG id; **guide horizon ~1 day** (latest programme
+  Oct 14 16:00 UTC) → only 21/91 games fell inside the guide.
+- **EPG title match** (both team names in a programme starting −45/+20 min): NHL 13/51 overall, but
+  13 of the 16 NHL games inside the guide horizon (~80%); NBA 1/5 inside horizon.
+- **Channel-NAME match is the strongest signal**: providers pre-name event channels, e.g.
+  `NHL | 01 - 6pm Devils at Red Wings`, `NHL: Montreal Canadiens vs Buffalo Sabres @ Oct 14 00:35 :TeliaPlay SE 23`,
+  `US (ESPN+ 065) | Washington Capitals vs. Carolina Hurricanes Oct 13 6:15PM ET`,
+  `Molson Habs Hockey: Sabres vs. Canadiens @ Oct 13 18:30 :TSN+ 47` (this is how Canadian regional
+  coverage shows up). NHL 28/51, NBA 8/26, NFL 3/14 for the whole week — effectively all of
+  *today's* NHL games. Caveat: names include stale events (yesterday's) and repeat match-ups → parse
+  the date/time in the name or only match games within ~±12 h.
+- **Broadcaster-name match is weak**: substring search explodes ("Fox" → 565 channels, "CBS" → CBS
+  Drama/Reality); regional US nets mostly absent. Use only an exact canonical map for national nets
+  (ESPN, TNT, NBA TV, NHL Network, ABC/NBC/CBS/Fox) as a last fallback.
+- → Matching order: (1) event channel names for today's games, (2) EPG titles inside the guide
+  horizon, (3) national-network map, (4) user override. One provider tested — others name event
+  channels differently; keep the name parser tolerant (`vs`, `vs.`, `at`, `@`, full name or nickname).
+
 ## Open questions / tests before building
-- [ ] **Owner: test the API-SPORTS free tier on the current season.** Sign up at dashboard.api-sports.io,
+- [x] **Owner: test the API-SPORTS free tier on the current season.** (Done — no current season, see above.) Sign up at dashboard.api-sports.io,
       then (header `x-apisports-key: <key>`):
       - `GET https://v1.hockey.api-sports.io/status` — plan + requests used today
       - `GET https://v1.hockey.api-sports.io/leagues?search=NHL` — get the NHL league id
@@ -116,6 +210,6 @@ Owner: a QR code is impractical for a TV app. Instead:
         and `.../games?date=2026-10-13` — do current-season games and live scores come back, or a
         plan/season error?
       Repeat one call on `v1.american-football.api-sports.io` (NFL) to confirm the per-sport quota.
-- [ ] Check ESPN scoreboard broadcaster names against the owner's EPG channel names (match quality).
-- [ ] Confirm API-SPORTS key format (hex?) for the custom key pad.
+- [x] Check ESPN scoreboard broadcaster names against the owner's EPG channel names (match quality). (Done — see above.)
+- [x] Confirm API-SPORTS key format (hex?) for the custom key pad. (32 lowercase hex.)
 - [ ] Pick BYOK #2 for sure (TheSportsDB premium vs. another).

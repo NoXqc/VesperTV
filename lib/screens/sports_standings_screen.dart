@@ -1,0 +1,644 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../models/sports.dart';
+import '../services/sports_service.dart';
+import '../utils/tv_theme.dart';
+import '../widgets/settings_scaffold.dart';
+import '../widgets/sports_widgets.dart';
+
+/// Conference / league tables for the user's Sports leagues.
+///
+/// D-pad: league chips, then group chips (conferences) when there is more
+/// than one, then the table rows. Up/Down are dispatched explicitly
+/// (CLAUDE.md §10); inside the table Left/Right flip between groups so a
+/// remote user never has to climb back up to compare conferences.
+class SportsStandingsScreen extends StatefulWidget {
+  const SportsStandingsScreen(
+      {super.key, required this.leagues, required this.initialLeague});
+
+  final List<SportsLeague> leagues;
+  final SportsLeague initialLeague;
+
+  @override
+  State<SportsStandingsScreen> createState() => _SportsStandingsScreenState();
+}
+
+class _Column {
+  const _Column(this.label, this.stat, {this.width = 46});
+  final String label;
+  final String stat;
+  final double width;
+}
+
+/// Columns per sport, most important first — narrow screens keep a prefix.
+List<_Column> _columnsFor(SportsLeague league) {
+  const l10 = _Column('L10', 'Last Ten Games', width: 54);
+  const strk = _Column('STRK', 'streak', width: 54);
+  if (league.soccer) {
+    return const [
+      _Column('GP', 'gamesPlayed'),
+      _Column('W', 'wins'),
+      _Column('D', 'ties'),
+      _Column('L', 'losses'),
+      _Column('GD', 'pointDifferential', width: 50),
+      _Column('PTS', 'points', width: 50),
+    ];
+  }
+  final sport = league.espnPath.split('/').first;
+  switch (sport) {
+    case 'hockey':
+      return const [
+        _Column('GP', 'gamesPlayed'),
+        _Column('W', 'wins'),
+        _Column('L', 'losses'),
+        _Column('OTL', 'otLosses'),
+        _Column('PTS', 'points', width: 50),
+        _Column('DIFF', 'pointDifferential', width: 54),
+        strk,
+        l10,
+      ];
+    case 'football' when league.id == 'college-football':
+      return const [
+        _Column('REC', 'overall', width: 58),
+        _Column('PF', 'pointsFor', width: 50),
+        _Column('PA', 'pointsAgainst', width: 50),
+        _Column('DIFF', 'pointDifferential', width: 54),
+        strk,
+        _Column('HOME', 'Home', width: 58),
+        _Column('AWAY', 'Away', width: 58),
+      ];
+    case 'football':
+      return const [
+        _Column('W', 'wins'),
+        _Column('L', 'losses'),
+        _Column('T', 'ties'),
+        _Column('PCT', 'winPercent', width: 58),
+        _Column('DIFF', 'pointDifferential', width: 54),
+        strk,
+        _Column('HOME', 'Home', width: 58),
+        _Column('AWAY', 'Road', width: 58),
+      ];
+    default: // basketball, baseball
+      return const [
+        _Column('W', 'wins'),
+        _Column('L', 'losses'),
+        _Column('PCT', 'winPercent', width: 58),
+        _Column('GB', 'gamesBehind', width: 50),
+        strk,
+        l10,
+        _Column('HOME', 'Home', width: 58),
+        _Column('AWAY', 'Road', width: 58),
+      ];
+  }
+}
+
+class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
+  static const double _rowHeight = 44;
+
+  late SportsLeague _league;
+  int _groupIndex = 0;
+  SportsStandings? _standings;
+  bool _loading = true;
+  int _loadToken = 0;
+
+  int _zone = 2;
+  int _row = 0;
+  final Map<String, FocusNode> _chipNodes = {};
+  final List<FocusNode> _rowNodes = [];
+  final ScrollController _scroll = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _league = widget.initialLeague;
+    unawaited(_load());
+  }
+
+  @override
+  void dispose() {
+    for (final n in _chipNodes.values) {
+      n.dispose();
+    }
+    for (final n in _rowNodes) {
+      n.dispose();
+    }
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  FocusNode _chipNode(String id) =>
+      _chipNodes[id] ??= FocusNode(debugLabel: 'standings-chip-$id');
+
+  FocusNode _rowNode(int i) {
+    while (_rowNodes.length <= i) {
+      _rowNodes.add(FocusNode(debugLabel: 'standings-row-${_rowNodes.length}'));
+    }
+    return _rowNodes[i];
+  }
+
+  SportsStandingGroup? get _group {
+    final groups = _standings?.groups ?? const [];
+    if (groups.isEmpty) return null;
+    return groups[_groupIndex.clamp(0, groups.length - 1)];
+  }
+
+  bool get _hasGroupBar => (_standings?.groups.length ?? 0) > 1;
+
+  Future<void> _load() async {
+    final token = ++_loadToken;
+    setState(() => _loading = true);
+    final result = await SportsService.instance.standings(_league);
+    if (!mounted || token != _loadToken) return;
+    final firstLoad = _standings == null;
+    setState(() {
+      _standings = result;
+      _groupIndex = 0;
+      _row = 0;
+      _loading = false;
+    });
+    if (_scroll.hasClients) _scroll.jumpTo(0);
+    if (firstLoad) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _focusZone(_group != null ? 2 : 0);
+      });
+    }
+  }
+
+  // ---------------------------------------------------------------- focus
+
+  void _focusZone(int zone) {
+    if (zone == 1 && !_hasGroupBar) zone = 2;
+    if (zone == 2 && _group == null) zone = _hasGroupBar ? 1 : 0;
+    if (zone == 0) {
+      _chipNode('league:${_league.id}').requestFocus();
+    } else if (zone == 1) {
+      _chipNode('group:$_groupIndex').requestFocus();
+    } else {
+      _focusRow(_row);
+    }
+    _zone = zone;
+  }
+
+  void _focusRow(int i) {
+    final rows = _group?.rows.length ?? 0;
+    if (rows == 0) return;
+    _row = i.clamp(0, rows - 1);
+    _rowNode(_row).requestFocus();
+    _keepRowVisible(_row);
+  }
+
+  /// Plain offset maths with jumpTo — never animateTo on a list (§10).
+  void _keepRowVisible(int i) {
+    if (!_scroll.hasClients) return;
+    final pos = _scroll.position;
+    final top = i * _rowHeight;
+    final bottom = top + _rowHeight;
+    if (top < pos.pixels) {
+      _scroll.jumpTo(top);
+    } else if (bottom > pos.pixels + pos.viewportDimension) {
+      _scroll.jumpTo(
+          (bottom - pos.viewportDimension).clamp(0.0, pos.maxScrollExtent));
+    }
+  }
+
+  void _moveVertical(int delta) {
+    if (_zone == 2) {
+      final next = _row + delta;
+      if (next < 0) {
+        _focusZone(_hasGroupBar ? 1 : 0);
+      } else if (next < (_group?.rows.length ?? 0)) {
+        _focusRow(next);
+      }
+      return;
+    }
+    final target = _zone + delta;
+    if (target == 1 && !_hasGroupBar) {
+      _focusZone(delta > 0 ? 2 : 0);
+    } else if (target >= 0 && target <= 2) {
+      _focusZone(target);
+    }
+  }
+
+  void _moveGroup(int delta) {
+    final groups = _standings?.groups.length ?? 0;
+    if (groups < 2) return;
+    _setGroup((_groupIndex + delta) % groups, keepRowFocus: true);
+  }
+
+  // -------------------------------------------------------------- actions
+
+  void _setLeague(SportsLeague league) {
+    if (league.id == _league.id) return;
+    setState(() {
+      _league = league;
+      _standings = null;
+    });
+    unawaited(_load());
+  }
+
+  void _setGroup(int index, {bool keepRowFocus = false}) {
+    setState(() => _groupIndex = index);
+    if (_scroll.hasClients) _scroll.jumpTo(0);
+    if (keepRowFocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _focusRow(_row);
+      });
+    }
+  }
+
+  // ---------------------------------------------------------------- build
+
+  @override
+  Widget build(BuildContext context) {
+    return withTvThemeIfNeeded(
+      context,
+      (context) => Stack(
+        children: [
+          const Positioned.fill(child: SettingsGradientBackground()),
+          Scaffold(
+            backgroundColor: Colors.transparent,
+            body: SafeArea(
+              child: CallbackShortcuts(
+                bindings: {
+                  const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
+                      _moveVertical(-1),
+                  const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
+                      _moveVertical(1),
+                },
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildLeagueBar(),
+                      const SizedBox(height: 8),
+                      _buildGroupBar(),
+                      const SizedBox(height: 8),
+                      Expanded(child: _buildTable()),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLeagueBar() {
+    return SizedBox(
+      height: 44,
+      child: Row(
+        children: [
+          Text('Standings',
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.w800)),
+          const SizedBox(width: 16),
+          Expanded(
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                for (final l in widget.leagues)
+                  SportsChip(
+                    focusNode: _chipNode('league:${l.id}'),
+                    label: l.name,
+                    logoUrl: l.logoUrl,
+                    selected: l.id == _league.id,
+                    onFocus: () => _zone = 0,
+                    onTap: () => _setLeague(l),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGroupBar() {
+    final s = _standings;
+    final groups = s?.groups ?? const <SportsStandingGroup>[];
+    final label = [
+      if (s?.season != null) s!.season!,
+      if (s?.preseason ?? false) 'Preseason',
+    ].join('  ·  ');
+    return SizedBox(
+      height: 40,
+      child: Row(
+        children: [
+          Expanded(
+            child: groups.length > 1
+                ? ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      for (var i = 0; i < groups.length; i++)
+                        SportsChip(
+                          focusNode: _chipNode('group:$i'),
+                          label: groups[i].name,
+                          selected: i == _groupIndex,
+                          compact: true,
+                          onFocus: () => _zone = 1,
+                          onTap: () => _setGroup(i),
+                        ),
+                    ],
+                  )
+                : Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(groups.firstOrNull?.name ?? '',
+                        style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white)),
+                  ),
+          ),
+          if (label.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(left: 12),
+              child: Text(label,
+                  style: const TextStyle(color: Colors.white54, fontSize: 13)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTable() {
+    final group = _group;
+    if (_loading && _standings == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (group == null) {
+      return const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.cloud_off, size: 44, color: Colors.white38),
+            SizedBox(height: 10),
+            Text('Standings could not be loaded. Check the connection.',
+                style: TextStyle(color: Colors.white70, fontSize: 16)),
+          ],
+        ),
+      );
+    }
+    return LayoutBuilder(builder: (context, constraints) {
+      // Keep as many columns as fit beside a readable team name.
+      final all = _columnsFor(_league);
+      final columns = <_Column>[];
+      var used = 36.0 + 40 + 160; // position + logo + minimum name width
+      for (final c in all) {
+        if (used + c.width > constraints.maxWidth) break;
+        used += c.width;
+        columns.add(c);
+      }
+      final notes = <String, String>{};
+      for (final r in group.rows) {
+        if (r.note != null && r.noteColor != null) {
+          notes.putIfAbsent(r.note!, () => r.noteColor!);
+        }
+      }
+      return CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.arrowLeft): () =>
+              _moveGroup(-1),
+          const SingleActivator(LogicalKeyboardKey.arrowRight): () =>
+              _moveGroup(1),
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _HeaderRow(columns: columns),
+            Expanded(
+              child: ListView.builder(
+                controller: _scroll,
+                itemExtent: _rowHeight,
+                padding: EdgeInsets.zero,
+                itemCount: group.rows.length,
+                itemBuilder: (context, i) => _StandingRow(
+                  key: ValueKey(i),
+                  focusNode: _rowNode(i),
+                  row: group.rows[i],
+                  columns: columns,
+                  onFocus: () {
+                    _zone = 2;
+                    _row = i;
+                  },
+                ),
+              ),
+            ),
+            if (notes.isNotEmpty) _Legend(notes: notes),
+            if (_hasGroupBar)
+              // Icons, not ◀ ▶ characters: Android draws those as emoji.
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  children: [
+                    Icon(Icons.chevron_left, size: 16, color: Colors.white38),
+                    Icon(Icons.chevron_right, size: 16, color: Colors.white38),
+                    SizedBox(width: 4),
+                    Text('switch conference',
+                        style: TextStyle(color: Colors.white38, fontSize: 12)),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      );
+    });
+  }
+}
+
+class _HeaderRow extends StatelessWidget {
+  const _HeaderRow({required this.columns});
+  final List<_Column> columns;
+
+  @override
+  Widget build(BuildContext context) {
+    const style = TextStyle(
+        color: Colors.white54, fontSize: 12, fontWeight: FontWeight.w700);
+    return SizedBox(
+      height: 28,
+      child: Row(
+        children: [
+          const SizedBox(width: 36, child: Text('#', style: style)),
+          const SizedBox(width: 40),
+          const Expanded(child: Text('TEAM', style: style)),
+          for (final c in columns)
+            SizedBox(
+              width: c.width,
+              child: Text(c.label, textAlign: TextAlign.center, style: style),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StandingRow extends StatefulWidget {
+  const _StandingRow({
+    super.key,
+    required this.focusNode,
+    required this.row,
+    required this.columns,
+    required this.onFocus,
+  });
+
+  final FocusNode focusNode;
+  final SportsStandingRow row;
+  final List<_Column> columns;
+  final VoidCallback onFocus;
+
+  @override
+  State<_StandingRow> createState() => _StandingRowState();
+}
+
+class _StandingRowState extends State<_StandingRow> {
+  // Seeded from the node: switching conference keeps the same row node
+  // focused, so no focus-change callback would ever arrive for a new row.
+  late bool _focused = widget.focusNode.hasFocus;
+
+  @override
+  Widget build(BuildContext context) {
+    final row = widget.row;
+    final team = row.team;
+    final tint = sportsTeamColor(team.color) ?? Colors.white;
+    final zone = sportsTeamColor(row.noteColor);
+    return Focus(
+      focusNode: widget.focusNode,
+      onFocusChange: (f) {
+        setState(() => _focused = f);
+        if (f) widget.onFocus();
+      },
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => widget.focusNode.requestFocus(),
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 2),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            color: _focused
+                ? null
+                : (row.position.isOdd
+                    ? Colors.white.withValues(alpha: 0.04)
+                    : Colors.transparent),
+            gradient: _focused
+                ? LinearGradient(colors: [
+                    tint.withValues(alpha: 0.35),
+                    Colors.white.withValues(alpha: 0.08),
+                  ])
+                : null,
+            border: Border.all(
+                color: _focused ? Colors.white : Colors.transparent,
+                width: 1.5),
+          ),
+          child: Row(
+            children: [
+              // Qualification zone stripe (soccer) — the table's colour key.
+              Container(
+                width: 4,
+                margin: const EdgeInsets.symmetric(vertical: 6),
+                decoration: BoxDecoration(
+                  color: zone ?? Colors.transparent,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              SizedBox(
+                width: 32,
+                child: Text('${row.position}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        color: Colors.white70,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14)),
+              ),
+              SportsLogo(
+                  url: team.logoUrl,
+                  size: 30,
+                  fallback: team.abbreviation,
+                  color: team.color),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(team.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight:
+                            _focused ? FontWeight.w700 : FontWeight.w500)),
+              ),
+              for (final c in widget.columns)
+                SizedBox(
+                  width: c.width,
+                  child: Text(
+                    row.stat(c.stat),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    style: TextStyle(
+                      color: _statColor(c, row.stat(c.stat)),
+                      fontSize: 14,
+                      fontWeight: c.stat == 'points'
+                          ? FontWeight.w800
+                          : FontWeight.w500,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static Color _statColor(_Column c, String v) {
+    if (c.stat == 'streak') {
+      if (v.startsWith('W')) return const Color(0xFF6FD08C);
+      if (v.startsWith('L')) return const Color(0xFFE57373);
+    }
+    if (c.stat == 'points') return Colors.white;
+    return Colors.white70;
+  }
+}
+
+class _Legend extends StatelessWidget {
+  const _Legend({required this.notes});
+  final Map<String, String> notes;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Wrap(
+        spacing: 16,
+        runSpacing: 4,
+        children: [
+          for (final e in notes.entries)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: sportsTeamColor(e.value),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(e.key,
+                    style:
+                        const TextStyle(color: Colors.white60, fontSize: 12)),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}

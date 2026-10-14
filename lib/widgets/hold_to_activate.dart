@@ -45,6 +45,50 @@ import 'package:flutter/services.dart';
 /// `onTap`/`onLongPress` set never double-fires either. Enabled
 /// unconditionally, not just on Windows — a touch screen benefits from
 /// the same "long-press for options" convention for free.
+/// Wrap a dialog/screen opened *by* a hold ([HoldToActivate.onHold]) with
+/// this. The remote keeps sending Select repeats (and finally the key-up)
+/// while the user is still holding, and those land on whatever the new
+/// route autofocused — the ambient `ActivateIntent` shortcut accepts
+/// repeats — so the first item was activated instantly and "hold" looked
+/// exactly like a short press (Sports game cards, Formuler). Activate keys
+/// are swallowed here until a fresh, non-repeat key-down arrives.
+class SwallowHeldActivate extends StatefulWidget {
+  const SwallowHeldActivate({super.key, required this.child});
+  final Widget child;
+
+  @override
+  State<SwallowHeldActivate> createState() => _SwallowHeldActivateState();
+}
+
+class _SwallowHeldActivateState extends State<SwallowHeldActivate> {
+  bool _armed = false;
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (_armed || !_isActivateKey(event.logicalKey)) {
+      return KeyEventResult.ignored;
+    }
+    if (event is KeyDownEvent) {
+      _armed = true;
+      return KeyEventResult.ignored;
+    }
+    return KeyEventResult.handled; // repeat / key-up of the held press
+  }
+
+  @override
+  Widget build(BuildContext context) => Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        onKeyEvent: _onKey,
+        child: widget.child,
+      );
+}
+
+bool _isActivateKey(LogicalKeyboardKey key) =>
+    key == LogicalKeyboardKey.select ||
+    key == LogicalKeyboardKey.enter ||
+    key == LogicalKeyboardKey.numpadEnter ||
+    key == LogicalKeyboardKey.gameButtonA;
+
 class HoldToActivate extends StatefulWidget {
   const HoldToActivate({
     super.key,

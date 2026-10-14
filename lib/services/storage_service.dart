@@ -204,6 +204,25 @@ class StorageService {
   Future<void> setShowResumePill(bool value) =>
       _prefs.setBool(AppConstants.keyShowResumePill, value);
 
+  /// Sports tab league ids in display order; null = never chosen (the
+  /// screen falls back to its own default set).
+  List<String>? getSportsLeagues() =>
+      _prefs.getStringList(_vk(AppConstants.keySportsLeagues));
+  Future<void> setSportsLeagues(List<String> ids) =>
+      _prefs.setStringList(_vk(AppConstants.keySportsLeagues), ids);
+
+  bool getSportsHideScores() =>
+      _prefs.getBool(_vk(AppConstants.keySportsHideScores)) ?? false;
+  Future<void> setSportsHideScores(bool value) =>
+      _prefs.setBool(_vk(AppConstants.keySportsHideScores), value);
+
+  /// Raw JSON of the user's game/team -> channel picks; parsed by
+  /// `SportsChannelPicks` (null = none yet).
+  String? getSportsChannelPicks() =>
+      _prefs.getString(_vk(AppConstants.keySportsChannelPicks));
+  Future<void> setSportsChannelPicks(String json) =>
+      _prefs.setString(_vk(AppConstants.keySportsChannelPicks), json);
+
   /// Last Multiview layout: true = 4 screens (2x2), false = 2 stacked.
   bool getMultiviewQuad() =>
       _prefs.getBool(AppConstants.keyMultiviewQuad) ?? false;

@@ -26,6 +26,7 @@ class TvMenuTile extends StatefulWidget {
     this.autofocus = false,
     this.enabled = true,
     this.focusNode,
+    this.titleMaxLines,
     required this.onTap,
   }) : assert(icon != null || leading != null,
             'TvMenuTile needs either icon or leading');
@@ -55,6 +56,10 @@ class TvMenuTile extends StatefulWidget {
   /// elsewhere in this app. Null (every existing caller) falls back to an
   /// owned, internal node, unchanged from before.
   final FocusNode? focusNode;
+
+  /// Clamp for long titles (e.g. provider event-channel names); null = no
+  /// limit, as before.
+  final int? titleMaxLines;
   final VoidCallback onTap;
 
   @override
@@ -138,6 +143,9 @@ class _TvMenuTileState extends State<TvMenuTile> {
                 child: Icon(widget.icon),
               ),
           title: Text(widget.title,
+              maxLines: widget.titleMaxLines,
+              overflow:
+                  widget.titleMaxLines == null ? null : TextOverflow.ellipsis,
               style: TextStyle(color: _focused ? focusForeground : null)),
           subtitle: widget.subtitle == null
               ? null

@@ -95,7 +95,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+207** (test builds up to +216 installed on the Formuler)) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+207** (test builds up to +221 installed on the Formuler)) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
@@ -208,14 +208,15 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   wants a higher number) — they reinstall from vespertv.app / Downloader `1760256`.
   Still to check: SQLite EPG on Windows. (Fire Stick "Update EPG Now" confirmed fixed by the owner,
   2026-10-13.)
-- **In progress (uncommitted, test build 1.0.3+216 on the Formuler):** Sports v1 + Standings — see
+- **Committed, not released (test build 1.0.3+221 on the Formuler):** Sports v1 + Standings — see
   `dev-notes/sports-tab.md` "v1 as built". Also fixed the "Hold > to resume" pill rendering with
   Flutter's yellow-underline debug text (no Material ancestor; Android + Windows), and the pill is
   now **hidden while Sports is open** (`LiveResumeHint.hideWhileMounted()` — a counter both pills
   watch; hold-Right still resumes), plus a Settings > General switch to turn the pill off. Also
   **Add Playlist > "From phone"** (QR → phone form; Wi-Fi path tested on the Formuler, VPS relay
   live at `https://pair.vespertv.app`, both paths verified with the real TV) — see `dev-notes/features.md`.
-  Test build **1.0.3+216**. Owner tests it all on 2026-10-14.
+  Owner tested Sports on 2026-10-14 and the feedback round is in (OK plays / hold = menu, league
+  reorder by hold, gold focus look). **Next task: My Teams** — decisions in `dev-notes/sports-tab.md`.
 - **Test builds** for the owner's Fire Stick go to a GitHub **pre-release** (skipped by the updater
   and `/latest`), sideloaded via Downloader with the direct asset URL; delete it once shipped.
 - **Roadmap (owner, 2026-10-12):** ~~fix Multiview~~ (done 2026-10-13). **Next:** a **Sports tab** (design draft: `dev-notes/sports-tab.md`)

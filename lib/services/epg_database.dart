@@ -133,6 +133,38 @@ class EpgDatabase {
     return result;
   }
 
+  /// Programmes starting in [fromMs, toMs) whose title contains any of
+  /// [terms] (case-insensitive) — the Sports tab's "find this game in the
+  /// guide" lookup, one scan for a whole day of games rather than one per
+  /// game. Chunked to stay under SQLite's bound parameter limit.
+  Future<List<EpgRow>> programmesStartingWithTitle(
+      int fromMs, int toMs, List<String> terms) async {
+    if (terms.isEmpty) return const [];
+    final db = await _database;
+    final result = <EpgRow>[];
+    const chunk = 400;
+    for (var i = 0; i < terms.length; i += chunk) {
+      final part =
+          terms.sublist(i, i + chunk > terms.length ? terms.length : i + chunk);
+      final likes = List.filled(part.length, 'title LIKE ?').join(' OR ');
+      final rows = await db.rawQuery(
+        'SELECT channel_id, start, stop, title FROM programme '
+        'WHERE stop > ? AND start >= ? AND start < ? AND ($likes)',
+        [fromMs, fromMs, toMs, for (final t in part) '%$t%'],
+      );
+      for (final r in rows) {
+        result.add((
+          channelId: r['channel_id'] as String,
+          startMs: r['start'] as int,
+          stopMs: r['stop'] as int,
+          title: r['title'] as String,
+          description: null,
+        ));
+      }
+    }
+    return result;
+  }
+
   /// Distinct channel ids that still have any programme ending after
   /// [minStopMs] — the "does this channel have EPG at all" answer for
   /// callers that need it for every channel at once (auto-pair).

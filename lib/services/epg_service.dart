@@ -593,6 +593,21 @@ class EpgService extends ChangeNotifier {
     return null;
   }
 
+  /// Programmes starting between [from] and [to] whose title contains any
+  /// of [terms] — see [EpgDatabase.programmesStartingWithTitle]. Channel ids
+  /// come back normalized (see [normalizeEpgId]).
+  Future<List<EpgProgram>> findProgrammesByTitle(
+      DateTime from, DateTime to, List<String> terms) async {
+    try {
+      final rows = await _db.programmesStartingWithTitle(
+          from.millisecondsSinceEpoch, to.millisecondsSinceEpoch, terms);
+      return rows.map(_toProgram).toList();
+    } catch (e) {
+      debugPrint('EpgService: title search failed: $e');
+      return const [];
+    }
+  }
+
   /// Whether [channelId] has any programme that hasn't ended — without
   /// loading its rows.
   bool hasPrograms(String channelId) =>
