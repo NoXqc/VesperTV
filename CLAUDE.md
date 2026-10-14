@@ -43,7 +43,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
 4. `flutter analyze` must report the baseline **22** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `1.0.2` unless noted
+5. Check the current state of releases: `gh release list` (latest should be `1.0.3` unless noted
    in §11).
 
 ## 3. Layout (what matters)
@@ -95,7 +95,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+207** (test builds up to +225 installed on the Formuler)) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+226**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
@@ -196,8 +196,15 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 ## 12. Features (details in `dev-notes/features.md`)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys). Read the file before changing any of these.
 
-## 13. Status & open items (as of 2026-10-13)
-- **Shipped: 1.0.2 (`+207`, 2026-10-13, latest on GitHub)** — TV tab focused at launch, Settings >
+## 13. Status & open items (as of 2026-10-14)
+- **Shipped: 1.0.3 (`+226`, 2026-10-14, latest on GitHub, tag on `d02200e`)** — the Sports tab:
+  scores, channel matching, Standings, **My Teams** (see `dev-notes/sports-tab.md`), plus Add
+  Playlist "From phone" and the resume-pill fixes/switch (details below). Site + README advertise it
+  with Formuler screenshots (`docs/assets/shot-sports.jpg`, `shot-my-teams.jpg`,
+  `shot-standings.png`, `shot-follow.png`). Windows build compiles; Sports on Windows not yet
+  checked by the owner. **Next:** the "Not yet" list in `dev-notes/sports-tab.md` (Sports
+  Multiview, phone layout, BYOK providers) — ask the owner which first.
+- 1.0.2 (`+207`, 2026-10-13) — TV tab focused at launch, Settings >
   General History clearing (also on Windows). 1.0.1 (`+206`) added Settings > General (resume last
   channel at startup, Multiview tip toggle). The 1.0.0 release was retagged in place each time; tag `1.0.0`
   (`+204`) remains. 1.0.0 restarted the version numbers and included
@@ -208,22 +215,16 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   wants a higher number) — they reinstall from vespertv.app / Downloader `1760256`.
   Still to check: SQLite EPG on Windows. (Fire Stick "Update EPG Now" confirmed fixed by the owner,
   2026-10-13.)
-- **Committed, not released (test build 1.0.3+225 on the Formuler):** Sports v1 + Standings + **My
-  Teams** (follow from Standings, starred/first games, team details screen; owner happy with it
-  2026-10-14) — see `dev-notes/sports-tab.md` "v1 as built" and the My Teams entry. The site
-  (`docs/index.html`: carousel slides 2-4, features cluster 04 / SPORTS, a Sports how-to group) and
-  `README.md` already advertise Sports as "new in 1.0.3" with Formuler screenshots
-  (`docs/assets/shot-sports.jpg`, `shot-my-teams.jpg`, `shot-standings.png`, `shot-follow.png`) —
-  **cut the 1.0.3 release soon**, the public download is still 1.0.2. Also fixed the "Hold > to resume" pill rendering with
+- **What went into 1.0.3:** Sports v1 + Standings + **My Teams** (follow from Standings,
+  starred/first games, team details screen; owner happy with it 2026-10-14). Site: carousel slides
+  2-4, features cluster 04 / SPORTS, a Sports how-to group. Also fixed the "Hold > to resume" pill rendering with
   Flutter's yellow-underline debug text (no Material ancestor; Android + Windows), and the pill is
   now **hidden while Sports is open** (`LiveResumeHint.hideWhileMounted()` — a counter both pills
   watch; hold-Right still resumes), plus a Settings > General switch to turn the pill off. Also
   **Add Playlist > "From phone"** (QR → phone form; Wi-Fi path tested on the Formuler, VPS relay
   live at `https://pair.vespertv.app`, both paths verified with the real TV) — see `dev-notes/features.md`.
   Owner tested Sports on 2026-10-14 and the feedback round is in (OK plays / hold = menu, league
-  reorder by hold, gold focus look). My Teams is done (above). **Next:** release 1.0.3 when the
-  owner says so; then the "Not yet" list in `dev-notes/sports-tab.md` (Sports Multiview, phone
-  layout, BYOK providers).
+  reorder by hold, gold focus look).
 - **Test builds** for the owner's Fire Stick go to a GitHub **pre-release** (skipped by the updater
   and `/latest`), sideloaded via Downloader with the direct asset URL; delete it once shipped.
 - **Roadmap (owner, 2026-10-12):** ~~fix Multiview~~ (done 2026-10-13). **Next:** a **Sports tab** (design draft: `dev-notes/sports-tab.md`)
