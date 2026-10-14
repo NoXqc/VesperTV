@@ -834,4 +834,10 @@ const Map<String, String> kFr = {
       "Entrez l'adresse affichée sous le code sur l'autre appareil (Cet appareil : …)",
   'Code: {code}': "Code : {code}",
   'Type the address instead': "Entrer l'adresse à la place",
+  '{n} playlist': "{n} liste",
+  '{n} playlists': "{n} listes",
+  '{n} profile': "{n} profil",
+  '{n} profiles': "{n} profils",
+  '{n} favorite': "{n} favori",
+  '{n} favorites': "{n} favoris",
 };

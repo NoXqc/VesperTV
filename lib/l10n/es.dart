@@ -831,4 +831,10 @@ const Map<String, String> kEs = {
       "Escribe la dirección que aparece bajo el código en el otro dispositivo (Este dispositivo: …)",
   'Code: {code}': "Código: {code}",
   'Type the address instead': "Escribir la dirección",
+  '{n} playlist': "{n} lista",
+  '{n} playlists': "{n} listas",
+  '{n} profile': "{n} perfil",
+  '{n} profiles': "{n} perfiles",
+  '{n} favorite': "{n} favorito",
+  '{n} favorites': "{n} favoritos",
 };

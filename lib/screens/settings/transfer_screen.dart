@@ -214,6 +214,7 @@ class _ReceiveScreenState extends State<_ReceiveScreen> {
     for (final row in _addressKeys) [for (final _ in row) FocusNode()],
   ];
   late final FocusNode _replaceNode = FocusNode();
+  late final FocusNode _cancelNode = FocusNode();
   late final FocusNode _addressOptionNode = FocusNode();
 
   List<List<String>> get _keys => _address == null ? _codeKeys : _addressKeys;
@@ -230,6 +231,7 @@ class _ReceiveScreenState extends State<_ReceiveScreen> {
       }
     }
     _replaceNode.dispose();
+    _cancelNode.dispose();
     _addressOptionNode.dispose();
     super.dispose();
   }
@@ -283,7 +285,7 @@ class _ReceiveScreenState extends State<_ReceiveScreen> {
         _received = values;
       });
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _replaceNode.requestFocus();
+        if (mounted) _cancelNode.requestFocus();
       });
     } on TransferException catch (e) {
       if (!mounted) return;
@@ -558,13 +560,12 @@ class _ReceiveScreenState extends State<_ReceiveScreen> {
                 fontWeight: FontWeight.w700)),
         const SizedBox(height: 8),
         Text(
-          tr(
-              '{playlists} playlists · {profiles} profiles · {favorites} favorites',
-              {
-                'playlists': playlists,
-                'profiles': profiles < 1 ? 1 : profiles,
-                'favorites': favorites,
-              }),
+          [
+            trPlural(playlists, '{n} playlist', '{n} playlists'),
+            trPlural(
+                profiles < 1 ? 1 : profiles, '{n} profile', '{n} profiles'),
+            trPlural(favorites, '{n} favorite', '{n} favorites'),
+          ].join(' · '),
           style: const TextStyle(color: Colors.white70, fontSize: 16),
         ),
         const SizedBox(height: 16),
@@ -577,12 +578,15 @@ class _ReceiveScreenState extends State<_ReceiveScreen> {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            OutlinedButton(
+            // Same look for both — only the focused one fills (owner: a
+            // filled Replace read as "selected" while Cancel had focus).
+            _ChoiceButton(
+              focusNode: _cancelNode,
               onPressed: _busy ? null : () => Navigator.of(context).pop(),
               child: Text(tr('Cancel')),
             ),
             const SizedBox(width: 16),
-            FilledButton(
+            _ChoiceButton(
               focusNode: _replaceNode,
               onPressed: _busy ? null : _apply,
               child: _busy
@@ -646,6 +650,44 @@ class _KeyButton extends StatelessWidget {
           child: child,
         ),
       ),
+    );
+  }
+}
+
+/// Outlined until focused, then filled with the accent — so "which one is
+/// selected" is never ambiguous on a TV.
+class _ChoiceButton extends StatelessWidget {
+  const _ChoiceButton({
+    required this.focusNode,
+    required this.onPressed,
+    required this.child,
+  });
+
+  final FocusNode focusNode;
+  final VoidCallback? onPressed;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ListenableBuilder(
+      listenable: focusNode,
+      builder: (context, _) {
+        final focused = focusNode.hasFocus;
+        return OutlinedButton(
+          focusNode: focusNode,
+          onPressed: onPressed,
+          style: OutlinedButton.styleFrom(
+            foregroundColor: focused ? scheme.onPrimary : Colors.white,
+            backgroundColor: focused ? scheme.primary : Colors.transparent,
+            side: BorderSide(
+                color: focused ? scheme.primary : Colors.white38,
+                width: focused ? 2 : 1),
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+          ),
+          child: child,
+        );
+      },
     );
   }
 }

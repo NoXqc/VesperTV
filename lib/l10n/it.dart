@@ -834,4 +834,10 @@ const Map<String, String> kIt = {
       "Inserisci l'indirizzo mostrato sotto il codice sull'altro dispositivo (Questo dispositivo: …)",
   'Code: {code}': "Codice: {code}",
   'Type the address instead': "Inserisci l'indirizzo",
+  '{n} playlist': "{n} lista",
+  '{n} playlists': "{n} liste",
+  '{n} profile': "{n} profilo",
+  '{n} profiles': "{n} profili",
+  '{n} favorite': "{n} preferito",
+  '{n} favorites': "{n} preferiti",
 };
