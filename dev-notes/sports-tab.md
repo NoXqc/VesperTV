@@ -48,7 +48,15 @@ right below; the rest of this file is the design and the tests behind it.
     "focused" outlines (three at once). `SportsChip` also re-seeds `_focused` when its node changes.
   - Channel picker: the search field's own `FocusNode.onKeyEvent` maps Down → first result, Up →
     suggestion chips, OK → reopen keyboard (Back closes the keyboard but EditableText kept the arrows).
-- **Next task: My Teams** (decided with the owner 2026-10-14, not started):
+- **My Teams — built 2026-10-14, test build +222 on the Formuler, awaiting owner test.** Code:
+  `sports_my_teams_screen.dart` (gets play/menu/match callbacks from `SportsScreen`, so picks and
+  player are shared), `SportsFollows` (`sports_follows.dart`, prefs `vesper_sports_followed_teams`,
+  `leagueId|teamId` per viewer), `SportsService.teamSchedule` + `parseEspnTeamSchedule`. Schedule JSON
+  differs from the scoreboard: `score` is `{displayValue}`, record is `record[0].displayValue`
+  ("2-1-0, 4 PTS"), logos in `team.logos[]`, broadcasts `{media: {shortName}}`, no team colours
+  (the followed team's own is filled in). Soccer: default = played games only, `?fixture=true` =
+  upcoming only → two calls, merged by id. Standings: OK or hold OK on a row = Follow/Unfollow
+  dialog, star on followed rows. Original decisions:
   - Entry: a **My Teams** button next to Standings.
   - Layout: **team list on the left + details on the right** (like Standings). Rows: logo, name,
     record, next game. Details: record + standing line, a mini table around the team, the **next

@@ -223,6 +223,14 @@ class StorageService {
   Future<void> setSportsChannelPicks(String json) =>
       _prefs.setString(_vk(AppConstants.keySportsChannelPicks), json);
 
+  /// My Teams, in follow order, as `leagueId|teamId` (parsed by
+  /// `FollowedTeam.parse`).
+  List<String> getSportsFollowedTeams() =>
+      _prefs.getStringList(_vk(AppConstants.keySportsFollowedTeams)) ??
+      const [];
+  Future<void> setSportsFollowedTeams(List<String> teams) =>
+      _prefs.setStringList(_vk(AppConstants.keySportsFollowedTeams), teams);
+
   /// Last Multiview layout: true = 4 screens (2x2), false = 2 stacked.
   bool getMultiviewQuad() =>
       _prefs.getBool(AppConstants.keyMultiviewQuad) ?? false;

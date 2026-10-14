@@ -254,6 +254,72 @@ class SportsStandingGroup {
   final List<SportsStandingRow> rows;
 }
 
+/// A team in My Teams. Team ids are only unique within a league.
+class FollowedTeam {
+  const FollowedTeam(this.leagueId, this.teamId);
+
+  final String leagueId;
+  final String teamId;
+
+  /// Stored form, `leagueId|teamId`; null when malformed.
+  static FollowedTeam? parse(String raw) {
+    final i = raw.indexOf('|');
+    if (i <= 0 || i == raw.length - 1) return null;
+    return FollowedTeam(raw.substring(0, i), raw.substring(i + 1));
+  }
+
+  String get key => '$leagueId|$teamId';
+
+  @override
+  bool operator ==(Object other) =>
+      other is FollowedTeam &&
+      other.leagueId == leagueId &&
+      other.teamId == teamId;
+
+  @override
+  int get hashCode => Object.hash(leagueId, teamId);
+}
+
+/// One team's season: who they are, where they stand, every game.
+class SportsTeamSchedule {
+  const SportsTeamSchedule({
+    required this.league,
+    required this.team,
+    required this.games,
+    this.standingSummary,
+  });
+
+  final SportsLeague league;
+
+  /// [SportsTeam.record] is the season record ("1-3-2").
+  final SportsTeam team;
+
+  /// "8th in Atlantic Division".
+  final String? standingSummary;
+
+  /// Oldest first.
+  final List<SportsGame> games;
+
+  /// The game being played now, else the next one, else null.
+  SportsGame? get nextGame =>
+      games.where((g) => g.state == GameState.live).firstOrNull ??
+      games.where((g) => g.state == GameState.pre).firstOrNull;
+
+  SportsGame? get lastGame =>
+      games.where((g) => g.state == GameState.post).lastOrNull;
+
+  /// Live and upcoming games starting within [days] days.
+  List<SportsGame> upcoming({int days = 14}) {
+    final until = DateTime.now().toUtc().add(Duration(days: days));
+    return [
+      for (final g in games)
+        if (g.state == GameState.live ||
+            (g.state == GameState.pre && g.start.isBefore(until)))
+          g,
+    ];
+  }
+}
+
 class SportsStandings {
   const SportsStandings({
     required this.league,

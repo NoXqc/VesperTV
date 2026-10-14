@@ -14,6 +14,7 @@ import '../services/epg_service.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../services/sports_channel_matcher.dart';
+import '../services/sports_follows.dart';
 import '../services/sports_service.dart';
 import '../services/storage_service.dart';
 import '../utils/route_observer.dart';
@@ -25,6 +26,7 @@ import '../widgets/sports_widgets.dart';
 import '../widgets/tv_menu_tile.dart';
 import 'desktop_player_screen.dart';
 import 'player_screen.dart';
+import 'sports_my_teams_screen.dart';
 import 'sports_standings_screen.dart';
 
 /// Sports: today's games across the user's leagues with logos, records,
@@ -55,6 +57,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   late final StorageService _storage;
   late final SportsChannelMatcher _matcher;
   late SportsChannelPicks _picks;
+  late SportsFollows _follows;
 
   late List<SportsLeague> _leagues;
   String? _leagueFilter;
@@ -93,6 +96,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     _storage = context.read<StorageService>();
     _matcher = SportsChannelMatcher(context.read<EpgService>());
     _picks = SportsChannelPicks.load(_storage);
+    _follows = SportsFollows.load(_storage);
     final saved = _storage.getSportsLeagues();
     _leagues = [
       for (final id in saved ?? kDefaultSportsLeagueIds)
@@ -198,8 +202,13 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   }
 
   List<_Section> get _sections {
-    final live = _games.where((g) => g.state == GameState.live).toList();
-    final pre = _games.where((g) => g.state == GameState.pre).toList();
+    // My Teams' games first (stable: start order kept within each half).
+    List<SportsGame> followedFirst(Iterable<SportsGame> games) => [
+          ...games.where(_follows.involves),
+          ...games.where((g) => !_follows.involves(g)),
+        ];
+    final live = followedFirst(_games.where((g) => g.state == GameState.live));
+    final pre = followedFirst(_games.where((g) => g.state == GameState.pre));
     final post = _games.where((g) => g.state == GameState.post).toList();
     final laterLabel = switch (_dayOffset) {
       0 => 'Later today',
@@ -361,22 +370,49 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       builder: (_) => SportsStandingsScreen(
         leagues: _leagues,
         initialLeague: sportsLeagueById(_leagueFilter ?? '') ?? _leagues.first,
+        follows: _follows,
       ),
     ));
+  }
+
+  Future<void> _openMyTeams() async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => SportsMyTeamsScreen(
+        leagues: _leagues,
+        follows: _follows,
+        hideScores: _hideScores,
+        matchGames: _matchGames,
+        onActivate: _activateGame,
+        onMenu: _openGame,
+      ),
+    ));
+  }
+
+  /// Channel matches for games outside the day being shown (My Teams).
+  Future<Map<String, List<ChannelMatch>>> _matchGames(
+      List<SportsGame> games) async {
+    final playlist = context.read<PlaylistManager>();
+    await playlist.ensureLiveChannelsLoaded();
+    await _matcher.prepare(playlist.visibleChannels(category: 'tv'));
+    return _matcher.matchDay(games, _picks);
   }
 
   /// OK on a card: straight to the stream when a channel is matched (your
   /// pick ranks first), otherwise the menu so one can be picked. Holding OK
   /// always opens the menu (other channels / pick / forget) — owner: OK
   /// popping the menu even with a channel assigned was one press too many.
-  Future<void> _activateGame(SportsGame game) async {
-    final best = _matches[_gameKey(game)]?.firstOrNull;
-    if (best == null) return _openGame(game);
+  /// [matches] = My Teams' own (its games aren't all on the shown day).
+  Future<void> _activateGame(SportsGame game,
+      [List<ChannelMatch>? matches]) async {
+    final best = (matches ?? _matches[_gameKey(game)])?.firstOrNull;
+    if (best == null) return _openGame(game, matches);
     await _play(best.channel);
   }
 
-  Future<void> _openGame(SportsGame game) async {
-    final matches = _matches[_gameKey(game)] ?? const <ChannelMatch>[];
+  Future<void> _openGame(SportsGame game,
+      [List<ChannelMatch>? gameMatches]) async {
+    final matches =
+        gameMatches ?? _matches[_gameKey(game)] ?? const <ChannelMatch>[];
     final result = await showDialog<_GameAction>(
       context: context,
       // Opened by a hold too: drop the held OK's repeats (see the widget).
@@ -384,7 +420,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           child: _GameDialog(
         game: game,
         matches: matches,
-        matching: _matching,
+        matching: gameMatches == null && _matching,
         hideScores: _hideScores,
         hasPick: _picks.channelIdFor(game) != null,
       )),
@@ -629,14 +665,28 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   Widget _buildStandingsButton() {
     final league = sportsLeagueById(_leagueFilter ?? '');
     return Center(
-      child: SportsChip(
-        focusNode: _chipNode('standings'),
-        label: league == null ? 'Standings' : '${league.name} standings',
-        icon: Icons.leaderboard,
-        selected: false,
-        compact: true,
-        onFocus: () => _zone = 2,
-        onTap: _openStandings,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SportsChip(
+            focusNode: _chipNode('standings'),
+            label: league == null ? 'Standings' : '${league.name} standings',
+            icon: Icons.leaderboard,
+            selected: false,
+            compact: true,
+            onFocus: () => _zone = 2,
+            onTap: _openStandings,
+          ),
+          SportsChip(
+            focusNode: _chipNode('myteams'),
+            label: 'My Teams',
+            icon: Icons.star,
+            selected: false,
+            compact: true,
+            onFocus: () => _zone = 2,
+            onTap: _openMyTeams,
+          ),
+        ],
       ),
     );
   }
@@ -708,6 +758,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                     match: _matches[_gameKey(g)]?.firstOrNull,
                     matching: _matching,
                     hideScores: _hideScores,
+                    starred: _follows.involves(g),
                     onFocus: () {
                       _zone = zoneIndex;
                       _lastCardInRow[s.id] = _gameKey(g);
@@ -992,6 +1043,7 @@ class _GameCard extends StatefulWidget {
     required this.match,
     required this.matching,
     required this.hideScores,
+    required this.starred,
     required this.onFocus,
     required this.onTap,
     required this.onHold,
@@ -1005,6 +1057,9 @@ class _GameCard extends StatefulWidget {
   final ChannelMatch? match;
   final bool matching;
   final bool hideScores;
+
+  /// One of My Teams plays.
+  final bool starred;
   final VoidCallback onFocus;
   final VoidCallback onTap;
   final VoidCallback onHold;
@@ -1132,6 +1187,12 @@ class _GameCardState extends State<_GameCard> {
                     children: [
                       Row(
                         children: [
+                          if (widget.starred)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 4),
+                              child: Icon(Icons.star,
+                                  size: 13, color: scheme.primary),
+                            ),
                           Text(g.league.shortName.toUpperCase(),
                               style: const TextStyle(
                                   fontSize: 11,

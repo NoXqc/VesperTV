@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../models/sports.dart';
+import '../services/sports_follows.dart';
 import '../services/sports_service.dart';
 import '../utils/tv_theme.dart';
+import '../widgets/hold_to_activate.dart';
 import '../widgets/settings_scaffold.dart';
 import '../widgets/sports_widgets.dart';
 
@@ -15,82 +17,94 @@ import '../widgets/sports_widgets.dart';
 /// than one, then the table rows. Up/Down are dispatched explicitly
 /// (CLAUDE.md §10); inside the table Left/Right flip between groups so a
 /// remote user never has to climb back up to compare conferences.
+///
+/// OK or hold OK on a team row = Follow / Unfollow (My Teams).
 class SportsStandingsScreen extends StatefulWidget {
-  const SportsStandingsScreen(
-      {super.key, required this.leagues, required this.initialLeague});
+  const SportsStandingsScreen({
+    super.key,
+    required this.leagues,
+    required this.initialLeague,
+    required this.follows,
+    this.addingTeam = false,
+  });
 
   final List<SportsLeague> leagues;
   final SportsLeague initialLeague;
+  final SportsFollows follows;
+
+  /// Opened from My Teams' "+ Add team": the follow hint is spelled out
+  /// above the table instead of the quiet footer.
+  final bool addingTeam;
 
   @override
   State<SportsStandingsScreen> createState() => _SportsStandingsScreenState();
 }
 
-class _Column {
-  const _Column(this.label, this.stat, {this.width = 46});
+class SportsStandingColumn {
+  const SportsStandingColumn(this.label, this.stat, {this.width = 46});
   final String label;
   final String stat;
   final double width;
 }
 
 /// Columns per sport, most important first — narrow screens keep a prefix.
-List<_Column> _columnsFor(SportsLeague league) {
-  const l10 = _Column('L10', 'Last Ten Games', width: 54);
-  const strk = _Column('STRK', 'streak', width: 54);
+List<SportsStandingColumn> sportsStandingColumns(SportsLeague league) {
+  const l10 = SportsStandingColumn('L10', 'Last Ten Games', width: 54);
+  const strk = SportsStandingColumn('STRK', 'streak', width: 54);
   if (league.soccer) {
     return const [
-      _Column('GP', 'gamesPlayed'),
-      _Column('W', 'wins'),
-      _Column('D', 'ties'),
-      _Column('L', 'losses'),
-      _Column('GD', 'pointDifferential', width: 50),
-      _Column('PTS', 'points', width: 50),
+      SportsStandingColumn('GP', 'gamesPlayed'),
+      SportsStandingColumn('W', 'wins'),
+      SportsStandingColumn('D', 'ties'),
+      SportsStandingColumn('L', 'losses'),
+      SportsStandingColumn('GD', 'pointDifferential', width: 50),
+      SportsStandingColumn('PTS', 'points', width: 50),
     ];
   }
   final sport = league.espnPath.split('/').first;
   switch (sport) {
     case 'hockey':
       return const [
-        _Column('GP', 'gamesPlayed'),
-        _Column('W', 'wins'),
-        _Column('L', 'losses'),
-        _Column('OTL', 'otLosses'),
-        _Column('PTS', 'points', width: 50),
-        _Column('DIFF', 'pointDifferential', width: 54),
+        SportsStandingColumn('GP', 'gamesPlayed'),
+        SportsStandingColumn('W', 'wins'),
+        SportsStandingColumn('L', 'losses'),
+        SportsStandingColumn('OTL', 'otLosses'),
+        SportsStandingColumn('PTS', 'points', width: 50),
+        SportsStandingColumn('DIFF', 'pointDifferential', width: 54),
         strk,
         l10,
       ];
     case 'football' when league.id == 'college-football':
       return const [
-        _Column('REC', 'overall', width: 58),
-        _Column('PF', 'pointsFor', width: 50),
-        _Column('PA', 'pointsAgainst', width: 50),
-        _Column('DIFF', 'pointDifferential', width: 54),
+        SportsStandingColumn('REC', 'overall', width: 58),
+        SportsStandingColumn('PF', 'pointsFor', width: 50),
+        SportsStandingColumn('PA', 'pointsAgainst', width: 50),
+        SportsStandingColumn('DIFF', 'pointDifferential', width: 54),
         strk,
-        _Column('HOME', 'Home', width: 58),
-        _Column('AWAY', 'Away', width: 58),
+        SportsStandingColumn('HOME', 'Home', width: 58),
+        SportsStandingColumn('AWAY', 'Away', width: 58),
       ];
     case 'football':
       return const [
-        _Column('W', 'wins'),
-        _Column('L', 'losses'),
-        _Column('T', 'ties'),
-        _Column('PCT', 'winPercent', width: 58),
-        _Column('DIFF', 'pointDifferential', width: 54),
+        SportsStandingColumn('W', 'wins'),
+        SportsStandingColumn('L', 'losses'),
+        SportsStandingColumn('T', 'ties'),
+        SportsStandingColumn('PCT', 'winPercent', width: 58),
+        SportsStandingColumn('DIFF', 'pointDifferential', width: 54),
         strk,
-        _Column('HOME', 'Home', width: 58),
-        _Column('AWAY', 'Road', width: 58),
+        SportsStandingColumn('HOME', 'Home', width: 58),
+        SportsStandingColumn('AWAY', 'Road', width: 58),
       ];
     default: // basketball, baseball
       return const [
-        _Column('W', 'wins'),
-        _Column('L', 'losses'),
-        _Column('PCT', 'winPercent', width: 58),
-        _Column('GB', 'gamesBehind', width: 50),
+        SportsStandingColumn('W', 'wins'),
+        SportsStandingColumn('L', 'losses'),
+        SportsStandingColumn('PCT', 'winPercent', width: 58),
+        SportsStandingColumn('GB', 'gamesBehind', width: 50),
         strk,
         l10,
-        _Column('HOME', 'Home', width: 58),
-        _Column('AWAY', 'Road', width: 58),
+        SportsStandingColumn('HOME', 'Home', width: 58),
+        SportsStandingColumn('AWAY', 'Road', width: 58),
       ];
   }
 }
@@ -250,6 +264,20 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
     }
   }
 
+  Future<void> _toggleFollow(SportsTeam team) async {
+    final follows = widget.follows;
+    final followed = follows.isFollowed(_league.id, team.id);
+    final confirmed =
+        await showSportsFollowDialog(context, team: team, followed: followed);
+    if (!confirmed || !mounted) return;
+    if (followed) {
+      await follows.unfollow(_league.id, team.id);
+    } else {
+      await follows.follow(_league.id, team.id);
+    }
+    if (mounted) setState(() {});
+  }
+
   // ---------------------------------------------------------------- build
 
   @override
@@ -278,6 +306,7 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
                       const SizedBox(height: 8),
                       _buildGroupBar(),
                       const SizedBox(height: 8),
+                      if (widget.addingTeam) _buildAddHint(),
                       Expanded(child: _buildTable()),
                     ],
                   ),
@@ -369,6 +398,30 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
     );
   }
 
+  Widget _buildAddHint() {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: scheme.primary.withValues(alpha: 0.6)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.star, size: 18, color: scheme.primary),
+          const SizedBox(width: 8),
+          const Expanded(
+            child: Text(
+                'Pick a league above, then hold OK on a team to follow it. '
+                'Back returns to My Teams.',
+                style: TextStyle(color: Colors.white, fontSize: 14)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTable() {
     final group = _group;
     if (_loading && _standings == null) {
@@ -389,8 +442,8 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
     }
     return LayoutBuilder(builder: (context, constraints) {
       // Keep as many columns as fit beside a readable team name.
-      final all = _columnsFor(_league);
-      final columns = <_Column>[];
+      final all = sportsStandingColumns(_league);
+      final columns = <SportsStandingColumn>[];
       var used = 36.0 + 40 + 160; // position + logo + minimum name width
       for (final c in all) {
         if (used + c.width > constraints.maxWidth) break;
@@ -420,33 +473,47 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
                 itemExtent: _rowHeight,
                 padding: EdgeInsets.zero,
                 itemCount: group.rows.length,
-                itemBuilder: (context, i) => _StandingRow(
-                  key: ValueKey(i),
-                  focusNode: _rowNode(i),
-                  row: group.rows[i],
-                  columns: columns,
-                  onFocus: () {
-                    _zone = 2;
-                    _row = i;
-                  },
-                ),
+                itemBuilder: (context, i) {
+                  final team = group.rows[i].team;
+                  return HoldToActivate(
+                    key: ValueKey(i),
+                    onTap: () => _toggleFollow(team),
+                    onHold: () => _toggleFollow(team),
+                    child: _StandingRow(
+                      focusNode: _rowNode(i),
+                      row: group.rows[i],
+                      columns: columns,
+                      followed: widget.follows.isFollowed(_league.id, team.id),
+                      onFocus: () {
+                        _zone = 2;
+                        _row = i;
+                      },
+                    ),
+                  );
+                },
               ),
             ),
             if (notes.isNotEmpty) _Legend(notes: notes),
-            if (_hasGroupBar)
-              // Icons, not ◀ ▶ characters: Android draws those as emoji.
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 6),
-                child: Row(
-                  children: [
+            // Icons, not ◀ ▶ characters: Android draws those as emoji.
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                children: [
+                  if (_hasGroupBar) ...const [
                     Icon(Icons.chevron_left, size: 16, color: Colors.white38),
                     Icon(Icons.chevron_right, size: 16, color: Colors.white38),
                     SizedBox(width: 4),
                     Text('switch conference',
                         style: TextStyle(color: Colors.white38, fontSize: 12)),
+                    SizedBox(width: 20),
                   ],
-                ),
+                  const Icon(Icons.star, size: 14, color: Colors.white38),
+                  const SizedBox(width: 4),
+                  const Text('Hold OK on a team to follow it (My Teams)',
+                      style: TextStyle(color: Colors.white38, fontSize: 12)),
+                ],
               ),
+            ),
           ],
         ),
       );
@@ -456,7 +523,7 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
 
 class _HeaderRow extends StatelessWidget {
   const _HeaderRow({required this.columns});
-  final List<_Column> columns;
+  final List<SportsStandingColumn> columns;
 
   @override
   Widget build(BuildContext context) {
@@ -482,16 +549,17 @@ class _HeaderRow extends StatelessWidget {
 
 class _StandingRow extends StatefulWidget {
   const _StandingRow({
-    super.key,
     required this.focusNode,
     required this.row,
     required this.columns,
+    required this.followed,
     required this.onFocus,
   });
 
   final FocusNode focusNode;
   final SportsStandingRow row;
-  final List<_Column> columns;
+  final List<SportsStandingColumn> columns;
+  final bool followed;
   final VoidCallback onFocus;
 
   @override
@@ -564,14 +632,28 @@ class _StandingRowState extends State<_StandingRow> {
                   color: team.color),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(team.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight:
-                            _focused ? FontWeight.w700 : FontWeight.w500)),
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: Text(team.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: _focused
+                                  ? FontWeight.w700
+                                  : FontWeight.w500)),
+                    ),
+                    if (widget.followed)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: Icon(Icons.star,
+                            size: 16,
+                            color: Theme.of(context).colorScheme.primary),
+                      ),
+                  ],
+                ),
               ),
               for (final c in widget.columns)
                 SizedBox(
@@ -597,7 +679,7 @@ class _StandingRowState extends State<_StandingRow> {
     );
   }
 
-  static Color _statColor(_Column c, String v) {
+  static Color _statColor(SportsStandingColumn c, String v) {
     if (c.stat == 'streak') {
       if (v.startsWith('W')) return const Color(0xFF6FD08C);
       if (v.startsWith('L')) return const Color(0xFFE57373);

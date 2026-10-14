@@ -2,8 +2,58 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../models/sports.dart';
+import 'hold_to_activate.dart';
+import 'tv_menu_tile.dart';
 
-// Pieces shared by the Sports screen and its Standings screen.
+// Pieces shared by the Sports screen and its Standings / My Teams screens.
+
+/// Follow / unfollow [team] (My Teams). True = the user confirmed the
+/// change. Opened by a hold, so the held OK is swallowed.
+Future<bool> showSportsFollowDialog(BuildContext context,
+    {required SportsTeam team, required bool followed}) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => SwallowHeldActivate(
+      child: AlertDialog(
+        backgroundColor: const Color(0xFF15151A),
+        title: Row(
+          children: [
+            SportsLogo(
+                url: team.logoUrl,
+                size: 40,
+                fallback: team.abbreviation,
+                color: team.color),
+            const SizedBox(width: 12),
+            Flexible(child: Text(team.name)),
+          ],
+        ),
+        content: SizedBox(
+          width: 440,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TvMenuTile(
+                autofocus: true,
+                icon: followed ? Icons.star_border : Icons.star,
+                title: followed ? 'Unfollow' : 'Follow',
+                subtitle: followed
+                    ? 'Remove from My Teams'
+                    : 'Add to My Teams — their games show first in Sports',
+                onTap: () => Navigator.of(context).pop(true),
+              ),
+              TvMenuTile(
+                icon: Icons.close,
+                title: 'Cancel',
+                onTap: () => Navigator.of(context).pop(false),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+  return confirmed ?? false;
+}
 
 Color? sportsTeamColor(String? hex) {
   if (hex == null || hex.length != 6) return null;

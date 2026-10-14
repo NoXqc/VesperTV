@@ -193,6 +193,7 @@ class AppConstants {
   static const String keySportsLeagues = 'vesper_sports_leagues';
   static const String keySportsHideScores = 'vesper_sports_hide_scores';
   static const String keySportsChannelPicks = 'vesper_sports_channel_picks';
+  static const String keySportsFollowedTeams = 'vesper_sports_followed_teams';
   static const String keyPaletteId = 'nox_palette_id';
 
   /// UI layout: 'auto' picks phone vs TV by screen size, 'phone'/'tv' force

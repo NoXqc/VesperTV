@@ -110,6 +110,57 @@ class SportsService {
     }
   }
 
+  final Map<String, (SportsTeamSchedule, DateTime)> _scheduleCache = {};
+  final Map<String, Future<SportsTeamSchedule?>> _scheduleInFlight = {};
+
+  /// [teamId]'s whole season (My Teams): record, standing line and every
+  /// game. Null when ESPN can't be reached and nothing is cached. One call
+  /// per team (two for soccer: ESPN only returns played games unless asked
+  /// for `fixture=true`, which returns only the upcoming ones).
+  Future<SportsTeamSchedule?> teamSchedule(SportsLeague league, String teamId) {
+    final key = '${league.id}|$teamId';
+    final cached = _scheduleCache[key];
+    if (cached != null) {
+      final live = cached.$1.games.any((g) => g.state == GameState.live);
+      final age = DateTime.now().difference(cached.$2);
+      if (age <
+          (live ? const Duration(seconds: 50) : const Duration(minutes: 10))) {
+        return Future.value(cached.$1);
+      }
+    }
+    return _scheduleInFlight[key] ??=
+        _downloadSchedule(league, teamId, key).whenComplete(() {
+      _scheduleInFlight.remove(key);
+    });
+  }
+
+  Future<SportsTeamSchedule?> _downloadSchedule(
+      SportsLeague league, String teamId, String key) async {
+    final base = '$_base/${league.espnPath}/teams/$teamId/schedule';
+    try {
+      final responses = await Future.wait([
+        _client.get(Uri.parse(base)).timeout(const Duration(seconds: 15)),
+        if (league.soccer)
+          _client
+              .get(Uri.parse('$base?fixture=true'))
+              .timeout(const Duration(seconds: 15)),
+      ]);
+      for (final r in responses) {
+        if (r.statusCode != 200) throw Exception('HTTP ${r.statusCode}');
+      }
+      // A hockey season is ~1 MB of JSON — parsed off the UI isolate.
+      final schedule = await compute(
+          parseEspnTeamSchedule, ([for (final r in responses) r.body], league));
+      if (schedule == null) throw Exception('no team in response');
+      _scheduleCache[key] = (schedule, DateTime.now());
+      return schedule;
+    } catch (e) {
+      debugPrint(
+          'SportsService: ${league.id} team $teamId schedule failed: $e');
+      return _scheduleCache[key]?.$1;
+    }
+  }
+
   DateTime _today() {
     final n = DateTime.now();
     return DateTime(n.year, n.month, n.day);
@@ -195,6 +246,74 @@ List<SportsGame> parseEspnScoreboard((String, SportsLeague) args) {
   return games;
 }
 
+/// Top-level so [compute] can run it on a background isolate. [bodies] are
+/// the team schedule responses (soccer: results + fixtures); events are
+/// merged by id and sorted oldest first. Null when there's no team.
+@visibleForTesting
+SportsTeamSchedule? parseEspnTeamSchedule((List<String>, SportsLeague) args) {
+  final (bodies, league) = args;
+  Map<String, dynamic>? teamJson;
+  final byId = <String, SportsGame>{};
+  for (final body in bodies) {
+    final json = jsonDecode(body);
+    if (json is! Map<String, dynamic>) continue;
+    teamJson ??= (json['team'] as Map?)?.cast<String, dynamic>();
+    for (final e in (json['events'] as List?) ?? const []) {
+      try {
+        final game = _parseEvent(e as Map<String, dynamic>, league);
+        if (game != null) byId[game.id] = game;
+      } catch (_) {
+        // One malformed event shouldn't drop the season.
+      }
+    }
+  }
+  if (teamJson == null || teamJson['id'] == null) return null;
+  final t = teamJson;
+  final name = (t['displayName'] ?? t['name'] ?? '').toString();
+  final team = SportsTeam(
+    id: t['id'].toString(),
+    name: name,
+    shortName: (t['shortDisplayName'] ?? t['name'] ?? name).toString(),
+    abbreviation: (t['abbreviation'] ?? '').toString(),
+    logoUrl: t['logo']?.toString(),
+    color: t['color']?.toString(),
+    record: t['recordSummary']?.toString(),
+  );
+  // Schedule events leave out team colours; give the followed team its own
+  // so the cards and glow match the rest of the tab.
+  SportsTeam withColor(SportsTeam s) => s.id != team.id || s.color != null
+      ? s
+      : SportsTeam(
+          id: s.id,
+          name: s.name,
+          shortName: s.shortName,
+          abbreviation: s.abbreviation,
+          logoUrl: s.logoUrl,
+          color: team.color,
+          record: s.record,
+          score: s.score,
+        );
+  final games = [
+    for (final g in byId.values)
+      SportsGame(
+        id: g.id,
+        league: g.league,
+        start: g.start,
+        state: g.state,
+        statusText: g.statusText,
+        home: withColor(g.home),
+        away: withColor(g.away),
+        broadcasts: g.broadcasts,
+      ),
+  ]..sort((a, b) => a.start.compareTo(b.start));
+  return SportsTeamSchedule(
+    league: league,
+    team: team,
+    games: games,
+    standingSummary: t['standingSummary']?.toString(),
+  );
+}
+
 SportsGame? _parseEvent(Map<String, dynamic> e, SportsLeague league) {
   final competitions = e['competitions'] as List?;
   if (competitions == null || competitions.isEmpty) return null;
@@ -223,9 +342,13 @@ SportsGame? _parseEvent(Map<String, dynamic> e, SportsLeague league) {
 
   final broadcasts = <String>{};
   for (final b in (comp['broadcasts'] as List?) ?? const []) {
-    for (final n in ((b as Map)['names'] as List?) ?? const []) {
+    final m = b as Map;
+    for (final n in (m['names'] as List?) ?? const []) {
       broadcasts.add(n.toString());
     }
+    // Team schedules list `{media: {shortName}}` instead of `names`.
+    final media = (m['media'] as Map?)?['shortName']?.toString();
+    if (media != null && media.isNotEmpty) broadcasts.add(media);
   }
   for (final g in (comp['geoBroadcasts'] as List?) ?? const []) {
     final name = ((g as Map)['media'] as Map?)?['shortName']?.toString();
@@ -372,15 +495,34 @@ SportsTeam _parseTeam(Map<String, dynamic> c) {
   if (records != null && records.isNotEmpty) {
     record = (records.first as Map)['summary']?.toString();
   }
+  // Team schedules: `record: [{displayValue: "2-1-0, 4 PTS"}]`.
+  final schedRecord = c['record'];
+  if (record == null && schedRecord is List && schedRecord.isNotEmpty) {
+    record = (schedRecord.first as Map)['displayValue']
+        ?.toString()
+        .split(',')
+        .first
+        .trim();
+  }
+  // Scoreboard: "3"; team schedules: {value: 3.0, displayValue: "3"}.
+  final rawScore = c['score'];
+  final score = rawScore is Map
+      ? rawScore['displayValue']?.toString()
+      : rawScore?.toString();
+  String? logo = t['logo']?.toString();
+  final logos = t['logos'];
+  if (logo == null && logos is List && logos.isNotEmpty) {
+    logo = (logos.first as Map)['href']?.toString();
+  }
   final name = (t['displayName'] ?? t['name'] ?? '').toString();
   return SportsTeam(
     id: (t['id'] ?? name).toString(),
     name: name,
     shortName: (t['shortDisplayName'] ?? t['name'] ?? name).toString(),
     abbreviation: (t['abbreviation'] ?? '').toString(),
-    logoUrl: t['logo']?.toString(),
+    logoUrl: logo,
     color: t['color']?.toString(),
     record: record,
-    score: c['score']?.toString(),
+    score: score,
   );
 }
