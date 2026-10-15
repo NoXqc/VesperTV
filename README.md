@@ -16,7 +16,9 @@ Firesticks. Install it directly, or side-load it via
 <p align="center">
   <img src="docs/assets/shot-guide.png" width="49%" alt="Timeline guide">
   <img src="docs/assets/shot-live.png" width="49%" alt="Live guide with now/next details">
-  <img src="docs/assets/shot-movies.png" width="49%" alt="Movies browse with ratings">
+  <img src="docs/assets/shot-movies.jpg" width="49%" alt="Movies browse with an HD backdrop banner">
+  <img src="docs/assets/shot-show-page.jpg" width="49%" alt="TV show page with seasons and episodes">
+  <img src="docs/assets/shot-movie-page.jpg" width="49%" alt="Movie page with backdrop and details">
   <img src="docs/assets/shot-expand-catalog.jpg" width="49%" alt="Expanded movie catalog">
   <img src="docs/assets/shot-add.png" width="49%" alt="Add Playlist">
   <img src="docs/assets/shot-group-menu.png" width="49%" alt="Hold Select on a group: expand catalog, favourite, hide">
