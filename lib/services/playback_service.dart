@@ -64,6 +64,12 @@ class PlaybackService extends ChangeNotifier {
   final PlaylistManager _playlistManager;
 
   Channel? currentChannel;
+
+  /// The live list the user last picked a channel from (TvHomeScreen's
+  /// Live list / Timeline guide, Favourites included) — what the player's
+  /// CH+/CH- step through. Plain field, no notify; PlayerScreen falls back
+  /// to the channel's own group when the playing channel isn't in it.
+  List<Channel>? zapList;
   VideoPlayerHdrController? controller;
   Future<void>? initFuture;
   String? error;

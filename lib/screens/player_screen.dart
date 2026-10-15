@@ -3,11 +3,14 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import 'package:provider/provider.dart';
 import 'package:video_player_hdr/video_player_hdr.dart';
 
 import '../models/channel.dart';
+import '../models/epg_program.dart';
 import '../services/app_preferences.dart';
+import '../services/epg_service.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../utils/constants.dart';
@@ -74,6 +77,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
   /// collapsed again next time it's revealed.
   bool _moreVisible = false;
   Timer? _hideTimer;
+
+  /// CH+/CH- info card ([_ZapInfoCard]) — separate from the top bar so a
+  /// zap shows what's on without moving focus or the bars.
+  bool _zapInfoVisible = false;
+  Timer? _zapInfoTimer;
 
   /// [PlayerSidePanel] showing (Left on a live channel). Back closes it
   /// instead of leaving the player (see the PopScope in [build]).
@@ -319,6 +327,59 @@ class _PlayerScreenState extends State<PlayerScreen> {
     controller.value.isPlaying ? controller.pause() : controller.play();
   }
 
+  /// A remote's CH+/CH- (or Page Up/Down) keys: CH- = next channel (the
+  /// one below in the list), CH+ = previous (above) — matches the guide,
+  /// owner's call. Steps through the list the channel was picked from
+  /// ([PlaybackService.zapList], e.g. Favourites), else the channel's own
+  /// group; wraps at either end. Live only; a remote without these keys
+  /// (Fire Stick) never sends them. Reveals the top bar so the new
+  /// channel's name + now/next show.
+  void _zapChannel(int step) {
+    if (_panelOpen) return;
+    final current = _playback.currentChannel ?? widget.channel;
+    if (!Channel.isLiveId(current.rawId)) return;
+    // A playlist can list the same channel twice (same id, e.g. a tvg-id
+    // used as the id): find the exact entry playing, and step past any
+    // copy with the same id — play() no-ops on it, which used to leave
+    // CH+/- stuck on a duplicate (owner, Favourites).
+    int indexIn(List<Channel> l) {
+      final exact = l.indexWhere((c) => identical(c, current));
+      return exact >= 0 ? exact : l.indexWhere((c) => c.id == current.id);
+    }
+
+    var list = _playback.zapList ?? const <Channel>[];
+    var i = indexIn(list);
+    if (i < 0) {
+      list = context.read<PlaylistManager>().visibleChannels(
+          playlistId: current.playlistId,
+          groupTitle: current.group,
+          category: 'tv');
+      i = indexIn(list);
+    }
+    if (i < 0) return;
+    Channel? next;
+    for (var n = 1; n < list.length; n++) {
+      final c = list[(i + step * n) % list.length];
+      if (c.id != current.id) {
+        next = c;
+        break;
+      }
+    }
+    final target = next;
+    if (target == null) return;
+    // Info overlay stays up while the new stream connects, then for 3 s
+    // once it's started (owner's call) — counted from the start, not the
+    // key press, so a slow stream doesn't eat the whole window.
+    _zapInfoTimer?.cancel();
+    setState(() => _zapInfoVisible = true);
+    _playback.play(target).whenComplete(() {
+      if (!mounted || _playback.currentChannel?.id != target.id) return;
+      _zapInfoTimer = Timer(const Duration(seconds: 3), () {
+        if (mounted) setState(() => _zapInfoVisible = false);
+      });
+    });
+  }
+
   Future<void> _toggleImmersive() async {
     final next = !_immersive;
     setState(() => _immersive = next);
@@ -377,6 +438,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       _playback.setFullscreenActive(false);
     });
     _hideTimer?.cancel();
+    _zapInfoTimer?.cancel();
     _topScope.removeListener(_onBarFocusChange);
     _bottomScope.removeListener(_onBarFocusChange);
     _switchButtonFocus.removeListener(_onBarFocusChange);
@@ -446,6 +508,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       _handlePlayPause,
                   const SingleActivator(LogicalKeyboardKey.mediaPause):
                       _handlePlayPause,
+                  const SingleActivator(LogicalKeyboardKey.channelUp): () =>
+                      _zapChannel(-1),
+                  const SingleActivator(LogicalKeyboardKey.channelDown): () =>
+                      _zapChannel(1),
+                  const SingleActivator(LogicalKeyboardKey.pageUp): () =>
+                      _zapChannel(-1),
+                  const SingleActivator(LogicalKeyboardKey.pageDown): () =>
+                      _zapChannel(1),
                   if (!_focusInBar) ...{
                     // Back is the only way out now; Left opens the side
                     // panel on a live channel (a no-op on movies/episodes).
@@ -580,6 +650,22 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                     ),
                                   ),
                                 ),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // CH+/CH- info card (see _zapChannel).
+                        Positioned(
+                          top: 24,
+                          left: 0,
+                          right: 0,
+                          child: IgnorePointer(
+                            child: AnimatedOpacity(
+                              opacity: _zapInfoVisible ? 1 : 0,
+                              duration: const Duration(milliseconds: 200),
+                              child: Center(
+                                child: _ZapInfoCard(channel: channel),
                               ),
                             ),
                           ),
@@ -901,5 +987,102 @@ class _TopBarIconButtonState extends State<_TopBarIconButton> {
     return widget.tooltip != null
         ? Tooltip(message: widget.tooltip!, child: button)
         : button;
+  }
+}
+
+/// CH+/CH- card: channel logo + name, the programme on now (time +
+/// progress) and two lines of its description — same content as the
+/// Timeline guide's full-video corner card.
+class _ZapInfoCard extends StatelessWidget {
+  const _ZapInfoCard({required this.channel});
+
+  final Channel channel;
+
+  @override
+  Widget build(BuildContext context) {
+    final epg = context.watch<EpgService>();
+    // epgId (rawId or a manual override), not the composite id.
+    final EpgProgram? program = epg.getCurrentProgram(channel.epgId);
+    final now = DateTime.now();
+    final time = DateFormat('HH:mm');
+    final logo = channel.logoUrl;
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 760),
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 56,
+            height: 56,
+            child: (logo != null && logo.isNotEmpty)
+                ? CachedNetworkImage(
+                    imageUrl: logo,
+                    fit: BoxFit.contain,
+                    errorWidget: (_, __, ___) =>
+                        const Icon(Icons.tv, color: Colors.white54))
+                : const Icon(Icons.tv, color: Colors.white54),
+          ),
+          const SizedBox(width: 14),
+          Flexible(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(channel.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(color: Colors.white)),
+                if (program == null)
+                  Text(tr('No program data available'),
+                      style: const TextStyle(color: Colors.white70))
+                else ...[
+                  Text(program.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white)),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text(
+                          '${time.format(program.start)} - ${time.format(program.stop)}',
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 12)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: LinearProgressIndicator(
+                            value: program.stop.isAfter(program.start)
+                                ? (now.difference(program.start).inSeconds /
+                                        program.stop
+                                            .difference(program.start)
+                                            .inSeconds)
+                                    .clamp(0.0, 1.0)
+                                : 0.0),
+                      ),
+                    ],
+                  ),
+                  if (program.description != null) ...[
+                    const SizedBox(height: 4),
+                    Text(program.description!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 12)),
+                  ],
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

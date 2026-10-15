@@ -873,4 +873,8 @@ const Map<String, String> kFr = {
   '{n} profiles': "{n} profils",
   '{n} favorite': "{n} favori",
   '{n} favorites': "{n} favoris",
+  'Delete watched history?': "Supprimer l'historique de visionnage?",
+  'Removes the History list of live channels.':
+      "Efface la liste Historique des chaînes en direct.",
+  'Watched history deleted.': "Historique de visionnage supprimé.",
 };

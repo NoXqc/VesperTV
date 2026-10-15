@@ -870,4 +870,8 @@ const Map<String, String> kEs = {
   '{n} profiles': "{n} perfiles",
   '{n} favorite': "{n} favorito",
   '{n} favorites': "{n} favoritos",
+  'Delete watched history?': "¿Eliminar el historial de visualización?",
+  'Removes the History list of live channels.':
+      "Borra la lista Historial de canales en directo.",
+  'Watched history deleted.': "Historial de visualización eliminado.",
 };

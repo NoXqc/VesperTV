@@ -1633,6 +1633,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       return;
     }
     final playback = context.read<PlaybackService>();
+    // CH+/CH- in the player follow this exact list (e.g. Favourites order).
+    playback.zapList = _currentLiveChannels(context.read<PlaylistManager>());
     final pending = _previewChannelId == channel.id ? _previewFuture : null;
     if (pending != null || playback.currentChannel?.id == channel.id) {
       // Wait for the preview's play() to finish first — same
@@ -1923,6 +1925,38 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     );
     if (picked == null || !mounted) return;
     await _selectChannel(picked);
+  }
+
+  /// Hold Select on the History row: clears the live channel History only
+  /// (Settings > General also clears recent searches). Cancel is focused
+  /// first so a stray Select can't wipe anything.
+  Future<void> _confirmClearChannelHistory() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      // SwallowHeldActivate: the still-held Select's repeats otherwise hit
+      // the autofocused Cancel and close this before it's ever seen.
+      builder: (dialogContext) => SwallowHeldActivate(
+          child: AlertDialog(
+        title: Text(tr('Delete watched history?')),
+        content: Text(tr('Removes the History list of live channels.')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(tr('Delete')),
+          ),
+          TextButton(
+            autofocus: true,
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(tr('Cancel')),
+          ),
+        ],
+      )),
+    );
+    if (ok != true || !mounted) return;
+    await context.read<PlaybackService>().clearRecentlyPlayed(live: true);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(tr('Watched history deleted.'))));
   }
 
   void _closeApp() {
@@ -2721,13 +2755,20 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
           focusNode: _firstGroupRowFocusNode,
           onTap: () => _onGroupSelected(_favoritesGroupSentinel),
         ),
-        _SelectableRow(
-          icon: Icons.history,
-          label: tr('History'),
-          selected: false,
-          collapsed: collapsed,
-          fontSize: _groupFontSize,
+        // Hold Select = shortcut to Settings > General's channel-history
+        // clear (same HoldToActivate-over-InkWell shape as the live list).
+        HoldToActivate(
           onTap: _showHistoryPopup,
+          onHold: _confirmClearChannelHistory,
+          child: _SelectableRow(
+            icon: Icons.history,
+            label: tr('History'),
+            selected: false,
+            collapsed: collapsed,
+            fontSize: _groupFontSize,
+            onTap: _showHistoryPopup,
+            onLongPress: _confirmClearChannelHistory,
+          ),
         ),
         ..._groupRowsWithPlaylistDividers(
           groups,

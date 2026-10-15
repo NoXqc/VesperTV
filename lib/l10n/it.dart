@@ -873,4 +873,8 @@ const Map<String, String> kIt = {
   '{n} profiles': "{n} profili",
   '{n} favorite': "{n} preferito",
   '{n} favorites': "{n} preferiti",
+  'Delete watched history?': "Eliminare la cronologia di visione?",
+  'Removes the History list of live channels.':
+      "Cancella l'elenco Cronologia dei canali in diretta.",
+  'Watched history deleted.': "Cronologia di visione eliminata.",
 };

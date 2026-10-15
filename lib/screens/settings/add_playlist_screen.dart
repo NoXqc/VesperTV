@@ -1308,14 +1308,73 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                                 }),
                               ),
                               const SizedBox(height: 16),
-                              FilledButton(
-                                focusNode: _addButtonFocus,
-                                onPressed: (playlist.isLoading || _saving)
-                                    ? null
-                                    : _save,
-                                child: Text(_editingProfile != null
-                                    ? tr('Save Changes')
-                                    : tr('Add Playlist')),
+                              // Black until the D-pad cursor is on it, then the
+                              // same contour + gradient sheen as every other
+                              // focused row (_SelectableRow / ModeButton) —
+                              // reported directly: a solid accent fill while
+                              // *not* focused read as "already selected".
+                              // The Container stays in the tree either way
+                              // (see _SelectableRow on changing a focus
+                              // widget's ancestor shape).
+                              ListenableBuilder(
+                                listenable: _addButtonFocus,
+                                builder: (context, _) {
+                                  final scheme = Theme.of(context).colorScheme;
+                                  final focused = _addButtonFocus.hasFocus;
+                                  return Container(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(100),
+                                      color: focused ? null : Colors.black,
+                                      gradient: focused
+                                          ? LinearGradient(
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight,
+                                              colors: [
+                                                Colors.black,
+                                                Color.lerp(
+                                                    Colors.black,
+                                                    scheme.primaryContainer,
+                                                    0.4)!,
+                                                Colors.black,
+                                              ],
+                                              stops: const [0.0, 0.5, 1.0],
+                                            )
+                                          : null,
+                                      boxShadow: focused
+                                          ? [
+                                              BoxShadow(
+                                                  color: scheme.primary
+                                                      .withValues(alpha: 0.35),
+                                                  blurRadius: 10)
+                                            ]
+                                          : const [],
+                                    ),
+                                    child: FilledButton(
+                                      focusNode: _addButtonFocus,
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: Colors.transparent,
+                                        disabledBackgroundColor:
+                                            Colors.transparent,
+                                        foregroundColor: focused
+                                            ? scheme.primary
+                                            : Colors.white,
+                                        disabledForegroundColor: Colors.white38,
+                                        overlayColor: Colors.transparent,
+                                        side: BorderSide(
+                                            color: focused
+                                                ? scheme.primary
+                                                : Colors.white24,
+                                            width: focused ? 2.5 : 1),
+                                      ),
+                                      onPressed: (playlist.isLoading || _saving)
+                                          ? null
+                                          : _save,
+                                      child: Text(_editingProfile != null
+                                          ? tr('Save Changes')
+                                          : tr('Add Playlist')),
+                                    ),
+                                  );
+                                },
                               ),
                               const SizedBox(height: 8),
                               Text(
