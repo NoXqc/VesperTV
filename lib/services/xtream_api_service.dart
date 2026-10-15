@@ -297,8 +297,7 @@ class XtreamApiService {
         episodes: <int, List<Channel>>{},
         plot: plot,
         details: info is Map
-            ? SeriesDetails(
-                backdropUrls: backdropUrlsOf(info['backdrop_path']))
+            ? SeriesDetails(backdropUrls: backdropUrlsOf(info['backdrop_path']))
             : null,
       );
     }
@@ -405,17 +404,27 @@ class XtreamApiService {
         : value.toStringAsFixed(1);
   }
 
-  /// `duration_secs` when present, otherwise parses `duration` ("00:45:12").
+  /// `duration_secs` when present, otherwise parses `duration`. Panels send
+  /// it as "01:58:10", "1:58" (h:mm) or a bare "118" (minutes) — reading
+  /// the last two as seconds showed The King's Speech as "2 min" (owner's
+  /// Formuler). A `duration_secs` under 5 minutes is taken as minutes too.
   static int? _durationSeconds(Map info) {
     final secs = int.tryParse(info['duration_secs']?.toString() ?? '');
-    if (secs != null && secs > 0) return secs;
+    if (secs != null && secs > 0) return secs < 300 ? secs * 60 : secs;
     final raw = _nonEmpty(info['duration']);
     if (raw == null) return null;
-    final parts = raw.split(':').map(int.tryParse).toList();
-    if (parts.any((p) => p == null)) return null;
-    var total = 0;
-    for (final p in parts) {
-      total = total * 60 + p!;
+    final parts = raw.trim().split(':').map(int.tryParse).toList();
+    if (parts.isEmpty || parts.any((p) => p == null)) return null;
+    final int total;
+    if (parts.length == 1) {
+      total = parts[0]! * 60;
+    } else if (parts.length == 2) {
+      // "1:58" = 1 h 58 min; "45:12" = 45 min 12 s.
+      total = parts[0]! <= 4
+          ? parts[0]! * 3600 + parts[1]! * 60
+          : parts[0]! * 60 + parts[1]!;
+    } else {
+      total = parts.fold(0, (t, p) => t * 60 + p!);
     }
     return total > 0 ? total : null;
   }

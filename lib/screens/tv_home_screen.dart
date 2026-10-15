@@ -22,6 +22,7 @@ import '../services/playlist_manager.dart';
 import '../services/storage_service.dart';
 import '../services/viewer_profile_service.dart';
 import '../utils/constants.dart';
+import '../utils/display_title.dart';
 import '../utils/route_observer.dart';
 import '../utils/tv_theme.dart';
 import '../utils/image_urls.dart';
@@ -4308,7 +4309,9 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     return Column(
       children: [
         _BrowseHero(
-            title: _focusedTitle,
+            title: _focusedTitle == null
+                ? null
+                : cleanDisplayTitle(_focusedTitle!),
             imageUrl: _focusedArtPending ? null : _focusedImageUrl,
             backdropUrl: _focusedBackdropUrl,
             description: _focusedDescription),
