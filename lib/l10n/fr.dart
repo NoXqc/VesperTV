@@ -532,9 +532,22 @@ const Map<String, String> kFr = {
   'Follows the device language': "Suit la langue de l'appareil",
   'Automatic': "Automatique",
   'Startup': "Démarrage",
-  'Resume last channel at startup': "Reprendre la dernière chaîne au démarrage",
-  'Opens the last live channel full screen after the splash. Off: a "Hold > to resume" reminder instead.':
-      "Ouvre la dernière chaîne en direct en plein écran après le démarrage. Désactivé : un rappel « Maintenir > pour reprendre » à la place.",
+  'Resume last channel in full screen':
+      "Reprendre la dernière chaîne en plein écran",
+  'Opens the last live channel full screen after the splash.':
+      "Ouvre la dernière chaîne en direct en plein écran après le démarrage.",
+  'Resume last channel with the guide open':
+      "Reprendre la dernière chaîne avec le guide ouvert",
+  'Plays the last live channel in the small preview, with the channel list.':
+      "Lit la dernière chaîne en direct dans le petit aperçu, avec la liste des chaînes.",
+  'Both off: nothing plays at startup (a "Hold > to resume" reminder instead).':
+      "Les deux désactivés : rien ne joue au démarrage (un rappel « Maintenir > pour reprendre » à la place).",
+  'Tabs': "Onglets",
+  'Hide Movies and TV Shows': "Masquer Films et Séries",
+  'Removes both tabs and their search results, e.g. if you watch movies and shows elsewhere.':
+      "Retire les deux onglets et leurs résultats de recherche, par ex. si vous regardez films et séries ailleurs.",
+  'Favorite channels are in the TV tab, under Favourites.':
+      "Les chaînes favorites sont dans l'onglet TV, sous Favoris.",
   'Show the Multiview tip': "Afficher le conseil Multivue",
   'The connections reminder shown when opening Multiview.':
       "Le rappel sur les connexions à l'ouverture de la Multivue.",

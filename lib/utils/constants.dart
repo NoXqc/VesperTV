@@ -186,7 +186,16 @@ class AppConstants {
   static const String keyMultiviewQuad = 'vesper_multiview_quad';
   static const String keyResumeLastChannelAtStartup =
       'vesper_resume_last_channel_at_startup';
+
+  /// Startup alternative to the full-screen resume above: the last channel
+  /// plays in the guide's preview box. At most one of the two is on.
+  static const String keyResumeLastChannelInGuide =
+      'vesper_resume_last_channel_in_guide';
   static const String keyShowResumePill = 'vesper_show_resume_pill';
+
+  /// Hides the Movies and TV Shows tabs (and their search results) — for
+  /// people who get movies/shows elsewhere (debrid etc.).
+  static const String keyHideMoviesShows = 'vesper_hide_movies_shows';
 
   /// Sports tab, per viewer: leagues shown (ordered ids), spoiler mode, and
   /// the user's own game -> channel picks (JSON, see `SportsChannelPicks`).

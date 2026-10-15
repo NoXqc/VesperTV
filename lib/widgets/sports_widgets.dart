@@ -275,6 +275,111 @@ class _SportsChipState extends State<SportsChip> {
   }
 }
 
+/// NFL RedZone shortcut beside Standings / My Teams: an NFL-red pill that
+/// slowly floats and breathes a red glow; focus adds the usual accent
+/// contour. One 2.4 s controller, inside a RepaintBoundary so only the pill
+/// repaints (weak boxes).
+class RedZonePill extends StatefulWidget {
+  const RedZonePill({
+    super.key,
+    required this.focusNode,
+    required this.onTap,
+    required this.onFocus,
+  });
+
+  final FocusNode focusNode;
+  final VoidCallback onTap;
+  final VoidCallback onFocus;
+
+  @override
+  State<RedZonePill> createState() => _RedZonePillState();
+}
+
+class _RedZonePillState extends State<RedZonePill>
+    with SingleTickerProviderStateMixin {
+  static const _red = Color(0xFFD50A0A);
+
+  late final AnimationController _pulse = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 2400))
+    ..repeat(reverse: true);
+  late bool _focused = widget.focusNode.hasFocus;
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, right: 8),
+      child: RepaintBoundary(
+        child: InkWell(
+          focusNode: widget.focusNode,
+          borderRadius: BorderRadius.circular(22),
+          onTap: widget.onTap,
+          onFocusChange: (f) {
+            setState(() => _focused = f);
+            if (f) widget.onFocus();
+          },
+          child: AnimatedBuilder(
+            animation: _pulse,
+            builder: (context, child) {
+              final t = Curves.easeInOut.transform(_pulse.value);
+              return Transform.translate(
+                offset: Offset(0, -2.5 * t),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFE8231B), Color(0xFF8E0606)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(
+                      color: _focused
+                          ? scheme.primary
+                          : Colors.white.withValues(alpha: 0.35 + 0.3 * t),
+                      width: _focused ? 2.5 : 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (_focused ? scheme.primary : _red)
+                            .withValues(alpha: 0.35 + 0.35 * t),
+                        blurRadius: 8 + 10 * t,
+                        spreadRadius: 1 * t,
+                        offset: Offset(0, 2 + 2 * t),
+                      ),
+                    ],
+                  ),
+                  child: child,
+                ),
+              );
+            },
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.sports_football, size: 18, color: Colors.white),
+                SizedBox(width: 6),
+                Text('NFL RedZone',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.3)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// The Sports screens were laid out for a TV (~960 logical px wide). A big
 /// desktop display (4K at 150 % = 2560 px) showed everything tiny, so wider
 /// screens render the same layout at [_designWidth] and scale it up — the

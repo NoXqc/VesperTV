@@ -530,9 +530,22 @@ const Map<String, String> kEs = {
   'Follows the device language': "Usa el idioma del dispositivo",
   'Automatic': "Automático",
   'Startup': "Inicio",
-  'Resume last channel at startup': "Reanudar el último canal al iniciar",
-  'Opens the last live channel full screen after the splash. Off: a "Hold > to resume" reminder instead.':
-      "Abre el último canal en vivo en pantalla completa tras la pantalla de inicio. Desactivado: un aviso «Mantén > para reanudar» en su lugar.",
+  'Resume last channel in full screen':
+      "Reanudar el último canal en pantalla completa",
+  'Opens the last live channel full screen after the splash.':
+      "Abre el último canal en vivo en pantalla completa tras la pantalla de inicio.",
+  'Resume last channel with the guide open':
+      "Reanudar el último canal con la guía abierta",
+  'Plays the last live channel in the small preview, with the channel list.':
+      "Reproduce el último canal en vivo en la vista previa pequeña, con la lista de canales.",
+  'Both off: nothing plays at startup (a "Hold > to resume" reminder instead).':
+      "Ambos desactivados: no se reproduce nada al iniciar (un aviso «Mantén > para reanudar» en su lugar).",
+  'Tabs': "Pestañas",
+  'Hide Movies and TV Shows': "Ocultar Películas y Series",
+  'Removes both tabs and their search results, e.g. if you watch movies and shows elsewhere.':
+      "Quita ambas pestañas y sus resultados de búsqueda, p. ej. si ves películas y series en otro lugar.",
+  'Favorite channels are in the TV tab, under Favourites.':
+      "Los canales favoritos están en la pestaña TV, en Favoritos.",
   'Show the Multiview tip': "Mostrar el consejo de Multivista",
   'The connections reminder shown when opening Multiview.':
       "El aviso sobre conexiones al abrir la Multivista.",

@@ -196,6 +196,14 @@ class StorageService {
       _prefs.getBool(AppConstants.keyResumeLastChannelAtStartup) ?? true;
   Future<void> setResumeLastChannelAtStartup(bool value) =>
       _prefs.setBool(AppConstants.keyResumeLastChannelAtStartup, value);
+  bool getResumeLastChannelInGuide() =>
+      _prefs.getBool(AppConstants.keyResumeLastChannelInGuide) ?? false;
+  Future<void> setResumeLastChannelInGuide(bool value) =>
+      _prefs.setBool(AppConstants.keyResumeLastChannelInGuide, value);
+  bool getHideMoviesShows() =>
+      _prefs.getBool(AppConstants.keyHideMoviesShows) ?? false;
+  Future<void> setHideMoviesShows(bool value) =>
+      _prefs.setBool(AppConstants.keyHideMoviesShows, value);
 
   /// Settings > General: the "Hold > to resume" reminder pill (Android and
   /// Windows). Off hides only the pill; hold-Right still resumes.

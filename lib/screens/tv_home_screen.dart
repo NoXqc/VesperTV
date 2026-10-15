@@ -651,6 +651,15 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     'Favorites': Icons.star,
   };
 
+  static bool _isBrowseTab(String tab) => tab == 'Movies' || tab == 'TV Shows';
+
+  /// [_tabs] minus Movies/TV Shows when Settings > General hides them.
+  /// Watches AppPreferences, so toggling it rebuilds the tabs column.
+  List<String> get _visibleTabs =>
+      context.watch<AppPreferences>().hideMoviesShows
+          ? _tabs.where((t) => !_isBrowseTab(t)).toList()
+          : _tabs;
+
   void _onTabChanged(String tab) {
     _disarmLeftEdge();
     // _col1Scope/_col2Scope are shared across every tab (see the widget
@@ -1269,7 +1278,14 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// list instead of the current channel" after backing out of fullscreen.
   @override
   void didPopNext() {
-    final isBrowseTab = _tab == 'Movies' || _tab == 'TV Shows';
+    final isBrowseTab = _isBrowseTab(_tab);
+    // Back from Settings with Movies/TV Shows just hidden while one of them
+    // was the open tab: fall back to TV. Here rather than in build so the
+    // tab switch's focus restore doesn't run under the Settings screen.
+    if (isBrowseTab && context.read<AppPreferences>().hideMoviesShows) {
+      _onTabChanged('TV');
+      return;
+    }
     if (!isBrowseTab) {
       // Reported directly: scroll to browse a different group (without
       // actually picking a channel from it), hold Right to resume the
@@ -1958,7 +1974,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     // exactly the surface a second copy would silently diverge from.
     final darkScheme = buildPaletteColorScheme(prefs.palette, Brightness.dark);
 
-    final isBrowseTab = _tab == 'Movies' || _tab == 'TV Shows';
+    final isBrowseTab = _isBrowseTab(_tab);
     // Only meaningful on the Live TV/Favorites side (the browse tabs have
     // their own poster grid and no concept of this setting) — see
     // _buildLiveRegion for where it actually swaps the content, and the
@@ -2532,7 +2548,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
               .push(MaterialPageRoute(builder: (_) => const SportsScreen())),
         ),
         const Divider(height: 16, color: Colors.white24),
-        for (final tab in _tabs)
+        for (final tab in _visibleTabs)
           _SelectableRow(
             icon: _tabIcons[tab]!,
             label: tr(tab),
@@ -3572,6 +3588,21 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     final series = isXtream ? playlist.favoriteSeries : null;
     final showChannels = isXtream ? null : playlist.favoriteShowChannels;
     final showsEmpty = isXtream ? series!.isEmpty : showChannels!.isEmpty;
+
+    // This view is movies/shows only, so with those hidden (Settings >
+    // General) it just points to where live favorites are.
+    if (context.read<AppPreferences>().hideMoviesShows) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            tr('Favorite channels are in the TV tab, under Favourites.'),
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white70),
+          ),
+        ),
+      );
+    }
 
     if (movies.isEmpty && showsEmpty) {
       return Center(
@@ -4849,7 +4880,11 @@ double get _browseCardHeight =>
 /// so [_categoryRowHeight] below is an exact, enforced number rather than
 /// a guess about font-metric-dependent text layout.
 const double _categoryRowHeaderHeight = 40;
-const double _categoryRowBottomPadding = 18;
+const double _categoryRowBottomPadding = 10;
+
+/// Room above/below the poster strip for a focused card's 1.10x scale —
+/// without it the strip's own clip cut the 2nd line of the focused title.
+const double _posterFocusPad = 9;
 
 /// Every `_CategoryRow` is *made* to be exactly this tall (see its own
 /// `build`, which wraps its content in a `SizedBox` of this height) —
@@ -4871,7 +4906,10 @@ const double _categoryRowBottomPadding = 18;
 /// intervening row, which is what makes a direct, unbuilt-row `jumpTo`
 /// exact instead of an estimate in the first place.
 double get _categoryRowHeight =>
-    _categoryRowBottomPadding + _categoryRowHeaderHeight + _browseCardHeight;
+    _categoryRowBottomPadding +
+    _categoryRowHeaderHeight +
+    _browseCardHeight +
+    2 * _posterFocusPad;
 
 /// One horizontally-scrolling row of [PosterCard]s under a category title
 /// — the Netflix/Apple-TV "browse" pattern. Builds cards lazily as they
@@ -4924,10 +4962,11 @@ class _CategoryRow<T> extends StatelessWidget {
               // Was 210 — ~20% smaller per feedback that the catalog read
               // too large. Windows scales back up from there — see
               // _browseCardHeight's own doc comment.
-              height: _browseCardHeight,
+              height: _browseCardHeight + 2 * _posterFocusPad,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 6),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 6, vertical: _posterFocusPad),
                 itemCount: items.length,
                 // Flutter's default (250px, ~2 cards) only starts
                 // building/decoding a card just barely before it's
@@ -4985,9 +5024,47 @@ class _BrowseHero extends StatelessWidget {
   /// still arrive a moment later.
   final String? description;
 
+  /// How far the backdrop continues below the banner, fading out behind
+  /// the first category row (owner: no bottom border, picture going lower).
+  static double get _bleed => _categoryRowHeight * 0.75;
+
+  static const double _bottomGap = 18;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final height = Platform.isWindows
+        ? (MediaQuery.of(context).size.height * 0.32).clamp(220.0, 480.0)
+        : 210.0;
+    final big = Platform.isWindows;
+    if (!big || (backdropUrl != null && backdropUrl!.isNotEmpty)) {
+      // Fixed-height slot; the backdrop overflows it downward (painted
+      // first, so the rows draw on top) and the title/description stay
+      // exactly where they were. Overflow isn't hit-tested, so the rows
+      // underneath keep their taps.
+      return SizedBox(
+        height: height + _bottomGap,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: height + _bottomGap + _bleed,
+              child: _buildFadingBackdrop(scheme, height),
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: height,
+              child: _buildHeroText(scheme, big: big),
+            ),
+          ],
+        ),
+      );
+    }
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       // Was 130 (before that, 200 — tall enough that its bottom-edge
@@ -5031,12 +5108,8 @@ class _BrowseHero extends StatelessWidget {
       // height never made a poster crop read as broken the same way, so
       // it always uses the full-bleed style (now preferring a real
       // backdrop over the poster crop when one's available).
-      child:
-          Platform.isWindows && backdropUrl != null && backdropUrl!.isNotEmpty
-              ? _buildBackdropHeroContent(scheme, big: true)
-              : Platform.isWindows
-                  ? _buildWindowsHeroContent(scheme)
-                  : _buildBackdropHeroContent(scheme, big: false),
+      // Only reached on Windows without a backdrop (see above).
+      child: _buildWindowsHeroContent(scheme),
     );
   }
 
@@ -5145,42 +5218,78 @@ class _BrowseHero extends StatelessWidget {
   /// logo, used only until this item's own backdrop has been enriched) —
   /// see [backdropUrl]'s doc comment for why cropping a portrait image
   /// this way was the actual bug this exists to avoid repeating.
-  Widget _buildBackdropHeroContent(ColorScheme scheme, {required bool big}) {
+  ///
+  /// Split in two: [_buildFadingBackdrop] (image + border, running [_bleed]
+  /// past the banner and masked to transparent, so there's no bottom
+  /// border) and [_buildHeroText] (unchanged spot inside the banner).
+  Widget _buildFadingBackdrop(ColorScheme scheme, double bannerHeight) {
     final effectiveImageUrl = (backdropUrl != null && backdropUrl!.isNotEmpty)
         ? backdropUrl
         : imageUrl;
+    final total = bannerHeight + _bottomGap + _bleed;
+    final textBottom = bannerHeight / total;
+    final tint =
+        Color.alphaBlend(scheme.primary.withValues(alpha: 0.35), Colors.black);
+    // RepaintBoundary: the mask's layer only redraws when the focused title
+    // changes, not while the rows above it scroll.
+    return RepaintBoundary(
+      child: ShaderMask(
+        blendMode: BlendMode.dstIn,
+        shaderCallback: (rect) => LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: const [Colors.white, Colors.white, Colors.transparent],
+          stops: [0, textBottom * 0.8, 1],
+        ).createShader(rect),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.grey.shade900,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+                color: Color.lerp(scheme.primary, scheme.secondary, 0.5)!,
+                width: 2),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (effectiveImageUrl != null && effectiveImageUrl.isNotEmpty)
+                CachedNetworkImage(
+                  imageUrl: effectiveImageUrl,
+                  key: ValueKey(effectiveImageUrl),
+                  fit: BoxFit.cover,
+                  // Same reasoning as _WhatsNewCarousel's identical fix:
+                  // key-art subjects sit in the upper part of a backdrop.
+                  alignment: Alignment.topCenter,
+                  errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                ),
+              // Darkest right under the title/description, then eased off
+              // so the picture still shows behind the first row.
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      tint.withValues(alpha: 0.85),
+                      tint.withValues(alpha: 0.6),
+                    ],
+                    stops: [0, textBottom, 1],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeroText(ColorScheme scheme, {required bool big}) {
     return Stack(
       fit: StackFit.expand,
       children: [
-        Container(color: Colors.grey.shade900),
-        if (effectiveImageUrl != null && effectiveImageUrl.isNotEmpty)
-          CachedNetworkImage(
-            imageUrl: effectiveImageUrl,
-            key: ValueKey(effectiveImageUrl),
-            fit: BoxFit.cover,
-            // Same reasoning as _WhatsNewCarousel's identical fix: this
-            // banner is much wider/shorter than a 16:9 backdrop, so a
-            // default center-aligned cover crops the subject (almost
-            // always in the upper portion of backdrop key-art) off at
-            // the shoulders. Anchoring to the top also happens to put
-            // the bottom-anchored title/description gradient below right
-            // over the part of the image already being cropped away.
-            alignment: Alignment.topCenter,
-            errorWidget: (_, __, ___) => const SizedBox.shrink(),
-          ),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.transparent,
-                Color.alphaBlend(scheme.primary.withValues(alpha: 0.35),
-                    Colors.black.withValues(alpha: big ? 0.92 : 0.85)),
-              ],
-            ),
-          ),
-        ),
         Positioned(
           left: big ? 28 : 20,
           bottom: big ? 24 : 16,

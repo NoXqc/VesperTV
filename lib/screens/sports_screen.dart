@@ -195,16 +195,44 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final playlist = context.read<PlaylistManager>();
     await playlist.ensureLiveChannelsLoaded();
     if (!mounted) return;
-    await _matcher.prepare(playlist.visibleChannels(category: 'tv'));
+    final live = playlist.visibleChannels(category: 'tv');
+    await _matcher.prepare(live);
     final matches = await _matcher.matchDay(_games, _picks);
     if (!mounted || myToken != _loadToken) return;
     setState(() {
+      _redZone = _findRedZone(live);
       _matches = matches;
       _matching = false;
     });
   }
 
   static String _gameKey(SportsGame g) => SportsChannelPicks.eventKey(g);
+
+  /// The playlist's NFL RedZone channel for the pill next to Standings /
+  /// My Teams: a name with "redzone"/"red zone", ones also saying "NFL"
+  /// first, then the shortest name (the plain channel, not an event copy).
+  static Channel? _findRedZone(Iterable<Channel> channels) {
+    final re = RegExp(r'red\s*zone', caseSensitive: false);
+    Channel? best;
+    var bestScore = -1 << 30;
+    for (final c in channels) {
+      if (!re.hasMatch(c.name)) continue;
+      final score =
+          (c.name.toLowerCase().contains('nfl') ? 1000 : 0) - c.name.length;
+      if (score > bestScore) {
+        best = c;
+        bestScore = score;
+      }
+    }
+    return best;
+  }
+
+  /// See [_findRedZone]; null hides the pill.
+  Channel? _redZone;
+
+  /// Only with all leagues or the NFL shown.
+  bool get _showRedZone =>
+      _redZone != null && (_leagueFilter == null || _leagueFilter == 'nfl');
 
   SportsGame? _defaultHero(List<SportsGame> games) {
     if (games.isEmpty) return null;
@@ -251,12 +279,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     _initialFocusDone = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final sections = _sections;
-      if (sections.isNotEmpty) {
-        _focusZone(_firstRowZone, sections);
-      } else {
-        _chipNode(_dayChipId).requestFocus();
-      }
+      // The league row, not the first game card (owner's request).
+      _focusZone(0, _sections);
     });
   }
 
@@ -464,6 +488,13 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     if (result == null || !mounted) return;
     switch (result) {
       case _WatchAction(:final channel):
+        // Watching another of the listed channels makes it this game's
+        // default (owner: the card kept showing the first match) — a game
+        // pick only; team-wide picks stay a deliberate "Pick a channel".
+        if (channel.id != matches.firstOrNull?.channel.id) {
+          await _picks.pickForGame(game, channel.id);
+          unawaited(_rematch());
+        }
         await _play(channel);
       case _PickAction():
         await _pickChannel(game);
@@ -751,6 +782,12 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
             onFocus: () => _zone = 2,
             onTap: _openMyTeams,
           ),
+          if (_showRedZone)
+            RedZonePill(
+              focusNode: _chipNode('redzone'),
+              onFocus: () => _zone = 2,
+              onTap: () => _play(_redZone!),
+            ),
         ],
       ),
     );

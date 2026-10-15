@@ -43,7 +43,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
 4. `flutter analyze` must report the baseline **20** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `1.0.10` unless noted
+5. Check the current state of releases: `gh release list` (latest should be `1.0.11` unless noted
    in §11).
 
 ## 3. Layout (what matters)
@@ -95,7 +95,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+254**) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+259**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
@@ -129,8 +129,11 @@ rejected (HDR + Android-TV hardware-decode risk).
   early lets remote input crash weak boxes. Do not cap/shorten it (`_bootstrap` in main.dart). The
   Android last-channel auto-resume after the splash was once removed (decoder start + the old ~25 s
   EPG decode made cold start sluggish); since the SQLite EPG it's back, **on by default** behind
-  Settings > General > "Resume last channel at startup" (off = the "Hold > to resume" pill).
-  **Windows** always auto-resumes.
+  Settings > General > Startup: "Resume last channel in full screen" or "…with the guide open"
+  (plays in the preview box / Windows mini player); at most one on, both off = nothing plays
+  (Android shows the "Hold > to resume" pill). Both platforms honor it (Windows used to always
+  resume full screen). Settings > General > Tabs can hide Movies/TV Shows (`AppPreferences
+  .hideMoviesShows`: tabs column, search, Favorites "All" view).
 - **D-pad focus:** default directional traversal is unreliable across differently shaped columns/
   rows — use explicit dispatch (`_moveColumnFocus`, the Timeline guide's own Up/Down/Left/Right,
   one `FocusScopeNode` per zone + `CallbackShortcuts`). No per-row `FocusScope`. Any programmatic
@@ -203,8 +206,9 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 ## 12. Features (details in `dev-notes/features.md`)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR). Read the file before changing any of these.
 
-## 13. Status & open items (as of 2026-10-14)
-- **Shipped: 1.0.10 (`+254`, 2026-10-14, latest on GitHub, 4 Formuler screenshots attached)** —
+## 13. Status & open items (as of 2026-10-15)
+- **Shipped: 1.0.11 (`+259`, 2026-10-15, latest on GitHub)** — Settings > General: hide Movies/TV Shows tabs, Startup = full screen / guide-preview / nothing (Android + Windows); Sports: watching another listed channel becomes that game's pick, glowing NFL RedZone pill, opens on the league row; Movies/TV Shows hero backdrop fades behind the first row, focused poster title no longer clipped.
+- 1.0.10 (`+254`, 2026-10-14, 4 Formuler screenshots attached) —
   **full-screen video behind the Timeline guide** (Theme toggle, 3-row translucent guide, side
   columns hidden in the guide, corner description card), **fullscreen side panel** on Left (Last
   channels / My Teams / Live now; Left no longer exits the player — Back only), and Movies/TV Shows

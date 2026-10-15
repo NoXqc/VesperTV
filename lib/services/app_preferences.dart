@@ -26,6 +26,9 @@ class AppPreferences extends ChangeNotifier {
   /// Timeline guide: video full screen behind a translucent guide.
   late bool guideFullVideo;
 
+  /// Movies and TV Shows tabs (and their search results) hidden.
+  late bool hideMoviesShows;
+
   /// Set once at startup from Android's own UI mode (see
   /// DeviceTypeService) — what 'auto' actually keys off now. Not
   /// persisted: it's a property of the device, re-detected every launch,
@@ -38,6 +41,7 @@ class AppPreferences extends ChangeNotifier {
     layoutMode = _storage.getLayoutMode();
     guideViewMode = _storage.getGuideViewMode();
     guideFullVideo = _storage.getGuideFullVideo();
+    hideMoviesShows = _storage.getHideMoviesShows();
   }
 
   CyberpunkPalette _paletteById(String id) {
@@ -87,6 +91,12 @@ class AppPreferences extends ChangeNotifier {
   void setGuideFullVideo(bool value) {
     guideFullVideo = value;
     _storage.setGuideFullVideo(value);
+    notifyListeners();
+  }
+
+  void setHideMoviesShows(bool value) {
+    hideMoviesShows = value;
+    _storage.setHideMoviesShows(value);
     notifyListeners();
   }
 }

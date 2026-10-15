@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../models/channel.dart';
 import '../models/xtream_series.dart';
+import '../services/app_preferences.dart';
 import '../services/catalog_database.dart';
 import '../services/desktop_mini_player.dart';
 import '../services/playback_service.dart';
@@ -121,6 +122,8 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Future<void> _runDbSearch(String query) async {
+    // Settings > General hides Movies/TV Shows: no catalog scan either.
+    if (context.read<AppPreferences>().hideMoviesShows) return;
     final playlist = context.read<PlaylistManager>();
     // Restricted to enabled playlists — a disabled playlist's stale
     // cached rows shouldn't surface in search results.
@@ -446,6 +449,7 @@ class _SearchScreenState extends State<SearchScreen> {
     if (channelMatches.isNotEmpty) {
       rows.add(_buildChannelRow(rows.length, tr('Live TV'), channelMatches));
     }
+    if (context.read<AppPreferences>().hideMoviesShows) return rows;
 
     final vodMatches = playlist.isXtream
         ? _dbVodResults

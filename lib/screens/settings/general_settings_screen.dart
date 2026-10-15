@@ -17,9 +17,9 @@ import '../../l10n/l10n.dart';
 /// Small behaviour switches that don't belong to one feature's own screen —
 /// a home for future ones too (planned candidates: start-on tab, default
 /// picture fit, preferred audio language, 12/24 h time, confirm on exit).
-/// Startup and Multiview are Android only (Windows always resumes the last
-/// channel and has its own Multiview without the tip); History is shown on
-/// every platform. Everything here applies to the active viewer profile.
+/// Multiview is Android only (Windows has its own Multiview without the
+/// tip); everything else is shown on every platform. Startup and Tabs are
+/// device-wide, not per viewer profile.
 ///
 /// No custom D-pad handling — see SettingsMenuScreen's doc comment.
 class GeneralSettingsScreen extends StatefulWidget {
@@ -32,6 +32,8 @@ class GeneralSettingsScreen extends StatefulWidget {
 class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
   late final StorageService _storage = context.read<StorageService>();
   late bool _resumeAtStartup = _storage.getResumeLastChannelAtStartup();
+  late bool _resumeInGuide =
+      !_resumeAtStartup && _storage.getResumeLastChannelInGuide();
   late bool _showMultiviewTip = !_storage.getMultiviewHideTips();
   late bool _showResumePill = _storage.getShowResumePill();
 
@@ -153,20 +155,58 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                     onTap: _pickLanguage,
                   ),
                   const Divider(height: 32),
-                  if (!Platform.isWindows) ...[
-                    SectionLabel(tr('Startup')),
-                    const SizedBox(height: 4),
-                    TvSwitchListTile(
-                      title: Text(tr('Resume last channel at startup')),
-                      subtitle: Text(tr(
-                          'Opens the last live channel full screen after the splash. Off: a "Hold > to resume" reminder instead.')),
-                      value: _resumeAtStartup,
-                      onChanged: (v) {
-                        setState(() => _resumeAtStartup = v);
-                        _storage.setResumeLastChannelAtStartup(v);
-                      },
+                  SectionLabel(tr('Startup')),
+                  const SizedBox(height: 4),
+                  // At most one of the two is on; both off = nothing plays.
+                  TvSwitchListTile(
+                    title: Text(tr('Resume last channel in full screen')),
+                    subtitle: Text(tr(
+                        'Opens the last live channel full screen after the splash.')),
+                    value: _resumeAtStartup,
+                    onChanged: (v) {
+                      setState(() {
+                        _resumeAtStartup = v;
+                        if (v) _resumeInGuide = false;
+                      });
+                      _storage.setResumeLastChannelAtStartup(v);
+                      if (v) _storage.setResumeLastChannelInGuide(false);
+                    },
+                  ),
+                  TvSwitchListTile(
+                    title: Text(tr('Resume last channel with the guide open')),
+                    subtitle: Text(tr(
+                        'Plays the last live channel in the small preview, with the channel list.')),
+                    value: _resumeInGuide,
+                    onChanged: (v) {
+                      setState(() {
+                        _resumeInGuide = v;
+                        if (v) _resumeAtStartup = false;
+                      });
+                      _storage.setResumeLastChannelInGuide(v);
+                      if (v) _storage.setResumeLastChannelAtStartup(false);
+                    },
+                  ),
+                  if (!Platform.isWindows)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                      child: Text(
+                        tr('Both off: nothing plays at startup (a "Hold > to resume" reminder instead).'),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                     ),
-                    const Divider(height: 32),
+                  const Divider(height: 32),
+                  SectionLabel(tr('Tabs')),
+                  const SizedBox(height: 4),
+                  TvSwitchListTile(
+                    title: Text(tr('Hide Movies and TV Shows')),
+                    subtitle: Text(tr(
+                        'Removes both tabs and their search results, e.g. if you watch movies and shows elsewhere.')),
+                    value: context.watch<AppPreferences>().hideMoviesShows,
+                    onChanged: (v) =>
+                        context.read<AppPreferences>().setHideMoviesShows(v),
+                  ),
+                  const Divider(height: 32),
+                  if (!Platform.isWindows) ...[
                     SectionLabel(tr('Multiview')),
                     const SizedBox(height: 4),
                     TvSwitchListTile(

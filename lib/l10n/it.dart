@@ -530,9 +530,22 @@ const Map<String, String> kIt = {
   'Follows the device language': "Segue la lingua del dispositivo",
   'Automatic': "Automatica",
   'Startup': "Avvio",
-  'Resume last channel at startup': "Riprendi l'ultimo canale all'avvio",
-  'Opens the last live channel full screen after the splash. Off: a "Hold > to resume" reminder instead.':
-      "Apre l'ultimo canale in diretta a schermo intero dopo la schermata iniziale. Disattivato: al suo posto un promemoria «Tieni premuto > per riprendere».",
+  'Resume last channel in full screen':
+      "Riprendi l'ultimo canale a schermo intero",
+  'Opens the last live channel full screen after the splash.':
+      "Apre l'ultimo canale in diretta a schermo intero dopo la schermata iniziale.",
+  'Resume last channel with the guide open':
+      "Riprendi l'ultimo canale con la guida aperta",
+  'Plays the last live channel in the small preview, with the channel list.':
+      "Riproduce l'ultimo canale in diretta nella piccola anteprima, con l'elenco dei canali.",
+  'Both off: nothing plays at startup (a "Hold > to resume" reminder instead).':
+      "Entrambi disattivati: all'avvio non parte nulla (al suo posto un promemoria «Tieni premuto > per riprendere»).",
+  'Tabs': "Schede",
+  'Hide Movies and TV Shows': "Nascondi Film e Serie TV",
+  'Removes both tabs and their search results, e.g. if you watch movies and shows elsewhere.':
+      "Rimuove le due schede e i relativi risultati di ricerca, ad es. se guardi film e serie altrove.",
+  'Favorite channels are in the TV tab, under Favourites.':
+      "I canali preferiti sono nella scheda TV, sotto Preferiti.",
   'Show the Multiview tip': "Mostra il consiglio Multivista",
   'The connections reminder shown when opening Multiview.':
       "Il promemoria sulle connessioni all'apertura della Multivista.",

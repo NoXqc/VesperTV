@@ -13,6 +13,7 @@ import 'package:window_manager/window_manager.dart';
 import 'screens/catalog_sync_prompt_screen.dart';
 import 'screens/catalog_sync_screen.dart';
 import 'screens/desktop_player_screen.dart';
+import 'services/desktop_mini_player.dart';
 import 'screens/home_screen.dart';
 import 'screens/player_screen.dart';
 import 'screens/settings/add_playlist_screen.dart';
@@ -478,9 +479,12 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   /// Right to start) because opening a decoder concurrently with the
   /// catalog/EPG load made the first 10-20 s of a cold start sluggish; with
   /// the EPG now in SQLite it's back, behind Settings > General > "Resume
-  /// last channel at startup" (on by default). Off = the pill again.
+  /// last channel at startup" (on by default). Off = the pill again. A
+  /// second switch there, "...with the guide open", plays it in the guide's
+  /// preview box (Windows: the mini player) instead; both off = nothing
+  /// plays (Android still offers the pill).
   ///
-  /// Windows only, restored to the original direct-open behavior —
+  /// Windows, restored to the original direct-open behavior —
   /// requested directly: a PC doesn't pay the same cold-launch cost a weak
   /// Android TV box does opening a decoder concurrently with the catalog/
   /// EPG load, so there's no reason to hold it back there. Pushes straight
@@ -511,6 +515,10 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     final lastId = _storage.getLastChannelId();
     if (lastId == null) return;
     await _playlistManager.ensureLiveChannelsLoaded();
+    // Settings > General > Startup (both platforms): full screen (default),
+    // or playing in the guide's preview box, or neither.
+    final fullscreen = _storage.getResumeLastChannelAtStartup();
+    final inGuide = !fullscreen && _storage.getResumeLastChannelInGuide();
     // visibleChannels, not the raw `channels` getter — a restricted
     // viewer's last-played channel may have had its group hidden since
     // they last watched (by whoever set up their profile), and silently
@@ -519,9 +527,17 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     for (final channel in _playlistManager.visibleChannels(category: 'tv')) {
       if (channel.id == lastId) {
         if (Platform.isWindows) {
-          _navigatorKey.currentState?.push(MaterialPageRoute(
-              builder: (_) => DesktopPlayerScreen(channel: channel)));
-        } else if (_storage.getResumeLastChannelAtStartup()) {
+          if (fullscreen) {
+            _navigatorKey.currentState?.push(MaterialPageRoute(
+                builder: (_) => DesktopPlayerScreen(channel: channel)));
+          } else if (inGuide &&
+              DesktopMiniPlayer.instance.channel.value == null) {
+            DesktopMiniPlayer.instance.play(channel);
+          }
+        } else if (inGuide) {
+          if (_playbackService.isPlayingSomething) return;
+          await _playbackService.play(channel);
+        } else if (fullscreen) {
           // Back on by default since 1.0.x: the heavy part of the old
           // cold-start load (decoding the whole EPG, ~25 s) is gone — the
           // guide now opens from SQLite in ~0.3 s during the splash, and the
