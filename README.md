@@ -66,4 +66,4 @@ username, password).
 
 Bug reports, suggestions/improvements, or general discussion — join the
 [Discord server](https://discord.gg/DDeGDHvFY), or open an issue here on
-GitHub.
+GitHub. Please also visit us at r/VesperTV
