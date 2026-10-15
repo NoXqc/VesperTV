@@ -1211,6 +1211,16 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       return;
     }
     scope.requestFocus();
+    // Safety net: a scope whose remembered child can't take focus any more
+    // silently ignores this, and Back from the guide looked stuck (owner,
+    // Fire Stick, after toggling the full-video guide; not reproducible).
+    // Land on the column's first row instead.
+    if (target == 1) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _col1Scope.hasFocus || !_col2Scope.hasFocus) return;
+        _firstGroupRowFocusNode.requestFocus();
+      });
+    }
   }
 
   @override
