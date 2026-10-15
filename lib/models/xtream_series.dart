@@ -15,6 +15,7 @@ class XtreamSeries {
     this.releaseDate,
     this.posterUrl,
     this.backdropUrl,
+    this.providerBackdropUrl,
   }) : id = '$playlistId::series_$seriesId';
 
   /// The raw per-provider integer Xtream itself uses — kept because
@@ -64,6 +65,20 @@ class XtreamSeries {
   /// source.
   String? backdropUrl;
 
+  /// The provider's own landscape fanart — `backdrop_path` from the
+  /// `get_series` list when the panel sends it there, else filled in from
+  /// `get_series_info` (hero dwell / detail open) and persisted. Keyless,
+  /// unlike [backdropUrl].
+  String? providerBackdropUrl;
+
+  /// Hero background order: TMDB backdrop, then the provider's.
+  String? get anyBackdropUrl {
+    for (final u in [backdropUrl, providerBackdropUrl]) {
+      if (u != null && u.isNotEmpty) return u;
+    }
+    return null;
+  }
+
   /// Mutable, flipped in place by `PlaylistManager.toggleSeriesFavorite` —
   /// same pattern as `Channel.isFavorite`.
   bool isFavorite;
@@ -81,6 +96,7 @@ class XtreamSeries {
         'releaseDate': releaseDate?.millisecondsSinceEpoch,
         'posterUrl': posterUrl,
         'backdropUrl': backdropUrl,
+        'providerBackdropUrl': providerBackdropUrl,
       };
 
   /// `playlistId` defaults to `'migrated_default'` for the same reason as
@@ -102,5 +118,6 @@ class XtreamSeries {
             : null,
         posterUrl: json['posterUrl'] as String?,
         backdropUrl: json['backdropUrl'] as String?,
+        providerBackdropUrl: json['providerBackdropUrl'] as String?,
       );
 }

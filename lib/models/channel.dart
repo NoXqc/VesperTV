@@ -28,6 +28,8 @@ class Channel {
     this.releaseDate,
     this.posterUrl,
     this.backdropUrl,
+    this.providerPosterUrl,
+    this.providerBackdropUrl,
   });
 
   /// Stable identifier: the M3U `tvg-id` when present (used to match EPG
@@ -149,6 +151,25 @@ class Channel {
   /// every TMDB-sourced field here.
   String? backdropUrl;
 
+  /// The provider's own bigger artwork from `get_vod_info` (`cover_big`,
+  /// else `movie_image`) — keyless, unlike [posterUrl]. Only fetched when a
+  /// movie's detail screen opens or the browse hero dwells on it (the same
+  /// one request that brings its plot), then persisted. Null until then.
+  String? providerPosterUrl;
+
+  /// `get_vod_info`'s `backdrop_path` (first entry) — a landscape image for
+  /// the hero/detail background when no TMDB [backdropUrl] exists. Same
+  /// on-demand fetch and persistence as [providerPosterUrl].
+  String? providerBackdropUrl;
+
+  /// Hero/detail background order: TMDB backdrop, then the provider's.
+  String? get anyBackdropUrl {
+    for (final u in [backdropUrl, providerBackdropUrl]) {
+      if (u != null && u.isNotEmpty) return u;
+    }
+    return null;
+  }
+
   /// The id every EPG lookup call site uses — see [epgIdOverride]'s doc
   /// comment. Never [rawId] directly from an EPG-lookup call site; that
   /// would bypass a manual assignment.
@@ -174,6 +195,8 @@ class Channel {
         releaseDate: releaseDate,
         posterUrl: posterUrl,
         backdropUrl: backdropUrl,
+        providerPosterUrl: providerPosterUrl,
+        providerBackdropUrl: providerBackdropUrl,
       );
 
   Map<String, dynamic> toJson() => {
@@ -195,6 +218,8 @@ class Channel {
         'releaseDate': releaseDate?.millisecondsSinceEpoch,
         'posterUrl': posterUrl,
         'backdropUrl': backdropUrl,
+        'providerPosterUrl': providerPosterUrl,
+        'providerBackdropUrl': providerBackdropUrl,
       };
 
   /// `playlistId` defaults to `'migrated_default'` and `rawId` to [id]
@@ -227,6 +252,8 @@ class Channel {
             : null,
         posterUrl: json['posterUrl'] as String?,
         backdropUrl: json['backdropUrl'] as String?,
+        providerPosterUrl: json['providerPosterUrl'] as String?,
+        providerBackdropUrl: json['providerBackdropUrl'] as String?,
       );
 
   /// Best-effort "is this a live channel, not VOD/an episode" signal from

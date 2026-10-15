@@ -24,7 +24,9 @@ import '../services/viewer_profile_service.dart';
 import '../utils/constants.dart';
 import '../utils/route_observer.dart';
 import '../utils/tv_theme.dart';
+import '../utils/image_urls.dart';
 import '../widgets/catalog_warmup_banner.dart';
+import '../widgets/hd_network_image.dart';
 import '../widgets/hold_to_activate.dart';
 import '../widgets/mode_button.dart';
 import '../widgets/player_controls.dart';
@@ -114,6 +116,14 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// this is kept separate from [_focusedImageUrl] (a portrait poster/logo)
   /// rather than folded into one fallback chain.
   String? _focusedBackdropUrl;
+
+  /// True while the focused title's backdrop may still arrive (its info
+  /// fetch hasn't finished): the hero shows no picture instead of the
+  /// portrait poster, so it goes dark -> backdrop rather than poster ->
+  /// backdrop (owner: "the old style appears first then the new one").
+  /// Cleared once the fetch is done; only then does a title with no
+  /// backdrop fall back to its poster.
+  bool _focusedArtPending = false;
 
   /// The stable id of whatever's currently focused in the Movies/TV Shows
   /// browse grid — `_updateBrowseFocus`'s de-dupe key (title alone isn't
@@ -1128,6 +1138,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     required String title,
     String? imageUrl,
     String? backdropUrl,
+    String? Function()? backdropOf,
     required Future<String?> Function() fetchDescription,
   }) {
     if (_focusedId == id) return;
@@ -1138,9 +1149,37 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       _focusedTitle = title;
       _focusedImageUrl = imageUrl;
       _focusedBackdropUrl = backdropUrl;
+      _focusedArtPending = backdropOf != null &&
+          (backdropUrl == null || backdropUrl.isEmpty);
       _focusedDescription = cached ? playlist.peekCachedDescription(id) : null;
     });
-    if (cached) return;
+    // The plot request (get_vod_info / get_series_info) also brings the
+    // provider's fanart — [backdropOf] re-reads it once that's in, so the
+    // hero upgrades from the poster to the landscape backdrop (TMDB's
+    // first, else the provider's). HdSwapImage keeps the poster painted
+    // until the backdrop has loaded, so the swap has no blank frame.
+    void refreshBackdrop() {
+      final b = backdropOf?.call();
+      if (!mounted || _focusedId != id) return;
+      setState(() {
+        if (b != null && b.isNotEmpty) _focusedBackdropUrl = b;
+        _focusedArtPending = false;
+      });
+    }
+
+    if (cached) {
+      // Cache hit = no request; this only stamps an earlier fetch's art
+      // onto this (possibly different) object for the same title.
+      if (backdropOf != null) {
+        unawaited(fetchDescription()
+            .then((_) => refreshBackdrop(), onError: (_) {
+          if (mounted && _focusedId == id) {
+            setState(() => _focusedArtPending = false);
+          }
+        }));
+      }
+      return;
+    }
     _descriptionDwellTimer = Timer(_kDescriptionDwell, () async {
       String? description;
       try {
@@ -1148,11 +1187,15 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       } catch (_) {
         // Leave it blank rather than cache a transient failure — a retry
         // is still possible next time this title is focused.
+        if (mounted && _focusedId == id) {
+          setState(() => _focusedArtPending = false);
+        }
         return;
       }
       if (!mounted || _focusedId != id) return;
       playlist.cacheDescription(id, description);
       setState(() => _focusedDescription = description);
+      refreshBackdrop();
     });
   }
 
@@ -4004,7 +4047,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                   id: series.id,
                   title: title,
                   imageUrl: imageUrl,
-                  backdropUrl: c.backdropUrl,
+                  backdropUrl: c.backdropUrl ?? series.anyBackdropUrl,
+                  backdropOf: () => series.anyBackdropUrl,
                   fetchDescription: () =>
                       playlist.getHeroSeriesDescription(series),
                 );
@@ -4014,7 +4058,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                   id: c.id,
                   title: title,
                   imageUrl: imageUrl,
-                  backdropUrl: c.backdropUrl,
+                  backdropUrl: c.anyBackdropUrl,
+                  backdropOf: () => c.anyBackdropUrl,
                   fetchDescription: () => playlist.getHeroVodDescription(c),
                 );
               } else {
@@ -4077,7 +4122,10 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         loadItems: playlist.whatsNewVod,
         titleOf: (c) => c.name,
         imageUrlOf: (c) => c.posterUrl ?? c.logoUrl,
-        backdropUrlOf: (c) => c.backdropUrl,
+        backdropUrlOf: (c) => c.anyBackdropUrl,
+        // One get_vod_info per shown slide per session (cached) — brings
+        // the provider's backdrop when TMDB has none.
+        prefetch: playlist.getHeroVodDescription,
         onOpen: _openMovie,
         playFocusNode: _moviesWhatsNewPlayFocusNode,
         emptyText: tr('No recently added movies yet'),
@@ -4131,7 +4179,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                     id: c.id,
                     title: c.name,
                     imageUrl: c.logoUrl,
-                    backdropUrl: c.backdropUrl,
+                    backdropUrl: c.anyBackdropUrl,
+                    backdropOf: () => c.anyBackdropUrl,
                     fetchDescription: () => playlist.getHeroVodDescription(c),
                   );
                   _ensureRowVisible(
@@ -4196,7 +4245,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         loadItems: playlist.whatsNewSeries,
         titleOf: (s) => s.name,
         imageUrlOf: (s) => s.posterUrl ?? s.coverUrl,
-        backdropUrlOf: (s) => s.backdropUrl,
+        backdropUrlOf: (s) => s.anyBackdropUrl,
+        prefetch: playlist.getHeroSeriesDescription,
         onOpen: _openSeries,
         playFocusNode: _showsWhatsNewPlayFocusNode,
         emptyText: tr('No recently added shows yet'),
@@ -4236,7 +4286,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                 id: s.id,
                 title: s.name,
                 imageUrl: s.coverUrl,
-                backdropUrl: s.backdropUrl,
+                backdropUrl: s.anyBackdropUrl,
+                backdropOf: () => s.anyBackdropUrl,
                 fetchDescription: () => playlist.getHeroSeriesDescription(s),
               );
               _ensureRowVisible(_keyForGroup(group.playlistId, group.title));
@@ -4258,7 +4309,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       children: [
         _BrowseHero(
             title: _focusedTitle,
-            imageUrl: _focusedImageUrl,
+            imageUrl: _focusedArtPending ? null : _focusedImageUrl,
             backdropUrl: _focusedBackdropUrl,
             description: _focusedDescription),
         Expanded(
@@ -5175,12 +5226,17 @@ class _BrowseHero extends StatelessWidget {
             // width:height ratio elsewhere in this app.
             aspectRatio: 2 / 3,
             child: imageUrl != null && imageUrl!.isNotEmpty
-                ? CachedNetworkImage(
-                    imageUrl: imageUrl!,
-                    key: ValueKey(imageUrl),
-                    fit: BoxFit.cover,
-                    errorWidget: (_, __, ___) =>
-                        Container(color: Colors.grey.shade900),
+                ? Builder(
+                    builder: (context) => HdNetworkImage(
+                      url: imageUrl!,
+                      key: ValueKey(imageUrl),
+                      kind: ImageKind.poster,
+                      // The banner is at most 480 tall -> 320-wide poster.
+                      decodeWidth: HdNetworkImage.cardDecodeWidth(context, 320,
+                          oversample: 1),
+                      errorWidget: (_) =>
+                          Container(color: Colors.grey.shade900),
+                    ),
                   )
                 : Container(color: Colors.grey.shade900),
           ),
@@ -5305,14 +5361,24 @@ class _BrowseHero extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               if (effectiveImageUrl != null && effectiveImageUrl.isNotEmpty)
-                CachedNetworkImage(
-                  imageUrl: effectiveImageUrl,
-                  key: ValueKey(effectiveImageUrl),
-                  fit: BoxFit.cover,
-                  // Same reasoning as _WhatsNewCarousel's identical fix:
-                  // key-art subjects sit in the upper part of a backdrop.
-                  alignment: Alignment.topCenter,
-                  errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                // No ValueKey: HdSwapImage keeps the previous title's image
+                // painted until the newly focused one has loaded, so moving
+                // across posters (or the late poster -> backdrop upgrade)
+                // never flashes an empty banner. Decode capped at the
+                // screen width (1920 max on Android, 3840 on Windows).
+                Builder(
+                  builder: (context) => HdSwapImage(
+                    url: effectiveImageUrl,
+                    kind: (backdropUrl != null && backdropUrl!.isNotEmpty)
+                        ? ImageKind.backdrop
+                        : ImageKind.poster,
+                    decodeWidth: HdNetworkImage.screenDecodeWidth(
+                        context, MediaQuery.of(context).size.width),
+                    // Same reasoning as _WhatsNewCarousel's identical fix:
+                    // key-art subjects sit in the upper part of a backdrop.
+                    alignment: Alignment.topCenter,
+                    fadeInDuration: const Duration(milliseconds: 250),
+                  ),
                 ),
               // Darkest right under the title/description, then eased off
               // so the picture still shows behind the first row.
@@ -5418,6 +5484,7 @@ class _WhatsNewCarousel<T> extends StatefulWidget {
     required this.titleOf,
     required this.imageUrlOf,
     this.backdropUrlOf,
+    this.prefetch,
     required this.onOpen,
     required this.playFocusNode,
     required this.emptyText,
@@ -5440,6 +5507,11 @@ class _WhatsNewCarousel<T> extends StatefulWidget {
   /// generic over item type and some future one might have nothing of the
   /// kind to offer.
   final String? Function(T item)? backdropUrlOf;
+
+  /// Run once per slide as it's shown (the provider-info fetch that also
+  /// stamps the provider's backdrop onto the item); the slide rebuilds when
+  /// it completes, so a late backdrop replaces the poster.
+  final Future<Object?> Function(T item)? prefetch;
   final void Function(T item) onOpen;
 
   /// Owned by `_TvHomeScreenState` — see its own doc comment on why the
@@ -5469,9 +5541,35 @@ class _WhatsNewCarouselState<T> extends State<_WhatsNewCarousel<T>>
     _itemsFuture = widget.loadItems().then((items) {
       if (mounted) {
         _itemCount = items.length;
+        _items = items;
         _startTimer();
+        _prefetchAt(0);
       }
       return items;
+    });
+  }
+
+  List<T> _items = const [];
+  final Set<int> _prefetched = {};
+
+  /// Slides whose [prefetch] has finished (or failed). Until then a slide
+  /// without a known backdrop shows no picture rather than its poster, so
+  /// it goes dark -> backdrop, never poster -> backdrop (same rule as the
+  /// browse hero's `_focusedArtPending`).
+  final Set<Object?> _artDone = {};
+
+  void _prefetchAt(int i) {
+    final prefetch = widget.prefetch;
+    if (prefetch == null || i < 0 || i >= _items.length) return;
+    if (!_prefetched.add(i)) return;
+    final item = _items[i];
+    prefetch(item).then((_) {
+      _artDone.add(item);
+      if (mounted) setState(() {});
+    }, onError: (_) {
+      _prefetched.remove(i);
+      _artDone.add(item);
+      if (mounted) setState(() {});
     });
   }
 
@@ -5543,7 +5641,10 @@ class _WhatsNewCarouselState<T> extends State<_WhatsNewCarousel<T>>
               child: PageView.builder(
                 controller: _pageController,
                 itemCount: items.length,
-                onPageChanged: (i) => setState(() => _index = i),
+                onPageChanged: (i) {
+                  setState(() => _index = i);
+                  _prefetchAt(i);
+                },
                 itemBuilder: (context, i) => _buildPage(context, items[i]),
               ),
             ),
@@ -5558,9 +5659,12 @@ class _WhatsNewCarouselState<T> extends State<_WhatsNewCarousel<T>>
   Widget _buildPage(BuildContext context, T item) {
     final scheme = Theme.of(context).colorScheme;
     final backdrop = widget.backdropUrlOf?.call(item);
-    final imageUrl = (backdrop != null && backdrop.isNotEmpty)
+    final hasBackdrop = backdrop != null && backdrop.isNotEmpty;
+    final imageUrl = hasBackdrop
         ? backdrop
-        : widget.imageUrlOf(item);
+        : (widget.prefetch != null && !_artDone.contains(item))
+            ? null
+            : widget.imageUrlOf(item);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6),
       child: Container(
@@ -5594,9 +5698,16 @@ class _WhatsNewCarouselState<T> extends State<_WhatsNewCarousel<T>>
           fit: StackFit.expand,
           children: [
             if (imageUrl != null && imageUrl.isNotEmpty)
-              CachedNetworkImage(
-                imageUrl: imageUrl,
-                key: ValueKey(imageUrl),
+              // HdSwapImage: when this slide's backdrop arrives (see
+              // `prefetch`) the poster stays up until it has loaded.
+              // Decode capped at the screen width (1920 max on Android).
+              HdSwapImage(
+                url: imageUrl,
+                kind: (backdrop != null && backdrop.isNotEmpty)
+                    ? ImageKind.backdrop
+                    : ImageKind.poster,
+                decodeWidth: HdNetworkImage.screenDecodeWidth(
+                    context, MediaQuery.of(context).size.width),
                 // Was `contain` (letterboxed, with the gradient above
                 // filling the bars either side) — changed back to `cover`
                 // per direct request, to fill this whole slide the way
@@ -5606,7 +5717,7 @@ class _WhatsNewCarouselState<T> extends State<_WhatsNewCarousel<T>>
                 // Stick hardware via a GPU blur *shader* specifically —
                 // plain cropping is the same ordinary operation already
                 // running crash-free across every poster grid in the app.
-                fit: BoxFit.cover,
+                // (HdSwapImage is always `cover`.)
                 // Backdrop key-art almost always puts its actual subject
                 // (a face, a figure) in the upper portion of the frame —
                 // this slide's box is much wider/shorter than the 16:9
@@ -5619,7 +5730,6 @@ class _WhatsNewCarouselState<T> extends State<_WhatsNewCarousel<T>>
                 // crops the (usually empty sky/background) bottom
                 // instead.
                 alignment: Alignment.topCenter,
-                errorWidget: (_, __, ___) => const SizedBox.shrink(),
               ),
             DecoratedBox(
               decoration: BoxDecoration(

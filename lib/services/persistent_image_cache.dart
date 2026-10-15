@@ -33,8 +33,17 @@ import 'package:path_provider/path_provider.dart';
 /// `CachedNetworkImage` in the app already goes through that static
 /// field whenever it isn't given a `cacheManager:` of its own, so no
 /// individual call site needs to change.
+///
+/// Limits: the package default (200 files / 30 days) evicted a big
+/// catalog's posters almost as fast as they were browsed, so every scroll
+/// back re-downloaded them. 1500 files (~100-250 MB with HD posters at
+/// w342 and a few w1280 backdrops — fine even on an 8 GB Fire Stick) and
+/// 60 days; TMDB's terms cap caching their images at 6 months, so the
+/// stale period must stay under ~180 days.
 final CacheManager persistentImageCacheManager = CacheManager(
   Config('noxplayer_posters',
+      stalePeriod: const Duration(days: 60),
+      maxNrOfCacheObjects: 1500,
       fileSystem: _PersistentFileSystem('noxplayer_posters')),
 );
 

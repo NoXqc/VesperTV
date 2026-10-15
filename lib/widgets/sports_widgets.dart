@@ -285,11 +285,15 @@ class RedZonePill extends StatefulWidget {
     required this.focusNode,
     required this.onTap,
     required this.onFocus,
+    this.onHold,
   });
 
   final FocusNode focusNode;
   final VoidCallback onTap;
   final VoidCallback onFocus;
+
+  /// Hold OK (or long-press): choose the RedZone channel.
+  final VoidCallback? onHold;
 
   @override
   State<RedZonePill> createState() => _RedZonePillState();
@@ -316,62 +320,67 @@ class _RedZonePillState extends State<RedZonePill>
     return Padding(
       padding: const EdgeInsets.only(left: 4, right: 8),
       child: RepaintBoundary(
-        child: InkWell(
-          focusNode: widget.focusNode,
-          borderRadius: BorderRadius.circular(22),
+        child: HoldToActivate(
           onTap: widget.onTap,
-          onFocusChange: (f) {
-            setState(() => _focused = f);
-            if (f) widget.onFocus();
-          },
-          child: AnimatedBuilder(
-            animation: _pulse,
-            builder: (context, child) {
-              final t = Curves.easeInOut.transform(_pulse.value);
-              return Transform.translate(
-                offset: Offset(0, -2.5 * t),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFE8231B), Color(0xFF8E0606)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(
-                      color: _focused
-                          ? scheme.primary
-                          : Colors.white.withValues(alpha: 0.35 + 0.3 * t),
-                      width: _focused ? 2.5 : 1,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: (_focused ? scheme.primary : _red)
-                            .withValues(alpha: 0.35 + 0.35 * t),
-                        blurRadius: 8 + 10 * t,
-                        spreadRadius: 1 * t,
-                        offset: Offset(0, 2 + 2 * t),
-                      ),
-                    ],
-                  ),
-                  child: child,
-                ),
-              );
+          onHold: widget.onHold,
+          child: InkWell(
+            focusNode: widget.focusNode,
+            borderRadius: BorderRadius.circular(22),
+            onTap: widget.onTap,
+            onLongPress: widget.onHold,
+            onFocusChange: (f) {
+              setState(() => _focused = f);
+              if (f) widget.onFocus();
             },
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.sports_football, size: 18, color: Colors.white),
-                SizedBox(width: 6),
-                Text('NFL RedZone',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.3)),
-              ],
+            child: AnimatedBuilder(
+              animation: _pulse,
+              builder: (context, child) {
+                final t = Curves.easeInOut.transform(_pulse.value);
+                return Transform.translate(
+                  offset: Offset(0, -2.5 * t),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFE8231B), Color(0xFF8E0606)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: _focused
+                            ? scheme.primary
+                            : Colors.white.withValues(alpha: 0.35 + 0.3 * t),
+                        width: _focused ? 2.5 : 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: (_focused ? scheme.primary : _red)
+                              .withValues(alpha: 0.35 + 0.35 * t),
+                          blurRadius: 8 + 10 * t,
+                          spreadRadius: 1 * t,
+                          offset: Offset(0, 2 + 2 * t),
+                        ),
+                      ],
+                    ),
+                    child: child,
+                  ),
+                );
+              },
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.sports_football, size: 18, color: Colors.white),
+                  SizedBox(width: 6),
+                  Text('NFL RedZone',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.3)),
+                ],
+              ),
             ),
           ),
         ),

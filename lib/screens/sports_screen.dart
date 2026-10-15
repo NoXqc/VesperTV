@@ -200,7 +200,11 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final matches = await _matcher.matchDay(_games, _picks);
     if (!mounted || myToken != _loadToken) return;
     setState(() {
-      _redZone = _findRedZone(live);
+      _redZoneChoices = _findRedZones(live);
+      _redZone = _redZoneChoices
+              .where((c) => c.id == _picks.redZoneChannelId)
+              .firstOrNull ??
+          _redZoneChoices.firstOrNull;
       _matches = matches;
       _matching = false;
     });
@@ -208,27 +212,77 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   static String _gameKey(SportsGame g) => SportsChannelPicks.eventKey(g);
 
-  /// The playlist's NFL RedZone channel for the pill next to Standings /
-  /// My Teams: a name with "redzone"/"red zone", ones also saying "NFL"
-  /// first, then the shortest name (the plain channel, not an event copy).
-  static Channel? _findRedZone(Iterable<Channel> channels) {
+  /// The playlist's NFL RedZone channels for the pill next to Standings /
+  /// My Teams: names with "redzone"/"red zone", best first — ones also
+  /// saying "NFL", then the shortest name (the plain channel, not an event
+  /// copy). The first is the automatic choice; hold the pill to pick
+  /// another (e.g. a 4K one) — see [_chooseRedZone].
+  static List<Channel> _findRedZones(Iterable<Channel> channels) {
     final re = RegExp(r'red\s*zone', caseSensitive: false);
-    Channel? best;
-    var bestScore = -1 << 30;
-    for (final c in channels) {
-      if (!re.hasMatch(c.name)) continue;
-      final score =
-          (c.name.toLowerCase().contains('nfl') ? 1000 : 0) - c.name.length;
-      if (score > bestScore) {
-        best = c;
-        bestScore = score;
-      }
-    }
-    return best;
+    int score(Channel c) =>
+        (c.name.toLowerCase().contains('nfl') ? 1000 : 0) - c.name.length;
+    return channels.where((c) => re.hasMatch(c.name)).toList()
+      ..sort((a, b) => score(b).compareTo(score(a)));
   }
 
-  /// See [_findRedZone]; null hides the pill.
+  List<Channel> _redZoneChoices = const [];
+
+  /// The pill's channel: the held-pill pick if it's still in the playlist,
+  /// else the automatic one. Null hides the pill.
   Channel? _redZone;
+
+  /// Hold on the RedZone pill: pick which RedZone channel it plays.
+  Future<void> _chooseRedZone() async {
+    final choices = _redZoneChoices;
+    if (choices.isEmpty) return;
+    final savedId = _picks.redZoneChannelId;
+    final auto = choices.first;
+    final picked = await showDialog<Object>(
+      context: context,
+      // Opened by a hold: drop the held OK's repeats.
+      builder: (context) => SwallowHeldActivate(
+        child: AlertDialog(
+          backgroundColor: const Color(0xFF15151A),
+          title: Text(tr('NFL RedZone channel')),
+          content: SizedBox(
+            width: 480,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TvMenuTile(
+                    autofocus: savedId == null,
+                    icon: Icons.auto_awesome,
+                    title: tr('Automatic'),
+                    subtitle: auto.name,
+                    trailing: savedId == null
+                        ? const Icon(Icons.check, color: Colors.white)
+                        : const SizedBox.shrink(),
+                    onTap: () => Navigator.of(context).pop(false),
+                  ),
+                  for (final c in choices)
+                    TvMenuTile(
+                      autofocus: c.id == savedId,
+                      icon: Icons.sports_football,
+                      title: c.name,
+                      subtitle: c.group,
+                      trailing: c.id == savedId
+                          ? const Icon(Icons.check, color: Colors.white)
+                          : const SizedBox.shrink(),
+                      onTap: () => Navigator.of(context).pop(c),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    if (picked == null || !mounted) return;
+    await _picks.setRedZone(picked is Channel ? picked.id : null);
+    if (!mounted) return;
+    setState(() => _redZone = picked is Channel ? picked : auto);
+  }
 
   /// Only with all leagues or the NFL shown.
   bool get _showRedZone =>
@@ -787,6 +841,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
               focusNode: _chipNode('redzone'),
               onFocus: () => _zone = 2,
               onTap: () => _play(_redZone!),
+              onHold: _chooseRedZone,
             ),
         ],
       ),

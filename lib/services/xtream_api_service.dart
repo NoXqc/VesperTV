@@ -4,8 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/channel.dart';
+import '../models/series_details.dart';
 import '../models/xtream_category.dart';
 import '../models/xtream_series.dart';
+import '../models/vod_details.dart';
 import '../l10n/l10n.dart';
 
 /// Talks to a real Xtream Codes ("XC API") panel via `player_api.php`.
@@ -202,12 +204,54 @@ class XtreamApiService {
   /// item in a 150k-title catalog just to populate a browse grid isn't
   /// worth the request — only called when a user actually opens one
   /// movie's detail screen.
-  Future<String?> getVodDescription(String streamId) async {
+  Future<String?> getVodDescription(String streamId) async =>
+      (await getVodInfo(streamId)).plot;
+
+  /// The same `get_vod_info` call as [getVodDescription], plus the
+  /// provider's own bigger art it carries for free: `cover_big` (else
+  /// `movie_image`) as the poster and `backdrop_path` (a list or a single
+  /// string on different panels — first http(s) entry) as the backdrop.
+  ///
+  /// Also the movie detail screen's metadata (genre, cast, director,
+  /// release date, duration, rating) — all from this one response.
+  Future<VodDetails> getVodInfo(String streamId) async {
     final decoded = await _getJson('get_vod_info', {'vod_id': streamId});
-    if (decoded is! Map<String, dynamic>) return null;
+    if (decoded is! Map<String, dynamic>) return VodDetails.empty;
     final info = decoded['info'];
-    final plot = info is Map ? info['plot']?.toString() : null;
-    return (plot != null && plot.isNotEmpty) ? plot : null;
+    if (info is! Map) return VodDetails.empty;
+    return VodDetails(
+      plot: _nonEmpty(info['plot']) ?? _nonEmpty(info['description']),
+      posterUrl: _httpUrl(info['cover_big']) ?? _httpUrl(info['movie_image']),
+      backdropUrls: backdropUrlsOf(info['backdrop_path']),
+      genre: _nonEmpty(info['genre']),
+      cast: _nonEmpty(info['cast']) ?? _nonEmpty(info['actors']),
+      director: _nonEmpty(info['director']),
+      releaseDate:
+          _nonEmpty(info['releasedate']) ?? _nonEmpty(info['release_date']),
+      durationSeconds: _durationSeconds(info),
+      rating: _rating(info['rating']),
+    );
+  }
+
+  static String? _httpUrl(Object? raw) {
+    final s = _nonEmpty(raw);
+    return (s != null && s.startsWith('http')) ? s : null;
+  }
+
+  /// `backdrop_path` comes as a list on most panels, a bare string on
+  /// some — every http(s) entry, in order.
+  static List<String> backdropUrlsOf(Object? raw) {
+    final out = <String>[];
+    if (raw is List) {
+      for (final b in raw) {
+        final url = _httpUrl(b);
+        if (url != null) out.add(url);
+      }
+    } else {
+      final url = _httpUrl(raw);
+      if (url != null) out.add(url);
+    }
+    return out;
   }
 
   /// Series (not directly playable) for a single category — call once per
@@ -225,7 +269,11 @@ class XtreamApiService {
   /// own plot/description — both come from the same `get_series_info`
   /// call, so this returns both rather than making SeriesDetailScreen pay
   /// for a second request just for the plot.
-  Future<({Map<int, List<Channel>> episodes, String? plot})> getSeriesEpisodes(
+  ///
+  /// `details` carries the rest of `info` (backdrop, genre, cast, rating,
+  /// run time) and each episode's own plot/duration — display-only, for
+  /// SeriesDetailScreen; null when [plotOnly] or the response is unusable.
+  Future<SeriesEpisodesResult> getSeriesEpisodes(
     int seriesId,
     String seriesName, {
     // The browse hero only ever wants the plot (see PlaylistManager
@@ -237,48 +285,139 @@ class XtreamApiService {
     final decoded =
         await _getJson('get_series_info', {'series_id': '$seriesId'});
     if (decoded is! Map<String, dynamic>)
-      return (episodes: <int, List<Channel>>{}, plot: null);
+      return (episodes: <int, List<Channel>>{}, plot: null, details: null);
 
     final info = decoded['info'];
     final rawPlot = info is Map ? info['plot']?.toString() : null;
     final plot = (rawPlot != null && rawPlot.isNotEmpty) ? rawPlot : null;
-    if (plotOnly) return (episodes: <int, List<Channel>>{}, plot: plot);
+    if (plotOnly) {
+      // The browse hero also wants the fanart (see PlaylistManager
+      // .getHeroSeriesDescription) — it's in this same response.
+      return (
+        episodes: <int, List<Channel>>{},
+        plot: plot,
+        details: info is Map
+            ? SeriesDetails(
+                backdropUrls: backdropUrlsOf(info['backdrop_path']))
+            : null,
+      );
+    }
 
-    final episodesByS = decoded['episodes'];
-    if (episodesByS is! Map)
-      return (episodes: <int, List<Channel>>{}, plot: plot);
-
+    final episodeDetails = <String, EpisodeDetails>{};
     final result = <int, List<Channel>>{};
-    episodesByS.forEach((seasonKey, episodeList) {
-      final season = int.tryParse(seasonKey.toString()) ?? 0;
-      if (episodeList is! List) return;
-      final channels = episodeList.map((raw) {
-        final episode = raw as Map<String, dynamic>;
-        final episodeId = episode['id'];
-        final ext = episode['container_extension']?.toString() ?? 'mp4';
-        final episodeNum = episode['episode_num']?.toString() ?? '?';
-        final title = episode['title']?.toString() ?? 'Episode $episodeNum';
-        // Most Xtream panels include a per-episode still under `info`
-        // (commonly `movie_image`) — read it defensively, since not every
-        // panel supplies it; the UI falls back to the series' own cover
-        // art when this is null rather than showing a blank card.
-        final info = episode['info'];
-        final stillUrl = info is Map ? info['movie_image']?.toString() : null;
-        final rawId = 'xt_ep_$episodeId';
-        return Channel(
-          id: '$playlistId::$rawId',
-          rawId: rawId,
-          playlistId: playlistId,
-          name: 'S${season}E$episodeNum — $title',
-          group: seriesName,
-          url: '$server/series/$username/$password/$episodeId.$ext',
-          logoUrl: (stillUrl != null && stillUrl.isNotEmpty) ? stillUrl : null,
-        );
-      }).toList();
-      result[season] = channels;
-    });
+    final episodesByS = decoded['episodes'];
+    if (episodesByS is Map) {
+      episodesByS.forEach((seasonKey, episodeList) {
+        final season = int.tryParse(seasonKey.toString()) ?? 0;
+        if (episodeList is! List) return;
+        final channels = <Channel>[];
+        for (final raw in episodeList) {
+          if (raw is! Map) continue;
+          final episode = raw;
+          final episodeId = episode['id'];
+          final ext = episode['container_extension']?.toString() ?? 'mp4';
+          final episodeNum = episode['episode_num']?.toString() ?? '?';
+          final title = episode['title']?.toString() ?? 'Episode $episodeNum';
+          // Most Xtream panels include a per-episode still under `info`
+          // (commonly `movie_image`) — read it defensively, since not every
+          // panel supplies it; the UI falls back to the series' own cover
+          // art when this is null rather than showing a blank card.
+          final info = episode['info'];
+          final stillUrl = info is Map ? info['movie_image']?.toString() : null;
+          final rawId = 'xt_ep_$episodeId';
+          final id = '$playlistId::$rawId';
+          channels.add(Channel(
+            id: id,
+            rawId: rawId,
+            playlistId: playlistId,
+            name: 'S${season}E$episodeNum — $title',
+            group: seriesName,
+            url: '$server/series/$username/$password/$episodeId.$ext',
+            logoUrl:
+                (stillUrl != null && stillUrl.isNotEmpty) ? stillUrl : null,
+          ));
+          episodeDetails[id] = EpisodeDetails(
+            season: season,
+            episodeNumber: int.tryParse(episodeNum),
+            title: episode['title']?.toString(),
+            plot: info is Map ? _nonEmpty(info['plot']) : null,
+            durationSeconds: info is Map ? _durationSeconds(info) : null,
+            airDate: info is Map
+                ? (_nonEmpty(info['releasedate']) ??
+                    _nonEmpty(info['air_date']))
+                : null,
+            rating: info is Map ? _rating(info['rating']) : null,
+          );
+        }
+        result[season] = channels;
+      });
+    }
 
-    return (episodes: result, plot: plot);
+    final seasonNames = <int, String>{};
+    final seasons = decoded['seasons'];
+    if (seasons is List) {
+      for (final s in seasons) {
+        if (s is! Map) continue;
+        final number = int.tryParse(s['season_number']?.toString() ?? '');
+        final name = _nonEmpty(s['name']);
+        if (number != null && name != null) seasonNames[number] = name;
+      }
+    }
+
+    SeriesDetails? details;
+    if (info is Map) {
+      final backdrops = backdropUrlsOf(info['backdrop_path']);
+      details = SeriesDetails(
+        backdropUrls: backdrops,
+        coverUrl: _nonEmpty(info['cover']),
+        genre: _nonEmpty(info['genre']),
+        cast: _nonEmpty(info['cast']),
+        director: _nonEmpty(info['director']),
+        releaseDate:
+            _nonEmpty(info['releaseDate']) ?? _nonEmpty(info['release_date']),
+        rating: _rating(info['rating']),
+        episodeRunTimeMinutes:
+            int.tryParse(info['episode_run_time']?.toString() ?? ''),
+        seasonNames: seasonNames,
+        episodes: episodeDetails,
+      );
+    } else {
+      details =
+          SeriesDetails(seasonNames: seasonNames, episodes: episodeDetails);
+    }
+
+    return (episodes: result, plot: plot, details: details);
+  }
+
+  static String? _nonEmpty(Object? raw) {
+    final s = raw?.toString().trim();
+    return (s == null || s.isEmpty || s == 'null') ? null : s;
+  }
+
+  /// Panels send "0", "0.0" or "" for "no rating" — those are dropped.
+  static String? _rating(Object? raw) {
+    final s = _nonEmpty(raw);
+    if (s == null) return null;
+    final value = double.tryParse(s);
+    if (value == null || value <= 0) return null;
+    return value == value.roundToDouble()
+        ? value.toStringAsFixed(0)
+        : value.toStringAsFixed(1);
+  }
+
+  /// `duration_secs` when present, otherwise parses `duration` ("00:45:12").
+  static int? _durationSeconds(Map info) {
+    final secs = int.tryParse(info['duration_secs']?.toString() ?? '');
+    if (secs != null && secs > 0) return secs;
+    final raw = _nonEmpty(info['duration']);
+    if (raw == null) return null;
+    final parts = raw.split(':').map(int.tryParse).toList();
+    if (parts.any((p) => p == null)) return null;
+    var total = 0;
+    for (final p in parts) {
+      total = total * 60 + p!;
+    }
+    return total > 0 ? total : null;
   }
 }
 
@@ -357,6 +496,8 @@ List<Channel> _buildVodChannels(_VodStreamsArgs args) {
     final rating = item['rating']?.toString();
     final added = int.tryParse(item['added']?.toString() ?? '');
     final tmdbId = item['tmdb']?.toString();
+    // Rare in the list response, but free when a panel sends it.
+    final backdrops = XtreamApiService.backdropUrlsOf(item['backdrop_path']);
     final rawId = 'xt_vod_$streamId';
     return Channel(
       id: '${args.playlistId}::$rawId',
@@ -376,6 +517,7 @@ List<Channel> _buildVodChannels(_VodStreamsArgs args) {
       tmdbId: (tmdbId != null && tmdbId.isNotEmpty && tmdbId != '0')
           ? tmdbId
           : null,
+      providerBackdropUrl: backdrops.isEmpty ? null : backdrops.first,
     );
   }).toList();
 }
@@ -394,6 +536,8 @@ List<XtreamSeries> _buildSeriesItems(_SeriesArgs args) {
     // `last_modified`, not `added` — see XtreamSeries.addedAt's doc comment.
     final lastModified = int.tryParse(item['last_modified']?.toString() ?? '');
     final tmdbId = item['tmdb']?.toString();
+    // Many panels already put the fanart in the list response itself.
+    final backdrops = XtreamApiService.backdropUrlsOf(item['backdrop_path']);
     return XtreamSeries(
       seriesId: int.parse(item['series_id'].toString()),
       playlistId: args.playlistId,
@@ -409,6 +553,7 @@ List<XtreamSeries> _buildSeriesItems(_SeriesArgs args) {
       tmdbId: (tmdbId != null && tmdbId.isNotEmpty && tmdbId != '0')
           ? tmdbId
           : null,
+      providerBackdropUrl: backdrops.isEmpty ? null : backdrops.first,
     );
   }).toList();
 }

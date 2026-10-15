@@ -1,8 +1,9 @@
 import 'dart:io';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import '../utils/image_urls.dart';
+import 'hd_network_image.dart';
 import 'hold_to_activate.dart';
 
 /// One poster/backdrop tile in a browse row — scales and glows when
@@ -195,27 +196,28 @@ class _PosterCardState extends State<PosterCard> {
                     children: [
                       if (hasImage)
                         Positioned.fill(
-                          child: CachedNetworkImage(
-                            imageUrl: widget.imageUrl!,
+                          child: HdNetworkImage(
+                            url: widget.imageUrl!,
+                            kind: ImageKind.poster,
                             fit: widget.fit,
                             // Provider posters commonly come in well above
-                            // this card's on-screen size; without this,
+                            // this card's on-screen size; without a cap,
                             // Flutter decodes and caches each one at full
                             // source resolution, which is the real memory
                             // cost of browsing a catalog (not the item
                             // metadata) — this was still causing device-
                             // wide OOM kills on a memory-constrained
                             // Firestick even after capping items per
-                            // category. Forcing decode-time downsampling to
-                            // roughly the card's physical size cuts each
-                            // cached image's memory footprint by an order
-                            // of magnitude or more.
-                            memCacheWidth: (widget.cardWidth *
-                                    MediaQuery.of(context).devicePixelRatio)
-                                .round(),
-                            memCacheHeight: (widget.cardPosterHeight *
-                                    MediaQuery.of(context).devicePixelRatio)
-                                .round(),
+                            // category. Decode-time downsampling to the
+                            // card's physical size cuts each cached image
+                            // by an order of magnitude or more. Width only
+                            // (a width + height pair stretched every image
+                            // to the card's exact shape), and 1.2x so the
+                            // 1.10 focus zoom isn't an upscale. Also picks
+                            // the TMDB rendition (w342 on a 1080p TV box)
+                            // — see hdImageUrl.
+                            decodeWidth: HdNetworkImage.cardDecodeWidth(
+                                context, widget.cardWidth),
                             // A poster popping in instantly from the grey
                             // placeholder reads as a jarring flash,
                             // especially when scrolling back re-triggers a
@@ -228,8 +230,7 @@ class _PosterCardState extends State<PosterCard> {
                             // which the memory cache ceiling alone
                             // couldn't do.
                             fadeInDuration: const Duration(milliseconds: 250),
-                            errorWidget: (_, __, ___) =>
-                                const _PosterFallbackIcon(),
+                            errorWidget: (_) => const _PosterFallbackIcon(),
                           ),
                         )
                       else

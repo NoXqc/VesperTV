@@ -42,8 +42,8 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
 3. Use Bash (Git Bash) or PowerShell. In Git Bash, **prefix adb commands that take `/sdcard`-style
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
-4. `flutter analyze` must report the baseline **20** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `1.0.12` unless noted
+4. `flutter analyze` must report the baseline **19** info-level issues (no errors). Don't add new ones.
+5. Check the current state of releases: `gh release list` (latest should be `1.0.13` unless noted
    in §11).
 
 ## 3. Layout (what matters)
@@ -76,7 +76,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
 - `windows/runner/main.cpp`, `Runner.rc` — Windows runner (window title "VesperTV").
 
 ## 4. Build / check
-- `flutter analyze` — baseline **20** info issues, none errors. `flutter test` — `test/device_transfer_test.dart` (real LAN sockets).
+- `flutter analyze` — baseline **19** info issues, none errors. `flutter test` — `test/device_transfer_test.dart` (real LAN sockets).
 - Android: `flutter build apk --release` → `build/app/outputs/flutter-apk/app-release.apk` (~68 MB).
 - Windows: **kill the running app first** (`Get-Process VesperTV | Stop-Process -Force`) or the link
   step fails with `LNK1104: cannot open VesperTV.exe`. Then `flutter build windows --release`
@@ -95,14 +95,14 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+261**) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+267**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
 Only release when the owner asks ("update the latest", "cut it", "fully release"). Outline: bump `pubspec.yaml` (versionCode `+N` must always rise) → `flutter analyze` → build APK + verify signature (§5) → build Windows + zip → **commit & push first** → `gh release upload <tag> app-release.apk VesperTV-windows-x64.zip --clobber` → `gh release edit <tag> --tag <new> --notes-file …` → make sure the tag equals HEAD → verify downloads/hashes, the OLD `NoXqc/NoXPlayer` redirect links and AFTVnews code `1760256`. The updater offers any *different* tag (`_isDifferent`), never leave two `.zip`/`.apk` assets on the latest release.
 
 ## 7. Test devices (details in `dev-notes/devices.md`)
-Formuler Z11 Pro MAX `192.168.1.46:5555` (IP changes; also seen `10.0.0.46`), Fire Stick `192.168.1.33:5555`. Install with `adb install -r` after verifying the signature. Not rooted: no logcat/run-as on the Formuler. Never press Select on "Exit App". Hold-Select via adb needs `input swipe X Y X Y 1800`, not `--longpress`. The owner keeps the Formuler on **Dark / Gold**.
+Formuler Z11 Pro MAX `192.168.1.46:5555` (IP changes; also seen `10.0.0.46`), Fire Stick `192.168.1.33:5555` (2026-10-15: on USB, `adb -s G072JN0733471CJ6`). Install with `adb install -r` after verifying the signature. Not rooted: no run-as on the Formuler, but `adb logcat` works (Flutter `print` shows as tag `flutter` even in release). **Don't drive the owner's Formuler over adb to debug** (owner, 2026-10-15) — add temporary on-screen debug output and ask for a photo, or use the Fire Stick when he hooks it up. Never press Select on "Exit App". Hold-Select via adb needs `input swipe X Y X Y 1800`, not `--longpress`. The owner keeps the Formuler on **Dark / Gold**.
 
 ## 8. Branding & website (details in `dev-notes/branding-and-site.md`)
 Brand = black + gold, gold "V" + star logo. Regenerate icons with `python assets/icon/gen_icon.py` then `dart run flutter_launcher_icons`. Default Platinum theme accent = gold. Site is the single file `docs/index.html` (carousel, hero sky). Fire OS keeps old launcher icons after updates — known, unfixable in-app.
@@ -207,7 +207,8 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-15)
-- **Shipped: 1.0.12 (`+261`, 2026-10-15, latest on GitHub)** — Android player CH+/CH- (and PgUp/PgDn) zap through the list the channel was picked from (`PlaybackService.zapList`, skips same-id duplicates) with a 3 s info card; hold OK on History = delete watched history; Add Playlist button black until focused; site shows the translucent guide. Windows: no CH zapping.
+- **Shipped: 1.0.13 (`+267`, 2026-10-15, latest on GitHub)** — redesigned TV Show + movie detail pages (`series_detail_screen.dart`, `movie_detail_screen.dart`, shared `widgets/detail_header.dart`, `utils/display_title.dart` title cleanup; per-episode progress from existing saved positions, watched = >=95%); HD images (`utils/image_urls.dart` keyless TMDB size upgrade, `widgets/hd_network_image.dart` decode caps, provider backdrops via `get_vod_info`/`get_series_info`, `CatalogDatabase` v8); hero/carousel go dark -> backdrop (no poster flash, `_focusedArtPending`); hold the Sports RedZone pill to pick its channel; Back-from-guide focus safety net. Next keyless artwork option if wanted: TVmaze (series/episodes, CC BY-SA, no key).
+- 1.0.12 (`+261`, 2026-10-15) — Android player CH+/CH- (and PgUp/PgDn) zap through the list the channel was picked from (`PlaybackService.zapList`, skips same-id duplicates) with a 3 s info card; hold OK on History = delete watched history; Add Playlist button black until focused; site shows the translucent guide. Windows: no CH zapping.
 - 1.0.11 (`+259`, 2026-10-15) — Settings > General: hide Movies/TV Shows tabs, Startup = full screen / guide-preview / nothing (Android + Windows); Sports: watching another listed channel becomes that game's pick, glowing NFL RedZone pill, opens on the league row; Movies/TV Shows hero backdrop fades behind the first row, focused poster title no longer clipped.
 - 1.0.10 (`+254`, 2026-10-14, 4 Formuler screenshots attached) —
   **full-screen video behind the Timeline guide** (Theme toggle, 3-row translucent guide, side

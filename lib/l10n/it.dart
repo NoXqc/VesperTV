@@ -877,4 +877,20 @@ const Map<String, String> kIt = {
   'Removes the History list of live channels.':
       "Cancella l'elenco Cronologia dei canali in diretta.",
   'Watched history deleted.': "Cronologia di visione eliminata.",
+  'NFL RedZone channel': "Canale NFL RedZone",
+  // Series detail screen
+  'Resume {code}': "Riprendi {code}",
+  'Play {code}': "Riproduci {code}",
+  '{n} seasons': "{n} stagioni",
+  '{n} episodes': "{n} episodi",
+  '1 episode': "1 episodio",
+  '{m} min': "{m} min",
+  '{h} h {m} min': "{h} h {m} min",
+  'Episode {n}': "Episodio {n}",
+  'Watched': "Visto",
+  'Cast: {names}': "Cast: {names}",
+  'Director: {names}': "Regia: {names}",
+  'Specials': "Speciali",
+  'Movie and TV artwork and data may come from TMDB (The Movie Database).':
+      "Le immagini e i dati di film e serie possono provenire da TMDB (The Movie Database).",
 };

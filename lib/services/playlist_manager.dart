@@ -6,6 +6,8 @@ import 'package:flutter/scheduler.dart';
 import '../models/channel.dart';
 import '../models/m3u_group.dart';
 import '../models/playlist_profile.dart';
+import '../models/series_details.dart';
+import '../models/vod_details.dart';
 import '../models/xtream_series.dart';
 import '../utils/channel_name_matching.dart';
 import '../utils/constants.dart';
@@ -1452,24 +1454,87 @@ class PlaylistManager extends ChangeNotifier {
 
   // --- Series / VOD detail --------------------------------------------------
 
-  Future<({Map<int, List<Channel>> episodes, String? plot})> loadSeriesEpisodes(
+  Future<SeriesEpisodesResult> loadSeriesEpisodes(
       XtreamSeries series,
       {bool plotOnly = false}) {
     final session = _sessionFor(series.playlistId);
     if (session == null)
-      return Future.value((episodes: <int, List<Channel>>{}, plot: null));
-    return session.loadSeriesEpisodes(series, plotOnly: plotOnly);
+      return Future.value(
+          (episodes: <int, List<Channel>>{}, plot: null, details: null));
+    return session
+        .loadSeriesEpisodes(series, plotOnly: plotOnly)
+        .then((result) {
+      // get_series_info's fanart — the hero/carousel backdrop for this
+      // show from now on, persisted so it isn't refetched next launch.
+      _stampSeriesImages(series, result.details);
+      return result;
+    });
   }
 
   /// Movie plot/description, fetched on demand when [MovieDetailScreen]
   /// opens for one title. [channel.rawId] still carries its `xt_vod_`
   /// prefix (see `Channel.rawId`'s doc comment) — stripped here before
   /// the raw stream id reaches the API call.
-  Future<String?> getVodDescription(Channel channel) async {
+  Future<String?> getVodDescription(Channel channel) async =>
+      (await getVodDetails(channel)).plot;
+
+  /// The whole `get_vod_info` result for one movie — at most one request
+  /// per title per session (cached in memory, like the plot). The same
+  /// response carries the provider's HD art (cover_big / backdrop_path):
+  /// stamped onto [channel] and persisted, so the hero and the detail
+  /// backdrop need neither a second fetch nor a TMDB key.
+  Future<VodDetails> getVodDetails(Channel channel) async {
+    final cached = _vodDetailsCache[channel.id];
+    if (cached != null) {
+      _stampVodImages(channel);
+      return cached;
+    }
     final session = _sessionFor(channel.playlistId);
-    if (session == null) return null;
+    if (session == null) return VodDetails.empty;
     final rawStreamId = channel.rawId.replaceFirst('xt_vod_', '');
-    return session.getVodDescription(rawStreamId);
+    final info = await session.getVodInfo(rawStreamId);
+    _vodDetailsCache[channel.id] = info;
+    _descriptionCache[channel.id] = info.plot;
+    _providerImages[channel.id] =
+        (poster: info.posterUrl, backdrop: info.backdropUrl);
+    _stampVodImages(channel);
+    if (info.posterUrl != null || info.backdropUrl != null) {
+      unawaited(_catalogDb.setVodProviderImages(channel.id,
+          posterUrl: info.posterUrl, backdropUrl: info.backdropUrl));
+    }
+    return info;
+  }
+
+  /// Already-fetched [getVodDetails] result, or null — no request.
+  VodDetails? peekVodDetails(String id) => _vodDetailsCache[id];
+
+  final Map<String, VodDetails> _vodDetailsCache = {};
+
+  /// Provider HD art seen this session, by Channel.id / XtreamSeries.id —
+  /// lets a *different* object for the same title (What's New, search,
+  /// Continue Watching build their own) pick it up from the description
+  /// cache path without another request.
+  final Map<String, ({String? poster, String? backdrop})> _providerImages = {};
+
+  void _stampVodImages(Channel channel) {
+    final images = _providerImages[channel.id];
+    if (images == null) return;
+    if (images.poster != null) channel.providerPosterUrl = images.poster;
+    if (images.backdrop != null) channel.providerBackdropUrl = images.backdrop;
+  }
+
+  void _stampSeriesImages(XtreamSeries series, SeriesDetails? details) {
+    final fromInfo = details?.firstBackdrop;
+    if (fromInfo != null) {
+      _providerImages[series.id] = (poster: null, backdrop: fromInfo);
+      if (series.providerBackdropUrl != fromInfo) {
+        series.providerBackdropUrl = fromInfo;
+        unawaited(_catalogDb.setSeriesProviderBackdropUrl(series.id, fromInfo));
+      }
+      return;
+    }
+    final known = _providerImages[series.id]?.backdrop;
+    if (known != null) series.providerBackdropUrl ??= known;
   }
 
   // --- Browse-hero description cache ---------------------------------------
@@ -1494,6 +1559,7 @@ class PlaylistManager extends ChangeNotifier {
   /// it isn't retried every time the same title is refocused).
   Future<String?> getHeroVodDescription(Channel channel) async {
     if (_descriptionCache.containsKey(channel.id)) {
+      _stampVodImages(channel);
       return _descriptionCache[channel.id];
     }
     final plot = await getVodDescription(channel);
@@ -1505,8 +1571,10 @@ class PlaylistManager extends ChangeNotifier {
   /// episode map entirely, which the hero never needs.
   Future<String?> getHeroSeriesDescription(XtreamSeries series) async {
     if (_descriptionCache.containsKey(series.id)) {
+      _stampSeriesImages(series, null);
       return _descriptionCache[series.id];
     }
+    // Also stamps the get_series_info fanart (see loadSeriesEpisodes).
     final result = await loadSeriesEpisodes(series, plotOnly: true);
     _descriptionCache[series.id] = result.plot;
     return result.plot;

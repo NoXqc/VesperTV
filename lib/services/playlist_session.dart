@@ -7,6 +7,8 @@ import 'package:flutter/foundation.dart';
 import '../models/channel.dart';
 import '../models/m3u_group.dart';
 import '../models/playlist_profile.dart';
+import '../models/series_details.dart';
+import '../models/vod_details.dart';
 import '../models/xtream_category.dart';
 import '../models/xtream_series.dart';
 import '../utils/constants.dart';
@@ -1141,11 +1143,13 @@ class PlaylistSession {
   }
 
   /// Fetches episodes for one series, grouped by season number.
-  Future<({Map<int, List<Channel>> episodes, String? plot})> loadSeriesEpisodes(
+  Future<SeriesEpisodesResult> loadSeriesEpisodes(
       XtreamSeries series,
       {bool plotOnly = false}) async {
     final api = xtreamApi;
-    if (api == null) return (episodes: <int, List<Channel>>{}, plot: null);
+    if (api == null) {
+      return (episodes: <int, List<Channel>>{}, plot: null, details: null);
+    }
     final result = await api.getSeriesEpisodes(series.seriesId, series.name,
         plotOnly: plotOnly);
     for (final list in result.episodes.values) {
@@ -1167,6 +1171,14 @@ class PlaylistSession {
     final api = xtreamApi;
     if (api == null) return null;
     return api.getVodDescription(rawStreamId);
+  }
+
+  /// [getVodDescription] plus the provider's HD poster/backdrop from the
+  /// same `get_vod_info` response.
+  Future<VodDetails> getVodInfo(String rawStreamId) async {
+    final api = xtreamApi;
+    if (api == null) return VodDetails.empty;
+    return api.getVodInfo(rawStreamId);
   }
 
   /// Applies [groupOrder] for [type]: titles the user has ordered come

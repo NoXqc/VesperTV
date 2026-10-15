@@ -137,6 +137,19 @@ class SettingsMenuScreen extends StatelessWidget {
                       style: const TextStyle(fontSize: 11, color: Colors.grey),
                     ),
                   ),
+                  // TMDB's terms ask for this wherever their data/images
+                  // show — posters and backdrops come from TMDB's image
+                  // CDN even without a key (provider links, upgraded to HD
+                  // by hdImageUrl), so it lives here, not only in the
+                  // TMDB key screen.
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Text(
+                      '${tr('Movie and TV artwork and data may come from TMDB (The Movie Database).')} '
+                      '${tr('This product uses the TMDB API but is not endorsed or certified by TMDB.')}',
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                  ),
                 ],
               ),
             ));

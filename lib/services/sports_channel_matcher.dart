@@ -102,6 +102,20 @@ class SportsChannelPicks {
     return _save();
   }
 
+  /// The NFL RedZone pill's chosen channel (hold the pill). Stored with the
+  /// team picks under a key no league/team id can produce; null = automatic.
+  static const _redZoneKey = 'redzone';
+  String? get redZoneChannelId => teams[_redZoneKey];
+
+  Future<void> setRedZone(String? channelId) {
+    if (channelId == null) {
+      teams.remove(_redZoneKey);
+    } else {
+      teams[_redZoneKey] = channelId;
+    }
+    return _save();
+  }
+
   Future<void> clearFor(SportsGame g) {
     _events.remove(eventKey(g));
     final c = teams[teamKey(g, g.first)];

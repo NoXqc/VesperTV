@@ -70,7 +70,7 @@ class CatalogDatabase {
   Future<Database> _open(String path) async {
     final db = await openDatabase(
       path,
-      version: 7,
+      version: 8,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE vod_channels (
@@ -90,7 +90,9 @@ class CatalogDatabase {
             tmdb_id TEXT,
             release_date INTEGER,
             poster_url TEXT,
-            backdrop_url TEXT
+            backdrop_url TEXT,
+            provider_poster_url TEXT,
+            provider_backdrop_url TEXT
           )
         ''');
         await db.execute(
@@ -112,7 +114,8 @@ class CatalogDatabase {
             tmdb_id TEXT,
             release_date INTEGER,
             poster_url TEXT,
-            backdrop_url TEXT
+            backdrop_url TEXT,
+            provider_backdrop_url TEXT
           )
         ''');
         await db.execute(
@@ -227,6 +230,17 @@ class CatalogDatabase {
           await _addColumnIfMissing(
               db, 'series_items', 'backdrop_url', 'TEXT');
         }
+        if (oldVersion < 8) {
+          // Channel.providerPosterUrl/providerBackdropUrl and
+          // XtreamSeries.providerBackdropUrl (keyless provider HD art) —
+          // same plain nullable ADD COLUMN as v6 -> v7.
+          await _addColumnIfMissing(
+              db, 'vod_channels', 'provider_poster_url', 'TEXT');
+          await _addColumnIfMissing(
+              db, 'vod_channels', 'provider_backdrop_url', 'TEXT');
+          await _addColumnIfMissing(
+              db, 'series_items', 'provider_backdrop_url', 'TEXT');
+        }
       },
     );
     return db;
@@ -261,6 +275,8 @@ class CatalogDatabase {
         'release_date': c.releaseDate?.millisecondsSinceEpoch,
         'poster_url': c.posterUrl,
         'backdrop_url': c.backdropUrl,
+        'provider_poster_url': c.providerPosterUrl,
+        'provider_backdrop_url': c.providerBackdropUrl,
       };
 
   Channel _rowToChannel(Map<String, Object?> row) {
@@ -297,6 +313,8 @@ class CatalogDatabase {
           : null,
       posterUrl: row['poster_url'] as String?,
       backdropUrl: row['backdrop_url'] as String?,
+      providerPosterUrl: row['provider_poster_url'] as String?,
+      providerBackdropUrl: row['provider_backdrop_url'] as String?,
     );
   }
 
@@ -314,6 +332,7 @@ class CatalogDatabase {
         'release_date': s.releaseDate?.millisecondsSinceEpoch,
         'poster_url': s.posterUrl,
         'backdrop_url': s.backdropUrl,
+        'provider_backdrop_url': s.providerBackdropUrl,
       };
 
   XtreamSeries _rowToSeries(Map<String, Object?> row) {
@@ -337,6 +356,7 @@ class CatalogDatabase {
           : null,
       posterUrl: row['poster_url'] as String?,
       backdropUrl: row['backdrop_url'] as String?,
+      providerBackdropUrl: row['provider_backdrop_url'] as String?,
     );
   }
 
@@ -623,6 +643,26 @@ class CatalogDatabase {
   Future<void> setSeriesBackdropUrl(String id, String url) async {
     final db = await _database;
     await db.update('series_items', {'backdrop_url': url},
+        where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// Provider HD art from `get_vod_info` — see
+  /// `Channel.providerPosterUrl`. Null arguments leave that column alone.
+  Future<void> setVodProviderImages(String id,
+      {String? posterUrl, String? backdropUrl}) async {
+    final values = <String, Object?>{
+      if (posterUrl != null) 'provider_poster_url': posterUrl,
+      if (backdropUrl != null) 'provider_backdrop_url': backdropUrl,
+    };
+    if (values.isEmpty) return;
+    final db = await _database;
+    await db.update('vod_channels', values, where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// See `XtreamSeries.providerBackdropUrl`.
+  Future<void> setSeriesProviderBackdropUrl(String id, String url) async {
+    final db = await _database;
+    await db.update('series_items', {'provider_backdrop_url': url},
         where: 'id = ?', whereArgs: [id]);
   }
 

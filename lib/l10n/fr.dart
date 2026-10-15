@@ -877,4 +877,20 @@ const Map<String, String> kFr = {
   'Removes the History list of live channels.':
       "Efface la liste Historique des chaînes en direct.",
   'Watched history deleted.': "Historique de visionnage supprimé.",
+  'NFL RedZone channel': "Chaîne NFL RedZone",
+  // Series detail screen
+  'Resume {code}': "Reprendre {code}",
+  'Play {code}': "Lire {code}",
+  '{n} seasons': "{n} saisons",
+  '{n} episodes': "{n} épisodes",
+  '1 episode': "1 épisode",
+  '{m} min': "{m} min",
+  '{h} h {m} min': "{h} h {m}",
+  'Episode {n}': "Épisode {n}",
+  'Watched': "Vu",
+  'Cast: {names}': "Avec : {names}",
+  'Director: {names}': "Réalisation : {names}",
+  'Specials': "Épisodes spéciaux",
+  'Movie and TV artwork and data may come from TMDB (The Movie Database).':
+      "Les affiches et données des films et séries peuvent provenir de TMDB (The Movie Database).",
 };

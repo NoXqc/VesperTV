@@ -874,4 +874,20 @@ const Map<String, String> kEs = {
   'Removes the History list of live channels.':
       "Borra la lista Historial de canales en directo.",
   'Watched history deleted.': "Historial de visualización eliminado.",
+  'NFL RedZone channel': "Canal NFL RedZone",
+  // Series detail screen
+  'Resume {code}': "Reanudar {code}",
+  'Play {code}': "Reproducir {code}",
+  '{n} seasons': "{n} temporadas",
+  '{n} episodes': "{n} episodios",
+  '1 episode': "1 episodio",
+  '{m} min': "{m} min",
+  '{h} h {m} min': "{h} h {m} min",
+  'Episode {n}': "Episodio {n}",
+  'Watched': "Visto",
+  'Cast: {names}': "Reparto: {names}",
+  'Director: {names}': "Dirección: {names}",
+  'Specials': "Especiales",
+  'Movie and TV artwork and data may come from TMDB (The Movie Database).':
+      "Las imágenes y los datos de películas y series pueden provenir de TMDB (The Movie Database).",
 };
