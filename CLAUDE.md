@@ -39,6 +39,10 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    (originals also on drive `E:\`). Files are CRLF here (autocrlf) — "LF will be replaced by CRLF"
    warnings are normal. `flutter pub get` dirties generated plugin files under linux/macos/windows —
    `git checkout` them before committing.
+   **VPS** (NOX-VPS, `ssh root@107.175.31.191`, key auth from `~/.ssh/id_ed25519`, works from the
+   Bash tool): runs the pairing relay + transfer vault (`tools/pair_relay/`, `pair.vespertv.app`)
+   **and the owner's streams (Tuliprox) behind the same nginx** — back up first, `nginx -t`, then
+   `systemctl reload nginx` (never restart). Deploy steps: `tools/pair_relay/README.md`.
 3. Use Bash (Git Bash) or PowerShell. In Git Bash, **prefix adb commands that take `/sdcard`-style
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
@@ -63,7 +67,9 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
 - `lib/services/playlist_manager.dart` / `playlist_session.dart` — per-playlist state, catalog
   loading, hidden groups/channels, backup-server failover. `playback_service.dart`,
   `epg_service.dart` + `epg_database.dart` (guide in sqflite), `catalog_database.dart` (sqflite), `storage_service.dart` (prefs/cache),
-  `app_update_service.dart` (GitHub release updater).
+  `app_update_service.dart` (GitHub release updater). Transfer to another device:
+  `cloud_transfer.dart` (internet, encrypted upload to the relay's vault — the main Send path) +
+  `device_transfer.dart` (same Wi-Fi), UI `screens/settings/transfer_screen.dart`.
 - `lib/screens/settings/*` — Settings screens (Add Playlist is a 3-pane LokTV-style layout).
 - `lib/screens/welcome_add_playlist_screen.dart` — first-launch "Hey beautiful Human" prompt.
 - `lib/widgets/`: `poster_card`, `hold_to_activate`, `live_resume_hint`, `tv_menu_tile`,
@@ -204,7 +210,7 @@ Look there before debugging. Still-open items: the **Fire OS stale launcher icon
 old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler) — Windows check pending.
 
 ## 12. Features (details in `dev-notes/features.md`)
-Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR). Read the file before changing any of these.
+Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-16)
 - **Shipped: 1.0.14 (`+271`, 2026-10-16, latest on GitHub)** — **Transfer over the internet**: Send = encrypted upload to the relay's vault for 1 h / 24 h / 7 days, 16-digit code, works any number of times until expiry or Delete now; the Wi-Fi transfer is the "Both devices on the same Wi-Fi?" tile on that screen; Receive takes 9 or 16 digits. Relay deployed on the VPS (`tools/pair_relay`, vault on disk in `/var/lib/pair-relay`). Built to grow into cloud sync later. Also the +268 provider-duration + browse-banner title fix. Details: `dev-notes/features.md` (Transfer over the internet). Owner tested Fire Stick ↔ phone: "flawless and superfast".
