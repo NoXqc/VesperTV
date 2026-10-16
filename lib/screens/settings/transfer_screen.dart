@@ -4,7 +4,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../services/catalog_database.dart';
@@ -12,6 +11,7 @@ import '../../services/cloud_transfer.dart';
 import '../../services/device_transfer.dart';
 import '../../services/epg_service.dart';
 import '../../services/storage_service.dart';
+import '../../utils/time_format.dart';
 import '../../utils/constants.dart';
 import '../../utils/tv_theme.dart';
 import '../../widgets/settings_scaffold.dart';
@@ -367,7 +367,7 @@ class _CloudSendScreenState extends State<_CloudSendScreen> {
   Widget _active(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final upload = _upload!;
-    final until = DateFormat.MMMEd().add_jm().format(upload.expires);
+    final until = TimeFormat.dayTime(upload.expires);
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),

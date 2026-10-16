@@ -5,7 +5,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart' hide TextDirection;
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
@@ -21,6 +20,7 @@ import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../services/storage_service.dart';
 import '../services/viewer_profile_service.dart';
+import '../utils/time_format.dart';
 import '../utils/constants.dart';
 import '../utils/display_title.dart';
 import '../utils/route_observer.dart';
@@ -248,6 +248,11 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// set true only by tapping the pinned "What's New" row in the groups
   /// column, and cleared again by picking "All" or a real category.
   bool _showWhatsNew = false;
+
+  /// Movies/TV Shows showing only favourites (the "Favourites" row in the
+  /// groups column): starred titles, then every favourited group — what
+  /// the old Favorites tab held. Same lifecycle as [_showWhatsNew].
+  bool _showFavorites = false;
 
   /// The carousel's Play button, owned here (like
   /// [_groupFirstPosterFocusNodes]/[_continueWatchingFirstFocusNode]) so
@@ -654,15 +659,21 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// per-resolution one.
   static const double _groupFontSize = 13;
 
-  static const _tabs = ['TV', 'Movies', 'TV Shows', 'Favorites'];
+  // No Favorites tab: favourites live in each tab (TV's Favourites entry,
+  // the Movies/TV Shows Favourites rows, pinned favourited groups).
+  static const _tabs = ['TV', 'Movies', 'TV Shows'];
   static const _tabIcons = {
     'TV': Icons.live_tv,
     'Movies': Icons.movie,
     'TV Shows': Icons.video_library,
-    'Favorites': Icons.star,
   };
 
   static bool _isBrowseTab(String tab) => tab == 'Movies' || tab == 'TV Shows';
+
+  /// Android phones/tablets: a browse poster's first tap previews it in
+  /// the hero, a second tap opens it (PosterCard.tapToPreview).
+  bool get _touchPreview =>
+      Platform.isAndroid && !context.read<AppPreferences>().isTelevision;
 
   /// [_tabs] minus Movies/TV Shows when Settings > General hides them.
   /// Watches AppPreferences, so toggling it rebuilds the tabs column.
@@ -716,6 +727,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       // column (see _buildBrowseGroupsColumn) is still there for anyone
       // who wants to switch into the carousel deliberately.
       _showWhatsNew = false;
+      _showFavorites = false;
     });
     // Switching back to the TV tab clears the explicit group selection —
     // _effectiveLiveGroup falls back to the playing channel's own group
@@ -886,25 +898,6 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       _collapseAfterTouchPick();
       return;
     }
-    if (_tab == 'Favorites') {
-      // A favorited *group* here can be a live TV group, a movies group,
-      // or a TV shows group (see _showGroupOptions — long-pressing a group
-      // works the same everywhere) — unlike a starred individual channel,
-      // its content isn't guaranteed to already be cached just because
-      // it's favorited, so a movies/series pick still needs the normal
-      // on-demand fetch. A live group's channels are always already
-      // loaded (Live TV has no lazy-loading), so nothing to do there.
-      final resolved =
-          _favoriteGroupCategory(context.read<PlaylistManager>(), group);
-      if (resolved == null) return;
-      if (resolved.category == 'vod' || resolved.category == 'series') {
-        context.read<PlaylistManager>().ensureCategoryLoaded(
-            resolved.playlistId, group, resolved.category);
-      } else {
-        _resetLiveListFocus();
-      }
-      return;
-    }
     if (_tab == 'TV') {
       _resetLiveListFocus();
       _collapseAfterTouchPick();
@@ -948,29 +941,6 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     final firstIsPlaying = playback.currentChannel?.id == channels.first.id;
     (firstIsPlaying ? _currentChannelFocusNode : _firstLiveChannelFocusNode)
         .requestFocus();
-  }
-
-  /// Which tab a favorited group actually belongs to, and which playlist
-  /// it came from — the Favorites tab's groups column mixes all three
-  /// group kinds (and every playlist's own groups) together, so a plain
-  /// `_categoryForTab(_tab)` (always "tv" there) isn't enough to know how
-  /// to load or render a given selection. Null if the group was
-  /// un-favorited/removed since the list was built. Search order (vod,
-  /// series, tv) matches the original single-playlist behavior; the first
-  /// match wins if (rare) two playlists share a favorited group's title.
-  ({String category, String playlistId})? _favoriteGroupCategory(
-      PlaylistManager playlist, String title) {
-    for (final g in playlist.vodGroups) {
-      if (g.title == title) return (category: 'vod', playlistId: g.playlistId);
-    }
-    for (final g in playlist.seriesGroups) {
-      if (g.title == title)
-        return (category: 'series', playlistId: g.playlistId);
-    }
-    for (final g in playlist.tvGroups) {
-      if (g.title == title) return (category: 'tv', playlistId: g.playlistId);
-    }
-    return null;
   }
 
   bool _hasContinueWatchingRow(String idPrefix) {
@@ -1061,12 +1031,20 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
             playlist
                 .visibleSeries(playlistId: g.playlistId, categoryName: g.title)
                 .isNotEmpty);
-    final targetNode = _hasContinueWatchingRow(isMovies ? 'xt_vod_' : 'xt_ep_')
+    final firstRow = _browseRowKeys.firstOrNull;
+    final targetNode = !_showFavorites &&
+            _hasContinueWatchingRow(isMovies ? 'xt_vod_' : 'xt_ep_')
         ? _continueWatchingFirstFocusNode
-        : groups.isNotEmpty
-            ? _firstPosterFocusNodeForGroup(
-                groups.first.playlistId, groups.first.title)
-            : null;
+        // Favourites view: whatever row it starts with.
+        : _showFavorites
+            ? (firstRow == null
+                ? null
+                : _firstPosterFocusNodeForGroup(
+                    firstRow.playlistId, firstRow.title))
+            : groups.isNotEmpty
+                ? _firstPosterFocusNodeForGroup(
+                    groups.first.playlistId, groups.first.title)
+                : null;
     if (targetNode == null) {
       _col2Scope.requestFocus();
       return;
@@ -1107,11 +1085,14 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       });
       return;
     }
-    if (!_showWhatsNew) {
+    if (!_showWhatsNew && !_showFavorites) {
       jump();
       return;
     }
-    setState(() => _showWhatsNew = false);
+    setState(() {
+      _showWhatsNew = false;
+      _showFavorites = false;
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) jump();
     });
@@ -1150,8 +1131,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       _focusedTitle = title;
       _focusedImageUrl = imageUrl;
       _focusedBackdropUrl = backdropUrl;
-      _focusedArtPending = backdropOf != null &&
-          (backdropUrl == null || backdropUrl.isEmpty);
+      _focusedArtPending =
+          backdropOf != null && (backdropUrl == null || backdropUrl.isEmpty);
       _focusedDescription = cached ? playlist.peekCachedDescription(id) : null;
     });
     // The plot request (get_vod_info / get_series_info) also brings the
@@ -1172,8 +1153,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       // Cache hit = no request; this only stamps an earlier fetch's art
       // onto this (possibly different) object for the same title.
       if (backdropOf != null) {
-        unawaited(fetchDescription()
-            .then((_) => refreshBackdrop(), onError: (_) {
+        unawaited(
+            fetchDescription().then((_) => refreshBackdrop(), onError: (_) {
           if (mounted && _focusedId == id) {
             setState(() => _focusedArtPending = false);
           }
@@ -1430,16 +1411,10 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// [_restoreLiveFocus] can find the playing channel's index in the exact
   /// same list instead of risking the two falling out of sync.
   List<Channel> _currentLiveChannels(PlaylistManager playlist) {
-    return _tab == 'Favorites'
-        ? (_selectedGroup == null
-            ? playlist.favoriteChannels
-            : playlist.favoriteChannels
-                .where((c) => c.group == _selectedGroup)
-                .toList())
-        : _effectiveLiveGroup(playlist) == _favoritesGroupSentinel
-            ? playlist.favoriteLiveChannels
-            : playlist.visibleChannels(
-                groupTitle: _effectiveLiveGroup(playlist), category: 'tv');
+    return _effectiveLiveGroup(playlist) == _favoritesGroupSentinel
+        ? playlist.favoriteLiveChannelsWithGroups
+        : playlist.visibleChannels(
+            groupTitle: _effectiveLiveGroup(playlist), category: 'tv');
   }
 
   /// [_currentLiveChannels], narrowed by [_timelineFilterQuery] — applied
@@ -1552,15 +1527,6 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// whenever this screen becomes visible again: the playing channel's
   /// row is what's in view and focused.
   Future<void> _restoreLiveFocus() async {
-    // The Favorites tab's default ("All") view no longer has any live list
-    // mounted at all (see _buildLiveRegion) — nothing below is meaningful
-    // there, and requesting focus on a channel row's FocusNode that isn't
-    // actually attached to anything is exactly the kind of "focus steals
-    // itself back unexpectedly later" bug this app has hit before.
-    if (_tab == 'Favorites' && _selectedGroup == null) {
-      _col0Scope.requestFocus();
-      return;
-    }
     final playback = context.read<PlaybackService>();
     final channel = playback.currentChannel;
     // Every early return below used to just do nothing — fine in theory
@@ -2507,6 +2473,13 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                             fontSize: 18,
                             fontWeight: FontWeight.w600)),
                   ),
+                  // Search without going back to the tabs page first.
+                  IconButton(
+                    icon: const Icon(Icons.search, color: Colors.white),
+                    tooltip: tr('Search'),
+                    visualDensity: VisualDensity.compact,
+                    onPressed: _openSearch,
+                  ),
                 ],
               ),
             ),
@@ -2747,49 +2720,6 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
 
   Widget _buildGroupsColumn(PlaylistManager playlist,
       {required bool collapsed}) {
-    if (_tab == 'Favorites') {
-      // Was a static "Pinned channels" placeholder — this is the actual
-      // filter now: the names of groups favorited as a whole (see
-      // _showGroupOptions), so you can jump to just one group's favorites
-      // instead of everything landing in one flat list.
-      final favoritedGroupTitles = playlist.allFavoritedGroupTitles.toList()
-        ..sort();
-      // Keyed by tab — same fix, and same reason, as
-      // _buildBrowseGroupsColumn's own ListView key.
-      return ListView(
-        key: const ValueKey('Favorites'),
-        children: [
-          _SelectableRow(
-            icon: Icons.apps,
-            label: tr('All'),
-            selected: _selectedGroup == null,
-            collapsed: collapsed,
-            fontSize: _groupFontSize,
-            focusNode: _firstGroupRowFocusNode,
-            onTap: () => _onGroupSelected(null),
-          ),
-          for (final title in favoritedGroupTitles)
-            _SelectableRow(
-              icon: Icons.grid_view_rounded,
-              label: title,
-              selected: _selectedGroup == title,
-              collapsed: collapsed,
-              fontSize: _groupFontSize,
-              onTap: () => _onGroupSelected(title),
-            ),
-          if (favoritedGroupTitles.isEmpty && !collapsed)
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Text(
-                tr('Long-press a group elsewhere to favorite the whole thing.'),
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
-              ),
-            ),
-        ],
-      );
-    }
-
     final groups = playlist.tvGroups.where((g) => !g.isHidden).toList();
     // No "All" row — see _effectiveLiveGroup's doc comment for why an
     // unfiltered dumping-ground was actively confusing to land back in.
@@ -2911,8 +2841,26 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
           focusNode: _firstGroupRowFocusNode,
           onTap: () => setState(() {
             _showWhatsNew = true;
+            _showFavorites = false;
             if (_compact) _phonePage = 2;
           }),
+        ),
+        _SelectableRow(
+          icon: Icons.star,
+          label: tr('Favourites'),
+          selected: _showFavorites,
+          collapsed: collapsed,
+          fontSize: _groupFontSize,
+          onTap: () {
+            setState(() {
+              _showFavorites = true;
+              _showWhatsNew = false;
+              if (_compact) _phonePage = 2;
+            });
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _scrollBrowseToTop();
+            });
+          },
         ),
         _SelectableRow(
           icon: Icons.apps,
@@ -3286,35 +3234,6 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     // category kick-off in _buildMoviesBrowse.
     unawaited(playlist.ensureLiveChannelsLoaded());
 
-    // The Favorites tab's default ("All") view used to fall through to the
-    // live-list-plus-video UI below, fed by a list that merged individually-
-    // favorited live channels AND movies together — wrong for a movie (tap
-    // tried to "play" it inline instead of opening its detail screen) and
-    // confusing with both types jumbled into one list. Individually-
-    // favorited live channels are reachable via the TV tab's own pinned
-    // "Favourites" entry instead (_favoritesGroupSentinel, unaffected by
-    // this) — this tab's default view now shows favorited movies/shows only.
-    if (_tab == 'Favorites' && _selectedGroup == null) {
-      return _buildFavoritesOverview(playlist);
-    }
-
-    // A favorited movies/TV-shows group selected from the Favorites tab
-    // isn't playable as a plain channel tap-to-fullscreen the way a live
-    // group is — it needs the actual movie/series catalog UI (posters,
-    // tap through to the detail screen). Reported as "click on one of
-    // those groups, it won't work" — it was routing through the live
-    // channel list either way regardless of what kind of group it was.
-    if (_tab == 'Favorites' &&
-        _selectedGroup != null &&
-        _selectedGroup != _favoritesGroupSentinel) {
-      final resolved = _favoriteGroupCategory(playlist, _selectedGroup!);
-      if (resolved != null &&
-          (resolved.category == 'vod' || resolved.category == 'series')) {
-        return _buildFavoriteGroupCatalog(
-            playlist, resolved.category, resolved.playlistId, _selectedGroup!);
-      }
-    }
-
     final playback = context.watch<PlaybackService>();
     // Only a genuinely live channel belongs in this preview — a movie/
     // episode isn't stopped just because its fullscreen view was left
@@ -3672,186 +3591,15 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     ));
   }
 
-  /// Individually-favorited movies/TV shows as two poster-grid sections —
-  /// the Favorites tab's default ("All") view. Individually-favorited live
-  /// channels are deliberately excluded here; they stay reachable via the
-  /// TV tab's own pinned "Favourites" entry instead (see [_buildLiveRegion]).
-  Widget _buildFavoritesOverview(PlaylistManager playlist) {
-    final storage = context.read<StorageService>();
-    final movies = playlist.favoriteMovies;
-    final isXtream = playlist.isXtream;
-    final series = isXtream ? playlist.favoriteSeries : null;
-    final showChannels = isXtream ? null : playlist.favoriteShowChannels;
-    final showsEmpty = isXtream ? series!.isEmpty : showChannels!.isEmpty;
-
-    // This view is movies/shows only, so with those hidden (Settings >
-    // General) it just points to where live favorites are.
-    if (context.read<AppPreferences>().hideMoviesShows) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            tr('Favorite channels are in the TV tab, under Favourites.'),
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white70),
-          ),
-        ),
-      );
-    }
-
-    if (movies.isEmpty && showsEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            tr('No favorited movies or TV shows yet.\nHold Select on a poster to add one.'),
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white70),
-          ),
-        ),
-      );
-    }
-
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 16),
-      children: [
-        Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: SectionLabel(tr('Movies'))),
-        if (movies.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(tr('No favorited movies yet.'),
-                style: const TextStyle(color: Colors.white54)),
-          )
-        else
-          _posterGrid(
-            movies,
-            (c) => PosterCard(
-              title: c.name,
-              imageUrl: c.logoUrl,
-              rating: c.rating,
-              watched: storage.isFullyWatched(c.id),
-              progressFraction: storage.getWatchedFraction(c.id),
-              isFavorite: c.isFavorite,
-              onToggleFavorite: () => _toggleFavoriteWithFeedback(context, c),
-              onTap: () => _openMovie(c),
-              onFocusGained: () {},
-            ),
-            shrinkWrap: true,
-          ),
-        Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: SectionLabel(tr('TV Shows'))),
-        if (showsEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(tr('No favorited TV shows yet.'),
-                style: const TextStyle(color: Colors.white54)),
-          )
-        else if (isXtream)
-          _posterGrid(
-            series!,
-            (s) => PosterCard(
-              title: s.name,
-              imageUrl: s.coverUrl,
-              rating: s.rating,
-              isFavorite: s.isFavorite,
-              onToggleFavorite: () =>
-                  _toggleSeriesFavoriteWithFeedback(context, s),
-              onTap: () => _openSeries(s),
-              onFocusGained: () {},
-            ),
-            shrinkWrap: true,
-          )
-        else
-          _posterGrid(
-            showChannels!,
-            (c) => PosterCard(
-              title: c.name,
-              imageUrl: c.logoUrl,
-              isFavorite: c.isFavorite,
-              onToggleFavorite: () => _toggleFavoriteWithFeedback(context, c),
-              onTap: () => _openMovie(c),
-              onFocusGained: () {},
-            ),
-            shrinkWrap: true,
-          ),
-      ],
-    );
-  }
-
-  /// Poster grid for a single favorited movies/TV-shows group, filling the
-  /// same region the live list+video normally occupies on this tab.
-  Widget _buildFavoriteGroupCatalog(PlaylistManager playlist, String category,
-      String playlistId, String title) {
-    final storage = context.read<StorageService>();
-    final Widget grid;
-    if (category == 'vod') {
-      final group = playlist.vodGroups.firstWhere(
-        (g) => g.title == title && g.playlistId == playlistId,
-        orElse: () =>
-            M3uGroup(title: title, playlistId: playlistId, channels: const []),
-      );
-      grid = _posterGrid(
-          group.channels,
-          (c) => PosterCard(
-                title: c.name,
-                imageUrl: c.logoUrl,
-                rating: c.rating,
-                watched: storage.isFullyWatched(c.id),
-                progressFraction: storage.getWatchedFraction(c.id),
-                isFavorite: c.isFavorite,
-                onToggleFavorite: () => _toggleFavoriteWithFeedback(context, c),
-                onTap: () => _openMovie(c),
-                onFocusGained: () {},
-              ));
-    } else {
-      final series =
-          playlist.visibleSeries(playlistId: playlistId, categoryName: title);
-      grid = _posterGrid(
-          series,
-          (s) => PosterCard(
-                title: s.name,
-                imageUrl: s.coverUrl,
-                rating: s.rating,
-                isFavorite: s.isFavorite,
-                onToggleFavorite: () =>
-                    _toggleSeriesFavoriteWithFeedback(context, s),
-                onTap: () => _openSeries(s),
-                onFocusGained: () {},
-              ));
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: SectionLabel(title)),
-        Expanded(child: grid),
-      ],
-    );
-  }
-
-  Widget _posterGrid<T>(List<T> items, Widget Function(T) posterBuilder,
-      {bool shrinkWrap = false}) {
-    if (items.isEmpty)
-      return Center(child: Text(tr('No items in this group.')));
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      shrinkWrap: shrinkWrap,
-      physics: shrinkWrap ? const NeverScrollableScrollPhysics() : null,
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: PosterCard.width + 12,
-        mainAxisExtent: PosterCard.height + 12,
-      ),
-      itemCount: items.length,
-      itemBuilder: (context, i) => posterBuilder(items[i]),
-    );
-  }
-
   Widget _buildLiveList(PlaylistManager playlist) {
     final channels = _currentLiveChannels(playlist);
+    // Favourites from two or more playlists: a playlist label above each
+    // one's first channel (the getter already groups them by playlist).
+    // Inside the row's item, not an extra list item, so row indexes stay
+    // what _restoreLiveFocus expects.
+    final labelPlaylists = (_selectedGroup ?? _effectiveLiveGroup(playlist)) ==
+            _favoritesGroupSentinel &&
+        channels.map((c) => c.playlistId).toSet().length > 1;
 
     if (channels.isEmpty) {
       return Center(
@@ -3885,78 +3633,89 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         itemCount: channels.length,
         itemBuilder: (context, i) {
           final channel = channels[i];
-          final isSelected = playback.currentChannel?.id == channel.id;
-          // The trailing star used to be independently D-pad-focusable (a
-          // plain IconButton) — reported directly: moving down the list
-          // would land the cursor on the star instead of the next channel,
-          // so "select" toggled favorite instead of playing. Long-press
-          // does what tapping the star used to (matches the group-favorite
-          // gesture elsewhere), and the star itself is excluded from focus
-          // traversal so D-pad Up/Down only ever stops on the row itself.
-          // `_SelectableRow`'s own `onLongPress` only fires from a touch/
-          // mouse long-press though (InkWell.onLongPress is touch-only) —
-          // HoldToActivate adds the equivalent for a *held* remote Select
-          // key, which is the case that actually matters on real hardware.
-          return HoldToActivate(
-            onTap: () => _previewOrOpenChannel(channel),
-            onHold: () => _toggleFavoriteWithFeedback(context, channel),
-            child: _SelectableRow(
-              selected: isSelected,
-              focusNode: isSelected
-                  ? _currentChannelFocusNode
-                  : (i == 0 ? _firstLiveChannelFocusNode : null),
-              onTap: () => _previewOrOpenChannel(channel),
-              onLongPress: () => _toggleFavoriteWithFeedback(context, channel),
-              leading: SizedBox(
-                width: 40,
-                height: 40,
-                child: (channel.logoUrl != null && channel.logoUrl!.isNotEmpty)
-                    ? CachedNetworkImage(
-                        imageUrl: channel.logoUrl!,
-                        fit: BoxFit.contain,
-                        memCacheWidth:
-                            (40 * MediaQuery.of(context).devicePixelRatio)
-                                .round(),
-                        memCacheHeight:
-                            (40 * MediaQuery.of(context).devicePixelRatio)
-                                .round(),
-                        errorWidget: (_, __, ___) => const Icon(Icons.tv))
-                    : const Icon(Icons.tv),
+          final row = _buildLiveRow(playback, channel, i);
+          if (!labelPlaylists ||
+              (i > 0 && channels[i - 1].playlistId == channel.playlistId)) {
+            return row;
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _PlaylistDividerRow(
+                name: playlist.playlistNameFor(channel.playlistId),
+                collapsed: false,
               ),
-              label: channel.name,
-              // epgId (rawId, or a manual override), not the composite `id`
-              // — see
-              // PlaylistManager.knownChannelIdsFor's doc comment.
-              subtitle: _CurrentProgramLine(channelId: channel.epgId),
-              trailing: ExcludeFocus(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // For a duplicate feed within this same group (e.g.
-                    // the same channel in HD and HEVC) — see
-                    // AppConstants.keyHiddenChannels's doc comment.
-                    IconButton(
-                      icon: const Icon(Icons.visibility_off_outlined,
-                          color: Colors.white70),
-                      tooltip: tr('Hide this channel'),
-                      onPressed: () =>
-                          _toggleHiddenWithFeedback(context, channel),
-                    ),
-                    IconButton(
-                      icon: Icon(
-                          channel.isFavorite ? Icons.star : Icons.star_border,
-                          color: channel.isFavorite
-                              ? Colors.amber
-                              : Colors.white70),
-                      onPressed: () =>
-                          _toggleFavoriteWithFeedback(context, channel),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+              row,
+            ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildLiveRow(PlaybackService playback, Channel channel, int i) {
+    final isSelected = playback.currentChannel?.id == channel.id;
+    // The trailing star used to be independently D-pad-focusable (a
+    // plain IconButton) — reported directly: moving down the list
+    // would land the cursor on the star instead of the next channel,
+    // so "select" toggled favorite instead of playing. Long-press
+    // does what tapping the star used to (matches the group-favorite
+    // gesture elsewhere), and the star itself is excluded from focus
+    // traversal so D-pad Up/Down only ever stops on the row itself.
+    // `_SelectableRow`'s own `onLongPress` only fires from a touch/
+    // mouse long-press though (InkWell.onLongPress is touch-only) —
+    // HoldToActivate adds the equivalent for a *held* remote Select
+    // key, which is the case that actually matters on real hardware.
+    return HoldToActivate(
+      onTap: () => _previewOrOpenChannel(channel),
+      onHold: () => _toggleFavoriteWithFeedback(context, channel),
+      child: _SelectableRow(
+        selected: isSelected,
+        focusNode: isSelected
+            ? _currentChannelFocusNode
+            : (i == 0 ? _firstLiveChannelFocusNode : null),
+        onTap: () => _previewOrOpenChannel(channel),
+        onLongPress: () => _toggleFavoriteWithFeedback(context, channel),
+        leading: SizedBox(
+          width: 40,
+          height: 40,
+          child: (channel.logoUrl != null && channel.logoUrl!.isNotEmpty)
+              ? CachedNetworkImage(
+                  imageUrl: channel.logoUrl!,
+                  fit: BoxFit.contain,
+                  memCacheWidth:
+                      (40 * MediaQuery.of(context).devicePixelRatio).round(),
+                  memCacheHeight:
+                      (40 * MediaQuery.of(context).devicePixelRatio).round(),
+                  errorWidget: (_, __, ___) => const Icon(Icons.tv))
+              : const Icon(Icons.tv),
+        ),
+        label: channel.name,
+        // epgId (rawId, or a manual override), not the composite `id`
+        // — see
+        // PlaylistManager.knownChannelIdsFor's doc comment.
+        subtitle: _CurrentProgramLine(channelId: channel.epgId),
+        trailing: ExcludeFocus(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // For a duplicate feed within this same group (e.g.
+              // the same channel in HD and HEVC) — see
+              // AppConstants.keyHiddenChannels's doc comment.
+              IconButton(
+                icon: const Icon(Icons.visibility_off_outlined,
+                    color: Colors.white70),
+                tooltip: tr('Hide this channel'),
+                onPressed: () => _toggleHiddenWithFeedback(context, channel),
+              ),
+              IconButton(
+                icon: Icon(channel.isFavorite ? Icons.star : Icons.star_border,
+                    color: channel.isFavorite ? Colors.amber : Colors.white70),
+                onPressed: () => _toggleFavoriteWithFeedback(context, channel),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -4020,6 +3779,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
             progressFraction: storage.getWatchedFraction(c.id),
             cardWidth: _browsePosterWidth,
             cardPosterHeight: _browsePosterHeight,
+            tapToPreview: _touchPreview,
             focusNode: index == 0 ? _continueWatchingFirstFocusNode : null,
             onTap: () => asSeries
                 ? _openSeries(XtreamSeries(
@@ -4086,6 +3846,67 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     );
   }
 
+  /// Pseudo-group title of the browse "Favourites" rows in
+  /// [_browseRowKeys] (playlistId = the row's playlist), so they reuse the
+  /// per-group row key / first-poster focus node machinery.
+  static const _favoritesRowTitle = '__favorites__';
+
+  /// The starred movies/shows, right under Continue Watching (this
+  /// replaced the old Favorites tab): one row, or one row per playlist
+  /// ("Favourites · name") when they come from two or more playlists —
+  /// the favorite getters already group items by playlist.
+  /// [firstRowIndex] = the first row's index in the browse rows.
+  ({List<Widget> rows, List<({String playlistId, String title})> keys})
+      _buildFavoritesBrowseRows<T>({
+    required List<T> items,
+    required int firstRowIndex,
+    required String Function(T) playlistIdOf,
+    required Widget Function(T item, _FavoriteCardExtras extras) card,
+  }) {
+    final chunks = <List<T>>[];
+    for (final item in items) {
+      if (chunks.isEmpty ||
+          playlistIdOf(chunks.last.first) != playlistIdOf(item)) {
+        chunks.add([item]);
+      } else {
+        chunks.last.add(item);
+      }
+    }
+    final playlist = context.read<PlaylistManager>();
+    final rows = <Widget>[];
+    final keys = <({String playlistId, String title})>[];
+    for (final (i, chunk) in chunks.indexed) {
+      final playlistId = playlistIdOf(chunk.first);
+      final rowKey = _keyForGroup(playlistId, _favoritesRowTitle);
+      final rowIndex = firstRowIndex + i;
+      final name = playlist.playlistNameFor(playlistId);
+      keys.add((playlistId: playlistId, title: _favoritesRowTitle));
+      rows.add(KeyedSubtree(
+        key: rowKey,
+        child: _CategoryRow<T>(
+          title: chunks.length > 1 && name.isNotEmpty
+              ? '${tr('Favourites')} · $name'
+              : tr('Favourites'),
+          items: chunk,
+          itemBuilder: (item, index) => card(
+            item,
+            (
+              focusNode: index == 0
+                  ? _firstPosterFocusNodeForGroup(
+                      playlistId, _favoritesRowTitle)
+                  : null,
+              onFocused: () {
+                _ensureRowVisible(rowKey);
+                _setFocusedBrowseRow(rowIndex);
+              },
+            ),
+          ),
+        ),
+      ));
+    }
+    return (rows: rows, keys: keys);
+  }
+
   Widget _buildMoviesBrowse(PlaylistManager playlist) {
     // Temporary diagnostic — see PlaylistManager.ensureCategoryLoaded's
     // matching comment. Pins down whether a ~10s gap seen between
@@ -4132,21 +3953,62 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         emptyText: tr('No recently added movies yet'),
       );
     }
-    final groupsWithItems =
-        visibleGroups.where((g) => g.channels.isNotEmpty).toList();
-    final continueRow =
-        _buildContinueWatchingRow(idPrefix: 'xt_vod_', onTap: _openMovie);
+    // Favourites view: starred movies, then only the favourited groups.
+    final groupsWithItems = visibleGroups
+        .where((g) =>
+            g.channels.isNotEmpty &&
+            (!_showFavorites ||
+                playlist.isGroupFavorited(g.playlistId, g.title)))
+        .toList();
+    final continueRow = _showFavorites
+        ? null
+        : _buildContinueWatchingRow(idPrefix: 'xt_vod_', onTap: _openMovie);
+    final groupSuffix = _favoriteGroupSuffix(groupsWithItems);
+    final favorites = _buildFavoritesBrowseRows<Channel>(
+      items: _showFavorites ? playlist.favoriteMovies : const [],
+      firstRowIndex: continueRow != null ? 1 : 0,
+      playlistIdOf: (c) => c.playlistId,
+      card: (c, x) => PosterCard(
+        title: c.name,
+        imageUrl: c.logoUrl,
+        rating: c.rating,
+        watched: storage.isFullyWatched(c.id),
+        progressFraction: storage.getWatchedFraction(c.id),
+        cardWidth: _browsePosterWidth,
+        cardPosterHeight: _browsePosterHeight,
+        tapToPreview: _touchPreview,
+        focusNode: x.focusNode,
+        isFavorite: true,
+        onToggleFavorite: () => _toggleFavoriteWithFeedback(context, c),
+        onTap: () => _openMovie(c),
+        onFocusGained: () {
+          _updateBrowseFocus(
+            playlist: playlist,
+            id: c.id,
+            title: c.name,
+            imageUrl: c.logoUrl,
+            backdropUrl: c.anyBackdropUrl,
+            backdropOf: () => c.anyBackdropUrl,
+            fetchDescription: () => playlist.getHeroVodDescription(c),
+          );
+          x.onFocused();
+        },
+      ),
+    );
+    final topRows = (continueRow != null ? 1 : 0) + favorites.rows.length;
     // See _browseRowKeys' doc comment — parallel to `rows` below, same
-    // order (Continue Watching first when present, then one entry per
-    // category), rebuilt fresh on every call.
+    // order (Continue Watching first when present, then Favourites, then
+    // one entry per category), rebuilt fresh on every call.
     _browseRowKeys = [
       if (continueRow != null) null,
+      ...favorites.keys,
       for (final group in groupsWithItems)
         (playlistId: group.playlistId, title: group.title),
     ];
     return _buildBrowseScaffold(
       rows: [
         if (continueRow != null) continueRow,
+        ...favorites.rows,
         for (final (groupIndex, group) in groupsWithItems.indexed)
           KeyedSubtree(
             key: _keyForGroup(group.playlistId, group.title),
@@ -4156,7 +4018,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
               // is limited to) when known — see
               // PlaylistManager.vodCategoryTotalCount's doc comment.
               title:
-                  '${group.title} (${playlist.vodCategoryTotalCount(group.playlistId, group.title) ?? group.channels.length})',
+                  '${group.title} (${playlist.vodCategoryTotalCount(group.playlistId, group.title) ?? group.channels.length})${groupSuffix(group)}',
               items: group.channels,
               itemBuilder: (c, index) => PosterCard(
                 title: c.name,
@@ -4166,6 +4028,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                 progressFraction: storage.getWatchedFraction(c.id),
                 cardWidth: _browsePosterWidth,
                 cardPosterHeight: _browsePosterHeight,
+                tapToPreview: _touchPreview,
                 focusNode: index == 0
                     ? _firstPosterFocusNodeForGroup(
                         group.playlistId, group.title)
@@ -4186,16 +4049,34 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                   );
                   _ensureRowVisible(
                       _keyForGroup(group.playlistId, group.title));
-                  _setFocusedBrowseRow(
-                      (continueRow != null ? 1 : 0) + groupIndex);
+                  _setFocusedBrowseRow(topRows + groupIndex);
                 },
               ),
             ),
           ),
       ],
-      emptyText:
-          groupsWithItems.isEmpty ? tr('Loading movie categories...') : null,
+      emptyText: _showFavorites
+          ? (groupsWithItems.isEmpty && favorites.rows.isEmpty
+              ? tr(
+                  'No favourites yet. Hold Select on a poster or a group to add one.')
+              : null)
+          : groupsWithItems.isEmpty
+              ? tr('Loading movie categories...')
+              : null,
     );
+  }
+
+  /// Favourites view only: " · playlist" after each group row's title
+  /// when the favourited groups come from two or more playlists.
+  String Function(M3uGroup) _favoriteGroupSuffix(List<M3uGroup> groups) {
+    if (!_showFavorites || groups.map((g) => g.playlistId).toSet().length < 2) {
+      return (_) => '';
+    }
+    final playlist = context.read<PlaylistManager>();
+    return (g) {
+      final name = playlist.playlistNameFor(g.playlistId);
+      return name.isEmpty ? '' : ' · $name';
+    };
   }
 
   /// Splits a merged group list back out by playlist — used wherever an
@@ -4219,8 +4100,9 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     // Episodes resume straight into playback (no detail screen in between)
     // — the user already picked this episode once, "Continue Watching"
     // means "keep watching it", not "go re-browse its season".
-    final continueRow =
-        _buildContinueWatchingRow(idPrefix: 'xt_ep_', onTap: _selectChannel);
+    final continueRow = _showFavorites
+        ? null
+        : _buildContinueWatchingRow(idPrefix: 'xt_ep_', onTap: _selectChannel);
     if (continueRow != null) rows.add(continueRow);
     // See _browseRowKeys' doc comment — parallel to `rows`, same order.
     // Built imperatively alongside it (not derived from `groups` by
@@ -4229,6 +4111,66 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     final rowKeys = <({String playlistId, String title})?>[
       if (continueRow != null) null,
     ];
+    final favorites = playlist.isXtream
+        ? _buildFavoritesBrowseRows<XtreamSeries>(
+            items: _showFavorites ? playlist.favoriteSeries : const [],
+            firstRowIndex: rows.length,
+            playlistIdOf: (s) => s.playlistId,
+            card: (s, x) => PosterCard(
+              title: s.name,
+              imageUrl: s.coverUrl,
+              rating: s.rating,
+              cardWidth: _browsePosterWidth,
+              cardPosterHeight: _browsePosterHeight,
+              tapToPreview: _touchPreview,
+              focusNode: x.focusNode,
+              isFavorite: true,
+              onToggleFavorite: () =>
+                  _toggleSeriesFavoriteWithFeedback(context, s),
+              onTap: () => _openSeries(s),
+              onFocusGained: () {
+                _updateBrowseFocus(
+                  playlist: playlist,
+                  id: s.id,
+                  title: s.name,
+                  imageUrl: s.coverUrl,
+                  backdropUrl: s.anyBackdropUrl,
+                  backdropOf: () => s.anyBackdropUrl,
+                  fetchDescription: () => playlist.getHeroSeriesDescription(s),
+                );
+                x.onFocused();
+              },
+            ),
+          )
+        : _buildFavoritesBrowseRows<Channel>(
+            items: _showFavorites ? playlist.favoriteShowChannels : const [],
+            firstRowIndex: rows.length,
+            playlistIdOf: (c) => c.playlistId,
+            card: (c, x) => PosterCard(
+              title: c.name,
+              imageUrl: c.logoUrl,
+              cardWidth: _browsePosterWidth,
+              cardPosterHeight: _browsePosterHeight,
+              tapToPreview: _touchPreview,
+              focusNode: x.focusNode,
+              isFavorite: true,
+              onToggleFavorite: () => _toggleFavoriteWithFeedback(context, c),
+              onTap: () => _openMovie(c),
+              onFocusGained: () {
+                _updateBrowseFocus(
+                  playlist: playlist,
+                  id: c.id,
+                  title: c.name,
+                  imageUrl: c.logoUrl,
+                  backdropUrl: c.backdropUrl,
+                  fetchDescription: () => Future.value(null),
+                );
+                x.onFocused();
+              },
+            ),
+          );
+    rows.addAll(favorites.rows);
+    rowKeys.addAll(favorites.keys);
     // See the identical kick-off in _buildMoviesBrowse (concurrency-capped
     // via ensureCategoriesLoaded — a plain per-category loop here fired
     // every category's network fetch at once on a brand-new provider,
@@ -4253,7 +4195,14 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         emptyText: tr('No recently added shows yet'),
       );
     }
-    for (final group in groups) {
+    // Favourites view: starred shows above, then only favourited groups.
+    final shownGroups = _showFavorites
+        ? groups
+            .where((g) => playlist.isGroupFavorited(g.playlistId, g.title))
+            .toList()
+        : groups;
+    final groupSuffix = _favoriteGroupSuffix(shownGroups);
+    for (final group in shownGroups) {
       final items = playlist.visibleSeries(
           playlistId: group.playlistId, categoryName: group.title);
       if (items.isEmpty) continue;
@@ -4265,7 +4214,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
           // See _buildMoviesBrowse's identical fix for why this isn't
           // just items.length.
           title:
-              '${group.title} (${playlist.seriesCategoryTotalCount(group.playlistId, group.title) ?? items.length})',
+              '${group.title} (${playlist.seriesCategoryTotalCount(group.playlistId, group.title) ?? items.length})${groupSuffix(group)}',
           items: items,
           itemBuilder: (s, index) => PosterCard(
             title: s.name,
@@ -4273,6 +4222,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
             rating: s.rating,
             cardWidth: _browsePosterWidth,
             cardPosterHeight: _browsePosterHeight,
+            tapToPreview: _touchPreview,
             focusNode: index == 0
                 ? _firstPosterFocusNodeForGroup(group.playlistId, group.title)
                 : null,
@@ -4301,7 +4251,12 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     _browseRowKeys = rowKeys;
     return _buildBrowseScaffold(
       rows: rows,
-      emptyText: rows.isEmpty ? tr('Loading TV show categories...') : null,
+      emptyText: rows.isEmpty
+          ? (_showFavorites
+              ? tr(
+                  'No favourites yet. Hold Select on a poster or a group to add one.')
+              : tr('Loading TV show categories...'))
+          : null,
     );
   }
 
@@ -4335,6 +4290,12 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     );
   }
 }
+
+/// What [_TvHomeScreenState._buildFavoritesBrowseRow] hands each card.
+typedef _FavoriteCardExtras = ({
+  FocusNode? focusNode,
+  VoidCallback onFocused,
+});
 
 /// A tab/group/channel row styled with a solid highlight bar when selected,
 /// instead of relying on default `ListTile` selected-tint (which reads as
@@ -5947,7 +5908,7 @@ class _TvClockTextState extends State<_TvClockText> {
 
   @override
   Widget build(BuildContext context) =>
-      Text(DateFormat('HH:mm').format(DateTime.now()), style: widget.style);
+      Text(TimeFormat.hm.format(DateTime.now()), style: widget.style);
 }
 
 class _CurrentProgramLine extends StatelessWidget {
@@ -5982,7 +5943,7 @@ class _ProgramDetails extends StatelessWidget {
     // PlaylistManager.knownChannelIdsFor's doc comment.
     final current = epg.getCurrentProgram(channel.epgId);
     final next = epg.getNextProgram(channel.epgId);
-    final timeFormat = DateFormat('HH:mm');
+    final timeFormat = TimeFormat.hm;
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -6069,7 +6030,7 @@ class _GuideNowPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final timeFormat = DateFormat('HH:mm');
+    final timeFormat = TimeFormat.hm;
     // Whichever channel the guide is actually focused on, even if that
     // row turned out to have no programme data (focusedProgram null but
     // focusedChannel set) — only falls back to whatever's playing when
@@ -6230,6 +6191,27 @@ class _TimelineGuide extends StatefulWidget {
 }
 
 class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
+  List<Channel>? _tagsFor;
+  bool _mixedPlaylists = false;
+
+  /// The playlist name on the first channel of each playlist's run when
+  /// the rows mix playlists (Favourites) — a tag inside the label cell,
+  /// not an extra row, so row indexes keep matching the programme rows.
+  String? _playlistTagFor(int i) {
+    final channels = widget.channels;
+    if (!identical(_tagsFor, channels)) {
+      _tagsFor = channels;
+      _mixedPlaylists = channels.map((c) => c.playlistId).toSet().length > 1;
+    }
+    if (!_mixedPlaylists) return null;
+    if (i > 0 && channels[i - 1].playlistId == channels[i].playlistId) {
+      return null;
+    }
+    final name =
+        context.read<PlaylistManager>().playlistNameFor(channels[i].playlistId);
+    return name.isEmpty ? tr('Playlist') : name;
+  }
+
   static const double _pixelsPerMinute = 6;
   static const Duration _windowBefore = Duration(hours: 1);
   static const Duration _windowAfter = Duration(hours: 5);
@@ -6799,8 +6781,9 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: widget.channels.length,
                     itemExtent: _rowHeight,
-                    itemBuilder: (context, i) =>
-                        _ChannelLabel(channel: widget.channels[i]),
+                    itemBuilder: (context, i) => _ChannelLabel(
+                        channel: widget.channels[i],
+                        playlistTag: _playlistTagFor(i)),
                   ),
                 ),
               ),
@@ -6881,7 +6864,7 @@ class _TimeRuler extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final timeFormat = DateFormat.jm();
+    final timeFormat = TimeFormat.hm;
     final firstTick = DateTime(
             windowStart.year,
             windowStart.month,
@@ -7216,16 +7199,21 @@ class _TimelineKeyboardKeyState extends State<_TimelineKeyboardKey> {
 /// [_TimelineRow], same as the plain channel list never puts focus on a
 /// row's logo.
 class _ChannelLabel extends StatelessWidget {
-  const _ChannelLabel({required this.channel});
+  const _ChannelLabel({required this.channel, this.playlistTag});
 
   final Channel channel;
 
+  /// Gold playlist name in the top-left corner (see
+  /// _TimelineGuideState._playlistTagFor).
+  final String? playlistTag;
+
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    final tag = playlistTag;
+    final row = SizedBox(
       height: _TimelineGuideState._rowHeight,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8),
+        padding: EdgeInsets.fromLTRB(8, tag == null ? 0 : 12, 8, 0),
         child: Row(
           children: [
             SizedBox(
@@ -7250,6 +7238,39 @@ class _ChannelLabel extends StatelessWidget {
           ],
         ),
       ),
+    );
+    if (tag == null) return row;
+    final scheme = Theme.of(context).colorScheme;
+    return Stack(
+      children: [
+        row,
+        Positioned(
+          top: 2,
+          left: 6,
+          right: 6,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(
+                color: scheme.primary.withValues(alpha: 0.22),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                tag,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: scheme.primary,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

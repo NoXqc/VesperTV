@@ -1306,6 +1306,27 @@ class PlaylistManager extends ChangeNotifier {
         return c.isFavorite || (favoritedGroups?.contains(c.group) ?? false);
       }).toList();
 
+  /// The TV tab's Favourites list: starred live channels plus every
+  /// channel of a favourited live group, per playlist in order (starred
+  /// first within each playlist).
+  List<Channel> get favoriteLiveChannelsWithGroups =>
+      _enabledSessionsSorted.expand((s) {
+        final live = s.isXtream
+            ? s.liveChannels
+            : s.channels.where((c) => _classifyGroupPublic(c.group) == 'tv');
+        final visible = live
+            .where((c) => !_isHiddenForActiveViewer(c.playlistId, c.group))
+            .toList();
+        final starred = visible.where((c) => c.isFavorite).toList();
+        final starredIds = {for (final c in starred) c.id};
+        return [
+          ...starred,
+          ...visible.where((c) =>
+              !starredIds.contains(c.id) &&
+              s.favoritedGroups.contains(c.group)),
+        ];
+      }).toList();
+
   List<Channel> get favoriteLiveChannels => _enabledSessionsSorted
       .expand((s) => s.isXtream
           ? s.liveChannels.where((c) => c.isFavorite)
@@ -1454,8 +1475,7 @@ class PlaylistManager extends ChangeNotifier {
 
   // --- Series / VOD detail --------------------------------------------------
 
-  Future<SeriesEpisodesResult> loadSeriesEpisodes(
-      XtreamSeries series,
+  Future<SeriesEpisodesResult> loadSeriesEpisodes(XtreamSeries series,
       {bool plotOnly = false}) {
     final session = _sessionFor(series.playlistId);
     if (session == null)

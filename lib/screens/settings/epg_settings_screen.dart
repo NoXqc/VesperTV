@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../services/catalog_database.dart';
 import '../../services/epg_service.dart';
 import '../../services/playlist_manager.dart';
 import '../../services/storage_service.dart';
+import '../../utils/time_format.dart';
 import '../../utils/constants.dart';
 import '../../utils/tv_theme.dart';
 import '../../widgets/settings_scaffold.dart';
@@ -213,8 +213,7 @@ class _EpgSettingsScreenState extends State<EpgSettingsScreen>
                               epg.lastUpdated == null
                                   ? tr('EPG never updated')
                                   : tr('EPG last updated: {p}', {
-                                      'p': DateFormat('yyyy-MM-dd HH:mm')
-                                          .format(epg.lastUpdated!)
+                                      'p': TimeFormat.dateTime(epg.lastUpdated!)
                                     }),
                               style: Theme.of(context).textTheme.bodySmall,
                             ),

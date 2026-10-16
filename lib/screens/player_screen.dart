@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart' hide TextDirection;
 import 'package:provider/provider.dart';
 import 'package:video_player_hdr/video_player_hdr.dart';
 
@@ -13,6 +12,7 @@ import '../services/app_preferences.dart';
 import '../services/epg_service.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
+import '../utils/time_format.dart';
 import '../utils/constants.dart';
 import '../utils/tv_theme.dart';
 import '../widgets/epg_guide.dart';
@@ -113,6 +113,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
   /// `context.watch`/`MediaQuery.of` lookup from places where that's
   /// unsafe (dispose) or unnecessary (a plain button handler).
   bool _isTvLayout = false;
+
+  /// A touch device (phone/tablet), refreshed on every build like
+  /// [_isTvLayout] — unlike that one it stays true for a phone held
+  /// sideways, whose width can pass the TV-layout threshold.
+  bool _touch = false;
+
+  /// The rotate button forced an orientation (released on leaving).
+  bool _rotated = false;
 
   final FocusScopeNode _topScope = FocusScopeNode(debugLabel: 'player-top');
   final FocusScopeNode _bottomScope =
@@ -307,6 +315,23 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   void _revealBottomOnTap() {
+    // Phone/tablet: a tap shows both bars (the top one holds the
+    // fullscreen button, which turns the phone landscape without the
+    // system rotation lock), and a second tap hides them again.
+    if (_touch) {
+      final show = !(_topVisible && _bottomVisible);
+      if (show) {
+        _resetHideTimer();
+      } else {
+        _hideTimer?.cancel();
+      }
+      setState(() {
+        _topVisible = show;
+        _bottomVisible = show;
+        if (!show) _moreVisible = false;
+      });
+      return;
+    }
     _resetHideTimer();
     setState(() => _bottomVisible = true);
   }
@@ -396,6 +421,18 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
   }
 
+  /// Phone: flips between landscape and portrait without the system's
+  /// rotation lock (top bar's rotate button).
+  Future<void> _toggleRotation() async {
+    final toLandscape =
+        MediaQuery.of(context).orientation == Orientation.portrait;
+    _rotated = true;
+    _resetHideTimer();
+    await SystemChrome.setPreferredOrientations(toLandscape
+        ? [DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]
+        : [DeviceOrientation.portraitUp]);
+  }
+
   Future<void> _restoreChrome() async {
     if (!_isTvLayout) {
       // Release the lock instead of forcing portraitUp specifically — a
@@ -448,7 +485,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _rootFocus.dispose();
     // Defensive: never leave the whole app stuck in landscape/immersive
     // mode if this screen is popped while _immersive was still on.
-    if (_immersive) _restoreChrome();
+    if (_immersive || _rotated) _restoreChrome();
     super.dispose();
   }
 
@@ -477,6 +514,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     // VideoPlayerPane below actually decides to show (playback.error != null
     // && a linkedChannel to offer), same caching pattern as [_isTvLayout].
     _hasSwitchButton = playback.error != null && linkedChannel != null;
+    _touch = !prefs.isTelevision;
     _isTvLayout = prefs.layoutMode == 'tv' ||
         (prefs.layoutMode == 'auto' &&
             (prefs.isTelevision ||
@@ -584,68 +622,80 @@ class _PlayerScreenState extends State<PlayerScreen> {
                           top: 0,
                           left: 0,
                           right: 0,
-                          child: ExcludeFocus(
-                            excluding: !_topVisible,
-                            child: AnimatedOpacity(
-                              opacity: _topVisible ? 1 : 0,
-                              duration: const Duration(milliseconds: 200),
-                              child: FocusTraversalGroup(
-                                child: FocusScope(
-                                  node: _topScope,
-                                  child: Container(
-                                    color: Colors.black54,
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 4, vertical: 4),
-                                    child: SafeArea(
-                                      bottom: false,
-                                      child: Row(
-                                        children: [
-                                          _TopBarIconButton(
-                                            icon: Icons.arrow_back,
-                                            tooltip: tr('Back'),
-                                            onPressed: () =>
-                                                Navigator.of(context).pop(),
-                                          ),
-                                          Expanded(
-                                            child: _searchScope == 'TV'
-                                                ? EpgGuide(
-                                                    // epgId (rawId, or a
-                                                    // manual override), not
-                                                    // the composite `id` —
-                                                    // see PlaylistManager
-                                                    // .knownChannelIdsFor's
-                                                    // doc comment.
-                                                    channelId: channel.epgId)
-                                                : Text(
-                                                    channel.name,
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                    style: const TextStyle(
-                                                        color: Colors.white),
-                                                  ),
-                                          ),
-                                          _TopBarIconButton(
-                                            icon: Icons.search,
-                                            tooltip: tr('Search'),
-                                            onPressed: () =>
-                                                Navigator.of(context).push(
-                                              MaterialPageRoute(
-                                                builder: (_) => SearchScreen(
-                                                    initialScope: _searchScope),
+                          // Hidden = not tappable either (an invisible back
+                          // button used to still catch taps up there).
+                          child: IgnorePointer(
+                            ignoring: !_topVisible,
+                            child: ExcludeFocus(
+                              excluding: !_topVisible,
+                              child: AnimatedOpacity(
+                                opacity: _topVisible ? 1 : 0,
+                                duration: const Duration(milliseconds: 200),
+                                child: FocusTraversalGroup(
+                                  child: FocusScope(
+                                    node: _topScope,
+                                    child: Container(
+                                      color: Colors.black54,
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 4, vertical: 4),
+                                      child: SafeArea(
+                                        bottom: false,
+                                        child: Row(
+                                          children: [
+                                            _TopBarIconButton(
+                                              icon: Icons.arrow_back,
+                                              tooltip: tr('Back'),
+                                              onPressed: () =>
+                                                  Navigator.of(context).pop(),
+                                            ),
+                                            Expanded(
+                                              child: _searchScope == 'TV'
+                                                  ? EpgGuide(
+                                                      // epgId (rawId, or a
+                                                      // manual override), not
+                                                      // the composite `id` —
+                                                      // see PlaylistManager
+                                                      // .knownChannelIdsFor's
+                                                      // doc comment.
+                                                      channelId: channel.epgId)
+                                                  : Text(
+                                                      channel.name,
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: const TextStyle(
+                                                          color: Colors.white),
+                                                    ),
+                                            ),
+                                            _TopBarIconButton(
+                                              icon: Icons.search,
+                                              tooltip: tr('Search'),
+                                              onPressed: () =>
+                                                  Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                  builder: (_) => SearchScreen(
+                                                      initialScope:
+                                                          _searchScope),
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                          _TopBarIconButton(
-                                            icon: _immersive
-                                                ? Icons.fullscreen_exit
-                                                : Icons.fullscreen,
-                                            tooltip: _immersive
-                                                ? tr('Exit fullscreen')
-                                                : tr('Fullscreen'),
-                                            onPressed: _toggleImmersive,
-                                          ),
-                                        ],
+                                            if (_touch)
+                                              _TopBarIconButton(
+                                                icon: Icons.screen_rotation,
+                                                tooltip: tr('Rotate'),
+                                                onPressed: _toggleRotation,
+                                              ),
+                                            _TopBarIconButton(
+                                              icon: _immersive
+                                                  ? Icons.fullscreen_exit
+                                                  : Icons.fullscreen,
+                                              tooltip: _immersive
+                                                  ? tr('Exit fullscreen')
+                                                  : tr('Fullscreen'),
+                                              onPressed: _toggleImmersive,
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -1004,7 +1054,7 @@ class _ZapInfoCard extends StatelessWidget {
     // epgId (rawId or a manual override), not the composite id.
     final EpgProgram? program = epg.getCurrentProgram(channel.epgId);
     final now = DateTime.now();
-    final time = DateFormat('HH:mm');
+    final time = TimeFormat.hm;
     final logo = channel.logoUrl;
     return Container(
       constraints: const BoxConstraints(maxWidth: 760),

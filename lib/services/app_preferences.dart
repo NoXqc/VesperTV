@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/l10n.dart';
 import '../models/cyberpunk_palette.dart';
 import '../utils/constants.dart';
+import '../utils/time_format.dart';
 import 'storage_service.dart';
 
 /// App-wide UI/behavior preferences (theme, clock, layout mode, whether
@@ -42,6 +43,16 @@ class AppPreferences extends ChangeNotifier {
     guideViewMode = _storage.getGuideViewMode();
     guideFullVideo = _storage.getGuideFullVideo();
     hideMoviesShows = _storage.getHideMoviesShows();
+    TimeFormat.use24h = _storage.getTime24h();
+  }
+
+  /// 24-hour vs 12-hour times (see TimeFormat).
+  bool get use24h => TimeFormat.use24h;
+
+  void setUse24h(bool value) {
+    TimeFormat.use24h = value;
+    _storage.setTime24h(value);
+    notifyListeners();
   }
 
   CyberpunkPalette _paletteById(String id) {

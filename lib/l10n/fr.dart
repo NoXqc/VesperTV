@@ -850,6 +850,40 @@ const Map<String, String> kFr = {
       "Rien n'a été trouvé pour ce code. Vérifiez-le — l'envoi a peut-être aussi expiré ou été supprimé.",
   '9 digits on the same Wi-Fi, 16 digits over the internet':
       "9 chiffres sur le même Wi-Fi, 16 chiffres par Internet",
+  '24-hour clock': "Horloge 24 heures",
+  'Times show as 21:30': "Les heures s'affichent ainsi : 21:30",
+  'Times show as 9:30 PM': "Les heures s'affichent ainsi : 9:30 PM",
+  'Welcome back, legend':
+      "Bon retour, légende",
+  'No favourites yet. Hold Select on a poster or a group to add one.':
+      "Aucun favori pour l'instant. Maintiens OK sur une affiche ou un groupe pour en ajouter.",
+  'Rotate': "Pivoter",
+  'You have great taste':
+      "Tu as vraiment bon goût",
+  'Looking sharp today':
+      "Tu as fière allure aujourd'hui",
+  'You make this place better':
+      "Tu rends cet endroit meilleur",
+  'Hey superstar':
+      "Salut, superstar",
+  'You deserve this break':
+      "Tu mérites cette pause",
+  'You\'re doing amazing':
+      "Tu fais un travail incroyable",
+  'Hello, wonderful you':
+      "Bonjour, toi la merveille",
+  'Smart choice, as always':
+      "Bon choix, comme toujours",
+  'You light up the room':
+      "Tu illumines la pièce",
+  'Keep shining, you\'ve got this':
+      "Continue de briller, tu gères",
+  'You earned some fun today':
+      "Tu as mérité un peu de plaisir aujourd'hui",
+  'The world is better with you in it':
+      "Le monde est meilleur avec toi",
+  'Hey champ, welcome in':
+      "Salut champion, entre donc",
   'Send from this device': "Envoyer depuis cet appareil",
   'Shows a code to enter on the other device':
       "Affiche un code à entrer sur l'autre appareil",

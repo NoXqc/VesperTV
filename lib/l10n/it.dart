@@ -849,6 +849,40 @@ const Map<String, String> kIt = {
       "Non è stato trovato nulla per questo codice. Controllalo: il caricamento potrebbe anche essere scaduto o eliminato.",
   '9 digits on the same Wi-Fi, 16 digits over the internet':
       "9 cifre sullo stesso Wi-Fi, 16 via internet",
+  '24-hour clock': "Orologio a 24 ore",
+  'Times show as 21:30': "Gli orari appaiono così: 21:30",
+  'Times show as 9:30 PM': "Gli orari appaiono così: 9:30 PM",
+  'Welcome back, legend':
+      "Bentornato, leggenda",
+  'No favourites yet. Hold Select on a poster or a group to add one.':
+      "Ancora nessun preferito. Tieni premuto OK su una locandina o un gruppo per aggiungerne uno.",
+  'Rotate': "Ruota",
+  'You have great taste':
+      "Hai davvero buon gusto",
+  'Looking sharp today':
+      "Oggi sei in gran forma",
+  'You make this place better':
+      "Rendi questo posto migliore",
+  'Hey superstar':
+      "Ciao, superstar",
+  'You deserve this break':
+      "Ti meriti questa pausa",
+  'You\'re doing amazing':
+      "Stai andando alla grande",
+  'Hello, wonderful you':
+      "Ciao, persona meravigliosa",
+  'Smart choice, as always':
+      "Ottima scelta, come sempre",
+  'You light up the room':
+      "Illumini la stanza",
+  'Keep shining, you\'ve got this':
+      "Continua a brillare, ce la fai",
+  'You earned some fun today':
+      "Oggi ti sei meritato un po' di svago",
+  'The world is better with you in it':
+      "Il mondo è migliore con te",
+  'Hey champ, welcome in':
+      "Ciao campione, benvenuto",
   'Send from this device': "Invia da questo dispositivo",
   'Shows a code to enter on the other device':
       "Mostra un codice da inserire sull'altro dispositivo",

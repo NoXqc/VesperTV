@@ -16,7 +16,7 @@ import '../../l10n/l10n.dart';
 
 /// Small behaviour switches that don't belong to one feature's own screen —
 /// a home for future ones too (planned candidates: start-on tab, default
-/// picture fit, preferred audio language, 12/24 h time, confirm on exit).
+/// picture fit, preferred audio language, confirm on exit).
 /// Multiview is Android only (Windows has its own Multiview without the
 /// tip); everything else is shown on every platform. Startup and Tabs are
 /// device-wide, not per viewer profile.
@@ -153,6 +153,15 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                         ? tr('Follows the device language')
                         : null,
                     onTap: _pickLanguage,
+                  ),
+                  TvSwitchListTile(
+                    title: Text(tr('24-hour clock')),
+                    subtitle: Text(context.watch<AppPreferences>().use24h
+                        ? tr('Times show as 21:30')
+                        : tr('Times show as 9:30 PM')),
+                    value: context.watch<AppPreferences>().use24h,
+                    onChanged: (v) =>
+                        context.read<AppPreferences>().setUse24h(v),
                   ),
                   const Divider(height: 32),
                   SectionLabel(tr('Startup')),

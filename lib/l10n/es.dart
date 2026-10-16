@@ -846,6 +846,40 @@ const Map<String, String> kEs = {
       "No se encontró nada con ese código. Revísalo; la subida también puede haber caducado o haberse eliminado.",
   '9 digits on the same Wi-Fi, 16 digits over the internet':
       "9 dígitos en el mismo Wi-Fi, 16 por internet",
+  '24-hour clock': "Reloj de 24 horas",
+  'Times show as 21:30': "Las horas se muestran así: 21:30",
+  'Times show as 9:30 PM': "Las horas se muestran así: 9:30 PM",
+  'Welcome back, legend':
+      "Bienvenido de nuevo, leyenda",
+  'No favourites yet. Hold Select on a poster or a group to add one.':
+      "Todavía no hay favoritos. Mantén OK sobre un póster o un grupo para añadir uno.",
+  'Rotate': "Girar",
+  'You have great taste':
+      "Tienes un gusto excelente",
+  'Looking sharp today':
+      "Hoy te ves increíble",
+  'You make this place better':
+      "Haces de este lugar algo mejor",
+  'Hey superstar':
+      "Hola, superestrella",
+  'You deserve this break':
+      "Te mereces este descanso",
+  'You\'re doing amazing':
+      "Lo estás haciendo genial",
+  'Hello, wonderful you':
+      "Hola, persona maravillosa",
+  'Smart choice, as always':
+      "Buena elección, como siempre",
+  'You light up the room':
+      "Iluminas la habitación",
+  'Keep shining, you\'ve got this':
+      "Sigue brillando, tú puedes",
+  'You earned some fun today':
+      "Hoy te ganaste un poco de diversión",
+  'The world is better with you in it':
+      "El mundo es mejor contigo",
+  'Hey champ, welcome in':
+      "Hola, campeón, adelante",
   'Send from this device': "Enviar desde este dispositivo",
   'Shows a code to enter on the other device':
       "Muestra un código para escribir en el otro dispositivo",

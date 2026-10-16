@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../models/playlist_profile.dart';
 import '../../services/playback_service.dart';
 import '../../services/playlist_manager.dart';
+import '../../utils/time_format.dart';
 import '../../utils/constants.dart';
 import '../../utils/tv_theme.dart';
 import '../../widgets/mode_button.dart';
@@ -431,10 +432,8 @@ class _PlaylistDetailScreenState extends State<_PlaylistDetailScreen> {
                                 Padding(
                                   padding: const EdgeInsets.only(top: 4),
                                   child: Text(
-                                    tr('Last updated: {p}', {
-                                      'p': DateFormat('yyyy-MM-dd HH:mm')
-                                          .format(lastLoaded)
-                                    }),
+                                    tr('Last updated: {p}',
+                                        {'p': TimeFormat.dateTime(lastLoaded)}),
                                     style:
                                         Theme.of(context).textTheme.bodySmall,
                                   ),
@@ -456,8 +455,7 @@ class _PlaylistDetailScreenState extends State<_PlaylistDetailScreen> {
                                 padding: const EdgeInsets.only(top: 4),
                                 child: Text(
                                   tr('Added: {p}', {
-                                    'p': DateFormat('yyyy-MM-dd HH:mm')
-                                        .format(profile.createdAt)
+                                    'p': TimeFormat.dateTime(profile.createdAt)
                                   }),
                                   style: Theme.of(context).textTheme.bodySmall,
                                 ),

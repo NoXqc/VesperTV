@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../utils/time_format.dart';
 import '../services/epg_service.dart';
 import '../l10n/l10n.dart';
 
@@ -20,7 +20,7 @@ class EpgGuide extends StatelessWidget {
     final epg = context.watch<EpgService>();
     final current = epg.getCurrentProgram(channelId);
     final next = epg.getNextProgram(channelId);
-    final timeFormat = DateFormat('HH:mm');
+    final timeFormat = TimeFormat.hm;
 
     if (current == null && next == null) {
       return compact

@@ -8,6 +8,7 @@ import '../models/sports.dart';
 import '../services/sports_channel_matcher.dart';
 import '../services/sports_follows.dart';
 import '../services/sports_service.dart';
+import '../utils/time_format.dart';
 import '../utils/route_observer.dart';
 import '../utils/tv_theme.dart';
 import '../widgets/hold_to_activate.dart';
@@ -682,7 +683,7 @@ String _whenLabel(DateTime utc) {
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
   final day = DateTime(local.year, local.month, local.day);
-  final time = DateFormat.jm().format(local);
+  final time = TimeFormat.hm.format(local);
   final diff = day.difference(today).inDays;
   if (diff == 0) return tr('Today {time}', {'time': time});
   if (diff == 1) return tr('Tomorrow {time}', {'time': time});

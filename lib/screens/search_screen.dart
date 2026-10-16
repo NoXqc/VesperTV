@@ -84,6 +84,10 @@ class _SearchScreenState extends State<SearchScreen> {
   /// [_moveRowFocus].
   int _focusedZone = -1;
 
+  /// playlistId → playlist name, set by [_buildRows] only while two or
+  /// more playlists are enabled (null = no source line on the cards).
+  Map<String, String>? _sourceNames;
+
   @override
   void initState() {
     super.initState();
@@ -437,6 +441,10 @@ class _SearchScreenState extends State<SearchScreen> {
   /// being looked for.
   List<_ResultRow> _buildRows(PlaylistManager playlist, String q) {
     final rows = <_ResultRow>[];
+    // With two or more playlists on, every card names its playlist.
+    final enabled = playlist.profiles.where((p) => p.enabled).toList();
+    _sourceNames =
+        enabled.length > 1 ? {for (final p in enabled) p.id: p.name} : null;
 
     // visibleChannels, not the raw `channels` getter — that one bypasses
     // hidden-group/hidden-channel filtering entirely, which would otherwise
@@ -498,6 +506,7 @@ class _SearchScreenState extends State<SearchScreen> {
           key: ValueKey('${label}_${items[i].id}'),
           focusNode: i == 0 ? firstFocusNode : null,
           title: items[i].name,
+          sourceLabel: _sourceNames?[items[i].playlistId],
           imageUrl: items[i].logoUrl,
           rating: isPoster ? items[i].rating : null,
           cardWidth: isPoster ? PosterCard.width : 64,
@@ -523,6 +532,7 @@ class _SearchScreenState extends State<SearchScreen> {
           key: ValueKey('series_${items[i].id}'),
           focusNode: i == 0 ? firstFocusNode : null,
           title: items[i].name,
+          sourceLabel: _sourceNames?[items[i].playlistId],
           imageUrl: items[i].coverUrl,
           isFavorite: items[i].isFavorite,
           onToggleFavorite: () => _toggleSeriesFavorite(items[i]),
@@ -574,7 +584,9 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
               const SizedBox(height: 8),
               SizedBox(
-                height: PosterCard.height + 12,
+                height: PosterCard.height +
+                    12 +
+                    (_sourceNames == null ? 0 : PosterCard.sourceHeight),
                 child: ListView(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 10),

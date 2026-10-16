@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../models/channel.dart';
@@ -14,6 +13,7 @@ import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../services/storage_service.dart';
 import '../services/viewer_profile_service.dart';
+import '../utils/time_format.dart';
 import '../utils/constants.dart';
 import '../widgets/catalog_warmup_banner.dart';
 import '../widgets/channel_list_tile.dart';
@@ -589,7 +589,7 @@ class _ClockTextState extends State<_ClockText> {
   @override
   Widget build(BuildContext context) {
     return Text(
-      DateFormat('HH:mm').format(DateTime.now()),
+      TimeFormat.hm.format(DateTime.now()),
       style: Theme.of(context).textTheme.titleMedium,
     );
   }

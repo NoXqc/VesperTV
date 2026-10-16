@@ -17,6 +17,7 @@ import '../services/sports_channel_matcher.dart';
 import '../services/sports_follows.dart';
 import '../services/sports_service.dart';
 import '../services/storage_service.dart';
+import '../utils/time_format.dart';
 import '../utils/route_observer.dart';
 import '../utils/tv_theme.dart';
 import '../widgets/hold_to_activate.dart';
@@ -957,7 +958,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
 // =================================================================== widgets
 
-String _timeLabel(DateTime utc) => DateFormat.jm().format(utc.toLocal());
+String _timeLabel(DateTime utc) => TimeFormat.hm.format(utc.toLocal());
 
 /// What a not-yet-started card shows: the start time — except golf, which
 /// ESPN dates at midnight with no tee time; it reads "Oct 15 – 18" (US

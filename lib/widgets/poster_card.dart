@@ -28,7 +28,14 @@ class PosterCard extends StatefulWidget {
     this.cardWidth = PosterCard.width,
     this.cardPosterHeight = PosterCard.posterHeight,
     this.fit = BoxFit.cover,
+    this.sourceLabel,
+    this.tapToPreview = false,
   });
+
+  /// Touch: the first tap only focuses the card (the browse hero shows
+  /// its description), a tap on the focused card or a double tap opens
+  /// it — like Select-to-preview on the live list. Always on for Windows.
+  final bool tapToPreview;
 
   /// Was 120x168 with the title overlaid on the poster (and only shown at
   /// all when there was no artwork) — reported directly as a real
@@ -47,7 +54,14 @@ class PosterCard extends StatefulWidget {
   static const double titleHeight = 30;
   static const double height = posterHeight + titleHeight;
 
+  /// Extra height a card needs when it shows a [sourceLabel] line.
+  static const double sourceHeight = 14;
+
   final String title;
+
+  /// One small grey line under the title — Search uses it for the
+  /// playlist an item came from when more than one playlist is enabled.
+  final String? sourceLabel;
   final String? imageUrl;
   final String? rating;
   final VoidCallback onTap;
@@ -123,6 +137,8 @@ class _PosterCardState extends State<PosterCard> {
     // mismatched sliver of mostly-blank space under tiny text.
     final scale = widget.cardWidth / PosterCard.width;
     final titleHeight = PosterCard.titleHeight * scale;
+    final sourceHeight =
+        widget.sourceLabel == null ? 0.0 : PosterCard.sourceHeight * scale;
 
     final card = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -144,8 +160,13 @@ class _PosterCardState extends State<PosterCard> {
         // untouched — same scoping as the Timeline guide fix.
         onTap: Platform.isWindows
             ? _effectiveFocusNode.requestFocus
-            : widget.onTap,
-        onDoubleTap: Platform.isWindows ? widget.onTap : null,
+            : widget.tapToPreview
+                ? () => _focused
+                    ? widget.onTap()
+                    : _effectiveFocusNode.requestFocus()
+                : widget.onTap,
+        onDoubleTap:
+            Platform.isWindows || widget.tapToPreview ? widget.onTap : null,
         onFocusChange: (f) {
           setState(() => _focused = f);
           if (f) widget.onFocusGained();
@@ -159,7 +180,7 @@ class _PosterCardState extends State<PosterCard> {
           curve: Curves.easeOut,
           child: SizedBox(
             width: widget.cardWidth,
-            height: widget.cardPosterHeight + titleHeight,
+            height: widget.cardPosterHeight + titleHeight + sourceHeight,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -359,6 +380,20 @@ class _PosterCardState extends State<PosterCard> {
                     ),
                   ),
                 ),
+                if (widget.sourceLabel != null)
+                  SizedBox(
+                    height: sourceHeight,
+                    child: Text(
+                      widget.sourceLabel!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white54,
+                        fontSize: 9.5 * scale,
+                        height: 1.2,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),

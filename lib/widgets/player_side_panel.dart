@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../utils/time_format.dart';
 import '../l10n/l10n.dart';
 import '../models/channel.dart';
 import '../models/sports.dart';
@@ -419,7 +419,7 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
 
   Widget _gameRow(SportsGame g) {
     final status = switch (g.state) {
-      GameState.pre => DateFormat.jm().format(g.start.toLocal()),
+      GameState.pre => TimeFormat.hm.format(g.start.toLocal()),
       _ => trSports(g.statusText),
     };
     final showScore =

@@ -221,6 +221,12 @@ class AppConstants {
   /// system language, or a language code ('en', 'fr', 'es', 'it'). See lib/l10n/l10n.dart.
   static const String keyLanguage = 'vesper_language';
 
+  /// 24-hour (default) vs 12-hour times everywhere — `utils/time_format.dart`.
+  static const String keyTime24h = 'vesper_time_24h';
+
+  /// Next splash greeting to show (index into SplashGreeting.bank).
+  static const String keySplashGreeting = 'vesper_splash_greeting';
+
   /// Live TV presentation: 'live' (single-channel now/next) or 'timeline'
   /// (cable-guide grid, all visible channels at once).
   static const String keyGuideViewMode = 'nox_guide_view_mode';

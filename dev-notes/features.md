@@ -166,3 +166,26 @@ Read before changing guide/Multiview/profiles/palettes/backup-server logic.
   test `test/cloud_transfer_test.dart` (runs relay.py locally). **Cloud sync later** reuses the
   vault as is: linked devices share a random master secret (`VaultKeys.fromMaster`), re-upload on
   change with a refreshed long TTL (raise `VAULT_MAX_TTL`), envelope `kind` = 'sync'.
+- **1.0.15 (+284, 2026-10-16) — favourites per tab, playlist labels, phone touches:**
+  - **No Favorites tab any more** (`_tabs` = TV / Movies / TV Shows). Movies/TV Shows group column:
+    What's New, **Favourites**, All, groups. Favourites (`_showFavorites`, same lifecycle as
+    `_showWhatsNew`) shows starred titles (one row per playlist, "Favourites · name", pseudo-group
+    title `__favorites__` so it reuses the row key / first-poster node machinery) then only the
+    favourited groups (" · playlist" suffix when mixed). TV's Favourites entry =
+    `PlaylistManager.favoriteLiveChannelsWithGroups` (starred + every channel of a favourited live
+    group, per playlist). Owner rejected "pin favourited groups to the top of the list" — keep
+    favourites behind the one entry.
+  - **Playlist labels** with 2+ playlists: Search result cards (`PosterCard.sourceLabel`), TV
+    Favourites live list (`_PlaylistDividerRow` inside the first row's item, so row indexes stay),
+    Timeline guide (gold tag inside the channel cell, `_playlistTagFor`, never an extra row).
+  - **12/24 h clock** (Settings > General, `TimeFormat` in `lib/utils/time_format.dart`, device-wide,
+    default 24 h); every time display goes through `TimeFormat.hm/dateTime/dayTime`.
+  - **Splash greeting bank** (`lib/utils/splash_greeting.dart`): 15 compliments (owner: positive
+    reinforcement, not jokes), cycled one per cold start, index in `vesper_splash_greeting`
+    (device-only). Add one = one line + fr/es/it.
+  - **Phone:** search icon in the phone header bar; tapping the video in `PlayerScreen` toggles both
+    bars on any touch device (`_touch` = `!isTelevision` — `_isTvLayout` is true for a phone held
+    sideways, that hid the top bar); hidden top bar ignores taps; **rotate** button in the top bar
+    (`_toggleRotation`, forces landscape/portrait without the system lock, released on leaving). Owner
+    wants it in the top bar, not floating. Browse posters on Android touch: tap = preview in the hero,
+    tap again / double tap = open (`PosterCard.tapToPreview`, Windows already did this).

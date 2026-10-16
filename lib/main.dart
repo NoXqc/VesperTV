@@ -31,6 +31,7 @@ import 'services/storage_service.dart';
 import 'services/viewer_profile_service.dart';
 import 'utils/constants.dart';
 import 'utils/route_observer.dart';
+import 'utils/splash_greeting.dart';
 import 'utils/tv_theme.dart';
 import 'widgets/desktop_live_resume_hint.dart';
 import 'widgets/live_resume_hint.dart';
@@ -81,6 +82,7 @@ Future<void> main() async {
   try {
     final prefs = await SharedPreferences.getInstance();
     await L10n.apply(prefs.getString(AppConstants.keyLanguage) ?? 'auto');
+    await SplashGreeting.pickNext(prefs);
   } catch (_) {
     await L10n.apply('auto');
   }
@@ -701,8 +703,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
                         ),
                         const SizedBox(height: 10),
                         // A small kind word on every cold start (owner's
-                        // wish) — same greeting as the welcome screen.
-                        Text(tr('Hey beautiful Human'),
+                        // wish), a different one each launch.
+                        Text(SplashGreeting.text,
                             style: const TextStyle(
                                 color: Color(0xFFF0C75E),
                                 fontSize: 16,
