@@ -4,9 +4,11 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../services/catalog_database.dart';
+import '../../services/cloud_transfer.dart';
 import '../../services/device_transfer.dart';
 import '../../services/epg_service.dart';
 import '../../services/storage_service.dart';
@@ -32,7 +34,7 @@ class TransferScreen extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
               child: Text(
-                tr('Copies your playlists, favorites, hidden groups, profiles, watch progress and settings over your home Wi-Fi. Both devices must be on the same Wi-Fi. Channels, movies and the guide download again on the new device.'),
+                tr('Copies your playlists, favorites, hidden groups, profiles, watch progress and settings to another device. On the same Wi-Fi it goes straight across; anywhere else it goes through an encrypted upload only the code can open. Channels, movies and the guide download again on the new device.'),
                 style: const TextStyle(color: Colors.white70),
               ),
             ),
@@ -41,8 +43,10 @@ class TransferScreen extends StatelessWidget {
               icon: Icons.upload,
               title: tr('Send from this device'),
               subtitle: tr('Shows a code to enter on the other device'),
-              onTap: () => Navigator.of(context)
-                  .push(MaterialPageRoute(builder: (_) => const _SendScreen())),
+              // Internet transfer is the main path; the same-Wi-Fi one is a
+              // link on that screen (works without our relay).
+              onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const _CloudSendScreen())),
             ),
             TvMenuTile(
               icon: Icons.download,
@@ -174,6 +178,270 @@ Widget _message(IconData icon, String text, {Color? color}) => Column(
       ],
     );
 
+// ------------------------------------------------------ send (internet)
+
+class _CloudSendScreen extends StatefulWidget {
+  const _CloudSendScreen();
+
+  @override
+  State<_CloudSendScreen> createState() => _CloudSendScreenState();
+}
+
+class _CloudSendScreenState extends State<_CloudSendScreen> {
+  late final StorageService _storage = context.read<StorageService>();
+
+  /// The live upload, or null = pick a duration.
+  CloudTransfer? _upload;
+  bool _busy = false;
+  String? _error;
+  final FocusNode _doneNode = FocusNode();
+  final FocusNode _againNode = FocusNode();
+  final FocusNode _deleteNode = FocusNode();
+  final FocusNode _firstLifetimeNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    final saved = CloudTransfer.fromJson(_storage.getCloudTransfer());
+    if (saved != null && saved.isActive) {
+      _upload = saved;
+    } else if (saved != null) {
+      unawaited(_storage.setCloudTransfer(null));
+    }
+  }
+
+  @override
+  void dispose() {
+    _doneNode.dispose();
+    _againNode.dispose();
+    _deleteNode.dispose();
+    _firstLifetimeNode.dispose();
+    super.dispose();
+  }
+
+  String _errorText(TransferError kind) => switch (kind) {
+        TransferError.tooBig => tr(
+            'This setup is too big to upload. Use the same-Wi-Fi transfer instead.'),
+        _ => tr(
+            'Couldn\'t reach the VesperTV transfer server. Check this device\'s internet connection and try again.'),
+      };
+
+  Future<void> _send(Duration lifetime) async {
+    if (_busy) return;
+    final previous =
+        _upload ?? CloudTransfer.fromJson(_storage.getCloudTransfer());
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final upload =
+          await uploadCloudTransfer(_storage.exportForTransfer(), lifetime);
+      await _storage.setCloudTransfer(upload.toJson());
+      // The old upload would otherwise stay readable until it expires.
+      if (previous != null && previous.isActive) {
+        unawaited(deleteCloudTransfer(previous.code).catchError((_) {}));
+      }
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _upload = upload;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _doneNode.requestFocus();
+      });
+    } on TransferException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = _errorText(e.kind);
+      });
+    }
+  }
+
+  Future<void> _delete() async {
+    final upload = _upload;
+    if (upload == null || _busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await deleteCloudTransfer(upload.code);
+      await _storage.setCloudTransfer(null);
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _upload = null;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _firstLifetimeNode.requestFocus();
+      });
+    } on TransferException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = _errorText(e.kind);
+      });
+    }
+  }
+
+  void _uploadAgain() {
+    setState(() {
+      _upload = null;
+      _error = null;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _firstLifetimeNode.requestFocus();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return withTvThemeIfNeeded(
+      context,
+      (context) => SettingsScaffold(
+        title: tr('Send from this device'),
+        body: _upload == null ? _chooser(context) : _active(context),
+      ),
+    );
+  }
+
+  Widget _chooser(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    String label(Duration d) => d.inDays >= 1
+        ? trPlural(d.inDays, '{n} day', '{n} days')
+        : trPlural(d.inHours, '{n} hour', '{n} hours');
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+          child: Text(
+            tr('Your setup is encrypted on this device and uploaded. Any device that enters the code can copy it until it expires — even with this device turned off. How long should it stay available?'),
+            style: const TextStyle(color: Colors.white70),
+          ),
+        ),
+        for (final (i, lifetime) in kCloudTransferLifetimes.indexed)
+          TvMenuTile(
+            focusNode: i == 0 ? _firstLifetimeNode : null,
+            autofocus: i == 0,
+            icon: Icons.timer_outlined,
+            title: label(lifetime),
+            onTap: () => _send(lifetime),
+          ),
+        SizedBox(
+          height: 56,
+          child: Center(
+            child: _busy
+                ? Row(mainAxisSize: MainAxisSize.min, children: [
+                    const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2)),
+                    const SizedBox(width: 12),
+                    Text(tr('Encrypting and uploading…'),
+                        style: const TextStyle(color: Colors.white70)),
+                  ])
+                : _error == null
+                    ? null
+                    : Text(_error!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: scheme.error, fontSize: 14)),
+          ),
+        ),
+        TvMenuTile(
+          icon: Icons.wifi,
+          title: tr('Both devices on the same Wi-Fi?'),
+          subtitle: tr('Send directly, without uploading'),
+          onTap: () {
+            if (_busy) return;
+            Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => const _SendScreen()));
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _active(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final upload = _upload!;
+    final until = DateFormat.MMMEd().add_jm().format(upload.expires);
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+                tr('On the other device, open Settings > Transfer to another device > Receive, and enter:'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70, fontSize: 16)),
+            const SizedBox(height: 20),
+            Text(
+              formatCloudCode(upload.code),
+              style: TextStyle(
+                  color: scheme.primary,
+                  fontSize: 44,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 3),
+            ),
+            const SizedBox(height: 12),
+            Text(tr('Works on any network until {time}', {'time': until}),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white, fontSize: 15)),
+            const SizedBox(height: 6),
+            Text(
+                tr('Anyone with this code can copy your setup, playlist logins included. Changes made after this upload aren\'t in it — upload again to update it.'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white54, fontSize: 13)),
+            SizedBox(
+              height: 40,
+              child: Center(
+                child: _busy
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : _error == null
+                        ? null
+                        : Text(_error!,
+                            textAlign: TextAlign.center,
+                            style:
+                                TextStyle(color: scheme.error, fontSize: 14)),
+              ),
+            ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _ChoiceButton(
+                  focusNode: _doneNode,
+                  autofocus: true,
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(tr('Done')),
+                ),
+                const SizedBox(width: 16),
+                _ChoiceButton(
+                  focusNode: _againNode,
+                  onPressed: _busy ? null : _uploadAgain,
+                  child: Text(tr('Upload again')),
+                ),
+                const SizedBox(width: 16),
+                _ChoiceButton(
+                  focusNode: _deleteNode,
+                  onPressed: _busy ? null : _delete,
+                  child: Text(tr('Delete now')),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ---------------------------------------------------------------- receive
 
 class _ReceiveScreen extends StatefulWidget {
@@ -184,6 +452,8 @@ class _ReceiveScreen extends StatefulWidget {
 }
 
 class _ReceiveScreenState extends State<_ReceiveScreen> {
+  /// 9 digits = same Wi-Fi (`device_transfer.dart`), 16 = internet
+  /// (`cloud_transfer.dart`).
   static const _codeLength = 9;
   static const _codeKeys = [
     ['1', '2', '3'],
@@ -219,8 +489,10 @@ class _ReceiveScreenState extends State<_ReceiveScreen> {
 
   List<List<String>> get _keys => _address == null ? _codeKeys : _addressKeys;
 
+  bool get _isCloudCode => _code.length > _codeLength;
+
   bool get _canSubmit => _address == null
-      ? _code.length == _codeLength
+      ? _code.length == _codeLength || _code.length == kCloudCodeLength
       : RegExp(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$').hasMatch(_address!);
 
   @override
@@ -253,7 +525,7 @@ class _ReceiveScreenState extends State<_ReceiveScreen> {
         }
       } else if (key == 'back') {
         if (_code.isNotEmpty) _code = _code.substring(0, _code.length - 1);
-      } else if (key != '.' && _code.length < _codeLength) {
+      } else if (key != '.' && _code.length < kCloudCodeLength) {
         _code += key;
       }
     });
@@ -271,14 +543,19 @@ class _ReceiveScreenState extends State<_ReceiveScreen> {
   }
 
   Future<void> _fetch() async {
-    if (!_canSubmit || _code.length != _codeLength || _busy) return;
+    final cloud = _code.length == kCloudCodeLength;
+    if (!_canSubmit || (_code.length != _codeLength && !cloud) || _busy) {
+      return;
+    }
     setState(() {
       _busy = true;
       _error = null;
       _offerAddress = false;
     });
     try {
-      final values = await receiveTransfer(_code, host: _address);
+      final values = cloud
+          ? await downloadCloudTransfer(_code)
+          : await receiveTransfer(_code, host: _address);
       if (!mounted) return;
       setState(() {
         _busy = false;
@@ -291,10 +568,15 @@ class _ReceiveScreenState extends State<_ReceiveScreen> {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _offerAddress = e.kind == TransferError.unreachable && _address == null;
+        _offerAddress =
+            e.kind == TransferError.unreachable && _address == null && !cloud;
         _error = switch (e.kind) {
           TransferError.noNetwork =>
             tr('This device isn\'t on a Wi-Fi or wired home network.'),
+          TransferError.unreachable when cloud => tr(
+              'Couldn\'t reach the VesperTV transfer server. Check this device\'s internet connection and try again.'),
+          TransferError.notFound || TransferError.tooBig => tr(
+              'Nothing was found for that code. Check it — the upload may also have expired or been deleted.'),
           TransferError.unreachable => tr(
               'Couldn\'t find the other device. Check the code, and that both devices are on the same Wi-Fi with the code still showing.'),
           TransferError.wrongCode =>
@@ -451,9 +733,17 @@ class _ReceiveScreenState extends State<_ReceiveScreen> {
 
   Widget _entry(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final shown = _code.padRight(_codeLength, '·');
-    final codeText =
-        '${shown.substring(0, 3)} ${shown.substring(3, 6)} ${shown.substring(6)}';
+    // 16 slots (4-4-4-4) — the internet code is the main one; a 9-digit
+    // Wi-Fi code just fills part of it. Address entry (Wi-Fi only) shows the
+    // code 3-3-3 like that sender does.
+    final String codeText;
+    if (_address == null || _isCloudCode) {
+      codeText = formatCloudCode(_code.padRight(kCloudCodeLength, '·'));
+    } else {
+      final shown = _code.padRight(_codeLength, '·');
+      codeText =
+          '${shown.substring(0, 3)} ${shown.substring(3, 6)} ${shown.substring(6)}';
+    }
     final address = _address;
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -465,12 +755,16 @@ class _ReceiveScreenState extends State<_ReceiveScreen> {
                     'Enter the address shown under the code on the other device (This device: …)'),
             textAlign: TextAlign.center,
             style: const TextStyle(color: Colors.white70, fontSize: 16)),
+        if (address == null)
+          Text(tr('9 digits on the same Wi-Fi, 16 digits over the internet'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white54, fontSize: 13)),
         const SizedBox(height: 16),
         Text(
           address == null ? codeText : (address.isEmpty ? '_' : address),
           style: TextStyle(
               color: scheme.primary,
-              fontSize: 44,
+              fontSize: address == null ? 36 : 44,
               fontWeight: FontWeight.w800,
               letterSpacing: 4),
         ),
@@ -661,11 +955,13 @@ class _ChoiceButton extends StatelessWidget {
     required this.focusNode,
     required this.onPressed,
     required this.child,
+    this.autofocus = false,
   });
 
   final FocusNode focusNode;
   final VoidCallback? onPressed;
   final Widget child;
+  final bool autofocus;
 
   @override
   Widget build(BuildContext context) {
@@ -676,6 +972,7 @@ class _ChoiceButton extends StatelessWidget {
         final focused = focusNode.hasFocus;
         return OutlinedButton(
           focusNode: focusNode,
+          autofocus: autofocus,
           onPressed: onPressed,
           style: OutlinedButton.styleFrom(
             foregroundColor: focused ? scheme.onPrimary : Colors.white,

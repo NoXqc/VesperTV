@@ -823,11 +823,34 @@ const Map<String, String> kEs = {
   'Transfer to another device': "Transferir a otro dispositivo",
   'Copy playlists, favorites and settings over Wi-Fi':
       "Copia listas, favoritos y ajustes por Wi-Fi",
-  'Copies your playlists, favorites, hidden groups, profiles, watch progress and settings over your home Wi-Fi. Both devices must be on the same Wi-Fi. Channels, movies and the guide download again on the new device.':
-      "Copia tus listas, favoritos, grupos ocultos, perfiles, progreso y ajustes por el Wi-Fi de casa. Ambos dispositivos deben estar en el mismo Wi-Fi. Los canales, películas y la guía se vuelven a descargar en el nuevo dispositivo.",
+  'Copies your playlists, favorites, hidden groups, profiles, watch progress and settings to another device. On the same Wi-Fi it goes straight across; anywhere else it goes through an encrypted upload only the code can open. Channels, movies and the guide download again on the new device.':
+      "Copia tus listas, favoritos, grupos ocultos, perfiles, progreso y ajustes a otro dispositivo. En el mismo Wi-Fi pasa directamente; desde otro lugar pasa por una subida cifrada que solo el código puede abrir. Los canales, películas y la guía se vuelven a descargar en el nuevo dispositivo.",
+  'This setup is too big to upload. Use the same-Wi-Fi transfer instead.':
+      "Esta configuración es demasiado grande para subirla. Usa la transferencia por el mismo Wi-Fi.",
+  'Couldn\'t reach the VesperTV transfer server. Check this device\'s internet connection and try again.':
+      "No se pudo contactar con el servidor de transferencia de VesperTV. Revisa la conexión a internet de este dispositivo y vuelve a intentarlo.",
+  '{n} hour': "{n} hora",
+  '{n} hours': "{n} horas",
+  '{n} day': "{n} día",
+  '{n} days': "{n} días",
+  'Your setup is encrypted on this device and uploaded. Any device that enters the code can copy it until it expires — even with this device turned off. How long should it stay available?':
+      "Tu configuración se cifra en este dispositivo y se sube. Cualquier dispositivo que escriba el código puede copiarla hasta que caduque, incluso con este dispositivo apagado. ¿Cuánto tiempo debe estar disponible?",
+  'Encrypting and uploading…': "Cifrando y subiendo…",
+  'Works on any network until {time}':
+      "Funciona en cualquier red hasta: {time}",
+  'Anyone with this code can copy your setup, playlist logins included. Changes made after this upload aren\'t in it — upload again to update it.':
+      "Cualquiera con este código puede copiar tu configuración, incluidos los accesos de las listas. Los cambios posteriores a esta subida no están incluidos: vuelve a subirla para actualizarla.",
+  'Upload again': "Volver a subir",
+  'Delete now': "Eliminar ahora",
+  'Nothing was found for that code. Check it — the upload may also have expired or been deleted.':
+      "No se encontró nada con ese código. Revísalo; la subida también puede haber caducado o haberse eliminado.",
+  '9 digits on the same Wi-Fi, 16 digits over the internet':
+      "9 dígitos en el mismo Wi-Fi, 16 por internet",
   'Send from this device': "Enviar desde este dispositivo",
   'Shows a code to enter on the other device':
       "Muestra un código para escribir en el otro dispositivo",
+  'Both devices on the same Wi-Fi?': "¿Los dos dispositivos en el mismo Wi-Fi?",
+  'Send directly, without uploading': "Enviar directamente, sin subir nada",
   'Receive on this device': "Recibir en este dispositivo",
   'Replaces this device\'s setup with the other one\'s':
       "Reemplaza la configuración de este dispositivo por la del otro",

@@ -12,8 +12,21 @@ no request lines or bodies.
     PUT  /api/s/<id>    -> store {"iv","ct"} once (409 if already there)
     GET  /api/s/<id>    -> 200 + delete, or 404
 
+It also hosts the **vault** for Settings > Transfer to another device >
+Different network (lib/services/cloud_transfer.dart): opaque ciphertext
+blobs on disk, each with an expiry and a write token (only its SHA-256 is
+kept). The app derives id, token and key from the code; nothing here can
+decrypt a blob. Expired blobs are deleted.
+
+    PUT    /api/v/<id>  -> store/replace; headers X-Vault-Token, X-Vault-Ttl
+                           (seconds). 409 if the id has another token.
+    GET    /api/v/<id>  -> 200 + blob (any number of times until expiry), 404
+    DELETE /api/v/<id>  -> 204 (X-Vault-Token must match), 404
+
 Stdlib only. Listens on 127.0.0.1; nginx terminates TLS in front of it.
 """
+import hashlib
+import hmac
 import json
 import os
 import re
@@ -30,6 +43,102 @@ MAX_BODY = 8 * 1024  # an encrypted form is well under 2 KB
 MAX_ITEMS = 2000     # memory cap; oldest are dropped first
 
 ID_RE = re.compile(r"^/api/s/([A-Za-z0-9_-]{16,64})$")
+
+VAULT_DIR = os.environ.get("PAIR_VAULT_DIR", "/var/lib/pair-relay")
+VAULT_MAX_TTL = 7 * 24 * 3600          # raise for cloud sync later
+VAULT_MAX_BODY = 8 * 1024 * 1024       # a gzipped setup is ~100-300 KB
+VAULT_MAX_TOTAL = 2 * 1024 * 1024 * 1024  # disk cap for all blobs
+VAULT_PRUNE_EVERY = 300
+VAULT_ID_RE = re.compile(r"^/api/v/([A-Za-z0-9_-]{22,64})$")
+TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{32,128}$")
+
+_vault_lock = threading.Lock()
+
+
+def _vault_paths(vid):
+    return (os.path.join(VAULT_DIR, vid + ".bin"),
+            os.path.join(VAULT_DIR, vid + ".meta"))
+
+
+def _vault_meta(vid):
+    """The blob's {"exp", "tok", "size"}, or None if missing/expired."""
+    blob, meta = _vault_paths(vid)
+    try:
+        with open(meta, "r", encoding="utf-8") as f:
+            m = json.load(f)
+    except (OSError, ValueError):
+        return None
+    if m.get("exp", 0) <= time.time():
+        _vault_remove(vid)
+        return None
+    return m
+
+
+def _vault_remove(vid):
+    for p in _vault_paths(vid):
+        try:
+            os.remove(p)
+        except OSError:
+            pass
+
+
+def _vault_total():
+    total = 0
+    try:
+        for name in os.listdir(VAULT_DIR):
+            if name.endswith(".bin"):
+                try:
+                    total += os.path.getsize(os.path.join(VAULT_DIR, name))
+                except OSError:
+                    pass
+    except OSError:
+        pass
+    return total
+
+
+def _vault_prune():
+    now = time.time()
+    with _vault_lock:
+        try:
+            names = os.listdir(VAULT_DIR)
+        except OSError:
+            return
+        for name in names:
+            path = os.path.join(VAULT_DIR, name)
+            if name.endswith(".meta"):
+                try:
+                    with open(path, "r", encoding="utf-8") as f:
+                        exp = json.load(f).get("exp", 0)
+                except (OSError, ValueError):
+                    exp = 0
+                if exp <= now:
+                    _vault_remove(name[:-5])
+            elif name.endswith(".tmp") or (
+                    name.endswith(".bin")
+                    and not os.path.exists(path[:-4] + ".meta")):
+                # Half-written upload or orphan blob (crash mid-write).
+                try:
+                    if now - os.path.getmtime(path) > 60:
+                        os.remove(path)
+                except OSError:
+                    pass
+
+
+def _vault_pruner():
+    while True:
+        _vault_prune()
+        time.sleep(VAULT_PRUNE_EVERY)
+
+
+def _token_hash(token):
+    return hashlib.sha256(token.encode("ascii")).hexdigest()
+
+
+def _write_atomic(path, data):
+    tmp = path + ".tmp"
+    with open(tmp, "wb") as f:
+        f.write(data)
+    os.replace(tmp, path)
 
 _lock = threading.Lock()
 _store = {}  # id -> (created, body bytes)
@@ -79,6 +188,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, _load_page(), "text/html; charset=utf-8")
             except OSError:
                 return self._send(500)
+        v = VAULT_ID_RE.match(path)
+        if v:
+            return self._vault_get(v.group(1))
         m = ID_RE.match(path)
         if not m:
             return self._send(404)
@@ -91,7 +203,11 @@ class Handler(BaseHTTPRequestHandler):
         return self._send(200, item[1])
 
     def do_PUT(self):
-        m = ID_RE.match(self.path.split("?", 1)[0])
+        path = self.path.split("?", 1)[0]
+        v = VAULT_ID_RE.match(path)
+        if v:
+            return self._vault_put(v.group(1))
+        m = ID_RE.match(path)
         if not m:
             return self._send(404)
         try:
@@ -119,9 +235,74 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         self._send(405)
 
+    def do_DELETE(self):
+        v = VAULT_ID_RE.match(self.path.split("?", 1)[0])
+        if not v:
+            return self._send(404)
+        token = self.headers.get("X-Vault-Token", "")
+        if not TOKEN_RE.match(token):
+            return self._send(400)
+        with _vault_lock:
+            m = _vault_meta(v.group(1))
+            if m is None:
+                return self._send(404)
+            if not hmac.compare_digest(m.get("tok", ""), _token_hash(token)):
+                return self._send(403)
+            _vault_remove(v.group(1))
+        return self._send(204)
+
+    # --------------------------------------------------------------- vault
+
+    def _vault_get(self, vid):
+        with _vault_lock:
+            m = _vault_meta(vid)
+            if m is None:
+                return self._send(404)
+            try:
+                with open(_vault_paths(vid)[0], "rb") as f:
+                    body = f.read()
+            except OSError:
+                return self._send(404)
+        return self._send(200, body, "application/octet-stream")
+
+    def _vault_put(self, vid):
+        token = self.headers.get("X-Vault-Token", "")
+        try:
+            ttl = int(self.headers.get("X-Vault-Ttl", "0"))
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            return self._send(400)
+        if not TOKEN_RE.match(token) or not 60 <= ttl <= VAULT_MAX_TTL:
+            return self._send(400)
+        if length < 29 or length > VAULT_MAX_BODY:  # version+nonce+tag
+            return self._send(413 if length > VAULT_MAX_BODY else 400)
+        body = self.rfile.read(length)
+        if len(body) != length:
+            return self._send(400)
+        tok = _token_hash(token)
+        blob, meta = _vault_paths(vid)
+        with _vault_lock:
+            m = _vault_meta(vid)
+            if m is not None and not hmac.compare_digest(m.get("tok", ""), tok):
+                return self._send(409)
+            old = m.get("size", 0) if m else 0
+            if _vault_total() - old + length > VAULT_MAX_TOTAL:
+                return self._send(507)
+            try:
+                _write_atomic(blob, body)
+                _write_atomic(meta, json.dumps(
+                    {"exp": int(time.time()) + ttl, "tok": tok,
+                     "size": length}).encode("utf-8"))
+            except OSError:
+                _vault_remove(vid)
+                return self._send(500)
+        return self._send(204)
+
 
 def main():
     _load_page()  # fail fast if the page is missing
+    os.makedirs(VAULT_DIR, exist_ok=True)
+    threading.Thread(target=_vault_pruner, daemon=True).start()
     srv = ThreadingHTTPServer((HOST, PORT), Handler)
     srv.daemon_threads = True
     print(f"pair relay on {HOST}:{PORT}", file=sys.stderr, flush=True)

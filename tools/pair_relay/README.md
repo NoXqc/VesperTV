@@ -6,6 +6,13 @@ Server half of Add Playlist > **From my phone** when the phone is *not* on the T
 - `relay.py` — stdlib Python, memory-only, no access log. Stores one AES-GCM blob per session
   (`PUT /api/s/<id>`), hands it to the TV once (`GET /api/s/<id>`, then deleted), expires after
   10 min. It never receives the key: that lives in the QR code's URL fragment.
+- **Vault** (same process, `/api/v/<id>`): Settings > Transfer > *Different network*
+  (`lib/services/cloud_transfer.dart`). The app uploads its setup encrypted under a key derived
+  from a 16-digit code; the relay keeps the ciphertext on disk in `PAIR_VAULT_DIR`
+  (`/var/lib/pair-relay`, systemd `StateDirectory`) until its expiry (≤ 7 days), serves it to any
+  number of GETs, and deletes it on expiry or a `DELETE` with the write token (stored hashed).
+  Caps: 8 MB per blob, 2 GB total (507 when full); expired files are pruned every 5 min. Built so
+  automatic cloud sync can later reuse it — only `VAULT_MAX_TTL` would change.
 - `pair.html` — copy `assets/pair/pair.html` next to `relay.py` (same file the TV serves).
 - `pair-relay.service` — systemd unit (`DynamicUser`, read-only filesystem, 128 MB cap).
 
@@ -22,7 +29,10 @@ Certificate: add the host to the port-80 `server_name`, `mkdir -p /var/www/certb
 `certbot certonly --webroot -w /var/www/certbot -d pair.vespertv.app`.
 
 nginx: append `nginx-pair.conf` inside the `http {}` block (its own `server`, certificate,
-`access_log off`, 8 KB body, 5 r/s + burst 20 per IP). Back up first, then
+`access_log off`, 8 KB body, 5 r/s + burst 20 per IP; `/api/v/` allows 8 MB bodies and 10
+uploads/deletes a minute per IP). Updating an existing install: replace the whole block (the
+vault adds a `map`, a second zone and the `/api/v/` location), copy the new `relay.py` and
+`pair-relay.service`, then `systemctl daemon-reload && systemctl restart pair-relay`. Back up first, then
 `nginx -t && systemctl reload nginx` — a reload, not a restart, so streams through the same nginx
 keep going.
 

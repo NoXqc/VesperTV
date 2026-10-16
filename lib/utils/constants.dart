@@ -212,6 +212,11 @@ class AppConstants {
   /// there's no fully reliable automatic signal for "this is a TV".
   static const String keyLayoutMode = 'nox_layout_mode';
 
+  /// This device's pending internet transfer (`cloud_transfer.dart`), JSON
+  /// `{"code": "...", "expires": <ms>}` — so Send can show it again and
+  /// delete it. Device-only: never part of a transfer.
+  static const String keyCloudTransfer = 'vesper_cloud_transfer';
+
   /// UI language for the whole device (not per viewer): 'auto' follows the
   /// system language, or a language code ('en', 'fr', 'es', 'it'). See lib/l10n/l10n.dart.
   static const String keyLanguage = 'vesper_language';

@@ -546,6 +546,12 @@ class StorageService {
   /// choices are left untouched.
   // --- Device transfer (Settings > Transfer to another device) -----------
 
+  /// The pending internet transfer's raw JSON (`AppConstants.keyCloudTransfer`).
+  String? getCloudTransfer() => _prefs.getString(AppConstants.keyCloudTransfer);
+  Future<void> setCloudTransfer(String? json) => json == null
+      ? _prefs.remove(AppConstants.keyCloudTransfer)
+      : _prefs.setString(AppConstants.keyCloudTransfer, json);
+
   /// Keys that describe *this device* or a cache, never the user's setup:
   /// left out of a transfer and kept as-is on the receiving device.
   static const _transferSkipExact = {
@@ -559,6 +565,7 @@ class StorageService {
     AppConstants.keyWhatsNewTmdbLastRefreshed,
     AppConstants.keyWhatsNewVodIds,
     AppConstants.keyWhatsNewSeriesIds,
+    AppConstants.keyCloudTransfer,
   };
 
   /// Prefix-matched skips: the per-playlist full-sync timestamps (a copied

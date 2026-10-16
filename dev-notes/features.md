@@ -152,3 +152,17 @@ Read before changing guide/Multiview/profiles/palettes/backup-server logic.
   + hidden groups across several playlists). Tested: unit tests (round trip, wrong code, lockout) +
   Formuler → PC send. The **receive UI on a real box and the replace step on a real device are not
   yet tested** — watch for reports.
+- **Transfer over the internet (1.0.14+271, 2026-10-16; relay deployed to the VPS 2026-10-16, backup in
+  `/root/backup-pair-20261016-084326`, live round trip passed):** Transfer > Send
+  is now the internet path (the Wi-Fi one is a "Both devices on the same Wi-Fi?" tile at the
+  bottom of that screen — kept so transfers work without our relay) → pick 1 h / 24 h / 7 days → the setup (same export) is gzipped,
+  AES-GCM-encrypted and PUT to the relay's **vault** (`tools/pair_relay/relay.py`, `/api/v/<id>`,
+  on disk in `/var/lib/pair-relay`, ≤7 days, 8 MB/blob, 2 GB total, pruned every 5 min). Code =
+  16 digits → PBKDF2 (60k) → HKDF → blob id + write token (relay keeps its SHA-256) + AES key, so
+  the relay can't read it or find its code. Receive takes 9 (Wi-Fi) or 16 (internet) digits and
+  picks the path by length; the download works any number of times until expiry. The sender keeps
+  `{code, expires}` in `vesper_cloud_transfer` (device-only, excluded from transfers) to show it
+  again with Done / Upload again (deletes the old one) / Delete now. `lib/services/cloud_transfer.dart`,
+  test `test/cloud_transfer_test.dart` (runs relay.py locally). **Cloud sync later** reuses the
+  vault as is: linked devices share a random master secret (`VaultKeys.fromMaster`), re-upload on
+  change with a refreshed long TTL (raise `VAULT_MAX_TTL`), envelope `kind` = 'sync'.

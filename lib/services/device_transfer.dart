@@ -51,6 +51,13 @@ enum TransferError {
 
   /// Garbage or tampered response.
   invalid,
+
+  /// Internet transfer: no upload for that code (wrong, expired or deleted).
+  notFound,
+
+  /// Internet transfer: the setup is over the relay's size limit (or the
+  /// relay is full).
+  tooBig,
 }
 
 /// Sender side. [start] binds the server and fills [code]; [sent] completes

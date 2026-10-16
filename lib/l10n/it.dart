@@ -826,11 +826,35 @@ const Map<String, String> kIt = {
   'Transfer to another device': "Trasferisci su un altro dispositivo",
   'Copy playlists, favorites and settings over Wi-Fi':
       "Copia liste, preferiti e impostazioni via Wi-Fi",
-  'Copies your playlists, favorites, hidden groups, profiles, watch progress and settings over your home Wi-Fi. Both devices must be on the same Wi-Fi. Channels, movies and the guide download again on the new device.':
-      "Copia liste, preferiti, gruppi nascosti, profili, progressi e impostazioni tramite il Wi-Fi di casa. I due dispositivi devono essere sullo stesso Wi-Fi. Canali, film e guida vengono scaricati di nuovo sul nuovo dispositivo.",
+  'Copies your playlists, favorites, hidden groups, profiles, watch progress and settings to another device. On the same Wi-Fi it goes straight across; anywhere else it goes through an encrypted upload only the code can open. Channels, movies and the guide download again on the new device.':
+      "Copia liste, preferiti, gruppi nascosti, profili, progressi e impostazioni su un altro dispositivo. Sullo stesso Wi-Fi passa direttamente; altrove passa da un caricamento cifrato che solo il codice può aprire. Canali, film e guida vengono scaricati di nuovo sul nuovo dispositivo.",
+  'This setup is too big to upload. Use the same-Wi-Fi transfer instead.':
+      "Questa configurazione è troppo grande da caricare. Usa invece il trasferimento sullo stesso Wi-Fi.",
+  'Couldn\'t reach the VesperTV transfer server. Check this device\'s internet connection and try again.':
+      "Impossibile raggiungere il server di trasferimento VesperTV. Controlla la connessione internet di questo dispositivo e riprova.",
+  '{n} hour': "{n} ora",
+  '{n} hours': "{n} ore",
+  '{n} day': "{n} giorno",
+  '{n} days': "{n} giorni",
+  'Your setup is encrypted on this device and uploaded. Any device that enters the code can copy it until it expires — even with this device turned off. How long should it stay available?':
+      "La configurazione viene cifrata su questo dispositivo e caricata. Qualsiasi dispositivo che inserisce il codice può copiarla fino alla scadenza, anche con questo dispositivo spento. Per quanto tempo deve restare disponibile?",
+  'Encrypting and uploading…': "Cifratura e caricamento…",
+  'Works on any network until {time}':
+      "Funziona su qualsiasi rete fino a: {time}",
+  'Anyone with this code can copy your setup, playlist logins included. Changes made after this upload aren\'t in it — upload again to update it.':
+      "Chiunque abbia questo codice può copiare la configurazione, credenziali delle liste comprese. Le modifiche fatte dopo questo caricamento non sono incluse: carica di nuovo per aggiornarla.",
+  'Upload again': "Carica di nuovo",
+  'Delete now': "Elimina ora",
+  'Nothing was found for that code. Check it — the upload may also have expired or been deleted.':
+      "Non è stato trovato nulla per questo codice. Controllalo: il caricamento potrebbe anche essere scaduto o eliminato.",
+  '9 digits on the same Wi-Fi, 16 digits over the internet':
+      "9 cifre sullo stesso Wi-Fi, 16 via internet",
   'Send from this device': "Invia da questo dispositivo",
   'Shows a code to enter on the other device':
       "Mostra un codice da inserire sull'altro dispositivo",
+  'Both devices on the same Wi-Fi?':
+      "Entrambi i dispositivi sullo stesso Wi-Fi?",
+  'Send directly, without uploading': "Invia direttamente, senza caricare",
   'Receive on this device': "Ricevi su questo dispositivo",
   'Replaces this device\'s setup with the other one\'s':
       "Sostituisce la configurazione di questo dispositivo con quella dell'altro",
