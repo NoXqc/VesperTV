@@ -47,7 +47,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
 4. `flutter analyze` must report the baseline **17** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `1.0.18` unless noted
+5. Check the current state of releases: `gh release list` (latest should be `1.0.19` unless noted
    in §11).
 
 ## 3. Layout (what matters)
@@ -101,7 +101,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+309**) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+320**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
@@ -224,9 +224,17 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 
 ## 13. Status & open items (as of 2026-10-18)
 - Donations will go through GitHub Sponsors (pending approval). After approval: `FUNDING.yml`,
-  site/README links and an About row. Relay `X-VesperTV-App` enforcement is OFF until old installs
-  update (see HANDOFF.md).
-- **Shipped: 1.0.18 (`+309`, 2026-10-18, latest on GitHub)** — **subtitles**: embedded MKV/MP4
+  site/README links and an About row. Relay `X-VesperTV-App` enforcement (`PAIR_REQUIRE_APP=1`) is
+  ON since 2026-10-17 (service file backed up on the VPS as `pair-relay.service.bak-*`).
+- **Shipped: 1.0.19 (`+320`, 2026-10-17, latest on GitHub)** — relay app check ON (Transfer over
+  the internet / From phone need 1.0.16+, announced as a privacy change); hold OK on an episode =
+  mark watched/unwatched (watched episodes restart from 0); **Neon Green** palette (`vivid` flag,
+  `#2FD414`); portrait phone: bottom tab bar (TV/Movies/TV Shows/Sports/More, page 0 = "More"),
+  live preview drawn once above the phone pages (shown on groups too), full-width Multiview picker;
+  Sports: OK on another card while the hero plays = its details beside the same video (`_heroPick`),
+  "WATCHING" pill on the playing card; Multiview 4 screens touch (tiles aligned to centre, 1.08
+  boost). Formuler-only green 4K HDR Multiview tile = won't fix (bugs-and-fixes.md).
+- 1.0.18 (`+309`, 2026-10-18) — **subtitles**: embedded MKV/MP4
   text tracks (Subtitles button, native `SubtitleBridge`, Flutter `SubtitleOverlay`) and **online
   subtitles from Stremio-protocol add-ons** (Settings > Add-ons, official OpenSubtitles v3 listed off,
   subtitles resource only — owner: no stream/debrid add-ons); recent online languages one press away;

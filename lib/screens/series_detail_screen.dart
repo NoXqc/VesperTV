@@ -221,7 +221,11 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
 
   Future<void> _play(Channel episode, {bool restart = false}) async {
     final storage = context.read<StorageService>();
-    if (restart) await storage.setLastPosition(episode.id, 0);
+    // A watched episode starts over: one marked by hold sits at 100%, so
+    // resuming it would hit the end at once and auto-advance.
+    if (restart || storage.isFullyWatched(episode.id)) {
+      await storage.setLastPosition(episode.id, 0);
+    }
     if (!mounted) return;
     // See TvHomeScreen._selectChannel's matching comment — Windows has no
     // PlaybackService-compatible player at all, so this bypasses it via a
@@ -252,6 +256,37 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
           : tr('Removed from Favorites')),
       duration: const Duration(seconds: 2),
     ));
+  }
+
+  /// Hold on an episode: mark it watched (position = duration, so every
+  /// progress bar, "Watched" label and Next Up treat it as finished) or,
+  /// when it already is, back to unwatched. With no duration known yet
+  /// (never played, no provider runtime) a 1 ms stand-in still reads as
+  /// 100%; the player overwrites it with the real one on the next play.
+  Future<void> _toggleWatched(Channel episode) async {
+    final storage = context.read<StorageService>();
+    final wasWatched = storage.isFullyWatched(episode.id);
+    if (wasWatched) {
+      await storage.setLastPosition(episode.id, 0);
+    } else {
+      var durationMs = storage.getLastDuration(episode.id);
+      if (durationMs <= 0) {
+        durationMs =
+            (_details?.episodes[episode.id]?.durationSeconds ?? 0) * 1000;
+      }
+      if (durationMs <= 0) durationMs = 1;
+      await storage.setLastDuration(episode.id, durationMs);
+      await storage.setLastPosition(episode.id, durationMs);
+    }
+    if (!mounted) return;
+    setState(() {});
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(
+            wasWatched ? tr('Marked as unwatched') : tr('Marked as watched')),
+        duration: const Duration(seconds: 2),
+      ));
   }
 
   void _goBack() {
@@ -857,6 +892,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                       scale: s,
                       highlighted: i == highlighted,
                       onTap: () => _play(episode),
+                      onHold: () => _toggleWatched(episode),
                       onFocused: () {
                         if (_highlight[season] != i) {
                           setState(() => _highlight[season] = i);
@@ -1039,6 +1075,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
               key: ValueKey(episodes[i].id),
               info: _info(episodes[i], storage),
               onTap: () => _play(episodes[i]),
+              onLongPress: () => _toggleWatched(episodes[i]),
             ),
           ),
           SliverToBoxAdapter(
@@ -1245,6 +1282,7 @@ class _EpisodeCard extends StatefulWidget {
     required this.scale,
     required this.highlighted,
     required this.onTap,
+    required this.onHold,
     required this.onFocused,
   });
 
@@ -1255,6 +1293,7 @@ class _EpisodeCard extends StatefulWidget {
   final double scale;
   final bool highlighted;
   final VoidCallback onTap;
+  final VoidCallback onHold;
   final VoidCallback onFocused;
 
   @override
@@ -1270,104 +1309,109 @@ class _EpisodeCardState extends State<_EpisodeCard> {
     final s = widget.scale;
     final info = widget.info;
     final radius = 10 * s;
-    return Material(
-      type: MaterialType.transparency,
-      child: InkWell(
-        focusNode: widget.focusNode,
-        borderRadius: BorderRadius.circular(radius),
-        focusColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        hoverColor: Colors.transparent,
-        // Windows (mouse): the first click focuses (shows this episode's
-        // plot below the row), a click on the focused card plays — same
-        // "look before you open" idea as PosterCard's Windows handling.
-        onTap: () {
-          if (Platform.isWindows && !_focused) {
-            widget.focusNode.requestFocus();
-          } else {
-            widget.onTap();
-          }
-        },
-        onFocusChange: (f) {
-          setState(() => _focused = f);
-          if (f) widget.onFocused();
-        },
-        child: AnimatedScale(
-          scale: _focused ? 1.06 : 1.0,
-          duration: const Duration(milliseconds: 140),
-          curve: Curves.easeOut,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: widget.width,
-                height: widget.thumbHeight,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade900,
-                  borderRadius: BorderRadius.circular(radius),
-                  border: Border.all(
-                    color: _focused
-                        ? scheme.primary
-                        : widget.highlighted
-                            ? scheme.primary.withValues(alpha: 0.45)
-                            : Colors.white12,
-                    width: _focused ? 3 : 1,
-                  ),
-                  boxShadow: _focused
-                      ? [
-                          BoxShadow(
-                            color: Color.lerp(
-                                    scheme.primary, scheme.secondary, 0.5)!
-                                .withValues(alpha: 0.55),
-                            blurRadius: 16,
-                            spreadRadius: 1,
-                          ),
-                        ]
-                      : const [],
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: _Thumb(
-                  info: info,
+    // Hold OK (or a long mouse/touch press) = mark watched / unwatched.
+    return HoldToActivate(
+      onTap: widget.onTap,
+      onHold: widget.onHold,
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          focusNode: widget.focusNode,
+          borderRadius: BorderRadius.circular(radius),
+          focusColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          hoverColor: Colors.transparent,
+          // Windows (mouse): the first click focuses (shows this episode's
+          // plot below the row), a click on the focused card plays — same
+          // "look before you open" idea as PosterCard's Windows handling.
+          onTap: () {
+            if (Platform.isWindows && !_focused) {
+              widget.focusNode.requestFocus();
+            } else {
+              widget.onTap();
+            }
+          },
+          onFocusChange: (f) {
+            setState(() => _focused = f);
+            if (f) widget.onFocused();
+          },
+          child: AnimatedScale(
+            scale: _focused ? 1.06 : 1.0,
+            duration: const Duration(milliseconds: 140),
+            curve: Curves.easeOut,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
                   width: widget.width,
                   height: widget.thumbHeight,
-                  scale: s,
-                ),
-              ),
-              SizedBox(height: 6 * s),
-              Text.rich(
-                TextSpan(children: [
-                  if (info.hasOwnTitle)
-                    TextSpan(
-                      text: 'E${info.number}  ',
-                      style: TextStyle(
-                          color: scheme.primary, fontWeight: FontWeight.w800),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade900,
+                    borderRadius: BorderRadius.circular(radius),
+                    border: Border.all(
+                      color: _focused
+                          ? scheme.primary
+                          : widget.highlighted
+                              ? scheme.primary.withValues(alpha: 0.45)
+                              : Colors.white12,
+                      width: _focused ? 3 : 1,
                     ),
-                  TextSpan(text: info.title),
-                ]),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: _focused ? scheme.primary : Colors.white,
-                  fontSize: 12.5 * s,
-                  fontWeight: _focused ? FontWeight.bold : FontWeight.w600,
-                ),
-              ),
-              if (info.durationText != null)
-                Padding(
-                  padding: EdgeInsets.only(top: 2 * s),
-                  child: Text(
-                    info.durationText!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: info.watched
-                          ? scheme.primary.withValues(alpha: 0.85)
-                          : Colors.white54,
-                      fontSize: 11 * s,
-                    ),
+                    boxShadow: _focused
+                        ? [
+                            BoxShadow(
+                              color: Color.lerp(
+                                      scheme.primary, scheme.secondary, 0.5)!
+                                  .withValues(alpha: 0.55),
+                              blurRadius: 16,
+                              spreadRadius: 1,
+                            ),
+                          ]
+                        : const [],
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: _Thumb(
+                    info: info,
+                    width: widget.width,
+                    height: widget.thumbHeight,
+                    scale: s,
                   ),
                 ),
-            ],
+                SizedBox(height: 6 * s),
+                Text.rich(
+                  TextSpan(children: [
+                    if (info.hasOwnTitle)
+                      TextSpan(
+                        text: 'E${info.number}  ',
+                        style: TextStyle(
+                            color: scheme.primary, fontWeight: FontWeight.w800),
+                      ),
+                    TextSpan(text: info.title),
+                  ]),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: _focused ? scheme.primary : Colors.white,
+                    fontSize: 12.5 * s,
+                    fontWeight: _focused ? FontWeight.bold : FontWeight.w600,
+                  ),
+                ),
+                if (info.durationText != null)
+                  Padding(
+                    padding: EdgeInsets.only(top: 2 * s),
+                    child: Text(
+                      info.durationText!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: info.watched
+                            ? scheme.primary.withValues(alpha: 0.85)
+                            : Colors.white54,
+                        fontSize: 11 * s,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1417,6 +1461,14 @@ class _EpisodeStrip extends StatelessWidget {
                       fontWeight: FontWeight.normal,
                       fontSize: 12 * s),
                 ),
+              TextSpan(
+                text:
+                    '    ${info.watched ? tr('Hold to mark as unwatched') : tr('Hold to mark as watched')}',
+                style: TextStyle(
+                    color: Colors.white38,
+                    fontWeight: FontWeight.normal,
+                    fontSize: 11.5 * s),
+              ),
             ]),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -1444,10 +1496,16 @@ class _EpisodeStrip extends StatelessWidget {
 
 /// Phone portrait: one episode per row (thumbnail + text, plot below).
 class _EpisodeListRow extends StatelessWidget {
-  const _EpisodeListRow({super.key, required this.info, required this.onTap});
+  const _EpisodeListRow({
+    super.key,
+    required this.info,
+    required this.onTap,
+    required this.onLongPress,
+  });
 
   final _EpisodeInfo info;
   final VoidCallback onTap;
+  final VoidCallback onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -1455,6 +1513,7 @@ class _EpisodeListRow extends StatelessWidget {
     const thumbW = 136.0;
     return InkWell(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Column(

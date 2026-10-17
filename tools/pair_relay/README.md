@@ -47,7 +47,7 @@ on your own server and point `kPairRelayBase` at it — don't ship a build that 
 
 App calls (the TV's poll and all vault calls) send `X-VesperTV-App` (`kRelayAppHeaders`). The
 relay logs an hourly count of calls with/without it (`journalctl -u pair-relay`) and, with
-`PAIR_REQUIRE_APP=1` (commented out in `pair-relay.service`), rejects calls without it with 403.
-Leave it off until 1.0.14/1.0.15 installs (which don't send the header) have updated, or their
-Transfer and From-phone pairing stop working. It's not a secret, only a speed bump: a fork that
+`PAIR_REQUIRE_APP=1` (on in `pair-relay.service` since 2026-10-17), rejects calls without it with
+403. 1.0.14/1.0.15 installs don't send the header, so their Transfer and From-phone pairing stop
+working until they update. It's not a secret, only a speed bump: a fork that
 copies the header on purpose is deliberate abuse and can be blocked at nginx.

@@ -280,8 +280,11 @@ class _LiveResumeHintState extends State<LiveResumeHint> {
           bottom: 24, left: 0, right: 0, child: SizedBox.shrink());
     }
 
+    // Portrait phone: clear TvHomeScreen's bottom tab bar.
+    final size = MediaQuery.sizeOf(context);
+    final phonePortrait = size.width < 600 && size.height > size.width;
     return Positioned(
-      bottom: 24,
+      bottom: phonePortrait ? 104 : 24,
       left: 0,
       right: 0,
       child: Center(

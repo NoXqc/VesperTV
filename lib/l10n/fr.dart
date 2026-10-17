@@ -269,6 +269,8 @@ const Map<String, String> kFr = {
   'Play here': "Lire ici",
   '{channel} · plays at the top of Sports':
       "{channel} · joue en haut de Sports",
+  '▶❚❚: watch this game  ·  Back: playing game':
+      "▶❚❚ : regarder ce match  ·  Retour : match en cours",
   'OK: full screen  ·  ▶❚❚ or Back: stop':
       "OK : plein écran  ·  ▶❚❚ ou Retour : arrêter",
   'Still looking for channels…': "Recherche de chaînes en cours…",
@@ -778,6 +780,7 @@ const Map<String, String> kFr = {
   'Platinum': "Platine",
   'Rosé': "Rosé",
   'Neon Purple': "Violet néon",
+  'Neon Green': "Vert néon",
   'Habs': "Habs",
   'Dark / Gold': "Noir / Or",
 
@@ -1007,6 +1010,12 @@ const Map<String, String> kFr = {
   '{h} h {m} min': "{h} h {m}",
   'Episode {n}': "Épisode {n}",
   'Watched': "Vu",
+  'More': "Plus",
+  'Watching': "En lecture",
+  'Marked as watched': "Marqué comme vu",
+  'Marked as unwatched': "Marqué comme non vu",
+  'Hold to mark as watched': "Maintenir pour marquer comme vu",
+  'Hold to mark as unwatched': "Maintenir pour marquer comme non vu",
   'Cast: {names}': "Avec : {names}",
   'Director: {names}': "Réalisation : {names}",
   'Specials': "Épisodes spéciaux",

@@ -5,9 +5,9 @@ After=network.target
 [Service]
 ExecStart=/usr/bin/python3 /opt/pair-relay/relay.py
 Environment=PAIR_HOST=127.0.0.1 PAIR_PORT=8930 PAIR_PAGE=/opt/pair-relay/pair.html PAIR_VAULT_DIR=/var/lib/pair-relay
-# Reject app calls without X-VesperTV-App once old (1.0.14/1.0.15) installs
-# have updated: uncomment, daemon-reload, restart.
-#Environment=PAIR_REQUIRE_APP=1
+# Reject app calls without X-VesperTV-App (on since 2026-10-17; 1.0.14/1.0.15
+# installs, which don't send it, must update for Transfer/From phone).
+Environment=PAIR_REQUIRE_APP=1
 Restart=always
 RestartSec=2
 # Runs as a throwaway user. Pairing is memory only; the only writable place

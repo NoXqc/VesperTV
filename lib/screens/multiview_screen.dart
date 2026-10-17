@@ -435,8 +435,9 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
 
   Widget _buildBody() {
     final quad = _layout == _MultiviewLayout.quad;
+    // Quad: a 2 px seam between the tiles, nearly edge to edge.
     Widget cell(int i) =>
-        Padding(padding: const EdgeInsets.all(3), child: _buildCell(i));
+        Padding(padding: EdgeInsets.all(quad ? 1 : 3), child: _buildCell(i));
     return Column(
       children: [
         Padding(
@@ -478,7 +479,8 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
         // the space, with nothing left to scroll.
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.all(6),
+            padding: EdgeInsets.fromLTRB(
+                quad ? 2 : 6, 0, quad ? 2 : 6, quad ? 2 : 6),
             child: quad
                 ? Column(
                     children: [
@@ -534,9 +536,19 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
         onTap: onTap,
         onLongPress:
             cell.channel == null ? null : () => _showCellActions(index),
-        // Stacked 2-screen rows are much wider than 16:9; quad's quarter
-        // cells aren't.
-        widthBoost: _layout == _MultiviewLayout.quad ? 1.0 : 1.15,
+        // Stacked 2-screen rows are much wider than 16:9. Quad's quarters
+        // are a bit wider than 16:9 too (the header takes height): a small
+        // boost, and each tile pushed toward the centre so the four touch
+        // (owner, 2026-10-17: gaps between them).
+        widthBoost: _layout == _MultiviewLayout.quad ? 1.08 : 1.15,
+        alignment: _layout == _MultiviewLayout.quad
+            ? const [
+                Alignment.bottomRight,
+                Alignment.bottomLeft,
+                Alignment.topRight,
+                Alignment.topLeft,
+              ][index]
+            : Alignment.center,
       ),
     );
   }
@@ -551,16 +563,19 @@ class _MultiviewCellTile extends StatefulWidget {
     required this.onTap,
     required this.onLongPress,
     required this.widthBoost,
+    this.alignment = Alignment.center,
   });
 
+  /// Where the ratio-locked frame sits in its slot (quad: toward the centre).
+  final Alignment alignment;
   final FocusNode focusNode;
   final Channel? channel;
   final VideoPlayerHdrController? controller;
   final bool active;
 
   /// How far past the video's true aspect ratio the frame is stretched — see
-  /// [_MultiviewCellTileState.build]. 1.0 in the 2x2 layout, whose quarter
-  /// cells are already about 16:9.
+  /// [_MultiviewCellTileState.build]. Small in the 2x2 layout, whose quarter
+  /// cells are only a little wider than 16:9.
   final double widthBoost;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
@@ -602,7 +617,8 @@ class _MultiviewCellTileState extends State<_MultiviewCellTile> {
                 ? widget.controller!.value.aspectRatio
                 : 16 / 9) *
             widget.widthBoost;
-    return Center(
+    return Align(
+      alignment: widget.alignment,
       child: AspectRatio(
         aspectRatio: ratio,
         child: InkWell(
@@ -836,6 +852,9 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
 
   String _query = '';
 
+  /// Portrait phone: a group was picked, its channels show (see build).
+  bool _narrowShowChannels = false;
+
   @override
   void initState() {
     super.initState();
@@ -902,145 +921,173 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
     // remaining-time label uses — epgId (rawId or a manual override), not
     // the composite `id`.
     final epg = context.watch<EpgService>();
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
+    // Portrait phone: the two panes don't fit side by side (the channel
+    // pane was one letter wide) — groups first, then that group's channels
+    // full width; Back returns to the groups.
+    final size = MediaQuery.sizeOf(context);
+    final narrow = size.width < 600 && size.height > size.width;
+    final showChannels = narrow && _narrowShowChannels;
+    final entry = _groupEntries[_selectedGroupIndex];
+    return PopScope(
+      canPop: !showChannels,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) setState(() => _narrowShowChannels = false);
+      },
+      child: Scaffold(
         backgroundColor: Colors.black,
-        title: Text(tr('Pick a channel')),
-      ),
-      body: CallbackShortcuts(
-        bindings: <ShortcutActivator, VoidCallback>{
-          const SingleActivator(LogicalKeyboardKey.arrowLeft): () {
-            // No-op when already there — EditableText claims Left/Right
-            // for caret movement whenever the search field has focus, so
-            // this only ever actually fires while focus is on a group or
-            // channel row, never mid-typing.
-            if (!_groupScope.hasFocus) {
-              _groupFocusNodes[_selectedGroupIndex].requestFocus();
-            }
+        appBar: AppBar(
+          backgroundColor: Colors.black,
+          title: Text(showChannels
+              ? (entry == 'All' || entry == 'Favorites' ? tr(entry) : entry)
+              : tr('Pick a channel')),
+        ),
+        body: CallbackShortcuts(
+          bindings: <ShortcutActivator, VoidCallback>{
+            const SingleActivator(LogicalKeyboardKey.arrowLeft): () {
+              // No-op when already there — EditableText claims Left/Right
+              // for caret movement whenever the search field has focus, so
+              // this only ever actually fires while focus is on a group or
+              // channel row, never mid-typing.
+              if (!_groupScope.hasFocus) {
+                _groupFocusNodes[_selectedGroupIndex].requestFocus();
+              }
+            },
+            const SingleActivator(LogicalKeyboardKey.arrowRight): () {
+              // Into the channel list, not the search field: focusing the
+              // field pops the on-screen keyboard, and on Fire OS that
+              // keyboard swallows Back and then traps D-pad focus (CLAUDE.md
+              // §10). Search stays one Up press away.
+              if (_contentScope.hasFocus) return;
+              if (_filteredChannels.isNotEmpty &&
+                  _firstResultFocus.context != null) {
+                _firstResultFocus.requestFocus();
+              } else {
+                _searchFocus.requestFocus();
+              }
+            },
           },
-          const SingleActivator(LogicalKeyboardKey.arrowRight): () {
-            // Into the channel list, not the search field: focusing the
-            // field pops the on-screen keyboard, and on Fire OS that
-            // keyboard swallows Back and then traps D-pad focus (CLAUDE.md
-            // §10). Search stays one Up press away.
-            if (_contentScope.hasFocus) return;
-            if (_filteredChannels.isNotEmpty &&
-                _firstResultFocus.context != null) {
-              _firstResultFocus.requestFocus();
-            } else {
-              _searchFocus.requestFocus();
-            }
-          },
-        },
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SizedBox(
-              width: 260,
-              child: FocusScope(
-                node: _groupScope,
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(8),
-                  itemCount: _groupEntries.length,
-                  itemBuilder: (context, i) {
-                    final entry = _groupEntries[i];
-                    final selected = i == _selectedGroupIndex;
-                    return TvMenuTile(
-                      focusNode: _groupFocusNodes[i],
-                      icon: entry == 'All'
-                          ? Icons.apps
-                          : entry == 'Favorites'
-                              ? Icons.star
-                              : Icons.live_tv,
-                      title: entry == 'All' || entry == 'Favorites'
-                          ? tr(entry)
-                          : entry,
-                      trailing: selected
-                          ? Icon(Icons.check, color: scheme.primary)
-                          : const SizedBox.shrink(),
-                      // Deliberately doesn't move focus into the content
-                      // pane on its own — matches the competitor screen
-                      // this is modeled on, where picking a group only
-                      // updates the list on the right; "change pane" stays
-                      // a separate, deliberate Right press.
-                      onTap: () {
-                        setState(() => _selectedGroupIndex = i);
-                        // Back to the top so Right lands on the new
-                        // group's first channel (row 0 must be built).
-                        if (_resultsScroll.hasClients) {
-                          _resultsScroll.jumpTo(0);
-                        }
-                      },
-                    );
-                  },
-                ),
+          child: _panes(
+            narrow: narrow,
+            showChannels: showChannels,
+            groups: FocusScope(
+              node: _groupScope,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(8),
+                itemCount: _groupEntries.length,
+                itemBuilder: (context, i) {
+                  final entry = _groupEntries[i];
+                  final selected = i == _selectedGroupIndex;
+                  return TvMenuTile(
+                    focusNode: _groupFocusNodes[i],
+                    icon: entry == 'All'
+                        ? Icons.apps
+                        : entry == 'Favorites'
+                            ? Icons.star
+                            : Icons.live_tv,
+                    title: entry == 'All' || entry == 'Favorites'
+                        ? tr(entry)
+                        : entry,
+                    trailing: selected
+                        ? Icon(Icons.check, color: scheme.primary)
+                        : const SizedBox.shrink(),
+                    // Deliberately doesn't move focus into the content
+                    // pane on its own — matches the competitor screen
+                    // this is modeled on, where picking a group only
+                    // updates the list on the right; "change pane" stays
+                    // a separate, deliberate Right press.
+                    onTap: () {
+                      setState(() {
+                        _selectedGroupIndex = i;
+                        if (narrow) _narrowShowChannels = true;
+                      });
+                      // Back to the top so Right lands on the new
+                      // group's first channel (row 0 must be built).
+                      if (_resultsScroll.hasClients) {
+                        _resultsScroll.jumpTo(0);
+                      }
+                    },
+                  );
+                },
               ),
             ),
-            const VerticalDivider(color: Colors.white24, width: 1),
-            Expanded(
-              child: FocusScope(
-                node: _contentScope,
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: TextField(
-                        controller: _searchController,
-                        focusNode: _searchFocus,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          hintText: tr('Search channels...'),
-                          hintStyle: const TextStyle(color: Colors.white54),
-                          prefixIcon:
-                              const Icon(Icons.search, color: Colors.white54),
-                          border: const OutlineInputBorder(),
-                        ),
-                        onChanged: (v) => setState(() => _query = v),
+            channels: FocusScope(
+              node: _contentScope,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: TextField(
+                      controller: _searchController,
+                      focusNode: _searchFocus,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: tr('Search channels...'),
+                        hintStyle: const TextStyle(color: Colors.white54),
+                        prefixIcon:
+                            const Icon(Icons.search, color: Colors.white54),
+                        border: const OutlineInputBorder(),
                       ),
+                      onChanged: (v) => setState(() => _query = v),
                     ),
-                    Expanded(
-                      child: filtered.isEmpty
-                          ? Center(
-                              child: Text(tr('No channels found'),
-                                  style:
-                                      const TextStyle(color: Colors.white54)),
-                            )
-                          : ListView.builder(
-                              controller: _resultsScroll,
-                              itemCount: filtered.length,
-                              itemBuilder: (context, i) {
-                                final c = filtered[i];
-                                final now = epg.getCurrentProgram(c.epgId);
-                                return TvMenuTile(
-                                  subtitle: now == null
-                                      ? null
-                                      : '${_hhmm(now.start)}–${_hhmm(now.stop)}  ${now.title}',
-                                  focusNode: i == 0 ? _firstResultFocus : null,
-                                  leading: (c.logoUrl != null &&
-                                          c.logoUrl!.isNotEmpty)
-                                      ? Image.network(c.logoUrl!,
-                                          width: 32,
-                                          height: 32,
-                                          errorBuilder: (_, __, ___) =>
-                                              const Icon(Icons.tv,
-                                                  color: Colors.white54))
-                                      : const Icon(Icons.tv,
-                                          color: Colors.white54),
-                                  title: c.name,
-                                  trailing: const SizedBox.shrink(),
-                                  onTap: () => Navigator.of(context).pop(c),
-                                );
-                              },
-                            ),
-                    ),
-                  ],
-                ),
+                  ),
+                  Expanded(
+                    child: filtered.isEmpty
+                        ? Center(
+                            child: Text(tr('No channels found'),
+                                style: const TextStyle(color: Colors.white54)),
+                          )
+                        : ListView.builder(
+                            controller: _resultsScroll,
+                            itemCount: filtered.length,
+                            itemBuilder: (context, i) {
+                              final c = filtered[i];
+                              final now = epg.getCurrentProgram(c.epgId);
+                              return TvMenuTile(
+                                subtitle: now == null
+                                    ? null
+                                    : '${_hhmm(now.start)}–${_hhmm(now.stop)}  ${now.title}',
+                                focusNode: i == 0 ? _firstResultFocus : null,
+                                leading:
+                                    (c.logoUrl != null && c.logoUrl!.isNotEmpty)
+                                        ? Image.network(c.logoUrl!,
+                                            width: 32,
+                                            height: 32,
+                                            errorBuilder: (_, __, ___) =>
+                                                const Icon(Icons.tv,
+                                                    color: Colors.white54))
+                                        : const Icon(Icons.tv,
+                                            color: Colors.white54),
+                                title: c.name,
+                                trailing: const SizedBox.shrink(),
+                                onTap: () => Navigator.of(context).pop(c),
+                              );
+                            },
+                          ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
+    );
+  }
+
+  /// Groups | channels side by side, or one of them on a portrait phone.
+  Widget _panes({
+    required bool narrow,
+    required bool showChannels,
+    required Widget groups,
+    required Widget channels,
+  }) {
+    if (narrow) return showChannels ? channels : groups;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(width: 260, child: groups),
+        const VerticalDivider(color: Colors.white24, width: 1),
+        Expanded(child: channels),
+      ],
     );
   }
 }

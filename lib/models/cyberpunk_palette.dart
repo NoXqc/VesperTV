@@ -13,7 +13,13 @@ class CyberpunkPalette {
     this.isMinimal = false,
     this.highlight,
     this.trueBlack = false,
+    this.vivid = false,
   });
+
+  /// A seeded duo-tone palette (gradient background like Neon Purple) whose
+  /// [primary] is used as-is instead of `ColorScheme.fromSeed`'s tone — the
+  /// seeded tone of a neon green is a soft mint. Dark text sits on it.
+  final bool vivid;
 
   /// Stored in prefs — stable even if [label] wording changes later.
   final String id;

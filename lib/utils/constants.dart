@@ -288,6 +288,17 @@ class AppConstants {
       primary: Color(0xFF7C3AED),
       secondary: Color(0xFFE91E8C),
     ),
+    // Owner, 2026-10-17: "same as the others, just green". `vivid` keeps the
+    // neon (seeding it gave a pale mint). New id, not the retired
+    // 'green_orange' (that one maps to Habs).
+    CyberpunkPalette(
+      id: 'neon_green',
+      label: 'Neon Green',
+      // Toned down from 39FF14 (owner: "nice but can be too much").
+      primary: Color(0xFF2FD414),
+      secondary: Color(0xFF00B86B),
+      vivid: true,
+    ),
     // Replaced the old Green / Orange palette (id 'green_orange', still
     // mapped to this one — see AppPreferences._paletteById). Bleu-blanc-
     // rouge: the red is the Canadiens' own C8102E; the blue is lifted well

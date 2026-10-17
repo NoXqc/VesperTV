@@ -63,6 +63,14 @@ ColorScheme buildPaletteColorScheme(
         ColorScheme.fromSeed(seedColor: palette.primary, brightness: brightness)
             .copyWith(secondary: palette.secondary);
     final hasHighlight = palette.highlight != null;
+    if (palette.vivid) {
+      return seeded.copyWith(
+        primary: palette.primary,
+        onPrimary: Colors.black,
+        tertiary: palette.primary,
+        primaryContainer: palette.primary,
+      );
+    }
     // A palette using `highlight` (currently only Habs) used to have
     // `primary` substituted with that neutral stand-in (white) for the
     // focus border/gradient/text — reverted per direct feedback: "make

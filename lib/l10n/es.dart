@@ -269,6 +269,8 @@ const Map<String, String> kEs = {
   'Play here': "Reproducir aquí",
   '{channel} · plays at the top of Sports':
       "{channel} · se reproduce arriba en Deportes",
+  '▶❚❚: watch this game  ·  Back: playing game':
+      "▶❚❚: ver este partido  ·  Atrás: partido en curso",
   'OK: full screen  ·  ▶❚❚ or Back: stop':
       "OK: pantalla completa  ·  ▶❚❚ o Atrás: detener",
   'Still looking for channels…': "Todavía buscando canales…",
@@ -775,6 +777,7 @@ const Map<String, String> kEs = {
   'Platinum': "Platino",
   'Rosé': "Rosé",
   'Neon Purple': "Morado neón",
+  'Neon Green': "Verde neón",
   'Habs': "Habs",
   'Dark / Gold': "Negro / Oro",
 
@@ -1004,6 +1007,12 @@ const Map<String, String> kEs = {
   '{h} h {m} min': "{h} h {m} min",
   'Episode {n}': "Episodio {n}",
   'Watched': "Visto",
+  'More': "Más",
+  'Watching': "Viendo",
+  'Marked as watched': "Marcado como visto",
+  'Marked as unwatched': "Marcado como no visto",
+  'Hold to mark as watched': "Mantén pulsado para marcar como visto",
+  'Hold to mark as unwatched': "Mantén pulsado para marcar como no visto",
   'Cast: {names}': "Reparto: {names}",
   'Director: {names}': "Dirección: {names}",
   'Specials': "Especiales",

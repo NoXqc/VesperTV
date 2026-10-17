@@ -66,7 +66,9 @@ Read before changing guide/Multiview/profiles/palettes/backup-server logic.
   failures retry other servers. Mid-stream drops do not fail over. Sticks to last-working server.
 - **Palettes:** duo-tone `primary`/`secondary`; optional `highlight` is wordmark/swatch decoration
   only (Habs uses white). Old id `green_orange` maps to `habs`. `isMinimal` (Platinum) = flat black
-  with translucent-white glass focus; `trueBlack` (Dark / Gold) = hand-built scheme.
+  with translucent-white glass focus; `trueBlack` (Dark / Gold) = hand-built scheme; `vivid`
+  (Neon Green, id `neon_green`) = seeded like Neon Purple but keeps the raw neon as `primary`
+  with black text on it (seeding turned it pale mint).
 - **Viewer profiles** (`ViewerProfile`, `ViewerProfileService`): several viewers sharing one
   device's playlists, each with their own favorites/hidden-groups/watch-history. Main's data lives
   under every *existing* unsuffixed storage key, completely unchanged — never add a step that

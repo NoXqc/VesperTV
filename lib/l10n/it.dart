@@ -267,6 +267,8 @@ const Map<String, String> kIt = {
   'Play here': "Riproduci qui",
   '{channel} · plays at the top of Sports':
       "{channel} · in onda in cima a Sport",
+  '▶❚❚: watch this game  ·  Back: playing game':
+      "▶❚❚: guarda questa partita  ·  Indietro: partita in corso",
   'OK: full screen  ·  ▶❚❚ or Back: stop':
       "OK: schermo intero  ·  ▶❚❚ o Indietro: ferma",
   'Still looking for channels…': "Ricerca dei canali in corso…",
@@ -776,6 +778,7 @@ const Map<String, String> kIt = {
   'Platinum': "Platino",
   'Rosé': "Rosé",
   'Neon Purple': "Viola neon",
+  'Neon Green': "Verde neon",
   'Habs': "Habs",
   'Dark / Gold': "Nero / Oro",
 
@@ -1008,6 +1011,12 @@ const Map<String, String> kIt = {
   '{h} h {m} min': "{h} h {m} min",
   'Episode {n}': "Episodio {n}",
   'Watched': "Visto",
+  'More': "Altro",
+  'Watching': "In visione",
+  'Marked as watched': "Segnato come visto",
+  'Marked as unwatched': "Segnato come non visto",
+  'Hold to mark as watched': "Tieni premuto per segnare come visto",
+  'Hold to mark as unwatched': "Tieni premuto per segnare come non visto",
   'Cast: {names}': "Cast: {names}",
   'Director: {names}': "Regia: {names}",
   'Specials': "Speciali",

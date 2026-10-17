@@ -2178,9 +2178,13 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
             return;
           }
           if (_compact) {
-            if (_phonePage > 0) {
+            // The bottom bar replaced the tabs page as the way between
+            // tabs: content -> groups -> exit; "More" (page 0) -> groups.
+            if (_phonePage == 2) {
               if (_timelineFilterActive) _closeTimelineFilter();
-              setState(() => _phonePage--);
+              setState(() => _phonePage = 1);
+            } else if (_phonePage == 0) {
+              setState(() => _phonePage = 1);
             } else {
               _confirmExit();
             }
@@ -2429,7 +2433,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                                     },
                               child: _compact
                                   ? _buildPhoneColumns(
-                                      playlist, epg, isBrowseTab)
+                                      playlist, epg, isBrowseTab, liveChannel)
                                   : Row(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.stretch,
@@ -2560,8 +2564,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// Portrait phone: the same three columns, one page at a time (see
   /// [_compact]). An IndexedStack, not just the visible column, so the
   /// long groups list keeps its scroll position across Back.
-  Widget _buildPhoneColumns(
-      PlaylistManager playlist, EpgService epg, bool isBrowseTab) {
+  Widget _buildPhoneColumns(PlaylistManager playlist, EpgService epg,
+      bool isBrowseTab, Channel? liveChannel) {
     final String? title = switch (_phonePage) {
       0 => null,
       1 => tr(_tab),
@@ -2580,12 +2584,17 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         if (title != null)
           InkWell(
             canRequestFocus: false,
-            onTap: () => setState(() => _phonePage--),
+            // Groups is the top level now (the bottom bar switches tabs).
+            onTap:
+                _phonePage == 2 ? () => setState(() => _phonePage = 1) : null,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(
                 children: [
-                  const Icon(Icons.arrow_back, color: Colors.white),
+                  if (_phonePage == 2)
+                    const Icon(Icons.arrow_back, color: Colors.white)
+                  else
+                    const SizedBox(width: 4),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(title,
@@ -2607,6 +2616,27 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
               ),
             ),
           ),
+        // TV tab: the live preview, one instance above both the groups and
+        // the channels page (a second video_player_hdr view on the same
+        // controller doesn't render — see LiveResumeHint). On the groups
+        // page only while something live is playing.
+        if (_tab == 'TV' &&
+            !_timelineFilterActive &&
+            (_phonePage == 2 || (_phonePage == 1 && liveChannel != null))) ...[
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: Container(
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.18), width: 1.5),
+              ),
+              child: _buildTimelinePreviewBox(liveChannel),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
         Expanded(
           child: IndexedStack(
             index: _phonePage,
@@ -2618,7 +2648,94 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
             ],
           ),
         ),
+        _buildPhoneTabBar(),
       ],
+    );
+  }
+
+  /// Portrait phone: floating tab bar under the pages (streaming-app
+  /// style). Sports opens its own screen like the tabs column's row;
+  /// "More" is the old tabs page (Search, Multiview, Settings, Exit...).
+  Widget _buildPhoneTabBar() {
+    final scheme = Theme.of(context).colorScheme;
+    Widget item(
+        IconData icon, String label, bool selected, VoidCallback onTap) {
+      return Expanded(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            margin: const EdgeInsets.all(5),
+            padding: const EdgeInsets.symmetric(vertical: 7),
+            decoration: BoxDecoration(
+              color: selected
+                  ? Colors.white.withValues(alpha: 0.14)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(
+                  color: selected ? Colors.white24 : Colors.transparent),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon,
+                    size: 24,
+                    color: selected ? scheme.primary : Colors.white70),
+                const SizedBox(height: 3),
+                Text(label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        color: selected ? Colors.white : Colors.white70,
+                        fontSize: 11.5,
+                        fontWeight:
+                            selected ? FontWeight.w700 : FontWeight.w500)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final onTabs = _phonePage != 0;
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(0, 6, 0, 8),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: [
+              Colors.white.withValues(alpha: 0.10),
+              Colors.white.withValues(alpha: 0.04),
+            ]),
+            color: Colors.black,
+            borderRadius: BorderRadius.circular(34),
+            border: Border.all(color: Colors.white24),
+            boxShadow: const [
+              BoxShadow(color: Colors.black54, blurRadius: 12),
+            ],
+          ),
+          child: Row(
+            children: [
+              for (final tab in _visibleTabs)
+                item(_tabIcons[tab]!, tr(tab), onTabs && _tab == tab, () {
+                  if (_tab == tab) {
+                    setState(() => _phonePage = 1);
+                  } else {
+                    _onTabChanged(tab);
+                  }
+                }),
+              item(Icons.sports_hockey, tr('Sports'), false, () {
+                Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const SportsScreen()));
+              }),
+              item(Icons.menu, tr('More'), !onTabs,
+                  () => setState(() => _phonePage = 0)),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -2728,24 +2845,27 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         // Its own full-screen page (like Search), not a tab in these
         // columns: league/day/game rows don't fit the groups -> content
         // column model.
-        _SelectableRow(
-          icon: Icons.sports_hockey,
-          label: tr('Sports'),
-          selected: false,
-          collapsed: collapsed,
-          onTap: () => Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => const SportsScreen())),
-        ),
-        const Divider(height: 16, color: Colors.white24),
-        for (final tab in _visibleTabs)
+        // Portrait phone: these live in the bottom tab bar instead.
+        if (!_compact) ...[
           _SelectableRow(
-            icon: _tabIcons[tab]!,
-            label: tr(tab),
-            selected: _tab == tab,
+            icon: Icons.sports_hockey,
+            label: tr('Sports'),
+            selected: false,
             collapsed: collapsed,
-            focusNode: tab == 'TV' ? _tvTabFocusNode : null,
-            onTap: () => _onTabChanged(tab),
+            onTap: () => Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => const SportsScreen())),
           ),
+          const Divider(height: 16, color: Colors.white24),
+          for (final tab in _visibleTabs)
+            _SelectableRow(
+              icon: _tabIcons[tab]!,
+              label: tr(tab),
+              selected: _tab == tab,
+              collapsed: collapsed,
+              focusNode: tab == 'TV' ? _tvTabFocusNode : null,
+              onTap: () => _onTabChanged(tab),
+            ),
+        ],
         const Divider(height: 16, color: Colors.white24),
         _SelectableRow(
           icon: Icons.playlist_add_check,
@@ -3541,12 +3661,14 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         // preview row is ~50% of the window (flex-based, see below) and
         // collapsing that to a small bar was a far more drastic, jarring
         // change than Android TV's fixed-160px starting point warranted.
+        // Portrait phone: the video sits above the pages
+        // (_buildPhoneColumns); only the filter bar stays here.
         children: _compact
             ? [
-                _timelineFilterActive
-                    ? SizedBox(height: 64, child: previewRow)
-                    : AspectRatio(aspectRatio: 16 / 9, child: previewRow),
-                const Divider(height: 12),
+                if (_timelineFilterActive) ...[
+                  SizedBox(height: 64, child: previewRow),
+                  const Divider(height: 12),
+                ],
                 Expanded(child: guide),
               ]
             : _timelineFilterActive &&
@@ -3609,27 +3731,9 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     // screen that's still full-bleed video.
     // Portrait phone: the list can't float beside the video (it would
     // cover all of it) — video on top, list below.
-    if (_compact) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AspectRatio(
-            aspectRatio: 16 / 9,
-            child: Container(
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.18), width: 1.5),
-              ),
-              child: _buildTimelinePreviewBox(channel),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Expanded(child: _buildLiveList(playlist)),
-        ],
-      );
-    }
+    // The video itself is drawn once above the phone pages
+    // (_buildPhoneColumns), so it stays on the groups page too.
+    if (_compact) return _buildLiveList(playlist);
 
     return Container(
       clipBehavior: Clip.antiAlias,

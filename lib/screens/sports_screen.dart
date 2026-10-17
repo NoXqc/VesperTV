@@ -92,6 +92,12 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   SportsGame? _previewGame;
   Channel? _previewChannel;
 
+  /// OK on another card while the hero plays: that game's score/details
+  /// show beside the still-playing video, nothing new plays (owner,
+  /// 2026-10-17). ▶❚❚ then plays it; Back returns to the playing game.
+  /// Cleared by any [_setPreview].
+  SportsGame? _heroPick;
+
   /// Preview starts/stops run one at a time (see [_setPreview]).
   Future<void> _previewChain = Future.value();
   int _previewSeq = 0;
@@ -547,6 +553,11 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     // OK on the game already playing in the hero: fullscreen on that same
     // stream (it may be a channel picked from the menu, not the best one).
     if (_isPreviewing(game)) return _play(_previewChannel!, game: game);
+    // Another game while one plays: show it beside the video, keep playing.
+    if (!_touch && _livePreview(context.read<PlaybackService>()) != null) {
+      setState(() => _heroPick = game);
+      return;
+    }
     // Otherwise OK only selects: a card shows in the hero, nothing plays
     // until ▶❚❚ (owner, 2026-10-18: OK went straight to full screen). A
     // phone has no ▶❚❚, so its second tap (the first one focuses, see
@@ -625,6 +636,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     setState(() {
       _previewGame = game;
       _previewChannel = channel;
+      _heroPick = null;
     });
     return _previewChain = _previewChain.then((_) async {
       if (seq != _previewSeq) return;
@@ -746,8 +758,16 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   Widget build(BuildContext context) {
     final sections = _sections;
     final preview = _livePreview(context.watch<PlaybackService>());
-    // While a game plays in the hero it stays there, whatever is focused.
-    final hero = preview ?? _heroGame;
+    // While a game plays in the hero it stays there, whatever is focused —
+    // unless OK picked another card ([_heroPick]): its details beside the
+    // same video. Re-read from the latest scores.
+    final pickKey = _heroPick == null ? null : _gameKey(_heroPick!);
+    final pick = preview == null ||
+            pickKey == null ||
+            pickKey == _gameKey(preview)
+        ? null
+        : _games.where((g) => _gameKey(g) == pickKey).firstOrNull ?? _heroPick;
+    final hero = pick ?? preview ?? _heroGame;
     final header = [
       _buildLeagueBar(),
       const SizedBox(height: 8),
@@ -762,6 +782,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           matching: _matching,
           hideScores: _hideScores,
           playing: preview != null,
+          showingOther: pick != null,
           touch: _touch,
           narrow: _narrow,
         ),
@@ -774,6 +795,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         if (didPop) return;
         if (_movingLeague != null) {
           _endLeagueMove();
+        } else if (pick != null) {
+          setState(() => _heroPick = null);
         } else if (preview != null) {
           unawaited(_setPreview(null, null));
         }
@@ -1409,9 +1432,14 @@ class _Hero extends StatelessWidget {
     required this.matching,
     required this.hideScores,
     required this.playing,
+    this.showingOther = false,
     this.touch = false,
     this.narrow = false,
   });
+
+  /// [playing], but [game] is a card picked with OK, not the one whose
+  /// stream the video shows (see `_heroPick`): its own channel is named.
+  final bool showingOther;
 
   static const double height = 168;
 
@@ -1467,7 +1495,10 @@ class _Hero extends StatelessWidget {
   ///   gold frame is a border around it.
   Widget _buildPlaying(BuildContext context, bool showScore) {
     final scheme = Theme.of(context).colorScheme;
-    final channel = context.read<PlaybackService>().currentChannel;
+    final playingChannel = context.read<PlaybackService>().currentChannel;
+    // The channel named under the score: the picked game's own match, not
+    // the stream still playing.
+    final channel = showingOther ? null : playingChannel;
     const videoHeight = height - 8;
     // The normal VS layout, smaller, beside the video (owner: the stacked
     // version wasn't nice).
@@ -1511,10 +1542,10 @@ class _Hero extends StatelessWidget {
           child: SizedBox(
             width: w,
             height: h,
-            child: channel == null
+            child: playingChannel == null
                 ? const SizedBox()
                 : VideoPlayerPane(
-                    key: ValueKey(channel.id),
+                    key: ValueKey(playingChannel.id),
                     showEpgBar: false,
                     showControls: false),
           ),
@@ -1522,7 +1553,9 @@ class _Hero extends StatelessWidget {
     final hint = _KeyHintText(
         touch
             ? tr('Tap the game again: full screen  ·  Back: stop')
-            : tr('OK: full screen  ·  ▶❚❚ or Back: stop'),
+            : showingOther
+                ? tr('▶❚❚: watch this game  ·  Back: playing game')
+                : tr('OK: full screen  ·  ▶❚❚ or Back: stop'),
         textAlign: TextAlign.center,
         style: const TextStyle(fontSize: 12, color: Colors.white54));
 
@@ -1980,8 +2013,14 @@ class _GameCardState extends State<_GameCard> {
                   height: _GameCard.height,
                   padding: const EdgeInsets.fromLTRB(12, 9, 12, 8),
                   decoration: BoxDecoration(
-                    color:
-                        _focused ? null : Colors.white.withValues(alpha: 0.07),
+                    // Watching: a light gold tint + thin frame (the
+                    // "WATCHING" pill is the main cue; a thick frame read
+                    // like the focused card, owner 2026-10-17).
+                    color: _focused
+                        ? null
+                        : widget.previewing
+                            ? scheme.primary.withValues(alpha: 0.14)
+                            : Colors.white.withValues(alpha: 0.07),
                     gradient: _focused ? sportsFocusSheen(scheme) : null,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
@@ -2015,28 +2054,61 @@ class _GameCardState extends State<_GameCard> {
                                   fontSize: 11,
                                   letterSpacing: 1,
                                   color: Colors.white54)),
-                          const Spacer(),
+                          const SizedBox(width: 6),
+                          // The game playing in the hero (it can be another
+                          // card's details the hero shows, see _heroPick).
                           if (widget.previewing)
-                            Padding(
-                              padding: const EdgeInsets.only(right: 6),
-                              child: Icon(Icons.play_circle_fill,
-                                  size: 15, color: scheme.primary),
-                            ),
-                          if (live)
                             Container(
-                              width: 7,
-                              height: 7,
-                              margin: const EdgeInsets.only(right: 5),
-                              decoration: const BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.redAccent),
+                              margin: const EdgeInsets.only(right: 6),
+                              padding: const EdgeInsets.fromLTRB(4, 2, 7, 2),
+                              decoration: BoxDecoration(
+                                color: scheme.primary,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.play_arrow,
+                                      size: 13, color: scheme.onPrimary),
+                                  const SizedBox(width: 2),
+                                  Text(tr('Watching').toUpperCase(),
+                                      style: TextStyle(
+                                          fontSize: 9.5,
+                                          letterSpacing: 0.6,
+                                          fontWeight: FontWeight.w800,
+                                          color: scheme.onPrimary)),
+                                ],
+                              ),
                             ),
-                          Text(status,
-                              style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color:
-                                      live ? Colors.redAccent : Colors.white)),
+                          // Takes the rest of the row (status right-aligned)
+                          // and shrinks a long status next to the pill.
+                          Expanded(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                if (live)
+                                  Container(
+                                    width: 7,
+                                    height: 7,
+                                    margin: const EdgeInsets.only(right: 5),
+                                    decoration: const BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Colors.redAccent),
+                                  ),
+                                Flexible(
+                                  child: Text(status,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: live
+                                              ? Colors.redAccent
+                                              : Colors.white)),
+                                ),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 5),
