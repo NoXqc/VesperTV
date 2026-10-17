@@ -2726,7 +2726,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                     _onTabChanged(tab);
                   }
                 }),
-              item(Icons.sports_hockey, tr('Sports'), false, () {
+              item(Icons.sports_hockey, AppConstants.sportsTabName, false, () {
                 Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const SportsScreen()));
               }),
@@ -2849,7 +2849,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         if (!_compact) ...[
           _SelectableRow(
             icon: Icons.sports_hockey,
-            label: tr('Sports'),
+            label: AppConstants.sportsTabName,
             selected: false,
             collapsed: collapsed,
             onTap: () => Navigator.of(context)

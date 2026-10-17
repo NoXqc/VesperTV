@@ -197,6 +197,65 @@ class SportsService {
     }
   }
 
+  final Map<String, (SportsGameSummary, DateTime)> _summaryCache = {};
+  final Map<String, Future<SportsGameSummary?>> _summaryInFlight = {};
+
+  /// One game's box score, leaders, injuries and its teams' standings (the
+  /// live list's detail pop-up). One call per opened game, cached 30 s
+  /// while it's live. Null when ESPN can't be reached and nothing is cached.
+  Future<SportsGameSummary?> gameSummary(SportsGame game) {
+    final key = '${game.league.id}|${game.id}';
+    final cached = _summaryCache[key];
+    if (cached != null &&
+        DateTime.now().difference(cached.$2) <
+            (game.state == GameState.live
+                ? const Duration(seconds: 30)
+                : const Duration(minutes: 10))) {
+      return Future.value(cached.$1);
+    }
+    return _summaryInFlight[key] ??= () async {
+      final url =
+          Uri.parse('$_base/${game.league.espnPath}/summary?event=${game.id}');
+      // It's ~40 KB gzipped and answers in well under a second, so a slow
+      // try is a stuck connection, not a big download: give up after 6 s
+      // and retry once (the owner's Formuler took ~30 s to fill the
+      // pop-up with one 15 s try).
+      for (var attempt = 1; attempt <= 2; attempt++) {
+        final watch = Stopwatch()..start();
+        try {
+          final response =
+              await _client.get(url).timeout(const Duration(seconds: 6));
+          if (response.statusCode != 200) {
+            throw Exception('HTTP ${response.statusCode}');
+          }
+          final httpMs = watch.elapsedMilliseconds;
+          // ~400 KB of JSON: parsed off the UI isolate.
+          final summary = await compute(
+              parseEspnSummary, (response.body, game.home.id, game.away.id));
+          debugPrint('SportsService: summary ${game.id} try $attempt: '
+              'http ${httpMs}ms ${response.bodyBytes.length}B, '
+              'parse ${watch.elapsedMilliseconds - httpMs}ms');
+          _summaryCache[key] = (summary, DateTime.now());
+          return summary;
+        } catch (e) {
+          debugPrint('SportsService: ${game.league.id} summary ${game.id} '
+              'try $attempt after ${watch.elapsedMilliseconds}ms: $e');
+        }
+      }
+      return _summaryCache[key]?.$1;
+    }()
+        .whenComplete(() {
+      // A block, not `=> remove(key)`: remove returns this very future, and
+      // whenComplete waits for a returned future — so it waited on itself
+      // forever and the pop-up only filled at its 30 s refresh.
+      _summaryInFlight.remove(key);
+    });
+  }
+
+  /// Starts [gameSummary] for a row the user is resting on, so OK opens the
+  /// pop-up already filled. Cached/in-flight games cost nothing.
+  void prefetchSummary(SportsGame game) => unawaited(gameSummary(game));
+
   DateTime _today() {
     final n = DateTime.now();
     return DateTime(n.year, n.month, n.day);
@@ -712,6 +771,364 @@ SportsGame? _parseEvent(Map<String, dynamic> e, SportsLeague league) {
     home: home,
     away: away,
     broadcasts: broadcasts.toList(),
+    leaders: _scoreboardLeaders(comp, competitors),
+    situation: state == GameState.live
+        ? _situationOf(comp['situation'], league)
+        : null,
+  );
+}
+
+/// ESPN's "rating" leader repeats another line ("29 PTS").
+const _skippedLeaderStats = {'RAT', 'MLB'};
+
+SportsLeader? _leaderOf(Map category, {String? teamId}) {
+  final first = (category['leaders'] as List?)?.firstOrNull as Map?;
+  final athlete = first?['athlete'] as Map?;
+  if (first == null || athlete == null) return null;
+  final name = (athlete['shortName'] ?? athlete['displayName'])?.toString();
+  final value = first['displayValue']?.toString();
+  if (name == null || value == null || value.isEmpty) return null;
+  return SportsLeader(
+    stat: (category['shortDisplayName'] ??
+            category['abbreviation'] ??
+            category['displayName'] ??
+            '')
+        .toString(),
+    name: name,
+    value: value,
+    teamId: ((first['team'] as Map?)?['id'] ??
+            (athlete['team'] as Map?)?['id'] ??
+            teamId)
+        ?.toString(),
+    position: (athlete['position'] as Map?)?['abbreviation']?.toString(),
+  );
+}
+
+/// Football puts one leader per stat on the competition; hockey/basketball/
+/// baseball give each team its own — merged here to the better of the two
+/// per stat, in ESPN's order.
+List<SportsLeader> _scoreboardLeaders(
+    Map<String, dynamic> comp, List competitors) {
+  final out = <SportsLeader>[];
+  for (final c in (comp['leaders'] as List?) ?? const []) {
+    final l = _leaderOf(c as Map);
+    if (l != null && !_skippedLeaderStats.contains(l.stat)) out.add(l);
+  }
+  if (out.isNotEmpty) return out;
+  final byStat = <String, (SportsLeader, double)>{};
+  final order = <String>[];
+  for (final t in competitors) {
+    final teamId = (((t as Map)['team'] as Map?)?['id'] ?? t['id'])?.toString();
+    for (final c in (t['leaders'] as List?) ?? const []) {
+      final l = _leaderOf(c as Map, teamId: teamId);
+      if (l == null || _skippedLeaderStats.contains(l.stat)) continue;
+      final v =
+          ((c['leaders'] as List).first['value'] as num?)?.toDouble() ?? 0;
+      final had = byStat[l.stat];
+      if (had == null) order.add(l.stat);
+      if (had == null || v > had.$2) byStat[l.stat] = (l, v);
+    }
+  }
+  return [for (final s in order) byStat[s]!.$1];
+}
+
+SportsSituation? _situationOf(Object? raw, SportsLeague league) {
+  if (raw is! Map) return null;
+  final lastPlay = (raw['lastPlay'] as Map?)?['text']?.toString();
+  String? text = raw['downDistanceText']?.toString();
+  if (text == null && raw['outs'] != null) {
+    // Baseball: "1-2, 2 out · 1st, 3rd".
+    bool on(String k) => raw[k] == true || raw[k] is Map;
+    final bases = [
+      if (on('onFirst')) '1st',
+      if (on('onSecond')) '2nd',
+      if (on('onThird')) '3rd',
+    ];
+    text = [
+      if (raw['balls'] != null && raw['strikes'] != null)
+        '${raw['balls']}-${raw['strikes']}',
+      '${raw['outs']} out',
+      if (bases.isNotEmpty) bases.join(', '),
+    ].join(' · ');
+  }
+  final possession = raw['possession']?.toString();
+  if (text == null && possession == null && lastPlay == null) return null;
+  return SportsSituation(
+    text: text,
+    possessionTeamId: possession,
+    redZone: raw['isRedZone'] == true,
+    lastPlay: lastPlay,
+  );
+}
+
+/// Box-score columns worth a glance, per category, in display order; a
+/// category whose labels hit none of them is left out (returns, punting).
+const List<List<String>> _boxColumns = [
+  ['C/ATT', 'YDS', 'TD', 'INT'], // passing
+  ['CAR', 'YDS', 'TD'], // rushing
+  ['REC', 'TGTS', 'YDS', 'TD'], // receiving
+  ['TOT', 'SACKS', 'TFL'], // defensive
+  ['FG', 'XP', 'PTS'], // kicking
+  ['MIN', 'PTS', 'REB', 'AST', '3PT', 'STL', 'BLK'], // basketball
+  ['G', 'A', 'S', '+/-', 'TOI'], // hockey skaters (S = shots)
+  ['SA', 'SV', 'SV%', 'GA'], // goalies
+  ['H-AB', 'R', 'HR', 'RBI', 'BB', 'K'], // batting
+  ['IP', 'H', 'ER', 'BB', 'K', 'PC'], // pitching
+];
+
+const _boxCategories = {
+  'passing',
+  'rushing',
+  'receiving',
+  'defensive',
+  'kicking',
+  'forwards',
+  'defenses',
+  'goalies',
+};
+
+/// Top-level so [compute] can run it on a background isolate.
+@visibleForTesting
+SportsGameSummary parseEspnSummary((String, String, String) args) {
+  final (body, homeId, awayId) = args;
+  final json = jsonDecode(body);
+  if (json is! Map<String, dynamic>) return const SportsGameSummary();
+  final box = json['boxscore'] as Map?;
+
+  // Team stats, away | home.
+  final teamStats = <(String, String, String)>[];
+  final boxTeams = [
+    for (final t in (box?['teams'] as List?) ?? const []) t as Map
+  ];
+  Map? statsOf(String id) => boxTeams
+      .where((t) => (t['team'] as Map?)?['id']?.toString() == id)
+      .firstOrNull;
+  final away = statsOf(awayId);
+  final home = statsOf(homeId);
+  if (away != null && home != null) {
+    final homeByName = {
+      for (final s in (home['statistics'] as List?) ?? const [])
+        (s as Map)['name']: s['displayValue']?.toString(),
+    };
+    for (final s in (away['statistics'] as List?) ?? const []) {
+      final m = s as Map;
+      final label = (m['label'] ?? m['abbreviation'])?.toString();
+      final a = m['displayValue']?.toString();
+      final h = homeByName[m['name']];
+      if (label == null || a == null || h == null) continue;
+      teamStats.add((label, a, h));
+    }
+  }
+
+  // Box score: per team, a few columns of the top players per category.
+  final players = <String, List<SportsPlayerGroup>>{};
+  for (final t in (box?['players'] as List?) ?? const []) {
+    final teamId = ((t as Map)['team'] as Map?)?['id']?.toString();
+    if (teamId == null) continue;
+    final groups = <SportsPlayerGroup>[];
+    for (final c in (t['statistics'] as List?) ?? const []) {
+      final cat = c as Map;
+      final labels = [
+        for (final l in (cat['labels'] as List?) ?? const []) '$l'
+      ];
+      final name = cat['name']?.toString();
+      final title = name ??
+          (labels.contains('IP')
+              ? 'pitching'
+              : labels.contains('AB')
+                  ? 'batting'
+                  : 'players');
+      if (name != null && !_boxCategories.contains(name)) continue;
+      // The column set this category matches best (rushing also has
+      // passing's YDS/TD — the first set with two hits dropped CAR).
+      List<String>? wanted;
+      for (final cols in _boxColumns) {
+        final hit = [
+          for (final x in cols)
+            if (labels.contains(x)) x
+        ];
+        if (hit.length >= 2 && hit.length > (wanted?.length ?? 0)) {
+          wanted = hit;
+        }
+      }
+      if (wanted == null) continue;
+      final idx = [for (final x in wanted) labels.indexOf(x)];
+      double num0(List s, String label) {
+        final i = labels.indexOf(label);
+        if (i < 0 || i >= s.length) return 0;
+        final v = '${s[i]}'.split(RegExp(r'[-/]')).first;
+        return double.tryParse(v) ?? 0;
+      }
+
+      double rank(List s) {
+        if (labels.contains('G') && labels.contains('A')) {
+          return num0(s, 'G') + num0(s, 'A') + num0(s, 'S') / 100;
+        }
+        for (final k in ['PTS', 'YDS', 'TOT']) {
+          if (labels.contains(k)) return num0(s, k);
+        }
+        if (labels.contains('H-AB')) {
+          return num0(s, 'H-AB') + num0(s, 'RBI') + num0(s, 'R') / 2;
+        }
+        return 0; // pitchers / goalies: ESPN's order (starter first)
+      }
+
+      final rows = <(String, List<String>, double)>[];
+      for (final a in (cat['athletes'] as List?) ?? const []) {
+        final m = a as Map;
+        final stats = (m['stats'] as List?) ?? const [];
+        if (stats.isEmpty) continue; // DNP
+        final ath = m['athlete'] as Map? ?? const {};
+        final n = (ath['shortName'] ?? ath['displayName'])?.toString();
+        if (n == null) continue;
+        rows.add((
+          n,
+          [for (final i in idx) i < stats.length ? '${stats[i]}' : ''],
+          rank(stats)
+        ));
+      }
+      if (rows.isEmpty) continue;
+      // Stable: equal ranks keep ESPN's order.
+      final indexed = rows.indexed.toList()
+        ..sort((x, y) {
+          final r = y.$2.$3.compareTo(x.$2.$3);
+          return r != 0 ? r : x.$1.compareTo(y.$1);
+        });
+      final take = switch (title) {
+        'players' => 5,
+        'passing' || 'kicking' || 'goalies' || 'pitching' => 2,
+        _ => 3,
+      };
+      groups.add(SportsPlayerGroup(
+        title: title,
+        labels: wanted,
+        rows: [for (final r in indexed.take(take)) (r.$2.$1, r.$2.$2)],
+      ));
+    }
+    if (groups.isNotEmpty) players[teamId] = groups;
+  }
+
+  // Leaders per team.
+  final leaders = <String, List<SportsLeader>>{};
+  for (final t in (json['leaders'] as List?) ?? const []) {
+    final teamId = ((t as Map)['team'] as Map?)?['id']?.toString();
+    if (teamId == null) continue;
+    final list = <SportsLeader>[];
+    for (final c in (t['leaders'] as List?) ?? const []) {
+      final cat = c as Map;
+      final l = _leaderOf(cat, teamId: teamId);
+      if (l == null) continue;
+      list.add(SportsLeader(
+          stat: (cat['displayName'] ?? l.stat).toString(),
+          name: l.name,
+          value: l.value,
+          teamId: teamId,
+          position: l.position));
+    }
+    if (list.isNotEmpty) leaders[teamId] = list;
+  }
+
+  // Injuries per team (football/basketball list them before and during).
+  final injuries = <String, List<SportsInjury>>{};
+  for (final t in (json['injuries'] as List?) ?? const []) {
+    final teamId = ((t as Map)['team'] as Map?)?['id']?.toString();
+    if (teamId == null) continue;
+    final list = <SportsInjury>[];
+    for (final i in (t['injuries'] as List?) ?? const []) {
+      final m = i as Map;
+      final ath = m['athlete'] as Map? ?? const {};
+      final n = (ath['shortName'] ?? ath['displayName'])?.toString();
+      final status = m['status']?.toString();
+      if (n == null || status == null) continue;
+      list.add(SportsInjury(
+        name: n,
+        status: status,
+        position: (ath['position'] as Map?)?['abbreviation']?.toString(),
+        detail: (m['details'] as Map?)?['type']?.toString(),
+      ));
+    }
+    if (list.isNotEmpty) injuries[teamId] = list;
+  }
+
+  // Soccer scorers.
+  final goals = <SportsGoal>[];
+  for (final k in (json['keyEvents'] as List?) ?? const []) {
+    final m = k as Map;
+    if (m['scoringPlay'] != true) continue;
+    final who = (((m['participants'] as List?)?.firstOrNull as Map?)?['athlete']
+            as Map?)?['displayName']
+        ?.toString();
+    if (who == null) continue;
+    final type = ((m['type'] as Map?)?['text'] ?? '').toString().toLowerCase();
+    goals.add(SportsGoal(
+      minute: ((m['clock'] as Map?)?['displayValue'] ?? '').toString(),
+      scorer: who,
+      teamId: (m['team'] as Map?)?['id']?.toString(),
+      penalty: type.contains('penalty'),
+    ));
+  }
+
+  // Standings groups that hold either team: a few columns, wins first.
+  const preferred = [
+    'overall', 'Total', 'W', 'D', 'L', 'T', 'OTL', 'P', 'PTS', 'PCT', 'GB', //
+    'GD', 'CONF', 'STRK',
+  ];
+  final tables = <SportsSummaryTable>[];
+  final groupsJson =
+      ((json['standings'] as Map?)?['groups'] as List?) ?? const [];
+  for (final g in groupsJson) {
+    final gm = g as Map;
+    final entries =
+        ((gm['standings'] as Map?)?['entries'] as List?) ?? const [];
+    final ids = [
+      for (final e in entries) ((e as Map)['id'] ?? '').toString(),
+    ];
+    if (!ids.contains(homeId) && !ids.contains(awayId)) continue;
+    final first = entries.isEmpty ? null : entries.first as Map;
+    final stats = [
+      for (final s in (first?['stats'] as List?) ?? const []) s as Map
+    ];
+    final cols = [
+      for (final p in preferred)
+        if (stats.any((s) => s['abbreviation'] == p)) p,
+    ].take(5).toList();
+    String header(String abbr) {
+      final s = stats.firstWhere((s) => s['abbreviation'] == abbr);
+      return (s['shortDisplayName'] ?? abbr).toString();
+    }
+
+    tables.add(SportsSummaryTable(
+      title: (gm['header'] ?? '')
+          .toString()
+          .replaceFirst(RegExp(r'^\d{4}(-\d{2})?\s+'), '')
+          .replaceFirst(RegExp(r'\s+Standings$'), ''),
+      labels: [for (final c in cols) header(c)],
+      rows: [
+        for (final e in entries)
+          (
+            ((e as Map)['id'] ?? '').toString(),
+            (e['team'] ?? '').toString(),
+            [
+              for (final c in cols)
+                ((e['stats'] as List?)
+                            ?.cast<Map>()
+                            .where((s) => s['abbreviation'] == c)
+                            .firstOrNull?['displayValue'] ??
+                        '')
+                    .toString(),
+            ],
+          ),
+      ],
+    ));
+  }
+
+  return SportsGameSummary(
+    teamStats: teamStats,
+    players: players,
+    leaders: leaders,
+    injuries: injuries,
+    goals: goals,
+    tables: tables,
   );
 }
 

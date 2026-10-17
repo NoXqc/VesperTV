@@ -890,7 +890,16 @@ class SportsGame {
     this.broadcasts = const [],
     this.event,
     this.end,
+    this.leaders = const [],
+    this.situation,
   });
+
+  /// The scoreboard's top performers (in-game once it starts), at most one
+  /// per stat — the live list's fantasy line. Team sports only.
+  final List<SportsLeader> leaders;
+
+  /// Football: down & distance / red zone; baseball: count, outs, bases.
+  final SportsSituation? situation;
 
   final String id;
   final SportsLeague league;
@@ -924,6 +933,129 @@ class SportsGame {
   String get title => league.isField
       ? (event?.title ?? first.name)
       : '${first.shortName} $joiner ${second.shortName}';
+}
+
+/// A stat leader from the scoreboard ("PASS  G. Stockton  181 YDS, 1 TD").
+class SportsLeader {
+  const SportsLeader({
+    required this.stat,
+    required this.name,
+    required this.value,
+    this.teamId,
+    this.position,
+  });
+
+  /// ESPN's short label ("PASS", "G", "Pts", "HR").
+  final String stat;
+
+  /// "G. Stockton".
+  final String name;
+
+  /// Game line ("11/18, 181 YDS, 1 TD") or a bare number ("29").
+  final String value;
+  final String? teamId;
+
+  /// "QB", "C".
+  final String? position;
+}
+
+/// Live game state beyond the clock.
+class SportsSituation {
+  const SportsSituation({
+    this.text,
+    this.possessionTeamId,
+    this.redZone = false,
+    this.lastPlay,
+  });
+
+  /// "3rd & 8 at AUB 28" / "2 out · 1st, 3rd".
+  final String? text;
+  final String? possessionTeamId;
+  final bool redZone;
+  final String? lastPlay;
+}
+
+/// The game-detail pop-up's data (ESPN `summary`), see
+/// [SportsService.gameSummary].
+class SportsGameSummary {
+  const SportsGameSummary({
+    this.teamStats = const [],
+    this.players = const {},
+    this.leaders = const {},
+    this.injuries = const {},
+    this.goals = const [],
+    this.tables = const [],
+  });
+
+  /// Side by side: (label, away value, home value).
+  final List<(String, String, String)> teamStats;
+
+  /// Box score per team id: a few columns of the top players per category.
+  final Map<String, List<SportsPlayerGroup>> players;
+
+  /// Per team id, ESPN's leader categories ("Passing Yards" → line).
+  final Map<String, List<SportsLeader>> leaders;
+
+  /// Per team id: "T. Badie RB · Questionable (Thumb)".
+  final Map<String, List<SportsInjury>> injuries;
+
+  /// Soccer scorers, in order.
+  final List<SportsGoal> goals;
+
+  /// The standings groups that hold either team.
+  final List<SportsSummaryTable> tables;
+
+  bool get isEmpty =>
+      teamStats.isEmpty &&
+      players.isEmpty &&
+      leaders.isEmpty &&
+      goals.isEmpty &&
+      tables.isEmpty;
+}
+
+class SportsPlayerGroup {
+  const SportsPlayerGroup(
+      {required this.title, required this.labels, required this.rows});
+
+  /// "passing", "forwards", "batting" — translated at the display site.
+  final String title;
+  final List<String> labels;
+
+  /// (short name, values in [labels] order).
+  final List<(String, List<String>)> rows;
+}
+
+class SportsInjury {
+  const SportsInjury(
+      {required this.name, required this.status, this.position, this.detail});
+  final String name;
+  final String status;
+  final String? position;
+  final String? detail;
+}
+
+class SportsGoal {
+  const SportsGoal(
+      {required this.minute,
+      required this.scorer,
+      this.teamId,
+      this.penalty = false});
+  final String minute;
+  final String scorer;
+  final String? teamId;
+  final bool penalty;
+}
+
+class SportsSummaryTable {
+  const SportsSummaryTable(
+      {required this.title, required this.labels, required this.rows});
+
+  /// "Metropolitan Division".
+  final String title;
+  final List<String> labels;
+
+  /// (team id, team name, values in [labels] order).
+  final List<(String, String, List<String>)> rows;
 }
 
 /// One line of an event's leaderboard / running order.

@@ -7,6 +7,9 @@ import '../models/cyberpunk_palette.dart';
 /// between the services that read and write them.
 class AppConstants {
   static const String appName = 'VesperTV';
+
+  /// The Sports tab's name (owner, 2026-10-17). A brand: not translated.
+  static const String sportsTabName = 'Sports Trak';
   static const Color seedColor = Colors.deepPurple;
 
   /// Screen width above which "auto" layout mode switches to the TV UI.

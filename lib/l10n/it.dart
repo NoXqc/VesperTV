@@ -203,8 +203,8 @@ const Map<String, String> kIt = {
   '◀ ▶ tabs  ·  OK to watch  ·  Back to close':
       "◀ ▶ schede  ·  OK per guardare  ·  Indietro per chiudere",
   'None of your teams play today.': "Nessuna delle tue squadre gioca oggi.",
-  'Follow teams from Sports > Standings to see them here.':
-      "Segui le squadre da Sport > Classifica per vederle qui.",
+  'Follow teams from {tab} > Standings to see them here.':
+      "Segui le squadre da {tab} > Classifica per vederle qui.",
   'No games from your leagues are live right now.':
       "Nessuna partita dei tuoi campionati è in diretta ora.",
   'Hold OK on a team to unfollow · on a game to pick the channel':
@@ -265,8 +265,8 @@ const Map<String, String> kIt = {
   'Tap: watch here  ·  Hold: pick the channel':
       "Tocca: guarda qui  ·  Tieni premuto: scegli il canale",
   'Play here': "Riproduci qui",
-  '{channel} · plays at the top of Sports':
-      "{channel} · in onda in cima a Sport",
+  '{channel} · plays at the top of {tab}':
+      "{channel} · in onda in cima a {tab}",
   '▶❚❚: watch this game  ·  Back: playing game':
       "▶❚❚: guarda questa partita  ·  Indietro: partita in corso",
   'OK: full screen  ·  ▶❚❚ or Back: stop':
@@ -312,8 +312,8 @@ const Map<String, String> kIt = {
   'Unfollow': "Non seguire più",
   'Follow': "Segui",
   'Remove from My Teams': "Rimuovi da Le mie squadre",
-  'Add to My Teams — their games show first in Sports':
-      "Aggiungi a Le mie squadre: le loro partite appaiono per prime in Sport",
+  'Add to My Teams — their games show first in {tab}':
+      "Aggiungi a Le mie squadre: le loro partite appaiono per prime in {tab}",
   // Results (W/L/D = won/lost/draw) and standings columns.
   'W': "V",
   'L': "P",
@@ -1027,4 +1027,32 @@ const Map<String, String> kIt = {
   'A new version is ready to install.': "Una nuova versione è pronta per l'installazione.",
   'Skip this version': "Salta questa versione",
   'Later': "Più tardi",
+  'See all · stats': "Vedi tutto · statistiche",
+  'Live games': "Partite in diretta",
+  'Click a game for its stats': "Clicca una partita per le sue statistiche",
+  'No games are live right now': "Nessuna partita in diretta ora",
+  'RED ZONE': "RED ZONE",
+  'No channel': "Nessun canale",
+  'Watch on {channel}': "Guarda su {channel}",
+  'No channel found. Hold OK on the game in {tab} to pick one.': "Nessun canale trovato. Tieni premuto OK sulla partita in {tab} per sceglierne uno.",
+  '▲▼ scroll · Back closes': "▲▼ scorri · Indietro chiude",
+  'Passing': "Passaggi",
+  'Rushing': "Corse",
+  'Receiving': "Ricezioni",
+  'Defense': "Difesa",
+  'Kicking': "Calci",
+  'Forwards': "Attaccanti",
+  'Defensemen': "Difensori",
+  'Goalies': "Portieri",
+  'Batting': "Battuta",
+  'Pitching': "Lanciatori",
+  'Players': "Giocatori",
+  'No stats for this game yet.': "Ancora nessuna statistica per questa partita.",
+  'Top performers': "Migliori giocatori",
+  'Injuries': "Infortuni",
+  'Goals': "Gol",
+  'pen.': "rig.",
+  'Team stats': "Statistiche di squadra",
+  'OK = stats · hold OK = channels · ▶❚❚ = watch': "OK = statistiche · tieni premuto OK = canali · ▶❚❚ = guarda",
+  '{channel} · full screen': "{channel} · schermo intero",
 };

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../utils/constants.dart';
 import '../utils/time_format.dart';
 import '../l10n/l10n.dart';
 import '../models/channel.dart';
@@ -47,10 +48,6 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
 
   /// Reopening lands on the tab used last (for the app session).
   static int _lastTab = 0;
-
-  /// One matcher for the session: `prepare` skips the index rebuild while
-  /// the channel list is unchanged, so reopening the panel stays cheap.
-  static SportsChannelMatcher? _sharedMatcher;
 
   final FocusNode _focus = FocusNode(debugLabel: 'player-side-panel');
   final ScrollController _scroll = ScrollController();
@@ -149,8 +146,7 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
     });
 
     final playlist = context.read<PlaylistManager>();
-    final matcher =
-        _sharedMatcher ??= SportsChannelMatcher(context.read<EpgService>());
+    final matcher = SportsChannelMatcher.shared(context.read<EpgService>());
     await playlist.ensureLiveChannelsLoaded();
     if (!mounted) return;
     await matcher.prepare(playlist.visibleChannels(category: 'tv'));
@@ -359,7 +355,8 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
       return _empty(_tab == 1
           ? (_hasFollows
               ? tr('None of your teams play today.')
-              : tr('Follow teams from Sports > Standings to see them here.'))
+              : tr('Follow teams from {tab} > Standings to see them here.',
+                  {'tab': AppConstants.sportsTabName}))
           : tr('No games from your leagues are live right now.'));
     }
     return _list(games.length, accent, (i) => _gameRow(games[i]));

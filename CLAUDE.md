@@ -47,7 +47,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
 4. `flutter analyze` must report the baseline **17** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `1.0.19` unless noted
+5. Check the current state of releases: `gh release list` (latest should be `1.0.20` unless noted
    in §11).
 
 ## 3. Layout (what matters)
@@ -101,7 +101,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+320**) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+330**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
@@ -222,11 +222,20 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 ## 12. Features (details in `dev-notes/features.md`)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
-## 13. Status & open items (as of 2026-10-18)
+## 13. Status & open items (as of 2026-10-17)
 - Donations will go through GitHub Sponsors (pending approval). After approval: `FUNDING.yml`,
   site/README links and an About row. Relay `X-VesperTV-App` enforcement (`PAIR_REQUIRE_APP=1`) is
   ON since 2026-10-17 (service file backed up on the VPS as `pair-relay.service.bak-*`).
-- **Shipped: 1.0.19 (`+320`, 2026-10-17, latest on GitHub)** — relay app check ON (Transfer over
+- **Shipped: 1.0.20 (`+330`, 2026-10-17, latest on GitHub)** — the Sports tab is renamed
+  **Sports Trak** (`AppConstants.sportsTabName`, a brand: never translated, `{tab}` placeholder in
+  sentences); **live games list** ("See all · stats" beside Live now with 2+ live games: dense rows
+  with situation + top players, OK = stats pop-up with box score / injuries / team stats /
+  standings from ESPN `summary`, ▶❚❚ or hold > Play = full screen, Back = list, league logo
+  backdrop); channel search much faster (guide scan: one team's names per game, superstring terms
+  dropped, 15 min cache keyed by `EpgService.lastUpdated`, one app-wide
+  `SportsChannelMatcher.shared`, hub shows last visit's channels at once); explicit Left/Right on
+  the game rows (fast scrolling jumped rows). Details: `dev-notes/sports-tab.md` (Live games list).
+- 1.0.19 (`+320`, 2026-10-17) — relay app check ON (Transfer over
   the internet / From phone need 1.0.16+, announced as a privacy change); hold OK on an episode =
   mark watched/unwatched (watched episodes restart from 0); **Neon Green** palette (`vivid` flag,
   `#2FD414`); portrait phone: bottom tab bar (TV/Movies/TV Shows/Sports/More, page 0 = "More"),

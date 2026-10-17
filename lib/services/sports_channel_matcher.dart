@@ -283,6 +283,18 @@ const _months = {
 class SportsChannelMatcher {
   SportsChannelMatcher(this._epg);
 
+  static SportsChannelMatcher? _shared;
+
+  /// One matcher for the whole app (Sports hub, live list, player side
+  /// panel): its channel index and guide-scan cache then survive leaving
+  /// Sports — a new one per visit re-indexed every channel and re-ran the
+  /// guide scan each time the hub was reopened (owner, 2026-10-17).
+  static SportsChannelMatcher shared(EpgService epg) {
+    final m = _shared;
+    if (m != null && identical(m._epg, epg)) return m;
+    return _shared = SportsChannelMatcher(epg);
+  }
+
   final EpgService _epg;
 
   List<Channel> _channels = const [];
@@ -480,6 +492,30 @@ class SportsChannelMatcher {
     return bias;
   }
 
+  /// The guide title scan, by its window + terms. It's one SQL `LIKE` per
+  /// term over the whole guide — on a busy Saturday (dozens of college
+  /// games, hundreds of terms) the Formuler took long enough that the Sports
+  /// hub stayed on "Looking…", and every 30 s score refresh ran it again.
+  /// The guide barely changes, so a hit is reused for 15 minutes, and a
+  /// scan already running is shared instead of started twice.
+  final Map<String, (Future<List<EpgProgram>>, DateTime)> _guideCache = {};
+
+  Future<List<EpgProgram>> _guideHits(
+      DateTime from, DateTime to, Set<String> terms) {
+    // A guide refresh changes lastUpdated: rescan at once, not after 15 min.
+    final key = '${_epg.lastUpdated?.millisecondsSinceEpoch}|'
+        '${from.millisecondsSinceEpoch}|${to.millisecondsSinceEpoch}|'
+        '${(terms.toList()..sort()).join('\u0001')}';
+    final now = DateTime.now();
+    _guideCache.removeWhere(
+        (_, v) => now.difference(v.$2) > const Duration(minutes: 15));
+    final hit = _guideCache[key];
+    if (hit != null) return hit.$1;
+    final future = _epg.findProgrammesByTitle(from, to, terms.toList());
+    _guideCache[key] = (future, now);
+    return future;
+  }
+
   /// Suggestions for every game in [games], keyed by
   /// [SportsChannelPicks.eventKey], best first, at most [limit] each.
   Future<Map<String, List<ChannelMatch>>> matchDay(
@@ -488,17 +524,27 @@ class SportsChannelMatcher {
     final out = <String, List<ChannelMatch>>{};
     if (games.isEmpty) return out;
 
-    // One guide query for the whole day: every team/event phrase at once.
-    final terms = <String>{};
+    // One guide query for the whole day. A title must name every group
+    // (both teams), and the loop below checks that — so SQL only needs one
+    // group per game to find every candidate. Terms containing a shorter
+    // term are dropped too ("georgia bulldogs" ⊃ "georgia"). Each term is a
+    // LIKE over every guide row of the day: fewer terms, faster hub.
+    final raw = <String>{};
     for (final g in games) {
-      for (final group in _nameGroups(g)) {
-        for (final p in group) {
-          terms.add(p.trim());
+      final groups = _nameGroups(g);
+      if (groups.isNotEmpty) {
+        for (final p in groups.first) {
+          if (p.trim().isNotEmpty) raw.add(p.trim());
         }
       }
       for (final p in g.league.seriesPhrases) {
-        terms.add(p.trim());
+        if (p.trim().isNotEmpty) raw.add(p.trim());
       }
+    }
+    final byLength = raw.toList()..sort((a, b) => a.length.compareTo(b.length));
+    final terms = <String>{};
+    for (final t in byLength) {
+      if (!terms.any(t.contains)) terms.add(t);
     }
     var earliest = _guideWindow(games.first).$1;
     var latest = _guideWindow(games.first).$2;
@@ -507,9 +553,8 @@ class SportsChannelMatcher {
       if (from.isBefore(earliest)) earliest = from;
       if (to.isAfter(latest)) latest = to;
     }
-    final List<EpgProgram> programmes = _byEpgId.isEmpty
-        ? const []
-        : await _epg.findProgrammesByTitle(earliest, latest, terms.toList());
+    final List<EpgProgram> programmes =
+        _byEpgId.isEmpty ? const [] : await _guideHits(earliest, latest, terms);
 
     for (final g in games) {
       final found = <String, ChannelMatch>{};

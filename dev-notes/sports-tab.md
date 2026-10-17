@@ -336,3 +336,25 @@ info version rejected — keep the VS layout). Fire Stick check pending.
 - Platform-view rules: one video per stream, stays mounted under the pushed player (like the TV
   preview box), fixed tree position, no overlay/clip on it. RedZone pill: no preview, plain fullscreen.
 - Windows: not built (needs `DesktopMiniPlayer`).
+
+## Live games list ("See all · stats", 1.0.20+330, 2026-10-17)
+- Entry: a chip beside **Live now N** when 2+ games are live; Up from Live now's first two cards
+  reaches it, Down goes back (`_liveAllStep` in `sports_screen.dart`). Owner wanted it for fantasy
+  players.
+- `sports_live_list_screen.dart`: one dense row per live game (clock + `SportsSituation` = down &
+  distance / RED ZONE / possession icon, or baseball count-outs-bases; both teams with record +
+  score; up to 3 `SportsGame.leaders` from the scoreboard; matched channel). Games live at open
+  stay listed after they end (Final). Polls every 30 s. Explicit Up/Down, non-lazy list.
+- OK on a row = `SportsGameDetailsDialog`: Watch on <channel> chips (up to 3 matches) + Close, then
+  per team top performers, a trimmed box score (`_boxColumns` picks the best-matching column set
+  per category), injuries, soccer scorers, team stats side by side, the standings groups holding
+  either team (highlighted). Data: ESPN `.../summary?event=<id>` (~400 KB, `parseEspnSummary`
+  off-isolate, 30 s cache while live). Up/Down scroll by `jumpTo`.
+- ▶❚❚ on a row = watch full screen at once. Back from the player **stops** the stream and returns
+  to the list (it would otherwise play unseen under it). Picking a channel stays in the hub (hold OK).
+- hideScores: rows hide scores + leaders; the dialog hides scores / last play only.
+- Hold OK on a row = the hub's game menu (`_openGame(game, matches, watch)`), first entry "Play"
+  = full screen (owner: remotes without ▶❚❚). The list starts from the hub's games + matches and
+  only searches games the hub hasn't (`initialGames` / `initialMatches`).
+- Owner-tested on the Formuler (+321..+329): stats load fast (focus prefetch), backdrop opacity
+  0.10 "perfect", channels instant on re-entering the hub.

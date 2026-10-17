@@ -205,8 +205,8 @@ const Map<String, String> kEs = {
   '◀ ▶ tabs  ·  OK to watch  ·  Back to close':
       "◀ ▶ pestañas  ·  OK para ver  ·  Atrás para cerrar",
   'None of your teams play today.': "Ninguno de tus equipos juega hoy.",
-  'Follow teams from Sports > Standings to see them here.':
-      "Sigue equipos desde Deportes > Clasificación para verlos aquí.",
+  'Follow teams from {tab} > Standings to see them here.':
+      "Sigue equipos desde {tab} > Clasificación para verlos aquí.",
   'No games from your leagues are live right now.':
       "Ningún partido de tus ligas está en directo ahora.",
   'Hold OK on a team to unfollow · on a game to pick the channel':
@@ -267,8 +267,8 @@ const Map<String, String> kEs = {
   'Tap: watch here  ·  Hold: pick the channel':
       "Tocar: ver aquí  ·  Mantener: elegir el canal",
   'Play here': "Reproducir aquí",
-  '{channel} · plays at the top of Sports':
-      "{channel} · se reproduce arriba en Deportes",
+  '{channel} · plays at the top of {tab}':
+      "{channel} · se reproduce arriba en {tab}",
   '▶❚❚: watch this game  ·  Back: playing game':
       "▶❚❚: ver este partido  ·  Atrás: partido en curso",
   'OK: full screen  ·  ▶❚❚ or Back: stop':
@@ -314,8 +314,8 @@ const Map<String, String> kEs = {
   'Unfollow': "Dejar de seguir",
   'Follow': "Seguir",
   'Remove from My Teams': "Quitar de Mis equipos",
-  'Add to My Teams — their games show first in Sports':
-      "Añadir a Mis equipos: sus partidos salen primero en Deportes",
+  'Add to My Teams — their games show first in {tab}':
+      "Añadir a Mis equipos: sus partidos salen primero en {tab}",
   // Results (W/L/D = won/lost/draw) and standings columns.
   'W': "G",
   'L': "P",
@@ -1023,4 +1023,32 @@ const Map<String, String> kEs = {
   'A new version is ready to install.': "Hay una nueva versión lista para instalar.",
   'Skip this version': "Omitir esta versión",
   'Later': "Más tarde",
+  'See all · stats': "Ver todo · estadísticas",
+  'Live games': "Partidos en vivo",
+  'Click a game for its stats': "Haz clic en un partido para ver sus estadísticas",
+  'No games are live right now': "No hay partidos en vivo ahora",
+  'RED ZONE': "ZONA ROJA",
+  'No channel': "Sin canal",
+  'Watch on {channel}': "Ver en {channel}",
+  'No channel found. Hold OK on the game in {tab} to pick one.': "No se encontró canal. Mantén OK sobre el partido en {tab} para elegir uno.",
+  '▲▼ scroll · Back closes': "▲▼ desplazar · Atrás cierra",
+  'Passing': "Pases",
+  'Rushing': "Carrera",
+  'Receiving': "Recepción",
+  'Defense': "Defensa",
+  'Kicking': "Pateo",
+  'Forwards': "Delanteros",
+  'Defensemen': "Defensas",
+  'Goalies': "Porteros",
+  'Batting': "Bateo",
+  'Pitching': "Pitcheo",
+  'Players': "Jugadores",
+  'No stats for this game yet.': "Aún no hay estadísticas de este partido.",
+  'Top performers': "Mejores jugadores",
+  'Injuries': "Lesiones",
+  'Goals': "Goles",
+  'pen.': "pen.",
+  'Team stats': "Estadísticas de equipo",
+  'OK = stats · hold OK = channels · ▶❚❚ = watch': "OK = estadísticas · mantener OK = canales · ▶❚❚ = ver",
+  '{channel} · full screen': "{channel} · pantalla completa",
 };

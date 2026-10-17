@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../utils/constants.dart';
 import '../models/sports.dart';
 import 'hold_to_activate.dart';
 import 'tv_menu_tile.dart';
@@ -42,7 +43,8 @@ Future<bool> showSportsFollowDialog(BuildContext context,
                 title: followed ? tr('Unfollow') : tr('Follow'),
                 subtitle: followed
                     ? tr('Remove from My Teams')
-                    : tr('Add to My Teams — their games show first in Sports'),
+                    : tr('Add to My Teams — their games show first in {tab}',
+                        {'tab': AppConstants.sportsTabName}),
                 onTap: () => Navigator.of(context).pop(true),
               ),
               TvMenuTile(

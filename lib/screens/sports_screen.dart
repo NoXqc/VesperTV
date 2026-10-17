@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../utils/constants.dart';
 import '../models/channel.dart';
 import '../models/sports.dart';
 import '../services/app_preferences.dart';
@@ -29,6 +30,7 @@ import '../widgets/sports_widgets.dart';
 import '../widgets/tv_menu_tile.dart';
 import 'desktop_player_screen.dart';
 import 'player_screen.dart';
+import 'sports_live_list_screen.dart';
 import 'sports_my_teams_screen.dart';
 import 'sports_league_manager_screen.dart';
 import 'sports_standings_screen.dart';
@@ -75,7 +77,12 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   bool _hideScores = false;
 
   List<SportsGame> _games = const [];
-  Map<String, List<ChannelMatch>> _matches = const {};
+
+  /// Last visit's channels, shown at once on the way back in while the
+  /// silent re-match confirms them (owner: reopening Sports said
+  /// "Looking…" again for channels it had just found).
+  static Map<String, List<ChannelMatch>> _lastMatches = const {};
+  Map<String, List<ChannelMatch>> _matches = _lastMatches;
   bool _loading = true;
   bool _matching = false;
   String? _error;
@@ -124,7 +131,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     super.initState();
     _showResumeHint = LiveResumeHint.hideWhileMounted();
     _storage = context.read<StorageService>();
-    _matcher = SportsChannelMatcher(context.read<EpgService>());
+    _matcher = SportsChannelMatcher.shared(context.read<EpgService>());
     _picks = SportsChannelPicks.load(_storage);
     _follows = SportsFollows.load(_storage);
     _leagues = _savedLeagues();
@@ -226,6 +233,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
               .firstOrNull ??
           _redZoneChoices.firstOrNull;
       _matches = matches;
+      _lastMatches = {..._lastMatches, ...matches};
       _matching = false;
     });
   }
@@ -384,8 +392,51 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     _zone = zone;
   }
 
+  static const _liveAllId = 'liveall';
+
+  /// "See all" beside Live now: with 2+ live games (owner, 2026-10-17).
+  bool get _showLiveAll =>
+      _games.where((g) => g.state == GameState.live).length >= 2;
+
+  bool get _onLiveAll => _chipNodes[_liveAllId]?.hasFocus ?? false;
+
+  /// Up from one of Live now's first two cards reaches "See all" (it sits
+  /// above them); Down from it goes back to the row.
+  bool _liveAllStep(int delta, List<_Section> sections) {
+    if (!_showLiveAll || sections.firstOrNull?.id != 'live') return false;
+    if (_onLiveAll) {
+      _focusZone(delta < 0 ? _firstRowZone - 1 : _firstRowZone, sections);
+      return true;
+    }
+    if (delta > 0 || _zone != _firstRowZone) return false;
+    final live = sections.first.games;
+    final i =
+        live.indexWhere((g) => _cardNodes[_gameKey(g)]?.hasFocus ?? false);
+    if (i < 0 || i > 1) return false;
+    _chipNode(_liveAllId).requestFocus();
+    _ensureRowVisible('live');
+    return true;
+  }
+
+  Future<void> _openLiveList() async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => SportsLiveListScreen(
+        leagues: _shownLeagues,
+        day: _day,
+        follows: _follows,
+        hideScores: _hideScores,
+        matchGames: _matchGames,
+        onWatch: (channel) => _play(channel),
+        onMenu: (game, matches, watch) => _openGame(game, matches, watch),
+        initialGames: _games,
+        initialMatches: _matches,
+      ),
+    ));
+  }
+
   void _moveZone(int delta) {
     final sections = _sections;
+    if (_liveAllStep(delta, sections)) return;
     final target = _zone + delta;
     final rows = sections.isEmpty && _nextGame != null ? 1 : sections.length;
     if (target < 0 || target >= _firstRowZone + rows) return;
@@ -658,8 +709,13 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     });
   }
 
+  /// [watch]: how a chosen channel plays — the hero by default; the live
+  /// list passes its own (full screen, back to the list). It also turns
+  /// "Play here" into "Play" full screen (no hero there).
   Future<void> _openGame(SportsGame game,
-      [List<ChannelMatch>? gameMatches]) async {
+      [List<ChannelMatch>? gameMatches,
+      Future<void> Function(Channel, SportsGame)? watch]) async {
+    final play = watch ?? _watch;
     final matches =
         gameMatches ?? _matches[_gameKey(game)] ?? const <ChannelMatch>[];
     final result = await showDialog<_GameAction>(
@@ -672,7 +728,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         matching: gameMatches == null && _matching,
         hideScores: _hideScores,
         hasPick: _picks.channelIdFor(game) != null,
-        offerPlayHere: !Platform.isWindows && !_isPreviewing(game),
+        offerPlayHere:
+            watch != null || (!Platform.isWindows && !_isPreviewing(game)),
+        playFullScreen: watch != null,
       )),
     );
     if (result == null || !mounted) return;
@@ -685,16 +743,17 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           await _picks.pickForGame(game, channel.id);
           unawaited(_rematch());
         }
-        await _watch(channel, game);
+        await play(channel, game);
       case _PickAction():
-        await _pickChannel(game);
+        await _pickChannel(game, play);
       case _ForgetPickAction():
         await _picks.clearFor(game);
         await _rematch();
     }
   }
 
-  Future<void> _pickChannel(SportsGame game) async {
+  Future<void> _pickChannel(SportsGame game,
+      [Future<void> Function(Channel, SportsGame)? watch]) async {
     final channel = await Navigator.of(context).push<Channel>(
       MaterialPageRoute(
         builder: (_) => _ChannelPickerScreen(game: game, matcher: _matcher),
@@ -718,7 +777,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     }
     await _rematch();
     if (!mounted) return;
-    await _watch(channel, game);
+    await (watch ?? _watch)(channel, game);
   }
 
   /// Fullscreen [channel]. With [game] (Android), it goes through the hero
@@ -877,7 +936,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       child: Row(
         children: [
           const SportsBackButton(),
-          Text(tr('Sports'),
+          Text(AppConstants.sportsTabName,
               style: Theme.of(context)
                   .textTheme
                   .headlineSmall
@@ -1111,6 +1170,55 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     );
   }
 
+  /// Left/Right along a game row, explicitly (CLAUDE.md §10): the row is a
+  /// lazy list, and holding Right on a long row (a full NHL night) reached
+  /// a card not built yet — default traversal then jumped to the nearest
+  /// card it could find, in the row below (owner, 2026-10-17). An unbuilt
+  /// neighbour is scrolled into existence first, then focused.
+  KeyEventResult _onRowKey(_Section s, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    final delta = event.logicalKey == LogicalKeyboardKey.arrowRight
+        ? 1
+        : event.logicalKey == LogicalKeyboardKey.arrowLeft
+            ? -1
+            : 0;
+    if (delta == 0 || _movingLeague != null) return KeyEventResult.ignored;
+    final i =
+        s.games.indexWhere((g) => _cardNodes[_gameKey(g)]?.hasFocus ?? false);
+    if (i < 0) return KeyEventResult.ignored;
+    final target = i + delta;
+    // Row ends: stay put rather than leave the row.
+    if (target < 0 || target >= s.games.length) return KeyEventResult.handled;
+    final node = _cardNode(_gameKey(s.games[target]));
+    void focus() {
+      final ctx = node.context;
+      if (ctx == null) return;
+      node.requestFocus();
+      // No duration = a jump (CLAUDE.md §10).
+      Scrollable.ensureVisible(ctx,
+          alignmentPolicy: delta > 0
+              ? ScrollPositionAlignmentPolicy.keepVisibleAtEnd
+              : ScrollPositionAlignmentPolicy.keepVisibleAtStart);
+    }
+
+    if (node.context != null) {
+      focus();
+    } else {
+      final c = _rowScrolls[s.id];
+      if (c != null && c.hasClients) {
+        final p = c.position;
+        c.jumpTo((p.pixels + delta * (_GameCard.width + 12))
+            .clamp(p.minScrollExtent, p.maxScrollExtent));
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) focus();
+      });
+    }
+    return KeyEventResult.handled;
+  }
+
   Widget _buildSection(_Section s, SportsGame? preview) {
     final rowKey = _rowKeys[s.id] ??= GlobalKey();
     final zoneIndex = _firstRowZone + _sections.indexWhere((x) => x.id == s.id);
@@ -1130,6 +1238,21 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
               const SizedBox(width: 8),
               Text('${s.games.length}',
                   style: const TextStyle(fontSize: 15, color: Colors.white54)),
+              if (s.id == 'live' && _showLiveAll) ...[
+                const SizedBox(width: 14),
+                SportsChip(
+                  focusNode: _chipNode(_liveAllId),
+                  label: tr('See all · stats'),
+                  icon: Icons.view_list,
+                  compact: true,
+                  selected: false,
+                  onFocus: () {
+                    _zone = zoneIndex;
+                    precacheLeagueBackdrop(context, s.games.first.league);
+                  },
+                  onTap: _openLiveList,
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 8),
@@ -1138,32 +1261,37 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
             child: SportsRowArrows(
               controller: _rowScrolls[s.id] ??= ScrollController(),
               arrowAreaHeight: _GameCard.height,
-              child: ListView(
-                controller: _rowScrolls[s.id],
-                scrollDirection: Axis.horizontal,
-                clipBehavior: Clip.none,
-                children: [
-                  for (final g in s.games)
-                    _GameCard(
-                      key: ValueKey('card-${_gameKey(g)}'),
-                      focusNode: _cardNode(_gameKey(g)),
-                      game: g,
-                      match: _matches[_gameKey(g)]?.firstOrNull,
-                      matching: _matching,
-                      hideScores: _hideScores,
-                      starred: _follows.involves(g),
-                      previewing:
-                          preview != null && _gameKey(preview) == _gameKey(g),
-                      onFocus: () {
-                        _zone = zoneIndex;
-                        _lastCardInRow[s.id] = _gameKey(g);
-                        _ensureRowVisible(s.id);
-                        if (_heroGame != g) setState(() => _heroGame = g);
-                      },
-                      onTap: () => _activateGame(g),
-                      onHold: () => _openGame(g),
-                    ),
-                ],
+              child: Focus(
+                canRequestFocus: false,
+                skipTraversal: true,
+                onKeyEvent: (_, event) => _onRowKey(s, event),
+                child: ListView(
+                  controller: _rowScrolls[s.id],
+                  scrollDirection: Axis.horizontal,
+                  clipBehavior: Clip.none,
+                  children: [
+                    for (final g in s.games)
+                      _GameCard(
+                        key: ValueKey('card-${_gameKey(g)}'),
+                        focusNode: _cardNode(_gameKey(g)),
+                        game: g,
+                        match: _matches[_gameKey(g)]?.firstOrNull,
+                        matching: _matching,
+                        hideScores: _hideScores,
+                        starred: _follows.involves(g),
+                        previewing:
+                            preview != null && _gameKey(preview) == _gameKey(g),
+                        onFocus: () {
+                          _zone = zoneIndex;
+                          _lastCardInRow[s.id] = _gameKey(g);
+                          _ensureRowVisible(s.id);
+                          if (_heroGame != g) setState(() => _heroGame = g);
+                        },
+                        onTap: () => _activateGame(g),
+                        onHold: () => _openGame(g),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -2183,6 +2311,7 @@ class _GameDialog extends StatelessWidget {
     required this.hideScores,
     required this.hasPick,
     required this.offerPlayHere,
+    this.playFullScreen = false,
   });
 
   final SportsGame game;
@@ -2194,6 +2323,9 @@ class _GameDialog extends StatelessWidget {
   /// First entry "Play here" (the hero mini player): some remotes have no
   /// Play/Pause key (user report, 2026-10-18), so hold OK > OK starts it.
   final bool offerPlayHere;
+
+  /// Live list: that first entry is "Play" (full screen) — no hero there.
+  final bool playFullScreen;
 
   @override
   Widget build(BuildContext context) {
@@ -2274,9 +2406,14 @@ class _GameDialog extends StatelessWidget {
                       TvMenuTile(
                         autofocus: true,
                         icon: Icons.play_arrow,
-                        title: tr('Play here'),
-                        subtitle: tr('{channel} · plays at the top of Sports',
-                            {'channel': matches.first.channel.name}),
+                        title: playFullScreen ? tr('Play') : tr('Play here'),
+                        subtitle: playFullScreen
+                            ? tr('{channel} · full screen',
+                                {'channel': matches.first.channel.name})
+                            : tr('{channel} · plays at the top of {tab}', {
+                                'channel': matches.first.channel.name,
+                                'tab': AppConstants.sportsTabName,
+                              }),
                         onTap: () => Navigator.of(context)
                             .pop(_WatchAction(matches.first.channel)),
                       ),
