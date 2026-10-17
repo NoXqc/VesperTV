@@ -69,3 +69,10 @@ username, password).
 Bug reports, suggestions/improvements, or general discussion — join the
 [Discord server](https://discord.gg/DDeGDHvFY), or open an issue here on
 GitHub. Please also visit us at r/VesperTV
+
+## License and trademarks
+
+The code is free software under the [GPL-3.0](LICENSE). The **VesperTV** name
+and logo are trademarks and are **not** covered by the GPL. Forks must use a
+different name and icon and run their own pairing/transfer relay instead of
+`pair.vespertv.app`. See [TRADEMARKS.md](TRADEMARKS.md).

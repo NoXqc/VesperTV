@@ -224,6 +224,10 @@ class AppConstants {
   /// 24-hour (default) vs 12-hour times everywhere — `utils/time_format.dart`.
   static const String keyTime24h = 'vesper_time_24h';
 
+  /// Release tag the launch update popup was told to skip
+  /// (`widgets/update_prompt.dart`); a newer tag is offered again.
+  static const String keySkippedUpdateVersion = 'vesper_skipped_update';
+
   /// Next splash greeting to show (index into SplashGreeting.bank).
   static const String keySplashGreeting = 'vesper_splash_greeting';
 

@@ -39,3 +39,15 @@ keep going.
 Live since 2026-10-13: `https://pair.vespertv.app` (Cloudflare A record, DNS only).
 
 The app's relay address is `kPairRelayBase` in `lib/services/phone_pairing_service.dart`.
+
+## Forks: run your own relay
+
+`pair.vespertv.app` serves the official VesperTV app only. If you fork the app, deploy this folder
+on your own server and point `kPairRelayBase` at it — don't ship a build that uses ours.
+
+App calls (the TV's poll and all vault calls) send `X-VesperTV-App` (`kRelayAppHeaders`). The
+relay logs an hourly count of calls with/without it (`journalctl -u pair-relay`) and, with
+`PAIR_REQUIRE_APP=1` (commented out in `pair-relay.service`), rejects calls without it with 403.
+Leave it off until 1.0.14/1.0.15 installs (which don't send the header) have updated, or their
+Transfer and From-phone pairing stop working. It's not a secret, only a speed bump: a fork that
+copies the header on purpose is deliberate abuse and can be blocked at nginx.

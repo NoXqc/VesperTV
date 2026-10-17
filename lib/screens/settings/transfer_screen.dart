@@ -646,7 +646,28 @@ class _ReceiveScreenState extends State<_ReceiveScreen> {
       _type('.');
       return KeyEventResult.handled;
     }
-    if (_received != null) return KeyEventResult.ignored;
+    if (_received != null) {
+      // The summary's two buttons, explicitly: focus could be left on
+      // nothing once the keypad was swapped out, and default traversal
+      // then had nowhere to start (owner + a user, 2026-10-16: stuck on
+      // "Ready to copy").
+      if (key == LogicalKeyboardKey.arrowLeft) {
+        _cancelNode.requestFocus();
+        return KeyEventResult.handled;
+      }
+      if (key == LogicalKeyboardKey.arrowRight) {
+        _replaceNode.requestFocus();
+        return KeyEventResult.handled;
+      }
+      if (key == LogicalKeyboardKey.arrowUp ||
+          key == LogicalKeyboardKey.arrowDown) {
+        if (!_cancelNode.hasFocus && !_replaceNode.hasFocus) {
+          _cancelNode.requestFocus();
+        }
+        return KeyEventResult.handled;
+      }
+      return KeyEventResult.ignored;
+    }
     if (_addressOptionNode.hasFocus) {
       if (key == LogicalKeyboardKey.arrowUp) {
         _nodes[_keys.length - 1][0].requestFocus();
@@ -719,6 +740,9 @@ class _ReceiveScreenState extends State<_ReceiveScreen> {
       (context) => SettingsScaffold(
         title: tr('Receive on this device'),
         body: Focus(
+          // Only listens to keys bubbling up from the keys/buttons; never
+          // takes focus itself (it could swallow it when the keypad goes).
+          canRequestFocus: false,
           onKeyEvent: _onKey,
           child: Center(
             child: SingleChildScrollView(
@@ -876,6 +900,7 @@ class _ReceiveScreenState extends State<_ReceiveScreen> {
             // filled Replace read as "selected" while Cancel had focus).
             _ChoiceButton(
               focusNode: _cancelNode,
+              autofocus: true,
               onPressed: _busy ? null : () => Navigator.of(context).pop(),
               child: Text(tr('Cancel')),
             ),
@@ -948,8 +973,9 @@ class _KeyButton extends StatelessWidget {
   }
 }
 
-/// Outlined until focused, then filled with the accent — so "which one is
-/// selected" is never ambiguous on a TV.
+/// Outlined until focused, then `ModeButton`'s focus look (dark diagonal
+/// sheen, accent border/text, soft glow) — a solid accent fill read as
+/// pastel on a real TV.
 class _ChoiceButton extends StatelessWidget {
   const _ChoiceButton({
     required this.focusNode,
@@ -970,19 +996,48 @@ class _ChoiceButton extends StatelessWidget {
       listenable: focusNode,
       builder: (context, _) {
         final focused = focusNode.hasFocus;
-        return OutlinedButton(
-          focusNode: focusNode,
-          autofocus: autofocus,
-          onPressed: onPressed,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: focused ? scheme.onPrimary : Colors.white,
-            backgroundColor: focused ? scheme.primary : Colors.transparent,
-            side: BorderSide(
-                color: focused ? scheme.primary : Colors.white38,
-                width: focused ? 2 : 1),
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+        // The Container is always there (only its decoration changes) so
+        // the button's FocusNode never changes ancestors between builds.
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            gradient: focused
+                ? LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.black,
+                      Color.lerp(Colors.black, scheme.primaryContainer, 0.4)!,
+                      Colors.black,
+                    ],
+                    stops: const [0.0, 0.5, 1.0],
+                  )
+                : null,
+            boxShadow: focused
+                ? [
+                    BoxShadow(
+                        color: scheme.primary.withValues(alpha: 0.45),
+                        blurRadius: 14)
+                  ]
+                : const [],
           ),
-          child: child,
+          child: OutlinedButton(
+            focusNode: focusNode,
+            autofocus: autofocus,
+            onPressed: onPressed,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: focused ? scheme.primary : Colors.white,
+              backgroundColor: Colors.transparent,
+              overlayColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+              side: BorderSide(
+                  color: focused ? scheme.primary : Colors.white38,
+                  width: focused ? 2 : 1),
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+            ),
+            child: child,
+          ),
         );
       },
     );

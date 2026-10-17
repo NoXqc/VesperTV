@@ -35,7 +35,34 @@ EpgProgram _toProgram(EpgRow r) => EpgProgram(
     );
 
 Map<String, List<EpgProgram>> _toPrograms(Map<String, List<EpgRow>> rows) =>
-    rows.map((id, list) => MapEntry(id, list.map(_toProgram).toList()));
+    rows.map((id, list) => MapEntry(id, _untangle(list)));
+
+/// One channel's rows as a clean timeline. Some providers' XMLTV lists two
+/// programmes for the same time slot (owner, 2026-10-16: RDS showed two
+/// titles drawn on top of each other in the Timeline guide). By start
+/// time, the earlier programme keeps its slot; a later one that starts
+/// inside it is trimmed to begin when it ends, or dropped if it ends
+/// inside it too.
+List<EpgProgram> _untangle(List<EpgRow> rows) {
+  final sorted = [...rows]..sort((a, b) => a.startMs.compareTo(b.startMs));
+  final out = <EpgProgram>[];
+  var lastStop = -1;
+  for (final r in sorted) {
+    if (r.stopMs <= lastStop) continue;
+    final p = _toProgram(r);
+    out.add(r.startMs < lastStop
+        ? EpgProgram(
+            channelId: p.channelId,
+            title: p.title,
+            description: p.description,
+            start: DateTime.fromMillisecondsSinceEpoch(lastStop),
+            stop: p.stop,
+          )
+        : p);
+    lastStop = r.stopMs;
+  }
+  return out;
+}
 
 /// Fetches and parses XMLTV EPG data into [EpgDatabase], and serves it.
 ///
@@ -651,7 +678,7 @@ class EpgService extends ChangeNotifier {
       if (epoch != _cacheEpoch) return;
       if (_full.length + ids.length > _fullCacheLimit) _full.clear();
       for (final id in ids) {
-        _full[id] = (rows[id] ?? const []).map(_toProgram).toList();
+        _full[id] = _untangle(rows[id] ?? const []);
       }
       // Not notifyListeners(): TvHomeScreen watches this whole service, and
       // rebuilding all of it for every guide row scrolled into view would

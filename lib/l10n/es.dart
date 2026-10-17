@@ -947,4 +947,9 @@ const Map<String, String> kEs = {
   'Specials': "Especiales",
   'Movie and TV artwork and data may come from TMDB (The Movie Database).':
       "Las imágenes y los datos de películas y series pueden provenir de TMDB (The Movie Database).",
+  '{appName} {version} is available': "{appName} {version} está disponible",
+  "What's new:": "Novedades:",
+  'A new version is ready to install.': "Hay una nueva versión lista para instalar.",
+  'Skip this version': "Omitir esta versión",
+  'Later': "Más tarde",
 };

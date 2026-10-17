@@ -23,6 +23,12 @@ decrypt a blob. Expired blobs are deleted.
     GET    /api/v/<id>  -> 200 + blob (any number of times until expiry), 404
     DELETE /api/v/<id>  -> 204 (X-Vault-Token must match), 404
 
+App calls (the TV's GET /api/s/<id> and everything under /api/v/) carry
+`X-VesperTV-App`, so forks that kept this relay's address can be told
+apart. PAIR_REQUIRE_APP=1 rejects calls without it (403); until then they
+are only counted (hourly line on stderr, no ids) — 1.0.14/1.0.15 don't
+send it yet. The phone's browser PUT /api/s/<id> is never checked.
+
 Stdlib only. Listens on 127.0.0.1; nginx terminates TLS in front of it.
 """
 import hashlib
@@ -52,7 +58,25 @@ VAULT_PRUNE_EVERY = 300
 VAULT_ID_RE = re.compile(r"^/api/v/([A-Za-z0-9_-]{22,64})$")
 TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{32,128}$")
 
+APP_HEADER = "X-VesperTV-App"
+REQUIRE_APP = os.environ.get("PAIR_REQUIRE_APP", "") == "1"
+APP_REPORT_EVERY = 3600
+
 _vault_lock = threading.Lock()
+_app_lock = threading.Lock()
+_app_counts = {"app": 0, "other": 0}
+
+
+def _app_reporter():
+    while True:
+        time.sleep(APP_REPORT_EVERY)
+        with _app_lock:
+            app, other = _app_counts["app"], _app_counts["other"]
+            _app_counts["app"] = _app_counts["other"] = 0
+        if app or other:
+            print(f"app calls last hour: {app} with {APP_HEADER}, {other} "
+                  f"without ({'rejected' if REQUIRE_APP else 'allowed'})",
+                  file=sys.stderr, flush=True)
 
 
 def _vault_paths(vid):
@@ -181,6 +205,17 @@ class Handler(BaseHTTPRequestHandler):
         if body:
             self.wfile.write(body)
 
+    def _app_ok(self):
+        """Counts an app call; False (403 sent) if it lacks the app header
+        while PAIR_REQUIRE_APP is on."""
+        ok = bool(self.headers.get(APP_HEADER))
+        with _app_lock:
+            _app_counts["app" if ok else "other"] += 1
+        if ok or not REQUIRE_APP:
+            return True
+        self._send(403)
+        return False
+
     def do_GET(self):
         path = self.path.split("?", 1)[0]
         if path in ("/", "/p", "/p/"):
@@ -190,10 +225,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(500)
         v = VAULT_ID_RE.match(path)
         if v:
+            if not self._app_ok():
+                return
             return self._vault_get(v.group(1))
         m = ID_RE.match(path)
         if not m:
             return self._send(404)
+        if not self._app_ok():
+            return
         now = time.time()
         with _lock:
             _prune(now)
@@ -206,6 +245,8 @@ class Handler(BaseHTTPRequestHandler):
         path = self.path.split("?", 1)[0]
         v = VAULT_ID_RE.match(path)
         if v:
+            if not self._app_ok():
+                return
             return self._vault_put(v.group(1))
         m = ID_RE.match(path)
         if not m:
@@ -239,6 +280,8 @@ class Handler(BaseHTTPRequestHandler):
         v = VAULT_ID_RE.match(self.path.split("?", 1)[0])
         if not v:
             return self._send(404)
+        if not self._app_ok():
+            return
         token = self.headers.get("X-Vault-Token", "")
         if not TOKEN_RE.match(token):
             return self._send(400)
@@ -303,6 +346,7 @@ def main():
     _load_page()  # fail fast if the page is missing
     os.makedirs(VAULT_DIR, exist_ok=True)
     threading.Thread(target=_vault_pruner, daemon=True).start()
+    threading.Thread(target=_app_reporter, daemon=True).start()
     srv = ThreadingHTTPServer((HOST, PORT), Handler)
     srv.daemon_threads = True
     print(f"pair relay on {HOST}:{PORT}", file=sys.stderr, flush=True)

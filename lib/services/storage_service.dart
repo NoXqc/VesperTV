@@ -183,6 +183,11 @@ class StorageService {
   Future<void> setTime24h(bool value) =>
       _prefs.setBool(AppConstants.keyTime24h, value);
 
+  String? getSkippedUpdateVersion() =>
+      _prefs.getString(AppConstants.keySkippedUpdateVersion);
+  Future<void> setSkippedUpdateVersion(String version) =>
+      _prefs.setString(AppConstants.keySkippedUpdateVersion, version);
+
   bool getShowClock() => _prefs.getBool(AppConstants.keyShowClock) ?? true;
   Future<void> setShowClock(bool value) =>
       _prefs.setBool(AppConstants.keyShowClock, value);
@@ -571,6 +576,7 @@ class StorageService {
     AppConstants.keyWhatsNewSeriesIds,
     AppConstants.keyCloudTransfer,
     AppConstants.keySplashGreeting,
+    AppConstants.keySkippedUpdateVersion,
   };
 
   /// Prefix-matched skips: the per-playlist full-sync timestamps (a copied

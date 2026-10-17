@@ -17,7 +17,11 @@ import '../../l10n/l10n.dart';
 /// confirmation dialog — nothing past handing the APK to the installer can
 /// be automated further.
 class CheckUpdatesScreen extends StatefulWidget {
-  const CheckUpdatesScreen({super.key});
+  const CheckUpdatesScreen({super.key, this.startWith});
+
+  /// From the launch update popup's "Update": skip the check and start
+  /// the download (Android) / open the download page (Windows) at once.
+  final UpdateInfo? startWith;
 
   @override
   State<CheckUpdatesScreen> createState() => _CheckUpdatesScreenState();
@@ -48,6 +52,15 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
     PackageInfo.fromPlatform().then((info) {
       if (mounted) setState(() => _currentVersion = info.version);
     });
+    final start = widget.startWith;
+    if (start != null) {
+      _update = start;
+      _status = _Status.updateAvailable;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Platform.isWindows ? _openWindowsDownload() : _download();
+      });
+    }
   }
 
   Future<void> _check() async {

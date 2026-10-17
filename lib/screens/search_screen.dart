@@ -64,6 +64,9 @@ class _ResultRow {
 class _SearchScreenState extends State<SearchScreen> {
   final _controller = TextEditingController();
   final _searchFieldFocus = FocusNode();
+
+  /// The first "Recent searches" chip — Down from the empty search field.
+  final _recentFirstFocus = FocusNode(debugLabel: 'recent-search-0');
   String _query = '';
   List<String> _recentSearches = [];
 
@@ -102,6 +105,7 @@ class _SearchScreenState extends State<SearchScreen> {
     _searchDebounce?.cancel();
     _controller.dispose();
     _searchFieldFocus.dispose();
+    _recentFirstFocus.dispose();
     super.dispose();
   }
 
@@ -214,6 +218,14 @@ class _SearchScreenState extends State<SearchScreen> {
   /// every row's first poster *and* the search field's own focus change.
   void _moveRowFocus(int delta, List<_ResultRow> rows) {
     final target = _focusedZone + delta;
+    // Nothing typed: the recent-search chips are the one row below the
+    // field (owner: after Back closed the keyboard, Down went nowhere).
+    if (rows.isEmpty && _query.trim().isEmpty && _recentSearches.isNotEmpty) {
+      if (target < -1 || target > 0) return;
+      _focusedZone = target;
+      (target == -1 ? _searchFieldFocus : _recentFirstFocus).requestFocus();
+      return;
+    }
     if (target < -1 || target >= rows.length) return;
     // Set directly rather than relying on a focus-change callback to do
     // it as a side effect — `TextField` only exposes `onTap`, which never
@@ -292,57 +304,61 @@ class _SearchScreenState extends State<SearchScreen> {
                     ),
                   ),
                 ),
-                Scaffold(
-                  backgroundColor: Colors.transparent,
-                  appBar: AppBar(
+                // Around the whole Scaffold, not just the body: the search
+                // field lives in the AppBar, and Up/Down from it must be
+                // caught here too (closer than the app-level text-editing
+                // shortcuts, so it wins over the field's own arrow keys).
+                CallbackShortcuts(
+                  bindings: {
+                    const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
+                        _moveRowFocus(-1, rows),
+                    const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
+                        _moveRowFocus(1, rows),
+                  },
+                  child: Scaffold(
                     backgroundColor: Colors.transparent,
-                    elevation: 0,
-                    title: TextField(
-                      controller: _controller,
-                      focusNode: _searchFieldFocus,
-                      autofocus: true,
-                      textInputAction: TextInputAction.search,
-                      decoration: InputDecoration(
-                        hintText: tr('Search everything...'),
-                        border: InputBorder.none,
-                        hintStyle: TextStyle(
-                            color: Theme.of(context)
-                                .appBarTheme
-                                .foregroundColor
-                                ?.withValues(alpha: 0.6)),
-                      ),
-                      style: TextStyle(
-                        color: Theme.of(context).appBarTheme.foregroundColor,
-                        fontSize: 18,
-                      ),
-                      onChanged: _onQueryChanged,
-                      onSubmitted: _recordSearch,
-                      onTap: () => _focusedZone = -1,
-                    ),
-                    actions: [
-                      if (_query.isNotEmpty)
-                        IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _searchDebounce?.cancel();
-                            setState(() {
-                              _controller.clear();
-                              _query = '';
-                              _dbVodResults = null;
-                              _dbSeriesResults = null;
-                            });
-                          },
+                    appBar: AppBar(
+                      backgroundColor: Colors.transparent,
+                      elevation: 0,
+                      title: TextField(
+                        controller: _controller,
+                        focusNode: _searchFieldFocus,
+                        autofocus: true,
+                        textInputAction: TextInputAction.search,
+                        decoration: InputDecoration(
+                          hintText: tr('Search everything...'),
+                          border: InputBorder.none,
+                          hintStyle: TextStyle(
+                              color: Theme.of(context)
+                                  .appBarTheme
+                                  .foregroundColor
+                                  ?.withValues(alpha: 0.6)),
                         ),
-                    ],
-                  ),
-                  body: CallbackShortcuts(
-                    bindings: {
-                      const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
-                          _moveRowFocus(-1, rows),
-                      const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
-                          _moveRowFocus(1, rows),
-                    },
-                    child: Column(
+                        style: TextStyle(
+                          color: Theme.of(context).appBarTheme.foregroundColor,
+                          fontSize: 18,
+                        ),
+                        onChanged: _onQueryChanged,
+                        onSubmitted: _recordSearch,
+                        onTap: () => _focusedZone = -1,
+                      ),
+                      actions: [
+                        if (_query.isNotEmpty)
+                          IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchDebounce?.cancel();
+                              setState(() {
+                                _controller.clear();
+                                _query = '';
+                                _dbVodResults = null;
+                                _dbSeriesResults = null;
+                              });
+                            },
+                          ),
+                      ],
+                    ),
+                    body: Column(
                       children: [
                         if (q.isEmpty) _buildSuggestionPills(scheme),
                         if (playlist.isXtream && playlist.isWarmingCatalog)
@@ -423,6 +439,7 @@ class _SearchScreenState extends State<SearchScreen> {
               itemBuilder: (context, i) {
                 final term = _recentSearches[i];
                 return ActionChip(
+                  focusNode: i == 0 ? _recentFirstFocus : null,
                   avatar: const Icon(Icons.history, size: 16),
                   label: Text(term),
                   onPressed: () => _runSearch(term),

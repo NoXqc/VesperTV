@@ -13,6 +13,11 @@ import 'package:http/http.dart' as http;
 /// session for a few minutes and never sees the key.
 const String kPairRelayBase = 'https://pair.vespertv.app';
 
+/// Sent on every app call to the relay so it can tell the official app from
+/// forks that kept [kPairRelayBase] (forks must run their own relay, see
+/// `tools/pair_relay/README.md`). Not a secret — it only stops casual reuse.
+const Map<String, String> kRelayAppHeaders = {'X-VesperTV-App': '1'};
+
 /// What the phone sent: the same fields Add Playlist has.
 class PairingResult {
   const PairingResult({
@@ -260,7 +265,8 @@ class PhonePairingSession {
     _polling = true;
     try {
       final res = await http
-          .get(Uri.parse('$kPairRelayBase/api/s/$_sessionId'))
+          .get(Uri.parse('$kPairRelayBase/api/s/$_sessionId'),
+              headers: kRelayAppHeaders)
           .timeout(const Duration(seconds: 8));
       if (res.statusCode != 200) return;
       final result = await decryptRelayPayload(res.body, _key);

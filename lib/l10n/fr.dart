@@ -950,4 +950,9 @@ const Map<String, String> kFr = {
   'Specials': "Épisodes spéciaux",
   'Movie and TV artwork and data may come from TMDB (The Movie Database).':
       "Les affiches et données des films et séries peuvent provenir de TMDB (The Movie Database).",
+  '{appName} {version} is available': "{appName} {version} est disponible",
+  "What's new:": "Nouveautés :",
+  'A new version is ready to install.': "Une nouvelle version est prête à être installée.",
+  'Skip this version': "Ignorer cette version",
+  'Later': "Plus tard",
 };

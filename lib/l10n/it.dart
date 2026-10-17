@@ -951,4 +951,9 @@ const Map<String, String> kIt = {
   'Specials': "Speciali",
   'Movie and TV artwork and data may come from TMDB (The Movie Database).':
       "Le immagini e i dati di film e serie possono provenire da TMDB (The Movie Database).",
+  '{appName} {version} is available': "{appName} {version} è disponibile",
+  "What's new:": "Novità:",
+  'A new version is ready to install.': "Una nuova versione è pronta per l'installazione.",
+  'Skip this version': "Salta questa versione",
+  'Later': "Più tardi",
 };

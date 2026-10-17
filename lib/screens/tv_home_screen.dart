@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +15,7 @@ import '../models/epg_program.dart';
 import '../models/m3u_group.dart';
 import '../models/xtream_series.dart';
 import '../services/app_preferences.dart';
+import '../services/app_update_service.dart';
 import '../services/desktop_mini_player.dart';
 import '../services/epg_service.dart';
 import '../services/playback_service.dart';
@@ -27,12 +29,14 @@ import '../utils/route_observer.dart';
 import '../utils/tv_theme.dart';
 import '../utils/image_urls.dart';
 import '../widgets/catalog_warmup_banner.dart';
+import '../widgets/detail_header.dart';
 import '../widgets/hd_network_image.dart';
 import '../widgets/hold_to_activate.dart';
 import '../widgets/mode_button.dart';
 import '../widgets/player_controls.dart';
 import '../widgets/poster_card.dart';
 import '../widgets/section_label.dart';
+import '../widgets/update_prompt.dart';
 import '../widgets/settings_scaffold.dart';
 import 'catalog_sync_screen.dart';
 import 'group_catalog_screen.dart';
@@ -45,6 +49,7 @@ import 'profile_picker_screen.dart';
 import 'search_screen.dart';
 import 'sports_screen.dart';
 import 'series_detail_screen.dart';
+import 'settings/check_updates_screen.dart';
 import 'settings/settings_menu_screen.dart';
 import '../l10n/l10n.dart';
 
@@ -93,6 +98,17 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// is left empty — never both, a second platform view of the same
   /// controller is the bug LiveResumeHint's doc comment describes.
   bool _fullVideo = false;
+
+  /// Movies/TV Shows showing "What's New" (not on a portrait phone): the
+  /// current slide's backdrop fills the whole screen behind everything,
+  /// like the detail pages, and passed side columns hide completely on a
+  /// TV (same as [_fullVideo]). Set each build.
+  bool _fullArt = false;
+
+  /// The What's New slide's landscape backdrop, published by
+  /// `_WhatsNewCarousel` for the full-screen layer in [build]. Null = no
+  /// backdrop (the carousel then shows the poster beside the text itself).
+  final ValueNotifier<_WhatsNewArt?> _whatsNewArt = ValueNotifier(null);
 
   /// Phone held in portrait: the side-by-side columns don't fit, so only
   /// one is shown at a time (tabs -> groups -> content), [_phonePage]
@@ -243,10 +259,10 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   int? _focusedBrowseRowIndex;
 
   /// Whether Movies/TV Shows is currently showing the "What's New"
-  /// carousel instead of the normal poster catalog. Opt-in, not the
-  /// default — always false on entering either tab (see [_onTabChanged]),
-  /// set true only by tapping the pinned "What's New" row in the groups
-  /// column, and cleared again by picking "All" or a real category.
+  /// carousel instead of the normal poster catalog. The default on
+  /// entering either tab (see [_onTabChanged]) and via the pinned
+  /// "What's New" row in the groups column; cleared by picking "All", a
+  /// category or Favourites.
   bool _showWhatsNew = false;
 
   /// Movies/TV Shows showing only favourites (the "Favourites" row in the
@@ -721,14 +737,13 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       _focusedDescription = null;
       _focusDepth = 0;
       _phonePage = _compact ? 1 : 0;
-      // Opt-in only, not the default view — groups + Continue Watching
-      // come up first on entering either tab, same as before this
-      // feature existed. The pinned "What's New" row in the groups
-      // column (see _buildBrowseGroupsColumn) is still there for anyone
-      // who wants to switch into the carousel deliberately.
-      _showWhatsNew = false;
+      // Movies/TV Shows open on What's New (owner's request, 2026-10-16;
+      // it was opt-in before). "All" or a category switches to the posters.
+      _showWhatsNew = _isBrowseTab(tab);
       _showFavorites = false;
     });
+    // The previous tab's slide must not flash behind the new carousel.
+    _whatsNewArt.value = null;
     // Switching back to the TV tab clears the explicit group selection —
     // _effectiveLiveGroup falls back to the playing channel's own group
     // (or the first group) rather than an unfiltered "All" — but never
@@ -1262,6 +1277,57 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         _tvTabFocusNode.requestFocus();
       }
     });
+    unawaited(_checkForUpdateOnLaunch());
+  }
+
+  /// Once per app launch (a layout switch rebuilds this screen).
+  static bool _updateChecked = false;
+
+  /// Found at launch, waiting for this screen to be on top (the startup
+  /// auto-resume may have the player over it) — see [didPopNext].
+  UpdateInfo? _pendingUpdate;
+
+  /// Launch update check: quietly does nothing when offline, rate-limited
+  /// or up to date, or when the user skipped this exact version.
+  Future<void> _checkForUpdateOnLaunch() async {
+    if (_updateChecked) return;
+    _updateChecked = true;
+    // Let the first screen settle (and any auto-resume start) first.
+    await Future<void>.delayed(const Duration(seconds: 4));
+    UpdateInfo? update;
+    try {
+      update = await AppUpdateService().checkForUpdate();
+    } catch (_) {
+      return;
+    }
+    if (update == null || !mounted) return;
+    if (context.read<StorageService>().getSkippedUpdateVersion() ==
+        update.version) {
+      return;
+    }
+    _pendingUpdate = update;
+    _maybeShowUpdatePrompt();
+  }
+
+  Future<void> _maybeShowUpdatePrompt() async {
+    final update = _pendingUpdate;
+    if (update == null || !mounted) return;
+    if (ModalRoute.of(context)?.isCurrent != true) return;
+    _pendingUpdate = null;
+    final choice = await UpdatePromptDialog.show(context, update);
+    if (!mounted) return;
+    switch (choice) {
+      case UpdatePromptChoice.update:
+        await Navigator.of(context).push(MaterialPageRoute<void>(
+            builder: (_) => CheckUpdatesScreen(startWith: update)));
+      case UpdatePromptChoice.skip:
+        await context
+            .read<StorageService>()
+            .setSkippedUpdateVersion(update.version);
+      case UpdatePromptChoice.later:
+      case null:
+        break;
+    }
   }
 
   @override
@@ -1299,6 +1365,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       }
     }
     _continueWatchingFirstFocusNode.dispose();
+    _whatsNewArt.dispose();
     _moviesWhatsNewPlayFocusNode.dispose();
     _showsWhatsNewPlayFocusNode.dispose();
     for (final timer in _pendingHideTimers.values) {
@@ -1313,6 +1380,11 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// list instead of the current channel" after backing out of fullscreen.
   @override
   void didPopNext() {
+    if (_pendingUpdate != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _maybeShowUpdatePrompt();
+      });
+    }
     final isBrowseTab = _isBrowseTab(_tab);
     // Back from Settings with Movies/TV Shows just hidden while one of them
     // was the open tab: fall back to TV. Here rather than in build so the
@@ -2046,6 +2118,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         // Also with nothing playing (owner's choice): the layout stays put
         // over a dark background instead of jumping when a channel starts.
         !Platform.isWindows;
+    _fullArt = isBrowseTab && _showWhatsNew && !_compact;
 
     return Theme(
       data: ThemeData(colorScheme: darkScheme, useMaterial3: true),
@@ -2104,6 +2177,13 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                   child: ColoredBox(
                     color: Colors.black,
                     child: _buildTimelinePreviewBox(liveChannel),
+                  ),
+                ),
+              if (_fullArt)
+                Positioned.fill(
+                  child: ValueListenableBuilder<_WhatsNewArt?>(
+                    valueListenable: _whatsNewArt,
+                    builder: (context, art, _) => _WhatsNewBackdrop(art: art),
                   ),
                 ),
               SafeArea(
@@ -2321,7 +2401,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                                         ),
                                         VerticalDivider(
                                             width: 1,
-                                            color: _fullVideo && _focusDepth > 0
+                                            color: (_fullVideo || _fullArt) &&
+                                                    _focusDepth > 0
                                                 ? Colors.transparent
                                                 : null),
                                         _collapsible(
@@ -2333,7 +2414,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                                         ),
                                         VerticalDivider(
                                             width: 1,
-                                            color: _fullVideo && _focusDepth > 1
+                                            color: (_fullVideo || _fullArt) &&
+                                                    _focusDepth > 1
                                                 ? Colors.transparent
                                                 : null),
                                         Expanded(
@@ -2390,7 +2472,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// the column and loses its focus or scroll position.
   Widget _fullVideoScrim(Widget child, {double alpha = 0.55}) => DecoratedBox(
         decoration: BoxDecoration(
-            color: _fullVideo
+            color: (_fullVideo || _fullArt)
                 ? Colors.black.withValues(alpha: alpha)
                 : Colors.transparent),
         child: child,
@@ -2511,7 +2593,12 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     // Full-video mode hides a passed column completely instead of leaving
     // the icon strip (owner's request) — Back/Left still walk out to it,
     // and it opens up again as soon as it's the focused column.
-    if (_fullVideo) collapsedWidth = 0;
+    // What's New does the same on a TV only (a mouse/touch user needs the
+    // strip to tap back into the columns).
+    if (_fullVideo ||
+        (_fullArt && context.read<AppPreferences>().isTelevision)) {
+      collapsedWidth = 0;
+    }
     // Touch/mouse: a tap on a collapsed strip opens it back up instead of
     // hitting one of its look-alike icons. Always the same wrappers (only
     // their flags change) so the column never remounts and keeps its
@@ -2840,6 +2927,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
           fontSize: _groupFontSize,
           focusNode: _firstGroupRowFocusNode,
           onTap: () => setState(() {
+            if (!_showWhatsNew) _whatsNewArt.value = null;
             _showWhatsNew = true;
             _showFavorites = false;
             if (_compact) _phonePage = 2;
@@ -3941,10 +4029,15 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     }
     if (_showWhatsNew) {
       return _WhatsNewCarousel<Channel>(
-        loadItems: playlist.whatsNewVod,
+        // A wider pool: the carousel shows the ones with backdrops first.
+        loadItems: () => playlist.whatsNewVod(limit: 10),
         titleOf: (c) => c.name,
         imageUrlOf: (c) => c.posterUrl ?? c.logoUrl,
         backdropUrlOf: (c) => c.anyBackdropUrl,
+        ratingOf: (c) => c.rating,
+        yearOf: (c) => c.releaseDate?.year,
+        art: _whatsNewArt,
+        ownBackdrop: _compact,
         // One get_vod_info per shown slide per session (cached) — brings
         // the provider's backdrop when TMDB has none.
         prefetch: playlist.getHeroVodDescription,
@@ -4185,10 +4278,14 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     }
     if (_showWhatsNew) {
       return _WhatsNewCarousel<XtreamSeries>(
-        loadItems: playlist.whatsNewSeries,
+        loadItems: () => playlist.whatsNewSeries(limit: 10),
         titleOf: (s) => s.name,
         imageUrlOf: (s) => s.posterUrl ?? s.coverUrl,
         backdropUrlOf: (s) => s.anyBackdropUrl,
+        ratingOf: (s) => s.rating,
+        yearOf: (s) => s.releaseDate?.year,
+        art: _whatsNewArt,
+        ownBackdrop: _compact,
         prefetch: playlist.getHeroSeriesDescription,
         onOpen: _openSeries,
         playFocusNode: _showsWhatsNewPlayFocusNode,
@@ -5442,12 +5539,97 @@ class _BrowseHero extends StatelessWidget {
 /// Generic over the item type for the same reason [_CategoryRow] is — the
 /// movies and TV shows variants differ only in which field holds the title
 /// and the artwork, not in any of the paging/focus behavior below.
+/// What's New's full-screen picture: a landscape backdrop, or (when the
+/// title has none) its poster.
+typedef _WhatsNewArt = ({String url, bool poster});
+
+/// Paints [art] the detail-page way. A poster isn't stretched to the
+/// screen's width (soft, cropped to a slice): it fills the full height on
+/// the right, uncropped, and fades into black toward the text and the
+/// small poster beside the title (owner's request). Plain gradients only —
+/// no blur (Fire Stick GPUs).
+class _WhatsNewBackdrop extends StatelessWidget {
+  const _WhatsNewBackdrop({required this.art});
+
+  final _WhatsNewArt? art;
+
+  @override
+  Widget build(BuildContext context) {
+    final art = this.art;
+    if (art == null || !art.poster) {
+      return DetailBackdrop(url: art?.url, fadeLeft: true);
+    }
+    return LayoutBuilder(builder: (context, c) {
+      // Full height, poster-shaped, but at least half the screen wide (a
+      // little top/bottom crop then) so the fade has room on a wide TV.
+      final w = math.max(c.maxHeight * 2 / 3, c.maxWidth * 0.5);
+      return ColoredBox(
+        color: Colors.black,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Positioned(
+              top: 0,
+              bottom: 0,
+              right: 0,
+              width: w,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  HdNetworkImage(
+                    url: art.url,
+                    kind: ImageKind.poster,
+                    decodeWidth: HdNetworkImage.cardDecodeWidth(context, w,
+                        oversample: 1),
+                    alignment: Alignment.topCenter,
+                    errorWidget: (_) => const SizedBox.shrink(),
+                  ),
+                  // Fades into the black toward the text, and a little at
+                  // the bottom where the buttons sit.
+                  const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: [
+                          Colors.black,
+                          Color(0x99000000),
+                          Color(0x00000000)
+                        ],
+                        stops: [0.0, 0.3, 0.65],
+                      ),
+                    ),
+                  ),
+                  const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Color(0x00000000), Color(0xCC000000)],
+                        stops: [0.6, 1.0],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+}
+
 class _WhatsNewCarousel<T> extends StatefulWidget {
   const _WhatsNewCarousel({
     required this.loadItems,
     required this.titleOf,
     required this.imageUrlOf,
     this.backdropUrlOf,
+    this.ratingOf,
+    this.yearOf,
+    required this.art,
+    this.ownBackdrop = false,
     this.prefetch,
     required this.onOpen,
     required this.playFocusNode,
@@ -5472,9 +5654,22 @@ class _WhatsNewCarousel<T> extends StatefulWidget {
   /// kind to offer.
   final String? Function(T item)? backdropUrlOf;
 
+  final String? Function(T item)? ratingOf;
+  final int? Function(T item)? yearOf;
+
+  /// Owned by `_TvHomeScreenState`, which paints it full screen behind
+  /// everything (detail-page style). Set here only from callbacks, never
+  /// during build — the listener lives earlier in the same tree.
+  final ValueNotifier<_WhatsNewArt?> art;
+
+  /// Portrait phone (no full-screen layer there): paint the backdrop
+  /// inside this area instead.
+  final bool ownBackdrop;
+
   /// Run once per slide as it's shown (the provider-info fetch that also
-  /// stamps the provider's backdrop onto the item); the slide rebuilds when
-  /// it completes, so a late backdrop replaces the poster.
+  /// stamps the provider's backdrop onto the item and returns its plot);
+  /// the slide rebuilds when it completes, so a late backdrop and the
+  /// description appear then.
   final Future<Object?> Function(T item)? prefetch;
   final void Function(T item) onOpen;
 
@@ -5491,50 +5686,84 @@ class _WhatsNewCarousel<T> extends StatefulWidget {
 
 class _WhatsNewCarouselState<T> extends State<_WhatsNewCarousel<T>>
     with RouteAware {
-  static const _advanceInterval = Duration(seconds: 4);
+  /// Was 4 s with a title only; a slide now carries a description to read.
+  static const _advanceInterval = Duration(seconds: 7);
 
-  final PageController _pageController = PageController();
+  final FocusNode _prevFocusNode = FocusNode(debugLabel: 'whats-new-prev');
+  final FocusNode _nextFocusNode = FocusNode(debugLabel: 'whats-new-next');
   late final Future<List<T>> _itemsFuture;
   Timer? _timer;
   int _index = 0;
   int _itemCount = 0;
 
+  /// Slides shown, picked from the larger pool [loadItems] returns.
+  static const _shown = 6;
+
   @override
   void initState() {
     super.initState();
-    _itemsFuture = widget.loadItems().then((items) {
+    _itemsFuture = widget.loadItems().then(_preferArt).then((items) {
       if (mounted) {
         _itemCount = items.length;
         _items = items;
         _startTimer();
-        _prefetchAt(0);
+        _publishArt();
       }
       return items;
     });
   }
 
   List<T> _items = const [];
-  final Set<int> _prefetched = {};
 
-  /// Slides whose [prefetch] has finished (or failed). Until then a slide
-  /// without a known backdrop shows no picture rather than its poster, so
-  /// it goes dark -> backdrop, never poster -> backdrop (same rule as the
-  /// browse hero's `_focusedArtPending`).
-  final Set<Object?> _artDone = {};
+  /// Plots returned by [prefetch], per item.
+  final Map<Object?, String> _plots = {};
 
-  void _prefetchAt(int i) {
+  /// Fetches every candidate's info up front (at most ~5 s, cached per
+  /// session) and puts the titles with a real landscape backdrop first —
+  /// owner: a slide with only a poster on black looked empty. The rest
+  /// still fill in when fewer than [_shown] have one.
+  Future<List<T>> _preferArt(List<T> pool) async {
     final prefetch = widget.prefetch;
-    if (prefetch == null || i < 0 || i >= _items.length) return;
-    if (!_prefetched.add(i)) return;
-    final item = _items[i];
-    prefetch(item).then((_) {
-      _artDone.add(item);
-      if (mounted) setState(() {});
-    }, onError: (_) {
-      _prefetched.remove(i);
-      _artDone.add(item);
-      if (mounted) setState(() {});
-    });
+    if (prefetch != null && pool.isNotEmpty) {
+      await Future.wait([
+        for (final item in pool)
+          prefetch(item).then((plot) {
+            if (plot is String && plot.trim().isNotEmpty) {
+              _plots[item] = plot.trim();
+            }
+          }, onError: (_) {}),
+      ]).timeout(const Duration(seconds: 5), onTimeout: () => const []);
+    }
+    final withArt = [
+      for (final i in pool)
+        if (_backdropOf(i) != null) i
+    ];
+    final rest = [
+      for (final i in pool)
+        if (_backdropOf(i) == null) i
+    ];
+    return [...withArt, ...rest].take(_shown).toList();
+  }
+
+  String? _backdropOf(T item) {
+    final b = widget.backdropUrlOf?.call(item);
+    return (b != null && b.isNotEmpty) ? b : null;
+  }
+
+  /// Hands the current slide's picture to the full-screen layer: its
+  /// backdrop, else its poster (drawn dimmed there).
+  void _publishArt() {
+    if (_items.isEmpty) return;
+    widget.art.value = _artOf(_items[_index.clamp(0, _items.length - 1)]);
+  }
+
+  _WhatsNewArt? _artOf(T item) {
+    final backdrop = _backdropOf(item);
+    if (backdrop != null) return (url: backdrop, poster: false);
+    final poster = widget.imageUrlOf(item);
+    return (poster != null && poster.isNotEmpty)
+        ? (url: poster, poster: true)
+        : null;
   }
 
   @override
@@ -5548,7 +5777,8 @@ class _WhatsNewCarouselState<T> extends State<_WhatsNewCarousel<T>>
   void dispose() {
     appRouteObserver.unsubscribe(this);
     _timer?.cancel();
-    _pageController.dispose();
+    _prevFocusNode.dispose();
+    _nextFocusNode.dispose();
     super.dispose();
   }
 
@@ -5570,16 +5800,13 @@ class _WhatsNewCarouselState<T> extends State<_WhatsNewCarousel<T>>
     _timer = Timer.periodic(_advanceInterval, (_) => _goTo(_index + 1));
   }
 
-  /// Modulo, not `nextPage`/`previousPage`: those stop dead at either end,
-  /// and a slideshow that quietly stops advancing after the 5th title
-  /// reads as broken.
+  /// Modulo, so the slideshow wraps around instead of stopping after the
+  /// last title. A plain index (no PageView): the picture is the
+  /// full-screen layer behind the whole screen, so slides cross-fade.
   void _goTo(int target) {
-    if (_itemCount == 0 || !_pageController.hasClients) return;
-    _pageController.animateToPage(
-      target % _itemCount,
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeOut,
-    );
+    if (_itemCount == 0 || !mounted) return;
+    setState(() => _index = target % _itemCount);
+    _publishArt();
   }
 
   void _step(int delta) {
@@ -5599,216 +5826,192 @@ class _WhatsNewCarouselState<T> extends State<_WhatsNewCarousel<T>>
         }
         final items = snapshot.data ?? <T>[];
         if (items.isEmpty) return Center(child: Text(widget.emptyText));
-        return Column(
-          children: [
-            Expanded(
-              child: PageView.builder(
-                controller: _pageController,
-                itemCount: items.length,
-                onPageChanged: (i) {
-                  setState(() => _index = i);
-                  _prefetchAt(i);
-                },
-                itemBuilder: (context, i) => _buildPage(context, items[i]),
+        final item = items[_index.clamp(0, items.length - 1)];
+        // Same scale rule as the detail pages, from the screen size (this
+        // area narrows while the side columns are open).
+        final size = MediaQuery.sizeOf(context);
+        final s = math
+            .min(size.width / 960, size.height / 540)
+            .clamp(1.0, 2.2)
+            .toDouble();
+        return GestureDetector(
+          // Touch: swipe between titles (the PageView used to do this).
+          onHorizontalDragEnd: (d) {
+            final v = d.primaryVelocity ?? 0;
+            if (v.abs() > 200) _step(v < 0 ? 1 : -1);
+          },
+          child: LayoutBuilder(builder: (context, c) {
+            final content = Padding(
+              // Bottom clearance: LiveResumeHint (the "Hold -> to resume"
+              // pill) is a global overlay 24px from the screen's bottom.
+              padding: EdgeInsets.fromLTRB(16 * s, 0, 16 * s, 56),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Spacer(),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    layoutBuilder: (current, previous) => Stack(
+                      alignment: Alignment.bottomLeft,
+                      children: [...previous, if (current != null) current],
+                    ),
+                    child: KeyedSubtree(
+                      key: ValueKey<Object?>(item),
+                      child: _buildInfo(context, item, s, c.maxWidth),
+                    ),
+                  ),
+                  SizedBox(height: 16 * s),
+                  _buildNavRow(context, item, s),
+                  SizedBox(height: 12 * s),
+                  _buildDots(context, items.length, s),
+                ],
               ),
-            ),
-            _buildDots(context, items.length),
-            _buildNavRow(context, items),
-          ],
+            );
+            if (!widget.ownBackdrop) return content;
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                _WhatsNewBackdrop(art: _artOf(item)),
+                content,
+              ],
+            );
+          }),
         );
       },
     );
   }
 
-  Widget _buildPage(BuildContext context, T item) {
+  /// Title, rating/year chips and plot, detail-page style.
+  Widget _buildInfo(BuildContext context, T item, double s, double maxW) {
     final scheme = Theme.of(context).colorScheme;
-    final backdrop = widget.backdropUrlOf?.call(item);
-    final hasBackdrop = backdrop != null && backdrop.isNotEmpty;
-    final imageUrl = hasBackdrop
-        ? backdrop
-        : (widget.prefetch != null && !_artDone.contains(item))
-            ? null
-            : widget.imageUrlOf(item);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      child: Container(
-        decoration: BoxDecoration(
-          // A static gradient instead of a blurred copy of the poster —
-          // a GPU blur over a full-bleed image crashed real Fire Stick
-          // hardware twice (native-level: logcat's crash buffer showed
-          // "crash_dump helper failed to exec" both times, consistent
-          // with a GPU-driver failure rather than a Dart exception),
-          // even after restricting it to only the active PageView page.
-          // This still fills the letterboxed space either side of a
-          // portrait poster with something intentional instead of flat
-          // grey, at effectively zero rendering cost.
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color.alphaBlend(
-                  scheme.primary.withValues(alpha: 0.25), Colors.grey.shade900),
-              Color.alphaBlend(scheme.secondary.withValues(alpha: 0.25),
-                  Colors.grey.shade900),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-              color: Color.lerp(scheme.primary, scheme.secondary, 0.5)!,
-              width: 2),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (imageUrl != null && imageUrl.isNotEmpty)
-              // HdSwapImage: when this slide's backdrop arrives (see
-              // `prefetch`) the poster stays up until it has loaded.
-              // Decode capped at the screen width (1920 max on Android).
-              HdSwapImage(
-                url: imageUrl,
-                kind: (backdrop != null && backdrop.isNotEmpty)
-                    ? ImageKind.backdrop
-                    : ImageKind.poster,
-                decodeWidth: HdNetworkImage.screenDecodeWidth(
-                    context, MediaQuery.of(context).size.width),
-                // Was `contain` (letterboxed, with the gradient above
-                // filling the bars either side) — changed back to `cover`
-                // per direct request, to fill this whole slide the way
-                // every other poster in this app already does by default
-                // (see PosterCard.fit). Not the same hazard as the
-                // scrapped blur effect above: that crashed real Fire
-                // Stick hardware via a GPU blur *shader* specifically —
-                // plain cropping is the same ordinary operation already
-                // running crash-free across every poster grid in the app.
-                // (HdSwapImage is always `cover`.)
-                // Backdrop key-art almost always puts its actual subject
-                // (a face, a figure) in the upper portion of the frame —
-                // this slide's box is much wider/shorter than the 16:9
-                // source image, so a default center-aligned cover crops
-                // evenly off the top *and* bottom, which on a backdrop
-                // this short-and-wide cuts the subject off at the
-                // shoulders. Reported directly, with a screenshot: a
-                // barely-recognizable torso/arm crop, not a poster.
-                // Anchoring to the top keeps the subject in frame and
-                // crops the (usually empty sky/background) bottom
-                // instead.
-                alignment: Alignment.topCenter,
-              ),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Color.alphaBlend(scheme.primary.withValues(alpha: 0.35),
-                        Colors.black.withValues(alpha: 0.85)),
+    final rawRating = widget.ratingOf?.call(item);
+    final ratingValue = rawRating == null ? null : double.tryParse(rawRating);
+    final rating = (ratingValue != null && ratingValue > 0) ? rawRating : null;
+    final year = widget.yearOf?.call(item);
+    final plot = _plots[item];
+    // No landscape backdrop: the poster card beside the title (the same
+    // poster also fills the right side behind, faded — _WhatsNewBackdrop).
+    final poster = _backdropOf(item) == null ? widget.imageUrlOf(item) : null;
+    final showPoster = poster != null && poster.isNotEmpty;
+    final posterW = 130 * s;
+    final textW =
+        math.min(560 * s, maxW * 0.55 - (showPoster ? posterW + 20 * s : 0));
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        if (showPoster) ...[
+          DetailPoster(url: poster, width: posterW),
+          SizedBox(width: 20 * s),
+        ],
+        ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: math.max(textW, 120)),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                cleanDisplayTitle(widget.titleOf(item)),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 34 * s,
+                  fontWeight: FontWeight.w800,
+                  height: 1.1,
+                  shadows: const [
+                    Shadow(color: Colors.black87, blurRadius: 12)
                   ],
                 ),
               ),
-            ),
-            Positioned(
-              left: 20,
-              right: 20,
-              bottom: 16,
-              child: Row(
-                children: [
-                  Container(width: 4, height: 26, color: scheme.secondary),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      widget.titleOf(item),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold),
-                    ),
+              if (rating != null || year != null) ...[
+                SizedBox(height: 10 * s),
+                Wrap(
+                  spacing: 6 * s,
+                  runSpacing: 6 * s,
+                  children: [
+                    if (rating != null)
+                      DetailMetaChip(
+                        scale: s,
+                        leading: Icon(Icons.star_rounded,
+                            size: 14 * s, color: scheme.primary),
+                        label: rating,
+                        strong: true,
+                      ),
+                    if (year != null) DetailMetaChip(scale: s, label: '$year'),
+                  ],
+                ),
+              ],
+              if (plot != null) ...[
+                SizedBox(height: 10 * s),
+                Text(
+                  plot,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.82),
+                    fontSize: 13.5 * s,
+                    height: 1.4,
+                    shadows: const [Shadow(color: Colors.black, blurRadius: 8)],
                   ),
-                ],
-              ),
-            ),
-          ],
+                ),
+              ],
+            ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
-  Widget _buildDots(BuildContext context, int count) {
+  Widget _buildDots(BuildContext context, int count, double s) {
     final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(top: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          for (var i = 0; i < count; i++)
-            Container(
-              width: 8,
-              height: 8,
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: i == _index ? scheme.primary : Colors.white24,
-              ),
+    return Row(
+      children: [
+        for (var i = 0; i < count; i++)
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: (i == _index ? 18 : 7) * s,
+            height: 7 * s,
+            margin: EdgeInsets.only(right: 6 * s),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(4 * s),
+              color: i == _index ? scheme.primary : Colors.white30,
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 
-  /// Three real focusable stops in a row, so moving between titles and
-  /// actually starting one is a single continuous D-pad motion: arrow over
-  /// to the title you want, a Right press or two lands on Play, Select.
-  /// Deliberately not "press Select on the artwork itself" — the artwork
-  /// isn't focusable at all here. Left/Right *between* these three is
-  /// ordinary directional traversal (they're laid out horizontally), same
-  /// as every other button row in this app.
-  Widget _buildNavRow(BuildContext context, List<T> items) {
-    final current = items[_index.clamp(0, items.length - 1)];
-    return Padding(
-      // Extra bottom clearance: LiveResumeHint (the "Hold -> to resume"
-      // pill for a live channel paused in the background) is a global
-      // overlay fixed at 24px from the very bottom of the screen,
-      // regardless of which tab is showing — this row would otherwise
-      // sit directly under it.
-      padding: const EdgeInsets.only(top: 12, bottom: 64),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 130,
-            child: ModeButton(
-              icon: Icons.chevron_left,
-              label: tr('Previous'),
-              selected: false,
-              onTap: () => _step(-1),
-            ),
-          ),
-          const SizedBox(width: 12),
-          SizedBox(
-            width: 160,
-            child: ModeButton(
-              icon: Icons.play_arrow,
-              label: tr('Play'),
-              selected: false,
-              focusNode: widget.playFocusNode,
-              onTap: () => widget.onOpen(current),
-            ),
-          ),
-          const SizedBox(width: 12),
-          SizedBox(
-            width: 130,
-            child: ModeButton(
-              icon: Icons.chevron_right,
-              label: tr('Next'),
-              selected: false,
-              onTap: () => _step(1),
-            ),
-          ),
-        ],
-      ),
+  /// Play first (where focus lands), then Previous / Next. Left/Right
+  /// between them is ordinary directional traversal, same as the detail
+  /// pages' pill row. The artwork itself isn't focusable.
+  Widget _buildNavRow(BuildContext context, T current, double s) {
+    return Row(
+      children: [
+        DetailPillButton(
+          focusNode: widget.playFocusNode,
+          scale: s,
+          icon: Icons.play_arrow_rounded,
+          label: tr('Play'),
+          emphasized: true,
+          onPressed: () => widget.onOpen(current),
+        ),
+        SizedBox(width: 10 * s),
+        DetailPillButton(
+          focusNode: _prevFocusNode,
+          scale: s,
+          icon: Icons.chevron_left,
+          label: tr('Previous'),
+          onPressed: () => _step(-1),
+        ),
+        SizedBox(width: 10 * s),
+        DetailPillButton(
+          focusNode: _nextFocusNode,
+          scale: s,
+          icon: Icons.chevron_right,
+          label: tr('Next'),
+          onPressed: () => _step(1),
+        ),
+      ],
     );
   }
 }

@@ -101,14 +101,14 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+284**) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+285**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
 Only release when the owner asks ("update the latest", "cut it", "fully release"). Outline: bump `pubspec.yaml` (versionCode `+N` must always rise) → `flutter analyze` → build APK + verify signature (§5) → build Windows + zip → **commit & push first** → `gh release upload <tag> app-release.apk VesperTV-windows-x64.zip --clobber` → `gh release edit <tag> --tag <new> --notes-file …` → make sure the tag equals HEAD → verify downloads/hashes, the OLD `NoXqc/NoXPlayer` redirect links and AFTVnews code `1760256`. The updater offers any *different* tag (`_isDifferent`), never leave two `.zip`/`.apk` assets on the latest release.
 
 ## 7. Test devices (details in `dev-notes/devices.md`)
-Formuler Z11 Pro MAX `192.168.1.46:5555` (IP changes; also seen `10.0.0.46`), Fire Stick `192.168.1.33:5555` (2026-10-15: on USB, `adb -s G072JN0733471CJ6`). Install with `adb install -r` after verifying the signature. Not rooted: no run-as on the Formuler, but `adb logcat` works (Flutter `print` shows as tag `flutter` even in release). **Don't drive the owner's Formuler over adb to debug** (owner, 2026-10-15) — add temporary on-screen debug output and ask for a photo, or use the Fire Stick when he hooks it up. Never press Select on "Exit App". Hold-Select via adb needs `input swipe X Y X Y 1800`, not `--longpress`. The owner keeps the Formuler on **Dark / Gold**.
+Formuler Z11 Pro MAX `10.0.0.46:5555` (IP changes; was `192.168.1.46`), Fire Stick `192.168.1.33:5555` (2026-10-15: on USB, `adb -s G072JN0733471CJ6`). Install with `adb install -r` after verifying the signature. Not rooted: no run-as on the Formuler, but `adb logcat` works (Flutter `print` shows as tag `flutter` even in release). **Don't drive the owner's Formuler over adb to debug** (owner, 2026-10-15) — add temporary on-screen debug output and ask for a photo, or use the Fire Stick when he hooks it up. Never press Select on "Exit App". Hold-Select via adb needs `input swipe X Y X Y 1800`, not `--longpress`. The owner keeps the Formuler on **Dark / Gold**.
 
 ## 8. Branding & website (details in `dev-notes/branding-and-site.md`)
 Brand = black + gold, gold "V" + star logo. Regenerate icons with `python assets/icon/gen_icon.py` then `dart run flutter_launcher_icons`. Default Platinum theme accent = gold. Site is the single file `docs/index.html` (carousel, hero sky). Fire OS keeps old launcher icons after updates — known, unfixable in-app.
@@ -202,6 +202,11 @@ rejected (HDR + Android-TV hardware-decode risk).
   (same `{placeholders}`). Never `tr()` a string that is also an id in logic (tab ids, 'All'/
   'Favorites' group entries, standings column labels) — translate at the display site. Details in
   `dev-notes/features.md` (Languages).
+- **A screen that swaps its focused widget for another (keypad → summary) must give the new view
+  a focus target** (`autofocus` + key handling); otherwise the remote has nothing focused and
+  looks frozen (Transfer "Ready to copy", 2026-10-16).
+- **`CallbackShortcuts` must be an ancestor of the focused node.** If it wraps only the body, it
+  misses an AppBar `TextField`, so wrap the whole Scaffold (Search screen).
 - Open-source principle: **no embedded API keys.** Anything needing a key (TMDB, a future
   OpenSubtitles) is bring-your-own-key in Settings.
 
@@ -213,6 +218,16 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-16)
+- **Unreleased (working tree, +285, see HANDOFF.md):**
+  - What's New is a full-screen backdrop and is the default view on the Movies/TV Shows tabs.
+  - Launch update prompt (`widgets/update_prompt.dart`; Skip is stored per version).
+  - Fixes: Search Down to the recent searches, EPG overlap cleanup (`EpgService._untangle`),
+    Transfer "Ready to copy" focus.
+  - Relay `X-VesperTV-App` header: sent by the app and counted on the VPS; enforcement is OFF
+    until old installs update.
+  - `TRADEMARKS.md`: the name and logo are not covered by the GPL.
+  - Donations will go through GitHub Sponsors, which is pending approval. After approval: add
+    `FUNDING.yml`, site/README links and an About row.
 - **Shipped: 1.0.15 (`+284`, 2026-10-16, latest on GitHub)** — Favorites tab removed: favourites live behind one **Favourites** entry per tab (Movies/TV Shows: starred rows per playlist + favourited groups; TV: starred + favourited groups' channels); playlist labels with 2+ playlists (Search cards, TV Favourites list + Timeline guide); 12/24 h clock (Settings > General); splash greeting bank of compliments (one per cold start); phone: header search icon, tap shows both player bars, rotate button in the top bar, browse posters tap = preview / tap again = open. Details: `dev-notes/features.md` (1.0.15).
 - 1.0.14 (`+271`, 2026-10-16) — **Transfer over the internet**: Send = encrypted upload to the relay's vault for 1 h / 24 h / 7 days, 16-digit code, works any number of times until expiry or Delete now; the Wi-Fi transfer is the "Both devices on the same Wi-Fi?" tile on that screen; Receive takes 9 or 16 digits. Relay deployed on the VPS (`tools/pair_relay`, vault on disk in `/var/lib/pair-relay`). Built to grow into cloud sync later. Also the +268 provider-duration + browse-banner title fix. Details: `dev-notes/features.md` (Transfer over the internet). Owner tested Fire Stick ↔ phone: "flawless and superfast".
 - 1.0.13 (`+267`, 2026-10-15) — redesigned TV Show + movie detail pages (`series_detail_screen.dart`, `movie_detail_screen.dart`, shared `widgets/detail_header.dart`, `utils/display_title.dart` title cleanup; per-episode progress from existing saved positions, watched = >=95%); HD images (`utils/image_urls.dart` keyless TMDB size upgrade, `widgets/hd_network_image.dart` decode caps, provider backdrops via `get_vod_info`/`get_series_info`, `CatalogDatabase` v8); hero/carousel go dark -> backdrop (no poster flash, `_focusedArtPending`); hold the Sports RedZone pill to pick its channel; Back-from-guide focus safety net. Next keyless artwork option if wanted: TVmaze (series/episodes, CC BY-SA, no key).

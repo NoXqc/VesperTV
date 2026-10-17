@@ -9,7 +9,7 @@ import 'package:cryptography/cryptography.dart';
 import 'package:http/http.dart' as http;
 
 import 'device_transfer.dart' show TransferError, TransferException;
-import 'phone_pairing_service.dart' show kPairRelayBase;
+import 'phone_pairing_service.dart' show kPairRelayBase, kRelayAppHeaders;
 
 /// Settings > Transfer to another device > **Different network**: the
 /// sender uploads its setup (`StorageService.exportForTransfer`), encrypted
@@ -134,6 +134,7 @@ Future<CloudTransfer> uploadCloudTransfer(
   });
   final res = await _call(() => http.put(_uri(keys.id),
       headers: {
+        ...kRelayAppHeaders,
         'Content-Type': 'application/octet-stream',
         'X-Vault-Token': keys.token,
         'X-Vault-Ttl': '${lifetime.inSeconds}',
@@ -158,7 +159,8 @@ Future<Map<String, Object?>> downloadCloudTransfer(String code) async {
     throw const TransferException(TransferError.wrongCode);
   }
   final keys = await Isolate.run(() => VaultKeys.fromCode(code));
-  final res = await _call(() => http.get(_uri(keys.id)));
+  final res =
+      await _call(() => http.get(_uri(keys.id), headers: kRelayAppHeaders));
   if (res.statusCode == 404) {
     throw const TransferException(TransferError.notFound);
   }
@@ -185,8 +187,8 @@ Future<Map<String, Object?>> downloadCloudTransfer(String code) async {
 /// as deleted.
 Future<void> deleteCloudTransfer(String code) async {
   final keys = await Isolate.run(() => VaultKeys.fromCode(code));
-  final res = await _call(
-      () => http.delete(_uri(keys.id), headers: {'X-Vault-Token': keys.token}));
+  final res = await _call(() => http.delete(_uri(keys.id),
+      headers: {...kRelayAppHeaders, 'X-Vault-Token': keys.token}));
   if (res.statusCode != 204 && res.statusCode != 404) {
     throw const TransferException(TransferError.unreachable);
   }
