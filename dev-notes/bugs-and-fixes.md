@@ -5,6 +5,7 @@ Check this before investigating a bug: it may already have been root-caused. Sec
 ## 11. Known bugs & their fixes (history — don't regress these)
 | Symptom | Cause | Fix / where |
 |---|---|---|
+| First quick OK on a hold row (TV Favourites, Fire Stick) opened its hold action ("Clear favourites?") | busy box: the click's key-up reached the app later than the 550 ms hold timer | `HoldToActivate` fires a hold only after a key **repeat** (real holds always repeat; a late key-up never does) (1.0.17) |
 | Starring ESPN 4K also put ESPN HD/FHD in Favourites (hide/Sports picks the same) | Live channel id = provider EPG id (`epg_channel_id`/`tvg-id`), shared by every copy of a channel | `Channel.withUniqueIds` on every live load (`playlist_session.dart`): shared ids become `<epg id>#<stream id>`, EPG id kept in `Channel.epgKey` (1.0.16). Saved state on those channels reset once |
 | Add Playlist: Back to close the keyboard on the **Name** field jumped to fullscreen live; Back again returned | `LiveResumeHint`'s global hold-Right (1200 ms) timer was armed while a text field had focus, and the Fire/remote keyboard sequence fired it | `LiveResumeHint._textFieldFocused` gates both arming **and** `_resume()` (`live_resume_hint.dart`) |
 | Cold launch opened the first live group instead of Favourites | `_effectiveLiveGroup` used only `currentChannel`, which is null on cold launch | favourites-first using `currentChannel ?? pendingResumeChannel` (`tv_home_screen.dart`) |

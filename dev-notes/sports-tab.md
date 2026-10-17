@@ -318,8 +318,18 @@ info version rejected — keep the VS layout). Fire Stick check pending.
   channel (`_livePreview`; a CH+/- zap ends it). Hero stays on the playing game whatever is focused.
 - `_setPreview` serialises starts/stops (`_previewChain`, latest press wins, waits up to 10 s for
   the stream to open) — overlapping `play()` calls could orphan a stream (audio underneath).
-- OK on any game (and the game menu's Watch) goes through the preview, then pushes PlayerScreen;
-  Back from fullscreen shows it in the hero. Back on Sports stops it first (PopScope), then leaves.
+- **1.0.17 controls (owner):** OK on a card only selects it (hero shows it, nothing plays) — ▶❚❚
+  starts the hero; OK on the playing game = fullscreen on the same stream (no wait for the stream to
+  open, the Fire Stick showed the hero first). Hold = channel menu; a channel picked there plays in
+  the hero. Selecting another card while one plays does NOT switch the hero (owner: Back stops it,
+  then pick). No match = OK opens the menu. Phone: 1st tap focuses, 2nd tap plays in the hero, 3rd
+  = fullscreen; long-press = menu. Back from fullscreen shows it in the hero; Back on Sports stops it
+  first (PopScope), then leaves.
+- Phone layout (1.0.17): the whole page scrolls (`_touch` = Android non-TV; header + hero + rows in
+  one `SingleChildScrollView`, `_buildBody(inPage:)`), portrait hero stacks (`_narrowInfo`, video
+  full width above the game). `_ensureRowVisible` is off on touch.
+- "▶❚❚" in hint strings is drawn as white play/pause icons (`_KeyHintText`) — as text Android shows
+  an orange emoji.
 - Platform-view rules: one video per stream, stays mounted under the pushed player (like the TV
   preview box), fixed tree position, no overlay/clip on it. RedZone pill: no preview, plain fullscreen.
 - Windows: not built (needs `DesktopMiniPlayer`).

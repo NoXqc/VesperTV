@@ -217,6 +217,10 @@ const Map<String, String> kFr = {
       "Maintenir OK : choisir/changer la chaîne",
   'Hold OK: pick the channel  ·  ▶❚❚: watch here':
       "Maintenir OK : choisir la chaîne  ·  ▶❚❚ : regarder ici",
+  'Tap the game again: full screen  ·  Back: stop':
+      "Touchez le match à nouveau : plein écran  ·  Retour : arrêter",
+  'Tap: watch here  ·  Hold: pick the channel':
+      "Toucher : regarder ici  ·  Maintenir : choisir la chaîne",
   'OK: full screen  ·  ▶❚❚ or Back: stop':
       "OK : plein écran  ·  ▶❚❚ ou Retour : arrêter",
   'Still looking for channels…': "Recherche de chaînes en cours…",

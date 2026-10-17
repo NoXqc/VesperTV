@@ -131,6 +131,22 @@ class _HoldToActivateState extends State<HoldToActivate> {
   /// row, and the same press's key-up then "activated" it a moment later.
   bool _downReceived = false;
 
+  /// A hold needs the remote's own auto-repeat as proof, not just the
+  /// timer: on a busy Fire Stick (a stream starting) a quick click's key-up
+  /// reached the app over [holdDuration] late, so the first click on the TV
+  /// Favourites row opened "Clear favourites?" (owner, 2026-10-18). A real
+  /// hold always sends repeats (Android after ~0.5 s, Windows keyboards
+  /// too); a late key-up after a click never has any.
+  bool _repeatSeen = false;
+  bool _timerElapsed = false;
+
+  void _fireHold() {
+    final onHold = widget.onHold;
+    if (onHold == null || _holdFired) return;
+    _holdFired = true;
+    onHold();
+  }
+
   @override
   void dispose() {
     _holdTimer?.cancel();
@@ -147,13 +163,21 @@ class _HoldToActivateState extends State<HoldToActivate> {
     if (event is KeyDownEvent) {
       _holdFired = false;
       _downReceived = true;
+      _repeatSeen = false;
+      _timerElapsed = false;
       _holdTimer?.cancel();
-      final onHold = widget.onHold;
-      if (onHold != null) {
+      if (widget.onHold != null) {
         _holdTimer = Timer(widget.holdDuration, () {
-          _holdFired = true;
-          onHold();
+          _timerElapsed = true;
+          if (_repeatSeen) _fireHold();
         });
+      }
+      return KeyEventResult.handled;
+    }
+    if (event is KeyRepeatEvent) {
+      if (_downReceived) {
+        _repeatSeen = true;
+        if (_timerElapsed) _fireHold();
       }
       return KeyEventResult.handled;
     }

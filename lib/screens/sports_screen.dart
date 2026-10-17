@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 
 import '../models/channel.dart';
 import '../models/sports.dart';
+import '../services/app_preferences.dart';
 import '../services/desktop_mini_player.dart';
 import '../services/epg_service.dart';
 import '../services/playback_service.dart';
@@ -385,7 +386,16 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     _focusZone(target, sections);
   }
 
+  /// A phone (touch, no remote): the whole page scrolls (see [build]).
+  bool get _touch =>
+      Platform.isAndroid && !context.read<AppPreferences>().isTelevision;
+
+  /// Portrait phone: the hero stacks and the side padding shrinks.
+  bool get _narrow => MediaQuery.sizeOf(context).width < 600;
+
   void _ensureRowVisible(String sectionId) {
+    // A tap focuses the card; scrolling the page then would yank it away.
+    if (_touch) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ctx = _rowKeys[sectionId]?.currentContext;
       if (ctx != null) {
@@ -533,10 +543,22 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       [List<ChannelMatch>? matches]) async {
     final best = (matches ?? _matches[_gameKey(game)])?.firstOrNull;
     if (best == null) return _openGame(game, matches);
+    if (Platform.isWindows) return _play(best.channel);
     // OK on the game already playing in the hero: fullscreen on that same
     // stream (it may be a channel picked from the menu, not the best one).
-    final previewing = _isPreviewing(game) ? _previewChannel : null;
-    await _play(previewing ?? best.channel, game: game);
+    if (_isPreviewing(game)) return _play(_previewChannel!, game: game);
+    // Otherwise OK only selects: a card shows in the hero, nothing plays
+    // until ▶❚❚ (owner, 2026-10-18: OK went straight to full screen). A
+    // phone has no ▶❚❚, so its second tap (the first one focuses, see
+    // _GameCard) plays the game in the hero.
+    if (_touch) await _setPreview(game, best.channel);
+  }
+
+  /// A channel chosen from the game's menu: Android plays it in the hero
+  /// (OK there = full screen), Windows full screen as before.
+  Future<void> _watch(Channel channel, SportsGame game) async {
+    if (Platform.isWindows) return _play(channel);
+    await _setPreview(game, channel);
   }
 
   // ------------------------------------------------------------- preview
@@ -591,7 +613,12 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   /// waiting is skipped. Each start also waits for the stream to open (max
   /// 10 s) before the next one: 1-connection accounts reject a new
   /// connection while the old one is still closing.
-  Future<void> _setPreview(SportsGame? game, Channel? channel) {
+  /// [waitReady]: hold the chain until the stream is up, so a quick second
+  /// Play/Pause can't start a stream over one still connecting. OK skips it:
+  /// it goes full screen at once (waiting kept the Fire Stick showing the
+  /// hero for seconds first, owner 2026-10-18).
+  Future<void> _setPreview(SportsGame? game, Channel? channel,
+      {bool waitReady = true}) {
     final seq = ++_previewSeq;
     final stopId = _previewChannel?.id;
     final playback = context.read<PlaybackService>();
@@ -610,6 +637,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           return;
         }
         await playback.play(channel);
+        if (!waitReady) return;
         await playback.initFuture
             ?.timeout(const Duration(seconds: 10), onTimeout: () {});
       } catch (_) {
@@ -644,7 +672,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           await _picks.pickForGame(game, channel.id);
           unawaited(_rematch());
         }
-        await _play(channel, game: game);
+        await _watch(channel, game);
       case _PickAction():
         await _pickChannel(game);
       case _ForgetPickAction():
@@ -677,7 +705,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     }
     await _rematch();
     if (!mounted) return;
-    await _play(channel, game: game);
+    await _watch(channel, game);
   }
 
   /// Fullscreen [channel]. With [game] (Android), it goes through the hero
@@ -693,7 +721,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       return;
     }
     if (game != null) {
-      await _setPreview(game, channel);
+      await _setPreview(game, channel, waitReady: false);
     } else {
       // RedZone: not a game; the hero goes back to normal and a preview
       // still waiting in the chain is skipped.
@@ -719,6 +747,24 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final preview = _livePreview(context.watch<PlaybackService>());
     // While a game plays in the hero it stays there, whatever is focused.
     final hero = preview ?? _heroGame;
+    final header = [
+      _buildLeagueBar(),
+      const SizedBox(height: 8),
+      _buildDayBar(),
+      const SizedBox(height: 6),
+      _buildStandingsButton(),
+      const SizedBox(height: 4),
+      if (hero != null)
+        _Hero(
+          game: hero,
+          matches: _matches[_gameKey(hero)],
+          matching: _matching,
+          hideScores: _hideScores,
+          playing: preview != null,
+          touch: _touch,
+          narrow: _narrow,
+        ),
+    ];
     // Back while moving a league chip = "done", not leave Sports; Back while
     // the hero plays stops it first.
     return PopScope(
@@ -767,29 +813,31 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                           const SingleActivator(LogicalKeyboardKey.mediaPause):
                               _onPlayKey,
                         },
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildLeagueBar(),
-                        const SizedBox(height: 8),
-                        _buildDayBar(),
-                        const SizedBox(height: 6),
-                        _buildStandingsButton(),
-                        const SizedBox(height: 4),
-                        if (hero != null)
-                          _Hero(
-                            game: hero,
-                            matches: _matches[_gameKey(hero)],
-                            matching: _matching,
-                            hideScores: _hideScores,
-                            playing: preview != null,
+                  child: _touch
+                      // Phones: the bars and hero left the game rows a
+                      // sliver of the screen, so nothing could be swiped
+                      // (owner, 2026-10-18). The whole page scrolls instead.
+                      ? SingleChildScrollView(
+                          padding: EdgeInsets.fromLTRB(
+                              _narrow ? 12 : 24, 12, _narrow ? 12 : 24, 32),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ...header,
+                              _buildBody(sections, preview, inPage: true),
+                            ],
                           ),
-                        Expanded(child: _buildBody(sections, preview)),
-                      ],
-                    ),
-                  ),
+                        )
+                      : Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ...header,
+                              Expanded(child: _buildBody(sections, preview)),
+                            ],
+                          ),
+                        ),
                 ),
               ),
             ),
@@ -976,7 +1024,23 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     );
   }
 
-  Widget _buildBody(List<_Section> sections, SportsGame? preview) {
+  /// [inPage]: inside the phone's page scroll — a plain column (an Expanded
+  /// or a nested vertical ListView has no height to fill there).
+  Widget _buildBody(List<_Section> sections, SportsGame? preview,
+      {bool inPage = false}) {
+    if (inPage && (sections.isEmpty || (_loading && _games.isEmpty))) {
+      return SizedBox(
+          height: 280, child: _buildBody(sections, preview, inPage: false));
+    }
+    if (inPage) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [for (final s in sections) _buildSection(s, preview)],
+        ),
+      );
+    }
     if (_loading && _games.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -1344,6 +1408,8 @@ class _Hero extends StatelessWidget {
     required this.matching,
     required this.hideScores,
     required this.playing,
+    this.touch = false,
+    this.narrow = false,
   });
 
   static const double height = 168;
@@ -1357,6 +1423,13 @@ class _Hero extends StatelessWidget {
   /// the game compacted to the right (see [_buildPlaying]).
   final bool playing;
 
+  /// A phone: the hint speaks of taps, not remote keys.
+  final bool touch;
+
+  /// Portrait phone: teams stacked over their names, the playing video
+  /// above the game instead of beside it.
+  final bool narrow;
+
   @override
   Widget build(BuildContext context) {
     final showScore = game.state != GameState.pre && !hideScores;
@@ -1365,6 +1438,7 @@ class _Hero extends StatelessWidget {
       return _EventHero(
           game: game, center: _center(context, false), hideScores: hideScores);
     }
+    if (narrow) return _narrowInfo(context, showScore);
     return SizedBox(
       height: 168,
       child: Row(
@@ -1426,40 +1500,104 @@ class _Hero extends StatelessWidget {
             ],
           );
 
+    Widget video(double w, double h) => Container(
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            color: Colors.black,
+            border: Border.all(color: scheme.primary, width: 2),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: SizedBox(
+            width: w,
+            height: h,
+            child: channel == null
+                ? const SizedBox()
+                : VideoPlayerPane(
+                    key: ValueKey(channel.id),
+                    showEpgBar: false,
+                    showControls: false),
+          ),
+        );
+    final hint = _KeyHintText(
+        touch
+            ? tr('Tap the game again: full screen  ·  Back: stop')
+            : tr('OK: full screen  ·  ▶❚❚ or Back: stop'),
+        textAlign: TextAlign.center,
+        style: const TextStyle(fontSize: 12, color: Colors.white54));
+
+    if (narrow) {
+      // Portrait phone: no room beside the video, so the game sits under it.
+      return Column(
+        children: [
+          LayoutBuilder(builder: (context, c) {
+            final w = c.maxWidth - 8;
+            return video(w, w * 9 / 16);
+          }),
+          const SizedBox(height: 8),
+          if (game.league.isField)
+            SizedBox(
+                height: 130, child: _center(context, false, channel: channel))
+          else
+            _narrowInfo(context, showScore, channel: channel),
+          hint,
+        ],
+      );
+    }
+
     return SizedBox(
       height: height,
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              color: Colors.black,
-              border: Border.all(color: scheme.primary, width: 2),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: SizedBox(
-              width: videoHeight * 16 / 9,
-              height: videoHeight,
-              child: channel == null
-                  ? const SizedBox()
-                  : VideoPlayerPane(
-                      key: ValueKey(channel.id),
-                      showEpgBar: false,
-                      showControls: false),
-            ),
-          ),
+          video(videoHeight * 16 / 9, videoHeight),
           const SizedBox(width: 20),
           Expanded(
             child: Column(
               children: [
                 Expanded(child: info),
-                Text(tr('OK: full screen  ·  ▶❚❚ or Back: stop'),
-                    style:
-                        const TextStyle(fontSize: 12, color: Colors.white54)),
+                hint,
                 const SizedBox(height: 4),
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  /// Portrait phone VS layout: each team's logo above its name, the time or
+  /// score in a narrower middle.
+  Widget _narrowInfo(BuildContext context, bool showScore, {Channel? channel}) {
+    Widget side(SportsTeam t) => Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SportsLogo(
+                url: t.logoUrl,
+                size: 52,
+                fallback: t.abbreviation,
+                color: t.color),
+            const SizedBox(height: 6),
+            Text(t.shortName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white)),
+            if (t.record != null)
+              Text(t.record!,
+                  style: const TextStyle(fontSize: 12, color: Colors.white60)),
+          ],
+        );
+    return SizedBox(
+      height: 140,
+      child: Row(
+        children: [
+          Expanded(child: side(game.first)),
+          SizedBox(
+              width: 150,
+              child:
+                  _center(context, showScore, channel: channel, small: true)),
+          Expanded(child: side(game.second)),
         ],
       ),
     );
@@ -1501,7 +1639,8 @@ class _Hero extends StatelessWidget {
   }
 
   /// [channel]: what the playing hero shows (it may not be the best match).
-  Widget _center(BuildContext context, bool showScore, {Channel? channel}) {
+  Widget _center(BuildContext context, bool showScore,
+      {Channel? channel, bool small = false}) {
     final scheme = Theme.of(context).colorScheme;
     final best = matches?.firstOrNull;
     final channelName = channel?.name ?? best?.channel.name;
@@ -1559,8 +1698,9 @@ class _Hero extends StatelessWidget {
                   color: Colors.white))
         else if (showScore)
           Text('${game.first.score ?? '-'}  -  ${game.second.score ?? '-'}',
-              style: const TextStyle(
-                  fontSize: 38,
+              maxLines: 1,
+              style: TextStyle(
+                  fontSize: small ? 28 : 38,
                   fontWeight: FontWeight.w800,
                   color: Colors.white))
         else
@@ -1568,8 +1708,9 @@ class _Hero extends StatelessWidget {
               game.state == GameState.pre
                   ? _timeLabel(game.start)
                   : game.joiner,
-              style: const TextStyle(
-                  fontSize: 30,
+              maxLines: 1,
+              style: TextStyle(
+                  fontSize: small ? 24 : 30,
                   fontWeight: FontWeight.w800,
                   color: Colors.white)),
         Text(status,
@@ -1613,6 +1754,43 @@ class _Hero extends StatelessWidget {
   }
 }
 
+/// A hint whose "▶❚❚" (the remote's Play/Pause key, in every language's
+/// string) is drawn as plain white play / pause icons — as text, Android
+/// renders ▶ as an orange emoji (owner, 2026-10-18).
+class _KeyHintText extends StatelessWidget {
+  const _KeyHintText(this.text, {required this.style, this.textAlign});
+  final String text;
+  final TextStyle style;
+  final TextAlign? textAlign;
+
+  @override
+  Widget build(BuildContext context) {
+    final parts = text.split('▶❚❚');
+    final size = (style.fontSize ?? 12) + 2;
+    final keys = WidgetSpan(
+      alignment: PlaceholderAlignment.middle,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.play_arrow, size: size, color: Colors.white),
+          Text('/', style: style.copyWith(color: Colors.white)),
+          Icon(Icons.pause, size: size, color: Colors.white),
+        ],
+      ),
+    );
+    return Text.rich(
+      TextSpan(children: [
+        for (var i = 0; i < parts.length; i++) ...[
+          if (i > 0) keys,
+          TextSpan(text: parts[i]),
+        ],
+      ]),
+      textAlign: textAlign,
+      style: style,
+    );
+  }
+}
+
 /// Small hint under the focused game card (owner: the floating pill was too
 /// big). Only the hold is spelled out — OK-to-watch is obvious. Its height is
 /// always reserved in the row so focus moves don't shift the layout.
@@ -1644,10 +1822,13 @@ class _HoldHint extends StatelessWidget {
                 Icon(Icons.touch_app, size: 11, color: scheme.primary),
                 const SizedBox(width: 4),
                 // Android: the Play/Pause preview (Windows has none yet).
-                Text(
+                _KeyHintText(
                     Platform.isWindows
                         ? tr('Hold OK to pick or swap the channel')
-                        : tr('Hold OK: pick the channel  ·  ▶❚❚: watch here'),
+                        : !context.read<AppPreferences>().isTelevision
+                            ? tr('Tap: watch here  ·  Hold: pick the channel')
+                            : tr(
+                                'Hold OK: pick the channel  ·  ▶❚❚: watch here'),
                     style:
                         const TextStyle(fontSize: 10, color: Colors.white70)),
               ],
@@ -1774,9 +1955,12 @@ class _GameCardState extends State<_GameCard> {
               focusNode: widget.focusNode,
               borderRadius: BorderRadius.circular(16),
               // Same mouse convention as PosterCard: first click focuses (fills
-              // the hero), a click on the focused card opens it.
+              // the hero), a click on the focused card opens it. Phones too:
+              // the first tap only shows the game in the hero.
               onTap: () {
-                if (Platform.isWindows && !widget.focusNode.hasFocus) {
+                if ((Platform.isWindows ||
+                        !context.read<AppPreferences>().isTelevision) &&
+                    !widget.focusNode.hasFocus) {
                   widget.focusNode.requestFocus();
                 } else {
                   widget.onTap();
