@@ -2051,6 +2051,47 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         .showSnackBar(SnackBar(content: Text(tr('Watched history deleted.'))));
   }
 
+  /// Hold Select on this tab's Favourites row: empty this tab's Favourites
+  /// (starred items + favourited groups) after a confirm.
+  Future<void> _confirmClearFavorites() async {
+    final tab = _tab;
+    final ok = await showDialog<bool>(
+      context: context,
+      // Opened by a hold: see _confirmClearChannelHistory.
+      builder: (dialogContext) => SwallowHeldActivate(
+          child: AlertDialog(
+        title: Text(tr('Clear favourites?')),
+        content: Text(tr(
+            'Removes every starred item and favourite group from this tab\'s Favourites.')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(tr('Clear')),
+          ),
+          TextButton(
+            autofocus: true,
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(tr('Cancel')),
+          ),
+        ],
+      )),
+    );
+    if (ok != true || !mounted) return;
+    final playlist = context.read<PlaylistManager>();
+    final groups = switch (tab) {
+      'Movies' => playlist.vodGroups,
+      'TV Shows' => playlist.seriesGroups,
+      _ => playlist.tvGroups,
+    }
+        .where((g) => playlist.isGroupFavorited(g.playlistId, g.title))
+        .map((g) => (playlistId: g.playlistId, title: g.title))
+        .toList();
+    await playlist.clearFavorites(tab, groups);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(tr('Favourites cleared.'))));
+  }
+
   void _closeApp() {
     if (Platform.isWindows) {
       windowManager.close();
@@ -2817,14 +2858,20 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     return ListView(
       key: const ValueKey('TV'),
       children: [
-        _SelectableRow(
-          icon: Icons.star,
-          label: tr('Favourites'),
-          selected: effectiveGroup == _favoritesGroupSentinel,
-          collapsed: collapsed,
-          fontSize: _groupFontSize,
-          focusNode: _firstGroupRowFocusNode,
+        // Hold Select = clear this tab's Favourites (after a confirm).
+        HoldToActivate(
           onTap: () => _onGroupSelected(_favoritesGroupSentinel),
+          onHold: _confirmClearFavorites,
+          child: _SelectableRow(
+            icon: Icons.star,
+            label: tr('Favourites'),
+            selected: effectiveGroup == _favoritesGroupSentinel,
+            collapsed: collapsed,
+            fontSize: _groupFontSize,
+            focusNode: _firstGroupRowFocusNode,
+            onTap: () => _onGroupSelected(_favoritesGroupSentinel),
+            onLongPress: _confirmClearFavorites,
+          ),
         ),
         // Hold Select = shortcut to Settings > General's channel-history
         // clear (same HoldToActivate-over-InkWell shape as the live list).
@@ -2914,6 +2961,17 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     // the tab forces Flutter to genuinely discard and rebuild this whole
     // subtree — every row's Element and FocusNode included — instead of
     // patching it in place, whenever the tab actually changes.
+    void showFavorites() {
+      setState(() {
+        _showFavorites = true;
+        _showWhatsNew = false;
+        if (_compact) _phonePage = 2;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _scrollBrowseToTop();
+      });
+    }
+
     return ListView(
       key: ValueKey(_tab),
       children: [
@@ -2933,22 +2991,19 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
             if (_compact) _phonePage = 2;
           }),
         ),
-        _SelectableRow(
-          icon: Icons.star,
-          label: tr('Favourites'),
-          selected: _showFavorites,
-          collapsed: collapsed,
-          fontSize: _groupFontSize,
-          onTap: () {
-            setState(() {
-              _showFavorites = true;
-              _showWhatsNew = false;
-              if (_compact) _phonePage = 2;
-            });
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) _scrollBrowseToTop();
-            });
-          },
+        // Hold Select = clear this tab's Favourites (after a confirm).
+        HoldToActivate(
+          onTap: showFavorites,
+          onHold: _confirmClearFavorites,
+          child: _SelectableRow(
+            icon: Icons.star,
+            label: tr('Favourites'),
+            selected: _showFavorites,
+            collapsed: collapsed,
+            fontSize: _groupFontSize,
+            onTap: showFavorites,
+            onLongPress: _confirmClearFavorites,
+          ),
         ),
         _SelectableRow(
           icon: Icons.apps,

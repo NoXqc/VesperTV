@@ -1413,6 +1413,58 @@ class PlaylistManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Hold on a tab's Favourites entry: empties that tab's Favourites for the
+  /// active viewer — its starred items and its favourited groups (the
+  /// Favourites view shows both). [tab] is 'TV', 'Movies' or 'TV Shows';
+  /// [groups] are the tab's favourited groups, from the screen that lists
+  /// them. Movies/series not loaded yet are cleared by id prefix, so a
+  /// starred title in an unopened category doesn't survive.
+  Future<void> clearFavorites(
+      String tab, Iterable<({String playlistId, String title})> groups) async {
+    final enabled = _enabledSessionsSorted.map((s) => '${s.profile.id}::');
+    bool ofEnabled(String id) => enabled.any(id.startsWith);
+    final channelIds = <String>{
+      ...switch (tab) {
+        'Movies' => favoriteMovies,
+        'TV Shows' => favoriteShowChannels,
+        _ => favoriteLiveChannels,
+      }
+          .map((c) => c.id),
+      if (tab == 'Movies')
+        ..._favoriteIds
+            .where((id) => ofEnabled(id) && id.contains('::xt_vod_')),
+      if (tab == 'TV Shows')
+        ..._favoriteIds.where((id) => ofEnabled(id) && id.contains('::xt_ep_')),
+    };
+    final seriesIds = tab == 'TV Shows'
+        ? {
+            ...favoriteSeries.map((s) => s.id),
+            ..._favoriteSeriesIds.where(ofEnabled),
+          }
+        : const <String>{};
+    _favoriteIds.removeAll(channelIds);
+    _favoriteSeriesIds.removeAll(seriesIds);
+    await _storage.setFavorites(_favoriteIds);
+    await _storage.setFavoriteSeries(_favoriteSeriesIds);
+    // See the matching comment in toggleFavorite.
+    if (_storage.getActiveViewerId() == AppConstants.mainViewerId) {
+      for (final id in channelIds) {
+        await _catalogDb.setVodFavorite(id, false);
+      }
+      for (final id in seriesIds) {
+        await _catalogDb.setSeriesFavorite(id, false);
+      }
+    }
+    for (final g in groups) {
+      await _sessionFor(g.playlistId)?.setGroupFavorited(g.title, false);
+    }
+    // Every loaded copy, not just the ones listed above.
+    for (final session in _sessions) {
+      session.restampFavorites();
+    }
+    notifyListeners();
+  }
+
   Future<void> toggleGroupHidden(String playlistId, String groupTitle) =>
       _sessionFor(playlistId)?.toggleGroupHidden(groupTitle) ?? Future.value();
 

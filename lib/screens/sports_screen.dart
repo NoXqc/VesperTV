@@ -22,6 +22,7 @@ import '../utils/route_observer.dart';
 import '../utils/tv_theme.dart';
 import '../widgets/hold_to_activate.dart';
 import '../widgets/live_resume_hint.dart';
+import '../widgets/player_controls.dart';
 import '../widgets/settings_scaffold.dart';
 import '../widgets/sports_widgets.dart';
 import '../widgets/tv_menu_tile.dart';
@@ -82,6 +83,17 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   SportsGame? _heroGame;
   Timer? _pollTimer;
   bool _covered = false;
+
+  /// Android: the game whose channel plays in the hero (Play/Pause on its
+  /// card, or back from its fullscreen) — see [_setPreview]. Only counts
+  /// while [PlaybackService] still plays [_previewChannel] (see
+  /// [_livePreview]); a CH+/CH- zap in the player ends it.
+  SportsGame? _previewGame;
+  Channel? _previewChannel;
+
+  /// Preview starts/stops run one at a time (see [_setPreview]).
+  Future<void> _previewChain = Future.value();
+  int _previewSeq = 0;
 
   /// The "Hold > to resume" pill covered the cards and Standings' table;
   /// hidden for as long as Sports (and anything pushed over it) is open.
@@ -521,7 +533,89 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       [List<ChannelMatch>? matches]) async {
     final best = (matches ?? _matches[_gameKey(game)])?.firstOrNull;
     if (best == null) return _openGame(game, matches);
-    await _play(best.channel);
+    // OK on the game already playing in the hero: fullscreen on that same
+    // stream (it may be a channel picked from the menu, not the best one).
+    final previewing = _isPreviewing(game) ? _previewChannel : null;
+    await _play(previewing ?? best.channel, game: game);
+  }
+
+  // ------------------------------------------------------------- preview
+
+  /// The game playing in the hero, refreshed from the latest scores, or null
+  /// when nothing Sports started is still what [PlaybackService] plays.
+  SportsGame? _livePreview(PlaybackService playback) {
+    final game = _previewGame;
+    final channel = _previewChannel;
+    if (game == null || channel == null) return null;
+    if (playback.currentChannel?.id != channel.id) return null;
+    final key = _gameKey(game);
+    return _games.where((g) => _gameKey(g) == key).firstOrNull ?? game;
+  }
+
+  bool _isPreviewing(SportsGame game) =>
+      _livePreview(context.read<PlaybackService>()) != null &&
+      _gameKey(_previewGame!) == _gameKey(game);
+
+  SportsGame? _focusedCardGame() {
+    for (final g in _games) {
+      if (_cardNodes[_gameKey(g)]?.hasFocus ?? false) return g;
+    }
+    return null;
+  }
+
+  /// Play/Pause on a game card: its channel plays in the hero; again on the
+  /// same card stops it. No channel yet = the menu, to pick one. Android
+  /// only for now (Windows has its own player stack).
+  void _onPlayKey() {
+    if (Platform.isWindows || _movingLeague != null) return;
+    final game = _focusedCardGame();
+    if (game == null) return;
+    if (_isPreviewing(game)) {
+      unawaited(_setPreview(null, null));
+      return;
+    }
+    final best = _matches[_gameKey(game)]?.firstOrNull;
+    if (best == null) {
+      unawaited(_openGame(game));
+      return;
+    }
+    unawaited(_setPreview(game, best.channel));
+  }
+
+  /// Starts [channel] for [game] in the hero, or stops the hero's stream
+  /// (null). [PlaybackService.play] closes whatever played before (a
+  /// background channel too), so audio never overlaps — but only if two
+  /// plays never run at once: overlapping calls can leave the first stream
+  /// orphaned and still playing (same family as Multiview's audio-underneath
+  /// bug). So presses run one at a time, and a press superseded while
+  /// waiting is skipped. Each start also waits for the stream to open (max
+  /// 10 s) before the next one: 1-connection accounts reject a new
+  /// connection while the old one is still closing.
+  Future<void> _setPreview(SportsGame? game, Channel? channel) {
+    final seq = ++_previewSeq;
+    final stopId = _previewChannel?.id;
+    final playback = context.read<PlaybackService>();
+    setState(() {
+      _previewGame = game;
+      _previewChannel = channel;
+    });
+    return _previewChain = _previewChain.then((_) async {
+      if (seq != _previewSeq) return;
+      try {
+        if (channel == null) {
+          // Only what the hero itself was playing.
+          if (stopId != null && playback.currentChannel?.id == stopId) {
+            await playback.stop();
+          }
+          return;
+        }
+        await playback.play(channel);
+        await playback.initFuture
+            ?.timeout(const Duration(seconds: 10), onTimeout: () {});
+      } catch (_) {
+        // play() reports its own errors; keep the chain alive.
+      }
+    });
   }
 
   Future<void> _openGame(SportsGame game,
@@ -550,7 +644,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           await _picks.pickForGame(game, channel.id);
           unawaited(_rematch());
         }
-        await _play(channel);
+        await _play(channel, game: game);
       case _PickAction():
         await _pickChannel(game);
       case _ForgetPickAction():
@@ -583,10 +677,14 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     }
     await _rematch();
     if (!mounted) return;
-    await _play(channel);
+    await _play(channel, game: game);
   }
 
-  Future<void> _play(Channel channel) async {
+  /// Fullscreen [channel]. With [game] (Android), it goes through the hero
+  /// preview, so Back from the player shows it there (one stream, no
+  /// reconnect — the hero's VideoPlayerPane stays under the player the same
+  /// way the TV guide's preview box does).
+  Future<void> _play(Channel channel, {SportsGame? game}) async {
     // Same split as SearchScreen._openChannel: Windows has its own player.
     if (Platform.isWindows) {
       DesktopMiniPlayer.instance.clear();
@@ -594,7 +692,20 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           builder: (_) => DesktopPlayerScreen(channel: channel)));
       return;
     }
-    await context.read<PlaybackService>().play(channel);
+    if (game != null) {
+      await _setPreview(game, channel);
+    } else {
+      // RedZone: not a game; the hero goes back to normal and a preview
+      // still waiting in the chain is skipped.
+      _previewSeq++;
+      setState(() {
+        _previewGame = null;
+        _previewChannel = null;
+      });
+      await _previewChain;
+      if (!mounted) return;
+      await context.read<PlaybackService>().play(channel);
+    }
     if (!mounted) return;
     await Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => PlayerScreen(channel: channel)));
@@ -605,12 +716,20 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   @override
   Widget build(BuildContext context) {
     final sections = _sections;
-    final hero = _heroGame;
-    // Back while moving a league chip = "done", not leave Sports.
+    final preview = _livePreview(context.watch<PlaybackService>());
+    // While a game plays in the hero it stays there, whatever is focused.
+    final hero = preview ?? _heroGame;
+    // Back while moving a league chip = "done", not leave Sports; Back while
+    // the hero plays stops it first.
     return PopScope(
-      canPop: _movingLeague == null,
+      canPop: _movingLeague == null && preview == null,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _endLeagueMove();
+        if (didPop) return;
+        if (_movingLeague != null) {
+          _endLeagueMove();
+        } else if (preview != null) {
+          unawaited(_setPreview(null, null));
+        }
       },
       child: SportsScreenFrame(
           child: withTvThemeIfNeeded(
@@ -640,6 +759,13 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                               () => _moveZone(-1),
                           const SingleActivator(LogicalKeyboardKey.arrowDown):
                               () => _moveZone(1),
+                          // Remotes send one combined key or separate ones.
+                          const SingleActivator(
+                              LogicalKeyboardKey.mediaPlayPause): _onPlayKey,
+                          const SingleActivator(LogicalKeyboardKey.mediaPlay):
+                              _onPlayKey,
+                          const SingleActivator(LogicalKeyboardKey.mediaPause):
+                              _onPlayKey,
                         },
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
@@ -658,8 +784,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                             matches: _matches[_gameKey(hero)],
                             matching: _matching,
                             hideScores: _hideScores,
+                            playing: preview != null,
                           ),
-                        Expanded(child: _buildBody(sections)),
+                        Expanded(child: _buildBody(sections, preview)),
                       ],
                     ),
                   ),
@@ -849,7 +976,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     );
   }
 
-  Widget _buildBody(List<_Section> sections) {
+  Widget _buildBody(List<_Section> sections, SportsGame? preview) {
     if (_loading && _games.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -891,12 +1018,12 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     return ListView(
       padding: const EdgeInsets.only(top: 8, bottom: 32),
       children: [
-        for (final s in sections) _buildSection(s),
+        for (final s in sections) _buildSection(s, preview),
       ],
     );
   }
 
-  Widget _buildSection(_Section s) {
+  Widget _buildSection(_Section s, SportsGame? preview) {
     final rowKey = _rowKeys[s.id] ??= GlobalKey();
     final zoneIndex = _firstRowZone + _sections.indexWhere((x) => x.id == s.id);
     return Padding(
@@ -937,6 +1064,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                       matching: _matching,
                       hideScores: _hideScores,
                       starred: _follows.involves(g),
+                      previewing:
+                          preview != null && _gameKey(preview) == _gameKey(g),
                       onFocus: () {
                         _zone = zoneIndex;
                         _lastCardInRow[s.id] = _gameKey(g);
@@ -1214,16 +1343,24 @@ class _Hero extends StatelessWidget {
     required this.matches,
     required this.matching,
     required this.hideScores,
+    required this.playing,
   });
+
+  static const double height = 168;
 
   final SportsGame game;
   final List<ChannelMatch>? matches;
   final bool matching;
   final bool hideScores;
 
+  /// [game]'s channel is what [PlaybackService] plays: video on the left,
+  /// the game compacted to the right (see [_buildPlaying]).
+  final bool playing;
+
   @override
   Widget build(BuildContext context) {
     final showScore = game.state != GameState.pre && !hideScores;
+    if (playing) return _buildPlaying(context, showScore);
     if (game.league.isField) {
       return _EventHero(
           game: game, center: _center(context, false), hideScores: hideScores);
@@ -1240,9 +1377,101 @@ class _Hero extends StatelessWidget {
     );
   }
 
-  Widget _side(BuildContext context, SportsTeam t, {required bool alignEnd}) {
+  /// The playing hero. Rules from the platform-view bugs (CLAUDE.md §10,
+  /// LiveResumeHint, PlayerControls):
+  /// * the video is the same [VideoPlayerPane] the TV guide's preview box
+  ///   uses, keyed by channel id, so a new stream gets a fresh platform view
+  ///   (an in-place rebind kept the old channel's last frame frozen);
+  /// * it is the only video of that stream on this screen (cards never show
+  ///   one) and it stays mounted under a pushed fullscreen player, exactly
+  ///   like that preview box — hiding/re-adding it per push raced the
+  ///   platform view teardown (the old Live Island bug);
+  /// * it always sits at the same place in this tree so score refreshes
+  ///   don't recreate it, and nothing is drawn over it or clips it (overlays
+  ///   and rounded clips on a platform view cost weak boxes a lot) — the
+  ///   gold frame is a border around it.
+  Widget _buildPlaying(BuildContext context, bool showScore) {
+    final scheme = Theme.of(context).colorScheme;
+    final channel = context.read<PlaybackService>().currentChannel;
+    const videoHeight = height - 8;
+    // The normal VS layout, smaller, beside the video (owner: the stacked
+    // version wasn't nice).
+    final info = game.league.isField
+        ? Row(
+            children: [
+              Expanded(
+                child: Text(game.title,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white)),
+              ),
+              SizedBox(
+                  width: 190, child: _center(context, false, channel: channel)),
+            ],
+          )
+        : Row(
+            children: [
+              Expanded(
+                  child: _side(context, game.first,
+                      alignEnd: false, compact: true)),
+              SizedBox(
+                  width: 190,
+                  child: _center(context, showScore, channel: channel)),
+              Expanded(
+                  child: _side(context, game.second,
+                      alignEnd: true, compact: true)),
+            ],
+          );
+
+    return SizedBox(
+      height: height,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              color: Colors.black,
+              border: Border.all(color: scheme.primary, width: 2),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: SizedBox(
+              width: videoHeight * 16 / 9,
+              height: videoHeight,
+              child: channel == null
+                  ? const SizedBox()
+                  : VideoPlayerPane(
+                      key: ValueKey(channel.id),
+                      showEpgBar: false,
+                      showControls: false),
+            ),
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              children: [
+                Expanded(child: info),
+                Text(tr('OK: full screen  ·  ▶❚❚ or Back: stop'),
+                    style:
+                        const TextStyle(fontSize: 12, color: Colors.white54)),
+                const SizedBox(height: 4),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _side(BuildContext context, SportsTeam t,
+      {required bool alignEnd, bool compact = false}) {
     final logo = SportsLogo(
-        url: t.logoUrl, size: 92, fallback: t.abbreviation, color: t.color);
+        url: t.logoUrl,
+        size: compact ? 56 : 92,
+        fallback: t.abbreviation,
+        color: t.color);
     final text = Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment:
@@ -1251,27 +1480,31 @@ class _Hero extends StatelessWidget {
         Text(t.shortName,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-                fontSize: 26,
+            style: TextStyle(
+                fontSize: compact ? 19 : 26,
                 fontWeight: FontWeight.w800,
                 color: Colors.white)),
         if (t.record != null)
           Text(t.record!,
-              style: const TextStyle(fontSize: 15, color: Colors.white60)),
+              style: TextStyle(
+                  fontSize: compact ? 13 : 15, color: Colors.white60)),
       ],
     );
+    final gap = SizedBox(width: compact ? 10 : 14);
     return Row(
       mainAxisAlignment:
           alignEnd ? MainAxisAlignment.end : MainAxisAlignment.start,
       children: alignEnd
-          ? [Flexible(child: text), const SizedBox(width: 14), logo]
-          : [logo, const SizedBox(width: 14), Flexible(child: text)],
+          ? [Flexible(child: text), gap, logo]
+          : [logo, gap, Flexible(child: text)],
     );
   }
 
-  Widget _center(BuildContext context, bool showScore) {
+  /// [channel]: what the playing hero shows (it may not be the best match).
+  Widget _center(BuildContext context, bool showScore, {Channel? channel}) {
     final scheme = Theme.of(context).colorScheme;
     final best = matches?.firstOrNull;
+    final channelName = channel?.name ?? best?.channel.name;
     String status;
     Color statusColor = Colors.white70;
     switch (game.state) {
@@ -1345,7 +1578,7 @@ class _Hero extends StatelessWidget {
             style: TextStyle(
                 fontSize: 14, fontWeight: FontWeight.w600, color: statusColor)),
         const SizedBox(height: 8),
-        if (best != null)
+        if (channelName != null)
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1355,7 +1588,7 @@ class _Hero extends StatelessWidget {
                   Icon(Icons.live_tv, size: 15, color: scheme.primary),
                   const SizedBox(width: 5),
                   Flexible(
-                    child: Text(best.channel.name,
+                    child: Text(channelName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -1410,7 +1643,11 @@ class _HoldHint extends StatelessWidget {
               children: [
                 Icon(Icons.touch_app, size: 11, color: scheme.primary),
                 const SizedBox(width: 4),
-                Text(tr('Hold OK to pick or swap the channel'),
+                // Android: the Play/Pause preview (Windows has none yet).
+                Text(
+                    Platform.isWindows
+                        ? tr('Hold OK to pick or swap the channel')
+                        : tr('Hold OK: pick the channel  ·  ▶❚❚: watch here'),
                     style:
                         const TextStyle(fontSize: 10, color: Colors.white70)),
               ],
@@ -1431,6 +1668,7 @@ class _GameCard extends StatefulWidget {
     required this.matching,
     required this.hideScores,
     required this.starred,
+    required this.previewing,
     required this.onFocus,
     required this.onTap,
     required this.onHold,
@@ -1447,6 +1685,9 @@ class _GameCard extends StatefulWidget {
 
   /// One of My Teams plays.
   final bool starred;
+
+  /// Its channel is playing in the hero.
+  final bool previewing;
   final VoidCallback onFocus;
   final VoidCallback onTap;
   final VoidCallback onHold;
@@ -1559,8 +1800,12 @@ class _GameCardState extends State<_GameCard> {
                     gradient: _focused ? sportsFocusSheen(scheme) : null,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                        color: _focused ? scheme.primary : Colors.white10,
-                        width: _focused ? 2.5 : 1),
+                        color: _focused
+                            ? scheme.primary
+                            : widget.previewing
+                                ? scheme.primary.withValues(alpha: 0.6)
+                                : Colors.white10,
+                        width: _focused ? 2.5 : (widget.previewing ? 1.5 : 1)),
                     boxShadow: _focused
                         ? [
                             BoxShadow(
@@ -1586,6 +1831,12 @@ class _GameCardState extends State<_GameCard> {
                                   letterSpacing: 1,
                                   color: Colors.white54)),
                           const Spacer(),
+                          if (widget.previewing)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: Icon(Icons.play_circle_fill,
+                                  size: 15, color: scheme.primary),
+                            ),
                           if (live)
                             Container(
                               width: 7,

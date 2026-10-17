@@ -389,7 +389,8 @@ class PlaylistSession {
         .cacheFilePath(_cacheName(AppConstants.cacheFileM3uChannels));
     if (path == null) return false;
     try {
-      final loaded = await compute(_readChannelsFile, path);
+      final loaded =
+          Channel.withUniqueIds(await compute(_readChannelsFile, path));
       for (final channel in loaded) {
         channel.isFavorite = favoriteIds().contains(channel.id);
         channel.epgIdOverride = epgIdOverrides[channel.rawId];
@@ -411,7 +412,8 @@ class PlaylistSession {
     onNotify();
 
     try {
-      final parsed = await M3uParser.fetchAndParse(url, playlistId: profile.id);
+      final parsed = Channel.withUniqueIds(
+          await M3uParser.fetchAndParse(url, playlistId: profile.id));
       for (final channel in parsed) {
         channel.isFavorite = favoriteIds().contains(channel.id);
         channel.epgIdOverride = epgIdOverrides[channel.rawId];
@@ -618,6 +620,7 @@ class PlaylistSession {
               _encodeJsonList, loaded.map((c) => c.toJson()).toList()),
         );
       }
+      loaded = Channel.withUniqueIds(loaded);
       for (final channel in loaded) {
         channel.isFavorite = favoriteIds().contains(channel.id);
         channel.epgIdOverride = epgIdOverrides[channel.rawId];
@@ -758,8 +761,8 @@ class PlaylistSession {
 
       loadingPhase = tr('Finding live channels...');
       onNotify();
-      final loadedLive =
-          await api.getLiveStreams(categoryNames: liveCategoryNames);
+      final loadedLive = Channel.withUniqueIds(
+          await api.getLiveStreams(categoryNames: liveCategoryNames));
       for (final channel in loadedLive) {
         channel.isFavorite = favoriteIds().contains(channel.id);
         channel.epgIdOverride = epgIdOverrides[channel.rawId];
@@ -1143,8 +1146,7 @@ class PlaylistSession {
   }
 
   /// Fetches episodes for one series, grouped by season number.
-  Future<SeriesEpisodesResult> loadSeriesEpisodes(
-      XtreamSeries series,
+  Future<SeriesEpisodesResult> loadSeriesEpisodes(XtreamSeries series,
       {bool plotOnly = false}) async {
     final api = xtreamApi;
     if (api == null) {

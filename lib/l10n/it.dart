@@ -213,6 +213,10 @@ const Map<String, String> kIt = {
       "Nessun canale trovato — OK per sceglierne uno",
   'Hold OK to pick or swap the channel':
       "Tieni premuto OK per scegliere o cambiare canale",
+  'Hold OK: pick the channel  ·  ▶❚❚: watch here':
+      "Tieni premuto OK: scegli il canale  ·  ▶❚❚: guarda qui",
+  'OK: full screen  ·  ▶❚❚ or Back: stop':
+      "OK: schermo intero  ·  ▶❚❚ o Indietro: ferma",
   'Still looking for channels…': "Ricerca dei canali in corso…",
   'No channel found for this game': "Nessun canale trovato per questa partita",
   'On {matches} channel{s}': "Canali: {matches}",
@@ -931,6 +935,12 @@ const Map<String, String> kIt = {
   '{n} profiles': "{n} profili",
   '{n} favorite': "{n} preferito",
   '{n} favorites': "{n} preferiti",
+  'Clear favourites?':
+      "Cancellare i preferiti?",
+  "Removes every starred item and favourite group from this tab's Favourites.":
+      "Rimuove tutti gli elementi con stella e i gruppi preferiti dai Preferiti di questa scheda.",
+  'Favourites cleared.':
+      "Preferiti cancellati.",
   'Delete watched history?': "Eliminare la cronologia di visione?",
   'Removes the History list of live channels.':
       "Cancella l'elenco Cronologia dei canali in diretta.",

@@ -47,7 +47,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
 4. `flutter analyze` must report the baseline **17** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `1.0.15` unless noted
+5. Check the current state of releases: `gh release list` (latest should be `1.0.16` unless noted
    in §11).
 
 ## 3. Layout (what matters)
@@ -101,7 +101,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+285**) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+289**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
@@ -173,7 +173,9 @@ rejected (HDR + Android-TV hardware-decode risk).
 - **Never call `notifyListeners()` mid-build.** `PlaylistManager.notifyListeners` defers anything
   fired during the build phase (fixed Group Management checkmarks not repainting).
 - Composite `Channel.id` (`playlistId::rawId`) vs raw `Channel.rawId`: EPG lookups and
-  `Channel.isLiveId` need **rawId**.
+  `Channel.isLiveId` need **rawId**. EPG lookups go through `Channel.epgId` (override → `epgKey` →
+  rawId). Channel ids come from the provider's EPG id, which copies share (ESPN 4K/HD/FHD), so
+  every live-list load path runs `Channel.withUniqueIds` — add it to any new load path.
 - Back button: walks content → groups → tabs, exits the app only from the tabs column (`PopScope`
   in TvHomeScreen).
 - The "live island" pill / mini player share **one controller** across preview/fullscreen/pill; see
@@ -217,18 +219,12 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 ## 12. Features (details in `dev-notes/features.md`)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
-## 13. Status & open items (as of 2026-10-16)
-- **Unreleased (working tree, +285, see HANDOFF.md):**
-  - What's New is a full-screen backdrop and is the default view on the Movies/TV Shows tabs.
-  - Launch update prompt (`widgets/update_prompt.dart`; Skip is stored per version).
-  - Fixes: Search Down to the recent searches, EPG overlap cleanup (`EpgService._untangle`),
-    Transfer "Ready to copy" focus.
-  - Relay `X-VesperTV-App` header: sent by the app and counted on the VPS; enforcement is OFF
-    until old installs update.
-  - `TRADEMARKS.md`: the name and logo are not covered by the GPL.
-  - Donations will go through GitHub Sponsors, which is pending approval. After approval: add
-    `FUNDING.yml`, site/README links and an About row.
-- **Shipped: 1.0.15 (`+284`, 2026-10-16, latest on GitHub)** — Favorites tab removed: favourites live behind one **Favourites** entry per tab (Movies/TV Shows: starred rows per playlist + favourited groups; TV: starred + favourited groups' channels); playlist labels with 2+ playlists (Search cards, TV Favourites list + Timeline guide); 12/24 h clock (Settings > General); splash greeting bank of compliments (one per cold start); phone: header search icon, tap shows both player bars, rotate button in the top bar, browse posters tap = preview / tap again = open. Details: `dev-notes/features.md` (1.0.15).
+## 13. Status & open items (as of 2026-10-17)
+- Donations will go through GitHub Sponsors (pending approval). After approval: `FUNDING.yml`,
+  site/README links and an About row. Relay `X-VesperTV-App` enforcement is OFF until old installs
+  update (see HANDOFF.md).
+- **Shipped: 1.0.16 (`+289`, 2026-10-17, latest on GitHub)** — **Sports hero mini player** (Android: Play/Pause on a game card plays its channel in the hero, video left + small VS layout right; OK = fullscreen on the same stream, Back stops it; see `dev-notes/sports-tab.md` "Hero mini player"); **unique channel ids** for channels sharing an EPG id (`Channel.withUniqueIds`, `epgKey`; fixed favourites/hide hitting every ESPN copy); hold OK on a tab's Favourites row = clear that tab's favourites (`PlaylistManager.clearFavorites`); What's New full-screen backdrop + default view; launch update prompt; Search/EPG-overlap/Transfer-focus fixes; relay app header; `TRADEMARKS.md`. Windows: no Sports preview yet.
+- 1.0.15 (`+284`, 2026-10-16) — Favorites tab removed: favourites live behind one **Favourites** entry per tab (Movies/TV Shows: starred rows per playlist + favourited groups; TV: starred + favourited groups' channels); playlist labels with 2+ playlists (Search cards, TV Favourites list + Timeline guide); 12/24 h clock (Settings > General); splash greeting bank of compliments (one per cold start); phone: header search icon, tap shows both player bars, rotate button in the top bar, browse posters tap = preview / tap again = open. Details: `dev-notes/features.md` (1.0.15).
 - 1.0.14 (`+271`, 2026-10-16) — **Transfer over the internet**: Send = encrypted upload to the relay's vault for 1 h / 24 h / 7 days, 16-digit code, works any number of times until expiry or Delete now; the Wi-Fi transfer is the "Both devices on the same Wi-Fi?" tile on that screen; Receive takes 9 or 16 digits. Relay deployed on the VPS (`tools/pair_relay`, vault on disk in `/var/lib/pair-relay`). Built to grow into cloud sync later. Also the +268 provider-duration + browse-banner title fix. Details: `dev-notes/features.md` (Transfer over the internet). Owner tested Fire Stick ↔ phone: "flawless and superfast".
 - 1.0.13 (`+267`, 2026-10-15) — redesigned TV Show + movie detail pages (`series_detail_screen.dart`, `movie_detail_screen.dart`, shared `widgets/detail_header.dart`, `utils/display_title.dart` title cleanup; per-episode progress from existing saved positions, watched = >=95%); HD images (`utils/image_urls.dart` keyless TMDB size upgrade, `widgets/hd_network_image.dart` decode caps, provider backdrops via `get_vod_info`/`get_series_info`, `CatalogDatabase` v8); hero/carousel go dark -> backdrop (no poster flash, `_focusedArtPending`); hold the Sports RedZone pill to pick its channel; Back-from-guide focus safety net. Next keyless artwork option if wanted: TVmaze (series/episodes, CC BY-SA, no key).
 - 1.0.12 (`+261`, 2026-10-15) — Android player CH+/CH- (and PgUp/PgDn) zap through the list the channel was picked from (`PlaybackService.zapList`, skips same-id duplicates) with a 3 s info card; hold OK on History = delete watched history; Add Playlist button black until focused; site shows the translucent guide. Windows: no CH zapping.

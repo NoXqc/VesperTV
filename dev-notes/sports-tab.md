@@ -307,3 +307,19 @@ Owner tested Sports on a 4K Windows display: no way out (no remote Back) and eve
 - `SportsRowArrows`: mouse ‹ › over each game-card row (per-row ScrollController `_rowScrolls`),
   shown only when there's more that way, ~one screen per click via jumpTo.
 - Dialogs (game menu, pick scope) are separate routes and are not scaled.
+
+## Hero mini player (1.0.16, 2026-10-17, Android only)
+Play/Pause (or Play/Pause keys) on a game card plays its best channel in the hero: video on the left
+(the TV guide's `VideoPlayerPane`, keyed by channel id), the normal VS layout shrunk on the right
+(`_Hero._buildPlaying`, `_side(compact:)`), hint "OK: full screen · ▶❚❚ or Back: stop". The card
+gets a gold ▶ + outline. Owner tested on the Formuler: "very very nice and works well" (stacked
+info version rejected — keep the VS layout). Fire Stick check pending.
+- State: `_previewGame`/`_previewChannel`; only live while `PlaybackService.currentChannel` is that
+  channel (`_livePreview`; a CH+/- zap ends it). Hero stays on the playing game whatever is focused.
+- `_setPreview` serialises starts/stops (`_previewChain`, latest press wins, waits up to 10 s for
+  the stream to open) — overlapping `play()` calls could orphan a stream (audio underneath).
+- OK on any game (and the game menu's Watch) goes through the preview, then pushes PlayerScreen;
+  Back from fullscreen shows it in the hero. Back on Sports stops it first (PopScope), then leaves.
+- Platform-view rules: one video per stream, stays mounted under the pushed player (like the TV
+  preview box), fixed tree position, no overlay/clip on it. RedZone pill: no preview, plain fullscreen.
+- Windows: not built (needs `DesktopMiniPlayer`).

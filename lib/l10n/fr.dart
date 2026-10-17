@@ -215,6 +215,10 @@ const Map<String, String> kFr = {
       "Aucune chaîne trouvée — OK pour en choisir une",
   'Hold OK to pick or swap the channel':
       "Maintenir OK : choisir/changer la chaîne",
+  'Hold OK: pick the channel  ·  ▶❚❚: watch here':
+      "Maintenir OK : choisir la chaîne  ·  ▶❚❚ : regarder ici",
+  'OK: full screen  ·  ▶❚❚ or Back: stop':
+      "OK : plein écran  ·  ▶❚❚ ou Retour : arrêter",
   'Still looking for channels…': "Recherche de chaînes en cours…",
   'No channel found for this game': "Aucune chaîne trouvée pour ce match",
   'On {matches} channel{s}': "Sur {matches} chaîne{s}",
@@ -930,6 +934,12 @@ const Map<String, String> kFr = {
   '{n} profiles': "{n} profils",
   '{n} favorite': "{n} favori",
   '{n} favorites': "{n} favoris",
+  'Clear favourites?':
+      "Effacer les favoris?",
+  "Removes every starred item and favourite group from this tab's Favourites.":
+      "Retire tous les éléments étoilés et groupes favoris des Favoris de cet onglet.",
+  'Favourites cleared.':
+      "Favoris effacés.",
   'Delete watched history?': "Supprimer l'historique de visionnage?",
   'Removes the History list of live channels.':
       "Efface la liste Historique des chaînes en direct.",

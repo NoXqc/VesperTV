@@ -24,6 +24,7 @@ class Channel {
     this.seriesName,
     this.seriesCoverUrl,
     this.epgIdOverride,
+    this.epgKey,
     this.tmdbId,
     this.releaseDate,
     this.posterUrl,
@@ -173,11 +174,58 @@ class Channel {
   /// The id every EPG lookup call site uses — see [epgIdOverride]'s doc
   /// comment. Never [rawId] directly from an EPG-lookup call site; that
   /// would bypass a manual assignment.
-  String get epgId => epgIdOverride ?? rawId;
+  String get epgId => epgIdOverride ?? epgKey ?? rawId;
 
-  Channel copyWith({bool? isFavorite}) => Channel(
-        id: id,
-        rawId: rawId,
+  /// The provider's own EPG id (`epg_channel_id`/`tvg-id`) when [rawId] is
+  /// not it — set by [withUniqueIds] for channels that shared one. Null =
+  /// [rawId] is the EPG id.
+  final String? epgKey;
+
+  /// Gives channels that share an id (the id is the provider's EPG id, and
+  /// "ESPN 4K", "ESPN HD" and "ESPN FHD" often all carry the same one) ids
+  /// of their own, so starring, hiding or picking one no longer hits all of
+  /// them. Each one becomes `<epg id>#<last URL segment>` (the stream id —
+  /// stable across reloads), with the EPG id kept in [epgKey] so the guide
+  /// still finds them. Channels with a unique id are untouched, so nothing
+  /// saved for them changes. Idempotent: an already-fixed list (from the
+  /// cache) has nothing left to fix.
+  static List<Channel> withUniqueIds(List<Channel> channels) {
+    final counts = <String, int>{};
+    for (final c in channels) {
+      counts[c.id] = (counts[c.id] ?? 0) + 1;
+    }
+    if (!counts.values.any((n) => n > 1)) return channels;
+    final used = {
+      for (final e in counts.entries)
+        if (e.value == 1) e.key
+    };
+    return [
+      for (final c in channels)
+        if (counts[c.id] == 1) c else c._withUniqueRawId(used)
+    ];
+  }
+
+  Channel _withUniqueRawId(Set<String> used) {
+    final segments = Uri.tryParse(url)?.pathSegments ?? const <String>[];
+    var key = segments.isEmpty ? '' : segments.last;
+    final dot = key.lastIndexOf('.');
+    if (dot > 0) key = key.substring(0, dot);
+    final base = key.isEmpty ? '$rawId#' : '$rawId#$key';
+    var newRaw = base;
+    for (var n = 2; used.contains('$playlistId::$newRaw'); n++) {
+      newRaw = '$base~$n';
+    }
+    used.add('$playlistId::$newRaw');
+    return copyWith(
+        id: '$playlistId::$newRaw', rawId: newRaw, epgKey: epgKey ?? rawId);
+  }
+
+  Channel copyWith(
+          {bool? isFavorite, String? id, String? rawId, String? epgKey}) =>
+      Channel(
+        id: id ?? this.id,
+        rawId: rawId ?? this.rawId,
+        epgKey: epgKey ?? this.epgKey,
         playlistId: playlistId,
         name: name,
         group: group,
@@ -202,6 +250,7 @@ class Channel {
   Map<String, dynamic> toJson() => {
         'id': id,
         'rawId': rawId,
+        if (epgKey != null) 'epgKey': epgKey,
         'playlistId': playlistId,
         'name': name,
         'group': group,
@@ -232,6 +281,7 @@ class Channel {
   factory Channel.fromJson(Map<String, dynamic> json) => Channel(
         id: json['id'] as String,
         rawId: json['rawId'] as String? ?? json['id'] as String,
+        epgKey: json['epgKey'] as String?,
         playlistId: json['playlistId'] as String? ?? 'migrated_default',
         name: json['name'] as String,
         group: json['group'] as String,

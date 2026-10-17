@@ -215,6 +215,10 @@ const Map<String, String> kEs = {
       "No se encontró canal — OK para elegir uno",
   'Hold OK to pick or swap the channel':
       "Mantén OK para elegir o cambiar el canal",
+  'Hold OK: pick the channel  ·  ▶❚❚: watch here':
+      "Mantén OK: elegir el canal  ·  ▶❚❚: ver aquí",
+  'OK: full screen  ·  ▶❚❚ or Back: stop':
+      "OK: pantalla completa  ·  ▶❚❚ o Atrás: detener",
   'Still looking for channels…': "Todavía buscando canales…",
   'No channel found for this game': "No se encontró canal para este partido",
   'On {matches} channel{s}': "Canales: {matches}",
@@ -927,6 +931,12 @@ const Map<String, String> kEs = {
   '{n} profiles': "{n} perfiles",
   '{n} favorite': "{n} favorito",
   '{n} favorites': "{n} favoritos",
+  'Clear favourites?':
+      "¿Borrar favoritos?",
+  "Removes every starred item and favourite group from this tab's Favourites.":
+      "Quita todos los elementos marcados y grupos favoritos de los Favoritos de esta pestaña.",
+  'Favourites cleared.':
+      "Favoritos borrados.",
   'Delete watched history?': "¿Eliminar el historial de visualización?",
   'Removes the History list of live channels.':
       "Borra la lista Historial de canales en directo.",
