@@ -328,6 +328,9 @@ info version rejected — keep the VS layout). Fire Stick check pending.
 - Phone layout (1.0.17): the whole page scrolls (`_touch` = Android non-TV; header + hero + rows in
   one `SingleChildScrollView`, `_buildBody(inPage:)`), portrait hero stacks (`_narrowInfo`, video
   full width above the game). `_ensureRowVisible` is off on touch.
+- Game menu (hold OK) opens on **Play here** (unreleased after 1.0.17): plays the best match in the
+  hero, for remotes with no Play/Pause key (user report). Hidden while that game plays, with no match,
+  and on Windows (`_GameDialog.offerPlayHere`).
 - "▶❚❚" in hint strings is drawn as white play/pause icons (`_KeyHintText`) — as text Android shows
   an orange emoji.
 - Platform-view rules: one video per stream, stays mounted under the pushed player (like the TV

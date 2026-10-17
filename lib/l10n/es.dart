@@ -221,6 +221,9 @@ const Map<String, String> kEs = {
       "Toca el partido otra vez: pantalla completa  ·  Atrás: detener",
   'Tap: watch here  ·  Hold: pick the channel':
       "Tocar: ver aquí  ·  Mantener: elegir el canal",
+  'Play here': "Reproducir aquí",
+  '{channel} · plays at the top of Sports':
+      "{channel} · se reproduce arriba en Deportes",
   'OK: full screen  ·  ▶❚❚ or Back: stop':
       "OK: pantalla completa  ·  ▶❚❚ o Atrás: detener",
   'Still looking for channels…': "Todavía buscando canales…",

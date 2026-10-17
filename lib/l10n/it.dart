@@ -219,6 +219,9 @@ const Map<String, String> kIt = {
       "Tocca di nuovo la partita: schermo intero  ·  Indietro: ferma",
   'Tap: watch here  ·  Hold: pick the channel':
       "Tocca: guarda qui  ·  Tieni premuto: scegli il canale",
+  'Play here': "Riproduci qui",
+  '{channel} · plays at the top of Sports':
+      "{channel} · in onda in cima a Sport",
   'OK: full screen  ·  ▶❚❚ or Back: stop':
       "OK: schermo intero  ·  ▶❚❚ o Indietro: ferma",
   'Still looking for channels…': "Ricerca dei canali in corso…",

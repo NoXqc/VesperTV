@@ -660,6 +660,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         matching: gameMatches == null && _matching,
         hideScores: _hideScores,
         hasPick: _picks.channelIdFor(game) != null,
+        offerPlayHere: !Platform.isWindows && !_isPreviewing(game),
       )),
     );
     if (result == null || !mounted) return;
@@ -2109,6 +2110,7 @@ class _GameDialog extends StatelessWidget {
     required this.matching,
     required this.hideScores,
     required this.hasPick,
+    required this.offerPlayHere,
   });
 
   final SportsGame game;
@@ -2116,6 +2118,10 @@ class _GameDialog extends StatelessWidget {
   final bool matching;
   final bool hideScores;
   final bool hasPick;
+
+  /// First entry "Play here" (the hero mini player): some remotes have no
+  /// Play/Pause key (user report, 2026-10-18), so hold OK > OK starts it.
+  final bool offerPlayHere;
 
   @override
   Widget build(BuildContext context) {
@@ -2192,9 +2198,19 @@ class _GameDialog extends StatelessWidget {
                 child: ListView(
                   shrinkWrap: true,
                   children: [
+                    if (offerPlayHere && matches.isNotEmpty)
+                      TvMenuTile(
+                        autofocus: true,
+                        icon: Icons.play_arrow,
+                        title: tr('Play here'),
+                        subtitle: tr('{channel} · plays at the top of Sports',
+                            {'channel': matches.first.channel.name}),
+                        onTap: () => Navigator.of(context)
+                            .pop(_WatchAction(matches.first.channel)),
+                      ),
                     for (var i = 0; i < matches.length; i++)
                       TvMenuTile(
-                        autofocus: i == 0,
+                        autofocus: i == 0 && !offerPlayHere,
                         titleMaxLines: 2,
                         leading: _ChannelLogo(channel: matches[i].channel),
                         title: matches[i].channel.name,

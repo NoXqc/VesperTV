@@ -405,6 +405,23 @@ class _PlayerScreenState extends State<PlayerScreen> {
     });
   }
 
+  /// OK with no bar focused on a live channel: the CH+/CH- info card for
+  /// 4 s (owner, 2026-10-18); OK again hides it.
+  void _toggleInfoCard() {
+    if (_panelOpen) return;
+    final current = _playback.currentChannel ?? widget.channel;
+    if (!Channel.isLiveId(current.rawId)) return;
+    _zapInfoTimer?.cancel();
+    if (_zapInfoVisible) {
+      setState(() => _zapInfoVisible = false);
+      return;
+    }
+    setState(() => _zapInfoVisible = true);
+    _zapInfoTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) setState(() => _zapInfoVisible = false);
+    });
+  }
+
   Future<void> _toggleImmersive() async {
     final next = !_immersive;
     setState(() => _immersive = next);
@@ -576,6 +593,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     // froze solid until Android force-killed the app. A no-op here,
                     // same as Left/Up/Down always being consumed, is enough.
                     const SingleActivator(LogicalKeyboardKey.arrowRight): () {},
+                    // No repeats: the OK held to open this player must not
+                    // pop the card on arrival.
+                    const SingleActivator(LogicalKeyboardKey.select,
+                        includeRepeats: false): _toggleInfoCard,
+                    const SingleActivator(LogicalKeyboardKey.enter,
+                        includeRepeats: false): _toggleInfoCard,
+                    const SingleActivator(LogicalKeyboardKey.numpadEnter,
+                        includeRepeats: false): _toggleInfoCard,
                   },
                 },
                 child: Focus(
@@ -1061,7 +1086,8 @@ class _ZapInfoCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 24),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.7),
+        // Lighter than the bars: the picture should show through (owner).
+        color: Colors.black.withValues(alpha: 0.45),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
