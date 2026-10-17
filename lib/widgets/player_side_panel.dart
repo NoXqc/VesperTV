@@ -398,11 +398,15 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
         },
       );
 
-  Widget _twoLines(String top, String bottom) => Column(
+  /// [topSpans]: styled pieces of the first line (a game's coloured
+  /// scores) in place of plain [top].
+  Widget _twoLines(String top, String bottom, {List<InlineSpan>? topSpans}) =>
+      Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(top,
+          Text.rich(
+              TextSpan(text: topSpans == null ? top : null, children: topSpans),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
@@ -429,6 +433,10 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
         : showScore
             ? '${g.first.abbreviation} ${g.first.score ?? ''}  -  ${g.second.score ?? ''} ${g.second.abbreviation}'
             : '${g.first.abbreviation} ${tr(g.joiner)} ${g.second.abbreviation}';
+    // Scores in the palette accent so they stand out (owner, 2026-10-18).
+    final scoreStyle = TextStyle(
+        color: Theme.of(context).colorScheme.primary,
+        fontWeight: FontWeight.w800);
     final channel =
         _matches[SportsChannelPicks.eventKey(g)]?.firstOrNull?.channel;
     final sub = [
@@ -436,30 +444,53 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
       status,
       if (channel != null) channel.name,
     ].join('  ·  ');
+    // Each team's score small under its logo (owner, 2026-10-18).
+    Widget team(SportsTeam t) => SizedBox(
+          width: 34,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SportsLogo(
+                  url: t.logoUrl,
+                  size: 28,
+                  fallback: t.abbreviation,
+                  color: t.color),
+              if (showScore)
+                Text(t.score ?? '',
+                    maxLines: 1,
+                    style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white70)),
+            ],
+          ),
+        );
     return Row(
       children: [
         if (g.league.isField)
           SportsLogo(
               url: g.league.logoUrl, size: 32, fallback: g.league.shortName)
         else ...[
-          SportsLogo(
-              url: g.first.logoUrl,
-              size: 28,
-              fallback: g.first.abbreviation,
-              color: g.first.color),
+          team(g.first),
           const SizedBox(width: 2),
-          SportsLogo(
-              url: g.second.logoUrl,
-              size: 28,
-              fallback: g.second.abbreviation,
-              color: g.second.color),
+          team(g.second),
         ],
         const SizedBox(width: 10),
         if (g.state == GameState.live) ...[
           const Icon(Icons.circle, color: Colors.redAccent, size: 8),
           const SizedBox(width: 6),
         ],
-        Expanded(child: _twoLines(title, sub)),
+        Expanded(
+            child: _twoLines(title, sub,
+                topSpans: showScore
+                    ? [
+                        TextSpan(text: '${g.first.abbreviation} '),
+                        TextSpan(text: g.first.score ?? '', style: scoreStyle),
+                        const TextSpan(text: '  -  '),
+                        TextSpan(text: g.second.score ?? '', style: scoreStyle),
+                        TextSpan(text: ' ${g.second.abbreviation}'),
+                      ]
+                    : null)),
       ],
     );
   }

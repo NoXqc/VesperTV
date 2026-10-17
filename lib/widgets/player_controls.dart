@@ -9,8 +9,12 @@ import '../models/channel.dart';
 import '../services/epg_service.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
+import '../services/addon_service.dart';
+import '../services/storage_service.dart';
+import '../services/subtitle_tracks.dart';
 import '../utils/video_quality.dart';
 import 'epg_guide.dart';
+import 'tv_menu_tile.dart';
 import '../l10n/l10n.dart';
 
 /// Renders whatever [PlaybackService] is currently playing.
@@ -54,7 +58,14 @@ class VideoPlayerPane extends StatelessWidget {
     final controller = playback.controller;
 
     if (channel == null || controller == null) {
-      return Center(child: Text(tr('Select a channel to start watching')));
+      // play() can refuse before anything starts (a disabled playlist):
+      // say why instead of "Select a channel".
+      return Center(
+          child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(playback.error ?? tr('Select a channel to start watching'),
+            textAlign: TextAlign.center),
+      ));
     }
 
     if (playback.error != null) {
@@ -313,6 +324,7 @@ class PlayerControls extends StatelessWidget {
     this.showMore = false,
     this.onToggleMore,
     this.onOpenMultiview,
+    this.playFocusNode,
   });
 
   final VideoPlayerHdrController controller;
@@ -405,6 +417,10 @@ class PlayerControls extends StatelessWidget {
   /// `Navigator.push`.
   final VoidCallback? onOpenMultiview;
 
+  /// Play/Pause's node, so the caller can land the remote's focus on it
+  /// when the bar opens (PlayerScreen._focusBottomBar).
+  final FocusNode? playFocusNode;
+
   String _formatDuration(Duration d) {
     final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
@@ -427,31 +443,6 @@ class PlayerControls extends StatelessWidget {
           return Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  _QualityBadge(controller: controller),
-                  const SizedBox(width: 4),
-                  _AudioChannelBadge(controller: controller),
-                  const SizedBox(width: 8),
-                  if (showSeek)
-                    Text(
-                      '${_formatDuration(position)} / ${_formatDuration(duration)}',
-                      style:
-                          const TextStyle(color: Colors.white70, fontSize: 12),
-                    )
-                  else if (isLive)
-                    _LiveRemainingLabel(channelId: channelId),
-                ],
-              ),
               // Excluded from D-pad focus always: a focused Slider consumes
               // Left/Right itself for seeking, ahead of any ancestor
               // Shortcuts/CallbackShortcuts trying to use those keys for
@@ -460,165 +451,207 @@ class PlayerControls extends StatelessWidget {
               // from keyboard/remote focus traversal.
               if (showSeek)
                 ExcludeFocus(
-                  child: Slider(
-                    value: position.inMilliseconds
-                        .clamp(0, duration.inMilliseconds)
-                        .toDouble(),
-                    max: duration.inMilliseconds.toDouble(),
-                    onChanged: (v) =>
-                        controller.seekTo(Duration(milliseconds: v.toInt())),
+                  // 24 px instead of Slider's 48: the bar was too tall.
+                  child: SizedBox(
+                    height: 24,
+                    child: SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        trackHeight: 3,
+                        thumbShape:
+                            const RoundSliderThumbShape(enabledThumbRadius: 6),
+                        overlayShape: SliderComponentShape.noOverlay,
+                      ),
+                      child: Slider(
+                        value: position.inMilliseconds
+                            .clamp(0, duration.inMilliseconds)
+                            .toDouble(),
+                        max: duration.inMilliseconds.toDouble(),
+                        onChanged: (v) => controller
+                            .seekTo(Duration(milliseconds: v.toInt())),
+                      ),
+                    ),
                   ),
                 ),
-              // Transport + favorite — the core, always-relevant actions
-              // for whatever's playing right now. Favorite used to sit
-              // alone above the seek bar, which put it out of reach of
-              // normal up/down movement within this bar (Up from there had
-              // nowhere to go but out to the top bar); grouped here with
-              // play/pause instead for that reason. Recall/Reload/audio
-              // track/linked-channel are situational rather than core
-              // transport, so they live in the secondary row below instead
-              // of crowding this one further as more actions get added —
-              // see [onToggleMore]'s doc comment.
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (onToggleFavorite != null)
-                    IconButton(
-                      icon: Icon(
-                        isFavorite == true ? Icons.star : Icons.star_border,
-                        color: isFavorite == true ? Colors.amber : Colors.white,
-                      ),
-                      tooltip: isFavorite == true
-                          ? tr('Remove from favorites')
-                          : tr('Add to favorites'),
-                      onPressed: onToggleFavorite,
-                    ),
-                  // Episode nav — distinct icon shape (skip_previous/next,
-                  // not replay_10/forward_10) so it doesn't read as "seek
-                  // within this episode" the way the buttons either side
-                  // of play/pause already do.
-                  if (onPrevious != null)
-                    IconButton(
-                      icon:
-                          const Icon(Icons.skip_previous, color: Colors.white),
-                      tooltip: tr('Previous episode'),
-                      onPressed: onPrevious,
-                    ),
-                  // Skip/fast-seek only makes sense for VOD.
-                  if (showSeek)
-                    _SkipButton(
-                      icon: Icons.replay_10,
-                      onSeek: (amount) {
-                        onActivity?.call();
-                        final target = position - amount;
-                        controller.seekTo(
-                            target < Duration.zero ? Duration.zero : target);
-                      },
-                    ),
-                  IconButton(
-                    icon: Icon(value.isPlaying ? Icons.pause : Icons.play_arrow,
-                        color: Colors.white),
-                    onPressed: () => value.isPlaying
-                        ? controller.pause()
-                        : controller.play(),
-                  ),
-                  if (showSeek)
-                    _SkipButton(
-                      icon: Icons.forward_10,
-                      onSeek: (amount) {
-                        onActivity?.call();
-                        final target = position + amount;
-                        controller
-                            .seekTo(target > duration ? duration : target);
-                      },
-                    ),
-                  if (onNext != null)
-                    IconButton(
-                      icon: const Icon(Icons.skip_next, color: Colors.white),
-                      tooltip: tr('Next episode'),
-                      onPressed: onNext,
-                    ),
-                ],
-              ),
-              // Chevron hint, shown only while the secondary row is
-              // collapsed and a caller has actually wired up
-              // [onToggleMore] — found by accident on a competitor's own
-              // player (no visual cue there at all that pressing Down
-              // again did anything); this exists specifically so that
-              // isn't true here. Not a focusable control itself — the
-              // *next* Down press is what actually reveals the row (see
-              // PlayerScreen._handleDown), this just advertises that
-              // there's something to find. Tappable too, for a touch/mouse
-              // caller with no D-pad.
-              if (onToggleMore != null && !showMore)
-                GestureDetector(
-                  onTap: () {
-                    onActivity?.call();
-                    onToggleMore!();
-                  },
-                  child: const Padding(
-                    padding: EdgeInsets.only(top: 2),
-                    child: Icon(Icons.keyboard_arrow_down,
-                        color: Colors.white54, size: 20),
-                  ),
-                ),
-              // Secondary row — situational actions, collapsed by default.
-              // Every button here uses [_LabeledIconButton], not a bare
-              // `IconButton` — revealing this row at all only solves "I
-              // didn't know this existed"; a bare icon still leaves "I
-              // don't know what it does" for every button except
-              // Favorite/transport in the primary row, where the icons are
-              // already self-explanatory. Reported directly: the swap-
-              // channel button was the only one in this row that actually
-              // explained itself on focus. Recall goes furthest left,
-              // ahead of the rest — placed there deliberately, per direct
-              // feedback: recall means *backward*, so left is where it
-              // reads correctly, mirroring how rewind conventionally sits
-              // left of a play head.
-              if (showMore)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (isLive && channel != null)
-                      _LabeledIconButton(
-                        icon: Icons.history,
-                        label: tr('Recall — go back to a recent channel'),
-                        onPressed: () {
-                          onActivity?.call();
-                          showRecallPicker(context, channel!);
-                        },
-                      ),
-                    // Manual recovery for a channel that's silently
-                    // stalled (frozen frame, no spinner, no error) — see
-                    // PlaybackService.reloadCurrentChannel's doc comment
-                    // for why this is a manual button rather than an
-                    // automatic watchdog. Live only, same gating as Recall
-                    // above.
-                    if (isLive && channel != null)
-                      _LabeledIconButton(
-                        icon: Icons.refresh,
-                        label: tr('Reload channel'),
-                        onPressed: () {
-                          onActivity?.call();
-                          context
-                              .read<PlaybackService>()
-                              .reloadCurrentChannel();
-                        },
-                      ),
-                    _AudioTrackButton(controller: controller),
-                    if (linkedChannel != null)
-                      _LinkedChannelButton(linkedChannel: linkedChannel!),
-                    if (isLive && onOpenMultiview != null)
-                      _LabeledIconButton(
-                        icon: Icons.grid_view,
-                        label: tr('Open in Multiview'),
-                        onPressed: () {
-                          onActivity?.call();
-                          onOpenMultiview!();
-                        },
-                      ),
-                  ],
-                ),
+              // Favorite sits with the transport: alone above the seek bar
+              // it was out of reach of up/down movement within this bar.
+              // One line for every button (owner, 2026-10-18: cleaner than
+              // the old chevron-revealed second row). The situational ones
+              // (Recall, Reload, tracks, failover, Multiview) only in the
+              // fullscreen player — the caller that passes [onToggleMore];
+              // inline previews keep just the transport. Never wraps (a
+              // second line made the bar huge): compact buttons, and the
+              // whole line scales down where it doesn't fit (phone portrait).
+              // One row (owner, 2026-10-18: slimmer): title left, buttons
+              // centred, badges + time right — the two sides share the
+              // leftover width equally so the buttons stay centred.
+              LayoutBuilder(
+                  builder: (context, box) => Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          // Capped so FittedBox has a width to scale down to.
+                          ConstrainedBox(
+                            constraints:
+                                BoxConstraints(maxWidth: box.maxWidth * 0.6),
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Theme(
+                                data: Theme.of(context).copyWith(
+                                    visualDensity: VisualDensity.compact),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (onToggleFavorite != null)
+                                      IconButton(
+                                        icon: Icon(
+                                          isFavorite == true
+                                              ? Icons.star
+                                              : Icons.star_border,
+                                          color: isFavorite == true
+                                              ? Colors.amber
+                                              : Colors.white,
+                                        ),
+                                        tooltip: isFavorite == true
+                                            ? tr('Remove from favorites')
+                                            : tr('Add to favorites'),
+                                        onPressed: onToggleFavorite,
+                                      ),
+                                    // Episode nav — distinct icon shape (skip_previous/next,
+                                    // not replay_10/forward_10) so it doesn't read as "seek
+                                    // within this episode" the way the buttons either side
+                                    // of play/pause already do.
+                                    if (onPrevious != null)
+                                      IconButton(
+                                        icon: const Icon(Icons.skip_previous,
+                                            color: Colors.white),
+                                        tooltip: tr('Previous episode'),
+                                        onPressed: onPrevious,
+                                      ),
+                                    // Skip/fast-seek only makes sense for VOD.
+                                    if (showSeek)
+                                      _SkipButton(
+                                        icon: Icons.replay_10,
+                                        onSeek: (amount) {
+                                          onActivity?.call();
+                                          final target = position - amount;
+                                          controller.seekTo(
+                                              target < Duration.zero
+                                                  ? Duration.zero
+                                                  : target);
+                                        },
+                                      ),
+                                    IconButton(
+                                      focusNode: playFocusNode,
+                                      icon: Icon(
+                                          value.isPlaying
+                                              ? Icons.pause
+                                              : Icons.play_arrow,
+                                          color: Colors.white),
+                                      onPressed: () => value.isPlaying
+                                          ? controller.pause()
+                                          : controller.play(),
+                                    ),
+                                    if (showSeek)
+                                      _SkipButton(
+                                        icon: Icons.forward_10,
+                                        onSeek: (amount) {
+                                          onActivity?.call();
+                                          final target = position + amount;
+                                          controller.seekTo(target > duration
+                                              ? duration
+                                              : target);
+                                        },
+                                      ),
+                                    if (onNext != null)
+                                      IconButton(
+                                        icon: const Icon(Icons.skip_next,
+                                            color: Colors.white),
+                                        tooltip: tr('Next episode'),
+                                        onPressed: onNext,
+                                      ),
+                                    if (onToggleMore != null) ...[
+                                      if (isLive && channel != null)
+                                        _LabeledIconButton(
+                                          icon: Icons.history,
+                                          label: tr(
+                                              'Recall — go back to a recent channel'),
+                                          onPressed: () {
+                                            onActivity?.call();
+                                            showRecallPicker(context, channel!);
+                                          },
+                                        ),
+                                      // Manual recovery for a channel that's silently
+                                      // stalled (frozen frame, no spinner, no error) — see
+                                      // PlaybackService.reloadCurrentChannel's doc comment
+                                      // for why this is a manual button rather than an
+                                      // automatic watchdog. Live only, same gating as Recall
+                                      // above.
+                                      if (isLive && channel != null)
+                                        _LabeledIconButton(
+                                          icon: Icons.refresh,
+                                          label: tr('Reload channel'),
+                                          onPressed: () {
+                                            onActivity?.call();
+                                            context
+                                                .read<PlaybackService>()
+                                                .reloadCurrentChannel();
+                                          },
+                                        ),
+                                      _AudioTrackButton(controller: controller),
+                                      _SubtitleButton(controller: controller),
+                                      if (linkedChannel != null)
+                                        _LinkedChannelButton(
+                                            linkedChannel: linkedChannel!),
+                                      if (isLive && onOpenMultiview != null)
+                                        _LabeledIconButton(
+                                          icon: Icons.grid_view,
+                                          label: tr('Open in Multiview'),
+                                          onPressed: () {
+                                            onActivity?.call();
+                                            onOpenMultiview!();
+                                          },
+                                        ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                _QualityBadge(controller: controller),
+                                const SizedBox(width: 4),
+                                _AudioChannelBadge(controller: controller),
+                                const SizedBox(width: 8),
+                                if (showSeek)
+                                  Flexible(
+                                    child: Text(
+                                      '${_formatDuration(position)} / ${_formatDuration(duration)}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                          color: Colors.white70, fontSize: 12),
+                                    ),
+                                  )
+                                else if (isLive)
+                                  Flexible(
+                                      child: _LiveRemainingLabel(
+                                          channelId: channelId)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      )),
             ],
           );
         },
@@ -698,17 +731,9 @@ class _RecallPickerSheet extends StatelessWidget {
                 ),
               )
             else
-              ...channels.map((c) => ListTile(
-                    dense: true,
-                    visualDensity: VisualDensity.compact,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                    leading:
-                        const Icon(Icons.tv, color: Colors.white54, size: 20),
-                    title: Text(c.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 14)),
+              ...channels.map((c) => TvMenuTile(
+                    icon: Icons.tv,
+                    title: c.name,
                     onTap: () {
                       Navigator.of(context).pop();
                       context.read<PlaybackService>().play(c);
@@ -994,6 +1019,8 @@ class _AudioTrackButton extends StatefulWidget {
 
 class _AudioTrackButtonState extends State<_AudioTrackButton> {
   List<VideoAudioTrack>? _tracks;
+  Timer? _retry;
+  int _tries = 0;
 
   @override
   void initState() {
@@ -1001,17 +1028,29 @@ class _AudioTrackButtonState extends State<_AudioTrackButton> {
     _loadTracks();
   }
 
+  @override
+  void dispose() {
+    _retry?.cancel();
+    super.dispose();
+  }
+
   Future<void> _loadTracks() async {
     if (!widget.controller.isAudioTrackSupportAvailable()) return;
     try {
       final tracks = await widget.controller.getAudioTracks();
       if (mounted) setState(() => _tracks = tracks);
+      if (tracks.length >= 2) return;
     } catch (_) {
       // Not every stream/platform combination actually has track info
       // available even when the capability check passes — leave the
       // button hidden (_tracks stays null) rather than show a picker
       // that can't do anything.
     }
+    // Loaded once only, the list could be read before the file's header
+    // was (controls shown early): a multi-language movie then never got
+    // the button. Retry a few times (user report, 2026-10-18).
+    if (!mounted || ++_tries > 5) return;
+    _retry = Timer(const Duration(seconds: 3), _loadTracks);
   }
 
   String _trackLabel(VideoAudioTrack track) {
@@ -1053,14 +1092,16 @@ class _AudioTrackButtonState extends State<_AudioTrackButton> {
                     fontSize: 16),
               ),
             ),
+            // TvMenuTile: the app's gold focus look (a plain ListTile
+            // showed Material's pastel fill on TV, owner 2026-10-18).
             for (final track in tracks)
-              ListTile(
+              TvMenuTile(
+                autofocus: track.isSelected,
                 leading: Icon(
                   track.isSelected ? Icons.check_circle : Icons.circle_outlined,
                   color: track.isSelected ? Colors.amber : Colors.white54,
                 ),
-                title: Text(_trackLabel(track),
-                    style: const TextStyle(color: Colors.white)),
+                title: _trackLabel(track),
                 onTap: () => Navigator.of(sheetContext).pop(track),
               ),
           ],
@@ -1079,6 +1120,301 @@ class _AudioTrackButtonState extends State<_AudioTrackButton> {
     return _LabeledIconButton(
       icon: Icons.multitrack_audio,
       label: tr('Audio track'),
+      onPressed: _openPicker,
+    );
+  }
+}
+
+/// Subtitles built into the file (MKV/MP4 text tracks) — providers' movie
+/// files often carry 20-30 languages (user report, 2026-10-18). Same shape
+/// as [_AudioTrackButton]: hidden when the file has none. The text is drawn
+/// by PlayerScreen's subtitle overlay (see SubtitleTracks).
+class _SubtitleButton extends StatefulWidget {
+  const _SubtitleButton({required this.controller});
+
+  final VideoPlayerHdrController controller;
+
+  @override
+  State<_SubtitleButton> createState() => _SubtitleButtonState();
+}
+
+class _SubtitleButtonState extends State<_SubtitleButton> {
+  List<SubtitleTrack> _tracks = const [];
+  Timer? _retry;
+  int _tries = 0;
+
+  int get _playerId => SubtitleTracks.playerIdOf(widget.controller);
+
+  Channel? get _channel => context.read<PlaybackService>().currentChannel;
+
+  AddonService get _addons => AddonService(context.read<StorageService>());
+
+  /// Movies/episodes can get subtitles from an add-on (Settings > Add-ons).
+  bool get _canSearchOnline {
+    final c = _channel;
+    return c != null && AddonService.supports(c) && _addons.anyEnabled;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _retry?.cancel();
+    super.dispose();
+  }
+
+  // The track list only exists once the file's header is read, which can
+  // be after this button is built — retry a few times.
+  Future<void> _load() async {
+    try {
+      final tracks = await SubtitleTracks.list(_playerId);
+      if (!mounted) return;
+      setState(() => _tracks = tracks);
+      if (tracks.isNotEmpty) return;
+    } catch (_) {
+      // No player yet: stay hidden.
+    }
+    if (!mounted || ++_tries > 5) return;
+    _retry = Timer(const Duration(seconds: 3), _load);
+  }
+
+  /// The file's own track name when it has one ("French (France) Full"),
+  /// else the language; "Forced" added unless the name already says it
+  /// (it read "Français · French (France) Forced · Forced").
+  String _trackLabel(SubtitleTrack t) {
+    final label = t.label?.trim() ?? '';
+    final name = languageName(t.language);
+    final base = label.isNotEmpty
+        ? label
+        : name.isNotEmpty
+            ? name
+            : tr('Track {id}', {'id': t.track + 1});
+    return t.forced && !base.toLowerCase().contains('forced')
+        ? '$base · ${tr('Forced')}'
+        : base;
+  }
+
+  Widget _option(BuildContext sheetContext,
+      {required bool selected,
+      required String title,
+      String? subtitle,
+      IconData? icon,
+      required Object result}) {
+    return TvMenuTile(
+      autofocus: selected,
+      leading: Icon(
+        icon ?? (selected ? Icons.check_circle : Icons.circle_outlined),
+        color: selected ? Colors.amber : Colors.white54,
+      ),
+      title: title,
+      subtitle: subtitle,
+      onTap: () => Navigator.of(sheetContext).pop(result),
+    );
+  }
+
+  Future<T?> _sheet<T>(
+      String title, List<Widget> Function(BuildContext) items) {
+    return showModalBottomSheet<T>(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A1A),
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(sheetContext).size.height * 0.8),
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16),
+                ),
+              ),
+              ...items(sheetContext),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openPicker() async {
+    final id = _playerId;
+    var tracks = const <SubtitleTrack>[];
+    try {
+      tracks = await SubtitleTracks.list(id);
+    } catch (_) {}
+    if (!mounted) return;
+    setState(() => _tracks = tracks);
+    final online = _canSearchOnline;
+    if (tracks.isEmpty && !online) return;
+    final external = SubtitleTracks.externalFor.value == id
+        ? SubtitleTracks.externalLabel[id]
+        : null;
+    final anySelected = external != null || tracks.any((t) => t.selected);
+    final remembered = online
+        ? context.read<StorageService>().getOnlineSubtitleLangs()
+        : const <String>[];
+    // 'off', 'online', or a SubtitleTrack.
+    final chosen = await _sheet<Object>(
+      tr('Subtitles'),
+      (sheet) => [
+        _option(sheet, selected: !anySelected, title: tr('Off'), result: 'off'),
+        if (external != null)
+          _option(sheet,
+              selected: true,
+              title: external,
+              subtitle: tr('Online'),
+              result: 'keep'),
+        for (final t in tracks)
+          _option(sheet,
+              selected: external == null && t.selected,
+              title: _trackLabel(t),
+              result: t),
+        // Languages picked online before, one press each (owner,
+        // 2026-10-18): the first match in that language for this title.
+        if (online)
+          for (final lang in remembered)
+            if (external != _langLabel(lang))
+              _option(sheet,
+                  selected: false,
+                  icon: Icons.cloud_outlined,
+                  title: _langLabel(lang),
+                  subtitle: tr('Online'),
+                  result: (lang: lang)),
+        if (online)
+          _option(sheet,
+              selected: false,
+              icon: Icons.cloud_download_outlined,
+              title: tr('Search online subtitles'),
+              subtitle: tr('From your add-ons (Settings > Add-ons)'),
+              result: 'online'),
+      ],
+    );
+    if (chosen == null || chosen == 'keep' || !mounted) return;
+    if (chosen == 'online') return _searchOnline();
+    if (chosen is ({String lang})) return _applyOnlineLang(chosen.lang);
+    final track = chosen is SubtitleTrack ? chosen : null;
+    // An episode: the choice carries on to the rest of the series; Off
+    // forgets it (SubtitleTracks.rememberForSeries).
+    unawaited(SubtitleTracks.rememberForSeries(
+        context.read<StorageService>(), _channel,
+        kind: track == null ? null : 'embedded',
+        lang: track?.language,
+        label: track?.label));
+    try {
+      await SubtitleTracks.clearExternal(widget.controller);
+      await SubtitleTracks.select(id, track);
+    } catch (_) {
+      // The stream changed underneath: nothing to select any more.
+    }
+  }
+
+  Future<void> _searchOnline() async {
+    final channel = _channel;
+    if (channel == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final results = _addons.search(channel);
+    final chosen = await _sheet<OnlineSubtitle>(
+      tr('Online subtitles'),
+      (sheet) => [
+        FutureBuilder<List<OnlineSubtitle>>(
+          future: results,
+          builder: (context, snap) {
+            if (snap.connectionState != ConnectionState.done) {
+              return const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            final list = snap.data ?? const <OnlineSubtitle>[];
+            if (list.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(tr('No subtitles found for this title.'),
+                    style: const TextStyle(color: Colors.white70)),
+              );
+            }
+            return Column(
+              children: [
+                for (var i = 0; i < list.length; i++)
+                  TvMenuTile(
+                    autofocus: i == 0,
+                    icon: Icons.subtitles_outlined,
+                    title: languageName(list[i].lang).isEmpty
+                        ? list[i].lang
+                        : languageName(list[i].lang),
+                    subtitle: [list[i].addonName, list[i].fileName ?? '']
+                        .where((x) => x.isNotEmpty)
+                        .join(' · '),
+                    onTap: () => Navigator.of(sheet).pop(list[i]),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+    if (chosen == null || !mounted) return;
+    await _applyOnline(chosen, messenger);
+  }
+
+  static String _langLabel(String lang) =>
+      languageName(lang).isEmpty ? lang : languageName(lang);
+
+  Future<void> _applyOnline(
+      OnlineSubtitle chosen, ScaffoldMessengerState messenger) async {
+    final storage = context.read<StorageService>();
+    try {
+      final text = await AddonService.download(chosen);
+      await SubtitleTracks.useExternal(widget.controller, text);
+      SubtitleTracks.externalLabel[_playerId] = _langLabel(chosen.lang);
+      await storage.addOnlineSubtitleLang(chosen.lang);
+      await SubtitleTracks.rememberForSeries(storage, _channel,
+          kind: 'online', lang: chosen.lang);
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(
+          content: Text(tr('Couldn\'t download that subtitle. Try another.'))));
+    }
+  }
+
+  /// A remembered language: the first match for this title, else the full
+  /// online list to pick from.
+  Future<void> _applyOnlineLang(String lang) async {
+    final channel = _channel;
+    if (channel == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(SnackBar(
+        duration: const Duration(seconds: 2),
+        content: Text(tr('Looking for {language} subtitles…',
+            {'language': _langLabel(lang)}))));
+    final results = await _addons.search(channel);
+    if (!mounted) return;
+    final match = results.where((s) => s.lang == lang).firstOrNull;
+    if (match == null) {
+      messenger.showSnackBar(SnackBar(
+          content: Text(tr('No {language} subtitles online for this title.',
+              {'language': _langLabel(lang)}))));
+      return _searchOnline();
+    }
+    await _applyOnline(match, messenger);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_tracks.isEmpty && !_canSearchOnline) return const SizedBox.shrink();
+    return _LabeledIconButton(
+      icon: Icons.subtitles,
+      label: tr('Subtitles'),
       onPressed: _openPicker,
     );
   }

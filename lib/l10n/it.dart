@@ -85,6 +85,51 @@ const Map<String, String> kIt = {
   'This device\'s hardware video decoder can\'t play this stream — likely a 4K HDR (HEVC 10-bit) format it doesn\'t support, even though it claims to. This is a hardware limitation, not something the app can fix. If your provider offers a non-4K/HD version of this channel or title, try that instead.':
       "Il decoder video di questo dispositivo non riesce a riprodurre questo flusso; probabilmente è un formato 4K HDR (HEVC 10 bit) che non supporta davvero, anche se dichiara il contrario. È un limite hardware che l'app non può risolvere. Se il tuo provider offre una versione HD (non 4K) di questo canale o titolo, prova quella.",
   'Playback error:\n{raw}': "Errore di riproduzione:\n{raw}",
+  'Subtitles': "Sottotitoli",
+  'Off': "Disattivati",
+  'Forced': "Forzati",
+  'Online':
+      'Online',
+  'Search online subtitles':
+      'Cerca sottotitoli online',
+  'From your add-ons (Settings > Add-ons)':
+      'Dai tuoi componenti (Impostazioni > Componenti aggiuntivi)',
+  'Online subtitles':
+      'Sottotitoli online',
+  'No subtitles found for this title.':
+      'Nessun sottotitolo trovato per questo titolo.',
+  "Couldn't download that subtitle. Try another.":
+      'Impossibile scaricare questo sottotitolo. Provane un altro.',
+  'Add-ons':
+      'Componenti aggiuntivi',
+  'Online subtitles in more languages':
+      'Sottotitoli online in più lingue',
+  'Remove {name}?':
+      'Rimuovere {name}?',
+  "That link isn't a subtitle add-on (only subtitle add-ons are supported).":
+      'Questo link non è un componente di sottotitoli (sono supportati solo quelli).',
+  'That add-on is already in the list.':
+      "Questo componente è già nell'elenco.",
+  '{name} added.':
+      '{name} aggiunto.',
+  "Add-ons find subtitles online for movies and episodes, in many languages. They are free community services, separate from your provider — VesperTV only uses them for subtitles. Turn one on, then pick \"Search online subtitles\" in the player's Subtitles button.":
+      'I componenti aggiuntivi trovano sottotitoli online per film ed episodi, in molte lingue. Sono servizi gratuiti della community, separati dal tuo provider — VesperTV li usa solo per i sottotitoli. Attivane uno, poi scegli «Cerca sottotitoli online» nel pulsante Sottotitoli del player.',
+  'Subtitle add-ons':
+      'Componenti per sottotitoli',
+  'Subtitles in 60+ languages from OpenSubtitles.org':
+      'Sottotitoli in oltre 60 lingue da OpenSubtitles.org',
+  'Hold OK to remove':
+      'Tieni premuto OK per rimuovere',
+  'Add an add-on':
+      'Aggiungi un componente',
+  'Add-on link (ends with manifest.json)':
+      'Link del componente (termina con manifest.json)',
+  'Only subtitle add-ons work here. When one is on, the title and episode you are watching are sent to it to find subtitles; nothing else is shared.':
+      "Qui funzionano solo componenti per sottotitoli. Quando uno è attivo, gli vengono inviati il titolo e l'episodio che guardi per trovare i sottotitoli; non viene condiviso nient'altro.",
+  'Looking for {language} subtitles…':
+      "Cerco sottotitoli in {language}…",
+  'No {language} subtitles online for this title.':
+      "Nessun sottotitolo in {language} online per questo titolo.",
   'Track {id}': "Traccia {id}",
   'Audio Track': "Traccia audio",
   'Audio track': "Traccia audio",

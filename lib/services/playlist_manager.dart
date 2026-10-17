@@ -587,7 +587,11 @@ class PlaylistManager extends ChangeNotifier {
     // carousel trending-ordered.
     for (final id in ids) {
       final c = byId[id];
-      if (c != null && !_isHiddenForActiveViewer(c.playlistId, c.group)) {
+      // Saved ids can belong to a playlist disabled since: playing one
+      // showed "Select a channel to start watching" (owner, 2026-10-18).
+      if (c != null &&
+          isPlaylistEnabled(c.playlistId) &&
+          !_isHiddenForActiveViewer(c.playlistId, c.group)) {
         picked.add(c);
       }
       if (picked.length >= limit) break;
@@ -595,10 +599,23 @@ class PlaylistManager extends ChangeNotifier {
     return picked;
   }
 
+  /// The saved TMDB-trending ids exist but none matches an enabled playlist
+  /// any more (playlists switched since the weekly refresh): What's New fell
+  /// back to "recently added" — on one provider, all anime (owner,
+  /// 2026-10-18). Rebuild the list once per session, in the background.
+  bool _staleWhatsNewRefreshStarted = false;
+
+  void _refreshStaleWhatsNew(List<String> savedIds) {
+    if (savedIds.isEmpty || _staleWhatsNewRefreshStarted) return;
+    _staleWhatsNewRefreshStarted = true;
+    unawaited(refreshWhatsNewTmdbIfDue(force: true));
+  }
+
   Future<List<Channel>> whatsNewVod({int limit = 5}) async {
     if (_storage.getTmdbApiKey()?.isNotEmpty ?? false) {
       final curated = await _curatedWhatsNewVod(limit);
       if (curated.isNotEmpty) return curated;
+      _refreshStaleWhatsNew(_storage.getWhatsNewVodIds());
     }
     // Fallback: no TMDB key, or a key but nothing curated yet (first
     // launch with a fresh key, before the first refresh has actually
@@ -639,7 +656,9 @@ class PlaylistManager extends ChangeNotifier {
     final picked = <XtreamSeries>[];
     for (final id in ids) {
       final s = byId[id];
-      if (s != null && !_isHiddenForActiveViewer(s.playlistId, s.categoryId)) {
+      if (s != null &&
+          isPlaylistEnabled(s.playlistId) &&
+          !_isHiddenForActiveViewer(s.playlistId, s.categoryId)) {
         picked.add(s);
       }
       if (picked.length >= limit) break;
@@ -651,6 +670,7 @@ class PlaylistManager extends ChangeNotifier {
     if (_storage.getTmdbApiKey()?.isNotEmpty ?? false) {
       final curated = await _curatedWhatsNewSeries(limit);
       if (curated.isNotEmpty) return curated;
+      _refreshStaleWhatsNew(_storage.getWhatsNewSeriesIds());
     }
     final candidates = await _whatsNewSeriesCandidates(limit * 40);
     final picked = _preferEnriched(candidates, limit,

@@ -67,6 +67,15 @@ class _SearchScreenState extends State<SearchScreen> {
 
   /// The first "Recent searches" chip — Down from the empty search field.
   final _recentFirstFocus = FocusNode(debugLabel: 'recent-search-0');
+
+  /// Holds focus (not a text field) while a picked recent search loads.
+  /// The picked chip leaves the tree with the results, and focus then went
+  /// back to the search field, reopening the keyboard (owner, 2026-10-18).
+  final _resultsHolder =
+      FocusNode(debugLabel: 'search-results-holder', skipTraversal: true);
+
+  /// Set by a picked recent search: focus the first result row once built.
+  bool _focusResultsWhenReady = false;
   String _query = '';
   List<String> _recentSearches = [];
 
@@ -106,6 +115,7 @@ class _SearchScreenState extends State<SearchScreen> {
     _controller.dispose();
     _searchFieldFocus.dispose();
     _recentFirstFocus.dispose();
+    _resultsHolder.dispose();
     super.dispose();
   }
 
@@ -269,6 +279,15 @@ class _SearchScreenState extends State<SearchScreen> {
     final scheme = Theme.of(context).colorScheme;
     final q = _query.trim().toLowerCase();
     final rows = q.isEmpty ? const <_ResultRow>[] : _buildRows(playlist, q);
+    if (_focusResultsWhenReady && rows.isNotEmpty) {
+      _focusResultsWhenReady = false;
+      final first = rows.first.firstFocusNode;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_resultsHolder.hasFocus) return;
+        _focusedZone = 0;
+        first.requestFocus();
+      });
+    }
 
     // Missed in the original Settings-family gradient redesign — Search
     // isn't a Settings screen, it's reached straight from the main tabs,
@@ -358,48 +377,51 @@ class _SearchScreenState extends State<SearchScreen> {
                           ),
                       ],
                     ),
-                    body: Column(
-                      children: [
-                        if (q.isEmpty) _buildSuggestionPills(scheme),
-                        if (playlist.isXtream && playlist.isWarmingCatalog)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 4),
-                            child: Row(
-                              children: [
-                                const SizedBox(
-                                    width: 14,
-                                    height: 14,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2)),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    tr(
-                                        'Still loading the full catalog in the background ({warmCatalogDone}/{warmCatalogTotal} categories) — some results may not show up yet.',
-                                        {
-                                          'warmCatalogDone':
-                                              playlist.warmCatalogDone,
-                                          'warmCatalogTotal':
-                                              playlist.warmCatalogTotal
-                                        }),
-                                    style:
-                                        Theme.of(context).textTheme.bodySmall,
+                    body: Focus(
+                      focusNode: _resultsHolder,
+                      child: Column(
+                        children: [
+                          if (q.isEmpty) _buildSuggestionPills(scheme),
+                          if (playlist.isXtream && playlist.isWarmingCatalog)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 4),
+                              child: Row(
+                                children: [
+                                  const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2)),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      tr(
+                                          'Still loading the full catalog in the background ({warmCatalogDone}/{warmCatalogTotal} categories) — some results may not show up yet.',
+                                          {
+                                            'warmCatalogDone':
+                                                playlist.warmCatalogDone,
+                                            'warmCatalogTotal':
+                                                playlist.warmCatalogTotal
+                                          }),
+                                      style:
+                                          Theme.of(context).textTheme.bodySmall,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
+                          Expanded(
+                            child: q.isEmpty
+                                ? (_recentSearches.isEmpty
+                                    ? Center(
+                                        child: Text(tr(
+                                            'Search Live TV, Movies & TV Shows')))
+                                    : const SizedBox())
+                                : _buildResultRows(rows),
                           ),
-                        Expanded(
-                          child: q.isEmpty
-                              ? (_recentSearches.isEmpty
-                                  ? Center(
-                                      child: Text(tr(
-                                          'Search Live TV, Movies & TV Shows')))
-                                  : const SizedBox())
-                              : _buildResultRows(rows),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -442,7 +464,13 @@ class _SearchScreenState extends State<SearchScreen> {
                   focusNode: i == 0 ? _recentFirstFocus : null,
                   avatar: const Icon(Icons.history, size: 16),
                   label: Text(term),
-                  onPressed: () => _runSearch(term),
+                  onPressed: () {
+                    _resultsHolder.requestFocus();
+                    // Up from here goes back to the field (zone -1).
+                    _focusedZone = 0;
+                    _focusResultsWhenReady = true;
+                    _runSearch(term);
+                  },
                 );
               },
             ),

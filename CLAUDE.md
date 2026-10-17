@@ -47,7 +47,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
 4. `flutter analyze` must report the baseline **17** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `1.0.17` unless noted
+5. Check the current state of releases: `gh release list` (latest should be `1.0.18` unless noted
    in §11).
 
 ## 3. Layout (what matters)
@@ -101,7 +101,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+294**) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+309**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
@@ -125,7 +125,10 @@ error/ENDED/frozen-video recovery (`ExoPlayerEventListener`, delayed + frozen-vi
 texture players), and **`VideoPlayerPlugin.createForTextureView` forces the SurfaceTexture-backed
 producer** (`FlutterRenderer.debugForceSurfaceProducerGlTextures`) — the ImageReader producer
 ignores the decoder's crop rect, which showed 720p Multiview tiles with a green area on a Fire Stick
-(MTK). Only safe while Impeller stays off (Skia/GL). **If `video_player_hdr` or its constraint
+(MTK). Only safe while Impeller stays off (Skia/GL). Also added (1.0.18): **`SubtitleBridge.java`**
+(MethodChannel `vespertv/subtitles` + EventChannel `vespertv/subtitles/cues`, attached in
+`VideoPlayerPlugin.registerPlayerInstance`) — lists/selects embedded text tracks and streams cue text;
+every player starts with text tracks disabled. **If `video_player_hdr` or its constraint
 is ever bumped**, re-sync the vendored copy to the new version and re-apply all of these patches
 plus the gradle dependency line. Migrating to `media_kit` on Android was researched and
 rejected (HDR + Android-TV hardware-decode risk).
@@ -223,7 +226,17 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 - Donations will go through GitHub Sponsors (pending approval). After approval: `FUNDING.yml`,
   site/README links and an About row. Relay `X-VesperTV-App` enforcement is OFF until old installs
   update (see HANDOFF.md).
-- **Shipped: 1.0.17 (`+294`, 2026-10-18, latest on GitHub)** — Sports hero controls reworked
+- **Shipped: 1.0.18 (`+309`, 2026-10-18, latest on GitHub)** — **subtitles**: embedded MKV/MP4
+  text tracks (Subtitles button, native `SubtitleBridge`, Flutter `SubtitleOverlay`) and **online
+  subtitles from Stremio-protocol add-ons** (Settings > Add-ons, official OpenSubtitles v3 listed off,
+  subtitles resource only — owner: no stream/debrid add-ons); recent online languages one press away;
+  a choice made on an episode carries to the rest of that series (movies manual). Player bar = one row
+  (title | buttons | badges + time; slim seek bar above for VOD), Down focuses Play/Pause, pickers use
+  `TvMenuTile`, OK in fullscreen live = info card, Sports game menu "Play here", coloured Live-now
+  scores, Audio-track button retries, What's New skips disabled playlists + rebuilds a stale TMDB list,
+  Search keeps the keyboard closed after picking a recent search. Details: `dev-notes/features.md`
+  (Subtitles & add-ons). Windows: none of the player/subtitle work (separate player).
+- 1.0.17 (`+294`, 2026-10-18) — Sports hero controls reworked
   (owner-tested Fire Stick/Formuler/phone): OK on a card only selects it, ▶❚❚ plays it in the hero,
   OK on the playing game = fullscreen at once; phone = tap focuses / tap plays in hero / tap
   fullscreen; phone Sports page scrolls as one + portrait hero; white play/pause icons in hints

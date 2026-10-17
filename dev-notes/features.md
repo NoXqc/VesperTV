@@ -189,3 +189,34 @@ Read before changing guide/Multiview/profiles/palettes/backup-server logic.
     (`_toggleRotation`, forces landscape/portrait without the system lock, released on leaving). Owner
     wants it in the top bar, not floating. Browse posters on Android touch: tap = preview in the hero,
     tap again / double tap = open (`PosterCard.tapToPreview`, Windows already did this).
+
+- **Subtitles & add-ons (1.0.18+309, 2026-10-18, Android only):**
+  - **Embedded tracks:** the vendored plugin's `SubtitleBridge.java` (see CLAUDE.md §9) lists text
+    tracks (PGS/VobSub/DVB image subs skipped) and selects one; cues arrive on an EventChannel and
+    `widgets/subtitle_overlay.dart` draws them over `PlayerScreen` (bottom 48, tags stripped). Text
+    tracks start **disabled** on every player (Multiview, live). Dart side: `services/subtitle_tracks.dart`
+    (`SubtitleTracks`, `languageName`). The player id is the controller's `textureId`
+    (`SubtitleTracks.playerIdOf`, the one place with the visible-for-testing ignore).
+  - **Online (add-ons):** `services/addon_service.dart` — Stremio protocol, **subtitles resource only**
+    (owner: no stream/debrid add-ons). Settings > Add-ons (`screens/settings/addons_screen.dart`,
+    hidden on Windows) lists the official OpenSubtitles v3 add-on **off** by default; users can add any
+    subtitle add-on by manifest link (hold OK = remove). Title → IMDb id via Cinemeta search
+    (keyless; Xtream movies `xt_vod_` + episodes `xt_ep_` only; episode = `tt:season:episode` from the
+    `S{n}E{n}` name prefix, series name/year from `channel.group`). Downloaded SRT/VTT goes through
+    `controller.setClosedCaptionFile` (`SubtitleTracks.useExternal`); the overlay then draws
+    `value.caption`. Results sorted app language, English, rest.
+  - **Memory:** last 3 online languages (`addOnlineSubtitleLang`) shown in the Subtitles list as
+    one-press "Online" entries. A choice made during an episode is saved per series
+    (`SubtitleTracks.rememberForSeries`, key `playlistId::group`) and reapplied on every later episode
+    by the overlay (`applyForSeries`: same language + label for embedded, first add-on match for
+    online); Off forgets it. Movies never auto-apply (owner).
+  - Audio: no "audio add-ons" exist (the protocol has catalog/meta/stream/subtitles only); other-language
+    audio has to be in the provider's file — the Audio track picker shows it (verified on a
+    French/English MobLand file).
+- **Player bar (1.0.18):** one row — title left, buttons centred (capped at 60 % width, scale down,
+  `VisualDensity.compact`), badges + time right; VOD seek bar above it is 24 px. The old
+  chevron-revealed second row is gone (`showMore`/`onToggleMore` now only mean "fullscreen caller").
+  Down opens the bar **with Play/Pause focused** (`PlayerScreen._focusBottomBar`, `playFocusNode`).
+  Picker sheets (audio, subtitles, online results, Recall) use `TvMenuTile` (ListTile showed a pastel
+  focus fill on TV). OK with no bar focused on a live channel toggles the CH+/- info card (4 s,
+  45 % black).

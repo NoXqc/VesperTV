@@ -17,6 +17,7 @@ import '../utils/constants.dart';
 import '../utils/tv_theme.dart';
 import '../widgets/epg_guide.dart';
 import '../widgets/player_controls.dart';
+import '../widgets/subtitle_overlay.dart';
 import '../widgets/player_side_panel.dart';
 import 'multiview_screen.dart';
 import 'search_screen.dart';
@@ -123,6 +124,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   bool _rotated = false;
 
   final FocusScopeNode _topScope = FocusScopeNode(debugLabel: 'player-top');
+  final FocusNode _playFocus = FocusNode(debugLabel: 'player-play');
   final FocusScopeNode _bottomScope =
       FocusScopeNode(debugLabel: 'player-bottom');
 
@@ -254,14 +256,27 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _topScope.requestFocus();
   }
 
+  /// Shows the bottom bar with Play/Pause focused in one press. Showing it
+  /// alone, then focusing the bar's scope (no child), left nothing
+  /// highlighted: it took a second Down plus Left/Right to see where the
+  /// remote was (owner, 2026-10-18).
+  void _focusBottomBar() {
+    if (!_bottomVisible) setState(() => _bottomVisible = true);
+    // Next frame: the bar is ExcludeFocus'd until it's visible.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_playFocus.context != null) {
+        _playFocus.requestFocus();
+      } else {
+        _bottomScope.requestFocus();
+      }
+    });
+  }
+
   void _handleDown() {
     _resetHideTimer();
     if (_switchButtonFocus.hasFocus) {
-      if (!_bottomVisible) {
-        setState(() => _bottomVisible = true);
-        return;
-      }
-      _bottomScope.requestFocus();
+      _focusBottomBar();
       return;
     }
     if (_topScope.hasFocus) {
@@ -270,29 +285,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
         _switchButtonFocus.requestFocus();
         return;
       }
-      if (!_bottomVisible) {
-        setState(() => _bottomVisible = true);
-        return;
-      }
-      _bottomScope.requestFocus();
+      _focusBottomBar();
       return;
     }
     if (_bottomScope.hasFocus) {
-      if (_tryIntraBarMove(_bottomScope, TraversalDirection.down)) return;
-      // Nowhere further to move within the bar — reveal the secondary
-      // row rather than no-op. This mirrors [_topVisible]/[_bottomVisible]'s
-      // own two-step reveal (one press shows it, the *next* press — now
-      // that it's actually in the tree — is what the intra-bar move above
-      // finds) rather than requesting focus onto it directly this same
-      // frame, before it exists to focus.
-      if (!_moreVisible) setState(() => _moreVisible = true);
+      // All the buttons are on one line now (no second row to reveal).
+      _tryIntraBarMove(_bottomScope, TraversalDirection.down);
       return;
     }
-    if (!_bottomVisible) {
-      setState(() => _bottomVisible = true);
-      return;
-    }
-    _bottomScope.requestFocus();
+    _focusBottomBar();
   }
 
   /// `PlaybackService`'s own controller is deliberately kept alive in the
@@ -498,6 +499,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _switchButtonFocus.removeListener(_onBarFocusChange);
     _topScope.dispose();
     _bottomScope.dispose();
+    _playFocus.dispose();
     _switchButtonFocus.dispose();
     _rootFocus.dispose();
     // Defensive: never leave the whole app stuck in landscape/immersive
@@ -746,6 +748,18 @@ class _PlayerScreenState extends State<PlayerScreen> {
                           ),
                         ),
 
+                        // Embedded subtitles picked in the controls'
+                        // Subtitles button (see SubtitleOverlay).
+                        if (controller != null)
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 48,
+                            child: IgnorePointer(
+                              child: SubtitleOverlay(controller: controller),
+                            ),
+                          ),
+
                         // Bottom bar: title, seek bar, play/pause.
                         if (controller != null)
                           Positioned(
@@ -788,6 +802,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                       showMore: _moreVisible,
                                       onToggleMore: () => setState(
                                           () => _moreVisible = !_moreVisible),
+                                      playFocusNode: _playFocus,
                                       onOpenMultiview:
                                           Channel.isLiveId(channel.rawId)
                                               ? () => _openMultiview(channel)

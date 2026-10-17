@@ -13,6 +13,7 @@ import 'playlist_manager_screen.dart';
 import 'profiles_screen.dart';
 import 'transfer_screen.dart';
 import 'theme_screen.dart';
+import 'addons_screen.dart';
 import 'tmdb_settings_screen.dart';
 import '../../l10n/l10n.dart';
 
@@ -90,6 +91,16 @@ class SettingsMenuScreen extends StatelessWidget {
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(
                         builder: (_) => const TmdbSettingsScreen())),
                   ),
+                  // Android only for now: the online subtitles live in
+                  // the Android player (Windows has its own player).
+                  if (!Platform.isWindows)
+                    TvMenuTile(
+                      icon: Icons.extension_outlined,
+                      title: tr('Add-ons'),
+                      subtitle: tr('Online subtitles in more languages'),
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => const AddonsScreen())),
+                    ),
                   TvMenuTile(
                     icon: Icons.system_update_outlined,
                     title: tr('Check for Updates'),

@@ -155,6 +155,26 @@ class StorageService {
   Future<void> setTmdbApiKey(String key) =>
       _prefs.setString(AppConstants.keyTmdbApiKey, key);
 
+  /// Subtitle add-ons, see AddonService. Null = never saved (defaults).
+  String? getAddonsJson() => _prefs.getString(AppConstants.keyAddons);
+  Future<void> setAddonsJson(String json) =>
+      _prefs.setString(AppConstants.keyAddons, json);
+
+  /// Languages picked from online subtitles (add-on codes like "fre"),
+  /// most recent first — the player's Subtitles list offers them directly.
+  String? getSeriesSubtitlesJson() =>
+      _prefs.getString(AppConstants.keySeriesSubtitles);
+  Future<void> setSeriesSubtitlesJson(String json) =>
+      _prefs.setString(AppConstants.keySeriesSubtitles, json);
+
+  List<String> getOnlineSubtitleLangs() =>
+      _prefs.getStringList(AppConstants.keyOnlineSubtitleLangs) ?? const [];
+  Future<void> addOnlineSubtitleLang(String lang) {
+    final list = [lang, ...getOnlineSubtitleLangs().where((l) => l != lang)];
+    return _prefs.setStringList(
+        AppConstants.keyOnlineSubtitleLangs, list.take(3).toList());
+  }
+
   /// When "What's New" was last TMDB-enriched — see
   /// `PlaylistManager.refreshWhatsNewTmdbIfDue`'s doc comment. Null means
   /// never (a freshly-added key, or TMDB sorting never used at all).

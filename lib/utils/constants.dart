@@ -45,6 +45,12 @@ class AppConstants {
   static const String keyEpgUrl = 'nox_epg_url';
   static const String keyRefreshInterval = 'nox_refresh_interval_minutes';
   static const String keyTmdbApiKey = 'nox_tmdb_api_key';
+  // Stremio-style subtitle add-ons (AddonService), JSON list.
+  static const String keyAddons = 'vesper_addons';
+  // Online subtitle languages picked before, most recent first.
+  static const String keyOnlineSubtitleLangs = 'vesper_online_sub_langs';
+  // Subtitle choice per series (SubtitleTracks.rememberForSeries), JSON.
+  static const String keySeriesSubtitles = 'vesper_series_subs';
   static const String keyWhatsNewTmdbLastRefreshed =
       'nox_whats_new_tmdb_last_refreshed';
 
