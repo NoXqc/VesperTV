@@ -248,6 +248,11 @@ class AppConstants {
   /// system language, or a language code ('en', 'fr', 'es', 'it'). See lib/l10n/l10n.dart.
   static const String keyLanguage = 'vesper_language';
 
+  /// Windows: windowed instead of full screen, and the window's last
+  /// bounds ("x,y,w,h") — see DesktopWindow. This PC only.
+  static const String keyWindowsWindowed = 'vesper_windows_windowed';
+  static const String keyWindowsBounds = 'vesper_windows_bounds';
+
   /// 24-hour (default) vs 12-hour times everywhere — `utils/time_format.dart`.
   static const String keyTime24h = 'vesper_time_24h';
 

@@ -50,6 +50,7 @@ const Map<String, String> kIt = {
   'OK': "OK",
   'Couldn\'t start that channel': "Impossibile avviare il canale",
   'Full screen': "Schermo intero",
+  'Windowed': "In finestra",
   '4 screens': "4 schermi",
   '2 screens': "2 schermi",
   '= audio — Select to switch, hold Select for options':

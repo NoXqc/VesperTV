@@ -14,6 +14,7 @@ import 'screens/catalog_sync_prompt_screen.dart';
 import 'screens/catalog_sync_screen.dart';
 import 'screens/desktop_player_screen.dart';
 import 'services/desktop_mini_player.dart';
+import 'services/desktop_window.dart';
 import 'screens/player_screen.dart';
 import 'screens/settings/add_playlist_screen.dart';
 import 'screens/tv_home_screen.dart';
@@ -55,27 +56,13 @@ Future<void> main() async {
     MediaKit.ensureInitialized();
   }
   if (Platform.isWindows) {
-    // See pubspec.yaml's window_manager comment — this app never had real
-    // OS-level fullscreen on Windows before; maximizing the plain window
-    // still left the title bar (and the taskbar, unless auto-hidden)
-    // visible, "only like 98%". Always fullscreen from launch, no toggle
-    // and no windowed mode at all — confirmed directly: this app's
-    // identity is a TV-style UI (same always-immersive convention the
-    // Android TV layout already has), not a resizable desktop app that
-    // happens to also do this. `fullScreen` is part of the initial
-    // `WindowOptions` (not a separate `setFullScreen` call after the
-    // window's already shown) specifically so the window is *created*
-    // already fullscreen — no visible windowed-then-fullscreen flash on
-    // every cold start.
-    await windowManager.ensureInitialized();
-    const windowOptions = WindowOptions(
-      fullScreen: true,
-      titleBarStyle: TitleBarStyle.hidden,
-    );
-    await windowManager.waitUntilReadyToShow(windowOptions, () async {
-      await windowManager.show();
-      await windowManager.focus();
-    });
+    // See pubspec.yaml's window_manager comment — maximizing a plain
+    // window left the title bar and taskbar visible ("only like 98%"), so
+    // the default is real full screen with no title bar, TV-style. Users
+    // asked for a resizable window too (half screen): the sidebar's
+    // Windowed row, remembered — DesktopWindow creates the window directly
+    // in the saved mode, so there's no windowed-then-fullscreen flash.
+    await DesktopWindow.init(await SharedPreferences.getInstance());
   }
   // Before runApp so the splash text is already in the right language.
   // Read straight from SharedPreferences: StorageService isn't up yet.
@@ -272,8 +259,14 @@ class _NoxIptvAppState extends State<NoxIptvApp>
 
   @override
   void onWindowRestore() {
-    if (Platform.isWindows) windowManager.setFullScreen(true);
+    if (Platform.isWindows) DesktopWindow.onRestore();
   }
+
+  @override
+  void onWindowResized() => DesktopWindow.onBoundsChanged();
+
+  @override
+  void onWindowMoved() => DesktopWindow.onBoundsChanged();
 
   /// The splash is meant to be *seen*, not just theoretically present —
   /// a boot animation that only flashes for a fraction of a second reads

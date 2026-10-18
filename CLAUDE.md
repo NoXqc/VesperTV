@@ -47,7 +47,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
 4. `flutter analyze` must report the baseline **17** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `1.0.22` unless noted
+5. Check the current state of releases: `gh release list` (latest should be `1.0.23` unless noted
    in §11).
 
 ## 3. Layout (what matters)
@@ -101,7 +101,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+345**) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+346**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
@@ -230,11 +230,11 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 ## 12. Features (details in `dev-notes/features.md`)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
-## 13. Status & open items (as of 2026-10-17)
+## 13. Status & open items (as of 2026-10-18)
 - Donations will go through GitHub Sponsors (pending approval). After approval: `FUNDING.yml`,
   site/README links and an About row. Relay `X-VesperTV-App` enforcement (`PAIR_REQUIRE_APP=1`) is
   ON since 2026-10-17 (service file backed up on the VPS as `pair-relay.service.bak-*`).
-- **Unreleased (`+340`, on the Formuler, owner: "perfect"; owner is batching more before a cut):**
+- **Shipped: 1.0.23 (`+346`, 2026-10-18, latest on GitHub).** +340 (owner: "perfect"):
   Extras rail is now only Movies / TV Shows / Refresh / Extras sources; the row jumps (Popular /
   New / Featured / Recently watched, not search results) moved into the floating bar before
   Search + Genre (`_barRows`, `_barRowNodes`; bar scrolls sideways, `_focusBarNode` keeps the
@@ -258,7 +258,14 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   *around* the platform view never fired on a phone — use `widgets/video_tap_layer.dart` (invisible
   layer *over* it): TV-tab preview (off while the pane shows an error) and the Sports hero
   (tap = `_play` full screen, also Windows click).
-- **Shipped: 1.0.22 (`+339`, 2026-10-18, latest on GitHub):** Extras **genre filter**
+  **Windows (+346):** sidebar **Windowed / Full screen** row (`services/desktop_window.dart`, live
+  switch, remembered with the window bounds, both keys skip Transfer). **window_manager gotcha:** an
+  app *started* full screen saved its style before the first show (no `WS_VISIBLE`), so
+  `setFullScreen(false)` hid the window (frozen ghost frame, window-less process, style
+  `0x04CF0000`) — `show()` right after fixes it. Fullscreen player: `PlayerSidePanel` (tab on the
+  left edge, Left key when the bar isn't focused, Esc / click closes, `onPlay: _switchTo`); Pull
+  stats on Windows = its own card (≤980 wide, 88% high) beside the panel, not the phone layout.
+- **1.0.22 (`+339`, 2026-10-18):** Extras **genre filter**
   (Search + Genre in a floating pill at the top centre, per category — owner didn't want them in the
   rail with Movies/TV Shows; Up from the first row reaches it; genre picker + search are `_FloatingPanel` dialogs in the same style; **Recently watched** row per category from `ArchiveService.recordWatched` (on play, `vesper_archive_history`, hold OK = remove) and per-category **recent searches** (`vesper_archive_recent_searches`), both Extras transfer keys. Open: a user's "big library" source sent the app to the launcher — not reproduced; suspect memory: every row is built at once and each catalog fetches 2 pages: `ArchiveCatalog.genres` from the manifest's `genre` options, Cinemeta's
   list for provider rows, `withGenre`; "New" hides while a genre is picked; genre labels translated

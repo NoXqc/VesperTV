@@ -16,6 +16,7 @@ import '../models/m3u_group.dart';
 import '../models/xtream_series.dart';
 import '../services/app_preferences.dart';
 import '../services/app_update_service.dart';
+import '../services/desktop_window.dart';
 import '../services/desktop_mini_player.dart';
 import '../services/epg_service.dart';
 import '../services/playback_service.dart';
@@ -2988,6 +2989,18 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
             selected: false,
             collapsed: collapsed,
             onTap: _minimizeWindow,
+          ),
+          // Full screen <-> a normal resizable window (snaps to half a
+          // screen); see DesktopWindow.
+          ValueListenableBuilder<bool>(
+            valueListenable: DesktopWindow.windowed,
+            builder: (context, windowed, _) => _SelectableRow(
+              icon: windowed ? Icons.fullscreen : Icons.fullscreen_exit,
+              label: windowed ? tr('Full screen') : tr('Windowed'),
+              selected: false,
+              collapsed: collapsed,
+              onTap: () => DesktopWindow.setWindowed(!windowed),
+            ),
           ),
           _SelectableRow(
             icon: Icons.close,

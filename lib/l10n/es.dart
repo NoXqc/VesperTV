@@ -50,6 +50,7 @@ const Map<String, String> kEs = {
   'OK': "OK",
   'Couldn\'t start that channel': "No se pudo iniciar ese canal",
   'Full screen': "Pantalla completa",
+  'Windowed': "En ventana",
   '4 screens': "4 pantallas",
   '2 screens': "2 pantallas",
   '= audio — Select to switch, hold Select for options':

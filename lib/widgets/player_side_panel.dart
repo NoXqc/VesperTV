@@ -35,10 +35,14 @@ import 'sports_widgets.dart';
 /// node per row, so default traversal never gets a say (CLAUDE.md §10).
 class PlayerSidePanel extends StatefulWidget {
   const PlayerSidePanel(
-      {super.key, required this.current, required this.onClose});
+      {super.key, required this.current, required this.onClose, this.onPlay});
 
   final Channel current;
   final VoidCallback onClose;
+
+  /// Plays a picked channel. Null = [PlaybackService.play] (Android);
+  /// Windows passes its own player's switch (DesktopPlayerScreen).
+  final Future<void> Function(Channel)? onPlay;
 
   static const double width = 400;
 
@@ -215,7 +219,7 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
     }
     if (channel == null) return;
     widget.onClose();
-    await context.read<PlaybackService>().play(channel);
+    await _play(channel);
   }
 
   /// Hold OK on a game: its box score / stats over the stream, see-through.
@@ -251,7 +255,14 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
       return;
     }
     widget.onClose();
-    await context.read<PlaybackService>().play(channel);
+    await _play(channel);
+  }
+
+  Future<void> _play(Channel channel) {
+    final play = widget.onPlay;
+    return play != null
+        ? play(channel)
+        : context.read<PlaybackService>().play(channel);
   }
 
   static bool _isSelect(LogicalKeyboardKey key) =>
@@ -292,6 +303,11 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
     if (_isSelect(event.logicalKey)) return _onSelectKey(event);
     if (event is KeyUpEvent) return KeyEventResult.ignored;
     final key = event.logicalKey;
+    // Windows keyboard: Esc closes, like Back on a remote.
+    if (key == LogicalKeyboardKey.escape) {
+      if (event is KeyDownEvent) widget.onClose();
+      return KeyEventResult.handled;
+    }
     if (key == LogicalKeyboardKey.arrowUp) {
       if (_index[_tab] > 0) _select(_tab, _index[_tab] - 1);
       return KeyEventResult.handled;
@@ -576,6 +592,44 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
                       ]
                     : null)),
       ],
+    );
+  }
+}
+
+/// Touch and mouse: the floating tab on the left edge of a fullscreen
+/// player that opens [PlayerSidePanel] (a remote uses Left), shown with
+/// the player bars. Phone (PlayerScreen) and Windows (DesktopPlayerScreen).
+class PlayerSidePanelTab extends StatelessWidget {
+  const PlayerSidePanelTab({super.key, required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(8, 18, 10, 18),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.62),
+            borderRadius:
+                const BorderRadius.horizontal(right: Radius.circular(24)),
+            border: Border.all(color: Colors.white24),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.view_list_rounded, color: scheme.primary, size: 24),
+              const SizedBox(height: 4),
+              const Icon(Icons.chevron_right, color: Colors.white70, size: 22),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -861,7 +861,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                 child: SafeArea(
                                   right: false,
                                   child: Center(
-                                    child: _SidePanelTab(onTap: _openPanel),
+                                    child:
+                                        PlayerSidePanelTab(onTap: _openPanel),
                                   ),
                                 ),
                               ),
@@ -894,41 +895,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 ),
               ),
             )));
-  }
-}
-
-/// Touch only: the floating tab on the left edge that opens
-/// [PlayerSidePanel] (Last channels / My Teams / Live now), in the phone
-/// tab bar's pill style.
-class _SidePanelTab extends StatelessWidget {
-  const _SidePanelTab({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(8, 18, 10, 18),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.62),
-          borderRadius:
-              const BorderRadius.horizontal(right: Radius.circular(24)),
-          border: Border.all(color: Colors.white24),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.view_list_rounded, color: scheme.primary, size: 24),
-            const SizedBox(height: 4),
-            const Icon(Icons.chevron_right, color: Colors.white70, size: 22),
-          ],
-        ),
-      ),
-    );
   }
 }
 

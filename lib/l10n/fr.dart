@@ -49,6 +49,7 @@ const Map<String, String> kFr = {
   'OK': "OK",
   'Couldn\'t start that channel': "Impossible de lancer cette chaîne",
   'Full screen': "Plein écran",
+  'Windowed': "Fenêtré",
   '4 screens': "4 écrans",
   '2 screens': "2 écrans",
   '= audio — Select to switch, hold Select for options':

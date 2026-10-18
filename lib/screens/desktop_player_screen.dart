@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:provider/provider.dart';
@@ -12,6 +14,7 @@ import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../services/storage_service.dart';
 import '../l10n/l10n.dart';
+import '../widgets/player_side_panel.dart';
 import '../widgets/desktop_subtitles.dart';
 
 /// A deliberately standalone, Windows-only playback screen — see
@@ -99,6 +102,26 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   late final VideoController _videoController;
   late Channel _currentChannel;
   bool _controlsVisible = true;
+
+  /// [PlayerSidePanel] (Last channels / My Teams / Live now) on a live
+  /// channel: the left-edge tab or the Left key opens it, Esc / a click on
+  /// the video closes it — Windows has no remote Left (owner, 2026-10-18).
+  bool _panelOpen = false;
+  final FocusNode _rootFocus = FocusNode(debugLabel: 'desktop-player-root');
+
+  void _openPanel() {
+    if (!_isLive) return;
+    setState(() {
+      _panelOpen = true;
+      _controlsVisible = false;
+    });
+  }
+
+  void _closePanel() {
+    if (!_panelOpen) return;
+    setState(() => _panelOpen = false);
+    _rootFocus.requestFocus();
+  }
 
   /// False when this screen is reusing a session handed off by
   /// [DesktopMiniPlayer] (see [initState]) — [dispose] must never tear
@@ -194,6 +217,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   @override
   void dispose() {
     _completedSubscription?.cancel();
+    _rootFocus.dispose();
     if (_ownsPlayer && !_handedOffToMiniPlayer) _player.dispose();
     super.dispose();
   }
@@ -487,74 +511,125 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   @override
   Widget build(BuildContext context) {
     final playlist = context.watch<PlaylistManager>();
+    final size = MediaQuery.sizeOf(context);
     return PopScope(
-      canPop: true,
+      // Back with the side panel open closes it first.
+      canPop: !_panelOpen,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _closePanel();
+      },
       child: Scaffold(
         backgroundColor: Colors.black,
-        body: GestureDetector(
-          onTap: () => setState(() => _controlsVisible = !_controlsVisible),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              // NoVideoControls — Video defaults to its own built-in
-              // AdaptiveVideoControls overlay (play/pause, seek bar, and
-              // its own fullscreen toggle). Left on, that showed up as a
-              // second player bar stacked on top of this screen's own,
-              // and its fullscreen button entered real native-window
-              // fullscreen with no way back to this screen's back
-              // button (which isn't part of that overlay at all) short of
-              // closing the app. This screen's own overlay below is the
-              // only controls surface.
-              Center(
-                  child: Video(
-                      controller: _videoController, controls: NoVideoControls)),
-              if (_controlsVisible) ...[
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(8, 8, 16, 24),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withValues(alpha: 0.6),
-                          Colors.transparent,
-                        ],
+        body: Focus(
+          focusNode: _rootFocus,
+          autofocus: true,
+          onKeyEvent: (_, event) {
+            if (event is KeyDownEvent &&
+                event.logicalKey == LogicalKeyboardKey.arrowLeft &&
+                // Not while arrowing along the player bar's buttons.
+                _rootFocus.hasPrimaryFocus &&
+                _isLive &&
+                !_panelOpen) {
+              _openPanel();
+              return KeyEventResult.handled;
+            }
+            return KeyEventResult.ignored;
+          },
+          child: GestureDetector(
+            onTap: () => _panelOpen
+                ? _closePanel()
+                : setState(() => _controlsVisible = !_controlsVisible),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // NoVideoControls — Video defaults to its own built-in
+                // AdaptiveVideoControls overlay (play/pause, seek bar, and
+                // its own fullscreen toggle). Left on, that showed up as a
+                // second player bar stacked on top of this screen's own,
+                // and its fullscreen button entered real native-window
+                // fullscreen with no way back to this screen's back
+                // button (which isn't part of that overlay at all) short of
+                // closing the app. This screen's own overlay below is the
+                // only controls surface.
+                Center(
+                    child: Video(
+                        controller: _videoController,
+                        controls: NoVideoControls)),
+                if (_controlsVisible) ...[
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(8, 8, 16, 24),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withValues(alpha: 0.6),
+                            Colors.transparent,
+                          ],
+                        ),
                       ),
-                    ),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        onPressed: _handleBack,
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: IconButton(
+                          icon:
+                              const Icon(Icons.arrow_back, color: Colors.white),
+                          onPressed: _handleBack,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(16, 28, 16, 12),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.topCenter,
-                        colors: [
-                          Colors.black.withValues(alpha: 0.8),
-                          Colors.transparent,
-                        ],
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(16, 28, 16, 12),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: [
+                            Colors.black.withValues(alpha: 0.8),
+                            Colors.transparent,
+                          ],
+                        ),
+                      ),
+                      child: _buildBar(playlist),
+                    ),
+                  ),
+                  if (_isLive && !_panelOpen)
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      child: Center(
+                        child: PlayerSidePanelTab(onTap: _openPanel),
                       ),
                     ),
-                    child: _buildBar(playlist),
+                ],
+                if (_panelOpen)
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: math.min(PlayerSidePanel.width, size.width * 0.88),
+                    child: GestureDetector(
+                      // Clicks on the panel's empty space mustn't reach the
+                      // video's click-to-close.
+                      onTap: () {},
+                      child: PlayerSidePanel(
+                        current: _currentChannel,
+                        onClose: _closePanel,
+                        onPlay: _switchTo,
+                      ),
+                    ),
                   ),
-                ),
               ],
-            ],
+            ),
           ),
         ),
       ),

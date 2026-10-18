@@ -633,6 +633,8 @@ class StorageService {
     AppConstants.keyEpgCache,
     AppConstants.keyEpgLastUpdated,
     AppConstants.keyLayoutMode,
+    AppConstants.keyWindowsWindowed,
+    AppConstants.keyWindowsBounds,
     AppConstants.keyPlaylistEnabled,
     AppConstants.keyPinFailCount,
     AppConstants.keyPinLockedUntil,

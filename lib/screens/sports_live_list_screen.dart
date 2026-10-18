@@ -814,25 +814,41 @@ class _SportsGameDetailsDialogState extends State<SportsGameDetailsDialog> {
     // against the side panel (its phone width, see PlayerScreen), with a
     // strip on the right to tap out of it (owner, 2026-10-18). TV unchanged.
     final phoneOver = over &&
+        Platform.isAndroid &&
         size.width > size.height &&
         !context.read<AppPreferences>().isTelevision;
+    // Windows: a card of its own size beside the panel, not the TV's
+    // "everything right of the panel" (far too big on a 4K monitor, owner
+    // 2026-10-18): at most 980 wide and 88% high, centred vertically.
+    final desktopOver = over && Platform.isWindows;
+    const desktopMaxWidth = 980.0;
     final pad = MediaQuery.paddingOf(context);
     final dialog = Dialog(
       backgroundColor: over ? const Color(0x9E101014) : const Color(0xF2121216),
-      insetPadding: phoneOver
+      insetPadding: desktopOver
           ? EdgeInsets.fromLTRB(
-              (size.width * 0.88)
-                      .clamp(0.0, SportsGameDetailsDialog.leftInset) +
-                  6,
-              pad.top + 6,
-              pad.right + 64,
-              pad.bottom + 6)
-          : over
-              ? EdgeInsets.fromLTRB(SportsGameDetailsDialog.leftInset + 16,
-                  size.height * 0.05, size.width * 0.03, size.height * 0.05)
-              : EdgeInsets.symmetric(
-                  horizontal: narrow ? 8 : size.width * 0.06,
-                  vertical: narrow ? 16 : size.height * 0.05),
+              SportsGameDetailsDialog.leftInset + 16,
+              size.height * 0.06,
+              (size.width -
+                      SportsGameDetailsDialog.leftInset -
+                      16 -
+                      desktopMaxWidth)
+                  .clamp(16.0, double.infinity),
+              size.height * 0.06)
+          : phoneOver
+              ? EdgeInsets.fromLTRB(
+                  (size.width * 0.88)
+                          .clamp(0.0, SportsGameDetailsDialog.leftInset) +
+                      6,
+                  pad.top + 6,
+                  pad.right + 64,
+                  pad.bottom + 6)
+              : over
+                  ? EdgeInsets.fromLTRB(SportsGameDetailsDialog.leftInset + 16,
+                      size.height * 0.05, size.width * 0.03, size.height * 0.05)
+                  : EdgeInsets.symmetric(
+                      horizontal: narrow ? 8 : size.width * 0.06,
+                      vertical: narrow ? 16 : size.height * 0.05),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
