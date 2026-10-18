@@ -221,6 +221,15 @@ class SubtitleTracks {
     }
   }
 
+  /// The remembered choice for [channel]'s series (`kind`/`lang`/`label`),
+  /// or null — Windows' player reapplies it itself (desktop_subtitles.dart).
+  static Map<String, dynamic>? seriesChoiceFor(
+      StorageService storage, Channel channel) {
+    final key = seriesKeyOf(channel);
+    final choice = key == null ? null : _seriesChoices(storage)[key];
+    return choice is Map ? Map<String, dynamic>.from(choice) : null;
+  }
+
   /// [kind] 'embedded' (a track of the file, matched by [lang] + [label])
   /// or 'online' (the first add-on match in [lang]); null = forget.
   static Future<void> rememberForSeries(

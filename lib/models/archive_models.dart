@@ -29,7 +29,7 @@ enum ArchiveType {
 /// One catalog a source's manifest lists, e.g. `{type: movie, id: pd_noir,
 /// name: Film Noir}`. Only catalogs that need no `extra` argument (search
 /// or genre are optional or absent) are kept — those are the ones that can
-/// be shown as a plain row.
+/// be shown as a plain row. An optional genre is the Extras genre filter.
 class ArchiveCatalog {
   const ArchiveCatalog({
     required this.type,
@@ -37,6 +37,7 @@ class ArchiveCatalog {
     required this.name,
     this.extra = const {},
     this.searchable = false,
+    this.genres = const [],
   });
 
   final ArchiveType type;
@@ -49,6 +50,25 @@ class ArchiveCatalog {
 
   /// The catalog takes the schema's optional `search` extra.
   final bool searchable;
+
+  /// The values its optional `genre` extra offers (the manifest's
+  /// `options`), minus pure years: what the Extras genre filter can ask
+  /// this catalog for. Empty = the row can't be filtered.
+  final List<String> genres;
+
+  /// This catalog narrowed to [genre] (sent as the `genre` extra), or null
+  /// when it doesn't offer that genre or already fixes its own.
+  ArchiveCatalog? withGenre(String genre) =>
+      extra.containsKey('genre') || !genres.contains(genre)
+          ? null
+          : ArchiveCatalog(
+              type: type,
+              id: id,
+              name: name,
+              extra: {...extra, 'genre': genre},
+              searchable: searchable,
+              genres: genres,
+            );
 
   /// [id] plus [extra]: unique per row, used for cache rows and row keys.
   String get slug => extra.isEmpty
@@ -63,6 +83,7 @@ class ArchiveCatalog {
         'name': name,
         if (extra.isNotEmpty) 'fixedExtra': extra,
         if (searchable) 'searchable': true,
+        if (genres.isNotEmpty) 'genres': genres,
       };
 
   /// Reads both a manifest entry (`extra: [{name: search}, …]`) and the
@@ -72,6 +93,13 @@ class ArchiveCatalog {
     final id = j['id']?.toString();
     if (type == null || id == null || id.isEmpty) return null;
     final fixed = j['fixedExtra'];
+    final extras = j['extra'] as List? ?? const [];
+    final genreOptions = [
+      ...(j['genres'] as List? ?? const []),
+      for (final e in extras)
+        if (e is Map && e['name'] == 'genre' && e['isRequired'] != true)
+          ...(e['options'] as List? ?? const []),
+    ];
     return ArchiveCatalog(
       type: type,
       id: id,
@@ -80,9 +108,12 @@ class ArchiveCatalog {
           ? {for (final e in fixed.entries) '${e.key}': '${e.value}'}
           : const {},
       searchable: j['searchable'] == true ||
-          (j['extra'] as List? ?? const [])
-              .any((e) => e is Map && e['name'] == 'search') ||
+          extras.any((e) => e is Map && e['name'] == 'search') ||
           (j['extraSupported'] as List? ?? const []).contains('search'),
+      genres: [
+        for (final g in {for (final o in genreOptions) '$o'.trim()})
+          if (g.isNotEmpty && !RegExp(r'^\d+$').hasMatch(g)) g,
+      ],
     );
   }
 }
@@ -95,6 +126,18 @@ class ArchiveCatalogProvider {
   static const baseUrl = 'https://v3-cinemeta.strem.io';
   static const name = 'Cinemeta';
 
+  /// The genres its Popular and Featured catalogs take (its manifest's
+  /// `genre` options; series add three TV-only ones).
+  static const movieGenres = [
+    'Action', 'Adventure', 'Animation', 'Biography', 'Comedy', 'Crime', //
+    'Documentary', 'Drama', 'Family', 'Fantasy', 'History', 'Horror',
+    'Mystery', 'Romance', 'Sci-Fi', 'Sport', 'Thriller', 'War', 'Western',
+  ];
+  static const seriesGenres = [
+    ...movieGenres,
+    'Reality-TV', 'Talk-Show', 'Game-Show', //
+  ];
+
   /// The rows a stream-only source shows, for the [types] it streams:
   /// Popular (also the one searched), New (this year's titles — the
   /// provider's `year` catalog needs the year) and Featured (by rating).
@@ -105,10 +148,19 @@ class ArchiveCatalogProvider {
     return [
       for (final t in ArchiveType.values)
         if (types.contains(t)) ...[
-          ArchiveCatalog(type: t, id: 'top', name: 'Popular', searchable: true),
+          ArchiveCatalog(
+              type: t,
+              id: 'top',
+              name: 'Popular',
+              searchable: true,
+              genres: t == ArchiveType.movie ? movieGenres : seriesGenres),
           ArchiveCatalog(
               type: t, id: 'year', name: 'New', extra: {'genre': year}),
-          ArchiveCatalog(type: t, id: 'imdbRating', name: 'Featured'),
+          ArchiveCatalog(
+              type: t,
+              id: 'imdbRating',
+              name: 'Featured',
+              genres: t == ArchiveType.movie ? movieGenres : seriesGenres),
         ],
     ];
   }

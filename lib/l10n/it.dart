@@ -857,8 +857,6 @@ const Map<String, String> kIt = {
   'Added · hold to send back': "Aggiunto · tieni premuto per rimetterlo",
   '{name} is back in the league bank':
       "{name} è tornato nell'archivio campionati",
-  'OK: show/hide or add · Hold OK on an added league to send it back to the bank':
-      "OK: mostra/nascondi o aggiungi · Tieni premuto OK su un campionato aggiunto per rimetterlo nell'archivio",
   'England': "Inghilterra",
   'Spain': "Spagna",
   'Germany': "Germania",
@@ -1111,4 +1109,47 @@ const Map<String, String> kIt = {
   'Removes the Extras tab.': 'Rimuove la scheda Extra.',
   'Hide Multiview': 'Nascondi Multivista',
   'Removes the Multiview row and the player\'s Open in Multiview button.': 'Rimuove la riga Multivista e il pulsante Apri in Multivista del lettore.',
+  // Extras genre filter
+  'Genre': 'Genere',
+  'All genres': 'Tutti i generi',
+  'genre.Action': 'Azione',
+  'genre.Adventure': 'Avventura',
+  'genre.Animation': 'Animazione',
+  'genre.Biography': 'Biografico',
+  'genre.Comedy': 'Commedia',
+  'genre.Crime': 'Crimine',
+  'genre.Documentary': 'Documentario',
+  'genre.Drama': 'Drammatico',
+  'genre.Family': 'Famiglia',
+  'genre.Fantasy': 'Fantasy',
+  'genre.History': 'Storico',
+  'genre.Horror': 'Horror',
+  'genre.Mystery': 'Mistero',
+  'genre.Romance': 'Sentimentale',
+  'genre.Sci-Fi': 'Fantascienza',
+  'genre.Sport': 'Sport',
+  'genre.Thriller': 'Thriller',
+  'genre.War': 'Guerra',
+  'genre.Western': 'Western',
+  'genre.Reality-TV': 'Reality',
+  'genre.Talk-Show': 'Talk show',
+  'genre.Game-Show': 'Quiz',
+  // Sports: favourite league
+  'OK: show/hide or add · Hold OK: favourite league, or send an added league back to the bank': 'OK: mostra/nascondi o aggiungi · Tieni premuto OK: campionato preferito, o rimetti nell\'archivio un campionato aggiunto',
+  'Make favourite league': 'Rendi campionato preferito',
+  'Remove from favourite': 'Togli dai preferiti',
+  '{tab} opens on it and its games come first in Live now': '{tab} si apre su di esso e le sue partite vengono prima in In diretta',
+  'Send back to the league bank': 'Rimetti nell\'archivio dei campionati',
+  'Favourite league': 'Campionato preferito',
+  // Player side panel: Pull stats
+  '◀ ▶ tabs  ·  OK to watch  ·  Hold OK for stats  ·  Back to close': '◀ ▶ schede  ·  OK per guardare  ·  Tieni premuto OK: statistiche  ·  Indietro per chiudere',
+  // Sports hero on Windows
+  'Click the game again or Enter: full screen  ·  Esc: stop': 'Clicca di nuovo la partita o Invio: schermo intero  ·  Esc: ferma',
+  'Click again: watch here  ·  Hold: pick the channel': 'Clicca di nuovo: guarda qui  ·  Tieni premuto: scegli il canale',
+  // Extras floating Search / Genre bar
+  'Movie genres': 'Generi di film',
+  'TV show genres': 'Generi di serie',
+  // Extras: watched history + recent searches
+  'Recently watched': 'Visti di recente',
+  'Clear recent searches': 'Cancella ricerche recenti',
 };

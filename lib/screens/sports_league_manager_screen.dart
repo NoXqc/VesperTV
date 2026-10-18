@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../models/sports.dart';
 import '../services/storage_service.dart';
+import '../utils/constants.dart';
 import '../utils/tv_theme.dart';
 import '../widgets/hold_to_activate.dart';
 import '../widgets/section_label.dart';
@@ -16,7 +17,9 @@ import '../l10n/l10n.dart';
 ///
 /// "Your leagues" = the 13 base leagues ([kSportsLeagues], can be hidden but
 /// never removed) plus leagues added from the bank. OK toggles shown/hidden;
-/// holding OK on an added league sends it back to the bank. "League bank" =
+/// holding OK opens the league's menu: make it the favourite (Sports Trak
+/// opens on it, its games lead the player's Live now) and, for an added
+/// league, send it back to the bank. "League bank" =
 /// [kSportsLeagueBank] minus what's added, grouped by region; OK adds (and
 /// shows) a league. Saves on every change; pops `true` if anything changed.
 ///
@@ -38,6 +41,9 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
 
   /// Added bank league ids, in the order added.
   late List<String> _added;
+
+  /// The favourite league id, or null.
+  late String? _favorite = _storage.getSportsFavoriteLeague();
   bool _changed = false;
 
   final _yoursScope = FocusScopeNode(debugLabel: 'leagues-yours');
@@ -90,8 +96,64 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
 
   Future<void> _save() async {
     _changed = true;
+    // A hidden or sent-back league stops being the favourite.
+    if (_favorite != null && !_shown.contains(_favorite)) _favorite = null;
     await _storage.setSportsAddedLeagues(_added);
     await _storage.setSportsLeagues(_shown);
+    await _storage.setSportsFavoriteLeague(_favorite);
+  }
+
+  /// Hold OK on one of your leagues: favourite on/off, send back (added).
+  Future<void> _openMenu(SportsLeague l) async {
+    final favorite = _favorite == l.id;
+    final action = await showDialog<String>(
+      context: context,
+      // Opened by a hold: drop the held OK's repeats.
+      builder: (context) => SwallowHeldActivate(
+        child: AlertDialog(
+          backgroundColor: const Color(0xFF15151A),
+          title: Text(l.name),
+          content: SizedBox(
+            width: 440,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TvMenuTile(
+                  autofocus: true,
+                  icon: favorite ? Icons.star_outline : Icons.star,
+                  title: favorite
+                      ? tr('Remove from favourite')
+                      : tr('Make favourite league'),
+                  subtitle: favorite
+                      ? null
+                      : tr(
+                          '{tab} opens on it and its games come first in Live now',
+                          {'tab': AppConstants.sportsTabName}),
+                  onTap: () => Navigator.of(context).pop('favorite'),
+                ),
+                if (!l.isBase)
+                  TvMenuTile(
+                    icon: Icons.remove_circle_outline,
+                    title: tr('Send back to the league bank'),
+                    onTap: () => Navigator.of(context).pop('remove'),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (action == 'favorite') {
+      setState(() {
+        _favorite = favorite ? null : l.id;
+        // The favourite is always shown.
+        if (!favorite && !_shown.contains(l.id)) _shown.add(l.id);
+      });
+      await _save();
+    } else if (action == 'remove') {
+      _remove(l);
+    }
   }
 
   void _toggleShown(SportsLeague l) {
@@ -268,7 +330,7 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
                             ],
                           ),
                         ),
-                        Text(tr('OK: show/hide or add · Hold OK on an added league to send it back to the bank'),
+                        Text(tr('OK: show/hide or add · Hold OK: favourite league, or send an added league back to the bank'),
                             style: const TextStyle(
                                 color: Colors.white54, fontSize: 13)),
                         const SizedBox(height: 10),
@@ -297,19 +359,30 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
   Widget _yourTile(SportsLeague l, {required bool autofocus}) {
     final shown = _shown.contains(l.id);
     final scheme = Theme.of(context).colorScheme;
+    final favorite = _favorite == l.id;
+    final subtitle = [
+      if (favorite) tr('Favourite league'),
+      if (!l.isBase) tr('Added · hold to send back'),
+    ].join(' · ');
     return HoldToActivate(
       key: ValueKey('yours:${l.id}'),
       onTap: () => _toggleShown(l),
-      onHold: l.isBase ? null : () => _remove(l),
+      onHold: () => _openMenu(l),
       child: TvMenuTile(
         focusNode: _node(l.id),
         autofocus: autofocus,
         leading: SportsLogo(url: l.logoUrl, size: 36, fallback: l.shortName),
         title: l.name,
-        subtitle: l.isBase ? null : tr('Added · hold to send back'),
-        trailing: Icon(
-            shown ? Icons.check_circle : Icons.radio_button_unchecked,
-            color: shown ? scheme.primary : Colors.white38),
+        subtitle: subtitle.isEmpty ? null : subtitle,
+        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+          if (favorite)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Icon(Icons.star, color: scheme.primary),
+            ),
+          Icon(shown ? Icons.check_circle : Icons.radio_button_unchecked,
+              color: shown ? scheme.primary : Colors.white38),
+        ]),
         onTap: () => _toggleShown(l),
       ),
     );

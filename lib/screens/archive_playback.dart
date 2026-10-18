@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -136,6 +137,8 @@ Future<void> playArchiveTitle(
   if (picked == null || !context.mounted) return;
   final channel =
       service.channelFor(source, meta, picked.stream, episode: episode);
+  // Extras' "Recently watched" row (the show, for an episode).
+  unawaited(service.recordWatched(source, meta));
 
   Future<Channel?> resolve(Channel placeholder) async {
     final video = videosById[placeholder.id];

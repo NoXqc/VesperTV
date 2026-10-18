@@ -17,14 +17,17 @@ import '../services/sports_channel_matcher.dart';
 import '../services/sports_follows.dart';
 import '../services/sports_service.dart';
 import '../services/storage_service.dart';
+import '../screens/sports_live_list_screen.dart';
+import 'hold_to_activate.dart';
 import 'sports_widgets.dart';
 
 /// Left on the remote in the fullscreen live player: a see-through panel
 /// over the left of the picture with three tabs — Last channels, My Teams
 /// (today's games of followed teams) and Live now (games playing right now
 /// in the viewer's active leagues). OK plays the channel / the game's best
-/// matched channel in place; Back closes it (handled by PlayerScreen's
-/// PopScope).
+/// matched channel in place; holding OK on a game "pulls" its stats over the
+/// stream (see-through [SportsGameDetailsDialog], Back returns here); Back
+/// closes it (handled by PlayerScreen's PopScope).
 ///
 /// Keys are dispatched explicitly (Left/Right = tabs, Up/Down = rows) from
 /// one Focus node, with the selected row only drawn highlighted — no focus
@@ -62,6 +65,14 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
   bool _hideScores = false;
   String? _message;
   Timer? _poll;
+
+  /// Hold OK on a game row (see [_onKey]): like [HoldToActivate], a hold
+  /// needs the remote's own key repeats, not just time — a late key-up
+  /// after a click on a busy box has none — so it fires from a repeat.
+  bool _selectDown = false;
+  bool _holdFired = false;
+  final Stopwatch _held = Stopwatch();
+  static const _holdDuration = Duration(milliseconds: 550);
 
   @override
   void initState() {
@@ -123,15 +134,17 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
         return s != 0 ? s : a.start.compareTo(b.start);
       });
     final savedIds = {for (final l in saved) l.id};
+    // The favourite league's games first, then My Teams' games, each
+    // keeping the start order.
+    final favoriteId = favoriteSportsLeague(storage)?.id;
+    int rank(SportsGame g) =>
+        (g.league.id == favoriteId ? 0 : 2) + (follows.involves(g) ? 0 : 1);
     final live = [
-      ...games.where((g) =>
-          g.state == GameState.live &&
-          savedIds.contains(g.league.id) &&
-          follows.involves(g)),
-      ...games.where((g) =>
-          g.state == GameState.live &&
-          savedIds.contains(g.league.id) &&
-          !follows.involves(g)),
+      for (var r = 0; r < 4; r++)
+        ...games.where((g) =>
+            g.state == GameState.live &&
+            savedIds.contains(g.league.id) &&
+            rank(g) == r),
     ];
     setState(() {
       _teamGames = team;
@@ -204,7 +217,72 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
     await context.read<PlaybackService>().play(channel);
   }
 
+  /// Hold OK on a game: its box score / stats over the stream, see-through.
+  /// Watch on a channel there plays it like OK does.
+  Future<void> _openStats() async {
+    if (_tab == 0) return;
+    final games = _tab == 1 ? _teamGames : _liveGames;
+    final i = _index[_tab];
+    if (i >= games.length) return;
+    final g = games[i];
+    final channel = await showDialog<Channel>(
+      context: context,
+      barrierColor: Colors.transparent,
+      // Opened by a hold: drop the held OK's repeats.
+      builder: (_) => SwallowHeldActivate(
+        child: SportsGameDetailsDialog(
+          game: g,
+          matches: _matches[SportsChannelPicks.eventKey(g)] ?? const [],
+          hideScores: _hideScores,
+          overStream: true,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (channel == null) {
+      _focus.requestFocus();
+      return;
+    }
+    widget.onClose();
+    await context.read<PlaybackService>().play(channel);
+  }
+
+  static bool _isSelect(LogicalKeyboardKey key) =>
+      key == LogicalKeyboardKey.select ||
+      key == LogicalKeyboardKey.enter ||
+      key == LogicalKeyboardKey.numpadEnter ||
+      key == LogicalKeyboardKey.gameButtonA;
+
+  /// OK on a game tab: tap = watch (on key-up), hold = stats. Last
+  /// channels has no hold, so it plays on key-down as before.
+  KeyEventResult _onSelectKey(KeyEvent event) {
+    if (_tab == 0) {
+      if (event is KeyDownEvent) unawaited(_activate());
+      return KeyEventResult.handled;
+    }
+    if (event is KeyDownEvent) {
+      _selectDown = true;
+      _holdFired = false;
+      _held
+        ..reset()
+        ..start();
+    } else if (event is KeyRepeatEvent) {
+      if (_selectDown && !_holdFired && _held.elapsed >= _holdDuration) {
+        _holdFired = true;
+        unawaited(_openStats());
+      }
+    } else if (event is KeyUpEvent) {
+      // Only a press that started here (an orphaned key-up is ignored).
+      final tap = _selectDown && !_holdFired;
+      _selectDown = false;
+      _held.stop();
+      if (tap) unawaited(_activate());
+    }
+    return KeyEventResult.handled;
+  }
+
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (_isSelect(event.logicalKey)) return _onSelectKey(event);
     if (event is KeyUpEvent) return KeyEventResult.ignored;
     final key = event.logicalKey;
     if (key == LogicalKeyboardKey.arrowUp) {
@@ -221,13 +299,6 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
     }
     if (key == LogicalKeyboardKey.arrowRight) {
       if (event is KeyDownEvent) _switchTab(_tab + 1);
-      return KeyEventResult.handled;
-    }
-    if (key == LogicalKeyboardKey.select ||
-        key == LogicalKeyboardKey.enter ||
-        key == LogicalKeyboardKey.numpadEnter ||
-        key == LogicalKeyboardKey.gameButtonA) {
-      if (event is KeyDownEvent) unawaited(_activate());
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
@@ -297,7 +368,10 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
                 child: Text(
-                  tr('◀ ▶ tabs  ·  OK to watch  ·  Back to close'),
+                  _tab == 0
+                      ? tr('◀ ▶ tabs  ·  OK to watch  ·  Back to close')
+                      : tr(
+                          '◀ ▶ tabs  ·  OK to watch  ·  Hold OK for stats  ·  Back to close'),
                   style: const TextStyle(color: Colors.white54, fontSize: 11),
                 ),
               ),
@@ -378,6 +452,12 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
                 _select(_tab, i);
                 unawaited(_activate());
               },
+              onLongPress: _tab == 0
+                  ? null
+                  : () {
+                      _select(_tab, i);
+                      unawaited(_openStats());
+                    },
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 decoration: BoxDecoration(

@@ -18,6 +18,7 @@ class ArchiveRow {
     required this.catalog,
     required this.items,
     this.searchQuery,
+    this.itemSources,
   });
 
   final ArchiveSource source;
@@ -25,11 +26,20 @@ class ArchiveRow {
   final List<ArchiveMeta> items;
   final String? searchQuery;
 
-  bool get isSearch => searchQuery != null;
+  /// Set on the watched-history row, whose titles come from several
+  /// sources: the source of each item (else every item is [source]'s).
+  final List<ArchiveSource>? itemSources;
 
-  String get key => isSearch
-      ? 'search|${ArchiveService._rowKey(source, catalog)}'
-      : ArchiveService._rowKey(source, catalog);
+  ArchiveSource sourceAt(int i) => itemSources?[i] ?? source;
+
+  bool get isSearch => searchQuery != null;
+  bool get isHistory => itemSources != null;
+
+  String get key => isHistory
+      ? 'history|${catalog.type.wire}'
+      : isSearch
+          ? 'search|${ArchiveService._rowKey(source, catalog)}'
+          : ArchiveService._rowKey(source, catalog);
 
   /// The row header: the catalog's own name, or the source name when the
   /// catalog has none. Provider row names ("Popular") and search rows are
@@ -75,6 +85,7 @@ class ArchiveService extends ChangeNotifier {
   final Map<String, List<ArchiveMeta>> _items = {};
   bool _loadedFromCache = false;
   bool _refreshing = false;
+  bool _refreshAgain = false;
   String? lastError;
 
   bool get refreshing => _refreshing;
@@ -144,17 +155,59 @@ class ArchiveService extends ChangeNotifier {
 
   /// Catalogs of [type] to read, one per distinct row: a provider catalog
   /// shared by several stream-only sources is listed once (Play still
-  /// asks every stream-only source — see [streams]).
-  List<(ArchiveSource, ArchiveCatalog)> _catalogs(ArchiveType type) {
+  /// asks every stream-only source — see [streams]). While a genre is
+  /// picked ([setGenre]) only the catalogs offering it are listed, narrowed
+  /// to it; [filtered] false lists the plain ones (search ignores genre).
+  List<(ArchiveSource, ArchiveCatalog)> _catalogs(ArchiveType type,
+      {bool filtered = true}) {
+    final genre = filtered ? _genre[type] : null;
     final shown = <String>{};
     return [
       for (final s in enabledSources)
-        for (final c in s.catalogs)
-          if (c.type == type)
-            if (!s.streamOnly ||
-                shown.add('${s.catalogBaseUrl}|${c.type.wire}|${c.slug}'))
-              (s, c),
+        for (final base in s.catalogs)
+          if (base.type == type)
+            if (genre == null ? base : base.withGenre(genre) case final c?)
+              if (!s.streamOnly ||
+                  shown.add('${s.catalogBaseUrl}|${c.type.wire}|${c.slug}'))
+                (s, c),
     ];
+  }
+
+  // ---- genre filter -------------------------------------------------------
+
+  /// The genre picked per type (rail "Genre"), kept for the session.
+  final Map<ArchiveType, String> _genre = {};
+
+  String? genre(ArchiveType type) => _genre[type];
+
+  /// Every genre a catalog of [type] can be narrowed to, in the order the
+  /// sources list them.
+  List<String> genres(ArchiveType type) => {
+        for (final (_, c) in _catalogs(type, filtered: false)) ...c.genres,
+      }.toList();
+
+  /// Narrows [type]'s rows to [genre] (null = all): the rows offering it
+  /// are shown from cache at once and fetched behind when stale.
+  Future<void> setGenre(ArchiveType type, String? genre) async {
+    if (_genre[type] == genre) return;
+    if (genre == null) {
+      _genre.remove(type);
+    } else {
+      _genre[type] = genre;
+    }
+    _notify();
+    if (genre == null) return;
+    for (final (s, c) in _catalogs(type)) {
+      final key = _rowKey(s, c);
+      if (_items.containsKey(key)) continue;
+      try {
+        _items[key] = await _cache.read(s.key, c);
+      } catch (e) {
+        debugPrint('ArchiveService: cache read failed: $e');
+      }
+    }
+    _notify();
+    await refresh();
   }
 
   /// The current search per type: its query and result rows.
@@ -176,13 +229,14 @@ class ArchiveService extends ChangeNotifier {
   Future<void> search(ArchiveType type, String query) async {
     final q = query.trim();
     if (q.isEmpty) return clearSearch(type);
+    unawaited(_rememberSearch(type, q));
     _searching = true;
     _search[type] = (q, const []);
     _notify();
     final out = <ArchiveRow>[];
     try {
       final groups = <String, List<(ArchiveSource, ArchiveCatalog)>>{};
-      for (final sc in _catalogs(type)) {
+      for (final sc in _catalogs(type, filtered: false)) {
         final s = sc.$1;
         groups
             .putIfAbsent(
@@ -223,6 +277,108 @@ class ArchiveService extends ChangeNotifier {
   }
 
   bool canSearch(ArchiveType type) => _catalogs(type).isNotEmpty;
+
+  // ---- recent searches ----------------------------------------------------
+
+  static const _recentSearchMax = 8;
+
+  Map<String, dynamic> _recentSearchMap() {
+    try {
+      final raw = _storage.getArchiveRecentSearchesJson();
+      return raw == null
+          ? {}
+          : Map<String, dynamic>.from(jsonDecode(raw) as Map);
+    } catch (_) {
+      return {};
+    }
+  }
+
+  /// The last searches of [type], newest first (each category its own).
+  List<String> recentSearches(ArchiveType type) => [
+        for (final q in (_recentSearchMap()[type.wire] as List? ?? const []))
+          '$q',
+      ];
+
+  Future<void> _rememberSearch(ArchiveType type, String query) async {
+    final lower = query.toLowerCase();
+    final list = [
+      query,
+      ...recentSearches(type).where((q) => q.toLowerCase() != lower),
+    ].take(_recentSearchMax).toList();
+    await _storage.setArchiveRecentSearchesJson(
+        jsonEncode({..._recentSearchMap(), type.wire: list}));
+  }
+
+  Future<void> forgetRecentSearches(ArchiveType type) async {
+    await _storage.setArchiveRecentSearchesJson(
+        jsonEncode({..._recentSearchMap()}..remove(type.wire)));
+    _notify();
+  }
+
+  // ---- watched history ----------------------------------------------------
+
+  /// Titles kept in the history (both categories together).
+  static const _historyMax = 40;
+
+  List<Map<String, dynamic>> _historyEntries() {
+    try {
+      final raw = _storage.getArchiveHistoryJson();
+      if (raw == null) return [];
+      return [
+        for (final e in jsonDecode(raw) as List)
+          if (e is Map) Map<String, dynamic>.from(e),
+      ];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Called when a title (a movie, or a show's episode) starts playing: it
+  /// moves to the front of its category's "Recently watched" row.
+  Future<void> recordWatched(ArchiveSource source, ArchiveMeta meta) async {
+    final entries = [
+      {'src': source.manifestUrl, 'meta': meta.toJson()},
+      ..._historyEntries().where((e) => !(e['src'] == source.manifestUrl &&
+          (e['meta'] as Map?)?['id'] == meta.id)),
+    ].take(_historyMax).toList();
+    await _storage.setArchiveHistoryJson(jsonEncode(entries));
+    _notify();
+  }
+
+  Future<void> removeFromHistory(ArchiveSource source, ArchiveMeta meta) async {
+    final entries = _historyEntries()
+        .where((e) => !(e['src'] == source.manifestUrl &&
+            (e['meta'] as Map?)?['id'] == meta.id))
+        .toList();
+    await _storage
+        .setArchiveHistoryJson(entries.isEmpty ? null : jsonEncode(entries));
+    _notify();
+  }
+
+  /// "Recently watched" for [type]: played titles whose source is still
+  /// enabled, newest first. Not narrowed by the genre filter.
+  ArchiveRow? _historyRow(ArchiveType type) {
+    final byUrl = {for (final s in enabledSources) s.manifestUrl: s};
+    final items = <ArchiveMeta>[];
+    final sources = <ArchiveSource>[];
+    for (final e in _historyEntries()) {
+      final source = byUrl[e['src']];
+      final m = e['meta'];
+      if (source == null || m is! Map) continue;
+      final meta = ArchiveMeta.fromJson(Map<String, dynamic>.from(m));
+      if (meta == null || meta.type != type) continue;
+      items.add(meta);
+      sources.add(source);
+    }
+    if (items.isEmpty) return null;
+    return ArchiveRow(
+      source: sources.first,
+      catalog:
+          ArchiveCatalog(type: type, id: 'history', name: 'Recently watched'),
+      items: items,
+      itemSources: sources,
+    );
+  }
 
   /// Lower case, accents off, anything else than letters/digits = space.
   static String _fold(String s) {
@@ -265,6 +421,7 @@ class ArchiveService extends ChangeNotifier {
   /// asks every stream-only source — see [resolve]).
   List<ArchiveRow> rows(ArchiveType type) => [
         ...?_search[type]?.$2,
+        if (_historyRow(type) case final history?) history,
         for (final (s, c) in _catalogs(type))
           if (_items[_rowKey(s, c)] case final items? when items.isNotEmpty)
             ArchiveRow(source: s, catalog: c, items: items),
@@ -278,7 +435,10 @@ class ArchiveService extends ChangeNotifier {
   /// refresh starts the row over.
   Future<void> loadMore(ArchiveRow row) async {
     final key = row.key;
-    if (row.isSearch || _exhausted.contains(key) || !_loadingMore.add(key)) {
+    if (row.isSearch ||
+        row.isHistory ||
+        _exhausted.contains(key) ||
+        !_loadingMore.add(key)) {
       return;
     }
     try {
@@ -326,7 +486,11 @@ class ArchiveService extends ChangeNotifier {
   /// Refetches catalogs older than [_staleAfter] (all of them with
   /// [force]). A failing source keeps its cached rows.
   Future<void> refresh({bool force = false}) async {
-    if (_refreshing) return;
+    if (_refreshing) {
+      // A genre picked mid-refresh adds rows the running pass won't reach.
+      _refreshAgain = true;
+      return;
+    }
     _refreshing = true;
     lastError = null;
     _notify();
@@ -366,6 +530,10 @@ class ArchiveService extends ChangeNotifier {
     } finally {
       _refreshing = false;
       _notify();
+    }
+    if (_refreshAgain) {
+      _refreshAgain = false;
+      await refresh();
     }
   }
 

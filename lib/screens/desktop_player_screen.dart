@@ -12,6 +12,7 @@ import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../services/storage_service.dart';
 import '../l10n/l10n.dart';
+import '../widgets/desktop_subtitles.dart';
 
 /// A deliberately standalone, Windows-only playback screen — see
 /// `pubspec.yaml`'s media_kit comment for why this exists at all:
@@ -160,6 +161,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
           'reconnect=1,reconnect_at_eof=1,reconnect_streamed=1,reconnect_delay_max=5,rw_timeout=15000000');
       _videoController = VideoController(_player);
       _player.open(Media(_currentChannel.url));
+      _applySeriesSubtitles();
     }
     if (_isLive) _DesktopLiveHistory.record(_currentChannel);
     // DesktopPlayerScreen deliberately never calls PlaybackService.play()
@@ -228,7 +230,9 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       channel = resolved;
     }
     setState(() => _currentChannel = channel);
-    _player.open(Media(channel.url));
+    await _player.open(Media(channel.url));
+    if (!mounted) return;
+    _applySeriesSubtitles();
     if (_isLive) _DesktopLiveHistory.record(channel);
     // See initState's identical call for why — keeps it current across a
     // channel switch too, not just the one this screen opened with.
@@ -236,6 +240,15 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       context.read<StorageService>().setLastChannelId(channel.id);
       context.read<PlaybackService>().recordWatched(channel);
     }
+  }
+
+  /// An episode gets the subtitles chosen earlier in its series (same
+  /// memory as Android's, see DesktopSubtitles.applyForSeries).
+  void _applySeriesSubtitles() {
+    if (_isLive) return;
+    unawaited(DesktopSubtitles.applyForSeries(
+            context.read<StorageService>(), _currentChannel, _player)
+        .catchError((Object _) {}));
   }
 
   /// Manual reconnect for a stalled live stream — this screen has none of
@@ -315,6 +328,162 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     return h > 0 ? '$h:$m:$s' : '$m:$s';
   }
 
+  /// The player bar, one row like the Android player's (1.0.18): title on
+  /// the left, buttons centred (scaled down to fit, never more than 60 % of
+  /// the width), time on the right; a slim seek bar above it for VOD. Live
+  /// shows what's left of the programme instead of a seek bar — never from
+  /// the stream's own duration (a DVR window looked like a ~30 s file).
+  Widget _buildBar(PlaylistManager playlist) {
+    return StreamBuilder<bool>(
+      stream: _player.stream.playing,
+      initialData: _player.state.playing,
+      builder: (context, playingSnapshot) {
+        final playing = playingSnapshot.data ?? false;
+        final width = MediaQuery.sizeOf(context).width;
+        final buttons = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Recall goes furthest left: it means *backward*.
+            if (_isLive)
+              IconButton(
+                icon: const Icon(Icons.history, color: Colors.white),
+                tooltip: tr('Recall — go back to a recent channel'),
+                onPressed: _openRecallPicker,
+              ),
+            IconButton(
+              icon: Icon(
+                _currentChannel.isFavorite ? Icons.star : Icons.star_border,
+                color: _currentChannel.isFavorite ? Colors.amber : Colors.white,
+              ),
+              tooltip: _currentChannel.isFavorite
+                  ? tr('Remove from favorites')
+                  : tr('Add to favorites'),
+              onPressed: () {
+                playlist.toggleFavorite(_currentChannel);
+                setState(() {});
+              },
+            ),
+            if (_isLive)
+              IconButton(
+                icon: const Icon(Icons.refresh, color: Colors.white),
+                tooltip: tr('Reload channel'),
+                onPressed: _reload,
+              ),
+            if (_previousEpisode != null)
+              IconButton(
+                icon: const Icon(Icons.skip_previous, color: Colors.white),
+                tooltip: tr('Previous episode'),
+                onPressed: () => _switchTo(_previousEpisode!),
+              ),
+            if (!_isLive)
+              IconButton(
+                icon: const Icon(Icons.replay_10, color: Colors.white),
+                onPressed: () => _skip(const Duration(seconds: -10)),
+              ),
+            IconButton(
+              iconSize: 40,
+              color: Colors.white,
+              icon: Icon(playing ? Icons.pause : Icons.play_arrow),
+              onPressed: () => playing ? _player.pause() : _player.play(),
+            ),
+            if (!_isLive)
+              IconButton(
+                icon: const Icon(Icons.forward_10, color: Colors.white),
+                onPressed: () => _skip(const Duration(seconds: 10)),
+              ),
+            if (_nextEpisode != null)
+              IconButton(
+                icon: const Icon(Icons.skip_next, color: Colors.white),
+                tooltip: tr('Next episode'),
+                onPressed: () => _switchTo(_nextEpisode!),
+              ),
+            if (!_isLive)
+              DesktopSubtitleButton(
+                  // A new episode is a new file: fresh track list.
+                  key: ValueKey(_currentChannel.id),
+                  player: _player,
+                  channel: _currentChannel),
+          ],
+        );
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!_isLive)
+              StreamBuilder<Duration>(
+                stream: _player.stream.position,
+                initialData: _player.state.position,
+                builder: (context, posSnapshot) {
+                  final position = posSnapshot.data ?? Duration.zero;
+                  final duration = _player.state.duration;
+                  final sliderMax = duration.inMilliseconds > 0
+                      ? duration.inMilliseconds.toDouble()
+                      : 1.0;
+                  return SizedBox(
+                    height: 24,
+                    child: SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        trackHeight: 3,
+                        thumbShape:
+                            const RoundSliderThumbShape(enabledThumbRadius: 6),
+                        overlayShape:
+                            const RoundSliderOverlayShape(overlayRadius: 12),
+                      ),
+                      child: Slider(
+                        value: position.inMilliseconds
+                            .clamp(0, sliderMax.toInt())
+                            .toDouble(),
+                        max: sliderMax,
+                        onChanged: duration.inMilliseconds > 0
+                            ? (v) =>
+                                _player.seek(Duration(milliseconds: v.round()))
+                            : null,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _currentChannel.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ),
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: width * 0.6),
+                  child: FittedBox(fit: BoxFit.scaleDown, child: buttons),
+                ),
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: _isLive
+                        ? _LiveRemainingLabel(channelId: _currentChannel.epgId)
+                        : StreamBuilder<Duration>(
+                            stream: _player.stream.position,
+                            initialData: _player.state.position,
+                            builder: (context, posSnapshot) => Text(
+                              '${_formatDuration(posSnapshot.data ?? Duration.zero)}'
+                              ' / ${_formatDuration(_player.state.duration)}',
+                              style: const TextStyle(
+                                  color: Colors.white70, fontSize: 13),
+                            ),
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final playlist = context.watch<PlaylistManager>();
@@ -351,29 +520,17 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          Colors.black.withValues(alpha: 0.7),
+                          Colors.black.withValues(alpha: 0.6),
                           Colors.transparent,
                         ],
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon:
-                              const Icon(Icons.arrow_back, color: Colors.white),
-                          onPressed: _handleBack,
-                        ),
-                        Expanded(
-                          child: Text(
-                            _currentChannel.name,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        onPressed: _handleBack,
+                      ),
                     ),
                   ),
                 ),
@@ -382,158 +539,18 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                   right: 0,
                   bottom: 0,
                   child: Container(
-                    padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+                    padding: const EdgeInsets.fromLTRB(16, 28, 16, 12),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.bottomCenter,
                         end: Alignment.topCenter,
                         colors: [
-                          Colors.black.withValues(alpha: 0.75),
+                          Colors.black.withValues(alpha: 0.8),
                           Colors.transparent,
                         ],
                       ),
                     ),
-                    child: StreamBuilder<bool>(
-                      stream: _player.stream.playing,
-                      initialData: _player.state.playing,
-                      builder: (context, playingSnapshot) {
-                        final playing = playingSnapshot.data ?? false;
-                        return Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Never trust the controller's own duration to
-                            // decide whether to show a seek bar — same fix
-                            // as PlayerControls.showSeek on mobile. Some
-                            // live streams report a small nonzero duration
-                            // here (their DVR sliding window, ~30s), which
-                            // made this seek bar appear and reset itself
-                            // every ~30s on a live channel. isLive comes
-                            // from the channel's own id classification,
-                            // never from the video duration.
-                            if (_isLive)
-                              _LiveRemainingLabel(
-                                  channelId: _currentChannel.epgId)
-                            else
-                              StreamBuilder<Duration>(
-                                stream: _player.stream.position,
-                                initialData: _player.state.position,
-                                builder: (context, posSnapshot) {
-                                  final position =
-                                      posSnapshot.data ?? Duration.zero;
-                                  final duration = _player.state.duration;
-                                  final sliderMax = duration.inMilliseconds > 0
-                                      ? duration.inMilliseconds.toDouble()
-                                      : 1.0;
-                                  final sliderValue = position.inMilliseconds
-                                      .clamp(0, sliderMax.toInt())
-                                      .toDouble();
-                                  return Row(
-                                    children: [
-                                      Text(_formatDuration(position),
-                                          style: const TextStyle(
-                                              color: Colors.white70,
-                                              fontSize: 12)),
-                                      Expanded(
-                                        child: Slider(
-                                          value: sliderValue,
-                                          max: sliderMax,
-                                          onChanged: duration.inMilliseconds > 0
-                                              ? (v) => _player.seek(Duration(
-                                                  milliseconds: v.round()))
-                                              : null,
-                                        ),
-                                      ),
-                                      Text(_formatDuration(duration),
-                                          style: const TextStyle(
-                                              color: Colors.white70,
-                                              fontSize: 12)),
-                                    ],
-                                  );
-                                },
-                              ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                // Recall goes furthest left, same placement
-                                // rationale as the mobile control bar
-                                // (PlayerControls): it means *backward*, so
-                                // left is where it reads correctly.
-                                if (_isLive)
-                                  IconButton(
-                                    icon: const Icon(Icons.history,
-                                        color: Colors.white),
-                                    tooltip: tr(
-                                        'Recall — go back to a recent channel'),
-                                    onPressed: _openRecallPicker,
-                                  ),
-                                IconButton(
-                                  icon: Icon(
-                                    _currentChannel.isFavorite
-                                        ? Icons.star
-                                        : Icons.star_border,
-                                    color: _currentChannel.isFavorite
-                                        ? Colors.amber
-                                        : Colors.white,
-                                  ),
-                                  tooltip: _currentChannel.isFavorite
-                                      ? tr('Remove from favorites')
-                                      : tr('Add to favorites'),
-                                  onPressed: () {
-                                    playlist.toggleFavorite(_currentChannel);
-                                    setState(() {});
-                                  },
-                                ),
-                                if (_isLive)
-                                  IconButton(
-                                    icon: const Icon(Icons.refresh,
-                                        color: Colors.white),
-                                    tooltip: tr('Reload channel'),
-                                    onPressed: _reload,
-                                  ),
-                                if (_previousEpisode != null)
-                                  IconButton(
-                                    icon: const Icon(Icons.skip_previous,
-                                        color: Colors.white),
-                                    tooltip: tr('Previous episode'),
-                                    onPressed: () =>
-                                        _switchTo(_previousEpisode!),
-                                  ),
-                                if (!_isLive)
-                                  IconButton(
-                                    icon: const Icon(Icons.replay_10,
-                                        color: Colors.white),
-                                    onPressed: () =>
-                                        _skip(const Duration(seconds: -10)),
-                                  ),
-                                IconButton(
-                                  iconSize: 40,
-                                  color: Colors.white,
-                                  icon: Icon(
-                                      playing ? Icons.pause : Icons.play_arrow),
-                                  onPressed: () => playing
-                                      ? _player.pause()
-                                      : _player.play(),
-                                ),
-                                if (!_isLive)
-                                  IconButton(
-                                    icon: const Icon(Icons.forward_10,
-                                        color: Colors.white),
-                                    onPressed: () =>
-                                        _skip(const Duration(seconds: 10)),
-                                  ),
-                                if (_nextEpisode != null)
-                                  IconButton(
-                                    icon: const Icon(Icons.skip_next,
-                                        color: Colors.white),
-                                    tooltip: tr('Next episode'),
-                                    onPressed: () => _switchTo(_nextEpisode!),
-                                  ),
-                              ],
-                            ),
-                          ],
-                        );
-                      },
-                    ),
+                    child: _buildBar(playlist),
                   ),
                 ),
               ],
@@ -563,7 +580,7 @@ class _LiveRemainingLabel extends StatelessWidget {
     if (remaining.isNegative) return const SizedBox.shrink();
     final minutes = remaining.inMinutes;
     return Align(
-      alignment: Alignment.centerLeft,
+      alignment: Alignment.centerRight,
       child: Text(
         minutes < 1
             ? tr('Ending now')

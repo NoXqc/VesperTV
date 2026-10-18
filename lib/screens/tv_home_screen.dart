@@ -32,6 +32,7 @@ import '../widgets/catalog_warmup_banner.dart';
 import '../widgets/detail_header.dart';
 import '../widgets/hd_network_image.dart';
 import '../widgets/hold_to_activate.dart';
+import '../widgets/live_resume_hint.dart';
 import '../widgets/mode_button.dart';
 import '../widgets/player_controls.dart';
 import '../widgets/poster_card.dart';
@@ -1341,6 +1342,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   @override
   void dispose() {
     appRouteObserver.unsubscribe(this);
+    _releasePreviewHint?.call();
     _tvTabFocusNode.dispose();
     _leftEdgeArmTimer?.cancel();
     _descriptionDwellTimer?.cancel();
@@ -1381,6 +1383,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// list instead of the current channel" after backing out of fullscreen.
   @override
   void didPopNext() {
+    _previewCovered = false;
+    _syncPreviewHint(_previewHintWanted);
     if (_pendingUpdate != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _maybeShowUpdatePrompt();
@@ -2153,6 +2157,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     final playing = playbackState.currentChannel;
     final liveChannel =
         playing != null && Channel.isLiveId(playing.rawId) ? playing : null;
+    // Only the phone layout has that preview (it sets its own state).
+    if (!_compact) _syncPreviewHint(false);
     _fullVideo = _tab == 'TV' &&
         showTimelineGuide &&
         prefs.guideFullVideo &&
@@ -2562,6 +2568,40 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         ),
       );
 
+  /// Portrait phone: the "Hold > to resume" pill hides while the live
+  /// preview above the pages is showing (it named the channel already in
+  /// the box, over the list). Called from build with whether the preview
+  /// shows; returns it. The pill's count changes after the frame.
+  bool _syncPreviewHint(bool shown) {
+    _previewHintWanted = shown;
+    if ((shown && !_previewCovered) != (_releasePreviewHint != null)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final want = mounted && _previewHintWanted && !_previewCovered;
+        if (want && _releasePreviewHint == null) {
+          _releasePreviewHint = LiveResumeHint.hideWhileMounted();
+        } else if (!want && _releasePreviewHint != null) {
+          _releasePreviewHint!();
+          _releasePreviewHint = null;
+        }
+      });
+    }
+    return shown;
+  }
+
+  bool _previewHintWanted = false;
+  VoidCallback? _releasePreviewHint;
+
+  /// A screen is pushed over this one: the preview isn't visible there, so
+  /// the pill comes back (Sports etc. hide it themselves).
+  bool _previewCovered = false;
+
+  @override
+  void didPushNext() {
+    _previewCovered = true;
+    _releasePreviewHint?.call();
+    _releasePreviewHint = null;
+  }
+
   /// Portrait phone: the same three columns, one page at a time (see
   /// [_compact]). An IndexedStack, not just the visible column, so the
   /// long groups list keeps its scroll position across Back.
@@ -2621,9 +2661,10 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         // the channels page (a second video_player_hdr view on the same
         // controller doesn't render — see LiveResumeHint). On the groups
         // page only while something live is playing.
-        if (_tab == 'TV' &&
+        if (_syncPreviewHint(_tab == 'TV' &&
             !_timelineFilterActive &&
-            (_phonePage == 2 || (_phonePage == 1 && liveChannel != null))) ...[
+            (_phonePage == 2 ||
+                (_phonePage == 1 && liveChannel != null)))) ...[
           AspectRatio(
             aspectRatio: 16 / 9,
             child: Container(
@@ -2684,14 +2725,22 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                     size: 24,
                     color: selected ? scheme.primary : Colors.white70),
                 const SizedBox(height: 3),
-                Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        color: selected ? Colors.white : Colors.white70,
-                        fontSize: 11.5,
-                        fontWeight:
-                            selected ? FontWeight.w700 : FontWeight.w500)),
+                // Shrinks a long label to fit its slot ("Sports Trak" was
+                // cut to "Sports T…" on a narrow phone) instead of an ellipsis.
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(label,
+                        maxLines: 1,
+                        softWrap: false,
+                        style: TextStyle(
+                            color: selected ? Colors.white : Colors.white70,
+                            fontSize: 11.5,
+                            fontWeight:
+                                selected ? FontWeight.w700 : FontWeight.w500)),
+                  ),
+                ),
               ],
             ),
           ),

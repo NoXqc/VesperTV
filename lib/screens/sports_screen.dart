@@ -5,6 +5,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:media_kit/media_kit.dart' show Player;
+import 'package:media_kit_video/media_kit_video.dart'
+    show NoVideoControls, Video, VideoController;
 import 'package:provider/provider.dart';
 
 import '../utils/constants.dart';
@@ -130,11 +133,17 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   void initState() {
     super.initState();
     _showResumeHint = LiveResumeHint.hideWhileMounted();
+    // Windows: the hero plays through DesktopMiniPlayer, not PlaybackService.
+    if (Platform.isWindows) {
+      DesktopMiniPlayer.instance.channel.addListener(_onMiniPlayerChanged);
+    }
     _storage = context.read<StorageService>();
     _matcher = SportsChannelMatcher.shared(context.read<EpgService>());
     _picks = SportsChannelPicks.load(_storage);
     _follows = SportsFollows.load(_storage);
     _leagues = _savedLeagues();
+    // Opens on the favourite league (League manager, hold OK), if any.
+    _leagueFilter = favoriteSportsLeague(_storage)?.id;
     _hideScores = _storage.getSportsHideScores();
     unawaited(_load());
     // Live scores tick while the screen is visible; SportsService's own
@@ -154,6 +163,10 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   @override
   void didPushNext() => _covered = true;
 
+  void _onMiniPlayerChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void didPopNext() {
     _covered = false;
@@ -163,6 +176,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   @override
   void dispose() {
     appRouteObserver.unsubscribe(this);
+    if (Platform.isWindows) {
+      DesktopMiniPlayer.instance.channel.removeListener(_onMiniPlayerChanged);
+    }
     _showResumeHint();
     _pollTimer?.cancel();
     for (final n in _chipNodes.values) {
@@ -600,7 +616,6 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       [List<ChannelMatch>? matches]) async {
     final best = (matches ?? _matches[_gameKey(game)])?.firstOrNull;
     if (best == null) return _openGame(game, matches);
-    if (Platform.isWindows) return _play(best.channel);
     // OK on the game already playing in the hero: fullscreen on that same
     // stream (it may be a channel picked from the menu, not the best one).
     if (_isPreviewing(game)) return _play(_previewChannel!, game: game);
@@ -612,16 +627,21 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     // Otherwise OK only selects: a card shows in the hero, nothing plays
     // until ▶❚❚ (owner, 2026-10-18: OK went straight to full screen). A
     // phone has no ▶❚❚, so its second tap (the first one focuses, see
-    // _GameCard) plays the game in the hero.
-    if (_touch) await _setPreview(game, best.channel);
+    // _GameCard) plays the game in the hero; Windows the same (second
+    // click, or Enter on the focused card).
+    if (_touch || Platform.isWindows) await _setPreview(game, best.channel);
   }
 
-  /// A channel chosen from the game's menu: Android plays it in the hero
-  /// (OK there = full screen), Windows full screen as before.
-  Future<void> _watch(Channel channel, SportsGame game) async {
-    if (Platform.isWindows) return _play(channel);
-    await _setPreview(game, channel);
-  }
+  /// A channel chosen from the game's menu plays in the hero (OK there =
+  /// full screen).
+  Future<void> _watch(Channel channel, SportsGame game) =>
+      _setPreview(game, channel);
+
+  /// What plays now: Windows' mini player (DesktopPlayerScreen hands a live
+  /// channel to it on Back), else PlaybackService.
+  static Channel? _playingNow(PlaybackService playback) => Platform.isWindows
+      ? DesktopMiniPlayer.instance.channel.value
+      : playback.currentChannel;
 
   // ------------------------------------------------------------- preview
 
@@ -631,7 +651,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final game = _previewGame;
     final channel = _previewChannel;
     if (game == null || channel == null) return null;
-    if (playback.currentChannel?.id != channel.id) return null;
+    if (_playingNow(playback)?.id != channel.id) return null;
     final key = _gameKey(game);
     return _games.where((g) => _gameKey(g) == key).firstOrNull ?? game;
   }
@@ -648,10 +668,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   }
 
   /// Play/Pause on a game card: its channel plays in the hero; again on the
-  /// same card stops it. No channel yet = the menu, to pick one. Android
-  /// only for now (Windows has its own player stack).
+  /// same card stops it. No channel yet = the menu, to pick one.
   void _onPlayKey() {
-    if (Platform.isWindows || _movingLeague != null) return;
+    if (_movingLeague != null) return;
     final game = _focusedCardGame();
     if (game == null) return;
     if (_isPreviewing(game)) {
@@ -684,6 +703,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final seq = ++_previewSeq;
     final stopId = _previewChannel?.id;
     final playback = context.read<PlaybackService>();
+    final storage = context.read<StorageService>();
     setState(() {
       _previewGame = game;
       _previewChannel = channel;
@@ -691,6 +711,19 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     });
     return _previewChain = _previewChain.then((_) async {
       if (seq != _previewSeq) return;
+      if (Platform.isWindows) {
+        // DesktopMiniPlayer reuses one Player (opening a new stream on it),
+        // so nothing overlaps; it records what DesktopPlayerScreen would.
+        final mini = DesktopMiniPlayer.instance;
+        if (channel == null) {
+          if (stopId != null && mini.channel.value?.id == stopId) mini.clear();
+          return;
+        }
+        mini.play(channel);
+        unawaited(storage.setLastChannelId(channel.id));
+        playback.recordWatched(channel);
+        return;
+      }
       try {
         if (channel == null) {
           // Only what the hero itself was playing.
@@ -728,8 +761,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         matching: gameMatches == null && _matching,
         hideScores: _hideScores,
         hasPick: _picks.channelIdFor(game) != null,
-        offerPlayHere:
-            watch != null || (!Platform.isWindows && !_isPreviewing(game)),
+        offerPlayHere: watch != null || !_isPreviewing(game),
         playFullScreen: watch != null,
       )),
     );
@@ -786,10 +818,29 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   /// way the TV guide's preview box does).
   Future<void> _play(Channel channel, {SportsGame? game}) async {
     // Same split as SearchScreen._openChannel: Windows has its own player.
+    // A game takes the hero's session full screen (no reconnect); Back
+    // there hands it back to DesktopMiniPlayer, i.e. the hero again.
     if (Platform.isWindows) {
-      DesktopMiniPlayer.instance.clear();
+      final mini = DesktopMiniPlayer.instance;
+      (Player, VideoController)? session;
+      if (game != null) {
+        await _setPreview(game, channel, waitReady: false);
+        if (!mounted) return;
+        if (mini.channel.value?.id == channel.id) session = mini.take();
+      } else {
+        _previewSeq++;
+        setState(() {
+          _previewGame = null;
+          _previewChannel = null;
+        });
+        mini.clear();
+      }
       await Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => DesktopPlayerScreen(channel: channel)));
+          builder: (_) => DesktopPlayerScreen(
+                channel: channel,
+                existingPlayer: session?.$1,
+                existingController: session?.$2,
+              )));
       return;
     }
     if (game != null) {
@@ -1623,7 +1674,11 @@ class _Hero extends StatelessWidget {
   ///   gold frame is a border around it.
   Widget _buildPlaying(BuildContext context, bool showScore) {
     final scheme = Theme.of(context).colorScheme;
-    final playingChannel = context.read<PlaybackService>().currentChannel;
+    final playingChannel = Platform.isWindows
+        ? DesktopMiniPlayer.instance.channel.value
+        : context.read<PlaybackService>().currentChannel;
+    final miniController =
+        Platform.isWindows ? DesktopMiniPlayer.instance.controller : null;
     // The channel named under the score: the picked game's own match, not
     // the stream still playing.
     final channel = showingOther ? null : playingChannel;
@@ -1672,18 +1727,24 @@ class _Hero extends StatelessWidget {
             height: h,
             child: playingChannel == null
                 ? const SizedBox()
-                : VideoPlayerPane(
-                    key: ValueKey(playingChannel.id),
-                    showEpgBar: false,
-                    showControls: false),
+                : miniController != null
+                    // Windows: media_kit renders the mini player's texture.
+                    ? Video(
+                        controller: miniController, controls: NoVideoControls)
+                    : VideoPlayerPane(
+                        key: ValueKey(playingChannel.id),
+                        showEpgBar: false,
+                        showControls: false),
           ),
         );
     final hint = _KeyHintText(
         touch
             ? tr('Tap the game again: full screen  ·  Back: stop')
-            : showingOther
-                ? tr('▶❚❚: watch this game  ·  Back: playing game')
-                : tr('OK: full screen  ·  ▶❚❚ or Back: stop'),
+            : Platform.isWindows && !showingOther
+                ? tr('Click the game again or Enter: full screen  ·  Esc: stop')
+                : showingOther
+                    ? tr('▶❚❚: watch this game  ·  Back: playing game')
+                    : tr('OK: full screen  ·  ▶❚❚ or Back: stop'),
         textAlign: TextAlign.center,
         style: const TextStyle(fontSize: 12, color: Colors.white54));
 
@@ -1986,7 +2047,8 @@ class _HoldHint extends StatelessWidget {
                 // Android: the Play/Pause preview (Windows has none yet).
                 _KeyHintText(
                     Platform.isWindows
-                        ? tr('Hold OK to pick or swap the channel')
+                        ? tr(
+                            'Click again: watch here  ·  Hold: pick the channel')
                         : !context.read<AppPreferences>().isTelevision
                             ? tr('Tap: watch here  ·  Hold: pick the channel')
                             : tr(

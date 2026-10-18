@@ -47,7 +47,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
 4. `flutter analyze` must report the baseline **17** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `1.0.21` unless noted
+5. Check the current state of releases: `gh release list` (latest should be `1.0.22` unless noted
    in §11).
 
 ## 3. Layout (what matters)
@@ -101,7 +101,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+335**) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+339**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
@@ -232,7 +232,23 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 - Donations will go through GitHub Sponsors (pending approval). After approval: `FUNDING.yml`,
   site/README links and an About row. Relay `X-VesperTV-App` enforcement (`PAIR_REQUIRE_APP=1`) is
   ON since 2026-10-17 (service file backed up on the VPS as `pair-relay.service.bak-*`).
-- **Shipped: 1.0.21 (`+335`, 2026-10-18, latest on GitHub)** — **Extras tab** (code name
+- **Shipped: 1.0.22 (`+339`, 2026-10-18, latest on GitHub):** Extras **genre filter**
+  (Search + Genre in a floating pill at the top centre, per category — owner didn't want them in the
+  rail with Movies/TV Shows; Up from the first row reaches it; genre picker + search are `_FloatingPanel` dialogs in the same style; **Recently watched** row per category from `ArchiveService.recordWatched` (on play, `vesper_archive_history`, hold OK = remove) and per-category **recent searches** (`vesper_archive_recent_searches`), both Extras transfer keys. Open: a user's "big library" source sent the app to the launcher — not reproduced; suspect memory: every row is built at once and each catalog fetches 2 pages: `ArchiveCatalog.genres` from the manifest's `genre` options, Cinemeta's
+  list for provider rows, `withGenre`; "New" hides while a genre is picked; genre labels translated
+  under `genre.` keys — "History" alone is watch history). **Favourite league** (League manager: hold
+  OK on any of your leagues = menu: favourite on/off, send back; per viewer
+  `vesper_sports_favorite_league`, `favoriteSportsLeague()`): Sports Trak opens filtered to it, its
+  live games lead the side panel's Live now. **Pull stats**: hold OK on a game in the fullscreen side
+  panel = `SportsGameDetailsDialog(overStream:)` see-through, right of the panel (hold = key repeat,
+  like `HoldToActivate`). Phone tab bar labels scale down (FittedBox) instead of "Sports T…". Portrait
+  phone: the resume pill hides while the TV preview shows (`_syncPreviewHint`, released when a
+  screen is pushed). **Windows parity:** one-row player bar (`DesktopPlayerScreen._buildBar`),
+  subtitles (`widgets/desktop_subtitles.dart`: file tracks + add-ons + per-series memory, media_kit
+  draws them; Settings > Add-ons now shown on Windows), Sports hero mini player via
+  `DesktopMiniPlayer` (second click/Enter = hero, again = full screen on the same session, Back
+  returns to the hero). Owner tested the Android side on the Formuler; Windows untested.
+- **1.0.21 (`+335`, 2026-10-18)** — **Extras tab** (code name
   Archive: `archive_*` files, `ArchiveService`, storage keys unchanged): user-added Stremio-schema
   add-on sources; a stream-only source on IMDb ids gets Popular / New (this year) / Featured rows,
   search and metas from Cinemeta (`ArchiveCatalogProvider`), Play asks every stream-only source's
@@ -245,8 +261,9 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   row — focusing an unbuilt lazy card does nothing). Back from the rail fixed (PopScope canPop was
   stale). Extras sits under TV Shows in the tabs column; Settings > General > Tabs: Hide Extras,
   **Hide Multiview** (row + player button). Transfer: "Include Extras tab data" (off = payload
-  marker, receiver keeps its own Archive keys). Phone "send a link" (`pair.html` `#…link`) — the
-  VPS relay's copy of `pair.html` still needs redeploying for the internet path.
+  marker, receiver keeps its own Archive keys). Phone "send a link" (`pair.html` `#…link`) is
+  **Wi-Fi only on purpose** (owner, 2026-10-18): the VPS relay's `pair.html` is deliberately
+  left without link mode — don't redeploy it unless the owner asks (revisit if users request it).
 - 1.0.20 (`+330`, 2026-10-17) — the Sports tab is renamed
   **Sports Trak** (`AppConstants.sportsTabName`, a brand: never translated, `{tab}` placeholder in
   sentences); **live games list** ("See all · stats" beside Live now with 2+ live games: dense rows

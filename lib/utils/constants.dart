@@ -52,6 +52,13 @@ class AppConstants {
   static const String keyAddons = 'vesper_addons';
   // Archive tab sources (Stremio-schema catalogs + streams), JSON list.
   static const String keyArchiveSources = 'vesper_archive_sources';
+
+  /// Extras: titles played (newest first, JSON) and recent searches per
+  /// category (JSON `{movie: [...], series: [...]}`). Sent with "Include
+  /// Extras tab data" like the sources.
+  static const String keyArchiveHistory = 'vesper_archive_history';
+  static const String keyArchiveRecentSearches =
+      'vesper_archive_recent_searches';
   // Online subtitle languages picked before, most recent first.
   static const String keyOnlineSubtitleLangs = 'vesper_online_sub_langs';
   // Subtitle choice per series (SubtitleTracks.rememberForSeries), JSON.
@@ -220,6 +227,10 @@ class AppConstants {
   static const String keySportsHideScores = 'vesper_sports_hide_scores';
   static const String keySportsChannelPicks = 'vesper_sports_channel_picks';
   static const String keySportsFollowedTeams = 'vesper_sports_followed_teams';
+
+  /// Per viewer: the favourite league (League manager, hold OK): Sports Trak
+  /// opens on it and its games lead the player side panel's Live now.
+  static const String keySportsFavoriteLeague = 'vesper_sports_favorite_league';
   static const String keyPaletteId = 'nox_palette_id';
 
   /// UI layout: 'auto' picks phone vs TV by screen size, 'phone'/'tv' force

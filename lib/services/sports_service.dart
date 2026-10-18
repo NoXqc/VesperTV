@@ -23,6 +23,14 @@ List<SportsLeague> savedSportsLeagues(StorageService storage) {
       : [for (final id in kDefaultSportsLeagueIds) sportsLeagueById(id)!];
 }
 
+/// The favourite league, when it's still one of [savedSportsLeagues] (a
+/// hidden or sent-back league doesn't count).
+SportsLeague? favoriteSportsLeague(StorageService storage) {
+  final id = storage.getSportsFavoriteLeague();
+  if (id == null) return null;
+  return savedSportsLeagues(storage).where((l) => l.id == id).firstOrNull;
+}
+
 /// Scores and schedules from ESPN's public site API — key-less, so the
 /// Sports tab works for everyone without signing up anywhere (see
 /// dev-notes/sports-tab.md for why ESPN is the default layer). Unofficial

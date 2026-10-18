@@ -92,16 +92,15 @@ class SettingsMenuScreen extends StatelessWidget {
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(
                         builder: (_) => const TmdbSettingsScreen())),
                   ),
-                  // Android only for now: the online subtitles live in
-                  // the Android player (Windows has its own player).
-                  if (!Platform.isWindows)
-                    TvMenuTile(
-                      icon: Icons.extension_outlined,
-                      title: tr('Add-ons'),
-                      subtitle: tr('Online subtitles in more languages'),
-                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => const AddonsScreen())),
-                    ),
+                  // Online subtitles: both players (Windows' own since
+                  // its Subtitles button, desktop_subtitles.dart).
+                  TvMenuTile(
+                    icon: Icons.extension_outlined,
+                    title: tr('Add-ons'),
+                    subtitle: tr('Online subtitles in more languages'),
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => const AddonsScreen())),
+                  ),
                   TvMenuTile(
                     icon: Icons.local_movies_outlined,
                     title: tr('Extras sources'),

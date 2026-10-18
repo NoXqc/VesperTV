@@ -335,7 +335,11 @@ info version rejected — keep the VS layout). Fire Stick check pending.
   an orange emoji.
 - Platform-view rules: one video per stream, stays mounted under the pushed player (like the TV
   preview box), fixed tree position, no overlay/clip on it. RedZone pill: no preview, plain fullscreen.
-- Windows: not built (needs `DesktopMiniPlayer`).
+- Windows (+336): built on `DesktopMiniPlayer` — `_setPreview` calls `mini.play` (one reused
+  `Player`, no overlap), the hero draws `Video(mini.controller)`, `_livePreview` reads
+  `mini.channel` (`_playingNow`, a listener rebuilds). Second click / Enter on a card = hero (like a
+  phone's second tap), again = `DesktopPlayerScreen` with the hero's session (`mini.take()`); its Back
+  minimizes the live channel back into the mini player = the hero. RedZone: plain fresh player.
 
 ## Live games list ("See all · stats", 1.0.20+330, 2026-10-17)
 - Entry: a chip beside **Live now N** when 2+ games are live; Up from Live now's first two cards

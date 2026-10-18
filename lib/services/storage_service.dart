@@ -161,6 +161,17 @@ class StorageService {
       _prefs.setString(AppConstants.keyAddons, json);
 
   /// Archive tab sources (ArchiveService). Null = never saved (none).
+  String? getArchiveHistoryJson() =>
+      _prefs.getString(AppConstants.keyArchiveHistory);
+  Future<void> setArchiveHistoryJson(String? json) => json == null
+      ? _prefs.remove(AppConstants.keyArchiveHistory)
+      : _prefs.setString(AppConstants.keyArchiveHistory, json);
+
+  String? getArchiveRecentSearchesJson() =>
+      _prefs.getString(AppConstants.keyArchiveRecentSearches);
+  Future<void> setArchiveRecentSearchesJson(String json) =>
+      _prefs.setString(AppConstants.keyArchiveRecentSearches, json);
+
   String? getArchiveSourcesJson() =>
       _prefs.getString(AppConstants.keyArchiveSources);
   Future<void> setArchiveSourcesJson(String json) =>
@@ -277,6 +288,14 @@ class StorageService {
       _prefs.getStringList(_vk(AppConstants.keySportsAddedLeagues)) ?? const [];
   Future<void> setSportsAddedLeagues(List<String> ids) =>
       _prefs.setStringList(_vk(AppConstants.keySportsAddedLeagues), ids);
+
+  /// The favourite league id (null = none). See
+  /// [AppConstants.keySportsFavoriteLeague].
+  String? getSportsFavoriteLeague() =>
+      _prefs.getString(_vk(AppConstants.keySportsFavoriteLeague));
+  Future<void> setSportsFavoriteLeague(String? id) => id == null
+      ? _prefs.remove(_vk(AppConstants.keySportsFavoriteLeague))
+      : _prefs.setString(_vk(AppConstants.keySportsFavoriteLeague), id);
 
   bool getSportsHideScores() =>
       _prefs.getBool(_vk(AppConstants.keySportsHideScores)) ?? false;
@@ -635,7 +654,10 @@ class StorageService {
   /// `ArchiveService.channelId`). Its catalog cache is a separate database
   /// and never transfers.
   static bool _isArchiveKey(String key) =>
-      key == AppConstants.keyArchiveSources || key.contains('archive::arc_');
+      key == AppConstants.keyArchiveSources ||
+      key == AppConstants.keyArchiveHistory ||
+      key == AppConstants.keyArchiveRecentSearches ||
+      key.contains('archive::arc_');
 
   /// Present in a payload sent without the Archive tab's data: the
   /// receiving device then keeps its own instead of losing it.

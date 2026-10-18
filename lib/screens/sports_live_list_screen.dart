@@ -727,11 +727,17 @@ class SportsGameDetailsDialog extends StatefulWidget {
     required this.game,
     required this.matches,
     required this.hideScores,
+    this.overStream = false,
   });
 
   final SportsGame game;
   final List<ChannelMatch> matches;
   final bool hideScores;
+
+  /// "Pull stats" from the fullscreen player's side panel: see-through, and
+  /// to the right of the panel ([leftInset]) so the picture stays visible.
+  final bool overStream;
+  static const double leftInset = 400;
 
   @override
   State<SportsGameDetailsDialog> createState() =>
@@ -801,11 +807,15 @@ class _SportsGameDetailsDialogState extends State<SportsGameDetailsDialog> {
     final narrow = size.width < 600;
     final g = widget.game;
     final channels = widget.matches.take(3).toList();
+    final over = widget.overStream && !narrow;
     return Dialog(
-      backgroundColor: const Color(0xF2121216),
-      insetPadding: EdgeInsets.symmetric(
-          horizontal: narrow ? 8 : size.width * 0.06,
-          vertical: narrow ? 16 : size.height * 0.05),
+      backgroundColor: over ? const Color(0x9E101014) : const Color(0xF2121216),
+      insetPadding: over
+          ? EdgeInsets.fromLTRB(SportsGameDetailsDialog.leftInset + 16,
+              size.height * 0.05, size.width * 0.03, size.height * 0.05)
+          : EdgeInsets.symmetric(
+              horizontal: narrow ? 8 : size.width * 0.06,
+              vertical: narrow ? 16 : size.height * 0.05),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(

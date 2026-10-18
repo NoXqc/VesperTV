@@ -192,7 +192,9 @@ Read before changing guide/Multiview/profiles/palettes/backup-server logic.
     wants it in the top bar, not floating. Browse posters on Android touch: tap = preview in the hero,
     tap again / double tap = open (`PosterCard.tapToPreview`, Windows already did this).
 
-- **Subtitles & add-ons (1.0.18+309, 2026-10-18, Android only):**
+- **Subtitles & add-ons (1.0.18+309, 2026-10-18; Windows since +336 — `widgets/desktop_subtitles.dart`:
+  media_kit tracks + add-on files loaded as data, `Video` draws them, same per-series memory via
+  `SubtitleTracks.seriesChoiceFor`):**
   - **Embedded tracks:** the vendored plugin's `SubtitleBridge.java` (see CLAUDE.md §9) lists text
     tracks (PGS/VobSub/DVB image subs skipped) and selects one; cues arrive on an EventChannel and
     `widgets/subtitle_overlay.dart` draws them over `PlayerScreen` (bottom 48, tags stripped). Text
