@@ -198,9 +198,12 @@ rejected (HDR + Android-TV hardware-decode risk).
   ran clean 25+ min. The popup on entering Multiview explains this to users.
 - **"Open in Multiview" from the player must `await _playback.stop()` before pushing**, otherwise
   the fullscreen stream and its audio keep playing underneath.
-- **Windows** is a separate world: `window_manager` makes the app **always fullscreen** at launch
-  (`WindowOptions(fullScreen: true, titleBarStyle: hidden)`); it cannot minimize while fullscreen →
-  `_minimizeWindow()` exits fullscreen first and `WindowListener.onWindowRestore` re-enters it;
+- **Windows** is a separate world: `DesktopWindow` (`services/desktop_window.dart`) creates the
+  window **full screen** by default (`WindowOptions(fullScreen: true, titleBarStyle: hidden)`) or
+  **windowed** (sidebar toggle, remembered); leaving full screen needs `windowManager.show()`
+  after `setFullScreen(false)` or the window vanishes (§13, 1.0.23). It cannot minimize while
+  fullscreen → `_minimizeWindow()` exits fullscreen first and `onWindowRestore` re-enters it
+  (not when windowed);
   `SystemNavigator.pop()` does nothing on Windows → use `windowManager.close()`; mouse "hold" needs
   the pointer `LongPressGestureRecognizer` inside `HoldToActivate` (keyboard Enter-hold alone did not
   work for mouse users); the last live channel is saved in `DesktopPlayerScreen`
