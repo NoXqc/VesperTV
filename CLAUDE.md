@@ -47,7 +47,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
 4. `flutter analyze` must report the baseline **17** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `1.0.20` unless noted
+5. Check the current state of releases: `gh release list` (latest should be `1.0.21` unless noted
    in §11).
 
 ## 3. Layout (what matters)
@@ -101,7 +101,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+330**) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+335**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
@@ -214,6 +214,12 @@ rejected (HDR + Android-TV hardware-decode risk).
   misses an AppBar `TextField`, so wrap the whole Scaffold (Search screen).
 - Open-source principle: **no embedded API keys.** Anything needing a key (TMDB, a future
   OpenSubtitles) is bring-your-own-key in Settings.
+- **REST/JSON Add-on Architecture:**
+  The app supports REST-based direct HTTP(S) video streaming.
+  The architecture strictly separates data providers: visual catalog grids are populated by default public metadata sources (like Cinemeta/TMDB),
+  while media playback requests are routed to custom user-provided stream endpoints via standard IMDB IDs.
+  The app strictly requires direct HTTPS media links (e.g., .mp4)
+  and does not parse or support raw data hashes or external client protocols.
 
 ## 11. Known bugs & fixes (full table in `dev-notes/bugs-and-fixes.md`)
 Look there before debugging. Still-open items: the **Fire OS stale launcher icon** (not fixable). The
@@ -226,7 +232,22 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 - Donations will go through GitHub Sponsors (pending approval). After approval: `FUNDING.yml`,
   site/README links and an About row. Relay `X-VesperTV-App` enforcement (`PAIR_REQUIRE_APP=1`) is
   ON since 2026-10-17 (service file backed up on the VPS as `pair-relay.service.bak-*`).
-- **Shipped: 1.0.20 (`+330`, 2026-10-17, latest on GitHub)** — the Sports tab is renamed
+- **Shipped: 1.0.21 (`+335`, 2026-10-18, latest on GitHub)** — **Extras tab** (code name
+  Archive: `archive_*` files, `ArchiveService`, storage keys unchanged): user-added Stremio-schema
+  add-on sources; a stream-only source on IMDb ids gets Popular / New (this year) / Featured rows,
+  search and metas from Cinemeta (`ArchiveCatalogProvider`), Play asks every stream-only source's
+  `/stream/` and shows "Choose a stream" when there are several (direct http(s) only). Shows open
+  the regular `SeriesDetailScreen` (its `loadEpisodes`/`playEpisode`/`showFavorite` hooks, see
+  `archive_playback.dart`); episode queue = URL-less placeholders resolved when due
+  (`PlaybackService.setUpNextQueue(resolve:)`, `DesktopPlayerScreen.resolveQueued`), keeping the
+  picked source + stream name. Search = server + loaded rows, word-prefix ranked
+  (`ArchiveService.rankSearch`). Rows page in as focus nears the end (own scroll controller per
+  row — focusing an unbuilt lazy card does nothing). Back from the rail fixed (PopScope canPop was
+  stale). Extras sits under TV Shows in the tabs column; Settings > General > Tabs: Hide Extras,
+  **Hide Multiview** (row + player button). Transfer: "Include Extras tab data" (off = payload
+  marker, receiver keeps its own Archive keys). Phone "send a link" (`pair.html` `#…link`) — the
+  VPS relay's copy of `pair.html` still needs redeploying for the internet path.
+- 1.0.20 (`+330`, 2026-10-17) — the Sports tab is renamed
   **Sports Trak** (`AppConstants.sportsTabName`, a brand: never translated, `{tab}` placeholder in
   sentences); **live games list** ("See all · stats" beside Live now with 2+ live games: dense rows
   with situation + top players, OK = stats pop-up with box score / injuries / team stats /
@@ -246,7 +267,7 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 - 1.0.18 (`+309`, 2026-10-18) — **subtitles**: embedded MKV/MP4
   text tracks (Subtitles button, native `SubtitleBridge`, Flutter `SubtitleOverlay`) and **online
   subtitles from Stremio-protocol add-ons** (Settings > Add-ons, official OpenSubtitles v3 listed off,
-  subtitles resource only — owner: no stream/debrid add-ons); recent online languages one press away;
+  recent online languages one press away;
   a choice made on an episode carries to the rest of that series (movies manual). Player bar = one row
   (title | buttons | badges + time; slim seek bar above for VOD), Down focuses Play/Pause, pickers use
   `TvMenuTile`, OK in fullscreen live = info card, Sports game menu "Play here", coloured Live-now

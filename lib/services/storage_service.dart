@@ -160,6 +160,12 @@ class StorageService {
   Future<void> setAddonsJson(String json) =>
       _prefs.setString(AppConstants.keyAddons, json);
 
+  /// Archive tab sources (ArchiveService). Null = never saved (none).
+  String? getArchiveSourcesJson() =>
+      _prefs.getString(AppConstants.keyArchiveSources);
+  Future<void> setArchiveSourcesJson(String json) =>
+      _prefs.setString(AppConstants.keyArchiveSources, json);
+
   /// Languages picked from online subtitles (add-on codes like "fre"),
   /// most recent first — the player's Subtitles list offers them directly.
   String? getSeriesSubtitlesJson() =>
@@ -233,6 +239,23 @@ class StorageService {
       _prefs.getBool(AppConstants.keyHideMoviesShows) ?? false;
   Future<void> setHideMoviesShows(bool value) =>
       _prefs.setBool(AppConstants.keyHideMoviesShows, value);
+
+  /// Separate Movies / TV Shows switches; unset = the old combined one.
+  bool getHideMovies() =>
+      _prefs.getBool(AppConstants.keyHideMovies) ?? getHideMoviesShows();
+  Future<void> setHideMovies(bool value) =>
+      _prefs.setBool(AppConstants.keyHideMovies, value);
+  bool getHideShows() =>
+      _prefs.getBool(AppConstants.keyHideShows) ?? getHideMoviesShows();
+  Future<void> setHideShows(bool value) =>
+      _prefs.setBool(AppConstants.keyHideShows, value);
+  bool getHideArchive() => _prefs.getBool(AppConstants.keyHideArchive) ?? false;
+  Future<void> setHideArchive(bool value) =>
+      _prefs.setBool(AppConstants.keyHideArchive, value);
+  bool getHideMultiview() =>
+      _prefs.getBool(AppConstants.keyHideMultiview) ?? false;
+  Future<void> setHideMultiview(bool value) =>
+      _prefs.setBool(AppConstants.keyHideMultiview, value);
 
   /// Settings > General: the "Hold > to resume" reminder pill (Android and
   /// Windows). Off hides only the pill; hold-Right still resumes.
@@ -607,15 +630,33 @@ class StorageService {
       !_transferSkipExact.contains(key) &&
       !_transferSkipPrefixes.any(key.startsWith);
 
+  /// The Archive tab's data: its sources, plus the watch progress of its
+  /// titles (position/duration keys of `archive::arc_…` channel ids — see
+  /// `ArchiveService.channelId`). Its catalog cache is a separate database
+  /// and never transfers.
+  static bool _isArchiveKey(String key) =>
+      key == AppConstants.keyArchiveSources || key.contains('archive::arc_');
+
+  /// Present in a payload sent without the Archive tab's data: the
+  /// receiving device then keeps its own instead of losing it.
+  static const _transferArchiveExcluded = 'vesper_transfer_archive_excluded';
+
   /// Everything the user set up — playlists, every viewer's favorites,
   /// hidden groups, progress, history, Sports, settings — as a
   /// type-tagged map (`{"t": "s"|"b"|"i"|"d"|"l", "v": ...}` per key) that
   /// [importForTransfer] restores exactly. Catalog/EPG caches aren't in
   /// here: the receiving device downloads them from the provider.
-  Map<String, Object> exportForTransfer() {
-    final out = <String, Object>{};
+  ///
+  /// [includeArchive] false (Transfer > "Include Archive tab data" off)
+  /// leaves out [_isArchiveKey] keys and marks the payload so the receiver
+  /// keeps its own Archive data.
+  Map<String, Object> exportForTransfer({bool includeArchive = true}) {
+    final out = <String, Object>{
+      if (!includeArchive) _transferArchiveExcluded: {'t': 'b', 'v': true},
+    };
     for (final key in _prefs.getKeys()) {
       if (!_transferable(key)) continue;
+      if (!includeArchive && _isArchiveKey(key)) continue;
       final v = _prefs.get(key);
       final tagged = switch (v) {
         String s => {'t': 's', 'v': s},
@@ -635,11 +676,15 @@ class StorageService {
   /// is removed first so nothing from the old setup lingers. The app must
   /// restart afterwards — services hold the old state in memory.
   Future<void> importForTransfer(Map<String, Object?> values) async {
+    final keepArchive = values.containsKey(_transferArchiveExcluded);
     for (final key in _prefs.getKeys().toList()) {
+      if (keepArchive && _isArchiveKey(key)) continue;
       if (_transferable(key)) await _prefs.remove(key);
     }
     for (final entry in values.entries) {
       if (!_transferable(entry.key)) continue;
+      if (entry.key == _transferArchiveExcluded) continue;
+      if (keepArchive && _isArchiveKey(entry.key)) continue;
       final tagged = entry.value;
       if (tagged is! Map) continue;
       final v = tagged['v'];

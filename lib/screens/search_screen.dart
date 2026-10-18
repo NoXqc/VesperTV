@@ -502,7 +502,8 @@ class _SearchScreenState extends State<SearchScreen> {
     if (channelMatches.isNotEmpty) {
       rows.add(_buildChannelRow(rows.length, tr('Live TV'), channelMatches));
     }
-    if (context.read<AppPreferences>().hideMoviesShows) return rows;
+    final prefs = context.read<AppPreferences>();
+    if (prefs.hideMoviesShows) return rows;
 
     final vodMatches = playlist.isXtream
         ? _dbVodResults
@@ -510,12 +511,14 @@ class _SearchScreenState extends State<SearchScreen> {
             .visibleChannels(category: 'vod')
             .where((c) => c.name.toLowerCase().contains(q))
             .toList();
-    if (vodMatches != null && vodMatches.isNotEmpty) {
+    if (!prefs.hideMovies && vodMatches != null && vodMatches.isNotEmpty) {
       rows.add(_buildChannelRow(rows.length, tr('Movies'), vodMatches,
           isPoster: true));
     }
 
-    if (playlist.isXtream) {
+    if (prefs.hideShows) {
+      // Settings > General hides TV Shows: no series row.
+    } else if (playlist.isXtream) {
       final seriesMatches = _dbSeriesResults;
       if (seriesMatches != null && seriesMatches.isNotEmpty) {
         rows.add(_buildSeriesRow(rows.length, tr('TV Shows'), seriesMatches));

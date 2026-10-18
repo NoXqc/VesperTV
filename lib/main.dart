@@ -37,6 +37,7 @@ import 'widgets/desktop_live_resume_hint.dart';
 import 'widgets/live_resume_hint.dart';
 import 'widgets/splash_stars.dart';
 import 'l10n/l10n.dart';
+import 'services/archive_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -162,6 +163,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   late final PlaybackService _playbackService;
   late final ViewerProfileService _viewerProfileService;
   late final ParentalPin _parentalPin;
+  late final ArchiveService _archiveService;
   bool _ready = false;
 
   /// True while [PlaylistManager.runFullCatalogSync] is blocking the
@@ -311,6 +313,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       unawaited(_epgService.init());
       _playbackService = PlaybackService(_storage, _playlistManager);
       _parentalPin = ParentalPin(_storage);
+      _archiveService = ArchiveService(_storage);
       _viewerProfileService =
           ViewerProfileService(_storage, _playlistManager, _playbackService);
 
@@ -739,6 +742,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         ChangeNotifierProvider<EpgService>.value(value: _epgService),
         ChangeNotifierProvider<PlaybackService>.value(value: _playbackService),
         Provider<ParentalPin>.value(value: _parentalPin),
+        ChangeNotifierProvider<ArchiveService>.value(value: _archiveService),
         ChangeNotifierProvider<ViewerProfileService>.value(
             value: _viewerProfileService),
       ],

@@ -50,6 +50,8 @@ class AppConstants {
   static const String keyTmdbApiKey = 'nox_tmdb_api_key';
   // Stremio-style subtitle add-ons (AddonService), JSON list.
   static const String keyAddons = 'vesper_addons';
+  // Archive tab sources (Stremio-schema catalogs + streams), JSON list.
+  static const String keyArchiveSources = 'vesper_archive_sources';
   // Online subtitle languages picked before, most recent first.
   static const String keyOnlineSubtitleLangs = 'vesper_online_sub_langs';
   // Subtitle choice per series (SubtitleTracks.rememberForSeries), JSON.
@@ -205,6 +207,11 @@ class AppConstants {
   /// Hides the Movies and TV Shows tabs (and their search results) — for
   /// people who get movies/shows elsewhere (debrid etc.).
   static const String keyHideMoviesShows = 'vesper_hide_movies_shows';
+  // Split from keyHideMoviesShows (which now only seeds these two).
+  static const String keyHideMovies = 'vesper_hide_movies';
+  static const String keyHideShows = 'vesper_hide_shows';
+  static const String keyHideArchive = 'vesper_hide_archive';
+  static const String keyHideMultiview = 'vesper_hide_multiview';
 
   /// Sports tab, per viewer: leagues shown (ordered ids), spoiler mode, and
   /// the user's own game -> channel picks (JSON, see `SportsChannelPicks`).

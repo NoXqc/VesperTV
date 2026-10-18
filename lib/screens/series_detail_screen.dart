@@ -41,10 +41,31 @@ typedef _NextUp = ({Channel episode, bool resume});
 /// so default directional traversal never has to guess across rows of
 /// different shapes. Phone portrait gets a stacked layout with a vertical,
 /// lazy episode list instead.
+///
+/// The Archive tab reuses this page for its shows: [loadEpisodes] stands in
+/// for `get_series_info` and [playEpisode] for the plain push to the
+/// player (its episodes only get a stream URL once one is picked).
 class SeriesDetailScreen extends StatefulWidget {
-  const SeriesDetailScreen({super.key, required this.series});
+  const SeriesDetailScreen({
+    super.key,
+    required this.series,
+    this.loadEpisodes,
+    this.playEpisode,
+    this.showFavorite = true,
+  });
 
   final XtreamSeries series;
+
+  /// Replaces `PlaylistManager.loadSeriesEpisodes` when set.
+  final Future<SeriesEpisodesResult> Function()? loadEpisodes;
+
+  /// Replaces the push to the player when set: gets the episode and the
+  /// whole ordered list (the up-next queue). Restart is already applied.
+  final Future<void> Function(Channel episode, List<Channel> allEpisodes)?
+      playEpisode;
+
+  /// Favorites belong to a playlist; Archive shows have none.
+  final bool showFavorite;
 
   @override
   State<SeriesDetailScreen> createState() => _SeriesDetailScreenState();
@@ -77,6 +98,10 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   final _episodesKey = GlobalKey();
   final List<Timer> _refreshTimers = [];
 
+  /// Where focus goes when there's no Play button: Favorites, or Back
+  /// when the page shows no Favorites.
+  FocusNode get _fallbackNode => widget.showFavorite ? _favNode : _backNode;
+
   FocusNode _seasonNode(int season) => _seasonNodes.putIfAbsent(
       season, () => FocusNode(debugLabel: 'season-$season'));
   FocusNode _episodeNode(int index) => _episodeNodes.putIfAbsent(
@@ -99,10 +124,15 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   Future<void> _load() async {
     final playlist = context.read<PlaylistManager>();
     try {
-      final result = await playlist.loadSeriesEpisodes(widget.series);
+      final custom = widget.loadEpisodes;
+      final result = custom != null
+          ? await custom()
+          : await playlist.loadSeriesEpisodes(widget.series);
       // Shares its plot with the Movies/TV Shows browse hero's description
       // cache — browsing back to this title shows it instantly afterward.
-      playlist.cacheDescription(widget.series.id, result.plot);
+      if (custom == null) {
+        playlist.cacheDescription(widget.series.id, result.plot);
+      }
       if (!mounted) return;
       final seasons = result.episodes.keys
           .where((s) => result.episodes[s]!.isNotEmpty)
@@ -227,6 +257,12 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
       await storage.setLastPosition(episode.id, 0);
     }
     if (!mounted) return;
+    final custom = widget.playEpisode;
+    if (custom != null) {
+      await custom(episode, _allEpisodes);
+      _refreshProgress();
+      return;
+    }
     // See TvHomeScreen._selectChannel's matching comment — Windows has no
     // PlaybackService-compatible player at all, so this bypasses it via a
     // standalone screen; the queue is passed so Previous/Next still works.
@@ -656,8 +692,9 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   Widget _buildBackButton(double s) {
     return CallbackShortcuts(
       bindings: _arrows(
-        down: () => (_loaded && _allEpisodes.isNotEmpty ? _playNode : _favNode)
-            .requestFocus(),
+        down: () =>
+            (_loaded && _allEpisodes.isNotEmpty ? _playNode : _fallbackNode)
+                .requestFocus(),
       ),
       child: DetailPillButton(
         focusNode: _backNode,
@@ -745,7 +782,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     final nodes = <FocusNode>[
       if (next != null) _playNode,
       if (next != null && next.resume) _restartNode,
-      _favNode,
+      if (widget.showFavorite) _favNode,
     ];
     void move(int delta) {
       final i = nodes.indexWhere((n) => n.hasFocus);
@@ -784,17 +821,18 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
           onPressed: () => _play(next.episode, restart: true),
           onFocused: _revealTop,
         ),
-      DetailPillButton(
-        focusNode: _favNode,
-        icon: widget.series.isFavorite
-            ? Icons.star_rounded
-            : Icons.star_border_rounded,
-        label: tr('Favorites'),
-        selected: widget.series.isFavorite,
-        scale: s,
-        onPressed: _toggleFavorite,
-        onFocused: _revealTop,
-      ),
+      if (widget.showFavorite)
+        DetailPillButton(
+          focusNode: _favNode,
+          icon: widget.series.isFavorite
+              ? Icons.star_rounded
+              : Icons.star_border_rounded,
+          label: tr('Favorites'),
+          selected: widget.series.isFavorite,
+          scale: s,
+          onPressed: _toggleFavorite,
+          onFocused: _revealTop,
+        ),
     ];
     final row = Wrap(
       spacing: 10 * s,
@@ -929,8 +967,8 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     // does nothing (CLAUDE.md §10). Seasons are few.
     return CallbackShortcuts(
       bindings: _arrows(
-        up: () =>
-            (_allEpisodes.isNotEmpty ? _playNode : _favNode).requestFocus(),
+        up: () => (_allEpisodes.isNotEmpty ? _playNode : _fallbackNode)
+            .requestFocus(),
         down: () => _focusEpisode(_highlight[_season] ?? 0),
         left: () => move(-1),
         right: () => move(1),

@@ -46,6 +46,7 @@ class DesktopPlayerScreen extends StatefulWidget {
     super.key,
     required this.channel,
     this.queue,
+    this.resolveQueued,
     this.existingPlayer,
     this.existingController,
   });
@@ -58,6 +59,10 @@ class DesktopPlayerScreen extends StatefulWidget {
   /// buttons; null/empty for a movie or live channel, which have no such
   /// queue.
   final List<Channel>? queue;
+
+  /// Gives a [queue] episode that has no URL yet (Archive) its stream —
+  /// same role as `PlaybackService.setUpNextQueue`'s `resolve`.
+  final Future<Channel?> Function(Channel)? resolveQueued;
 
   /// Set together, only by `DesktopLiveResumeHint` when resuming a
   /// minimized live channel — reuses the session already playing in the
@@ -203,7 +208,25 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     Navigator.of(context).pop();
   }
 
-  void _switchTo(Channel channel) {
+  Future<void> _switchTo(Channel channel) async {
+    if (channel.url.isEmpty) {
+      final resolve = widget.resolveQueued;
+      Channel? resolved;
+      try {
+        resolved = resolve == null ? null : await resolve(channel);
+      } catch (_) {
+        resolved = null;
+      }
+      if (!mounted) return;
+      if (resolved == null || resolved.url.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('No playable stream for this title.')),
+          backgroundColor: Colors.red.shade900,
+        ));
+        return;
+      }
+      channel = resolved;
+    }
     setState(() => _currentChannel = channel);
     _player.open(Media(channel.url));
     if (_isLive) _DesktopLiveHistory.record(channel);

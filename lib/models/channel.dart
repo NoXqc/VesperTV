@@ -319,6 +319,14 @@ class Channel {
   /// limitation — this only returns a confident answer for Xtream ids.
   /// Takes a raw id (`Channel.rawId`, not `Channel.id`) — the playlist
   /// prefix on `id` would otherwise mask these provider-native prefixes.
+  /// Archive tab titles (`arc_vod_`/`arc_ep_`, see ArchiveService) are VOD too.
   static bool isLiveId(String rawId) =>
-      !(rawId.startsWith('xt_vod_') || rawId.startsWith('xt_ep_'));
+      !(rawId.startsWith('xt_vod_') ||
+          rawId.startsWith('xt_ep_') ||
+          isArchiveId(rawId));
+
+  /// An Archive tab movie/episode (ArchiveService.resolve) — no playlist
+  /// profile backs it.
+  static bool isArchiveId(String rawId) =>
+      rawId.startsWith('arc_vod_') || rawId.startsWith('arc_ep_');
 }

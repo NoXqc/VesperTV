@@ -13,6 +13,9 @@
   - served by the relay (https://<relay>/p#<id>.<key>): the form encrypts with
     AES-GCM in the browser (WebCrypto) using the key from the URL fragment —
     which browsers never send to a server — and uploads only ciphertext.
+  A trailing ".link" in the fragment (Wi-Fi: "#link") swaps the playlist form
+  for one long-link box (Settings > Archive sources: paste a manifest URL);
+  it sends {"mode":"link","link":…} the same two ways.
   Keep it dependency-free: no CDN, no fonts, nothing that phones home.
 -->
 <style>
@@ -27,6 +30,8 @@
   .tabs button { flex:1; padding:12px; border-radius:12px; border:1px solid var(--line); background:var(--card); color:var(--text); font:inherit; font-weight:600; }
   .tabs button[aria-pressed="true"] { background:var(--gold); border-color:var(--gold); color:#1a1408; }
   label { display:block; font-size:14px; color:var(--muted); margin:14px 0 6px; }
+  textarea { width:100%; min-height:120px; padding:13px 12px; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--text); font:inherit; word-break:break-all; resize:vertical; }
+  textarea:focus { outline:2px solid var(--gold); border-color:transparent; }
   input { width:100%; padding:13px 12px; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--text); font:inherit; }
   input:focus { outline:2px solid var(--gold); border-color:transparent; }
   .hint { font-size:13px; color:var(--muted); margin-top:6px; }
@@ -78,10 +83,21 @@
     </form>
   </section>
 
+  <section id="link-view" hidden>
+    <h1>Send a link to <span>VesperTV</span></h1>
+    <p class="lead">Paste the long link here and it will appear on your TV.</p>
+    <form id="link-form" autocomplete="off" novalidate>
+      <label for="link">Link</label>
+      <textarea id="link" name="link" inputmode="url" autocapitalize="off" spellcheck="false" maxlength="4000" placeholder="https://…/manifest.json"></textarea>
+      <button class="send" id="link-send" type="submit">Send to TV</button>
+      <div class="msg" id="link-msg"></div>
+    </form>
+  </section>
+
   <section class="done" id="done-view">
     <div class="big">✓</div>
     <h1>Sent to your TV</h1>
-    <p class="lead">Check the details there, then press <b>Add Playlist</b>. You can close this page.</p>
+    <p class="lead" id="done-hint">Check the details there, then press <b>Add Playlist</b>. You can close this page.</p>
   </section>
 </main>
 <script>
@@ -94,7 +110,15 @@
   // served this page itself and expects a plain POST back to the same path.
   var frag = (location.hash || "").replace(/^#/, "");
   var parts = frag.split(".");
+  // "link" kind: "#<id>.<key>.link" (relay) or "#link" (Wi-Fi).
+  var linkKind = parts[parts.length - 1] === "link";
+  if (linkKind) parts.pop();
   var relay = parts.length === 2 && parts[0].length >= 16 && parts[1].length >= 40;
+  if (linkKind) {
+    $("form-view").hidden = true;
+    $("link-view").hidden = false;
+    document.title = "VesperTV · Send a link";
+  }
 
   function setMode(m) {
     mode = m;
@@ -107,7 +131,7 @@
   $("tab-m3u").onclick = function () { setMode("m3u"); };
 
   function show(text, kind) {
-    var el = $("msg");
+    var el = $(linkKind ? "link-msg" : "msg");
     el.textContent = text;
     el.className = "msg " + (kind || "");
     el.style.display = "block";
@@ -164,22 +188,32 @@
     if (!res.ok) throw new Error("The TV didn't accept it (" + res.status + "). Try again.");
   }
 
-  $("form").addEventListener("submit", async function (e) {
+  function collectLink() {
+    var link = $("link").value.replace(/\s+/g, "");
+    if (!link) return "Paste the link first.";
+    return { v: 1, mode: "link", link: link };
+  }
+
+  async function submit(e) {
     e.preventDefault();
-    var data = collect();
+    var data = linkKind ? collectLink() : collect();
     if (typeof data === "string") { show(data, "err"); return; }
-    var btn = $("send");
+    var btn = $(linkKind ? "link-send" : "send");
     btn.disabled = true; btn.textContent = "Sending…";
     try {
       var json = JSON.stringify(data);
       if (relay) await sendRelay(json); else await sendLocal(json);
       $("form-view").hidden = true;
+      $("link-view").hidden = true;
+      if (linkKind) $("done-hint").textContent = "Check it there, then press Add. You can close this page.";
       $("done-view").style.display = "block";
     } catch (err) {
       show(err && err.message ? err.message : "Something went wrong. Try again.", "err");
       btn.disabled = false; btn.textContent = "Send to TV";
     }
-  });
+  }
+  $("form").addEventListener("submit", submit);
+  $("link-form").addEventListener("submit", submit);
 })();
 </script>
 </body>

@@ -1,0 +1,474 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
+
+import '../models/archive_models.dart';
+import '../models/channel.dart';
+import 'archive_api_service.dart';
+import 'archive_cache.dart';
+import 'storage_service.dart';
+
+/// One row of the Archive browse: a source's catalog and its titles, or
+/// (with [searchQuery]) that catalog's results for a search.
+class ArchiveRow {
+  const ArchiveRow({
+    required this.source,
+    required this.catalog,
+    required this.items,
+    this.searchQuery,
+  });
+
+  final ArchiveSource source;
+  final ArchiveCatalog catalog;
+  final List<ArchiveMeta> items;
+  final String? searchQuery;
+
+  bool get isSearch => searchQuery != null;
+
+  String get key => isSearch
+      ? 'search|${ArchiveService._rowKey(source, catalog)}'
+      : ArchiveService._rowKey(source, catalog);
+
+  /// The row header: the catalog's own name, or the source name when the
+  /// catalog has none. Provider row names ("Popular") and search rows are
+  /// translated by the screen.
+  String get title => catalog.name.isEmpty ? source.name : catalog.name;
+}
+
+/// One stream offered for a title, with the source that offered it.
+class ArchiveStreamOption {
+  const ArchiveStreamOption({required this.source, required this.stream});
+
+  final ArchiveSource source;
+  final ArchiveStream stream;
+}
+
+/// The Archive tab's state: the user's sources (Settings > Archive
+/// sources), their catalog rows (cache first, then network), and turning
+/// a picked title into a [Channel] the existing player can play.
+///
+/// Sources are any server that follows the Stremio add-on REST schema
+/// (see [ArchiveApiService]) — the app ships none, so nothing is
+/// contacted until the user adds one. Only direct http(s) streams are
+/// used; torrent/debrid entries are ignored on purpose.
+class ArchiveService extends ChangeNotifier {
+  ArchiveService(this._storage, {ArchiveApiService? api, ArchiveCache? cache})
+      : _api = api ?? ArchiveApiService(),
+        _cache = cache ?? ArchiveCache();
+
+  final StorageService _storage;
+  final ArchiveApiService _api;
+  final ArchiveCache _cache;
+
+  /// Every Archive [Channel] uses this playlist id; `PlaybackService.play`
+  /// lets it through (no playlist profile backs it).
+  static const playlistId = 'archive';
+
+  /// A cached catalog younger than this isn't refetched on open.
+  static const _staleAfter = Duration(hours: 12);
+
+  /// Pages fetched per catalog (sources usually send 100 per page).
+  static const _pagesPerCatalog = 2;
+
+  final Map<String, List<ArchiveMeta>> _items = {};
+  bool _loadedFromCache = false;
+  bool _refreshing = false;
+  String? lastError;
+
+  bool get refreshing => _refreshing;
+
+  // ---- sources ------------------------------------------------------------
+
+  List<ArchiveSource> get sources {
+    final raw = _storage.getArchiveSourcesJson();
+    if (raw == null) return const [];
+    try {
+      return [
+        for (final j in jsonDecode(raw) as List)
+          ArchiveSource.fromJson(Map<String, dynamic>.from(j as Map)),
+      ];
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  List<ArchiveSource> get enabledSources =>
+      sources.where((s) => s.enabled).toList();
+
+  Future<void> _saveSources(List<ArchiveSource> list) async {
+    await _storage
+        .setArchiveSourcesJson(jsonEncode([for (final s in list) s.toJson()]));
+    _notify();
+  }
+
+  /// Checks [link]'s manifest and adds it. Throws [ArchiveApiException]
+  /// (bad link, no streams/catalogs) or [StateError] (already added).
+  Future<ArchiveSource> addSource(String link) async {
+    final source = await _api.fetchManifest(link);
+    final list = sources;
+    if (list.any((s) => s.manifestUrl == source.manifestUrl)) {
+      throw StateError('already added');
+    }
+    await _saveSources([...list, source]);
+    unawaited(refresh(force: true));
+    return source;
+  }
+
+  Future<void> setEnabled(ArchiveSource source, bool on) => _saveSources([
+        for (final s in sources)
+          s.manifestUrl == source.manifestUrl ? s.copyWith(enabled: on) : s,
+      ]);
+
+  Future<void> removeSource(ArchiveSource source) async {
+    await _saveSources(
+        sources.where((s) => s.manifestUrl != source.manifestUrl).toList());
+    _items.removeWhere((k, _) => k.startsWith('${source.key}|'));
+    await _cache.deleteSource(source.key);
+    _notify();
+  }
+
+  /// Removes every source and its cached rows (Clear archives).
+  Future<void> clearAll() async {
+    await _saveSources(const []);
+    _items.clear();
+    await _cache.clear();
+    _notify();
+  }
+
+  // ---- catalog rows -------------------------------------------------------
+
+  static String _rowKey(ArchiveSource s, ArchiveCatalog c) =>
+      '${s.key}|${c.type.wire}|${c.slug}';
+
+  /// Catalogs of [type] to read, one per distinct row: a provider catalog
+  /// shared by several stream-only sources is listed once (Play still
+  /// asks every stream-only source — see [streams]).
+  List<(ArchiveSource, ArchiveCatalog)> _catalogs(ArchiveType type) {
+    final shown = <String>{};
+    return [
+      for (final s in enabledSources)
+        for (final c in s.catalogs)
+          if (c.type == type)
+            if (!s.streamOnly ||
+                shown.add('${s.catalogBaseUrl}|${c.type.wire}|${c.slug}'))
+              (s, c),
+    ];
+  }
+
+  /// The current search per type: its query and result rows.
+  final Map<ArchiveType, (String, List<ArchiveRow>)> _search = {};
+  bool _searching = false;
+  bool get searching => _searching;
+  String? searchQuery(ArchiveType type) => _search[type]?.$1;
+
+  /// Searches every searchable catalog of [type] (the provider's Popular
+  /// for stream-only sources). The results become the first rows.
+  ///
+  /// Partial words work: the server's matches and the titles already
+  /// loaded in this source's rows are both kept only when a word of the
+  /// title starts with the query, titles that start with it first (see
+  /// [rankSearch]) — "li" finds "Lioness", then "The Lincoln Lawyer". A
+  /// source without a searchable catalog is searched in its loaded rows
+  /// only. One results row per source (stream-only sources sharing the
+  /// provider count as one).
+  Future<void> search(ArchiveType type, String query) async {
+    final q = query.trim();
+    if (q.isEmpty) return clearSearch(type);
+    _searching = true;
+    _search[type] = (q, const []);
+    _notify();
+    final out = <ArchiveRow>[];
+    try {
+      final groups = <String, List<(ArchiveSource, ArchiveCatalog)>>{};
+      for (final sc in _catalogs(type)) {
+        final s = sc.$1;
+        groups
+            .putIfAbsent(
+                s.streamOnly ? s.catalogBaseUrl : s.manifestUrl, () => [])
+            .add(sc);
+      }
+      for (final group in groups.values) {
+        final found = <ArchiveMeta>[];
+        for (final (s, c) in group) {
+          if (!c.searchable) continue;
+          try {
+            found.addAll(
+                await _api.fetchCatalog(s.catalogBaseUrl, c, search: q));
+          } catch (e) {
+            debugPrint('ArchiveService: search ${s.name}/${c.id} failed: $e');
+          }
+        }
+        for (final (s, c) in group) {
+          found.addAll(_items[_rowKey(s, c)] ?? const []);
+        }
+        final items = rankSearch(q, found);
+        if (items.isEmpty) continue;
+        final (s, c) = group.firstWhere((sc) => sc.$2.searchable,
+            orElse: () => group.first);
+        out.add(
+            ArchiveRow(source: s, catalog: c, items: items, searchQuery: q));
+      }
+    } finally {
+      // A newer search (or a clear) replaced this one: drop these results.
+      if (_search[type]?.$1 == q) _search[type] = (q, out);
+      _searching = false;
+      _notify();
+    }
+  }
+
+  void clearSearch(ArchiveType type) {
+    if (_search.remove(type) != null) _notify();
+  }
+
+  bool canSearch(ArchiveType type) => _catalogs(type).isNotEmpty;
+
+  /// Lower case, accents off, anything else than letters/digits = space.
+  static String _fold(String s) {
+    const from = 'àáâãäåçèéêëìíîïñòóôõöùúûüýÿœæ';
+    const to = 'aaaaaaceeeeiiiinooooouuuuyyoa';
+    final b = StringBuffer();
+    for (final ch in s.toLowerCase().split('')) {
+      final i = from.indexOf(ch);
+      b.write(i >= 0 ? to[i] : ch);
+    }
+    return b.toString().replaceAll(RegExp(r'[^a-z0-9]+'), ' ').trim();
+  }
+
+  /// [items] where [query] appears at the start of a word of the title
+  /// ("lincoln law" finds "The Lincoln Lawyer"), deduplicated:
+  /// titles starting with the query first, then the rest, each keeping the
+  /// order they came in (server relevance, then row order).
+  static List<ArchiveMeta> rankSearch(
+      String query, Iterable<ArchiveMeta> items) {
+    final q = _fold(query);
+    if (q.isEmpty) return const [];
+    final starts = <ArchiveMeta>[];
+    final words = <ArchiveMeta>[];
+    final seen = <String>{};
+    for (final m in items) {
+      if (!seen.add(m.id)) continue;
+      final name = _fold(m.name);
+      if (name.startsWith(q)) {
+        starts.add(m);
+      } else if (' $name'.contains(' $q')) {
+        words.add(m);
+      }
+    }
+    return [...starts, ...words];
+  }
+
+  /// Rows of [type] from every enabled source, in source then manifest
+  /// order. Rows not loaded yet (or empty) are left out, and so is a
+  /// provider row an earlier stream-only source already shows (Play still
+  /// asks every stream-only source — see [resolve]).
+  List<ArchiveRow> rows(ArchiveType type) => [
+        ...?_search[type]?.$2,
+        for (final (s, c) in _catalogs(type))
+          if (_items[_rowKey(s, c)] case final items? when items.isNotEmpty)
+            ArchiveRow(source: s, catalog: c, items: items),
+      ];
+
+  final Set<String> _loadingMore = {};
+  final Set<String> _exhausted = {};
+
+  /// Appends [row]'s next page (called as focus nears its end), so a row
+  /// keeps scrolling past the pages [refresh] fetched. Not cached: a
+  /// refresh starts the row over.
+  Future<void> loadMore(ArchiveRow row) async {
+    final key = row.key;
+    if (row.isSearch || _exhausted.contains(key) || !_loadingMore.add(key)) {
+      return;
+    }
+    try {
+      final have = _items[key] ?? const <ArchiveMeta>[];
+      final batch = await _api.fetchCatalog(
+          row.source.catalogBaseUrl, row.catalog,
+          skip: have.length);
+      final seen = {for (final m in have) m.id};
+      final fresh = batch.where((m) => seen.add(m.id)).toList();
+      if (fresh.isEmpty) {
+        _exhausted.add(key);
+      } else {
+        _items[key] = [...have, ...fresh];
+        _notify();
+      }
+    } catch (e) {
+      debugPrint('ArchiveService: more of $key failed: $e');
+    } finally {
+      _loadingMore.remove(key);
+    }
+  }
+
+  bool hasAny(ArchiveType type) =>
+      enabledSources.any((s) => s.catalogs.any((c) => c.type == type));
+
+  /// Call when the Archive tab opens: draws the cached rows at once, then
+  /// refreshes stale catalogs behind them.
+  Future<void> open() async {
+    if (!_loadedFromCache) {
+      _loadedFromCache = true;
+      for (final type in ArchiveType.values) {
+        for (final (s, c) in _catalogs(type)) {
+          try {
+            _items[_rowKey(s, c)] = await _cache.read(s.key, c);
+          } catch (e) {
+            debugPrint('ArchiveService: cache read failed: $e');
+          }
+        }
+      }
+      _notify();
+    }
+    unawaited(refresh());
+  }
+
+  /// Refetches catalogs older than [_staleAfter] (all of them with
+  /// [force]). A failing source keeps its cached rows.
+  Future<void> refresh({bool force = false}) async {
+    if (_refreshing) return;
+    _refreshing = true;
+    lastError = null;
+    _notify();
+    try {
+      for (final type in ArchiveType.values) {
+        for (final (s, c) in _catalogs(type)) {
+          final key = _rowKey(s, c);
+          if (!force) {
+            final at = await _cache.fetchedAt(s.key, c);
+            if (at != null &&
+                DateTime.now().difference(at) < _staleAfter &&
+                (_items[key]?.isNotEmpty ?? false)) {
+              continue;
+            }
+          }
+          try {
+            final items = <ArchiveMeta>[];
+            final seen = <String>{};
+            for (var page = 0; page < _pagesPerCatalog; page++) {
+              final batch = await _api.fetchCatalog(s.catalogBaseUrl, c,
+                  skip: items.length);
+              final fresh = batch.where((m) => seen.add(m.id)).toList();
+              if (fresh.isEmpty) break;
+              items.addAll(fresh);
+              if (batch.length < 50) break; // a short page = the last one
+            }
+            _items[key] = items;
+            _exhausted.remove(key);
+            await _cache.write(s.key, c, items);
+            _notify();
+          } catch (e) {
+            lastError = '${s.name}: $e';
+            debugPrint('ArchiveService: ${s.name}/${c.slug} failed: $e');
+          }
+        }
+      }
+    } finally {
+      _refreshing = false;
+      _notify();
+    }
+  }
+
+  // ---- details + playback -------------------------------------------------
+
+  static String _rawId(ArchiveSource source, String videoId,
+          {required bool episode}) =>
+      'arc_${episode ? 'ep' : 'vod'}_${source.key}_$videoId';
+
+  /// The [Channel.id] [channelFor] gives a title — known before resolving, so
+  /// detail pages can show saved progress (StorageService positions).
+  static String channelId(ArchiveSource source, String videoId,
+          {required bool episode}) =>
+      '$playlistId::${_rawId(source, videoId, episode: episode)}';
+
+  Future<ArchiveMeta?> meta(ArchiveSource source, ArchiveMeta preview) =>
+      _api.fetchMeta(source.catalogBaseUrl, preview.type, preview.id);
+
+  /// The sources asked for a title's streams: [source] itself, then — for
+  /// a title from the public provider — every other enabled stream-only
+  /// source on the same provider, since they share the same IMDB ids.
+  List<ArchiveSource> _streamSources(ArchiveSource source) => [
+        source,
+        if (source.streamOnly)
+          for (final s in enabledSources)
+            if (s.streamOnly &&
+                s.manifestUrl != source.manifestUrl &&
+                s.catalogBaseUrl == source.catalogBaseUrl)
+              s,
+      ];
+
+  /// Every direct http(s) stream for [meta] (a movie) or one of its
+  /// [episode]s, in source then server order — the detail page plays a
+  /// single one at once and lets the user pick when there are several
+  /// (quality, language…). Each source is asked at its own `/stream/` with
+  /// the title's id (`tt…`, or `tt…:{season}:{episode}` for a provider
+  /// episode); a failing source is skipped, and its error rethrown only
+  /// when no source answered with anything.
+  Future<List<ArchiveStreamOption>> streams(
+    ArchiveSource source,
+    ArchiveMeta meta, {
+    ArchiveVideo? episode,
+  }) async {
+    final videoId = episode?.id ?? meta.id;
+    final out = <ArchiveStreamOption>[];
+    final urls = <String>{};
+    Object? error;
+    for (final s in _streamSources(source)) {
+      try {
+        for (final st
+            in await _api.fetchStreams(s.baseUrl, meta.type, videoId)) {
+          if (urls.add(st.url)) {
+            out.add(ArchiveStreamOption(source: s, stream: st));
+          }
+        }
+      } catch (e) {
+        error ??= e;
+        debugPrint('ArchiveService: ${s.name} streams failed: $e');
+      }
+    }
+    if (out.isEmpty && error != null) throw error;
+    return out;
+  }
+
+  /// The [Channel] that plays [stream] for [meta] or its [episode]. Its id
+  /// comes from [source] (the row the title was opened from), not from the
+  /// stream picked, so progress is kept whichever stream plays.
+  Channel channelFor(
+    ArchiveSource source,
+    ArchiveMeta meta,
+    ArchiveStream stream, {
+    ArchiveVideo? episode,
+  }) {
+    final videoId = episode?.id ?? meta.id;
+    final rawId = _rawId(source, videoId, episode: episode != null);
+    return Channel(
+      id: '$playlistId::$rawId',
+      rawId: rawId,
+      playlistId: playlistId,
+      name: episode == null
+          ? meta.name
+          : 'S${episode.season.toString().padLeft(2, '0')}'
+              'E${episode.episode.toString().padLeft(2, '0')}'
+              '${episode.title.isEmpty ? '' : ' - ${episode.title}'}',
+      group: meta.name,
+      url: stream.url,
+      logoUrl: episode?.thumbnailUrl ?? meta.posterUrl,
+      subtitleUrl: stream.subtitleUrl,
+      posterUrl: meta.posterUrl,
+      backdropUrl: meta.backgroundUrl,
+      seriesName: episode == null ? null : meta.name,
+      seriesCoverUrl: episode == null ? null : meta.posterUrl,
+    );
+  }
+
+  /// notifyListeners, deferred out of a build phase (see CLAUDE.md:
+  /// never notify mid-build).
+  void _notify() {
+    final phase = SchedulerBinding.instance.schedulerPhase;
+    if (phase == SchedulerPhase.persistentCallbacks) {
+      SchedulerBinding.instance.addPostFrameCallback((_) => notifyListeners());
+    } else {
+      notifyListeners();
+    }
+  }
+}

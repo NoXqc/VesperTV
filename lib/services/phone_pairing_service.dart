@@ -18,10 +18,16 @@ const String kPairRelayBase = 'https://pair.vespertv.app';
 /// `tools/pair_relay/README.md`). Not a secret — it only stops casual reuse.
 const Map<String, String> kRelayAppHeaders = {'X-VesperTV-App': '1'};
 
-/// What the phone sent: the same fields Add Playlist has.
+/// What a pairing session asks the phone for: the Add Playlist form, or one
+/// long link (Settings > Archive sources' manifest URL). pair.html picks its
+/// form from a `.link` / `#link` suffix on the URL fragment.
+enum PairingKind { playlist, link }
+
+/// What the phone sent: the same fields Add Playlist has, or one [link].
 class PairingResult {
   const PairingResult({
     required this.mode,
+    this.link = '',
     this.name = '',
     this.server = '',
     this.username = '',
@@ -30,8 +36,11 @@ class PairingResult {
     this.epgUrl = '',
   });
 
-  /// 'xtream' or 'm3u'.
+  /// 'xtream', 'm3u' or 'link'.
   final String mode;
+
+  /// Set when [mode] is 'link'.
+  final String link;
   final String name;
   final String server;
   final String username;
@@ -58,7 +67,9 @@ class PairingResult {
       password: s('password', 200),
       m3uUrl: s('m3u', 2000),
       epgUrl: s('epg', 2000),
+      link: s('link', 4000),
     );
+    if (mode == 'link') return r.link.isNotEmpty ? r : null;
     if (mode == 'xtream' &&
         r.server.isNotEmpty &&
         r.username.isNotEmpty &&
@@ -85,9 +96,20 @@ class PairingResult {
 /// Both stay armed together once started (one result wins), the server is
 /// closed on [stop], and everything expires after [lifetime].
 class PhonePairingSession {
-  PhonePairingSession({this.lifetime = const Duration(minutes: 10)});
+  PhonePairingSession(
+      {this.lifetime = const Duration(minutes: 10),
+      this.kind = PairingKind.playlist});
 
   final Duration lifetime;
+
+  /// Which form the phone shows; results of the other kind are refused.
+  final PairingKind kind;
+
+  /// The URL-fragment suffix pair.html reads (see [PairingKind]).
+  String get _kindSuffix => kind == PairingKind.link ? 'link' : '';
+
+  bool _accepts(PairingResult r) =>
+      (r.mode == 'link') == (kind == PairingKind.link);
 
   final _results = StreamController<PairingResult>.broadcast();
   Stream<PairingResult> get results => _results.stream;
@@ -106,7 +128,8 @@ class PhonePairingSession {
   /// IPv4 address (then only the relay path can work).
   String? get lanUrl => _lanUrl;
 
-  String get relayUrl => '$kPairRelayBase/p#$_sessionId.${_b64url(_key)}';
+  String get relayUrl => '$kPairRelayBase/p#$_sessionId.${_b64url(_key)}'
+      '${_kindSuffix.isEmpty ? '' : '.$_kindSuffix'}';
 
   bool get isExpired => _done;
 
@@ -118,7 +141,8 @@ class PhonePairingSession {
     try {
       final server = await HttpServer.bind(InternetAddress.anyIPv4, 0);
       _server = server;
-      _lanUrl = 'http://${ip.address}:${server.port}/p/$_token';
+      _lanUrl = 'http://${ip.address}:${server.port}/p/$_token'
+          '${_kindSuffix.isEmpty ? '' : '#$_kindSuffix'}';
       server.listen(_handle, onError: (Object e) {
         debugPrint('PhonePairing: server error $e');
       });
@@ -151,7 +175,7 @@ class PhonePairingSession {
   }
 
   void _deliver(PairingResult r) {
-    if (_done) return;
+    if (_done || !_accepts(r)) return;
     _results.add(r);
     unawaited(stop());
   }
@@ -185,7 +209,7 @@ class PhonePairingSession {
       }
       final body = await _readLimited(req, 16 * 1024);
       final result = body == null ? null : _decodeResult(body);
-      if (result == null) {
+      if (result == null || !_accepts(result)) {
         res.statusCode = HttpStatus.badRequest;
         return;
       }

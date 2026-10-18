@@ -131,8 +131,16 @@ class PlaybackService extends ChangeNotifier {
   /// this becomes a no-op until the next episode is opened.
   List<Channel>? _upNextQueue;
 
-  void setUpNextQueue(List<Channel>? queue) {
+  /// Turns a queued episode with no URL yet (Archive: its stream is only
+  /// looked up when it's about to play) into a playable one — see [play].
+  /// Null for queues whose episodes already carry their URL.
+  Future<Channel?> Function(Channel)? _upNextResolver;
+  bool _resolvingQueued = false;
+
+  void setUpNextQueue(List<Channel>? queue,
+      {Future<Channel?> Function(Channel)? resolve}) {
     _upNextQueue = queue;
+    _upNextResolver = resolve;
   }
 
   Channel? get _nextInQueue {
@@ -258,7 +266,31 @@ class PlaybackService extends ChangeNotifier {
   /// (so re-opening the fullscreen view for the channel the mini-player is
   /// already showing doesn't restart it).
   Future<void> play(Channel channel) async {
-    if (!_playlistManager.isPlaylistEnabled(channel.playlistId)) {
+    // A queued episode whose stream isn't known yet (Archive Next / auto-
+    // advance): resolve it first. Guarded, so the position timer's repeat
+    // calls near the end don't start a second lookup.
+    if (channel.url.isEmpty) {
+      final resolve = _upNextResolver;
+      if (resolve == null || _resolvingQueued) return;
+      _resolvingQueued = true;
+      Channel? resolved;
+      try {
+        resolved = await resolve(channel);
+      } catch (e) {
+        debugPrint('PlaybackService: up-next lookup failed: $e');
+      } finally {
+        _resolvingQueued = false;
+      }
+      if (resolved == null || resolved.url.isEmpty) {
+        error = tr('No playable stream for this title.');
+        notifyListeners();
+        return;
+      }
+      channel = resolved;
+    }
+    // Archive titles belong to no playlist (see ArchiveService).
+    if (!Channel.isArchiveId(channel.rawId) &&
+        !_playlistManager.isPlaylistEnabled(channel.playlistId)) {
       error = tr(
           'This playlist is disabled on this device — enable it in Settings > Playlist Manager to watch.');
       notifyListeners();

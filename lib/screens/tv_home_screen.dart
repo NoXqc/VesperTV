@@ -48,6 +48,7 @@ import 'player_screen.dart';
 import 'profile_picker_screen.dart';
 import 'search_screen.dart';
 import 'sports_screen.dart';
+import 'archive_screen.dart';
 import 'series_detail_screen.dart';
 import 'settings/check_updates_screen.dart';
 import 'settings/settings_menu_screen.dart';
@@ -691,12 +692,12 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   bool get _touchPreview =>
       Platform.isAndroid && !context.read<AppPreferences>().isTelevision;
 
-  /// [_tabs] minus Movies/TV Shows when Settings > General hides them.
-  /// Watches AppPreferences, so toggling it rebuilds the tabs column.
-  List<String> get _visibleTabs =>
-      context.watch<AppPreferences>().hideMoviesShows
-          ? _tabs.where((t) => !_isBrowseTab(t)).toList()
-          : _tabs;
+  /// [_tabs] minus Movies and/or TV Shows when Settings > General hides
+  /// them. Watches AppPreferences, so toggling it rebuilds the tabs column.
+  List<String> get _visibleTabs {
+    final prefs = context.watch<AppPreferences>();
+    return _tabs.where((t) => !prefs.isTabHidden(t)).toList();
+  }
 
   void _onTabChanged(String tab) {
     _disarmLeftEdge();
@@ -1389,7 +1390,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     // Back from Settings with Movies/TV Shows just hidden while one of them
     // was the open tab: fall back to TV. Here rather than in build so the
     // tab switch's focus restore doesn't run under the Settings screen.
-    if (isBrowseTab && context.read<AppPreferences>().hideMoviesShows) {
+    if (isBrowseTab && context.read<AppPreferences>().isTabHidden(_tab)) {
       _onTabChanged('TV');
       return;
     }
@@ -2791,6 +2792,23 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     );
   }
 
+  /// Extras (the Archive tab): films and series from the user's own add-on
+  /// sources — its own page like Sports Trak (nothing in it belongs to a
+  /// playlist), listed under the tabs it sits beside (Movies / TV Shows,
+  /// all three switchable in Settings > General > Tabs). Parks a background
+  /// live channel first, like entering Movies/TV Shows.
+  Widget _archiveRow(bool collapsed) => _SelectableRow(
+        icon: Icons.local_movies_outlined,
+        label: tr('Extras'),
+        selected: false,
+        collapsed: collapsed,
+        onTap: () {
+          _parkLiveChannel();
+          Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const ArchiveScreen()));
+        },
+      );
+
   Widget _buildTabsColumn({required bool collapsed}) {
     return ListView(
       children: [
@@ -2815,33 +2833,38 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         // platform gets a separate, remote-first one built around
         // video_player_hdr instead (there is no cross-platform video
         // engine in this app — see pubspec.yaml's media_kit comment).
-        _SelectableRow(
-          icon: Icons.grid_view,
-          label: tr('Multiview'),
-          selected: false,
-          collapsed: collapsed,
-          onTap: () {
-            if (Platform.isWindows) {
-              DesktopMiniPlayer.instance.clear();
-              Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => const DesktopMultiviewScreen()));
-            } else {
-              // PlaybackService's own background-kept-alive live channel
-              // (the mobile "island"/resume hint — deliberately still
-              // playing after backing out of fullscreen, and almost
-              // always populated anyway since the app auto-resumes the
-              // last channel on launch) is a separate player system from
-              // this screen's own controllers, same as DesktopMiniPlayer
-              // is on Windows. Reported directly as its audio bleeding
-              // through on top of whichever multiview cell has audio
-              // focus — stopping it here is the same fix as the Windows
-              // branch above, just a different background player.
-              unawaited(context.read<PlaybackService>().stop());
-              Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const MultiviewScreen()));
-            }
-          },
-        ),
+        if (!context.watch<AppPreferences>().hideMultiview)
+          _SelectableRow(
+            icon: Icons.grid_view,
+            label: tr('Multiview'),
+            selected: false,
+            collapsed: collapsed,
+            onTap: () {
+              if (Platform.isWindows) {
+                DesktopMiniPlayer.instance.clear();
+                Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const DesktopMultiviewScreen()));
+              } else {
+                // PlaybackService's own background-kept-alive live channel
+                // (the mobile "island"/resume hint — deliberately still
+                // playing after backing out of fullscreen, and almost
+                // always populated anyway since the app auto-resumes the
+                // last channel on launch) is a separate player system from
+                // this screen's own controllers, same as DesktopMiniPlayer
+                // is on Windows. Reported directly as its audio bleeding
+                // through on top of whichever multiview cell has audio
+                // focus — stopping it here is the same fix as the Windows
+                // branch above, just a different background player.
+                unawaited(context.read<PlaybackService>().stop());
+                Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const MultiviewScreen()));
+              }
+            },
+          ),
+        // Portrait phone: no Archive in the bottom tab bar, so it sits on
+        // the "More" page.
+        if (_compact && !context.watch<AppPreferences>().hideArchive)
+          _archiveRow(collapsed),
         // Its own full-screen page (like Search), not a tab in these
         // columns: league/day/game rows don't fit the groups -> content
         // column model.
@@ -2865,6 +2888,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
               focusNode: tab == 'TV' ? _tvTabFocusNode : null,
               onTap: () => _onTabChanged(tab),
             ),
+          if (!context.watch<AppPreferences>().hideArchive)
+            _archiveRow(collapsed),
         ],
         const Divider(height: 16, color: Colors.white24),
         _SelectableRow(

@@ -14,6 +14,7 @@ import 'profiles_screen.dart';
 import 'transfer_screen.dart';
 import 'theme_screen.dart';
 import 'addons_screen.dart';
+import 'archive_sources_screen.dart';
 import 'tmdb_settings_screen.dart';
 import '../../l10n/l10n.dart';
 
@@ -101,6 +102,13 @@ class SettingsMenuScreen extends StatelessWidget {
                       onTap: () => Navigator.of(context).push(MaterialPageRoute(
                           builder: (_) => const AddonsScreen())),
                     ),
+                  TvMenuTile(
+                    icon: Icons.local_movies_outlined,
+                    title: tr('Extras sources'),
+                    subtitle: tr('Add-on sources for the Extras tab'),
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => const ArchiveSourcesScreen())),
+                  ),
                   TvMenuTile(
                     icon: Icons.system_update_outlined,
                     title: tr('Check for Updates'),

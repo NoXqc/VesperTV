@@ -27,8 +27,27 @@ class AppPreferences extends ChangeNotifier {
   /// Timeline guide: video full screen behind a translucent guide.
   late bool guideFullVideo;
 
-  /// Movies and TV Shows tabs (and their search results) hidden.
-  late bool hideMoviesShows;
+  /// Movies / TV Shows tabs (and their search results) hidden, each on its
+  /// own switch (Settings > General > Tabs).
+  late bool hideMovies;
+  late bool hideShows;
+
+  /// The Extras row (the Archive tab; tabs column / phone "More" page)
+  /// hidden.
+  late bool hideArchive;
+
+  /// The Multiview row and the player's "Open in Multiview" hidden.
+  late bool hideMultiview;
+
+  /// Both Movies and TV Shows hidden.
+  bool get hideMoviesShows => hideMovies && hideShows;
+
+  /// Whether the tab id 'Movies' / 'TV Shows' is hidden.
+  bool isTabHidden(String tab) => switch (tab) {
+        'Movies' => hideMovies,
+        'TV Shows' => hideShows,
+        _ => false,
+      };
 
   /// Set once at startup from Android's own UI mode (see
   /// DeviceTypeService) — what 'auto' actually keys off now. Not
@@ -42,7 +61,10 @@ class AppPreferences extends ChangeNotifier {
     layoutMode = _storage.getLayoutMode();
     guideViewMode = _storage.getGuideViewMode();
     guideFullVideo = _storage.getGuideFullVideo();
-    hideMoviesShows = _storage.getHideMoviesShows();
+    hideMovies = _storage.getHideMovies();
+    hideShows = _storage.getHideShows();
+    hideArchive = _storage.getHideArchive();
+    hideMultiview = _storage.getHideMultiview();
     TimeFormat.use24h = _storage.getTime24h();
   }
 
@@ -105,9 +127,27 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setHideMoviesShows(bool value) {
-    hideMoviesShows = value;
-    _storage.setHideMoviesShows(value);
+  void setHideMovies(bool value) {
+    hideMovies = value;
+    _storage.setHideMovies(value);
+    notifyListeners();
+  }
+
+  void setHideShows(bool value) {
+    hideShows = value;
+    _storage.setHideShows(value);
+    notifyListeners();
+  }
+
+  void setHideArchive(bool value) {
+    hideArchive = value;
+    _storage.setHideArchive(value);
+    notifyListeners();
+  }
+
+  void setHideMultiview(bool value) {
+    hideMultiview = value;
+    _storage.setHideMultiview(value);
     notifyListeners();
   }
 }

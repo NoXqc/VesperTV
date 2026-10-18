@@ -804,7 +804,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                           () => _moreVisible = !_moreVisible),
                                       playFocusNode: _playFocus,
                                       onOpenMultiview:
-                                          Channel.isLiveId(channel.rawId)
+                                          Channel.isLiveId(channel.rawId) &&
+                                                  !prefs.hideMultiview
                                               ? () => _openMultiview(channel)
                                               : null,
                                     ),

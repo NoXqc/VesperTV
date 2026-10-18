@@ -15,7 +15,12 @@ class PhonePairPanel extends StatefulWidget {
     super.key,
     required this.toggleFocusNode,
     required this.onResult,
+    this.kind = PairingKind.playlist,
   });
+
+  /// [PairingKind.link]: the phone shows one link box instead of the
+  /// playlist form (Settings > Archive sources).
+  final PairingKind kind;
 
   /// The "Phone not on this Wi-Fi?" button — the screen's Right-arrow
   /// target into this pane.
@@ -46,7 +51,7 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
   Future<void> _start() async {
     await _sub?.cancel();
     await _session?.stop();
-    final session = PhonePairingSession();
+    final session = PhonePairingSession(kind: widget.kind);
     _session = session;
     setState(() {
       _starting = true;
@@ -131,13 +136,18 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
       );
     }
 
+    final isLink = widget.kind == PairingKind.link;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(tr('Add from your phone'), style: theme.textTheme.titleLarge),
         const SizedBox(height: 4),
         Text(
-          tr('Typing a long password with a remote is painful. Scan this code with your phone camera and fill in the form there — it appears here for you to check and add.'),
+          isLink
+              ? tr(
+                  'Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.')
+              : tr(
+                  'Typing a long password with a remote is painful. Scan this code with your phone camera and fill in the form there — it appears here for you to check and add.'),
           style: muted,
         ),
         const SizedBox(height: 16),
@@ -156,11 +166,17 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
                           ? tr('Scan with your phone (mobile data is fine).')
                           : tr(
                               'Connect your phone to the same Wi-Fi as this TV, then scan.')),
-                  _Step(n: 2, text: tr('Fill in the form and tap Send to TV.')),
+                  _Step(
+                      n: 2,
+                      text: isLink
+                          ? tr('Paste the link and tap Send to TV.')
+                          : tr('Fill in the form and tap Send to TV.')),
                   _Step(
                       n: 3,
-                      text: tr(
-                          'Check the details here, then press Add Playlist.')),
+                      text: isLink
+                          ? tr('Check the link here, then press Add.')
+                          : tr(
+                              'Check the details here, then press Add Playlist.')),
                   const SizedBox(height: 12),
                   if (!_starting && !_expired)
                     Row(

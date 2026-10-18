@@ -207,12 +207,35 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                   SectionLabel(tr('Tabs')),
                   const SizedBox(height: 4),
                   TvSwitchListTile(
-                    title: Text(tr('Hide Movies and TV Shows')),
-                    subtitle: Text(tr(
-                        'Removes both tabs and their search results, e.g. if you watch movies and shows elsewhere.')),
-                    value: context.watch<AppPreferences>().hideMoviesShows,
+                    title: Text(tr('Hide Movies')),
+                    subtitle: Text(
+                        tr('Removes the Movies tab and movie search results.')),
+                    value: context.watch<AppPreferences>().hideMovies,
                     onChanged: (v) =>
-                        context.read<AppPreferences>().setHideMoviesShows(v),
+                        context.read<AppPreferences>().setHideMovies(v),
+                  ),
+                  TvSwitchListTile(
+                    title: Text(tr('Hide TV Shows')),
+                    subtitle: Text(tr(
+                        'Removes the TV Shows tab and show search results.')),
+                    value: context.watch<AppPreferences>().hideShows,
+                    onChanged: (v) =>
+                        context.read<AppPreferences>().setHideShows(v),
+                  ),
+                  TvSwitchListTile(
+                    title: Text(tr('Hide Extras')),
+                    subtitle: Text(tr('Removes the Extras tab.')),
+                    value: context.watch<AppPreferences>().hideArchive,
+                    onChanged: (v) =>
+                        context.read<AppPreferences>().setHideArchive(v),
+                  ),
+                  TvSwitchListTile(
+                    title: Text(tr('Hide Multiview')),
+                    subtitle: Text(tr(
+                        'Removes the Multiview row and the player\'s Open in Multiview button.')),
+                    value: context.watch<AppPreferences>().hideMultiview,
+                    onChanged: (v) =>
+                        context.read<AppPreferences>().setHideMultiview(v),
                   ),
                   const Divider(height: 32),
                   if (!Platform.isWindows) ...[

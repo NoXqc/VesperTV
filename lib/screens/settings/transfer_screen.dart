@@ -19,8 +19,18 @@ import '../../widgets/tv_menu_tile.dart';
 import '../../l10n/l10n.dart';
 
 /// Settings > Transfer to another device — see `device_transfer.dart`.
-class TransferScreen extends StatelessWidget {
+/// "Include Archive tab data" (on by default) decides whether Send takes
+/// the Archive sources and their watch progress along
+/// (`StorageService.exportForTransfer`).
+class TransferScreen extends StatefulWidget {
   const TransferScreen({super.key});
+
+  @override
+  State<TransferScreen> createState() => _TransferScreenState();
+}
+
+class _TransferScreenState extends State<TransferScreen> {
+  bool _includeArchive = true;
 
   @override
   Widget build(BuildContext context) {
@@ -45,8 +55,20 @@ class TransferScreen extends StatelessWidget {
               subtitle: tr('Shows a code to enter on the other device'),
               // Internet transfer is the main path; the same-Wi-Fi one is a
               // link on that screen (works without our relay).
-              onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const _CloudSendScreen())),
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) =>
+                      _CloudSendScreen(includeArchive: _includeArchive))),
+            ),
+            TvMenuTile(
+              icon: _includeArchive
+                  ? Icons.check_box
+                  : Icons.check_box_outline_blank,
+              title: tr('Include Extras tab data'),
+              subtitle: _includeArchive
+                  ? tr('Extras sources and their watch progress are sent too')
+                  : tr('The other device keeps its own Extras sources'),
+              trailing: const SizedBox.shrink(),
+              onTap: () => setState(() => _includeArchive = !_includeArchive),
             ),
             TvMenuTile(
               icon: Icons.download,
@@ -66,7 +88,9 @@ class TransferScreen extends StatelessWidget {
 // ------------------------------------------------------------------- send
 
 class _SendScreen extends StatefulWidget {
-  const _SendScreen();
+  const _SendScreen({required this.includeArchive});
+
+  final bool includeArchive;
 
   @override
   State<_SendScreen> createState() => _SendScreenState();
@@ -85,8 +109,9 @@ class _SendScreenState extends State<_SendScreen> {
   }
 
   Future<void> _start() async {
-    final session =
-        TransferSendSession(context.read<StorageService>().exportForTransfer());
+    final session = TransferSendSession(context
+        .read<StorageService>()
+        .exportForTransfer(includeArchive: widget.includeArchive));
     _session = session;
     try {
       await session.start();
@@ -181,7 +206,9 @@ Widget _message(IconData icon, String text, {Color? color}) => Column(
 // ------------------------------------------------------ send (internet)
 
 class _CloudSendScreen extends StatefulWidget {
-  const _CloudSendScreen();
+  const _CloudSendScreen({required this.includeArchive});
+
+  final bool includeArchive;
 
   @override
   State<_CloudSendScreen> createState() => _CloudSendScreenState();
@@ -235,8 +262,9 @@ class _CloudSendScreenState extends State<_CloudSendScreen> {
       _error = null;
     });
     try {
-      final upload =
-          await uploadCloudTransfer(_storage.exportForTransfer(), lifetime);
+      final upload = await uploadCloudTransfer(
+          _storage.exportForTransfer(includeArchive: widget.includeArchive),
+          lifetime);
       await _storage.setCloudTransfer(upload.toJson());
       // The old upload would otherwise stay readable until it expires.
       if (previous != null && previous.isActive) {
@@ -356,8 +384,9 @@ class _CloudSendScreenState extends State<_CloudSendScreen> {
           subtitle: tr('Send directly, without uploading'),
           onTap: () {
             if (_busy) return;
-            Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const _SendScreen()));
+            Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) =>
+                    _SendScreen(includeArchive: widget.includeArchive)));
           },
         ),
       ],
