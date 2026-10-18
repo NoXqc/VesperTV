@@ -175,19 +175,24 @@ class _DesktopSubtitleButtonState extends State<DesktopSubtitleButton> {
         child: ConstrainedBox(
           constraints: BoxConstraints(
               maxHeight: MediaQuery.of(sheetContext).size.height * 0.8),
-          child: ListView(
-            shrinkWrap: true,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Text(title,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16)),
-              ),
-              ...items(sheetContext),
-            ],
+          // Not a lazy ListView: autofocus on the selected language (often
+          // far down a 30-track list) needs its tile built.
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Text(title,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16)),
+                ),
+                ...items(sheetContext),
+              ],
+            ),
           ),
         ),
       ),

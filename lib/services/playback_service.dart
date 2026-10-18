@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:http/http.dart' as http;
 import 'package:video_player_hdr/video_player_hdr.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -341,6 +342,19 @@ class PlaybackService extends ChangeNotifier {
       if (savedPositionMs > 0) {
         await newController.seekTo(Duration(milliseconds: savedPositionMs));
       }
+      // Surface first, then play. The video view (a platform view) is only
+      // built once this controller reads as initialized; playing before
+      // that meant the decoder started with no surface and got one
+      // mid-stream, which some TV boxes' decoders answer with a restart:
+      // one frame, black until the next keyframe, then the picture
+      // (Formuler, Timeline guide, owner 2026-10-18).
+      if (controller == newController) {
+        notifyListeners();
+        await SchedulerBinding.instance.endOfFrame;
+        await Future<void>.delayed(const Duration(milliseconds: 250));
+      }
+      // Switched channel meanwhile: this controller is already disposed.
+      if (controller != newController) return;
       await newController.play();
       // Fire TV/Android TV boxes otherwise sleep the screen mid-stream on
       // idle-input timeout, exactly like they would for any non-video app —

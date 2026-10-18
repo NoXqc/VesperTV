@@ -101,7 +101,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+340**) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+342**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
@@ -239,6 +239,12 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   focused button visible; Up from a row lands on that row's button). The "big library" crash
   reporter says his library now loads fine (not reproduced by us; the lazy-rows idea stays a
   fallback if it comes back).
+  **+342:** picker sheets scroll (Audio Track was a plain Column, ran off screen with ~12 tracks;
+  subtitle sheets not lazy so the autofocused language exists; `TvMenuTile` reveals itself on
+  focus, `test/menu_sheet_scroll_test.dart`). **Channel-change flash fixed** (owner-confirmed on the
+  Formuler): `PlaybackService.play` now notifies + waits a frame and 250 ms *before* `play()`, so
+  the platform view's surface exists first — playing surface-less then attaching mid-stream made
+  the box's decoder restart (one frame, black until the next keyframe, picture).
 - **Shipped: 1.0.22 (`+339`, 2026-10-18, latest on GitHub):** Extras **genre filter**
   (Search + Genre in a floating pill at the top centre, per category — owner didn't want them in the
   rail with Movies/TV Shows; Up from the first row reaches it; genre picker + search are `_FloatingPanel` dialogs in the same style; **Recently watched** row per category from `ArchiveService.recordWatched` (on play, `vesper_archive_history`, hold OK = remove) and per-category **recent searches** (`vesper_archive_recent_searches`), both Extras transfer keys. Open: a user's "big library" source sent the app to the launcher — not reproduced; suspect memory: every row is built at once and each catalog fetches 2 pages: `ArchiveCatalog.genres` from the manifest's `genre` options, Cinemeta's

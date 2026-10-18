@@ -1078,33 +1078,44 @@ class _AudioTrackButtonState extends State<_AudioTrackButton> {
     final chosen = await showModalBottomSheet<VideoAudioTrack>(
       context: context,
       backgroundColor: const Color(0xFF1A1A1A),
+      isScrollControlled: true,
+      // Scrolls past ~5 tracks (a 12-language movie ran off the screen,
+      // owner 2026-10-18). Not lazy: autofocus needs the selected tile built.
       builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Text(
-                tr('Audio Track'),
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16),
-              ),
-            ),
-            // TvMenuTile: the app's gold focus look (a plain ListTile
-            // showed Material's pastel fill on TV, owner 2026-10-18).
-            for (final track in tracks)
-              TvMenuTile(
-                autofocus: track.isSelected,
-                leading: Icon(
-                  track.isSelected ? Icons.check_circle : Icons.circle_outlined,
-                  color: track.isSelected ? Colors.amber : Colors.white54,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(sheetContext).size.height * 0.8),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Text(
+                    tr('Audio Track'),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16),
+                  ),
                 ),
-                title: _trackLabel(track),
-                onTap: () => Navigator.of(sheetContext).pop(track),
-              ),
-          ],
+                // TvMenuTile: the app's gold focus look (a plain ListTile
+                // showed Material's pastel fill on TV, owner 2026-10-18).
+                for (final track in tracks)
+                  TvMenuTile(
+                    autofocus: track.isSelected,
+                    leading: Icon(
+                      track.isSelected
+                          ? Icons.check_circle
+                          : Icons.circle_outlined,
+                      color: track.isSelected ? Colors.amber : Colors.white54,
+                    ),
+                    title: _trackLabel(track),
+                    onTap: () => Navigator.of(sheetContext).pop(track),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -1226,21 +1237,26 @@ class _SubtitleButtonState extends State<_SubtitleButton> {
         child: ConstrainedBox(
           constraints: BoxConstraints(
               maxHeight: MediaQuery.of(sheetContext).size.height * 0.8),
-          child: ListView(
-            shrinkWrap: true,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16),
+          // Not a lazy ListView: autofocus on the selected language (often
+          // far down a 30-track list) needs its tile built.
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16),
+                  ),
                 ),
-              ),
-              ...items(sheetContext),
-            ],
+                ...items(sheetContext),
+              ],
+            ),
           ),
         ),
       ),

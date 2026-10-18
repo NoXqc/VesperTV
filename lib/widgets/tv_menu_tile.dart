@@ -69,6 +69,19 @@ class TvMenuTile extends StatefulWidget {
 class _TvMenuTileState extends State<TvMenuTile> {
   bool _focused = false;
 
+  /// Scrolls the least needed to show this tile once it has focus. D-pad
+  /// moves already do this, but `autofocus` doesn't: a sheet opened on its
+  /// selected entry (audio track 9 of 12) left the focus off screen.
+  void _revealSoon() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_focused) return;
+      Scrollable.ensureVisible(context,
+          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd);
+      Scrollable.ensureVisible(context,
+          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -128,7 +141,10 @@ class _TvMenuTileState extends State<TvMenuTile> {
           focusNode: widget.focusNode,
           autofocus: widget.autofocus,
           enabled: widget.enabled,
-          onFocusChange: (f) => setState(() => _focused = f),
+          onFocusChange: (f) {
+            setState(() => _focused = f);
+            if (f) _revealSoon();
+          },
           leading: widget.leading ??
               CircleAvatar(
                 backgroundColor: _focused
