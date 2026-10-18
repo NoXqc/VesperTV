@@ -2663,8 +2663,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         // page only while something live is playing.
         if (_syncPreviewHint(_tab == 'TV' &&
             !_timelineFilterActive &&
-            (_phonePage == 2 ||
-                (_phonePage == 1 && liveChannel != null)))) ...[
+            (_phonePage == 2 || (_phonePage == 1 && liveChannel != null)))) ...[
           AspectRatio(
             aspectRatio: 16 / 9,
             child: Container(
@@ -2775,6 +2774,14 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                   } else {
                     _onTabChanged(tab);
                   }
+                }),
+              // Extras always has its slot (owner, 2026-10-18); Settings >
+              // General > Tabs > Hide Extras removes it.
+              if (!context.watch<AppPreferences>().hideArchive)
+                item(Icons.local_movies_outlined, tr('Extras'), false, () {
+                  _parkLiveChannel();
+                  Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ArchiveScreen()));
                 }),
               item(Icons.sports_hockey, AppConstants.sportsTabName, false, () {
                 Navigator.of(context).push(
@@ -2910,10 +2917,6 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
               }
             },
           ),
-        // Portrait phone: no Archive in the bottom tab bar, so it sits on
-        // the "More" page.
-        if (_compact && !context.watch<AppPreferences>().hideArchive)
-          _archiveRow(collapsed),
         // Its own full-screen page (like Search), not a tab in these
         // columns: league/day/game rows don't fit the groups -> content
         // column model.

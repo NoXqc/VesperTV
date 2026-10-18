@@ -73,7 +73,6 @@ class ThemeScreen extends StatelessWidget {
                     children: [
                       for (final option in const [
                         ('auto', 'Auto'),
-                        ('phone', 'Phone'),
                         ('tv', 'TV')
                       ]) ...[
                         Expanded(

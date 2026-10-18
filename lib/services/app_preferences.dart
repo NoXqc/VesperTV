@@ -21,7 +21,7 @@ class AppPreferences extends ChangeNotifier {
 
   late bool showClock;
   late CyberpunkPalette palette;
-  late String layoutMode; // 'auto', 'phone', 'tv'
+  late String layoutMode; // 'auto', 'tv'
   late String guideViewMode; // 'live', 'timeline'
 
   /// Timeline guide: video full screen behind a translucent guide.

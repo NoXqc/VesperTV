@@ -333,10 +333,14 @@ class StorageService {
   Future<void> setPaletteId(String id) =>
       _prefs.setString(AppConstants.keyPaletteId, id);
 
-  /// 'auto', 'phone', or 'tv'.
-  String getLayoutMode() =>
-      _prefs.getString(AppConstants.keyLayoutMode) ??
-      AppConstants.defaultLayoutMode;
+  /// 'auto' or 'tv'. A saved 'phone' (the old phone-only home screen,
+  /// removed) reads as 'auto'.
+  String getLayoutMode() {
+    final mode = _prefs.getString(AppConstants.keyLayoutMode) ??
+        AppConstants.defaultLayoutMode;
+    return mode == 'phone' ? 'auto' : mode;
+  }
+
   Future<void> setLayoutMode(String mode) =>
       _prefs.setString(AppConstants.keyLayoutMode, mode);
 

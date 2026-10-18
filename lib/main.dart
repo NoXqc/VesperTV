@@ -14,7 +14,6 @@ import 'screens/catalog_sync_prompt_screen.dart';
 import 'screens/catalog_sync_screen.dart';
 import 'screens/desktop_player_screen.dart';
 import 'services/desktop_mini_player.dart';
-import 'screens/home_screen.dart';
 import 'screens/player_screen.dart';
 import 'screens/settings/add_playlist_screen.dart';
 import 'screens/tv_home_screen.dart';
@@ -808,10 +807,9 @@ class _NoxIptvAppState extends State<NoxIptvApp>
           ),
           home: Builder(
             builder: (context) {
-              // TvHomeScreen adapts to phones itself now (one column at a
-              // time in portrait), so only an explicit "phone" choice still
-              // gets the old HomeScreen.
-              final useTv = prefs.layoutMode != 'phone';
+              // TvHomeScreen is the only home: it adapts to phones itself
+              // (one column at a time in portrait, bottom tab bar). The old
+              // phone HomeScreen was removed (owner, 2026-10-18).
               // `Consumer<ViewerProfileService>` plus a `ValueKey` on the
               // active viewer's id is what actually makes a profile switch
               // take effect on screen — nothing else in this ancestor
@@ -832,7 +830,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
                   // is rebuilt (General settings pops back here first).
                   final key =
                       ValueKey('${viewerService.active.id}|${L10n.code}');
-                  return useTv ? TvHomeScreen(key: key) : HomeScreen(key: key);
+                  return TvHomeScreen(key: key);
                 },
               );
             },
