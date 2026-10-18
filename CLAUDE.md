@@ -135,7 +135,9 @@ rejected (HDR + Android-TV hardware-decode risk).
 
 ## 10. Hard-won rules (don't re-learn these)
 - **Cold-start splash is deliberately slow (~20-25s with a big second playlist).** Entering the UI
-  early lets remote input crash weak boxes. Do not cap/shorten it (`_bootstrap` in main.dart). The
+  early lets remote input crash weak boxes. Do not cap/shorten it (`_bootstrap` in main.dart).
+  The time is the catalog pre-load + `_waitForCategoriesToSettle`, not a timer (floor 2.6 s).
+  Re-asked after the SQLite EPG (2026-10-18): owner chose to **leave it as is**. The
   Android last-channel auto-resume after the splash was once removed (decoder start + the old ~25 s
   EPG decode made cold start sluggish); since the SQLite EPG it's back, **on by default** behind
   Settings > General > Startup: "Resume last channel in full screen" or "…with the guide open"
