@@ -11,6 +11,7 @@ import '../l10n/l10n.dart';
 import '../models/channel.dart';
 import '../models/sports.dart';
 import '../services/epg_service.dart';
+import '../services/app_preferences.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../services/sports_channel_matcher.dart';
@@ -225,9 +226,15 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
     final i = _index[_tab];
     if (i >= games.length) return;
     final g = games[i];
+    final size = MediaQuery.sizeOf(context);
     final channel = await showDialog<Channel>(
       context: context,
       barrierColor: Colors.transparent,
+      // Landscape phone: the dialog places itself around the notch (see
+      // SportsGameDetailsDialog.build); the default SafeArea pushed it off
+      // the panel's edge.
+      useSafeArea: context.read<AppPreferences>().isTelevision ||
+          size.width <= size.height,
       // Opened by a hold: drop the held OK's repeats.
       builder: (_) => SwallowHeldActivate(
         child: SportsGameDetailsDialog(

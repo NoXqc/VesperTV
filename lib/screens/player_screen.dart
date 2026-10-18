@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -316,6 +317,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   void _revealBottomOnTap() {
+    // Touch: a tap on the video beside the open side panel closes it.
+    if (_panelOpen) {
+      _closePanel();
+      return;
+    }
     // Phone/tablet: a tap shows both bars (the top one holds the
     // fullscreen button, which turns the phone landscape without the
     // system rotation lock), and a second tap hides them again.
@@ -611,6 +617,20 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: _revealBottomOnTap,
+                    // Touch has no Left key: swipe right opens the side
+                    // panel on a live channel, swipe left closes it.
+                    onHorizontalDragEnd: _touch
+                        ? (d) {
+                            final v = d.primaryVelocity ?? 0;
+                            if (v > 300 &&
+                                !_panelOpen &&
+                                Channel.isLiveId(channel.rawId)) {
+                              _openPanel();
+                            } else if (v < -300 && _panelOpen) {
+                              _closePanel();
+                            }
+                          }
+                        : null,
                     // No outer SafeArea here (deliberately — it was tried and
                     // wasn't the fix; left off anyway since it's unneeded once the
                     // real bug below is fixed). The top/bottom bars keep their own
@@ -826,15 +846,46 @@ class _PlayerScreenState extends State<PlayerScreen> {
                             onDismiss: playback.dismissAutoAdvance,
                           ),
 
+                        // Touch: a tab on the left edge while the bars show
+                        // opens the side panel (a remote uses Left).
+                        if (_touch && Channel.isLiveId(channel.rawId))
+                          Positioned(
+                            left: 0,
+                            top: 0,
+                            bottom: 0,
+                            child: IgnorePointer(
+                              ignoring: !_topVisible || _panelOpen,
+                              child: AnimatedOpacity(
+                                opacity: _topVisible && !_panelOpen ? 1 : 0,
+                                duration: const Duration(milliseconds: 200),
+                                child: SafeArea(
+                                  right: false,
+                                  child: Center(
+                                    child: _SidePanelTab(onTap: _openPanel),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+
                         // Always Positioned (see the Stack comment above).
+                        // Narrower than 400 on a portrait phone.
                         Positioned(
                           left: 0,
                           top: 0,
                           bottom: 0,
-                          width: _panelOpen ? PlayerSidePanel.width : 0,
+                          width: _panelOpen
+                              ? math.min(PlayerSidePanel.width,
+                                  MediaQuery.sizeOf(context).width * 0.88)
+                              : 0,
                           child: _panelOpen
-                              ? PlayerSidePanel(
-                                  current: channel, onClose: _closePanel)
+                              ? GestureDetector(
+                                  // Taps on the panel's empty space mustn't
+                                  // reach the video's tap-to-close.
+                                  onTap: () {},
+                                  child: PlayerSidePanel(
+                                      current: channel, onClose: _closePanel),
+                                )
                               : const SizedBox.shrink(),
                         ),
                       ],
@@ -843,6 +894,41 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 ),
               ),
             )));
+  }
+}
+
+/// Touch only: the floating tab on the left edge that opens
+/// [PlayerSidePanel] (Last channels / My Teams / Live now), in the phone
+/// tab bar's pill style.
+class _SidePanelTab extends StatelessWidget {
+  const _SidePanelTab({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(8, 18, 10, 18),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.62),
+          borderRadius:
+              const BorderRadius.horizontal(right: Radius.circular(24)),
+          border: Border.all(color: Colors.white24),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.view_list_rounded, color: scheme.primary, size: 24),
+            const SizedBox(height: 4),
+            const Icon(Icons.chevron_right, color: Colors.white70, size: 22),
+          ],
+        ),
+      ),
+    );
   }
 }
 

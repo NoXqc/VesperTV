@@ -28,6 +28,7 @@ import '../utils/display_title.dart';
 import '../utils/route_observer.dart';
 import '../utils/tv_theme.dart';
 import '../utils/image_urls.dart';
+import '../widgets/video_tap_layer.dart';
 import '../widgets/catalog_warmup_banner.dart';
 import '../widgets/detail_header.dart';
 import '../widgets/hd_network_image.dart';
@@ -3387,9 +3388,12 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       // above the grid's top row, and default D-pad traversal reaching Up
       // from there would otherwise land here instead of stopping cleanly
       // at the guide's own edge.
-      child: GestureDetector(
-        onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => PlayerScreen(channel: channel))),
+      child: VideoTapLayer(
+        // Off while the pane shows an error: its buttons need the taps.
+        onTap: context.watch<PlaybackService>().error != null
+            ? null
+            : () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => PlayerScreen(channel: channel))),
         // Same channel-id key as the full-size pane in the non-timeline
         // branch below — see the long comment there for why (stale-frame
         // vs. texture-teardown race). showControls: false — the full

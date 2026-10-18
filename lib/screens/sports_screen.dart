@@ -25,6 +25,7 @@ import '../services/storage_service.dart';
 import '../utils/time_format.dart';
 import '../utils/route_observer.dart';
 import '../utils/tv_theme.dart';
+import '../widgets/video_tap_layer.dart';
 import '../widgets/hold_to_activate.dart';
 import '../widgets/live_resume_hint.dart';
 import '../widgets/player_controls.dart';
@@ -895,6 +896,13 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           showingOther: pick != null,
           touch: _touch,
           narrow: _narrow,
+          // Tap/click the playing video = full screen on the same stream
+          // (owner, 2026-10-18); a remote keeps OK.
+          onVideoTap: (_touch || Platform.isWindows) &&
+                  _previewGame != null &&
+                  _previewChannel != null
+              ? () => _play(_previewChannel!, game: _previewGame)
+              : null,
         ),
     ];
     // Back while moving a league chip = "done", not leave Sports; Back while
@@ -1614,7 +1622,11 @@ class _Hero extends StatelessWidget {
     this.showingOther = false,
     this.touch = false,
     this.narrow = false,
+    this.onVideoTap,
   });
+
+  /// Touch/mouse: the playing video goes full screen when tapped.
+  final VoidCallback? onVideoTap;
 
   /// [playing], but [game] is a card picked with OK, not the one whose
   /// stream the video shows (see `_heroPick`): its own channel is named.
@@ -1715,7 +1727,9 @@ class _Hero extends StatelessWidget {
             ],
           );
 
-    Widget video(double w, double h) => Container(
+    Widget video(double w, double h) => VideoTapLayer(
+        onTap: onVideoTap,
+        child: Container(
           padding: const EdgeInsets.all(2),
           decoration: BoxDecoration(
             color: Colors.black,
@@ -1736,7 +1750,7 @@ class _Hero extends StatelessWidget {
                         showEpgBar: false,
                         showControls: false),
           ),
-        );
+        ));
     final hint = _KeyHintText(
         touch
             ? tr('Tap the game again: full screen  ·  Back: stop')

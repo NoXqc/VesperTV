@@ -101,7 +101,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+343**) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+345**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
@@ -251,6 +251,13 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   `mini_player_bar`); `TvHomeScreen` is the only home, Settings > Theme > Layout = Auto / TV
   (a saved 'phone' reads as 'auto'). Portrait phone bottom bar always has **Extras** (after the tabs,
   before Sports Trak; Hide Extras removes it) and the More page no longer lists it.
+  **+345 (phone, owner: "very good"):** fullscreen player on touch: a left-edge tab (with the bars) and
+  swipe right open `PlayerSidePanel` (live only), swipe left / tap the video closes it, panel max
+  88% wide. Landscape touch Pull stats = full height right against the panel, 64 px tap-out strip
+  on the right, `useSafeArea: false` (TV unchanged). **Taps on a video:** a `GestureDetector`
+  *around* the platform view never fired on a phone — use `widgets/video_tap_layer.dart` (invisible
+  layer *over* it): TV-tab preview (off while the pane shows an error) and the Sports hero
+  (tap = `_play` full screen, also Windows click).
 - **Shipped: 1.0.22 (`+339`, 2026-10-18, latest on GitHub):** Extras **genre filter**
   (Search + Genre in a floating pill at the top centre, per category — owner didn't want them in the
   rail with Movies/TV Shows; Up from the first row reaches it; genre picker + search are `_FloatingPanel` dialogs in the same style; **Recently watched** row per category from `ArchiveService.recordWatched` (on play, `vesper_archive_history`, hold OK = remove) and per-category **recent searches** (`vesper_archive_recent_searches`), both Extras transfer keys. Open: a user's "big library" source sent the app to the launcher — not reproduced; suspect memory: every row is built at once and each catalog fetches 2 pages: `ArchiveCatalog.genres` from the manifest's `genre` options, Cinemeta's

@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import '../utils/constants.dart';
 import '../models/channel.dart';
 import '../models/sports.dart';
+import '../services/app_preferences.dart';
 import '../services/playback_service.dart';
 import '../services/sports_channel_matcher.dart';
 import '../services/sports_follows.dart';
@@ -808,14 +809,30 @@ class _SportsGameDetailsDialogState extends State<SportsGameDetailsDialog> {
     final g = widget.game;
     final channels = widget.matches.take(3).toList();
     final over = widget.overStream && !narrow;
-    return Dialog(
+    // Landscape phone/tablet: the TV's 5% margins left the card short and
+    // the safe area pushed it off the panel. Full height instead, right
+    // against the side panel (its phone width, see PlayerScreen), with a
+    // strip on the right to tap out of it (owner, 2026-10-18). TV unchanged.
+    final phoneOver = over &&
+        size.width > size.height &&
+        !context.read<AppPreferences>().isTelevision;
+    final pad = MediaQuery.paddingOf(context);
+    final dialog = Dialog(
       backgroundColor: over ? const Color(0x9E101014) : const Color(0xF2121216),
-      insetPadding: over
-          ? EdgeInsets.fromLTRB(SportsGameDetailsDialog.leftInset + 16,
-              size.height * 0.05, size.width * 0.03, size.height * 0.05)
-          : EdgeInsets.symmetric(
-              horizontal: narrow ? 8 : size.width * 0.06,
-              vertical: narrow ? 16 : size.height * 0.05),
+      insetPadding: phoneOver
+          ? EdgeInsets.fromLTRB(
+              (size.width * 0.88)
+                      .clamp(0.0, SportsGameDetailsDialog.leftInset) +
+                  6,
+              pad.top + 6,
+              pad.right + 64,
+              pad.bottom + 6)
+          : over
+              ? EdgeInsets.fromLTRB(SportsGameDetailsDialog.leftInset + 16,
+                  size.height * 0.05, size.width * 0.03, size.height * 0.05)
+              : EdgeInsets.symmetric(
+                  horizontal: narrow ? 8 : size.width * 0.06,
+                  vertical: narrow ? 16 : size.height * 0.05),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
@@ -910,6 +927,7 @@ class _SportsGameDetailsDialogState extends State<SportsGameDetailsDialog> {
         ),
       ),
     );
+    return dialog;
   }
 }
 
