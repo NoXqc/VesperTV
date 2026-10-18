@@ -48,6 +48,9 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
   final _barSearchNode = FocusNode(debugLabel: 'archive-bar-search');
   final _barClearNode = FocusNode(debugLabel: 'archive-bar-clear');
   final _barGenreNode = FocusNode(debugLabel: 'archive-bar-genre');
+
+  /// The floating bar's row jumps ("Popular", "New"...), by row key.
+  final Map<String, FocusNode> _barRowNodes = {};
   final _scroll = ScrollController();
 
   /// Card focus nodes by row key, created on demand.
@@ -100,6 +103,9 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
     _barSearchNode.dispose();
     _barClearNode.dispose();
     _barGenreNode.dispose();
+    for (final n in _barRowNodes.values) {
+      n.dispose();
+    }
     _railScope.dispose();
     _contentScope.dispose();
     _firstRailNode.dispose();
@@ -456,19 +462,6 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                 onTap: () => _setType(ArchiveType.series),
               ),
               const Divider(height: 20, color: Colors.white24),
-              for (var r = 0; r < rows.length; r++)
-                _RailTile(
-                  icon: rows[r].isSearch
-                      ? Icons.search
-                      : rows[r].isHistory
-                          ? Icons.history
-                          : Icons.grid_view_rounded,
-                  label: _rowTitle(service, rows[r]),
-                  small: true,
-                  onTap: () => _focusRow(rows, r),
-                ),
-              if (rows.isNotEmpty)
-                const Divider(height: 20, color: Colors.white24),
               _RailTile(
                 icon: Icons.refresh,
                 label: service.refreshing ? tr('Updating…') : tr('Refresh'),
@@ -533,30 +526,73 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
     );
   }
 
+  /// Rows that get a jump button in the floating bar: all but search
+  /// results (the lit Search button stands for those).
+  List<int> _barRows(List<ArchiveRow> rows) => [
+        for (var r = 0; r < rows.length; r++)
+          if (!rows[r].isSearch) r,
+      ];
+
+  FocusNode _barRowNode(String rowKey) => _barRowNodes.putIfAbsent(
+      rowKey, () => FocusNode(debugLabel: 'archive-bar-row'));
+
+  /// A row's jump label: its own title, without the " · Genre" suffix
+  /// (the Genre button shows that).
+  String _barRowLabel(ArchiveRow row) {
+    if (row.isHistory) return tr('Recently watched');
+    return row.source.streamOnly ? tr(row.title) : row.title;
+  }
+
   /// The floating bar's buttons, in order (for explicit Left/Right).
-  List<FocusNode> _barNodes(ArchiveService service) => [
+  List<FocusNode> _barNodes(ArchiveService service, List<ArchiveRow> rows) => [
+        for (final r in _barRows(rows)) _barRowNode(rows[r].key),
         if (service.canSearch(_type)) _barSearchNode,
         if (service.searchQuery(_type) != null) _barClearNode,
         if (service.genres(_type).isNotEmpty) _barGenreNode,
       ];
 
+  /// Up into the bar lands on the current row's jump button (else the
+  /// first button).
   void _focusBar() {
-    final nodes = _barNodes(context.read<ArchiveService>());
-    if (nodes.isNotEmpty) nodes.first.requestFocus();
+    final service = context.read<ArchiveService>();
+    final rows = service.rows(_type);
+    final nodes = _barNodes(service, rows);
+    if (nodes.isEmpty) return;
+    final r = _focusedRow;
+    final current = r >= 0 && r < rows.length && !rows[r].isSearch
+        ? _barRowNodes[rows[r].key]
+        : null;
+    _focusBarNode(current ?? nodes.first);
   }
 
-  /// Search and Genre for the category picked in the rail, centred at the
-  /// top in the phone tab bar's floating pill. D-pad: Left/Right along it
-  /// (Left past the first = rail), Down = the rows.
+  /// The bar scrolls sideways when a source has many catalogs: bring the
+  /// newly focused button into view.
+  void _focusBarNode(FocusNode node) {
+    node.requestFocus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = node.context;
+      if (mounted && ctx != null) {
+        Scrollable.ensureVisible(ctx, alignment: 0.5);
+      }
+    });
+  }
+
+  /// The category's row jumps (Popular / New / Featured / Recently
+  /// watched...) plus Search and Genre, centred at the top in the phone
+  /// tab bar's floating pill. D-pad: Left/Right along it (Left past the
+  /// first = rail), Down = the rows.
   Widget _buildFloatingBar(ArchiveService service, List<ArchiveRow> rows) {
-    final nodes = _barNodes(service);
+    final nodes = _barNodes(service, rows);
     if (nodes.isEmpty) return const SizedBox.shrink();
     final narrow = MediaQuery.sizeOf(context).width < 700;
+    final barRows = _barRows(rows);
+    final hasTools =
+        service.canSearch(_type) || service.genres(_type).isNotEmpty;
     void move(int delta) {
       final i = nodes.indexWhere((n) => n.hasFocus);
       final to = i + delta;
       if (to >= 0 && to < nodes.length) {
-        nodes[to].requestFocus();
+        _focusBarNode(nodes[to]);
       } else if (to < 0 && !narrow) {
         _railScope.requestFocus();
       }
@@ -599,43 +635,64 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                   BoxShadow(color: Colors.black54, blurRadius: 12),
                 ],
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (service.canSearch(_type))
-                    _BarButton(
-                      focusNode: _barSearchNode,
-                      icon: Icons.search,
-                      label: service.searching
-                          ? tr('Searching…')
-                          : query ??
-                              (movies
-                                  ? tr('Search movies')
-                                  : tr('Search TV shows')),
-                      active: query != null,
-                      onTap: () => _openSearch(service),
-                    ),
-                  if (query != null)
-                    _BarButton(
-                      focusNode: _barClearNode,
-                      icon: Icons.close,
-                      tooltip: tr('Clear search'),
-                      onTap: () {
-                        _clearSearch(service);
-                        _barSearchNode.requestFocus();
-                      },
-                    ),
-                  if (service.genres(_type).isNotEmpty)
-                    _BarButton(
-                      focusNode: _barGenreNode,
-                      icon: Icons.category_outlined,
-                      label: genre == null
-                          ? (movies ? tr('Movie genres') : tr('TV show genres'))
-                          : _genreName(genre),
-                      active: genre != null,
-                      onTap: () => _pickGenre(service),
-                    ),
-                ],
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final r in barRows)
+                      _BarButton(
+                        focusNode: _barRowNode(rows[r].key),
+                        icon: rows[r].isHistory
+                            ? Icons.history
+                            : Icons.grid_view_rounded,
+                        label: _barRowLabel(rows[r]),
+                        onTap: () => _focusRow(rows, r),
+                      ),
+                    if (barRows.isNotEmpty && hasTools)
+                      Container(
+                        width: 1,
+                        height: 24,
+                        margin: const EdgeInsets.symmetric(horizontal: 6),
+                        color: Colors.white24,
+                      ),
+                    if (service.canSearch(_type))
+                      _BarButton(
+                        focusNode: _barSearchNode,
+                        icon: Icons.search,
+                        label: service.searching
+                            ? tr('Searching…')
+                            : query ??
+                                (movies
+                                    ? tr('Search movies')
+                                    : tr('Search TV shows')),
+                        active: query != null,
+                        onTap: () => _openSearch(service),
+                      ),
+                    if (query != null)
+                      _BarButton(
+                        focusNode: _barClearNode,
+                        icon: Icons.close,
+                        tooltip: tr('Clear search'),
+                        onTap: () {
+                          _clearSearch(service);
+                          _focusBarNode(_barSearchNode);
+                        },
+                      ),
+                    if (service.genres(_type).isNotEmpty)
+                      _BarButton(
+                        focusNode: _barGenreNode,
+                        icon: Icons.category_outlined,
+                        label: genre == null
+                            ? (movies
+                                ? tr('Movie genres')
+                                : tr('TV show genres'))
+                            : _genreName(genre),
+                        active: genre != null,
+                        onTap: () => _pickGenre(service),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
