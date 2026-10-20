@@ -5,9 +5,11 @@ the rules that were learned the hard way, and every bug that has already been fi
 get re-introduced or re-investigated).
 
 ## 1. What this is
-Flutter IPTV player (M3U + Xtream Codes, XMLTV EPG) for **Android phones, Android TV boxes
-(Formuler), Fire Sticks, and Windows 10/11 PCs**. GPL-3.0, open source, always free, no ads, no
-tracking, bring-your-own playlist (the app ships no channels).
+Flutter **universal media player** for **Android phones, Android TV boxes (Formuler), Fire
+Sticks, and Windows 10/11 PCs**: live IPTV (M3U + Xtream Codes, XMLTV EPG), the **Media Hub**
+(user-added REST add-ons + the user's own **Jellyfin / Emby** server) and **Trakt / Simkl** watch
+tracking. GPL-3.0, open source, always free, no ads, no tracking, bring-your-own sources (the app
+ships no content).
 
 - **Name:** VesperTV (formerly **NoXPlayer**; "NoX TV Player" in some UI text). Renamed in Oct 2026
   because "NoXPlayer" collided with a well-known Android emulator that had a malware scandal.
@@ -47,7 +49,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
 4. `flutter analyze` must report the baseline **17** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `1.0.23` unless noted
+5. Check the current state of releases: `gh release list` (latest should be `1.0.26` unless noted
    in §11).
 
 ## 3. Layout (what matters)
@@ -71,6 +73,15 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `cloud_transfer.dart` (internet, encrypted upload to the relay's vault — the main Send path) +
   `device_transfer.dart` (same Wi-Fi), UI `screens/settings/transfer_screen.dart`.
 - `lib/screens/settings/*` — Settings screens (Add Playlist is a 3-pane LokTV-style layout).
+- **Media Hub** (code name Archive — files/classes/keys stay `archive_*`): `screens/archive_screen.dart`
+  (tab), `archive_detail_screen.dart` / `archive_playback.dart` (play, series via
+  `SeriesDetailScreen`), `services/archive_service.dart` (sources, rows, routing per source kind),
+  `archive_api_service.dart` (add-on REST schema), `media_server_api.dart` (Jellyfin/Emby),
+  `tracker_api.dart` + `tracker_sync.dart` + `watch_tracker.dart` (Trakt/Simkl: rows, read-back,
+  scrobbling), `screens/settings/{archive_sources,media_server,trackers}_screen.dart`. Details in
+  §10 "REST/JSON Add-on Architecture" and §13.
+- Multiview extras: `services/multiview_sports.dart` (picker Live now / Sports),
+  `widgets/game_channel_chooser.dart`, `widgets/auto_hide_overlay.dart` (tile name bar).
 - `lib/screens/welcome_add_playlist_screen.dart` — first-launch "Hey beautiful Human" prompt.
 - `lib/widgets/`: `poster_card`, `hold_to_activate`, `live_resume_hint`, `tv_menu_tile`,
   `mode_button`, `pin_pad`, `sidebar`, `epg_guide`.
@@ -265,7 +276,11 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-19)
-- **Shipped: 1.0.26 (`+350`, 2026-10-19, latest):** every text field gated + guard test (see §10, Fire TV report).
+- **Open (2026-10-19 evening):** no real Trakt/Simkl account has signed in yet (all mock-tested +
+  live endpoint/client-id checks) — first user reports are the real test. Jellyfin only
+  mock-tested (owner confirmed a real Emby server). Windows Multiview has no header-overlay /
+  full-screen fade (hover controls instead) — do it only if asked.
+- **Shipped: 1.0.26 (`+350`, 2026-10-19, latest, commit `e3c3f51`):** every text field gated + guard test (see §10, Fire TV report).
   **Multiview header = overlay** (user report: it squashed the 2x2): grid fills the screen; header
   slides down on Up from the top row (`_onGridKey` → `_revealHeader(focus: true)`, `_headerFirst`),
   Down returns to tile 0, hides 1.5 s after focus leaves (`_headerScope` listener), shown 4 s on
@@ -283,7 +298,7 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   hold-OK episode toggle pushes to `/sync/history(/remove)`. IPTV *shows* don't join the TV tab's
   Continue Watching until opened once (episode ids need `get_series_info`). Mock-tested + live
   401 path checks; no real account yet.
-- **Shipped: 1.0.25 (`+349`, 2026-10-19, latest)** — everything in the next bullet (was the
+- **Shipped: 1.0.25 (`+349`, 2026-10-19)** — everything in the next bullet (was the
   "unreleased" list). Owner trusted the mock tests; real Trakt/Simkl sign-in still unconfirmed.
 - **1.0.25 contents:** Multiview quad tiles **fill** their quarter
   (`_MaybeAspect`, no aspect lock — owner: black side bands on a landscape phone); **portrait
@@ -309,7 +324,7 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   devices & command line" (V1 /oauth/pin retired ~2027; V2 = `POST /oauth2/device` + `/oauth2/token`
   device grant, 7-day tokens refreshed with the client id, QR opens `verification_uri_complete`); both client ids set (verified live). Credits: Settings footer + Trakt & Simkl screen +
   README "Credits". Mock-tested plus a live Trakt device-code check; no real sign-in yet.
-- **Shipped: 1.0.24 (`+348`, 2026-10-19, latest).** Archive/Extras tab renamed **Media Hub**
+- **Shipped: 1.0.24 (`+348`, 2026-10-19).** Archive/Extras tab renamed **Media Hub**
   (user-facing only; code/files/keys still `archive_*`); site repositioned as a "universal media
   player"; add-ons with their own catalogs of any type/ids (Other filter); **Jellyfin / Emby**
   sources (see §10 REST/JSON); Multiview name bar auto-hides after 4 s (`widgets/auto_hide_overlay.dart`,
@@ -320,7 +335,7 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 - Donations will go through GitHub Sponsors (pending approval). After approval: `FUNDING.yml`,
   site/README links and an About row. Relay `X-VesperTV-App` enforcement (`PAIR_REQUIRE_APP=1`) is
   ON since 2026-10-17 (service file backed up on the VPS as `pair-relay.service.bak-*`).
-- **Shipped: 1.0.23 (`+346`, 2026-10-18, latest on GitHub).** +340 (owner: "perfect"):
+- **Shipped: 1.0.23 (`+346`, 2026-10-18).** +340 (owner: "perfect"):
   Extras rail is now only Movies / TV Shows / Refresh / Extras sources; the row jumps (Popular /
   New / Featured / Recently watched, not search results) moved into the floating bar before
   Search + Genre (`_barRows`, `_barRowNodes`; bar scrolls sideways, `_focusBarNode` keeps the
