@@ -261,5 +261,6 @@ Future<void> openArchiveSeries(
             loadEpisodes: load,
             playEpisode: play,
             showFavorite: false,
+            imdbId: preview.imdb,
           )));
 }

@@ -7,7 +7,10 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../../l10n/l10n.dart';
 import '../../models/archive_models.dart';
 import '../../services/archive_service.dart';
+import '../../services/playlist_manager.dart';
+import '../../services/storage_service.dart';
 import '../../services/tracker_api.dart';
+import '../../services/tracker_sync.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_menu_tile.dart';
 
@@ -76,6 +79,8 @@ class TrackersScreen extends StatelessWidget {
 
   Future<void> _connect(BuildContext context, TrackerKind kind) async {
     final service = context.read<ArchiveService>();
+    final storage = context.read<StorageService>();
+    final playlist = context.read<PlaylistManager>();
     final messenger = ScaffoldMessenger.of(context);
     final login = await showDialog<TrackerLogin>(
       context: context,
@@ -84,6 +89,9 @@ class TrackersScreen extends StatelessWidget {
     );
     if (login == null) return;
     await service.addTracker(login);
+    // Bring this account's history in now, not at the next launch.
+    TrackerSync.instance.invalidate();
+    unawaited(TrackerSync.instance.syncCatalog(storage, playlist));
     messenger.showSnackBar(
         SnackBar(content: Text(tr('{name} connected.', {'name': kind.label}))));
   }

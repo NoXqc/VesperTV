@@ -211,7 +211,9 @@ void main() {
     final api = TrackerApi(client: Fake().client);
     const trakt = TrackerLogin(kind: TrackerKind.trakt, accessToken: 'TA');
     final movies = await api.fetchCatalog(
-        trakt, TrackerApi.catalogsFor(TrackerKind.trakt).first);
+        trakt,
+        TrackerApi.catalogsFor(TrackerKind.trakt)
+            .firstWhere((c) => c.id == 'trakt.watchlist'));
     expect(movies.single.id, 'tt0113277');
     expect(movies.single.year, '1995');
     expect(movies.single.posterUrl, contains('tt0113277'));

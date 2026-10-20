@@ -511,6 +511,7 @@ class _ChannelPickerDialogState extends State<_ChannelPickerDialog> {
           children: [
             Padding(
               padding: const EdgeInsets.all(12),
+              // tv-text-field-gate: exempt — Windows only (no TV keyboard).
               child: TextField(
                 controller: _searchController,
                 autofocus: true,

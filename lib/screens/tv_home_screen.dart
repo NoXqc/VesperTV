@@ -3473,6 +3473,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
             const Icon(Icons.search, color: Colors.white70, size: 20),
             const SizedBox(width: 8),
             Expanded(
+              // tv-text-field-gate: exempt — opened on purpose by the filter
+              // button, so the keyboard coming up at once is the point.
               child: TextField(
                 controller: _timelineFilterController,
                 // A fresh node, never previously focused, with autofocus —

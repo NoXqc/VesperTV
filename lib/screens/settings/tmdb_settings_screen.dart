@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../services/playlist_manager.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/settings_scaffold.dart';
+import '../../widgets/tv_text_field_gate.dart';
 import '../../l10n/l10n.dart';
 
 /// Where a user supplies their own free TMDB (The Movie Database) API
@@ -145,24 +146,31 @@ class _TmdbSettingsScreenState extends State<TmdbSettingsScreen> {
             style: const TextStyle(fontSize: 12, color: Colors.white60),
           ),
           const SizedBox(height: 20),
-          TextField(
-            controller: _controller,
+          // Keyboard only on OK (TvTextFieldGate): it opened as soon as the
+          // D-pad reached the field, so "Refresh What's New Now" below was
+          // unreachable on a Fire TV (user report, 2026-10-19).
+          TvTextFieldGate(
             focusNode: _apiKeyFocus,
-            // Submitting straight from the on-screen keyboard's own
-            // Done/Enter key — reachable without ever leaving the
-            // keyboard — rather than requiring a D-pad trip down to the
-            // Save button below. On Fire TV that trip is genuinely hard:
-            // the on-screen keyboard overlay owns D-pad input while a
-            // text field has focus (see CLAUDE.md's "Fire OS's on-screen
-            // keyboard swallows the physical Back button" note — same
-            // overlay, same root cause), so reported directly as "very
-            // hard to reach" on Fire Stick but not Formuler, which has no
-            // such overlay.
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _save(),
-            decoration: InputDecoration(
-              labelText: tr('TMDB API Key'),
-              border: const OutlineInputBorder(),
+            builder: (context, readOnly) => TextField(
+              controller: _controller,
+              focusNode: _apiKeyFocus,
+              readOnly: readOnly,
+              // Submitting straight from the on-screen keyboard's own
+              // Done/Enter key — reachable without ever leaving the
+              // keyboard — rather than requiring a D-pad trip down to the
+              // Save button below. On Fire TV that trip is genuinely hard:
+              // the on-screen keyboard overlay owns D-pad input while a
+              // text field has focus (see CLAUDE.md's "Fire OS's on-screen
+              // keyboard swallows the physical Back button" note — same
+              // overlay, same root cause), so reported directly as "very
+              // hard to reach" on Fire Stick but not Formuler, which has no
+              // such overlay.
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _save(),
+              decoration: InputDecoration(
+                labelText: tr('TMDB API Key'),
+                border: const OutlineInputBorder(),
+              ),
             ),
           ),
           const SizedBox(height: 16),

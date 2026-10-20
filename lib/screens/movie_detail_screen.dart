@@ -13,6 +13,9 @@ import '../services/desktop_mini_player.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../services/storage_service.dart';
+import '../services/tracker_api.dart';
+import '../services/tracker_sync.dart';
+import '../services/watch_tracker.dart';
 import '../utils/display_title.dart';
 import '../utils/image_urls.dart';
 import '../utils/tv_theme.dart';
@@ -67,6 +70,21 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       if (mounted) _playNode.requestFocus();
     });
     _load(playlist);
+    unawaited(_syncTrackers());
+  }
+
+  /// Trakt / Simkl by the provider's TMDB id: the play is reported, and a
+  /// watch or pause made elsewhere fills in this movie's mark / resume.
+  Future<void> _syncTrackers() async {
+    final tmdb = widget.channel.tmdbId;
+    if (tmdb == null || tmdb.isEmpty || tmdb == '0') return;
+    WatchTracker.instance
+        .register(widget.channel.id, TrackedItem.movie(null, tmdb: tmdb));
+    final changed = await TrackerSync.instance.applyToMovie(
+        context.read<StorageService>(),
+        tmdb: tmdb,
+        channelId: widget.channel.id);
+    if (changed && mounted) setState(() {});
   }
 
   Future<void> _load(PlaylistManager playlist) async {

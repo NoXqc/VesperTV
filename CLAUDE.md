@@ -101,7 +101,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+349**) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+350**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
@@ -176,8 +176,11 @@ rejected (HDR + Android-TV hardware-decode risk).
   picker did that, so Back reopened the keyboard forever). The keyboard also never follows Next
   into the next field: Fire OS reports Back as that same Next action, so it can't be told apart
   (tried, 2026-10-19: Back walked field to field). A new field on TV: wrap it, and give
-  its `onSubmitted` a focus target. Gated: Search, Add Playlist, Extras sources, Add-ons,
-  Sports picker. Not gated yet: the settings channel-linking/EPG-matching searches, dialogs.
+  its `onSubmitted` a focus target. **Every** field is gated since 1.0.26 (EPG matching, channel
+  linking, TMDB key, profiles, backup-server dialog were the last — Fire TV user report);
+  dialogs/pickers without a node use `FocusNodeOwner`. `test/tv_text_field_gate_guard_test.dart`
+  fails the build on any ungated `TextField`; a deliberate exception needs a
+  `// tv-text-field-gate: exempt — why` comment (Timeline filter, Windows Multiview picker).
 - **Opening Sports Trak, Settings or Search parks a background live channel**
   (`_parkLiveChannel`, like Movies/TV Shows/Extras). Left playing, its video stayed on screen
   over Sports Trak on a Fire Stick 4K Max (it covered the whole page with the full-video guide).
@@ -262,6 +265,24 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-19)
+- **Shipped: 1.0.26 (`+350`, 2026-10-19, latest):** every text field gated + guard test (see §10, Fire TV report).
+  **Multiview header = overlay** (user report: it squashed the 2x2): grid fills the screen; header
+  slides down on Up from the top row (`_onGridKey` → `_revealHeader(focus: true)`, `_headerFirst`),
+  Down returns to tile 0, hides 1.5 s after focus leaves (`_headerScope` listener), shown 4 s on
+  entry; touch/mouse get a top-centre handle. Multiview **full screen**: name + back arrow fade
+  after 4 s, any key/tap reveals; while hidden the first OK only reveals (Back always works).
+  **Trakt/Simkl read-back** (`services/tracker_sync.dart`): history (watched episodes per show,
+  watched movies, paused items; Trakt `/sync/watched/*` + `/sync/playback`, Simkl
+  `/sync/all-items/... extended=full` + `/sync/playback`) cached 5 min, merged across accounts,
+  matched by IMDb (Media Hub) or provider TMDB id (IPTV `Channel.tmdbId` / `XtreamSeries.tmdbId`)
+  and written into the saved positions (only fills in: never clears a mark or overwrites a local
+  resume). Unknown length → `StorageService.setResumeFraction` (1e6 scale + flag; `PlaybackService`
+  converts on start). Applied on opening a series/movie page and to the whole VOD catalog 20 s
+  after startup / on connect (`syncCatalog`). "Continue watching on Trakt/Simkl" rows (`*.playback`,
+  re-derived for old accounts in `ArchiveService.sources`). IPTV plays now scrobble too (TMDB),
+  hold-OK episode toggle pushes to `/sync/history(/remove)`. IPTV *shows* don't join the TV tab's
+  Continue Watching until opened once (episode ids need `get_series_info`). Mock-tested + live
+  401 path checks; no real account yet.
 - **Shipped: 1.0.25 (`+349`, 2026-10-19, latest)** — everything in the next bullet (was the
   "unreleased" list). Owner trusted the mock tests; real Trakt/Simkl sign-in still unconfirmed.
 - **1.0.25 contents:** Multiview quad tiles **fill** their quarter

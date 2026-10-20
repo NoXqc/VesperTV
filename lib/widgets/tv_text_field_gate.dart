@@ -18,6 +18,31 @@ import '../services/app_preferences.dart';
 /// field ([builder] with `readOnly: false`).
 ///
 /// The [builder] must pass `readOnly` and [focusNode] to its `TextField`.
+/// A [FocusNode] created and disposed with this widget, for a
+/// [TvTextFieldGate] in a dialog or a picker that has no node of its own:
+/// `FocusNodeOwner(builder: (_, node) => TvTextFieldGate(focusNode: node, …))`.
+class FocusNodeOwner extends StatefulWidget {
+  const FocusNodeOwner({super.key, required this.builder});
+
+  final Widget Function(BuildContext context, FocusNode node) builder;
+
+  @override
+  State<FocusNodeOwner> createState() => _FocusNodeOwnerState();
+}
+
+class _FocusNodeOwnerState extends State<FocusNodeOwner> {
+  final _node = FocusNode(debugLabel: 'gated-text-field');
+
+  @override
+  void dispose() {
+    _node.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.builder(context, _node);
+}
+
 class TvTextFieldGate extends StatefulWidget {
   const TvTextFieldGate({
     super.key,

@@ -341,7 +341,17 @@ class PlaybackService extends ChangeNotifier {
         .initialize(viewType: VideoViewType.platformView)
         .then((_) async {
       if (savedPositionMs > 0) {
-        await newController.seekTo(Duration(milliseconds: savedPositionMs));
+        var seekMs = savedPositionMs;
+        // A Trakt/Simkl resume point saved as a fraction (length unknown
+        // until now): the real time, then the flag goes.
+        if (_storage.isResumeFraction(channel.id)) {
+          seekMs = (savedPositionMs /
+                  StorageService.resumeFractionScale *
+                  newController.value.duration.inMilliseconds)
+              .round();
+          await _storage.clearResumeFraction(channel.id);
+        }
+        await newController.seekTo(Duration(milliseconds: seekMs));
       }
       // Surface first, then play. The video view (a platform view) is only
       // built once this controller reads as initialized; playing before

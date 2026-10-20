@@ -5,6 +5,7 @@ import '../l10n/l10n.dart';
 import '../models/archive_models.dart';
 import '../services/archive_service.dart';
 import '../services/storage_service.dart';
+import '../services/tracker_sync.dart';
 import '../widgets/detail_header.dart';
 import 'archive_playback.dart';
 
@@ -38,9 +39,24 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
   void initState() {
     super.initState();
     _loadMeta();
+    _syncTrackers();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _playNode.context != null) _playNode.requestFocus();
     });
+  }
+
+  /// Trakt / Simkl: a watch or pause made elsewhere fills in this movie's
+  /// mark / resume point (by IMDb id). Its play is registered when it
+  /// starts (`playArchiveTitle`).
+  Future<void> _syncTrackers() async {
+    final imdb = widget.preview.imdb;
+    if (imdb == null) return;
+    final changed = await TrackerSync.instance.applyToMovie(
+        context.read<StorageService>(),
+        imdb: imdb,
+        channelId: ArchiveService.channelId(widget.source, widget.preview.id,
+            episode: false));
+    if (changed && mounted) setState(() {});
   }
 
   @override

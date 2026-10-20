@@ -15,6 +15,9 @@ import '../services/desktop_mini_player.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../services/storage_service.dart';
+import '../services/tracker_api.dart';
+import '../services/tracker_sync.dart';
+import '../services/watch_tracker.dart';
 import '../utils/display_title.dart';
 import '../utils/image_urls.dart';
 import '../utils/tv_theme.dart';
@@ -52,7 +55,13 @@ class SeriesDetailScreen extends StatefulWidget {
     this.loadEpisodes,
     this.playEpisode,
     this.showFavorite = true,
+    this.imdbId,
   });
+
+  /// The show's IMDb id when known (Media Hub shows): with
+  /// [XtreamSeries.tmdbId] (IPTV, from the provider) it matches the show
+  /// on Trakt/Simkl — watched episodes get their mark, plays are reported.
+  final String? imdbId;
 
   final XtreamSeries series;
 
@@ -161,10 +170,39 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
         if (_allEpisodes.isNotEmpty) _playNode.requestFocus();
         _scrollEpisodeIntoView(_highlight[_season] ?? 0);
       });
+      unawaited(_syncTrackers(result));
     } catch (e) {
       debugPrint('SeriesDetailScreen: load failed: $e');
       if (mounted) setState(() => _failed = true);
     }
+  }
+
+  /// Season / episode number per episode channel (the provider's or the
+  /// meta's numbering) — what Trakt/Simkl match on.
+  Map<String, (int, int)> _episodeNumbers(SeriesEpisodesResult result) => {
+        for (final e in _allEpisodes)
+          if (result.details?.episodes[e.id] case final d?
+              when d.episodeNumber != null)
+            e.id: (d.season, d.episodeNumber!),
+      };
+
+  /// Trakt / Simkl: plays of these episodes are reported, and episodes
+  /// watched (or paused) elsewhere are filled in, then the page redraws.
+  Future<void> _syncTrackers(SeriesEpisodesResult result) async {
+    final imdb = widget.imdbId;
+    final tmdb = widget.series.tmdbId;
+    if (imdb == null && (tmdb == null || tmdb.isEmpty)) return;
+    final numbers = _episodeNumbers(result);
+    for (final e in numbers.entries) {
+      WatchTracker.instance.register(
+          e.key,
+          TrackedItem.episode(imdb,
+              tmdb: tmdb, season: e.value.$1, episode: e.value.$2));
+    }
+    final storage = context.read<StorageService>();
+    final changed = await TrackerSync.instance
+        .applyToSeries(storage, imdb: imdb, tmdb: tmdb, episodes: numbers);
+    if (changed && mounted) setState(() {});
   }
 
   @override
@@ -302,6 +340,16 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   Future<void> _toggleWatched(Channel episode) async {
     final storage = context.read<StorageService>();
     final wasWatched = storage.isFullyWatched(episode.id);
+    // Same mark on Trakt / Simkl, when the show is matched there.
+    final numbers = _data == null ? null : _episodeNumbers(_data!)[episode.id];
+    final tmdb = widget.series.tmdbId;
+    if (numbers != null &&
+        (widget.imdbId != null || (tmdb != null && tmdb.isNotEmpty))) {
+      unawaited(TrackerSync.instance.setWatched(
+          TrackedItem.episode(widget.imdbId,
+              tmdb: tmdb, season: numbers.$1, episode: numbers.$2),
+          watched: !wasWatched));
+    }
     if (wasWatched) {
       await storage.setLastPosition(episode.id, 0);
     } else {

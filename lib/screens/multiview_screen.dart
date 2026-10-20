@@ -7,6 +7,7 @@ import 'package:video_player_hdr/video_player_hdr.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../models/channel.dart';
+import '../services/app_preferences.dart';
 import '../services/epg_service.dart';
 import '../services/multiview_sports.dart';
 import '../services/playlist_manager.dart';
@@ -102,6 +103,56 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
       List.generate(_cellCount, (_) => _MultiviewCell());
   int _activeCell = 0;
   _MultiviewLayout _layout = _MultiviewLayout.dual;
+
+  /// The header (back, 2/4 screens, the audio hint) is an overlay, not a
+  /// row: it took height from the grid and squashed the 2x2 tiles (user
+  /// report, 2026-10-19). It slides down on Up from the top row (or a tap
+  /// on the handle, touch/mouse), shows for a few seconds on entering so
+  /// it's discoverable, and slides away once focus leaves it.
+  bool _headerShown = true;
+  Timer? _headerTimer;
+  final _headerScope = FocusScopeNode(debugLabel: 'multiview-header');
+  final _headerFirst = FocusNode(debugLabel: 'multiview-header-first');
+
+  void _revealHeader({bool focus = false}) {
+    _headerTimer?.cancel();
+    if (!_headerShown) setState(() => _headerShown = true);
+    if (focus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _headerFirst.requestFocus();
+      });
+    } else {
+      _hideHeaderSoon(const Duration(seconds: 4));
+    }
+  }
+
+  void _hideHeaderSoon([Duration after = const Duration(milliseconds: 1500)]) {
+    _headerTimer?.cancel();
+    _headerTimer = Timer(after, () {
+      if (mounted && !_headerScope.hasFocus && _headerShown) {
+        setState(() => _headerShown = false);
+      }
+    });
+  }
+
+  void _onHeaderFocus() {
+    if (_headerScope.hasFocus) {
+      _headerTimer?.cancel();
+    } else {
+      _hideHeaderSoon();
+    }
+  }
+
+  /// Up from a top-row screen opens the header (nothing is above it now).
+  KeyEventResult _onGridKey(FocusNode node, KeyEvent e, bool quad) {
+    if (e is! KeyDownEvent || e.logicalKey != LogicalKeyboardKey.arrowUp) {
+      return KeyEventResult.ignored;
+    }
+    final i = _cells.indexWhere((c) => c.focusNode.hasFocus);
+    if (i < 0 || i >= (quad ? 2 : 1)) return KeyEventResult.ignored;
+    _revealHeader(focus: true);
+    return KeyEventResult.handled;
+  }
 
   /// Portrait phone: always the 2 stacked screens (owner, 2026-10-19 — a
   /// 2x2 grid of tiny tiles on a narrow screen). The saved 4-screen choice
@@ -214,6 +265,8 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     // player first (which releases its wakelock) — a Fire Stick fell into
     // its screensaver mid-test.
     unawaited(WakelockPlus.enable());
+    _headerScope.addListener(_onHeaderFocus);
+    _hideHeaderSoon(const Duration(seconds: 4));
     if (context.read<StorageService>().getMultiviewQuad()) {
       _layout = _MultiviewLayout.quad;
     }
@@ -229,6 +282,10 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
 
   @override
   void dispose() {
+    _headerTimer?.cancel();
+    _headerScope.removeListener(_onHeaderFocus);
+    _headerScope.dispose();
+    _headerFirst.dispose();
     for (final cell in _cells) {
       cell.controller?.dispose();
       cell.focusNode.dispose();
@@ -467,87 +524,153 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     // Quad: a 2 px seam between the tiles, nearly edge to edge.
     Widget cell(int i) => Padding(
         padding: EdgeInsets.all(quad ? 1 : 3), child: _buildCell(i, quad));
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
-          child: Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-              Text(tr('Multiview'),
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600)),
-              const SizedBox(width: 12),
-              // Toggles 2 <-> 4 screens (remembered). Reached with Up from
-              // the top row of screens. Not in portrait (always 2 there).
-              if (!portrait)
-                TextButton.icon(
-                  onPressed: _toggleLayout,
-                  icon: Icon(quad ? Icons.grid_view : Icons.view_agenda,
-                      color: Colors.white, size: 18),
-                  label: Text(quad ? tr('4 screens') : tr('2 screens'),
-                      style: const TextStyle(color: Colors.white)),
-                ),
-              const Spacer(),
-              const Icon(Icons.volume_up, color: Colors.amber, size: 16),
-              const SizedBox(width: 4),
-              Flexible(
-                child: Text(
-                    tr('= audio — Select to switch, hold Select for options'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style:
-                        const TextStyle(color: Colors.white54, fontSize: 12)),
-              ),
-            ],
-          ),
+    final header = Container(
+      padding: const EdgeInsets.fromLTRB(4, 4, 12, 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.black.withValues(alpha: 0.92),
+            Colors.black.withValues(alpha: 0.75),
+            Colors.transparent,
+          ],
+          stops: const [0.0, 0.7, 1.0],
         ),
+      ),
+      child: Focus(
+        // Down from the header: back to the top row.
+        onKeyEvent: (_, e) {
+          if (e is KeyDownEvent &&
+              e.logicalKey == LogicalKeyboardKey.arrowDown) {
+            _cells[0].focusNode.requestFocus();
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: Row(
+          children: [
+            IconButton(
+              focusNode: portrait ? _headerFirst : null,
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            Text(tr('Multiview'),
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600)),
+            const SizedBox(width: 12),
+            // Toggles 2 <-> 4 screens (remembered). Reached with Up from
+            // the top row of screens. Not in portrait (always 2 there).
+            if (!portrait)
+              TextButton.icon(
+                focusNode: _headerFirst,
+                onPressed: _toggleLayout,
+                icon: Icon(quad ? Icons.grid_view : Icons.view_agenda,
+                    color: Colors.white, size: 18),
+                label: Text(quad ? tr('4 screens') : tr('2 screens'),
+                    style: const TextStyle(color: Colors.white)),
+              ),
+            const Spacer(),
+            const Icon(Icons.volume_up, color: Colors.amber, size: 16),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                  tr('= audio — Select to switch, hold Select for options'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
+            ),
+          ],
+        ),
+      ),
+    );
+    final isTv = context.read<AppPreferences>().isTelevision;
+    return Stack(
+      children: [
         // A fixed Row/Column+Expanded layout, not GridView — GridView is a
         // Scrollable, and its `childAspectRatio: 16/9` didn't exactly match
         // every real TV's available height, making it scrollable by a few
         // pixels; D-pad focus moving to the bottom row then scrolled the top
         // row partly off-screen. Row/Column+Expanded always exactly fills
         // the space, with nothing left to scroll.
-        Expanded(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-                quad ? 2 : 6, 0, quad ? 2 : 6, quad ? 2 : 6),
-            child: quad
-                ? Column(
-                    children: [
-                      Expanded(
-                          child: Row(children: [
-                        Expanded(child: cell(0)),
-                        Expanded(child: cell(1)),
-                      ])),
-                      Expanded(
-                          child: Row(children: [
-                        Expanded(child: cell(2)),
-                        Expanded(child: cell(3)),
-                      ])),
-                    ],
-                  )
-                // 2 screens are stacked (Column), not side-by-side —
-                // requested directly: left/right halves squeeze each cell
-                // into a tall near-square, distorting widescreen video.
-                // Flex 13:7 when only one cell has a channel gives the
-                // occupied row 65% of the height (1.3x an even split,
-                // requested as "bigger by 30%"); both filled = even split.
-                : Column(
-                    children: [
-                      Expanded(
-                          flex: _cells[0].channel != null ? 13 : 7,
-                          child: cell(0)),
-                      Expanded(
-                          flex: _cells[1].channel != null ? 13 : 7,
-                          child: cell(1)),
-                    ],
+        Positioned.fill(
+          child: Focus(
+            onKeyEvent: (node, e) => _onGridKey(node, e, quad),
+            child: Padding(
+              padding: EdgeInsets.all(quad ? 2 : 6),
+              child: quad
+                  ? Column(
+                      children: [
+                        Expanded(
+                            child: Row(children: [
+                          Expanded(child: cell(0)),
+                          Expanded(child: cell(1)),
+                        ])),
+                        Expanded(
+                            child: Row(children: [
+                          Expanded(child: cell(2)),
+                          Expanded(child: cell(3)),
+                        ])),
+                      ],
+                    )
+                  // 2 screens are stacked (Column), not side-by-side —
+                  // requested directly: left/right halves squeeze each cell
+                  // into a tall near-square, distorting widescreen video.
+                  // Flex 13:7 when only one cell has a channel gives the
+                  // occupied row 65% of the height (1.3x an even split,
+                  // requested as "bigger by 30%"); both filled = even split.
+                  : Column(
+                      children: [
+                        Expanded(
+                            flex: _cells[0].channel != null ? 13 : 7,
+                            child: cell(0)),
+                        Expanded(
+                            flex: _cells[1].channel != null ? 13 : 7,
+                            child: cell(1)),
+                      ],
+                    ),
+            ),
+          ),
+        ),
+        // Touch / mouse: a small handle opens the header (no Up key there).
+        if (!isTv && !_headerShown)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: GestureDetector(
+                onTap: _revealHeader,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 2),
+                  decoration: const BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius:
+                        BorderRadius.vertical(bottom: Radius.circular(12)),
                   ),
+                  child: const Icon(Icons.expand_more,
+                      color: Colors.white70, size: 20),
+                ),
+              ),
+            ),
+          ),
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: IgnorePointer(
+            ignoring: !_headerShown,
+            child: AnimatedSlide(
+              offset: _headerShown ? Offset.zero : const Offset(0, -1),
+              duration: const Duration(milliseconds: 220),
+              child: ExcludeFocus(
+                excluding: !_headerShown,
+                child: FocusScope(node: _headerScope, child: header),
+              ),
+            ),
           ),
         ),
       ],
@@ -794,61 +917,109 @@ class _MultiviewFullscreenView extends StatefulWidget {
 class _MultiviewFullscreenViewState extends State<_MultiviewFullscreenView> {
   final _backFocus = FocusNode();
 
+  /// The channel name and back arrow fade after a few seconds (they sat
+  /// over the game — user report, 2026-10-19); any key or tap brings them
+  /// back. While hidden, the first OK only reveals (it must not press the
+  /// hidden back arrow); Back itself always works.
+  bool _overlay = true;
+  Timer? _overlayTimer;
+
+  void _showOverlay() {
+    _overlayTimer?.cancel();
+    if (!_overlay) setState(() => _overlay = true);
+    _overlayTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) setState(() => _overlay = false);
+    });
+  }
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent e) {
+    if (e is! KeyDownEvent) return KeyEventResult.ignored;
+    final k = e.logicalKey;
+    final back = k == LogicalKeyboardKey.goBack ||
+        k == LogicalKeyboardKey.escape ||
+        k == LogicalKeyboardKey.browserBack;
+    final wasHidden = !_overlay;
+    _showOverlay();
+    return wasHidden && !back ? KeyEventResult.handled : KeyEventResult.ignored;
+  }
+
   @override
   void initState() {
     super.initState();
     widget.controller.setVolume(1.0);
     WidgetsBinding.instance
         .addPostFrameCallback((_) => _backFocus.requestFocus());
+    _showOverlay();
   }
 
   @override
   void dispose() {
+    _overlayTimer?.cancel();
     _backFocus.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    const fade = Duration(milliseconds: 300);
     return Scaffold(
       backgroundColor: Colors.black,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Center(
-              child: AspectRatio(
-                aspectRatio: widget.controller.value.aspectRatio == 0
-                    ? 16 / 9
-                    : widget.controller.value.aspectRatio,
-                child: VideoPlayerHdr(widget.controller,
-                    key: ObjectKey(widget.controller)),
-              ),
-            ),
-            Positioned(
-              left: 4,
-              top: 4,
-              child: IconButton(
-                focusNode: _backFocus,
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 24,
-              child: Center(
-                child: Text(
-                  widget.channel.name,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      shadows: [Shadow(color: Colors.black, blurRadius: 4)]),
+      body: Focus(
+        onKeyEvent: _onKey,
+        child: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: _showOverlay,
+          child: SafeArea(
+            child: Stack(
+              children: [
+                Center(
+                  child: AspectRatio(
+                    aspectRatio: widget.controller.value.aspectRatio == 0
+                        ? 16 / 9
+                        : widget.controller.value.aspectRatio,
+                    child: VideoPlayerHdr(widget.controller,
+                        key: ObjectKey(widget.controller)),
+                  ),
                 ),
-              ),
+                Positioned(
+                  left: 4,
+                  top: 4,
+                  child: AnimatedOpacity(
+                    opacity: _overlay ? 1 : 0,
+                    duration: fade,
+                    child: IconButton(
+                      focusNode: _backFocus,
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 24,
+                  child: IgnorePointer(
+                    child: AnimatedOpacity(
+                      opacity: _overlay ? 1 : 0,
+                      duration: fade,
+                      child: Center(
+                        child: Text(
+                          widget.channel.name,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              shadows: [
+                                Shadow(color: Colors.black, blurRadius: 4)
+                              ]),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

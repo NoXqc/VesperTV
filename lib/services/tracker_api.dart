@@ -52,36 +52,153 @@ class TrackerDeviceCode {
   final String? qrUrl;
 }
 
-/// A Media Hub play reported to Trakt/Simkl: a movie, or an episode of a
-/// show, both by IMDb id.
+/// A play reported to Trakt/Simkl: a movie, or an episode of a show, by
+/// IMDb id (Media Hub) and/or TMDB id (IPTV titles from the provider).
 class TrackedItem {
-  const TrackedItem.movie(this.imdb)
+  const TrackedItem.movie(this.imdb, {this.tmdb})
       : season = null,
         episode = null;
   const TrackedItem.episode(this.imdb,
-      {required int this.season, required int this.episode});
+      {this.tmdb, required int this.season, required int this.episode});
 
   /// The movie's or the show's IMDb id.
-  final String imdb;
+  final String? imdb;
+
+  /// The movie's or the show's TMDB id.
+  final String? tmdb;
   final int? season;
   final int? episode;
 
   bool get isEpisode => season != null;
+  bool get hasIds => imdb != null || tmdb != null;
+
+  Map<String, dynamic> get ids => {
+        if (imdb != null) 'imdb': imdb,
+        if (tmdb != null) 'tmdb': int.tryParse(tmdb!) ?? tmdb,
+      };
 
   /// The body both services' scrobble endpoints take (Simkl copied
   /// Trakt's format).
   Map<String, dynamic> toBody() => isEpisode
       ? {
-          'show': {
-            'ids': {'imdb': imdb}
-          },
+          'show': {'ids': ids},
           'episode': {'season': season, 'number': episode},
         }
       : {
-          'movie': {
-            'ids': {'imdb': imdb}
-          }
+          'movie': {'ids': ids}
         };
+
+  /// The `/sync/history` (and `/remove`) body for this one item.
+  Map<String, dynamic> toHistoryBody() => isEpisode
+      ? {
+          'shows': [
+            {
+              'ids': ids,
+              'seasons': [
+                {
+                  'number': season,
+                  'episodes': [
+                    {'number': episode}
+                  ],
+                }
+              ],
+            }
+          ]
+        }
+      : {
+          'movies': [
+            {'ids': ids}
+          ]
+        };
+}
+
+/// A movie or episode paused part-way on a tracker (Trakt `/sync/playback`,
+/// Simkl the same): the Media Hub's "Continue watching" and resume points.
+class PausedItem {
+  const PausedItem({
+    required this.type,
+    required this.title,
+    required this.progress,
+    required this.pausedAt,
+    this.imdb,
+    this.tmdb,
+    this.year,
+    this.season,
+    this.episode,
+  });
+
+  /// [ArchiveType.movie], or [ArchiveType.series] for an episode ([title]
+  /// and the ids are then the show's).
+  final ArchiveType type;
+  final String title;
+
+  /// Percent, 0-100.
+  final double progress;
+  final DateTime pausedAt;
+  final String? imdb;
+  final String? tmdb;
+  final String? year;
+  final int? season;
+  final int? episode;
+}
+
+/// What an account has watched: episodes per show and movies, each keyed
+/// by `imdb:tt…` / `tmdb:123` ([TrackerHistory.keys]), plus [paused].
+class TrackerHistory {
+  TrackerHistory({
+    Map<String, Set<String>>? episodes,
+    Set<String>? movies,
+    List<PausedItem>? paused,
+  })  : episodes = episodes ?? {},
+        movies = movies ?? {},
+        paused = paused ?? [];
+
+  /// Show key -> watched episodes as `season:number`.
+  final Map<String, Set<String>> episodes;
+  final Set<String> movies;
+  final List<PausedItem> paused;
+
+  static List<String> keys({String? imdb, String? tmdb}) => [
+        if (imdb != null && imdb.isNotEmpty) 'imdb:$imdb',
+        if (tmdb != null && tmdb.isNotEmpty && tmdb != '0') 'tmdb:$tmdb',
+      ];
+
+  static List<String> _keysOf(Object? ids) => ids is Map
+      ? keys(imdb: ids['imdb']?.toString(), tmdb: ids['tmdb']?.toString())
+      : const [];
+
+  /// [other] added in (several accounts: watched anywhere counts; a pause
+  /// on both keeps the newer one).
+  void merge(TrackerHistory other) {
+    other.episodes
+        .forEach((k, v) => episodes.putIfAbsent(k, () => <String>{}).addAll(v));
+    movies.addAll(other.movies);
+    paused.addAll(other.paused);
+    paused.sort((a, b) => b.pausedAt.compareTo(a.pausedAt));
+    final seen = <String>{};
+    paused.retainWhere((p) => seen.add(
+        '${p.type.wire}|${p.imdb ?? p.tmdb ?? p.title}|${p.season}:${p.episode}'));
+  }
+
+  bool episodeWatched(List<String> showKeys, int season, int episode) =>
+      showKeys.any((k) => episodes[k]?.contains('$season:$episode') ?? false);
+
+  bool movieWatched(List<String> keys) => keys.any(movies.contains);
+
+  PausedItem? pausedEpisode(List<String> showKeys, int season, int episode) =>
+      paused
+          .where((p) =>
+              p.type == ArchiveType.series &&
+              p.season == season &&
+              p.episode == episode &&
+              keys(imdb: p.imdb, tmdb: p.tmdb).any(showKeys.contains))
+          .firstOrNull;
+
+  PausedItem? pausedMovie(List<String> movieKeys) => paused
+      .where((p) =>
+          p.type == ArchiveType.movie &&
+          keys(imdb: p.imdb, tmdb: p.tmdb).any(movieKeys.contains))
+      .firstOrNull;
 }
 
 /// Plain HTTP client for Trakt and Simkl, mapped onto the Media Hub: sign in
@@ -108,8 +225,12 @@ class TrackerApi {
         if (k == TrackerKind.trakt) ...{
           'trakt-api-version': '2',
           'trakt-api-key': kTraktClientId,
-        } else
+        } else ...{
           'simkl-api-key': kSimklClientId,
+          'app-name': 'vespertv',
+          'app-version': '1',
+          'User-Agent': 'VesperTV',
+        },
         if (token != null) 'Authorization': 'Bearer $token',
       };
 
@@ -272,6 +393,14 @@ class TrackerApi {
         TrackerKind.trakt => const [
             ArchiveCatalog(
                 type: ArchiveType.movie,
+                id: 'trakt.playback',
+                name: 'Continue watching on Trakt'),
+            ArchiveCatalog(
+                type: ArchiveType.series,
+                id: 'trakt.playback',
+                name: 'Continue watching on Trakt'),
+            ArchiveCatalog(
+                type: ArchiveType.movie,
                 id: 'trakt.watchlist',
                 name: 'Trakt watchlist'),
             ArchiveCatalog(
@@ -288,6 +417,14 @@ class TrackerApi {
                 name: 'Trending on Trakt'),
           ],
         TrackerKind.simkl => const [
+            ArchiveCatalog(
+                type: ArchiveType.movie,
+                id: 'simkl.playback',
+                name: 'Continue watching on Simkl'),
+            ArchiveCatalog(
+                type: ArchiveType.series,
+                id: 'simkl.playback',
+                name: 'Continue watching on Simkl'),
             ArchiveCatalog(
                 type: ArchiveType.series,
                 id: 'simkl.watching',
@@ -308,6 +445,27 @@ class TrackerApi {
       TrackerLogin login, ArchiveCatalog catalog,
       {int skip = 0}) async {
     final movies = catalog.type == ArchiveType.movie;
+    if (catalog.id.endsWith('.playback')) {
+      // Paused items, newest first: movies as such, episodes as their show
+      // (once per show). IMDb id needed to show and play them here.
+      if (skip > 0) return const [];
+      final paused = await fetchPaused(login);
+      final seen = <String>{};
+      return [
+        for (final p in paused)
+          if (p.type == catalog.type && p.imdb != null && seen.add(p.imdb!))
+            ArchiveMeta(
+              id: p.imdb!,
+              type: p.type,
+              name: p.title,
+              year: p.year,
+              posterUrl:
+                  'https://images.metahub.space/poster/medium/${p.imdb}/img',
+              backgroundUrl:
+                  'https://images.metahub.space/background/medium/${p.imdb}/img',
+            ),
+      ];
+    }
     final Uri uri;
     if (login.kind == TrackerKind.trakt) {
       final page = '${skip ~/ _pageSize + 1}';
@@ -362,6 +520,132 @@ class TrackerApi {
       posterUrl: 'https://images.metahub.space/poster/medium/$imdb/img',
       backgroundUrl: 'https://images.metahub.space/background/medium/$imdb/img',
     );
+  }
+
+  // ---- watched history (read back) ----------------------------------------
+
+  Future<Object?> _getJson(TrackerLogin login, String url,
+      [Map<String, String>? query]) async {
+    var uri = Uri.parse(url);
+    if (login.kind == TrackerKind.simkl) {
+      query = {
+        ...?query,
+        'client_id': kSimklClientId,
+        'app-name': 'vespertv',
+        'app-version': '1',
+      };
+    }
+    if (query != null) uri = uri.replace(queryParameters: query);
+    final r = await _client
+        .get(uri, headers: _headers(login.kind, login.accessToken))
+        .timeout(const Duration(seconds: 30));
+    if (r.statusCode == 401) throw TrackerAuthException('401');
+    if (r.statusCode != 200) {
+      throw TrackerAuthException('history ${r.statusCode}');
+    }
+    return _decode(r);
+  }
+
+  /// Everything [login] has watched (episodes per show, movies) and its
+  /// paused items. Trakt: `/sync/watched/{shows,movies}` + `/sync/playback`;
+  /// Simkl: `/sync/all-items` (`extended=full` for the episodes) +
+  /// `/sync/playback`.
+  Future<TrackerHistory> fetchHistory(TrackerLogin login) async {
+    final h = TrackerHistory();
+    void addShow(Object? show, Object? seasons) {
+      final keys = TrackerHistory._keysOf(show is Map ? show['ids'] : null);
+      if (keys.isEmpty || seasons is! List) return;
+      final eps = <String>{
+        for (final s in seasons)
+          if (s is Map)
+            for (final e in (s['episodes'] as List? ?? const []))
+              if (e is Map) '${s['number']}:${e['number']}',
+      };
+      for (final k in keys) {
+        h.episodes.putIfAbsent(k, () => <String>{}).addAll(eps);
+      }
+    }
+
+    void addMovie(Object? movie) => h.movies
+        .addAll(TrackerHistory._keysOf(movie is Map ? movie['ids'] : null));
+
+    if (login.kind == TrackerKind.trakt) {
+      final shows = await _getJson(login, '$_trakt/sync/watched/shows');
+      for (final s in (shows is List ? shows : const [])) {
+        if (s is Map) addShow(s['show'], s['seasons']);
+      }
+      final movies = await _getJson(login, '$_trakt/sync/watched/movies');
+      for (final m in (movies is List ? movies : const [])) {
+        if (m is Map) addMovie(m['movie']);
+      }
+    } else {
+      final shows = await _getJson(login, '$_simkl/sync/all-items/shows/all',
+          {'extended': 'full', 'include_all_episodes': 'yes'});
+      for (final s
+          in (shows is Map ? shows['shows'] as List? ?? const [] : const [])) {
+        if (s is Map) addShow(s['show'], s['seasons']);
+      }
+      final movies =
+          await _getJson(login, '$_simkl/sync/all-items/movies/completed');
+      for (final m in (movies is Map
+          ? movies['movies'] as List? ?? const []
+          : const [])) {
+        if (m is Map) addMovie(m['movie']);
+      }
+    }
+    h.paused.addAll(await fetchPaused(login));
+    h.paused.sort((a, b) => b.pausedAt.compareTo(a.pausedAt));
+    return h;
+  }
+
+  /// [login]'s paused movies and episodes, newest first.
+  Future<List<PausedItem>> fetchPaused(TrackerLogin login) async {
+    final out = <PausedItem>[];
+    final playback = await _getJson(login,
+        '${login.kind == TrackerKind.trakt ? _trakt : _simkl}/sync/playback');
+    for (final p in (playback is List ? playback : const [])) {
+      if (p is! Map) continue;
+      final episode = p['episode'];
+      final isEpisode = episode is Map;
+      final owner = (isEpisode ? p['show'] : p['movie']);
+      if (owner is! Map) continue;
+      final ids = owner['ids'];
+      final progress = (p['progress'] as num?)?.toDouble();
+      final title = owner['title']?.toString();
+      if (progress == null || title == null || ids is! Map) continue;
+      int? n(Object? v) => v is num ? v.toInt() : int.tryParse('$v');
+      out.add(PausedItem(
+        type: isEpisode ? ArchiveType.series : ArchiveType.movie,
+        title: title,
+        progress: progress,
+        pausedAt: DateTime.tryParse('${p['paused_at']}') ?? DateTime(2000),
+        imdb: ids['imdb']?.toString(),
+        tmdb: ids['tmdb']?.toString(),
+        year: owner['year']?.toString(),
+        season: isEpisode ? n(episode['season']) : null,
+        // Simkl's docs show both `number` and `episode`.
+        episode: isEpisode ? n(episode['number'] ?? episode['episode']) : null,
+      ));
+    }
+    out.sort((a, b) => b.pausedAt.compareTo(a.pausedAt));
+    return out;
+  }
+
+  /// Marks [item] watched (or, with [watched] false, unwatched) on
+  /// [login]'s account — the series page's hold-OK toggle. Best effort.
+  Future<bool> setWatched(TrackerLogin login, TrackedItem item,
+      {required bool watched}) async {
+    final base = login.kind == TrackerKind.trakt ? _trakt : _simkl;
+    try {
+      final r = await _client
+          .post(Uri.parse('$base/sync/history${watched ? '' : '/remove'}'),
+              headers: _headers(login.kind, login.accessToken),
+              body: jsonEncode(item.toHistoryBody()))
+          .timeout(_timeout);
+      return r.statusCode == 200 || r.statusCode == 201;
+    } catch (_) {
+      return false;
+    }
   }
 
   // ---- scrobbling ----------------------------------------------------------

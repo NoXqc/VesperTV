@@ -13,6 +13,7 @@ import '../../widgets/section_label.dart';
 import '../../widgets/settings_panel.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_app_bar_button.dart';
+import '../../widgets/tv_text_field_gate.dart';
 import '../../widgets/tv_menu_tile.dart';
 import '../../widgets/tv_switch_list_tile.dart';
 import 'add_playlist_screen.dart';
@@ -176,15 +177,22 @@ class _PlaylistDetailScreenState extends State<_PlaylistDetailScreen> {
               tr('The full address, exactly like the main one — for example http://backup.example.com:8080'),
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              autofocus: true,
-              keyboardType: TextInputType.url,
-              decoration: InputDecoration(
-                labelText: tr('Server address'),
-                hintText: 'http://',
+            FocusNodeOwner(
+              builder: (context, node) => TvTextFieldGate(
+                focusNode: node,
+                builder: (context, readOnly) => TextField(
+                  controller: controller,
+                  focusNode: node,
+                  readOnly: readOnly,
+                  autofocus: true,
+                  keyboardType: TextInputType.url,
+                  decoration: InputDecoration(
+                    labelText: tr('Server address'),
+                    hintText: 'http://',
+                  ),
+                  onSubmitted: (value) => Navigator.of(context).pop(value),
+                ),
               ),
-              onSubmitted: (value) => Navigator.of(context).pop(value),
             ),
           ],
         ),

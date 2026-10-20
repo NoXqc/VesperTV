@@ -176,7 +176,13 @@ class ArchiveService extends ChangeNotifier {
     try {
       return [
         for (final j in jsonDecode(raw) as List)
-          ArchiveSource.fromJson(Map<String, dynamic>.from(j as Map)),
+          if (ArchiveSource.fromJson(Map<String, dynamic>.from(j as Map))
+              case final s)
+            // A tracker's rows are always the current set (accounts added
+            // before "Continue watching" existed get it too).
+            s.tracker == null
+                ? s
+                : s.copyWith(catalogs: TrackerApi.catalogsFor(s.tracker!.kind)),
       ];
     } catch (_) {
       return const [];

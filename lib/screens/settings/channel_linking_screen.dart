@@ -6,6 +6,7 @@ import '../../models/channel.dart';
 import '../../services/playlist_manager.dart';
 import '../../widgets/auto_pair_flow.dart';
 import '../../widgets/settings_scaffold.dart';
+import '../../widgets/tv_text_field_gate.dart';
 import '../../l10n/l10n.dart';
 
 /// Manual cross-playlist "same real-world channel" linking — see
@@ -158,24 +159,31 @@ class _ChannelLinkingScreenState extends State<ChannelLinkingScreen> {
           ),
         Padding(
           padding: const EdgeInsets.all(16),
-          child: TextField(
-            controller: _searchController,
+          // Keyboard only on OK (TvTextFieldGate): it opened as soon as the
+          // D-pad reached the field, so the channels below were unreachable
+          // on a Fire TV (user report, 2026-10-19).
+          child: TvTextFieldGate(
             focusNode: _searchFocus,
-            decoration: InputDecoration(
-              labelText: reviewFilter != null
-                  ? tr(
-                      'Reviewing {reviewFilter} auto-paired channel{s} — type to search all instead',
-                      {
-                          'reviewFilter': reviewFilter.length,
-                          's': reviewFilter.length == 1 ? '' : 's'
-                        })
-                  : tr('Search your channels'),
-              prefixIcon: const Icon(Icons.search),
-              border: const OutlineInputBorder(),
+            builder: (context, readOnly) => TextField(
+              controller: _searchController,
+              focusNode: _searchFocus,
+              readOnly: readOnly,
+              decoration: InputDecoration(
+                labelText: reviewFilter != null
+                    ? tr(
+                        'Reviewing {reviewFilter} auto-paired channel{s} — type to search all instead',
+                        {
+                            'reviewFilter': reviewFilter.length,
+                            's': reviewFilter.length == 1 ? '' : 's'
+                          })
+                    : tr('Search your channels'),
+                prefixIcon: const Icon(Icons.search),
+                border: const OutlineInputBorder(),
+              ),
+              onChanged: (value) => setState(() {
+                if (value.isNotEmpty) _reviewFilter = null;
+              }),
             ),
-            onChanged: (value) => setState(() {
-              if (value.isNotEmpty) _reviewFilter = null;
-            }),
           ),
         ),
         Expanded(
@@ -294,15 +302,22 @@ class _PickLinkedChannelScreenState extends State<_PickLinkedChannelScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _searchController,
-              autofocus: true,
-              decoration: InputDecoration(
-                labelText: tr('Search other playlists\' channels'),
-                prefixIcon: const Icon(Icons.search),
-                border: const OutlineInputBorder(),
+            child: FocusNodeOwner(
+              builder: (context, node) => TvTextFieldGate(
+                focusNode: node,
+                builder: (context, readOnly) => TextField(
+                  controller: _searchController,
+                  focusNode: node,
+                  readOnly: readOnly,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    labelText: tr('Search other playlists\' channels'),
+                    prefixIcon: const Icon(Icons.search),
+                    border: const OutlineInputBorder(),
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
               ),
-              onChanged: (_) => setState(() {}),
             ),
           ),
           Expanded(

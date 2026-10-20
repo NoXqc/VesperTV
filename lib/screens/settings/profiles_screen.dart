@@ -12,6 +12,7 @@ import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_app_bar_button.dart';
 import '../../widgets/tv_menu_tile.dart';
 import '../../widgets/tv_switch_list_tile.dart';
+import '../../widgets/tv_text_field_gate.dart';
 import 'group_management_screen.dart';
 import 'hidden_channels_screen.dart';
 import '../../l10n/l10n.dart';
@@ -162,7 +163,16 @@ class _ProfileDetailScreenState extends State<_ProfileDetailScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(tr('Rename profile')),
-        content: TextField(controller: controller, autofocus: true),
+        content: FocusNodeOwner(
+          builder: (context, node) => TvTextFieldGate(
+            focusNode: node,
+            builder: (context, readOnly) => TextField(
+                controller: controller,
+                focusNode: node,
+                readOnly: readOnly,
+                autofocus: true),
+          ),
+        ),
         actions: [
           TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -405,13 +415,17 @@ class _AddProfileScreenState extends State<_AddProfileScreen> {
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            TextField(
-              controller: _nameController,
+            TvTextFieldGate(
               focusNode: _nameFocus,
-              autofocus: true,
-              decoration: InputDecoration(
-                labelText: tr('Name'),
-                border: const OutlineInputBorder(),
+              builder: (context, readOnly) => TextField(
+                controller: _nameController,
+                focusNode: _nameFocus,
+                readOnly: readOnly,
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: tr('Name'),
+                  border: const OutlineInputBorder(),
+                ),
               ),
             ),
             const SizedBox(height: 16),

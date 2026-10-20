@@ -574,6 +574,29 @@ class StorageService {
 
   int getLastDuration(String channelId) =>
       _prefs.getInt(_durationKey(channelId)) ?? 0;
+
+  /// A resume point known only as a fraction (Trakt/Simkl paused at 42 %,
+  /// the title never played here so its length is unknown): saved as
+  /// position/duration on a 1,000,000 scale, so progress bars and "resume"
+  /// read it as is, plus a flag so the player converts it to a real time
+  /// once the duration is known ([PlaybackService.play]). Its key starts
+  /// with the position prefix, so clearing history sweeps it too.
+  static const resumeFractionScale = 1000000;
+  String _fractionKey(String channelId) =>
+      _vk('${AppConstants.keyLastPositionPrefix}frac:$channelId');
+
+  Future<void> setResumeFraction(String channelId, double fraction) async {
+    await _prefs.setBool(_fractionKey(channelId), true);
+    await setLastDuration(channelId, resumeFractionScale);
+    await setLastPosition(
+        channelId, (fraction.clamp(0.0, 1.0) * resumeFractionScale).round());
+  }
+
+  bool isResumeFraction(String channelId) =>
+      _prefs.getBool(_fractionKey(channelId)) ?? false;
+
+  Future<void> clearResumeFraction(String channelId) =>
+      _prefs.remove(_fractionKey(channelId));
   Future<void> setLastDuration(String channelId, int milliseconds) =>
       _prefs.setInt(_durationKey(channelId), milliseconds);
 

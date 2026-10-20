@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'archive_service.dart';
 import 'tracker_api.dart';
+import 'tracker_sync.dart';
 
 /// Reports Media Hub plays to the viewer's connected Trakt / Simkl
 /// accounts (scrobbling). Off unless an account is connected: nothing is
@@ -32,11 +33,15 @@ class WatchTracker {
   final Map<String, String> _sent = {};
 
   void register(String channelId, TrackedItem item) {
+    if (!item.hasIds) return _drop(channelId);
     _items[channelId] = item;
     _sent.remove(channelId);
   }
 
   bool isTracked(String channelId) => _items.containsKey(channelId);
+
+  /// No ids at all (a provider title without a TMDB id): nothing to report.
+  void _drop(String channelId) => _items.remove(channelId);
 
   Future<void> started(String channelId) => _report(channelId, 'start', 0);
 
@@ -61,5 +66,6 @@ class WatchTracker {
     await Future.wait([
       for (final login in logins) _api.scrobble(login, item, action, progress),
     ]);
+    if (action != 'start') TrackerSync.instance.invalidate();
   }
 }

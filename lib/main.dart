@@ -38,6 +38,7 @@ import 'widgets/live_resume_hint.dart';
 import 'widgets/splash_stars.dart';
 import 'l10n/l10n.dart';
 import 'services/archive_service.dart';
+import 'services/tracker_sync.dart';
 import 'services/watch_tracker.dart';
 
 Future<void> main() async {
@@ -309,6 +310,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       _archiveService = ArchiveService(_storage);
       // Trakt/Simkl scrobbling reads the connected accounts from here.
       WatchTracker.instance.attach(_archiveService);
+      TrackerSync.instance.attach(_archiveService);
       _viewerProfileService =
           ViewerProfileService(_storage, _playlistManager, _playbackService);
 
@@ -437,6 +439,11 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // `_epgService.init()` was started during the splash (see above);
       // awaiting it here only makes sure startAutoRefresh sees whether the
       // database has data — which decides if a refresh is due right away.
+      // Trakt/Simkl: movies watched or paused elsewhere get their mark /
+      // resume point (a no-op without an account). Late, off the busy
+      // first seconds after the splash.
+      unawaited(Future<void>.delayed(const Duration(seconds: 20)).then(
+          (_) => TrackerSync.instance.syncCatalog(_storage, _playlistManager)));
       unawaited(() async {
         await _playbackService.init();
         await Future.wait([
