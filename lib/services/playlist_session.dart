@@ -90,6 +90,10 @@ class PlaylistSession {
   /// [moveGroup]. Missing/empty = provider order.
   Map<String, List<String>> groupOrder = {};
 
+  /// User-chosen live channel order per group title (ordered rawIds) — see
+  /// [moveChannel]. Missing = provider order.
+  Map<String, List<String>> channelOrder = {};
+
   /// Live TV only — see [AppConstants.keyHiddenChannels]'s doc comment
   /// for why this exists alongside whole-group hiding. Keyed by
   /// [Channel.rawId].
@@ -232,6 +236,7 @@ class PlaylistSession {
       for (final type in const ['tv', 'vod', 'series'])
         type: storage.getGroupOrder(profile.id, type),
     };
+    channelOrder = storage.getChannelOrder(profile.id);
     hiddenChannels = storage.getHiddenChannels(profile.id);
     if (isRestrictedViewer()) {
       hiddenGroups =
@@ -1297,7 +1302,8 @@ class PlaylistSession {
       switch (category) {
         case 'tv':
           final list = groupTitle != null
-              ? liveChannels.where((c) => c.group == groupTitle)
+              ? _orderedChannels(
+                  groupTitle, liveChannels.where((c) => c.group == groupTitle))
               : liveChannels.where((c) => !hiddenGroups.contains(c.group));
           // Applied even when a specific group was asked for (unlike
           // hiddenGroups above) — a hidden channel is usually a
@@ -1317,7 +1323,9 @@ class PlaylistSession {
     }
 
     if (groupTitle != null) {
-      final list = channels.where((c) => c.group == groupTitle);
+      final inGroup = channels.where((c) => c.group == groupTitle);
+      final list =
+          category == 'tv' ? _orderedChannels(groupTitle, inGroup) : inGroup;
       return (category == 'tv'
               ? list.where((c) => !hiddenChannels.contains(c.rawId))
               : list)
@@ -1329,6 +1337,46 @@ class PlaylistSession {
             !hiddenGroups.contains(c.group) &&
             (category != 'tv' || !hiddenChannels.contains(c.rawId)))
         .toList();
+  }
+
+  /// Applies [channelOrder] for [groupTitle] — same rule as [_ordered]:
+  /// ordered rawIds first, channels the provider added since follow in
+  /// provider order.
+  Iterable<Channel> _orderedChannels(
+      String groupTitle, Iterable<Channel> inGroup) {
+    final order = channelOrder[groupTitle];
+    if (order == null || order.isEmpty) return inGroup;
+    final byRawId = {for (final c in inGroup) c.rawId: c};
+    return [
+      for (final rawId in order)
+        if (byRawId.remove(rawId) case final c?) c,
+      ...inGroup.where((c) => byRawId.containsKey(c.rawId)),
+    ];
+  }
+
+  /// Moves the live channel [rawId] by [delta] places among [groupTitle]'s
+  /// visible channels (a hidden one in between would make a press look
+  /// like it did nothing), clamped to the ends. Returns the new visible
+  /// index, or null if it isn't a visible channel of that group.
+  Future<int?> moveChannel(String groupTitle, String rawId, int delta) async {
+    final source = isXtream ? liveChannels : channels;
+    final all =
+        _orderedChannels(groupTitle, source.where((c) => c.group == groupTitle))
+            .map((c) => c.rawId)
+            .toList();
+    final visible = all.where((id) => !hiddenChannels.contains(id)).toList();
+    final from = visible.indexOf(rawId);
+    if (from < 0) return null;
+    final to = (from + delta).clamp(0, visible.length - 1);
+    if (to == from) return from;
+    final anchor = visible[to];
+    all.remove(rawId);
+    final anchorIndex = all.indexOf(anchor);
+    all.insert(delta < 0 ? anchorIndex : anchorIndex + 1, rawId);
+    channelOrder[groupTitle] = all;
+    await storage.setChannelOrder(profile.id, channelOrder);
+    onNotify();
+    return to;
   }
 
   Future<void> toggleChannelHidden(String rawId) async {

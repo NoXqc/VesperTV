@@ -34,9 +34,28 @@ class MainActivity : FlutterActivity() {
     private val MEMORY_CHANNEL = "com.nox.nox_iptv/device_memory"
     private val UPDATE_CHANNEL = "com.nox.nox_iptv/app_update"
     private val DEVICE_CHANNEL = "com.nox.nox_iptv/device_type"
+    private val BACKUP_CHANNEL = "com.nox.nox_iptv/backup"
+    private val backupStore by lazy { BackupStore(this) }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        if (!backupStore.onPermissionResult(requestCode, grantResults)) {
+            super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        }
+    }
+
+    @Deprecated("Activity result API; FlutterActivity still routes through this")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (!backupStore.onActivityResult(requestCode, resultCode, data)) {
+            super.onActivityResult(requestCode, resultCode, data)
+        }
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        // Settings > Backup & restore — see BackupStore.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, BACKUP_CHANNEL)
+            .setMethodCallHandler { call, result -> backupStore.handle(call, result) }
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, MEMORY_CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "getMemoryInfo") {

@@ -42,6 +42,15 @@ class AppPreferences extends ChangeNotifier {
   /// Fullscreen player zooms the picture to fill the screen (no black bars).
   late bool videoFill;
 
+  /// Favourites (TV, Movies, TV Shows) mixed across playlists, A-Z,
+  /// instead of one block per playlist (Settings > General > Favourites).
+  late bool mixFavoritePlaylists;
+
+  /// Sports Trak / Settings / Search hide the background live channel's
+  /// picture while open (stream and sound keep going) — see
+  /// `TvHomeScreen._pushOverLiveVideo`.
+  late bool hideVideoOnSports;
+
   /// Both Movies and TV Shows hidden.
   bool get hideMoviesShows => hideMovies && hideShows;
 
@@ -69,6 +78,8 @@ class AppPreferences extends ChangeNotifier {
     hideArchive = _storage.getHideArchive();
     hideMultiview = _storage.getHideMultiview();
     videoFill = _storage.getVideoFill();
+    mixFavoritePlaylists = _storage.getMixFavoritePlaylists();
+    hideVideoOnSports = _storage.getHideVideoOnSports();
     TimeFormat.use24h = _storage.getTime24h();
   }
 
@@ -146,6 +157,18 @@ class AppPreferences extends ChangeNotifier {
   void setVideoFill(bool value) {
     videoFill = value;
     _storage.setVideoFill(value);
+    notifyListeners();
+  }
+
+  void setHideVideoOnSports(bool value) {
+    hideVideoOnSports = value;
+    _storage.setHideVideoOnSports(value);
+    notifyListeners();
+  }
+
+  void setMixFavoritePlaylists(bool value) {
+    mixFavoritePlaylists = value;
+    _storage.setMixFavoritePlaylists(value);
     notifyListeners();
   }
 

@@ -130,6 +130,17 @@ class AppConstants {
   /// per viewer, one list per content type ('tv'/'vod'/'series'): the key
   /// gets a `_<type>` suffix before the usual playlist/viewer suffixes.
   static const String keyGroupOrder = 'nox_group_order';
+
+  /// User-chosen live channel order inside a group (hold OK on a channel →
+  /// Move Up / Down), per playlist and per viewer: one JSON map of group
+  /// title → ordered `Channel.rawId`s.
+  static const String keyChannelOrder = 'nox_channel_order';
+
+  /// Playlists whose groups are hidden from one category's groups column
+  /// and browse rows (groups column > Playlists > Right > Hide), per viewer;
+  /// the key gets a `_<category>` suffix ('tv'/'vod'/'series'). Their
+  /// channels stay in Search and Favourites and keep playing.
+  static const String keyHiddenPlaylistGroups = 'vesper_hidden_playlist_groups';
   static const String keyRecentSearches = 'nox_recent_searches';
 
   /// The JSON-encoded `List<PlaylistProfile>` — the whole multi-playlist
@@ -219,6 +230,21 @@ class AppConstants {
   static const String keyHideShows = 'vesper_hide_shows';
   static const String keyHideArchive = 'vesper_hide_archive';
   static const String keyHideMultiview = 'vesper_hide_multiview';
+
+  /// Favourites (TV, Movies, TV Shows) as one list across playlists,
+  /// A-Z, instead of one block per playlist.
+  static const String keyMixFavoritePlaylists = 'vesper_mix_favorite_playlists';
+
+  /// Settings > Backup & restore: weekly automatic backup on/off (off by
+  /// default) and the last one's time (ms since epoch; never backed up).
+  static const String keyAutoBackup = 'vesper_auto_backup';
+
+  /// Settings > General > Background video: hide the live picture (not
+  /// the stream) while Sports Trak, Settings or Search is open — opt-in
+  /// workaround for Fire TV sticks that keep drawing it on top.
+  /// Device-only (not transferred). Key name predates Settings/Search.
+  static const String keyHideVideoOnSports = 'vesper_hide_video_on_sports';
+  static const String keyLastAutoBackup = 'vesper_last_auto_backup';
 
   /// Sports tab, per viewer: leagues shown (ordered ids), spoiler mode, and
   /// the user's own game -> channel picks (JSON, see `SportsChannelPicks`).

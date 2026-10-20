@@ -1513,6 +1513,12 @@ class PlaylistManager extends ChangeNotifier {
       _sessionFor(playlistId)?.moveGroup(type, title, delta, shown: shown) ??
       Future.value(null);
 
+  /// See [PlaylistSession.moveChannel].
+  Future<int?> moveChannel(Channel channel, int delta) =>
+      _sessionFor(channel.playlistId)
+          ?.moveChannel(channel.group, channel.rawId, delta) ??
+      Future.value(null);
+
   // --- Full catalog sync ------------------------------------------------
 
   /// True if *any* enabled Xtream playlist is due for a full sync — see

@@ -6,6 +6,12 @@
          once, from Settings — this permission alone doesn't skip that. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
 
+    <!-- Settings > Backup & restore (BackupStore.kt): Android 9 and older write
+         Download/VesperTV directly; Android 10 reads backups another install left
+         there (requestLegacyExternalStorage). Android 11+ needs neither. -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="29"/>
+
     <!-- Not TV-only: phones/tablets can still install and run this fine. -->
     <uses-feature android:name="android.software.leanback" android:required="false"/>
     <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>
@@ -16,7 +22,8 @@
         android:icon="@mipmap/vespertv_launcher"
         android:banner="@drawable/vespertv_banner"
         android:usesCleartextTraffic="true"
-        android:largeHeap="true">
+        android:largeHeap="true"
+        android:requestLegacyExternalStorage="true">
         <!-- Impeller (Vulkan) crashes on startup on several budget Amlogic/Mali
              GPU drivers found in Firesticks and Android STBs — those devices
              have no Dart-level stack trace to catch since the crash happens

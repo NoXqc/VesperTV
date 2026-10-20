@@ -88,6 +88,18 @@ const Map<String, String> kEs = {
   'This device\'s video decoder couldn\'t play this stream — likely 4K HDR (HEVC 10-bit). If your provider offers an HD (non-4K) version of this channel or title, try that. If another app plays this stream on this device, please report it with a photo of the technical details below.':
       "El decodificador de video de este dispositivo no pudo reproducir esta transmisión; probablemente sea 4K HDR (HEVC 10 bits). Si tu proveedor ofrece una versión HD (no 4K) de este canal o título, prueba con esa. Si otra app reproduce esta transmisión en este dispositivo, avísanos con una foto de los detalles técnicos de abajo.",
   'Playback error:\n{raw}': "Error de reproducción:\n{raw}",
+  "Server error {code}":
+      "Error del servidor {code}",
+  "The provider's server had a problem. Try again in a moment.":
+      "El servidor del proveedor tuvo un problema. Inténtalo de nuevo en un momento.",
+  "The provider refused the stream: check that your account is active and not already in use on another device.":
+      "El proveedor rechazó la transmisión: comprueba que tu cuenta está activa y no se está usando en otro dispositivo.",
+  "The provider has no stream at this address: the channel or title may have been removed.":
+      "El proveedor no tiene ninguna transmisión en esta dirección: puede que el canal o el título se haya eliminado.",
+  "The provider rejected the request.":
+      "El proveedor rechazó la solicitud.",
+  "Couldn't reach the provider's server. Check your internet connection, or the server may be down.":
+      "No se pudo conectar con el servidor del proveedor. Comprueba tu conexión a Internet, o puede que el servidor esté caído.",
   'Subtitles': "Subtítulos",
   'Off': "Desactivados",
   'Forced': "Forzados",
@@ -348,6 +360,97 @@ const Map<String, String> kEs = {
   'Cancel Hide': "Cancelar ocultar",
   'Hide Group': "Ocultar grupo",
   'Move Up / Down': "Subir / bajar",
+  "Show":
+      "Mostrar",
+  "Hide":
+      "Ocultar",
+  "Hidden here · {n} groups":
+      "Oculta aquí · {n} grupos",
+  "At least one playlist stays shown.":
+      "Al menos una lista debe seguir visible.",
+  "{name} hidden in {tab}":
+      "{name} oculta en {tab}",
+  "{name} shown in {tab}":
+      "{name} visible en {tab}",
+  "Playlists":
+      "Listas",
+  "Jump to playlist":
+      "Ir a la lista",
+  "{n} groups":
+      "{n} grupos",
+  "Background video":
+      "Vídeo en segundo plano",
+  "Hide the live picture behind other pages":
+      "Ocultar la imagen en directo detrás de otras páginas",
+  "A live channel keeps playing behind {tab}, Settings and Search. Some Fire TV sticks keep showing its picture on top of those pages. Turn this on if that happens: the sound keeps going, only the picture is hidden until you go back. Updating the device's software (Fire TV: Settings > My Fire TV > About > Check for Updates) may fix it too.":
+      "Un canal en directo sigue sonando detrás de {tab}, Ajustes y Buscar. Algunos Fire TV Stick siguen mostrando su imagen encima de esas páginas. Actívalo si te pasa: el sonido sigue, solo se oculta la imagen hasta que vuelvas. Actualizar el software del dispositivo (Fire TV: Configuración > Mi Fire TV > Acerca de > Buscar actualizaciones) también puede solucionarlo.",
+  'Go to row': "Ir a la fila",
+  "Typing a server address and password with a remote is painful. Scan this code with your phone camera and sign in there — the details appear here for you to check and connect.":
+      "Escribir la dirección de un servidor y una contraseña con el mando es incómodo. Escanea este código con la cámara del teléfono e inicia sesión allí: los datos aparecen aquí para que los compruebes.",
+  "Check the details here, then press Connect.":
+      "Comprueba los datos aquí y pulsa Conectar.",
+  "{n} other catalogs":
+      "{n} otros catálogos",
+  "Use the Other filter in Media Hub > Movies > Genre to see this content.":
+      "Usa el filtro Otros en Media Hub > Películas > Género para ver este contenido.",
+  "Backup & restore":
+      "Copia de seguridad y restauración",
+  "Save everything to a file on this device":
+      "Guardar todo en un archivo en este dispositivo",
+  "Back up now":
+      "Hacer copia ahora",
+  "Playlists, favourites, profiles, progress and settings, saved to {path}":
+      "Listas, favoritos, perfiles, progreso y ajustes, guardados en {path}",
+  "Automatic backup":
+      "Copia automática",
+  "Once a week, when VesperTV starts. Keeps the last {n}.":
+      "Una vez por semana, al iniciar VesperTV. Conserva las últimas {n}.",
+  "Restore from a file":
+      "Restaurar desde un archivo",
+  "Pick a backup file, e.g. after reinstalling VesperTV":
+      "Elige un archivo de copia, por ejemplo tras reinstalar VesperTV",
+  "Backups":
+      "Copias de seguridad",
+  "No backups yet.":
+      "Todavía no hay copias.",
+  "Backups include your playlist logins. Keep the files private.":
+      "Las copias incluyen los datos de acceso de tus listas. Mantén los archivos en privado.",
+  "Manual":
+      "Manual",
+  "Restore this backup":
+      "Restaurar esta copia",
+  "Restore":
+      "Restaurar",
+  "Restore backup?":
+      "¿Restaurar la copia?",
+  "Everything on this device (playlists, favourites, profiles, settings) is replaced by the backup from {from}. Your current setup is saved as an automatic backup first. VesperTV closes afterwards.":
+      "Todo lo que hay en este dispositivo (listas, favoritos, perfiles, ajustes) se sustituye por la copia de {from}. Tu configuración actual se guarda antes como copia automática. VesperTV se cierra después.",
+  "the chosen file":
+      "el archivo elegido",
+  "Backup restored":
+      "Copia restaurada",
+  "Backup saved to {path}":
+      "Copia guardada en {path}",
+  "Backup failed: {error}":
+      "Error en la copia: {error}",
+  "VesperTV needs storage access to save backups.":
+      "VesperTV necesita acceso al almacenamiento para guardar copias.",
+  "Couldn't read the backup folder: {error}":
+      "No se pudo leer la carpeta de copias: {error}",
+  "Couldn't read this backup: {error}":
+      "No se pudo leer esta copia: {error}",
+  "Couldn't delete this backup.":
+      "No se pudo eliminar esta copia.",
+  "This device has no file picker. Copy the backup into {path} on this device instead.":
+      "Este dispositivo no tiene selector de archivos. Copia la copia de seguridad en {path} de este dispositivo.",
+  "This file is not a VesperTV backup.":
+      "Este archivo no es una copia de VesperTV.",
+  "Up / Down moves {name}. OK when done.":
+      "Arriba / Abajo mueve {name}. OK para terminar.",
+  "Mix playlists in Favourites":
+      "Mezclar las listas en Favoritos",
+  "TV, Movies and TV Shows favourites from every playlist in one A-Z list, instead of one list per playlist.":
+      "Los favoritos de TV, Películas y Series de todas las listas en una sola lista de la A a la Z, en lugar de una lista por cada una.",
   'Move to Top': "Mover arriba del todo",
   'Unhide this channel': "Volver a mostrar este canal",
   'Hide this channel': "Ocultar este canal",

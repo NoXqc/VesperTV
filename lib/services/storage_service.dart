@@ -263,6 +263,14 @@ class StorageService {
   bool getVideoFill() => _prefs.getBool(AppConstants.keyVideoFill) ?? false;
   Future<void> setVideoFill(bool value) =>
       _prefs.setBool(AppConstants.keyVideoFill, value);
+  bool getHideVideoOnSports() =>
+      _prefs.getBool(AppConstants.keyHideVideoOnSports) ?? false;
+  Future<void> setHideVideoOnSports(bool value) =>
+      _prefs.setBool(AppConstants.keyHideVideoOnSports, value);
+  bool getMixFavoritePlaylists() =>
+      _prefs.getBool(AppConstants.keyMixFavoritePlaylists) ?? false;
+  Future<void> setMixFavoritePlaylists(bool value) =>
+      _prefs.setBool(AppConstants.keyMixFavoritePlaylists, value);
   bool getHideArchive() => _prefs.getBool(AppConstants.keyHideArchive) ?? false;
   Future<void> setHideArchive(bool value) =>
       _prefs.setBool(AppConstants.keyHideArchive, value);
@@ -498,6 +506,39 @@ class StorageService {
       _prefs.setStringList(
           _vkp('${AppConstants.keyGroupOrder}_$type', playlistId), titles);
 
+  /// See [AppConstants.keyHiddenPlaylistGroups]; [category] is
+  /// 'tv'/'vod'/'series'.
+  Set<String> getHiddenPlaylistGroups(String category) => (_prefs.getStringList(
+              _vk('${AppConstants.keyHiddenPlaylistGroups}_$category')) ??
+          const <String>[])
+      .toSet();
+  Future<void> setHiddenPlaylistGroups(String category, Set<String> ids) =>
+      _prefs.setStringList(
+          _vk('${AppConstants.keyHiddenPlaylistGroups}_$category'),
+          ids.toList());
+
+  /// Group title → ordered live channel rawIds — see
+  /// [AppConstants.keyChannelOrder]. Empty = provider order everywhere.
+  Map<String, List<String>> getChannelOrder(String playlistId) {
+    final raw =
+        _prefs.getString(_vkp(AppConstants.keyChannelOrder, playlistId));
+    if (raw == null || raw.isEmpty) return {};
+    try {
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      return {
+        for (final e in decoded.entries)
+          e.key: (e.value as List).map((v) => v as String).toList(),
+      };
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> setChannelOrder(
+          String playlistId, Map<String, List<String>> order) =>
+      _prefs.setString(
+          _vkp(AppConstants.keyChannelOrder, playlistId), jsonEncode(order));
+
   // --- Search history (per viewer) ------------------------------------------
 
   static const _maxRecentSearches = 10;
@@ -662,6 +703,7 @@ class StorageService {
     AppConstants.keyWindowsWindowed,
     AppConstants.keyWindowsBounds,
     AppConstants.keyVideoFill,
+    AppConstants.keyHideVideoOnSports,
     AppConstants.keyPlaylistEnabled,
     AppConstants.keyPinFailCount,
     AppConstants.keyPinLockedUntil,
@@ -681,6 +723,100 @@ class StorageService {
   static bool _transferable(String key) =>
       !_transferSkipExact.contains(key) &&
       !_transferSkipPrefixes.any(key.startsWith);
+
+  /// A backup goes back onto the same device, so unlike a transfer it keeps
+  /// the device settings (layout, picture fit, enabled playlists, window
+  /// size) — only caches and lock/sync state stay out.
+  static const _backupSkipExact = {
+    AppConstants.keyEpgCache,
+    AppConstants.keyEpgLastUpdated,
+    AppConstants.keyPinFailCount,
+    AppConstants.keyPinLockedUntil,
+    AppConstants.keyWhatsNewTmdbLastRefreshed,
+    AppConstants.keyWhatsNewVodIds,
+    AppConstants.keyWhatsNewSeriesIds,
+    AppConstants.keyCloudTransfer,
+    AppConstants.keyLastAutoBackup,
+  };
+
+  static bool _backupable(String key) =>
+      !_backupSkipExact.contains(key) &&
+      !_transferSkipPrefixes.any(key.startsWith);
+
+  /// Everything [_backupable] in the same type-tagged form as
+  /// [exportForTransfer] — see `BackupService`.
+  Map<String, Object> exportForBackup() => _exportWhere(_backupable);
+
+  /// Replaces the setup with a backup from [exportForBackup] (or an older
+  /// one); the app must restart afterwards, as after a transfer.
+  Future<void> importForBackup(Map<String, Object?> values) =>
+      _importWhere(values, _backupable);
+
+  Map<String, Object> _exportWhere(bool Function(String key) include,
+      {bool Function(String key)? skip}) {
+    final out = <String, Object>{};
+    for (final key in _prefs.getKeys()) {
+      if (!include(key) || (skip?.call(key) ?? false)) continue;
+      final v = _prefs.get(key);
+      final tagged = switch (v) {
+        String s => {'t': 's', 'v': s},
+        bool b => {'t': 'b', 'v': b},
+        int i => {'t': 'i', 'v': i},
+        double x => {'t': 'd', 'v': x},
+        List<String> l => {'t': 'l', 'v': l},
+        _ => null,
+      };
+      if (tagged != null) out[key] = tagged;
+    }
+    return out;
+  }
+
+  /// Removes every [include] key not [keep]-protected, then writes
+  /// [values]' [include] keys back with their tagged types.
+  Future<void> _importWhere(
+      Map<String, Object?> values, bool Function(String key) include,
+      {bool Function(String key)? keep}) async {
+    for (final key in _prefs.getKeys().toList()) {
+      if (keep?.call(key) ?? false) continue;
+      if (include(key)) await _prefs.remove(key);
+    }
+    for (final entry in values.entries) {
+      if (!include(entry.key)) continue;
+      if (entry.key == _transferArchiveExcluded) continue;
+      if (keep?.call(entry.key) ?? false) continue;
+      final tagged = entry.value;
+      if (tagged is! Map) continue;
+      final v = tagged['v'];
+      switch (tagged['t']) {
+        case 's' when v is String:
+          await _prefs.setString(entry.key, v);
+        case 'b' when v is bool:
+          await _prefs.setBool(entry.key, v);
+        case 'i' when v is int:
+          await _prefs.setInt(entry.key, v);
+        case 'd' when v is num:
+          await _prefs.setDouble(entry.key, v.toDouble());
+        case 'l' when v is List:
+          await _prefs.setStringList(entry.key, [
+            for (final s in v)
+              if (s is String) s
+          ]);
+      }
+    }
+  }
+
+  /// Settings > Backup & restore: automatic weekly backup (off by default)
+  /// and when the last one ran (device-only, never in a backup).
+  bool getAutoBackup() => _prefs.getBool(AppConstants.keyAutoBackup) ?? false;
+  Future<void> setAutoBackup(bool value) =>
+      _prefs.setBool(AppConstants.keyAutoBackup, value);
+  DateTime? getLastAutoBackup() {
+    final ms = _prefs.getInt(AppConstants.keyLastAutoBackup);
+    return ms == null ? null : DateTime.fromMillisecondsSinceEpoch(ms);
+  }
+
+  Future<void> setLastAutoBackup(DateTime when) => _prefs.setInt(
+      AppConstants.keyLastAutoBackup, when.millisecondsSinceEpoch);
 
   /// The Archive tab's data: its sources, plus the watch progress of its
   /// titles (position/duration keys of `archive::arc_…` channel ids — see
@@ -705,61 +841,20 @@ class StorageService {
   /// [includeArchive] false (Transfer > "Include Archive tab data" off)
   /// leaves out [_isArchiveKey] keys and marks the payload so the receiver
   /// keeps its own Archive data.
-  Map<String, Object> exportForTransfer({bool includeArchive = true}) {
-    final out = <String, Object>{
-      if (!includeArchive) _transferArchiveExcluded: {'t': 'b', 'v': true},
-    };
-    for (final key in _prefs.getKeys()) {
-      if (!_transferable(key)) continue;
-      if (!includeArchive && _isArchiveKey(key)) continue;
-      final v = _prefs.get(key);
-      final tagged = switch (v) {
-        String s => {'t': 's', 'v': s},
-        bool b => {'t': 'b', 'v': b},
-        int i => {'t': 'i', 'v': i},
-        double x => {'t': 'd', 'v': x},
-        List<String> l => {'t': 'l', 'v': l},
-        _ => null,
+  Map<String, Object> exportForTransfer({bool includeArchive = true}) => {
+        if (!includeArchive) _transferArchiveExcluded: {'t': 'b', 'v': true},
+        ..._exportWhere(_transferable,
+            skip: includeArchive ? null : _isArchiveKey),
       };
-      if (tagged != null) out[key] = tagged;
-    }
-    return out;
-  }
 
   /// Replaces this device's setup with [values] from [exportForTransfer].
   /// Device-only keys ([_transferable] = false) are kept; everything else
   /// is removed first so nothing from the old setup lingers. The app must
   /// restart afterwards — services hold the old state in memory.
-  Future<void> importForTransfer(Map<String, Object?> values) async {
-    final keepArchive = values.containsKey(_transferArchiveExcluded);
-    for (final key in _prefs.getKeys().toList()) {
-      if (keepArchive && _isArchiveKey(key)) continue;
-      if (_transferable(key)) await _prefs.remove(key);
-    }
-    for (final entry in values.entries) {
-      if (!_transferable(entry.key)) continue;
-      if (entry.key == _transferArchiveExcluded) continue;
-      if (keepArchive && _isArchiveKey(entry.key)) continue;
-      final tagged = entry.value;
-      if (tagged is! Map) continue;
-      final v = tagged['v'];
-      switch (tagged['t']) {
-        case 's' when v is String:
-          await _prefs.setString(entry.key, v);
-        case 'b' when v is bool:
-          await _prefs.setBool(entry.key, v);
-        case 'i' when v is int:
-          await _prefs.setInt(entry.key, v);
-        case 'd' when v is num:
-          await _prefs.setDouble(entry.key, v.toDouble());
-        case 'l' when v is List:
-          await _prefs.setStringList(entry.key, [
-            for (final s in v)
-              if (s is String) s
-          ]);
-      }
-    }
-  }
+  Future<void> importForTransfer(Map<String, Object?> values) => _importWhere(
+      values, _transferable,
+      keep:
+          values.containsKey(_transferArchiveExcluded) ? _isArchiveKey : null);
 
   Future<void> clearCache() async {
     await _prefs.remove(AppConstants.keyEpgCache);

@@ -8,9 +8,12 @@ import '../l10n/l10n.dart';
 import '../models/archive_models.dart';
 import '../services/archive_service.dart';
 import '../widgets/detail_header.dart';
+import '../widgets/hold_to_activate.dart';
 import '../widgets/live_resume_hint.dart';
 import '../widgets/poster_card.dart';
+import '../widgets/roll_down_menu.dart';
 import '../widgets/tv_text_field_gate.dart';
+import 'archive_catalog_screen.dart';
 import 'archive_detail_screen.dart';
 import 'archive_playback.dart';
 import 'settings/archive_sources_screen.dart';
@@ -578,6 +581,42 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
           if (!rows[r].isSearch) r,
       ];
 
+  /// Hold OK (or long-press) on a row's jump button: a small menu rolls
+  /// down under it — Expand catalog (the whole row as a poster grid,
+  /// [ArchiveCatalogScreen], like the IPTV groups' hold menu) or Go to row.
+  Future<void> _showRowMenu(List<ArchiveRow> rows, int r) async {
+    final row = rows[r];
+    final anchorNode = _barRowNode(row.key);
+    final title = _barRowLabel(row);
+    final choice = await showRollDownMenu<String>(
+      context,
+      anchor: rollDownAnchorOf(anchorNode.context),
+      title: title,
+      items: [
+        RollDownMenuItem(
+            value: 'expand',
+            icon: Icons.grid_view_rounded,
+            label: tr('Expand catalog')),
+        RollDownMenuItem(
+            value: 'row', icon: Icons.south, label: tr('Go to row')),
+      ],
+    );
+    if (!mounted) return;
+    switch (choice) {
+      case 'expand':
+        await Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => ArchiveCatalogScreen(
+                type: row.catalog.type, rowKey: row.key, title: title)));
+        // Back lands on the button that opened it, not wherever Flutter's
+        // focus restoration guesses (CLAUDE.md §10: explicit beats default).
+        if (mounted && anchorNode.context != null) _focusBarNode(anchorNode);
+      case 'row':
+        _focusRow(rows, r);
+      default:
+        if (anchorNode.context != null) _focusBarNode(anchorNode);
+    }
+  }
+
   FocusNode _barRowNode(String rowKey) => _barRowNodes.putIfAbsent(
       rowKey, () => FocusNode(debugLabel: 'archive-bar-row'));
 
@@ -695,6 +734,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                             : Icons.grid_view_rounded,
                         label: _barRowLabel(rows[r]),
                         onTap: () => _focusRow(rows, r),
+                        onHold: () => _showRowMenu(rows, r),
                       ),
                     if (barRows.isNotEmpty && hasTools)
                       Container(
@@ -927,9 +967,13 @@ class _BarButton extends StatefulWidget {
     this.active = false,
     this.autofocus = false,
     this.expand = false,
+    this.onHold,
   });
 
   final FocusNode? focusNode;
+
+  /// Hold OK / long-press (a row button's menu); null = no hold action.
+  final VoidCallback? onHold;
   final bool autofocus;
 
   /// Fill the width (grid cells), content centred.
@@ -998,9 +1042,13 @@ class _BarButtonState extends State<_BarButton> {
             ]),
       ),
     );
-    return widget.tooltip == null
+    final held = widget.onHold == null
         ? button
-        : Tooltip(message: widget.tooltip!, child: button);
+        : HoldToActivate(
+            onTap: widget.onTap, onHold: widget.onHold, child: button);
+    return widget.tooltip == null
+        ? held
+        : Tooltip(message: widget.tooltip!, child: held);
   }
 }
 

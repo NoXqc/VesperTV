@@ -166,14 +166,25 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
   }
 
   String _summary(ArchiveSource s) {
-    final movies = s.catalogs.where((c) => c.type == ArchiveType.movie).length;
-    final shows = s.catalogs.where((c) => c.type == ArchiveType.series).length;
+    // Custom-type catalogs (wireType set) are browsed under Movies but only
+    // behind the genre picker's Other entry — counted on their own.
+    final movies = s.catalogs
+        .where((c) => c.type == ArchiveType.movie && c.wireType == null)
+        .length;
+    final shows = s.catalogs
+        .where((c) => c.type == ArchiveType.series && c.wireType == null)
+        .length;
+    final other = _otherCatalogs(s);
     final parts = [
       if (movies > 0) tr('{n} movie catalogs', {'n': movies}),
       if (shows > 0) tr('{n} TV show catalogs', {'n': shows}),
+      if (other > 0) tr('{n} other catalogs', {'n': other}),
     ];
     return '${parts.join(' · ')}  ·  ${tr('Hold OK to remove')}';
   }
+
+  int _otherCatalogs(ArchiveSource s) =>
+      s.catalogs.where((c) => c.wireType != null).length;
 
   @override
   Widget build(BuildContext context) {
@@ -201,8 +212,25 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
               onHold: () => _remove(s),
               child: TvSwitchListTile(
                 title: Text(s.name),
-                subtitle: Text(_summary(s),
-                    maxLines: 2, overflow: TextOverflow.ellipsis),
+                subtitle: _otherCatalogs(s) == 0
+                    ? Text(_summary(s),
+                        maxLines: 2, overflow: TextOverflow.ellipsis)
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(_summary(s),
+                              maxLines: 2, overflow: TextOverflow.ellipsis),
+                          const SizedBox(height: 2),
+                          // Not in the normal rows, search or Recently
+                          // watched (ArchiveService.otherGenre) — without
+                          // this, the source looks like it added nothing.
+                          Text(
+                            tr('Use the Other filter in Media Hub > Movies > Genre to see this content.'),
+                            style: TextStyle(
+                                color: Theme.of(context).colorScheme.primary),
+                          ),
+                        ],
+                      ),
                 value: s.enabled,
                 onChanged: (v) => service.setEnabled(s, v),
               ),

@@ -49,7 +49,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
 4. `flutter analyze` must report the baseline **17** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `1.0.26` unless noted
+5. Check the current state of releases: `gh release list` (latest should be `1.0.27` unless noted
    in §11).
 
 ## 3. Layout (what matters)
@@ -71,7 +71,10 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `epg_service.dart` + `epg_database.dart` (guide in sqflite), `catalog_database.dart` (sqflite), `storage_service.dart` (prefs/cache),
   `app_update_service.dart` (GitHub release updater). Transfer to another device:
   `cloud_transfer.dart` (internet, encrypted upload to the relay's vault — the main Send path) +
-  `device_transfer.dart` (same Wi-Fi), UI `screens/settings/transfer_screen.dart`.
+  `device_transfer.dart` (same Wi-Fi), UI `screens/settings/transfer_screen.dart`. Backup &
+  restore: `services/backup_service.dart` + `android/.../BackupStore.kt` (Download/VesperTV via
+  MediaStore; Windows Documents\VesperTV), UI `screens/settings/backup_screen.dart`; Transfer and
+  Restore share `screens/settings/replace_setup.dart` (clear caches, import, exit).
 - `lib/screens/settings/*` — Settings screens (Add Playlist is a 3-pane LokTV-style layout).
 - **Media Hub** (code name Archive — files/classes/keys stay `archive_*`): `screens/archive_screen.dart`
   (tab), `archive_detail_screen.dart` / `archive_playback.dart` (play, series via
@@ -84,7 +87,8 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `widgets/game_channel_chooser.dart`, `widgets/auto_hide_overlay.dart` (tile name bar).
 - `lib/screens/welcome_add_playlist_screen.dart` — first-launch "Hey beautiful Human" prompt.
 - `lib/widgets/`: `poster_card`, `hold_to_activate`, `live_resume_hint`, `tv_menu_tile`,
-  `mode_button`, `pin_pad`, `sidebar`, `epg_guide`.
+  `mode_button`, `pin_pad`, `sidebar`, `epg_guide`, `roll_down_menu` (the black/gold menu that
+  unrolls under a button: Media Hub row hold menu, groups column Playlists menu).
 - Palettes: `lib/utils/constants.dart` (`cyberpunkPalettes`, `AppConstants.appName`),
   `lib/models/cyberpunk_palette.dart`, `lib/utils/tv_theme.dart`.
 - `third_party/video_player_android` — **vendored, patched** ExoPlayer plugin (see §9).
@@ -112,7 +116,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+350**) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+360**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
@@ -148,7 +152,10 @@ Stick passes ExoPlayer's 500 ms timeout, and the error recovery then re-prepared
 player on the main thread (an ANR was seen once). **If `video_player_hdr` or its constraint
 is ever bumped**, re-sync the vendored copy to the new version and re-apply all of these patches
 plus the gradle dependency line. Migrating to `media_kit` on Android was researched and
-rejected (HDR + Android-TV hardware-decode risk).
+rejected (HDR + Android-TV hardware-decode risk). Also patched (1.0.27):
+`ExoPlayerEventListener.describeCause` appends `[HTTP 404 Not Found] [ERROR_CODE_…] cause: …` to
+the error string; Dart reads it (`httpStatusFromPlaybackError`) and the player's error screen
+always shows the details (owner: show any error so user photos can be diagnosed).
 
 ## 10. Hard-won rules (don't re-learn these)
 - **Cold-start splash is deliberately slow (~20-25s with a big second playlist).** Entering the UI
@@ -192,9 +199,17 @@ rejected (HDR + Android-TV hardware-decode risk).
   dialogs/pickers without a node use `FocusNodeOwner`. `test/tv_text_field_gate_guard_test.dart`
   fails the build on any ungated `TextField`; a deliberate exception needs a
   `// tv-text-field-gate: exempt — why` comment (Timeline filter, Windows Multiview picker).
-- **Opening Sports Trak, Settings or Search parks a background live channel**
-  (`_parkLiveChannel`, like Movies/TV Shows/Extras). Left playing, its video stayed on screen
-  over Sports Trak on a Fire Stick 4K Max (it covered the whole page with the full-video guide).
+- **Sports Trak, Settings and Search keep a background live channel playing** (owner reverted the
+  1.0.24 parking on all three, 2026-10-20). Movies/TV Shows/Media Hub still park it
+  (`_parkLiveChannel`). The parking was added because the video stayed on screen over those pages
+  on some Fire TV sticks (newer sticks on an older Fire OS build; not on the owner's updated 4K
+  Max). Fix = opt-in **Settings > General > Background video** (`AppPreferences
+  .hideVideoOnSports`, device-only): `_pushOverLiveVideo` removes the picture's platform view
+  while the page is open, stream + sound keep going. Don't re-add the parking.
+- **A `Focus(onKeyEvent: …)` wrapper around focusable children must be `canRequestFocus: false,
+  skipTraversal: true`.** A plain one is itself a focus target: D-pad traversal landed on
+  Multiview's invisible grid-sized wrapper instead of the next tile and the remote looked stuck
+  (Fire Stick, 1.0.26 header overlay).
 - **A plain focusable widget (not a text field) competes with Flutter's own default directional
   traversal — `HardwareKeyboard.instance.addHandler` loses that race.** `add_playlist_screen.dart`'s
   `_handleFieldEscapeKey` reliably overrides arrow keys while a *text field* has focus only because
@@ -275,7 +290,23 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 ## 12. Features (details in `dev-notes/features.md`)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
-## 13. Status & open items (as of 2026-10-19)
+## 13. Status & open items (as of 2026-10-20)
+- **Shipped: 1.0.27 (`+360`, 2026-10-20, latest; test builds `+351`..`+359` were on the Formuler and
+  the Fire Stick):** playback error codes on screen (§9); hold OK on a live channel
+  (guide or list) = menu with **Move Up / Down** inside its group (`PlaylistSession.moveChannel`,
+  `nox_channel_order`; the plain list's hold now opens that menu instead of favouriting);
+  Settings > General **collapsible sections** (`_section`), **Mix playlists in Favourites**
+  (A-Z across playlists), **Background video** opt-in (§10); **Backup & restore** (§3; Android
+  11+ can't list another install's files, Fire TV has no file picker — only Fire OS 7 sticks see
+  old backups after a reinstall); Media Hub sources show "Use the Other filter…" under sources
+  with custom-type catalogs; Jellyfin/Emby **From phone** (`PairingKind.mediaServer`; it and the
+  link kind are **Wi-Fi only** — the relay's deployed pair.html predates them, redeploy only if
+  the owner asks); Media Hub **hold a row button = roll-down menu** (Expand catalog =
+  `screens/archive_catalog_screen.dart` grid, Go to row); groups column **Playlists ▾** row under
+  History (What's New/Favourites/All in Movies/Shows): jump to a playlist, Right = **Hide/Show
+  that playlist's groups in this tab only** (`keyHiddenPlaylistGroups`, per viewer, channels stay
+  in Search/Favourites); Multiview stuck-focus fix (§10). Owner said "very good" to the menus,
+  From phone and the jump; error screen, move, backup, Multiview fix on the Fire Stick unconfirmed.
 - **Open (2026-10-19 evening):** no real Trakt/Simkl account has signed in yet (all mock-tested +
   live endpoint/client-id checks) — first user reports are the real test. Jellyfin only
   mock-tested (owner confirmed a real Emby server). Windows Multiview has no header-overlay /

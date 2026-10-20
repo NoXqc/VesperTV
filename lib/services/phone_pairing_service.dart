@@ -18,10 +18,29 @@ const String kPairRelayBase = 'https://pair.vespertv.app';
 /// `tools/pair_relay/README.md`). Not a secret — it only stops casual reuse.
 const Map<String, String> kRelayAppHeaders = {'X-VesperTV-App': '1'};
 
-/// What a pairing session asks the phone for: the Add Playlist form, or one
-/// long link (Settings > Archive sources' manifest URL). pair.html picks its
-/// form from a `.link` / `#link` suffix on the URL fragment.
-enum PairingKind { playlist, link }
+/// What a pairing session asks the phone for: the Add Playlist form, one
+/// long link (Settings > Archive sources' manifest URL), or a Jellyfin /
+/// Emby sign-in (address, user name, password). pair.html picks its form
+/// from a `.link` / `#link` or `.server` / `#server` suffix on the fragment.
+///
+/// Only [playlist] works through the relay: the relay serves its own copy
+/// of pair.html, which predates the other two forms (CLAUDE.md §13 —
+/// redeploy it only when the owner asks). [isWifiOnly] kinds hide the relay
+/// code in `PhonePairPanel`.
+enum PairingKind {
+  playlist,
+  link,
+  mediaServer;
+
+  bool get isWifiOnly => this != playlist;
+
+  /// The result `mode` this kind accepts (null = 'xtream' or 'm3u').
+  String? get mode => switch (this) {
+        playlist => null,
+        link => 'link',
+        mediaServer => 'server',
+      };
+}
 
 /// What the phone sent: the same fields Add Playlist has, or one [link].
 class PairingResult {
@@ -36,7 +55,8 @@ class PairingResult {
     this.epgUrl = '',
   });
 
-  /// 'xtream', 'm3u' or 'link'.
+  /// 'xtream', 'm3u', 'link' or 'server' (Jellyfin / Emby: [server],
+  /// [username], [password]; the password may be empty).
   final String mode;
 
   /// Set when [mode] is 'link'.
@@ -70,6 +90,9 @@ class PairingResult {
       link: s('link', 4000),
     );
     if (mode == 'link') return r.link.isNotEmpty ? r : null;
+    if (mode == 'server') {
+      return r.server.isNotEmpty && r.username.isNotEmpty ? r : null;
+    }
     if (mode == 'xtream' &&
         r.server.isNotEmpty &&
         r.username.isNotEmpty &&
@@ -106,10 +129,15 @@ class PhonePairingSession {
   final PairingKind kind;
 
   /// The URL-fragment suffix pair.html reads (see [PairingKind]).
-  String get _kindSuffix => kind == PairingKind.link ? 'link' : '';
+  String get _kindSuffix => switch (kind) {
+        PairingKind.playlist => '',
+        PairingKind.link => 'link',
+        PairingKind.mediaServer => 'server',
+      };
 
-  bool _accepts(PairingResult r) =>
-      (r.mode == 'link') == (kind == PairingKind.link);
+  bool _accepts(PairingResult r) => kind.mode == null
+      ? r.mode == 'xtream' || r.mode == 'm3u'
+      : r.mode == kind.mode;
 
   final _results = StreamController<PairingResult>.broadcast();
   Stream<PairingResult> get results => _results.stream;

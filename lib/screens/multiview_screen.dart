@@ -539,6 +539,9 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
         ),
       ),
       child: Focus(
+        // Listen-only (see the grid's Focus below).
+        canRequestFocus: false,
+        skipTraversal: true,
         // Down from the header: back to the top row.
         onKeyEvent: (_, e) {
           if (e is KeyDownEvent &&
@@ -597,6 +600,12 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
         // the space, with nothing left to scroll.
         Positioned.fill(
           child: Focus(
+            // Listen-only: it only hears keys bubbling up from the focused
+            // tile. Focusable (the default), D-pad traversal could land on
+            // this invisible grid-sized node instead of the next tile, and
+            // the remote looked stuck (Fire Stick, 2026-10-20).
+            canRequestFocus: false,
+            skipTraversal: true,
             onKeyEvent: (node, e) => _onGridKey(node, e, quad),
             child: Padding(
               padding: EdgeInsets.all(quad ? 2 : 6),

@@ -671,6 +671,16 @@ class PlaybackService extends ChangeNotifier {
 /// to explain the limitation, `PlaybackService` uses it to *not* waste
 /// the viewer's time cycling backup servers over something no server
 /// change can fix, and those two must agree on what counts.
+/// The HTTP status the stream's server answered with, when the native
+/// player put one in its error (`... [HTTP 404 Not Found]`, appended by
+/// `ExoPlayerEventListener.describeCause` in the vendored plugin) — the
+/// usual reason a stream won't start is the provider, not the app.
+/// Null for anything else (decoder, network, unknown).
+int? httpStatusFromPlaybackError(String raw) {
+  final match = RegExp(r'\[HTTP (\d{3})').firstMatch(raw);
+  return match == null ? null : int.parse(match.group(1)!);
+}
+
 bool isDecoderPlaybackError(String raw) {
   final lower = raw.toLowerCase();
   return lower.contains('mediacodecvideorenderer') ||

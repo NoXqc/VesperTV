@@ -129,19 +129,17 @@ class VideoPlayerPane extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 12),
-              ExpansionTile(
-                title: Text(tr('Technical details'),
-                    style: const TextStyle(fontSize: 12)),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Text(
-                      playback.error!,
-                      style:
-                          const TextStyle(fontSize: 11, color: Colors.white54),
-                    ),
-                  ),
-                ],
+              // Always shown (not collapsed): user reports arrive as a
+              // photo of the TV, and the raw error is what diagnoses them.
+              Text(tr('Technical details'),
+                  style: const TextStyle(fontSize: 12, color: Colors.white70)),
+              const SizedBox(height: 4),
+              Text(
+                playback.error!,
+                textAlign: TextAlign.center,
+                maxLines: 8,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 11, color: Colors.white54),
               ),
             ],
           ),
@@ -329,7 +327,27 @@ String _friendlyPlaybackError(String raw) {
     return tr(
         'This device\'s video decoder couldn\'t play this stream — likely 4K HDR (HEVC 10-bit). If your provider offers an HD (non-4K) version of this channel or title, try that. If another app plays this stream on this device, please report it with a photo of the technical details below.');
   }
-  return tr('Playback error:\n{raw}', {'raw': raw});
+  final status = httpStatusFromPlaybackError(raw);
+  if (status != null) {
+    final hint = status >= 500
+        ? tr('The provider\'s server had a problem. Try again in a moment.')
+        : status == 401 || status == 403
+            ? tr(
+                'The provider refused the stream: check that your account is active and not already in use on another device.')
+            : status == 404 || status == 410
+                ? tr(
+                    'The provider has no stream at this address: the channel or title may have been removed.')
+                : tr('The provider rejected the request.');
+    return '${tr('Server error {code}', {'code': '$status'})}\n$hint';
+  }
+  if (raw.contains('ERROR_CODE_IO_NETWORK_CONNECTION_FAILED') ||
+      raw.contains('ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT')) {
+    return tr(
+        'Couldn\'t reach the provider\'s server. Check your internet connection, or the server may be down.');
+  }
+  // Details are printed in full below the message, so only name the code.
+  final code = RegExp(r'\[(ERROR_CODE_\w+)\]').firstMatch(raw)?.group(1);
+  return tr('Playback error:\n{raw}', {'raw': code ?? tr('unknown error')});
 }
 
 /// Bottom-anchored playback controls: play/pause, seek bar, elapsed/total

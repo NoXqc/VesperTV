@@ -14,6 +14,7 @@ import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.media3.common.Timeline;
 import androidx.media3.common.Tracks;
+import androidx.media3.datasource.HttpDataSource;
 import androidx.media3.exoplayer.ExoPlayer;
 
 public abstract class ExoPlayerEventListener implements Player.Listener {
@@ -266,8 +267,33 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
       // TextureExoPlayerEventListener.errorRetryDelayMs.
       scheduleRecovery();
     } else {
-      events.onError("VideoError", "Video player had error " + error, null);
+      events.onError("VideoError", "Video player had error " + error + describeCause(error), null);
     }
+  }
+
+  // PlaybackException.toString() is just "ExoPlaybackException: Source error"
+  // — the HTTP status a provider answered with (the usual reason a stream
+  // won't start) and the root cause sit several causes deep. Appended as
+  // " [HTTP 404 Not Found] [ERROR_CODE_IO_BAD_HTTP_STATUS] cause: ..." so
+  // the Dart side (httpStatusFromPlaybackError, the player's error screen)
+  // can show what actually failed, for diagnosing user reports from a photo.
+  @NonNull
+  static String describeCause(@NonNull PlaybackException error) {
+    StringBuilder out = new StringBuilder();
+    Throwable root = null;
+    for (Throwable t = error.getCause(); t != null; t = t.getCause()) {
+      if (t instanceof HttpDataSource.InvalidResponseCodeException) {
+        HttpDataSource.InvalidResponseCodeException http =
+            (HttpDataSource.InvalidResponseCodeException) t;
+        String message = http.responseMessage == null ? "" : " " + http.responseMessage;
+        out.append(" [HTTP ").append(http.responseCode).append(message).append("]");
+      }
+      root = t;
+      if (t.getCause() == t) break;
+    }
+    out.append(" [").append(error.getErrorCodeName()).append("]");
+    if (root != null) out.append(" cause: ").append(root);
+    return out.toString();
   }
 
   @Override

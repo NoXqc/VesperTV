@@ -38,6 +38,7 @@ import 'widgets/live_resume_hint.dart';
 import 'widgets/splash_stars.dart';
 import 'l10n/l10n.dart';
 import 'services/archive_service.dart';
+import 'services/backup_service.dart';
 import 'services/tracker_sync.dart';
 import 'services/watch_tracker.dart';
 
@@ -444,6 +445,10 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // first seconds after the splash.
       unawaited(Future<void>.delayed(const Duration(seconds: 20)).then(
           (_) => TrackerSync.instance.syncCatalog(_storage, _playlistManager)));
+      // Weekly automatic backup when switched on (Settings > Backup &
+      // restore); a no-op otherwise.
+      unawaited(Future<void>.delayed(const Duration(seconds: 40))
+          .then((_) => BackupService(_storage).maybeAutoBackup()));
       unawaited(() async {
         await _playbackService.init();
         await Future.wait([

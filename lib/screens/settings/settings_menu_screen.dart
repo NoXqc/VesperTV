@@ -6,6 +6,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../../utils/tv_theme.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_menu_tile.dart';
+import '../../services/backup_service.dart';
+import 'backup_screen.dart';
 import 'check_updates_screen.dart';
 import 'epg_settings_screen.dart';
 import 'general_settings_screen.dart';
@@ -132,6 +134,14 @@ class SettingsMenuScreen extends StatelessWidget {
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(
                         builder: (_) => const TransferScreen())),
                   ),
+                  if (BackupService.supported)
+                    TvMenuTile(
+                      icon: Icons.settings_backup_restore,
+                      title: tr('Backup & restore'),
+                      subtitle: tr('Save everything to a file on this device'),
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => const BackupScreen())),
+                    ),
                   // Reads whatever code is actually running via
                   // PackageInfo (same source CheckUpdatesScreen's
                   // "Current version" line uses) rather than a hand-typed

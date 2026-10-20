@@ -38,6 +38,7 @@ import '../widgets/live_resume_hint.dart';
 import '../widgets/mode_button.dart';
 import '../widgets/player_controls.dart';
 import '../widgets/poster_card.dart';
+import '../widgets/roll_down_menu.dart';
 import '../widgets/section_label.dart';
 import '../widgets/update_prompt.dart';
 import '../widgets/settings_scaffold.dart';
@@ -202,6 +203,16 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// scope node itself rather than any real row.
   final FocusNode _firstGroupRowFocusNode =
       FocusNode(debugLabel: 'first-group-row');
+
+  /// The groups column's "Playlists" row (2+ playlists) — the jump menu's
+  /// anchor, and where focus goes back when it's dismissed.
+  final FocusNode _playlistsRowFocusNode =
+      FocusNode(debugLabel: 'playlists-row');
+
+  /// The groups column (Live TV) / groups rail (Movies, TV Shows) — only
+  /// one of them is ever mounted (keyed by tab). Lets the Playlists jump
+  /// scroll to rows the lazy list hasn't built yet.
+  final ScrollController _groupsScroll = ScrollController();
 
   /// True once a Left press at the leftmost poster in the browse grid has
   /// found nowhere further left to go, but hasn't yet been confirmed by a
@@ -419,7 +430,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   List<String> _shownGroupTitles(
       PlaylistManager playlist, String playlistId, String type) {
     final groups = type == 'tv'
-        ? playlist.tvGroups.where((g) => !g.isHidden)
+        ? _withoutHiddenPlaylists(
+            playlist.tvGroups.where((g) => !g.isHidden), 'tv')
         : _browseRailGroups(playlist);
     return groups
         .where((g) => g.playlistId == playlistId)
@@ -490,6 +502,11 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     final playlist = context.read<PlaylistManager>();
     final isFavorited = channel.isFavorite;
     final isHidden = playlist.isChannelHidden(channel);
+    // Only inside the channel's own group, unfiltered: Favourites mixes
+    // groups, and a filtered guide's row order isn't the group's order.
+    final canMove = !isHidden &&
+        _timelineFilterQuery.trim().isEmpty &&
+        _effectiveLiveGroup(playlist) == channel.group;
 
     final choice = await showDialog<String>(
       context: context,
@@ -507,6 +524,11 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
             child: Text(
                 isHidden ? tr('Unhide this channel') : tr('Hide this channel')),
           ),
+          if (canMove)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(context).pop('move'),
+              child: Text(tr('Move Up / Down')),
+            ),
           SimpleDialogOption(
             onPressed: () => Navigator.of(context).pop(),
             child: Text(tr('Cancel')),
@@ -517,6 +539,13 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
 
     if (!mounted) return;
     switch (choice) {
+      case 'move':
+        setState(() => _movingChannel = channel);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr(
+              'Up / Down moves {name}. OK when done.', {'name': channel.name})),
+          duration: const Duration(seconds: 3),
+        ));
       case 'favorite':
         _toggleFavoriteWithFeedback(context, channel);
       case 'hide':
@@ -532,6 +561,55 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         }
         _toggleHiddenWithFeedback(context, channel);
     }
+  }
+
+  /// Live channel in "Move Up / Down" mode (hold OK on a channel → menu),
+  /// or null — the channel-list twin of [_movingGroupKey]: Up/Down move it
+  /// inside its group (plain list and Timeline guide alike, see
+  /// [_movingChannelBindings]), OK or Back finishes.
+  Channel? _movingChannel;
+
+  /// Given to whichever plain-list row shows [_movingChannel], so focus
+  /// follows the channel to its new index after each step.
+  final FocusNode _movingChannelFocusNode =
+      FocusNode(debugLabel: 'moving-channel-row');
+
+  Map<ShortcutActivator, VoidCallback> get _movingChannelBindings => {
+        const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
+            _moveChannelStep(-1),
+        const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
+            _moveChannelStep(1),
+        // Stay on the row while moving.
+        const SingleActivator(LogicalKeyboardKey.arrowLeft): () {},
+        const SingleActivator(LogicalKeyboardKey.arrowRight): () {},
+      };
+
+  Future<void> _moveChannelStep(int delta) async {
+    final channel = _movingChannel;
+    if (channel == null) return;
+    await context.read<PlaylistManager>().moveChannel(channel, delta);
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _movingChannel?.id != channel.id) return;
+      if (context.read<AppPreferences>().guideViewMode == 'timeline') {
+        _timelineGuideKey.currentState?.restoreFocusToChannel(channel.id);
+        return;
+      }
+      _movingChannelFocusNode.requestFocus();
+      final row = _movingChannelFocusNode.context;
+      if (row != null && row.mounted) {
+        // Zero duration = jump, never animate (CLAUDE.md §10).
+        Scrollable.ensureVisible(row,
+            alignmentPolicy: delta < 0
+                ? ScrollPositionAlignmentPolicy.keepVisibleAtStart
+                : ScrollPositionAlignmentPolicy.keepVisibleAtEnd);
+      }
+    });
+  }
+
+  void _endChannelMove() {
+    if (_movingChannel == null) return;
+    setState(() => _movingChannel = null);
   }
 
   GlobalKey _keyForGroup(String playlistId, String title) => _groupRowKeys
@@ -1352,6 +1430,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     _browseScrollController.dispose();
     _liveListController.dispose();
     _currentChannelFocusNode.dispose();
+    _movingChannelFocusNode.dispose();
     _firstLiveChannelFocusNode.dispose();
     _col0Scope.dispose();
     _col1Scope.dispose();
@@ -1360,6 +1439,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       node.dispose();
     }
     _firstGroupRowFocusNode.dispose();
+    _playlistsRowFocusNode.dispose();
+    _groupsScroll.dispose();
     _timelineFilterButtonFocusNode.dispose();
     _timelineFilterFieldFocusNode.dispose();
     _timelineFilterController.dispose();
@@ -1490,11 +1571,28 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// [_restoreLiveFocus] can find the playing channel's index in the exact
   /// same list instead of risking the two falling out of sync.
   List<Channel> _currentLiveChannels(PlaylistManager playlist) {
-    return _effectiveLiveGroup(playlist) == _favoritesGroupSentinel
-        ? playlist.favoriteLiveChannelsWithGroups
-        : playlist.visibleChannels(
-            groupTitle: _effectiveLiveGroup(playlist), category: 'tv');
+    if (_effectiveLiveGroup(playlist) != _favoritesGroupSentinel) {
+      return playlist.visibleChannels(
+          groupTitle: _effectiveLiveGroup(playlist), category: 'tv');
+    }
+    final favorites = playlist.favoriteLiveChannelsWithGroups;
+    if (!_mixFavorites) return favorites;
+    // Settings > General > Favourites "Mix playlists": every playlist's
+    // starred channels as one A-Z run, then the favourited groups'
+    // channels, instead of one block per playlist.
+    return [
+      ..._sortedByName(favorites.where((c) => c.isFavorite), (c) => c.name),
+      ...favorites.where((c) => !c.isFavorite),
+    ];
   }
+
+  bool get _mixFavorites => context.read<AppPreferences>().mixFavoritePlaylists;
+
+  static List<T> _sortedByName<T>(
+          Iterable<T> items, String Function(T) nameOf) =>
+      items.toList()
+        ..sort((a, b) =>
+            nameOf(a).toLowerCase().compareTo(nameOf(b).toLowerCase()));
 
   /// [_currentLiveChannels], narrowed by [_timelineFilterQuery] — applied
   /// only at the Timeline guide's own `channels:` argument, never inside
@@ -1566,7 +1664,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// always matches the list actually being shown.
   String? _effectiveLiveGroup(PlaylistManager playlist) {
     if (_selectedGroup != null) return _selectedGroup;
-    final groups = playlist.tvGroups.where((g) => !g.isHidden).toList();
+    final groups = _withoutHiddenPlaylists(
+        playlist.tvGroups.where((g) => !g.isHidden), 'tv');
     if (groups.isEmpty) return null;
     final playback = context.read<PlaybackService>();
     // pendingResumeChannel too, not just currentChannel — on a true cold
@@ -1831,30 +1930,40 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     final unlocked =
         await context.read<ViewerProfileService>().requireUnlock(context);
     if (!unlocked || !mounted) return;
-    _parkLiveChannel();
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const SettingsMenuScreen()));
+    await _pushOverLiveVideo(
+        MaterialPageRoute(builder: (_) => const SettingsMenuScreen()));
   }
 
-  /// Parks a background live channel first, like Settings and Extras: left
-  /// playing, its video stayed on screen over Sports Trak on a Fire Stick
-  /// (with the full-video guide it covered the whole page).
-  void _openSports() {
-    _parkLiveChannel();
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const SportsScreen()));
+  Future<void> _openSports() => _pushOverLiveVideo(
+      MaterialPageRoute(builder: (_) => const SportsScreen()));
+
+  /// Sports Trak, Settings and Search open over a background live channel
+  /// and keep it playing (owner, 2026-10-20: the parking added in 1.0.24
+  /// was reverted on all three). It was added because the video stayed on
+  /// screen over those pages on some Fire TV sticks (newer sticks on an
+  /// older Fire OS build; the full-video guide covered the whole page).
+  /// Opt-in workaround, Settings > General > Background video: the
+  /// picture's platform view is taken out of this (covered) screen while
+  /// the page is open — the stream and its sound keep going on the shared
+  /// controller, and the picture comes back on return.
+  Future<void> _pushOverLiveVideo(Route<void> route) async {
+    final hideVideo =
+        !Platform.isWindows && context.read<AppPreferences>().hideVideoOnSports;
+    if (hideVideo) setState(() => _videoHiddenForSports = true);
+    await Navigator.of(context).push(route);
+    if (mounted && hideVideo) setState(() => _videoHiddenForSports = false);
   }
+
+  /// See [_pushOverLiveVideo].
+  bool _videoHiddenForSports = false;
 
   void _openProfilePicker() {
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => const ProfilePickerScreen()));
   }
 
-  void _openSearch() {
-    _parkLiveChannel();
-    Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => SearchScreen(initialScope: _tab)));
-  }
+  Future<void> _openSearch() => _pushOverLiveVideo(
+      MaterialPageRoute(builder: (_) => SearchScreen(initialScope: _tab)));
 
   /// Re-syncs every enabled playlist — Xtream ones via a full catalog
   /// sync (one confirm covers all of them), M3U ones via a plain re-fetch
@@ -2197,6 +2306,10 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
             _endGroupMove();
             return;
           }
+          if (_movingChannel != null) {
+            _endChannelMove();
+            return;
+          }
           if (_compact) {
             // The bottom bar replaced the tabs page as the way between
             // tabs: content -> groups -> exit; "More" (page 0) -> groups.
@@ -2337,120 +2450,139 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                               // the poster grid itself, where Left/Right move
                               // card-to-card (see _handleBrowseLeft for the
                               // "nowhere further left" escape).
-                              bindings: isBrowseTab
-                                  ? switch (_focusDepth) {
-                                      0 => <ShortcutActivator, VoidCallback>{
+                              bindings: !isBrowseTab &&
+                                      _focusDepth == 2 &&
+                                      _movingChannel != null
+                                  ? _movingChannelBindings
+                                  : isBrowseTab
+                                      ? switch (_focusDepth) {
+                                          0 =>
+                                            <ShortcutActivator, VoidCallback>{
+                                              const SingleActivator(
+                                                  LogicalKeyboardKey
+                                                      .arrowRight): () =>
+                                                  _moveColumnFocus(1, 2),
+                                            },
+                                          1 =>
+                                            <ShortcutActivator, VoidCallback>{
+                                              const SingleActivator(
+                                                  LogicalKeyboardKey
+                                                      .arrowLeft): () =>
+                                                  _moveColumnFocus(-1, 2),
+                                              const SingleActivator(
+                                                      LogicalKeyboardKey
+                                                          .arrowRight):
+                                                  _enterBrowseColumn,
+                                            },
+                                          _ =>
+                                            <ShortcutActivator, VoidCallback>{
+                                              const SingleActivator(
+                                                      LogicalKeyboardKey
+                                                          .arrowLeft):
+                                                  _handleBrowseLeft,
+                                              // See _browseRowKeys'/
+                                              // _moveBrowseRowFocus's doc
+                                              // comments — explicit row-to-row
+                                              // jump instead of default
+                                              // traversal's expensive search
+                                              // across every cached row's
+                                              // posters.
+                                              const SingleActivator(
+                                                  LogicalKeyboardKey
+                                                      .arrowDown): () =>
+                                                  _moveBrowseRowFocus(1),
+                                              const SingleActivator(
+                                                  LogicalKeyboardKey
+                                                      .arrowUp): () =>
+                                                  _moveBrowseRowFocus(-1),
+                                            },
+                                        }
+                                      : <ShortcutActivator, VoidCallback>{
+                                          // 3 columns now (tabs, groups, the merged
+                                          // live-list-over-video region) — the list
+                                          // panel is a plain vertical list like the
+                                          // groups column, so Left/Right always
+                                          // switching columns (never intra-row) is
+                                          // safe here, same as before the merge.
+                                          //
+                                          // The timeline guide is the one exception: at depth 2 while
+                                          // it's showing, Left and Right step the view one 30-minute
+                                          // slot (see _TimelineGuideState.moveHorizontal) rather than
+                                          // moving column. Left falls back to the "press again to leave
+                                          // for the groups" escape (_handleBrowseLeft) only at the edge
+                                          // of the guide's window; the Back button is the quick way out.
+                                          const SingleActivator(
+                                                  LogicalKeyboardKey.arrowLeft):
+                                              (_focusDepth == 2 &&
+                                                      showTimelineGuide)
+                                                  ? _handleTimelineLeft
+                                                  : () =>
+                                                      _moveColumnFocus(-1, 2),
+                                          // Already in the last column: Right has
+                                          // nowhere further to go, so it becomes a
+                                          // shortcut straight to fullscreen on
+                                          // whatever's currently playing instead of
+                                          // a dead end — otherwise finding your way
+                                          // back to fullscreen meant re-selecting
+                                          // the same channel from the list again.
+                                          // In the timeline guide, Right steps
+                                          // the view one 30-minute slot instead
+                                          // (see moveHorizontal).
                                           const SingleActivator(
                                               LogicalKeyboardKey
-                                                  .arrowRight): () =>
-                                              _moveColumnFocus(1, 2),
-                                        },
-                                      1 => <ShortcutActivator, VoidCallback>{
-                                          const SingleActivator(
-                                                  LogicalKeyboardKey.arrowLeft):
-                                              () => _moveColumnFocus(-1, 2),
-                                          const SingleActivator(
-                                                  LogicalKeyboardKey
-                                                      .arrowRight):
-                                              _enterBrowseColumn,
-                                        },
-                                      _ => <ShortcutActivator, VoidCallback>{
-                                          const SingleActivator(
-                                                  LogicalKeyboardKey.arrowLeft):
-                                              _handleBrowseLeft,
-                                          // See _browseRowKeys'/
-                                          // _moveBrowseRowFocus's doc
-                                          // comments — explicit row-to-row
-                                          // jump instead of default
-                                          // traversal's expensive search
-                                          // across every cached row's
-                                          // posters.
-                                          const SingleActivator(
-                                                  LogicalKeyboardKey.arrowDown):
-                                              () => _moveBrowseRowFocus(1),
-                                          const SingleActivator(
-                                                  LogicalKeyboardKey.arrowUp):
-                                              () => _moveBrowseRowFocus(-1),
-                                        },
-                                    }
-                                  : <ShortcutActivator, VoidCallback>{
-                                      // 3 columns now (tabs, groups, the merged
-                                      // live-list-over-video region) — the list
-                                      // panel is a plain vertical list like the
-                                      // groups column, so Left/Right always
-                                      // switching columns (never intra-row) is
-                                      // safe here, same as before the merge.
-                                      //
-                                      // The timeline guide is the one exception: at depth 2 while
-                                      // it's showing, Left and Right step the view one 30-minute
-                                      // slot (see _TimelineGuideState.moveHorizontal) rather than
-                                      // moving column. Left falls back to the "press again to leave
-                                      // for the groups" escape (_handleBrowseLeft) only at the edge
-                                      // of the guide's window; the Back button is the quick way out.
-                                      const SingleActivator(
-                                              LogicalKeyboardKey.arrowLeft):
-                                          (_focusDepth == 2 &&
+                                                  .arrowRight): (_focusDepth ==
+                                                      2 &&
                                                   showTimelineGuide)
-                                              ? _handleTimelineLeft
-                                              : () => _moveColumnFocus(-1, 2),
-                                      // Already in the last column: Right has
-                                      // nowhere further to go, so it becomes a
-                                      // shortcut straight to fullscreen on
-                                      // whatever's currently playing instead of
-                                      // a dead end — otherwise finding your way
-                                      // back to fullscreen meant re-selecting
-                                      // the same channel from the list again.
-                                      // In the timeline guide, Right steps
-                                      // the view one 30-minute slot instead
-                                      // (see moveHorizontal).
-                                      const SingleActivator(LogicalKeyboardKey
-                                          .arrowRight): (_focusDepth == 2 &&
-                                              showTimelineGuide)
-                                          ? () => _timelineGuideKey.currentState
-                                              ?.moveHorizontal(1)
-                                          : _focusDepth == 2
-                                              ? _goFullscreenIfPlaying
-                                              : () => _moveColumnFocus(1, 2),
-                                      // Default directional traversal picks
-                                      // Up/Down by on-screen rect overlap,
-                                      // which reliably lands on the wrong
-                                      // block once a row's programmes are
-                                      // much wider/narrower than its
-                                      // neighbours' — reported directly on
-                                      // real hardware (moving off a long
-                                      // block landed near the *end* of its
-                                      // span in the next row, not "now").
-                                      // See _TimelineGuideState.moveVertical.
-                                      if (_focusDepth == 2 &&
-                                          showTimelineGuide) ...{
-                                        // Down from the filter button or
-                                        // field (two separate nodes — see
-                                        // _timelineFilterButtonFocusNode's
-                                        // doc comment for why) enters the
-                                        // guide via focusEntry() instead of
-                                        // moveVertical(1), which operates on
-                                        // a row index that's meaningless
-                                        // until the guide's actually been
-                                        // entered once.
-                                        const SingleActivator(
-                                            LogicalKeyboardKey
-                                                .arrowDown): () =>
-                                            (_timelineFilterButtonFocusNode
-                                                        .hasFocus ||
-                                                    _timelineFilterFieldFocusNode
-                                                        .hasFocus ||
-                                                    _timelineKeyboardScope
-                                                        .hasFocus)
-                                                ? _timelineGuideKey.currentState
-                                                    ?.focusEntry()
-                                                : _timelineGuideKey.currentState
-                                                    ?.moveVertical(1),
-                                        const SingleActivator(
-                                                LogicalKeyboardKey.arrowUp):
-                                            () => _timelineGuideKey.currentState
-                                                ?.moveVertical(-1),
-                                      },
-                                    },
+                                              ? () => _timelineGuideKey
+                                                  .currentState
+                                                  ?.moveHorizontal(1)
+                                              : _focusDepth == 2
+                                                  ? _goFullscreenIfPlaying
+                                                  : () =>
+                                                      _moveColumnFocus(1, 2),
+                                          // Default directional traversal picks
+                                          // Up/Down by on-screen rect overlap,
+                                          // which reliably lands on the wrong
+                                          // block once a row's programmes are
+                                          // much wider/narrower than its
+                                          // neighbours' — reported directly on
+                                          // real hardware (moving off a long
+                                          // block landed near the *end* of its
+                                          // span in the next row, not "now").
+                                          // See _TimelineGuideState.moveVertical.
+                                          if (_focusDepth == 2 &&
+                                              showTimelineGuide) ...{
+                                            // Down from the filter button or
+                                            // field (two separate nodes — see
+                                            // _timelineFilterButtonFocusNode's
+                                            // doc comment for why) enters the
+                                            // guide via focusEntry() instead of
+                                            // moveVertical(1), which operates on
+                                            // a row index that's meaningless
+                                            // until the guide's actually been
+                                            // entered once.
+                                            const SingleActivator(
+                                                LogicalKeyboardKey
+                                                    .arrowDown): () =>
+                                                (_timelineFilterButtonFocusNode
+                                                            .hasFocus ||
+                                                        _timelineFilterFieldFocusNode
+                                                            .hasFocus ||
+                                                        _timelineKeyboardScope
+                                                            .hasFocus)
+                                                    ? _timelineGuideKey
+                                                        .currentState
+                                                        ?.focusEntry()
+                                                    : _timelineGuideKey
+                                                        .currentState
+                                                        ?.moveVertical(1),
+                                            const SingleActivator(
+                                                    LogicalKeyboardKey.arrowUp):
+                                                () => _timelineGuideKey
+                                                    .currentState
+                                                    ?.moveVertical(-1),
+                                          },
+                                        },
                               child: _compact
                                   ? _buildPhoneColumns(
                                       playlist, epg, isBrowseTab, liveChannel)
@@ -3065,17 +3197,221 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     return widgets;
   }
 
+  /// The tab's category for per-category settings ('tv'/'vod'/'series').
+  String get _tabCategory => switch (_tab) {
+        'Movies' => 'vod',
+        'TV Shows' => 'series',
+        _ => 'tv',
+      };
+
+  /// [groups] minus those of playlists hidden in [category] (Playlists
+  /// menu > Right > Hide) — groups columns and browse rows only; Search,
+  /// Favourites and playback still see them.
+  List<M3uGroup> _withoutHiddenPlaylists(
+      Iterable<M3uGroup> groups, String category) {
+    final hidden =
+        context.read<StorageService>().getHiddenPlaylistGroups(category);
+    return hidden.isEmpty
+        ? groups.toList()
+        : groups.where((g) => !hidden.contains(g.playlistId)).toList();
+  }
+
+  /// "Playlists" under the column's fixed rows (Favourites / History, or
+  /// What's New / Favourites / All), only with 2+ playlists in this tab:
+  /// OK rolls down a menu of them and jumps the column to the picked one's
+  /// first group — instead of scrolling through every group of the
+  /// playlists above it (user request, 2026-10-20). Right on a playlist =
+  /// Hide / Show its groups in this tab only. [allGroups] includes hidden
+  /// playlists' groups (so they can be shown again), [groups] is what the
+  /// column lists. [rowsAbove] counts the fixed rows including this one,
+  /// for the scroll estimate in [_jumpToGroupRow].
+  Widget? _playlistsRow(
+      List<M3uGroup> allGroups, List<M3uGroup> groups, PlaylistManager playlist,
+      {required bool collapsed,
+      required int rowsAbove,
+      String? currentPlaylistId}) {
+    if (allGroups.map((g) => g.playlistId).toSet().length < 2) return null;
+    return _SelectableRow(
+      icon: Icons.playlist_play,
+      label: tr('Playlists'),
+      selected: false,
+      collapsed: collapsed,
+      fontSize: _groupFontSize,
+      focusNode: _playlistsRowFocusNode,
+      trailing: const Icon(Icons.expand_more, color: Colors.white54, size: 18),
+      onTap: () => _showPlaylistJump(allGroups, playlist,
+          rowsAbove: rowsAbove, currentPlaylistId: currentPlaylistId),
+    );
+  }
+
+  Future<void> _showPlaylistJump(
+      List<M3uGroup> allGroups, PlaylistManager playlist,
+      {required int rowsAbove, String? currentPlaylistId}) async {
+    final category = _tabCategory;
+    final storage = context.read<StorageService>();
+    final hidden = storage.getHiddenPlaylistGroups(category);
+    final ids = <String>[];
+    final counts = <String, int>{};
+    for (final g in allGroups) {
+      if (!counts.containsKey(g.playlistId)) ids.add(g.playlistId);
+      counts[g.playlistId] = (counts[g.playlistId] ?? 0) + 1;
+    }
+    String nameOf(String id) {
+      final name = playlist.playlistNameFor(id);
+      return name.isEmpty ? tr('Playlist') : name;
+    }
+
+    final picked = await showRollDownMenu<String>(
+      context,
+      anchor: rollDownAnchorOf(_playlistsRowFocusNode.context),
+      centered: false,
+      width: 340,
+      title: tr('Jump to playlist'),
+      items: [
+        for (final id in ids)
+          RollDownMenuItem(
+            value: 'jump:$id',
+            icon: hidden.contains(id)
+                ? Icons.visibility_off_outlined
+                : Icons.playlist_play,
+            label: nameOf(id),
+            subtitle: hidden.contains(id)
+                ? tr('Hidden here · {n} groups', {'n': counts[id]})
+                : tr('{n} groups', {'n': counts[id]}),
+            selected: id == currentPlaylistId && !hidden.contains(id),
+            dimmed: hidden.contains(id),
+            action: hidden.contains(id)
+                ? RollDownMenuAction(
+                    value: 'show:$id',
+                    icon: Icons.visibility_outlined,
+                    label: tr('Show'))
+                : RollDownMenuAction(
+                    value: 'hide:$id',
+                    icon: Icons.visibility_off_outlined,
+                    label: tr('Hide')),
+          ),
+      ],
+    );
+    if (!mounted) return;
+    if (picked == null) {
+      _playlistsRowFocusNode.requestFocus();
+      return;
+    }
+    final colon = picked.indexOf(':');
+    final verb = picked.substring(0, colon);
+    final id = picked.substring(colon + 1);
+    final messenger = ScaffoldMessenger.of(context);
+    void toast(String text) => messenger.showSnackBar(
+        SnackBar(content: Text(text), duration: const Duration(seconds: 2)));
+
+    if (verb == 'hide') {
+      if (ids.where((i) => !hidden.contains(i)).length <= 1) {
+        toast(tr('At least one playlist stays shown.'));
+        _playlistsRowFocusNode.requestFocus();
+        return;
+      }
+      await storage.setHiddenPlaylistGroups(category, {...hidden, id});
+      if (!mounted) return;
+      setState(() {
+        // The selected live group belonged to it: fall back to a shown one.
+        if (category == 'tv' && id == currentPlaylistId) _selectedGroup = null;
+      });
+      toast(
+          tr('{name} hidden in {tab}', {'name': nameOf(id), 'tab': tr(_tab)}));
+      _playlistsRowFocusNode.requestFocus();
+      return;
+    }
+    if (verb == 'show' || hidden.contains(id)) {
+      await storage.setHiddenPlaylistGroups(category, {...hidden}..remove(id));
+      if (!mounted) return;
+      setState(() {});
+      if (verb == 'show') {
+        toast(
+            tr('{name} shown in {tab}', {'name': nameOf(id), 'tab': tr(_tab)}));
+        _playlistsRowFocusNode.requestFocus();
+        return;
+      }
+    }
+    // Jump (a hidden playlist was just shown again first).
+    final stillHidden = storage.getHiddenPlaylistGroups(category);
+    final visible =
+        allGroups.where((g) => !stillHidden.contains(g.playlistId)).toList();
+    final visibleIds = <String>[];
+    for (final g in visible) {
+      if (!visibleIds.contains(g.playlistId)) visibleIds.add(g.playlistId);
+    }
+    final first = visible.firstWhere((g) => g.playlistId == id);
+    // One playlist divider sits above every playlist's run but the first.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _jumpToGroupRow(first,
+          rowsBefore: rowsAbove + visible.indexOf(first),
+          dividersBefore: visibleIds.indexOf(id));
+    });
+  }
+
+  /// Scrolls the groups list so [group]'s row gets built, then focuses it
+  /// ([_focusGroupKeyOnBuild]) and brings it near the top. The list is lazy
+  /// and has no fixed extent, so the offset is estimated from the measured
+  /// row height (the Playlists row is the same kind of row) plus the
+  /// dividers; the list's cache area absorbs the small error.
+  void _jumpToGroupRow(M3uGroup group,
+      {required int rowsBefore, required int dividersBefore}) {
+    final rowBox = _playlistsRowFocusNode.context?.findRenderObject();
+    final rowHeight =
+        rowBox is RenderBox && rowBox.hasSize ? rowBox.size.height : 44.0;
+    const dividerHeight = 50.0;
+    if (_groupsScroll.hasClients) {
+      final estimate =
+          rowsBefore * rowHeight + dividersBefore * dividerHeight - rowHeight;
+      _groupsScroll.jumpTo(estimate < 0 ? 0 : estimate);
+    }
+    final key = _groupKey(group.playlistId, group.title);
+    setState(() => _focusGroupKeyOnBuild = key);
+    // Frame 1: the row builds and focuses itself; frame 2: position it.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (_focusGroupKeyOnBuild == key) {
+          // Estimate missed (row never built): don't let it grab focus
+          // later out of nowhere.
+          setState(() => _focusGroupKeyOnBuild = null);
+          return;
+        }
+        final row = FocusManager.instance.primaryFocus?.context;
+        if (row != null && row.mounted) {
+          // Zero duration = jump, never animate (CLAUDE.md §10).
+          Scrollable.ensureVisible(row, alignment: 0.15);
+        }
+      });
+    });
+  }
+
   Widget _buildGroupsColumn(PlaylistManager playlist,
       {required bool collapsed}) {
-    final groups = playlist.tvGroups.where((g) => !g.isHidden).toList();
+    final allGroups = playlist.tvGroups.where((g) => !g.isHidden).toList();
+    final groups = _withoutHiddenPlaylists(allGroups, 'tv');
     // No "All" row — see _effectiveLiveGroup's doc comment for why an
     // unfiltered dumping-ground was actively confusing to land back in.
     final effectiveGroup = _effectiveLiveGroup(playlist);
 
     // Keyed by tab — same fix, and same reason, as
     // _buildBrowseGroupsColumn's own ListView key.
+    String? currentPlaylistId;
+    for (final g in groups) {
+      if (g.title == effectiveGroup) {
+        currentPlaylistId = g.playlistId;
+        break;
+      }
+    }
+    final playlistsRow = _playlistsRow(allGroups, groups, playlist,
+        collapsed: collapsed,
+        rowsAbove: 3,
+        currentPlaylistId: currentPlaylistId);
+
     return ListView(
       key: const ValueKey('TV'),
+      controller: _groupsScroll,
       children: [
         // Hold Select = clear this tab's Favourites (after a confirm).
         HoldToActivate(
@@ -3107,6 +3443,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
             onLongPress: _confirmClearChannelHistory,
           ),
         ),
+        if (playlistsRow != null) playlistsRow,
         ..._groupRowsWithPlaylistDividers(
           groups,
           playlist,
@@ -3148,21 +3485,24 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// that actually have a row to jump to right now — one that's still
   /// loading in the background isn't selectable here until it appears in
   /// the catalog below, at which point it shows up here too.
-  List<M3uGroup> _browseRailGroups(PlaylistManager playlist) =>
-      (_tab == 'Movies'
-              ? playlist.vodGroups
-                  .where((g) => !g.isHidden && g.channels.isNotEmpty)
-              : playlist.seriesGroups.where((g) =>
-                  !g.isHidden &&
-                  playlist
-                      .visibleSeries(
-                          playlistId: g.playlistId, categoryName: g.title)
-                      .isNotEmpty))
-          .toList();
+  List<M3uGroup> _browseRailGroups(PlaylistManager playlist,
+      {bool includeHiddenPlaylists = false}) {
+    final groups = _tab == 'Movies'
+        ? playlist.vodGroups.where((g) => !g.isHidden && g.channels.isNotEmpty)
+        : playlist.seriesGroups.where((g) =>
+            !g.isHidden &&
+            playlist
+                .visibleSeries(playlistId: g.playlistId, categoryName: g.title)
+                .isNotEmpty);
+    return includeHiddenPlaylists
+        ? groups.toList()
+        : _withoutHiddenPlaylists(groups, _tabCategory);
+  }
 
   Widget _buildBrowseGroupsColumn(PlaylistManager playlist,
       {required bool collapsed}) {
     final groups = _browseRailGroups(playlist);
+    final allGroups = _browseRailGroups(playlist, includeHiddenPlaylists: true);
 
     // Keyed by tab — reported directly, live: simply *scrolling* down the
     // groups column (never tapping/selecting a group at all) in Movies,
@@ -3191,8 +3531,12 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       });
     }
 
+    final playlistsRow = _playlistsRow(allGroups, groups, playlist,
+        collapsed: collapsed, rowsAbove: 4);
+
     return ListView(
       key: ValueKey(_tab),
+      controller: _groupsScroll,
       children: [
         // Pinned above the real categories, same shape as the Live TV
         // column's own "Favourites" entry — not a category, a view.
@@ -3232,6 +3576,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
           fontSize: _groupFontSize,
           onTap: () => _leaveWhatsNewThen(_scrollBrowseToTop),
         ),
+        if (playlistsRow != null) playlistsRow,
         ..._groupRowsWithPlaylistDividers(
           groups,
           playlist,
@@ -3391,6 +3736,9 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       );
     }
 
+    // Sports Trak / Settings / Search open with the opt-in workaround on
+    // (see _pushOverLiveVideo).
+    if (_videoHiddenForSports) return const ColoredBox(color: Colors.black);
     if (channel == null) {
       return Center(
         child: Column(
@@ -3724,9 +4072,15 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         // stuck open, since nothing on that whole round trip ever touched
         // _timelineFilterActive on its own.
         onOpen: (channel) {
+          if (_movingChannel != null) {
+            _endChannelMove();
+            return;
+          }
           if (_timelineFilterActive) _closeTimelineFilter();
           _previewOrOpenChannel(channel);
         },
+        movingChannelId: _movingChannel?.id,
+        playlistTags: !_mixFavorites,
         onFocusChanged: _onGuideFocusChanged,
         onShowOptions: _showChannelOptions,
         onWindowStale: () => setState(() => _timelineGuideKey = GlobalKey()),
@@ -3948,7 +4302,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     // one's first channel (the getter already groups them by playlist).
     // Inside the row's item, not an extra list item, so row indexes stay
     // what _restoreLiveFocus expects.
-    final labelPlaylists = (_selectedGroup ?? _effectiveLiveGroup(playlist)) ==
+    final labelPlaylists = !_mixFavorites &&
+        (_selectedGroup ?? _effectiveLiveGroup(playlist)) ==
             _favoritesGroupSentinel &&
         channels.map((c) => c.playlistId).toSet().length > 1;
 
@@ -4006,6 +4361,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
 
   Widget _buildLiveRow(PlaybackService playback, Channel channel, int i) {
     final isSelected = playback.currentChannel?.id == channel.id;
+    final isMoving = _movingChannel?.id == channel.id;
     // The trailing star used to be independently D-pad-focusable (a
     // plain IconButton) — reported directly: moving down the list
     // would land the cursor on the star instead of the next channel,
@@ -4017,15 +4373,21 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     // mouse long-press though (InkWell.onLongPress is touch-only) —
     // HoldToActivate adds the equivalent for a *held* remote Select
     // key, which is the case that actually matters on real hardware.
+    // Hold opens the channel menu (favourite, hide, Move Up / Down) — the
+    // same one the Timeline guide's hold opens.
     return HoldToActivate(
-      onTap: () => _previewOrOpenChannel(channel),
-      onHold: () => _toggleFavoriteWithFeedback(context, channel),
+      onTap: () =>
+          isMoving ? _endChannelMove() : _previewOrOpenChannel(channel),
+      onHold: () => isMoving ? _endChannelMove() : _showChannelOptions(channel),
       child: _SelectableRow(
-        selected: isSelected,
-        focusNode: isSelected
-            ? _currentChannelFocusNode
-            : (i == 0 ? _firstLiveChannelFocusNode : null),
-        onTap: () => _previewOrOpenChannel(channel),
+        selected: isSelected || isMoving,
+        focusNode: isMoving
+            ? _movingChannelFocusNode
+            : isSelected
+                ? _currentChannelFocusNode
+                : (i == 0 ? _firstLiveChannelFocusNode : null),
+        onTap: () =>
+            isMoving ? _endChannelMove() : _previewOrOpenChannel(channel),
         onLongPress: () => _toggleFavoriteWithFeedback(context, channel),
         leading: SizedBox(
           width: 40,
@@ -4050,6 +4412,11 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (isMoving)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: Icon(Icons.swap_vert, color: Colors.amber),
+                ),
               // For a duplicate feed within this same group (e.g.
               // the same channel in HD and HEVC) — see
               // AppConstants.keyHiddenChannels's doc comment.
@@ -4212,15 +4579,21 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     required List<T> items,
     required int firstRowIndex,
     required String Function(T) playlistIdOf,
+    required String Function(T) nameOf,
     required Widget Function(T item, _FavoriteCardExtras extras) card,
   }) {
     final chunks = <List<T>>[];
-    for (final item in items) {
-      if (chunks.isEmpty ||
-          playlistIdOf(chunks.last.first) != playlistIdOf(item)) {
-        chunks.add([item]);
-      } else {
-        chunks.last.add(item);
+    if (_mixFavorites) {
+      // One A-Z row across playlists (Settings > General > Favourites).
+      if (items.isNotEmpty) chunks.add(_sortedByName(items, nameOf));
+    } else {
+      for (final item in items) {
+        if (chunks.isEmpty ||
+            playlistIdOf(chunks.last.first) != playlistIdOf(item)) {
+          chunks.add([item]);
+        } else {
+          chunks.last.add(item);
+        }
       }
     }
     final playlist = context.read<PlaylistManager>();
@@ -4271,7 +4644,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     // Management still showed up in the actual catalog, just missing from
     // the shortcut list pointing at it.
     final storage = context.read<StorageService>();
-    final visibleGroups = playlist.vodGroups.where((g) => !g.isHidden).toList();
+    final visibleGroups = _withoutHiddenPlaylists(
+        playlist.vodGroups.where((g) => !g.isHidden), 'vod');
     // Kick off the first load for every visible category that isn't
     // loaded yet (fire-and-forget, concurrency-capped — see
     // ensureCategoriesLoaded's doc comment for why a plain per-category
@@ -4324,6 +4698,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       items: _showFavorites ? playlist.favoriteMovies : const [],
       firstRowIndex: continueRow != null ? 1 : 0,
       playlistIdOf: (c) => c.playlistId,
+      nameOf: (c) => c.name,
       card: (c, x) => PosterCard(
         title: c.name,
         imageUrl: c.logoUrl,
@@ -4451,7 +4826,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   Widget _buildShowsBrowse(PlaylistManager playlist) {
     // Temporary diagnostic — see _buildMoviesBrowse's matching comment.
     debugPrint('BuildShows at ${DateTime.now().toIso8601String()}');
-    final groups = playlist.seriesGroups.where((g) => !g.isHidden).toList();
+    final groups = _withoutHiddenPlaylists(
+        playlist.seriesGroups.where((g) => !g.isHidden), 'series');
     final rows = <Widget>[];
     // Episodes resume straight into playback (no detail screen in between)
     // — the user already picked this episode once, "Continue Watching"
@@ -4472,6 +4848,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
             items: _showFavorites ? playlist.favoriteSeries : const [],
             firstRowIndex: rows.length,
             playlistIdOf: (s) => s.playlistId,
+            nameOf: (s) => s.name,
             card: (s, x) => PosterCard(
               title: s.name,
               imageUrl: s.coverUrl,
@@ -4502,6 +4879,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
             items: _showFavorites ? playlist.favoriteShowChannels : const [],
             firstRowIndex: rows.length,
             playlistIdOf: (c) => c.playlistId,
+            nameOf: (c) => c.name,
             card: (c, x) => PosterCard(
               title: c.name,
               imageUrl: c.logoUrl,
@@ -6608,6 +6986,8 @@ class _TimelineGuide extends StatefulWidget {
       required this.onOpen,
       required this.onFocusChanged,
       required this.onShowOptions,
+      this.movingChannelId,
+      this.playlistTags = true,
       required this.filterFocusNode,
       required this.onFilterToggle,
       this.onReachedTop,
@@ -6625,6 +7005,13 @@ class _TimelineGuide extends StatefulWidget {
 
   /// Hold-Select on a block — see [_TvHomeScreenState._showChannelOptions].
   final void Function(Channel channel) onShowOptions;
+
+  /// Row in "Move Up / Down" mode (marked in the channel column).
+  final String? movingChannelId;
+
+  /// Playlist name tags on mixed-playlist rows (off when the user mixes
+  /// Favourites across playlists on purpose).
+  final bool playlistTags;
 
   /// Backs the filter toggle button rendered above the channel column
   /// (`_TimelineFilterButton`). A dedicated node, not shared with the
@@ -6669,7 +7056,7 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
       _tagsFor = channels;
       _mixedPlaylists = channels.map((c) => c.playlistId).toSet().length > 1;
     }
-    if (!_mixedPlaylists) return null;
+    if (!_mixedPlaylists || !widget.playlistTags) return null;
     if (i > 0 && channels[i - 1].playlistId == channels[i].playlistId) {
       return null;
     }
@@ -7249,7 +7636,9 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
                     itemExtent: _rowHeight,
                     itemBuilder: (context, i) => _ChannelLabel(
                         channel: widget.channels[i],
-                        playlistTag: _playlistTagFor(i)),
+                        playlistTag: _playlistTagFor(i),
+                        moving:
+                            widget.channels[i].id == widget.movingChannelId),
                   ),
                 ),
               ),
@@ -7665,9 +8054,13 @@ class _TimelineKeyboardKeyState extends State<_TimelineKeyboardKey> {
 /// [_TimelineRow], same as the plain channel list never puts focus on a
 /// row's logo.
 class _ChannelLabel extends StatelessWidget {
-  const _ChannelLabel({required this.channel, this.playlistTag});
+  const _ChannelLabel(
+      {required this.channel, this.playlistTag, this.moving = false});
 
   final Channel channel;
+
+  /// "Move Up / Down" in progress on this row: gold outline + arrows.
+  final bool moving;
 
   /// Gold playlist name in the top-left corner (see
   /// _TimelineGuideState._playlistTagFor).
@@ -7701,15 +8094,25 @@ class _ChannelLabel extends StatelessWidget {
                 style: const TextStyle(color: Colors.white, fontSize: 13),
               ),
             ),
+            if (moving) const Icon(Icons.swap_vert, color: Colors.amber),
           ],
         ),
       ),
     );
-    if (tag == null) return row;
+    final marked = moving
+        ? DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.amber, width: 2),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: row,
+          )
+        : row;
+    if (tag == null) return marked;
     final scheme = Theme.of(context).colorScheme;
     return Stack(
       children: [
-        row,
+        marked,
         Positioned(
           top: 2,
           left: 6,

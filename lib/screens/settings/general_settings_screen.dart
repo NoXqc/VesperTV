@@ -6,9 +6,9 @@ import 'package:provider/provider.dart';
 import '../../services/app_preferences.dart';
 import '../../services/playback_service.dart';
 import '../../services/storage_service.dart';
+import '../../utils/constants.dart';
 import '../../utils/tv_theme.dart';
 import '../../widgets/live_resume_hint.dart';
-import '../../widgets/section_label.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_menu_tile.dart';
 import '../../widgets/tv_switch_list_tile.dart';
@@ -135,6 +135,50 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
     await prefs.setLanguage(value);
   }
 
+  /// Sections open right now (all closed on entry — the screen had grown
+  /// into a long scroll).
+  final Set<String> _open = {};
+
+  /// One collapsible category: a [TvMenuTile] header (same focus look as
+  /// the rest of Settings, so D-pad needs nothing special) that rolls its
+  /// [children] open underneath on OK / tap.
+  Widget _section(String id, IconData icon, String title,
+      {String? subtitle, required List<Widget> children}) {
+    final open = _open.contains(id);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TvMenuTile(
+          icon: icon,
+          title: title,
+          subtitle: subtitle,
+          trailing: AnimatedRotation(
+            turns: open ? 0.5 : 0,
+            duration: const Duration(milliseconds: 200),
+            child: const Icon(Icons.expand_more),
+          ),
+          onTap: () => setState(() => open ? _open.remove(id) : _open.add(id)),
+        ),
+        ClipRect(
+          child: AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            child: open
+                ? Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 0, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: children,
+                    ),
+                  )
+                : const SizedBox(width: double.infinity),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return withTvThemeIfNeeded(
@@ -144,147 +188,184 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
               body: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  SectionLabel(tr('Language')),
-                  const SizedBox(height: 4),
-                  TvMenuTile(
-                    icon: Icons.translate,
-                    title: _languageLabel(L10n.setting),
-                    subtitle: L10n.setting == 'auto'
-                        ? tr('Follows the device language')
-                        : null,
-                    onTap: _pickLanguage,
-                  ),
-                  TvSwitchListTile(
-                    title: Text(tr('24-hour clock')),
-                    subtitle: Text(context.watch<AppPreferences>().use24h
-                        ? tr('Times show as 21:30')
-                        : tr('Times show as 9:30 PM')),
-                    value: context.watch<AppPreferences>().use24h,
-                    onChanged: (v) =>
-                        context.read<AppPreferences>().setUse24h(v),
-                  ),
-                  const Divider(height: 32),
-                  SectionLabel(tr('Startup')),
-                  const SizedBox(height: 4),
-                  // At most one of the two is on; both off = nothing plays.
-                  TvSwitchListTile(
-                    title: Text(tr('Resume last channel in full screen')),
-                    subtitle: Text(tr(
-                        'Opens the last live channel full screen after the splash.')),
-                    value: _resumeAtStartup,
-                    onChanged: (v) {
-                      setState(() {
-                        _resumeAtStartup = v;
-                        if (v) _resumeInGuide = false;
-                      });
-                      _storage.setResumeLastChannelAtStartup(v);
-                      if (v) _storage.setResumeLastChannelInGuide(false);
-                    },
-                  ),
-                  TvSwitchListTile(
-                    title: Text(tr('Resume last channel with the guide open')),
-                    subtitle: Text(tr(
-                        'Plays the last live channel in the small preview, with the channel list.')),
-                    value: _resumeInGuide,
-                    onChanged: (v) {
-                      setState(() {
-                        _resumeInGuide = v;
-                        if (v) _resumeAtStartup = false;
-                      });
-                      _storage.setResumeLastChannelInGuide(v);
-                      if (v) _storage.setResumeLastChannelAtStartup(false);
-                    },
-                  ),
-                  if (!Platform.isWindows)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-                      child: Text(
-                        tr('Both off: nothing plays at startup (a "Hold > to resume" reminder instead).'),
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ),
-                  const Divider(height: 32),
-                  SectionLabel(tr('Tabs')),
-                  const SizedBox(height: 4),
-                  TvSwitchListTile(
-                    title: Text(tr('Hide Movies')),
-                    subtitle: Text(
-                        tr('Removes the Movies tab and movie search results.')),
-                    value: context.watch<AppPreferences>().hideMovies,
-                    onChanged: (v) =>
-                        context.read<AppPreferences>().setHideMovies(v),
-                  ),
-                  TvSwitchListTile(
-                    title: Text(tr('Hide TV Shows')),
-                    subtitle: Text(tr(
-                        'Removes the TV Shows tab and show search results.')),
-                    value: context.watch<AppPreferences>().hideShows,
-                    onChanged: (v) =>
-                        context.read<AppPreferences>().setHideShows(v),
-                  ),
-                  TvSwitchListTile(
-                    title: Text(tr('Hide Media Hub')),
-                    subtitle: Text(tr('Removes the Media Hub tab.')),
-                    value: context.watch<AppPreferences>().hideArchive,
-                    onChanged: (v) =>
-                        context.read<AppPreferences>().setHideArchive(v),
-                  ),
-                  TvSwitchListTile(
-                    title: Text(tr('Hide Multiview')),
-                    subtitle: Text(tr(
-                        'Removes the Multiview row and the player\'s Open in Multiview button.')),
-                    value: context.watch<AppPreferences>().hideMultiview,
-                    onChanged: (v) =>
-                        context.read<AppPreferences>().setHideMultiview(v),
-                  ),
-                  const Divider(height: 32),
-                  if (!Platform.isWindows) ...[
-                    SectionLabel(tr('Multiview')),
-                    const SizedBox(height: 4),
+                  _section('language', Icons.translate, tr('Language'),
+                      subtitle: _languageLabel(L10n.setting),
+                      children: [
+                        TvMenuTile(
+                          icon: Icons.translate,
+                          title: _languageLabel(L10n.setting),
+                          subtitle: L10n.setting == 'auto'
+                              ? tr('Follows the device language')
+                              : null,
+                          onTap: _pickLanguage,
+                        ),
+                        TvSwitchListTile(
+                          title: Text(tr('24-hour clock')),
+                          subtitle: Text(context.watch<AppPreferences>().use24h
+                              ? tr('Times show as 21:30')
+                              : tr('Times show as 9:30 PM')),
+                          value: context.watch<AppPreferences>().use24h,
+                          onChanged: (v) =>
+                              context.read<AppPreferences>().setUse24h(v),
+                        ),
+                      ]),
+                  _section('startup', Icons.power_settings_new, tr('Startup'),
+                      children: [
+                        // At most one of the two is on; both off = nothing
+                        // plays.
+                        TvSwitchListTile(
+                          title: Text(tr('Resume last channel in full screen')),
+                          subtitle: Text(tr(
+                              'Opens the last live channel full screen after the splash.')),
+                          value: _resumeAtStartup,
+                          onChanged: (v) {
+                            setState(() {
+                              _resumeAtStartup = v;
+                              if (v) _resumeInGuide = false;
+                            });
+                            _storage.setResumeLastChannelAtStartup(v);
+                            if (v) _storage.setResumeLastChannelInGuide(false);
+                          },
+                        ),
+                        TvSwitchListTile(
+                          title: Text(
+                              tr('Resume last channel with the guide open')),
+                          subtitle: Text(tr(
+                              'Plays the last live channel in the small preview, with the channel list.')),
+                          value: _resumeInGuide,
+                          onChanged: (v) {
+                            setState(() {
+                              _resumeInGuide = v;
+                              if (v) _resumeAtStartup = false;
+                            });
+                            _storage.setResumeLastChannelInGuide(v);
+                            if (v) {
+                              _storage.setResumeLastChannelAtStartup(false);
+                            }
+                          },
+                        ),
+                        if (!Platform.isWindows)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                            child: Text(
+                              tr('Both off: nothing plays at startup (a "Hold > to resume" reminder instead).'),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                      ]),
+                  _section('tabs', Icons.tab_outlined, tr('Tabs'), children: [
                     TvSwitchListTile(
-                      title: Text(tr('Show the Multiview tip')),
+                      title: Text(tr('Hide Movies')),
                       subtitle: Text(tr(
-                          'The connections reminder shown when opening Multiview.')),
-                      value: _showMultiviewTip,
-                      onChanged: (v) {
-                        setState(() => _showMultiviewTip = v);
-                        _storage.setMultiviewHideTips(!v);
-                      },
+                          'Removes the Movies tab and movie search results.')),
+                      value: context.watch<AppPreferences>().hideMovies,
+                      onChanged: (v) =>
+                          context.read<AppPreferences>().setHideMovies(v),
                     ),
-                    const Divider(height: 32),
-                  ],
-                  SectionLabel(tr('Resume reminder')),
-                  const SizedBox(height: 4),
-                  TvSwitchListTile(
-                    title: Text(tr('Show the "Hold > to resume" reminder')),
-                    subtitle: Text(Platform.isWindows
-                        ? tr(
-                            'The pill at the bottom while a channel plays in the background. Off: hidden.')
-                        : tr(
-                            'The pill at the bottom while a channel plays in the background. Off: hidden — holding Right still resumes.')),
-                    value: _showResumePill,
-                    onChanged: (v) {
-                      setState(() => _showResumePill = v);
-                      LiveResumeHint.pillEnabled.value = v;
-                      _storage.setShowResumePill(v);
-                    },
-                  ),
-                  const Divider(height: 32),
-                  SectionLabel(tr('History')),
-                  const SizedBox(height: 4),
-                  TvMenuTile(
-                    icon: Icons.manage_search,
-                    title: tr('Clear search & channel history'),
-                    subtitle:
-                        tr('Recent searches and the live channel History'),
-                    onTap: _clearSearchAndChannelHistory,
-                  ),
-                  TvMenuTile(
-                    icon: Icons.movie_outlined,
-                    title: tr('Clear Movies & TV Shows history'),
-                    subtitle: tr('Continue Watching and saved progress'),
-                    onTap: _clearMoviesAndShowsHistory,
-                  ),
+                    TvSwitchListTile(
+                      title: Text(tr('Hide TV Shows')),
+                      subtitle: Text(tr(
+                          'Removes the TV Shows tab and show search results.')),
+                      value: context.watch<AppPreferences>().hideShows,
+                      onChanged: (v) =>
+                          context.read<AppPreferences>().setHideShows(v),
+                    ),
+                    TvSwitchListTile(
+                      title: Text(tr('Hide Media Hub')),
+                      subtitle: Text(tr('Removes the Media Hub tab.')),
+                      value: context.watch<AppPreferences>().hideArchive,
+                      onChanged: (v) =>
+                          context.read<AppPreferences>().setHideArchive(v),
+                    ),
+                    TvSwitchListTile(
+                      title: Text(tr('Hide Multiview')),
+                      subtitle: Text(tr(
+                          'Removes the Multiview row and the player\'s Open in Multiview button.')),
+                      value: context.watch<AppPreferences>().hideMultiview,
+                      onChanged: (v) =>
+                          context.read<AppPreferences>().setHideMultiview(v),
+                    ),
+                  ]),
+                  if (!Platform.isWindows)
+                    _section('background', Icons.picture_in_picture_alt,
+                        tr('Background video'),
+                        children: [
+                          TvSwitchListTile(
+                            title: Text(
+                                tr('Hide the live picture behind other pages')),
+                            subtitle: Text(tr(
+                                'A live channel keeps playing behind {tab}, Settings and Search. Some Fire TV sticks keep showing its picture on top of those pages. Turn this on if that happens: the sound keeps going, only the picture is hidden until you go back. Updating the device\'s software (Fire TV: Settings > My Fire TV > About > Check for Updates) may fix it too.',
+                                {'tab': AppConstants.sportsTabName})),
+                            value: context
+                                .watch<AppPreferences>()
+                                .hideVideoOnSports,
+                            onChanged: (v) => context
+                                .read<AppPreferences>()
+                                .setHideVideoOnSports(v),
+                          ),
+                        ]),
+                  _section('favourites', Icons.star_outline, tr('Favourites'),
+                      children: [
+                        TvSwitchListTile(
+                          title: Text(tr('Mix playlists in Favourites')),
+                          subtitle: Text(tr(
+                              'TV, Movies and TV Shows favourites from every playlist in one A-Z list, instead of one list per playlist.')),
+                          value: context
+                              .watch<AppPreferences>()
+                              .mixFavoritePlaylists,
+                          onChanged: (v) => context
+                              .read<AppPreferences>()
+                              .setMixFavoritePlaylists(v),
+                        ),
+                      ]),
+                  if (!Platform.isWindows)
+                    _section('multiview', Icons.grid_view, tr('Multiview'),
+                        children: [
+                          TvSwitchListTile(
+                            title: Text(tr('Show the Multiview tip')),
+                            subtitle: Text(tr(
+                                'The connections reminder shown when opening Multiview.')),
+                            value: _showMultiviewTip,
+                            onChanged: (v) {
+                              setState(() => _showMultiviewTip = v);
+                              _storage.setMultiviewHideTips(!v);
+                            },
+                          ),
+                        ]),
+                  _section('resume', Icons.play_circle_outline,
+                      tr('Resume reminder'),
+                      children: [
+                        TvSwitchListTile(
+                          title:
+                              Text(tr('Show the "Hold > to resume" reminder')),
+                          subtitle: Text(Platform.isWindows
+                              ? tr(
+                                  'The pill at the bottom while a channel plays in the background. Off: hidden.')
+                              : tr(
+                                  'The pill at the bottom while a channel plays in the background. Off: hidden — holding Right still resumes.')),
+                          value: _showResumePill,
+                          onChanged: (v) {
+                            setState(() => _showResumePill = v);
+                            LiveResumeHint.pillEnabled.value = v;
+                            _storage.setShowResumePill(v);
+                          },
+                        ),
+                      ]),
+                  _section('history', Icons.history, tr('History'), children: [
+                    TvMenuTile(
+                      icon: Icons.manage_search,
+                      title: tr('Clear search & channel history'),
+                      subtitle:
+                          tr('Recent searches and the live channel History'),
+                      onTap: _clearSearchAndChannelHistory,
+                    ),
+                    TvMenuTile(
+                      icon: Icons.movie_outlined,
+                      title: tr('Clear Movies & TV Shows history'),
+                      subtitle: tr('Continue Watching and saved progress'),
+                      onTap: _clearMoviesAndShowsHistory,
+                    ),
+                  ]),
                 ],
               ),
             ));

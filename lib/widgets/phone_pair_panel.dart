@@ -19,11 +19,12 @@ class PhonePairPanel extends StatefulWidget {
   });
 
   /// [PairingKind.link]: the phone shows one link box instead of the
-  /// playlist form (Settings > Archive sources).
+  /// playlist form (Settings > Archive sources); [PairingKind.mediaServer]
+  /// a Jellyfin / Emby sign-in. Both are Wi-Fi only (see [PairingKind]).
   final PairingKind kind;
 
-  /// The "Phone not on this Wi-Fi?" button — the screen's Right-arrow
-  /// target into this pane.
+  /// The "Phone not on this Wi-Fi?" button (Cancel for a Wi-Fi-only kind)
+  /// — the screen's Right-arrow target into this pane, and its focus.
   final FocusNode toggleFocusNode;
   final ValueChanged<PairingResult> onResult;
 
@@ -66,8 +67,9 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
     if (!mounted || !identical(_session, session)) return;
     setState(() {
       _starting = false;
-      // No LAN address (unusual) — only the relay can work.
-      if (session.lanUrl == null) _relay = true;
+      // No LAN address (unusual) — only the relay can work (not for a
+      // Wi-Fi-only kind: the relay's page has no such form).
+      if (session.lanUrl == null && !widget.kind.isWifiOnly) _relay = true;
     });
     if (_relay) session.startRelayPolling();
   }
@@ -137,6 +139,8 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
     }
 
     final isLink = widget.kind == PairingKind.link;
+    final isServer = widget.kind == PairingKind.mediaServer;
+    final wifiOnly = widget.kind.isWifiOnly;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -146,8 +150,11 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
           isLink
               ? tr(
                   'Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.')
-              : tr(
-                  'Typing a long password with a remote is painful. Scan this code with your phone camera and fill in the form there — it appears here for you to check and add.'),
+              : isServer
+                  ? tr(
+                      'Typing a server address and password with a remote is painful. Scan this code with your phone camera and sign in there — the details appear here for you to check and connect.')
+                  : tr(
+                      'Typing a long password with a remote is painful. Scan this code with your phone camera and fill in the form there — it appears here for you to check and add.'),
           style: muted,
         ),
         const SizedBox(height: 16),
@@ -175,8 +182,11 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
                       n: 3,
                       text: isLink
                           ? tr('Check the link here, then press Add.')
-                          : tr(
-                              'Check the details here, then press Add Playlist.')),
+                          : isServer
+                              ? tr(
+                                  'Check the details here, then press Connect.')
+                              : tr(
+                                  'Check the details here, then press Add Playlist.')),
                   const SizedBox(height: 12),
                   if (!_starting && !_expired)
                     Row(
@@ -210,18 +220,28 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
           ],
         ),
         const SizedBox(height: 16),
-        OutlinedButton.icon(
-          focusNode: widget.toggleFocusNode,
-          onPressed: _starting ? null : _toggle,
-          icon: Icon(_expired
-              ? Icons.refresh
-              : (_relay ? Icons.wifi : Icons.signal_cellular_alt)),
-          label: Text(_expired
-              ? tr('New code')
-              : (_relay
-                  ? tr('Phone on this Wi-Fi? Use the Wi-Fi code')
-                  : tr('Phone not on this Wi-Fi? Use the other code'))),
-        ),
+        // Wi-Fi-only kinds: no relay code to switch to — the button just
+        // leaves (it's still the screen's focus target, CLAUDE.md §10).
+        if (wifiOnly && !_expired)
+          OutlinedButton.icon(
+            focusNode: widget.toggleFocusNode,
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.close),
+            label: Text(tr('Cancel')),
+          )
+        else
+          OutlinedButton.icon(
+            focusNode: widget.toggleFocusNode,
+            onPressed: _starting ? null : _toggle,
+            icon: Icon(_expired
+                ? Icons.refresh
+                : (_relay ? Icons.wifi : Icons.signal_cellular_alt)),
+            label: Text(_expired
+                ? tr('New code')
+                : (_relay
+                    ? tr('Phone on this Wi-Fi? Use the Wi-Fi code')
+                    : tr('Phone not on this Wi-Fi? Use the other code'))),
+          ),
       ],
     );
   }

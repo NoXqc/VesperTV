@@ -6,6 +6,8 @@ import '../../l10n/l10n.dart';
 import '../../services/app_preferences.dart';
 import '../../services/archive_service.dart';
 import '../../services/media_server_api.dart';
+import '../../services/phone_pairing_service.dart';
+import '../../widgets/phone_pair_panel.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_text_field_gate.dart';
 
@@ -116,6 +118,18 @@ class _MediaServerScreenState extends State<MediaServerScreen> {
     navigator.pop();
   }
 
+  /// "From phone": the Add Playlist QR flow, server kind — the phone signs
+  /// in, the details land in the fields here to check, Connect is focused.
+  Future<void> _fromPhone() async {
+    final r = await Navigator.of(context).push<PairingResult>(
+        MaterialPageRoute(builder: (_) => const _PhoneServerScreen()));
+    if (r == null || !mounted) return;
+    _address.text = r.server;
+    _user.text = r.username;
+    _password.text = r.password;
+    _connectFocus.requestFocus();
+  }
+
   Widget _field({
     required TextEditingController controller,
     required FocusNode focus,
@@ -188,9 +202,8 @@ class _MediaServerScreenState extends State<MediaServerScreen> {
             onDone: _connect,
           ),
           const SizedBox(height: 16),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: OutlinedButton.icon(
+          Wrap(spacing: 12, runSpacing: 12, children: [
+            OutlinedButton.icon(
               focusNode: _connectFocus,
               onPressed: _connecting ? null : _connect,
               icon: _connecting
@@ -201,13 +214,63 @@ class _MediaServerScreenState extends State<MediaServerScreen> {
                   : const Icon(Icons.dns_outlined),
               label: Text(tr('Connect')),
             ),
-          ),
+            OutlinedButton.icon(
+              onPressed: _connecting ? null : _fromPhone,
+              icon: const Icon(Icons.qr_code_2),
+              label: Text(tr('From phone')),
+            ),
+          ]),
           const SizedBox(height: 16),
           Text(
             tr('Your password is only sent to your server. VesperTV keeps the sign-in token the server gives back, not the password.'),
             style: const TextStyle(fontSize: 12, color: Colors.white60),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The QR page behind "From phone"; pops with what the phone sent.
+class _PhoneServerScreen extends StatefulWidget {
+  const _PhoneServerScreen();
+
+  @override
+  State<_PhoneServerScreen> createState() => _PhoneServerScreenState();
+}
+
+class _PhoneServerScreenState extends State<_PhoneServerScreen> {
+  final _toggleFocus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    // The panel's only focusable control; without it the remote has
+    // nothing focused (CLAUDE.md §10).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _toggleFocus.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _toggleFocus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SettingsScaffold(
+      title: tr('Connect Jellyfin / Emby'),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: PhonePairPanel(
+          kind: PairingKind.mediaServer,
+          toggleFocusNode: _toggleFocus,
+          onResult: (r) {
+            if (mounted) Navigator.of(context).pop(r);
+          },
+        ),
       ),
     );
   }

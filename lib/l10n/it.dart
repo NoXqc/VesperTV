@@ -87,6 +87,18 @@ const Map<String, String> kIt = {
   'This device\'s video decoder couldn\'t play this stream — likely 4K HDR (HEVC 10-bit). If your provider offers an HD (non-4K) version of this channel or title, try that. If another app plays this stream on this device, please report it with a photo of the technical details below.':
       "Il decoder video di questo dispositivo non è riuscito a riprodurre questo flusso; probabilmente è 4K HDR (HEVC 10 bit). Se il tuo provider offre una versione HD (non 4K) di questo canale o titolo, prova quella. Se un'altra app riproduce questo flusso su questo dispositivo, segnalacelo con una foto dei dettagli tecnici qui sotto.",
   'Playback error:\n{raw}': "Errore di riproduzione:\n{raw}",
+  "Server error {code}":
+      "Errore del server {code}",
+  "The provider's server had a problem. Try again in a moment.":
+      "Il server del provider ha avuto un problema. Riprova tra un momento.",
+  "The provider refused the stream: check that your account is active and not already in use on another device.":
+      "Il provider ha rifiutato lo stream: verifica che il tuo account sia attivo e non già in uso su un altro dispositivo.",
+  "The provider has no stream at this address: the channel or title may have been removed.":
+      "Il provider non ha nessuno stream a questo indirizzo: il canale o il titolo potrebbe essere stato rimosso.",
+  "The provider rejected the request.":
+      "Il provider ha rifiutato la richiesta.",
+  "Couldn't reach the provider's server. Check your internet connection, or the server may be down.":
+      "Impossibile raggiungere il server del provider. Controlla la connessione a Internet, oppure il server potrebbe essere inattivo.",
   'Subtitles': "Sottotitoli",
   'Off': "Disattivati",
   'Forced': "Forzati",
@@ -346,6 +358,97 @@ const Map<String, String> kIt = {
   'Cancel Hide': "Annulla nascondi",
   'Hide Group': "Nascondi gruppo",
   'Move Up / Down': "Sposta su / giù",
+  "Show":
+      "Mostra",
+  "Hide":
+      "Nascondi",
+  "Hidden here · {n} groups":
+      "Nascosta qui · {n} gruppi",
+  "At least one playlist stays shown.":
+      "Almeno una playlist resta visibile.",
+  "{name} hidden in {tab}":
+      "{name} nascosta in {tab}",
+  "{name} shown in {tab}":
+      "{name} visibile in {tab}",
+  "Playlists":
+      "Playlist",
+  "Jump to playlist":
+      "Vai alla playlist",
+  "{n} groups":
+      "{n} gruppi",
+  "Background video":
+      "Video in sottofondo",
+  "Hide the live picture behind other pages":
+      "Nascondi l'immagine in diretta dietro le altre pagine",
+  "A live channel keeps playing behind {tab}, Settings and Search. Some Fire TV sticks keep showing its picture on top of those pages. Turn this on if that happens: the sound keeps going, only the picture is hidden until you go back. Updating the device's software (Fire TV: Settings > My Fire TV > About > Check for Updates) may fix it too.":
+      "Un canale in diretta continua dietro {tab}, Impostazioni e Cerca. Alcune chiavette Fire TV continuano a mostrare la sua immagine sopra quelle pagine. Attivalo se succede: l'audio continua, solo l'immagine viene nascosta finché non torni indietro. Aggiornare il software del dispositivo (Fire TV: Impostazioni > La mia Fire TV > Informazioni > Verifica aggiornamenti) può risolvere anche questo.",
+  'Go to row': "Vai alla fila",
+  "Typing a server address and password with a remote is painful. Scan this code with your phone camera and sign in there — the details appear here for you to check and connect.":
+      "Digitare l'indirizzo di un server e una password con il telecomando è scomodo. Scansiona questo codice con la fotocamera del telefono e accedi lì: i dati compaiono qui per verificarli.",
+  "Check the details here, then press Connect.":
+      "Controlla i dati qui, poi premi Collega.",
+  "{n} other catalogs":
+      "{n} altri cataloghi",
+  "Use the Other filter in Media Hub > Movies > Genre to see this content.":
+      "Usa il filtro Altri in Media Hub > Film > Genere per vedere questi contenuti.",
+  "Backup & restore":
+      "Backup e ripristino",
+  "Save everything to a file on this device":
+      "Salva tutto in un file su questo dispositivo",
+  "Back up now":
+      "Esegui backup ora",
+  "Playlists, favourites, profiles, progress and settings, saved to {path}":
+      "Playlist, preferiti, profili, avanzamento e impostazioni, salvati in {path}",
+  "Automatic backup":
+      "Backup automatico",
+  "Once a week, when VesperTV starts. Keeps the last {n}.":
+      "Una volta alla settimana, all'avvio di VesperTV. Conserva gli ultimi {n}.",
+  "Restore from a file":
+      "Ripristina da un file",
+  "Pick a backup file, e.g. after reinstalling VesperTV":
+      "Scegli un file di backup, ad esempio dopo aver reinstallato VesperTV",
+  "Backups":
+      "Backup",
+  "No backups yet.":
+      "Nessun backup per ora.",
+  "Backups include your playlist logins. Keep the files private.":
+      "I backup contengono le credenziali delle tue playlist. Tieni i file privati.",
+  "Manual":
+      "Manuale",
+  "Restore this backup":
+      "Ripristina questo backup",
+  "Restore":
+      "Ripristina",
+  "Restore backup?":
+      "Ripristinare il backup?",
+  "Everything on this device (playlists, favourites, profiles, settings) is replaced by the backup from {from}. Your current setup is saved as an automatic backup first. VesperTV closes afterwards.":
+      "Tutto ciò che è su questo dispositivo (playlist, preferiti, profili, impostazioni) viene sostituito dal backup del {from}. La configurazione attuale viene prima salvata come backup automatico. Poi VesperTV si chiude.",
+  "the chosen file":
+      "il file scelto",
+  "Backup restored":
+      "Backup ripristinato",
+  "Backup saved to {path}":
+      "Backup salvato in {path}",
+  "Backup failed: {error}":
+      "Backup non riuscito: {error}",
+  "VesperTV needs storage access to save backups.":
+      "VesperTV ha bisogno dell'accesso alla memoria per salvare i backup.",
+  "Couldn't read the backup folder: {error}":
+      "Impossibile leggere la cartella dei backup: {error}",
+  "Couldn't read this backup: {error}":
+      "Impossibile leggere questo backup: {error}",
+  "Couldn't delete this backup.":
+      "Impossibile eliminare questo backup.",
+  "This device has no file picker. Copy the backup into {path} on this device instead.":
+      "Questo dispositivo non ha un selettore di file. Copia il backup in {path} su questo dispositivo.",
+  "This file is not a VesperTV backup.":
+      "Questo file non è un backup di VesperTV.",
+  "Up / Down moves {name}. OK when done.":
+      "Su / Giù sposta {name}. OK per finire.",
+  "Mix playlists in Favourites":
+      "Unisci le playlist nei preferiti",
+  "TV, Movies and TV Shows favourites from every playlist in one A-Z list, instead of one list per playlist.":
+      "I preferiti di TV, Film e Serie TV di tutte le playlist in un unico elenco dalla A alla Z, invece di un elenco per playlist.",
   'Move to Top': "Sposta in cima",
   'Unhide this channel': "Mostra di nuovo il canale",
   'Hide this channel': "Nascondi questo canale",

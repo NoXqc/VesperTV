@@ -1,16 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import '../../services/catalog_database.dart';
 import '../../services/cloud_transfer.dart';
 import '../../services/device_transfer.dart';
-import '../../services/epg_service.dart';
 import '../../services/storage_service.dart';
+import 'replace_setup.dart';
 import '../../utils/time_format.dart';
 import '../../utils/constants.dart';
 import '../../utils/tv_theme.dart';
@@ -65,7 +63,8 @@ class _TransferScreenState extends State<TransferScreen> {
                   : Icons.check_box_outline_blank,
               title: tr('Include Media Hub tab data'),
               subtitle: _includeArchive
-                  ? tr('Media Hub sources and their watch progress are sent too')
+                  ? tr(
+                      'Media Hub sources and their watch progress are sent too')
                   : tr('The other device keeps its own Media Hub sources'),
               trailing: const SizedBox.shrink(),
               onTap: () => setState(() => _includeArchive = !_includeArchive),
@@ -623,35 +622,9 @@ class _ReceiveScreenState extends State<_ReceiveScreen> {
     final values = _received;
     if (values == null) return;
     setState(() => _busy = true);
-    final storage = context.read<StorageService>();
-    final catalogDb = context.read<CatalogDatabase>();
-    final epg = context.read<EpgService>();
-    // Old caches first (clearCache also drops watch positions, which the
-    // import then brings back from the other device).
-    await storage.clearCache();
-    await epg.clearAll();
-    await catalogDb.clearAll();
-    await storage.importForTransfer(values);
-    if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Text(tr('Transfer complete')),
-        content: Text(tr(
-            'VesperTV will close now. Open it again to load your playlists.')),
-        actions: [
-          FilledButton(
-            autofocus: true,
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(tr('OK')),
-          ),
-        ],
-      ),
-    );
-    // Every service still holds the old setup in memory; a fresh start is
-    // the only clean way to load the new one.
-    exit(0);
+    await replaceSetupAndExit(context,
+        title: tr('Transfer complete'),
+        importer: (storage) => storage.importForTransfer(values));
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {

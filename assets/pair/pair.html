@@ -15,7 +15,11 @@
     which browsers never send to a server — and uploads only ciphertext.
   A trailing ".link" in the fragment (Wi-Fi: "#link") swaps the playlist form
   for one long-link box (Settings > Archive sources: paste a manifest URL);
-  it sends {"mode":"link","link":…} the same two ways.
+  it sends {"mode":"link","link":…} the same two ways. A trailing ".server"
+  ("#server") shows a Jellyfin / Emby sign-in instead and sends
+  {"mode":"server","server":…,"username":…,"password":…}.
+  (The relay's deployed copy predates both; the app only offers them over
+  Wi-Fi until it's redeployed.)
   Keep it dependency-free: no CDN, no fonts, nothing that phones home.
 -->
 <style>
@@ -94,6 +98,22 @@
     </form>
   </section>
 
+  <section id="server-view" hidden>
+    <h1>Sign in to your server on <span>VesperTV</span></h1>
+    <p class="lead">Your Jellyfin or Emby details go straight to your TV.</p>
+    <form id="server-form" autocomplete="off" novalidate>
+      <label for="ms-server">Server address</label>
+      <input id="ms-server" name="server" inputmode="url" autocapitalize="off" spellcheck="false" maxlength="500" placeholder="http://192.168.1.10:8096">
+      <label for="ms-username">User name</label>
+      <input id="ms-username" name="username" autocapitalize="off" spellcheck="false" maxlength="200">
+      <label for="ms-password">Password</label>
+      <input id="ms-password" name="password" type="password" autocapitalize="off" spellcheck="false" maxlength="200">
+      <div class="hint">Leave the password blank if your account has none.</div>
+      <button class="send" id="server-send" type="submit">Send to TV</button>
+      <div class="msg" id="server-msg"></div>
+    </form>
+  </section>
+
   <section class="done" id="done-view">
     <div class="big">✓</div>
     <h1>Sent to your TV</h1>
@@ -110,14 +130,21 @@
   // served this page itself and expects a plain POST back to the same path.
   var frag = (location.hash || "").replace(/^#/, "");
   var parts = frag.split(".");
-  // "link" kind: "#<id>.<key>.link" (relay) or "#link" (Wi-Fi).
+  // "link" kind: "#<id>.<key>.link" (relay) or "#link" (Wi-Fi); "server"
+  // kind the same with "server".
   var linkKind = parts[parts.length - 1] === "link";
-  if (linkKind) parts.pop();
+  var serverKind = parts[parts.length - 1] === "server";
+  if (linkKind || serverKind) parts.pop();
   var relay = parts.length === 2 && parts[0].length >= 16 && parts[1].length >= 40;
   if (linkKind) {
     $("form-view").hidden = true;
     $("link-view").hidden = false;
     document.title = "VesperTV · Send a link";
+  }
+  if (serverKind) {
+    $("form-view").hidden = true;
+    $("server-view").hidden = false;
+    document.title = "VesperTV · Sign in to your server";
   }
 
   function setMode(m) {
@@ -131,7 +158,7 @@
   $("tab-m3u").onclick = function () { setMode("m3u"); };
 
   function show(text, kind) {
-    var el = $(linkKind ? "link-msg" : "msg");
+    var el = $(linkKind ? "link-msg" : serverKind ? "server-msg" : "msg");
     el.textContent = text;
     el.className = "msg " + (kind || "");
     el.style.display = "block";
@@ -194,18 +221,27 @@
     return { v: 1, mode: "link", link: link };
   }
 
+  function collectServer() {
+    var v = function (id) { return $(id).value.trim(); };
+    var data = { v: 1, mode: "server", server: v("ms-server"), username: v("ms-username"), password: $("ms-password").value };
+    if (!data.server || !data.username) return "Fill in the server address and user name.";
+    return data;
+  }
+
   async function submit(e) {
     e.preventDefault();
-    var data = linkKind ? collectLink() : collect();
+    var data = linkKind ? collectLink() : serverKind ? collectServer() : collect();
     if (typeof data === "string") { show(data, "err"); return; }
-    var btn = $(linkKind ? "link-send" : "send");
+    var btn = $(linkKind ? "link-send" : serverKind ? "server-send" : "send");
     btn.disabled = true; btn.textContent = "Sending…";
     try {
       var json = JSON.stringify(data);
       if (relay) await sendRelay(json); else await sendLocal(json);
       $("form-view").hidden = true;
       $("link-view").hidden = true;
+      $("server-view").hidden = true;
       if (linkKind) $("done-hint").textContent = "Check it there, then press Add. You can close this page.";
+      if (serverKind) $("done-hint").textContent = "Check the details there, then press Connect. You can close this page.";
       $("done-view").style.display = "block";
     } catch (err) {
       show(err && err.message ? err.message : "Something went wrong. Try again.", "err");
@@ -214,6 +250,7 @@
   }
   $("form").addEventListener("submit", submit);
   $("link-form").addEventListener("submit", submit);
+  $("server-form").addEventListener("submit", submit);
 })();
 </script>
 </body>
