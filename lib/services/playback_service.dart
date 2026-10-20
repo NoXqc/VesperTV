@@ -11,6 +11,7 @@ import '../models/channel.dart';
 import '../models/playlist_profile.dart';
 import '../utils/constants.dart';
 import 'playlist_manager.dart';
+import 'real_4k_channels.dart';
 import 'storage_service.dart';
 import 'watch_tracker.dart';
 import '../l10n/l10n.dart';
@@ -267,6 +268,15 @@ class PlaybackService extends ChangeNotifier {
   /// Starts playing [channel]. No-ops if it's already the current channel
   /// (so re-opening the fullscreen view for the channel the mini-player is
   /// already showing doesn't restart it).
+  /// Main player as a texture instead of a native (platform) view — the
+  /// Settings > General "Compatibility video" switch, on by default for
+  /// Android 7 and older (see AppPreferences.compatVideo). Read when a
+  /// channel starts, so a change applies from the next channel.
+  static bool textureVideo = false;
+
+  static VideoViewType get _viewType =>
+      textureVideo ? VideoViewType.textureView : VideoViewType.platformView;
+
   Future<void> play(Channel channel) async {
     // A queued episode whose stream isn't known yet (Archive Next / auto-
     // advance): resolve it first. Guarded, so the position timer's repeat
@@ -329,17 +339,15 @@ class PlaybackService extends ChangeNotifier {
     // resume position).
     final isLive = Channel.isLiveId(channel.rawId);
     final savedPositionMs = isLive ? 0 : _storage.getLastPosition(channel.id);
-    final newController = VideoPlayerHdrController.networkUrl(
-      Uri.parse(channel.url),
+    final newController = streamController(
+      channel.url,
       closedCaptionFile: channel.subtitleUrl != null
           ? _loadCaptions(channel.subtitleUrl!)
           : null,
     );
     controller = newController;
 
-    initFuture = newController
-        .initialize(viewType: VideoViewType.platformView)
-        .then((_) async {
+    initFuture = newController.initialize(viewType: _viewType).then((_) async {
       if (savedPositionMs > 0) {
         var seekMs = savedPositionMs;
         // A Trakt/Simkl resume point saved as a fraction (length unknown
@@ -373,6 +381,7 @@ class PlaybackService extends ChangeNotifier {
       unawaited(WakelockPlus.enable());
       // Trakt/Simkl, for Media Hub titles (a no-op otherwise).
       unawaited(WatchTracker.instance.started(channel.id));
+      if (isLive) unawaited(_recordRealResolution(newController, channel));
       await _storage.setLastChannelId(channel.id);
       // Live streams report zero/unknown duration — that's fine, it just
       // means StorageService.getWatchedFraction has nothing to compute a
@@ -384,6 +393,13 @@ class PlaybackService extends ChangeNotifier {
       }
       notifyListeners();
     }).catchError((e) async {
+      // A `.ts` that was really HLS: once more as HLS, through [play]
+      // (clearing currentChannel lets it past its same-channel guard).
+      if (learnHlsHost(channel.url, e) && currentChannel?.id == channel.id) {
+        currentChannel = null;
+        unawaited(play(channel));
+        return;
+      }
       if (await _retryOnBackupServers(channel, e)) return;
       error = e.toString();
       notifyListeners();
@@ -415,6 +431,21 @@ class PlaybackService extends ChangeNotifier {
     });
 
     notifyListeners();
+  }
+
+  /// The live list's 4K tag ([Real4kChannels]): what [channel] really
+  /// decodes at, read a few seconds in (the size is 0 until the first
+  /// frame) and again later (adaptive streams settle on their top
+  /// rendition).
+  Future<void> _recordRealResolution(
+      VideoPlayerHdrController c, Channel channel) async {
+    for (final wait in const [Duration(seconds: 4), Duration(seconds: 12)]) {
+      await Future<void>.delayed(wait);
+      if (controller != c || !c.value.isInitialized) return;
+      final size = c.value.size;
+      Real4kChannels.record(
+          channel.id, size.width.round(), size.height.round());
+    }
   }
 
   /// True while a manual [reloadCurrentChannel] is in flight — guards
@@ -452,11 +483,9 @@ class PlaybackService extends ChangeNotifier {
     error = null;
     notifyListeners();
 
-    final newController =
-        VideoPlayerHdrController.networkUrl(Uri.parse(channel.url));
+    final newController = streamController(channel.url);
     try {
-      final future =
-          newController.initialize(viewType: VideoViewType.platformView);
+      final future = newController.initialize(viewType: _viewType);
       initFuture = future;
       await future;
       if (currentChannel?.id != channel.id) {
@@ -539,11 +568,9 @@ class PlaybackService extends ChangeNotifier {
       if (currentChannel?.id != channel.id) return false;
 
       final retryUrl = _swapOrigin(channel.url, server);
-      final retryController =
-          VideoPlayerHdrController.networkUrl(Uri.parse(retryUrl));
+      final retryController = streamController(retryUrl);
       try {
-        final future =
-            retryController.initialize(viewType: VideoViewType.platformView);
+        final future = retryController.initialize(viewType: _viewType);
         initFuture = future;
         await future;
         // Initialising took real time, and the viewer may have moved on
@@ -685,4 +712,43 @@ bool isDecoderPlaybackError(String raw) {
   final lower = raw.toLowerCase();
   return lower.contains('mediacodecvideorenderer') ||
       (lower.contains('hevc') && lower.contains('10bit'));
+}
+
+/// Hosts whose live `.ts` URLs answer with an HLS playlist instead of a TS
+/// stream (a 302 to `….m3u8`: Strong8K behind live.flixnest.app, user
+/// photo 2026-10-20). ExoPlayer picks its reader from the URL, so it read
+/// the playlist text as video: ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED
+/// ("None of the available extractors…"). TiviMate goes by the response.
+/// Learned per host on the first such failure, for the app session.
+final Set<String> _hlsHosts = {};
+
+/// A network controller for [url], told to expect HLS when [url] is a
+/// live `.ts` on a host [learnHlsHost] has seen redirect to HLS. VOD files
+/// on the same host keep the normal detection.
+VideoPlayerHdrController streamController(
+  String url, {
+  Future<ClosedCaptionFile>? closedCaptionFile,
+  VideoPlayerOptions? videoPlayerOptions,
+}) {
+  final uri = Uri.parse(url);
+  final hls =
+      _hlsHosts.contains(uri.host) && uri.path.toLowerCase().endsWith('.ts');
+  return VideoPlayerHdrController.networkUrl(
+    uri,
+    formatHint: hls ? VideoFormat.hls : null,
+    closedCaptionFile: closedCaptionFile,
+    videoPlayerOptions: videoPlayerOptions,
+  );
+}
+
+/// True (once per host) when [error] says [url]'s live `.ts` was not a TS
+/// stream: the caller then retries it, and [streamController] opens that
+/// host's channels as HLS from now on.
+bool learnHlsHost(String url, Object error) {
+  if (!error.toString().contains('ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED')) {
+    return false;
+  }
+  final uri = Uri.tryParse(url);
+  if (uri == null || !uri.path.toLowerCase().endsWith('.ts')) return false;
+  return _hlsHosts.add(uri.host);
 }

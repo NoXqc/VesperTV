@@ -49,7 +49,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
 4. `flutter analyze` must report the baseline **17** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `1.0.27` unless noted
+5. Check the current state of releases: `gh release list` (latest should be `1.0.28` unless noted
    in §11).
 
 ## 3. Layout (what matters)
@@ -118,6 +118,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
 - Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+360**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
+  (Currently **+368**, 1.0.28.)
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
 Only release when the owner asks ("update the latest", "cut it", "fully release"). Outline: bump `pubspec.yaml` (versionCode `+N` must always rise) → `flutter analyze` → build APK + verify signature (§5) → build Windows + zip → **commit & push first** → `gh release upload <tag> app-release.apk VesperTV-windows-x64.zip --clobber` → `gh release edit <tag> --tag <new> --notes-file …` → make sure the tag equals HEAD → verify downloads/hashes, the OLD `NoXqc/NoXPlayer` redirect links and AFTVnews code `1760256`. The updater offers any *different* tag (`_isDifferent`), never leave two `.zip`/`.apk` assets on the latest release.
@@ -291,6 +292,44 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-20)
+- **Shipped: 1.0.28 (`+368`, 2026-10-20, latest; test builds `+361`..`+367`, pre-release
+  `1.0.28-test.362` for a Fire OS 6 user):**
+  - **Sports Trak:** Romanian Liga I/II, Croatian HNL, Serbian SuperLiga, Bulgarian First League
+    from **TheSportsDB** (`SportsLeague.sportsDbId`, `services/sports_db_source.dart`; ESPN has
+    none of them, its `rou.1` is frozen in 2025). Free public key `123` (shared, not a secret).
+    Free tier: day's games + scores, next game, **top 5** of the table, no live minute/box
+    score. Rate limit ~10 quick requests then 429 with a growing `Retry-After`, so one day per
+    league (not 3), a token bucket in `SportsDbSource.get`, live refresh 2 min.
+  - **HLS behind a `.ts` URL** (Strong8K via `live.flixnest.app`): `.ts` 302s to an `.m3u8`, and
+    ExoPlayer picks its reader from the URL → ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED.
+    `learnHlsHost` retries once with `formatHint: hls` and `streamController` opens that host's
+    live `.ts` as HLS for the session (player + Multiview). Owner-confirmed on the Formuler.
+  - **Compatibility video** (Settings > General > Background video, `AppPreferences.compatVideo`,
+    device-only): main player as a **texture** instead of the platform view. Default on for
+    Android 7 and older (`DeviceTypeService.sdkInt`): a 1st-gen Fire TV Stick 4K (Fire OS 6.7)
+    showed the picture twice, stripes, and the guide stuck on screen after Back. Unconfirmed
+    (the user hasn't tested yet). Texture players use Multiview's buffer policy (§9).
+  - **Media Hub:** Favourites row per category (hold OK on any poster toggles; Recently watched
+    keeps hold = remove), `keyArchiveFavorites`; **stream-only regression fix**: an IMDb stream
+    add-on with only custom-type catalogs was read as "own catalogs" since 1.0.24 (only its row
+    under Other) — it's stream-only again (Cinemeta grids), stored sources re-checked once per
+    launch (`_recheckCustomOnlySources`); custom-only add-ons without IMDb streams stay in Other
+    (owner-checked with an adult add-on). **Whole source under Other**: an own-catalog add-on
+    with any custom-type catalog (`ArchiveSource.autoOther`) goes entirely under Other — its
+    plain "series" shows too (adult add-on report), TV Shows gets an Other filter — and every
+    add-on source has a **"Show under Other"** switch (Settings > Media Hub sources,
+    `otherChoice`, stored as `other`) so either direction can be undone; Refresh after changing.
+    Floating bar under Other starts with **Back to main**. PosterCard's InkWell focus highlight
+    is off (it showed as a stray box under the zoomed card). Owner-confirmed.
+  - **Real 4K tag** (`services/real_4k_channels.dart`, `widgets/real_4k_tag.dart`): a live
+    channel that decoded at 2160p (Android at 4 s / 12 s, Multiview at 6 s, Windows from mpv's
+    height) gets a gold 4K tag on the live list and the Timeline guide (corner badge); lower
+    playback removes it. Never from the name. Not in search / side panel yet.
+  - **Windows:** volume slider + mute in the player bar (M key too), remembered per PC
+    (`keyDesktopVolume`/`keyDesktopMuted`). Owner-confirmed.
+  - Playlists menu eye icon on non-TV devices (owner-confirmed on the phone); `/pickup` command.
+  - **Trailers: on hold** (owner). Only safe way = open the YouTube link in the YouTube app /
+    browser, button hidden when nothing can open it; never extract YouTube streams in-app.
 - **Shipped: 1.0.27 (`+360`, 2026-10-20, latest; test builds `+351`..`+359` were on the Formuler and
   the Fire Stick):** playback error codes on screen (§9); hold OK on a live channel
   (guide or list) = menu with **Move Up / Down** inside its group (`PlaylistSession.moveChannel`,
@@ -306,7 +345,7 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   History (What's New/Favourites/All in Movies/Shows): jump to a playlist, Right = **Hide/Show
   that playlist's groups in this tab only** (`keyHiddenPlaylistGroups`, per viewer, channels stay
   in Search/Favourites); Multiview stuck-focus fix (§10). Owner said "very good" to the menus,
-  From phone and the jump; error screen, move, backup, Multiview fix on the Fire Stick unconfirmed.
+  From phone and the jump; owner confirmed the Multiview fix and Backup save + restore on the Formuler (2026-10-20). Unconfirmed: restore after a full uninstall, error screen, move, Windows.
 - **Open (2026-10-19 evening):** no real Trakt/Simkl account has signed in yet (all mock-tested +
   live endpoint/client-id checks) — first user reports are the real test. Jellyfin only
   mock-tested (owner confirmed a real Emby server). Windows Multiview has no header-overlay /

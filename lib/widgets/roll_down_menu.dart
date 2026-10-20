@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../services/app_preferences.dart';
 import 'hold_to_activate.dart';
 
 /// One choice in a [showRollDownMenu].
@@ -326,8 +328,15 @@ class _RollDownActionButtonState extends State<_RollDownActionButton> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(_focused ? widget.icon : Icons.chevron_right,
-                size: 20, color: _focused ? scheme.primary : Colors.white54),
+            // Touch / mouse: the action's own icon (an eye says "hide"; a
+            // bare › didn't, owner 2026-10-20). Remote: a › that opens into
+            // icon + label when Right reaches it.
+            Icon(
+                _focused || !context.read<AppPreferences>().isTelevision
+                    ? widget.icon
+                    : Icons.chevron_right,
+                size: 20,
+                color: _focused ? scheme.primary : Colors.white54),
             if (_focused) ...[
               const SizedBox(width: 6),
               Text(widget.label,

@@ -161,6 +161,21 @@ class StorageService {
       _prefs.setString(AppConstants.keyAddons, json);
 
   /// Archive tab sources (ArchiveService). Null = never saved (none).
+  double getDesktopVolume() =>
+      _prefs.getDouble(AppConstants.keyDesktopVolume) ?? 100;
+  Future<void> setDesktopVolume(double value) =>
+      _prefs.setDouble(AppConstants.keyDesktopVolume, value);
+  bool getDesktopMuted() =>
+      _prefs.getBool(AppConstants.keyDesktopMuted) ?? false;
+  Future<void> setDesktopMuted(bool value) =>
+      _prefs.setBool(AppConstants.keyDesktopMuted, value);
+
+  String? getArchiveFavoritesJson() =>
+      _prefs.getString(AppConstants.keyArchiveFavorites);
+  Future<void> setArchiveFavoritesJson(String? json) => json == null
+      ? _prefs.remove(AppConstants.keyArchiveFavorites)
+      : _prefs.setString(AppConstants.keyArchiveFavorites, json);
+
   String? getArchiveHistoryJson() =>
       _prefs.getString(AppConstants.keyArchiveHistory);
   Future<void> setArchiveHistoryJson(String? json) => json == null
@@ -267,6 +282,17 @@ class StorageService {
       _prefs.getBool(AppConstants.keyHideVideoOnSports) ?? false;
   Future<void> setHideVideoOnSports(bool value) =>
       _prefs.setBool(AppConstants.keyHideVideoOnSports, value);
+
+  Set<String> getReal4kChannels() =>
+      (_prefs.getStringList(AppConstants.keyReal4kChannels) ?? const [])
+          .toSet();
+  Future<void> setReal4kChannels(Set<String> ids) =>
+      _prefs.setStringList(AppConstants.keyReal4kChannels, ids.toList());
+
+  /// Null = never chosen (auto, see AppPreferences.compatVideo).
+  bool? getCompatVideo() => _prefs.getBool(AppConstants.keyCompatVideo);
+  Future<void> setCompatVideo(bool value) =>
+      _prefs.setBool(AppConstants.keyCompatVideo, value);
   bool getMixFavoritePlaylists() =>
       _prefs.getBool(AppConstants.keyMixFavoritePlaylists) ?? false;
   Future<void> setMixFavoritePlaylists(bool value) =>
@@ -702,8 +728,11 @@ class StorageService {
     AppConstants.keyLayoutMode,
     AppConstants.keyWindowsWindowed,
     AppConstants.keyWindowsBounds,
+    AppConstants.keyDesktopVolume,
+    AppConstants.keyDesktopMuted,
     AppConstants.keyVideoFill,
     AppConstants.keyHideVideoOnSports,
+    AppConstants.keyCompatVideo,
     AppConstants.keyPlaylistEnabled,
     AppConstants.keyPinFailCount,
     AppConstants.keyPinLockedUntil,
@@ -825,6 +854,7 @@ class StorageService {
   static bool _isArchiveKey(String key) =>
       key == AppConstants.keyArchiveSources ||
       key == AppConstants.keyArchiveHistory ||
+      key == AppConstants.keyArchiveFavorites ||
       key == AppConstants.keyArchiveRecentSearches ||
       key.contains('archive::arc_');
 

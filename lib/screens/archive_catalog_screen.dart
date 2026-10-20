@@ -116,13 +116,12 @@ class _ArchiveCatalogScreenState extends State<ArchiveCatalogScreen> {
                         rating: meta.year,
                         tapToPreview: touchPreview,
                         onTap: () => _open(current.sourceAt(i), meta),
-                        // Hold OK on a watched title: out of the history
-                        // (same as the row it came from).
-                        onToggleFavorite: current.isHistory
-                            ? () => context
-                                .read<ArchiveService>()
-                                .removeFromHistory(current.sourceAt(i), meta)
-                            : null,
+                        // Same hold as the row it came from.
+                        isFavorite: context
+                            .read<ArchiveService>()
+                            .isFavorite(current.sourceAt(i), meta),
+                        onToggleFavorite: () => holdArchiveTitle(
+                            context, current, current.sourceAt(i), meta),
                         onFocusGained: () {
                           // A grid row holds several cards: ask for the
                           // next page a few rows before the end.

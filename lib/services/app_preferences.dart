@@ -4,6 +4,7 @@ import '../l10n/l10n.dart';
 import '../models/cyberpunk_palette.dart';
 import '../utils/constants.dart';
 import '../utils/time_format.dart';
+import 'playback_service.dart';
 import 'storage_service.dart';
 
 /// App-wide UI/behavior preferences (theme, clock, layout mode, whether
@@ -66,6 +67,23 @@ class AppPreferences extends ChangeNotifier {
   /// persisted: it's a property of the device, re-detected every launch,
   /// and a stale stored value would be worse than asking again.
   bool isTelevision = false;
+
+  /// Android API level, set at startup like [isTelevision] (0 = unknown).
+  int androidSdk = 0;
+
+  /// Compatibility video: the main player draws into a texture instead of
+  /// a native view (see PlaybackService.textureVideo). Default on for
+  /// Android 7 and older: a 1st-gen Fire TV Stick 4K (Fire OS 6.7) showed
+  /// the picture twice (a small copy top-left over the full one) and
+  /// striped garbage with the native view (user photos, 2026-10-20).
+  bool get compatVideo =>
+      _storage.getCompatVideo() ?? (androidSdk > 0 && androidSdk < 26);
+
+  void setCompatVideo(bool value) {
+    _storage.setCompatVideo(value);
+    PlaybackService.textureVideo = value;
+    notifyListeners();
+  }
 
   Future<void> init() async {
     showClock = _storage.getShowClock();

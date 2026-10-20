@@ -330,6 +330,7 @@ class ArchiveSource {
     this.enabled = true,
     this.server,
     this.tracker,
+    this.otherChoice,
   });
 
   final String manifestUrl;
@@ -351,6 +352,26 @@ class ArchiveSource {
   final TrackerLogin? tracker;
 
   bool get streamOnly => catalogProviderUrl != null;
+
+  /// The user's "Show under Other" switch (Settings > Media Hub sources):
+  /// true = the whole source only behind the genre filter's Other entry
+  /// (Movies and TV Shows), false = in the main rows. Null = never
+  /// touched: [autoOther] decides.
+  final bool? otherChoice;
+
+  /// The default: an add-on serving its own catalogs where any catalog is
+  /// of a custom type (adult add-ons: custom-type movies, plain "series"
+  /// shows — user report, 2026-10-20). Stream-only, server and tracker
+  /// sources never are.
+  bool get autoOther =>
+      !streamOnly &&
+      server == null &&
+      tracker == null &&
+      catalogs.any((c) => c.wireType != null);
+
+  /// Browsed only under Other: every one of its rows, search hits and
+  /// Recently watched / Favourites titles.
+  bool get underOther => otherChoice ?? autoOther;
 
   /// Where its resources live: the manifest URL minus `/manifest.json` (a
   /// media server: its API base, without the `#userId`).
@@ -377,7 +398,8 @@ class ArchiveSource {
   ArchiveSource copyWith(
           {bool? enabled,
           List<ArchiveCatalog>? catalogs,
-          TrackerLogin? tracker}) =>
+          TrackerLogin? tracker,
+          bool? otherChoice}) =>
       ArchiveSource(
         manifestUrl: manifestUrl,
         name: name,
@@ -388,6 +410,7 @@ class ArchiveSource {
         enabled: enabled ?? this.enabled,
         server: server,
         tracker: tracker ?? this.tracker,
+        otherChoice: otherChoice ?? this.otherChoice,
       );
 
   Map<String, dynamic> toJson() => {
@@ -400,6 +423,7 @@ class ArchiveSource {
         'enabled': enabled,
         if (server != null) 'server': server!.toJson(),
         if (tracker != null) 'tracker': tracker!.toJson(),
+        if (otherChoice != null) 'other': otherChoice,
       };
 
   factory ArchiveSource.fromJson(Map<String, dynamic> j) {
@@ -427,6 +451,7 @@ class ArchiveSource {
       enabled: j['enabled'] != false,
       server: MediaServerLogin.fromJson(j['server']),
       tracker: TrackerLogin.fromJson(j['tracker']),
+      otherChoice: j['other'] is bool ? j['other'] as bool : null,
     );
   }
 }

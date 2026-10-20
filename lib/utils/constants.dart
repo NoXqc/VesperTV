@@ -57,6 +57,10 @@ class AppConstants {
   /// category (JSON `{movie: [...], series: [...]}`). Sent with "Include
   /// Extras tab data" like the sources.
   static const String keyArchiveHistory = 'vesper_archive_history';
+
+  /// Media Hub favourites (newest first, same `{src, meta}` JSON entries as
+  /// the history), both categories together.
+  static const String keyArchiveFavorites = 'vesper_archive_favorites';
   static const String keyArchiveRecentSearches =
       'vesper_archive_recent_searches';
   // Online subtitle languages picked before, most recent first.
@@ -244,6 +248,9 @@ class AppConstants {
   /// workaround for Fire TV sticks that keep drawing it on top.
   /// Device-only (not transferred). Key name predates Settings/Search.
   static const String keyHideVideoOnSports = 'vesper_hide_video_on_sports';
+  static const String keyCompatVideo = 'vesper_compat_video';
+  // Live channel ids seen playing at real 4K (Real4kChannels), list.
+  static const String keyReal4kChannels = 'vesper_real_4k_channels';
   static const String keyLastAutoBackup = 'vesper_last_auto_backup';
 
   /// Sports tab, per viewer: leagues shown (ordered ids), spoiler mode, and
@@ -278,6 +285,9 @@ class AppConstants {
   /// bounds ("x,y,w,h") — see DesktopWindow. This PC only.
   static const String keyWindowsWindowed = 'vesper_windows_windowed';
   static const String keyWindowsBounds = 'vesper_windows_bounds';
+  // Windows player volume 0-100 and mute (device-only, like the bounds).
+  static const String keyDesktopVolume = 'vesper_desktop_volume';
+  static const String keyDesktopMuted = 'vesper_desktop_muted';
 
   /// Fullscreen player: zoom the picture to fill the screen (crops the
   /// edges) instead of fitting it with black bars — the player's ⛶ button.

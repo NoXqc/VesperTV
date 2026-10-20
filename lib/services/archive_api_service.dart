@@ -89,9 +89,14 @@ class ArchiveApiService {
       if (cat != null) catalogs.add(cat);
     }
     String? providerUrl;
-    if (catalogs.isEmpty) {
-      // Stream-only: fine when its streams are keyed on IMDB ids, which the
-      // public provider's catalogs and metas use too.
+    // No movie/series catalog of its own: stream-only when its streams are
+    // keyed on IMDB ids (the public provider's grids, Cinemeta). A custom-
+    // type catalog alone ("tv", …) doesn't count — up to 1.0.23 those were
+    // dropped, and since 1.0.24 keeping them turned such an add-on's IMDb
+    // grids into just its custom row under Other (user report, 2026-10-20).
+    // An add-on that only has custom catalogs and no IMDb streams keeps
+    // them (adult add-ons, browsed under Other).
+    if (catalogs.every((c) => c.wireType != null)) {
       final streamRes =
           resourceList.whereType<Map>().where((r) => r['name'] == 'stream');
       final prefixes = <String>{
@@ -108,12 +113,16 @@ class ArchiveApiService {
         ])
           if (ArchiveType.fromWire(t?.toString()) case final type?) type,
       };
-      if (types.isEmpty ||
-          !(prefixes.isEmpty || prefixes.any((p) => p.startsWith('tt')))) {
+      final imdbStreams = types.isNotEmpty &&
+          (prefixes.isEmpty || prefixes.any((p) => p.startsWith('tt')));
+      if (imdbStreams) {
+        catalogs
+          ..clear()
+          ..addAll(ArchiveCatalogProvider.catalogsFor(types));
+        providerUrl = ArchiveCatalogProvider.baseUrl;
+      } else if (catalogs.isEmpty) {
         throw ArchiveApiException('This source has no catalog to browse.');
       }
-      catalogs.addAll(ArchiveCatalogProvider.catalogsFor(types));
-      providerUrl = ArchiveCatalogProvider.baseUrl;
     }
     return ArchiveSource(
       manifestUrl: url,

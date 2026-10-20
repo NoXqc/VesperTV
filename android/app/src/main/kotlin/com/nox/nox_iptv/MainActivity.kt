@@ -91,6 +91,8 @@ class MainActivity : FlutterActivity() {
                     packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK) ||
                         packageManager.hasSystemFeature(PackageManager.FEATURE_TELEVISION)
                 result.success(isTvUiMode || hasLeanback)
+            } else if (call.method == "sdkInt") {
+                result.success(Build.VERSION.SDK_INT)
             } else {
                 result.notImplemented()
             }

@@ -29,6 +29,7 @@ class SportsLeague {
   const SportsLeague({
     required this.id,
     required this.espnPath,
+    this.sportsDbId,
     required this.name,
     required this.shortName,
     required this.logoUrl,
@@ -52,8 +53,13 @@ class SportsLeague {
   /// Stable id stored in prefs (`nhl`, `eng.1`, ...).
   final String id;
 
-  /// `{sport}/{league}` segment of ESPN's site API.
+  /// `{sport}/{league}` segment of ESPN's site API. A [sportsDbId] league
+  /// is never requested from ESPN; only its `{sport}` part is read.
   final String espnPath;
+
+  /// TheSportsDB league id — set for leagues ESPN doesn't cover; every
+  /// request then goes to `services/sports_db_source.dart` instead.
+  final String? sportsDbId;
   final String name;
   final String shortName;
   final String logoUrl;
@@ -443,6 +449,58 @@ const List<SportsLeague> kSportsLeagueBank = [
       name: 'Swedish Allsvenskan',
       shortName: 'ALLSV',
       logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/16.png',
+      region: 'Europe',
+      soccer: true),
+  // Not on ESPN (its rou.1 stopped updating in 2025): TheSportsDB instead,
+  // checked 2026-10-20 (see [SportsLeague.sportsDbId]).
+  SportsLeague(
+      id: 'rou.1',
+      espnPath: 'soccer/rou.1',
+      sportsDbId: '4691',
+      name: 'Romanian Liga I',
+      shortName: 'LIGA 1',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/x9ordh1662657856.png',
+      region: 'Europe',
+      soccer: true),
+  SportsLeague(
+      id: 'rou.2',
+      espnPath: 'soccer/rou.2',
+      sportsDbId: '4665',
+      name: 'Romanian Liga II',
+      shortName: 'LIGA 2',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/m7b7xt1580764061.png',
+      region: 'Europe',
+      soccer: true),
+  SportsLeague(
+      id: 'cro.1',
+      espnPath: 'soccer/cro.1',
+      sportsDbId: '4629',
+      name: 'Croatian HNL',
+      shortName: 'HNL',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/bgo85e1781975278.png',
+      region: 'Europe',
+      soccer: true),
+  SportsLeague(
+      id: 'srb.1',
+      espnPath: 'soccer/srb.1',
+      sportsDbId: '4671',
+      name: 'Serbian SuperLiga',
+      shortName: 'SSL',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/lu8cvs1578940052.png',
+      region: 'Europe',
+      soccer: true),
+  SportsLeague(
+      id: 'bul.1',
+      espnPath: 'soccer/bul.1',
+      sportsDbId: '4626',
+      name: 'Bulgarian First League',
+      shortName: 'EFBET',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/nujbma1730047938.png',
       region: 'Europe',
       soccer: true),
   SportsLeague(
@@ -873,6 +931,10 @@ SportsLeague? sportsLeagueById(String id) {
 /// returns a ~8 KB version — what a weak TV box should download and decode.
 String? sportsLogoUrl(String? url, {int size = 96}) {
   if (url == null || url.isEmpty) return null;
+  // TheSportsDB's `/tiny` is 100 px (~13 KB); the original is 500+ px.
+  if (url.startsWith('https://r2.thesportsdb.com/') && url.endsWith('.png')) {
+    return '$url/tiny';
+  }
   const host = 'https://a.espncdn.com/';
   if (!url.startsWith(host) || url.contains('/combiner/')) return url;
   final path = url.substring(host.length - 1);

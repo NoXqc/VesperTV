@@ -57,4 +57,13 @@ class DeviceTypeService {
       return false;
     }
   }
+
+  /// Android's API level (25 = Android 7.1 / Fire OS 6), 0 when unknown.
+  static Future<int> sdkInt() async {
+    try {
+      return await _channel.invokeMethod<int>('sdkInt') ?? 0;
+    } catch (_) {
+      return 0;
+    }
+  }
 }

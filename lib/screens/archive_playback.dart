@@ -264,3 +264,18 @@ Future<void> openArchiveSeries(
             imdbId: preview.imdb,
           )));
 }
+
+/// Hold OK on a Media Hub title: Recently watched = out of the history,
+/// any other row = into / out of Favourites (with a short confirmation).
+Future<void> holdArchiveTitle(BuildContext context, ArchiveRow row,
+    ArchiveSource source, ArchiveMeta meta) async {
+  final service = context.read<ArchiveService>();
+  if (row.isHistory) return service.removeFromHistory(source, meta);
+  final messenger = ScaffoldMessenger.of(context);
+  final added = await service.toggleFavorite(source, meta);
+  messenger.showSnackBar(SnackBar(
+    content:
+        Text(added ? tr('Added to Favorites') : tr('Removed from Favorites')),
+    duration: const Duration(seconds: 2),
+  ));
+}

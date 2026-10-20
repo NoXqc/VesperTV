@@ -145,6 +145,11 @@ class _PosterCardState extends State<PosterCard> {
       child: InkWell(
         focusNode: _effectiveFocusNode,
         borderRadius: BorderRadius.circular(10),
+        // The poster's own border + glow is the focus look. InkWell's grey
+        // focus highlight sat around the unscaled card, so under the 1.10
+        // zoom it showed as a stray box below the title (Media Hub photo,
+        // 2026-10-20).
+        focusColor: Colors.transparent,
         // Windows only — same fix/reasoning as TvHomeScreen's
         // _ProgramBlock (the Timeline guide's program cells): a single
         // click immediately opening the detail screen (the old, only

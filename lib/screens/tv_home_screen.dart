@@ -38,6 +38,7 @@ import '../widgets/live_resume_hint.dart';
 import '../widgets/mode_button.dart';
 import '../widgets/player_controls.dart';
 import '../widgets/poster_card.dart';
+import '../widgets/real_4k_tag.dart';
 import '../widgets/roll_down_menu.dart';
 import '../widgets/section_label.dart';
 import '../widgets/update_prompt.dart';
@@ -4412,6 +4413,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              Real4kTag(channelId: channel.id),
               if (isMoving)
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 8),
@@ -8108,11 +8110,19 @@ class _ChannelLabel extends StatelessWidget {
             child: row,
           )
         : row;
-    if (tag == null) return marked;
+    // The 4K tag sits in the top-right corner, over the row, so it never
+    // takes width from the channel name (owner photo, 2026-10-20).
+    final corner = Positioned(
+      top: 2,
+      right: 4,
+      child: Real4kTag(channelId: channel.id, compact: true),
+    );
+    if (tag == null) return Stack(children: [marked, corner]);
     final scheme = Theme.of(context).colorScheme;
     return Stack(
       children: [
         marked,
+        corner,
         Positioned(
           top: 2,
           left: 6,

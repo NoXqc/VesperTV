@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import '../models/sports.dart';
 import '../l10n/l10n.dart';
+import 'sports_db_source.dart';
 import 'storage_service.dart';
 
 /// The viewer's active leagues, in their order: base leagues plus the ones
@@ -71,7 +72,11 @@ class SportsService {
     ];
     final results = await Future.wait([
       for (final league in leagues)
-        for (final d in dates) _fetch(league, d),
+        // TheSportsDB: the local date only (its rate limit). It buckets by
+        // UTC date, which is the local one for European kick-offs here and
+        // in the Americas; a viewer far east loses the evening games.
+        for (final d in league.sportsDbId != null ? [local] : dates)
+          _fetch(league, d),
     ]);
     final seen = <String>{};
     final games = <SportsGame>[];
@@ -114,6 +119,12 @@ class SportsService {
     return !localDay.isBefore(first) && !localDay.isAfter(last);
   }
 
+  /// TheSportsDB leagues go through its rate-limit bucket.
+  Future<http.Response> _get(SportsLeague league, Uri url) =>
+      league.sportsDbId != null
+          ? SportsDbSource.get(_client, url)
+          : _client.get(url).timeout(const Duration(seconds: 15));
+
   /// Set when the most recent load had at least one failed request.
   String? lastError;
 
@@ -137,15 +148,18 @@ class SportsService {
   }
 
   Future<SportsStandings?> _downloadStandings(SportsLeague league) async {
-    final url = Uri.parse('$_standingsBase/${league.espnPath}/standings');
+    final db = league.sportsDbId != null;
+    final url = db
+        ? SportsDbSource.tableUrl(league)
+        : Uri.parse('$_standingsBase/${league.espnPath}/standings');
     try {
-      final response =
-          await _client.get(url).timeout(const Duration(seconds: 15));
+      final response = await _get(league, url);
       if (response.statusCode != 200) {
         throw Exception('HTTP ${response.statusCode}');
       }
-      final standings =
-          await compute(parseEspnStandings, (response.body, league));
+      final standings = await compute(
+          db ? parseSportsDbTable : parseEspnStandings,
+          (response.body, league));
       _standingsCache[league.id] = (standings, DateTime.now());
       return standings;
     } catch (e) {
@@ -180,6 +194,9 @@ class SportsService {
 
   Future<SportsTeamSchedule?> _downloadSchedule(
       SportsLeague league, String teamId, String key) async {
+    if (league.sportsDbId != null) {
+      return _downloadDbSchedule(league, teamId, key);
+    }
     final base = '$_base/${league.espnPath}/teams/$teamId/schedule';
     try {
       final responses = await Future.wait([
@@ -205,6 +222,85 @@ class SportsService {
     }
   }
 
+  /// [teamSchedule] for a TheSportsDB league: the free key gives only the
+  /// last and the next game; the table line when the team is in its top 5.
+  Future<SportsTeamSchedule?> _downloadDbSchedule(
+      SportsLeague league, String teamId, String key) async {
+    try {
+      final responses = await Future.wait([
+        for (final url in SportsDbSource.teamUrls(teamId)) _get(league, url),
+      ]);
+      final games = <SportsGame>[];
+      for (final r in responses) {
+        if (r.statusCode != 200) throw Exception('HTTP ${r.statusCode}');
+        games.addAll(await compute(parseSportsDbEvents, (r.body, league)));
+      }
+      games.sort((a, b) => a.start.compareTo(b.start));
+      final rows = [
+        for (final g in (await standings(league))?.groups ?? const [])
+          ...g.rows,
+      ];
+      final row = rows.where((r) => r.team.id == teamId).firstOrNull;
+      final team = row?.team ??
+          [
+            for (final g in games) ...[g.home, g.away]
+          ].where((t) => t.id == teamId).firstOrNull;
+      if (team == null) throw Exception('no team in response');
+      final schedule = SportsTeamSchedule(
+        league: league,
+        team: team,
+        games: games,
+        standingSummary:
+            row == null ? null : '${_ordinal(row.position)} in ${league.name}',
+      );
+      _scheduleCache[key] = (schedule, DateTime.now());
+      return schedule;
+    } catch (e) {
+      debugPrint(
+          'SportsService: ${league.id} team $teamId schedule failed: $e');
+      return _scheduleCache[key]?.$1;
+    }
+  }
+
+  static String _ordinal(int n) {
+    final suffix = n % 100 >= 11 && n % 100 <= 13
+        ? 'th'
+        : switch (n % 10) { 1 => 'st', 2 => 'nd', 3 => 'rd', _ => 'th' };
+    return '$n$suffix';
+  }
+
+  /// TheSportsDB has no box score on the free key: the pop-up shows the
+  /// league table (its top 5) when either team is in it.
+  Future<SportsGameSummary?> _dbSummary(SportsGame game) async {
+    final table = await standings(game.league);
+    final ids = {game.home.id, game.away.id};
+    return SportsGameSummary(tables: [
+      for (final g in table?.groups ?? const <SportsStandingGroup>[])
+        if (g.rows.any((r) => ids.contains(r.team.id)))
+          SportsSummaryTable(
+            title: g.name,
+            labels: const ['GP', 'W', 'D', 'L', 'PTS'],
+            rows: [
+              for (final r in g.rows)
+                (
+                  r.team.id,
+                  r.team.name,
+                  [
+                    for (final k in const [
+                      'gamesPlayed',
+                      'wins',
+                      'ties',
+                      'losses',
+                      'points'
+                    ])
+                      r.stat(k),
+                  ],
+                ),
+            ],
+          ),
+    ]);
+  }
+
   final Map<String, (SportsGameSummary, DateTime)> _summaryCache = {};
   final Map<String, Future<SportsGameSummary?>> _summaryInFlight = {};
 
@@ -212,6 +308,7 @@ class SportsService {
   /// live list's detail pop-up). One call per opened game, cached 30 s
   /// while it's live. Null when ESPN can't be reached and nothing is cached.
   Future<SportsGameSummary?> gameSummary(SportsGame game) {
+    if (game.league.sportsDbId != null) return _dbSummary(game);
     final key = '${game.league.id}|${game.id}';
     final cached = _summaryCache[key];
     if (cached != null &&
@@ -289,15 +386,19 @@ class SportsService {
         // last week's card, so "no upcoming games"); a 60-day range lists
         // what's next. Team leagues keep the dateless call — a range there
         // is hundreds of games (NHL's failed outright).
+        final db = league.sportsDbId != null;
         final range = league.kind == SportsKind.team
             ? ''
             : '?dates=${_espnDate(day)}-${_espnDate(day.add(const Duration(days: 60)))}';
-        final response = await _client
-            .get(Uri.parse('$_base/${league.espnPath}/scoreboard$range'))
-            .timeout(const Duration(seconds: 15));
+        final response = await _get(
+            league,
+            db
+                ? SportsDbSource.nextUrl(league)
+                : Uri.parse('$_base/${league.espnPath}/scoreboard$range'));
         if (response.statusCode != 200) return null;
-        final games =
-            await compute(parseEspnScoreboard, (response.body, league));
+        final games = await compute(
+            db ? parseSportsDbEvents : parseEspnScoreboard,
+            (response.body, league));
         hit = ([for (final g in games) g.start.toLocal()], DateTime.now());
         _windowStarts[league.id] = hit;
       } catch (e) {
@@ -325,19 +426,24 @@ class SportsService {
 
   Future<List<SportsGame>> _download(
       SportsLeague league, DateTime date, String key) async {
-    final url = Uri.parse(
-        '$_base/${league.espnPath}/scoreboard?dates=${_espnDate(date)}');
+    final db = league.sportsDbId != null;
+    // TheSportsDB buckets by UTC date, ESPN by US Eastern; either way the
+    // days either side are fetched too (see [gamesForDay]).
+    final url = db
+        ? SportsDbSource.dayUrl(league, date)
+        : Uri.parse(
+            '$_base/${league.espnPath}/scoreboard?dates=${_espnDate(date)}');
     try {
-      final response =
-          await _client.get(url).timeout(const Duration(seconds: 15));
+      final response = await _get(league, url);
       if (response.statusCode != 200) {
         throw Exception('HTTP ${response.statusCode}');
       }
       final body = response.body;
       // A busy NFL Sunday is a few hundred KB of JSON — decoded off the UI
       // isolate so the screen keeps responding on a weak box.
-      final games = await compute(parseEspnScoreboard, (body, league));
-      _cache[key] = _CacheEntry(games, DateTime.now());
+      final games = await compute(
+          db ? parseSportsDbEvents : parseEspnScoreboard, (body, league));
+      _cache[key] = _CacheEntry(games, DateTime.now(), sportsDb: db);
       lastError = null;
       return games;
     } catch (e) {
@@ -349,9 +455,13 @@ class SportsService {
 }
 
 class _CacheEntry {
-  _CacheEntry(this.games, this.fetchedAt);
+  _CacheEntry(this.games, this.fetchedAt, {this.sportsDb = false});
   final List<SportsGame> games;
   final DateTime fetchedAt;
+
+  /// TheSportsDB's free tier allows 30 requests a minute: live days
+  /// refresh every 2 minutes instead of every 50 s.
+  final bool sportsDb;
 
   bool isStale(DateTime espnDate, DateTime today) {
     final age = DateTime.now().difference(fetchedAt);
@@ -359,7 +469,9 @@ class _CacheEntry {
     final startsSoon = games.any((g) =>
         g.state == GameState.pre &&
         g.start.difference(DateTime.now().toUtc()).inMinutes < 30);
-    if (live || startsSoon) return age > const Duration(seconds: 50);
+    if (live || startsSoon) {
+      return age > Duration(seconds: sportsDb ? 120 : 50);
+    }
     final d = DateTime(espnDate.year, espnDate.month, espnDate.day);
     if (d.isBefore(today.subtract(const Duration(days: 1)))) {
       return age > const Duration(hours: 6);

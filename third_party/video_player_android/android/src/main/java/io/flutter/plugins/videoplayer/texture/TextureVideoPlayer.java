@@ -62,8 +62,9 @@ public final class TextureVideoPlayer extends VideoPlayer implements SurfaceProd
         () -> {
           ExoPlayer.Builder builder = new ExoPlayer.Builder(context);
           DefaultLoadControl.Builder loadControlBuilder = new DefaultLoadControl.Builder();
-          // Only Multiview uses texture players (the main player is a
-          // platform view), so this is Multiview's buffer policy.
+          // Multiview's buffer policy. Texture players are Multiview plus
+          // the main player in Compatibility video (Android 7 and older,
+          // or the Settings switch); these sizes suit one stream too.
           // Xtream live is progressive .ts: it arrives at real-time speed,
           // so the cushion never grows beyond what's held before playback
           // (re)starts. The old 500 ms start thresholds meant any network

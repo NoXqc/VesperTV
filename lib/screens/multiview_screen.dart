@@ -10,7 +10,9 @@ import '../models/channel.dart';
 import '../services/app_preferences.dart';
 import '../services/epg_service.dart';
 import '../services/multiview_sports.dart';
+import '../services/playback_service.dart' show learnHlsHost, streamController;
 import '../services/playlist_manager.dart';
+import '../services/real_4k_channels.dart';
 import '../services/storage_service.dart';
 import '../widgets/auto_hide_overlay.dart';
 import '../widgets/game_channel_chooser.dart';
@@ -323,8 +325,8 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     // or not) cell froze the *other*, audio-focused one specifically,
     // not a random sibling, which pointed at audio focus rather than
     // the video decode/rendering path itself.
-    final newController = VideoPlayerHdrController.networkUrl(
-      Uri.parse(channel.url),
+    final newController = streamController(
+      channel.url,
       videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
     );
     try {
@@ -333,14 +335,25 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
         unawaited(newController.dispose());
         return;
       }
+      // The live list's 4K tag, from what this tile really decodes.
+      unawaited(Future<void>.delayed(const Duration(seconds: 6), () {
+        if (cell.controller != newController) return;
+        final size = newController.value.size;
+        Real4kChannels.record(
+            channel.id, size.width.round(), size.height.round());
+      }));
       await newController.setVolume(index == _activeCell ? 1.0 : 0.0);
       await newController.play();
       setState(() {
         cell.channel = channel;
         cell.controller = newController;
       });
-    } catch (_) {
+    } catch (e) {
       unawaited(newController.dispose());
+      // A `.ts` that was really HLS (see learnHlsHost): once more as HLS.
+      if (learnHlsHost(channel.url, e) && mounted) {
+        return _assign(index, channel);
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(tr('Couldn\'t start that channel'))));

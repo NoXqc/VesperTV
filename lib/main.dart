@@ -26,6 +26,7 @@ import 'services/epg_service.dart';
 import 'services/parental_pin.dart';
 import 'services/persistent_image_cache.dart';
 import 'services/playback_service.dart';
+import 'services/real_4k_channels.dart';
 import 'services/playlist_manager.dart';
 import 'services/storage_service.dart';
 import 'services/viewer_profile_service.dart';
@@ -289,11 +290,16 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       await _storage.init();
       LiveResumeHint.pillEnabled.value = _storage.getShowResumePill();
 
+      Real4kChannels.init(_storage);
       _preferences = AppPreferences(_storage);
       await _preferences.init();
       // Asked once per launch, before anything decides a layout — see
       // DeviceTypeService for why screen width couldn't answer this.
       _preferences.isTelevision = await DeviceTypeService.isTelevision();
+      if (Platform.isAndroid) {
+        _preferences.androidSdk = await DeviceTypeService.sdkInt();
+      }
+      PlaybackService.textureVideo = _preferences.compatVideo;
 
       _catalogDb = CatalogDatabase();
 

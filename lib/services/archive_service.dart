@@ -21,6 +21,7 @@ class ArchiveRow {
     required this.items,
     this.searchQuery,
     this.itemSources,
+    this.isFavorites = false,
   });
 
   final ArchiveSource source;
@@ -28,20 +29,26 @@ class ArchiveRow {
   final List<ArchiveMeta> items;
   final String? searchQuery;
 
-  /// Set on the watched-history row, whose titles come from several
-  /// sources: the source of each item (else every item is [source]'s).
+  /// Set on the watched-history and Favourites rows, whose titles come
+  /// from several sources: the source of each item (else every item is
+  /// [source]'s).
   final List<ArchiveSource>? itemSources;
+
+  /// The Favourites row (also carries [itemSources]).
+  final bool isFavorites;
 
   ArchiveSource sourceAt(int i) => itemSources?[i] ?? source;
 
   bool get isSearch => searchQuery != null;
-  bool get isHistory => itemSources != null;
+  bool get isHistory => itemSources != null && !isFavorites;
 
-  String get key => isHistory
-      ? 'history|${catalog.type.wire}'
-      : isSearch
-          ? 'search|${ArchiveService._rowKey(source, catalog)}'
-          : ArchiveService._rowKey(source, catalog);
+  String get key => isFavorites
+      ? 'favorites|${catalog.type.wire}'
+      : isHistory
+          ? 'history|${catalog.type.wire}'
+          : isSearch
+              ? 'search|${ArchiveService._rowKey(source, catalog)}'
+              : ArchiveService._rowKey(source, catalog);
 
   /// The row header: the catalog's own name, or the source name when the
   /// catalog has none. Provider row names ("Popular") and search rows are
@@ -198,6 +205,37 @@ class ArchiveService extends ChangeNotifier {
     _notify();
   }
 
+  /// Sources added on 1.0.24-1.0.27 whose catalogs are all of a custom
+  /// type may be stream-only IMDb add-ons misread (see
+  /// [ArchiveApiService.fetchManifest]): their manifest is read again once
+  /// per launch, and a source that now comes back stream-only replaces
+  /// the stored one (same link, same on/off). Quick: such sources are rare.
+  Future<void> _recheckCustomOnlySources() async {
+    final list = sources;
+    var changed = false;
+    for (var i = 0; i < list.length; i++) {
+      final s = list[i];
+      if (s.streamOnly ||
+          s.server != null ||
+          s.tracker != null ||
+          s.catalogs.isEmpty ||
+          s.catalogs.any((c) => c.wireType == null)) {
+        continue;
+      }
+      try {
+        final fresh = await _api
+            .fetchManifest(s.manifestUrl)
+            .timeout(const Duration(seconds: 10));
+        if (!fresh.streamOnly) continue;
+        list[i] = fresh.copyWith(enabled: s.enabled);
+        changed = true;
+      } catch (e) {
+        debugPrint('ArchiveService: recheck ${s.manifestUrl} failed: $e');
+      }
+    }
+    if (changed) await _saveSources(list);
+  }
+
   /// Checks [link]'s manifest and adds it. Throws [ArchiveApiException]
   /// (bad link, no streams/catalogs) or [StateError] (already added).
   Future<ArchiveSource> addSource(String link) async {
@@ -227,6 +265,12 @@ class ArchiveService extends ChangeNotifier {
     unawaited(refresh(force: true));
     return source;
   }
+
+  /// The source's "Show under Other" switch (see [ArchiveSource.underOther]).
+  Future<void> setUnderOther(ArchiveSource source, bool on) => _saveSources([
+        for (final s in sources)
+          s.manifestUrl == source.manifestUrl ? s.copyWith(otherChoice: on) : s,
+      ]);
 
   Future<void> setEnabled(ArchiveSource source, bool on) => _saveSources([
         for (final s in sources)
@@ -260,9 +304,10 @@ class ArchiveService extends ChangeNotifier {
   /// picked ([setGenre]) only the catalogs offering it are listed, narrowed
   /// to it; [filtered] false lists the plain ones (search ignores genre).
   ///
-  /// Catalogs of a custom type (`wireType` set: browsed under Movies) are
-  /// only listed while the [otherGenre] filter is picked, and then alone —
-  /// search follows the same split.
+  /// A source [ArchiveSource.underOther] (custom-type catalogs by default,
+  /// or the user's switch) has its catalogs listed only while the
+  /// [otherGenre] filter is picked, and then alone — search follows the
+  /// same split.
   List<(ArchiveSource, ArchiveCatalog)> _catalogs(ArchiveType type,
       {bool filtered = true}) {
     final other = _genre[type] == otherGenre;
@@ -271,7 +316,7 @@ class ArchiveService extends ChangeNotifier {
     return [
       for (final s in enabledSources)
         for (final base in s.catalogs)
-          if (base.type == type && (base.wireType != null) == other)
+          if (base.type == type && s.underOther == other)
             if (genre == null ? base : base.withGenre(genre) case final c?)
               if (!s.streamOnly ||
                   shown.add('${s.catalogBaseUrl}|${c.wire}|${c.slug}'))
@@ -293,14 +338,14 @@ class ArchiveService extends ChangeNotifier {
 
   /// Every genre a regular catalog of [type] can be narrowed to, in the
   /// order the sources list them, then [otherGenre] when an enabled source
-  /// has catalogs of a custom type browsed under [type].
+  /// shown under Other has catalogs browsed under [type].
   List<String> genres(ArchiveType type) {
     final regular = <String>{};
     var other = false;
     for (final s in enabledSources) {
       for (final c in s.catalogs) {
         if (c.type != type) continue;
-        if (c.wireType != null) {
+        if (s.underOther) {
           other = true;
         } else {
           regular.addAll(c.genres);
@@ -438,14 +483,48 @@ class ArchiveService extends ChangeNotifier {
     _notify();
   }
 
+  // ---- favourites ---------------------------------------------------------
+
+  /// Titles kept in Favourites (both categories together).
+  static const _favoritesMax = 200;
+
+  List<Map<String, dynamic>> _favoriteEntries() =>
+      _decodeEntries(_storage.getArchiveFavoritesJson());
+
+  static bool _sameTitle(
+          Map<String, dynamic> e, ArchiveSource source, ArchiveMeta meta) =>
+      e['src'] == source.manifestUrl && (e['meta'] as Map?)?['id'] == meta.id;
+
+  bool isFavorite(ArchiveSource source, ArchiveMeta meta) =>
+      _favoriteEntries().any((e) => _sameTitle(e, source, meta));
+
+  /// Hold OK on a title: into Favourites (front of the row), or out again.
+  /// Returns true when it is now a favourite.
+  Future<bool> toggleFavorite(ArchiveSource source, ArchiveMeta meta) async {
+    final entries = _favoriteEntries();
+    final had = entries.any((e) => _sameTitle(e, source, meta));
+    final next = had
+        ? entries.where((e) => !_sameTitle(e, source, meta)).toList()
+        : [
+            {'src': source.manifestUrl, 'meta': meta.toJson()},
+            ...entries,
+          ].take(_favoritesMax).toList();
+    await _storage
+        .setArchiveFavoritesJson(next.isEmpty ? null : jsonEncode(next));
+    _notify();
+    return !had;
+  }
+
   // ---- watched history ----------------------------------------------------
 
   /// Titles kept in the history (both categories together).
   static const _historyMax = 40;
 
-  List<Map<String, dynamic>> _historyEntries() {
+  List<Map<String, dynamic>> _historyEntries() =>
+      _decodeEntries(_storage.getArchiveHistoryJson());
+
+  static List<Map<String, dynamic>> _decodeEntries(String? raw) {
     try {
-      final raw = _storage.getArchiveHistoryJson();
       if (raw == null) return [];
       return [
         for (final e in jsonDecode(raw) as List)
@@ -480,28 +559,42 @@ class ArchiveService extends ChangeNotifier {
 
   /// "Recently watched" for [type]: played titles whose source is still
   /// enabled, newest first. Not narrowed by the genre filter.
-  ArchiveRow? _historyRow(ArchiveType type) {
+  ArchiveRow? _historyRow(ArchiveType type) => _savedRow(
+      type,
+      _historyEntries(),
+      ArchiveCatalog(type: type, id: 'history', name: 'Recently watched'));
+
+  /// "Favourites" for [type], newest first — like [_historyRow].
+  ArchiveRow? _favoritesRow(ArchiveType type) => _savedRow(
+      type,
+      _favoriteEntries(),
+      ArchiveCatalog(type: type, id: 'favorites', name: 'Favourites'),
+      favorites: true);
+
+  ArchiveRow? _savedRow(ArchiveType type, List<Map<String, dynamic>> entries,
+      ArchiveCatalog catalog,
+      {bool favorites = false}) {
     final byUrl = {for (final s in enabledSources) s.manifestUrl: s};
     final items = <ArchiveMeta>[];
     final sources = <ArchiveSource>[];
-    for (final e in _historyEntries()) {
+    for (final e in entries) {
       final source = byUrl[e['src']];
       final m = e['meta'];
       if (source == null || m is! Map) continue;
       final meta = ArchiveMeta.fromJson(Map<String, dynamic>.from(m));
       if (meta == null || meta.type != type) continue;
-      // Custom-type titles only under the Other filter, like their rows.
-      if ((meta.wireType != null) != (_genre[type] == otherGenre)) continue;
+      // An Other source's titles only under the Other filter, like its rows.
+      if (source.underOther != (_genre[type] == otherGenre)) continue;
       items.add(meta);
       sources.add(source);
     }
     if (items.isEmpty) return null;
     return ArchiveRow(
       source: sources.first,
-      catalog:
-          ArchiveCatalog(type: type, id: 'history', name: 'Recently watched'),
+      catalog: catalog,
       items: items,
       itemSources: sources,
+      isFavorites: favorites,
     );
   }
 
@@ -546,6 +639,7 @@ class ArchiveService extends ChangeNotifier {
   /// asks every stream-only source — see [resolve]).
   List<ArchiveRow> rows(ArchiveType type) => [
         ...?_search[type]?.$2,
+        if (_favoritesRow(type) case final favorites?) favorites,
         if (_historyRow(type) case final history?) history,
         for (final (s, c) in _catalogs(type))
           if (_items[_rowKey(s, c)] case final items? when items.isNotEmpty)
@@ -561,7 +655,7 @@ class ArchiveService extends ChangeNotifier {
   Future<void> loadMore(ArchiveRow row) async {
     final key = row.key;
     if (row.isSearch ||
-        row.isHistory ||
+        row.itemSources != null ||
         _exhausted.contains(key) ||
         !_loadingMore.add(key)) {
       return;
@@ -592,6 +686,7 @@ class ArchiveService extends ChangeNotifier {
   Future<void> open() async {
     if (!_loadedFromCache) {
       _loadedFromCache = true;
+      await _recheckCustomOnlySources();
       for (final type in ArchiveType.values) {
         for (final (s, c) in _catalogs(type)) {
           try {

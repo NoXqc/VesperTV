@@ -12,6 +12,7 @@ import '../services/desktop_mini_player.dart';
 import '../services/epg_service.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
+import '../services/real_4k_channels.dart';
 import '../services/storage_service.dart';
 import '../services/watch_tracker.dart';
 import '../l10n/l10n.dart';
@@ -145,6 +146,10 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   /// low-level ffmpeg cause.
   StreamSubscription<bool>? _completedSubscription;
 
+  /// The live list's 4K tag ([Real4kChannels]): mpv reports the decoded
+  /// size whenever it changes, channel switches included.
+  StreamSubscription<int?>? _heightSubscription;
+
   bool get _isLive => Channel.isLiveId(_currentChannel.rawId);
   List<Channel> get _queue => widget.queue ?? const [];
   int get _currentIndex => _queue.indexWhere((c) => c.id == _currentChannel.id);
@@ -184,6 +189,11 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       (_player.platform as NativePlayer).setProperty('demuxer-lavf-o',
           'reconnect=1,reconnect_at_eof=1,reconnect_streamed=1,reconnect_delay_max=5,rw_timeout=15000000');
       _videoController = VideoController(_player);
+      // The volume / mute set last time (a handed-over mini player
+      // session already has it).
+      final storage = context.read<StorageService>();
+      unawaited(_player.setVolume(
+          storage.getDesktopMuted() ? 0 : storage.getDesktopVolume()));
       _player.open(Media(_currentChannel.url));
       _applySeriesSubtitles();
     }
@@ -206,6 +216,11 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       // Continue Watching is unaffected).
       context.read<PlaybackService>().recordWatched(_currentChannel);
     }
+    _heightSubscription = _player.stream.height.listen((height) {
+      if (!_isLive || height == null) return;
+      Real4kChannels.record(
+          _currentChannel.id, _player.state.width ?? 0, height);
+    });
     if (_isLive) {
       _completedSubscription = _player.stream.completed.listen((completed) {
         if (completed && mounted) {
@@ -229,6 +244,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   void dispose() {
     if (!_handedOffToMiniPlayer) _reportStopped();
     _completedSubscription?.cancel();
+    _heightSubscription?.cancel();
     _rootFocus.dispose();
     if (_ownsPlayer && !_handedOffToMiniPlayer) _player.dispose();
     super.dispose();
@@ -441,6 +457,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                   key: ValueKey(_currentChannel.id),
                   player: _player,
                   channel: _currentChannel),
+            _DesktopVolume(player: _player),
           ],
         );
         return Column(
@@ -538,6 +555,12 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
           focusNode: _rootFocus,
           autofocus: true,
           onKeyEvent: (_, event) {
+            // M = mute / unmute, like most desktop players.
+            if (event is KeyDownEvent &&
+                event.logicalKey == LogicalKeyboardKey.keyM) {
+              _DesktopVolume.toggleMute(context, _player);
+              return KeyEventResult.handled;
+            }
             if (event is KeyDownEvent &&
                 event.logicalKey == LogicalKeyboardKey.arrowLeft &&
                 // Not while arrowing along the player bar's buttons.
@@ -676,6 +699,81 @@ class _LiveRemainingLabel extends StatelessWidget {
             : tr('{minutes} min left', {'minutes': minutes}),
         style: const TextStyle(color: Colors.white70, fontSize: 12),
       ),
+    );
+  }
+}
+
+/// Mute button + volume slider at the end of the player bar (Windows user
+/// request, 2026-10-20). Volume and mute are remembered on this PC; mute
+/// is volume 0 on the player, so the slider shows 0 while muted and
+/// unmuting goes back to the saved level.
+class _DesktopVolume extends StatelessWidget {
+  const _DesktopVolume({required this.player});
+
+  final Player player;
+
+  static void toggleMute(BuildContext context, Player player) {
+    final storage = context.read<StorageService>();
+    final muted = !storage.getDesktopMuted();
+    storage.setDesktopMuted(muted);
+    player.setVolume(muted ? 0 : storage.getDesktopVolume());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<double>(
+      stream: player.stream.volume,
+      initialData: player.state.volume,
+      builder: (context, snapshot) {
+        final volume = (snapshot.data ?? 100).clamp(0.0, 100.0);
+        final storage = context.read<StorageService>();
+        final muted = storage.getDesktopMuted() || volume == 0;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: Icon(
+                  muted
+                      ? Icons.volume_off
+                      : volume < 50
+                          ? Icons.volume_down
+                          : Icons.volume_up,
+                  color: Colors.white),
+              tooltip: muted ? tr('Unmute') : tr('Mute'),
+              onPressed: () {
+                if (!storage.getDesktopMuted() && volume == 0) {
+                  // Slid down to 0: the button brings the sound back.
+                  storage.setDesktopVolume(50);
+                  player.setVolume(50);
+                  return;
+                }
+                toggleMute(context, player);
+              },
+            ),
+            SizedBox(
+              width: 110,
+              child: SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  trackHeight: 3,
+                  thumbShape:
+                      const RoundSliderThumbShape(enabledThumbRadius: 6),
+                  overlayShape:
+                      const RoundSliderOverlayShape(overlayRadius: 12),
+                ),
+                child: Slider(
+                  value: muted ? 0 : volume,
+                  max: 100,
+                  onChanged: (v) {
+                    storage.setDesktopMuted(false);
+                    storage.setDesktopVolume(v);
+                    player.setVolume(v);
+                  },
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

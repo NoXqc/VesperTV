@@ -166,15 +166,15 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
   }
 
   String _summary(ArchiveSource s) {
-    // Custom-type catalogs (wireType set) are browsed under Movies but only
-    // behind the genre picker's Other entry — counted on their own.
+    // Custom-type catalogs (wireType set) are browsed under Movies —
+    // counted on their own.
     final movies = s.catalogs
         .where((c) => c.type == ArchiveType.movie && c.wireType == null)
         .length;
     final shows = s.catalogs
         .where((c) => c.type == ArchiveType.series && c.wireType == null)
         .length;
-    final other = _otherCatalogs(s);
+    final other = s.catalogs.where((c) => c.wireType != null).length;
     final parts = [
       if (movies > 0) tr('{n} movie catalogs', {'n': movies}),
       if (shows > 0) tr('{n} TV show catalogs', {'n': shows}),
@@ -182,9 +182,6 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
     ];
     return '${parts.join(' · ')}  ·  ${tr('Hold OK to remove')}';
   }
-
-  int _otherCatalogs(ArchiveSource s) =>
-      s.catalogs.where((c) => c.wireType != null).length;
 
   @override
   Widget build(BuildContext context) {
@@ -206,13 +203,13 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
               child: Text(tr('No sources yet.'),
                   style: const TextStyle(color: Colors.white60)),
             ),
-          for (final s in sources)
+          for (final s in sources) ...[
             HoldToActivate(
               onTap: () => service.setEnabled(s, !s.enabled),
               onHold: () => _remove(s),
               child: TvSwitchListTile(
                 title: Text(s.name),
-                subtitle: _otherCatalogs(s) == 0
+                subtitle: !s.underOther
                     ? Text(_summary(s),
                         maxLines: 2, overflow: TextOverflow.ellipsis)
                     : Column(
@@ -225,7 +222,7 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
                           // watched (ArchiveService.otherGenre) — without
                           // this, the source looks like it added nothing.
                           Text(
-                            tr('Use the Other filter in Media Hub > Movies > Genre to see this content.'),
+                            tr('Use the Other filter in Media Hub > Movies / TV Shows > Genre to see this source.'),
                             style: TextStyle(
                                 color: Theme.of(context).colorScheme.primary),
                           ),
@@ -235,6 +232,20 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
                 onChanged: (v) => service.setEnabled(s, v),
               ),
             ),
+            // Main rows or Other only, either way: the automatic choice
+            // (ArchiveSource.autoOther) is just the starting position.
+            if (s.server == null && s.tracker == null)
+              Padding(
+                padding: const EdgeInsets.only(left: 24),
+                child: TvSwitchListTile(
+                  title: Text(tr('Show under Other')),
+                  subtitle: Text(tr(
+                      'On: this source only appears behind the Other genre filter (Movies and TV Shows). Off: in the main rows. Press Refresh in Media Hub after changing this.')),
+                  value: s.underOther,
+                  onChanged: (v) => service.setUnderOther(s, v),
+                ),
+              ),
+          ],
           const Divider(height: 32),
           SectionLabel(tr('Add a source')),
           const SizedBox(height: 8),

@@ -380,6 +380,19 @@ const Map<String, String> kFr = {
       "{n} groupes",
   "Background video":
       "Vidéo en arrière-plan",
+  "Mute": "Couper le son",
+  "Unmute": "Rétablir le son",
+  "Show under Other":
+      "Afficher dans Autre",
+  "On: this source only appears behind the Other genre filter (Movies and TV Shows). Off: in the main rows. Press Refresh in Media Hub after changing this.":
+      "Activé : cette source n'apparaît que derrière le filtre de genre Autre (Films et Séries). Désactivé : dans les rangées principales. Appuyez sur Actualiser dans Media Hub après un changement.",
+  "Use the Other filter in Media Hub > Movies / TV Shows > Genre to see this source.":
+      "Utilisez le filtre Autre dans Media Hub > Films / Séries > Genre pour voir cette source.",
+  "Back to main":
+      "Retour au principal",
+  "Compatibility video": "Vidéo compatible",
+  "Turn this on if the picture shows twice, in the wrong size or as coloured stripes (older Fire TV sticks). Applies from the next channel. On by default on Android 7 and older.":
+      "Activez ceci si l'image s'affiche en double, à la mauvaise taille ou en rayures de couleur (anciennes clés Fire TV). S'applique à partir de la chaîne suivante. Activé par défaut sur Android 7 et versions antérieures.",
   "Hide the live picture behind other pages":
       "Masquer l'image en direct derrière les autres pages",
   "A live channel keeps playing behind {tab}, Settings and Search. Some Fire TV sticks keep showing its picture on top of those pages. Turn this on if that happens: the sound keeps going, only the picture is hidden until you go back. Updating the device's software (Fire TV: Settings > My Fire TV > About > Check for Updates) may fix it too.":

@@ -55,6 +55,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
   final _barSearchNode = FocusNode(debugLabel: 'archive-bar-search');
   final _barClearNode = FocusNode(debugLabel: 'archive-bar-clear');
   final _barGenreNode = FocusNode(debugLabel: 'archive-bar-genre');
+  final _barBackNode = FocusNode(debugLabel: 'archive-bar-back');
 
   /// The floating bar's row jumps ("Popular", "New"...), by row key.
   final Map<String, FocusNode> _barRowNodes = {};
@@ -110,6 +111,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
     _barSearchNode.dispose();
     _barClearNode.dispose();
     _barGenreNode.dispose();
+    _barBackNode.dispose();
     for (final n in _barRowNodes.values) {
       n.dispose();
     }
@@ -179,6 +181,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
       return tr('Results for "{query}"', {'query': row.searchQuery});
     }
     if (row.isHistory) return tr('Recently watched');
+    if (row.isFavorites) return tr('Favourites');
     final title = row.source.streamOnly || row.source.tracker != null
         ? tr(row.title)
         : row.title;
@@ -244,13 +247,19 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
       ),
     );
     if (picked == null || !mounted || type != _type) return;
+    await _applyGenre(service, picked.isEmpty ? null : picked);
+  }
+
+  /// Shows [genre]'s rows (null = all) from the top.
+  Future<void> _applyGenre(ArchiveService service, String? genre) async {
+    final type = _type;
     setState(() {
       _focusedRow = 0;
       _focused = null;
       _focusedSource = null;
     });
     if (_scroll.hasClients) _scroll.jumpTo(0);
-    await service.setGenre(type, picked.isEmpty ? null : picked);
+    await service.setGenre(type, genre);
   }
 
   /// Search for the current category: a field plus that category's recent
@@ -624,6 +633,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
   /// (the Genre button shows that).
   String _barRowLabel(ArchiveRow row) {
     if (row.isHistory) return tr('Recently watched');
+    if (row.isFavorites) return tr('Favourites');
     return row.source.streamOnly || row.source.tracker != null
         ? tr(row.title)
         : row.title;
@@ -631,6 +641,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
 
   /// The floating bar's buttons, in order (for explicit Left/Right).
   List<FocusNode> _barNodes(ArchiveService service, List<ArchiveRow> rows) => [
+        if (service.genre(_type) == ArchiveService.otherGenre) _barBackNode,
         for (final r in _barRows(rows)) _barRowNode(rows[r].key),
         if (service.canSearch(_type)) _barSearchNode,
         if (service.searchQuery(_type) != null) _barClearNode,
@@ -726,12 +737,34 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Under Other, its many category buttons pushed Genre
+                    // far to the right: leaving Other is the first button
+                    // (user request, 2026-10-20).
+                    if (genre == ArchiveService.otherGenre) ...[
+                      _BarButton(
+                        focusNode: _barBackNode,
+                        icon: Icons.arrow_back,
+                        label: tr('Back to main'),
+                        onTap: () async {
+                          await _applyGenre(service, null);
+                          if (mounted) _focusBar();
+                        },
+                      ),
+                      Container(
+                        width: 1,
+                        height: 24,
+                        margin: const EdgeInsets.symmetric(horizontal: 6),
+                        color: Colors.white24,
+                      ),
+                    ],
                     for (final r in barRows)
                       _BarButton(
                         focusNode: _barRowNode(rows[r].key),
                         icon: rows[r].isHistory
                             ? Icons.history
-                            : Icons.grid_view_rounded,
+                            : rows[r].isFavorites
+                                ? Icons.star_outline
+                                : Icons.grid_view_rounded,
                         label: _barRowLabel(rows[r]),
                         onTap: () => _focusRow(rows, r),
                         onHold: () => _showRowMenu(rows, r),
@@ -927,12 +960,11 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                       Theme.of(context).platform == TargetPlatform.android &&
                           MediaQuery.sizeOf(context).width < 700,
                   onTap: () => _open(row.sourceAt(i), meta),
-                  // Hold OK on a watched title: out of the history.
-                  onToggleFavorite: row.isHistory
-                      ? () => context
-                          .read<ArchiveService>()
-                          .removeFromHistory(row.sourceAt(i), meta)
-                      : null,
+                  isFavorite: context
+                      .read<ArchiveService>()
+                      .isFavorite(row.sourceAt(i), meta),
+                  onToggleFavorite: () =>
+                      holdArchiveTitle(context, row, row.sourceAt(i), meta),
                   onFocusGained: () {
                     _lastIndex[row.key] = i;
                     if (i >= row.items.length - 12) {

@@ -303,6 +303,15 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                                 .read<AppPreferences>()
                                 .setHideVideoOnSports(v),
                           ),
+                          TvSwitchListTile(
+                            title: Text(tr('Compatibility video')),
+                            subtitle: Text(tr(
+                                'Turn this on if the picture shows twice, in the wrong size or as coloured stripes (older Fire TV sticks). Applies from the next channel. On by default on Android 7 and older.')),
+                            value: context.watch<AppPreferences>().compatVideo,
+                            onChanged: (v) => context
+                                .read<AppPreferences>()
+                                .setCompatVideo(v),
+                          ),
                         ]),
                   _section('favourites', Icons.star_outline, tr('Favourites'),
                       children: [
