@@ -8,6 +8,7 @@ import '../../widgets/hold_to_activate.dart';
 import '../../widgets/section_label.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_switch_list_tile.dart';
+import '../../widgets/tv_text_field_gate.dart';
 import '../../l10n/l10n.dart';
 
 /// Settings > Add-ons: Stremio-protocol add-ons, used for subtitles only
@@ -167,14 +168,22 @@ class _AddonsScreenState extends State<AddonsScreen> {
           const Divider(height: 32),
           SectionLabel(tr('Add an add-on')),
           const SizedBox(height: 8),
-          TextField(
-            controller: _link,
+          TvTextFieldGate(
             focusNode: _linkFocus,
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _add(),
-            decoration: InputDecoration(
-              labelText: tr('Add-on link (ends with manifest.json)'),
-              border: const OutlineInputBorder(),
+            builder: (context, readOnly) => TextField(
+              controller: _link,
+              focusNode: _linkFocus,
+              readOnly: readOnly,
+              textInputAction: TextInputAction.done,
+              // Lands on Add, never on nothing (see ArchiveSourcesScreen).
+              onSubmitted: (_) {
+                _addFocus.requestFocus();
+                _add();
+              },
+              decoration: InputDecoration(
+                labelText: tr('Add-on link (ends with manifest.json)'),
+                border: const OutlineInputBorder(),
+              ),
             ),
           ),
           const SizedBox(height: 12),

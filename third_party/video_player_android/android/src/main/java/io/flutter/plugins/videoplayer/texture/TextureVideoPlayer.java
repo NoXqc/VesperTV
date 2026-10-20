@@ -123,6 +123,8 @@ public final class TextureVideoPlayer extends VideoPlayer implements SurfaceProd
           // using the hardware decoder).
           renderersFactory.setExtensionRendererMode(
               DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON);
+          // Next decoder on a failed start — see PlatformViewVideoPlayer.
+          renderersFactory.setEnableDecoderFallback(true);
           // A frozen live tile (playing, clock not advancing) is failed after 4 s instead of
           // media3's default 10 s, so ExoPlayerEventListener's in-place recovery kicks in sooner.
           builder.setStuckPlayingDetectionTimeoutMs(4_000);

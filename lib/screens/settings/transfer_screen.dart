@@ -63,10 +63,10 @@ class _TransferScreenState extends State<TransferScreen> {
               icon: _includeArchive
                   ? Icons.check_box
                   : Icons.check_box_outline_blank,
-              title: tr('Include Extras tab data'),
+              title: tr('Include Media Hub tab data'),
               subtitle: _includeArchive
-                  ? tr('Extras sources and their watch progress are sent too')
-                  : tr('The other device keeps its own Extras sources'),
+                  ? tr('Media Hub sources and their watch progress are sent too')
+                  : tr('The other device keeps its own Media Hub sources'),
               trailing: const SizedBox.shrink(),
               onTap: () => setState(() => _includeArchive = !_includeArchive),
             ),

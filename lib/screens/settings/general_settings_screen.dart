@@ -223,8 +223,8 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                         context.read<AppPreferences>().setHideShows(v),
                   ),
                   TvSwitchListTile(
-                    title: Text(tr('Hide Extras')),
-                    subtitle: Text(tr('Removes the Extras tab.')),
+                    title: Text(tr('Hide Media Hub')),
+                    subtitle: Text(tr('Removes the Media Hub tab.')),
                     value: context.watch<AppPreferences>().hideArchive,
                     onChanged: (v) =>
                         context.read<AppPreferences>().setHideArchive(v),

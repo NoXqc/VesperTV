@@ -28,7 +28,14 @@ class VideoPlayerPane extends StatelessWidget {
       {super.key,
       this.showEpgBar = true,
       this.showControls = true,
+      this.fillScreen = false,
       this.switchButtonFocusNode});
+
+  /// Zoom the picture to cover the whole pane (edges cropped, no black
+  /// bars) — the fullscreen player's ⛶ button. Not clipped here: the pane
+  /// is the whole screen there, the display edge does the cropping (a clip
+  /// on a platform view costs weak boxes a lot).
+  final bool fillScreen;
 
   final bool showEpgBar;
 
@@ -50,6 +57,25 @@ class VideoPlayerPane extends StatelessWidget {
   /// non-autofocusing node — those have no such handling and shouldn't
   /// steal focus for an errored preview tile anyway.
   final FocusNode? switchButtonFocusNode;
+
+  /// Sizes the video to fit the pane (black bars) or, with [fillScreen], to
+  /// cover it. The same widgets either way, so toggling never recreates the
+  /// platform view.
+  Widget _fit(double ratio, Widget child) => LayoutBuilder(
+        builder: (context, c) {
+          final w = c.maxWidth;
+          final h = c.maxHeight;
+          if (!w.isFinite || !h.isFinite || h == 0) return child;
+          final paneWider = w / h > ratio;
+          final size =
+              paneWider != fillScreen ? Size(h * ratio, h) : Size(w, w / ratio);
+          return OverflowBox(
+            maxWidth: double.infinity,
+            maxHeight: double.infinity,
+            child: SizedBox.fromSize(size: size, child: child),
+          );
+        },
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -145,8 +171,11 @@ class VideoPlayerPane extends StatelessWidget {
                   // exactly what switching to `video_player_hdr`'s
                   // platform-view rendering is meant to avoid needing a
                   // workaround for at all.
-                  Center(
-                    child: AspectRatio(
+                  _fit(
+                    controller.value.aspectRatio == 0
+                        ? 16 / 9
+                        : controller.value.aspectRatio,
+                    AspectRatio(
                       aspectRatio: controller.value.aspectRatio == 0
                           ? 16 / 9
                           : controller.value.aspectRatio,
@@ -298,7 +327,7 @@ class _SwitchToLinkedChannelButtonState
 String _friendlyPlaybackError(String raw) {
   if (isDecoderPlaybackError(raw)) {
     return tr(
-        'This device\'s hardware video decoder can\'t play this stream — likely a 4K HDR (HEVC 10-bit) format it doesn\'t support, even though it claims to. This is a hardware limitation, not something the app can fix. If your provider offers a non-4K/HD version of this channel or title, try that instead.');
+        'This device\'s video decoder couldn\'t play this stream — likely 4K HDR (HEVC 10-bit). If your provider offers an HD (non-4K) version of this channel or title, try that. If another app plays this stream on this device, please report it with a photo of the technical details below.');
   }
   return tr('Playback error:\n{raw}', {'raw': raw});
 }
@@ -1197,6 +1226,9 @@ class _SubtitleButtonState extends State<_SubtitleButton> {
   /// else the language; "Forced" added unless the name already says it
   /// (it read "Français · French (France) Forced · Forced").
   String _trackLabel(SubtitleTrack t) {
+    if (t.closedCaptions) {
+      return tr('Closed captions (CC) — if the channel broadcasts them');
+    }
     final label = t.label?.trim() ?? '';
     final name = languageName(t.language);
     final base = label.isNotEmpty

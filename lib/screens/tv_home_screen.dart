@@ -1831,8 +1831,18 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     final unlocked =
         await context.read<ViewerProfileService>().requireUnlock(context);
     if (!unlocked || !mounted) return;
+    _parkLiveChannel();
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => const SettingsMenuScreen()));
+  }
+
+  /// Parks a background live channel first, like Settings and Extras: left
+  /// playing, its video stayed on screen over Sports Trak on a Fire Stick
+  /// (with the full-video guide it covered the whole page).
+  void _openSports() {
+    _parkLiveChannel();
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const SportsScreen()));
   }
 
   void _openProfilePicker() {
@@ -1841,6 +1851,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   }
 
   void _openSearch() {
+    _parkLiveChannel();
     Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => SearchScreen(initialScope: _tab)));
   }
@@ -2780,15 +2791,13 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
               // Extras always has its slot (owner, 2026-10-18); Settings >
               // General > Tabs > Hide Extras removes it.
               if (!context.watch<AppPreferences>().hideArchive)
-                item(Icons.local_movies_outlined, tr('Extras'), false, () {
+                item(Icons.local_movies_outlined, tr('Media Hub'), false, () {
                   _parkLiveChannel();
                   Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const ArchiveScreen()));
                 }),
-              item(Icons.sports_hockey, AppConstants.sportsTabName, false, () {
-                Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const SportsScreen()));
-              }),
+              item(Icons.sports_hockey, AppConstants.sportsTabName, false,
+                  _openSports),
               item(Icons.menu, tr('More'), !onTabs,
                   () => setState(() => _phonePage = 0)),
             ],
@@ -2857,7 +2866,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// live channel first, like entering Movies/TV Shows.
   Widget _archiveRow(bool collapsed) => _SelectableRow(
         icon: Icons.local_movies_outlined,
-        label: tr('Extras'),
+        label: tr('Media Hub'),
         selected: false,
         collapsed: collapsed,
         onTap: () {
@@ -2929,8 +2938,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
             label: AppConstants.sportsTabName,
             selected: false,
             collapsed: collapsed,
-            onTap: () => Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const SportsScreen())),
+            onTap: _openSports,
           ),
           const Divider(height: 16, color: Colors.white24),
           for (final tab in _visibleTabs)
@@ -3015,7 +3023,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         // tab list above it.
         _SelectableRow(
           icon: Icons.power_settings_new,
-          label: tr('Exit App'),
+          label: tr('Disable and exit'),
           selected: false,
           collapsed: collapsed,
           onTap: _confirmHardExit,

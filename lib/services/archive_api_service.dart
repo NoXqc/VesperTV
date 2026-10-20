@@ -61,10 +61,12 @@ class ArchiveApiService {
   static String _seg(String s) => Uri.encodeComponent(s).replaceAll('%3A', ':');
 
   /// Fetches and checks a manifest — this is the "does the connection
-  /// work" test. A source either serves its own movie/series catalogs, or
-  /// is stream-only on IMDB ids (`tt…`) and gets its grids from
-  /// [ArchiveCatalogProvider]. Throws [ArchiveApiException] when it's
-  /// neither, or offers no `stream` resource.
+  /// work" test. A source either serves its own catalogs (any type, any id
+  /// scheme: custom types are browsed under Movies, see
+  /// [ArchiveType.bucketFor]), or is stream-only on IMDB ids (`tt…`) and
+  /// gets its grids from [ArchiveCatalogProvider]. Throws
+  /// [ArchiveApiException] when it's neither (stream-only on its own ids
+  /// leaves nothing to browse), or offers no `stream` resource.
   Future<ArchiveSource> fetchManifest(String input) async {
     final url = normalizeManifestUrl(input);
     final j = await _getJson(Uri.parse(url));
@@ -108,8 +110,7 @@ class ArchiveApiService {
       };
       if (types.isEmpty ||
           !(prefixes.isEmpty || prefixes.any((p) => p.startsWith('tt')))) {
-        throw ArchiveApiException(
-            'This source has no movie or series catalog.');
+        throw ArchiveApiException('This source has no catalog to browse.');
       }
       catalogs.addAll(ArchiveCatalogProvider.catalogsFor(types));
       providerUrl = ArchiveCatalogProvider.baseUrl;
@@ -150,27 +151,29 @@ class ArchiveApiService {
       if (skip > 0) 'skip': '$skip',
     });
     final j = await _getJson(Uri.parse(
-        '$baseUrl/catalog/${catalog.type.wire}/${_seg(catalog.id)}$extra.json'));
+        '$baseUrl/catalog/${_seg(catalog.wire)}/${_seg(catalog.id)}$extra.json'));
     return [
       for (final m in (j['metas'] as List? ?? const []))
         if (m is Map)
           if (ArchiveMeta.fromJson(Map<String, dynamic>.from(m),
-                  fallbackType: catalog.type)
+                  fallbackType: catalog.type, fallbackWire: catalog.wire)
               case final meta?)
             meta,
     ];
   }
 
   /// Full meta — needed for a series (its `videos` are the episodes) and
-  /// for a longer description than the catalog preview carries.
-  Future<ArchiveMeta?> fetchMeta(
-      String baseUrl, ArchiveType type, String id) async {
-    final j = await _getJson(
-        Uri.parse('$baseUrl/meta/${type.wire}/${_seg(id)}.json'));
+  /// for a longer description than the catalog preview carries. [wire]
+  /// is the source's own type string when it isn't [type]'s.
+  Future<ArchiveMeta?> fetchMeta(String baseUrl, ArchiveType type, String id,
+      {String? wire}) async {
+    final w = wire ?? type.wire;
+    final j =
+        await _getJson(Uri.parse('$baseUrl/meta/${_seg(w)}/${_seg(id)}.json'));
     final m = j['meta'];
     if (m is! Map) return null;
     return ArchiveMeta.fromJson(Map<String, dynamic>.from(m),
-        fallbackType: type);
+        fallbackType: type, fallbackWire: w);
   }
 
   /// Direct, playable streams for a movie id or an episode id
@@ -178,9 +181,10 @@ class ArchiveApiService {
   /// carries). Torrent/YouTube/external entries are skipped — see
   /// [ArchiveStream].
   Future<List<ArchiveStream>> fetchStreams(
-      String baseUrl, ArchiveType type, String videoId) async {
-    final j = await _getJson(
-        Uri.parse('$baseUrl/stream/${type.wire}/${_seg(videoId)}.json'));
+      String baseUrl, ArchiveType type, String videoId,
+      {String? wire}) async {
+    final j = await _getJson(Uri.parse(
+        '$baseUrl/stream/${_seg(wire ?? type.wire)}/${_seg(videoId)}.json'));
     final out = <ArchiveStream>[];
     for (final s in (j['streams'] as List? ?? const [])) {
       if (s is! Map) continue;

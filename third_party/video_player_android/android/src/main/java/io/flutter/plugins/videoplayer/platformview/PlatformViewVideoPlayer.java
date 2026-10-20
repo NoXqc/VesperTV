@@ -137,6 +137,11 @@ public class PlatformViewVideoPlayer extends VideoPlayer {
           // purely as a fallback for formats hardware truly can't do.
           renderersFactory.setExtensionRendererMode(
               DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON);
+          // A decoder that fails to start (a Formuler Z10 Max's first HEVC
+          // decoder on a 4K HDR channel that TiviMate plays fine on the same
+          // box, 2026-10-19) makes ExoPlayer try the next one the device
+          // lists instead of failing the stream.
+          renderersFactory.setEnableDecoderFallback(true);
           builder
               .setTrackSelector(trackSelector)
               .setMediaSourceFactory(asset.getMediaSourceFactory(context))

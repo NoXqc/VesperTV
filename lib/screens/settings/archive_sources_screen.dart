@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../l10n/l10n.dart';
 import '../../models/archive_models.dart';
 import '../../services/archive_api_service.dart';
+import '../../services/app_preferences.dart';
 import '../../services/archive_service.dart';
 import '../../services/phone_pairing_service.dart';
 import '../../widgets/hold_to_activate.dart';
@@ -12,6 +13,8 @@ import '../../widgets/phone_pair_panel.dart';
 import '../../widgets/section_label.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_switch_list_tile.dart';
+import '../../widgets/tv_text_field_gate.dart';
+import 'media_server_screen.dart';
 
 /// Settings > Archive sources: the servers the Archive tab browses. Any
 /// source following the catalog/stream add-on schema works (see
@@ -34,6 +37,13 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
   void initState() {
     super.initState();
     HardwareKeyboard.instance.addHandler(_escapeLinkField);
+    // TV: start on the link field (keyboard only on OK, see
+    // TvTextFieldGate) instead of nothing focused.
+    if (context.read<AppPreferences>().isTelevision) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _linkFocus.requestFocus();
+      });
+    }
   }
 
   @override
@@ -99,7 +109,7 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
       error = tr('That source is already in the list.');
     } on ArchiveApiException {
       error = tr(
-          'That link isn\'t an Extras source (it needs movie or series streams).');
+          'That link isn\'t a Media Hub source (it needs movie or series streams).');
     } catch (_) {
       error = tr("Couldn't reach that link.");
     }
@@ -121,9 +131,9 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
       context: context,
       builder: (dialogContext) => SwallowHeldActivate(
           child: AlertDialog(
-        title: Text(tr('Clear Extras?')),
+        title: Text(tr('Clear Media Hub?')),
         content: Text(tr(
-            'Removes every Extras source and its saved catalog from this device.')),
+            'Removes every Media Hub source and its saved catalog from this device.')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
@@ -141,7 +151,7 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
     await service.clearAll();
     if (!mounted) return;
     ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(tr('Extras cleared.'))));
+        .showSnackBar(SnackBar(content: Text(tr('Media Hub cleared.'))));
   }
 
   /// "From my phone": the Add Playlist QR flow, link kind — the phone
@@ -169,12 +179,12 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
     final service = context.watch<ArchiveService>();
     final sources = service.sources;
     return SettingsScaffold(
-      title: tr('Extras sources'),
+      title: tr('Media Hub sources'),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           Text(tr(
-              'The Extras tab shows films and series from sources you add here. Any source that follows the catalog/stream add-on format works; a source that only offers streams by IMDb id gets its posters and episodes from Cinemeta. Only direct video links are played; torrent links are ignored.')),
+              'The Media Hub tab shows films and series from sources you add here. Any source that follows the catalog/stream add-on format works; a source that only offers streams by IMDb id gets its posters and episodes from Cinemeta. Only direct video links are played; torrent links are ignored.')),
           const SizedBox(height: 16),
           SectionLabel(tr('Your sources')),
           const SizedBox(height: 4),
@@ -199,14 +209,23 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
           const Divider(height: 32),
           SectionLabel(tr('Add a source')),
           const SizedBox(height: 8),
-          TextField(
-            controller: _link,
+          TvTextFieldGate(
             focusNode: _linkFocus,
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _add(),
-            decoration: InputDecoration(
-              labelText: tr('Source link (ends with manifest.json)'),
-              border: const OutlineInputBorder(),
+            builder: (context, readOnly) => TextField(
+              controller: _link,
+              focusNode: _linkFocus,
+              readOnly: readOnly,
+              textInputAction: TextInputAction.done,
+              // The keyboard's Done lands on Add (Fire OS also sends it
+              // for Back): the remote is never left with nothing focused.
+              onSubmitted: (_) {
+                _addFocus.requestFocus();
+                _add();
+              },
+              decoration: InputDecoration(
+                labelText: tr('Source link (ends with manifest.json)'),
+                border: const OutlineInputBorder(),
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -226,6 +245,12 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
               icon: const Icon(Icons.qr_code_2),
               label: Text(tr('From phone')),
             ),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const MediaServerScreen())),
+              icon: const Icon(Icons.dns_outlined),
+              label: Text(tr('Connect Jellyfin / Emby')),
+            ),
           ]),
           if (sources.isNotEmpty) ...[
             const Divider(height: 32),
@@ -234,7 +259,7 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
               child: OutlinedButton.icon(
                 onPressed: _clearAll,
                 icon: const Icon(Icons.delete_sweep_outlined),
-                label: Text(tr('Clear Extras')),
+                label: Text(tr('Clear Media Hub')),
               ),
             ),
           ],
@@ -279,7 +304,7 @@ class _PhoneLinkScreenState extends State<_PhoneLinkScreen> {
   @override
   Widget build(BuildContext context) {
     return SettingsScaffold(
-      title: tr('Extras sources'),
+      title: tr('Media Hub sources'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: PhonePairPanel(

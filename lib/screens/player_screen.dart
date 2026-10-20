@@ -177,6 +177,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _bottomScope.addListener(_onBarFocusChange);
     _switchButtonFocus.addListener(_onBarFocusChange);
     _resetHideTimer();
+    // Fill remembered from last time: hide the system bars again (no
+    // orientation lock — that only comes with pressing ⛶).
+    if (context.read<AppPreferences>().videoFill &&
+        !context.read<AppPreferences>().isTelevision) {
+      _immersive = true;
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    }
   }
 
   void _onBarFocusChange() {
@@ -429,8 +436,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
     });
   }
 
+  /// ⛶: the picture fills the whole screen (zoomed, edges cropped, no black
+  /// bars; remembered) and the system bars hide; again = fit + bars back.
+  /// Owner: on his phone this button used to look like it did nothing — it
+  /// only toggled the system bars.
   Future<void> _toggleImmersive() async {
-    final next = !_immersive;
+    final prefs = context.read<AppPreferences>();
+    final next = !prefs.videoFill;
+    prefs.setVideoFill(next);
+    _resetHideTimer();
     setState(() => _immersive = next);
     if (next) {
       if (!_isTvLayout) {
@@ -655,6 +669,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                             key: ValueKey(channel.id),
                             showControls: false,
                             showEpgBar: false,
+                            fillScreen: prefs.videoFill,
                             switchButtonFocusNode: _switchButtonFocus,
                           ),
                         ),
@@ -733,12 +748,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                                 onPressed: _toggleRotation,
                                               ),
                                             _TopBarIconButton(
-                                              icon: _immersive
+                                              icon: prefs.videoFill
                                                   ? Icons.fullscreen_exit
                                                   : Icons.fullscreen,
-                                              tooltip: _immersive
-                                                  ? tr('Exit fullscreen')
-                                                  : tr('Fullscreen'),
+                                              tooltip: prefs.videoFill
+                                                  ? tr('Fit to screen')
+                                                  : tr('Fill screen'),
                                               onPressed: _toggleImmersive,
                                             ),
                                           ],

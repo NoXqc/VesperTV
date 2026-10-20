@@ -134,6 +134,10 @@ final class SubtitleBridge implements MethodChannel.MethodCallHandler, EventChan
         m.put("language", f.language);
         m.put("label", f.label);
         m.put("forced", (f.selectionFlags & C.SELECTION_FLAG_FORCED) != 0);
+        // Live closed captions (see HttpVideoAsset.liveCaptionExtractors).
+        m.put(
+            "cc",
+            MimeTypes.APPLICATION_CEA608.equals(mime) || MimeTypes.APPLICATION_CEA708.equals(mime));
         m.put("selected", group.isTrackSelected(t));
         out.add(m);
       }

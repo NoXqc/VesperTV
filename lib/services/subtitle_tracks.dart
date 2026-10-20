@@ -111,6 +111,7 @@ class SubtitleTrack {
     this.label,
     this.forced = false,
     this.selected = false,
+    this.closedCaptions = false,
   });
 
   final int group;
@@ -119,6 +120,10 @@ class SubtitleTrack {
   final String? label;
   final bool forced;
   final bool selected;
+
+  /// Broadcast closed captions (CEA-608/708) on a live channel. Every .ts
+  /// stream lists one; it stays empty on channels that don't carry them.
+  final bool closedCaptions;
 }
 
 /// Embedded subtitles on Android, through the vendored ExoPlayer plugin's
@@ -160,6 +165,7 @@ class SubtitleTracks {
           label: m['label'] as String?,
           forced: m['forced'] == true,
           selected: m['selected'] == true,
+          closedCaptions: m['cc'] == true,
         ),
     ];
   }

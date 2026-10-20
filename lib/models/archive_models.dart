@@ -24,6 +24,14 @@ enum ArchiveType {
         'series' => ArchiveType.series,
         _ => null,
       };
+
+  /// Where a source's own catalog/meta of type [s] is browsed: movie and
+  /// series as such, any other type ("tv", "channel", custom ones) under
+  /// Movies, played like a movie. Null when there's no type at all.
+  static ArchiveType? bucketFor(String? s) {
+    final t = s?.trim() ?? '';
+    return t.isEmpty ? null : fromWire(t) ?? ArchiveType.movie;
+  }
 }
 
 /// One catalog a source's manifest lists, e.g. `{type: movie, id: pd_noir,
@@ -38,11 +46,19 @@ class ArchiveCatalog {
     this.extra = const {},
     this.searchable = false,
     this.genres = const [],
+    this.wireType,
   });
 
   final ArchiveType type;
   final String id;
   final String name;
+
+  /// The source's own type string when it isn't [type]'s (a custom type
+  /// browsed under Movies, see [ArchiveType.bucketFor]); null otherwise.
+  final String? wireType;
+
+  /// The type sent in `/catalog/{type}/…` requests.
+  String get wire => wireType ?? type.wire;
 
   /// Fixed extra arguments sent with every page, e.g. `{genre: 2026}` for
   /// the provider's "New" row (its `year` catalog requires a year).
@@ -68,6 +84,7 @@ class ArchiveCatalog {
               extra: {...extra, 'genre': genre},
               searchable: searchable,
               genres: genres,
+              wireType: wireType,
             );
 
   /// [id] plus [extra]: unique per row, used for cache rows and row keys.
@@ -78,7 +95,7 @@ class ArchiveCatalog {
         ].join('&')}';
 
   Map<String, dynamic> toJson() => {
-        'type': type.wire,
+        'type': wire,
         'id': id,
         'name': name,
         if (extra.isNotEmpty) 'fixedExtra': extra,
@@ -89,7 +106,8 @@ class ArchiveCatalog {
   /// Reads both a manifest entry (`extra: [{name: search}, …]`) and the
   /// stored form ([toJson]).
   static ArchiveCatalog? fromJson(Map<String, dynamic> j) {
-    final type = ArchiveType.fromWire(j['type']?.toString());
+    final wire = j['type']?.toString().trim();
+    final type = ArchiveType.bucketFor(wire);
     final id = j['id']?.toString();
     if (type == null || id == null || id.isEmpty) return null;
     final fixed = j['fixedExtra'];
@@ -114,6 +132,7 @@ class ArchiveCatalog {
         for (final g in {for (final o in genreOptions) '$o'.trim()})
           if (g.isNotEmpty && !RegExp(r'^\d+$').hasMatch(g)) g,
       ],
+      wireType: wire == type.wire ? null : wire,
     );
   }
 }
@@ -146,7 +165,7 @@ class ArchiveCatalogProvider {
       {DateTime? now}) {
     final year = '${(now ?? DateTime.now()).year}';
     return [
-      for (final t in ArchiveType.values)
+      for (final t in const [ArchiveType.movie, ArchiveType.series])
         if (types.contains(t)) ...[
           ArchiveCatalog(
               type: t,
@@ -166,7 +185,72 @@ class ArchiveCatalogProvider {
   }
 }
 
+/// The two media servers Settings > Connect Jellyfin / Emby speaks to. Emby
+/// is Jellyfin's parent (forked in 2018): same REST API, but different
+/// auth headers and often a `/emby` path (see `MediaServerApi`).
+enum MediaServerKind {
+  jellyfin('Jellyfin'),
+  emby('Emby');
+
+  const MediaServerKind(this.label);
+  final String label;
+
+  static MediaServerKind? fromName(String? s) => switch (s) {
+        'jellyfin' => MediaServerKind.jellyfin,
+        'emby' => MediaServerKind.emby,
+        _ => null,
+      };
+}
+
+/// The signed-in user of a media-server source: what every request to
+/// that server needs (`MediaServerApi`).
+class MediaServerLogin {
+  const MediaServerLogin({
+    required this.kind,
+    required this.userId,
+    required this.token,
+    required this.deviceId,
+    this.userName = '',
+  });
+
+  final MediaServerKind kind;
+  final String userId;
+  final String token;
+
+  /// Sent in the auth header; the server ties the token to it.
+  final String deviceId;
+  final String userName;
+
+  Map<String, dynamic> toJson() => {
+        'kind': kind.name,
+        'userId': userId,
+        'token': token,
+        'deviceId': deviceId,
+        if (userName.isNotEmpty) 'userName': userName,
+      };
+
+  static MediaServerLogin? fromJson(Object? j) {
+    if (j is! Map) return null;
+    final kind = MediaServerKind.fromName(j['kind']?.toString());
+    final userId = j['userId']?.toString();
+    final token = j['token']?.toString();
+    if (kind == null || userId == null || token == null) return null;
+    return MediaServerLogin(
+      kind: kind,
+      userId: userId,
+      token: token,
+      deviceId: j['deviceId']?.toString() ?? userId,
+      userName: j['userName']?.toString() ?? '',
+    );
+  }
+}
+
 /// A source the user added: its manifest plus whether it's switched on.
+///
+/// A Jellyfin/Emby server is a source too ([server] set): its
+/// [manifestUrl] is `{apiBase}#{userId}` (one source per server + user),
+/// its catalogs are the user's movie and TV libraries, and every request
+/// goes through `MediaServerApi` instead of the add-on schema.
 class ArchiveSource {
   const ArchiveSource({
     required this.manifestUrl,
@@ -176,6 +260,7 @@ class ArchiveSource {
     this.catalogs = const [],
     this.catalogProviderUrl,
     this.enabled = true,
+    this.server,
   });
 
   final String manifestUrl;
@@ -190,10 +275,15 @@ class ArchiveSource {
   final String? catalogProviderUrl;
   final bool enabled;
 
+  /// Set for a Jellyfin/Emby server source.
+  final MediaServerLogin? server;
+
   bool get streamOnly => catalogProviderUrl != null;
 
-  /// Where its resources live: the manifest URL minus `/manifest.json`.
+  /// Where its resources live: the manifest URL minus `/manifest.json` (a
+  /// media server: its API base, without the `#userId`).
   String get baseUrl {
+    if (server != null) return manifestUrl.split('#').first;
     final u = manifestUrl.trim();
     return u.endsWith('/manifest.json')
         ? u.substring(0, u.length - '/manifest.json'.length)
@@ -219,6 +309,7 @@ class ArchiveSource {
         catalogs: catalogs ?? this.catalogs,
         catalogProviderUrl: catalogProviderUrl,
         enabled: enabled ?? this.enabled,
+        server: server,
       );
 
   Map<String, dynamic> toJson() => {
@@ -229,6 +320,7 @@ class ArchiveSource {
         'catalogs': [for (final c in catalogs) c.toJson()],
         if (catalogProviderUrl != null) 'catalogProvider': catalogProviderUrl,
         'enabled': enabled,
+        if (server != null) 'server': server!.toJson(),
       };
 
   factory ArchiveSource.fromJson(Map<String, dynamic> j) {
@@ -253,6 +345,7 @@ class ArchiveSource {
               {for (final c in stored) c.type}),
       catalogProviderUrl: provider,
       enabled: j['enabled'] != false,
+      server: MediaServerLogin.fromJson(j['server']),
     );
   }
 }
@@ -274,11 +367,19 @@ class ArchiveMeta {
     this.cast = const [],
     this.director = const [],
     this.videos = const [],
+    this.wireType,
   });
 
   final String id;
   final ArchiveType type;
   final String name;
+
+  /// The source's own type string when it isn't [type]'s (see
+  /// [ArchiveCatalog.wireType]); null otherwise.
+  final String? wireType;
+
+  /// The type sent in `/meta/` and `/stream/` requests.
+  String get wire => wireType ?? type.wire;
   final String? posterUrl;
   final String? backgroundUrl;
 
@@ -306,15 +407,23 @@ class ArchiveMeta {
           if (_str(x) case final s?) s,
       ];
 
+  /// [fallbackType]/[fallbackWire] (the catalog's) stand in when the meta
+  /// carries no type. Ids are kept as the source sends them: IMDb `tt…` or
+  /// the source's own.
   static ArchiveMeta? fromJson(Map<String, dynamic> j,
-      {ArchiveType? fallbackType}) {
+      {ArchiveType? fallbackType, String? fallbackWire}) {
     final id = _str(j['id']);
     final name = _str(j['name']);
-    final type = ArchiveType.fromWire(j['type']?.toString()) ?? fallbackType;
+    final ownWire = _str(j['type']);
+    final wire = ownWire ?? fallbackWire ?? fallbackType?.wire;
+    final type = ownWire != null
+        ? ArchiveType.bucketFor(ownWire)
+        : (fallbackType ?? ArchiveType.bucketFor(wire));
     if (id == null || name == null || type == null) return null;
     return ArchiveMeta(
       id: id,
       type: type,
+      wireType: wire == null || wire == type.wire ? null : wire,
       name: name,
       posterUrl: _str(j['poster']),
       backgroundUrl: _str(j['background']),
@@ -341,7 +450,7 @@ class ArchiveMeta {
   /// What the cache stores: the preview fields only (no episode list).
   Map<String, dynamic> toJson() => {
         'id': id,
-        'type': type.wire,
+        'type': wire,
         'name': name,
         if (posterUrl != null) 'poster': posterUrl,
         if (backgroundUrl != null) 'background': backgroundUrl,

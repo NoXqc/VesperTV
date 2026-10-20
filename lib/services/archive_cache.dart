@@ -64,7 +64,7 @@ class ArchiveCache {
       'catalog_items',
       columns: ['meta_json'],
       where: 'source_key = ? AND catalog_type = ? AND catalog_id = ?',
-      whereArgs: [sourceKey, catalog.type.wire, catalog.slug],
+      whereArgs: [sourceKey, catalog.wire, catalog.slug],
       orderBy: 'position',
     );
     final out = <ArchiveMeta>[];
@@ -72,7 +72,8 @@ class ArchiveCache {
       try {
         final m = ArchiveMeta.fromJson(
             Map<String, dynamic>.from(jsonDecode(r['meta_json'] as String)),
-            fallbackType: catalog.type);
+            fallbackType: catalog.type,
+            fallbackWire: catalog.wire);
         if (m != null) out.add(m);
       } catch (_) {
         // One bad row shouldn't hide the rest.
@@ -88,7 +89,7 @@ class ArchiveCache {
       'catalog_fetches',
       columns: ['fetched_at'],
       where: 'source_key = ? AND catalog_type = ? AND catalog_id = ?',
-      whereArgs: [sourceKey, catalog.type.wire, catalog.slug],
+      whereArgs: [sourceKey, catalog.wire, catalog.slug],
     );
     if (rows.isEmpty) return null;
     return DateTime.fromMillisecondsSinceEpoch(rows.first['fetched_at'] as int);
@@ -102,13 +103,13 @@ class ArchiveCache {
       await txn.delete(
         'catalog_items',
         where: 'source_key = ? AND catalog_type = ? AND catalog_id = ?',
-        whereArgs: [sourceKey, catalog.type.wire, catalog.slug],
+        whereArgs: [sourceKey, catalog.wire, catalog.slug],
       );
       final batch = txn.batch();
       for (var i = 0; i < items.length; i++) {
         batch.insert('catalog_items', {
           'source_key': sourceKey,
-          'catalog_type': catalog.type.wire,
+          'catalog_type': catalog.wire,
           'catalog_id': catalog.slug,
           'position': i,
           'meta_json': jsonEncode(items[i].toJson()),
@@ -118,7 +119,7 @@ class ArchiveCache {
         'catalog_fetches',
         {
           'source_key': sourceKey,
-          'catalog_type': catalog.type.wire,
+          'catalog_type': catalog.wire,
           'catalog_id': catalog.slug,
           'fetched_at': DateTime.now().millisecondsSinceEpoch,
         },

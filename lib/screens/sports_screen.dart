@@ -32,6 +32,7 @@ import '../widgets/player_controls.dart';
 import '../widgets/settings_scaffold.dart';
 import '../widgets/sports_widgets.dart';
 import '../widgets/tv_menu_tile.dart';
+import '../widgets/tv_text_field_gate.dart';
 import 'desktop_player_screen.dart';
 import 'player_screen.dart';
 import 'sports_live_list_screen.dart';
@@ -2703,8 +2704,7 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
   /// `EditableText` keeps the arrow keys for itself, so after Back closes the
   /// keyboard (Formuler) the D-pad had no way out of the field. The field's
   /// own node sees keys before EditableText's shortcuts do: Down -> results,
-  /// Up -> suggestion chips, OK -> reopen the keyboard (Flutter only raises
-  /// it when the field *gains* focus) — same idea as Add Playlist's
+  /// Up -> suggestion chips — same idea as Add Playlist's
   /// `_handleFieldEscapeKey`.
   KeyEventResult _onFieldKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
@@ -2719,13 +2719,8 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
       _chipNodes[i < 0 ? 0 : i].requestFocus();
       return KeyEventResult.handled;
     }
-    if (key == LogicalKeyboardKey.select ||
-        key == LogicalKeyboardKey.enter ||
-        key == LogicalKeyboardKey.numpadEnter ||
-        key == LogicalKeyboardKey.gameButtonA) {
-      SystemChannels.textInput.invokeMethod<void>('TextInput.show');
-      return KeyEventResult.handled;
-    }
+    // OK = keyboard is TvTextFieldGate's job (this also reopened it on the
+    // Enter Fire OS sends when Back closes its keyboard).
     return KeyEventResult.ignored;
   }
 
@@ -2766,14 +2761,27 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
                 ),
               ),
               const SizedBox(height: 6),
-              TextField(
-                controller: _controller,
+              // TV: keyboard only on OK, so Down from the chips can pass the
+              // field to the results (Fire OS: the keyboard took the remote
+              // as soon as the field was focused).
+              TvTextFieldGate(
                 focusNode: _fieldNode,
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.search),
-                  hintText: tr('Search channels'),
+                builder: (context, readOnly) => TextField(
+                  controller: _controller,
+                  focusNode: _fieldNode,
+                  readOnly: readOnly,
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.search),
+                    hintText: tr('Search channels'),
+                  ),
+                  onChanged: (v) => setState(() => _query = v),
+                  // Done / Fire OS Back: on to the results, never nothing.
+                  onSubmitted: (_) {
+                    if (_firstResult.context != null) {
+                      _firstResult.requestFocus();
+                    }
+                  },
                 ),
-                onChanged: (v) => setState(() => _query = v),
               ),
               const SizedBox(height: 8),
               Text(

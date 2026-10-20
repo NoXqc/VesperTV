@@ -8,6 +8,7 @@ import '../models/archive_models.dart';
 import '../models/channel.dart';
 import 'archive_api_service.dart';
 import 'archive_cache.dart';
+import 'media_server_api.dart';
 import 'storage_service.dart';
 
 /// One row of the Archive browse: a source's catalog and its titles, or
@@ -64,13 +65,26 @@ class ArchiveStreamOption {
 /// contacted until the user adds one. Only direct http(s) streams are
 /// used; torrent/debrid entries are ignored on purpose.
 class ArchiveService extends ChangeNotifier {
-  ArchiveService(this._storage, {ArchiveApiService? api, ArchiveCache? cache})
+  ArchiveService(this._storage,
+      {ArchiveApiService? api, ArchiveCache? cache, MediaServerApi? servers})
       : _api = api ?? ArchiveApiService(),
-        _cache = cache ?? ArchiveCache();
+        _cache = cache ?? ArchiveCache(),
+        _servers = servers ?? MediaServerApi();
 
   final StorageService _storage;
   final ArchiveApiService _api;
   final ArchiveCache _cache;
+
+  /// Jellyfin/Emby sources ([ArchiveSource.server]) go here instead of
+  /// [_api]; everything else (rows, cache, search, history, Play) is the
+  /// same for both kinds of source.
+  final MediaServerApi _servers;
+
+  Future<List<ArchiveMeta>> _page(ArchiveSource s, ArchiveCatalog c,
+          {int skip = 0, String? search}) =>
+      s.server != null
+          ? _servers.fetchCatalog(s, c, skip: skip, search: search)
+          : _api.fetchCatalog(s.catalogBaseUrl, c, skip: skip, search: search);
 
   /// Every Archive [Channel] uses this playlist id; `PlaybackService.play`
   /// lets it through (no playlist profile backs it).
@@ -127,6 +141,23 @@ class ArchiveService extends ChangeNotifier {
     return source;
   }
 
+  /// Signs in to a Jellyfin/Emby server and adds it (signing in again as
+  /// the same user replaces the old login). Throws
+  /// [MediaServerLoginException] (wrong user/password),
+  /// [MediaServerNoLibraryException] or [ArchiveApiException] (no server
+  /// there).
+  Future<ArchiveSource> addMediaServer(
+      String address, String userName, String password) async {
+    final source = await _servers.connect(address, userName, password);
+    final list = sources;
+    final at = list.indexWhere((s) => s.manifestUrl == source.manifestUrl);
+    await _saveSources(at < 0
+        ? [...list, source]
+        : [for (var i = 0; i < list.length; i++) i == at ? source : list[i]]);
+    unawaited(refresh(force: true));
+    return source;
+  }
+
   Future<void> setEnabled(ArchiveSource source, bool on) => _saveSources([
         for (final s in sources)
           s.manifestUrl == source.manifestUrl ? s.copyWith(enabled: on) : s,
@@ -151,24 +182,29 @@ class ArchiveService extends ChangeNotifier {
   // ---- catalog rows -------------------------------------------------------
 
   static String _rowKey(ArchiveSource s, ArchiveCatalog c) =>
-      '${s.key}|${c.type.wire}|${c.slug}';
+      '${s.key}|${c.wire}|${c.slug}';
 
   /// Catalogs of [type] to read, one per distinct row: a provider catalog
   /// shared by several stream-only sources is listed once (Play still
   /// asks every stream-only source — see [streams]). While a genre is
   /// picked ([setGenre]) only the catalogs offering it are listed, narrowed
   /// to it; [filtered] false lists the plain ones (search ignores genre).
+  ///
+  /// Catalogs of a custom type (`wireType` set: browsed under Movies) are
+  /// only listed while the [otherGenre] filter is picked, and then alone —
+  /// search follows the same split.
   List<(ArchiveSource, ArchiveCatalog)> _catalogs(ArchiveType type,
       {bool filtered = true}) {
-    final genre = filtered ? _genre[type] : null;
+    final other = _genre[type] == otherGenre;
+    final genre = filtered && !other ? _genre[type] : null;
     final shown = <String>{};
     return [
       for (final s in enabledSources)
         for (final base in s.catalogs)
-          if (base.type == type)
+          if (base.type == type && (base.wireType != null) == other)
             if (genre == null ? base : base.withGenre(genre) case final c?)
               if (!s.streamOnly ||
-                  shown.add('${s.catalogBaseUrl}|${c.type.wire}|${c.slug}'))
+                  shown.add('${s.catalogBaseUrl}|${c.wire}|${c.slug}'))
                 (s, c),
     ];
   }
@@ -178,13 +214,31 @@ class ArchiveService extends ChangeNotifier {
   /// The genre picked per type (rail "Genre"), kept for the session.
   final Map<ArchiveType, String> _genre = {};
 
+  /// The "Other" pick in the genre filter: shows the catalogs of custom
+  /// types (not movie/series) instead of the regular rows. Not a real
+  /// genre name, so it can't collide with one.
+  static const otherGenre = '\u0001other';
+
   String? genre(ArchiveType type) => _genre[type];
 
-  /// Every genre a catalog of [type] can be narrowed to, in the order the
-  /// sources list them.
-  List<String> genres(ArchiveType type) => {
-        for (final (_, c) in _catalogs(type, filtered: false)) ...c.genres,
-      }.toList();
+  /// Every genre a regular catalog of [type] can be narrowed to, in the
+  /// order the sources list them, then [otherGenre] when an enabled source
+  /// has catalogs of a custom type browsed under [type].
+  List<String> genres(ArchiveType type) {
+    final regular = <String>{};
+    var other = false;
+    for (final s in enabledSources) {
+      for (final c in s.catalogs) {
+        if (c.type != type) continue;
+        if (c.wireType != null) {
+          other = true;
+        } else {
+          regular.addAll(c.genres);
+        }
+      }
+    }
+    return [...regular, if (other) otherGenre];
+  }
 
   /// Narrows [type]'s rows to [genre] (null = all): the rows offering it
   /// are shown from cache at once and fetched behind when stale.
@@ -248,8 +302,7 @@ class ArchiveService extends ChangeNotifier {
         for (final (s, c) in group) {
           if (!c.searchable) continue;
           try {
-            found.addAll(
-                await _api.fetchCatalog(s.catalogBaseUrl, c, search: q));
+            found.addAll(await _page(s, c, search: q));
           } catch (e) {
             debugPrint('ArchiveService: search ${s.name}/${c.id} failed: $e');
           }
@@ -367,6 +420,8 @@ class ArchiveService extends ChangeNotifier {
       if (source == null || m is! Map) continue;
       final meta = ArchiveMeta.fromJson(Map<String, dynamic>.from(m));
       if (meta == null || meta.type != type) continue;
+      // Custom-type titles only under the Other filter, like their rows.
+      if ((meta.wireType != null) != (_genre[type] == otherGenre)) continue;
       items.add(meta);
       sources.add(source);
     }
@@ -443,9 +498,7 @@ class ArchiveService extends ChangeNotifier {
     }
     try {
       final have = _items[key] ?? const <ArchiveMeta>[];
-      final batch = await _api.fetchCatalog(
-          row.source.catalogBaseUrl, row.catalog,
-          skip: have.length);
+      final batch = await _page(row.source, row.catalog, skip: have.length);
       final seen = {for (final m in have) m.id};
       final fresh = batch.where((m) => seen.add(m.id)).toList();
       if (fresh.isEmpty) {
@@ -510,8 +563,7 @@ class ArchiveService extends ChangeNotifier {
             final items = <ArchiveMeta>[];
             final seen = <String>{};
             for (var page = 0; page < _pagesPerCatalog; page++) {
-              final batch = await _api.fetchCatalog(s.catalogBaseUrl, c,
-                  skip: items.length);
+              final batch = await _page(s, c, skip: items.length);
               final fresh = batch.where((m) => seen.add(m.id)).toList();
               if (fresh.isEmpty) break;
               items.addAll(fresh);
@@ -550,7 +602,10 @@ class ArchiveService extends ChangeNotifier {
       '$playlistId::${_rawId(source, videoId, episode: episode)}';
 
   Future<ArchiveMeta?> meta(ArchiveSource source, ArchiveMeta preview) =>
-      _api.fetchMeta(source.catalogBaseUrl, preview.type, preview.id);
+      source.server != null
+          ? _servers.fetchMeta(source, preview)
+          : _api.fetchMeta(source.catalogBaseUrl, preview.type, preview.id,
+              wire: preview.wire);
 
   /// The sources asked for a title's streams: [source] itself, then — for
   /// a title from the public provider — every other enabled stream-only
@@ -583,8 +638,10 @@ class ArchiveService extends ChangeNotifier {
     Object? error;
     for (final s in _streamSources(source)) {
       try {
-        for (final st
-            in await _api.fetchStreams(s.baseUrl, meta.type, videoId)) {
+        for (final st in s.server != null
+            ? _servers.streams(s, videoId)
+            : await _api.fetchStreams(s.baseUrl, meta.type, videoId,
+                wire: meta.wire)) {
           if (urls.add(st.url)) {
             out.add(ArchiveStreamOption(source: s, stream: st));
           }

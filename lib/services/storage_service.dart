@@ -260,6 +260,9 @@ class StorageService {
       _prefs.getBool(AppConstants.keyHideShows) ?? getHideMoviesShows();
   Future<void> setHideShows(bool value) =>
       _prefs.setBool(AppConstants.keyHideShows, value);
+  bool getVideoFill() => _prefs.getBool(AppConstants.keyVideoFill) ?? false;
+  Future<void> setVideoFill(bool value) =>
+      _prefs.setBool(AppConstants.keyVideoFill, value);
   bool getHideArchive() => _prefs.getBool(AppConstants.keyHideArchive) ?? false;
   Future<void> setHideArchive(bool value) =>
       _prefs.setBool(AppConstants.keyHideArchive, value);
@@ -635,6 +638,7 @@ class StorageService {
     AppConstants.keyLayoutMode,
     AppConstants.keyWindowsWindowed,
     AppConstants.keyWindowsBounds,
+    AppConstants.keyVideoFill,
     AppConstants.keyPlaylistEnabled,
     AppConstants.keyPinFailCount,
     AppConstants.keyPinLockedUntil,

@@ -39,6 +39,9 @@ class AppPreferences extends ChangeNotifier {
   /// The Multiview row and the player's "Open in Multiview" hidden.
   late bool hideMultiview;
 
+  /// Fullscreen player zooms the picture to fill the screen (no black bars).
+  late bool videoFill;
+
   /// Both Movies and TV Shows hidden.
   bool get hideMoviesShows => hideMovies && hideShows;
 
@@ -65,6 +68,7 @@ class AppPreferences extends ChangeNotifier {
     hideShows = _storage.getHideShows();
     hideArchive = _storage.getHideArchive();
     hideMultiview = _storage.getHideMultiview();
+    videoFill = _storage.getVideoFill();
     TimeFormat.use24h = _storage.getTime24h();
   }
 
@@ -136,6 +140,12 @@ class AppPreferences extends ChangeNotifier {
   void setHideShows(bool value) {
     hideShows = value;
     _storage.setHideShows(value);
+    notifyListeners();
+  }
+
+  void setVideoFill(bool value) {
+    videoFill = value;
+    _storage.setVideoFill(value);
     notifyListeners();
   }
 

@@ -103,8 +103,8 @@ class SettingsMenuScreen extends StatelessWidget {
                   ),
                   TvMenuTile(
                     icon: Icons.local_movies_outlined,
-                    title: tr('Extras sources'),
-                    subtitle: tr('Add-on sources for the Extras tab'),
+                    title: tr('Media Hub sources'),
+                    subtitle: tr('Add-on sources for the Media Hub tab'),
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(
                         builder: (_) => const ArchiveSourcesScreen())),
                   ),

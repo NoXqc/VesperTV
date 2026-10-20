@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -8,9 +10,11 @@ import '../services/archive_service.dart';
 import '../widgets/detail_header.dart';
 import '../widgets/live_resume_hint.dart';
 import '../widgets/poster_card.dart';
+import '../widgets/tv_text_field_gate.dart';
 import 'archive_detail_screen.dart';
 import 'archive_playback.dart';
 import 'settings/archive_sources_screen.dart';
+import 'settings/media_server_screen.dart';
 
 /// The Archive tab: classic, public-domain films and series from the
 /// user's own sources (Settings > Archive sources, any server speaking the
@@ -181,6 +185,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
   /// translated under `genre.` keys ("History" alone is watch history);
   /// one the dictionaries don't know (a source's own) is shown as sent.
   static String _genreName(String genre) {
+    if (genre == ArchiveService.otherGenre) return tr('Other');
     final key = 'genre.$genre';
     final s = tr(key);
     return s == key ? genre : s;
@@ -359,6 +364,12 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
         .push(MaterialPageRoute(builder: (_) => const ArchiveSourcesScreen()));
   }
 
+  /// Sign in to a Jellyfin/Emby server; its libraries become rows.
+  void _connectMediaServer() {
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const MediaServerScreen()));
+  }
+
   @override
   Widget build(BuildContext context) {
     final service = context.watch<ArchiveService>();
@@ -381,40 +392,51 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
           Navigator.of(context).pop();
         }
       },
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        body: Stack(
-          children: [
-            if (backdrop != null)
-              Positioned(
-                top: 0,
-                right: 0,
-                left: narrow ? 0 : MediaQuery.sizeOf(context).width * 0.35,
-                height: MediaQuery.sizeOf(context).height * 0.6,
-                child: DetailBackdrop(url: backdrop, fadeLeft: true),
+      // Windows has no remote Back: Esc does what Back does (rows -> rail ->
+      // leave), plus a clickable arrow in the rail (user report: no way
+      // back to the main UI). Same as SportsScreenFrame / SportsBackButton.
+      child: CallbackShortcuts(
+        bindings: {
+          if (Platform.isWindows)
+            const SingleActivator(LogicalKeyboardKey.escape): () =>
+                Navigator.of(context).maybePop(),
+        },
+        child: Scaffold(
+          backgroundColor: Colors.black,
+          body: Stack(
+            children: [
+              if (backdrop != null)
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  left: narrow ? 0 : MediaQuery.sizeOf(context).width * 0.35,
+                  height: MediaQuery.sizeOf(context).height * 0.6,
+                  child: DetailBackdrop(url: backdrop, fadeLeft: true),
+                ),
+              SafeArea(
+                child: narrow
+                    ? Column(children: [
+                        _buildTopBar(service),
+                        _buildFloatingBar(service, rows),
+                        Expanded(child: _buildContent(service, rows, scheme)),
+                      ])
+                    : Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SizedBox(
+                              width: 190, child: _buildRail(service, rows)),
+                          Expanded(
+                            child: Column(children: [
+                              _buildFloatingBar(service, rows),
+                              Expanded(
+                                  child: _buildContent(service, rows, scheme)),
+                            ]),
+                          ),
+                        ],
+                      ),
               ),
-            SafeArea(
-              child: narrow
-                  ? Column(children: [
-                      _buildTopBar(service),
-                      _buildFloatingBar(service, rows),
-                      Expanded(child: _buildContent(service, rows, scheme)),
-                    ])
-                  : Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        SizedBox(width: 190, child: _buildRail(service, rows)),
-                        Expanded(
-                          child: Column(children: [
-                            _buildFloatingBar(service, rows),
-                            Expanded(
-                                child: _buildContent(service, rows, scheme)),
-                          ]),
-                        ),
-                      ],
-                    ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -444,9 +466,19 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(6, 0, 6, 12),
-                child: Text(tr('Extras'),
-                    style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.w700)),
+                child: Row(children: [
+                  if (Platform.isWindows)
+                    ExcludeFocus(
+                      child: IconButton(
+                        tooltip: tr('Back'),
+                        icon: const Icon(Icons.arrow_back),
+                        onPressed: () => Navigator.of(context).maybePop(),
+                      ),
+                    ),
+                  Text(tr('Media Hub'),
+                      style: const TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.w700)),
+                ]),
               ),
               _RailTile(
                 focusNode: _firstRailNode,
@@ -470,9 +502,15 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
               ),
               _RailTile(
                 icon: Icons.extension_outlined,
-                label: tr('Extras sources'),
+                label: tr('Media Hub sources'),
                 small: true,
                 onTap: _openSources,
+              ),
+              _RailTile(
+                icon: Icons.dns_outlined,
+                label: tr('Connect Jellyfin / Emby'),
+                small: true,
+                onTap: _connectMediaServer,
               ),
             ],
           ),
@@ -520,6 +558,11 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
           IconButton(
             icon: const Icon(Icons.extension_outlined),
             onPressed: _openSources,
+          ),
+          IconButton(
+            tooltip: tr('Connect Jellyfin / Emby'),
+            icon: const Icon(Icons.dns_outlined),
+            onPressed: _connectMediaServer,
           ),
         ]),
       ),
@@ -1061,30 +1104,34 @@ class _SearchPanelState extends State<_SearchPanel> {
                     const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
                         _firstRecentNode.requestFocus(),
                 },
-                child: TextField(
-                  controller: _controller,
+                child: TvTextFieldGate(
                   focusNode: _fieldNode,
-                  autofocus: _recent.isEmpty,
-                  textInputAction: TextInputAction.search,
-                  decoration: InputDecoration(
-                    hintText: tr('Title'),
-                    prefixIcon: const Icon(Icons.search),
-                    filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.06),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(28),
-                      borderSide: const BorderSide(color: Colors.white24),
+                  builder: (context, readOnly) => TextField(
+                    controller: _controller,
+                    focusNode: _fieldNode,
+                    readOnly: readOnly,
+                    autofocus: _recent.isEmpty,
+                    textInputAction: TextInputAction.search,
+                    decoration: InputDecoration(
+                      hintText: tr('Title'),
+                      prefixIcon: const Icon(Icons.search),
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.06),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(28),
+                        borderSide: const BorderSide(color: Colors.white24),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(28),
+                        borderSide: const BorderSide(color: Colors.white24),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(28),
+                        borderSide: BorderSide(color: scheme.primary, width: 2),
+                      ),
                     ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(28),
-                      borderSide: const BorderSide(color: Colors.white24),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(28),
-                      borderSide: BorderSide(color: scheme.primary, width: 2),
-                    ),
+                    onSubmitted: (v) => Navigator.of(context).pop(v),
                   ),
-                  onSubmitted: (v) => Navigator.of(context).pop(v),
                 ),
               ),
               if (_recent.isNotEmpty) ...[

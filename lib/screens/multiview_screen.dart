@@ -8,10 +8,13 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../models/channel.dart';
 import '../services/epg_service.dart';
+import '../services/multiview_sports.dart';
 import '../services/playlist_manager.dart';
 import '../services/storage_service.dart';
+import '../widgets/auto_hide_overlay.dart';
 import '../widgets/hold_to_activate.dart';
 import '../widgets/tv_menu_tile.dart';
+import '../widgets/tv_text_field_gate.dart';
 import '../l10n/l10n.dart';
 
 /// TV-remote-first multiview grid — several live channels playing at
@@ -637,85 +640,87 @@ class _MultiviewCellTileState extends State<_MultiviewCellTile> {
               borderRadius: BorderRadius.circular(8),
             ),
             clipBehavior: Clip.antiAlias,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                if (widget.controller != null &&
-                    widget.controller!.value.isInitialized)
-                  VideoPlayerHdr(widget.controller!,
+            // The name bar fades after a few seconds (it covered the
+            // score bug): shown again on a new channel, when the sound
+            // moves here, and when focus lands on the tile.
+            child: AutoHideOverlay(
+              flashKey: (widget.channel?.id, widget.active, _focused),
+              hidden: widget.active ? const MultiviewAudioBadge() : null,
+              video: widget.controller != null &&
+                      widget.controller!.value.isInitialized
+                  ? VideoPlayerHdr(widget.controller!,
                       key: ObjectKey(widget.controller))
-                else
-                  ColoredBox(
-                    color: const Color(0xFF1A1A1A),
-                    child: Center(
-                      child: Icon(
-                          widget.channel == null
-                              ? Icons.add_circle_outline
-                              : Icons.hourglass_empty,
-                          color: Colors.white38,
-                          size: 36),
-                    ),
-                  ),
-                if (widget.channel != null)
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    top: 0,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 4),
-                      // Was a 2-stop gradient fading to transparent almost
-                      // immediately — reported directly as barely visible
-                      // against a bright/busy video frame. A mid-bar stop
-                      // keeps the whole header solidly dark (not just its
-                      // very top edge) before fading out underneath it, and
-                      // the text itself now carries its own shadow as a
-                      // second, independent line of contrast — the same
-                      // "readable over anything behind it" fix already used
-                      // elsewhere in this app (e.g. PosterCard's progress
-                      // label) rather than relying on the backdrop alone.
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          stops: const [0.0, 0.6, 1.0],
-                          colors: [
-                            Colors.black.withValues(alpha: 0.92),
-                            Colors.black.withValues(alpha: 0.92),
-                            Colors.transparent,
-                          ],
-                        ),
+                  : ColoredBox(
+                      color: const Color(0xFF1A1A1A),
+                      child: Center(
+                        child: Icon(
+                            widget.channel == null
+                                ? Icons.add_circle_outline
+                                : Icons.hourglass_empty,
+                            color: Colors.white38,
+                            size: 36),
                       ),
-                      child: Row(
-                        children: [
-                          if (widget.active) ...[
-                            const Icon(Icons.volume_up,
-                                color: Colors.amber,
-                                size: 15,
-                                shadows: [
-                                  Shadow(color: Colors.black, blurRadius: 4)
-                                ]),
-                            const SizedBox(width: 4),
-                          ],
-                          Expanded(
-                            child: Text(
-                              widget.channel!.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
+                    ),
+              overlay: widget.channel == null
+                  ? const SizedBox.shrink()
+                  : Positioned(
+                      left: 0,
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 4),
+                        // Was a 2-stop gradient fading to transparent almost
+                        // immediately — reported directly as barely visible
+                        // against a bright/busy video frame. A mid-bar stop
+                        // keeps the whole header solidly dark (not just its
+                        // very top edge) before fading out underneath it, and
+                        // the text itself now carries its own shadow as a
+                        // second, independent line of contrast — the same
+                        // "readable over anything behind it" fix already used
+                        // elsewhere in this app (e.g. PosterCard's progress
+                        // label) rather than relying on the backdrop alone.
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            stops: const [0.0, 0.6, 1.0],
+                            colors: [
+                              Colors.black.withValues(alpha: 0.92),
+                              Colors.black.withValues(alpha: 0.92),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            if (widget.active) ...[
+                              const Icon(Icons.volume_up,
+                                  color: Colors.amber,
+                                  size: 15,
                                   shadows: [
                                     Shadow(color: Colors.black, blurRadius: 4)
                                   ]),
+                              const SizedBox(width: 4),
+                            ],
+                            Expanded(
+                              child: Text(
+                                widget.channel!.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    shadows: [
+                                      Shadow(color: Colors.black, blurRadius: 4)
+                                    ]),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-              ],
             ),
           ),
         ),
@@ -850,6 +855,52 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
   late final List<FocusNode> _groupFocusNodes;
   int _selectedGroupIndex = 0;
 
+  /// The two sports shortcuts ([MultiviewSports]) right after All /
+  /// Favorites. Not real group names, so a provider group called "Sports"
+  /// can't collide with them.
+  static const _liveEntry = '\u0001live';
+  static const _sportsEntry = '\u0001sports';
+
+  /// Live now: loaded the first time the entry is picked (it fetches
+  /// scores and runs the channel matcher), null until then.
+  List<LiveGameChannel>? _live;
+  bool _liveLoading = false;
+
+  Future<void> _loadLive() async {
+    if (_live != null || _liveLoading) return;
+    setState(() => _liveLoading = true);
+    List<LiveGameChannel> live;
+    try {
+      live = await MultiviewSports.liveGames(
+        storage: context.read<StorageService>(),
+        playlist: context.read<PlaylistManager>(),
+        epg: context.read<EpgService>(),
+      );
+    } catch (_) {
+      live = const [];
+    }
+    if (!mounted) return;
+    setState(() {
+      _live = live;
+      _liveLoading = false;
+    });
+  }
+
+  static String _entryTitle(String entry) => switch (entry) {
+        'All' || 'Favorites' => tr(entry),
+        _liveEntry => tr('Live now'),
+        _sportsEntry => tr('Sports'),
+        _ => entry,
+      };
+
+  static IconData _entryIcon(String entry) => switch (entry) {
+        'All' => Icons.apps,
+        'Favorites' => Icons.star,
+        _liveEntry => Icons.sports_score,
+        _sportsEntry => Icons.sports,
+        _ => Icons.live_tv,
+      };
+
   String _query = '';
 
   /// Portrait phone: a group was picked, its channels show (see build).
@@ -864,7 +915,14 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
       if (c.group.isNotEmpty && seen.add(c.group)) groups.add(c.group);
     }
     final hasFavorites = widget.channels.any((c) => c.isFavorite);
-    _groupEntries = ['All', if (hasFavorites) 'Favorites', ...groups];
+    final hasSports = widget.channels.any(MultiviewSports.isSports);
+    _groupEntries = [
+      'All',
+      if (hasFavorites) 'Favorites',
+      _liveEntry,
+      if (hasSports) _sportsEntry,
+      ...groups,
+    ];
     _groupFocusNodes = List.generate(_groupEntries.length, (_) => FocusNode());
     HardwareKeyboard.instance.addHandler(_handleSearchFieldEscapeKey);
     WidgetsBinding.instance
@@ -900,6 +958,10 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
     final entry = _groupEntries[_selectedGroupIndex];
     if (entry == 'Favorites') {
       base = base.where((c) => c.isFavorite);
+    } else if (entry == _liveEntry) {
+      base = [for (final l in _live ?? const <LiveGameChannel>[]) l.channel];
+    } else if (entry == _sportsEntry) {
+      base = base.where(MultiviewSports.isSports);
     } else if (entry != 'All') {
       base = base.where((c) => c.group == entry);
     }
@@ -937,9 +999,7 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
         backgroundColor: Colors.black,
         appBar: AppBar(
           backgroundColor: Colors.black,
-          title: Text(showChannels
-              ? (entry == 'All' || entry == 'Favorites' ? tr(entry) : entry)
-              : tr('Pick a channel')),
+          title: Text(showChannels ? _entryTitle(entry) : tr('Pick a channel')),
         ),
         body: CallbackShortcuts(
           bindings: <ShortcutActivator, VoidCallback>{
@@ -979,14 +1039,8 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
                   final selected = i == _selectedGroupIndex;
                   return TvMenuTile(
                     focusNode: _groupFocusNodes[i],
-                    icon: entry == 'All'
-                        ? Icons.apps
-                        : entry == 'Favorites'
-                            ? Icons.star
-                            : Icons.live_tv,
-                    title: entry == 'All' || entry == 'Favorites'
-                        ? tr(entry)
-                        : entry,
+                    icon: _entryIcon(entry),
+                    title: _entryTitle(entry),
                     trailing: selected
                         ? Icon(Icons.check, color: scheme.primary)
                         : const SizedBox.shrink(),
@@ -1000,6 +1054,7 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
                         _selectedGroupIndex = i;
                         if (narrow) _narrowShowChannels = true;
                       });
+                      if (entry == _liveEntry) _loadLive();
                       // Back to the top so Right lands on the new
                       // group's first channel (row 0 must be built).
                       if (_resultsScroll.hasClients) {
@@ -1016,25 +1071,37 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.all(12),
-                    child: TextField(
-                      controller: _searchController,
+                    child: TvTextFieldGate(
                       focusNode: _searchFocus,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: tr('Search channels...'),
-                        hintStyle: const TextStyle(color: Colors.white54),
-                        prefixIcon:
-                            const Icon(Icons.search, color: Colors.white54),
-                        border: const OutlineInputBorder(),
+                      builder: (context, readOnly) => TextField(
+                        controller: _searchController,
+                        focusNode: _searchFocus,
+                        readOnly: readOnly,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          hintText: tr('Search channels...'),
+                          hintStyle: const TextStyle(color: Colors.white54),
+                          prefixIcon:
+                              const Icon(Icons.search, color: Colors.white54),
+                          border: const OutlineInputBorder(),
+                        ),
+                        onChanged: (v) => setState(() => _query = v),
                       ),
-                      onChanged: (v) => setState(() => _query = v),
                     ),
                   ),
                   Expanded(
                     child: filtered.isEmpty
                         ? Center(
-                            child: Text(tr('No channels found'),
-                                style: const TextStyle(color: Colors.white54)),
+                            child: entry == _liveEntry && _live == null
+                                ? const CircularProgressIndicator()
+                                : Text(
+                                    entry == _liveEntry
+                                        ? tr(
+                                            'No live games on your channels right now')
+                                        : tr('No channels found'),
+                                    textAlign: TextAlign.center,
+                                    style:
+                                        const TextStyle(color: Colors.white54)),
                           )
                         : ListView.builder(
                             controller: _resultsScroll,
@@ -1042,10 +1109,18 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
                             itemBuilder: (context, i) {
                               final c = filtered[i];
                               final now = epg.getCurrentProgram(c.epgId);
+                              // Live now: the game, not the guide (event
+                              // channels often have no guide at all).
+                              final game = entry == _liveEntry &&
+                                      i < (_live?.length ?? 0)
+                                  ? _live![i].game
+                                  : null;
                               return TvMenuTile(
-                                subtitle: now == null
-                                    ? null
-                                    : '${_hhmm(now.start)}–${_hhmm(now.stop)}  ${now.title}',
+                                subtitle: game != null
+                                    ? MultiviewSports.label(game)
+                                    : now == null
+                                        ? null
+                                        : '${_hhmm(now.start)}–${_hhmm(now.stop)}  ${now.title}',
                                 focusNode: i == 0 ? _firstResultFocus : null,
                                 leading:
                                     (c.logoUrl != null && c.logoUrl!.isNotEmpty)

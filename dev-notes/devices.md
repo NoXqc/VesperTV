@@ -21,7 +21,7 @@ Read when installing to / screenshotting a real box.
   **black** in screencaps — that's normal while a stream plays). `input keyevent DPAD_*`/`BACK` work.
   **`input keyevent --longpress` does NOT trigger HoldToActivate; use a touch hold instead:**
   `adb shell input swipe X Y X Y 1800` on the item (pointer long-press is supported on
-  `HoldToActivate`). `input tap X Y` works for touch targets. **The sidebar "Exit App" row is focusable
+  `HoldToActivate`). `input tap X Y` works for touch targets. **The sidebar "Disable and exit" (was "Exit App") row is focusable
   at the bottom — never press Select there by accident.**
 - Don't `adb install` when the owner says not to (they sometimes test from a separate box).
 - The owner sets the Formuler's theme to **Dark / Gold** on purpose; leave it unless asked.

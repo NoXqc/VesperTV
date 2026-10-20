@@ -472,6 +472,11 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
     }
     if (exoPlayerEventListener != null) {
       exoPlayerEventListener.dispose();
+      // VesperTV: detached before release. A 4K stream's release can pass
+      // ExoPlayer's 500 ms timeout (Fire Stick), which reports an error, and
+      // the in-place recovery then re-prepared the released player on the
+      // main thread ("Ignoring messages sent after release").
+      exoPlayer.removeListener(exoPlayerEventListener);
       exoPlayerEventListener = null;
     }
     exoPlayer.release();

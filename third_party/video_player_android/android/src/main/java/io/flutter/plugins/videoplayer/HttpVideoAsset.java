@@ -9,6 +9,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
 import androidx.annotation.VisibleForTesting;
+import androidx.media3.common.Format;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MimeTypes;
 import androidx.media3.common.util.UnstableApi;
@@ -17,6 +18,9 @@ import androidx.media3.datasource.DefaultDataSource;
 import androidx.media3.datasource.DefaultHttpDataSource;
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
 import androidx.media3.exoplayer.source.MediaSource;
+import androidx.media3.extractor.DefaultExtractorsFactory;
+import androidx.media3.extractor.ExtractorsFactory;
+import java.util.Collections;
 import java.util.Map;
 
 final class HttpVideoAsset extends VideoAsset {
@@ -77,7 +81,22 @@ final class HttpVideoAsset extends VideoAsset {
       Context context, DefaultHttpDataSource.Factory initialFactory) {
     unstableUpdateDataSourceFactory(initialFactory, httpHeaders, userAgent);
     DataSource.Factory dataSourceFactory = new DefaultDataSource.Factory(context, initialFactory);
-    return new DefaultMediaSourceFactory(context).setDataSourceFactory(dataSourceFactory);
+    return new DefaultMediaSourceFactory(dataSourceFactory, liveCaptionExtractors());
+  }
+
+  /**
+   * VesperTV patch: CEA-608 closed captions ride inside the video stream of a live MPEG-TS
+   * channel, and TsExtractor only looks for them when the stream declares them, which IPTV
+   * streams almost never do. Always expecting them gives every .ts stream a "CC" text track
+   * (empty on channels without captions — accepted by the owner, 2026-10-19). HLS already
+   * exposes undeclared CEA-608 by default.
+   */
+  @OptIn(markerClass = UnstableApi.class)
+  private static ExtractorsFactory liveCaptionExtractors() {
+    return new DefaultExtractorsFactory()
+        .setTsSubtitleFormats(
+            Collections.singletonList(
+                new Format.Builder().setSampleMimeType(MimeTypes.APPLICATION_CEA608).build()));
   }
 
   // TODO: Migrate to stable API, see https://github.com/flutter/flutter/issues/147039.

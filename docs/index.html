@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>VesperTV — Always free, Always open source IPTV player for Android TV and Windows</title>
-<meta name="description" content="VesperTV is a free, open-source IPTV player for Android TV boxes, Fire Sticks, phones and Windows PCs. Bring your own Xtream Codes login or M3U playlist — get a real TV guide, favourites, resume and a remote-first interface. GPL-3.0, no ads, no tracking.">
+<title>VesperTV — Always free, Always open source universal media player for Android TV and Windows</title>
+<meta name="description" content="VesperTV is a free, open-source universal media player for Android TV boxes, Fire Sticks, phones and Windows PCs. Live IPTV from your own Xtream Codes login or M3U playlist, films and series from custom REST add-ons and your own Jellyfin or Emby server in the Media Hub — plus a real TV guide, favourites, resume and a remote-first interface. GPL-3.0, no ads, no tracking.">
 <meta name="theme-color" content="#070608">
 <meta name="color-scheme" content="dark">
 
 <meta property="og:type" content="website">
 <meta property="og:title" content="VesperTV — Always free, Always open source">
-<meta property="og:description" content="A free, open-source IPTV player for Android TV boxes, Fire Sticks, phones and Windows PCs. You bring the playlist; it brings the guide, the favourites and a remote-first interface.">
+<meta property="og:description" content="A free, open-source universal media player for Android TV boxes, Fire Sticks, phones and Windows PCs. Live IPTV, custom REST add-ons, and your own Jellyfin or Emby server. You bring the sources; it brings the guide, the favourites and a remote-first interface.">
 <meta property="og:image" content="assets/shot-live.png">
 <meta name="twitter:card" content="summary_large_image">
 
@@ -745,14 +745,16 @@ details .ans p + p{ margin-top:12px; }
         <li class="chip">No subscription</li>
       </ul>
 
-      <p class="kicker">IPTV player for Android TV&nbsp;· Fire Stick&nbsp;· Phone&nbsp;· Windows</p>
+      <p class="kicker">Universal media player for Android TV&nbsp;· Fire Stick&nbsp;· Phone&nbsp;· Windows</p>
 
       <h1>Always free,<span class="grad">Always open source</span></h1>
 
       <p class="lede">
-        VesperTV plays <strong>your</strong> IPTV subscription — live channels, movies and
-        series — with a proper TV guide and an interface built to be driven by a remote
-        from ten feet away. You bring the playlist. It brings everything else.
+        VesperTV is a universal media player for <strong>your</strong> sources — live IPTV
+        channels, movies and series, films and shows from custom REST add-ons in the
+        Media Hub, and your own Jellyfin or Emby server — with a proper TV guide and
+        an interface built to be driven by a remote from ten feet away. You bring the
+        sources. It brings everything else.
       </p>
 
       <div class="cta-row">
@@ -791,8 +793,9 @@ details .ans p + p{ margin-top:12px; }
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 11v5.5"/><path d="M12 7.6v.2"/></svg>
         <p>
           <b>VesperTV ships no channels.</b> It is a player, not a streaming service —
-          there is no content inside it and none is provided. You need your own IPTV
-          provider: an Xtream Codes login, or an M3U playlist URL.
+          there is no content inside it and none is provided. You bring your own sources:
+          an IPTV provider (Xtream Codes login or M3U playlist URL), add-ons you choose,
+          or your own Jellyfin or Emby server.
         </p>
       </div>
 
@@ -942,11 +945,10 @@ details .ans p + p{ margin-top:12px; }
     <div class="wrap">
       <div class="sec-head reveal">
         <span class="eyebrow">Before you start</span>
-        <h2>You bring the playlist</h2>
+        <h2>You bring the sources</h2>
         <p>
-          VesperTV connects to a provider you already pay for. If you don't have one,
-          the app will open, look lovely, and show you nothing. Either of these gets you
-          running:
+          VesperTV connects to sources you already have. Without one, the app will open,
+          look lovely, and show you nothing. Any of these gets you running:
         </p>
       </div>
 
@@ -963,6 +965,22 @@ details .ans p + p{ margin-top:12px; }
           <p>
             A direct <code>.m3u</code> or <code>.m3u8</code> URL, with an optional separate
             XMLTV EPG URL for the guide. Add as many as you like and switch between them.
+          </p>
+        </div>
+        <div class="req">
+          <h3>REST add-ons <span class="tag">Media Hub</span></h3>
+          <p>
+            Paste an add-on's <code>manifest.json</code> link and its films and series show
+            up in the Media Hub. Any source that follows the catalog/stream add-on format
+            works; only direct video links are played.
+          </p>
+        </div>
+        <div class="req">
+          <h3>Jellyfin &amp; Emby <span class="tag">Media server</span></h3>
+          <p>
+            Sign in to your own Jellyfin or Emby server with its address, user name and
+            password. Its movie and TV libraries show up in the Media Hub and play as
+            stored, no transcoding.
           </p>
         </div>
       </div>
@@ -1118,6 +1136,12 @@ details .ans p + p{ margin-top:12px; }
               <span>Search live channels, movies and TV shows all at once, each shown as
               its own row of results.</span>
             </li>
+            <li>
+              <b>Media Hub</b>
+              <span>Films and series from the REST add-ons you add, with posters, genres,
+              search and watch history, plus the movie and TV libraries of your own
+              Jellyfin or Emby server.</span>
+            </li>
           </ul>
 
         </article>
@@ -1153,6 +1177,13 @@ details .ans p + p{ margin-top:12px; }
               <span>Follow a team from Standings: its games get a star and come first, and
               My Teams shows its record, standing, a mini table and the next two weeks of
               games.</span>
+            </li>
+            <li>
+              <b>Multiview for game nights</b>
+              <span>Two or four games at once. The channel picker's <b>Live now</b> lists
+              the games on right now with their matched channel, and <b>Sports</b> narrows
+              your playlist to sports channels. Channel names fade so the score bug stays
+              clear.</span>
             </li>
             <li>
               <b>No spoilers, no sign-up</b>

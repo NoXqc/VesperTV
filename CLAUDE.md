@@ -101,14 +101,14 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+346**) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+348**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
 Only release when the owner asks ("update the latest", "cut it", "fully release"). Outline: bump `pubspec.yaml` (versionCode `+N` must always rise) → `flutter analyze` → build APK + verify signature (§5) → build Windows + zip → **commit & push first** → `gh release upload <tag> app-release.apk VesperTV-windows-x64.zip --clobber` → `gh release edit <tag> --tag <new> --notes-file …` → make sure the tag equals HEAD → verify downloads/hashes, the OLD `NoXqc/NoXPlayer` redirect links and AFTVnews code `1760256`. The updater offers any *different* tag (`_isDifferent`), never leave two `.zip`/`.apk` assets on the latest release.
 
 ## 7. Test devices (details in `dev-notes/devices.md`)
-Formuler Z11 Pro MAX `10.0.0.46:5555` (IP changes; was `192.168.1.46`), Fire Stick `192.168.1.33:5555` (2026-10-15: on USB, `adb -s G072JN0733471CJ6`). Install with `adb install -r` after verifying the signature. Not rooted: no run-as on the Formuler, but `adb logcat` works (Flutter `print` shows as tag `flutter` even in release). **Don't drive the owner's Formuler over adb to debug** (owner, 2026-10-15) — add temporary on-screen debug output and ask for a photo, or use the Fire Stick when he hooks it up. Never press Select on "Exit App". Hold-Select via adb needs `input swipe X Y X Y 1800`, not `--longpress`. The owner keeps the Formuler on **Dark / Gold**.
+Formuler Z11 Pro MAX `10.0.0.46:5555` (IP changes; was `192.168.1.46`), Fire Stick `192.168.1.33:5555` (2026-10-15: on USB, `adb -s G072JN0733471CJ6`). Install with `adb install -r` after verifying the signature. Not rooted: no run-as on the Formuler, but `adb logcat` works (Flutter `print` shows as tag `flutter` even in release). **Don't drive the owner's Formuler over adb to debug** (owner, 2026-10-15) — add temporary on-screen debug output and ask for a photo, or use the Fire Stick when he hooks it up. Never press Select on "Disable and exit" (was "Exit App": it disables every playlist). Hold-Select via adb needs `input swipe X Y X Y 1800`, not `--longpress`. The owner keeps the Formuler on **Dark / Gold**.
 
 ## 8. Branding & website (details in `dev-notes/branding-and-site.md`)
 Brand = black + gold, gold "V" + star logo. Regenerate icons with `python assets/icon/gen_icon.py` then `dart run flutter_launcher_icons`. Default Platinum theme accent = gold. Site is the single file `docs/index.html` (carousel, hero sky). Fire OS keeps old launcher icons after updates — known, unfixable in-app.
@@ -128,7 +128,13 @@ ignores the decoder's crop rect, which showed 720p Multiview tiles with a green 
 (MTK). Only safe while Impeller stays off (Skia/GL). Also added (1.0.18): **`SubtitleBridge.java`**
 (MethodChannel `vespertv/subtitles` + EventChannel `vespertv/subtitles/cues`, attached in
 `VideoPlayerPlugin.registerPlayerInstance`) — lists/selects embedded text tracks and streams cue text;
-every player starts with text tracks disabled. **If `video_player_hdr` or its constraint
+every player starts with text tracks disabled. Added in 1.0.24: **live closed captions**
+(`HttpVideoAsset.liveCaptionExtractors`: `DefaultExtractorsFactory.setTsSubtitleFormats(CEA-608)`,
+so every .ts stream lists a "CC" track, empty when the channel has none; `SubtitleBridge` flags it
+`cc`), **decoder fallback** (`setEnableDecoderFallback(true)` in both players), and
+`VideoPlayer.dispose` **removes its listener before `release()`**: a 4K release on the Fire
+Stick passes ExoPlayer's 500 ms timeout, and the error recovery then re-prepared the released
+player on the main thread (an ANR was seen once). **If `video_player_hdr` or its constraint
 is ever bumped**, re-sync the vendored copy to the new version and re-apply all of these patches
 plus the gradle dependency line. Migrating to `media_kit` on Android was researched and
 rejected (HDR + Android-TV hardware-decode risk).
@@ -162,6 +168,19 @@ rejected (HDR + Android-TV hardware-decode risk).
   `TextField.onSubmitted`/`TextInputAction.next`, advancing focus to the next field instead of
   closing the keyboard. No app-level fix exists. A Formuler box does not have this problem (Back
   closes its keyboard normally).
+- **Text fields on a TV box go through `TvTextFieldGate` (`widgets/tv_text_field_gate.dart`,
+  1.0.24):** the field stays `readOnly` (no keyboard) until OK, so the D-pad can pass over it.
+  A plain `TextField` raises the keyboard as soon as it's focused: on Fire OS that took the
+  remote, and Back then cleared all focus. Never reopen the keyboard on Enter/numpadEnter,
+  because Fire OS sends a numpadEnter when Back closes its keyboard (Add Playlist and the Sports
+  picker did that, so Back reopened the keyboard forever). The keyboard also never follows Next
+  into the next field: Fire OS reports Back as that same Next action, so it can't be told apart
+  (tried, 2026-10-19: Back walked field to field). A new field on TV: wrap it, and give
+  its `onSubmitted` a focus target. Gated: Search, Add Playlist, Extras sources, Add-ons,
+  Sports picker. Not gated yet: the settings channel-linking/EPG-matching searches, dialogs.
+- **Opening Sports Trak, Settings or Search parks a background live channel**
+  (`_parkLiveChannel`, like Movies/TV Shows/Extras). Left playing, its video stayed on screen
+  over Sports Trak on a Fire Stick 4K Max (it covered the whole page with the full-video guide).
 - **A plain focusable widget (not a text field) competes with Flutter's own default directional
   traversal — `HardwareKeyboard.instance.addHandler` loses that race.** `add_playlist_screen.dart`'s
   `_handleFieldEscapeKey` reliably overrides arrow keys while a *text field* has focus only because
@@ -219,12 +238,21 @@ rejected (HDR + Android-TV hardware-decode risk).
   misses an AppBar `TextField`, so wrap the whole Scaffold (Search screen).
 - Open-source principle: **no embedded API keys.** Anything needing a key (TMDB, a future
   OpenSubtitles) is bring-your-own-key in Settings.
-- **REST/JSON Add-on Architecture:**
-  The app supports REST-based direct HTTP(S) video streaming.
-  The architecture strictly separates data providers: visual catalog grids are populated by default public metadata sources (like Cinemeta/TMDB),
-  while media playback requests are routed to custom user-provided stream endpoints via standard IMDB IDs.
-  The app strictly requires direct HTTPS media links (e.g., .mp4)
-  and does not parse or support raw data hashes or external client protocols.
+- **REST/JSON Add-on Architecture (Media Hub, code name Archive):**
+  Direct HTTP(S) video streaming only — no torrent hashes or external client protocols.
+  Two kinds of add-on source: a **stream-only** add-on on IMDb ids gets its grids/metas from
+  Cinemeta (`ArchiveCatalogProvider`) and only `/stream/` goes to the add-on; an add-on with **its
+  own catalogs** (any type, any id scheme — since 1.0.24) is browsed and played entirely from its
+  own `/catalog/`, `/meta/`, `/stream/`. Custom types (not movie/series) keep their type string
+  (`ArchiveCatalog.wireType` / `ArchiveMeta.wireType`) for requests and are browsed under Movies
+  behind the genre picker's **Other** entry only (`ArchiveService.otherGenre`; kept out of the
+  normal rows, search and Recently watched — adult add-ons, owner 2026-10-19).
+  **Jellyfin / Emby** (1.0.24, `services/media_server_api.dart`, `screens/settings/
+  media_server_screen.dart`): a server is an `ArchiveSource` with `server` (`MediaServerLogin`:
+  kind, userId, token, deviceId), libraries = catalogs, direct `/Videos/{id}/stream?static=true`
+  (no transcoding; key `ApiKey` Jellyfin / `api_key` Emby; auth header `Authorization` vs
+  `X-Emby-Authorization`+`X-Emby-Token`; Emby tried under `/emby`). Mock-tested only at release —
+  owner testing on a real Emby server. Not done: watched-state sync, server subtitles, Quick Connect.
 
 ## 11. Known bugs & fixes (full table in `dev-notes/bugs-and-fixes.md`)
 Look there before debugging. Still-open items: the **Fire OS stale launcher icon** (not fixable). The
@@ -233,7 +261,15 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 ## 12. Features (details in `dev-notes/features.md`)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
-## 13. Status & open items (as of 2026-10-18)
+## 13. Status & open items (as of 2026-10-19)
+- **Shipped: 1.0.24 (`+348`, 2026-10-19, latest).** Archive/Extras tab renamed **Media Hub**
+  (user-facing only; code/files/keys still `archive_*`); site repositioned as a "universal media
+  player"; add-ons with their own catalogs of any type/ids (Other filter); **Jellyfin / Emby**
+  sources (see §10 REST/JSON); Multiview name bar auto-hides after 4 s (`widgets/auto_hide_overlay.dart`,
+  it covered the NHL score bug; speaker dot bottom-right meanwhile) and the Multiview picker got
+  **Live now** (Sports Trak games playing now + matched channel) and **Sports** shortcuts
+  (`services/multiview_sports.dart`; Windows: chips). Also live CC captions, decoder fallback,
+  ANR fix on 4K release, `TvTextFieldGate`, Fit/Fill screen, parking live on Sports/Settings/Search.
 - Donations will go through GitHub Sponsors (pending approval). After approval: `FUNDING.yml`,
   site/README links and an About row. Relay `X-VesperTV-App` enforcement (`PAIR_REQUIRE_APP=1`) is
   ON since 2026-10-17 (service file backed up on the VPS as `pair-relay.service.bak-*`).

@@ -16,6 +16,7 @@ import '../services/storage_service.dart';
 import '../utils/tv_theme.dart';
 import '../widgets/poster_card.dart';
 import '../widgets/settings_scaffold.dart';
+import '../widgets/tv_text_field_gate.dart';
 import 'desktop_player_screen.dart';
 import 'player_screen.dart';
 import 'series_detail_screen.dart';
@@ -339,27 +340,37 @@ class _SearchScreenState extends State<SearchScreen> {
                     appBar: AppBar(
                       backgroundColor: Colors.transparent,
                       elevation: 0,
-                      title: TextField(
-                        controller: _controller,
+                      // TV: focused on open, keyboard on OK (a TCL Android TV
+                      // keyboard opened with the screen came up unusable).
+                      title: TvTextFieldGate(
                         focusNode: _searchFieldFocus,
-                        autofocus: true,
-                        textInputAction: TextInputAction.search,
-                        decoration: InputDecoration(
-                          hintText: tr('Search everything...'),
-                          border: InputBorder.none,
-                          hintStyle: TextStyle(
-                              color: Theme.of(context)
-                                  .appBarTheme
-                                  .foregroundColor
-                                  ?.withValues(alpha: 0.6)),
+                        builder: (context, readOnly) => TextField(
+                          controller: _controller,
+                          focusNode: _searchFieldFocus,
+                          readOnly: readOnly,
+                          autofocus: true,
+                          textInputAction: TextInputAction.search,
+                          decoration: InputDecoration(
+                            // readOnly = a TV box until OK is pressed.
+                            hintText: readOnly
+                                ? tr('Search everything... (press OK to type)')
+                                : tr('Search everything...'),
+                            border: InputBorder.none,
+                            hintStyle: TextStyle(
+                                color: Theme.of(context)
+                                    .appBarTheme
+                                    .foregroundColor
+                                    ?.withValues(alpha: 0.6)),
+                          ),
+                          style: TextStyle(
+                            color:
+                                Theme.of(context).appBarTheme.foregroundColor,
+                            fontSize: 18,
+                          ),
+                          onChanged: _onQueryChanged,
+                          onSubmitted: _recordSearch,
+                          onTap: () => _focusedZone = -1,
                         ),
-                        style: TextStyle(
-                          color: Theme.of(context).appBarTheme.foregroundColor,
-                          fontSize: 18,
-                        ),
-                        onChanged: _onQueryChanged,
-                        onSubmitted: _recordSearch,
-                        onTap: () => _focusedZone = -1,
                       ),
                       actions: [
                         if (_query.isNotEmpty)

@@ -253,6 +253,11 @@ class AppConstants {
   static const String keyWindowsWindowed = 'vesper_windows_windowed';
   static const String keyWindowsBounds = 'vesper_windows_bounds';
 
+  /// Fullscreen player: zoom the picture to fill the screen (crops the
+  /// edges) instead of fitting it with black bars — the player's ⛶ button.
+  /// This device only (a phone and a TV want different things).
+  static const String keyVideoFill = 'vesper_video_fill';
+
   /// 24-hour (default) vs 12-hour times everywhere — `utils/time_format.dart`.
   static const String keyTime24h = 'vesper_time_24h';
 

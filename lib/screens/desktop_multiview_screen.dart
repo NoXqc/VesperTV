@@ -6,7 +6,11 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:provider/provider.dart';
 
 import '../models/channel.dart';
+import '../services/epg_service.dart';
+import '../services/multiview_sports.dart';
 import '../services/playlist_manager.dart';
+import '../services/storage_service.dart';
+import '../widgets/auto_hide_overlay.dart';
 import '../l10n/l10n.dart';
 
 /// Windows-only: a grid of simultaneously-playing live channels —
@@ -304,115 +308,118 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
           borderRadius: BorderRadius.circular(8),
         ),
         clipBehavior: Clip.antiAlias,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (cell.controller != null)
+        // The name bar fades after a few seconds (it covered the score
+        // bug); it's back on a new channel, when the sound moves here, and
+        // while the mouse is over the tile (its buttons live there).
+        child: AutoHideOverlay(
+          flashKey: (cell.channel?.id, active),
+          hidden: active ? const MultiviewAudioBadge() : null,
+          video: cell.controller != null
               // AspectRatio wraps only the video, not the frame around it
               // — media_kit's Video widget has no fit/letterbox option of
               // its own and otherwise just stretches to fill whatever box
               // it's handed.
-              Center(
-                child: AspectRatio(
-                  aspectRatio: 16 / 9,
-                  child: Video(
-                      controller: cell.controller!, controls: NoVideoControls),
-                ),
-              )
-            else
-              const ColoredBox(
-                color: Color(0xFF1A1A1A),
-                child: Center(
-                  child: Icon(Icons.add_circle_outline,
-                      color: Colors.white38, size: 40),
-                ),
-              ),
-            if (cell.channel != null)
-              Positioned(
-                left: 0,
-                right: 0,
-                top: 0,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                  // Was a 2-stop gradient fading to transparent almost
-                  // immediately — reported directly as barely visible
-                  // against a bright/busy video frame. A mid-bar stop
-                  // keeps the whole header solidly dark (not just its
-                  // very top edge) before fading out underneath it, and
-                  // the text itself now carries its own shadow as a
-                  // second, independent line of contrast — the same
-                  // "readable over anything behind it" fix already used
-                  // elsewhere in this app (e.g. PosterCard's progress
-                  // label) rather than relying on the backdrop alone.
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      stops: const [0.0, 0.6, 1.0],
-                      colors: [
-                        Colors.black.withValues(alpha: 0.92),
-                        Colors.black.withValues(alpha: 0.92),
-                        Colors.transparent,
-                      ],
-                    ),
+              ? Center(
+                  child: AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: Video(
+                        controller: cell.controller!,
+                        controls: NoVideoControls),
                   ),
-                  child: Row(
-                    children: [
-                      if (active) ...[
-                        const Icon(Icons.volume_up,
-                            color: Colors.amber,
-                            size: 15,
-                            shadows: [
-                              Shadow(color: Colors.black, blurRadius: 4)
-                            ]),
-                        const SizedBox(width: 4),
-                      ],
-                      Expanded(
-                        child: Text(
-                          cell.channel!.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
+                )
+              : const ColoredBox(
+                  color: Color(0xFF1A1A1A),
+                  child: Center(
+                    child: Icon(Icons.add_circle_outline,
+                        color: Colors.white38, size: 40),
+                  ),
+                ),
+          overlay: cell.channel == null
+              ? const SizedBox.shrink()
+              : Positioned(
+                  left: 0,
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    // Was a 2-stop gradient fading to transparent almost
+                    // immediately — reported directly as barely visible
+                    // against a bright/busy video frame. A mid-bar stop
+                    // keeps the whole header solidly dark (not just its
+                    // very top edge) before fading out underneath it, and
+                    // the text itself now carries its own shadow as a
+                    // second, independent line of contrast — the same
+                    // "readable over anything behind it" fix already used
+                    // elsewhere in this app (e.g. PosterCard's progress
+                    // label) rather than relying on the backdrop alone.
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        stops: const [0.0, 0.6, 1.0],
+                        colors: [
+                          Colors.black.withValues(alpha: 0.92),
+                          Colors.black.withValues(alpha: 0.92),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        if (active) ...[
+                          const Icon(Icons.volume_up,
+                              color: Colors.amber,
+                              size: 15,
                               shadows: [
                                 Shadow(color: Colors.black, blurRadius: 4)
                               ]),
+                          const SizedBox(width: 4),
+                        ],
+                        Expanded(
+                          child: Text(
+                            cell.channel!.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                shadows: [
+                                  Shadow(color: Colors.black, blurRadius: 4)
+                                ]),
+                          ),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.refresh,
-                            color: Colors.white70, size: 18),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        tooltip: tr('Reload'),
-                        onPressed: () => _reload(index),
-                      ),
-                      const SizedBox(width: 6),
-                      IconButton(
-                        icon: const Icon(Icons.swap_horiz,
-                            color: Colors.white70, size: 18),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        tooltip: tr('Change channel'),
-                        onPressed: () => _openPicker(index),
-                      ),
-                      const SizedBox(width: 6),
-                      IconButton(
-                        icon: const Icon(Icons.close,
-                            color: Colors.white70, size: 18),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        tooltip: tr('Remove'),
-                        onPressed: () => _clear(index),
-                      ),
-                    ],
+                        IconButton(
+                          icon: const Icon(Icons.refresh,
+                              color: Colors.white70, size: 18),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          tooltip: tr('Reload'),
+                          onPressed: () => _reload(index),
+                        ),
+                        const SizedBox(width: 6),
+                        IconButton(
+                          icon: const Icon(Icons.swap_horiz,
+                              color: Colors.white70, size: 18),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          tooltip: tr('Change channel'),
+                          onPressed: () => _openPicker(index),
+                        ),
+                        const SizedBox(width: 6),
+                        IconButton(
+                          icon: const Icon(Icons.close,
+                              color: Colors.white70, size: 18),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          tooltip: tr('Remove'),
+                          onPressed: () => _clear(index),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-          ],
         ),
       ),
     );
@@ -433,9 +440,38 @@ class _ChannelPickerDialog extends StatefulWidget {
   State<_ChannelPickerDialog> createState() => _ChannelPickerDialogState();
 }
 
+/// The picker's quick filters: every channel, games playing now (with
+/// their matched channel) and sports channels — see [MultiviewSports].
+enum _PickerFilter { all, live, sports }
+
 class _ChannelPickerDialogState extends State<_ChannelPickerDialog> {
   final _searchController = TextEditingController();
   String _query = '';
+  _PickerFilter _filter = _PickerFilter.all;
+
+  /// Loaded the first time Live now is picked; null until then.
+  List<LiveGameChannel>? _live;
+  bool _liveLoading = false;
+
+  Future<void> _loadLive() async {
+    if (_live != null || _liveLoading) return;
+    setState(() => _liveLoading = true);
+    List<LiveGameChannel> live;
+    try {
+      live = await MultiviewSports.liveGames(
+        storage: context.read<StorageService>(),
+        playlist: context.read<PlaylistManager>(),
+        epg: context.read<EpgService>(),
+      );
+    } catch (_) {
+      live = const [];
+    }
+    if (!mounted) return;
+    setState(() {
+      _live = live;
+      _liveLoading = false;
+    });
+  }
 
   @override
   void dispose() {
@@ -445,11 +481,25 @@ class _ChannelPickerDialogState extends State<_ChannelPickerDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _query.isEmpty
-        ? widget.channels
-        : widget.channels
-            .where((c) => c.name.toLowerCase().contains(_query.toLowerCase()))
-            .toList();
+    final live = _live ?? const <LiveGameChannel>[];
+    final Iterable<Channel> base = switch (_filter) {
+      _PickerFilter.all => widget.channels,
+      _PickerFilter.live => [for (final l in live) l.channel],
+      _PickerFilter.sports => widget.channels.where(MultiviewSports.isSports),
+    };
+    final q = _query.toLowerCase();
+    final filtered = q.isEmpty
+        ? base.toList()
+        : base.where((c) => c.name.toLowerCase().contains(q)).toList();
+    Widget chip(_PickerFilter f, String label, IconData icon) => ChoiceChip(
+          avatar: Icon(icon, size: 18),
+          label: Text(label),
+          selected: _filter == f,
+          onSelected: (_) {
+            setState(() => _filter = f);
+            if (f == _PickerFilter.live) _loadLive();
+          },
+        );
     return Dialog(
       backgroundColor: const Color(0xFF1A1A1A),
       child: SizedBox(
@@ -472,25 +522,55 @@ class _ChannelPickerDialogState extends State<_ChannelPickerDialog> {
                 onChanged: (v) => setState(() => _query = v),
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+              child: Wrap(spacing: 8, children: [
+                chip(_PickerFilter.all, tr('All'), Icons.apps),
+                chip(_PickerFilter.live, tr('Live now'), Icons.sports_score),
+                chip(_PickerFilter.sports, tr('Sports'), Icons.sports),
+              ]),
+            ),
             Expanded(
-              child: ListView.builder(
-                itemCount: filtered.length,
-                itemBuilder: (context, i) {
-                  final c = filtered[i];
-                  return ListTile(
-                    leading: (c.logoUrl != null && c.logoUrl!.isNotEmpty)
-                        ? Image.network(c.logoUrl!,
-                            width: 32,
-                            height: 32,
-                            errorBuilder: (_, __, ___) =>
-                                const Icon(Icons.tv, color: Colors.white54))
-                        : const Icon(Icons.tv, color: Colors.white54),
-                    title: Text(c.name,
-                        style: const TextStyle(color: Colors.white)),
-                    onTap: () => Navigator.of(context).pop(c),
-                  );
-                },
-              ),
+              child: filtered.isEmpty
+                  ? Center(
+                      child: _filter == _PickerFilter.live && _live == null
+                          ? const CircularProgressIndicator()
+                          : Text(
+                              _filter == _PickerFilter.live
+                                  ? tr(
+                                      'No live games on your channels right now')
+                                  : tr('No channels found'),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.white54)),
+                    )
+                  : ListView.builder(
+                      itemCount: filtered.length,
+                      itemBuilder: (context, i) {
+                        final c = filtered[i];
+                        final game =
+                            _filter == _PickerFilter.live && i < live.length
+                                ? live[i].game
+                                : null;
+                        return ListTile(
+                          subtitle: game == null
+                              ? null
+                              : Text(MultiviewSports.label(game),
+                                  style:
+                                      const TextStyle(color: Colors.white54)),
+                          leading: (c.logoUrl != null && c.logoUrl!.isNotEmpty)
+                              ? Image.network(c.logoUrl!,
+                                  width: 32,
+                                  height: 32,
+                                  errorBuilder: (_, __, ___) => const Icon(
+                                      Icons.tv,
+                                      color: Colors.white54))
+                              : const Icon(Icons.tv, color: Colors.white54),
+                          title: Text(c.name,
+                              style: const TextStyle(color: Colors.white)),
+                          onTap: () => Navigator.of(context).pop(c),
+                        );
+                      },
+                    ),
             ),
           ],
         ),

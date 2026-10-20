@@ -16,6 +16,7 @@ import '../../widgets/mode_button.dart';
 import '../../widgets/phone_pair_panel.dart';
 import '../../widgets/section_label.dart';
 import '../../widgets/settings_scaffold.dart';
+import '../../widgets/tv_text_field_gate.dart';
 import '../../widgets/tv_menu_tile.dart';
 import '../catalog_sync_screen.dart';
 import 'group_management_screen.dart';
@@ -312,24 +313,9 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
     if (event is! KeyDownEvent) return false;
     if (!(ModalRoute.of(context)?.isCurrent ?? true)) return false;
 
-    // OK/Select on a field that already has focus. Flutter only raises the
-    // on-screen keyboard when a field *gains* focus, so once the keyboard
-    // has been dismissed there is otherwise no way back into the field
-    // you're standing on — pressing OK does nothing, while arrowing to the
-    // next field works, because that's a focus change. Reported from a
-    // real remote: stuck unable to type a username, while password (one
-    // press further down) accepted input fine.
-    if (event.logicalKey == LogicalKeyboardKey.select ||
-        event.logicalKey == LogicalKeyboardKey.enter ||
-        event.logicalKey == LogicalKeyboardKey.numpadEnter ||
-        event.logicalKey == LogicalKeyboardKey.gameButtonA) {
-      final focused = FocusManager.instance.primaryFocus;
-      if (_allTrackedFields.any((n) => n == focused)) {
-        SystemChannels.textInput.invokeMethod<void>('TextInput.show');
-        return true;
-      }
-      return false;
-    }
+    // OK on a field (raising its keyboard) is TvTextFieldGate's job now.
+    // This used to reopen the keyboard on any Enter too, and Fire OS sends
+    // an Enter when Back closes its keyboard: Back reopened it, forever.
 
     if (event.logicalKey != LogicalKeyboardKey.arrowDown &&
         event.logicalKey != LogicalKeyboardKey.arrowUp) {
@@ -928,48 +914,62 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                             else ...[
                               SectionLabel(tr('Playlist name')),
                               const SizedBox(height: 8),
-                              TextField(
-                                controller: _nameController,
+                              TvTextFieldGate(
                                 focusNode: _nameFocus,
-                                decoration: InputDecoration(
-                                  labelText: tr('Name'),
-                                  hintText: tr('e.g. My Provider, or 8kStrong'),
-                                  border: const OutlineInputBorder(),
+                                builder: (context, readOnly) => TextField(
+                                  controller: _nameController,
+                                  focusNode: _nameFocus,
+                                  readOnly: readOnly,
+                                  decoration: InputDecoration(
+                                    labelText: tr('Name'),
+                                    hintText:
+                                        tr('e.g. My Provider, or 8kStrong'),
+                                    border: const OutlineInputBorder(),
+                                  ),
+                                  textInputAction: TextInputAction.next,
+                                  // Goes to the first field *of the current
+                                  // mode* now, not a mode row that used to sit
+                                  // right below it — [_firstModeFieldFocus]'s
+                                  // doc comment has the per-mode mapping
+                                  // (including Smart Add's two stages).
+                                  onSubmitted: (_) =>
+                                      _firstModeFieldFocus.requestFocus(),
                                 ),
-                                textInputAction: TextInputAction.next,
-                                // Goes to the first field *of the current
-                                // mode* now, not a mode row that used to sit
-                                // right below it — [_firstModeFieldFocus]'s
-                                // doc comment has the per-mode mapping
-                                // (including Smart Add's two stages).
-                                onSubmitted: (_) =>
-                                    _firstModeFieldFocus.requestFocus(),
                               ),
                               const SizedBox(height: 16),
                               if (_mode == 'm3u') ...[
-                                TextField(
-                                  controller: _m3uController,
+                                TvTextFieldGate(
                                   focusNode: _m3uFocus,
-                                  decoration: InputDecoration(
-                                    labelText: tr('M3U Playlist URL'),
-                                    border: const OutlineInputBorder(),
+                                  builder: (context, readOnly) => TextField(
+                                    controller: _m3uController,
+                                    focusNode: _m3uFocus,
+                                    readOnly: readOnly,
+                                    decoration: InputDecoration(
+                                      labelText: tr('M3U Playlist URL'),
+                                      border: const OutlineInputBorder(),
+                                    ),
+                                    keyboardType: TextInputType.url,
+                                    textInputAction: TextInputAction.next,
+                                    onSubmitted: (_) =>
+                                        _epgFocus.requestFocus(),
                                   ),
-                                  keyboardType: TextInputType.url,
-                                  textInputAction: TextInputAction.next,
-                                  onSubmitted: (_) => _epgFocus.requestFocus(),
                                 ),
                                 const SizedBox(height: 16),
-                                TextField(
-                                  controller: _epgController,
+                                TvTextFieldGate(
                                   focusNode: _epgFocus,
-                                  decoration: InputDecoration(
-                                    labelText: tr('EPG (XMLTV) URL'),
-                                    border: const OutlineInputBorder(),
+                                  builder: (context, readOnly) => TextField(
+                                    controller: _epgController,
+                                    focusNode: _epgFocus,
+                                    readOnly: readOnly,
+                                    decoration: InputDecoration(
+                                      labelText: tr('EPG (XMLTV) URL'),
+                                      border: const OutlineInputBorder(),
+                                    ),
+                                    keyboardType: TextInputType.url,
+                                    textInputAction: TextInputAction.done,
+                                    onSubmitted: (_) =>
+                                        _addButtonFocus.requestFocus(),
                                   ),
-                                  keyboardType: TextInputType.url,
-                                  textInputAction: TextInputAction.done,
-                                  onSubmitted: (_) =>
-                                      _addButtonFocus.requestFocus(),
                                 ),
                               ] else if (_mode == 'smart' && !_smartParsed) ...[
                                 // Stage 1: paste box. Deliberately doesn't try to guess a
@@ -981,27 +981,31 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                                   style: Theme.of(context).textTheme.bodySmall,
                                 ),
                                 const SizedBox(height: 8),
-                                TextField(
-                                  controller: _smartPasteController,
+                                TvTextFieldGate(
                                   focusNode: _smartPasteFocus,
-                                  maxLines: 6,
-                                  minLines: 3,
-                                  decoration: InputDecoration(
-                                    labelText: tr('Paste provider message'),
-                                    hintText:
-                                        'username=...\npassword=...\nhttp://server.example.com/get.php?...',
-                                    alignLabelWithHint: true,
-                                    border: const OutlineInputBorder(),
+                                  builder: (context, readOnly) => TextField(
+                                    controller: _smartPasteController,
+                                    focusNode: _smartPasteFocus,
+                                    readOnly: readOnly,
+                                    maxLines: 6,
+                                    minLines: 3,
+                                    decoration: InputDecoration(
+                                      labelText: tr('Paste provider message'),
+                                      hintText:
+                                          'username=...\npassword=...\nhttp://server.example.com/get.php?...',
+                                      alignLabelWithHint: true,
+                                      border: const OutlineInputBorder(),
+                                    ),
+                                    // A paste (the normal way this field gets filled, via the
+                                    // Fire Stick's QR-code-to-phone-keyboard relay) inserts the
+                                    // whole multi-line block directly — it doesn't need the
+                                    // IME's own return key to type newlines one at a time, so
+                                    // claiming that key for a real "next field" action instead
+                                    // costs nothing real.
+                                    textInputAction: TextInputAction.done,
+                                    onSubmitted: (_) =>
+                                        _parseButtonFocus.requestFocus(),
                                   ),
-                                  // A paste (the normal way this field gets filled, via the
-                                  // Fire Stick's QR-code-to-phone-keyboard relay) inserts the
-                                  // whole multi-line block directly — it doesn't need the
-                                  // IME's own return key to type newlines one at a time, so
-                                  // claiming that key for a real "next field" action instead
-                                  // costs nothing real.
-                                  textInputAction: TextInputAction.done,
-                                  onSubmitted: (_) =>
-                                      _parseButtonFocus.requestFocus(),
                                 ),
                                 const SizedBox(height: 16),
                                 FilledButton.icon(
@@ -1065,58 +1069,75 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                                     ),
                                   ),
                                 const SizedBox(height: 8),
-                                TextField(
-                                  controller: _xtreamServerController,
+                                TvTextFieldGate(
                                   focusNode: _serverFocus,
-                                  decoration: InputDecoration(
-                                    labelText: tr(
-                                        'Server URL (e.g. http://host:port)'),
-                                    border: const OutlineInputBorder(),
+                                  builder: (context, readOnly) => TextField(
+                                    controller: _xtreamServerController,
+                                    focusNode: _serverFocus,
+                                    readOnly: readOnly,
+                                    decoration: InputDecoration(
+                                      labelText: tr(
+                                          'Server URL (e.g. http://host:port)'),
+                                      border: const OutlineInputBorder(),
+                                    ),
+                                    keyboardType: TextInputType.url,
+                                    textInputAction: TextInputAction.next,
+                                    onSubmitted: (_) =>
+                                        _usernameFocus.requestFocus(),
                                   ),
-                                  keyboardType: TextInputType.url,
-                                  textInputAction: TextInputAction.next,
-                                  onSubmitted: (_) =>
-                                      _usernameFocus.requestFocus(),
                                 ),
                                 const SizedBox(height: 16),
-                                TextField(
-                                  controller: _xtreamUsernameController,
+                                TvTextFieldGate(
                                   focusNode: _usernameFocus,
-                                  decoration: InputDecoration(
-                                    labelText: tr('Username'),
-                                    border: const OutlineInputBorder(),
+                                  builder: (context, readOnly) => TextField(
+                                    controller: _xtreamUsernameController,
+                                    focusNode: _usernameFocus,
+                                    readOnly: readOnly,
+                                    decoration: InputDecoration(
+                                      labelText: tr('Username'),
+                                      border: const OutlineInputBorder(),
+                                    ),
+                                    textInputAction: TextInputAction.next,
+                                    onSubmitted: (_) =>
+                                        _passwordFocus.requestFocus(),
                                   ),
-                                  textInputAction: TextInputAction.next,
-                                  onSubmitted: (_) =>
-                                      _passwordFocus.requestFocus(),
                                 ),
                                 const SizedBox(height: 16),
-                                TextField(
-                                  controller: _xtreamPasswordController,
+                                TvTextFieldGate(
                                   focusNode: _passwordFocus,
-                                  // Shown in plain text on purpose: provider
-                                  // passwords are long and random, and typing
-                                  // them blind with a remote is error-prone.
-                                  decoration: InputDecoration(
-                                    labelText: tr('Password'),
-                                    border: const OutlineInputBorder(),
+                                  builder: (context, readOnly) => TextField(
+                                    controller: _xtreamPasswordController,
+                                    focusNode: _passwordFocus,
+                                    readOnly: readOnly,
+                                    // Shown in plain text on purpose: provider
+                                    // passwords are long and random, and typing
+                                    // them blind with a remote is error-prone.
+                                    decoration: InputDecoration(
+                                      labelText: tr('Password'),
+                                      border: const OutlineInputBorder(),
+                                    ),
+                                    textInputAction: TextInputAction.next,
+                                    onSubmitted: (_) =>
+                                        _epgFocus.requestFocus(),
                                   ),
-                                  textInputAction: TextInputAction.next,
-                                  onSubmitted: (_) => _epgFocus.requestFocus(),
                                 ),
                                 const SizedBox(height: 16),
-                                TextField(
-                                  controller: _epgController,
+                                TvTextFieldGate(
                                   focusNode: _epgFocus,
-                                  decoration: InputDecoration(
-                                    labelText:
-                                        tr('Custom EPG (XMLTV) URL — optional'),
-                                    border: const OutlineInputBorder(),
+                                  builder: (context, readOnly) => TextField(
+                                    controller: _epgController,
+                                    focusNode: _epgFocus,
+                                    readOnly: readOnly,
+                                    decoration: InputDecoration(
+                                      labelText: tr(
+                                          'Custom EPG (XMLTV) URL — optional'),
+                                      border: const OutlineInputBorder(),
+                                    ),
+                                    keyboardType: TextInputType.url,
+                                    textInputAction: TextInputAction.done,
+                                    onSubmitted: (_) =>
+                                        _addButtonFocus.requestFocus(),
                                   ),
-                                  keyboardType: TextInputType.url,
-                                  textInputAction: TextInputAction.done,
-                                  onSubmitted: (_) =>
-                                      _addButtonFocus.requestFocus(),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
@@ -1133,58 +1154,75 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                                   },
                                 ),
                               ] else ...[
-                                TextField(
-                                  controller: _xtreamServerController,
+                                TvTextFieldGate(
                                   focusNode: _serverFocus,
-                                  decoration: InputDecoration(
-                                    labelText: tr(
-                                        'Server URL (e.g. http://host:port)'),
-                                    border: const OutlineInputBorder(),
+                                  builder: (context, readOnly) => TextField(
+                                    controller: _xtreamServerController,
+                                    focusNode: _serverFocus,
+                                    readOnly: readOnly,
+                                    decoration: InputDecoration(
+                                      labelText: tr(
+                                          'Server URL (e.g. http://host:port)'),
+                                      border: const OutlineInputBorder(),
+                                    ),
+                                    keyboardType: TextInputType.url,
+                                    textInputAction: TextInputAction.next,
+                                    onSubmitted: (_) =>
+                                        _usernameFocus.requestFocus(),
                                   ),
-                                  keyboardType: TextInputType.url,
-                                  textInputAction: TextInputAction.next,
-                                  onSubmitted: (_) =>
-                                      _usernameFocus.requestFocus(),
                                 ),
                                 const SizedBox(height: 16),
-                                TextField(
-                                  controller: _xtreamUsernameController,
+                                TvTextFieldGate(
                                   focusNode: _usernameFocus,
-                                  decoration: InputDecoration(
-                                    labelText: tr('Username'),
-                                    border: const OutlineInputBorder(),
+                                  builder: (context, readOnly) => TextField(
+                                    controller: _xtreamUsernameController,
+                                    focusNode: _usernameFocus,
+                                    readOnly: readOnly,
+                                    decoration: InputDecoration(
+                                      labelText: tr('Username'),
+                                      border: const OutlineInputBorder(),
+                                    ),
+                                    textInputAction: TextInputAction.next,
+                                    onSubmitted: (_) =>
+                                        _passwordFocus.requestFocus(),
                                   ),
-                                  textInputAction: TextInputAction.next,
-                                  onSubmitted: (_) =>
-                                      _passwordFocus.requestFocus(),
                                 ),
                                 const SizedBox(height: 16),
-                                TextField(
-                                  controller: _xtreamPasswordController,
+                                TvTextFieldGate(
                                   focusNode: _passwordFocus,
-                                  // Shown in plain text on purpose: provider
-                                  // passwords are long and random, and typing
-                                  // them blind with a remote is error-prone.
-                                  decoration: InputDecoration(
-                                    labelText: tr('Password'),
-                                    border: const OutlineInputBorder(),
+                                  builder: (context, readOnly) => TextField(
+                                    controller: _xtreamPasswordController,
+                                    focusNode: _passwordFocus,
+                                    readOnly: readOnly,
+                                    // Shown in plain text on purpose: provider
+                                    // passwords are long and random, and typing
+                                    // them blind with a remote is error-prone.
+                                    decoration: InputDecoration(
+                                      labelText: tr('Password'),
+                                      border: const OutlineInputBorder(),
+                                    ),
+                                    textInputAction: TextInputAction.next,
+                                    onSubmitted: (_) =>
+                                        _epgFocus.requestFocus(),
                                   ),
-                                  textInputAction: TextInputAction.next,
-                                  onSubmitted: (_) => _epgFocus.requestFocus(),
                                 ),
                                 const SizedBox(height: 16),
-                                TextField(
-                                  controller: _epgController,
+                                TvTextFieldGate(
                                   focusNode: _epgFocus,
-                                  decoration: InputDecoration(
-                                    labelText:
-                                        tr('Custom EPG (XMLTV) URL — optional'),
-                                    border: const OutlineInputBorder(),
+                                  builder: (context, readOnly) => TextField(
+                                    controller: _epgController,
+                                    focusNode: _epgFocus,
+                                    readOnly: readOnly,
+                                    decoration: InputDecoration(
+                                      labelText: tr(
+                                          'Custom EPG (XMLTV) URL — optional'),
+                                      border: const OutlineInputBorder(),
+                                    ),
+                                    keyboardType: TextInputType.url,
+                                    textInputAction: TextInputAction.done,
+                                    onSubmitted: (_) =>
+                                        _addButtonFocus.requestFocus(),
                                   ),
-                                  keyboardType: TextInputType.url,
-                                  textInputAction: TextInputAction.done,
-                                  onSubmitted: (_) =>
-                                      _addButtonFocus.requestFocus(),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
