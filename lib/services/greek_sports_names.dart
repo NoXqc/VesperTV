@@ -203,9 +203,98 @@ const List<GreekTeamName> greekTeamNames = [
       stems: ['Λαύρι', 'Λαυρι', 'ΛΑΥΡΙ']),
 ];
 
-/// The [greekTeamNames] entry for a team's normalized name, if any.
+/// EuroLeague clubs as Greek guides write them (Nova on Strong8K:
+/// "Live: Μπάσκετ: Χάποελ Τελ Αβίβ - Βίρτους Μπολόνια" — no Latin, no
+/// competition name; owner's Greek user, 2026-10-20). Spellings from
+/// Nova's own listings. The football namesakes (Real, Barcelona, Bayern,
+/// PSG…) are written the same way, so the keys aren't basketball-only.
+const List<GreekTeamName> greekForeignTeamNames = [
+  GreekTeamName(
+      keys: [' hapoel '],
+      phrases: [' chapoel '],
+      stems: ['Χάποελ', 'Χαποελ', 'ΧΑΠΟΕΛ']),
+  GreekTeamName(
+      keys: [' maccabi '],
+      phrases: [' makampi '],
+      stems: ['Μακάμπι', 'Μακαμπι', 'ΜΑΚΑΜΠΙ']),
+  GreekTeamName(
+      keys: [' virtus '],
+      phrases: [' virtous '],
+      stems: ['Βίρτους', 'Βιρτους', 'ΒΙΡΤΟΥΣ']),
+  GreekTeamName(
+      keys: [' efes '], phrases: [' efes '], stems: ['Εφές', 'Εφες', 'ΕΦΕΣ']),
+  GreekTeamName(
+      keys: [' besiktas '],
+      phrases: [' mpesiktas '],
+      stems: ['Μπεσίκτα', 'Μπεσικτα', 'ΜΠΕΣΙΚΤΑ']),
+  GreekTeamName(
+      keys: [' real madrid '],
+      phrases: [' real madritis '],
+      stems: ['Ρεάλ', 'Ρεαλ', 'ΡΕΑΛ']),
+  GreekTeamName(
+      keys: [' baskonia '],
+      phrases: [' mpaskonia '],
+      stems: ['Μπασκόνια', 'Μπασκονια', 'ΜΠΑΣΚΟΝΙΑ']),
+  GreekTeamName(
+      keys: [' dubai '],
+      phrases: [' ntoumpai '],
+      stems: ['Ντουμπάι', 'Ντουμπαι', 'ΝΤΟΥΜΠΑΙ']),
+  GreekTeamName(
+      keys: [' bayern '],
+      phrases: [' mpagern '],
+      stems: ['Μπάγερν', 'Μπαγερν', 'ΜΠΑΓΕΡΝ']),
+  GreekTeamName(
+      keys: [' barcelona '],
+      phrases: [' mpartselona '],
+      stems: ['Μπαρτσελόν', 'Μπαρτσελον', 'ΜΠΑΡΤΣΕΛΟΝ']),
+  GreekTeamName(
+      keys: [' fenerbahce '],
+      phrases: [' fenermpachtse '],
+      stems: ['Φενέρμπαχτσ', 'Φενερμπαχτσ', 'ΦΕΝΕΡΜΠΑΧΤΣ']),
+  GreekTeamName(
+      keys: [' olimpia milano ', ' armani '],
+      phrases: [' armani '],
+      stems: ['Αρμάνι', 'Αρμανι', 'ΑΡΜΑΝΙ']),
+  GreekTeamName(
+      keys: [' partizan '],
+      phrases: [' partizan '],
+      stems: ['Παρτίζαν', 'Παρτιζαν', 'ΠΑΡΤΙΖΑΝ']),
+  GreekTeamName(
+      keys: [' crvena zvezda ', ' red star '],
+      phrases: [' erythros asteras '],
+      stems: ['Ερυθρ', 'ΕΡΥΘΡ']),
+  GreekTeamName(
+      keys: [' zalgiris '],
+      phrases: [' zalgkiris '],
+      stems: ['Ζάλγκιρ', 'Ζαλγκιρ', 'ΖΑΛΓΚΙΡ']),
+  GreekTeamName(keys: [
+    ' valencia '
+  ], phrases: [
+    ' valenthia ',
+    ' valensia '
+  ], stems: [
+    'Βαλένθι',
+    'Βαλενθι',
+    'ΒΑΛΕΝΘΙ',
+    'Βαλένσι',
+    'Βαλενσι',
+    'ΒΑΛΕΝΣΙ'
+  ]),
+  GreekTeamName(
+      keys: [' asvel ', ' villeurbanne '],
+      phrases: [' vilermpan ', ' asvel '],
+      stems: ['Βιλερμπ', 'ΒΙΛΕΡΜΠ', 'Άσβελ', 'Ασβελ', 'ΑΣΒΕΛ']),
+  GreekTeamName(keys: [' paris '], phrases: [' pari '], stems: ['Παρί']),
+  GreekTeamName(
+      keys: [' monaco '],
+      phrases: [' monako '],
+      stems: ['Μονακό', 'Μονακο', 'ΜΟΝΑΚΟ']),
+];
+
+/// The [greekTeamNames] / [greekForeignTeamNames] entry for a team's
+/// normalized name, if any.
 GreekTeamName? greekTeamFor(String normalizedName) {
-  for (final t in greekTeamNames) {
+  for (final t in [...greekTeamNames, ...greekForeignTeamNames]) {
     if (t.keys.any(normalizedName.contains)) return t;
   }
   return null;

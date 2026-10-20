@@ -197,6 +197,31 @@ const Map<String, String> _foldAccents = {
   'ü': 'u',
   'ý': 'y',
   'ß': 'ss',
+  // Balkan, Turkish and Central European guides (Sport Klub, Arena:
+  // "Beşiktaş", "Žalgiris", "Crvena zvezda") — unfolded they split words.
+  'č': 'c',
+  'ć': 'c',
+  'š': 's',
+  'ž': 'z',
+  'đ': 'd',
+  'ş': 's',
+  'ğ': 'g',
+  'ı': 'i',
+  'ł': 'l',
+  'ą': 'a',
+  'ę': 'e',
+  'ń': 'n',
+  'ś': 's',
+  'ź': 'z',
+  'ż': 'z',
+  'ő': 'o',
+  'ű': 'u',
+  'ř': 'r',
+  'ě': 'e',
+  'ů': 'u',
+  'ț': 't',
+  'ș': 's',
+  'ă': 'a',
 };
 
 /// Streaming-only services ESPN lists that have no linear channel to find.
@@ -271,6 +296,11 @@ const _months = {
   'nov': 11,
   'dec': 12,
 };
+
+/// App language -> the channel-name country tag that viewer watches. Only
+/// Greek so far: French/Spanish/Italian viewers of this app mostly watch
+/// North American feeds, which rank first by default.
+const Map<String, String> _languageTags = {'el': 'gr'};
 
 /// Finds IPTV channels for games, best signal first (measured on a real
 /// provider, see dev-notes/sports-tab.md "Channel-matching test"):
@@ -495,13 +525,17 @@ class SportsChannelMatcher {
   /// nothing is dropped except for network matches.
   ///
   /// A league's own country ([SportsLeague.homeTags]: "gr" for the Greek
-  /// leagues) ranks its channels first instead (+20, above English).
+  /// leagues) ranks its channels first instead (+20, above English), and so
+  /// does the viewer's own when the app is in Greek ([_languageTags]: a Greek
+  /// viewer's EuroLeague game listed the Croatian feeds above Nova, owner,
+  /// 2026-10-20).
   int _regionBias(int index, [SportsLeague? league]) {
     final tokens = _names[index].trim().split(' ');
     final home = league?.homeTags ?? const <String>[];
+    final own = _languageTags[L10n.code];
     var bias = 0;
     for (final t in tokens) {
-      if (home.contains(t)) return 20;
+      if (home.contains(t) || t == own) return 20;
     }
     for (final t in tokens) {
       if (_englishTags.contains(t)) bias = math.max(bias, 10);
