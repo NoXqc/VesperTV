@@ -424,6 +424,51 @@ class SportsService {
     });
   }
 
+  /// TheSportsDB's day call stops at [SportsDbSource.dayCap] games: a day at
+  /// the cap gets the rest from its whole round(s), cut to that UTC day.
+  /// The day's own list stands if a round can't be loaded.
+  Future<List<SportsGame>> _completeCappedDay(SportsLeague league,
+      DateTime date, String body, List<SportsGame> games) async {
+    final byId = {for (final g in games) g.id: g};
+    for (final url in SportsDbSource.roundUrls(league, body)) {
+      try {
+        final round = await _roundBody(league, url);
+        if (round == null) continue;
+        for (final g in await compute(parseSportsDbEvents, (round, league))) {
+          final s = g.start.toUtc();
+          if (s.year == date.year &&
+              s.month == date.month &&
+              s.day == date.day) {
+            byId.putIfAbsent(g.id, () => g);
+          }
+        }
+      } catch (e) {
+        debugPrint('SportsService: ${league.id} round failed: $e');
+      }
+    }
+    return byId.values.toList()..sort((a, b) => a.start.compareTo(b.start));
+  }
+
+  /// A round is fetched for each capped day around the one shown (see
+  /// [gamesForDay]) — the same URL, so it's shared for 2 minutes.
+  final Map<Uri, (Future<String?>, DateTime)> _rounds = {};
+
+  Future<String?> _roundBody(SportsLeague league, Uri url) {
+    final hit = _rounds[url];
+    if (hit != null &&
+        DateTime.now().difference(hit.$2) < const Duration(minutes: 2)) {
+      return hit.$1;
+    }
+    final body =
+        _get(league, url).then((r) => r.statusCode == 200 ? r.body : null);
+    _rounds[url] = (body, DateTime.now());
+    body.catchError((_) {
+      _rounds.remove(url);
+      return null;
+    });
+    return body;
+  }
+
   Future<List<SportsGame>> _download(
       SportsLeague league, DateTime date, String key) async {
     final db = league.sportsDbId != null;
@@ -441,8 +486,9 @@ class SportsService {
       final body = response.body;
       // A busy NFL Sunday is a few hundred KB of JSON — decoded off the UI
       // isolate so the screen keeps responding on a weak box.
-      final games = await compute(
+      var games = await compute(
           db ? parseSportsDbEvents : parseEspnScoreboard, (body, league));
+      if (db) games = await _completeCappedDay(league, date, body, games);
       _cache[key] = _CacheEntry(games, DateTime.now(), sportsDb: db);
       lastError = null;
       return games;

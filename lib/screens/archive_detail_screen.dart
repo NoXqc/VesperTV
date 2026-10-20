@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/l10n.dart';
@@ -100,41 +103,54 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
     final narrow = size.width < 700;
     final meta = _meta;
     final backdrop = meta.backgroundUrl;
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: DetailBackdrop(
-                url: backdrop ?? meta.posterUrl, fadeLeft: !narrow),
-          ),
-          SafeArea(
-            child: ListView(
-              padding: EdgeInsets.fromLTRB(
-                  narrow ? 16 : 40, narrow ? 8 : 32, narrow ? 16 : 40, 32),
-              children: [
-                if (narrow)
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back),
-                      onPressed: () => Navigator.of(context).maybePop(),
-                    ),
-                  ),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (meta.posterUrl != null && !narrow) ...[
-                      DetailPoster(url: meta.posterUrl!, width: 150),
-                      const SizedBox(width: 24),
-                    ],
-                    Expanded(child: _buildInfo(meta)),
-                  ],
-                ),
-              ],
+    // Windows has no remote Back: Esc pops, and the arrow is shown at every
+    // width (it was narrow-only, so wide windows had no way out).
+    return CallbackShortcuts(
+      bindings: {
+        if (Platform.isWindows)
+          const SingleActivator(LogicalKeyboardKey.escape): () =>
+              Navigator.of(context).maybePop(),
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: DetailBackdrop(
+                  url: backdrop ?? meta.posterUrl, fadeLeft: !narrow),
             ),
-          ),
-        ],
+            SafeArea(
+              child: ListView(
+                padding: EdgeInsets.fromLTRB(
+                    narrow ? 16 : 40, narrow ? 8 : 32, narrow ? 16 : 40, 32),
+                children: [
+                  if (narrow || Platform.isWindows)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: ExcludeFocus(
+                        excluding: !narrow,
+                        child: IconButton(
+                          tooltip: tr('Back'),
+                          icon: const Icon(Icons.arrow_back),
+                          onPressed: () => Navigator.of(context).maybePop(),
+                        ),
+                      ),
+                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (meta.posterUrl != null && !narrow) ...[
+                        DetailPoster(url: meta.posterUrl!, width: 150),
+                        const SizedBox(width: 24),
+                      ],
+                      Expanded(child: _buildInfo(meta)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

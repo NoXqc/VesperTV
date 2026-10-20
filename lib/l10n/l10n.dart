@@ -4,13 +4,14 @@ import 'package:flutter/widgets.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 
+import 'el.dart';
 import 'es.dart';
 import 'fr.dart';
 import 'it.dart';
 
 /// App-wide UI language. English strings in the code are the keys
 /// (`tr('Settings')`); [_dictionaries] maps them to each other language
-/// ([kFr], [kEs], [kIt]). A missing entry falls back to the English text, so
+/// ([kFr], [kEs], [kIt], [kEl]). A missing entry falls back to the English text, so
 /// a forgotten string shows in English, never blank.
 ///
 /// Deliberately not Flutter's gen-l10n: many strings live in services and
@@ -27,7 +28,7 @@ class L10n {
   /// The setting: 'auto' (follow the device) or a language code.
   static String setting = 'auto';
 
-  /// The resolved language actually in use: 'en', 'fr', 'es' or 'it'.
+  /// The resolved language actually in use: 'en', 'fr', 'es', 'it' or 'el'.
   static String code = 'en';
 
   static Locale get locale => Locale(code);
@@ -37,6 +38,7 @@ class L10n {
     Locale('fr'),
     Locale('es'),
     Locale('it'),
+    Locale('el'),
   ];
 
   static bool _supported(String c) => c == 'en' || _dictionaries.containsKey(c);
@@ -56,6 +58,7 @@ const Map<String, Map<String, String>> _dictionaries = {
   'fr': kFr,
   'es': kEs,
   'it': kIt,
+  'el': kEl,
 };
 
 /// Translate [en] into the current language. `{name}` placeholders are filled
@@ -88,6 +91,8 @@ class _SportsLanguage {
 String _frOrdinal(String n) => n == '1' ? '1re' : '${n}e';
 String _esOrdinal(String n) => '$n.º';
 String _itOrdinal(String n) => '$nº';
+// Neuter ("1ο ημίχρονο", "7ο – …"); the status words below are neuter too.
+String _elOrdinal(String n) => '$nο';
 
 const Map<String, _SportsLanguage> _sportsLanguages = {
   'fr': _SportsLanguage(
@@ -217,6 +222,49 @@ const Map<String, _SportsLanguage> _sportsLanguages = {
       'Play Complete': 'Giro concluso',
       'Scheduled': 'In programma',
       'Lap': 'Giro',
+    },
+  ),
+  'el': _SportsLanguage(
+    ordinal: _elOrdinal,
+    overtime: 'παρ.',
+    shootout: 'πέν.',
+    words: {
+      'Final': 'Τελικό',
+      'Halftime': 'Ημίχρονο',
+      'Half': 'ημίχρονο',
+      'Delayed': 'Καθυστέρηση',
+      'Rain Delay': 'Καθυστέρηση (βροχή)',
+      'Postponed': 'Αναβλήθηκε',
+      'Canceled': 'Ακυρώθηκε',
+      'Cancelled': 'Ακυρώθηκε',
+      'Suspended': 'Διακόπηκε',
+      'Forfeit': 'Μηδενισμός',
+      'End of': 'Τέλος',
+      'End': 'Τέλος',
+      'Top': 'Πάνω',
+      'Bot': 'Κάτω',
+      'Bottom': 'Κάτω',
+      'Mid': 'Μέση',
+      'Middle': 'Μέση',
+      'OT': 'Παρ.',
+      'SO': 'Πέν.',
+      'FT': 'Τελικό',
+      'HT': 'Ημίχρονο',
+      'AET': 'Παρ.',
+      'Pens': 'Πέν.',
+      'Intermission': 'Διάλειμμα',
+      'Quarter': 'δεκάλεπτο',
+      'Period': 'μέρος',
+      'Inning': 'inning',
+      // Golf / racing.
+      'Round': 'Γύρος',
+      'Race': 'Αγώνας',
+      'Qualifying': 'Κατατακτήριες',
+      'Complete': 'Ολοκληρώθηκε',
+      'In Progress': 'Σε εξέλιξη',
+      'Play Complete': 'Ο γύρος ολοκληρώθηκε',
+      'Scheduled': 'Προγραμματισμένο',
+      'Lap': 'Γύρος',
     },
   ),
 };

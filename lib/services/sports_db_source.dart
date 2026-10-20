@@ -11,9 +11,10 @@ import '../models/sports.dart';
 ///
 /// Uses TheSportsDB's public free key (`123`, shared by every free user —
 /// not a secret, so no BYOK). The free tier is enough for the Sports tab:
-/// every game of a league on one day with final scores, the next game, and
-/// the top 5 of the table (that's all it returns). No live minute, box
-/// score or full table — those need a paid key.
+/// a league's games with final scores, the next game, and the top 5 of the
+/// table (that's all it returns). No live minute, box score or full table —
+/// those need a paid key. A day is capped at [dayCap] games; a whole round
+/// isn't, so a capped day is completed from its rounds ([roundUrls]).
 ///
 /// Rate limit (measured 2026-10-20): ~10 quick requests, then HTTP 429 with
 /// a `Retry-After` that grows on repeat (35 s, then 120 s). So every request
@@ -69,6 +70,30 @@ class SportsDbSource {
       Uri.parse('$_base/eventsday.php?d=${_date(utcDate)}'
           '&l=${league.sportsDbId}');
 
+  /// The free key's per-league day limit: Super League 2 had 5 games on
+  /// 2026-10-18 and `eventsday` returned 3 (user report: games missing).
+  static const dayCap = 3;
+
+  /// When a day came back at [dayCap], the rounds its games belong to —
+  /// `eventsround` returns a whole round (10 EuroLeague, 8 Super League 2
+  /// games, checked 2026-10-20); the caller keeps that day's games.
+  static List<Uri> roundUrls(SportsLeague league, String dayBody) {
+    final json = jsonDecode(dayBody);
+    final list = json is Map ? json['events'] : null;
+    if (list is! List || list.length < dayCap) return const [];
+    final urls = <String>{};
+    for (final e in list) {
+      if (e is! Map) continue;
+      final round = e['intRound']?.toString() ?? '';
+      final season = e['strSeason']?.toString() ?? '';
+      if (round.isEmpty || round == '0' || season.isEmpty) continue;
+      urls.add('$_base/eventsround.php?id=${league.sportsDbId}'
+          '&r=${Uri.encodeQueryComponent(round)}'
+          '&s=${Uri.encodeQueryComponent(season)}');
+    }
+    return [for (final u in urls) Uri.parse(u)];
+  }
+
   static Uri nextUrl(SportsLeague league) =>
       Uri.parse('$_base/eventsnextleague.php?id=${league.sportsDbId}');
 
@@ -114,6 +139,12 @@ SportsGame? _parseEvent(Map<String, dynamic> e, SportsLeague league) {
     'MATCH FINISHED' => (GameState.post, 'FT'),
     'PST' || 'POSTPONED' => (GameState.post, 'Postponed'),
     'CANC' || 'ABD' => (GameState.post, 'Canceled'),
+    'AOT' => (GameState.post, 'Final/OT'),
+    'Q1' => (GameState.live, '1st Quarter'),
+    'Q2' => (GameState.live, '2nd Quarter'),
+    'Q3' => (GameState.live, '3rd Quarter'),
+    'Q4' => (GameState.live, '4th Quarter'),
+    'OT' => (GameState.live, 'OT'),
     '1H' => (GameState.live, '1st Half'),
     '2H' => (GameState.live, '2nd Half'),
     'HT' => (GameState.live, 'HT'),
@@ -132,7 +163,7 @@ SportsGame? _parseEvent(Map<String, dynamic> e, SportsLeague league) {
     return SportsTeam(
       id: (e['id${side}Team'] ?? name).toString(),
       name: name,
-      shortName: name,
+      shortName: sportsDbShortName(name),
       abbreviation: '',
       logoUrl: e['str${side}TeamBadge']?.toString(),
       score: score('int${side}Score'),
@@ -149,6 +180,24 @@ SportsGame? _parseEvent(Map<String, dynamic> e, SportsLeague league) {
     away: team('Away'),
   );
 }
+
+/// TheSportsDB uses registered club names ("Hapoel Tel Aviv BC", "Virtus
+/// Pallacanestro Bologna", "Real Madrid Baloncesto"); guides and event
+/// channels say "Hapoel Tel Aviv", "Virtus Bologna", "Real Madrid". The short
+/// name drops the club-type words so the channel matcher has a phrase they
+/// actually use (it tries both names). Too short once stripped: the name.
+String sportsDbShortName(String name) {
+  final short = name
+      .split(' ')
+      .where((w) => w.isNotEmpty && !_clubWords.contains(w.toLowerCase()))
+      .join(' ');
+  return short.length >= 4 ? short : name;
+}
+
+const _clubWords = {
+  'ac', 'as', 'bc', 'bk', 'cf', 'fc', 'kb', 'kk', 'sc', 'sk', //
+  'basket', 'basketball', 'basketbol', 'baloncesto', 'pallacanestro',
+};
 
 /// `strTimestamp` is UTC without a zone ("2026-10-18T13:00:00"); older
 /// rows only have `dateEvent` + `strTime` (also UTC).

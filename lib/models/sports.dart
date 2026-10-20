@@ -38,12 +38,17 @@ class SportsLeague {
     this.hasStandings = true,
     this.kind = SportsKind.team,
     this.seriesPhrases = const [],
+    this.homeTags = const [],
   });
+
+  /// Country tags of the league's own channels ("gr"): those rank first
+  /// for its games, not last as foreign feeds (SportsChannelMatcher).
+  final List<String> homeTags;
 
   final SportsKind kind;
 
   /// Event sports: how channels and guide titles name the series ("formula
-  /// 1", "nascar", "pga tour"), lower-case — the channel matcher's fallback
+  /// 1", "nascar", "pga tour"), lower-case (Greek: raw spellings) — the channel matcher's fallback
   /// when no channel names the event itself.
   final List<String> seriesPhrases;
 
@@ -412,6 +417,7 @@ const List<SportsLeague> kSportsLeagueBank = [
   SportsLeague(
       id: 'gre.1',
       espnPath: 'soccer/gre.1',
+      homeTags: ['gr'],
       name: 'Greek Super League',
       shortName: 'GRE',
       logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/98.png',
@@ -456,6 +462,7 @@ const List<SportsLeague> kSportsLeagueBank = [
   SportsLeague(
       id: 'rou.1',
       espnPath: 'soccer/rou.1',
+      homeTags: ['ro'],
       sportsDbId: '4691',
       name: 'Romanian Liga I',
       shortName: 'LIGA 1',
@@ -466,6 +473,7 @@ const List<SportsLeague> kSportsLeagueBank = [
   SportsLeague(
       id: 'rou.2',
       espnPath: 'soccer/rou.2',
+      homeTags: ['ro'],
       sportsDbId: '4665',
       name: 'Romanian Liga II',
       shortName: 'LIGA 2',
@@ -476,6 +484,7 @@ const List<SportsLeague> kSportsLeagueBank = [
   SportsLeague(
       id: 'cro.1',
       espnPath: 'soccer/cro.1',
+      homeTags: ['hr'],
       sportsDbId: '4629',
       name: 'Croatian HNL',
       shortName: 'HNL',
@@ -486,6 +495,7 @@ const List<SportsLeague> kSportsLeagueBank = [
   SportsLeague(
       id: 'srb.1',
       espnPath: 'soccer/srb.1',
+      homeTags: ['rs'],
       sportsDbId: '4671',
       name: 'Serbian SuperLiga',
       shortName: 'SSL',
@@ -496,11 +506,23 @@ const List<SportsLeague> kSportsLeagueBank = [
   SportsLeague(
       id: 'bul.1',
       espnPath: 'soccer/bul.1',
+      homeTags: ['bg'],
       sportsDbId: '4626',
       name: 'Bulgarian First League',
       shortName: 'EFBET',
       logoUrl:
           'https://r2.thesportsdb.com/images/media/league/badge/nujbma1730047938.png',
+      region: 'Europe',
+      soccer: true),
+  SportsLeague(
+      id: 'gre.2',
+      espnPath: 'soccer/gre.2',
+      sportsDbId: '4640',
+      homeTags: ['gr'],
+      name: 'Greek Super League 2',
+      shortName: 'SL2',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/kosnhq1698212674.png',
       region: 'Europe',
       soccer: true),
   SportsLeague(
@@ -822,6 +844,34 @@ const List<SportsLeague> kSportsLeagueBank = [
       logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2408.png',
       region: 'Women',
       soccer: true),
+  // Not on ESPN (its euroleague feed is empty): TheSportsDB, 2026-10-20.
+  SportsLeague(
+      id: 'basketball.euroleague',
+      espnPath: 'basketball/euroleague',
+      sportsDbId: '4546',
+      name: 'EuroLeague',
+      shortName: 'EL',
+      // Greek guides name the competition but spell the clubs in Greek.
+      // Greek spellings stay raw: the guide query is a plain LIKE (accents
+      // and Greek case aren't folded); matching normalizes them.
+      seriesPhrases: ['euroleague', 'Ευρωλίγκα', 'Ευρωλιγκα', 'ΕΥΡΩΛΙΓΚΑ'],
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/7xjtuy1554397263.png',
+      region: 'Basketball',
+      // TheSportsDB's free key has no basketball tables (empty reply).
+      hasStandings: false),
+  SportsLeague(
+      id: 'basketball.gre.1',
+      espnPath: 'basketball/gre.1',
+      sportsDbId: '4452',
+      homeTags: ['gr'],
+      name: 'Greek Basket League',
+      shortName: 'GBL',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/z39ouv1667032625.png',
+      region: 'Basketball',
+      // TheSportsDB's free key has no basketball tables (empty reply).
+      hasStandings: false),
   SportsLeague(
       id: 'basketball.mens-college-basketball',
       espnPath: 'basketball/mens-college-basketball',

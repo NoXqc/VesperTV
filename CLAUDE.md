@@ -49,7 +49,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
 4. `flutter analyze` must report the baseline **17** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `1.0.28` unless noted
+5. Check the current state of releases: `gh release list` (latest should be `1.0.29` unless noted
    in §11).
 
 ## 3. Layout (what matters)
@@ -118,7 +118,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
 - Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+360**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
-  (Currently **+368**, 1.0.28.)
+  (Currently **+371**, 1.0.29.)
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
 Only release when the owner asks ("update the latest", "cut it", "fully release"). Outline: bump `pubspec.yaml` (versionCode `+N` must always rise) → `flutter analyze` → build APK + verify signature (§5) → build Windows + zip → **commit & push first** → `gh release upload <tag> app-release.apk VesperTV-windows-x64.zip --clobber` → `gh release edit <tag> --tag <new> --notes-file …` → make sure the tag equals HEAD → verify downloads/hashes, the OLD `NoXqc/NoXPlayer` redirect links and AFTVnews code `1760256`. The updater offers any *different* tag (`_isDifferent`), never leave two `.zip`/`.apk` assets on the latest release.
@@ -289,9 +289,27 @@ Look there before debugging. Still-open items: the **Fire OS stale launcher icon
 old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler) — Windows check pending.
 
 ## 12. Features (details in `dev-notes/features.md`)
-Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
+Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-20)
+- **Shipped: 1.0.29 (`+371`, 2026-10-20, latest; test builds `+369`/`+370`, pre-release
+  `1.0.28-test.370` for a Greek Discord user) — released before that user finished testing
+  (owner: best we can do for now):**
+  - **Greek:** UI language `lib/l10n/el.dart` (machine-authored, not native-reviewed); leagues
+    Super League 2 (`gre.2`), EuroLeague, Greek Basket League (TheSportsDB; basketball has no
+    free tables → `hasStandings: false`); `SportsLeague.homeTags` ranks a league's own-country
+    channels first; `greek_sports_names.dart` transliterates Greek guide titles and maps 23 clubs.
+  - **TheSportsDB day cap:** the free `eventsday` returns at most **3 games per league/day**
+    (SL2 user: games missing). A capped day now loads its whole round(s) from `eventsround`
+    (uncapped) and keeps that UTC day. `eventsseason` caps at 15 and `eventsnextleague` at 1.
+  - **Matching:** `sportsDbShortName` strips BC/SK/FC/Basket/Baloncesto/Pallacanestro… (feed
+    names never matched guides); EuroLeague `seriesPhrases` incl. raw Greek spellings — team
+    leagues accept a series-only guide title unless it names another game. Unconfirmed on a
+    real Greek guide (Nova Sports).
+  - **Box score** (`_BoxTable`): trailing columns that don't fit are dropped, names keep 96 px
+    (NBA's 7 columns overlapped the other team on the Formuler). Owner-checked.
+  - **Windows:** Media Hub detail had no back arrow at wide widths — arrow at every width + Esc.
+    Owner-confirmed.
 - **Shipped: 1.0.28 (`+368`, 2026-10-20, latest; test builds `+361`..`+367`, pre-release
   `1.0.28-test.362` for a Fire OS 6 user):**
   - **Sports Trak:** Romanian Liga I/II, Croatian HNL, Serbian SuperLiga, Bulgarian First League

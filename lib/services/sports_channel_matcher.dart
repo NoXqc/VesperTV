@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import '../models/channel.dart';
 import '../models/epg_program.dart';
 import '../models/sports.dart';
+import 'greek_sports_names.dart';
 import '../utils/channel_name_matching.dart';
 import 'epg_service.dart';
 import 'storage_service.dart';
@@ -143,6 +144,8 @@ class _EventPick {
 /// with a space each side — so `' red wings '` matches a whole phrase and
 /// never the inside of another word.
 String sportsNormalize(String s) {
+  // Greek guides and channel names compare in Latin (greek_sports_names).
+  if (hasGreek(s)) s = greekToLatin(s);
   final buffer = StringBuffer(' ');
   var lastSpace = true;
   // Code-unit checks, not a RegExp per character: this runs over every
@@ -353,6 +356,9 @@ class SportsChannelMatcher {
     for (final s in [t.shortName, t.name]) {
       final n = sportsNormalize(s);
       if (n.trim().length >= 4) out.add(n);
+      // A Greek club: how a transliterated Greek title spells it (short
+      // ones like "aek" included — they're whole words).
+      if (greekTeamFor(n) case final greek?) out.addAll(greek.phrases);
     }
     return out.toList();
   }
@@ -487,9 +493,16 @@ class SportsChannelMatcher {
   /// watches North American / English feeds, so those rank first and
   /// obviously foreign ones (country tags in the name) sink. Only reorders —
   /// nothing is dropped except for network matches.
-  int _regionBias(int index) {
+  ///
+  /// A league's own country ([SportsLeague.homeTags]: "gr" for the Greek
+  /// leagues) ranks its channels first instead (+20, above English).
+  int _regionBias(int index, [SportsLeague? league]) {
     final tokens = _names[index].trim().split(' ');
+    final home = league?.homeTags ?? const <String>[];
     var bias = 0;
+    for (final t in tokens) {
+      if (home.contains(t)) return 20;
+    }
     for (final t in tokens) {
       if (_englishTags.contains(t)) bias = math.max(bias, 10);
       if (_foreignTags.contains(t)) return -30;
@@ -545,6 +558,13 @@ class SportsChannelMatcher {
       for (final p in g.league.seriesPhrases) {
         if (p.trim().isNotEmpty) raw.add(p.trim());
       }
+      // Greek clubs: the guide may write them in Greek. Both teams, since
+      // a Latin term can't find a Greek title for the other one.
+      for (final t in [g.home, g.away]) {
+        final greek = greekTeamFor(sportsNormalize(t.name)) ??
+            greekTeamFor(sportsNormalize(t.shortName));
+        if (greek != null) raw.addAll(greek.stems);
+      }
     }
     final byLength = raw.toList()..sort((a, b) => a.length.compareTo(b.length));
     final terms = <String>{};
@@ -560,6 +580,17 @@ class SportsChannelMatcher {
     }
     final List<EpgProgram> programmes =
         _byEpgId.isEmpty ? const [] : await _guideHits(earliest, latest, terms);
+
+    // Team leagues with series phrases (EuroLeague): a title naming the
+    // series but not this game's teams still counts — Greek guides write
+    // foreign clubs in Greek ("Euroleague: Χάποελ Τελ Αβίβ - Βίρτους
+    // Μπολόνια", user report 2026-10-20) — unless it names another game.
+    final groupsByGame = {for (final g in games) g: _nameGroups(g)};
+    bool namesOtherGame(SportsGame g, String title) =>
+        groupsByGame.entries.any((o) =>
+            o.key != g &&
+            o.key.league.id == g.league.id &&
+            o.value.every((group) => group.any(title.contains)));
 
     for (final g in games) {
       final found = <String, ChannelMatch>{};
@@ -578,7 +609,7 @@ class SportsChannelMatcher {
       }
 
       // 2. Event channels naming both teams (event sports: the event).
-      final groups = _nameGroups(g);
+      final groups = groupsByGame[g]!;
       Set<int>? named;
       for (final group in groups) {
         final hits = _channelsNaming(group);
@@ -588,7 +619,8 @@ class SportsChannelMatcher {
       for (final i in named ?? const <int>{}) {
         final d = _dateInName(_names[i]);
         if (d != null && !_dateFits(d, g.start)) continue;
-        add(i, MatchReason.name, (d != null ? 120 : 100) + _regionBias(i));
+        add(i, MatchReason.name,
+            (d != null ? 120 : 100) + _regionBias(i, g.league));
       }
 
       // 3. Guide programmes naming both teams near the start time — or,
@@ -604,6 +636,11 @@ class SportsChannelMatcher {
         final title = sportsNormalize(p.title);
         final byName = groups.every((group) => group.any(title.contains));
         if (!byName && !series.any(title.contains)) continue;
+        if (!byName &&
+            g.league.kind == SportsKind.team &&
+            namesOtherGame(g, title)) {
+          continue;
+        }
         final diff = g.end != null
             ? 0 // golf: all day, nothing to be early or late for
             : start.difference(g.start).inMinutes;
@@ -613,19 +650,20 @@ class SportsChannelMatcher {
               MatchReason.guide,
               (byName ? 80 : 70) -
                   math.min(diff.abs(), 60) ~/ 6 +
-                  _regionBias(i),
+                  _regionBias(i, g.league),
               p.title);
         }
       }
 
       // 3b. Event sports: channels named after the series ("Sky Sports F1",
-      // "NASCAR"), a few at most — they carry it, if not always live.
-      if (series.isNotEmpty) {
+      // "NASCAR"), a few at most — they carry it, if not always live. Not
+      // team leagues: "EuroLeague 03 | ..." channels are one game each.
+      if (series.isNotEmpty && g.league.kind != SportsKind.team) {
         var taken = 0;
         for (final i in _channelsNaming(series)) {
           if (taken >= 3) break;
-          if (_regionBias(i) < 0) continue;
-          add(i, MatchReason.name, 60 + _regionBias(i));
+          if (_regionBias(i, g.league) < 0) continue;
+          add(i, MatchReason.name, 60 + _regionBias(i, g.league));
           taken++;
         }
       }
@@ -639,7 +677,7 @@ class SportsChannelMatcher {
         for (final i in hits) {
           if (taken >= 3) break;
           // Same name, different country's channel ("RU: TNT" is not TNT).
-          final bias = _regionBias(i);
+          final bias = _regionBias(i, g.league);
           if (bias < 0) continue;
           add(i, MatchReason.network, 50 + bias, network);
           taken++;

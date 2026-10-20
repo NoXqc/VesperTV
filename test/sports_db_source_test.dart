@@ -113,4 +113,32 @@ void main() {
     expect(parseSportsDbEvents(('{"events":null}', league)), isEmpty);
     expect(parseSportsDbTable(('{"table":null}', league)).groups, isEmpty);
   });
+
+  test('short names drop club-type words for the channel matcher', () {
+    expect(sportsDbShortName('Hapoel Tel Aviv BC'), 'Hapoel Tel Aviv');
+    expect(sportsDbShortName('Virtus Pallacanestro Bologna'), 'Virtus Bologna');
+    expect(sportsDbShortName('Real Madrid Baloncesto'), 'Real Madrid');
+    expect(sportsDbShortName('Besiktas Basketbol'), 'Besiktas');
+    expect(sportsDbShortName('Hajduk Split'), 'Hajduk Split');
+    // Too short once stripped: the full name.
+    expect(sportsDbShortName('AEL'), 'AEL');
+    expect(sportsDbShortName('FC Ae'), 'FC Ae');
+  });
+
+  test('a day at the free-key cap asks for its rounds', () {
+    final euroleague = sportsLeagueById('basketball.euroleague')!;
+    String day(int n, {String round = '8'}) => jsonEncode({
+          'events': [
+            for (var i = 0; i < n; i++)
+              {...event('NS'), 'intRound': round, 'strSeason': '2026-2027'}
+          ]
+        });
+    expect(SportsDbSource.roundUrls(euroleague, day(2)), isEmpty);
+    final urls = SportsDbSource.roundUrls(euroleague, day(3));
+    expect(urls, hasLength(1));
+    expect(urls.single.toString(),
+        endsWith('eventsround.php?id=4546&r=8&s=2026-2027'));
+    expect(SportsDbSource.roundUrls(euroleague, day(3, round: '0')), isEmpty);
+    expect(SportsDbSource.roundUrls(euroleague, '{"events":null}'), isEmpty);
+  });
 }

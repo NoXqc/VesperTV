@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -1318,40 +1319,55 @@ class _BoxTable extends StatelessWidget {
   Widget build(BuildContext context) {
     const head = TextStyle(fontSize: 11, color: Colors.white38);
     const cell = TextStyle(fontSize: 12.5, color: Colors.white);
-    Widget row(String name, List<String> values, TextStyle style,
-            {bool bold = false}) =>
-        Padding(
-          padding: const EdgeInsets.only(bottom: 2),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: bold
-                        ? style.copyWith(fontWeight: FontWeight.w600)
-                        : style),
-              ),
-              for (final v in values)
-                SizedBox(
-                  width: 44,
-                  child: Text(v,
-                      textAlign: TextAlign.end,
+    // Two teams side by side on a TV panel leave each table ~300 px: seven
+    // basketball columns didn't fit, the names got no width and the extra
+    // columns painted under the other team (owner's Formuler screenshot,
+    // 2026-10-20). Names keep [nameMin]; trailing columns that don't fit
+    // are dropped (the most important come first, see _boxColumns).
+    const colW = 40.0;
+    const nameMin = 96.0;
+    return LayoutBuilder(builder: (context, c) {
+      final int fit = ((c.maxWidth - nameMin) / colW)
+          .floor()
+          .clamp(1, math.max(1, group.labels.length))
+          .toInt();
+      List<String> cut(List<String> v) =>
+          v.length > fit ? v.sublist(0, fit) : v;
+      Widget row(String name, List<String> values, TextStyle style,
+              {bool bold = false}) =>
+          Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(name,
                       maxLines: 1,
-                      overflow: TextOverflow.fade,
-                      softWrap: false,
-                      style: style),
+                      overflow: TextOverflow.ellipsis,
+                      style: bold
+                          ? style.copyWith(fontWeight: FontWeight.w600)
+                          : style),
                 ),
-            ],
-          ),
-        );
-    return Column(
-      children: [
-        row('', group.labels, head),
-        for (final (name, values) in group.rows)
-          row(name, values, cell, bold: true),
-      ],
-    );
+                for (final v in cut(values))
+                  SizedBox(
+                    width: colW,
+                    child: Text(v,
+                        textAlign: TextAlign.end,
+                        maxLines: 1,
+                        overflow: TextOverflow.fade,
+                        softWrap: false,
+                        style: style),
+                  ),
+              ],
+            ),
+          );
+      return Column(
+        children: [
+          row('', group.labels, head),
+          for (final (name, values) in group.rows)
+            row(name, values, cell, bold: true),
+        ],
+      );
+    });
   }
 }
 

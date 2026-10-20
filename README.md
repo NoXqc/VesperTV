@@ -41,6 +41,7 @@ Grab the latest release from the [Releases](../../releases) page or
   <img src="docs/assets/shot-my-teams.jpg" width="49%" alt="My Teams: record, standing, mini table and the next two weeks of games">
   <img src="docs/assets/shot-standings.png" width="49%" alt="Standings by conference">
   <img src="docs/assets/shot-follow.png" width="49%" alt="Hold OK on a team to follow it">
+  <img src="docs/assets/shot-live-stats.jpg" width="49%" alt="Live stats over the game: score, top performers, box score and the channels it's on">
 </p>
 
 - **Scores & schedule** for NHL, NFL, NBA, MLB, WNBA, college football, MLS, Premier League,
