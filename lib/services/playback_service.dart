@@ -12,6 +12,7 @@ import '../models/playlist_profile.dart';
 import '../utils/constants.dart';
 import 'playlist_manager.dart';
 import 'storage_service.dart';
+import 'watch_tracker.dart';
 import '../l10n/l10n.dart';
 
 /// Owns the single, app-wide [VideoPlayerHdrController] for whatever channel
@@ -360,6 +361,8 @@ class PlaybackService extends ChangeNotifier {
       // idle-input timeout, exactly like they would for any non-video app —
       // there was nothing here telling the OS playback is active.
       unawaited(WakelockPlus.enable());
+      // Trakt/Simkl, for Media Hub titles (a no-op otherwise).
+      unawaited(WatchTracker.instance.started(channel.id));
       await _storage.setLastChannelId(channel.id);
       // Live streams report zero/unknown duration — that's fine, it just
       // means StorageService.getWatchedFraction has nothing to compute a
@@ -632,6 +635,9 @@ class PlaybackService extends ChangeNotifier {
       final duration = old.value.duration;
       if (duration > Duration.zero) {
         await _storage.setLastDuration(ch.id, duration.inMilliseconds);
+        // Watched / paused at, for Trakt/Simkl (Media Hub titles only).
+        unawaited(
+            WatchTracker.instance.stopped(ch.id, old.value.position, duration));
       }
     }
     controller = null;

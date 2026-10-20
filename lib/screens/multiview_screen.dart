@@ -12,6 +12,7 @@ import '../services/multiview_sports.dart';
 import '../services/playlist_manager.dart';
 import '../services/storage_service.dart';
 import '../widgets/auto_hide_overlay.dart';
+import '../widgets/game_channel_chooser.dart';
 import '../widgets/hold_to_activate.dart';
 import '../widgets/tv_menu_tile.dart';
 import '../widgets/tv_text_field_gate.dart';
@@ -101,6 +102,25 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
       List.generate(_cellCount, (_) => _MultiviewCell());
   int _activeCell = 0;
   _MultiviewLayout _layout = _MultiviewLayout.dual;
+
+  /// Portrait phone: always the 2 stacked screens (owner, 2026-10-19 — a
+  /// 2x2 grid of tiny tiles on a narrow screen). The saved 4-screen choice
+  /// stays; screens 3-4 are paused (not dropped) until it's rotated back.
+  bool _portraitDual = false;
+
+  Future<void> _setPortraitDual(bool on) async {
+    if (on == _portraitDual || !mounted) return;
+    setState(() => _portraitDual = on);
+    if (on && _activeCell >= 2) {
+      final i = _cells[0].channel != null ? 0 : 1;
+      if (_cells[i].channel != null) await _setActive(i);
+    }
+    for (var i = 2; i < _cellCount; i++) {
+      final c = _cells[i].controller;
+      if (c == null) continue;
+      await (on ? c.pause() : c.play());
+    }
+  }
 
   void _toggleLayout() {
     final next = _layout == _MultiviewLayout.quad
@@ -437,10 +457,16 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
   }
 
   Widget _buildBody() {
-    final quad = _layout == _MultiviewLayout.quad;
+    final size = MediaQuery.sizeOf(context);
+    final portrait = size.height > size.width;
+    if (portrait != _portraitDual) {
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _setPortraitDual(portrait));
+    }
+    final quad = _layout == _MultiviewLayout.quad && !portrait;
     // Quad: a 2 px seam between the tiles, nearly edge to edge.
-    Widget cell(int i) =>
-        Padding(padding: EdgeInsets.all(quad ? 1 : 3), child: _buildCell(i));
+    Widget cell(int i) => Padding(
+        padding: EdgeInsets.all(quad ? 1 : 3), child: _buildCell(i, quad));
     return Column(
       children: [
         Padding(
@@ -458,19 +484,26 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
                       fontWeight: FontWeight.w600)),
               const SizedBox(width: 12),
               // Toggles 2 <-> 4 screens (remembered). Reached with Up from
-              // the top row of screens.
-              TextButton.icon(
-                onPressed: _toggleLayout,
-                icon: Icon(quad ? Icons.grid_view : Icons.view_agenda,
-                    color: Colors.white, size: 18),
-                label: Text(quad ? tr('4 screens') : tr('2 screens'),
-                    style: const TextStyle(color: Colors.white)),
-              ),
+              // the top row of screens. Not in portrait (always 2 there).
+              if (!portrait)
+                TextButton.icon(
+                  onPressed: _toggleLayout,
+                  icon: Icon(quad ? Icons.grid_view : Icons.view_agenda,
+                      color: Colors.white, size: 18),
+                  label: Text(quad ? tr('4 screens') : tr('2 screens'),
+                      style: const TextStyle(color: Colors.white)),
+                ),
               const Spacer(),
               const Icon(Icons.volume_up, color: Colors.amber, size: 16),
               const SizedBox(width: 4),
-              Text(tr('= audio — Select to switch, hold Select for options'),
-                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
+              Flexible(
+                child: Text(
+                    tr('= audio — Select to switch, hold Select for options'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style:
+                        const TextStyle(color: Colors.white54, fontSize: 12)),
+              ),
             ],
           ),
         ),
@@ -521,7 +554,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     );
   }
 
-  Widget _buildCell(int index) {
+  Widget _buildCell(int index, bool quad) {
     final cell = _cells[index];
     final active = index == _activeCell && cell.channel != null;
     void onTap() =>
@@ -539,19 +572,13 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
         onTap: onTap,
         onLongPress:
             cell.channel == null ? null : () => _showCellActions(index),
-        // Stacked 2-screen rows are much wider than 16:9. Quad's quarters
-        // are a bit wider than 16:9 too (the header takes height): a small
-        // boost, and each tile pushed toward the centre so the four touch
-        // (owner, 2026-10-17: gaps between them).
-        widthBoost: _layout == _MultiviewLayout.quad ? 1.08 : 1.15,
-        alignment: _layout == _MultiviewLayout.quad
-            ? const [
-                Alignment.bottomRight,
-                Alignment.bottomLeft,
-                Alignment.topRight,
-                Alignment.topLeft,
-              ][index]
-            : Alignment.center,
+        // Stacked 2-screen rows are much wider than 16:9: a 1.15 boost.
+        // Quad: each tile fills its whole quarter (owner, 2026-10-19: on a
+        // wide phone the 16:9-ish tiles left black bars at the sides; on a
+        // TV the quarters are close to 16:9 anyway).
+        widthBoost: 1.15,
+        fill: quad,
+        alignment: Alignment.center,
       ),
     );
   }
@@ -567,7 +594,11 @@ class _MultiviewCellTile extends StatefulWidget {
     required this.onLongPress,
     required this.widthBoost,
     this.alignment = Alignment.center,
+    this.fill = false,
   });
+
+  /// Fill the whole slot instead of an aspect-locked frame (quad).
+  final bool fill;
 
   /// Where the ratio-locked frame sits in its slot (quad: toward the centre).
   final Alignment alignment;
@@ -622,8 +653,8 @@ class _MultiviewCellTileState extends State<_MultiviewCellTile> {
             widget.widthBoost;
     return Align(
       alignment: widget.alignment,
-      child: AspectRatio(
-        aspectRatio: ratio,
+      child: _MaybeAspect(
+        ratio: widget.fill ? null : ratio,
         child: InkWell(
           focusNode: widget.focusNode,
           onTap: widget.onTap,
@@ -727,6 +758,20 @@ class _MultiviewCellTileState extends State<_MultiviewCellTile> {
       ),
     );
   }
+}
+
+/// An [AspectRatio] frame, or the whole slot when [ratio] is null (quad
+/// tiles fill their quarter).
+class _MaybeAspect extends StatelessWidget {
+  const _MaybeAspect({required this.ratio, required this.child});
+
+  final double? ratio;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => ratio == null
+      ? SizedBox.expand(child: child)
+      : AspectRatio(aspectRatio: ratio!, child: child);
 }
 
 /// Pushed from a cell's hold-Select menu ("Full screen") — reuses that
@@ -886,6 +931,9 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
     });
   }
 
+  List<LiveGameChannel> get _liveRows =>
+      MultiviewSports.search(_live ?? const [], _query);
+
   static String _entryTitle(String entry) => switch (entry) {
         'All' || 'Favorites' => tr(entry),
         _liveEntry => tr('Live now'),
@@ -959,7 +1007,8 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
     if (entry == 'Favorites') {
       base = base.where((c) => c.isFavorite);
     } else if (entry == _liveEntry) {
-      base = [for (final l in _live ?? const <LiveGameChannel>[]) l.channel];
+      // One row per game (see build); search matches the game too.
+      return [for (final l in _liveRows) l.channel];
     } else if (entry == _sportsEntry) {
       base = base.where(MultiviewSports.isSports);
     } else if (entry != 'All') {
@@ -1109,18 +1158,43 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
                             itemBuilder: (context, i) {
                               final c = filtered[i];
                               final now = epg.getCurrentProgram(c.epgId);
-                              // Live now: the game, not the guide (event
-                              // channels often have no guide at all).
-                              final game = entry == _liveEntry &&
-                                      i < (_live?.length ?? 0)
-                                  ? _live![i].game
+                              // Live now: one row per game (title = the
+                              // game, best channel + count below); OK opens
+                              // every channel found for it.
+                              final rows =
+                                  entry == _liveEntry ? _liveRows : null;
+                              final live = rows != null && i < rows.length
+                                  ? rows[i]
                                   : null;
+                              if (live != null) {
+                                final n = live.matches.length;
+                                return TvMenuTile(
+                                  focusNode: i == 0 ? _firstResultFocus : null,
+                                  icon: Icons.sports_score,
+                                  title: MultiviewSports.label(live.game),
+                                  subtitle: n > 1
+                                      ? '${c.name} · ${tr('{n} channels', {
+                                              'n': n
+                                            })}'
+                                      : c.name,
+                                  trailing: n > 1
+                                      ? const Icon(Icons.chevron_right,
+                                          color: Colors.white54)
+                                      : const SizedBox.shrink(),
+                                  onTap: () async {
+                                    final navigator = Navigator.of(context);
+                                    final picked =
+                                        await chooseGameChannel(context, live);
+                                    if (picked != null && mounted) {
+                                      navigator.pop(picked);
+                                    }
+                                  },
+                                );
+                              }
                               return TvMenuTile(
-                                subtitle: game != null
-                                    ? MultiviewSports.label(game)
-                                    : now == null
-                                        ? null
-                                        : '${_hhmm(now.start)}–${_hhmm(now.stop)}  ${now.title}',
+                                subtitle: now == null
+                                    ? null
+                                    : '${_hhmm(now.start)}–${_hhmm(now.stop)}  ${now.title}',
                                 focusNode: i == 0 ? _firstResultFocus : null,
                                 leading:
                                     (c.logoUrl != null && c.logoUrl!.isNotEmpty)

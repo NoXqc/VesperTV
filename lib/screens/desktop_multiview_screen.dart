@@ -11,6 +11,7 @@ import '../services/multiview_sports.dart';
 import '../services/playlist_manager.dart';
 import '../services/storage_service.dart';
 import '../widgets/auto_hide_overlay.dart';
+import '../widgets/game_channel_chooser.dart';
 import '../l10n/l10n.dart';
 
 /// Windows-only: a grid of simultaneously-playing live channels —
@@ -481,14 +482,15 @@ class _ChannelPickerDialogState extends State<_ChannelPickerDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final live = _live ?? const <LiveGameChannel>[];
+    // Live now: one row per game; search matches the game or its channels.
+    final live = MultiviewSports.search(_live ?? const [], _query);
     final Iterable<Channel> base = switch (_filter) {
       _PickerFilter.all => widget.channels,
       _PickerFilter.live => [for (final l in live) l.channel],
       _PickerFilter.sports => widget.channels.where(MultiviewSports.isSports),
     };
     final q = _query.toLowerCase();
-    final filtered = q.isEmpty
+    final filtered = q.isEmpty || _filter == _PickerFilter.live
         ? base.toList()
         : base.where((c) => c.name.toLowerCase().contains(q)).toList();
     Widget chip(_PickerFilter f, String label, IconData icon) => ChoiceChip(
@@ -547,16 +549,39 @@ class _ChannelPickerDialogState extends State<_ChannelPickerDialog> {
                       itemCount: filtered.length,
                       itemBuilder: (context, i) {
                         final c = filtered[i];
-                        final game =
+                        final row =
                             _filter == _PickerFilter.live && i < live.length
-                                ? live[i].game
+                                ? live[i]
                                 : null;
+                        if (row != null) {
+                          final n = row.matches.length;
+                          return ListTile(
+                            leading: const Icon(Icons.sports_score,
+                                color: Colors.white54),
+                            title: Text(MultiviewSports.label(row.game),
+                                style: const TextStyle(color: Colors.white)),
+                            subtitle: Text(
+                                n > 1
+                                    ? '${c.name} · ${tr('{n} channels', {
+                                            'n': n
+                                          })}'
+                                    : c.name,
+                                style: const TextStyle(color: Colors.white54)),
+                            trailing: n > 1
+                                ? const Icon(Icons.chevron_right,
+                                    color: Colors.white54)
+                                : null,
+                            onTap: () async {
+                              final navigator = Navigator.of(context);
+                              final picked =
+                                  await chooseGameChannel(context, row);
+                              if (picked != null && mounted) {
+                                navigator.pop(picked);
+                              }
+                            },
+                          );
+                        }
                         return ListTile(
-                          subtitle: game == null
-                              ? null
-                              : Text(MultiviewSports.label(game),
-                                  style:
-                                      const TextStyle(color: Colors.white54)),
                           leading: (c.logoUrl != null && c.logoUrl!.isNotEmpty)
                               ? Image.network(c.logoUrl!,
                                   width: 32,

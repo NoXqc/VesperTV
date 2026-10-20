@@ -19,6 +19,10 @@ enum SportsKind {
   /// One event per fight card; the main event's two fighters play the part
   /// of the two teams.
   fight,
+
+  /// One event per tournament; each main-draw singles match is its own card,
+  /// the two players playing the part of the two teams (score = sets won).
+  tennis,
 }
 
 class SportsLeague {
@@ -271,6 +275,46 @@ const List<SportsLeague> kSportsLeagueBank = [
       hasStandings: true,
       kind: SportsKind.racing,
       seriesPhrases: ['indycar']),
+  SportsLeague(
+      id: 'tennis.atp',
+      espnPath: 'tennis/atp',
+      name: 'ATP Tour',
+      shortName: 'ATP',
+      logoUrl:
+          'https://a.espncdn.com/combiner/i?img=/redesign/assets/img/icons/ESPN-icon-tennis.png',
+      region: 'Tennis',
+      hasStandings: false,
+      kind: SportsKind.tennis,
+      seriesPhrases: ['atp', 'tennis channel', 'tennis']),
+  SportsLeague(
+      id: 'tennis.wta',
+      espnPath: 'tennis/wta',
+      name: 'WTA Tour',
+      shortName: 'WTA',
+      logoUrl:
+          'https://a.espncdn.com/combiner/i?img=/redesign/assets/img/icons/ESPN-icon-tennis.png',
+      region: 'Tennis',
+      hasStandings: false,
+      kind: SportsKind.tennis,
+      seriesPhrases: ['wta', 'tennis channel', 'tennis']),
+  SportsLeague(
+      id: 'usa.ncaa.m.1',
+      espnPath: 'soccer/usa.ncaa.m.1',
+      name: "NCAA Men's Soccer",
+      shortName: 'NCAAMS',
+      logoUrl:
+          'https://a.espncdn.com/combiner/i?img=/redesign/assets/img/icons/sports-soccer-solid.png',
+      region: 'Americas',
+      soccer: true),
+  SportsLeague(
+      id: 'usa.ncaa.w.1',
+      espnPath: 'soccer/usa.ncaa.w.1',
+      name: "NCAA Women's Soccer",
+      shortName: 'NCAAWS',
+      logoUrl:
+          'https://a.espncdn.com/combiner/i?img=/redesign/assets/img/icons/sports-soccer-solid.png',
+      region: 'Americas',
+      soccer: true),
   SportsLeague(
       id: 'ger.2',
       espnPath: 'soccer/ger.2',
@@ -809,6 +853,7 @@ const List<String> kSportsLeagueRegions = [
   'Hockey',
   'Baseball',
   'Golf',
+  'Tennis',
   'Fighting',
   'Motorsport',
   'Other',
@@ -999,7 +1044,8 @@ class SportsGameSummary {
   /// Per team id: "T. Badie RB · Questionable (Thumb)".
   final Map<String, List<SportsInjury>> injuries;
 
-  /// Soccer scorers, in order.
+  /// Every goal, in order (soccer and hockey) — the box score only lists a
+  /// few players per position, so it can't say who scored.
   final List<SportsGoal> goals;
 
   /// The standings groups that hold either team.
@@ -1039,11 +1085,23 @@ class SportsGoal {
       {required this.minute,
       required this.scorer,
       this.teamId,
-      this.penalty = false});
+      this.penalty = false,
+      this.period,
+      this.assists = const [],
+      this.score});
   final String minute;
   final String scorer;
   final String? teamId;
   final bool penalty;
+
+  /// Hockey: "1st", "2nd", "OT" ([minute] is then the period clock).
+  final String? period;
+
+  /// Hockey: the assisting players' short names.
+  final List<String> assists;
+
+  /// The score right after this goal, away-home ("0-3").
+  final String? score;
 }
 
 class SportsSummaryTable {

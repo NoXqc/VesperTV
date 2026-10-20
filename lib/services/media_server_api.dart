@@ -211,7 +211,7 @@ class MediaServerApi {
       'Recursive': 'true',
       'IncludeItemTypes':
           catalog.type == ArchiveType.series ? 'Series' : 'Movie',
-      'Fields': 'Overview,Genres,ProductionYear',
+      'Fields': 'Overview,Genres,ProductionYear,ProviderIds',
       'EnableImageTypes': 'Primary,Backdrop',
       'ImageTypeLimit': '1',
       'StartIndex': '$skip',
@@ -318,8 +318,14 @@ class MediaServerApi {
     if (id == null || name == null) return null;
     final ticks = j['RunTimeTicks'];
     final rating = j['CommunityRating'];
+    // Lets Trakt/Simkl scrobble server plays (WatchTracker).
+    final providers = j['ProviderIds'];
+    final imdb = providers is Map
+        ? (providers['Imdb'] ?? providers['IMDB'])?.toString()
+        : null;
     return ArchiveMeta(
       id: id,
+      imdbId: imdb != null && imdb.startsWith('tt') ? imdb : null,
       type: j['Type'] == 'Series' ? ArchiveType.series : ArchiveType.movie,
       name: name,
       posterUrl: _image(s, j, 'Primary', 'maxHeight=600'),

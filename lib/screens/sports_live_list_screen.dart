@@ -1242,11 +1242,18 @@ class _SummaryBody extends StatelessWidget {
           Text(tr('Goals'), style: _sectionStyle),
           const SizedBox(height: 4),
           for (final goal in s.goals)
-            Text(
-              '${goal.minute}  ${goal.scorer}'
-              '${goal.penalty ? ' (${tr('pen.')})' : ''}'
-              '  · ${goal.teamId == g.home.id ? g.home.abbreviation : g.away.abbreviation}',
-              style: const TextStyle(fontSize: 13, color: Colors.white),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 1),
+              child: Text(
+                '${goal.period == null ? '' : '${trSports(goal.period!)} '}'
+                '${goal.minute}  ${goal.scorer}'
+                '${goal.penalty ? ' (${tr('pen.')})' : ''}'
+                '${goal.assists.isEmpty ? '' : ' (${goal.assists.join(', ')})'}'
+                '  · ${goal.teamId == g.home.id ? g.home.abbreviation : g.away.abbreviation}'
+                // Running score, in on-screen order like the header.
+                '${goal.score == null ? '' : '  ${flip ? goal.score!.split('-').reversed.join('-') : goal.score}'}',
+                style: const TextStyle(fontSize: 13, color: Colors.white),
+              ),
             ),
         ],
         if (stats.isNotEmpty) ...[

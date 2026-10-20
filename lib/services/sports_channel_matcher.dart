@@ -359,13 +359,15 @@ class SportsChannelMatcher {
 
   /// The name groups a channel name or guide title must all contain (one
   /// phrase from each). Team sports: the two teams. Fights: the two
-  /// fighters, by full or last name — event channels say "Allen vs Duncan".
+  /// fighters (tennis: players), by full or last name — event channels say
+  /// "Allen vs Duncan".
   /// Golf/racing: the event alone ("singapore grand prix").
   static List<List<String>> _nameGroups(SportsGame g) {
     switch (g.league.kind) {
       case SportsKind.team:
         return [_teamPhrases(g.home), _teamPhrases(g.away)];
       case SportsKind.fight:
+      case SportsKind.tennis:
         return [_fighterPhrases(g.home), _fighterPhrases(g.away)];
       case SportsKind.golf:
       case SportsKind.racing:
@@ -410,9 +412,12 @@ class SportsChannelMatcher {
           : g.start;
       return (from, from.add(const Duration(hours: 24)));
     }
-    final after = g.league.kind == SportsKind.fight
-        ? const Duration(hours: 5)
-        : const Duration(minutes: 30);
+    // Tennis times are "not before": a match often starts hours late.
+    final after = switch (g.league.kind) {
+      SportsKind.fight => const Duration(hours: 5),
+      SportsKind.tennis => const Duration(hours: 4),
+      _ => const Duration(minutes: 30),
+    };
     return (g.start.subtract(const Duration(minutes: 60)), g.start.add(after));
   }
 

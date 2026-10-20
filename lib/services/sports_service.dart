@@ -392,6 +392,8 @@ List<SportsGame> parseEspnScoreboard((String, SportsLeague) args) {
         case SportsKind.fight:
           final game = _parseFightCard(m, league);
           if (game != null) games.add(game);
+        case SportsKind.tennis:
+          games.addAll(_parseTennis(m, league));
       }
     } catch (_) {
       // One malformed event shouldn't drop the whole league.
@@ -579,6 +581,84 @@ List<SportsGame> _parseRacing(Map<String, dynamic> e, SportsLeague league) {
               ],
       ),
     ));
+  }
+  return out;
+}
+
+/// A tennis tournament is one ESPN event with `groupings` (Men's Singles,
+/// Women's Doubles…), each listing every match of the tournament. Each
+/// main-draw singles match becomes a card ([gamesForDay] keeps the day's):
+/// doubles (no athlete per side) and qualifying rounds are left out — a
+/// tournament day would otherwise be 50+ cards. Score = sets won.
+List<SportsGame> _parseTennis(Map<String, dynamic> e, SportsLeague league) {
+  final tournament = (e['name'] ?? '').toString();
+  final out = <SportsGame>[];
+  for (final g in (e['groupings'] as List?) ?? const []) {
+    final grouping =
+        ((g as Map)['grouping'] as Map?)?['displayName']?.toString() ?? '';
+    if (!grouping.toLowerCase().contains('singles')) continue;
+    for (final c in (g['competitions'] as List?) ?? const []) {
+      final comp = (c as Map).cast<String, dynamic>();
+      final round = ((comp['round'] as Map?)?['displayName'] ?? '').toString();
+      if (round.toLowerCase().contains('qualif')) continue;
+      final players = _competitorsByOrder(comp);
+      if (players.length != 2 || players.any((p) => p['athlete'] is! Map)) {
+        continue;
+      }
+      final date = DateTime.tryParse((comp['date'] ?? '').toString());
+      if (date == null) continue;
+      final status = comp['status'] as Map<String, dynamic>?;
+      final state = _stateOf(status);
+      List<num> sets(Map<String, dynamic> p) => [
+            for (final l in (p['linescores'] as List?) ?? const [])
+              ((l as Map)['value'] as num?) ?? 0,
+          ];
+      final a = sets(players[0]), b = sets(players[1]);
+      int won(List<num> mine, List<num> theirs) {
+        var n = 0;
+        for (var i = 0; i < mine.length && i < theirs.length; i++) {
+          // A set still being played counts once it's over (6+ games, 2 up,
+          // or 7 after a tie-break) — otherwise only finished matches.
+          final done = state == GameState.post || i < mine.length - 1;
+          if (done && mine[i] > theirs[i]) n++;
+        }
+        return n;
+      }
+
+      SportsTeam player(Map<String, dynamic> p, int setsWon) {
+        final full = _athleteName(p);
+        return SportsTeam(
+          id: ((p['athlete'] as Map?)?['id'] ?? p['id'] ?? full).toString(),
+          name: full,
+          shortName: full,
+          abbreviation: full
+              .split(' ')
+              .where((w) => w.isNotEmpty)
+              .map((w) => w[0])
+              .take(2)
+              .join()
+              .toUpperCase(),
+          logoUrl: _flagOf(p),
+          score: state == GameState.pre ? null : '$setsWon',
+        );
+      }
+
+      out.add(SportsGame(
+        id: comp['id'].toString(),
+        league: league,
+        start: date.toUtc(),
+        state: state,
+        statusText: _statusTextOf(status),
+        home: player(players[0], won(a, b)),
+        away: player(players[1], won(b, a)),
+        broadcasts: _broadcastsOf([comp]),
+        event: SportsEventInfo(
+          title: tournament,
+          session: round.isEmpty ? grouping : round,
+          venue: _venueOf(e, comp),
+        ),
+      ));
+    }
   }
   return out;
 }
@@ -1074,6 +1154,44 @@ SportsGameSummary parseEspnSummary((String, String, String) args) {
       teamId: (m['team'] as Map?)?['id']?.toString(),
       penalty: type.contains('penalty'),
     ));
+  }
+
+  // Hockey goals: ESPN has no keyEvents there, but every play, goals flagged
+  // (user report: 0-4 with only two scorers in the box score's top three).
+  // Only plays typed "Goal": basketball's scoring plays are every basket.
+  if (goals.isEmpty) {
+    for (final p in (json['plays'] as List?) ?? const []) {
+      final m = p as Map;
+      if (m['scoringPlay'] != true) continue;
+      final type = m['type'] as Map?;
+      final kind = (type?['abbreviation'] ?? type?['text'] ?? '')
+          .toString()
+          .toLowerCase();
+      if (kind != 'goal') continue;
+      String? scorer;
+      final assists = <String>[];
+      for (final x in (m['participants'] as List?) ?? const []) {
+        final part = x as Map;
+        final ath = part['athlete'] as Map? ?? const {};
+        final n = (ath['shortName'] ?? ath['displayName'])?.toString();
+        if (n == null) continue;
+        if (part['type'] == 'scorer') {
+          scorer = n;
+        } else if (part['type'] == 'assister') {
+          assists.add(n);
+        }
+      }
+      if (scorer == null) continue;
+      final away = m['awayScore'], home = m['homeScore'];
+      goals.add(SportsGoal(
+        minute: ((m['clock'] as Map?)?['displayValue'] ?? '').toString(),
+        scorer: scorer,
+        teamId: (m['team'] as Map?)?['id']?.toString(),
+        period: (m['period'] as Map?)?['displayValue']?.toString(),
+        assists: assists,
+        score: away is num && home is num ? '$away-$home' : null,
+      ));
+    }
   }
 
   // Standings groups that hold either team: a few columns, wins first.

@@ -13,6 +13,7 @@ import '../services/epg_service.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../services/storage_service.dart';
+import '../services/watch_tracker.dart';
 import '../l10n/l10n.dart';
 import '../widgets/player_side_panel.dart';
 import '../widgets/desktop_subtitles.dart';
@@ -187,6 +188,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       _applySeriesSubtitles();
     }
     if (_isLive) _DesktopLiveHistory.record(_currentChannel);
+    // Trakt/Simkl, for Media Hub titles (a no-op otherwise).
+    unawaited(WatchTracker.instance.started(_currentChannel.id));
     // DesktopPlayerScreen deliberately never calls PlaybackService.play()
     // (see this class's own doc comment) — meaning nothing on Windows
     // ever recorded a "last channel" at all, since StorageService
@@ -214,8 +217,17 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     }
   }
 
+  /// Trakt/Simkl: where [_currentChannel] stopped (this player keeps no
+  /// resume positions, so it reports straight from mpv's state).
+  void _reportStopped() {
+    final state = _player.state;
+    unawaited(WatchTracker.instance
+        .stopped(_currentChannel.id, state.position, state.duration));
+  }
+
   @override
   void dispose() {
+    if (!_handedOffToMiniPlayer) _reportStopped();
     _completedSubscription?.cancel();
     _rootFocus.dispose();
     if (_ownsPlayer && !_handedOffToMiniPlayer) _player.dispose();
@@ -253,9 +265,11 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       }
       channel = resolved;
     }
+    _reportStopped();
     setState(() => _currentChannel = channel);
     await _player.open(Media(channel.url));
     if (!mounted) return;
+    unawaited(WatchTracker.instance.started(channel.id));
     _applySeriesSubtitles();
     if (_isLive) _DesktopLiveHistory.record(channel);
     // See initState's identical call for why — keeps it current across a

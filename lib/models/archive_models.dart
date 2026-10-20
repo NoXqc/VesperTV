@@ -245,7 +245,75 @@ class MediaServerLogin {
   }
 }
 
+/// The two watch trackers (Settings > Trakt & Simkl, `TrackerApi`).
+enum TrackerKind {
+  trakt('Trakt'),
+  simkl('Simkl');
+
+  const TrackerKind(this.label);
+  final String label;
+
+  static TrackerKind? fromName(String? s) => switch (s) {
+        'trakt' => TrackerKind.trakt,
+        'simkl' => TrackerKind.simkl,
+        _ => null,
+      };
+}
+
+/// A connected Trakt/Simkl account. Trakt tokens expire ([expiresAtMs],
+/// Simkl V2 after 7 days — both refreshed with the client id alone).
+class TrackerLogin {
+  const TrackerLogin({
+    required this.kind,
+    required this.accessToken,
+    this.refreshToken,
+    this.expiresAtMs,
+    this.userName = '',
+  });
+
+  final TrackerKind kind;
+  final String accessToken;
+  final String? refreshToken;
+  final int? expiresAtMs;
+  final String userName;
+
+  /// Expired, or expiring within the hour.
+  bool get needsRefresh =>
+      refreshToken != null &&
+      expiresAtMs != null &&
+      DateTime.now().millisecondsSinceEpoch >
+          expiresAtMs! - const Duration(hours: 1).inMilliseconds;
+
+  Map<String, dynamic> toJson() => {
+        'kind': kind.name,
+        'access': accessToken,
+        if (refreshToken != null) 'refresh': refreshToken,
+        if (expiresAtMs != null) 'expires': expiresAtMs,
+        if (userName.isNotEmpty) 'user': userName,
+      };
+
+  static TrackerLogin? fromJson(Object? j) {
+    if (j is! Map) return null;
+    final kind = TrackerKind.fromName(j['kind']?.toString());
+    final access = j['access']?.toString();
+    if (kind == null || access == null) return null;
+    return TrackerLogin(
+      kind: kind,
+      accessToken: access,
+      refreshToken: j['refresh']?.toString(),
+      expiresAtMs: (j['expires'] as num?)?.toInt(),
+      userName: j['user']?.toString() ?? '',
+    );
+  }
+}
+
 /// A source the user added: its manifest plus whether it's switched on.
+///
+/// A Trakt/Simkl account is a source too ([tracker] set): its catalogs are
+/// the account's lists (watchlist, …) by IMDb id, metas and posters come
+/// from [ArchiveCatalogProvider], and Play asks the stream-only add-ons —
+/// like the provider's own rows. Its plays are also reported back
+/// (`WatchTracker`).
 ///
 /// A Jellyfin/Emby server is a source too ([server] set): its
 /// [manifestUrl] is `{apiBase}#{userId}` (one source per server + user),
@@ -261,6 +329,7 @@ class ArchiveSource {
     this.catalogProviderUrl,
     this.enabled = true,
     this.server,
+    this.tracker,
   });
 
   final String manifestUrl;
@@ -278,6 +347,9 @@ class ArchiveSource {
   /// Set for a Jellyfin/Emby server source.
   final MediaServerLogin? server;
 
+  /// Set for a Trakt/Simkl account source.
+  final TrackerLogin? tracker;
+
   bool get streamOnly => catalogProviderUrl != null;
 
   /// Where its resources live: the manifest URL minus `/manifest.json` (a
@@ -292,7 +364,9 @@ class ArchiveSource {
 
   /// Where `/catalog/` and `/meta/` live: the provider for a stream-only
   /// source, else the source itself. `/stream/` always uses [baseUrl].
-  String get catalogBaseUrl => catalogProviderUrl ?? baseUrl;
+  String get catalogBaseUrl =>
+      catalogProviderUrl ??
+      (tracker != null ? ArchiveCatalogProvider.baseUrl : baseUrl);
 
   /// Short stable key for cache rows and channel ids (the manifest URL can
   /// be long; ids only need to be unique per install).
@@ -300,7 +374,10 @@ class ArchiveSource {
   String get key =>
       sha1.convert(utf8.encode(manifestUrl)).toString().substring(0, 12);
 
-  ArchiveSource copyWith({bool? enabled, List<ArchiveCatalog>? catalogs}) =>
+  ArchiveSource copyWith(
+          {bool? enabled,
+          List<ArchiveCatalog>? catalogs,
+          TrackerLogin? tracker}) =>
       ArchiveSource(
         manifestUrl: manifestUrl,
         name: name,
@@ -310,6 +387,7 @@ class ArchiveSource {
         catalogProviderUrl: catalogProviderUrl,
         enabled: enabled ?? this.enabled,
         server: server,
+        tracker: tracker ?? this.tracker,
       );
 
   Map<String, dynamic> toJson() => {
@@ -321,6 +399,7 @@ class ArchiveSource {
         if (catalogProviderUrl != null) 'catalogProvider': catalogProviderUrl,
         'enabled': enabled,
         if (server != null) 'server': server!.toJson(),
+        if (tracker != null) 'tracker': tracker!.toJson(),
       };
 
   factory ArchiveSource.fromJson(Map<String, dynamic> j) {
@@ -339,13 +418,15 @@ class ArchiveSource {
       logoUrl: j['logo'] as String?,
       // A stream-only source's rows are re-derived from its types, so new
       // provider rows (and next year's "New") reach sources added earlier.
-      catalogs: provider == null
+      // (A tracker's rows are its own lists — kept as stored.)
+      catalogs: provider == null || j['tracker'] != null
           ? stored
           : ArchiveCatalogProvider.catalogsFor(
               {for (final c in stored) c.type}),
       catalogProviderUrl: provider,
       enabled: j['enabled'] != false,
       server: MediaServerLogin.fromJson(j['server']),
+      tracker: TrackerLogin.fromJson(j['tracker']),
     );
   }
 }
@@ -368,11 +449,23 @@ class ArchiveMeta {
     this.director = const [],
     this.videos = const [],
     this.wireType,
+    this.imdbId,
   });
 
   final String id;
   final ArchiveType type;
   final String name;
+
+  /// The IMDb id when [id] isn't one (a Jellyfin/Emby item's provider id);
+  /// see [imdb].
+  final String? imdbId;
+
+  /// The title's IMDb id (`tt…`), if known — what Trakt/Simkl are told.
+  String? get imdb {
+    if (imdbId != null) return imdbId;
+    final base = id.split(':').first;
+    return RegExp(r'^tt\d+$').hasMatch(base) ? base : null;
+  }
 
   /// The source's own type string when it isn't [type]'s (see
   /// [ArchiveCatalog.wireType]); null otherwise.
@@ -424,6 +517,7 @@ class ArchiveMeta {
       id: id,
       type: type,
       wireType: wire == null || wire == type.wire ? null : wire,
+      imdbId: _str(j['imdb_id']),
       name: name,
       posterUrl: _str(j['poster']),
       backgroundUrl: _str(j['background']),
@@ -452,6 +546,7 @@ class ArchiveMeta {
         'id': id,
         'type': wire,
         'name': name,
+        if (imdbId != null) 'imdb_id': imdbId,
         if (posterUrl != null) 'poster': posterUrl,
         if (backgroundUrl != null) 'background': backgroundUrl,
         if (year != null) 'releaseInfo': year,

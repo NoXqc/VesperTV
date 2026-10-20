@@ -12,6 +12,8 @@ import '../models/xtream_series.dart';
 import '../services/archive_service.dart';
 import '../services/desktop_mini_player.dart';
 import '../services/playback_service.dart';
+import '../services/tracker_api.dart';
+import '../services/watch_tracker.dart';
 import '../widgets/tv_menu_tile.dart';
 import 'desktop_player_screen.dart';
 import 'player_screen.dart';
@@ -101,6 +103,19 @@ ArchiveStreamOption preferredArchiveStream(
   return sameSource.firstOrNull ?? options.first;
 }
 
+/// Lets the players report this title to Trakt/Simkl (by IMDb id; titles
+/// without one aren't reported). See `WatchTracker`.
+void _track(Channel channel, ArchiveMeta meta, ArchiveVideo? episode) {
+  final imdb = meta.imdb;
+  if (imdb == null) return;
+  WatchTracker.instance.register(
+      channel.id,
+      episode == null
+          ? TrackedItem.movie(imdb)
+          : TrackedItem.episode(imdb,
+              season: episode.season, episode: episode.episode));
+}
+
 void _noStream(BuildContext context) {
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
     content: Text(tr('No playable stream for this title.')),
@@ -137,6 +152,7 @@ Future<void> playArchiveTitle(
   if (picked == null || !context.mounted) return;
   final channel =
       service.channelFor(source, meta, picked.stream, episode: episode);
+  _track(channel, meta, episode);
   // Extras' "Recently watched" row (the show, for an episode).
   unawaited(service.recordWatched(source, meta));
 
@@ -147,7 +163,9 @@ Future<void> playArchiveTitle(
     if (next.isEmpty) return null;
     final o = preferredArchiveStream(next, picked);
     picked = o; // the episode after follows this one
-    return service.channelFor(source, meta, o.stream, episode: video);
+    final ch = service.channelFor(source, meta, o.stream, episode: video);
+    _track(ch, meta, video);
+    return ch;
   }
 
   final hasQueue = queue != null && queue.isNotEmpty;

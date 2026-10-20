@@ -15,6 +15,7 @@ import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_switch_list_tile.dart';
 import '../../widgets/tv_text_field_gate.dart';
 import 'media_server_screen.dart';
+import 'trackers_screen.dart';
 
 /// Settings > Archive sources: the servers the Archive tab browses. Any
 /// source following the catalog/stream add-on schema works (see
@@ -250,6 +251,12 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
                   MaterialPageRoute(builder: (_) => const MediaServerScreen())),
               icon: const Icon(Icons.dns_outlined),
               label: Text(tr('Connect Jellyfin / Emby')),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const TrackersScreen())),
+              icon: const Icon(Icons.playlist_add_check),
+              label: Text(tr('Trakt & Simkl')),
             ),
           ]),
           if (sources.isNotEmpty) ...[

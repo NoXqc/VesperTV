@@ -1915,7 +1915,9 @@ class _Hero extends StatelessWidget {
         // A fight card's name ("UFC 320: Ankalaev vs. Pereira 2") says more
         // than "UFC".
         Text(
-            game.league.kind == SportsKind.fight && ev != null
+            (game.league.kind == SportsKind.fight ||
+                        game.league.kind == SportsKind.tennis) &&
+                    ev != null
                 ? ev.title
                 : game.league.name.toUpperCase(),
             maxLines: 1,
@@ -2666,7 +2668,8 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
                 g.league.shortName,
                 ...g.broadcasts.take(4),
               }
-            : g.league.kind == SportsKind.fight
+            : g.league.kind == SportsKind.fight ||
+                    g.league.kind == SportsKind.tennis
                 ? {
                     lastName(g.second),
                     lastName(g.first),

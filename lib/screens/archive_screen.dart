@@ -176,7 +176,9 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
       return tr('Results for "{query}"', {'query': row.searchQuery});
     }
     if (row.isHistory) return tr('Recently watched');
-    final title = row.source.streamOnly ? tr(row.title) : row.title;
+    final title = row.source.streamOnly || row.source.tracker != null
+        ? tr(row.title)
+        : row.title;
     final genre = service.genre(_type);
     return genre == null ? title : '$title · ${_genreName(genre)}';
   }
@@ -583,7 +585,9 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
   /// (the Genre button shows that).
   String _barRowLabel(ArchiveRow row) {
     if (row.isHistory) return tr('Recently watched');
-    return row.source.streamOnly ? tr(row.title) : row.title;
+    return row.source.streamOnly || row.source.tracker != null
+        ? tr(row.title)
+        : row.title;
   }
 
   /// The floating bar's buttons, in order (for explicit Left/Right).

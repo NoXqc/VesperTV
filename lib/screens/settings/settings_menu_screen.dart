@@ -15,6 +15,7 @@ import 'transfer_screen.dart';
 import 'theme_screen.dart';
 import 'addons_screen.dart';
 import 'archive_sources_screen.dart';
+import 'trackers_screen.dart';
 import 'tmdb_settings_screen.dart';
 import '../../l10n/l10n.dart';
 
@@ -109,6 +110,14 @@ class SettingsMenuScreen extends StatelessWidget {
                         builder: (_) => const ArchiveSourcesScreen())),
                   ),
                   TvMenuTile(
+                    icon: Icons.playlist_add_check,
+                    title: tr('Trakt & Simkl'),
+                    subtitle:
+                        tr('Track what you watch, lists in the Media Hub'),
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => const TrackersScreen())),
+                  ),
+                  TvMenuTile(
                     icon: Icons.system_update_outlined,
                     title: tr('Check for Updates'),
                     subtitle: tr('Download and install the latest release'),
@@ -164,7 +173,10 @@ class SettingsMenuScreen extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                     child: Text(
                       '${tr('Movie and TV artwork and data may come from TMDB (The Movie Database).')} '
-                      '${tr('This product uses the TMDB API but is not endorsed or certified by TMDB.')}',
+                      '${tr('This product uses the TMDB API but is not endorsed or certified by TMDB.')} '
+                      // Credit for the watch trackers (Settings > Trakt &
+                      // Simkl), owner 2026-10-19.
+                      '${tr('Watch tracking powered by Trakt and Simkl; VesperTV is not affiliated with or endorsed by either.')}',
                       style: const TextStyle(fontSize: 11, color: Colors.grey),
                     ),
                   ),

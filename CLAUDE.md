@@ -101,7 +101,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+348**) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+349**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
@@ -251,8 +251,8 @@ rejected (HDR + Android-TV hardware-decode risk).
   media_server_screen.dart`): a server is an `ArchiveSource` with `server` (`MediaServerLogin`:
   kind, userId, token, deviceId), libraries = catalogs, direct `/Videos/{id}/stream?static=true`
   (no transcoding; key `ApiKey` Jellyfin / `api_key` Emby; auth header `Authorization` vs
-  `X-Emby-Authorization`+`X-Emby-Token`; Emby tried under `/emby`). Mock-tested only at release —
-  owner testing on a real Emby server. Not done: watched-state sync, server subtitles, Quick Connect.
+  `X-Emby-Authorization`+`X-Emby-Token`; Emby tried under `/emby`). Owner added a real Emby server
+  successfully on 1.0.24 (2026-10-19); Jellyfin still only mock-tested. Not done: watched-state sync, server subtitles, Quick Connect.
 
 ## 11. Known bugs & fixes (full table in `dev-notes/bugs-and-fixes.md`)
 Look there before debugging. Still-open items: the **Fire OS stale launcher icon** (not fixable). The
@@ -262,6 +262,32 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-19)
+- **Shipped: 1.0.25 (`+349`, 2026-10-19, latest)** — everything in the next bullet (was the
+  "unreleased" list). Owner trusted the mock tests; real Trakt/Simkl sign-in still unconfirmed.
+- **1.0.25 contents:** Multiview quad tiles **fill** their quarter
+  (`_MaybeAspect`, no aspect lock — owner: black side bands on a landscape phone); **portrait
+  phone = always 2 screens** (`_portraitDual`: toggle hidden, screens 3-4 paused, audio moved).
+  Picker **Live now** = one row per game, OK opens every matched channel
+  (`widgets/game_channel_chooser.dart`), the choice saved as the game's pick
+  (`MultiviewSports.rememberPick` → Sports Trak uses it too). **Tennis** (`SportsKind.tennis`,
+  `_parseTennis`: main-draw singles only, score = sets won, matched like fights) — ATP + WTA,
+  and **NCAA men's/women's soccer** in the league bank. README rewritten for the universal player.
+  Game stats **Goals** section now lists every hockey goal (from ESPN `plays`, type `goal`:
+  period, clock, scorer, assists, running score) — the box score keeps only the top 3 per position,
+  so a 4-0 showed two scorers (owner photo, 2026-10-19).
+  **Trakt & Simkl** (Settings > Trakt & Simkl, `screens/settings/trackers_screen.dart`,
+  `services/tracker_api.dart`, `services/watch_tracker.dart`): device-code sign-in (code + QR on
+  the TV); an account is an `ArchiveSource` with `tracker` (`TrackerLogin`) whose catalogs are its
+  lists (Trakt watchlist/trending, Simkl watching/plan-to-watch) by IMDb id, metas from Cinemeta,
+  Play via stream-only add-ons. Scrobbling: `playArchiveTitle` registers the channel →
+  `PlaybackService.play`/`_teardown` and `DesktopPlayerScreen` report start / stop (≥80 % = watched,
+  else pause). Jellyfin/Emby items carry `ProviderIds` IMDb (`ArchiveMeta.imdbId`). **No secret,
+  no relay:** the Trakt app (developer.trakt.tv, owner's GitHub-linked account, Production,
+  redirect `https://vespertv.app/trakt`) is a public client — device token + refresh take only
+  `kTraktClientId` (verified against the live API 2026-10-19). Simkl = **AUTH V2** app of type "TV,
+  devices & command line" (V1 /oauth/pin retired ~2027; V2 = `POST /oauth2/device` + `/oauth2/token`
+  device grant, 7-day tokens refreshed with the client id, QR opens `verification_uri_complete`); both client ids set (verified live). Credits: Settings footer + Trakt & Simkl screen +
+  README "Credits". Mock-tested plus a live Trakt device-code check; no real sign-in yet.
 - **Shipped: 1.0.24 (`+348`, 2026-10-19, latest).** Archive/Extras tab renamed **Media Hub**
   (user-facing only; code/files/keys still `archive_*`); site repositioned as a "universal media
   player"; add-ons with their own catalogs of any type/ids (Other filter); **Jellyfin / Emby**

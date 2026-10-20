@@ -10,6 +10,7 @@ import 'archive_api_service.dart';
 import 'archive_cache.dart';
 import 'media_server_api.dart';
 import 'storage_service.dart';
+import 'tracker_api.dart';
 
 /// One row of the Archive browse: a source's catalog and its titles, or
 /// (with [searchQuery]) that catalog's results for a search.
@@ -66,10 +67,14 @@ class ArchiveStreamOption {
 /// used; torrent/debrid entries are ignored on purpose.
 class ArchiveService extends ChangeNotifier {
   ArchiveService(this._storage,
-      {ArchiveApiService? api, ArchiveCache? cache, MediaServerApi? servers})
+      {ArchiveApiService? api,
+      ArchiveCache? cache,
+      MediaServerApi? servers,
+      TrackerApi? trackers})
       : _api = api ?? ArchiveApiService(),
         _cache = cache ?? ArchiveCache(),
-        _servers = servers ?? MediaServerApi();
+        _servers = servers ?? MediaServerApi(),
+        _trackers = trackers ?? TrackerApi();
 
   final StorageService _storage;
   final ArchiveApiService _api;
@@ -80,11 +85,70 @@ class ArchiveService extends ChangeNotifier {
   /// same for both kinds of source.
   final MediaServerApi _servers;
 
+  /// Trakt/Simkl accounts ([ArchiveSource.tracker]): their lists are rows.
+  final TrackerApi _trackers;
+
   Future<List<ArchiveMeta>> _page(ArchiveSource s, ArchiveCatalog c,
-          {int skip = 0, String? search}) =>
-      s.server != null
-          ? _servers.fetchCatalog(s, c, skip: skip, search: search)
-          : _api.fetchCatalog(s.catalogBaseUrl, c, skip: skip, search: search);
+      {int skip = 0, String? search}) async {
+    if (s.tracker != null) {
+      if (search != null) return const []; // lists aren't searchable
+      final login = await _freshTracker(s);
+      return _trackers.fetchCatalog(login, c, skip: skip);
+    }
+    return s.server != null
+        ? _servers.fetchCatalog(s, c, skip: skip, search: search)
+        : _api.fetchCatalog(s.catalogBaseUrl, c, skip: skip, search: search);
+  }
+
+  // ---- Trakt / Simkl -------------------------------------------------------
+
+  /// [s]'s login, refreshed (and saved) first when it's about to expire.
+  Future<TrackerLogin> _freshTracker(ArchiveSource s) async {
+    final login = s.tracker!;
+    if (!login.needsRefresh) return login;
+    final fresh = await _trackers.refresh(login);
+    await _saveSources([
+      for (final x in sources)
+        x.manifestUrl == s.manifestUrl ? x.copyWith(tracker: fresh) : x,
+    ]);
+    return fresh;
+  }
+
+  /// The connected tracker account of [kind], if any.
+  ArchiveSource? trackerSource(TrackerKind kind) =>
+      sources.where((s) => s.tracker?.kind == kind).firstOrNull;
+
+  /// Every enabled account's login, fresh — what `WatchTracker` reports to.
+  Future<List<TrackerLogin>> trackerLogins() async {
+    final out = <TrackerLogin>[];
+    for (final s in enabledSources) {
+      if (s.tracker == null) continue;
+      try {
+        out.add(await _freshTracker(s));
+      } catch (e) {
+        debugPrint('ArchiveService: ${s.name} token refresh failed: $e');
+      }
+    }
+    return out;
+  }
+
+  /// Adds (or replaces: one account per tracker) a signed-in account.
+  Future<ArchiveSource> addTracker(TrackerLogin login) async {
+    final source = ArchiveSource(
+      manifestUrl: '${login.kind.name}://account',
+      name: login.kind.label,
+      description: login.userName,
+      catalogs: TrackerApi.catalogsFor(login.kind),
+      tracker: login,
+    );
+    await _saveSources([
+      for (final s in sources)
+        if (s.tracker?.kind != login.kind) s,
+      source,
+    ]);
+    unawaited(refresh(force: true));
+    return source;
+  }
 
   /// Every Archive [Channel] uses this playlist id; `PlaybackService.play`
   /// lets it through (no playlist profile backs it).
@@ -602,16 +666,25 @@ class ArchiveService extends ChangeNotifier {
       '$playlistId::${_rawId(source, videoId, episode: episode)}';
 
   Future<ArchiveMeta?> meta(ArchiveSource source, ArchiveMeta preview) =>
-      source.server != null
-          ? _servers.fetchMeta(source, preview)
-          : _api.fetchMeta(source.catalogBaseUrl, preview.type, preview.id,
-              wire: preview.wire);
+      // A tracker's titles are IMDb ids: the provider has their metas.
+      source.tracker != null
+          ? _api.fetchMeta(
+              ArchiveCatalogProvider.baseUrl, preview.type, preview.id)
+          : source.server != null
+              ? _servers.fetchMeta(source, preview)
+              : _api.fetchMeta(source.catalogBaseUrl, preview.type, preview.id,
+                  wire: preview.wire);
 
   /// The sources asked for a title's streams: [source] itself, then — for
   /// a title from the public provider — every other enabled stream-only
   /// source on the same provider, since they share the same IMDB ids.
   List<ArchiveSource> _streamSources(ArchiveSource source) => [
-        source,
+        // A tracker list has no streams: every stream-only add-on is asked,
+        // like for the provider's own rows (same IMDb ids).
+        if (source.tracker != null)
+          for (final s in enabledSources)
+            if (s.streamOnly) s,
+        if (source.tracker == null) source,
         if (source.streamOnly)
           for (final s in enabledSources)
             if (s.streamOnly &&

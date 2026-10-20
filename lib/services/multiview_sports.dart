@@ -7,14 +7,21 @@ import 'sports_follows.dart';
 import 'sports_service.dart';
 import 'storage_service.dart';
 
-/// A game being played right now and the channel that best shows it.
-typedef LiveGameChannel = ({SportsGame game, Channel channel});
+/// A game being played right now and every channel found for it, best
+/// first (your pick, then event channels, the guide, the network).
+typedef LiveGameChannel = ({SportsGame game, List<ChannelMatch> matches});
+
+extension LiveGameChannelBest on LiveGameChannel {
+  Channel get channel => matches.first.channel;
+}
 
 /// The Multiview channel picker's two sports shortcuts (most Multiview
 /// viewers watch sports — owner, 2026-10-19):
 /// - "Live now": games playing right now in the viewer's Sports Trak
-///   leagues (+ followed teams' leagues), each with its best matched
-///   channel — the same matching as Sports Trak and the player side panel;
+///   leagues (+ followed teams' leagues), each with every matched channel
+///   — the same matching as Sports Trak and the player side panel (the
+///   first suggestion isn't always the best, owner 2026-10-19, so the
+///   picker lets the viewer choose, and remembers it via [rememberPick]);
 /// - "Sports": every channel whose group or name looks like sports.
 class MultiviewSports {
   MultiviewSports._();
@@ -32,8 +39,8 @@ class MultiviewSports {
   static bool isSports(Channel c) =>
       _sportsWords.hasMatch(c.group) || _sportsWords.hasMatch(c.name);
 
-  /// Live games with a matched channel, earliest start first. Games with no
-  /// channel in the viewer's playlists are left out.
+  /// Live games with at least one matched channel, earliest start first.
+  /// Games with no channel in the viewer's playlists are left out.
   static Future<List<LiveGameChannel>> liveGames({
     required StorageService storage,
     required PlaylistManager playlist,
@@ -55,13 +62,35 @@ class MultiviewSports {
     final matcher = SportsChannelMatcher.shared(epg);
     await playlist.ensureLiveChannelsLoaded();
     await matcher.prepare(playlist.visibleChannels(category: 'tv'));
-    final matches = await matcher
-        .matchDay(games, SportsChannelPicks.load(storage), limit: 1);
+    final matches =
+        await matcher.matchDay(games, SportsChannelPicks.load(storage));
     return [
       for (final g in games)
-        if (matches[SportsChannelPicks.eventKey(g)]?.firstOrNull?.channel
-            case final c?)
-          (game: g, channel: c),
+        if (matches[SportsChannelPicks.eventKey(g)] case final m?
+            when m.isNotEmpty)
+          (game: g, matches: m),
+    ];
+  }
+
+  /// The viewer chose [channel] for [game]: saved as that game's pick, so
+  /// Sports Trak, the player side panel and this picker list it first.
+  static Future<void> rememberPick(
+      StorageService storage, SportsGame game, Channel channel) async {
+    final picks = SportsChannelPicks.load(storage);
+    if (picks.channelIdFor(game) == channel.id) return;
+    await picks.pickForGame(game, channel.id);
+  }
+
+  /// [live] narrowed to [query] (game title or any of its channels' names).
+  static List<LiveGameChannel> search(
+      List<LiveGameChannel> live, String query) {
+    final q = query.trim().toLowerCase();
+    if (q.isEmpty) return live;
+    return [
+      for (final l in live)
+        if (l.game.title.toLowerCase().contains(q) ||
+            l.matches.any((m) => m.channel.name.toLowerCase().contains(q)))
+          l,
     ];
   }
 

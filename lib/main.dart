@@ -38,6 +38,7 @@ import 'widgets/live_resume_hint.dart';
 import 'widgets/splash_stars.dart';
 import 'l10n/l10n.dart';
 import 'services/archive_service.dart';
+import 'services/watch_tracker.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -306,6 +307,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       _playbackService = PlaybackService(_storage, _playlistManager);
       _parentalPin = ParentalPin(_storage);
       _archiveService = ArchiveService(_storage);
+      // Trakt/Simkl scrobbling reads the connected accounts from here.
+      WatchTracker.instance.attach(_archiveService);
       _viewerProfileService =
           ViewerProfileService(_storage, _playlistManager, _playbackService);
 
