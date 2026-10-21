@@ -34,6 +34,19 @@ well-scoped tasks). The owner decides who does what. Only one agent works at a t
   review) merges into `main`.
 - Keep changes small and on-topic: one task per branch.
 
+## Codex: finishing a task (do every step, in order)
+1. **New worktree? Run `flutter pub get` first** (once). Without it `flutter analyze`/`test` can't run.
+2. `dart format` the files you changed (only those).
+3. `flutter analyze` → must say **17 issues found** (no errors, nothing new).
+4. `flutter test` → must end with **All tests passed!**
+5. `git checkout -- linux/flutter macos/Flutter windows/flutter` — `pub get` rewrites those
+   generated files; never commit them.
+6. **Commit on your `codex/<task>` branch** (message starts with `Codex:`). Don't merge, don't push.
+7. **Write `HANDOFF.md` in the main checkout: `C:\Users\aarse\NoXPlayer\HANDOFF.md`** — not in your
+   worktree (it's git-ignored, so a worktree copy is invisible to the owner and Claude). Mark your
+   lines with `cdx`, and paste the exact analyze/test result lines under **State**.
+If a step fails, stop and say so in HANDOFF instead of handing back as done.
+
 ## Good Codex tasks / keep for Claude
 | Codex | Claude |
 |---|---|
