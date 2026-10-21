@@ -516,6 +516,13 @@ h3{ font-size:1.22rem; letter-spacing:-.015em; font-stretch:92%; margin-bottom:9
 /* ---- 10-foot split ---- */
 .split{ display:grid; gap:clamp(30px,5vw,60px); align-items:center; grid-template-columns:1fr; }
 @media (min-width:980px){ .split{ grid-template-columns:.9fr 1.1fr; } }
+.shot-stack{ display:grid; gap:18px; }
+.shot-pair{ display:grid; gap:14px; grid-template-columns:1fr 1fr; }
+.shot-sm figcaption{ font-size:.8rem; margin-top:10px; }
+@media (min-width:980px){
+  .split-flip{ grid-template-columns:1.1fr .9fr; }
+  .split-flip > :first-child{ order:2; }
+}
 .ticks{ list-style:none; margin:26px 0 0; padding:0; display:grid; gap:14px; }
 .ticks li{ display:flex; gap:12px; align-items:flex-start; color:var(--ink-2); font-size:1rem; }
 .ticks svg{ flex:none; margin-top:4px; color:var(--pink-lift); }
@@ -698,7 +705,8 @@ details .ans p + p{ margin-top:12px; }
     <nav class="nav" aria-label="Primary">
       <a href="#requirements">What you need</a>
       <a href="#features">Features</a>
-      <a href="#tv">On the TV</a>
+      <a href="#sports">Sports Trak</a>
+      <a href="#media-hub">Media Hub</a>
       <a href="#install">Install</a>
       <a href="#howto">How to use it</a>
       <a href="#faq">FAQ</a>
@@ -721,6 +729,8 @@ details .ans p + p{ margin-top:12px; }
     <div class="wrap">
       <a href="#requirements">What you need</a>
       <a href="#features">Features</a>
+      <a href="#sports">Sports Trak</a>
+      <a href="#media-hub">Media Hub</a>
       <a href="#tv">On the TV</a>
       <a href="#install">Install</a>
       <a href="#howto">How to use it</a>
@@ -939,10 +949,10 @@ details .ans p + p{ margin-top:12px; }
         <li class="gal-item" role="group" aria-roledescription="slide" aria-label="14 of 14">
           <figure class="shot">
             <div class="shot-frame">
-              <img src="assets/shot-settings.png" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
-                   alt="VesperTV's settings screen laid out for a remote: large, widely spaced rows for Add Playlist, Playlist Manager, Profiles, Theme, EPG and Check for Updates.">
+              <img src="assets/shot-settings.jpg" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+                   alt="VesperTV's settings on a TV: a left panel of categories (Playlists &amp; guide, Media Hub, Interface, General, Device &amp; data) and, beside it, the focused category's description and rows.">
             </div>
-            <figcaption>Every screen sized for a D-pad and a sofa</figcaption>
+            <figcaption>Settings — pick a category on the left, see what's inside on the right</figcaption>
           </figure>
         </li>
     </ul>
@@ -1146,17 +1156,10 @@ details .ans p + p{ margin-top:12px; }
               its own row of results.</span>
             </li>
             <li>
-              <b>Media Hub</b>
-              <span>Films and series from the REST add-ons you add, with posters, genres,
-              search and watch history, plus the movie and TV libraries of your own
-              Jellyfin or Emby server.</span>
-            </li>
-            <li>
-              <b>Trakt &amp; Simkl</b>
-              <span>Connect your account with a code on the TV: what you watch is marked
-              as watched, episodes you watched anywhere get their checkmark, and your
-              watchlist and Continue watching show up in the Media Hub. Off until you
-              connect.</span>
+              <b>Media Hub &amp; Sports Trak</b>
+              <span>Add-ons, your own Jellyfin or Emby server, Trakt &amp; Simkl, and live
+              scores matched to your channels — each has its own section
+              (<a href="#media-hub">Media Hub</a>, <a href="#sports">Sports Trak</a>).</span>
             </li>
           </ul>
 
@@ -1165,55 +1168,7 @@ details .ans p + p{ margin-top:12px; }
         <!-- 04 -->
         <article class="cluster reveal">
           <div class="cluster-head">
-            <p class="step-no">04 / SPORTS · NEW</p>
-            <h3>The scoreboard, and the channel it's on</h3>
-            <p>Live scores for your leagues, matched to the channels in your own playlist.</p>
-          </div>
-
-          <ul class="feat-list">
-            <li>
-              <b>Scores &amp; schedule</b>
-              <span>NHL, NFL, NBA, MLB, WNBA, college football, MLS, Premier League,
-              Champions League, LaLiga, Bundesliga, Serie A and Ligue 1, plus 60+ more
-              in the League manager (college hockey and soccer, tennis, golf, UFC, F1…) —
-              live scores, records and start times, from yesterday to next week.</span>
-            </li>
-            <li>
-              <b>Finds the channel for you</b>
-              <span>Each game is matched to a channel in your playlist through event
-              channels, your guide and the broadcasting network. Select to watch; hold
-              Select to pick another and have it remembered for the game or the team.</span>
-            </li>
-            <li>
-              <b>Standings</b>
-              <span>Conference and league tables with streaks, last ten and the soccer
-              qualification zones.</span>
-            </li>
-            <li>
-              <b>My Teams</b>
-              <span>Follow a team from Standings: its games get a star and come first, and
-              My Teams shows its record, standing, a mini table and the next two weeks of
-              games.</span>
-            </li>
-            <li>
-              <b>Multiview for game nights</b>
-              <span>Two or four games at once. The channel picker's <b>Live now</b> lists
-              the games on right now with their matched channel, and <b>Sports</b> narrows
-              your playlist to sports channels. Channel names fade so the score bug stays
-              clear.</span>
-            </li>
-            <li>
-              <b>No spoilers, no sign-up</b>
-              <span>One switch hides every score. Data comes from ESPN's public feed,
-              straight from your device — no account and no API key.</span>
-            </li>
-          </ul>
-        </article>
-
-        <!-- 05 -->
-        <article class="cluster reveal">
-          <div class="cluster-head">
-            <p class="step-no">05 / REMOTE, TV &amp; SPEED</p>
+            <p class="step-no">04 / REMOTE, TV &amp; SPEED</p>
             <h3>Fast on the hardware you own</h3>
             <p>Including the five-year-old stick behind the television.</p>
           </div>
@@ -1253,6 +1208,134 @@ details .ans p + p{ margin-top:12px; }
           </ul>
         </article>
 
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- ==================== SPORTS TRAK ==================== -->
+  <section class="sec" id="sports">
+    <div class="wrap split">
+      <div class="reveal">
+        <span class="eyebrow">Sports Trak</span>
+        <h2>The scoreboard, and the channel it's on</h2>
+        <p style="color:var(--ink-2)">
+          Live scores for the leagues you follow, each game matched to a channel in your
+          own playlist. Pick a game and it plays — no hunting through a hundred sports
+          channels at kick-off.
+        </p>
+        <ul class="ticks">
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 12.5 5.2 5.2L20 6.9"/></svg>
+            <span><b>70+ leagues.</b> NHL, NFL, NBA, MLB, WNBA, college sports, MLS, the big five European leagues and the Champions League, plus tennis, golf, UFC, F1 and more in the League manager — from yesterday to next week.</span>
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 12.5 5.2 5.2L20 6.9"/></svg>
+            <span><b>Finds the channel for you.</b> Games are matched through event channels, your guide and the broadcaster. Hold Select to pick another channel; it's remembered for the game or the team.</span>
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 12.5 5.2 5.2L20 6.9"/></svg>
+            <span><b>Watch without leaving.</b> Play a game in the mini player beside the scores, then OK for full screen. Hold Select in the player's side panel to pull the live stats over the stream.</span>
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 12.5 5.2 5.2L20 6.9"/></svg>
+            <span><b>Live games, in depth.</b> Box scores, scorers, injuries, team stats and standings for every game in play.</span>
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 12.5 5.2 5.2L20 6.9"/></svg>
+            <span><b>My Teams &amp; a favourite league.</b> Follow teams from Standings: their games come first with a star. A favourite league opens Sports Trak already filtered to it.</span>
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 12.5 5.2 5.2L20 6.9"/></svg>
+            <span><b>Game night in Multiview.</b> Two or four games at once; the picker's Live now lists what's on with its matched channel.</span>
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 12.5 5.2 5.2L20 6.9"/></svg>
+            <span><b>No spoilers, no sign-up.</b> One switch hides every score. Data comes from public sports feeds, straight from your device — no account, no key.</span>
+          </li>
+        </ul>
+      </div>
+      <div class="shot-stack reveal">
+        <figure class="shot">
+          <div class="shot-frame">
+            <img src="assets/shot-sports.jpg" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+                 alt="Sports Trak on a TV: today's games as cards with live scores, and the channel each one is on.">
+          </div>
+          <figcaption>Live scores, and the channel each game is on</figcaption>
+        </figure>
+        <div class="shot-pair">
+        <figure class="shot shot-sm">
+          <div class="shot-frame">
+            <img src="assets/shot-live-stats.jpg" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+                 alt="Live stats over a playing game: score, top performers and box score.">
+          </div>
+          <figcaption>Live stats over the stream</figcaption>
+        </figure>
+        <figure class="shot shot-sm">
+          <div class="shot-frame">
+            <img src="assets/shot-my-teams.jpg" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+                 alt="My Teams: a followed team's record, standing and upcoming games.">
+          </div>
+          <figcaption>My Teams</figcaption>
+        </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- ==================== MEDIA HUB ==================== -->
+  <section class="sec" id="media-hub">
+    <div class="wrap split split-flip">
+      <div class="reveal">
+        <span class="eyebrow">Media Hub</span>
+        <h2>Your add-ons and your own server, in one place</h2>
+        <p style="color:var(--ink-2)">
+          Films and series from the REST add-ons you add and from your own Jellyfin or
+          Emby server, in rows of posters under an HD backdrop — browsed exactly like the
+          rest of the app, with the remote.
+        </p>
+        <ul class="ticks">
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 12.5 5.2 5.2L20 6.9"/></svg>
+            <span><b>REST add-ons.</b> Paste a <code>manifest.json</code> link: its catalogues become rows, or a stream-only add-on plays the popular, new and featured titles it can find. Only direct video links are played.</span>
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 12.5 5.2 5.2L20 6.9"/></svg>
+            <span><b>Jellyfin &amp; Emby.</b> Sign in with your server's address — its movie and TV libraries show up as rows and play as stored, no transcoding.</span>
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 12.5 5.2 5.2L20 6.9"/></svg>
+            <span><b>Search first.</b> The floating bar up top starts with Search (your recent searches one press away), then a jump to every row and a genre filter.</span>
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 12.5 5.2 5.2L20 6.9"/></svg>
+            <span><b>Favourites &amp; Recently watched.</b> Hold Select on a poster to keep it; what you played is a row of its own.</span>
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 12.5 5.2 5.2L20 6.9"/></svg>
+            <span><b>A whole row at once.</b> Hold a row's button to open it as a full-screen poster grid.</span>
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 12.5 5.2 5.2L20 6.9"/></svg>
+            <span><b>Kept out of the way.</b> An Other filter holds custom or adult add-ons apart from the main rows; any source can be moved in or out of it.</span>
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 12.5 5.2 5.2L20 6.9"/></svg>
+            <span><b>Trakt &amp; Simkl.</b> Connect with a code on the TV: what you watch is scrobbled, watched episodes get their checkmark, and your watchlist and Continue watching become rows.</span>
+          </li>
+        </ul>
+      </div>
+      <div class="shot-stack reveal">
+        <figure class="shot">
+          <div class="shot-frame">
+            <img src="assets/shot-media-hub.jpg" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+                 alt="The Media Hub on a TV: an HD backdrop, the floating Search and genre bar, and rows of posters from add-ons.">
+          </div>
+          <figcaption>Media Hub — rows from your add-ons and server</figcaption>
+        </figure>
       </div>
     </div>
   </section>
