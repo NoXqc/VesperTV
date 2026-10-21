@@ -36,6 +36,7 @@ class MainActivity : FlutterActivity() {
     private val DEVICE_CHANNEL = "com.nox.nox_iptv/device_type"
     private val BACKUP_CHANNEL = "com.nox.nox_iptv/backup"
     private val backupStore by lazy { BackupStore(this) }
+    private val recorderBridge by lazy { RecorderBridge(this) }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         if (!backupStore.onPermissionResult(requestCode, grantResults)) {
@@ -56,6 +57,10 @@ class MainActivity : FlutterActivity() {
         // Settings > Backup & restore — see BackupStore.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, BACKUP_CHANNEL)
             .setMethodCallHandler { call, result -> backupStore.handle(call, result) }
+
+        // Sports Trak recording — see RecorderService / RecorderScheduler.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "vespertv/recorder")
+            .setMethodCallHandler { call, result -> recorderBridge.handle(call, result) }
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, MEMORY_CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "getMemoryInfo") {

@@ -8,12 +8,15 @@ import '../../utils/tv_theme.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_menu_tile.dart';
 import '../../services/backup_service.dart';
+import '../../services/recording_service.dart';
 import 'backup_screen.dart';
 import 'check_updates_screen.dart';
 import 'epg_settings_screen.dart';
 import 'general_settings_screen.dart';
 import 'playlist_manager_screen.dart';
 import 'profiles_screen.dart';
+import 'recording_settings_screen.dart';
+import 'send_log_screen.dart';
 import 'transfer_screen.dart';
 import 'theme_screen.dart';
 import 'addons_screen.dart';
@@ -220,6 +223,17 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
                 tr('Check for Updates'),
                 tr('Download and install the latest release'),
                 (_) => const CheckUpdatesScreen()),
+            if (RecordingService.supported)
+              _Entry(
+                  Icons.fiber_smart_record_outlined,
+                  tr('Recordings'),
+                  tr('Margins, space and where recordings are saved'),
+                  (_) => const RecordingSettingsScreen()),
+            _Entry(
+                Icons.bug_report_outlined,
+                tr('Send log'),
+                tr('Send the app\'s log to the developer'),
+                (_) => const SendLogScreen()),
           ],
         ),
       ];

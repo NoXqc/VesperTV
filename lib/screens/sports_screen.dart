@@ -18,6 +18,7 @@ import '../services/desktop_mini_player.dart';
 import '../services/epg_service.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
+import '../services/recording_service.dart';
 import '../services/sports_channel_matcher.dart';
 import '../services/sports_follows.dart';
 import '../services/sports_service.dart';
@@ -29,6 +30,7 @@ import '../widgets/video_tap_layer.dart';
 import '../widgets/hold_to_activate.dart';
 import '../widgets/live_resume_hint.dart';
 import '../widgets/player_controls.dart';
+import '../widgets/rec_cue.dart';
 import '../widgets/settings_scaffold.dart';
 import '../widgets/sports_widgets.dart';
 import '../widgets/tv_menu_tile.dart';
@@ -765,6 +767,12 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         hasPick: _picks.channelIdFor(game) != null,
         offerPlayHere: watch != null || !_isPreviewing(game),
         playFullScreen: watch != null,
+        recording: RecordingService.supported
+            ? RecordingService.instance.entryFor(game)
+            : null,
+        autoTeam: RecordingService.supported
+            ? RecordingService.instance.autoTeam
+            : null,
       )),
     );
     if (result == null || !mounted) return;
@@ -783,7 +791,59 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       case _ForgetPickAction():
         await _picks.clearFor(game);
         await _rematch();
+      case _RecordAction(:final channel):
+        await _record(game, channel);
+      case _StopRecordAction(:final entry):
+        await RecordingService.instance.stop(entry);
+        _toast(tr('Recording cancelled'));
+      case _AutoTeamAction(:final team):
+        await _setAutoTeam(game, team);
     }
+  }
+
+  Future<void> _record(SportsGame game, Channel channel) async {
+    final service = RecordingService.instance;
+    await service.askNotifications();
+    if (!await service.hasRoom()) {
+      _toast(tr('Not enough free space to record'));
+      return;
+    }
+    if (!mounted) return;
+    await service.handOver(channel, context.read<PlaybackService>(),
+        () => service.recordGame(game, channel));
+    if (!mounted) return;
+    _toast(game.state == GameState.live
+        ? tr('Recording {title}', {'title': game.title})
+        : tr('{title} will be recorded', {'title': game.title}));
+    setState(() {});
+  }
+
+  Future<void> _setAutoTeam(SportsGame game, SportsTeam? team) async {
+    final service = RecordingService.instance;
+    if (team == null) {
+      final name = service.autoTeam?.teamName ?? '';
+      await service.clearAutoTeam();
+      _toast(tr('No longer recording every {team} game', {'team': name}));
+      return;
+    }
+    await service.askNotifications();
+    await service.setAutoTeam(game.league, team);
+    _toast(tr('Every {team} game will be recorded', {'team': team.shortName}));
+    if (!mounted) return;
+    final playlist = context.read<PlaylistManager>();
+    await playlist.ensureLiveChannelsLoaded();
+    await service.refreshAutoTeam(
+      viewerLeagues: _leagues,
+      matcher: _matcher,
+      picks: _picks,
+      channels: playlist.visibleChannels(category: 'tv'),
+    );
+  }
+
+  void _toast(String text) {
+    if (!mounted) return;
+    ScaffoldMessenger.maybeOf(context)
+        ?.showSnackBar(SnackBar(content: Text(text)));
   }
 
   Future<void> _pickChannel(SportsGame game,
@@ -1953,11 +2013,21 @@ class _Hero extends StatelessWidget {
                   fontSize: small ? 24 : 30,
                   fontWeight: FontWeight.w800,
                   color: Colors.white)),
-        Text(status,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-                fontSize: 14, fontWeight: FontWeight.w600, color: statusColor)),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(status,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: statusColor)),
+            ),
+            RecPill(game: game, small: true),
+          ],
+        ),
         const SizedBox(height: 8),
         if (channelName != null)
           Column(
@@ -2287,6 +2357,7 @@ class _GameCardState extends State<_GameCard> {
                                 ],
                               ),
                             ),
+                          RecPill(game: g, small: true),
                           // Takes the rest of the row (status right-aligned)
                           // and shrinks a long status next to the pill.
                           Expanded(
@@ -2382,6 +2453,22 @@ class _PickAction extends _GameAction {}
 
 class _ForgetPickAction extends _GameAction {}
 
+class _RecordAction extends _GameAction {
+  _RecordAction(this.channel);
+  final Channel channel;
+}
+
+class _StopRecordAction extends _GameAction {
+  _StopRecordAction(this.entry);
+  final RecordingEntry entry;
+}
+
+/// Record every game of [team] (null = stop auto-recording).
+class _AutoTeamAction extends _GameAction {
+  _AutoTeamAction(this.team);
+  final SportsTeam? team;
+}
+
 class _GameDialog extends StatelessWidget {
   const _GameDialog({
     required this.game,
@@ -2389,6 +2476,8 @@ class _GameDialog extends StatelessWidget {
     required this.matching,
     required this.hideScores,
     required this.hasPick,
+    this.recording,
+    this.autoTeam,
     required this.offerPlayHere,
     this.playFullScreen = false,
   });
@@ -2405,6 +2494,67 @@ class _GameDialog extends StatelessWidget {
 
   /// Live list: that first entry is "Play" (full screen) — no hero there.
   final bool playFullScreen;
+
+  /// This game's recording (scheduled / running / done), null = none.
+  final RecordingEntry? recording;
+
+  /// The team whose every game is recorded, if any.
+  final AutoTeam? autoTeam;
+
+  /// Record / Stop recording / Record every <team> game (Android).
+  List<Widget> _recordTiles(BuildContext context) {
+    if (!RecordingService.supported) return const [];
+    final rec = recording;
+    final tiles = <Widget>[];
+    if (rec != null &&
+        (rec.state == RecState.scheduled ||
+            rec.state == RecState.waiting ||
+            rec.state == RecState.recording)) {
+      final running = rec.state == RecState.recording;
+      tiles.add(TvMenuTile(
+        icon: running ? Icons.stop_circle_outlined : Icons.event_busy,
+        title: running ? tr('Stop recording') : tr('Cancel recording'),
+        subtitle: rec.state == RecState.waiting
+            ? tr('Waiting for a channel in the guide')
+            : '${rec.channelName} · ${_timeLabel(rec.startAt)}–${_timeLabel(rec.endAt)}',
+        onTap: () => Navigator.of(context).pop(_StopRecordAction(rec)),
+      ));
+    } else if (game.state != GameState.post && matches.isNotEmpty) {
+      tiles.add(TvMenuTile(
+        icon: Icons.fiber_manual_record,
+        title: tr('Record'),
+        subtitle: game.state == GameState.live
+            ? tr('{channel} · starts now',
+                {'channel': matches.first.channel.name})
+            : tr('{channel} · from {time}', {
+                'channel': matches.first.channel.name,
+                'time': _timeLabel(game.start),
+              }),
+        onTap: () =>
+            Navigator.of(context).pop(_RecordAction(matches.first.channel)),
+      ));
+    }
+    if (!game.league.isField) {
+      for (final team in [game.first, game.second]) {
+        final isAuto = RecordingService.instance.isAutoTeam(game, team);
+        tiles.add(TvMenuTile(
+          icon: isAuto ? Icons.event_repeat : Icons.repeat,
+          title: isAuto
+              ? tr('Stop recording every {team} game', {'team': team.shortName})
+              : tr('Record every {team} game', {'team': team.shortName}),
+          subtitle: isAuto
+              ? tr('Recordings already made are kept')
+              : autoTeam == null
+                  ? tr('One team at a time, on the channel {tab} picks',
+                      {'tab': AppConstants.sportsTabName})
+                  : tr('Replaces {team}', {'team': autoTeam!.teamName}),
+          onTap: () =>
+              Navigator.of(context).pop(_AutoTeamAction(isAuto ? null : team)),
+        ));
+      }
+    }
+    return tiles;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2527,6 +2677,7 @@ class _GameDialog extends StatelessWidget {
                         onTap: () =>
                             Navigator.of(context).pop(_ForgetPickAction()),
                       ),
+                    ..._recordTiles(context),
                   ],
                 ),
               ),

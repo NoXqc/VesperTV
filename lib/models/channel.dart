@@ -320,13 +320,18 @@ class Channel {
   /// Takes a raw id (`Channel.rawId`, not `Channel.id`) — the playlist
   /// prefix on `id` would otherwise mask these provider-native prefixes.
   /// Archive tab titles (`arc_vod_`/`arc_ep_`, see ArchiveService) are VOD too.
-  static bool isLiveId(String rawId) =>
-      !(rawId.startsWith('xt_vod_') ||
-          rawId.startsWith('xt_ep_') ||
-          isArchiveId(rawId));
+  static bool isLiveId(String rawId) => !(rawId.startsWith('xt_vod_') ||
+      rawId.startsWith('xt_ep_') ||
+      isArchiveId(rawId) ||
+      isRecordingId(rawId));
 
   /// An Archive tab movie/episode (ArchiveService.resolve) — no playlist
   /// profile backs it.
   static bool isArchiveId(String rawId) =>
       rawId.startsWith('arc_vod_') || rawId.startsWith('arc_ep_');
+
+  /// A Sports Trak recording (RecordingService.channelFor): a local file,
+  /// seekable, no playlist profile backs it.
+  static const recordingPrefix = 'rec_';
+  static bool isRecordingId(String rawId) => rawId.startsWith(recordingPrefix);
 }

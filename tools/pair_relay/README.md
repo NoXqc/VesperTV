@@ -13,6 +13,11 @@ Server half of Add Playlist > **From my phone** when the phone is *not* on the T
   number of GETs, and deletes it on expiry or a `DELETE` with the write token (stored hashed).
   Caps: 8 MB per blob, 2 GB total (507 when full); expired files are pruned every 5 min. Built so
   automatic cloud sync can later reuse it — only `VAULT_MAX_TTL` would change.
+- **Send log** (`POST /api/log`, Settings > Device & data, `lib/services/app_log.dart`): the app
+  sends its redacted log as text with an `X-Log-Code` (`LOG-XXXXXX`); the relay posts it as a
+  file to the owner's private Discord channel and keeps nothing. 1 MB cap, 5 an hour per IP (+
+  nginx `pairlog` zone). The webhook URL is a secret: `PAIR_LOG_WEBHOOK=` in root-only
+  `/etc/pair-relay.env` (`EnvironmentFile`), never in the repo; without it the route answers 503.
 - `pair.html` — copy `assets/pair/pair.html` next to `relay.py` (same file the TV serves).
 - `pair-relay.service` — systemd unit (`DynamicUser`, read-only filesystem, 128 MB cap).
 

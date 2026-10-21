@@ -49,7 +49,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
 4. `flutter analyze` must report the baseline **17** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `1.0.31` unless noted
+5. Check the current state of releases: `gh release list` (latest should be `1.0.32` unless noted
    in §11).
 
 ## 3. Layout (what matters)
@@ -118,7 +118,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
 - Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+360**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
-  (Currently **+382**, 1.0.31.)
+  (Currently **+384**, 1.0.32.)
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
 Only release when the owner asks ("update the latest", "cut it", "fully release"). Outline: bump `pubspec.yaml` (versionCode `+N` must always rise) → `flutter analyze` → build APK + verify signature (§5) → build Windows + zip → **commit & push first** → `gh release upload <tag> app-release.apk VesperTV-windows-x64.zip --clobber` → `gh release edit <tag> --tag <new> --notes-file …` → make sure the tag equals HEAD → verify downloads/hashes, the OLD `NoXqc/NoXPlayer` redirect links and AFTVnews code `1760256`. The updater offers any *different* tag (`_isDifferent`), never leave two `.zip`/`.apk` assets on the latest release.
@@ -162,6 +162,8 @@ set by `HttpVideoAsset`), `StatsBridge.java` (MethodChannel `vespertv/stats` →
 rendered / dropped frames), `VideoAsset.streamStats()`, `VideoPlayer.streamStats`, and
 `videoPlayer.streamStats = videoAsset.streamStats()` in both `VideoPlayerPlugin` create methods.
 Uses `android.util.LongSparseArray`; new classes need `@OptIn(markerClass = UnstableApi.class)`.
+**Recording (1.0.32) is NOT in this plugin** — it is app-side Kotlin (`RecorderService.kt`,
+`RecorderScheduler.kt` in `android/app/.../nox_iptv/`), so a plugin re-sync doesn't touch it.
 
 ## 10. Hard-won rules (don't re-learn these)
 - **Cold-start splash is deliberately slow (~20-25s with a big second playlist).** Entering the UI
@@ -301,7 +303,31 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-21)
-- **Shipped: 1.0.31 (`+382`, 2026-10-21, latest; test builds `+374`..`+381` on the Formuler and
+- **Shipped: 1.0.32 (`+384`, 2026-10-21, latest; test build `+383` on the Formuler + Fire Stick):**
+  - **Recording (Android only)** — Sports Trak games (game menu `_recordTiles`: "Record until the
+    show ends" / "Record until I stop it", 4 h max) and live channels (hold menu), margins 5 min
+    before / 30 after, **auto-record ONE team** (all its leagues). Native `RecorderService.kt`
+    (foreground service, wake + Wi-Fi lock, HLS loop, `LiveTee`: watching the recorded channel
+    plays `127.0.0.1` so both share one provider connection) + `RecorderScheduler.kt` (exact
+    alarms `USE_EXACT_ALARM`, `BootReceiver`, channel `vespertv/recorder`). Dart
+    `services/recording_service.dart` (device-only `recordings.json`), Recordings tab row
+    (`screens/recordings_screen.dart`: game cards = both teams, **never the score**; channel
+    card = logo + program at start), Settings > Recording (app storage or USB/SD), conflict popup
+    when the account's connections are used. 20 GB cap, stops at 1 GB free (start needs 1.25 GB).
+    **Red REC cue** (`widgets/rec_cue.dart`): dot by a recording channel on the live list +
+    Timeline guide corner, "● REC" pill before the player badges, on Sports game cards (outlined
+    dot = scheduled) and beside the hero's status. Fire Stick-verified: record, tee, stop,
+    playback with seek. **Unverified:** scheduled start with the app closed / standby,
+    HLS-behind-.ts, USB/SD, conflict popup, auto-team over days, the REC cue on a box.
+    Notification text is English only. Windows: no recording.
+  - **Send log** (Settings, `services/app_log.dart` capture zone + `redact`,
+    `send_log_screen.dart`) → `POST pair.vespertv.app/api/log` → owner's private Discord channel
+    (relay `_log_post`, webhook only in root-only `/etc/pair-relay.env` `PAIR_LOG_WEBHOOK`).
+  - **NBA channel matching** (`_networkAliases`, `_callSign`, team channels step 2b): 11/11 on the
+    Fire Stick. **Menus:** `widgets/tv_dialog_option.dart` replaces every `SimpleDialogOption`
+    (gold focus row, `SwallowHeldActivate` — a held OK on a focused first row activated it), TV
+    forces the focus highlight (`alwaysTraditional`); Formuler + Sony CEC remote recheck pending.
+- **Shipped: 1.0.31 (`+382`, 2026-10-21; test builds `+374`..`+381` on the Formuler and
   the Fire Stick, all owner-tested):**
   - **Own live groups** (`services/user_groups.dart`, `UserGroups` owned by `PlaylistManager`,
     key `nox_my_groups` **per viewer, across playlists**; moves keyed by `Channel.id`, own channel

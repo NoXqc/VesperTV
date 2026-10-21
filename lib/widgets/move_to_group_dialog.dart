@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
 import 'mode_button.dart';
+import 'tv_dialog_option.dart';
 import 'tv_text_field_gate.dart';
 
 /// What [showMoveToGroupDialog] picked: the viewer's own group to move the
@@ -29,7 +30,8 @@ Future<MoveToGroupChoice?> showMoveToGroupDialog(
           maxLines: 2, overflow: TextOverflow.ellipsis),
       children: [
         for (final g in userGroups)
-          SimpleDialogOption(
+          TvDialogOption(
+            autofocus: true,
             onPressed: () => Navigator.of(context).pop('g:$g'),
             child: Row(children: [
               Expanded(child: Text(g)),
@@ -38,7 +40,7 @@ Future<MoveToGroupChoice?> showMoveToGroupDialog(
                     size: 18, color: Theme.of(context).colorScheme.primary),
             ]),
           ),
-        SimpleDialogOption(
+        TvDialogOption(
           onPressed: () => Navigator.of(context).pop('new'),
           child: Row(children: [
             const Icon(Icons.add, size: 18),
@@ -47,11 +49,11 @@ Future<MoveToGroupChoice?> showMoveToGroupDialog(
           ]),
         ),
         if (moved)
-          SimpleDialogOption(
+          TvDialogOption(
             onPressed: () => Navigator.of(context).pop('back'),
             child: Text(tr('Back to {group}', {'group': providerGroup})),
           ),
-        SimpleDialogOption(
+        TvDialogOption(
           onPressed: () => Navigator.of(context).pop(),
           child: Text(tr('Cancel')),
         ),

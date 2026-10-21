@@ -1439,4 +1439,138 @@ const Map<String, String> kIt = {
   // Channel menu: Remove from group
   "Remove from {group}":
       "Rimuovi da {group}",
+  // Settings > Device & data > Send log
+  "Send log":
+      "Invia log",
+  "Send the app's log to the developer":
+      "Invia il log dell'app allo sviluppatore",
+  "Sending...":
+      "Invio...",
+  "Send again":
+      "Invia di nuovo",
+  "Log sent. Your code:":
+      "Log inviato. Il tuo codice:",
+  "Mention this code on Reddit or Discord with what happened, so the developer can find your log.":
+      "Indica questo codice su Reddit o Discord insieme a cosa è successo, così lo sviluppatore trova il tuo log.",
+  "Something not working? Send the app's log to the VesperTV developer. It holds what the app did recently (this session and the last one) and your device model, nothing else.":
+      "Qualcosa non funziona? Invia il log dell'app allo sviluppatore di VesperTV. Contiene ciò che l'app ha fatto di recente (questa sessione e la precedente) e il modello del dispositivo, nient'altro.",
+  "Server addresses, user names, passwords and other private details are removed before sending.":
+      "Indirizzi dei server, nomi utente, password e altri dati privati vengono rimossi prima dell'invio.",
+  "Too many logs sent from here. Try again in an hour.":
+      "Troppi log inviati da qui. Riprova tra un'ora.",
+  "Couldn't send the log. Check the internet connection and try again.":
+      "Impossibile inviare il log. Controlla la connessione a Internet e riprova.",
+  // Recordings (Sports Trak recording, Recordings tab)
+  "Watch live":
+      "Guarda in diretta",
+  "Play from the start":
+      "Riproduci dall'inizio",
+  "What has been recorded so far":
+      "Quanto registrato finora",
+  "Stop recording":
+      "Interrompi la registrazione",
+  "Keeps what has been recorded":
+      "Conserva quanto registrato",
+  "Cancel recording":
+      "Annulla la registrazione",
+  "Delete recording":
+      "Elimina la registrazione",
+  "Frees {size}":
+      "Libera {size}",
+  "Removes it from the list":
+      "La rimuove dall'elenco",
+  "Recordings":
+      "Registrazioni",
+  "Recording every {team} game":
+      "Registra ogni partita di {team}",
+  "Nothing recorded yet. Hold OK on a game in {tab} and pick Record, or hold OK on a live channel.":
+      "Ancora nessuna registrazione. Tieni premuto OK su una partita in {tab} e scegli Registra, oppure tieni premuto OK su un canale in diretta.",
+  "Recording now":
+      "In registrazione",
+  "Recorded":
+      "Registrati",
+  "{used} of {cap} GB used":
+      "{used} usati su {cap} GB",
+  "REC · {size}":
+      "REG · {size}",
+  "Waiting for a channel":
+      "In attesa di un canale",
+  "Interrupted · {size}":
+      "Interrotta · {size}",
+  "Missed":
+      "Persa",
+  "Failed":
+      "Non riuscita",
+  "Live channel":
+      "Canale in diretta",
+  "Start early: {min} min":
+      "Inizia prima: {min} min",
+  "Before the game's scheduled start":
+      "Prima dell'inizio previsto della partita",
+  "Keep recording: {min} min":
+      "Continua a registrare: {min} min",
+  "After the scheduled end, for overtime and delays":
+      "Dopo la fine prevista, per supplementari e ritardi",
+  "Space for recordings: {gb} GB":
+      "Spazio per le registrazioni: {gb} GB",
+  "{used} used. Recording stops when this is full or the storage has less than 1 GB left.":
+      "{used} usati. La registrazione si ferma quando lo spazio è pieno o resta meno di 1 GB.",
+  "Save recordings to":
+      "Salva le registrazioni in",
+  "USB drive / SD card":
+      "Chiavetta USB / scheda SD",
+  "This device":
+      "Questo dispositivo",
+  "{free} free of {total}":
+      "{free} liberi su {total}",
+  "Plug in a USB drive or SD card to record to it. Recordings on this device are deleted if VesperTV is uninstalled.":
+      "Collega una chiavetta USB o una scheda SD per registrare lì. Le registrazioni su questo dispositivo vengono eliminate se VesperTV viene disinstallato.",
+  "Recording in progress":
+      "Registrazione in corso",
+  "{title} is recording on {channel}. Your playlist allows one connection, so playing another of its channels stops the recording.":
+      "{title} è in registrazione su {channel}. La tua playlist consente una connessione, quindi guardare un altro dei suoi canali interrompe la registrazione.",
+  "Recording cancelled":
+      "Registrazione annullata",
+  "Not enough free space to record":
+      "Spazio insufficiente per registrare",
+  "Recording {title}":
+      "Registrazione di {title}",
+  "{title} will be recorded":
+      "{title} verrà registrata",
+  "No longer recording every {team} game":
+      "Le partite di {team} non vengono più registrate",
+  "Every {team} game will be recorded":
+      "Ogni partita di {team} verrà registrata",
+  "Waiting for a channel in the guide":
+      "In attesa di un canale nella guida",
+  "Record":
+      "Registra",
+  "{channel} · starts now":
+      "{channel} · inizia ora",
+  "{channel} · from {time}":
+      "{channel} · dalle {time}",
+  "Stop recording every {team} game":
+      "Smetti di registrare ogni partita di {team}",
+  "Record every {team} game":
+      "Registra ogni partita di {team}",
+  "Recordings already made are kept":
+      "Le registrazioni già fatte restano",
+  "One team at a time, on the channel {tab} picks":
+      "Una squadra alla volta, sul canale scelto da {tab}",
+  "Replaces {team}":
+      "Sostituisce {team}",
+  "Recording stopped":
+      "Registrazione interrotta",
+  "Margins, space and where recordings are saved":
+      "Margini, spazio e dove si salvano",
+  "Record until the show ends":
+      "Registra fino alla fine del programma",
+  "Record until I stop it":
+      "Registra finché non la interrompo",
+  "Keeps going across shows (4 hours at most)":
+      "Continua tra un programma e l'altro (massimo 4 ore)",
+  "{title} · stops at {time}":
+      "{title} · si ferma alle {time}",
+  "No guide for this channel: stops after 2 hours":
+      "Nessuna guida per questo canale: si ferma dopo 2 ore",
 };

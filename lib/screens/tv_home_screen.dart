@@ -19,6 +19,8 @@ import '../services/app_update_service.dart';
 import '../services/desktop_window.dart';
 import '../services/desktop_mini_player.dart';
 import '../services/epg_service.dart';
+import '../services/recording_service.dart';
+import 'recordings_screen.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../services/storage_service.dart';
@@ -29,6 +31,7 @@ import '../utils/display_title.dart';
 import '../utils/route_observer.dart';
 import '../utils/tv_theme.dart';
 import '../utils/image_urls.dart';
+import '../widgets/tv_dialog_option.dart';
 import '../widgets/video_tap_layer.dart';
 import '../widgets/catalog_warmup_banner.dart';
 import '../widgets/detail_header.dart';
@@ -40,6 +43,7 @@ import '../widgets/move_to_group_dialog.dart';
 import '../widgets/player_controls.dart';
 import '../widgets/poster_card.dart';
 import '../widgets/real_4k_tag.dart';
+import '../widgets/rec_cue.dart';
 import '../widgets/roll_down_menu.dart';
 import '../widgets/section_label.dart';
 import '../widgets/update_prompt.dart';
@@ -359,35 +363,36 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
         children: [
           if (category != null)
-            SimpleDialogOption(
+            TvDialogOption(
+              autofocus: true,
               onPressed: () => Navigator.of(context).pop('expand'),
               child: Text(tr('Expand catalog')),
             ),
-          SimpleDialogOption(
+          TvDialogOption(
             onPressed: () => Navigator.of(context).pop('favorite'),
             child: Text(isFavorited
                 ? tr('Remove from Favourites')
                 : tr('Add to Favourites')),
           ),
-          SimpleDialogOption(
+          TvDialogOption(
             onPressed: () =>
                 Navigator.of(context).pop(isPending ? 'cancel_hide' : 'hide'),
             child: Text(isPending ? tr('Cancel Hide') : tr('Hide Group')),
           ),
-          SimpleDialogOption(
+          TvDialogOption(
             onPressed: () => Navigator.of(context).pop('move'),
             child: Text(tr('Move Up / Down')),
           ),
-          SimpleDialogOption(
+          TvDialogOption(
             onPressed: () => Navigator.of(context).pop('move_top'),
             child: Text(tr('Move to Top')),
           ),
           if (category == null)
-            SimpleDialogOption(
+            TvDialogOption(
               onPressed: () => Navigator.of(context).pop('new_group'),
               child: Text(tr('New group…')),
             ),
-          SimpleDialogOption(
+          TvDialogOption(
             onPressed: () => Navigator.of(context).pop(),
             child: Text(tr('Cancel')),
           ),
@@ -461,23 +466,24 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       builder: (context) => SimpleDialog(
         title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
         children: [
-          SimpleDialogOption(
+          TvDialogOption(
+            autofocus: true,
             onPressed: () => Navigator.of(context).pop('move'),
             child: Text(tr('Move Up / Down')),
           ),
-          SimpleDialogOption(
+          TvDialogOption(
             onPressed: () => Navigator.of(context).pop('move_top'),
             child: Text(tr('Move to Top')),
           ),
-          SimpleDialogOption(
+          TvDialogOption(
             onPressed: () => Navigator.of(context).pop('new_group'),
             child: Text(tr('New group…')),
           ),
-          SimpleDialogOption(
+          TvDialogOption(
             onPressed: () => Navigator.of(context).pop('delete_group'),
             child: Text(tr('Delete this group')),
           ),
-          SimpleDialogOption(
+          TvDialogOption(
             onPressed: () => Navigator.of(context).pop(),
             child: Text(tr('Cancel')),
           ),
@@ -598,39 +604,84 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         _timelineFilterQuery.trim().isEmpty &&
         _effectiveLiveGroup(playlist) == playlist.liveGroupOf(channel);
     final inMyGroup = playlist.isUserGroup(playlist.liveGroupOf(channel));
+    final recording = RecordingService.supported
+        ? RecordingService.instance.recordingOf(channel)
+        : null;
+    // What "until the show ends" means right now, shown under that row.
+    final onNow = RecordingService.supported
+        ? context.read<EpgService>().getCurrentProgram(channel.epgId)
+        : null;
+    final showEnds = onNow == null
+        ? tr('No guide for this channel: stops after 2 hours')
+        : tr('{title} · stops at {time}', {
+            'title': onNow.title,
+            'time': TimeFormat.hm
+                .format(onNow.stop.toLocal().add(const Duration(minutes: 5))),
+          });
+    Widget twoLines(String title, String detail) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title),
+            const SizedBox(height: 2),
+            Text(detail,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.normal,
+                    color: Colors.white60)),
+          ],
+        );
 
     final choice = await showDialog<String>(
       context: context,
       builder: (context) => SimpleDialog(
         title: Text(channel.name, maxLines: 1, overflow: TextOverflow.ellipsis),
         children: [
-          SimpleDialogOption(
+          TvDialogOption(
+            autofocus: true,
             onPressed: () => Navigator.of(context).pop('favorite'),
             child: Text(isFavorited
                 ? tr('Remove from Favourites')
                 : tr('Add to Favourites')),
           ),
-          SimpleDialogOption(
+          TvDialogOption(
             onPressed: () => Navigator.of(context).pop('hide'),
             child: Text(
                 isHidden ? tr('Unhide this channel') : tr('Hide this channel')),
           ),
           if (canMove)
-            SimpleDialogOption(
+            TvDialogOption(
               onPressed: () => Navigator.of(context).pop('move'),
               child: Text(tr('Move Up / Down')),
             ),
-          SimpleDialogOption(
+          TvDialogOption(
             onPressed: () => Navigator.of(context).pop('group'),
             child: Text(tr('Move to group…')),
           ),
           if (inMyGroup)
-            SimpleDialogOption(
+            TvDialogOption(
               onPressed: () => Navigator.of(context).pop('ungroup'),
               child: Text(tr('Remove from {group}',
                   {'group': playlist.liveGroupOf(channel)})),
             ),
-          SimpleDialogOption(
+          if (RecordingService.supported && recording != null)
+            TvDialogOption(
+              onPressed: () => Navigator.of(context).pop('record'),
+              child: Text(tr('Stop recording')),
+            ),
+          if (RecordingService.supported && recording == null) ...[
+            TvDialogOption(
+              onPressed: () => Navigator.of(context).pop('record'),
+              child: twoLines(tr('Record until the show ends'), showEnds),
+            ),
+            TvDialogOption(
+              onPressed: () => Navigator.of(context).pop('recordChannel'),
+              child: twoLines(tr('Record until I stop it'),
+                  tr('Keeps going across shows (4 hours at most)')),
+            ),
+          ],
+          TvDialogOption(
             onPressed: () => Navigator.of(context).pop(),
             child: Text(tr('Cancel')),
           ),
@@ -640,6 +691,10 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
 
     if (!mounted) return;
     switch (choice) {
+      case 'record':
+        await _recordChannel(channel, recording);
+      case 'recordChannel':
+        await _recordChannel(channel, null, untilStopped: true);
       case 'group':
         await _moveChannelToGroup(channel);
       case 'ungroup':
@@ -672,6 +727,37 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         }
         _toggleHiddenWithFeedback(context, channel);
     }
+  }
+
+  /// Hold OK on a channel → Record: from now to the end of the guide's
+  /// current programme (2 h without a guide), or stops [running].
+  Future<void> _recordChannel(Channel channel, RecordingEntry? running,
+      {bool untilStopped = false}) async {
+    final service = RecordingService.instance;
+    final messenger = ScaffoldMessenger.of(context);
+    if (running != null) {
+      await service.stop(running);
+      messenger.showSnackBar(SnackBar(content: Text(tr('Recording stopped'))));
+      return;
+    }
+    await service.askNotifications();
+    if (!await service.hasRoom()) {
+      messenger.showSnackBar(
+          SnackBar(content: Text(tr('Not enough free space to record'))));
+      return;
+    }
+    if (!mounted) return;
+    final now = context.read<EpgService>().getCurrentProgram(channel.epgId);
+    await service.handOver(
+        channel,
+        context.read<PlaybackService>(),
+        () => service.recordChannel(channel,
+            program: now?.title ?? '',
+            until: now?.stop.toLocal(),
+            untilStopped: untilStopped));
+    messenger.showSnackBar(SnackBar(
+        content: Text(
+            tr('Recording {title}', {'title': now?.title ?? channel.name}))));
   }
 
   /// Hold OK on a channel → "Move to group…": into one of the viewer's
@@ -2260,7 +2346,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                   style: const TextStyle(color: Colors.white70)),
             ),
           for (final c in channels)
-            SimpleDialogOption(
+            TvDialogOption(
+              autofocus: true,
               onPressed: () => Navigator.of(dialogContext).pop(c),
               child: Row(
                 children: [
@@ -3218,6 +3305,15 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
             ),
           if (!context.watch<AppPreferences>().hideArchive)
             _archiveRow(collapsed),
+          if (RecordingService.supported)
+            _SelectableRow(
+              icon: Icons.fiber_smart_record_outlined,
+              label: tr('Recordings'),
+              selected: false,
+              collapsed: collapsed,
+              onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const RecordingsScreen())),
+            ),
         ],
         const Divider(height: 16, color: Colors.white24),
         _SelectableRow(
@@ -4566,6 +4662,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              RecDot(channel: channel),
               Real4kTag(channelId: channel.id),
               if (isMoving)
                 const Padding(
@@ -8268,7 +8365,13 @@ class _ChannelLabel extends StatelessWidget {
     final corner = Positioned(
       top: 2,
       right: 4,
-      child: Real4kTag(channelId: channel.id, compact: true),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          RecDot(channel: channel, size: 7),
+          Real4kTag(channelId: channel.id, compact: true),
+        ],
+      ),
     );
     if (tag == null) return Stack(children: [marked, corner]);
     final scheme = Theme.of(context).colorScheme;

@@ -10,6 +10,7 @@ import '../../utils/time_format.dart';
 import '../../utils/tv_theme.dart';
 import '../../widgets/section_label.dart';
 import '../../widgets/settings_scaffold.dart';
+import '../../widgets/tv_dialog_option.dart';
 import '../../widgets/tv_menu_tile.dart';
 import '../../widgets/tv_switch_list_tile.dart';
 import '../../l10n/l10n.dart';
@@ -100,15 +101,16 @@ class _BackupScreenState extends State<BackupScreen> {
       builder: (context) => SimpleDialog(
         title: Text(_label(entry)),
         children: [
-          SimpleDialogOption(
+          TvDialogOption(
+            autofocus: true,
             onPressed: () => Navigator.of(context).pop('restore'),
             child: Text(tr('Restore this backup')),
           ),
-          SimpleDialogOption(
+          TvDialogOption(
             onPressed: () => Navigator.of(context).pop('delete'),
             child: Text(tr('Delete')),
           ),
-          SimpleDialogOption(
+          TvDialogOption(
             onPressed: () => Navigator.of(context).pop(),
             child: Text(tr('Cancel')),
           ),

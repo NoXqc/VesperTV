@@ -1435,4 +1435,138 @@ const Map<String, String> kEs = {
   // Channel menu: Remove from group
   "Remove from {group}":
       "Quitar de {group}",
+  // Settings > Device & data > Send log
+  "Send log":
+      "Enviar registro",
+  "Send the app's log to the developer":
+      "Enviar el registro de la app al desarrollador",
+  "Sending...":
+      "Enviando...",
+  "Send again":
+      "Enviar de nuevo",
+  "Log sent. Your code:":
+      "Registro enviado. Tu código:",
+  "Mention this code on Reddit or Discord with what happened, so the developer can find your log.":
+      "Menciona este código en Reddit o Discord junto con lo que pasó, para que el desarrollador encuentre tu registro.",
+  "Something not working? Send the app's log to the VesperTV developer. It holds what the app did recently (this session and the last one) and your device model, nothing else.":
+      "¿Algo no funciona? Envía el registro de la app al desarrollador de VesperTV. Contiene lo que la app hizo recientemente (esta sesión y la anterior) y el modelo de tu dispositivo, nada más.",
+  "Server addresses, user names, passwords and other private details are removed before sending.":
+      "Las direcciones de servidor, nombres de usuario, contraseñas y otros datos privados se eliminan antes de enviar.",
+  "Too many logs sent from here. Try again in an hour.":
+      "Demasiados registros enviados desde aquí. Inténtalo de nuevo en una hora.",
+  "Couldn't send the log. Check the internet connection and try again.":
+      "No se pudo enviar el registro. Comprueba la conexión a Internet e inténtalo de nuevo.",
+  // Recordings (Sports Trak recording, Recordings tab)
+  "Watch live":
+      "Ver en directo",
+  "Play from the start":
+      "Reproducir desde el principio",
+  "What has been recorded so far":
+      "Lo grabado hasta ahora",
+  "Stop recording":
+      "Detener la grabación",
+  "Keeps what has been recorded":
+      "Conserva lo grabado",
+  "Cancel recording":
+      "Cancelar la grabación",
+  "Delete recording":
+      "Eliminar la grabación",
+  "Frees {size}":
+      "Libera {size}",
+  "Removes it from the list":
+      "La quita de la lista",
+  "Recordings":
+      "Grabaciones",
+  "Recording every {team} game":
+      "Grabando cada partido de {team}",
+  "Nothing recorded yet. Hold OK on a game in {tab} and pick Record, or hold OK on a live channel.":
+      "Aún no hay grabaciones. Mantén OK en un partido de {tab} y elige Grabar, o mantén OK en un canal en directo.",
+  "Recording now":
+      "Grabando ahora",
+  "Recorded":
+      "Grabados",
+  "{used} of {cap} GB used":
+      "{used} usados de {cap} GB",
+  "REC · {size}":
+      "GRAB · {size}",
+  "Waiting for a channel":
+      "Esperando un canal",
+  "Interrupted · {size}":
+      "Interrumpida · {size}",
+  "Missed":
+      "Perdida",
+  "Failed":
+      "Fallida",
+  "Live channel":
+      "Canal en directo",
+  "Start early: {min} min":
+      "Empezar antes: {min} min",
+  "Before the game's scheduled start":
+      "Antes del inicio previsto del partido",
+  "Keep recording: {min} min":
+      "Seguir grabando: {min} min",
+  "After the scheduled end, for overtime and delays":
+      "Tras el final previsto, por prórrogas y retrasos",
+  "Space for recordings: {gb} GB":
+      "Espacio para grabaciones: {gb} GB",
+  "{used} used. Recording stops when this is full or the storage has less than 1 GB left.":
+      "{used} usados. La grabación se detiene cuando se llena o quedan menos de 1 GB libres.",
+  "Save recordings to":
+      "Guardar grabaciones en",
+  "USB drive / SD card":
+      "Unidad USB / tarjeta SD",
+  "This device":
+      "Este dispositivo",
+  "{free} free of {total}":
+      "{free} libres de {total}",
+  "Plug in a USB drive or SD card to record to it. Recordings on this device are deleted if VesperTV is uninstalled.":
+      "Conecta una unidad USB o una tarjeta SD para grabar en ella. Las grabaciones en este dispositivo se borran si se desinstala VesperTV.",
+  "Recording in progress":
+      "Grabación en curso",
+  "{title} is recording on {channel}. Your playlist allows one connection, so playing another of its channels stops the recording.":
+      "{title} se está grabando en {channel}. Tu lista permite una conexión, así que ver otro de sus canales detiene la grabación.",
+  "Recording cancelled":
+      "Grabación cancelada",
+  "Not enough free space to record":
+      "No hay espacio suficiente para grabar",
+  "Recording {title}":
+      "Grabando {title}",
+  "{title} will be recorded":
+      "{title} se grabará",
+  "No longer recording every {team} game":
+      "Ya no se graban los partidos de {team}",
+  "Every {team} game will be recorded":
+      "Se grabará cada partido de {team}",
+  "Waiting for a channel in the guide":
+      "Esperando un canal en la guía",
+  "Record":
+      "Grabar",
+  "{channel} · starts now":
+      "{channel} · empieza ahora",
+  "{channel} · from {time}":
+      "{channel} · desde las {time}",
+  "Stop recording every {team} game":
+      "Dejar de grabar cada partido de {team}",
+  "Record every {team} game":
+      "Grabar cada partido de {team}",
+  "Recordings already made are kept":
+      "Las grabaciones hechas se conservan",
+  "One team at a time, on the channel {tab} picks":
+      "Un equipo a la vez, en el canal que elige {tab}",
+  "Replaces {team}":
+      "Sustituye a {team}",
+  "Recording stopped":
+      "Grabación detenida",
+  "Margins, space and where recordings are saved":
+      "Márgenes, espacio y dónde se guardan",
+  "Record until the show ends":
+      "Grabar hasta que termine el programa",
+  "Record until I stop it":
+      "Grabar hasta que lo detenga",
+  "Keeps going across shows (4 hours at most)":
+      "Sigue entre programas (4 horas como máximo)",
+  "{title} · stops at {time}":
+      "{title} · se detiene a las {time}",
+  "No guide for this channel: stops after 2 hours":
+      "Sin guía para este canal: se detiene tras 2 horas",
 };

@@ -19,6 +19,7 @@ import 'screens/player_screen.dart';
 import 'screens/settings/add_playlist_screen.dart';
 import 'screens/tv_home_screen.dart';
 import 'screens/welcome_add_playlist_screen.dart';
+import 'services/app_log.dart';
 import 'services/app_preferences.dart';
 import 'services/catalog_database.dart';
 import 'services/device_memory_service.dart';
@@ -27,6 +28,11 @@ import 'services/parental_pin.dart';
 import 'services/persistent_image_cache.dart';
 import 'services/playback_service.dart';
 import 'services/real_4k_channels.dart';
+import 'services/recording_service.dart';
+import 'services/sports_channel_matcher.dart';
+import 'services/sports_service.dart';
+import 'models/channel.dart';
+import 'widgets/recording_conflict_dialog.dart';
 import 'services/playlist_manager.dart';
 import 'services/storage_service.dart';
 import 'services/viewer_profile_service.dart';
@@ -43,7 +49,11 @@ import 'services/backup_service.dart';
 import 'services/tracker_sync.dart';
 import 'services/watch_tracker.dart';
 
-Future<void> main() async {
+// AppLog keeps print/errors for Settings > Send log; the binding must be
+// initialized inside its zone (same zone as runApp).
+Future<void> main() => AppLog.capture(_main);
+
+Future<void> _main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Plain `sqflite` has no Windows/Linux implementation at all — confirmed
   // via .flutter-plugins-dependencies: sqflite_android/sqflite_darwin exist
@@ -272,6 +282,39 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   @override
   void onWindowMoved() => DesktopWindow.onBoundsChanged();
 
+  /// PlaybackService.confirmOpen: a running recording holds [channel]'s
+  /// playlist's only connection — Stop recording / Cancel.
+  Future<bool> _confirmOverRecording(Channel channel) async {
+    final rec = RecordingService.instance
+        .conflictFor(channel, _playlistManager.profiles);
+    final context = _navigatorKey.currentContext;
+    if (rec == null || context == null) return true;
+    final stop = await showRecordingConflictDialog(context, rec);
+    if (!stop) return false;
+    await RecordingService.instance.stop(rec);
+    // The provider needs a moment to free the connection.
+    await Future<void>.delayed(const Duration(seconds: 2));
+    return true;
+  }
+
+  Future<String?> _recordingTapUrl(Channel channel) async {
+    final rec = RecordingService.instance.recordingOf(channel);
+    return rec == null ? null : RecordingService.instance.teeUrl(rec);
+  }
+
+  Future<void> _refreshAutoRecordings() async {
+    final service = RecordingService.instance;
+    if (service.autoTeam == null) return;
+    await _epgService.init();
+    await _playlistManager.ensureLiveChannelsLoaded();
+    await service.refreshAutoTeam(
+      viewerLeagues: savedSportsLeagues(_storage),
+      matcher: SportsChannelMatcher.shared(_epgService),
+      picks: SportsChannelPicks.load(_storage),
+      channels: _playlistManager.visibleChannels(category: 'tv'),
+    );
+  }
+
   /// The splash is meant to be *seen*, not just theoretically present —
   /// a boot animation that only flashes for a fraction of a second reads
   /// as broken, not polished. On a normal day (no full sync due),
@@ -301,6 +344,14 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // Asked once per launch, before anything decides a layout — see
       // DeviceTypeService for why screen width couldn't answer this.
       _preferences.isTelevision = await DeviceTypeService.isTelevision();
+      // A TV has no touch screen, so the focus highlight always shows.
+      // Flutter's automatic mode hides it until it sees a "keyboard" event,
+      // and a TV's own remote forwarded over HDMI-CEC (owner's Sony on the
+      // Formuler, 2026-10-21) moved the selector without ever showing it.
+      if (_preferences.isTelevision) {
+        FocusManager.instance.highlightStrategy =
+            FocusHighlightStrategy.alwaysTraditional;
+      }
       if (Platform.isAndroid) {
         _preferences.androidSdk = await DeviceTypeService.sdkInt();
       }
@@ -318,6 +369,10 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // below awaits the same future.
       unawaited(_epgService.init());
       _playbackService = PlaybackService(_storage, _playlistManager);
+      if (RecordingService.supported) {
+        PlaybackService.confirmOpen = _confirmOverRecording;
+        PlaybackService.openUrlFor = _recordingTapUrl;
+      }
       _parentalPin = ParentalPin(_storage);
       _archiveService = ArchiveService(_storage);
       // Trakt/Simkl scrobbling reads the connected accounts from here.
@@ -478,6 +533,13 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // restore); a no-op otherwise.
       unawaited(Future<void>.delayed(const Duration(seconds: 40))
           .then((_) => BackupService(_storage).maybeAutoBackup()));
+      // Recordings: states of anything that ran while the app was closed,
+      // then the auto-recorded team's next games (needs the guide).
+      if (RecordingService.supported) {
+        unawaited(RecordingService.instance.init());
+        unawaited(Future<void>.delayed(const Duration(seconds: 60))
+            .then((_) => _refreshAutoRecordings()));
+      }
       unawaited(() async {
         await _playbackService.init();
         await Future.wait([

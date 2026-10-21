@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
@@ -45,6 +46,14 @@ import '../l10n/l10n.dart';
 /// the same live controller — switching between them is just a different
 /// wrapper around the same video, never a restart.
 class PlaybackService extends ChangeNotifier {
+  /// Set by the app (main.dart): asked before a channel opens; false =
+  /// don't play (a recording holds the playlist's only connection).
+  static Future<bool> Function(Channel channel)? confirmOpen;
+
+  /// Set by the app: a different URL to open [channel] from (the
+  /// recorder's local tap while that channel records), or null.
+  static Future<String?> Function(Channel channel)? openUrlFor;
+
   PlaybackService(this._storage, this._playlistManager);
 
   static const _recentlyPlayedCacheKey = 'recently_played';
@@ -312,8 +321,10 @@ class PlaybackService extends ChangeNotifier {
       }
       channel = resolved;
     }
-    // Archive titles belong to no playlist (see ArchiveService).
+    // Archive titles and recordings belong to no playlist (see
+    // ArchiveService, RecordingService).
     if (!Channel.isArchiveId(channel.rawId) &&
+        !Channel.isRecordingId(channel.rawId) &&
         !_playlistManager.isPlaylistEnabled(channel.playlistId)) {
       error = tr(
           'This playlist is disabled on this device — enable it in Settings > Playlist Manager to watch.');
@@ -321,6 +332,14 @@ class PlaybackService extends ChangeNotifier {
       return;
     }
     if (currentChannel?.id == channel.id && controller != null) return;
+
+    // A recording uses this playlist's only connection: ask first (the
+    // app shows the Stop recording / Cancel popup, see main.dart).
+    final confirm = confirmOpen;
+    if (confirm != null && !await confirm(channel)) return;
+    // The channel being recorded plays from the recorder's local tap, so
+    // both share one provider connection.
+    final openUrl = await openUrlFor?.call(channel) ?? channel.url;
 
     // Before the teardown: it reads currentChannel for the old title's
     // resume save, so only the flag changes here.
@@ -355,7 +374,7 @@ class PlaybackService extends ChangeNotifier {
     final isLive = Channel.isLiveId(channel.rawId);
     final savedPositionMs = isLive ? 0 : _storage.getLastPosition(channel.id);
     final newController = streamController(
-      channel.url,
+      openUrl,
       closedCaptionFile: channel.subtitleUrl != null
           ? _loadCaptions(channel.subtitleUrl!)
           : null,
@@ -500,7 +519,8 @@ class PlaybackService extends ChangeNotifier {
     error = null;
     notifyListeners();
 
-    final newController = streamController(channel.url);
+    final newController =
+        streamController(await openUrlFor?.call(channel) ?? channel.url);
     try {
       final future = newController.initialize(viewType: _viewType);
       initFuture = future;
@@ -748,6 +768,12 @@ VideoPlayerHdrController streamController(
   Future<ClosedCaptionFile>? closedCaptionFile,
   VideoPlayerOptions? videoPlayerOptions,
 }) {
+  // A recording (RecordingService.channelFor): a local .ts file.
+  if (url.startsWith('/')) {
+    return VideoPlayerHdrController.file(File(url),
+        closedCaptionFile: closedCaptionFile,
+        videoPlayerOptions: videoPlayerOptions);
+  }
   final uri = Uri.parse(url);
   final hls =
       _hlsHosts.contains(uri.host) && uri.path.toLowerCase().endsWith('.ts');

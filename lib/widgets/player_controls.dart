@@ -14,6 +14,7 @@ import '../services/storage_service.dart';
 import '../services/subtitle_tracks.dart';
 import '../utils/video_quality.dart';
 import 'epg_guide.dart';
+import 'rec_cue.dart';
 import 'tv_menu_tile.dart';
 import '../l10n/l10n.dart';
 
@@ -681,6 +682,8 @@ class PlayerControls extends StatelessWidget {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
+                                if (channel != null && isLive)
+                                  RecPill(channel: channel),
                                 _QualityBadge(controller: controller),
                                 const SizedBox(width: 4),
                                 _AudioChannelBadge(controller: controller),

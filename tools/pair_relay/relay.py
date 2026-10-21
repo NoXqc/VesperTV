@@ -29,6 +29,18 @@ apart. PAIR_REQUIRE_APP=1 rejects calls without it (403); until then they
 are only counted (hourly line on stderr, no ids) — 1.0.14/1.0.15 don't
 send it yet. The phone's browser PUT /api/s/<id> is never checked.
 
+It also forwards **Send log** (Settings > Device & data, lib/services/
+app_log.dart) to the owner's private Discord channel. The app redacts the
+text first; nothing is stored here.
+
+    POST   /api/log     -> 204; text/plain body (<= 1 MB), X-Log-Code
+                           header (LOG-XXXXXX). 429 after LOG_PER_HOUR per
+                           IP, 503 without PAIR_LOG_WEBHOOK, 502 if Discord
+                           refused it.
+
+PAIR_LOG_WEBHOOK (the Discord webhook URL) is a secret: it lives only in
+/etc/pair-relay.env on the VPS, never in the repo.
+
 Stdlib only. Listens on 127.0.0.1; nginx terminates TLS in front of it.
 """
 import hashlib
@@ -39,6 +51,9 @@ import re
 import sys
 import threading
 import time
+import urllib.error
+import urllib.request
+import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HOST = os.environ.get("PAIR_HOST", "127.0.0.1")
@@ -61,6 +76,13 @@ TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{32,128}$")
 APP_HEADER = "X-VesperTV-App"
 REQUIRE_APP = os.environ.get("PAIR_REQUIRE_APP", "") == "1"
 APP_REPORT_EVERY = 3600
+
+LOG_WEBHOOK = os.environ.get("PAIR_LOG_WEBHOOK", "")
+LOG_MAX_BODY = 1024 * 1024
+LOG_PER_HOUR = 5
+LOG_CODE_RE = re.compile(r"^LOG-[2-9A-HJ-NP-Z]{6}$")
+_log_lock = threading.Lock()
+_log_hits = {}  # ip -> [timestamps in the last hour]
 
 _vault_lock = threading.Lock()
 _app_lock = threading.Lock()
@@ -274,7 +296,11 @@ class Handler(BaseHTTPRequestHandler):
         return self._send(204)
 
     def do_POST(self):
-        self._send(405)
+        if self.path.split("?", 1)[0] != "/api/log":
+            return self._send(405)
+        if not self._app_ok():
+            return
+        return self._log_post()
 
     def do_DELETE(self):
         v = VAULT_ID_RE.match(self.path.split("?", 1)[0])
@@ -293,6 +319,36 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(403)
             _vault_remove(v.group(1))
         return self._send(204)
+
+    # ----------------------------------------------------------------- log
+
+    def _log_post(self):
+        if not LOG_WEBHOOK:
+            return self._send(503)
+        code = self.headers.get("X-Log-Code", "")
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            return self._send(400)
+        if not LOG_CODE_RE.match(code) or length <= 0:
+            return self._send(400)
+        if length > LOG_MAX_BODY:
+            return self._send(413)
+        ip = self.headers.get("X-Real-IP") or self.client_address[0]
+        now = time.time()
+        with _log_lock:
+            for k in [k for k, v in _log_hits.items() if v[-1] < now - 3600]:
+                del _log_hits[k]
+            hits = [t for t in _log_hits.get(ip, []) if t > now - 3600]
+            if len(hits) >= LOG_PER_HOUR:
+                return self._send(429)
+            hits.append(now)
+            _log_hits[ip] = hits
+        body = self.rfile.read(length)
+        if len(body) != length:
+            return self._send(400)
+        text = body.decode("utf-8", "replace")
+        return self._send(204 if _post_discord(code, text) else 502)
 
     # --------------------------------------------------------------- vault
 
@@ -340,6 +396,54 @@ class Handler(BaseHTTPRequestHandler):
                 _vault_remove(vid)
                 return self._send(500)
         return self._send(204)
+
+
+def _summary(text):
+    """'App: …' and 'Device: …'/'OS: …' lines from the log's header."""
+    keep = []
+    for line in text.splitlines()[:12]:
+        if line.startswith(("App:", "Device:", "Android:", "OS:")):
+            keep.append(line[:120])
+    return " · ".join(keep)
+
+
+def _post_discord(code, text):
+    boundary = uuid.uuid4().hex
+    payload = json.dumps({
+        "content": f"**{code}**  {_summary(text)}"[:1900],
+        "allowed_mentions": {"parse": []},
+    })
+    crlf = "\r\n"
+    head = (f'--{boundary}{crlf}Content-Disposition: form-data; '
+            f'name="payload_json"{crlf}Content-Type: application/json'
+            f'{crlf}{crlf}{payload}{crlf}'
+            f'--{boundary}{crlf}Content-Disposition: form-data; '
+            f'name="files[0]"; filename="{code}.txt"{crlf}'
+            f'Content-Type: text/plain; charset=utf-8{crlf}{crlf}')
+    tail = f"{crlf}--{boundary}--{crlf}"
+    data = head.encode("utf-8") + text.encode("utf-8") + tail.encode("utf-8")
+    for attempt in range(2):
+        req = urllib.request.Request(LOG_WEBHOOK, data=data, method="POST", headers={
+            "Content-Type": f"multipart/form-data; boundary={boundary}",
+            "User-Agent": "VesperTV-relay (https://vespertv.app, 1)",
+        })
+        try:
+            with urllib.request.urlopen(req, timeout=20) as res:
+                return 200 <= res.status < 300
+        except urllib.error.HTTPError as e:
+            if e.code == 429 and attempt == 0:
+                try:
+                    wait = float(json.loads(e.read()).get("retry_after", 2))
+                except (ValueError, AttributeError):
+                    wait = 2
+                time.sleep(min(wait, 10))
+                continue
+            print(f"log {code}: discord HTTP {e.code}", file=sys.stderr, flush=True)
+            return False
+        except (urllib.error.URLError, OSError) as e:
+            print(f"log {code}: discord {e}", file=sys.stderr, flush=True)
+            return False
+    return False
 
 
 def main():

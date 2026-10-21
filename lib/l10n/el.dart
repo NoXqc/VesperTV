@@ -2046,4 +2046,138 @@ const Map<String, String> kEl = {
   // Channel menu: Remove from group
   "Remove from {group}":
       "Αφαίρεση από το {group}",
+  // Settings > Device & data > Send log
+  "Send log":
+      "Αποστολή αρχείου καταγραφής",
+  "Send the app's log to the developer":
+      "Στείλτε το αρχείο καταγραφής της εφαρμογής στον προγραμματιστή",
+  "Sending...":
+      "Αποστολή...",
+  "Send again":
+      "Αποστολή ξανά",
+  "Log sent. Your code:":
+      "Το αρχείο στάλθηκε. Ο κωδικός σας:",
+  "Mention this code on Reddit or Discord with what happened, so the developer can find your log.":
+      "Αναφέρετε αυτόν τον κωδικό στο Reddit ή στο Discord μαζί με ό,τι συνέβη, ώστε ο προγραμματιστής να βρει το αρχείο σας.",
+  "Something not working? Send the app's log to the VesperTV developer. It holds what the app did recently (this session and the last one) and your device model, nothing else.":
+      "Κάτι δεν λειτουργεί; Στείλτε το αρχείο καταγραφής της εφαρμογής στον προγραμματιστή του VesperTV. Περιέχει τι έκανε πρόσφατα η εφαρμογή (αυτή και την προηγούμενη συνεδρία) και το μοντέλο της συσκευής σας, τίποτα άλλο.",
+  "Server addresses, user names, passwords and other private details are removed before sending.":
+      "Διευθύνσεις διακομιστών, ονόματα χρήστη, κωδικοί και άλλα προσωπικά στοιχεία αφαιρούνται πριν την αποστολή.",
+  "Too many logs sent from here. Try again in an hour.":
+      "Στάλθηκαν πάρα πολλά αρχεία από εδώ. Δοκιμάστε ξανά σε μία ώρα.",
+  "Couldn't send the log. Check the internet connection and try again.":
+      "Δεν ήταν δυνατή η αποστολή. Ελέγξτε τη σύνδεση στο Internet και δοκιμάστε ξανά.",
+  // Recordings (Sports Trak recording, Recordings tab)
+  "Watch live":
+      "Παρακολούθηση ζωντανά",
+  "Play from the start":
+      "Αναπαραγωγή από την αρχή",
+  "What has been recorded so far":
+      "Ό,τι έχει εγγραφεί μέχρι τώρα",
+  "Stop recording":
+      "Διακοπή εγγραφής",
+  "Keeps what has been recorded":
+      "Κρατά ό,τι έχει εγγραφεί",
+  "Cancel recording":
+      "Ακύρωση εγγραφής",
+  "Delete recording":
+      "Διαγραφή εγγραφής",
+  "Frees {size}":
+      "Ελευθερώνει {size}",
+  "Removes it from the list":
+      "Την αφαιρεί από τη λίστα",
+  "Recordings":
+      "Εγγραφές",
+  "Recording every {team} game":
+      "Εγγράφεται κάθε αγώνας της {team}",
+  "Nothing recorded yet. Hold OK on a game in {tab} and pick Record, or hold OK on a live channel.":
+      "Δεν υπάρχουν εγγραφές ακόμα. Κρατήστε OK σε έναν αγώνα στο {tab} και επιλέξτε Εγγραφή, ή κρατήστε OK σε ένα ζωντανό κανάλι.",
+  "Recording now":
+      "Εγγράφεται τώρα",
+  "Recorded":
+      "Εγγεγραμμένα",
+  "{used} of {cap} GB used":
+      "{used} από {cap} GB σε χρήση",
+  "REC · {size}":
+      "REC · {size}",
+  "Waiting for a channel":
+      "Αναμονή για κανάλι",
+  "Interrupted · {size}":
+      "Διακόπηκε · {size}",
+  "Missed":
+      "Χάθηκε",
+  "Failed":
+      "Απέτυχε",
+  "Live channel":
+      "Ζωντανό κανάλι",
+  "Start early: {min} min":
+      "Έναρξη νωρίτερα: {min} λεπτά",
+  "Before the game's scheduled start":
+      "Πριν την προγραμματισμένη έναρξη του αγώνα",
+  "Keep recording: {min} min":
+      "Συνέχιση εγγραφής: {min} λεπτά",
+  "After the scheduled end, for overtime and delays":
+      "Μετά το προγραμματισμένο τέλος, για παράταση και καθυστερήσεις",
+  "Space for recordings: {gb} GB":
+      "Χώρος για εγγραφές: {gb} GB",
+  "{used} used. Recording stops when this is full or the storage has less than 1 GB left.":
+      "{used} σε χρήση. Η εγγραφή σταματά όταν γεμίσει ή μείνει λιγότερο από 1 GB.",
+  "Save recordings to":
+      "Αποθήκευση εγγραφών σε",
+  "USB drive / SD card":
+      "USB / κάρτα SD",
+  "This device":
+      "Αυτή η συσκευή",
+  "{free} free of {total}":
+      "{free} ελεύθερα από {total}",
+  "Plug in a USB drive or SD card to record to it. Recordings on this device are deleted if VesperTV is uninstalled.":
+      "Συνδέστε USB ή κάρτα SD για εγγραφή εκεί. Οι εγγραφές σε αυτή τη συσκευή διαγράφονται αν απεγκατασταθεί το VesperTV.",
+  "Recording in progress":
+      "Εγγραφή σε εξέλιξη",
+  "{title} is recording on {channel}. Your playlist allows one connection, so playing another of its channels stops the recording.":
+      "Το {title} εγγράφεται στο {channel}. Η λίστα σας επιτρέπει μία σύνδεση, οπότε η αναπαραγωγή άλλου καναλιού της σταματά την εγγραφή.",
+  "Recording cancelled":
+      "Η εγγραφή ακυρώθηκε",
+  "Not enough free space to record":
+      "Δεν υπάρχει αρκετός χώρος για εγγραφή",
+  "Recording {title}":
+      "Εγγραφή: {title}",
+  "{title} will be recorded":
+      "Το {title} θα εγγραφεί",
+  "No longer recording every {team} game":
+      "Οι αγώνες της {team} δεν εγγράφονται πια",
+  "Every {team} game will be recorded":
+      "Κάθε αγώνας της {team} θα εγγράφεται",
+  "Waiting for a channel in the guide":
+      "Αναμονή για κανάλι στον οδηγό",
+  "Record":
+      "Εγγραφή",
+  "{channel} · starts now":
+      "{channel} · ξεκινά τώρα",
+  "{channel} · from {time}":
+      "{channel} · από τις {time}",
+  "Stop recording every {team} game":
+      "Διακοπή εγγραφής κάθε αγώνα της {team}",
+  "Record every {team} game":
+      "Εγγραφή κάθε αγώνα της {team}",
+  "Recordings already made are kept":
+      "Οι εγγραφές που έγιναν διατηρούνται",
+  "One team at a time, on the channel {tab} picks":
+      "Μία ομάδα τη φορά, στο κανάλι που επιλέγει το {tab}",
+  "Replaces {team}":
+      "Αντικαθιστά την {team}",
+  "Recording stopped":
+      "Η εγγραφή σταμάτησε",
+  "Margins, space and where recordings are saved":
+      "Περιθώρια, χώρος και θέση αποθήκευσης",
+  "Record until the show ends":
+      "Εγγραφή μέχρι το τέλος της εκπομπής",
+  "Record until I stop it":
+      "Εγγραφή μέχρι να τη σταματήσω",
+  "Keeps going across shows (4 hours at most)":
+      "Συνεχίζει από εκπομπή σε εκπομπή (έως 4 ώρες)",
+  "{title} · stops at {time}":
+      "{title} · σταματά στις {time}",
+  "No guide for this channel: stops after 2 hours":
+      "Χωρίς οδηγό για αυτό το κανάλι: σταματά μετά από 2 ώρες",
 };

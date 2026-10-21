@@ -244,6 +244,134 @@ const Set<String> _streamingOnly = {
   'ESPN UNLMTD',
 };
 
+/// Regional sports networks as ESPN writes them in `broadcasts` (an
+/// abbreviation) -> phrases their channels go by in playlists (normalized,
+/// lower case). The exact-name check in matchDay finds none of these:
+/// "MNMT" is "US - Monumental Sports Network HD" (NBA user report,
+/// 2026-10-21: most regional games had no channel). FanDuel's networks keep
+/// their old Bally Sports names on many providers, so both are listed.
+const Map<String, List<String>> _networkAliases = {
+  'MNMT': ['monumental'],
+  'MONUMENTAL': ['monumental'],
+  'NBC SPORTS CA': ['nbc sports california', 'nbcs california'],
+  'NBCS-CA': ['nbc sports california', 'nbcs california'],
+  'NBC SPORTS BA': ['nbc sports bay area', 'nbcs bay area'],
+  'NBCS-BA': ['nbc sports bay area', 'nbcs bay area'],
+  'NBC SPORTS PH': ['nbc sports philadelphia', 'nbcs philadelphia'],
+  'NBCS-PH': ['nbc sports philadelphia', 'nbcs philadelphia'],
+  'NBC SPORTS BOS': ['nbc sports boston', 'nbcs boston'],
+  'NBCS-BOS': ['nbc sports boston', 'nbcs boston'],
+  'CHSN': ['chicago sports network', 'chsn'],
+  'GCSEN': ['gulf coast sports', 'gcsen'],
+  'YES': ['yes network'],
+  'MSG': ['msg'],
+  'MSGSN': ['msg sportsnet', 'msg 2', 'msg'],
+  'SNY': ['sny'],
+  'NESN': ['nesn'],
+  'MASN': ['masn'],
+  'MARQUEE': ['marquee'],
+  'SPECTRUM SN': ['spectrum sportsnet'],
+  'SPECTRUM SPORTSNET': ['spectrum sportsnet'],
+  'SPECTRUM SPORTSNET LA': ['spectrum sportsnet la', 'sportsnet la'],
+  'SNLA': ['spectrum sportsnet la', 'sportsnet la'],
+  'ALT': ['altitude'],
+  'ALTITUDE': ['altitude'],
+  'ROOT SPORTS': ['root sports'],
+  'ROOT': ['root sports'],
+  'SCHN': ['space city'],
+  'SPACE CITY HOME NETWORK': ['space city'],
+  'FDSDET': [
+    'fanduel sports network detroit',
+    'fanduel sports detroit',
+    'bally sports detroit'
+  ],
+  'FDSFL': [
+    'fanduel sports network florida',
+    'fanduel sports florida',
+    'bally sports florida'
+  ],
+  'FDSSUN': [
+    'fanduel sports network sun',
+    'fanduel sports sun',
+    'bally sports sun'
+  ],
+  'FDSSE': [
+    'fanduel sports network southeast',
+    'fanduel sports southeast',
+    'bally sports southeast'
+  ],
+  'FDSSO': [
+    'fanduel sports network south',
+    'fanduel sports south',
+    'bally sports south'
+  ],
+  'FDSIN': [
+    'fanduel sports network indiana',
+    'fanduel sports indiana',
+    'bally sports indiana'
+  ],
+  'FDSOH': [
+    'fanduel sports network ohio',
+    'fanduel sports ohio',
+    'bally sports ohio'
+  ],
+  'FDSWI': [
+    'fanduel sports network wisconsin',
+    'fanduel sports wisconsin',
+    'bally sports wisconsin'
+  ],
+  'FDSN': [
+    'fanduel sports network north',
+    'fanduel sports north',
+    'bally sports north'
+  ],
+  'FDSNO': [
+    'fanduel sports network new orleans',
+    'fanduel sports new orleans',
+    'bally sports new orleans'
+  ],
+  'FDSSW': [
+    'fanduel sports network southwest',
+    'fanduel sports southwest',
+    'bally sports southwest'
+  ],
+  'FDSMW': [
+    'fanduel sports network midwest',
+    'fanduel sports midwest',
+    'bally sports midwest'
+  ],
+  'FDSOK': [
+    'fanduel sports network oklahoma',
+    'fanduel sports oklahoma',
+    'bally sports oklahoma'
+  ],
+  'FDSSD': [
+    'fanduel sports network san diego',
+    'fanduel sports san diego',
+    'bally sports san diego'
+  ],
+  'FDSWC': [
+    'fanduel sports network socal',
+    'fanduel sports socal',
+    'bally sports socal'
+  ],
+  'FDSKC': [
+    'fanduel sports network kansas city',
+    'fanduel sports kansas city',
+    'bally sports kansas city'
+  ],
+  'FDSCIN': [
+    'fanduel sports network cincinnati',
+    'fanduel sports cincinnati',
+    'bally sports ohio'
+  ],
+};
+
+/// A US/Canadian TV station's call sign ("KJZZ-TV", "KUNP 16", "WGN"):
+/// its channel names carry it ("US - KJZZ 14 SALT LAKE CITY").
+final RegExp _callSign =
+    RegExp(r'^([KW][A-Z]{2,3})(?:-(?:TV|DT|CD|LD))?(?: \d+)?$');
+
 const Set<String> _englishTags = {'us', 'usa', 'ca', 'uk', 'en', 'english'};
 
 /// Country/language tags providers put in channel names. Two-letter tags
@@ -657,6 +785,27 @@ class SportsChannelMatcher {
             (d != null ? 120 : 100) + _regionBias(i, g.league));
       }
 
+      // 2b. A team's own channel: one team's full name plus the league
+      // ("US - NBA TEAMS - ATLANTA HAWKS FHD"). Providers carry every
+      // team's local broadcast that way, without a guide (NBA user report,
+      // 2026-10-21: Hawks-Magic and Jazz-Grizzlies had nothing else). The
+      // full name only — "heat" or "magic" alone would hit other channels.
+      if (g.league.kind == SportsKind.team) {
+        final league = sportsNormalize(g.league.shortName).trim();
+        if (league.length >= 2) {
+          for (final t in [g.home, g.away]) {
+            final full = sportsNormalize(t.name).trim();
+            if (full.split(' ').length < 2) continue;
+            for (final i in _channelsNaming([full])) {
+              if (!_names[i].trim().split(' ').contains(league)) continue;
+              final bias = _regionBias(i, g.league);
+              if (bias < 0) continue;
+              add(i, MatchReason.name, 65 + bias, t.shortName);
+            }
+          }
+        }
+      }
+
       // 3. Guide programmes naming both teams near the start time — or,
       // for event sports, the event or its series ("Formula 1: Qualifying",
       // "PGA Tour Golf").
@@ -702,11 +851,25 @@ class SportsChannelMatcher {
         }
       }
 
-      // 4. National networks, exact channel name only.
+      // 4. National networks, exact channel name only — or, for regional
+      // networks and local stations, the names they go by
+      // ([_networkAliases], [_callSign]).
       for (final network in g.broadcasts) {
-        if (_streamingOnly.contains(network.toUpperCase())) continue;
+        final upper = network.toUpperCase().trim();
+        if (_streamingOnly.contains(upper)) continue;
         final key = canonicalChannelKey(network);
-        final hits = _byCanonical[key] ?? const <int>[];
+        var hits = _byCanonical[key] ?? const <int>[];
+        if (hits.isEmpty) {
+          final call = _callSign.firstMatch(upper)?.group(1);
+          final phrases = _networkAliases[upper] ??
+              (call != null ? [call.toLowerCase()] : const <String>[]);
+          if (phrases.isNotEmpty) {
+            hits = (_channelsNaming(phrases).toList()
+                  ..sort(
+                      (a, b) => _names[a].length.compareTo(_names[b].length)))
+                .toList();
+          }
+        }
         var taken = 0;
         for (final i in hits) {
           if (taken >= 3) break;

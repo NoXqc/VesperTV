@@ -1438,4 +1438,138 @@ const Map<String, String> kFr = {
   // Channel menu: Remove from group
   "Remove from {group}":
       "Retirer de {group}",
+  // Settings > Device & data > Send log
+  "Send log":
+      "Envoyer le journal",
+  "Send the app's log to the developer":
+      "Envoyer le journal de l'app au développeur",
+  "Sending...":
+      "Envoi...",
+  "Send again":
+      "Envoyer à nouveau",
+  "Log sent. Your code:":
+      "Journal envoyé. Votre code :",
+  "Mention this code on Reddit or Discord with what happened, so the developer can find your log.":
+      "Indiquez ce code sur Reddit ou Discord avec ce qui s'est passé, pour que le développeur trouve votre journal.",
+  "Something not working? Send the app's log to the VesperTV developer. It holds what the app did recently (this session and the last one) and your device model, nothing else.":
+      "Quelque chose ne marche pas ? Envoyez le journal de l'app au développeur de VesperTV. Il contient ce que l'app a fait récemment (cette session et la précédente) et le modèle de votre appareil, rien d'autre.",
+  "Server addresses, user names, passwords and other private details are removed before sending.":
+      "Les adresses de serveur, noms d'utilisateur, mots de passe et autres détails privés sont retirés avant l'envoi.",
+  "Too many logs sent from here. Try again in an hour.":
+      "Trop de journaux envoyés d'ici. Réessayez dans une heure.",
+  "Couldn't send the log. Check the internet connection and try again.":
+      "Impossible d'envoyer le journal. Vérifiez la connexion Internet et réessayez.",
+  // Recordings (Sports Trak recording, Recordings tab)
+  "Watch live":
+      "Regarder en direct",
+  "Play from the start":
+      "Lire depuis le début",
+  "What has been recorded so far":
+      "Ce qui a été enregistré jusqu'ici",
+  "Stop recording":
+      "Arrêter l'enregistrement",
+  "Keeps what has been recorded":
+      "Garde ce qui a été enregistré",
+  "Cancel recording":
+      "Annuler l'enregistrement",
+  "Delete recording":
+      "Supprimer l'enregistrement",
+  "Frees {size}":
+      "Libère {size}",
+  "Removes it from the list":
+      "Le retire de la liste",
+  "Recordings":
+      "Enregistrements",
+  "Recording every {team} game":
+      "Enregistre chaque match de {team}",
+  "Nothing recorded yet. Hold OK on a game in {tab} and pick Record, or hold OK on a live channel.":
+      "Aucun enregistrement pour l'instant. Maintenez OK sur un match dans {tab} et choisissez Enregistrer, ou maintenez OK sur une chaîne en direct.",
+  "Recording now":
+      "En cours d'enregistrement",
+  "Recorded":
+      "Enregistrés",
+  "{used} of {cap} GB used":
+      "{used} utilisés sur {cap} Go",
+  "REC · {size}":
+      "ENR · {size}",
+  "Waiting for a channel":
+      "En attente d'une chaîne",
+  "Interrupted · {size}":
+      "Interrompu · {size}",
+  "Missed":
+      "Manqué",
+  "Failed":
+      "Échec",
+  "Live channel":
+      "Chaîne en direct",
+  "Start early: {min} min":
+      "Commencer en avance : {min} min",
+  "Before the game's scheduled start":
+      "Avant l'heure prévue du match",
+  "Keep recording: {min} min":
+      "Continuer : {min} min",
+  "After the scheduled end, for overtime and delays":
+      "Après la fin prévue, pour les prolongations et retards",
+  "Space for recordings: {gb} GB":
+      "Espace pour les enregistrements : {gb} Go",
+  "{used} used. Recording stops when this is full or the storage has less than 1 GB left.":
+      "{used} utilisés. L'enregistrement s'arrête quand cet espace est plein ou qu'il reste moins de 1 Go.",
+  "Save recordings to":
+      "Enregistrer dans",
+  "USB drive / SD card":
+      "Clé USB / carte SD",
+  "This device":
+      "Cet appareil",
+  "{free} free of {total}":
+      "{free} libres sur {total}",
+  "Plug in a USB drive or SD card to record to it. Recordings on this device are deleted if VesperTV is uninstalled.":
+      "Branchez une clé USB ou une carte SD pour y enregistrer. Les enregistrements sur cet appareil sont supprimés si VesperTV est désinstallé.",
+  "Recording in progress":
+      "Enregistrement en cours",
+  "{title} is recording on {channel}. Your playlist allows one connection, so playing another of its channels stops the recording.":
+      "{title} est en cours d'enregistrement sur {channel}. Votre playlist n'autorise qu'une connexion : lire une autre de ses chaînes arrête l'enregistrement.",
+  "Recording cancelled":
+      "Enregistrement annulé",
+  "Not enough free space to record":
+      "Pas assez d'espace libre pour enregistrer",
+  "Recording {title}":
+      "Enregistrement de {title}",
+  "{title} will be recorded":
+      "{title} sera enregistré",
+  "No longer recording every {team} game":
+      "Les matchs de {team} ne sont plus enregistrés",
+  "Every {team} game will be recorded":
+      "Chaque match de {team} sera enregistré",
+  "Waiting for a channel in the guide":
+      "En attente d'une chaîne dans le guide",
+  "Record":
+      "Enregistrer",
+  "{channel} · starts now":
+      "{channel} · commence maintenant",
+  "{channel} · from {time}":
+      "{channel} · à partir de {time}",
+  "Stop recording every {team} game":
+      "Ne plus enregistrer chaque match de {team}",
+  "Record every {team} game":
+      "Enregistrer chaque match de {team}",
+  "Recordings already made are kept":
+      "Les enregistrements déjà faits sont conservés",
+  "One team at a time, on the channel {tab} picks":
+      "Une équipe à la fois, sur la chaîne choisie par {tab}",
+  "Replaces {team}":
+      "Remplace {team}",
+  "Recording stopped":
+      "Enregistrement arrêté",
+  "Margins, space and where recordings are saved":
+      "Marges, espace et emplacement des enregistrements",
+  "Record until the show ends":
+      "Enregistrer jusqu'à la fin de l'émission",
+  "Record until I stop it":
+      "Enregistrer jusqu'à ce que je l'arrête",
+  "Keeps going across shows (4 hours at most)":
+      "Continue d'une émission à l'autre (4 heures au plus)",
+  "{title} · stops at {time}":
+      "{title} · s'arrête à {time}",
+  "No guide for this channel: stops after 2 hours":
+      "Pas de guide pour cette chaîne : s'arrête après 2 heures",
 };
