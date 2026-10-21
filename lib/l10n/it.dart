@@ -1656,6 +1656,8 @@ const Map<String, String> kIt = {
       "Aggiungi {n} add-on",
   "Already added":
       "Già aggiunto",
+  "Can't play in VesperTV":
+      "Non riproducibile in VesperTV",
   "Several links at once work too.":
       "Funzionano anche più link insieme.",
   "{n} links checked":

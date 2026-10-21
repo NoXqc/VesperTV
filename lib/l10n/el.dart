@@ -2263,6 +2263,8 @@ const Map<String, String> kEl = {
       "Προσθήκη {n} πρόσθετων",
   "Already added":
       "Έχει ήδη προστεθεί",
+  "Can't play in VesperTV":
+      "Δεν μπορεί να αναπαραχθεί στο VesperTV",
   "Several links at once work too.":
       "Λειτουργούν και πολλοί σύνδεσμοι μαζί.",
   "{n} links checked":

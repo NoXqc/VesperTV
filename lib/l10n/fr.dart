@@ -1655,6 +1655,8 @@ const Map<String, String> kFr = {
       "Ajouter {n} add-ons",
   "Already added":
       "Déjà ajouté",
+  "Can't play in VesperTV":
+      "Impossible à lire dans VesperTV",
   "Several links at once work too.":
       "Plusieurs liens à la fois, ça marche aussi.",
   "{n} links checked":

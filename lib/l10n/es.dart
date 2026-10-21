@@ -1652,6 +1652,8 @@ const Map<String, String> kEs = {
       "Añadir {n} add-ons",
   "Already added":
       "Ya añadido",
+  "Can't play in VesperTV":
+      "No se puede reproducir en VesperTV",
   "Several links at once work too.":
       "También funcionan varios enlaces a la vez.",
   "{n} links checked":

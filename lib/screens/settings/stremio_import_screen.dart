@@ -54,6 +54,13 @@ class _StremioImportScreenState extends State<StremioImportScreen> {
 
   static const _pollEvery = Duration(seconds: 3);
   static const _codeLife = Duration(minutes: 10);
+  static const _unsupportedAddonHosts = {
+    'v3-channels.strem.io',
+    'watchhub.strem.io',
+  };
+
+  bool _isUnsupportedAddon(String url) =>
+      _unsupportedAddonHosts.contains(Uri.tryParse(url)?.host.toLowerCase());
 
   @override
   void initState() {
@@ -114,8 +121,9 @@ class _StremioImportScreenState extends State<StremioImportScreen> {
         _addons = addons;
         _picked
           ..clear()
-          ..addAll(
-              addons.map((a) => a.url).where((u) => !service.hasSource(u)));
+          ..addAll(addons
+              .map((a) => a.url)
+              .where((u) => !service.hasSource(u) && !_isUnsupportedAddon(u)));
         _step = _Step.list;
       });
       _focusMain();
@@ -261,10 +269,12 @@ class _StremioImportScreenState extends State<StremioImportScreen> {
           CheckboxListTile(
             value: _picked.contains(a.url),
             title: Text(a.name),
-            subtitle: service.hasSource(a.url)
-                ? Text(tr('Already added'))
-                : Text(Uri.parse(a.url).host,
-                    style: const TextStyle(color: Colors.white54)),
+            subtitle: _isUnsupportedAddon(a.url)
+                ? Text(tr("Can't play in VesperTV"))
+                : service.hasSource(a.url)
+                    ? Text(tr('Already added'))
+                    : Text(Uri.parse(a.url).host,
+                        style: const TextStyle(color: Colors.white54)),
             onChanged: (v) => setState(
                 () => v == true ? _picked.add(a.url) : _picked.remove(a.url)),
           ),
