@@ -354,7 +354,8 @@ class SportsService {
   /// live list's detail pop-up). One call per opened game, cached 30 s
   /// while it's live. Null when ESPN can't be reached and nothing is cached.
   Future<SportsGameSummary?> gameSummary(SportsGame game) {
-    if (game.league.isCfl || game.league.sportsDbId != null) {
+    if (game.league.sportsDbId != null ||
+        (game.league.isCfl && game.statusText == 'Score unavailable')) {
       return _tableSummary(game);
     }
     final key = '${game.league.id}|${game.id}';
@@ -367,6 +368,32 @@ class SportsService {
       return Future.value(cached.$1);
     }
     return _summaryInFlight[key] ??= () async {
+      if (game.league.isCfl) {
+        try {
+          final results = await Future.wait([
+            _cfl.gameSummary(game),
+            _tableSummary(game),
+          ]);
+          final details = results[0]!;
+          final previous = _summaryCache[key]?.$1;
+          // One feed can fail while the other updates. Keep the last
+          // available box score instead of blanking it on a transient error.
+          final summary = SportsGameSummary(
+            teamStats: details.teamStats.isNotEmpty
+                ? details.teamStats
+                : previous?.teamStats ?? const [],
+            players: details.players.isNotEmpty
+                ? details.players
+                : previous?.players ?? const {},
+            tables: results[1]?.tables ?? previous?.tables ?? const [],
+          );
+          _summaryCache[key] = (summary, DateTime.now());
+          return summary;
+        } catch (e) {
+          debugPrint('SportsService: CFL summary ${game.id} failed: $e');
+          return _summaryCache[key]?.$1 ?? await _tableSummary(game);
+        }
+      }
       final url =
           Uri.parse('$_base/${game.league.espnPath}/summary?event=${game.id}');
       // It's ~40 KB gzipped and answers in well under a second, so a slow

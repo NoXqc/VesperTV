@@ -269,7 +269,32 @@ void main() {
     final first = DateTime(2026, 10, 23, 19).toUtc();
     final second = DateTime(2026, 10, 24, 19).toUtc();
     var roundCalls = 0;
+    var statsCalls = 0;
+    final statsUrls = <Uri>[];
     final client = MockClient((request) async {
+      if (request.url.host == 'gsm-widgets.betstream.betgenius.com') {
+        statsCalls++;
+        statsUrls.add(request.url);
+        if (request.url.path.contains('/teamStats/')) {
+          return http.Response(
+              jsonEncode({
+                'data': {
+                  'status': {'status': 'AVAILABLE'},
+                  'details': {
+                    'stats': [
+                      {
+                        'id': 'passing_detailed',
+                        'away': [262],
+                        'home': [324]
+                      }
+                    ]
+                  }
+                }
+              }),
+              200);
+        }
+        return http.Response('failed', 503); // Optional player feed failure.
+      }
       if (request.url == CflSource.roundsUrl) {
         roundCalls++;
         return http.Response(
@@ -297,6 +322,28 @@ void main() {
     final summary = await service.gameSummary(dayGames.single);
     expect(summary!.tables.single.labels, ['GP', 'W', 'L', 'T', 'PTS']);
     expect(summary.tables.single.rows.map((r) => r.$1), ['MTL', 'TOR']);
+    expect(summary.teamStats.single, ('Passing yards', '262', '324'));
+    await service.gameSummary(dayGames.single);
+    expect(statsCalls, 2); // Two optional feeds, shared/cached per game.
+    expect(statsUrls.map((u) => u.queryParameters['fixtureId']),
+        everyElement(dayGames.single.id));
+    expect(
+        statsUrls.map((u) => u.path),
+        containsAll([
+          '/v1/widget/teamStats/customer/democfl_light/locale/en-US/geolocale/any-',
+          '/v1/widget/playerStats/customer/democfl_light/locale/en-US/geolocale/any-',
+        ]));
+    final game = dayGames.single;
+    final hidden = SportsGame(
+        id: game.id,
+        league: game.league,
+        start: game.start,
+        state: game.state,
+        statusText: 'Score unavailable',
+        home: game.home,
+        away: game.away);
+    expect((await service.gameSummary(hidden))!.teamStats, isEmpty);
+    expect(statsCalls, 2); // Hidden stats cannot leak from the populated cache.
     expect(roundCalls, 1);
     expect(service.lastError, isNull);
   });

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/sports.dart';
+import 'cfl_game_stats.dart';
 
 /// The same public JSON used by CFL's scoreboard and stats sites. The
 /// scoreboard is the whole current season, so share one request across
@@ -24,9 +25,9 @@ class CflSource {
 
   List<SportsGame> get cachedGames => _cached?.games ?? const [];
 
-  Future<String> _get(Uri url) async {
-    final response =
-        await _client.get(url).timeout(const Duration(seconds: 15));
+  Future<String> _get(Uri url,
+      {Duration timeout = const Duration(seconds: 15)}) async {
+    final response = await _client.get(url).timeout(timeout);
     if (response.statusCode != 200) {
       throw Exception('CFL HTTP ${response.statusCode}');
     }
@@ -62,6 +63,22 @@ class CflSource {
   }
 
   Future<List<SportsGame>> games() async => (await _season()).games;
+
+  Future<SportsGameSummary> gameSummary(SportsGame game) async {
+    Future<String?> load(String widget) async {
+      try {
+        return await _get(cflGameStatsUrl(widget, game.id),
+            timeout: const Duration(seconds: 6));
+      } catch (e) {
+        debugPrint('CFL $widget ${game.id} failed: $e');
+        return null;
+      }
+    }
+
+    final bodies = await Future.wait([load('teamStats'), load('playerStats')]);
+    return compute(
+        parseCflGameStats, (bodies[0], bodies[1], game.home.id, game.away.id));
+  }
 
   Future<SportsStandings> standings() async {
     final season = await _season();

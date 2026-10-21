@@ -162,9 +162,16 @@ NASCAR Cup `racing/nascar-premier`, IndyCar `racing/irl`). Parsing in `sports_se
 - Quarter states are `first_quarter`..`fourth_quarter`, `half_time`, `overtime`; `clock` is display
   text, `possession` is Home/Away. They are not just `playing`. Hidden scores stay hidden;
   unassigned TBD playoff fixtures are omitted. PNG logos come from the official scoreboard.
-- No broadcaster list or player box score in these feeds: channel matching uses team/guide names
-  with Canadian preference; the game-detail popup shows the available standings. Follow, My Teams,
-  next-game dates and recording use the same stable team/game identities.
+- Channel matching uses team/guide names with Canadian preference (no broadcaster list in the
+  scoreboard). Follow, My Teams, next-game dates and recording use the same stable team/game identities.
+- `services/cfl_game_stats.dart` parses CFL.ca's public Genius gametracker `teamStats` and
+  `playerStats` widgets, using the scoreboard fixture id. Public route:
+  `https://gsm-widgets.betstream.betgenius.com/v1/widget/<widget>/customer/democfl_light/locale/en-US/geolocale/any-?fixtureId=<id>`.
+  No key/authentication. Team totals and the top eight players in each category appear in the
+  shared stats dialog, including fullscreen left-arrow menu stats. Live summaries refresh every
+  30 s; unavailable optional feeds retain previous detail or fall back to standings. No injury feed.
+  Home/away order is explicit; player participation flags can be wrong, so actual stats determine
+  inclusion. Verified against the completed Oct 17 Calgary–BC game, not an observed live game.
 - Live observation on Oct 21: **no game in progress** (86 complete, 9 scheduled including TBD
   playoff slots; next games Oct 23). Quarter/halftime/OT behavior is covered by fixtures based on
   CFL's actual client schema; confirm live updates on a box during a real game.
