@@ -1667,4 +1667,8 @@ const Map<String, String> kIt = {
       "Premi OK durante la riproduzione di un canale, un film o un episodio per aprire una scheda con i dettagli del flusso: risoluzione, fotogrammi al secondo, codec, bitrate, varianti di qualità, tracce audio, buffer e HDR. Disattivato: OK mostra solo le info del canale.",
   "Stream details when you press OK while watching":
       "Dettagli del flusso premendo OK durante la visione",
+  // CFL official feed
+  'East Division': 'Divisione Est',
+  'West Division': 'Divisione Ovest',
+  'Score unavailable': 'Punteggio non disponibile',
 };

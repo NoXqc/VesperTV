@@ -1023,6 +1023,7 @@ class _MiniTable extends StatelessWidget {
 
   /// The deciding columns per sport — the full set doesn't fit here.
   List<String> get _stats {
+    if (league.isCfl) return const ['wins', 'losses', 'ties', 'points'];
     if (league.soccer) {
       return const ['gamesPlayed', 'pointDifferential', 'points'];
     }
@@ -1070,7 +1071,7 @@ class _MiniTable extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(group.name,
+          Text(tr(group.name),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(

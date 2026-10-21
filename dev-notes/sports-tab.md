@@ -146,6 +146,29 @@ NASCAR Cup `racing/nascar-premier`, IndyCar `racing/irl`). Parsing in `sports_se
   hasn't built does nothing — League manager `_bank` is now in screen (region) order; the Sports
   league chip row is a `SingleChildScrollView` + `ensureVisible`.
 
+## CFL (2026-10-21)
+- CFL is a **base league** beside NFL (`kSportsLeagues`, also in the new-install defaults),
+  not a bank entry. Existing saved league selections still apply; CFL is available in Your leagues.
+- `services/cfl_source.dart` uses CFL's own public feeds: scoreboard
+  `https://cflscoreboard.cfl.ca/json/scoreboard/rounds.json`, team metadata
+  `https://api.stats.cfl.ca/teams`, and official division standings
+  `https://api.stats.cfl.ca/standings/<scoreboard season>`. ESPN's CFL feed remains frozen in 2022.
+- The scoreboard is the whole season (~300 KB): one shared/in-flight snapshot for all dates,
+  My Teams and next-game lookups. Refresh after 50 s live/near kickoff, otherwise 10 min;
+  metadata once per session. Parsing runs off the UI isolate. Failed loads retain cached scores.
+- **Team ids are abbreviations**, e.g. `MTL`: the two official APIs use different numeric ids.
+  The stats API supplies division membership and ranking (including tiebreak order), with CFL
+  points columns. Records on cards come from completed regular-season games only.
+- Quarter states are `first_quarter`..`fourth_quarter`, `half_time`, `overtime`; `clock` is display
+  text, `possession` is Home/Away. They are not just `playing`. Hidden scores stay hidden;
+  unassigned TBD playoff fixtures are omitted. PNG logos come from the official scoreboard.
+- No broadcaster list or player box score in these feeds: channel matching uses team/guide names
+  with Canadian preference; the game-detail popup shows the available standings. Follow, My Teams,
+  next-game dates and recording use the same stable team/game identities.
+- Live observation on Oct 21: **no game in progress** (86 complete, 9 scheduled including TBD
+  playoff slots; next games Oct 23). Quarter/halftime/OT behavior is covered by fixtures based on
+  CFL's actual client schema; confirm live updates on a box during a real game.
+
 ## Goals
 - A Sports tab with: **league filter** (NHL, NFL, NBA, MLB, PGA, ...), **My Teams**, **Standings**,
   scoreboard by day, game detail, and a **Watch** button that opens the matching IPTV channel.

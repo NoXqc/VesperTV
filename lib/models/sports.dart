@@ -91,6 +91,9 @@ class SportsLeague {
   final bool hasStandings;
 
   bool get isBase => region == null;
+
+  /// CFL's ESPN feed stopped in 2022; use the league's own scores/stats.
+  bool get isCfl => id == 'cfl';
 }
 
 /// The base leagues — always available in the League manager, in the
@@ -108,6 +111,13 @@ const List<SportsLeague> kSportsLeagues = [
       name: 'NFL',
       shortName: 'NFL',
       logoUrl: 'https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png'),
+  SportsLeague(
+      id: 'cfl',
+      espnPath: 'football/cfl',
+      name: 'CFL',
+      shortName: 'CFL',
+      logoUrl: 'https://cflscoreboard.cfl.ca/favicon.png',
+      homeTags: ['ca']),
   SportsLeague(
       id: 'nba',
       espnPath: 'basketball/nba',
@@ -188,6 +198,7 @@ const List<SportsLeague> kSportsLeagues = [
 const List<String> kDefaultSportsLeagueIds = [
   'nhl',
   'nfl',
+  'cfl',
   'nba',
   'mlb',
   'eng.1',

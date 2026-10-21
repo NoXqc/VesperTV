@@ -1666,4 +1666,8 @@ const Map<String, String> kFr = {
       "Appuyez sur OK pendant la lecture d'une chaîne, d'un film ou d'un épisode pour ouvrir une carte avec les détails du flux : résolution, images par seconde, codecs, débit, variantes de qualité, pistes audio, mémoire tampon et HDR. Désactivé : OK affiche seulement les infos de la chaîne.",
   "Stream details when you press OK while watching":
       "Détails du flux quand vous appuyez sur OK en regardant",
+  // CFL official feed
+  'East Division': 'Division Est',
+  'West Division': 'Division Ouest',
+  'Score unavailable': 'Score indisponible',
 };

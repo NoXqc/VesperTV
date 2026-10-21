@@ -146,6 +146,7 @@ class RecordingService extends ChangeNotifier {
   bool isAutoTeam(SportsGame g, SportsTeam t) =>
       _autoTeam != null &&
       _autoTeam!.teamId == t.id &&
+      sportsLeagueById(_autoTeam!.leagueId)?.isCfl == g.league.isCfl &&
       _sport(sportsLeagueById(_autoTeam!.leagueId)) == _sport(g.league);
 
   static String _sport(SportsLeague? l) => l?.espnPath.split('/').first ?? '';
@@ -521,6 +522,7 @@ class RecordingService extends ChangeNotifier {
         home,
         for (final l in viewerLeagues)
           if (_sport(l) == _sport(home) &&
+              l.isCfl == home.isCfl &&
               l.sportsDbId == null &&
               home.sportsDbId == null)
             l,

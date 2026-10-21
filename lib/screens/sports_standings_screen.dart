@@ -54,6 +54,18 @@ class SportsStandingColumn {
 List<SportsStandingColumn> sportsStandingColumns(SportsLeague league) {
   const l10 = SportsStandingColumn('L10', 'Last Ten Games', width: 54);
   const strk = SportsStandingColumn('STRK', 'streak', width: 54);
+  if (league.isCfl) {
+    return const [
+      SportsStandingColumn('GP', 'gamesPlayed'),
+      SportsStandingColumn('W', 'wins'),
+      SportsStandingColumn('L', 'losses'),
+      SportsStandingColumn('T', 'ties'),
+      SportsStandingColumn('PTS', 'points', width: 50),
+      SportsStandingColumn('DIFF', 'pointDifferential', width: 54),
+      SportsStandingColumn('PF', 'pointsFor', width: 50),
+      SportsStandingColumn('PA', 'pointsAgainst', width: 50),
+    ];
+  }
   if (league.soccer) {
     return const [
       SportsStandingColumn('GP', 'gamesPlayed'),
@@ -399,7 +411,7 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
                       for (var i = 0; i < groups.length; i++)
                         SportsChip(
                           focusNode: _chipNode('group:$i'),
-                          label: groups[i].name,
+                          label: tr(groups[i].name),
                           selected: i == _groupIndex,
                           compact: true,
                           onFocus: () => _zone = 1,
@@ -409,7 +421,7 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
                   )
                 : Align(
                     alignment: Alignment.centerLeft,
-                    child: Text(groups.firstOrNull?.name ?? '',
+                    child: Text(tr(groups.firstOrNull?.name ?? ''),
                         style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,

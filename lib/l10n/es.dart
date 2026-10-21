@@ -1663,4 +1663,8 @@ const Map<String, String> kEs = {
       "Pulsa OK mientras se reproduce un canal, una película o un episodio para abrir una tarjeta con los detalles de la transmisión: resolución, fotogramas por segundo, códecs, bitrate, variantes de calidad, pistas de audio, búfer y HDR. Desactivado: OK muestra solo la info del canal.",
   "Stream details when you press OK while watching":
       "Detalles de la transmisión al pulsar OK mientras ves",
+  // CFL official feed
+  'East Division': 'División Este',
+  'West Division': 'División Oeste',
+  'Score unavailable': 'Marcador no disponible',
 };
