@@ -264,6 +264,8 @@ class AppConstants {
   // Media Hub placeholder clips re-asked + titles tagged Ready
   // (ArchiveReadyWatch), JSON. Device-only.
   static const String keyArchiveReadyWatch = 'vesper_hub_ready_watch';
+  // Expand catalog: the last sort picked, per category (+ 'vod'/'series').
+  static const String keyCatalogSortPrefix = 'vesper_catalog_sort_';
   // Settings > Media Hub > Debrid accounts (DebridApi): the user's own
   // Real-Debrid API token / TorBox API key.
   static const String keyRealDebridToken = 'vesper_real_debrid_token';

@@ -236,6 +236,33 @@ class ArchiveService extends ChangeNotifier {
     if (changed) await _saveSources(list);
   }
 
+  /// Checks [link]'s manifest without adding it (same errors as
+  /// [addSource]) — an import checks every link first, then adds them in
+  /// one save with [addCheckedSources].
+  Future<ArchiveSource> checkSource(String link) => _api.fetchManifest(link);
+
+  /// Adds sources from [checkSource] in one save and one refresh; a link
+  /// already in the list is left out. Returns the ones added.
+  Future<List<ArchiveSource>> addCheckedSources(
+      List<ArchiveSource> found) async {
+    final list = sources;
+    final have = {for (final s in list) s.manifestUrl};
+    final added = [
+      for (final s in found)
+        if (have.add(s.manifestUrl)) s,
+    ];
+    if (added.isEmpty) return added;
+    await _saveSources([...list, ...added]);
+    unawaited(refresh(force: true));
+    return added;
+  }
+
+  /// True when [link] (normalized like a manifest URL) is already a source.
+  bool hasSource(String link) {
+    final url = ArchiveApiService.normalizeManifestUrl(link);
+    return sources.any((s) => s.manifestUrl == url);
+  }
+
   /// Checks [link]'s manifest and adds it. Throws [ArchiveApiException]
   /// (bad link, no streams/catalogs) or [StateError] (already added).
   Future<ArchiveSource> addSource(String link) async {
@@ -309,8 +336,8 @@ class ArchiveService extends ChangeNotifier {
   /// [otherGenre] filter is picked, and then alone — search follows the
   /// same split.
   List<(ArchiveSource, ArchiveCatalog)> _catalogs(ArchiveType type,
-      {bool filtered = true}) {
-    final other = _genre[type] == otherGenre;
+      {bool filtered = true, bool? underOther}) {
+    final other = underOther ?? _genre[type] == otherGenre;
     final genre = filtered && !other ? _genre[type] : null;
     final shown = <String>{};
     return [
@@ -402,42 +429,52 @@ class ArchiveService extends ChangeNotifier {
     _searching = true;
     _search[type] = (q, const []);
     _notify();
-    final out = <ArchiveRow>[];
+    var out = const <ArchiveRow>[];
     try {
-      final groups = <String, List<(ArchiveSource, ArchiveCatalog)>>{};
-      for (final sc in _catalogs(type, filtered: false)) {
-        final s = sc.$1;
-        groups
-            .putIfAbsent(
-                s.streamOnly ? s.catalogBaseUrl : s.manifestUrl, () => [])
-            .add(sc);
-      }
-      for (final group in groups.values) {
-        final found = <ArchiveMeta>[];
-        for (final (s, c) in group) {
-          if (!c.searchable) continue;
-          try {
-            found.addAll(await _page(s, c, search: q));
-          } catch (e) {
-            debugPrint('ArchiveService: search ${s.name}/${c.id} failed: $e');
-          }
-        }
-        for (final (s, c) in group) {
-          found.addAll(_items[_rowKey(s, c)] ?? const []);
-        }
-        final items = rankSearch(q, found);
-        if (items.isEmpty) continue;
-        final (s, c) = group.firstWhere((sc) => sc.$2.searchable,
-            orElse: () => group.first);
-        out.add(
-            ArchiveRow(source: s, catalog: c, items: items, searchQuery: q));
-      }
+      out = await searchRows(type, q);
     } finally {
       // A newer search (or a clear) replaced this one: drop these results.
       if (_search[type]?.$1 == q) _search[type] = (q, out);
       _searching = false;
       _notify();
     }
+  }
+
+  /// The search itself, one row per source (stream-only sources sharing a
+  /// provider = one row), without touching this tab's search state — the
+  /// app's global Search uses it too ([underOther] false there: Other
+  /// stays behind its filter). Null [underOther] = the tab's current split.
+  Future<List<ArchiveRow>> searchRows(ArchiveType type, String q,
+      {bool? underOther}) async {
+    final out = <ArchiveRow>[];
+    final groups = <String, List<(ArchiveSource, ArchiveCatalog)>>{};
+    for (final sc in _catalogs(type, filtered: false, underOther: underOther)) {
+      final s = sc.$1;
+      groups
+          .putIfAbsent(
+              s.streamOnly ? s.catalogBaseUrl : s.manifestUrl, () => [])
+          .add(sc);
+    }
+    for (final group in groups.values) {
+      final found = <ArchiveMeta>[];
+      for (final (s, c) in group) {
+        if (!c.searchable) continue;
+        try {
+          found.addAll(await _page(s, c, search: q));
+        } catch (e) {
+          debugPrint('ArchiveService: search ${s.name}/${c.id} failed: $e');
+        }
+      }
+      for (final (s, c) in group) {
+        found.addAll(_items[_rowKey(s, c)] ?? const []);
+      }
+      final items = rankSearch(q, found);
+      if (items.isEmpty) continue;
+      final (s, c) =
+          group.firstWhere((sc) => sc.$2.searchable, orElse: () => group.first);
+      out.add(ArchiveRow(source: s, catalog: c, items: items, searchQuery: q));
+    }
+    return out;
   }
 
   void clearSearch(ArchiveType type) {
@@ -767,8 +804,9 @@ class ArchiveService extends ChangeNotifier {
       '$playlistId::${_rawId(source, videoId, episode: episode)}';
 
   Future<ArchiveMeta?> meta(ArchiveSource source, ArchiveMeta preview) =>
-      // A tracker's titles are IMDb ids: the provider has their metas.
-      source.tracker != null
+      // A tracker's or list-only source's titles are IMDb ids: the
+      // provider has their metas.
+      source.tracker != null || source.listOnly
           ? _api.fetchMeta(
               ArchiveCatalogProvider.baseUrl, preview.type, preview.id)
           : source.server != null
@@ -780,12 +818,13 @@ class ArchiveService extends ChangeNotifier {
   /// a title from the public provider — every other enabled stream-only
   /// source on the same provider, since they share the same IMDB ids.
   List<ArchiveSource> _streamSources(ArchiveSource source) => [
-        // A tracker list has no streams: every stream-only add-on is asked,
-        // like for the provider's own rows (same IMDb ids).
-        if (source.tracker != null)
+        // A tracker list or list-only add-on has no streams: every
+        // stream-only add-on is asked, like for the provider's own rows
+        // (same IMDb ids).
+        if (source.tracker != null || source.listOnly)
           for (final s in enabledSources)
             if (s.streamOnly) s,
-        if (source.tracker == null) source,
+        if (source.tracker == null && !source.listOnly) source,
         if (source.streamOnly)
           for (final s in enabledSources)
             if (s.streamOnly &&

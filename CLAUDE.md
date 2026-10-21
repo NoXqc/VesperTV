@@ -49,7 +49,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
 4. `flutter analyze` must report the baseline **17** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `1.0.33` unless noted
+5. Check the current state of releases: `gh release list` (latest should be `1.0.34` unless noted
    in §11).
 
 ## 3. Layout (what matters)
@@ -118,7 +118,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
 - Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+360**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
-  (Currently **+385**, 1.0.33.)
+  (Currently **+388**, 1.0.34.)
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
 Only release when the owner asks ("update the latest", "cut it", "fully release"). Outline: bump `pubspec.yaml` (versionCode `+N` must always rise) → `flutter analyze` → build APK + verify signature (§5) → build Windows + zip → **commit & push first** → `gh release upload <tag> app-release.apk VesperTV-windows-x64.zip --clobber` → `gh release edit <tag> --tag <new> --notes-file …` → make sure the tag equals HEAD → verify downloads/hashes, the OLD `NoXqc/NoXPlayer` redirect links and AFTVnews code `1760256`. The updater offers any *different* tag (`_isDifferent`), never leave two `.zip`/`.apk` assets on the latest release.
@@ -162,6 +162,9 @@ set by `HttpVideoAsset`), `StatsBridge.java` (MethodChannel `vespertv/stats` →
 rendered / dropped frames), `VideoAsset.streamStats()`, `VideoPlayer.streamStats`, and
 `videoPlayer.streamStats = videoAsset.streamStats()` in both `VideoPlayerPlugin` create methods.
 Uses `android.util.LongSparseArray`; new classes need `@OptIn(markerClass = UnstableApi.class)`.
+Added in 1.0.34: **`BufferBudget.java`** — on devices under 2.5 GB RAM (or `isLowRamDevice`),
+`setTargetBufferBytes` 64 MB in `PlatformViewVideoPlayer` and 32 MB in `TextureVideoPlayer` (the
+time limits alone let a 4K remux fill ~140 MB of Java heap; the Fire Stick ran out of memory).
 **Recording (1.0.32) is NOT in this plugin** — it is app-side Kotlin (`RecorderService.kt`,
 `RecorderScheduler.kt` in `android/app/.../nox_iptv/`), so a plugin re-sync doesn't touch it.
 
@@ -307,7 +310,44 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-21)
-- **Shipped: 1.0.33 (`+385`, 2026-10-21, latest; Formuler-tested):**
+- **Shipped: 1.0.34 (`+388`, 2026-10-21, latest; test builds `+386`/`+387` = pre-releases
+  `1.0.34-test.386`/`.387`, `+388` owner-tested on the Fire Stick):** **list-only add-ons** (`ArchiveSource.listOnly`,
+  stored `listOnly`): a manifest with movie/series catalogs on IMDb ids (or no idPrefixes) and no
+  `stream` resource is accepted instead of "This source offers no streams" — rows from its own
+  `/catalog/`, metas from Cinemeta, Play asks every stream-only source (same path as tracker lists).
+  User's case: Streaming Catalogs (`catalog.ers.pw`, Netflix/Disney+/Prime/Apple TV+/HBO Max),
+  verified live (10 rows, Cinemeta metas). `test/archive_list_only_test.dart`.
+  **Global Search › Media Hub**: after the playlists' rows, a gold "Media Hub" heading, then its
+  Movies / TV Shows (`ArchiveService.searchRows(underOther: false)` — no Other/adult content, doesn't
+  touch the tab's own search state; 500 ms debounce; hidden with Hide Media Hub).
+  **Unreadable-stream sniff** (Android, `PlaybackService._sniffUnreadable` + `sniffStream`): on
+  ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED for a link the `.ts` rule doesn't cover, the first KB is
+  read once per link: `#EXTM3U` = retried as HLS (`_hlsUrls`); JSON/HTML/text = the reply goes on the
+  error as `[SOURCE_REPLY:kind HTTP n] text` and `_friendlyPlaybackError` shows it in plain words;
+  a no-URL line goes to Send log. User case: Media Hub TV show via TorBox add-ons — couldn't reproduce
+  with Torrentio+TorBox (10 episode/pack links all MKV). No stream picker = one stream, so likely a
+  Jellyfin/Emby `.strm` library: a body that is only an http(s) link = `link`, played instead (address
+  never shown/logged). Pre-release `1.0.34-test.386` has it. Windows: not done.
+  **Add-on import** (`services/addon_import.dart`): the Media Hub sources link field takes many
+  `manifest.json` links at once (`AddonImporter.linksIn`, even run together) — each checked, Media Hub
+  sources saved in one go (`ArchiveService.checkSource`/`addCheckedSources`), subtitle-only ones go to
+  Settings > Add-ons; summary dialog. **Import from Stremio** (`screens/settings/stremio_import_screen.dart`,
+  `StremioAccount`): QR + 4-letter code from `link.stremio.com/api/v2/create`, poll `/read` every 3 s
+  (error 101 = not signed in yet), `api.strem.io/api/addonCollectionGet`, checklist, then `logout`.
+  Built-ins (protected, Cinemeta, 127.0.0.1) skipped. Undocumented Stremio API; the signed-in `/read`
+  shape (`result.authKey`) — **owner-verified on the Fire Stick (2026-10-21)**: real sign-in, list, Streaming Catalogs added. Nuvio: needs
+  Nuvio's Supabase anon key (`api.nuvio.tv`) — owner chose not to ship it (2026-10-21); paste links instead.
+  **Expand catalog remembers its sort** per category (`vesper_catalog_sort_vod|series`, shown beside
+  the Sort icon; a saved TMDB sort re-runs its lookups). **Data pool on VOD** (Android): OK on a
+  movie/episode (provider or Media Hub) opens the Data pool card alone when the setting is on.
+  **Quality badge uses width too** (`qualityLabelForTrack`): 3840x1600 films were "HD", 1920x800 had
+  none. `test/video_quality_test.dart`. Not done: subtitle size setting (asked by the same user).
+  **Player buffer budget** (§9 `BufferBudget.java`): a 4K remux ANR'd the 1.7 GB Fire Stick (whole
+  device out of memory, kswapd 82 %, VesperTV killed as not responding). Under 2.5 GB RAM the main
+  player caps its buffer at 64 MB, texture players at 32 MB. Owner: a 4K Spider-Man remux then
+  played well (tiny lag at start); memory log: app ~320 MB PSS, device free RAM low point 55 MB.
+  **`AGENTS.md`** added: Codex (or any agent) reads it first; it points here.
+- **Shipped: 1.0.33 (`+385`, 2026-10-21; Formuler-tested):**
   - **Media Hub Ready tag** (`services/archive_ready_watch.dart`): a Media Hub stream under 90 s is a
     source's "being downloaded" clip — no resume point, no Trakt/Simkl scrobble, no auto-advance;
     on leaving the player the title is queued (persisted, device-only `vesper_hub_ready_watch`),
@@ -711,6 +751,9 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 - Local junk is git-ignored/untracked on purpose (`nox_*.png` screenshots, `*.apk`, `*-windows-x64.zip`).
 
 ## 15. Session hygiene (token efficiency)
+- **Two agents:** Claude and Codex share this repo. `AGENTS.md` is the entry point for Codex (and its
+  hard rules, branch etiquette, task split and handoff/pickup steps); `CLAUDE.md` stays the single
+  rulebook. Only one agent works at a time; commit before switching; Codex works on `codex/*` branches.
 - **One task per session.** Long sessions get lossy compaction and re-read the whole history after the
   1-hour prompt-cache expires. Finish a task, commit, then start fresh (`/clear` or a new session).
 - **Hand off, don't drag.** Before a session ends or compacts, run `/handoff` (project command in

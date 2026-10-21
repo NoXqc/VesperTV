@@ -5,9 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../models/archive_models.dart';
 import '../models/channel.dart';
 import '../models/xtream_series.dart';
 import '../services/app_preferences.dart';
+import '../services/archive_ready_watch.dart';
+import '../services/archive_service.dart';
 import '../services/catalog_database.dart';
 import '../services/desktop_mini_player.dart';
 import '../services/playback_service.dart';
@@ -17,6 +20,8 @@ import '../utils/tv_theme.dart';
 import '../widgets/poster_card.dart';
 import '../widgets/settings_scaffold.dart';
 import '../widgets/tv_text_field_gate.dart';
+import 'archive_detail_screen.dart';
+import 'archive_playback.dart';
 import 'desktop_player_screen.dart';
 import 'player_screen.dart';
 import 'series_detail_screen.dart';
@@ -24,7 +29,8 @@ import '../l10n/l10n.dart';
 
 /// Full-screen search — a search bar plus every matching result grouped
 /// into its own horizontally-scrolling poster row (Live TV, Movies, TV
-/// Shows — in that order, each shown only when it actually has matches),
+/// Shows — in that order, each shown only when it actually has matches —
+/// then the Media Hub's Movies and TV Shows under their own heading),
 /// instead of the old single flat list gated behind a scope switch. Every
 /// content type is visible at once now, the same way a modern TV app's
 /// search results page reads.
@@ -49,8 +55,15 @@ class SearchScreen extends StatefulWidget {
 /// potentially large number of focusable tiles across several rows) and
 /// gets the same fix.
 class _ResultRow {
-  _ResultRow(this.label, this.rowKey, this.firstFocusNode, this.children);
+  _ResultRow(this.label, this.rowKey, this.firstFocusNode, this.children,
+      {this.section, this.hasSource = false});
   final String label;
+
+  /// A heading drawn above this row ("Media Hub"), starting a group.
+  final String? section;
+
+  /// Its cards carry a source line (taller row).
+  final bool hasSource;
 
   /// Wraps this row's header + horizontal list — see
   /// [_SearchScreenState._ensureRowVisible]'s doc comment for why this
@@ -92,6 +105,13 @@ class _SearchScreenState extends State<SearchScreen> {
   List<XtreamSeries>? _dbSeriesResults;
   Timer? _searchDebounce;
 
+  /// Media Hub matches (its sources' search + loaded rows, Other left out),
+  /// by type; asked over the network, so on their own, slower debounce.
+  List<(ArchiveSource, ArchiveMeta)> _hubMovies = const [];
+  List<(ArchiveSource, ArchiveMeta)> _hubShows = const [];
+  bool _hubSearching = false;
+  Timer? _hubDebounce;
+
   /// -1 means the search field/suggestion pills, otherwise an index into
   /// whichever `_ResultRow` list [build] most recently produced — see
   /// [_moveRowFocus].
@@ -113,6 +133,7 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   void dispose() {
     _searchDebounce?.cancel();
+    _hubDebounce?.cancel();
     _controller.dispose();
     _searchFieldFocus.dispose();
     _recentFirstFocus.dispose();
@@ -129,6 +150,12 @@ class _SearchScreenState extends State<SearchScreen> {
     setState(() => _query = value);
     _searchDebounce?.cancel();
     final trimmed = value.trim();
+    _hubDebounce?.cancel();
+    _clearHub();
+    if (trimmed.isNotEmpty) {
+      _hubDebounce = Timer(
+          const Duration(milliseconds: 500), () => _runHubSearch(trimmed));
+    }
     if (trimmed.isEmpty || !context.read<PlaylistManager>().isXtream) {
       setState(() {
         _dbVodResults = null;
@@ -165,6 +192,57 @@ class _SearchScreenState extends State<SearchScreen> {
     });
   }
 
+  void _clearHub() {
+    _hubMovies = const [];
+    _hubShows = const [];
+    _hubSearching = false;
+  }
+
+  Future<void> _runHubSearch(String query) async {
+    if (context.read<AppPreferences>().hideArchive) return;
+    final service = context.read<ArchiveService>();
+    if (service.enabledSources.isEmpty) return;
+    setState(() => _hubSearching = true);
+    Future<List<(ArchiveSource, ArchiveMeta)>> find(ArchiveType type) async {
+      final seen = <String>{};
+      return [
+        for (final row
+            in await service.searchRows(type, query, underOther: false))
+          for (final m in row.items)
+            if (seen.add(m.id)) (row.source, m),
+      ];
+    }
+
+    final List<(ArchiveSource, ArchiveMeta)> movies, shows;
+    try {
+      (movies, shows) =
+          await (find(ArchiveType.movie), find(ArchiveType.series)).wait;
+    } catch (e) {
+      debugPrint('SearchScreen: Media Hub search failed: $e');
+      if (mounted && _query.trim() == query) {
+        setState(() => _hubSearching = false);
+      }
+      return;
+    }
+    // Typing moved on meanwhile: a stale answer must not show.
+    if (!mounted || _query.trim() != query) return;
+    setState(() {
+      _hubMovies = movies;
+      _hubShows = shows;
+      _hubSearching = false;
+    });
+  }
+
+  void _openHubTitle(ArchiveSource source, ArchiveMeta meta) {
+    _recordSearch(_query);
+    if (meta.type == ArchiveType.series) {
+      openArchiveSeries(context, source, meta);
+      return;
+    }
+    Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => ArchiveDetailScreen(source: source, preview: meta)));
+  }
+
   /// Records a completed search (explicit submit, or picking a result) for
   /// the quick-access pills shown while the field is empty — not on every
   /// keystroke, which would just fill history with partial fragments.
@@ -180,11 +258,16 @@ class _SearchScreenState extends State<SearchScreen> {
   void _runSearch(String query) {
     _controller.text = query;
     _controller.selection = TextSelection.collapsed(offset: query.length);
-    setState(() => _query = query);
+    setState(() {
+      _query = query;
+      _clearHub();
+    });
     _searchDebounce?.cancel();
+    _hubDebounce?.cancel();
     if (context.read<PlaylistManager>().isXtream) {
       unawaited(_runDbSearch(query.trim()));
     }
+    unawaited(_runHubSearch(query.trim()));
   }
 
   Future<void> _openChannel(Channel channel) async {
@@ -378,11 +461,13 @@ class _SearchScreenState extends State<SearchScreen> {
                             icon: const Icon(Icons.clear),
                             onPressed: () {
                               _searchDebounce?.cancel();
+                              _hubDebounce?.cancel();
                               setState(() {
                                 _controller.clear();
                                 _query = '';
                                 _dbVodResults = null;
                                 _dbSeriesResults = null;
+                                _clearHub();
                               });
                             },
                           ),
@@ -427,7 +512,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                 ? (_recentSearches.isEmpty
                                     ? Center(
                                         child: Text(tr(
-                                            'Search Live TV, Movies & TV Shows')))
+                                            'Search Live TV, Movies, TV Shows & the Media Hub')))
                                     : const SizedBox())
                                 : _buildResultRows(rows),
                           ),
@@ -514,7 +599,7 @@ class _SearchScreenState extends State<SearchScreen> {
       rows.add(_buildChannelRow(rows.length, tr('Live TV'), channelMatches));
     }
     final prefs = context.read<AppPreferences>();
-    if (prefs.hideMoviesShows) return rows;
+    if (prefs.hideMoviesShows) return rows..addAll(_buildHubRows(rows.length));
 
     final vodMatches = playlist.isXtream
         ? _dbVodResults
@@ -545,6 +630,49 @@ class _SearchScreenState extends State<SearchScreen> {
       }
     }
 
+    return rows..addAll(_buildHubRows(rows.length));
+  }
+
+  /// The Media Hub's Movies and TV Shows, after the playlists' rows, under
+  /// a "Media Hub" heading so the two never read as one catalog.
+  List<_ResultRow> _buildHubRows(int firstIndex) {
+    final rows = <_ResultRow>[];
+    final watch = ArchiveReadyWatch.instance;
+    for (final (label, items) in [
+      (tr('Movies'), _hubMovies),
+      (tr('TV Shows'), _hubShows),
+    ]) {
+      if (items.isEmpty) continue;
+      final rowIndex = firstIndex + rows.length;
+      final rowKey = GlobalKey();
+      final firstFocusNode = FocusNode();
+      rows.add(_ResultRow(
+        label,
+        rowKey,
+        firstFocusNode,
+        [
+          for (var i = 0; i < items.length; i++)
+            PosterCard(
+              key:
+                  ValueKey('hub_${label}_${items[i].$1.key}_${items[i].$2.id}'),
+              focusNode: i == 0 ? firstFocusNode : null,
+              title: items[i].$2.name,
+              sourceLabel: items[i].$1.name,
+              imageUrl: items[i].$2.posterUrl,
+              rating: items[i].$2.year,
+              ready: watch.isReady(items[i].$2.id),
+              fetching: watch.fetching.value.contains(items[i].$2.id),
+              onTap: () => _openHubTitle(items[i].$1, items[i].$2),
+              onFocusGained: () {
+                _focusedZone = rowIndex;
+                _ensureRowVisible(rowKey);
+              },
+            ),
+        ],
+        section: rows.isEmpty ? tr('Media Hub') : null,
+        hasSource: true,
+      ));
+    }
     return rows;
   }
 
@@ -606,6 +734,9 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildResultRows(List<_ResultRow> rows) {
+    if (rows.isEmpty && _hubSearching) {
+      return const Center(child: CircularProgressIndicator());
+    }
     if (rows.isEmpty) {
       return Center(
         child: Padding(
@@ -633,6 +764,30 @@ class _SearchScreenState extends State<SearchScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (row.section != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+                  child: Row(
+                    children: [
+                      Text(row.section!,
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleLarge
+                              ?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color:
+                                      Theme.of(context).colorScheme.primary)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Divider(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withValues(alpha: 0.4)),
+                      ),
+                    ],
+                  ),
+                ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(row.label,
@@ -645,7 +800,9 @@ class _SearchScreenState extends State<SearchScreen> {
               SizedBox(
                 height: PosterCard.height +
                     12 +
-                    (_sourceNames == null ? 0 : PosterCard.sourceHeight),
+                    (_sourceNames == null && !row.hasSource
+                        ? 0
+                        : PosterCard.sourceHeight),
                 child: ListView(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 10),

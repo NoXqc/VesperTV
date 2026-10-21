@@ -72,6 +72,10 @@ public class PlatformViewVideoPlayer extends VideoPlayer {
               /* maxBufferMs= */ 120_000,
               /* bufferForPlaybackMs= */ 500,
               /* bufferForPlaybackAfterRebufferMs= */ 500);
+          // Small-RAM devices: a byte cap too (4K remux ANR, see BufferBudget).
+          io.flutter.plugins.videoplayer.BufferBudget.apply(
+              context, loadControlBuilder,
+              io.flutter.plugins.videoplayer.BufferBudget.MAIN_PLAYER_BYTES);
           if (options.backBufferDurationMs != null) {
             if (options.backBufferDurationMs < 0) {
               throw new IllegalArgumentException("backBufferDurationMs must be at least 0");

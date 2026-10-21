@@ -345,7 +345,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                           TvSwitchListTile(
                             title: Text(tr('Data pool display')),
                             subtitle: Text(tr(
-                                'Press OK while a live channel plays to open a second card under the channel info with the stream\'s details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer and HDR. Off: OK shows only the channel info.')),
+                                'Press OK while a channel, movie or episode plays to open a card with the stream\'s details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer and HDR. Off: OK shows only the channel info.')),
                             value: context.watch<AppPreferences>().dataPool,
                             onChanged: (v) =>
                                 context.read<AppPreferences>().setDataPool(v),

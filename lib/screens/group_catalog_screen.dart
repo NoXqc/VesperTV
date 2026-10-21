@@ -69,7 +69,9 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
   /// Defaults to whatever order the provider sent (`none`) rather than
   /// forcing a sort nobody asked for — A-Z/Rating/Release Date are all
   /// opt-in via the top-bar menu, per direct feedback wanting a filter bar
-  /// up there rather than buried in a menu elsewhere.
+  /// up there rather than buried in a menu elsewhere. The last one picked
+  /// is kept per category and used again next time (user request,
+  /// 2026-10-21: "Date added/updated" was forgotten on leaving).
   _SortMode _sort = _SortMode.none;
 
   /// Set only once real TMDB-fetched dates start arriving, so the grid
@@ -105,8 +107,21 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
   @override
   void initState() {
     super.initState();
+    final saved =
+        context.read<StorageService>().getCatalogSort(widget.category);
+    _sort = _SortMode.values.where((m) => m.name == saved).firstOrNull ??
+        _SortMode.none;
     _loadItems();
   }
+
+  String _sortLabel(_SortMode mode) => switch (mode) {
+        _SortMode.none => tr('Default'),
+        _SortMode.aToZ => tr('A to Z'),
+        _SortMode.zToA => tr('Z to A'),
+        _SortMode.rating => tr('Rating (high to low)'),
+        _SortMode.addedDate => tr('Date added/updated'),
+        _SortMode.tmdb => 'TMDB',
+      };
 
   Future<void> _loadItems() async {
     final db = context.read<CatalogDatabase>();
@@ -117,6 +132,7 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
         _vodItems = items;
         _loading = false;
       });
+      _resumeTmdbSort();
     } else {
       final items = await db.getSeriesCategory(widget.playlistId, widget.title);
       if (!mounted) return;
@@ -124,6 +140,7 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
         _seriesItems = items;
         _loading = false;
       });
+      _resumeTmdbSort();
     }
   }
 
@@ -155,7 +172,16 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
                         maxLines: 1, overflow: TextOverflow.ellipsis),
                     actions: [
                       PopupMenuButton<_SortMode>(
-                        icon: const Icon(Icons.sort),
+                        // The sort in use, beside the icon: a remembered
+                        // one must not look like the provider's order.
+                        icon: _sort == _SortMode.none
+                            ? const Icon(Icons.sort)
+                            : Row(mainAxisSize: MainAxisSize.min, children: [
+                                const Icon(Icons.sort),
+                                const SizedBox(width: 6),
+                                Text(_sortLabel(_sort),
+                                    style: const TextStyle(fontSize: 14)),
+                              ]),
                         tooltip: tr('Sort'),
                         initialValue: _sort,
                         onSelected: _onSortSelected,
@@ -197,8 +223,17 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
             ));
   }
 
+  /// A saved TMDB sort needs its lookups once the items are in.
+  void _resumeTmdbSort() {
+    if (_sort == _SortMode.tmdb && !_enrichmentStarted) {
+      _enrichmentStarted = true;
+      _startEnrichment();
+    }
+  }
+
   void _onSortSelected(_SortMode mode) {
     setState(() => _sort = mode);
+    context.read<StorageService>().setCatalogSort(widget.category, mode.name);
     if (mode == _SortMode.tmdb && !_enrichmentStarted) {
       _enrichmentStarted = true;
       _startEnrichment();

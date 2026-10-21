@@ -15,6 +15,7 @@ import 'playlist_manager.dart';
 import 'real_4k_channels.dart';
 import 'storage_service.dart';
 import 'archive_ready_watch.dart';
+import 'archive_service.dart';
 import 'watch_tracker.dart';
 import '../l10n/l10n.dart';
 
@@ -437,8 +438,24 @@ class PlaybackService extends ChangeNotifier {
         unawaited(play(channel));
         return;
       }
+      // Any other link the player couldn't read: what did it really serve?
+      final sniff = await _sniffUnreadable(channel, e);
+      if (currentChannel?.id != channel.id) return;
+      // A `.strm`-style reply (Jellyfin/Emby debrid libraries): the body
+      // is just the real link — play that.
+      if (sniff?.kind == 'link') {
+        currentChannel = null;
+        unawaited(play(channel.copyWith(url: sniff!.text)));
+        return;
+      }
+      if (sniff?.kind == 'hls') {
+        _hlsUrls.add(channel.url);
+        currentChannel = null;
+        unawaited(play(channel));
+        return;
+      }
       if (await _retryOnBackupServers(channel, e)) return;
-      error = e.toString();
+      error = sniff == null ? e.toString() : '$e\n${sniff.tag}';
       notifyListeners();
     });
 
@@ -685,6 +702,34 @@ class PlaybackService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Once per link: when the player couldn't read [channel]'s stream at
+  /// all (ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED), what the link really
+  /// served — an HLS playlist (retried as HLS), or a source's error reply
+  /// instead of the file (a debrid service's plan limit, an expired
+  /// account… — Media Hub TV show, user photo 2026-10-21). Logged without
+  /// the link, for Send log.
+  Future<StreamSniff?> _sniffUnreadable(Channel channel, Object error) async {
+    if (!error
+            .toString()
+            .contains('ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED') ||
+        channel.url.startsWith('/') ||
+        !_sniffedUrls.add(channel.url)) {
+      return null;
+    }
+    final sniff = await sniffStream(channel.url);
+    final what = Channel.isLiveId(channel.rawId)
+        ? 'live'
+        : channel.playlistId == ArchiveService.playlistId
+            ? 'media hub'
+            : 'vod';
+    final path = Uri.tryParse(channel.url)?.path ?? '';
+    final dot = path.lastIndexOf('.');
+    final ext = dot > path.lastIndexOf('/') ? path.substring(dot) : 'none';
+    debugPrint('PlaybackService: unreadable $what stream (extension $ext): '
+        'served ${sniff?.tag ?? 'nothing (request failed)'}');
+    return sniff;
+  }
+
   Future<ClosedCaptionFile> _loadCaptions(String url) async {
     final response = await http.get(Uri.parse(url));
     final content = response.body;
@@ -767,6 +812,91 @@ bool isDecoderPlaybackError(String raw) {
 /// Learned per host on the first such failure, for the app session.
 final Set<String> _hlsHosts = {};
 
+/// Links of any shape found to serve an HLS playlist ([sniffStream]),
+/// opened as HLS for the app session.
+final Set<String> _hlsUrls = {};
+
+/// Links already sniffed after a read failure — one look each.
+final Set<String> _sniffedUrls = {};
+
+/// What a stream link really served, from its first bytes ([sniffStream]).
+class StreamSniff {
+  const StreamSniff(this.kind, {this.text, this.status});
+
+  /// `hls`, `link` (the body is only another http(s) link: a `.strm`
+  /// file), `json`, `html`, `text` (a reply, not a video) or `binary`
+  /// (media data the player has no reader for).
+  final String kind;
+
+  /// The reply's own words: a JSON `error`/`message`/`detail`, a page's
+  /// `<title>`, or the start of a plain text (one line, ≤160 chars).
+  final String? text;
+  final int? status;
+
+  /// Appended to the player's error: shown under "Technical details",
+  /// read back by the error screen (`_friendlyPlaybackError`). A `link`'s
+  /// address is never shown (it may carry a token).
+  String get tag =>
+      '[SOURCE_REPLY:$kind${status == null ? '' : ' HTTP $status'}]'
+      '${text == null || kind == 'link' ? '' : ' $text'}';
+}
+
+/// The first KB of [url] (redirects followed), classified. Null when the
+/// request itself failed.
+Future<StreamSniff?> sniffStream(String url, {http.Client? client}) async {
+  final c = client ?? http.Client();
+  try {
+    final req = http.Request('GET', Uri.parse(url))
+      ..headers['Range'] = 'bytes=0-1023';
+    final r = await c.send(req).timeout(const Duration(seconds: 10));
+    final bytes = <int>[];
+    await for (final chunk in r.stream.timeout(const Duration(seconds: 10))) {
+      bytes.addAll(chunk);
+      if (bytes.length >= 1024) break;
+    }
+    final status = r.statusCode >= 400 ? r.statusCode : null;
+    final type = (r.headers['content-type'] ?? '').toLowerCase();
+    final body = utf8
+        .decode(bytes.take(1024).toList(), allowMalformed: true)
+        .replaceFirst('\uFEFF', '')
+        .trimLeft();
+    String oneLine(String s) {
+      final t = s.replaceAll(RegExp(r'\s+'), ' ').trim();
+      return t.length > 160 ? '${t.substring(0, 160)}…' : t;
+    }
+
+    if (body.startsWith('#EXTM3U')) return StreamSniff('hls', status: status);
+    final link = RegExp(r'^https?://\S+$').firstMatch(body.trim())?.group(0);
+    if (link != null && status == null) return StreamSniff('link', text: link);
+    if (type.contains('json') || body.startsWith('{') || body.startsWith('[')) {
+      final m = RegExp(
+              r'"(?:error_message|error|message|detail|msg)"\s*:\s*"([^"]{1,300})"')
+          .firstMatch(body);
+      return StreamSniff('json',
+          text: oneLine(m?.group(1) ?? body), status: status);
+    }
+    if (type.contains('html') || body.startsWith('<')) {
+      final title = RegExp(r'<title[^>]*>([^<]{1,300})', caseSensitive: false)
+          .firstMatch(body)
+          ?.group(1);
+      return StreamSniff('html',
+          text: title == null ? null : oneLine(title), status: status);
+    }
+    final printable = body.runes
+        .where((r) => r == 9 || r == 10 || r == 13 || (r >= 32 && r != 0xFFFD))
+        .length;
+    if (body.isNotEmpty && printable / body.runes.length > 0.95) {
+      return StreamSniff('text', text: oneLine(body), status: status);
+    }
+    return StreamSniff('binary', status: status);
+  } catch (e) {
+    debugPrint('sniffStream failed: $e');
+    return null;
+  } finally {
+    if (client == null) c.close();
+  }
+}
+
 /// A network controller for [url], told to expect HLS when [url] is a
 /// live `.ts` on a host [learnHlsHost] has seen redirect to HLS. VOD files
 /// on the same host keep the normal detection.
@@ -782,8 +912,8 @@ VideoPlayerHdrController streamController(
         videoPlayerOptions: videoPlayerOptions);
   }
   final uri = Uri.parse(url);
-  final hls =
-      _hlsHosts.contains(uri.host) && uri.path.toLowerCase().endsWith('.ts');
+  final hls = _hlsUrls.contains(url) ||
+      (_hlsHosts.contains(uri.host) && uri.path.toLowerCase().endsWith('.ts'));
   return VideoPlayerHdrController.networkUrl(
     uri,
     formatHint: hls ? VideoFormat.hls : null,

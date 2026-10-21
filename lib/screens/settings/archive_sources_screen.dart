@@ -4,10 +4,13 @@ import 'package:provider/provider.dart';
 
 import '../../l10n/l10n.dart';
 import '../../models/archive_models.dart';
+import '../../services/addon_import.dart';
+import '../../services/addon_service.dart';
 import '../../services/archive_api_service.dart';
 import '../../services/app_preferences.dart';
 import '../../services/archive_service.dart';
 import '../../services/phone_pairing_service.dart';
+import '../../services/storage_service.dart';
 import '../../widgets/hold_to_activate.dart';
 import '../../widgets/phone_pair_panel.dart';
 import '../../widgets/section_label.dart';
@@ -15,6 +18,7 @@ import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_switch_list_tile.dart';
 import '../../widgets/tv_text_field_gate.dart';
 import 'media_server_screen.dart';
+import 'stremio_import_screen.dart';
 import 'trackers_screen.dart';
 
 /// Settings > Archive sources: the servers the Archive tab browses. Any
@@ -99,6 +103,9 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
   Future<void> _add() async {
     final url = _link.text.trim();
     if (url.isEmpty) return;
+    // Several links pasted at once (from Nuvio, a notes file…): all of them.
+    final links = AddonImporter.linksIn(url);
+    if (links.length > 1) return _addMany(links);
     final messenger = ScaffoldMessenger.of(context);
     final service = context.read<ArchiveService>();
     setState(() => _adding = true);
@@ -124,6 +131,31 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
     _link.clear();
     messenger.showSnackBar(
         SnackBar(content: Text(tr('{name} added.', {'name': added!.name}))));
+  }
+
+  Future<void> _addMany(List<String> links) async {
+    final importer = AddonImporter(context.read<ArchiveService>(),
+        AddonService(context.read<StorageService>()));
+    setState(() => _adding = true);
+    final result = await importer.importLinks(links);
+    if (!mounted) return;
+    setState(() => _adding = false);
+    _link.clear();
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(tr('{n} links checked', {'n': result.total})),
+        content: SingleChildScrollView(child: Text(addonImportSummary(result))),
+        actions: [
+          TextButton(
+            autofocus: true,
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(tr('OK')),
+          ),
+        ],
+      ),
+    );
+    if (mounted) _addFocus.requestFocus();
   }
 
   Future<void> _clearAll() async {
@@ -179,6 +211,7 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
       if (movies > 0) tr('{n} movie catalogs', {'n': movies}),
       if (shows > 0) tr('{n} TV show catalogs', {'n': shows}),
       if (other > 0) tr('{n} other catalogs', {'n': other}),
+      if (s.listOnly) tr('Plays through your other sources'),
     ];
     return '${parts.join(' · ')}  ·  ${tr('Hold OK to remove')}';
   }
@@ -264,6 +297,7 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
               },
               decoration: InputDecoration(
                 labelText: tr('Source link (ends with manifest.json)'),
+                helperText: tr('Several links at once work too.'),
                 border: const OutlineInputBorder(),
               ),
             ),
@@ -284,6 +318,12 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
               onPressed: _fromPhone,
               icon: const Icon(Icons.qr_code_2),
               label: Text(tr('From phone')),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => const StremioImportScreen())),
+              icon: const Icon(Icons.move_down),
+              label: Text(tr('Import from Stremio')),
             ),
             OutlinedButton.icon(
               onPressed: () => Navigator.of(context).push(

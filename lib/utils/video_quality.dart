@@ -13,9 +13,16 @@ const _highFrameRateThreshold = 40.0;
 ///
 /// Null below 1080p — not worth a badge for the common case, and this app
 /// has no reliable way to tell an honest 720p feed from a downscaled one.
-String? qualityLabelForTrack({required int height, double? frameRate}) {
-  if (height >= 2160) return '4K';
-  if (height >= 1080) {
+///
+/// [width] counts too: a film is usually wider than 16:9, so a 4K movie is
+/// 3840x1600 and a 1080p one 1920x800 — by height alone they read as HD
+/// and nothing (user report, 2026-10-21: a 4K Media Hub stream showed HD).
+/// The width bars sit a little under the nominal 3840/1920 for crops.
+String? qualityLabelForTrack(
+    {required int height, int? width, double? frameRate}) {
+  final w = width ?? 0;
+  if (height >= 2160 || w >= 3800) return '4K';
+  if (height >= 1080 || w >= 1900) {
     return (frameRate != null && frameRate > _highFrameRateThreshold)
         ? 'FHD'
         : 'HD';

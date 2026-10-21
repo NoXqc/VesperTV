@@ -2219,4 +2219,57 @@ const Map<String, String> kEl = {
   "The basics: hold OK (about half a second) opens a menu almost everywhere. Back always steps out one level. OK twice on a channel = full screen.":
       "Τα βασικά: κρατώντας πατημένο το OK (περίπου μισό δευτερόλεπτο) ανοίγει μενού σχεδόν παντού. Το Πίσω βγαίνει πάντα ένα επίπεδο. OK δύο φορές σε κανάλι = πλήρης οθόνη.",
   "Fetching…": "Λήψη…",
+  // Media Hub: list-only sources
+  "Plays through your other sources": "Αναπαράγεται μέσω των άλλων πηγών σας",
+  // Search: Media Hub results
+  "Search Live TV, Movies, TV Shows & the Media Hub": "Αναζήτηση σε ζωντανή TV, ταινίες, σειρές και στο Media Hub",
+  // Player: what an unreadable link really served
+  "This file's format can't be played here. Try another stream (an MKV or MP4 one).":
+      "Η μορφή αυτού του αρχείου δεν μπορεί να αναπαραχθεί εδώ. Δοκιμάστε άλλη ροή (MKV ή MP4).",
+  "Your source sent a message instead of the video:":
+      "Η πηγή σας έστειλε μήνυμα αντί για το βίντεο:",
+  "Check your source or debrid account (plan limits, active downloads), or pick another stream.":
+      "Ελέγξτε την πηγή ή τον λογαριασμό debrid (όρια πακέτου, ενεργές λήψεις) ή επιλέξτε άλλη ροή.",
+  // Media Hub: import add-ons (pasted links, Stremio)
+  "Added to the Media Hub: {names}":
+      "Προστέθηκε στο Media Hub: {names}",
+  "Added to subtitle add-ons: {names}":
+      "Προστέθηκε στα πρόσθετα υποτίτλων: {names}",
+  "Already added: {names}":
+      "Έχει ήδη προστεθεί: {names}",
+  "Not usable in VesperTV: {names}":
+      "Δεν χρησιμοποιείται στο VesperTV: {names}",
+  "Couldn't reach: {names}":
+      "Δεν ήταν δυνατή η πρόσβαση: {names}",
+  "Import from Stremio":
+      "Εισαγωγή από το Stremio",
+  "Couldn't reach Stremio. Check your internet connection.":
+      "Δεν ήταν δυνατή η σύνδεση με το Stremio. Ελέγξτε τη σύνδεσή σας στο διαδίκτυο.",
+  "Couldn't read your Stremio add-ons. Try again.":
+      "Δεν ήταν δυνατή η ανάγνωση των πρόσθετων Stremio. Δοκιμάστε ξανά.",
+  "Copy the add-ons from your Stremio account. Nothing is changed on your Stremio account.":
+      "Αντιγράψτε τα πρόσθετα από τον λογαριασμό σας Stremio. Τίποτα δεν αλλάζει στον λογαριασμό σας.",
+  "On your phone, scan the code or open":
+      "Στο κινητό σας, σαρώστε τον κωδικό ή ανοίξτε",
+  "Code":
+      "Κωδικός",
+  "Then sign in to Stremio there. This page continues on its own.":
+      "Μετά συνδεθείτε στο Stremio εκεί. Αυτή η σελίδα συνεχίζει μόνη της.",
+  "Your Stremio account has no add-ons VesperTV can copy.":
+      "Ο λογαριασμός σας Stremio δεν έχει πρόσθετα που μπορεί να αντιγράψει το VesperTV.",
+  "Your Stremio add-ons. Untick any you don't want.":
+      "Τα πρόσθετα Stremio σας. Αποεπιλέξτε όσα δεν θέλετε.",
+  "Add {n} add-ons":
+      "Προσθήκη {n} πρόσθετων",
+  "Already added":
+      "Έχει ήδη προστεθεί",
+  "Several links at once work too.":
+      "Λειτουργούν και πολλοί σύνδεσμοι μαζί.",
+  "{n} links checked":
+      "Ελέγχθηκαν {n} σύνδεσμοι",
+  // Data pool on movies / episodes
+  "Press OK while a channel, movie or episode plays to open a card with the stream's details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer and HDR. Off: OK shows only the channel info.":
+      "Πατήστε OK ενώ παίζει κανάλι, ταινία ή επεισόδιο για να ανοίξει μια κάρτα με τις λεπτομέρειες της ροής: ανάλυση, καρέ ανά δευτερόλεπτο, codecs, bitrate, παραλλαγές ποιότητας, κομμάτια ήχου, buffer και HDR. Απενεργοποιημένο: το OK δείχνει μόνο τις πληροφορίες του καναλιού.",
+  "Stream details when you press OK while watching":
+      "Λεπτομέρειες ροής όταν πατάτε OK κατά την προβολή",
 };

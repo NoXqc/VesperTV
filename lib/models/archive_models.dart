@@ -331,6 +331,7 @@ class ArchiveSource {
     this.server,
     this.tracker,
     this.otherChoice,
+    this.listOnly = false,
   });
 
   final String manifestUrl;
@@ -353,6 +354,13 @@ class ArchiveSource {
 
   bool get streamOnly => catalogProviderUrl != null;
 
+  /// An add-on with catalogs of IMDb ids and no streams of its own
+  /// ("Streaming Catalogs": Netflix, Disney+… lists; user request,
+  /// 2026-10-21). Like a tracker's lists: its rows come from its own
+  /// `/catalog/`, metas from [ArchiveCatalogProvider], and Play asks every
+  /// stream-only source.
+  final bool listOnly;
+
   /// The user's "Show under Other" switch (Settings > Media Hub sources):
   /// true = the whole source only behind the genre filter's Other entry
   /// (Movies and TV Shows), false = in the main rows. Null = never
@@ -365,6 +373,7 @@ class ArchiveSource {
   /// sources never are.
   bool get autoOther =>
       !streamOnly &&
+      !listOnly &&
       server == null &&
       tracker == null &&
       catalogs.any((c) => c.wireType != null);
@@ -411,6 +420,7 @@ class ArchiveSource {
         server: server,
         tracker: tracker ?? this.tracker,
         otherChoice: otherChoice ?? this.otherChoice,
+        listOnly: listOnly,
       );
 
   Map<String, dynamic> toJson() => {
@@ -424,6 +434,7 @@ class ArchiveSource {
         if (server != null) 'server': server!.toJson(),
         if (tracker != null) 'tracker': tracker!.toJson(),
         if (otherChoice != null) 'other': otherChoice,
+        if (listOnly) 'listOnly': true,
       };
 
   factory ArchiveSource.fromJson(Map<String, dynamic> j) {
@@ -452,6 +463,7 @@ class ArchiveSource {
       server: MediaServerLogin.fromJson(j['server']),
       tracker: TrackerLogin.fromJson(j['tracker']),
       otherChoice: j['other'] is bool ? j['other'] as bool : null,
+      listOnly: j['listOnly'] == true,
     );
   }
 }

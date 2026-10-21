@@ -298,6 +298,12 @@ class StorageService {
   Future<void> setReal4kChannels(Set<String> ids) =>
       _prefs.setStringList(AppConstants.keyReal4kChannels, ids.toList());
 
+  /// Expand catalog's last sort for [category] ('vod'/'series'), by name.
+  String? getCatalogSort(String category) =>
+      _prefs.getString('${AppConstants.keyCatalogSortPrefix}$category');
+  Future<void> setCatalogSort(String category, String sort) =>
+      _prefs.setString('${AppConstants.keyCatalogSortPrefix}$category', sort);
+
   String? getArchiveReadyWatch() =>
       _prefs.getString(AppConstants.keyArchiveReadyWatch);
   Future<void> setArchiveReadyWatch(String json) =>

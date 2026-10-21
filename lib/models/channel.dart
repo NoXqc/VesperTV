@@ -221,7 +221,11 @@ class Channel {
   }
 
   Channel copyWith(
-          {bool? isFavorite, String? id, String? rawId, String? epgKey}) =>
+          {bool? isFavorite,
+          String? id,
+          String? rawId,
+          String? epgKey,
+          String? url}) =>
       Channel(
         id: id ?? this.id,
         rawId: rawId ?? this.rawId,
@@ -229,7 +233,7 @@ class Channel {
         playlistId: playlistId,
         name: name,
         group: group,
-        url: url,
+        url: url ?? this.url,
         logoUrl: logoUrl,
         subtitleUrl: subtitleUrl,
         isFavorite: isFavorite ?? this.isFavorite,

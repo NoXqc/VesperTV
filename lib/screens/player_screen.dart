@@ -427,11 +427,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   /// OK with no bar focused on a live channel: the CH+/CH- info card for
-  /// 4 s (owner, 2026-10-18); OK again hides it.
+  /// 4 s (owner, 2026-10-18); OK again hides it. With Data pool on, its
+  /// card too — and on movies/episodes (provider or Media Hub) the Data
+  /// pool card alone (owner, 2026-10-21: a user missed VOD stream specs).
   void _toggleInfoCard() {
     if (_panelOpen) return;
     final current = _playback.currentChannel ?? widget.channel;
-    if (!Channel.isLiveId(current.rawId)) return;
+    final live = Channel.isLiveId(current.rawId);
+    final dataPool = context.read<AppPreferences>().dataPool;
+    if (!live && !dataPool) return;
     _zapInfoTimer?.cancel();
     _dataPoolTimer?.cancel();
     if (_zapInfoVisible || _dataPoolVisible) {
@@ -441,14 +445,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
       });
       return;
     }
-    final dataPool = context.read<AppPreferences>().dataPool;
     setState(() {
-      _zapInfoVisible = true;
+      _zapInfoVisible = live;
       _dataPoolVisible = dataPool;
     });
-    _zapInfoTimer = Timer(const Duration(seconds: 4), () {
-      if (mounted) setState(() => _zapInfoVisible = false);
-    });
+    if (live) {
+      _zapInfoTimer = Timer(const Duration(seconds: 4), () {
+        if (mounted) setState(() => _zapInfoVisible = false);
+      });
+    }
     if (dataPool) {
       _dataPoolTimer = Timer(const Duration(seconds: 10), () {
         if (mounted) setState(() => _dataPoolVisible = false);

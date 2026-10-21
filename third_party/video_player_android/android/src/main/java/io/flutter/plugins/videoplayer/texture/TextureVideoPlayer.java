@@ -78,6 +78,10 @@ public final class TextureVideoPlayer extends VideoPlayer implements SurfaceProd
               /* maxBufferMs= */ 30_000,
               /* bufferForPlaybackMs= */ 2_500,
               /* bufferForPlaybackAfterRebufferMs= */ 4_000);
+          // Small-RAM devices: a byte cap per screen (see BufferBudget).
+          io.flutter.plugins.videoplayer.BufferBudget.apply(
+              context, loadControlBuilder,
+              io.flutter.plugins.videoplayer.BufferBudget.TEXTURE_PLAYER_BYTES);
           if (options.backBufferDurationMs != null) {
             if (options.backBufferDurationMs < 0) {
               throw new IllegalArgumentException("backBufferDurationMs must be at least 0");

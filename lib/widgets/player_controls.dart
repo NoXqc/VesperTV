@@ -333,6 +333,20 @@ String _friendlyPlaybackError(String raw) {
     return tr(
         'This device\'s video decoder couldn\'t play this stream — likely 4K HDR (HEVC 10-bit). If your provider offers an HD (non-4K) version of this channel or title, try that. If another app plays this stream on this device, please report it with a photo of the technical details below.');
   }
+  // What the link really served (PlaybackService._sniffUnreadable).
+  final reply = RegExp(r'\[SOURCE_REPLY:(\w+)[^\]]*\] ?(.*)').firstMatch(raw);
+  if (reply != null) {
+    if (reply[1] == 'binary') {
+      return tr(
+          'This file\'s format can\'t be played here. Try another stream (an MKV or MP4 one).');
+    }
+    final said = reply[2]?.trim() ?? '';
+    return [
+      tr('Your source sent a message instead of the video:'),
+      if (said.isNotEmpty) '"$said"',
+      tr('Check your source or debrid account (plan limits, active downloads), or pick another stream.'),
+    ].join('\n');
+  }
   final status = httpStatusFromPlaybackError(raw);
   if (status != null) {
     final hint = status >= 500
@@ -898,8 +912,10 @@ class _QualityBadgeState extends State<_QualityBadge> {
       }
       final height = selected?.height;
       if (!mounted || height == null) return;
-      final label =
-          qualityLabelForTrack(height: height, frameRate: selected?.frameRate);
+      final label = qualityLabelForTrack(
+          height: height,
+          width: selected?.width,
+          frameRate: selected?.frameRate);
       final frameRate = selected?.frameRate?.round();
       if (label != _label || frameRate != _frameRate) {
         setState(() {

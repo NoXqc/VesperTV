@@ -66,7 +66,9 @@ class ArchiveApiService {
   /// [ArchiveType.bucketFor]), or is stream-only on IMDB ids (`tt…`) and
   /// gets its grids from [ArchiveCatalogProvider]. Throws
   /// [ArchiveApiException] when it's neither (stream-only on its own ids
-  /// leaves nothing to browse), or offers no `stream` resource.
+  /// leaves nothing to browse). Without a `stream` resource it can still be
+  /// a list-only source ([ArchiveSource.listOnly]): movie/series catalogs
+  /// on IMDb ids, played through the user's other sources.
   Future<ArchiveSource> fetchManifest(String input) async {
     final url = normalizeManifestUrl(input);
     final j = await _getJson(Uri.parse(url));
@@ -75,9 +77,7 @@ class ArchiveApiService {
         .map((e) => e is Map ? e['name']?.toString() : e?.toString())
         .toSet();
     // A manifest can omit 'catalog' from resources and still list catalogs.
-    if (!resources.contains('stream')) {
-      throw ArchiveApiException('This source offers no streams.');
-    }
+    final hasStreams = resources.contains('stream');
     final catalogs = <ArchiveCatalog>[];
     for (final c in (j['catalogs'] as List? ?? const [])) {
       if (c is! Map) continue;
@@ -87,6 +87,32 @@ class ArchiveApiService {
       if (needsExtra || legacyRequired.isNotEmpty) continue;
       final cat = ArchiveCatalog.fromJson(Map<String, dynamic>.from(c));
       if (cat != null) catalogs.add(cat);
+    }
+    if (!hasStreams) {
+      final catalogRes =
+          resourceList.whereType<Map>().where((r) => r['name'] == 'catalog');
+      final prefixes = <String>{
+        for (final p in [
+          ...(j['idPrefixes'] as List? ?? const []),
+          for (final r in catalogRes) ...(r['idPrefixes'] as List? ?? const []),
+        ])
+          p.toString(),
+      };
+      final lists = catalogs.where((c) => c.wireType == null).toList();
+      if (lists.isEmpty ||
+          !(prefixes.isEmpty || prefixes.any((p) => p.startsWith('tt')))) {
+        throw ArchiveApiException('This source offers no streams.');
+      }
+      return ArchiveSource(
+        manifestUrl: url,
+        name: (j['name']?.toString().trim().isNotEmpty ?? false)
+            ? j['name'].toString().trim()
+            : Uri.parse(url).host,
+        description: j['description']?.toString() ?? '',
+        logoUrl: j['logo']?.toString(),
+        catalogs: lists,
+        listOnly: true,
+      );
     }
     String? providerUrl;
     // No movie/series catalog of its own: stream-only when its streams are

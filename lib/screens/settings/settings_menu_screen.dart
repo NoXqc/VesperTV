@@ -186,7 +186,7 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
                   tr('Fixes for the picture on some Fire TV sticks')),
             if (!Platform.isWindows)
               _general('datapool', Icons.analytics_outlined, tr('Data pool'),
-                  tr('Stream details when you press OK on a channel')),
+                  tr('Stream details when you press OK while watching')),
             _general('favourites', Icons.star_outline, tr('Favourites'),
                 tr('One list for every playlist, or one per playlist')),
             if (!Platform.isWindows)

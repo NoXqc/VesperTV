@@ -1612,4 +1612,57 @@ const Map<String, String> kIt = {
   "The basics: hold OK (about half a second) opens a menu almost everywhere. Back always steps out one level. OK twice on a channel = full screen.":
       "Le basi: tenere premuto OK (circa mezzo secondo) apre un menu quasi ovunque. Indietro esce sempre di un livello. OK due volte su un canale = schermo intero.",
   "Fetching…": "Recupero…",
+  // Media Hub: list-only sources
+  "Plays through your other sources": "Si riproduce con le tue altre sorgenti",
+  // Search: Media Hub results
+  "Search Live TV, Movies, TV Shows & the Media Hub": "Cerca TV in diretta, film, serie TV e il Media Hub",
+  // Player: what an unreadable link really served
+  "This file's format can't be played here. Try another stream (an MKV or MP4 one).":
+      "Il formato di questo file non può essere riprodotto qui. Prova un altro flusso (MKV o MP4).",
+  "Your source sent a message instead of the video:":
+      "La tua sorgente ha inviato un messaggio invece del video:",
+  "Check your source or debrid account (plan limits, active downloads), or pick another stream.":
+      "Controlla la sorgente o l'account debrid (limiti del piano, download attivi) oppure scegli un altro flusso.",
+  // Media Hub: import add-ons (pasted links, Stremio)
+  "Added to the Media Hub: {names}":
+      "Aggiunto al Media Hub: {names}",
+  "Added to subtitle add-ons: {names}":
+      "Aggiunto agli add-on dei sottotitoli: {names}",
+  "Already added: {names}":
+      "Già aggiunto: {names}",
+  "Not usable in VesperTV: {names}":
+      "Non utilizzabile in VesperTV: {names}",
+  "Couldn't reach: {names}":
+      "Non raggiungibile: {names}",
+  "Import from Stremio":
+      "Importa da Stremio",
+  "Couldn't reach Stremio. Check your internet connection.":
+      "Impossibile raggiungere Stremio. Controlla la connessione a Internet.",
+  "Couldn't read your Stremio add-ons. Try again.":
+      "Impossibile leggere i tuoi add-on di Stremio. Riprova.",
+  "Copy the add-ons from your Stremio account. Nothing is changed on your Stremio account.":
+      "Copia gli add-on dal tuo account Stremio. Sul tuo account Stremio non cambia nulla.",
+  "On your phone, scan the code or open":
+      "Sul telefono, inquadra il codice o apri",
+  "Code":
+      "Codice",
+  "Then sign in to Stremio there. This page continues on its own.":
+      "Poi accedi a Stremio da lì. Questa pagina prosegue da sola.",
+  "Your Stremio account has no add-ons VesperTV can copy.":
+      "Il tuo account Stremio non ha add-on che VesperTV possa copiare.",
+  "Your Stremio add-ons. Untick any you don't want.":
+      "I tuoi add-on di Stremio. Togli la spunta a quelli che non vuoi.",
+  "Add {n} add-ons":
+      "Aggiungi {n} add-on",
+  "Already added":
+      "Già aggiunto",
+  "Several links at once work too.":
+      "Funzionano anche più link insieme.",
+  "{n} links checked":
+      "{n} link controllati",
+  // Data pool on movies / episodes
+  "Press OK while a channel, movie or episode plays to open a card with the stream's details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer and HDR. Off: OK shows only the channel info.":
+      "Premi OK durante la riproduzione di un canale, un film o un episodio per aprire una scheda con i dettagli del flusso: risoluzione, fotogrammi al secondo, codec, bitrate, varianti di qualità, tracce audio, buffer e HDR. Disattivato: OK mostra solo le info del canale.",
+  "Stream details when you press OK while watching":
+      "Dettagli del flusso premendo OK durante la visione",
 };
