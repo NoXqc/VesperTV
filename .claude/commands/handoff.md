@@ -17,7 +17,8 @@ Then these sections:
 4. **Files touched / key locations** — paths (with function names) a newcomer must look at first.
 5. **Decisions & why** — choices already made (and options the user rejected) so they are not re-litigated.
 6. **Gotchas** — traps hit this session that are not already in `CLAUDE.md` / `dev-notes/`.
-7. **Next steps** — an ordered, actionable list, plus anything waiting on the user's answer.
+7. **Next steps** — an ordered, actionable list, plus anything waiting on the user's answer. Prefix
+   each step that suits Codex (small, well-scoped, see `AGENTS.md` task table) with **`cdx-do`**.
 
 Do not copy things already documented in `CLAUDE.md` or `dev-notes/`; link to them instead.
 `HANDOFF.md` is git-ignored — never commit it.

@@ -62,5 +62,7 @@ Overwrite `HANDOFF.md` (repo root, **never commit it**, no secrets), under ~60 l
 - **Files / key locations** — paths + function names to look at first.
 - **Decisions & why** — including options the owner rejected.
 - **Gotchas** — traps not already in `CLAUDE.md` / `dev-notes/`.
-- **Next steps** — ordered; plus questions waiting on the owner.
+- **Next steps** — ordered; plus questions waiting on the owner. Tag each step meant for Codex with
+  **`cdx-do`** (e.g. `- cdx-do: add the Mountain West conference…`); untagged steps are for Claude.
+  Codex: on pickup, only take `cdx-do` items unless the owner says otherwise.
 Link to `CLAUDE.md` / `dev-notes/` instead of repeating them.
