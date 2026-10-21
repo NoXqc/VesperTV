@@ -1,0 +1,4 @@
+interface:
+  display_name: "VesperTV Handoff / Pickup"
+  short_description: "Write handoffs and resume VesperTV sessions"
+  default_prompt: "Use $handoff-pickup to run /handoff or /pickup for the VesperTV repository."
