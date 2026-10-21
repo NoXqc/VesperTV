@@ -129,6 +129,11 @@ class SportsService {
   String? lastError;
 
   static const _standingsBase = 'https://site.api.espn.com/apis/v2/sports';
+
+  /// A conference league's scoreboard filter ([SportsLeague.espnGroup]),
+  /// after [sep] (`?` or `&`); empty for every other league.
+  static String _groupQuery(SportsLeague league, String sep) =>
+      league.espnGroup == null ? '' : '${sep}groups=${league.espnGroup}';
   final Map<String, (SportsStandings, DateTime)> _standingsCache = {};
   final Map<String, Future<SportsStandings?>> _standingsInFlight = {};
 
@@ -151,7 +156,8 @@ class SportsService {
     final db = league.sportsDbId != null;
     final url = db
         ? SportsDbSource.tableUrl(league)
-        : Uri.parse('$_standingsBase/${league.espnPath}/standings');
+        : Uri.parse('$_standingsBase/${league.espnPath}/standings'
+            '${league.espnGroup == null ? '' : '?group=${league.espnGroup}'}');
     try {
       final response = await _get(league, url);
       if (response.statusCode != 200) {
@@ -388,7 +394,7 @@ class SportsService {
         // is hundreds of games (NHL's failed outright).
         final db = league.sportsDbId != null;
         final range = league.kind == SportsKind.team
-            ? ''
+            ? _groupQuery(league, '?')
             : '?dates=${_espnDate(day)}-${_espnDate(day.add(const Duration(days: 60)))}';
         final response = await _get(
             league,
@@ -477,7 +483,8 @@ class SportsService {
     final url = db
         ? SportsDbSource.dayUrl(league, date)
         : Uri.parse(
-            '$_base/${league.espnPath}/scoreboard?dates=${_espnDate(date)}');
+            '$_base/${league.espnPath}/scoreboard?dates=${_espnDate(date)}'
+            '${_groupQuery(league, '&')}');
     try {
       final response = await _get(league, url);
       if (response.statusCode != 200) {

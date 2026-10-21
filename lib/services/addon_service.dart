@@ -8,8 +8,8 @@ import '../utils/display_title.dart';
 import 'storage_service.dart';
 
 /// A Stremio-protocol add-on the user turned on. Only its `subtitles`
-/// resource is used (owner, 2026-10-18: subtitles only — stream add-ons are
-/// almost all torrent/debrid scrapers, which this app stays away from).
+/// resource is used here; stream add-ons are Media Hub sources
+/// (`ArchiveService`).
 class Addon {
   const Addon({
     required this.manifestUrl,

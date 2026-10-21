@@ -261,6 +261,13 @@ class AppConstants {
   static const String keyDataPool = 'vesper_data_pool';
   // Live channel ids seen playing at real 4K (Real4kChannels), list.
   static const String keyReal4kChannels = 'vesper_real_4k_channels';
+  // Media Hub placeholder clips re-asked + titles tagged Ready
+  // (ArchiveReadyWatch), JSON. Device-only.
+  static const String keyArchiveReadyWatch = 'vesper_hub_ready_watch';
+  // Settings > Media Hub > Debrid accounts (DebridApi): the user's own
+  // Real-Debrid API token / TorBox API key.
+  static const String keyRealDebridToken = 'vesper_real_debrid_token';
+  static const String keyTorBoxKey = 'vesper_torbox_key';
   static const String keyLastAutoBackup = 'vesper_last_auto_backup';
 
   /// Sports tab, per viewer: leagues shown (ordered ids), spoiler mode, and

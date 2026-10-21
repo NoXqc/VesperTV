@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../l10n/l10n.dart';
 import '../models/archive_models.dart';
+import '../services/archive_ready_watch.dart';
 import '../services/archive_service.dart';
 import '../widgets/detail_header.dart';
 import '../widgets/hold_to_activate.dart';
@@ -977,32 +978,38 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
               final meta = row.items[i];
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: PosterCard(
-                  focusNode: _node(row.key, i),
-                  title: meta.name,
-                  imageUrl: meta.posterUrl,
-                  rating: meta.year,
-                  tapToPreview:
-                      Theme.of(context).platform == TargetPlatform.android &&
-                          MediaQuery.sizeOf(context).width < 700,
-                  onTap: () => _open(row.sourceAt(i), meta),
-                  isFavorite: context
-                      .read<ArchiveService>()
-                      .isFavorite(row.sourceAt(i), meta),
-                  onToggleFavorite: () =>
-                      holdArchiveTitle(context, row, row.sourceAt(i), meta),
-                  onFocusGained: () {
-                    _lastIndex[row.key] = i;
-                    if (i >= row.items.length - 12) {
-                      context.read<ArchiveService>().loadMore(row);
-                    }
-                    if (_focused?.id == meta.id && _focusedRow == r) return;
-                    setState(() {
-                      _focusedRow = r;
-                      _focused = meta;
-                      _focusedSource = row.sourceAt(i);
-                    });
-                  },
+                child: ValueListenableBuilder<Set<String>>(
+                  valueListenable: ArchiveReadyWatch.instance.tags,
+                  builder: (context, ready, _) => PosterCard(
+                    ready: ready.contains(meta.id),
+                    fetching: ArchiveReadyWatch.instance.fetching.value
+                        .contains(meta.id),
+                    focusNode: _node(row.key, i),
+                    title: meta.name,
+                    imageUrl: meta.posterUrl,
+                    rating: meta.year,
+                    tapToPreview:
+                        Theme.of(context).platform == TargetPlatform.android &&
+                            MediaQuery.sizeOf(context).width < 700,
+                    onTap: () => _open(row.sourceAt(i), meta),
+                    isFavorite: context
+                        .read<ArchiveService>()
+                        .isFavorite(row.sourceAt(i), meta),
+                    onToggleFavorite: () =>
+                        holdArchiveTitle(context, row, row.sourceAt(i), meta),
+                    onFocusGained: () {
+                      _lastIndex[row.key] = i;
+                      if (i >= row.items.length - 12) {
+                        context.read<ArchiveService>().loadMore(row);
+                      }
+                      if (_focused?.id == meta.id && _focusedRow == r) return;
+                      setState(() {
+                        _focusedRow = r;
+                        _focused = meta;
+                        _focusedSource = row.sourceAt(i);
+                      });
+                    },
+                  ),
                 ),
               );
             },

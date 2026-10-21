@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../l10n/l10n.dart';
 import '../models/archive_models.dart';
+import '../services/archive_ready_watch.dart';
 import '../services/archive_service.dart';
 import '../utils/tv_theme.dart';
 import '../widgets/poster_card.dart';
@@ -109,26 +110,32 @@ class _ArchiveCatalogScreenState extends State<ArchiveCatalogScreen> {
                     itemBuilder: (context, i) {
                       final current = row!;
                       final meta = items[i];
-                      return PosterCard(
-                        focusNode: i == 0 ? _firstPoster : null,
-                        title: meta.name,
-                        imageUrl: meta.posterUrl,
-                        rating: meta.year,
-                        tapToPreview: touchPreview,
-                        onTap: () => _open(current.sourceAt(i), meta),
-                        // Same hold as the row it came from.
-                        isFavorite: context
-                            .read<ArchiveService>()
-                            .isFavorite(current.sourceAt(i), meta),
-                        onToggleFavorite: () => holdArchiveTitle(
-                            context, current, current.sourceAt(i), meta),
-                        onFocusGained: () {
-                          // A grid row holds several cards: ask for the
-                          // next page a few rows before the end.
-                          if (i >= items.length - 24) {
-                            context.read<ArchiveService>().loadMore(current);
-                          }
-                        },
+                      return ValueListenableBuilder<Set<String>>(
+                        valueListenable: ArchiveReadyWatch.instance.tags,
+                        builder: (context, ready, _) => PosterCard(
+                          ready: ready.contains(meta.id),
+                          fetching: ArchiveReadyWatch.instance.fetching.value
+                              .contains(meta.id),
+                          focusNode: i == 0 ? _firstPoster : null,
+                          title: meta.name,
+                          imageUrl: meta.posterUrl,
+                          rating: meta.year,
+                          tapToPreview: touchPreview,
+                          onTap: () => _open(current.sourceAt(i), meta),
+                          // Same hold as the row it came from.
+                          isFavorite: context
+                              .read<ArchiveService>()
+                              .isFavorite(current.sourceAt(i), meta),
+                          onToggleFavorite: () => holdArchiveTitle(
+                              context, current, current.sourceAt(i), meta),
+                          onFocusGained: () {
+                            // A grid row holds several cards: ask for the
+                            // next page a few rows before the end.
+                            if (i >= items.length - 24) {
+                              context.read<ArchiveService>().loadMore(current);
+                            }
+                          },
+                        ),
                       );
                     },
                   ),

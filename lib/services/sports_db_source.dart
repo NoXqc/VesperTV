@@ -133,8 +133,16 @@ SportsGame? _parseEvent(Map<String, dynamic> e, SportsLeague league) {
   if (id == null || start == null) return null;
   final status = (e['strStatus'] ?? '').toString().trim().toUpperCase();
   final postponed = e['strPostponed']?.toString() == 'yes';
+  final hockey = league.espnPath.startsWith('hockey/');
   final (state, text) = switch (status) {
     _ when postponed => (GameState.post, 'Postponed'),
+    // Hockey (AHL/ECHL): AP = won in the shootout; periods P1-P3.
+    'FT' when hockey => (GameState.post, 'Final'),
+    'AP' when hockey => (GameState.post, 'Final/SO'),
+    'P1' => (GameState.live, '1st Period'),
+    'P2' => (GameState.live, '2nd Period'),
+    'P3' => (GameState.live, '3rd Period'),
+    'PT' => (GameState.live, 'Shootout'),
     'FT' || 'AET' || 'PEN' || 'AP' || 'AWD' || 'WO' => (GameState.post, status),
     'MATCH FINISHED' => (GameState.post, 'FT'),
     'PST' || 'POSTPONED' => (GameState.post, 'Postponed'),

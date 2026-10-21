@@ -49,7 +49,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
 4. `flutter analyze` must report the baseline **17** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `1.0.32` unless noted
+5. Check the current state of releases: `gh release list` (latest should be `1.0.33` unless noted
    in §11).
 
 ## 3. Layout (what matters)
@@ -118,7 +118,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
 - Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+360**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
-  (Currently **+384**, 1.0.32.)
+  (Currently **+385**, 1.0.33.)
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
 Only release when the owner asks ("update the latest", "cut it", "fully release"). Outline: bump `pubspec.yaml` (versionCode `+N` must always rise) → `flutter analyze` → build APK + verify signature (§5) → build Windows + zip → **commit & push first** → `gh release upload <tag> app-release.apk VesperTV-windows-x64.zip --clobber` → `gh release edit <tag> --tag <new> --notes-file …` → make sure the tag equals HEAD → verify downloads/hashes, the OLD `NoXqc/NoXPlayer` redirect links and AFTVnews code `1760256`. The updater offers any *different* tag (`_isDifferent`), never leave two `.zip`/`.apk` assets on the latest release.
@@ -280,7 +280,11 @@ Uses `android.util.LongSparseArray`; new classes need `@OptIn(markerClass = Unst
 - Open-source principle: **no embedded API keys.** Anything needing a key (TMDB, a future
   OpenSubtitles) is bring-your-own-key in Settings.
 - **REST/JSON Add-on Architecture (Media Hub, code name Archive):**
-  Direct HTTP(S) video streaming only — no torrent hashes or external client protocols.
+  The player plays HTTP(S) URLs (it has no torrent client: `infoHash`/`ytId`/`externalUrl` entries
+  are skipped). Debrid-backed add-ons (Torrentio + Real-Debrid/TorBox etc.) are fine and supported —
+  owner, 2026-10-21: users are worldwide, don't judge their sources. Their uncached streams
+  (`[TB download]`, `[RD download]`…) 302 to a ~0.1 MB "being downloaded" clip; see
+  `ArchiveReadyWatch` (Ready tag) and `DebridApi` (Settings > Media Hub > Debrid accounts).
   Two kinds of add-on source: a **stream-only** add-on on IMDb ids gets its grids/metas from
   Cinemeta (`ArchiveCatalogProvider`) and only `/stream/` goes to the add-on; an add-on with **its
   own catalogs** (any type, any id scheme — since 1.0.24) is browsed and played entirely from its
@@ -303,7 +307,24 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-21)
-- **Shipped: 1.0.32 (`+384`, 2026-10-21, latest; test build `+383` on the Formuler + Fire Stick):**
+- **Shipped: 1.0.33 (`+385`, 2026-10-21, latest; Formuler-tested):**
+  - **Media Hub Ready tag** (`services/archive_ready_watch.dart`): a Media Hub stream under 90 s is a
+    source's "being downloaded" clip — no resume point, no Trakt/Simkl scrobble, no auto-advance;
+    on leaving the player the title is queued (persisted, device-only `vesper_hub_ready_watch`),
+    checked every minute for 24 h; poster shows outlined **Fetching…**, then gold **Ready**
+    (cleared on the next play). Ready = the user's debrid account lists the URL's 40-hex torrent
+    hash as finished (`services/debrid_api.dart`, Real-Debrid `/torrents` + TorBox `/torrents/mylist`,
+    keys in Settings > Media Hub > **Debrid accounts**), else the same URL now serves ≥50 MB and ≥4×
+    the clip (Torrentio: clip `videos/downloading_v3.mp4` 0.1 MB vs TorBox CDN file). Owner saw
+    Fetching… on the Formuler; the Ready flip itself not yet seen on a box.
+  - **Big Sky Football / Basketball** (League bank › **College**): `SportsLeague.espnGroup` adds
+    `groups=` (scoreboards) / `group=` (standings) to ESPN's whole-sport feeds (20 = Big Sky football,
+    5 = men's basketball; verified live). Any other conference = one entry.
+  - **AHL + ECHL** (Hockey bank, TheSportsDB 4738 / 4916, no tables). AHL matched on the Fire Stick.
+  - **Remote tips**: site page `docs/remote.html` (tabs per screen, search, print = PDF), linked
+    from the site nav + How to use it; Settings > General > Remote tips = QR to it. Update the page
+    whenever a hold menu or remote move changes.
+- **Shipped: 1.0.32 (`+384`, 2026-10-21; test build `+383` on the Formuler + Fire Stick):**
   - **Recording (Android only)** — Sports Trak games (game menu `_recordTiles`: "Record until the
     show ends" / "Record until I stop it", 4 h max) and live channels (hold menu), margins 5 min
     before / 30 after, **auto-record ONE team** (all its leagues). Native `RecorderService.kt`

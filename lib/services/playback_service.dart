@@ -14,6 +14,7 @@ import '../utils/constants.dart';
 import 'playlist_manager.dart';
 import 'real_4k_channels.dart';
 import 'storage_service.dart';
+import 'archive_ready_watch.dart';
 import 'watch_tracker.dart';
 import '../l10n/l10n.dart';
 
@@ -450,7 +451,10 @@ class PlaybackService extends ChangeNotifier {
       if (c != null &&
           ch != null &&
           c.value.isInitialized &&
-          !Channel.isLiveId(ch.rawId)) {
+          !Channel.isLiveId(ch.rawId) &&
+          // A "being downloaded" clip: no resume point, and no auto-advance
+          // (its last 30 s are all of it).
+          !ArchiveReadyWatch.instance.isClip(ch.id, c.value.duration)) {
         _storage.setLastPosition(ch.id, c.value.position.inMilliseconds);
         final duration = c.value.duration;
         if (duration > Duration.zero) {
@@ -704,7 +708,10 @@ class PlaybackService extends ChangeNotifier {
     if (ch != null &&
         old != null &&
         old.value.isInitialized &&
-        !Channel.isLiveId(ch.rawId)) {
+        !Channel.isLiveId(ch.rawId) &&
+        // A Media Hub source's "being downloaded" clip: no resume point
+        // and no Trakt/Simkl "watched" for it.
+        !ArchiveReadyWatch.instance.ended(ch.id, old.value.duration)) {
       await _storage.setLastPosition(ch.id, old.value.position.inMilliseconds);
       final duration = old.value.duration;
       if (duration > Duration.zero) {

@@ -155,6 +155,15 @@ class StorageService {
   Future<void> setTmdbApiKey(String key) =>
       _prefs.setString(AppConstants.keyTmdbApiKey, key);
 
+  /// Settings > Media Hub > Debrid accounts — see `DebridApi`.
+  String? getRealDebridToken() =>
+      _prefs.getString(AppConstants.keyRealDebridToken);
+  Future<void> setRealDebridToken(String token) =>
+      _prefs.setString(AppConstants.keyRealDebridToken, token);
+  String? getTorBoxKey() => _prefs.getString(AppConstants.keyTorBoxKey);
+  Future<void> setTorBoxKey(String key) =>
+      _prefs.setString(AppConstants.keyTorBoxKey, key);
+
   /// Subtitle add-ons, see AddonService. Null = never saved (defaults).
   String? getAddonsJson() => _prefs.getString(AppConstants.keyAddons);
   Future<void> setAddonsJson(String json) =>
@@ -288,6 +297,11 @@ class StorageService {
           .toSet();
   Future<void> setReal4kChannels(Set<String> ids) =>
       _prefs.setStringList(AppConstants.keyReal4kChannels, ids.toList());
+
+  String? getArchiveReadyWatch() =>
+      _prefs.getString(AppConstants.keyArchiveReadyWatch);
+  Future<void> setArchiveReadyWatch(String json) =>
+      _prefs.setString(AppConstants.keyArchiveReadyWatch, json);
 
   bool getFastStartup() => _prefs.getBool(AppConstants.keyFastStartup) ?? false;
   Future<void> setFastStartup(bool value) =>
@@ -759,6 +773,7 @@ class StorageService {
     AppConstants.keyCloudTransfer,
     AppConstants.keySplashGreeting,
     AppConstants.keySkippedUpdateVersion,
+    AppConstants.keyArchiveReadyWatch,
   };
 
   /// Prefix-matched skips: the per-playlist full-sync timestamps (a copied

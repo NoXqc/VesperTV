@@ -13,6 +13,7 @@ import '../services/archive_service.dart';
 import '../services/desktop_mini_player.dart';
 import '../services/playback_service.dart';
 import '../services/tracker_api.dart';
+import '../services/archive_ready_watch.dart';
 import '../services/watch_tracker.dart';
 import '../widgets/tv_menu_tile.dart';
 import 'desktop_player_screen.dart';
@@ -104,8 +105,11 @@ ArchiveStreamOption preferredArchiveStream(
 }
 
 /// Lets the players report this title to Trakt/Simkl (by IMDb id; titles
-/// without one aren't reported). See `WatchTracker`.
+/// without one aren't reported). See `WatchTracker`. Also lets them tell a
+/// source's "being downloaded" clip from the title (`ArchiveReadyWatch`).
 void _track(Channel channel, ArchiveMeta meta, ArchiveVideo? episode) {
+  ArchiveReadyWatch.instance
+      .register(channel.id, metaId: meta.id, url: channel.url);
   final imdb = meta.imdb;
   if (imdb == null) return;
   WatchTracker.instance.register(

@@ -27,6 +27,7 @@ import 'services/epg_service.dart';
 import 'services/parental_pin.dart';
 import 'services/persistent_image_cache.dart';
 import 'services/playback_service.dart';
+import 'services/archive_ready_watch.dart';
 import 'services/real_4k_channels.dart';
 import 'services/recording_service.dart';
 import 'services/sports_channel_matcher.dart';
@@ -339,6 +340,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       LiveResumeHint.pillEnabled.value = _storage.getShowResumePill();
 
       Real4kChannels.init(_storage);
+      ArchiveReadyWatch.instance.init(_storage);
       _preferences = AppPreferences(_storage);
       await _preferences.init();
       // Asked once per launch, before anything decides a layout — see

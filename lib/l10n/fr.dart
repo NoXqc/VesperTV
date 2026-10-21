@@ -1572,4 +1572,43 @@ const Map<String, String> kFr = {
       "{title} · s'arrête à {time}",
   "No guide for this channel: stops after 2 hours":
       "Pas de guide pour cette chaîne : s'arrête après 2 heures",
+  // Media Hub: Ready tag / Debrid accounts
+  "Cleared":
+      "Effacé",
+  "Saved — key verified ✓":
+      "Enregistré — clé vérifiée ✓",
+  "Saved, but {service} rejected the key — double-check it":
+      "Enregistré, mais {service} a refusé la clé — vérifiez-la",
+  "Debrid accounts":
+      "Comptes debrid",
+  "Optional keys for the \"Ready\" tag":
+      "Clés optionnelles pour l'étiquette « Prêt »",
+  "Some Media Hub sources answer Play with a short \"being downloaded\" video while they fetch a title into your debrid account. VesperTV then checks back every minute and puts a \"Ready\" tag on the title's poster once it's there.":
+      "Certaines sources du Media Hub répondent à Lecture par une courte vidéo « en cours de téléchargement » pendant qu'elles récupèrent un titre dans votre compte debrid. VesperTV revérifie alors chaque minute et ajoute une étiquette « Prêt » sur l'affiche du titre dès qu'il est là.",
+  "Optional: with your own key, your account confirms it directly. Without one, VesperTV asks the source again until the full file answers.":
+      "Optionnel : avec votre propre clé, votre compte le confirme directement. Sans clé, VesperTV redemande à la source jusqu'à ce que le fichier complet réponde.",
+  "Real-Debrid: real-debrid.com/apitoken. TorBox: torbox.app/settings (API key). Kept in VesperTV and only used to read your downloads list.":
+      "Real-Debrid : real-debrid.com/apitoken. TorBox : torbox.app/settings (clé API). Conservée dans VesperTV et utilisée seulement pour lire votre liste de téléchargements.",
+  "Real-Debrid API token":
+      "Jeton API Real-Debrid",
+  "TorBox API key":
+      "Clé API TorBox",
+  // Sports Trak: League bank heading for college conferences
+  "College": "Universitaire",
+  // Settings > General > Remote tips
+  "Language and clock, what plays when the app starts, Fast startup, clearing your history, and remote tips.":
+      "Langue et horloge, ce qui joue au démarrage, Démarrage rapide, l'effacement de l'historique et les astuces télécommande.",
+  "Remote tips":
+      "Astuces télécommande",
+  "Every hold menu and shortcut, on your phone":
+      "Chaque menu « maintenir » et raccourci, sur votre téléphone",
+  "Every hold menu and remote shortcut, on one page: hold OK on channels, groups and posters, the side panel on ← in full screen, Multiview, Sports Trak and more.":
+      "Chaque menu « maintenir » et raccourci de la télécommande sur une seule page : maintenir OK sur les chaînes, groupes et affiches, le panneau latéral avec ← en plein écran, Multiview, Sports Trak et plus.",
+  "Scan with your phone, or open":
+      "Scannez avec votre téléphone, ou ouvrez",
+  "Open":
+      "Ouvrir",
+  "The basics: hold OK (about half a second) opens a menu almost everywhere. Back always steps out one level. OK twice on a channel = full screen.":
+      "L'essentiel : maintenir OK (environ une demi-seconde) ouvre un menu presque partout. Retour recule toujours d'un niveau. OK deux fois sur une chaîne = plein écran.",
+  "Fetching…": "Récupération…",
 };

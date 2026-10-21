@@ -39,7 +39,16 @@ class SportsLeague {
     this.kind = SportsKind.team,
     this.seriesPhrases = const [],
     this.homeTags = const [],
+    this.espnGroup,
   });
+
+  /// ESPN conference id for a college conference league ("20" = Big Sky
+  /// football, "5" = Big Sky basketball): its scoreboard and standings
+  /// are the whole sport's, filtered to that conference (`groups=` /
+  /// `group=`). The sport's own feed only lists ESPN's featured games, so
+  /// a conference like Big Sky (FCS) almost never showed (user request,
+  /// 2026-10-21).
+  final String? espnGroup;
 
   /// Country tags of the league's own channels ("gr"): those rank first
   /// for its games, not last as foreign feeds (SportsChannelMatcher).
@@ -912,6 +921,29 @@ const List<SportsLeague> kSportsLeagueBank = [
       logoUrl:
           'https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-hockey.png',
       region: 'Hockey'),
+  // Not on ESPN (hockey/ahl and hockey/echl have no events endpoint):
+  // TheSportsDB, checked 2026-10-21. Weekly rounds of ~30 games, so a
+  // capped day loads its round. No tables on the free key (empty reply).
+  SportsLeague(
+      id: 'hockey.ahl',
+      espnPath: 'hockey/ahl',
+      sportsDbId: '4738',
+      name: 'American Hockey League',
+      shortName: 'AHL',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/bm25ej1582197507.png',
+      region: 'Hockey',
+      hasStandings: false),
+  SportsLeague(
+      id: 'hockey.echl',
+      espnPath: 'hockey/echl',
+      sportsDbId: '4916',
+      name: 'ECHL',
+      shortName: 'ECHL',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/im9a7w1783325344.png',
+      region: 'Hockey',
+      hasStandings: false),
   SportsLeague(
       id: 'australian-football.afl',
       espnPath: 'australian-football/afl',
@@ -943,6 +975,22 @@ const List<SportsLeague> kSportsLeagueBank = [
       logoUrl:
           'https://a.espncdn.com/combiner/i?img=/redesign/assets/img/icons/sports-volleyball-solid.png',
       region: 'Other'),
+  SportsLeague(
+      id: 'college-football.big-sky',
+      espnPath: 'football/college-football',
+      espnGroup: '20',
+      name: 'Big Sky Football',
+      shortName: 'BSKY',
+      logoUrl: 'https://a.espncdn.com/i/teamlogos/ncaa_conf/500/20.png',
+      region: 'College'),
+  SportsLeague(
+      id: 'mens-college-basketball.big-sky',
+      espnPath: 'basketball/mens-college-basketball',
+      espnGroup: '5',
+      name: 'Big Sky Basketball',
+      shortName: 'BSKY',
+      logoUrl: 'https://a.espncdn.com/i/teamlogos/ncaa_conf/500/20.png',
+      region: 'College'),
 ];
 
 /// Bank group headings, in display order.
@@ -958,6 +1006,7 @@ const List<String> kSportsLeagueRegions = [
   'World',
   'Women',
   'Basketball',
+  'College',
   'Hockey',
   'Baseball',
   'Golf',

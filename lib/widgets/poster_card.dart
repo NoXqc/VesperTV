@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../utils/image_urls.dart';
 import 'hd_network_image.dart';
 import 'hold_to_activate.dart';
@@ -24,6 +25,8 @@ class PosterCard extends StatefulWidget {
     this.progressFraction,
     this.focusNode,
     this.isFavorite = false,
+    this.ready = false,
+    this.fetching = false,
     this.onToggleFavorite,
     this.cardWidth = PosterCard.width,
     this.cardPosterHeight = PosterCard.posterHeight,
@@ -84,6 +87,14 @@ class PosterCard extends StatefulWidget {
   /// that don't have a favorite concept for this item (e.g. episode cards)
   /// — the hold-to-favorite gesture is only wired up when it's provided.
   final bool isFavorite;
+
+  /// Media Hub: the source finished preparing a title that played as a
+  /// "being downloaded" clip (`ArchiveReadyWatch`) — gold "Ready" tag in
+  /// the rating's corner.
+  final bool ready;
+
+  /// Media Hub: that title is still being checked — outlined "Fetching…".
+  final bool fetching;
   final VoidCallback? onToggleFavorite;
 
   /// Override [PosterCard.width]/[PosterCard.posterHeight] per instance —
@@ -271,6 +282,36 @@ class _PosterCardState extends State<PosterCard> {
                               shadows: const [
                                 Shadow(color: Colors.black, blurRadius: 4),
                               ]),
+                        )
+                      else if (widget.ready || widget.fetching)
+                        Positioned(
+                          top: 4,
+                          left: 4,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: widget.ready
+                                  ? scheme.primary
+                                  : Colors.black.withValues(alpha: 0.75),
+                              border: widget.ready
+                                  ? null
+                                  : Border.all(color: scheme.primary),
+                              borderRadius: BorderRadius.circular(4),
+                              boxShadow: const [
+                                BoxShadow(color: Colors.black54, blurRadius: 4),
+                              ],
+                            ),
+                            child: Text(
+                              widget.ready ? tr('Ready') : tr('Fetching…'),
+                              style: TextStyle(
+                                  color: widget.ready
+                                      ? scheme.onPrimary
+                                      : scheme.primary,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
                         )
                       else if (widget.rating != null)
                         Positioned(

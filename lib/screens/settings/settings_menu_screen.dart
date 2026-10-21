@@ -23,6 +23,8 @@ import 'addons_screen.dart';
 import 'archive_sources_screen.dart';
 import 'trackers_screen.dart';
 import 'tmdb_settings_screen.dart';
+import 'debrid_settings_screen.dart';
+import 'remote_tips_screen.dart';
 import '../../l10n/l10n.dart';
 
 /// One destination row of a Settings category.
@@ -159,6 +161,11 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
                 tr('TMDB (Release Dates)'),
                 tr('Optional key for sorting by real release date'),
                 (_) => const TmdbSettingsScreen()),
+            _Entry(
+                Icons.cloud_done_outlined,
+                tr('Debrid accounts'),
+                tr('Optional keys for the "Ready" tag'),
+                (_) => const DebridSettingsScreen()),
           ],
         ),
         _Category(
@@ -192,7 +199,7 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
         _Category(
           Icons.tune,
           tr('General'),
-          tr('Language and clock, what plays when the app starts, Fast startup, and clearing your history.'),
+          tr('Language and clock, what plays when the app starts, Fast startup, clearing your history, and remote tips.'),
           [
             _general('language', Icons.translate, tr('Language'),
                 tr('App language and 24-hour clock')),
@@ -200,6 +207,11 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
                 tr('Resume the last channel, Fast startup')),
             _general('history', Icons.history, tr('History'),
                 tr('Clear searches, channels, Continue Watching')),
+            _Entry(
+                Icons.settings_remote_outlined,
+                tr('Remote tips'),
+                tr('Every hold menu and shortcut, on your phone'),
+                (_) => const RemoteTipsScreen()),
           ],
         ),
         _Category(

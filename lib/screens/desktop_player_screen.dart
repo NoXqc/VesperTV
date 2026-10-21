@@ -14,6 +14,7 @@ import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../services/real_4k_channels.dart';
 import '../services/storage_service.dart';
+import '../services/archive_ready_watch.dart';
 import '../services/watch_tracker.dart';
 import '../l10n/l10n.dart';
 import '../widgets/player_side_panel.dart';
@@ -236,6 +237,10 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   /// resume positions, so it reports straight from mpv's state).
   void _reportStopped() {
     final state = _player.state;
+    // A Media Hub source's "being downloaded" clip isn't the title.
+    if (ArchiveReadyWatch.instance.ended(_currentChannel.id, state.duration)) {
+      return;
+    }
     unawaited(WatchTracker.instance
         .stopped(_currentChannel.id, state.position, state.duration));
   }

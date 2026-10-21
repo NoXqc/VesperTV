@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Remote Tips · VesperTV</title>
+<meta name="description" content="Every remote shortcut in VesperTV: hold OK menus, the full-screen side panel, channel zapping, Multiview, Sports Trak and Media Hub moves.">
+<meta name="theme-color" content="#070608">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23FFE28C'/%3E%3Cstop offset='1' stop-color='%23C48412'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='15' fill='%230B0907'/%3E%3Cpath d='M14.8 19h9.8L32 39l7.4-20h9.8L36.7 46H27.3z' fill='url(%23g)'/%3E%3Cpath d='M32 11.5l1.1 4.6 3.4 1.1-3.4 1.1L32 23l-1.1-4.7-3.4-1.1 3.4-1.1z' fill='%23FFE9B0'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* Same tokens as index.html ("Broadcast Console"). */
+:root{
+  --bg:#070608; --bg-lift:#0D0A08;
+  --panel:rgba(255,255,255,.035); --panel-2:rgba(255,255,255,.06);
+  --hair:rgba(255,255,255,.10); --hair-2:rgba(255,255,255,.18);
+  --ink:#F6F1E7; --ink-2:#C4BAA6; --ink-3:#918771;
+  --gold:#D4A017; --gold-lift:#F0C75E; --gold-pale:#FFD98A; --amber-dp:#C9781A;
+  --r-sm:10px; --r:16px;
+  --pad:clamp(16px,5vw,40px); --maxw:1060px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.6 Inter,system-ui,sans-serif;
+  background-image:radial-gradient(900px 500px at 85% -10%,rgba(212,160,23,.10),transparent 60%)}
+a{color:var(--gold-lift)}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 var(--pad)}
+header{border-bottom:1px solid var(--hair);position:sticky;top:0;z-index:5;background:rgba(7,6,8,.85);backdrop-filter:blur(10px)}
+header .wrap{display:flex;align-items:center;gap:14px;height:60px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--ink);text-decoration:none;font:700 18px 'Bricolage Grotesque',sans-serif}
+header nav{margin-left:auto;display:flex;gap:18px;font-size:14px}
+header nav a{color:var(--ink-2);text-decoration:none}
+header nav a:hover{color:var(--ink)}
+h1{font:800 clamp(32px,6vw,52px)/1.05 'Bricolage Grotesque',sans-serif;margin:40px 0 12px;letter-spacing:-.02em}
+h1 span{background:linear-gradient(100deg,var(--gold-lift),var(--gold-pale));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lead{color:var(--ink-2);max-width:680px;margin:0 0 28px}
+h2{font:700 24px/1.2 'Bricolage Grotesque',sans-serif;margin:0 0 4px}
+.sub{color:var(--ink-3);font-size:14px;margin:0 0 18px}
+
+/* The three key ideas */
+.basics{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:28px}
+.basic{background:var(--panel);border:1px solid var(--hair);border-radius:var(--r);padding:16px}
+.basic b{display:block;font:700 16px 'Bricolage Grotesque',sans-serif;margin:8px 0 4px}
+.basic p{margin:0;color:var(--ink-2);font-size:14px}
+
+kbd{display:inline-block;min-width:1.9em;padding:1px 7px;border-radius:7px;border:1px solid var(--hair-2);
+  border-bottom-width:2px;background:var(--panel-2);font:700 12.5px/1.6 'JetBrains Mono',monospace;color:var(--ink);text-align:center;white-space:nowrap}
+kbd.hold{border-color:var(--gold);color:var(--gold-pale);background:rgba(212,160,23,.12)}
+
+/* Controls */
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:18px}
+.search{flex:1 1 260px;display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--hair-2);border-radius:999px;padding:0 14px}
+.search input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--ink);font:inherit;padding:10px 0}
+.search:focus-within{border-color:var(--gold)}
+.btn{background:var(--panel);border:1px solid var(--hair-2);color:var(--ink);border-radius:999px;padding:9px 16px;font:600 14px Inter,sans-serif;cursor:pointer}
+.btn:hover,.btn:focus-visible{border-color:var(--gold);outline:0}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:18px;scrollbar-width:thin}
+.tab{flex:0 0 auto;background:none;border:1px solid var(--hair);color:var(--ink-2);border-radius:999px;padding:8px 14px;font:600 14px Inter,sans-serif;cursor:pointer}
+.tab[aria-selected="true"]{background:linear-gradient(100deg,var(--gold),var(--amber-dp));border-color:transparent;color:#140E02}
+.tab:focus-visible{outline:2px solid var(--gold-lift);outline-offset:2px}
+
+/* Sections + rows */
+section.screen{margin-bottom:34px}
+.rows{border:1px solid var(--hair);border-radius:var(--r);overflow:hidden;background:var(--panel)}
+.row{display:grid;grid-template-columns:minmax(150px,240px) 1fr;gap:16px;padding:13px 16px;border-top:1px solid var(--hair)}
+.row:first-child{border-top:0}
+.row .keys{display:flex;flex-wrap:wrap;gap:6px;align-items:flex-start;color:var(--ink-3);font-size:13px}
+.row .what b{font-weight:600}
+.row .what p{margin:2px 0 0;color:var(--ink-2);font-size:14px}
+.tag{display:inline-block;font:700 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.04em;padding:3px 6px;border-radius:5px;border:1px solid var(--hair-2);color:var(--ink-3);margin-left:6px;vertical-align:2px}
+.empty{display:none;color:var(--ink-3);padding:24px 0}
+footer{border-top:1px solid var(--hair);color:var(--ink-3);font-size:13px;padding:24px 0 40px;margin-top:20px}
+
+@media (max-width:640px){
+  header nav{display:none}
+  .row{grid-template-columns:1fr;gap:6px}
+}
+
+/* Print = the "PDF": every screen, no chrome. */
+@media print{
+  :root{--ink:#111;--ink-2:#333;--ink-3:#555;--hair:#ccc;--hair-2:#999;--panel:#fff;--panel-2:#f3f3f3}
+  body{background:#fff;color:#111;font-size:11.5px}
+  header,.controls,.tabs,.no-print{display:none!important}
+  h1{margin-top:0;font-size:26px} h1 span{color:#8a6400;-webkit-text-fill-color:#8a6400}
+  section.screen{display:block!important;break-inside:avoid-page;margin-bottom:14px}
+  .row{display:grid!important;padding:6px 10px;break-inside:avoid}
+  kbd{color:#111} kbd.hold{color:#6b4d00;background:#fff4d6}
+  .basic{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a class="brand" href="./">
+      <svg width="28" height="28" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE28C"/><stop offset="1" stop-color="#C48412"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="#0B0907"/><path d="M14.8 19h9.8L32 39l7.4-20h9.8L36.7 46H27.3z" fill="url(#lg)"/><path d="M32 11.5l1.1 4.6 3.4 1.1-3.4 1.1L32 23l-1.1-4.7-3.4-1.1 3.4-1.1z" fill="#FFE9B0"/></svg>
+      VesperTV
+    </a>
+    <nav aria-label="Primary">
+      <a href="./#howto">How to use it</a>
+      <a href="./#faq">FAQ</a>
+      <a href="https://discord.gg/DDeGDHvFY">Discord</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>Remote <span>tips</span></h1>
+  <p class="lead">Everything the remote can do that isn't written on screen. Pick the screen you're on, or search for what you want to do ("move a channel", "record", "subtitles").</p>
+
+  <div class="basics">
+    <div class="basic"><kbd class="hold">Hold OK</kbd><b>Hold = menu</b><p>Press OK and keep it down for about half a second. Almost everything has a menu behind it: channels, groups, posters, games, screens. Phone: long-press. Mouse: long-press too.</p></div>
+    <div class="basic"><kbd>Back</kbd><b>Back is always safe</b><p>Back steps out one level at a time: the list, then the groups, then the tabs. The app only closes when you press Back on the tabs column.</p></div>
+    <div class="basic"><kbd>OK</kbd> <kbd>OK</kbd><b>OK twice = full screen</b><p>On a channel, the first OK plays it in the preview box and the second goes full screen. On a text box, OK opens the keyboard; otherwise the arrows just pass over it.</p></div>
+  </div>
+
+  <div class="controls">
+    <label class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Search: move, hide, record, stats…" aria-label="Search the tips">
+    </label>
+    <button class="btn" type="button" onclick="window.print()">Print / save as PDF</button>
+  </div>
+
+  <div class="tabs" role="tablist" id="tabs"></div>
+  <p class="empty" id="empty">Nothing matches. Try another word, or ask on <a href="https://discord.gg/DDeGDHvFY">Discord</a>.</p>
+
+  <section class="screen" data-tab="Live TV">
+    <h2>Live TV: channel list and guide</h2>
+    <p class="sub">The TV tab, its channel list and the Timeline guide.</p>
+    <div class="rows">
+      <div class="row"><div class="keys"><kbd>OK</kbd> then <kbd>OK</kbd></div><div class="what"><b>Preview, then full screen</b><p>The first OK plays the channel in the preview box; OK again opens it full screen.</p></div></div>
+      <div class="row"><div class="keys"><kbd class="hold">Hold OK</kbd> on a channel</div><div class="what"><b>Channel menu</b><p>Add to / Remove from Favourites, Hide this channel, Move Up / Down (your own order inside the group), Move to group…, Remove from a group, and Record on Android.</p></div></div>
+      <div class="row"><div class="keys"><kbd class="hold">Hold OK</kbd> on a group</div><div class="what"><b>Group menu</b><p>Add to Favourites, Hide Group, Move Up / Down, Move to Top, and New group… to start your own group.</p></div></div>
+      <div class="row"><div class="keys"><kbd class="hold">Hold OK</kbd> on your own group</div><div class="what"><b>Your group's menu</b><p>Move Up / Down, Move to Top, New group…, Delete. Your groups sit under Favourites and History and mix channels from every playlist.</p></div></div>
+      <div class="row"><div class="keys"><kbd class="hold">Hold OK</kbd> on Favourites</div><div class="what"><b>Clear this tab's favourites</b><p>Asks first. Works on the Favourites row of TV, Movies and TV Shows.</p></div></div>
+      <div class="row"><div class="keys"><kbd class="hold">Hold OK</kbd> on History</div><div class="what"><b>Clear channel history</b><p>Asks first.</p></div></div>
+      <div class="row"><div class="keys"><kbd>OK</kbd> on Playlists ▾, then <kbd>→</kbd></div><div class="what"><b>Jump to a playlist, or hide its groups here</b><p>OK jumps to that playlist's groups. → on a playlist hides or shows all its groups in this tab only (its channels stay in Search and Favourites).</p></div></div>
+      <div class="row"><div class="keys"><kbd class="hold">Hold →</kbd></div><div class="what"><b>Resume the last channel</b><p>What the "Hold &gt; to resume" pill means. Works even with the pill turned off in Settings.</p></div></div>
+    </div>
+  </section>
+
+  <section class="screen" data-tab="Full screen">
+    <h2>Full-screen player</h2>
+    <p class="sub">While a channel, film or episode plays full screen.</p>
+    <div class="rows">
+      <div class="row"><div class="keys"><kbd>←</kbd><span class="tag">LIVE</span></div><div class="what"><b>Side panel</b><p>Last channels, My Teams and Live now, without leaving the video. OK on one switches to it; Back closes the panel. Phone: swipe right to open, swipe left to close.</p></div></div>
+      <div class="row"><div class="keys"><kbd class="hold">Hold OK</kbd> on a game in the side panel</div><div class="what"><b>Pull stats</b><p>The game's box score and stats open beside the panel, over the video.</p></div></div>
+      <div class="row"><div class="keys"><kbd>OK</kbd><span class="tag">LIVE</span></div><div class="what"><b>Info card</b><p>What's on now and next. With Settings › Interface › Data pool on, a second card shows resolution, fps, codecs and bitrate.</p></div></div>
+      <div class="row"><div class="keys"><kbd>↓</kbd></div><div class="what"><b>Player bar</b><p>Opens the bar with Play/Pause already selected: audio track, subtitles, Multiview and more are on the same row.</p></div></div>
+      <div class="row"><div class="keys"><kbd>CH+</kbd> <kbd>CH−</kbd></div><div class="what"><b>Next / previous channel</b><p>Zaps through the list you opened the channel from. Page Up / Page Down do the same.</p></div></div>
+      <div class="row"><div class="keys"><kbd>⏯</kbd></div><div class="what"><b>Play / Pause</b><p>The remote's own Play/Pause key works anywhere in the player.</p></div></div>
+      <div class="row"><div class="keys"><kbd>Back</kbd></div><div class="what"><b>Leave full screen</b><p>With the side panel open, Back closes the panel first.</p></div></div>
+    </div>
+  </section>
+
+  <section class="screen" data-tab="Movies &amp; Shows">
+    <h2>Movies and TV Shows</h2>
+    <p class="sub">Your provider's films and series, and every show page.</p>
+    <div class="rows">
+      <div class="row"><div class="keys"><kbd class="hold">Hold OK</kbd> on a poster</div><div class="what"><b>Favourite on / off</b><p>A star appears on the poster, and the title joins Favourites.</p></div></div>
+      <div class="row"><div class="keys"><kbd class="hold">Hold OK</kbd> on an episode</div><div class="what"><b>Mark watched / unwatched</b><p>A watched episode starts over from the beginning. Synced to Trakt / Simkl when signed in.</p></div></div>
+      <div class="row"><div class="keys"><kbd class="hold">Hold OK</kbd> on a group</div><div class="what"><b>Expand catalog</b><p>The whole group as a grid, with sorting (and TMDB release-date sorting if you added a TMDB key).</p></div></div>
+    </div>
+  </section>
+
+  <section class="screen" data-tab="Media Hub">
+    <h2>Media Hub</h2>
+    <p class="sub">Your add-on sources and Jellyfin / Emby server.</p>
+    <div class="rows">
+      <div class="row"><div class="keys"><kbd>↑</kbd> from the first row</div><div class="what"><b>Floating bar</b><p>Search, a button for each row, and Genre. Genre › Other holds add-on catalogs that aren't plain movies or series.</p></div></div>
+      <div class="row"><div class="keys"><kbd class="hold">Hold OK</kbd> on a poster</div><div class="what"><b>Favourite on / off</b><p>On Recently watched, hold removes the title from that row instead.</p></div></div>
+      <div class="row"><div class="keys"><kbd class="hold">Hold OK</kbd> on a row's bar button</div><div class="what"><b>Row menu</b><p>Expand catalog (the whole row as a grid) or Go to row.</p></div></div>
+      <div class="row"><div class="keys">Gold <kbd class="hold">Ready</kbd> tag</div><div class="what"><b>Your source finished fetching it</b><p>If a title played a short "being downloaded" video, press Back and carry on. The poster gets a Ready tag when the full file is there. Optional: add your debrid key in Settings › Media Hub › Debrid accounts for an exact check.</p></div></div>
+      <div class="row"><div class="keys"><kbd class="hold">Hold OK</kbd> on an episode</div><div class="what"><b>Mark watched / unwatched</b><p>Same as provider shows.</p></div></div>
+    </div>
+  </section>
+
+  <section class="screen" data-tab="Sports Trak">
+    <h2>Sports Trak</h2>
+    <p class="sub">Scores, your teams and the channels showing each game.</p>
+    <div class="rows">
+      <div class="row"><div class="keys"><kbd>OK</kbd> on a game</div><div class="what"><b>Select it</b><p>Shows the game's details in the hero at the top.</p></div></div>
+      <div class="row"><div class="keys"><kbd>⏯</kbd> on a game</div><div class="what"><b>Watch in the hero</b><p>Plays the game's channel in the small player at the top. OK on the playing game goes full screen; Back stops it.</p></div></div>
+      <div class="row"><div class="keys"><kbd class="hold">Hold OK</kbd> on a game</div><div class="what"><b>Game menu</b><p>Play here, choose another channel, Record until the show ends / until I stop it (Android).</p></div></div>
+      <div class="row"><div class="keys"><kbd class="hold">Hold OK</kbd> on a league chip</div><div class="what"><b>Reorder leagues</b><p>Move the chip with ← →, then OK to drop it.</p></div></div>
+      <div class="row"><div class="keys"><kbd class="hold">Hold OK</kbd> on the RedZone pill</div><div class="what"><b>Pick its channel</b><p>NFL Sundays.</p></div></div>
+      <div class="row"><div class="keys"><kbd>OK</kbd> on See all · stats</div><div class="what"><b>Live games list</b><p>Every live game in one list. OK = stats pop-up, <kbd class="hold">Hold OK</kbd> = channel menu, ⏯ = play full screen.</p></div></div>
+      <div class="row"><div class="keys"><kbd>OK</kbd> on a team in Standings</div><div class="what"><b>Follow it (My Teams)</b><p>Followed teams' games come first, with a star.</p></div></div>
+      <div class="row"><div class="keys"><kbd class="hold">Hold OK</kbd> on a team in My Teams</div><div class="what"><b>Unfollow</b></div></div>
+      <div class="row"><div class="keys">League manager: <kbd>OK</kbd> / <kbd class="hold">Hold OK</kbd></div><div class="what"><b>Show / hide, favourite, send back</b><p>OK shows or hides a league in the tab. Hold: Make favourite league (Sports Trak opens on it), Send back to the league bank. Add more leagues from the bank below.</p></div></div>
+    </div>
+  </section>
+
+  <section class="screen" data-tab="Multiview">
+    <h2>Multiview</h2>
+    <p class="sub">2 or 4 channels at once.</p>
+    <div class="rows">
+      <div class="row"><div class="keys"><kbd>OK</kbd> on a screen</div><div class="what"><b>Move the sound</b><p>The speaker dot shows which screen you hear.</p></div></div>
+      <div class="row"><div class="keys"><kbd class="hold">Hold OK</kbd> on a screen</div><div class="what"><b>Screen menu</b><p>Full screen, Reload, Change channel, Remove.</p></div></div>
+      <div class="row"><div class="keys"><kbd>↑</kbd> from the top row</div><div class="what"><b>Header</b><p>The 2 / 4 screens switch and Multiview's other buttons. ↓ goes back to the screens.</p></div></div>
+      <div class="row"><div class="keys"><kbd>OK</kbd> in Multiview full screen</div><div class="what"><b>Show the controls</b><p>The first OK only brings back the name and back arrow. Back always works.</p></div></div>
+    </div>
+  </section>
+
+  <section class="screen" data-tab="Recordings">
+    <h2>Recordings <span class="tag">ANDROID</span></h2>
+    <p class="sub">Start one from a channel's or a game's hold menu.</p>
+    <div class="rows">
+      <div class="row"><div class="keys"><kbd>OK</kbd> on a recording</div><div class="what"><b>Play it</b></div></div>
+      <div class="row"><div class="keys"><kbd class="hold">Hold OK</kbd> on a recording</div><div class="what"><b>Recording menu</b><p>While it records: Watch live, Play from the start, Stop recording (keeps it), Cancel recording.</p></div></div>
+    </div>
+  </section>
+
+  <section class="screen" data-tab="Settings">
+    <h2>Settings and text boxes</h2>
+    <p class="sub">Settings has a menu on the left and the options on the right.</p>
+    <div class="rows">
+      <div class="row"><div class="keys"><kbd>→</kbd> / <kbd>OK</kbd>, <kbd>←</kbd> / <kbd>Back</kbd></div><div class="what"><b>In and out of a category</b></div></div>
+      <div class="row"><div class="keys"><kbd>OK</kbd> on a text box</div><div class="what"><b>Type</b><p>The keyboard only opens on OK, so the arrows can pass over a text box. On a Fire TV the on-screen keyboard keeps the Back key for itself; use its own close or Done key.</p></div></div>
+      <div class="row"><div class="keys"><kbd>OK</kbd> / <kbd class="hold">Hold OK</kbd> on an add-on</div><div class="what"><b>On / off, or remove</b><p>Settings › Media Hub › Add-ons and Media Hub sources.</p></div></div>
+    </div>
+  </section>
+
+  <section class="screen" data-tab="Windows">
+    <h2>Windows PC</h2>
+    <p class="sub">Mouse and keyboard.</p>
+    <div class="rows">
+      <div class="row"><div class="keys">Click, double-click</div><div class="what"><b>Select, then open</b><p>One click selects a poster or channel (and fills the banner), a second click opens it.</p></div></div>
+      <div class="row"><div class="keys">Long-press</div><div class="what"><b>Hold menus</b><p>Holding the mouse button opens the same menus as Hold OK.</p></div></div>
+      <div class="row"><div class="keys"><kbd>Esc</kbd></div><div class="what"><b>Back</b></div></div>
+      <div class="row"><div class="keys"><kbd>M</kbd></div><div class="what"><b>Mute</b><p>The volume slider sits in the player bar and is remembered.</p></div></div>
+      <div class="row"><div class="keys"><kbd>←</kbd><span class="tag">LIVE</span></div><div class="what"><b>Side panel</b><p>Same as on a TV, when the player bar isn't selected.</p></div></div>
+    </div>
+  </section>
+
+  <footer class="no-print">Something missing or not working the way it says? Tell us on <a href="https://discord.gg/DDeGDHvFY">Discord</a> or <a href="https://www.reddit.com/r/VesperTV/">r/VesperTV</a>. <a href="./">Back to vespertv.app</a></footer>
+</main>
+
+<script>
+(function(){
+  var screens=[].slice.call(document.querySelectorAll('section.screen'));
+  var tabs=document.getElementById('tabs'), q=document.getElementById('q'), empty=document.getElementById('empty');
+  var current='All';
+  ['All'].concat(screens.map(function(s){return s.dataset.tab})).forEach(function(name){
+    var b=document.createElement('button');
+    b.type='button';b.className='tab';b.role='tab';b.textContent=name;
+    b.addEventListener('click',function(){current=name;try{history.replaceState(null,'',name==='All'?location.pathname:'#'+encodeURIComponent(name))}catch(e){}render()});
+    tabs.appendChild(b);
+  });
+  var h=decodeURIComponent(location.hash.slice(1));
+  if(screens.some(function(s){return s.dataset.tab===h}))current=h;
+  function render(){
+    var term=q.value.trim().toLowerCase(), any=false;
+    [].forEach.call(tabs.children,function(b){b.setAttribute('aria-selected',b.textContent===current)});
+    screens.forEach(function(s){
+      var inTab=current==='All'||s.dataset.tab===current, shown=0;
+      [].forEach.call(s.querySelectorAll('.row'),function(r){
+        var hit=!term||(s.textContent.toLowerCase().indexOf(term)>=0&&r.textContent.toLowerCase().indexOf(term)>=0)||s.querySelector('h2').textContent.toLowerCase().indexOf(term)>=0;
+        r.style.display=hit?'':'none'; if(hit)shown++;
+      });
+      var vis=inTab&&shown>0; s.style.display=vis?'':'none'; if(vis)any=true;
+    });
+    empty.style.display=any?'none':'block';
+  }
+  q.addEventListener('input',function(){if(q.value&&current!=='All'){current='All'}render()});
+  render();
+})();
+</script>
+</body>
+</html>

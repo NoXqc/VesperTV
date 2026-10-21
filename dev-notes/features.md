@@ -202,7 +202,7 @@ Read before changing guide/Multiview/profiles/palettes/backup-server logic.
     (`SubtitleTracks`, `languageName`). The player id is the controller's `textureId`
     (`SubtitleTracks.playerIdOf`, the one place with the visible-for-testing ignore).
   - **Online (add-ons):** `services/addon_service.dart` — Stremio protocol, **subtitles resource only**
-    (owner: no stream/debrid add-ons). Settings > Add-ons (`screens/settings/addons_screen.dart`,
+    (stream add-ons, debrid ones included, go in Media Hub sources instead). Settings > Add-ons (`screens/settings/addons_screen.dart`,
     hidden on Windows) lists the official OpenSubtitles v3 add-on **off** by default; users can add any
     subtitle add-on by manifest link (hold OK = remove). Title → IMDb id via Cinemeta search
     (keyless; Xtream movies `xt_vod_` + episodes `xt_ep_` only; episode = `tt:season:episode` from the

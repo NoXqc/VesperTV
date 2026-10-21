@@ -1573,4 +1573,43 @@ const Map<String, String> kIt = {
       "{title} · si ferma alle {time}",
   "No guide for this channel: stops after 2 hours":
       "Nessuna guida per questo canale: si ferma dopo 2 ore",
+  // Media Hub: Ready tag / Debrid accounts
+  "Cleared":
+      "Cancellato",
+  "Saved — key verified ✓":
+      "Salvato — chiave verificata ✓",
+  "Saved, but {service} rejected the key — double-check it":
+      "Salvato, ma {service} ha rifiutato la chiave — controllala",
+  "Debrid accounts":
+      "Account debrid",
+  "Optional keys for the \"Ready\" tag":
+      "Chiavi facoltative per l'etichetta «Pronto»",
+  "Some Media Hub sources answer Play with a short \"being downloaded\" video while they fetch a title into your debrid account. VesperTV then checks back every minute and puts a \"Ready\" tag on the title's poster once it's there.":
+      "Alcune sorgenti del Media Hub rispondono a Riproduci con un breve video «in download» mentre portano un titolo nel tuo account debrid. VesperTV ricontrolla ogni minuto e mette un'etichetta «Pronto» sulla locandina del titolo appena è disponibile.",
+  "Optional: with your own key, your account confirms it directly. Without one, VesperTV asks the source again until the full file answers.":
+      "Facoltativo: con la tua chiave, è il tuo account a confermarlo direttamente. Senza, VesperTV richiede alla sorgente finché non risponde il file completo.",
+  "Real-Debrid: real-debrid.com/apitoken. TorBox: torbox.app/settings (API key). Kept in VesperTV and only used to read your downloads list.":
+      "Real-Debrid: real-debrid.com/apitoken. TorBox: torbox.app/settings (chiave API). Conservata in VesperTV e usata solo per leggere l'elenco dei tuoi download.",
+  "Real-Debrid API token":
+      "Token API Real-Debrid",
+  "TorBox API key":
+      "Chiave API TorBox",
+  // Sports Trak: League bank heading for college conferences
+  "College": "Universitario",
+  // Settings > General > Remote tips
+  "Language and clock, what plays when the app starts, Fast startup, clearing your history, and remote tips.":
+      "Lingua e orologio, cosa parte all'avvio, Avvio rapido, cancellare la cronologia e i trucchi del telecomando.",
+  "Remote tips":
+      "Trucchi telecomando",
+  "Every hold menu and shortcut, on your phone":
+      "Ogni menu a pressione lunga e scorciatoia, sul tuo telefono",
+  "Every hold menu and remote shortcut, on one page: hold OK on channels, groups and posters, the side panel on ← in full screen, Multiview, Sports Trak and more.":
+      "Ogni menu a pressione lunga e scorciatoia del telecomando in una sola pagina: tenere premuto OK su canali, gruppi e locandine, il pannello laterale con ← a schermo intero, Multiview, Sports Trak e altro.",
+  "Scan with your phone, or open":
+      "Inquadra con il telefono, oppure apri",
+  "Open":
+      "Apri",
+  "The basics: hold OK (about half a second) opens a menu almost everywhere. Back always steps out one level. OK twice on a channel = full screen.":
+      "Le basi: tenere premuto OK (circa mezzo secondo) apre un menu quasi ovunque. Indietro esce sempre di un livello. OK due volte su un canale = schermo intero.",
+  "Fetching…": "Recupero…",
 };

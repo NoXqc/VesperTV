@@ -2180,4 +2180,43 @@ const Map<String, String> kEl = {
       "{title} · σταματά στις {time}",
   "No guide for this channel: stops after 2 hours":
       "Χωρίς οδηγό για αυτό το κανάλι: σταματά μετά από 2 ώρες",
+  // Media Hub: Ready tag / Debrid accounts
+  "Cleared":
+      "Διαγράφηκε",
+  "Saved — key verified ✓":
+      "Αποθηκεύτηκε — το κλειδί επαληθεύτηκε ✓",
+  "Saved, but {service} rejected the key — double-check it":
+      "Αποθηκεύτηκε, αλλά το {service} απέρριψε το κλειδί — ελέγξτε το",
+  "Debrid accounts":
+      "Λογαριασμοί debrid",
+  "Optional keys for the \"Ready\" tag":
+      "Προαιρετικά κλειδιά για την ετικέτα «Έτοιμο»",
+  "Some Media Hub sources answer Play with a short \"being downloaded\" video while they fetch a title into your debrid account. VesperTV then checks back every minute and puts a \"Ready\" tag on the title's poster once it's there.":
+      "Ορισμένες πηγές του Media Hub απαντούν στην Αναπαραγωγή με ένα σύντομο βίντεο «γίνεται λήψη» ενώ φέρνουν έναν τίτλο στον λογαριασμό σας debrid. Το VesperTV ελέγχει ξανά κάθε λεπτό και βάζει την ετικέτα «Έτοιμο» στην αφίσα του τίτλου μόλις είναι διαθέσιμος.",
+  "Optional: with your own key, your account confirms it directly. Without one, VesperTV asks the source again until the full file answers.":
+      "Προαιρετικό: με το δικό σας κλειδί, ο λογαριασμός σας το επιβεβαιώνει απευθείας. Χωρίς κλειδί, το VesperTV ρωτά ξανά την πηγή μέχρι να απαντήσει το πλήρες αρχείο.",
+  "Real-Debrid: real-debrid.com/apitoken. TorBox: torbox.app/settings (API key). Kept in VesperTV and only used to read your downloads list.":
+      "Real-Debrid: real-debrid.com/apitoken. TorBox: torbox.app/settings (κλειδί API). Φυλάσσεται στο VesperTV και χρησιμοποιείται μόνο για την ανάγνωση της λίστας λήψεών σας.",
+  "Real-Debrid API token":
+      "Διακριτικό API Real-Debrid",
+  "TorBox API key":
+      "Κλειδί API TorBox",
+  // Sports Trak: League bank heading for college conferences
+  "College": "Κολεγιακά",
+  // Settings > General > Remote tips
+  "Language and clock, what plays when the app starts, Fast startup, clearing your history, and remote tips.":
+      "Γλώσσα και ρολόι, τι παίζει στην εκκίνηση, Γρήγορη εκκίνηση, διαγραφή ιστορικού και συμβουλές τηλεχειριστηρίου.",
+  "Remote tips":
+      "Συμβουλές τηλεχειριστηρίου",
+  "Every hold menu and shortcut, on your phone":
+      "Κάθε μενού παρατεταμένου πατήματος και συντόμευση, στο κινητό σας",
+  "Every hold menu and remote shortcut, on one page: hold OK on channels, groups and posters, the side panel on ← in full screen, Multiview, Sports Trak and more.":
+      "Κάθε μενού παρατεταμένου πατήματος και συντόμευση του τηλεχειριστηρίου σε μία σελίδα: κρατήστε πατημένο το OK σε κανάλια, ομάδες και αφίσες, το πλαϊνό πάνελ με ← σε πλήρη οθόνη, Multiview, Sports Trak και άλλα.",
+  "Scan with your phone, or open":
+      "Σαρώστε με το κινητό σας ή ανοίξτε",
+  "Open":
+      "Άνοιγμα",
+  "The basics: hold OK (about half a second) opens a menu almost everywhere. Back always steps out one level. OK twice on a channel = full screen.":
+      "Τα βασικά: κρατώντας πατημένο το OK (περίπου μισό δευτερόλεπτο) ανοίγει μενού σχεδόν παντού. Το Πίσω βγαίνει πάντα ένα επίπεδο. OK δύο φορές σε κανάλι = πλήρης οθόνη.",
+  "Fetching…": "Λήψη…",
 };
