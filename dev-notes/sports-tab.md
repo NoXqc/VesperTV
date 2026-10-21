@@ -146,6 +146,36 @@ NASCAR Cup `racing/nascar-premier`, IndyCar `racing/irl`). Parsing in `sports_se
   hasn't built does nothing — League manager `_bank` is now in screen (region) order; the Sports
   league chip row is a `SingleChildScrollView` + `ensureVisible`.
 
+## CFL (2026-10-21)
+- CFL is a **base league** beside NFL (`kSportsLeagues`, also in the new-install defaults),
+  not a bank entry. Existing saved league selections still apply; CFL is available in Your leagues.
+- `services/cfl_source.dart` uses CFL's own public feeds: scoreboard
+  `https://cflscoreboard.cfl.ca/json/scoreboard/rounds.json`, team metadata
+  `https://api.stats.cfl.ca/teams`, and official division standings
+  `https://api.stats.cfl.ca/standings/<scoreboard season>`. ESPN's CFL feed remains frozen in 2022.
+- The scoreboard is the whole season (~300 KB): one shared/in-flight snapshot for all dates,
+  My Teams and next-game lookups. Refresh after 50 s live/near kickoff, otherwise 10 min;
+  metadata once per session. Parsing runs off the UI isolate. Failed loads retain cached scores.
+- **Team ids are abbreviations**, e.g. `MTL`: the two official APIs use different numeric ids.
+  The stats API supplies division membership and ranking (including tiebreak order), with CFL
+  points columns. Records on cards come from completed regular-season games only.
+- Quarter states are `first_quarter`..`fourth_quarter`, `half_time`, `overtime`; `clock` is display
+  text, `possession` is Home/Away. They are not just `playing`. Hidden scores stay hidden;
+  unassigned TBD playoff fixtures are omitted. PNG logos come from the official scoreboard.
+- Channel matching uses team/guide names with Canadian preference (no broadcaster list in the
+  scoreboard). Follow, My Teams, next-game dates and recording use the same stable team/game identities.
+- `services/cfl_game_stats.dart` parses CFL.ca's public Genius gametracker `teamStats` and
+  `playerStats` widgets, using the scoreboard fixture id. Public route:
+  `https://gsm-widgets.betstream.betgenius.com/v1/widget/<widget>/customer/democfl_light/locale/en-US/geolocale/any-?fixtureId=<id>`.
+  No key/authentication. Team totals and the top eight players in each category appear in the
+  shared stats dialog, including fullscreen left-arrow menu stats. Live summaries refresh every
+  30 s; unavailable optional feeds retain previous detail or fall back to standings. No injury feed.
+  Home/away order is explicit; player participation flags can be wrong, so actual stats determine
+  inclusion. Verified against the completed Oct 17 Calgary–BC game, not an observed live game.
+- Live observation on Oct 21: **no game in progress** (86 complete, 9 scheduled including TBD
+  playoff slots; next games Oct 23). Quarter/halftime/OT behavior is covered by fixtures based on
+  CFL's actual client schema; confirm live updates on a box during a real game.
+
 ## Goals
 - A Sports tab with: **league filter** (NHL, NFL, NBA, MLB, PGA, ...), **My Teams**, **Standings**,
   scoreboard by day, game detail, and a **Watch** button that opens the matching IPTV channel.

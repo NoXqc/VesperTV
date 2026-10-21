@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import '../models/sports.dart';
 import '../l10n/l10n.dart';
+import 'cfl_source.dart';
 import 'sports_db_source.dart';
 import 'storage_service.dart';
 
@@ -43,12 +44,15 @@ SportsLeague? favoriteSportsLeague(StorageService storage) {
 /// the whole app session with a freshness window that depends on what the
 /// day holds (live games refresh every minute, finished days rarely).
 class SportsService {
-  SportsService._();
+  SportsService._() : _client = http.Client();
+  @visibleForTesting
+  SportsService.forTesting(this._client);
   static final SportsService instance = SportsService._();
 
   static const _base = 'https://site.api.espn.com/apis/site/v2/sports';
 
-  final http.Client _client = http.Client();
+  final http.Client _client;
+  late final CflSource _cfl = CflSource(_client);
   final Map<String, _CacheEntry> _cache = {};
   final Map<String, Future<List<SportsGame>>> _inFlight = {};
 
@@ -72,11 +76,14 @@ class SportsService {
     ];
     final results = await Future.wait([
       for (final league in leagues)
-        // TheSportsDB: the local date only (its rate limit). It buckets by
-        // UTC date, which is the local one for European kick-offs here and
-        // in the Americas; a viewer far east loses the evening games.
-        for (final d in league.sportsDbId != null ? [local] : dates)
-          _fetch(league, d),
+        if (league.isCfl)
+          _cflGames()
+        else
+          // TheSportsDB: the local date only (its rate limit). It buckets by
+          // UTC date, which is the local one for European kick-offs here and
+          // in the Americas; a viewer far east loses the evening games.
+          for (final d in league.sportsDbId != null ? [local] : dates)
+            _fetch(league, d),
     ]);
     final seen = <String>{};
     final games = <SportsGame>[];
@@ -99,6 +106,18 @@ class SportsService {
       return byStart != 0 ? byStart : a.league.id.compareTo(b.league.id);
     });
     return games;
+  }
+
+  Future<List<SportsGame>> _cflGames() async {
+    try {
+      final games = await _cfl.games();
+      lastError = null;
+      return games;
+    } catch (e) {
+      debugPrint('SportsService: CFL scores failed: $e');
+      lastError = tr('Some scores could not be loaded. Check the connection.');
+      return _cfl.cachedGames;
+    }
   }
 
   /// A golf tournament runs Thursday to Sunday but ESPN dates it once, at
@@ -159,6 +178,11 @@ class SportsService {
         : Uri.parse('$_standingsBase/${league.espnPath}/standings'
             '${league.espnGroup == null ? '' : '?group=${league.espnGroup}'}');
     try {
+      if (league.isCfl) {
+        final table = await _cfl.standings();
+        _standingsCache[league.id] = (table, DateTime.now());
+        return table;
+      }
       final response = await _get(league, url);
       if (response.statusCode != 200) {
         throw Exception('HTTP ${response.statusCode}');
@@ -186,9 +210,16 @@ class SportsService {
     final cached = _scheduleCache[key];
     if (cached != null) {
       final live = cached.$1.games.any((g) => g.state == GameState.live);
+      final nearCflGame = league.isCfl &&
+          cached.$1.games.any((g) =>
+              g.state == GameState.pre &&
+              g.start.difference(DateTime.now()).abs() <
+                  const Duration(minutes: 30));
       final age = DateTime.now().difference(cached.$2);
       if (age <
-          (live ? const Duration(seconds: 50) : const Duration(minutes: 10))) {
+          (live || nearCflGame
+              ? const Duration(seconds: 50)
+              : const Duration(minutes: 10))) {
         return Future.value(cached.$1);
       }
     }
@@ -200,6 +231,18 @@ class SportsService {
 
   Future<SportsTeamSchedule?> _downloadSchedule(
       SportsLeague league, String teamId, String key) async {
+    if (league.isCfl) {
+      try {
+        final schedule = await _cfl.teamSchedule(teamId);
+        if (schedule != null) {
+          _scheduleCache[key] = (schedule, DateTime.now());
+        }
+        return schedule;
+      } catch (e) {
+        debugPrint('SportsService: CFL team $teamId schedule failed: $e');
+        return _scheduleCache[key]?.$1;
+      }
+    }
     if (league.sportsDbId != null) {
       return _downloadDbSchedule(league, teamId, key);
     }
@@ -275,31 +318,28 @@ class SportsService {
     return '$n$suffix';
   }
 
-  /// TheSportsDB has no box score on the free key: the pop-up shows the
-  /// league table (its top 5) when either team is in it.
-  Future<SportsGameSummary?> _dbSummary(SportsGame game) async {
+  /// Sources without a box score show the teams' available standings.
+  Future<SportsGameSummary?> _tableSummary(SportsGame game) async {
     final table = await standings(game.league);
     final ids = {game.home.id, game.away.id};
+    final keys = game.league.isCfl
+        ? const ['gamesPlayed', 'wins', 'losses', 'ties', 'points']
+        : const ['gamesPlayed', 'wins', 'ties', 'losses', 'points'];
     return SportsGameSummary(tables: [
       for (final g in table?.groups ?? const <SportsStandingGroup>[])
         if (g.rows.any((r) => ids.contains(r.team.id)))
           SportsSummaryTable(
-            title: g.name,
-            labels: const ['GP', 'W', 'D', 'L', 'PTS'],
+            title: tr(g.name),
+            labels: game.league.isCfl
+                ? const ['GP', 'W', 'L', 'T', 'PTS']
+                : const ['GP', 'W', 'D', 'L', 'PTS'],
             rows: [
               for (final r in g.rows)
                 (
                   r.team.id,
                   r.team.name,
                   [
-                    for (final k in const [
-                      'gamesPlayed',
-                      'wins',
-                      'ties',
-                      'losses',
-                      'points'
-                    ])
-                      r.stat(k),
+                    for (final k in keys) r.stat(k),
                   ],
                 ),
             ],
@@ -314,7 +354,10 @@ class SportsService {
   /// live list's detail pop-up). One call per opened game, cached 30 s
   /// while it's live. Null when ESPN can't be reached and nothing is cached.
   Future<SportsGameSummary?> gameSummary(SportsGame game) {
-    if (game.league.sportsDbId != null) return _dbSummary(game);
+    if (game.league.sportsDbId != null ||
+        (game.league.isCfl && game.statusText == 'Score unavailable')) {
+      return _tableSummary(game);
+    }
     final key = '${game.league.id}|${game.id}';
     final cached = _summaryCache[key];
     if (cached != null &&
@@ -325,6 +368,32 @@ class SportsService {
       return Future.value(cached.$1);
     }
     return _summaryInFlight[key] ??= () async {
+      if (game.league.isCfl) {
+        try {
+          final results = await Future.wait([
+            _cfl.gameSummary(game),
+            _tableSummary(game),
+          ]);
+          final details = results[0]!;
+          final previous = _summaryCache[key]?.$1;
+          // One feed can fail while the other updates. Keep the last
+          // available box score instead of blanking it on a transient error.
+          final summary = SportsGameSummary(
+            teamStats: details.teamStats.isNotEmpty
+                ? details.teamStats
+                : previous?.teamStats ?? const [],
+            players: details.players.isNotEmpty
+                ? details.players
+                : previous?.players ?? const {},
+            tables: results[1]?.tables ?? previous?.tables ?? const [],
+          );
+          _summaryCache[key] = (summary, DateTime.now());
+          return summary;
+        } catch (e) {
+          debugPrint('SportsService: CFL summary ${game.id} failed: $e');
+          return _summaryCache[key]?.$1 ?? await _tableSummary(game);
+        }
+      }
       final url =
           Uri.parse('$_base/${game.league.espnPath}/summary?event=${game.id}');
       // It's ~40 KB gzipped and answers in well under a second, so a slow
@@ -384,6 +453,15 @@ class SportsService {
   /// go weeks without a game. Null when ESPN lists nothing upcoming.
   Future<DateTime?> nextGameStart(SportsLeague league, DateTime from) async {
     final day = DateTime(from.year, from.month, from.day);
+    if (league.isCfl) {
+      final starts = [
+        for (final game in await _cflGames())
+          if (game.state != GameState.post &&
+              !game.start.toLocal().isBefore(day))
+            game.start.toLocal(),
+      ]..sort();
+      return starts.firstOrNull;
+    }
     var hit = _windowStarts[league.id];
     if (hit == null ||
         DateTime.now().difference(hit.$2) > const Duration(minutes: 30)) {

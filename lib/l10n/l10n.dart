@@ -273,6 +273,9 @@ const Map<String, _SportsLanguage> _sportsLanguages = {
 /// "Top 5th", "7th in Pacific Division") in the current language. Pattern
 /// based, so an unknown status passes through untouched.
 String trSports(String s) {
+  // Exact app-defined source statuses, before ESPN's phrase patterns.
+  final translated = tr(s);
+  if (translated != s) return translated;
   final lang = _sportsLanguages[L10n.code];
   if (lang == null || s.isEmpty) return s;
   // "7th in Pacific Division" -> "7e – Pacific Division" (ties: "T-3rd in").

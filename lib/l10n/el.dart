@@ -2276,4 +2276,22 @@ const Map<String, String> kEl = {
       "Πατήστε OK ενώ παίζει κανάλι, ταινία ή επεισόδιο για να ανοίξει μια κάρτα με τις λεπτομέρειες της ροής: ανάλυση, καρέ ανά δευτερόλεπτο, codecs, bitrate, παραλλαγές ποιότητας, κομμάτια ήχου, buffer και HDR. Απενεργοποιημένο: το OK δείχνει μόνο τις πληροφορίες του καναλιού.",
   "Stream details when you press OK while watching":
       "Λεπτομέρειες ροής όταν πατάτε OK κατά την προβολή",
+  // CFL official feed
+  'East Division': 'Ανατολική περιφέρεια',
+  'West Division': 'Δυτική περιφέρεια',
+  'Score unavailable': 'Μη διαθέσιμο σκορ',
+  'Passing yards': 'Γιάρδες πάσας',
+  'Rushing yards': 'Γιάρδες τρεξίματος',
+  'Net offence': 'Καθαρή επίθεση',
+  'First downs': 'Πρώτα down',
+  'Sacks': 'Sack',
+  '2nd down conversions': 'Μετατροπές 2ου down',
+  'Turnovers': 'Απώλειες κατοχής',
+  'Penalties (yards)': 'Ποινές (γιάρδες)',
+  'Field goals': 'Field goals',
+  'Time of possession': 'Χρόνος κατοχής',
+  'Punting': 'Punt',
+  'Kickoffs': 'Kickoff',
+  'Kickoff returns': 'Επιστροφές kickoff',
+  'Punt returns': 'Επιστροφές punt',
 };

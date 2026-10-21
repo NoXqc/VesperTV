@@ -730,6 +730,7 @@ class SportsGameDetailsDialog extends StatefulWidget {
     required this.matches,
     required this.hideScores,
     this.overStream = false,
+    this.service,
   });
 
   final SportsGame game;
@@ -739,6 +740,9 @@ class SportsGameDetailsDialog extends StatefulWidget {
   /// "Pull stats" from the fullscreen player's side panel: see-through, and
   /// to the right of the panel ([leftInset]) so the picture stays visible.
   final bool overStream;
+
+  /// Allows the shared popup's two presentation modes to be tested offline.
+  final SportsService? service;
   static const double leftInset = 400;
 
   @override
@@ -775,13 +779,14 @@ class _SportsGameDetailsDialogState extends State<SportsGameDetailsDialog> {
   }
 
   Future<void> _load() async {
-    var s = await SportsService.instance.gameSummary(widget.game);
+    final service = widget.service ?? SportsService.instance;
+    var s = await service.gameSummary(widget.game);
     // Nothing yet: one more try a second later rather than at the next
     // 30 s refresh.
     if (s == null && _summary == null && mounted) {
       await Future<void>.delayed(const Duration(seconds: 1));
       if (!mounted) return;
-      s = await SportsService.instance.gameSummary(widget.game);
+      s = await service.gameSummary(widget.game);
     }
     if (!mounted) return;
     setState(() {
@@ -1080,6 +1085,10 @@ String _groupTitle(String id) => switch (id) {
       'receiving' => tr('Receiving'),
       'defensive' => tr('Defense'),
       'kicking' => tr('Kicking'),
+      'punting' => tr('Punting'),
+      'kickoffs' => tr('Kickoffs'),
+      'kickoffReturns' => tr('Kickoff returns'),
+      'puntReturns' => tr('Punt returns'),
       'forwards' => tr('Forwards'),
       'defenses' => tr('Defensemen'),
       'goalies' => tr('Goalies'),
@@ -1285,7 +1294,7 @@ class _SummaryBody extends StatelessWidget {
                           style: const TextStyle(
                               fontSize: 13, color: Colors.white))),
                   Expanded(
-                      child: Text(label,
+                      child: Text(tr(label),
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                               fontSize: 12, color: Colors.white54))),

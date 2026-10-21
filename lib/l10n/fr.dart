@@ -1668,4 +1668,22 @@ const Map<String, String> kFr = {
       "Appuyez sur OK pendant la lecture d'une chaîne, d'un film ou d'un épisode pour ouvrir une carte avec les détails du flux : résolution, images par seconde, codecs, débit, variantes de qualité, pistes audio, mémoire tampon et HDR. Désactivé : OK affiche seulement les infos de la chaîne.",
   "Stream details when you press OK while watching":
       "Détails du flux quand vous appuyez sur OK en regardant",
+  // CFL official feed
+  'East Division': 'Division Est',
+  'West Division': 'Division Ouest',
+  'Score unavailable': 'Score indisponible',
+  'Passing yards': 'Verges par la passe',
+  'Rushing yards': 'Verges au sol',
+  'Net offence': 'Attaque nette',
+  'First downs': 'Premiers essais',
+  'Sacks': 'Sacs du quart',
+  '2nd down conversions': 'Conversions au 2e essai',
+  'Turnovers': 'Revirements',
+  'Penalties (yards)': 'Pénalités (verges)',
+  'Field goals': 'Bottés de placement',
+  'Time of possession': 'Temps de possession',
+  'Punting': 'Dégagements',
+  'Kickoffs': 'Bottés d’envoi',
+  'Kickoff returns': 'Retours de botté d’envoi',
+  'Punt returns': 'Retours de dégagement',
 };
