@@ -84,6 +84,8 @@ const Map<String, String> kIt = {
   'Switch to {p}: {name}': "Passa a {p}: {name}",
   'Switch to {playlistName}: {name}': "Passa a {playlistName}: {name}",
   'Technical details': "Dettagli tecnici",
+  "This is a Dolby Vision video, and this device can't play this kind of Dolby Vision. Pick a version without DV (HDR10 or SDR) if your source has one.":
+      "Questo video è in Dolby Vision e questo dispositivo non può riprodurre questo tipo di Dolby Vision. Scegli una versione senza DV (HDR10 o SDR) se la tua fonte ne offre una.",
   'This device\'s video decoder couldn\'t play this stream — likely 4K HDR (HEVC 10-bit). If your provider offers an HD (non-4K) version of this channel or title, try that. If another app plays this stream on this device, please report it with a photo of the technical details below.':
       "Il decoder video di questo dispositivo non è riuscito a riprodurre questo flusso; probabilmente è 4K HDR (HEVC 10 bit). Se il tuo provider offre una versione HD (non 4K) di questo canale o titolo, prova quella. Se un'altra app riproduce questo flusso su questo dispositivo, segnalacelo con una foto dei dettagli tecnici qui sotto.",
   'Playback error:\n{raw}': "Errore di riproduzione:\n{raw}",

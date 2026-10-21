@@ -66,3 +66,6 @@ app.*.map.json
 
 # Per-session handoff notes (may contain in-progress details)
 /HANDOFF.md
+
+# Users' Send-log files the owner saves for the agents to read (never commit)
+/Logs/

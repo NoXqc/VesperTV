@@ -56,12 +56,17 @@ class SeriesDetailScreen extends StatefulWidget {
     this.playEpisode,
     this.showFavorite = true,
     this.imdbId,
+    this.sourceLabel,
   });
 
   /// The show's IMDb id when known (Media Hub shows): with
   /// [XtreamSeries.tmdbId] (IPTV, from the provider) it matches the show
   /// on Trakt/Simkl — watched episodes get their mark, plays are reported.
   final String? imdbId;
+
+  /// The Media Hub source the show came from, as the last chip — same as
+  /// the movie page (`ArchiveDetailScreen`); a user missed it on shows.
+  final String? sourceLabel;
 
   final XtreamSeries series;
 
@@ -287,7 +292,14 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
 
   // --- Actions ------------------------------------------------------------
 
+  /// The episode whose streams are being looked up (Media Hub shows, see
+  /// [SeriesDetailScreen.playEpisode]): an hourglass on its card and on
+  /// Play, and further presses ignored until the stream list opens — the
+  /// movie page already did this; a user thought the tap hadn't worked.
+  String? _startingId;
+
   Future<void> _play(Channel episode, {bool restart = false}) async {
+    if (_startingId != null) return;
     final storage = context.read<StorageService>();
     // A watched episode starts over: one marked by hold sits at 100%, so
     // resuming it would hit the end at once and auto-advance.
@@ -297,7 +309,12 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     if (!mounted) return;
     final custom = widget.playEpisode;
     if (custom != null) {
-      await custom(episode, _allEpisodes);
+      setState(() => _startingId = episode.id);
+      try {
+        await custom(episode, _allEpisodes);
+      } finally {
+        if (mounted) setState(() => _startingId = null);
+      }
       _refreshProgress();
       return;
     }
@@ -792,6 +809,8 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                 strong: true,
               ),
             for (final chip in chips) DetailMetaChip(scale: s, label: chip),
+            if (widget.sourceLabel != null)
+              DetailMetaChip(scale: s, label: widget.sourceLabel!),
           ],
         ),
         if (plot != null) ...[
@@ -842,7 +861,9 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
       if (next != null)
         DetailPillButton(
           focusNode: _playNode,
-          icon: Icons.play_arrow_rounded,
+          icon: _startingId != null
+              ? Icons.hourglass_top
+              : Icons.play_arrow_rounded,
           label: next.resume
               ? tr('Resume {code}', {'code': _episodeCode(next.episode)})
               : tr('Play {code}', {'code': _episodeCode(next.episode)}),
@@ -977,6 +998,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                       thumbHeight: thumbH,
                       scale: s,
                       highlighted: i == highlighted,
+                      busy: _startingId == episode.id,
                       onTap: () => _play(episode),
                       onHold: () => _toggleWatched(episode),
                       onFocused: () {
@@ -1370,8 +1392,11 @@ class _EpisodeCard extends StatefulWidget {
     required this.onTap,
     required this.onHold,
     required this.onFocused,
+    this.busy = false,
   });
 
+  /// Its streams are being looked up: hourglass over the thumbnail.
+  final bool busy;
   final _EpisodeInfo info;
   final FocusNode focusNode;
   final double width;
@@ -1455,11 +1480,24 @@ class _EpisodeCardState extends State<_EpisodeCard> {
                         : const [],
                   ),
                   clipBehavior: Clip.antiAlias,
-                  child: _Thumb(
-                    info: info,
-                    width: widget.width,
-                    height: widget.thumbHeight,
-                    scale: s,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      _Thumb(
+                        info: info,
+                        width: widget.width,
+                        height: widget.thumbHeight,
+                        scale: s,
+                      ),
+                      if (widget.busy)
+                        ColoredBox(
+                          color: Colors.black54,
+                          child: Center(
+                            child: Icon(Icons.hourglass_top,
+                                size: 34 * s, color: scheme.primary),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 SizedBox(height: 6 * s),

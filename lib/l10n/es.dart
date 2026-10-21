@@ -85,6 +85,8 @@ const Map<String, String> kEs = {
   'Switch to {p}: {name}': "Cambiar a {p}: {name}",
   'Switch to {playlistName}: {name}': "Cambiar a {playlistName}: {name}",
   'Technical details': "Detalles técnicos",
+  "This is a Dolby Vision video, and this device can't play this kind of Dolby Vision. Pick a version without DV (HDR10 or SDR) if your source has one.":
+      "Este video es Dolby Vision y este dispositivo no puede reproducir este tipo de Dolby Vision. Elige una versión sin DV (HDR10 o SDR) si tu fuente la ofrece.",
   'This device\'s video decoder couldn\'t play this stream — likely 4K HDR (HEVC 10-bit). If your provider offers an HD (non-4K) version of this channel or title, try that. If another app plays this stream on this device, please report it with a photo of the technical details below.':
       "El decodificador de video de este dispositivo no pudo reproducir esta transmisión; probablemente sea 4K HDR (HEVC 10 bits). Si tu proveedor ofrece una versión HD (no 4K) de este canal o título, prueba con esa. Si otra app reproduce esta transmisión en este dispositivo, avísanos con una foto de los detalles técnicos de abajo.",
   'Playback error:\n{raw}': "Error de reproducción:\n{raw}",

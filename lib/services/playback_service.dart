@@ -801,6 +801,7 @@ int? httpStatusFromPlaybackError(String raw) {
 bool isDecoderPlaybackError(String raw) {
   final lower = raw.toLowerCase();
   return lower.contains('mediacodecvideorenderer') ||
+      lower.contains('[unsupported_video:') ||
       (lower.contains('hevc') && lower.contains('10bit'));
 }
 

@@ -112,9 +112,12 @@ class VideoPlayerPane extends StatelessWidget {
       final linkedChannel = channelLink == null
           ? null
           : context.read<PlaylistManager>().resolveChannelLink(channelLink);
+      // 48 px sides + width cap: a long message ran past both edges of a
+      // TV with overscan (Formuler photo, 2026-10-21).
       return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 1000),
+          padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -329,6 +332,13 @@ class _SwitchToLinkedChannelButtonState
 /// code makes an incapable decoder chip decode 10-bit HDR. This just
 /// stops surfacing that as a raw stack-trace-shaped string.
 String _friendlyPlaybackError(String raw) {
+  // No decoder for the video at all (ExoPlayerEventListener's
+  // [UNSUPPORTED_VIDEO: mime codecs size] tag). Dolby Vision profile 5/7 is
+  // the usual one: profile 8 already plays as HDR10 on a plain HEVC decoder.
+  if (raw.contains('[UNSUPPORTED_VIDEO: video/dolby-vision')) {
+    return tr(
+        "This is a Dolby Vision video, and this device can't play this kind of Dolby Vision. Pick a version without DV (HDR10 or SDR) if your source has one.");
+  }
   if (isDecoderPlaybackError(raw)) {
     return tr(
         'This device\'s video decoder couldn\'t play this stream — likely 4K HDR (HEVC 10-bit). If your provider offers an HD (non-4K) version of this channel or title, try that. If another app plays this stream on this device, please report it with a photo of the technical details below.');

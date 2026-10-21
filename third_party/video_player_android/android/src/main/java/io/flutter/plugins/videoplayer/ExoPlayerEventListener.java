@@ -10,6 +10,7 @@ import android.os.SystemClock;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.media3.common.C;
+import androidx.media3.common.Format;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.media3.common.Timeline;
@@ -38,6 +39,15 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
   private static final int MAX_ERRORS_IN_WINDOW = 3;
   private long errorWindowStartMs = 0;
   private int errorsInWindow = 0;
+
+  // VesperTV: failures since playback last reached READY. The window above
+  // alone never gave up on a link whose every attempt took longer than
+  // ~3 s to fail: a dead Media Hub link (HTTP 404 behind a slow debrid
+  // redirect) failed every ~6.5 s, each window reset first, and the user
+  // got an endless spinner for minutes (Shield log, 2026-10-21). Reset on
+  // READY, so a live stream that recovers keeps recovering.
+  private static final int MAX_CONSECUTIVE_ERRORS = 3;
+  private int consecutiveErrors = 0;
   private boolean isInitialized = false;
   private boolean isWaitingForValidDuration = false;
   private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -46,7 +56,7 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
         if (!isInitialized && isWaitingForValidDuration) {
           isWaitingForValidDuration = false;
           isInitialized = true;
-          sendInitialized();
+          sendInitializedOrReportUnplayable();
         }
       };
   private final Runnable recover;
@@ -85,7 +95,25 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
       errorsInWindow = 0;
     }
     errorsInWindow++;
-    return errorsInWindow <= MAX_ERRORS_IN_WINDOW;
+    consecutiveErrors++;
+    return errorsInWindow <= MAX_ERRORS_IN_WINDOW
+        && consecutiveErrors <= MAX_CONSECUTIVE_ERRORS;
+  }
+
+  /**
+   * VesperTV: the server said the file isn't there (HTTP 404 Not Found / 410 Gone). Retrying in
+   * place can't bring it back, so the error goes straight to Dart (its error screen, backup
+   * servers).
+   */
+  static boolean isGoneError(@NonNull PlaybackException error) {
+    for (Throwable t = error.getCause(); t != null; t = t.getCause()) {
+      if (t instanceof HttpDataSource.InvalidResponseCodeException) {
+        int code = ((HttpDataSource.InvalidResponseCodeException) t).responseCode;
+        if (code == 404 || code == 410) return true;
+      }
+      if (t.getCause() == t) break;
+    }
+    return false;
   }
 
   private void scheduleRecovery() {
@@ -208,7 +236,50 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
     isWaitingForValidDuration = false;
     isInitialized = true;
     mainHandler.removeCallbacks(initializationFallback);
-    sendInitialized();
+    sendInitializedOrReportUnplayable();
+  }
+
+  // VesperTV: a stream whose video no decoder on this device can play (Dolby
+  // Vision profile 5/7 on a box without a DV decoder: a 4K DV episode from
+  // the Media Hub on a Formuler Z11 Pro MAX, 2026-10-21) still goes READY on
+  // its audio alone, with no video format. The platform view's
+  // sendInitialized() then crashed the whole app on that null. Report it as
+  // a playback error instead (the tag is read by isDecoderPlaybackError on
+  // the Dart side), and stop the audio playing behind the error screen.
+  private void sendInitializedOrReportUnplayable() {
+    String unplayable = unplayableVideoTrack();
+    if (unplayable == null) {
+      sendInitialized();
+      return;
+    }
+    exoPlayer.setPlayWhenReady(false);
+    events.onError(
+        "VideoError",
+        "No decoder on this device can play this video [UNSUPPORTED_VIDEO: " + unplayable + "]",
+        null);
+  }
+
+  /** The stream's video track when it has one but none of its tracks can be decoded here. */
+  @Nullable
+  private String unplayableVideoTrack() {
+    if (exoPlayer.getVideoFormat() != null) {
+      return null;
+    }
+    String unplayable = null;
+    for (Tracks.Group group : exoPlayer.getCurrentTracks().getGroups()) {
+      if (group.getType() != C.TRACK_TYPE_VIDEO) {
+        continue;
+      }
+      if (group.isSupported()) {
+        return null;
+      }
+      Format format = group.getTrackFormat(0);
+      unplayable =
+          format.sampleMimeType
+              + (format.codecs == null ? "" : " " + format.codecs)
+              + (format.width > 0 ? " " + format.width + "x" + format.height : "");
+    }
+    return unplayable;
   }
 
   @Override
@@ -220,6 +291,7 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
         break;
       case Player.STATE_READY:
         platformState = PlatformPlaybackState.READY;
+        consecutiveErrors = 0;
         maybeSendInitialized();
         break;
       case Player.STATE_ENDED:
@@ -258,7 +330,7 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
       return;
     }
 
-    if (allowRetry()) {
+    if (!isGoneError(error) && allowRetry()) {
       // In-place recovery: re-preparing the same ExoPlayer instance resets
       // its internal renderers (including recreating the MediaCodec
       // decoders) without releasing the Surface/texture, so playback just

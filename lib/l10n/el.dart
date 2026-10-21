@@ -132,6 +132,8 @@ const Map<String, String> kEl = {
       "Αλλαγή σε {playlistName}: {name}",
   "Technical details":
       "Τεχνικές λεπτομέρειες",
+  "This is a Dolby Vision video, and this device can't play this kind of Dolby Vision. Pick a version without DV (HDR10 or SDR) if your source has one.":
+      "Αυτό το βίντεο είναι Dolby Vision και αυτή η συσκευή δεν μπορεί να παίξει αυτό το είδος Dolby Vision. Διάλεξε μια έκδοση χωρίς DV (HDR10 ή SDR) αν την προσφέρει η πηγή σου.",
   "This device's video decoder couldn't play this stream — likely 4K HDR (HEVC 10-bit). If your provider offers an HD (non-4K) version of this channel or title, try that. If another app plays this stream on this device, please report it with a photo of the technical details below.":
       "Ο αποκωδικοποιητής βίντεο της συσκευής δεν μπόρεσε να παίξει αυτή τη ροή — πιθανότατα 4K HDR (HEVC 10-bit). Αν ο πάροχος έχει έκδοση HD (όχι 4K) αυτού του καναλιού ή τίτλου, δοκιμάστε την. Αν άλλη εφαρμογή παίζει αυτή τη ροή σε αυτή τη συσκευή, αναφέρετέ το με φωτογραφία των τεχνικών λεπτομερειών παρακάτω.",
   "Playback error:\n{raw}":

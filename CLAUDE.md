@@ -162,6 +162,9 @@ set by `HttpVideoAsset`), `StatsBridge.java` (MethodChannel `vespertv/stats` →
 rendered / dropped frames), `VideoAsset.streamStats()`, `VideoPlayer.streamStats`, and
 `videoPlayer.streamStats = videoAsset.streamStats()` in both `VideoPlayerPlugin` create methods.
 Uses `android.util.LongSparseArray`; new classes need `@OptIn(markerClass = UnstableApi.class)`.
+Next release: **`ExoPlayerEventListener`** gives up on HTTP 404/410 at once (`isGoneError`) and after
+3 failures in a row without reaching READY (`consecutiveErrors`); the 10 s window alone never fired
+when each attempt took ~6.5 s to fail (endless spinner on a dead Media Hub link).
 Added in 1.0.34: **`BufferBudget.java`** — on devices under 2.5 GB RAM (or `isLowRamDevice`),
 `setTargetBufferBytes` 64 MB in `PlatformViewVideoPlayer` and 32 MB in `TextureVideoPlayer` (the
 time limits alone let a 4K remux fill ~140 MB of Java heap; the Fire Stick ran out of memory).
@@ -310,6 +313,19 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-21)
+- **Unreleased (next = 1.0.35):** Media Hub show page shows its source chip (`SeriesDetailScreen
+  .sourceLabel`) and an hourglass on the tapped episode + Play while streams load (`_startingId`,
+  extra presses ignored). **Add-on links resolved once before playing** (`services/stream_resolver.dart`
+  `resolveRedirects`, `archive_playback._playUrl`; media servers skipped; `_track` keeps the original
+  link for `ArchiveReadyWatch`): a 4K DV episode took 6.5 s to start on a Shield (user log) because
+  every range request re-walked add-on → debrid API → CDN; measured on a TorBox remux 2.3 s → 0.65 s
+  for 3 requests. **No endless retry on dead links** (§9). Shield user's 47 GB Carrie link was an
+  HTTP 404 retried 18x. **Unplayable video no longer crashes the app**: a DV profile 5 episode
+  (`dvhe.05.06`) on the Formuler (no DV decoder) went READY on audio alone and the platform view's
+  `sendInitialized` NPE'd on the null video format (also seen on 1.0.30). `ExoPlayerEventListener
+  .sendInitializedOrReportUnplayable` now pauses and errors with `[UNSUPPORTED_VIDEO: mime codecs
+  size]`; `_friendlyPlaybackError` has a Dolby Vision message (owner-confirmed). DV profile 8 (and 4)
+  already plays as HDR10 via media3's HEVC fallback; profile 5 can't; profile 7 could (not done).
 - **Shipped: 1.0.34 (`+388`, 2026-10-21, latest; test builds `+386`/`+387` = pre-releases
   `1.0.34-test.386`/`.387`, `+388` owner-tested on the Fire Stick):** **list-only add-ons** (`ArchiveSource.listOnly`,
   stored `listOnly`): a manifest with movie/series catalogs on IMDb ids (or no idPrefixes) and no
@@ -751,6 +767,8 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 - Local junk is git-ignored/untracked on purpose (`nox_*.png` screenshots, `*.apk`, `*-windows-x64.zip`).
 
 ## 15. Session hygiene (token efficiency)
+- **User logs:** the owner saves users' Send-log files in `Logs/` (repo root, git-ignored) for the agents
+  to read, e.g. `Logs/LOG-F28YBG.txt`. Read them from there; never commit or quote secrets from them.
 - **Two agents:** Claude and Codex share this repo. `AGENTS.md` is the entry point for Codex (and its
   hard rules, branch etiquette, task split and handoff/pickup steps); `CLAUDE.md` stays the single
   rulebook. Only one agent works at a time; commit before switching; Codex works on `codex/*` branches.

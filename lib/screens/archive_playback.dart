@@ -14,6 +14,7 @@ import '../services/desktop_mini_player.dart';
 import '../services/playback_service.dart';
 import '../services/tracker_api.dart';
 import '../services/archive_ready_watch.dart';
+import '../services/stream_resolver.dart';
 import '../services/watch_tracker.dart';
 import '../widgets/tv_menu_tile.dart';
 import 'desktop_player_screen.dart';
@@ -104,6 +105,15 @@ ArchiveStreamOption preferredArchiveStream(
   return sameSource.firstOrNull ?? options.first;
 }
 
+/// The link the player gets: an add-on stream's redirect chain followed
+/// once ([resolveRedirects] — every request the player makes for a big file
+/// then goes straight to the CDN). A media server's link is direct already.
+/// [_track] keeps the original link: `ArchiveReadyWatch` must re-ask the
+/// add-on, not the "being downloaded" clip it redirected to.
+Future<String> _playUrl(ArchiveStreamOption o) => o.source.server != null
+    ? Future.value(o.stream.url)
+    : resolveRedirects(o.stream.url);
+
 /// Lets the players report this title to Trakt/Simkl (by IMDb id; titles
 /// without one aren't reported). See `WatchTracker`. Also lets them tell a
 /// source's "being downloaded" clip from the title (`ArchiveReadyWatch`).
@@ -154,9 +164,11 @@ Future<void> playArchiveTitle(
       ? options.single
       : await pickArchiveStream(context, options);
   if (picked == null || !context.mounted) return;
-  final channel =
+  final tracked =
       service.channelFor(source, meta, picked.stream, episode: episode);
-  _track(channel, meta, episode);
+  _track(tracked, meta, episode);
+  final channel = tracked.copyWith(url: await _playUrl(picked));
+  if (!context.mounted) return;
   // Extras' "Recently watched" row (the show, for an episode).
   unawaited(service.recordWatched(source, meta));
 
@@ -169,7 +181,7 @@ Future<void> playArchiveTitle(
     picked = o; // the episode after follows this one
     final ch = service.channelFor(source, meta, o.stream, episode: video);
     _track(ch, meta, video);
-    return ch;
+    return ch.copyWith(url: await _playUrl(o));
   }
 
   final hasQueue = queue != null && queue.isNotEmpty;
@@ -266,6 +278,7 @@ Future<void> openArchiveSeries(
             playEpisode: play,
             showFavorite: false,
             imdbId: preview.imdb,
+            sourceLabel: source.name,
           )));
 }
 
