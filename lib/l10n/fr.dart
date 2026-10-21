@@ -1002,10 +1002,10 @@ const Map<String, String> kFr = {
   'No upcoming games listed yet for this league.':
       "Aucun match à venir pour cette ligue pour l'instant.",
   'Transfer to another device': "Transférer vers un autre appareil",
-  'Copy playlists, favorites and settings over Wi-Fi':
-      "Copier listes, favoris et réglages par Wi-Fi",
-  'Copies your playlists, favorites, hidden groups, profiles, watch progress and settings to another device. On the same Wi-Fi it goes straight across; anywhere else it goes through an encrypted upload only the code can open. Channels, movies and the guide download again on the new device.':
-      "Copie vos listes, favoris, groupes masqués, profils, progression et réglages vers un autre appareil. Sur le même Wi-Fi, ça passe directement; ailleurs, ça passe par un envoi chiffré que seul le code peut ouvrir. Les chaînes, films et le guide se téléchargent de nouveau sur le nouvel appareil.",
+  'Copy all of your data to another device':
+      "Copier toutes vos données sur un autre appareil",
+  'Copies your playlists, favorites, hidden groups, profiles, watch progress, {tab} (leagues, favourite league, My Teams) and settings to another device. On the same Wi-Fi it goes straight across; anywhere else it goes through an encrypted upload only the code can open. Channels, movies and the guide download again on the new device.':
+      "Copie vos listes, favoris, groupes masqués, profils, progression, {tab} (ligues, ligue favorite, Mes équipes) et réglages vers un autre appareil. Sur le même Wi-Fi, ça passe directement; ailleurs, ça passe par un envoi chiffré que seul le code peut ouvrir. Les chaînes, films et le guide se téléchargent de nouveau sur le nouvel appareil.",
   'This setup is too big to upload. Use the same-Wi-Fi transfer instead.':
       "Cette configuration est trop grosse pour l'envoi. Utilisez plutôt le transfert par le même Wi-Fi.",
   'Couldn\'t reach the VesperTV transfer server. Check this device\'s internet connection and try again.':
@@ -1312,4 +1312,130 @@ const Map<String, String> kFr = {
   // Extras: watched history + recent searches
   'Recently watched': 'Regardés récemment',
   'Clear recent searches': 'Effacer les recherches récentes',
+  // Data pool (player stream details, Settings > General)
+  "Data pool":
+      "Data pool",
+  "Data pool display":
+      "Affichage du Data pool",
+  "Press OK while a live channel plays to open a second card under the channel info with the stream's details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer and HDR. Off: OK shows only the channel info.":
+      "Appuyez sur OK pendant une chaîne en direct pour ouvrir une deuxième carte sous les infos de la chaîne, avec les détails du flux : résolution, images par seconde, codecs, débit, variantes de qualité, pistes audio, mémoire tampon et HDR. Désactivé : OK n'affiche que les infos de la chaîne.",
+  "Reading the stream…":
+      "Lecture du flux…",
+  "Video":
+      "Vidéo",
+  "Video bitrate":
+      "Débit vidéo",
+  "Picture":
+      "Image",
+  "Quality variants":
+      "Variantes de qualité",
+  "One (not adaptive)":
+      "Une seule (non adaptatif)",
+  "Audio":
+      "Audio",
+  "Audio tracks":
+      "Pistes audio",
+  "Stream":
+      "Flux",
+  "Buffered":
+      "En mémoire tampon",
+  "{seconds} s":
+      "{seconds} s",
+  "State":
+      "État",
+  "Buffering…":
+      "Mise en mémoire tampon…",
+  "Playing for {time}":
+      "Lecture depuis {time}",
+  "Paused":
+      "En pause",
+  "Device HDR":
+      "HDR de l'appareil",
+  "Not reported by the stream":
+      "Non indiqué par le flux",
+  "Mono":
+      "Mono",
+  "Stereo":
+      "Stéréo",
+  "Direct stream":
+      "Flux direct",
+  "Yes":
+      "Oui",
+  "No":
+      "Non",
+  "Stream bitrate":
+      "Débit du flux",
+  "Declared bitrate":
+      "Débit déclaré",
+  "Dropped frames":
+      "Images perdues",
+  "(measured)":
+      "(mesuré)",
+  "Measuring…":
+      "Mesure…",
+  // Settings categories (left panel)
+  "Playlists & guide":
+      "Listes et guide",
+  "Your playlists and their logins, the TV guide (EPG) and the viewer profiles.":
+      "Vos listes et leurs identifiants, le guide TV (EPG) et les profils.",
+  "Everything the Media Hub uses: its add-on sources, online subtitles, Trakt & Simkl watch tracking and the optional TMDB key.":
+      "Tout ce que le Media Hub utilise : ses sources d’add-ons, les sous-titres en ligne, le suivi Trakt et Simkl et la clé TMDB facultative.",
+  "Interface":
+      "Interface",
+  "How the app looks and what it shows: theme, tabs, the player's extras and reminders.":
+      "L’apparence et ce qui s’affiche : thème, onglets, extras du lecteur et rappels.",
+  "Hide Movies, TV Shows, Media Hub or Multiview":
+      "Masquer Films, Séries, Media Hub ou Multiview",
+  "Fixes for the picture on some Fire TV sticks":
+      "Correctifs pour l’image sur certaines clés Fire TV",
+  "Stream details when you press OK on a channel":
+      "Détails du flux quand vous appuyez sur OK sur une chaîne",
+  "One list for every playlist, or one per playlist":
+      "Une liste pour toutes les listes, ou une par liste",
+  "The connections tip when opening Multiview":
+      "L’astuce sur les connexions à l’ouverture du Multiview",
+  "The \"Hold > to resume\" pill":
+      "La pastille « Maintenir > pour reprendre »",
+  "Language and clock, what plays when the app starts, Fast startup, and clearing your history.":
+      "Langue et horloge, ce qui joue au démarrage, Démarrage rapide, et l’effacement de l’historique.",
+  "App language and 24-hour clock":
+      "Langue de l’app et horloge 24 h",
+  "Resume the last channel, Fast startup":
+      "Reprendre la dernière chaîne, Démarrage rapide",
+  "Clear searches, channels, Continue Watching":
+      "Effacer recherches, chaînes, Reprendre la lecture",
+  "Device & data":
+      "Appareil et données",
+  "Move your whole setup to another device, keep a backup of it, and update VesperTV.":
+      "Copiez toute votre configuration sur un autre appareil, gardez-en une sauvegarde et mettez VesperTV à jour.",
+  // Own live groups (Move to group)
+  "Move to group…":
+      "Déplacer vers un groupe…",
+  "Move {name} to":
+      "Déplacer {name} vers",
+  "New group…":
+      "Nouveau groupe…",
+  "Back to {group}":
+      "Retour dans {group}",
+  "New group":
+      "Nouveau groupe",
+  "Group name":
+      "Nom du groupe",
+  "{name} is now in {group}":
+      "{name} est maintenant dans {group}",
+  "Delete this group":
+      "Supprimer ce groupe",
+  "{group} deleted. Its channels are back in their groups.":
+      "{group} supprimé. Ses chaînes sont revenues dans leurs groupes.",
+  // Fast startup
+  "Fast startup":
+      "Démarrage rapide",
+  "Opens the app without waiting for Movies and TV Shows to load; they fill in a few seconds later. For fast devices — leave it off on an older box if the app closes by itself right after starting. Applies from the next start.":
+      "Ouvre l’app sans attendre le chargement des Films et Séries ; ils se remplissent quelques secondes plus tard. Pour les appareils rapides — laissez-le désactivé sur un boîtier plus ancien si l’app se ferme toute seule juste après le démarrage. S’applique au prochain démarrage.",
+  // Group hold menu: New group
+  "{group} created. Hold OK on a channel > Move to group… to add channels.":
+      "{group} créé. Maintenez OK sur une chaîne > Déplacer vers un groupe… pour y ajouter des chaînes.",
+  // Channel menu: Remove from group
+  "Remove from {group}":
+      "Retirer de {group}",
 };

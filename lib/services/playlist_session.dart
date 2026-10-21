@@ -37,7 +37,12 @@ class PlaylistSession {
     required this.favoriteSeriesIds,
     required this.isRestrictedViewer,
     required this.onNotify,
+    this.myGroupOf,
   });
+
+  /// The viewer's own group a live channel was moved into (see
+  /// `UserGroups`, owned by `PlaylistManager`), or null.
+  final String? Function(Channel)? myGroupOf;
 
   PlaylistProfile profile;
   final StorageService storage;
@@ -1302,9 +1307,10 @@ class PlaylistSession {
       switch (category) {
         case 'tv':
           final list = groupTitle != null
-              ? _orderedChannels(
-                  groupTitle, liveChannels.where((c) => c.group == groupTitle))
-              : liveChannels.where((c) => !hiddenGroups.contains(c.group));
+              ? _orderedChannels(groupTitle,
+                  liveChannels.where((c) => liveGroupOf(c) == groupTitle))
+              : liveChannels
+                  .where((c) => !hiddenGroups.contains(liveGroupOf(c)));
           // Applied even when a specific group was asked for (unlike
           // hiddenGroups above) — a hidden channel is usually a
           // duplicate *within* an otherwise-wanted group, so hiding the
@@ -1323,7 +1329,8 @@ class PlaylistSession {
     }
 
     if (groupTitle != null) {
-      final inGroup = channels.where((c) => c.group == groupTitle);
+      final inGroup = channels.where(
+          (c) => (category == 'tv' ? liveGroupOf(c) : c.group) == groupTitle);
       final list =
           category == 'tv' ? _orderedChannels(groupTitle, inGroup) : inGroup;
       return (category == 'tv'
@@ -1334,7 +1341,8 @@ class PlaylistSession {
     return channels
         .where((c) =>
             _classifyGroup(c.group) == category &&
-            !hiddenGroups.contains(c.group) &&
+            !hiddenGroups
+                .contains(category == 'tv' ? liveGroupOf(c) : c.group) &&
             (category != 'tv' || !hiddenChannels.contains(c.rawId)))
         .toList();
   }
@@ -1360,10 +1368,10 @@ class PlaylistSession {
   /// index, or null if it isn't a visible channel of that group.
   Future<int?> moveChannel(String groupTitle, String rawId, int delta) async {
     final source = isXtream ? liveChannels : channels;
-    final all =
-        _orderedChannels(groupTitle, source.where((c) => c.group == groupTitle))
-            .map((c) => c.rawId)
-            .toList();
+    final all = _orderedChannels(
+            groupTitle, source.where((c) => liveGroupOf(c) == groupTitle))
+        .map((c) => c.rawId)
+        .toList();
     final visible = all.where((id) => !hiddenChannels.contains(id)).toList();
     final from = visible.indexOf(rawId);
     if (from < 0) return null;
@@ -1378,6 +1386,10 @@ class PlaylistSession {
     onNotify();
     return to;
   }
+
+  /// A live channel's group as shown: the viewer's own group it was moved
+  /// into, else the provider's.
+  String liveGroupOf(Channel c) => myGroupOf?.call(c) ?? c.group;
 
   Future<void> toggleChannelHidden(String rawId) async {
     if (hiddenChannels.contains(rawId)) {

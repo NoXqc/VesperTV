@@ -16,6 +16,7 @@ import 'epg_service.dart';
 import 'playlist_session.dart';
 import 'storage_service.dart';
 import 'tmdb_enrichment_service.dart';
+import 'user_groups.dart';
 
 /// Holds every playlist's parsed catalog, group visibility, and the
 /// (per-viewer — see [applyActiveViewer]) favorites — a thin merge/dispatch
@@ -182,6 +183,7 @@ class PlaylistManager extends ChangeNotifier {
       _favoriteIds = _storage.getFavorites();
       _favoriteSeriesIds = _storage.getFavoriteSeries();
       _activeViewerRestricted = _activeViewerIsRestricted();
+      _myGroups.load(_storage.getMyGroups());
 
       _sessions
         ..clear()
@@ -193,6 +195,7 @@ class PlaylistManager extends ChangeNotifier {
               favoriteSeriesIds: () => _favoriteSeriesIds,
               isRestrictedViewer: () => _activeViewerRestricted,
               onNotify: notifyListeners,
+              myGroupOf: _myGroupOf,
             )));
 
       notifyListeners();
@@ -311,6 +314,7 @@ class PlaylistManager extends ChangeNotifier {
     _activeViewerRestricted = _activeViewerIsRestricted();
     _favoriteIds = _storage.getFavorites();
     _favoriteSeriesIds = _storage.getFavoriteSeries();
+    _myGroups.load(_storage.getMyGroups());
     for (final session in _sessions) {
       session.reloadViewerState();
       session.restampFavorites();
@@ -359,6 +363,7 @@ class PlaylistManager extends ChangeNotifier {
       favoriteSeriesIds: () => _favoriteSeriesIds,
       isRestrictedViewer: () => _activeViewerRestricted,
       onNotify: notifyListeners,
+      myGroupOf: _myGroupOf,
     ));
     notifyListeners();
   }
@@ -1213,10 +1218,13 @@ class PlaylistManager extends ChangeNotifier {
               ?.visibleChannels(groupTitle: groupTitle, category: category) ??
           const [];
     }
-    return _enabledSessionsSorted
+    final all = _enabledSessionsSorted
         .expand((s) =>
             s.visibleChannels(groupTitle: groupTitle, category: category))
         .toList();
+    return groupTitle != null && category == 'tv' && isUserGroup(groupTitle)
+        ? _myGroups.ordered(groupTitle, all)
+        : all;
   }
 
   List<XtreamSeries> visibleSeries({String? playlistId, String? categoryName}) {
@@ -1335,7 +1343,8 @@ class PlaylistManager extends ChangeNotifier {
             ? s.liveChannels
             : s.channels.where((c) => _classifyGroupPublic(c.group) == 'tv');
         final visible = live
-            .where((c) => !_isHiddenForActiveViewer(c.playlistId, c.group))
+            .where((c) =>
+                !_isHiddenForActiveViewer(c.playlistId, s.liveGroupOf(c)))
             .toList();
         final starred = visible.where((c) => c.isFavorite).toList();
         final starredIds = {for (final c in starred) c.id};
@@ -1343,7 +1352,7 @@ class PlaylistManager extends ChangeNotifier {
           ...starred,
           ...visible.where((c) =>
               !starredIds.contains(c.id) &&
-              s.favoritedGroups.contains(c.group)),
+              s.favoritedGroups.contains(s.liveGroupOf(c))),
         ];
       }).toList();
 
@@ -1513,11 +1522,70 @@ class PlaylistManager extends ChangeNotifier {
       _sessionFor(playlistId)?.moveGroup(type, title, delta, shown: shown) ??
       Future.value(null);
 
-  /// See [PlaylistSession.moveChannel].
-  Future<int?> moveChannel(Channel channel, int delta) =>
-      _sessionFor(channel.playlistId)
-          ?.moveChannel(channel.group, channel.rawId, delta) ??
-      Future.value(null);
+  /// See [PlaylistSession.moveChannel]; in one of the viewer's own groups
+  /// the order spans every playlist, so it's kept by [UserGroups].
+  Future<int?> moveChannel(Channel channel, int delta) async {
+    final group = liveGroupOf(channel);
+    if (_myGroups.contains(group)) {
+      final to = _myGroups.moveChannel(group, channel.id, delta,
+          visibleChannels(groupTitle: group, category: 'tv'));
+      if (to != null) await _saveMyGroups();
+      return to;
+    }
+    return _sessionFor(channel.playlistId)
+        ?.moveChannel(group, channel.rawId, delta);
+  }
+
+  // --- The viewer's own groups (see UserGroups) --------------------------
+
+  final UserGroups _myGroups = UserGroups();
+
+  String? _myGroupOf(Channel c) => _myGroups.groupOf(c.id);
+
+  Future<void> _saveMyGroups() async {
+    await _storage.setMyGroups(_myGroups.toJson());
+    notifyListeners();
+  }
+
+  /// The viewer's own live groups, in display order (top of the TV tab's
+  /// groups column, under Favourites / History).
+  List<String> get userGroups => _myGroups.groups;
+
+  bool isUserGroup(String title) => _myGroups.contains(title);
+
+  /// A live channel's group as shown: the viewer's own group it was moved
+  /// into, else the provider's.
+  String liveGroupOf(Channel channel) =>
+      _myGroups.groupOf(channel.id) ?? channel.group;
+
+  /// Into the viewer's own group [title] (created if new), or back to its
+  /// provider group when [title] is null (Remove from group).
+  Future<void> moveChannelToGroup(Channel channel, String? title) {
+    _myGroups.move(channel.id, title);
+    return _saveMyGroups();
+  }
+
+  /// A new, empty own group named [name]; returns its title (made unique
+  /// against every group, since groups are picked by title).
+  Future<String> createUserGroup(String name) async {
+    final title =
+        _myGroups.create(name, taken: {for (final g in tvGroups) g.title});
+    await _saveMyGroups();
+    return title;
+  }
+
+  /// Deletes own group [title]; its channels go back to their groups.
+  Future<void> deleteUserGroup(String title) {
+    _myGroups.delete(title);
+    return _saveMyGroups();
+  }
+
+  /// Hold OK on an own group > Move Up / Down / Move to Top.
+  Future<int?> moveUserGroup(String title, int delta) async {
+    final to = _myGroups.moveGroup(title, delta);
+    if (to != null) await _saveMyGroups();
+    return to;
+  }
 
   // --- Full catalog sync ------------------------------------------------
 

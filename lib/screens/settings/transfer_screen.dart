@@ -42,7 +42,8 @@ class _TransferScreenState extends State<TransferScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
               child: Text(
-                tr('Copies your playlists, favorites, hidden groups, profiles, watch progress and settings to another device. On the same Wi-Fi it goes straight across; anywhere else it goes through an encrypted upload only the code can open. Channels, movies and the guide download again on the new device.'),
+                tr('Copies your playlists, favorites, hidden groups, profiles, watch progress, {tab} (leagues, favourite league, My Teams) and settings to another device. On the same Wi-Fi it goes straight across; anywhere else it goes through an encrypted upload only the code can open. Channels, movies and the guide download again on the new device.',
+                    {'tab': AppConstants.sportsTabName}),
                 style: const TextStyle(color: Colors.white70),
               ),
             ),

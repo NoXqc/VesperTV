@@ -1,6 +1,7 @@
 import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
@@ -144,12 +145,17 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
   ScrollController _rowScroll(String key) =>
       _rowScrolls.putIfAbsent(key, ScrollController.new);
 
-  /// Card slot width in a row: the card plus its 4 px padding each side.
-  static const _cardExtent = PosterCard.width + 8;
+  /// Card slot width in a row: the card, PosterCard's own 6 px padding and
+  /// the row's 4 px each side. Was `width + 8` (PosterCard's padding
+  /// missed): each Right scrolled 12 px short, so the selector crept off
+  /// the right edge after ~15 presses (owner, 2026-10-21).
+  static const _cardExtent = PosterCard.width + 12 + 8;
   static const _rowPadding = 20.0;
 
   /// Scrolls [row] so card [i] is on screen (with a card of room past it),
-  /// then focuses it — after a frame when the jump had to build it.
+  /// then focuses it — after a frame when the jump had to build it, retried
+  /// for a few frames on a slow box (owner, 2026-10-21: holding Right, the
+  /// selector got lost on titles not built yet).
   void _focusCard(ArchiveRow row, int i) {
     final c = _rowScrolls[row.key];
     if (c != null && c.hasClients) {
@@ -163,13 +169,17 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
       }
       if (to != null) c.jumpTo(to.clamp(0.0, pos.maxScrollExtent));
     }
-    final node = _node(row.key, i);
+    _focusWhenBuilt(_node(row.key, i));
+  }
+
+  void _focusWhenBuilt(FocusNode node, [int framesLeft = 4]) {
     if (node.context != null) {
       node.requestFocus();
-    } else {
+    } else if (framesLeft > 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) node.requestFocus();
+        if (mounted) _focusWhenBuilt(node, framesLeft - 1);
       });
+      WidgetsBinding.instance.scheduleFrame();
     }
   }
 
@@ -641,10 +651,10 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
 
   /// The floating bar's buttons, in order (for explicit Left/Right).
   List<FocusNode> _barNodes(ArchiveService service, List<ArchiveRow> rows) => [
-        if (service.genre(_type) == ArchiveService.otherGenre) _barBackNode,
-        for (final r in _barRows(rows)) _barRowNode(rows[r].key),
         if (service.canSearch(_type)) _barSearchNode,
         if (service.searchQuery(_type) != null) _barClearNode,
+        if (service.genre(_type) == ArchiveService.otherGenre) _barBackNode,
+        for (final r in _barRows(rows)) _barRowNode(rows[r].key),
         if (service.genres(_type).isNotEmpty) _barGenreNode,
       ];
 
@@ -674,8 +684,8 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
     });
   }
 
-  /// The category's row jumps (Popular / New / Featured / Recently
-  /// watched...) plus Search and Genre, centred at the top in the phone
+  /// Search, then the category's row jumps (Popular / New / Featured /
+  /// Recently watched...) and Genre, centred at the top in the phone
   /// tab bar's floating pill. D-pad: Left/Right along it (Left past the
   /// first = rail), Down = the rows.
   Widget _buildFloatingBar(ArchiveService service, List<ArchiveRow> rows) {
@@ -683,8 +693,9 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
     if (nodes.isEmpty) return const SizedBox.shrink();
     final narrow = MediaQuery.sizeOf(context).width < 700;
     final barRows = _barRows(rows);
-    final hasTools =
-        service.canSearch(_type) || service.genres(_type).isNotEmpty;
+    final canSearch = service.canSearch(_type);
+    final hasGenres = service.genres(_type).isNotEmpty;
+    final other = service.genre(_type) == ArchiveService.otherGenre;
     void move(int delta) {
       final i = nodes.indexWhere((n) => n.hasFocus);
       final to = i + delta;
@@ -737,10 +748,42 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Search leads the bar (owner, 2026-10-20), then the
+                    // row jumps and Genre.
+                    if (canSearch)
+                      _BarButton(
+                        focusNode: _barSearchNode,
+                        icon: Icons.search,
+                        label: service.searching
+                            ? tr('Searching…')
+                            : query ??
+                                (movies
+                                    ? tr('Search movies')
+                                    : tr('Search TV shows')),
+                        active: query != null,
+                        onTap: () => _openSearch(service),
+                      ),
+                    if (query != null)
+                      _BarButton(
+                        focusNode: _barClearNode,
+                        icon: Icons.close,
+                        tooltip: tr('Clear search'),
+                        onTap: () {
+                          _clearSearch(service);
+                          _focusBarNode(_barSearchNode);
+                        },
+                      ),
+                    if (canSearch && (other || barRows.isNotEmpty || hasGenres))
+                      Container(
+                        width: 1,
+                        height: 24,
+                        margin: const EdgeInsets.symmetric(horizontal: 6),
+                        color: Colors.white24,
+                      ),
                     // Under Other, its many category buttons pushed Genre
-                    // far to the right: leaving Other is the first button
-                    // (user request, 2026-10-20).
-                    if (genre == ArchiveService.otherGenre) ...[
+                    // far to the right: leaving Other comes right after
+                    // Search (user request, 2026-10-20).
+                    if (other) ...[
                       _BarButton(
                         focusNode: _barBackNode,
                         icon: Icons.arrow_back,
@@ -769,37 +812,14 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                         onTap: () => _focusRow(rows, r),
                         onHold: () => _showRowMenu(rows, r),
                       ),
-                    if (barRows.isNotEmpty && hasTools)
+                    if (barRows.isNotEmpty && hasGenres)
                       Container(
                         width: 1,
                         height: 24,
                         margin: const EdgeInsets.symmetric(horizontal: 6),
                         color: Colors.white24,
                       ),
-                    if (service.canSearch(_type))
-                      _BarButton(
-                        focusNode: _barSearchNode,
-                        icon: Icons.search,
-                        label: service.searching
-                            ? tr('Searching…')
-                            : query ??
-                                (movies
-                                    ? tr('Search movies')
-                                    : tr('Search TV shows')),
-                        active: query != null,
-                        onTap: () => _openSearch(service),
-                      ),
-                    if (query != null)
-                      _BarButton(
-                        focusNode: _barClearNode,
-                        icon: Icons.close,
-                        tooltip: tr('Clear search'),
-                        onTap: () {
-                          _clearSearch(service);
-                          _focusBarNode(_barSearchNode);
-                        },
-                      ),
-                    if (service.genres(_type).isNotEmpty)
+                    if (hasGenres)
                       _BarButton(
                         focusNode: _barGenreNode,
                         icon: Icons.category_outlined,
@@ -946,6 +966,12 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
             controller: _rowScroll(row.key),
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: _rowPadding),
+            // Exact slot width: [_focusCard]'s jump lands where the card
+            // really is, even far past the built ones (the TV tab's rows
+            // do the same, see `_categoryRowHeight`). Cards ~5 ahead are
+            // built early, so Right always finds the next one ready.
+            itemExtent: _cardExtent,
+            scrollCacheExtent: const ScrollCacheExtent.pixels(_cardExtent * 5),
             itemCount: row.items.length,
             itemBuilder: (_, i) {
               final meta = row.items[i];

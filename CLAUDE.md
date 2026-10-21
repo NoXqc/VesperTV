@@ -49,7 +49,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
 4. `flutter analyze` must report the baseline **17** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `1.0.30` unless noted
+5. Check the current state of releases: `gh release list` (latest should be `1.0.31` unless noted
    in §11).
 
 ## 3. Layout (what matters)
@@ -118,7 +118,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
 - Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+360**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
-  (Currently **+373**, 1.0.30.)
+  (Currently **+382**, 1.0.31.)
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
 Only release when the owner asks ("update the latest", "cut it", "fully release"). Outline: bump `pubspec.yaml` (versionCode `+N` must always rise) → `flutter analyze` → build APK + verify signature (§5) → build Windows + zip → **commit & push first** → `gh release upload <tag> app-release.apk VesperTV-windows-x64.zip --clobber` → `gh release edit <tag> --tag <new> --notes-file …` → make sure the tag equals HEAD → verify downloads/hashes, the OLD `NoXqc/NoXPlayer` redirect links and AFTVnews code `1760256`. The updater offers any *different* tag (`_isDifferent`), never leave two `.zip`/`.apk` assets on the latest release.
@@ -157,12 +157,21 @@ rejected (HDR + Android-TV hardware-decode risk). Also patched (1.0.27):
 `ExoPlayerEventListener.describeCause` appends `[HTTP 404 Not Found] [ERROR_CODE_…] cause: …` to
 the error string; Dart reads it (`httpStatusFromPlaybackError`) and the player's error screen
 always shows the details (owner: show any error so user photos can be diagnosed).
+Added in 1.0.31 (**Data pool**): `StreamStats.java` (a `TransferListener` counting network bytes,
+set by `HttpVideoAsset`), `StatsBridge.java` (MethodChannel `vespertv/stats` → nowMs / bytes /
+rendered / dropped frames), `VideoAsset.streamStats()`, `VideoPlayer.streamStats`, and
+`videoPlayer.streamStats = videoAsset.streamStats()` in both `VideoPlayerPlugin` create methods.
+Uses `android.util.LongSparseArray`; new classes need `@OptIn(markerClass = UnstableApi.class)`.
 
 ## 10. Hard-won rules (don't re-learn these)
 - **Cold-start splash is deliberately slow (~20-25s with a big second playlist).** Entering the UI
   early lets remote input crash weak boxes. Do not cap/shorten it (`_bootstrap` in main.dart).
   The time is the catalog pre-load + `_waitForCategoriesToSettle`, not a timer (floor 2.6 s).
-  Re-asked after the SQLite EPG (2026-10-18): owner chose to **leave it as is**. The
+  Re-asked after the SQLite EPG (2026-10-18): owner chose to **leave it as is**. Since 1.0.31
+  there is an **opt-in, device-only Fast startup** (Settings > General > Startup,
+  `AppPreferences.fastStartup`): the splash loads Movies/TV Shows for at most 3.5 s, then the UI
+  opens and the rest loads behind it (owner timed Formuler 30 s → 4 s, Fire Stick 4K 14 s → 5 s,
+  stable). Never make it the default, never transfer it. The
   Android last-channel auto-resume after the splash was once removed (decoder start + the old ~25 s
   EPG decode made cold start sluggish); since the SQLite EPG it's back, **on by default** behind
   Settings > General > Startup: "Resume last channel in full screen" or "…with the guide open"
@@ -291,7 +300,45 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 ## 12. Features (details in `dev-notes/features.md`)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
-## 13. Status & open items (as of 2026-10-20)
+## 13. Status & open items (as of 2026-10-21)
+- **Shipped: 1.0.31 (`+382`, 2026-10-21, latest; test builds `+374`..`+381` on the Formuler and
+  the Fire Stick, all owner-tested):**
+  - **Own live groups** (`services/user_groups.dart`, `UserGroups` owned by `PlaylistManager`,
+    key `nox_my_groups` **per viewer, across playlists**; moves keyed by `Channel.id`, own channel
+    order across playlists). Hold OK on a channel → **Move to group…** (own groups, New group…,
+    Back to <provider group>) / **Remove from {group}**; hold on any live group → **New group…**;
+    hold on an own group → Move Up/Down, Move to Top, New group…, Delete. Own groups are rows
+    under Favourites/History (`_myGroupsId` sentinel) and are never hidden with a playlist (a
+    first per-playlist version was — owner test). Sessions only know `myGroupOf` → `liveGroupOf`;
+    the loaded `Channel.group` stays the provider's. TV group selection is **by title**, so own
+    group names are made unique against provider titles. Not done (owner: fine as is): hiding an
+    own group, Search by own group, kid-profile allowlist.
+  - **Settings = left panel + right pane** (`settings_menu_screen.dart`): Playlists & guide /
+    Media Hub (sources, Add-ons, Trakt & Simkl, TMDB) / Interface (Theme, Tabs, Background video,
+    Data pool, Favourites, Multiview, Resume reminder) / General (Language, Startup, History) /
+    Device & data (Transfer, Backup, Updates). The focused category's description + rows show on
+    the right; Right/OK enters, Left/Back returns (each column its own `FocusScope`, plain default
+    Up/Down inside); phone = list → category page. `GeneralSettingsScreen(sections:, title:)`
+    shows one section without its header.
+  - **Fast startup** (opt-in, §10).
+  - **Data pool** (Settings > Interface > Data pool, off by default): OK on a live channel opens a
+    second card with resolution, fps, codecs, declared + measured bitrate, variants, audio tracks,
+    buffer, HDR, dropped frames, playing-for timer (`widgets/data_pool_card.dart`, native §9).
+    Never shows the server host; no channel probing.
+  - **Black-flash fix** on channel change (`PlaybackService.switching` + `VideoPlayerPane`
+    spinner; `switching` is set before `_teardown()`, `currentChannel` is not).
+  - **Greek football club names** (`greekBroadcastNames`, 197 clubs) — confirmed by Black1914.
+  - **Media Hub**: the floating bar starts with **Search** (+ Clear); rows no longer lose the
+    selector after ~15 Rights (`_cardExtent` missed PosterCard's own 6 px padding → 12 px short per
+    step; now exact + `itemExtent`).
+  - **Transfer** already carried all Sports Trak data (test proves it); its text now says so.
+    Settings row subtitle: "Copy all of your data to another device".
+  - **Faster channel changes: not done.** The main player already starts at
+    `bufferForPlaybackMs` 500; time each step on the Fire Stick before changing anything (reusing
+    one ExoPlayer would be the big win — ask first).
+  - Site: dedicated Sports Trak / Media Hub sections (`#sports`, `#media-hub`) + new screenshots.
+    Never show a piracy add-on's name in a site screenshot (the Media Hub shot's source chip was
+    painted out).
 - **Shipped: 1.0.30 (`+373`, 2026-10-20, latest; test `+372` = pre-release `1.0.29-test.372`,
   confirmed by the Greek user — Nova Sports found):**
   - **Greek-only guide titles:** Strong8K's Nova guide says `Live: Μπάσκετ: Χάποελ Τελ Αβίβ -

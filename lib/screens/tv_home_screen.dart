@@ -36,6 +36,7 @@ import '../widgets/hd_network_image.dart';
 import '../widgets/hold_to_activate.dart';
 import '../widgets/live_resume_hint.dart';
 import '../widgets/mode_button.dart';
+import '../widgets/move_to_group_dialog.dart';
 import '../widgets/player_controls.dart';
 import '../widgets/poster_card.dart';
 import '../widgets/real_4k_tag.dart';
@@ -381,6 +382,11 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
             onPressed: () => Navigator.of(context).pop('move_top'),
             child: Text(tr('Move to Top')),
           ),
+          if (category == null)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(context).pop('new_group'),
+              child: Text(tr('New group…')),
+            ),
           SimpleDialogOption(
             onPressed: () => Navigator.of(context).pop(),
             child: Text(tr('Cancel')),
@@ -422,6 +428,85 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         _startPendingHide(playlistId, title);
       case 'cancel_hide':
         _cancelPendingHide(playlistId, title);
+      case 'new_group':
+        await _createMyGroup();
+    }
+  }
+
+  /// Stands in for a playlist id on the viewer's own groups' rows: they
+  /// belong to no playlist (see `UserGroups`), so a playlist's hidden
+  /// groups or a Playlists-menu hide never touch them.
+  static const _myGroupsId = '__my_groups__';
+
+  /// Group hold menu "New group…": an empty own group, on top.
+  Future<void> _createMyGroup() async {
+    final name = await askGroupName(context);
+    if (name == null || !mounted) return;
+    final title = await context.read<PlaylistManager>().createUserGroup(name);
+    if (!mounted) return;
+    setState(() => _focusGroupKeyOnBuild = _groupKey(_myGroupsId, title));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(tr(
+          '{group} created. Hold OK on a channel > Move to group… to add channels.',
+          {'group': title})),
+      duration: const Duration(seconds: 4),
+    ));
+  }
+
+  /// Hold OK on one of the viewer's own groups.
+  Future<void> _showMyGroupOptions(String title) async {
+    final playlist = context.read<PlaylistManager>();
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.of(context).pop('move'),
+            child: Text(tr('Move Up / Down')),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.of(context).pop('move_top'),
+            child: Text(tr('Move to Top')),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.of(context).pop('new_group'),
+            child: Text(tr('New group…')),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.of(context).pop('delete_group'),
+            child: Text(tr('Delete this group')),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(tr('Cancel')),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    switch (choice) {
+      case 'move':
+        setState(() {
+          _movingGroupKey = _groupKey(_myGroupsId, title);
+          _movingGroupType = 'tv';
+        });
+      case 'move_top':
+        await playlist.moveUserGroup(title, -playlist.userGroups.length);
+        if (!mounted) return;
+        setState(() => _focusGroupKeyOnBuild = _groupKey(_myGroupsId, title));
+      case 'new_group':
+        await _createMyGroup();
+      case 'delete_group':
+        await playlist.deleteUserGroup(title);
+        if (!mounted) return;
+        if (_selectedGroup == title) setState(() => _selectedGroup = null);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr(
+              '{group} deleted. Its channels are back in their groups.',
+              {'group': title})),
+          duration: const Duration(seconds: 3),
+        ));
     }
   }
 
@@ -450,8 +535,12 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   Future<void> _moveGroupStep(
       String playlistId, String title, int delta) async {
     final playlist = context.read<PlaylistManager>();
-    await playlist.moveGroup(playlistId, _movingGroupType, title, delta,
-        shown: _shownGroupTitles(playlist, playlistId, _movingGroupType));
+    if (playlistId == _myGroupsId) {
+      await playlist.moveUserGroup(title, delta);
+    } else {
+      await playlist.moveGroup(playlistId, _movingGroupType, title, delta,
+          shown: _shownGroupTitles(playlist, playlistId, _movingGroupType));
+    }
     if (!mounted) return;
     // The row is keyed, so it keeps its Element and focus as the list
     // reorders — just keep it on screen. Zero duration = jump, never
@@ -507,7 +596,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     // groups, and a filtered guide's row order isn't the group's order.
     final canMove = !isHidden &&
         _timelineFilterQuery.trim().isEmpty &&
-        _effectiveLiveGroup(playlist) == channel.group;
+        _effectiveLiveGroup(playlist) == playlist.liveGroupOf(channel);
+    final inMyGroup = playlist.isUserGroup(playlist.liveGroupOf(channel));
 
     final choice = await showDialog<String>(
       context: context,
@@ -531,6 +621,16 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
               child: Text(tr('Move Up / Down')),
             ),
           SimpleDialogOption(
+            onPressed: () => Navigator.of(context).pop('group'),
+            child: Text(tr('Move to group…')),
+          ),
+          if (inMyGroup)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(context).pop('ungroup'),
+              child: Text(tr('Remove from {group}',
+                  {'group': playlist.liveGroupOf(channel)})),
+            ),
+          SimpleDialogOption(
             onPressed: () => Navigator.of(context).pop(),
             child: Text(tr('Cancel')),
           ),
@@ -540,6 +640,16 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
 
     if (!mounted) return;
     switch (choice) {
+      case 'group':
+        await _moveChannelToGroup(channel);
+      case 'ungroup':
+        await playlist.moveChannelToGroup(channel, null);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('{name} is now in {group}',
+              {'name': channel.name, 'group': channel.group})),
+          duration: const Duration(seconds: 3),
+        ));
       case 'move':
         setState(() => _movingChannel = channel);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -562,6 +672,27 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         }
         _toggleHiddenWithFeedback(context, channel);
     }
+  }
+
+  /// Hold OK on a channel → "Move to group…": into one of the viewer's
+  /// own groups (or a new one), or back to its provider group.
+  Future<void> _moveChannelToGroup(Channel channel) async {
+    final playlist = context.read<PlaylistManager>();
+    final picked = await showMoveToGroupDialog(
+      context,
+      channelName: channel.name,
+      userGroups: playlist.userGroups,
+      currentGroup: playlist.liveGroupOf(channel),
+      providerGroup: channel.group,
+    );
+    if (picked == null || !mounted) return;
+    await playlist.moveChannelToGroup(channel, picked.title);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(tr('{name} is now in {group}',
+          {'name': channel.name, 'group': picked.title ?? channel.group})),
+      duration: const Duration(seconds: 3),
+    ));
   }
 
   /// Live channel in "Move Up / Down" mode (hold OK on a channel → menu),
@@ -1690,8 +1821,10 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       if (playlist.favoriteLiveChannels.any((c) => c.id == playing.id)) {
         return _favoritesGroupSentinel;
       }
-      if (groups.any((g) => g.title == playing.group)) {
-        return playing.group;
+      final playingGroup = playlist.liveGroupOf(playing);
+      if (playlist.isUserGroup(playingGroup) ||
+          groups.any((g) => g.title == playingGroup)) {
+        return playingGroup;
       }
     }
     return groups.first.title;
@@ -3443,7 +3576,27 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
             onTap: _showHistoryPopup,
             onLongPress: _confirmClearChannelHistory,
           ),
-        ),
+        ), // The viewer's own groups (any playlist's channels): above every
+        // playlist's groups, never hidden with one.
+        for (final title in playlist.userGroups)
+          _GroupRow(
+            key: ValueKey(_groupKey(_myGroupsId, title)),
+            icon: Icons.folder_special_outlined,
+            label: title,
+            selected: effectiveGroup == title,
+            collapsed: collapsed,
+            fontSize: _groupFontSize,
+            isFavorited: false,
+            isPendingHide: false,
+            onTap: () => _onGroupSelected(title),
+            onLongPress: () => _showMyGroupOptions(title),
+            moving: _movingGroupKey == _groupKey(_myGroupsId, title),
+            onMove: (delta) => _moveGroupStep(_myGroupsId, title, delta),
+            onMoveDone: _endGroupMove,
+            focusOnBuild:
+                _focusGroupKeyOnBuild == _groupKey(_myGroupsId, title),
+            onFocusedOnBuild: () => _focusGroupKeyOnBuild = null,
+          ),
         if (playlistsRow != null) playlistsRow,
         ..._groupRowsWithPlaylistDividers(
           groups,

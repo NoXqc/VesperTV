@@ -22,8 +22,15 @@ import '../../l10n/l10n.dart';
 /// device-wide, not per viewer profile.
 ///
 /// No custom D-pad handling — see SettingsMenuScreen's doc comment.
+///
+/// Settings' Interface and General categories open it on one section each
+/// ([sections] = that id, shown open without its header, [title] = the
+/// section's name); null shows every section, collapsible.
 class GeneralSettingsScreen extends StatefulWidget {
-  const GeneralSettingsScreen({super.key});
+  const GeneralSettingsScreen({super.key, this.sections, this.title});
+
+  final Set<String>? sections;
+  final String? title;
 
   @override
   State<GeneralSettingsScreen> createState() => _GeneralSettingsScreenState();
@@ -145,6 +152,14 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
   /// [children] open underneath on OK / tap.
   Widget _section(String id, IconData icon, String title,
       {String? subtitle, required List<Widget> children}) {
+    final only = widget.sections;
+    if (only != null && !only.contains(id)) return const SizedBox.shrink();
+    if (only != null && only.length == 1) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      );
+    }
     final open = _open.contains(id);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -185,7 +200,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
     return withTvThemeIfNeeded(
         context,
         (context) => SettingsScaffold(
-              title: tr('General'),
+              title: widget.title ?? tr('General'),
               body: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
@@ -244,6 +259,14 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                               _storage.setResumeLastChannelAtStartup(false);
                             }
                           },
+                        ),
+                        TvSwitchListTile(
+                          title: Text(tr('Fast startup')),
+                          subtitle: Text(tr(
+                              'Opens the app without waiting for Movies and TV Shows to load; they fill in a few seconds later. For fast devices — leave it off on an older box if the app closes by itself right after starting. Applies from the next start.')),
+                          value: context.watch<AppPreferences>().fastStartup,
+                          onChanged: (v) =>
+                              context.read<AppPreferences>().setFastStartup(v),
                         ),
                         if (!Platform.isWindows)
                           Padding(
@@ -312,6 +335,20 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                             onChanged: (v) => context
                                 .read<AppPreferences>()
                                 .setCompatVideo(v),
+                          ),
+                        ]),
+                  // Windows has no OK info card yet, so no Data pool there.
+                  if (!Platform.isWindows)
+                    _section(
+                        'datapool', Icons.analytics_outlined, tr('Data pool'),
+                        children: [
+                          TvSwitchListTile(
+                            title: Text(tr('Data pool display')),
+                            subtitle: Text(tr(
+                                'Press OK while a live channel plays to open a second card under the channel info with the stream\'s details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer and HDR. Off: OK shows only the channel info.')),
+                            value: context.watch<AppPreferences>().dataPool,
+                            onChanged: (v) =>
+                                context.read<AppPreferences>().setDataPool(v),
                           ),
                         ]),
                   _section('favourites', Icons.star_outline, tr('Favourites'),

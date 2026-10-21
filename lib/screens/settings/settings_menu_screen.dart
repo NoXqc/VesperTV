@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../utils/tv_theme.dart';
@@ -21,177 +22,436 @@ import 'trackers_screen.dart';
 import 'tmdb_settings_screen.dart';
 import '../../l10n/l10n.dart';
 
-/// Settings entry point — a plain menu of destinations instead of one long
-/// scrollable form. Much easier to navigate with a D-pad (a handful of big
-/// rows, not a dense form with several text fields packed in), and each
-/// destination stays focused on one concern.
+/// One destination row of a Settings category.
+class _Entry {
+  const _Entry(this.icon, this.title, this.subtitle, this.open);
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final WidgetBuilder open;
+}
+
+/// A Settings category: a row of the left panel, and the description +
+/// destinations its right pane shows.
+class _Category {
+  const _Category(this.icon, this.title, this.description, this.entries);
+  final IconData icon;
+  final String title;
+  final String description;
+  final List<_Entry> entries;
+}
+
+/// Settings entry point: a left panel of categories (owner, 2026-10-21:
+/// related settings under one roof — Media Hub sources + Add-ons + Trakt
+/// + TMDB together, the small display switches together) and, beside it,
+/// the focused category's description and destinations. Right / OK goes
+/// into them, Left / Back returns to the panel. A portrait phone gets the
+/// categories as a list, each opening its own page.
 ///
-/// No custom D-pad handling here at all, deliberately — every custom
-/// Up/Down interception tried on this app's Settings screens (a
-/// `DpadVerticalNav` using `FocusScope.nextFocus()`, then an
-/// `ExplicitFocusOrder` using an explicit node list, several dispatch
-/// mechanisms) was reported as unreliable on real hardware, while
-/// `GroupManagementScreen`'s checkbox lists — which never had any custom
-/// Up/Down code — were confirmed working flawlessly on the same remote.
-/// Plain Flutter default focus traversal turned out to be the answer all
-/// along; every row below is a single, ordinary focusable widget in
-/// simple top-to-bottom document order, exactly like that working list.
-class SettingsMenuScreen extends StatelessWidget {
+/// Up/Down inside each column is plain Flutter default traversal on
+/// purpose — every custom Up/Down interception tried on these screens
+/// (`DpadVerticalNav`, `ExplicitFocusOrder`...) was unreliable on real
+/// hardware, while plain top-to-bottom lists always worked. Each column is
+/// its own [FocusScope] so Up/Down never crosses over; only Left/Right
+/// between the two are explicit ([CallbackShortcuts], CLAUDE.md §10).
+class SettingsMenuScreen extends StatefulWidget {
   const SettingsMenuScreen({super.key});
+
+  @override
+  State<SettingsMenuScreen> createState() => _SettingsMenuScreenState();
+}
+
+class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
+  final _railScope = FocusScopeNode(debugLabel: 'settings-rail');
+  final _paneScope = FocusScopeNode(debugLabel: 'settings-pane');
+  final List<FocusNode> _railNodes = [];
+  final _firstEntryNode = FocusNode(debugLabel: 'settings-first-entry');
+  int _selected = 0;
+  bool _inPane = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _paneScope.addListener(_onPaneFocus);
+  }
+
+  void _onPaneFocus() {
+    if (_paneScope.hasFocus != _inPane) {
+      setState(() => _inPane = _paneScope.hasFocus);
+    }
+  }
+
+  @override
+  void dispose() {
+    _paneScope.removeListener(_onPaneFocus);
+    _railScope.dispose();
+    _paneScope.dispose();
+    _firstEntryNode.dispose();
+    for (final n in _railNodes) {
+      n.dispose();
+    }
+    super.dispose();
+  }
+
+  FocusNode _railNode(int i) {
+    while (_railNodes.length <= i) {
+      _railNodes.add(FocusNode(debugLabel: 'settings-category'));
+    }
+    return _railNodes[i];
+  }
+
+  /// Interface / General rows open the General screen on one section.
+  static _Entry _general(
+          String id, IconData icon, String title, String subtitle) =>
+      _Entry(icon, title, subtitle,
+          (_) => GeneralSettingsScreen(sections: {id}, title: title));
+
+  List<_Category> _categories() => [
+        _Category(
+          Icons.video_library_outlined,
+          tr('Playlists & guide'),
+          tr('Your playlists and their logins, the TV guide (EPG) and the viewer profiles.'),
+          [
+            _Entry(
+                Icons.video_library_outlined,
+                tr('Playlist Manager'),
+                tr('Every playlist: login, groups, enable/disable'),
+                (_) => const PlaylistManagerScreen()),
+            _Entry(
+                Icons.calendar_month_outlined,
+                tr('EPG'),
+                tr('Auto-refresh, channel matching & pairing, clear cache'),
+                (_) => const EpgSettingsScreen()),
+            _Entry(
+                Icons.people_outline,
+                tr('Profiles'),
+                tr('Separate favorites, history & hidden groups per viewer'),
+                (_) => const ProfilesScreen()),
+          ],
+        ),
+        _Category(
+          Icons.local_movies_outlined,
+          tr('Media Hub'),
+          tr('Everything the Media Hub uses: its add-on sources, online subtitles, Trakt & Simkl watch tracking and the optional TMDB key.'),
+          [
+            _Entry(
+                Icons.local_movies_outlined,
+                tr('Media Hub sources'),
+                tr('Add-on sources for the Media Hub tab'),
+                (_) => const ArchiveSourcesScreen()),
+            // Online subtitles: both players (Windows' own since its
+            // Subtitles button, desktop_subtitles.dart).
+            _Entry(
+                Icons.extension_outlined,
+                tr('Add-ons'),
+                tr('Online subtitles in more languages'),
+                (_) => const AddonsScreen()),
+            _Entry(
+                Icons.playlist_add_check,
+                tr('Trakt & Simkl'),
+                tr('Track what you watch, lists in the Media Hub'),
+                (_) => const TrackersScreen()),
+            _Entry(
+                Icons.movie_filter_outlined,
+                tr('TMDB (Release Dates)'),
+                tr('Optional key for sorting by real release date'),
+                (_) => const TmdbSettingsScreen()),
+          ],
+        ),
+        _Category(
+          Icons.dashboard_customize_outlined,
+          tr('Interface'),
+          tr('How the app looks and what it shows: theme, tabs, the player\'s extras and reminders.'),
+          [
+            _Entry(Icons.palette_outlined, tr('Theme'),
+                tr('Clock, accent color, layout'), (_) => const ThemeScreen()),
+            _general('tabs', Icons.tab_outlined, tr('Tabs'),
+                tr('Hide Movies, TV Shows, Media Hub or Multiview')),
+            // Windows: no platform-view video, OK info card or tip.
+            if (!Platform.isWindows)
+              _general(
+                  'background',
+                  Icons.picture_in_picture_alt,
+                  tr('Background video'),
+                  tr('Fixes for the picture on some Fire TV sticks')),
+            if (!Platform.isWindows)
+              _general('datapool', Icons.analytics_outlined, tr('Data pool'),
+                  tr('Stream details when you press OK on a channel')),
+            _general('favourites', Icons.star_outline, tr('Favourites'),
+                tr('One list for every playlist, or one per playlist')),
+            if (!Platform.isWindows)
+              _general('multiview', Icons.grid_view, tr('Multiview'),
+                  tr('The connections tip when opening Multiview')),
+            _general('resume', Icons.play_circle_outline, tr('Resume reminder'),
+                tr('The "Hold > to resume" pill')),
+          ],
+        ),
+        _Category(
+          Icons.tune,
+          tr('General'),
+          tr('Language and clock, what plays when the app starts, Fast startup, and clearing your history.'),
+          [
+            _general('language', Icons.translate, tr('Language'),
+                tr('App language and 24-hour clock')),
+            _general('startup', Icons.power_settings_new, tr('Startup'),
+                tr('Resume the last channel, Fast startup')),
+            _general('history', Icons.history, tr('History'),
+                tr('Clear searches, channels, Continue Watching')),
+          ],
+        ),
+        _Category(
+          Icons.devices,
+          tr('Device & data'),
+          tr('Move your whole setup to another device, keep a backup of it, and update VesperTV.'),
+          [
+            _Entry(
+                Icons.devices,
+                tr('Transfer to another device'),
+                tr('Copy all of your data to another device'),
+                (_) => const TransferScreen()),
+            if (BackupService.supported)
+              _Entry(
+                  Icons.settings_backup_restore,
+                  tr('Backup & restore'),
+                  tr('Save everything to a file on this device'),
+                  (_) => const BackupScreen()),
+            _Entry(
+                Icons.system_update_outlined,
+                tr('Check for Updates'),
+                tr('Download and install the latest release'),
+                (_) => const CheckUpdatesScreen()),
+          ],
+        ),
+      ];
+
+  void _open(_Entry e) =>
+      Navigator.of(context).push(MaterialPageRoute(builder: e.open));
+
+  void _enterPane() => _firstEntryNode.requestFocus();
+
+  void _backToRail() => _railNode(_selected).requestFocus();
+
+  @override
+  Widget build(BuildContext context) {
+    final categories = _categories();
+    final narrow = MediaQuery.sizeOf(context).width < 700;
+    return withTvThemeIfNeeded(
+      context,
+      (context) => PopScope(
+        canPop: narrow || !_inPane,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) _backToRail();
+        },
+        child: SettingsScaffold(
+          title: tr('Settings'),
+          body: narrow
+              ? ListView(children: [
+                  for (final c in categories)
+                    TvMenuTile(
+                      icon: c.icon,
+                      title: c.title,
+                      subtitle: c.description,
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => _CategoryScreen(category: c))),
+                    ),
+                  const _Footer(),
+                ])
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(width: 280, child: _buildRail(categories)),
+                    const VerticalDivider(width: 1, color: Colors.white24),
+                    Expanded(child: _buildPane(categories[_selected])),
+                  ],
+                ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRail(List<_Category> categories) {
+    return FocusScope(
+      node: _railScope,
+      child: CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.arrowRight): _enterPane,
+        },
+        child: ListView(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          children: [
+            for (var i = 0; i < categories.length; i++)
+              // Focus follows the selector: the pane shows whichever
+              // category is focused (wrapper not itself a focus target,
+              // CLAUDE.md §10).
+              Focus(
+                canRequestFocus: false,
+                skipTraversal: true,
+                onFocusChange: (f) {
+                  if (f && _selected != i) setState(() => _selected = i);
+                },
+                child: TvMenuTile(
+                  focusNode: _railNode(i),
+                  autofocus: i == 0,
+                  icon: categories[i].icon,
+                  title: categories[i].title,
+                  trailing: i == _selected
+                      ? Icon(Icons.chevron_right,
+                          color: Theme.of(context).colorScheme.primary)
+                      : null,
+                  onTap: () {
+                    setState(() => _selected = i);
+                    _enterPane();
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPane(_Category c) {
+    return FocusScope(
+      node: _paneScope,
+      child: CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.arrowLeft): _backToRail,
+        },
+        child: ListView(
+          key: ValueKey(c.title),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          children: [
+            _PaneHeader(category: c),
+            for (var i = 0; i < c.entries.length; i++)
+              TvMenuTile(
+                focusNode: i == 0 ? _firstEntryNode : null,
+                icon: c.entries[i].icon,
+                title: c.entries[i].title,
+                subtitle: c.entries[i].subtitle,
+                onTap: () => _open(c.entries[i]),
+              ),
+            const _Footer(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The pane's top: the category's icon, name and what's inside it.
+class _PaneHeader extends StatelessWidget {
+  const _PaneHeader({required this.category});
+  final _Category category;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 4, 8, 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(category.icon, size: 36, color: scheme.primary),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(category.title,
+                    style: const TextStyle(
+                        fontSize: 22, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 6),
+                Text(category.description,
+                    style: const TextStyle(color: Colors.white70)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Portrait phone: one category's destinations on their own page.
+class _CategoryScreen extends StatelessWidget {
+  const _CategoryScreen({required this.category});
+  final _Category category;
 
   @override
   Widget build(BuildContext context) {
     return withTvThemeIfNeeded(
-        context,
-        (context) => SettingsScaffold(
-              title: tr('Settings'),
-              body: ListView(
-                children: [
-                  TvMenuTile(
-                    icon: Icons.video_library_outlined,
-                    title: tr('Playlist Manager'),
-                    subtitle:
-                        tr('Every playlist: login, groups, enable/disable'),
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => const PlaylistManagerScreen())),
-                  ),
-                  TvMenuTile(
-                    icon: Icons.people_outline,
-                    title: tr('Profiles'),
-                    subtitle: tr(
-                        'Separate favorites, history & hidden groups per viewer'),
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => const ProfilesScreen())),
-                  ),
-                  TvMenuTile(
-                    icon: Icons.tune,
-                    title: tr('General'),
-                    subtitle: Platform.isWindows
-                        ? tr('Language and history')
-                        : tr('Language, startup, Multiview and history'),
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => const GeneralSettingsScreen())),
-                  ),
-                  TvMenuTile(
-                    icon: Icons.palette_outlined,
-                    title: tr('Theme'),
-                    subtitle: tr('Clock, accent color, layout'),
-                    onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const ThemeScreen())),
-                  ),
-                  TvMenuTile(
-                    icon: Icons.calendar_month_outlined,
-                    title: tr('EPG'),
-                    subtitle: tr(
-                        'Auto-refresh, channel matching & pairing, clear cache'),
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => const EpgSettingsScreen())),
-                  ),
-                  TvMenuTile(
-                    icon: Icons.movie_filter_outlined,
-                    title: tr('TMDB (Release Dates)'),
-                    subtitle:
-                        tr('Optional key for sorting by real release date'),
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => const TmdbSettingsScreen())),
-                  ),
-                  // Online subtitles: both players (Windows' own since
-                  // its Subtitles button, desktop_subtitles.dart).
-                  TvMenuTile(
-                    icon: Icons.extension_outlined,
-                    title: tr('Add-ons'),
-                    subtitle: tr('Online subtitles in more languages'),
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => const AddonsScreen())),
-                  ),
-                  TvMenuTile(
-                    icon: Icons.local_movies_outlined,
-                    title: tr('Media Hub sources'),
-                    subtitle: tr('Add-on sources for the Media Hub tab'),
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => const ArchiveSourcesScreen())),
-                  ),
-                  TvMenuTile(
-                    icon: Icons.playlist_add_check,
-                    title: tr('Trakt & Simkl'),
-                    subtitle:
-                        tr('Track what you watch, lists in the Media Hub'),
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => const TrackersScreen())),
-                  ),
-                  TvMenuTile(
-                    icon: Icons.system_update_outlined,
-                    title: tr('Check for Updates'),
-                    subtitle: tr('Download and install the latest release'),
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => const CheckUpdatesScreen())),
-                  ),
-                  TvMenuTile(
-                    icon: Icons.devices,
-                    title: tr('Transfer to another device'),
-                    subtitle:
-                        tr('Copy playlists, favorites and settings over Wi-Fi'),
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => const TransferScreen())),
-                  ),
-                  if (BackupService.supported)
-                    TvMenuTile(
-                      icon: Icons.settings_backup_restore,
-                      title: tr('Backup & restore'),
-                      subtitle: tr('Save everything to a file on this device'),
-                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => const BackupScreen())),
-                    ),
-                  // Reads whatever code is actually running via
-                  // PackageInfo (same source CheckUpdatesScreen's
-                  // "Current version" line uses) rather than a hand-typed
-                  // constant — requested directly, after the previous
-                  // buildMarker string (a version number plus a long
-                  // hand-maintained per-release changelog) was replaced
-                  // with just the line below: "so I can confirm easily
-                  // the current version inside the app" needed *some*
-                  // version stamp back, just not the changelog text.
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-                    child: FutureBuilder<PackageInfo>(
-                      future: PackageInfo.fromPlatform(),
-                      builder: (context, snapshot) {
-                        final version = snapshot.data?.version;
-                        return Text(
-                          version == null
-                              ? tr('Version —')
-                              : tr('Version {version}', {'version': version}),
-                          style:
-                              const TextStyle(fontSize: 11, color: Colors.grey),
-                        );
-                      },
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    child: Text(
-                      tr('Report any bugs or glitches to noxqcx@gmail.com'),
-                      style: const TextStyle(fontSize: 11, color: Colors.grey),
-                    ),
-                  ),
-                  // TMDB's terms ask for this wherever their data/images
-                  // show — posters and backdrops come from TMDB's image
-                  // CDN even without a key (provider links, upgraded to HD
-                  // by hdImageUrl), so it lives here, not only in the
-                  // TMDB key screen.
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    child: Text(
-                      '${tr('Movie and TV artwork and data may come from TMDB (The Movie Database).')} '
-                      '${tr('This product uses the TMDB API but is not endorsed or certified by TMDB.')} '
-                      // Credit for the watch trackers (Settings > Trakt &
-                      // Simkl), owner 2026-10-19.
-                      '${tr('Watch tracking powered by Trakt and Simkl; VesperTV is not affiliated with or endorsed by either.')}',
-                      style: const TextStyle(fontSize: 11, color: Colors.grey),
-                    ),
-                  ),
-                ],
+      context,
+      (context) => SettingsScaffold(
+        title: category.title,
+        body: ListView(
+          padding: const EdgeInsets.only(top: 8),
+          children: [
+            _PaneHeader(category: category),
+            for (final e in category.entries)
+              TvMenuTile(
+                icon: e.icon,
+                title: e.title,
+                subtitle: e.subtitle,
+                onTap: () => Navigator.of(context)
+                    .push(MaterialPageRoute(builder: e.open)),
               ),
-            ));
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Version, bug-report address and the TMDB / Trakt / Simkl credits.
+class _Footer extends StatelessWidget {
+  const _Footer();
+
+  @override
+  Widget build(BuildContext context) {
+    const small = TextStyle(fontSize: 11, color: Colors.grey);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Reads whatever code is actually running via PackageInfo (same
+        // source CheckUpdatesScreen's "Current version" line uses) rather
+        // than a hand-typed constant — requested directly: "so I can
+        // confirm easily the current version inside the app".
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+          child: FutureBuilder<PackageInfo>(
+            future: PackageInfo.fromPlatform(),
+            builder: (context, snapshot) {
+              final version = snapshot.data?.version;
+              return Text(
+                version == null
+                    ? tr('Version —')
+                    : tr('Version {version}', {'version': version}),
+                style: small,
+              );
+            },
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Text(tr('Report any bugs or glitches to noxqcx@gmail.com'),
+              style: small),
+        ),
+        // TMDB's terms ask for this wherever their data/images show —
+        // posters and backdrops come from TMDB's image CDN even without a
+        // key (provider links, upgraded to HD by hdImageUrl), so it lives
+        // here, not only in the TMDB key screen.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Text(
+            '${tr('Movie and TV artwork and data may come from TMDB (The Movie Database).')} '
+            '${tr('This product uses the TMDB API but is not endorsed or certified by TMDB.')} '
+            // Credit for the watch trackers (Settings > Trakt & Simkl),
+            // owner 2026-10-19.
+            '${tr('Watch tracking powered by Trakt and Simkl; VesperTV is not affiliated with or endorsed by either.')}',
+            style: small,
+          ),
+        ),
+      ],
+    );
   }
 }

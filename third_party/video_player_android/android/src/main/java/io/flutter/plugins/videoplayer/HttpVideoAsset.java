@@ -27,6 +27,14 @@ final class HttpVideoAsset extends VideoAsset {
   @NonNull private final StreamingFormat streamingFormat;
   @NonNull private final Map<String, String> httpHeaders;
   @Nullable private final String userAgent;
+  // VesperTV patch: Data pool measured bitrate, see StatsBridge.
+  private final StreamStats stats = new StreamStats();
+
+  @Nullable
+  @Override
+  StreamStats streamStats() {
+    return stats;
+  }
 
   HttpVideoAsset(
       @Nullable String assetUrl,
@@ -76,10 +84,12 @@ final class HttpVideoAsset extends VideoAsset {
    * @param initialFactory initial factory, to be configured.
    * @return configured factory, or {@code null} if not needed for this asset type.
    */
+  @OptIn(markerClass = UnstableApi.class) // VesperTV patch: setTransferListener
   @VisibleForTesting
   MediaSource.Factory getMediaSourceFactory(
       Context context, DefaultHttpDataSource.Factory initialFactory) {
     unstableUpdateDataSourceFactory(initialFactory, httpHeaders, userAgent);
+    initialFactory.setTransferListener(stats);
     DataSource.Factory dataSourceFactory = new DefaultDataSource.Factory(context, initialFactory);
     return new DefaultMediaSourceFactory(dataSourceFactory, liveCaptionExtractors());
   }

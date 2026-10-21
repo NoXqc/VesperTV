@@ -82,6 +82,12 @@ public abstract class VideoAsset {
   @NonNull
   public abstract MediaSource.Factory getMediaSourceFactory(@NonNull Context context);
 
+  /** VesperTV patch: network byte counter for the Data pool (HTTP assets only). */
+  @Nullable
+  StreamStats streamStats() {
+    return null;
+  }
+
   /** Streaming formats that can be provided to the video player as a hint. */
   enum StreamingFormat {
     /** Default, if the format is either not known or not another valid format. */

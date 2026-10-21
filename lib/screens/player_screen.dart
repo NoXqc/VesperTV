@@ -16,6 +16,7 @@ import '../services/playlist_manager.dart';
 import '../utils/time_format.dart';
 import '../utils/constants.dart';
 import '../utils/tv_theme.dart';
+import '../widgets/data_pool_card.dart';
 import '../widgets/epg_guide.dart';
 import '../widgets/player_controls.dart';
 import '../widgets/subtitle_overlay.dart';
@@ -84,6 +85,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
   /// zap shows what's on without moving focus or the bars.
   bool _zapInfoVisible = false;
   Timer? _zapInfoTimer;
+
+  /// Data pool card ([DataPoolCard]) under the info card — OK only, when
+  /// Settings > General > Data pool display is on. Stays 10 s (more to
+  /// read than the info card's 4 s); OK again hides both.
+  bool _dataPoolVisible = false;
+  Timer? _dataPoolTimer;
 
   /// [PlayerSidePanel] showing (Left on a live channel). Back closes it
   /// instead of leaving the player (see the PopScope in [build]).
@@ -426,14 +433,27 @@ class _PlayerScreenState extends State<PlayerScreen> {
     final current = _playback.currentChannel ?? widget.channel;
     if (!Channel.isLiveId(current.rawId)) return;
     _zapInfoTimer?.cancel();
-    if (_zapInfoVisible) {
-      setState(() => _zapInfoVisible = false);
+    _dataPoolTimer?.cancel();
+    if (_zapInfoVisible || _dataPoolVisible) {
+      setState(() {
+        _zapInfoVisible = false;
+        _dataPoolVisible = false;
+      });
       return;
     }
-    setState(() => _zapInfoVisible = true);
+    final dataPool = context.read<AppPreferences>().dataPool;
+    setState(() {
+      _zapInfoVisible = true;
+      _dataPoolVisible = dataPool;
+    });
     _zapInfoTimer = Timer(const Duration(seconds: 4), () {
       if (mounted) setState(() => _zapInfoVisible = false);
     });
+    if (dataPool) {
+      _dataPoolTimer = Timer(const Duration(seconds: 10), () {
+        if (mounted) setState(() => _dataPoolVisible = false);
+      });
+    }
   }
 
   /// ⛶: the picture fills the whole screen (zoomed, edges cropped, no black
@@ -514,6 +534,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     });
     _hideTimer?.cancel();
     _zapInfoTimer?.cancel();
+    _dataPoolTimer?.cancel();
     _topScope.removeListener(_onBarFocusChange);
     _bottomScope.removeListener(_onBarFocusChange);
     _switchButtonFocus.removeListener(_onBarFocusChange);
@@ -767,18 +788,37 @@ class _PlayerScreenState extends State<PlayerScreen> {
                           ),
                         ),
 
-                        // CH+/CH- info card (see _zapChannel).
+                        // CH+/CH- info card (see _zapChannel), and the
+                        // Data pool card under it (OK, if enabled). The
+                        // Data pool is only built while shown — it polls.
                         Positioned(
                           top: 24,
                           left: 0,
                           right: 0,
                           child: IgnorePointer(
-                            child: AnimatedOpacity(
-                              opacity: _zapInfoVisible ? 1 : 0,
-                              duration: const Duration(milliseconds: 200),
-                              child: Center(
-                                child: _ZapInfoCard(channel: channel),
-                              ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                AnimatedOpacity(
+                                  opacity: _zapInfoVisible ? 1 : 0,
+                                  duration: const Duration(milliseconds: 200),
+                                  child: Center(
+                                    child: _ZapInfoCard(channel: channel),
+                                  ),
+                                ),
+                                AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 200),
+                                  child: _dataPoolVisible && controller != null
+                                      ? Padding(
+                                          padding: const EdgeInsets.only(
+                                              top: 10, left: 24, right: 24),
+                                          child: DataPoolCard(
+                                              controller: controller,
+                                              since: playback.playingSince),
+                                        )
+                                      : const SizedBox.shrink(),
+                                ),
+                              ],
                             ),
                           ),
                         ),

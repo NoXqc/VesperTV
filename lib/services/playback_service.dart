@@ -74,6 +74,18 @@ class PlaybackService extends ChangeNotifier {
   /// to the channel's own group when the playing channel isn't in it.
   List<Channel>? zapList;
   VideoPlayerHdrController? controller;
+
+  /// When the current channel was tuned (the Data pool's "Playing for"; a
+  /// live stream's position doesn't advance). Kept across a server retry.
+  DateTime? playingSince;
+
+  /// True from the start of [play] until the new controller exists. The
+  /// old player's release can take most of a second (4K decoders), and a
+  /// pane built meanwhile — the guide mounts a fresh one per channel — saw
+  /// no controller and drew its empty black state, then the spinner: the
+  /// "black flash before the loading circle" (owner, 2026-10-20). With
+  /// this the pane shows the spinner from the first frame.
+  bool switching = false;
   Future<void>? initFuture;
   String? error;
 
@@ -310,6 +322,9 @@ class PlaybackService extends ChangeNotifier {
     }
     if (currentChannel?.id == channel.id && controller != null) return;
 
+    // Before the teardown: it reads currentChannel for the old title's
+    // resume save, so only the flag changes here.
+    switching = true;
     await _teardown();
     currentChannel = channel;
     error = null;
@@ -346,6 +361,8 @@ class PlaybackService extends ChangeNotifier {
           : null,
     );
     controller = newController;
+    switching = false;
+    playingSince = DateTime.now();
 
     initFuture = newController.initialize(viewType: _viewType).then((_) async {
       if (savedPositionMs > 0) {
@@ -678,6 +695,7 @@ class PlaybackService extends ChangeNotifier {
       }
     }
     controller = null;
+    playingSince = null;
     initFuture = null;
     unawaited(WakelockPlus.disable());
     await old?.dispose();

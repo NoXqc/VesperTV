@@ -1416,10 +1416,10 @@ const Map<String, String> kEl = {
       "Δεν υπάρχουν ακόμη επερχόμενα παιχνίδια για αυτό το πρωτάθλημα.",
   "Transfer to another device":
       "Μεταφορά σε άλλη συσκευή",
-  "Copy playlists, favorites and settings over Wi-Fi":
-      "Αντιγραφή λιστών, αγαπημένων και ρυθμίσεων μέσω Wi-Fi",
-  "Copies your playlists, favorites, hidden groups, profiles, watch progress and settings to another device. On the same Wi-Fi it goes straight across; anywhere else it goes through an encrypted upload only the code can open. Channels, movies and the guide download again on the new device.":
-      "Αντιγράφει τις λίστες, τα αγαπημένα, τις κρυμμένες ομάδες, τα προφίλ, την πρόοδο παρακολούθησης και τις ρυθμίσεις σε άλλη συσκευή. Στο ίδιο Wi-Fi περνούν απευθείας· αλλού μέσω κρυπτογραφημένης μεταφόρτωσης που ανοίγει μόνο με τον κωδικό. Τα κανάλια, οι ταινίες και ο οδηγός κατεβαίνουν ξανά στη νέα συσκευή.",
+  "Copy all of your data to another device":
+      "Αντιγραφή όλων των δεδομένων σας σε άλλη συσκευή",
+  "Copies your playlists, favorites, hidden groups, profiles, watch progress, {tab} (leagues, favourite league, My Teams) and settings to another device. On the same Wi-Fi it goes straight across; anywhere else it goes through an encrypted upload only the code can open. Channels, movies and the guide download again on the new device.":
+      "Αντιγράφει τις λίστες, τα αγαπημένα, τις κρυμμένες ομάδες, τα προφίλ, την πρόοδο παρακολούθησης, το {tab} (πρωταθλήματα, αγαπημένο πρωτάθλημα, Οι ομάδες μου) και τις ρυθμίσεις σε άλλη συσκευή. Στο ίδιο Wi-Fi περνούν απευθείας· αλλού μέσω κρυπτογραφημένης μεταφόρτωσης που ανοίγει μόνο με τον κωδικό. Τα κανάλια, οι ταινίες και ο οδηγός κατεβαίνουν ξανά στη νέα συσκευή.",
   "This setup is too big to upload. Use the same-Wi-Fi transfer instead.":
       "Αυτή η ρύθμιση είναι πολύ μεγάλη για μεταφόρτωση. Χρησιμοποιήστε τη μεταφορά στο ίδιο Wi-Fi.",
   "Couldn't reach the VesperTV transfer server. Check this device's internet connection and try again.":
@@ -1920,4 +1920,130 @@ const Map<String, String> kEl = {
       "Πρόσφατα",
   "Clear recent searches":
       "Καθαρισμός πρόσφατων αναζητήσεων",
+  // Data pool (player stream details, Settings > General)
+  "Data pool":
+      "Data pool",
+  "Data pool display":
+      "Εμφάνιση Data pool",
+  "Press OK while a live channel plays to open a second card under the channel info with the stream's details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer and HDR. Off: OK shows only the channel info.":
+      "Πατήστε OK ενώ παίζει ένα ζωντανό κανάλι για να ανοίξει μια δεύτερη κάρτα κάτω από τις πληροφορίες του καναλιού με τα στοιχεία της ροής: ανάλυση, καρέ ανά δευτερόλεπτο, codecs, bitrate, εκδόσεις ποιότητας, κομμάτια ήχου, buffer και HDR. Απενεργοποιημένο: το OK δείχνει μόνο τις πληροφορίες του καναλιού.",
+  "Reading the stream…":
+      "Ανάγνωση της ροής…",
+  "Video":
+      "Βίντεο",
+  "Video bitrate":
+      "Bitrate βίντεο",
+  "Picture":
+      "Εικόνα",
+  "Quality variants":
+      "Εκδόσεις ποιότητας",
+  "One (not adaptive)":
+      "Μία (όχι προσαρμοστική)",
+  "Audio":
+      "Ήχος",
+  "Audio tracks":
+      "Κομμάτια ήχου",
+  "Stream":
+      "Ροή",
+  "Buffered":
+      "Στο buffer",
+  "{seconds} s":
+      "{seconds} δ",
+  "State":
+      "Κατάσταση",
+  "Buffering…":
+      "Φόρτωση buffer…",
+  "Playing for {time}":
+      "Παίζει εδώ και {time}",
+  "Paused":
+      "Σε παύση",
+  "Device HDR":
+      "HDR συσκευής",
+  "Not reported by the stream":
+      "Δεν αναφέρεται από τη ροή",
+  "Mono":
+      "Μονοφωνικό",
+  "Stereo":
+      "Στερεοφωνικό",
+  "Direct stream":
+      "Άμεση ροή",
+  "Yes":
+      "Ναι",
+  "No":
+      "Όχι",
+  "Stream bitrate":
+      "Bitrate ροής",
+  "Declared bitrate":
+      "Δηλωμένο bitrate",
+  "Dropped frames":
+      "Χαμένα καρέ",
+  "(measured)":
+      "(μετρημένο)",
+  "Measuring…":
+      "Μέτρηση…",
+  // Settings categories (left panel)
+  "Playlists & guide":
+      "Λίστες και οδηγός",
+  "Your playlists and their logins, the TV guide (EPG) and the viewer profiles.":
+      "Οι λίστες σας και τα στοιχεία σύνδεσής τους, ο οδηγός TV (EPG) και τα προφίλ.",
+  "Everything the Media Hub uses: its add-on sources, online subtitles, Trakt & Simkl watch tracking and the optional TMDB key.":
+      "Ό,τι χρησιμοποιεί το Media Hub: πηγές add-on, online υπότιτλοι, παρακολούθηση Trakt και Simkl και το προαιρετικό κλειδί TMDB.",
+  "Interface":
+      "Διεπαφή",
+  "How the app looks and what it shows: theme, tabs, the player's extras and reminders.":
+      "Η εμφάνιση της εφαρμογής και τι δείχνει: θέμα, καρτέλες, έξτρα του player και υπενθυμίσεις.",
+  "Hide Movies, TV Shows, Media Hub or Multiview":
+      "Απόκρυψη Ταινιών, Σειρών, Media Hub ή Multiview",
+  "Fixes for the picture on some Fire TV sticks":
+      "Διορθώσεις για την εικόνα σε ορισμένα Fire TV stick",
+  "Stream details when you press OK on a channel":
+      "Λεπτομέρειες ροής όταν πατάτε OK σε ένα κανάλι",
+  "One list for every playlist, or one per playlist":
+      "Μία λίστα για όλες τις λίστες, ή μία ανά λίστα",
+  "The connections tip when opening Multiview":
+      "Η συμβουλή για τις συνδέσεις όταν ανοίγει το Multiview",
+  "The \"Hold > to resume\" pill":
+      "Η ένδειξη «Κρατήστε > για συνέχεια»",
+  "Language and clock, what plays when the app starts, Fast startup, and clearing your history.":
+      "Γλώσσα και ρολόι, τι παίζει στην εκκίνηση, Γρήγορη εκκίνηση και διαγραφή ιστορικού.",
+  "App language and 24-hour clock":
+      "Γλώσσα εφαρμογής και ρολόι 24 ωρών",
+  "Resume the last channel, Fast startup":
+      "Συνέχεια του τελευταίου καναλιού, Γρήγορη εκκίνηση",
+  "Clear searches, channels, Continue Watching":
+      "Διαγραφή αναζητήσεων, καναλιών, Συνέχεια παρακολούθησης",
+  "Device & data":
+      "Συσκευή και δεδομένα",
+  "Move your whole setup to another device, keep a backup of it, and update VesperTV.":
+      "Μεταφέρετε όλη τη ρύθμισή σας σε άλλη συσκευή, κρατήστε αντίγραφο ασφαλείας και ενημερώστε το VesperTV.",
+  // Own live groups (Move to group)
+  "Move to group…":
+      "Μετακίνηση σε ομάδα…",
+  "Move {name} to":
+      "Μετακίνηση του {name} σε",
+  "New group…":
+      "Νέα ομάδα…",
+  "Back to {group}":
+      "Επιστροφή στο {group}",
+  "New group":
+      "Νέα ομάδα",
+  "Group name":
+      "Όνομα ομάδας",
+  "{name} is now in {group}":
+      "Το {name} είναι τώρα στο {group}",
+  "Delete this group":
+      "Διαγραφή αυτής της ομάδας",
+  "{group} deleted. Its channels are back in their groups.":
+      "Η ομάδα {group} διαγράφηκε. Τα κανάλια της επέστρεψαν στις ομάδες τους.",
+  // Fast startup
+  "Fast startup":
+      "Γρήγορη εκκίνηση",
+  "Opens the app without waiting for Movies and TV Shows to load; they fill in a few seconds later. For fast devices — leave it off on an older box if the app closes by itself right after starting. Applies from the next start.":
+      "Ανοίγει την εφαρμογή χωρίς να περιμένει να φορτώσουν οι Ταινίες και οι Σειρές· συμπληρώνονται λίγα δευτερόλεπτα αργότερα. Για γρήγορες συσκευές — αφήστε το κλειστό σε παλιότερο αποκωδικοποιητή αν η εφαρμογή κλείνει μόνη της αμέσως μετά την εκκίνηση. Ισχύει από την επόμενη εκκίνηση.",
+  // Group hold menu: New group
+  "{group} created. Hold OK on a channel > Move to group… to add channels.":
+      "Η ομάδα {group} δημιουργήθηκε. Κρατήστε OK σε ένα κανάλι > Μετακίνηση σε ομάδα… για να προσθέσετε κανάλια.",
+  // Channel menu: Remove from group
+  "Remove from {group}":
+      "Αφαίρεση από το {group}",
 };

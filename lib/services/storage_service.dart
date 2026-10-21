@@ -289,10 +289,20 @@ class StorageService {
   Future<void> setReal4kChannels(Set<String> ids) =>
       _prefs.setStringList(AppConstants.keyReal4kChannels, ids.toList());
 
+  bool getFastStartup() => _prefs.getBool(AppConstants.keyFastStartup) ?? false;
+  Future<void> setFastStartup(bool value) =>
+      _prefs.setBool(AppConstants.keyFastStartup, value);
+
   /// Null = never chosen (auto, see AppPreferences.compatVideo).
   bool? getCompatVideo() => _prefs.getBool(AppConstants.keyCompatVideo);
   Future<void> setCompatVideo(bool value) =>
       _prefs.setBool(AppConstants.keyCompatVideo, value);
+
+  /// Settings > General > Data pool display (off by default).
+  bool getDataPool() => _prefs.getBool(AppConstants.keyDataPool) ?? false;
+  Future<void> setDataPool(bool value) =>
+      _prefs.setBool(AppConstants.keyDataPool, value);
+
   bool getMixFavoritePlaylists() =>
       _prefs.getBool(AppConstants.keyMixFavoritePlaylists) ?? false;
   Future<void> setMixFavoritePlaylists(bool value) =>
@@ -565,6 +575,11 @@ class StorageService {
       _prefs.setString(
           _vkp(AppConstants.keyChannelOrder, playlistId), jsonEncode(order));
 
+  /// [AppConstants.keyMyGroups]'s raw JSON (parsed by `UserGroups`).
+  String? getMyGroups() => _prefs.getString(_vk(AppConstants.keyMyGroups));
+  Future<void> setMyGroups(String json) =>
+      _prefs.setString(_vk(AppConstants.keyMyGroups), json);
+
   // --- Search history (per viewer) ------------------------------------------
 
   static const _maxRecentSearches = 10;
@@ -733,6 +748,7 @@ class StorageService {
     AppConstants.keyVideoFill,
     AppConstants.keyHideVideoOnSports,
     AppConstants.keyCompatVideo,
+    AppConstants.keyFastStartup,
     AppConstants.keyPlaylistEnabled,
     AppConstants.keyPinFailCount,
     AppConstants.keyPinLockedUntil,

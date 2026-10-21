@@ -57,4 +57,34 @@ void main() {
       }
     }
   });
+
+  test('football clubs as Greek channels write them', () {
+    bool matches(String feed, String greekTitle) {
+      final club = greekTeamFor(sportsNormalize(feed));
+      if (club == null) return false;
+      final title = sportsNormalize(greekTitle);
+      return club.phrases.any(title.contains) &&
+          club.stems.any(greekTitle.contains);
+    }
+
+    const como = 'Live: Ποδόσφαιρο: Κόμο - Μάντσεστερ Γιουνάιτεντ';
+    expect(matches('Como', como), isTrue);
+    expect(matches('Manchester United', como), isTrue);
+    expect(matches('Manchester City', como), isFalse);
+    expect(matches('Bayern Munich', 'Μπάγερν Μονάχου - Άρσεναλ'), isTrue);
+    expect(matches('Arsenal', 'Μπάγερν Μονάχου - Άρσεναλ'), isTrue);
+    expect(matches('Paris Saint-Germain', 'Παρί Σεν Ζερμέν - Μπαρτσελόνα'),
+        isTrue);
+    expect(matches('Atlético Madrid', 'Ατλέτικο Μαδρίτης - Λίβερπουλ'), isTrue);
+    // Boston Celtics is not Celtic.
+    expect(greekTeamFor(sportsNormalize('Celtic'))!.phrases, [' seltik ']);
+    for (final (keys, greek) in greekBroadcastNames) {
+      for (final k in keys) {
+        expect(k, sportsNormalize(k), reason: k);
+      }
+      for (final g in greek) {
+        expect(sportsNormalize(g).trim(), isNotEmpty, reason: g);
+      }
+    }
+  });
 }

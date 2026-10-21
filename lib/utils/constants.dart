@@ -140,6 +140,10 @@ class AppConstants {
   /// title → ordered `Channel.rawId`s.
   static const String keyChannelOrder = 'nox_channel_order';
 
+  /// The viewer's own live groups, across every playlist (see
+  /// `UserGroups` for the JSON). Per viewer, not per playlist.
+  static const String keyMyGroups = 'nox_my_groups';
+
   /// Playlists whose groups are hidden from one category's groups column
   /// and browse rows (groups column > Playlists > Right > Hide), per viewer;
   /// the key gets a `_<category>` suffix ('tv'/'vod'/'series'). Their
@@ -249,6 +253,12 @@ class AppConstants {
   /// Device-only (not transferred). Key name predates Settings/Search.
   static const String keyHideVideoOnSports = 'vesper_hide_video_on_sports';
   static const String keyCompatVideo = 'vesper_compat_video';
+
+  /// Settings > General > Startup: Fast startup (opt-in, owner
+  /// 2026-10-21) — the UI opens without waiting for Movies/TV Shows to
+  /// pre-load. Device-only: the slow splash protects weak boxes (§10).
+  static const String keyFastStartup = 'vesper_fast_startup';
+  static const String keyDataPool = 'vesper_data_pool';
   // Live channel ids seen playing at real 4K (Real4kChannels), list.
   static const String keyReal4kChannels = 'vesper_real_4k_channels';
   static const String keyLastAutoBackup = 'vesper_last_auto_backup';

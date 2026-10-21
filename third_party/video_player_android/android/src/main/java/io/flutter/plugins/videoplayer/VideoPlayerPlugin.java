@@ -28,6 +28,8 @@ public class VideoPlayerPlugin implements FlutterPlugin, AndroidVideoPlayerApi {
   private long nextPlayerIdentifier = 1;
   // VesperTV patch: embedded subtitles, see SubtitleBridge.
   @Nullable private SubtitleBridge subtitleBridge;
+  // VesperTV patch: Data pool measured bitrate / frame rate, see StatsBridge.
+  @Nullable private StatsBridge statsBridge;
 
   /** Register this with the v2 embedding for the plugin to respond to lifecycle callbacks. */
   public VideoPlayerPlugin() {}
@@ -44,6 +46,7 @@ public class VideoPlayerPlugin implements FlutterPlugin, AndroidVideoPlayerApi {
             binding.getTextureRegistry());
     flutterState.startListening(this, binding.getBinaryMessenger());
     subtitleBridge = new SubtitleBridge(binding.getBinaryMessenger(), videoPlayers);
+    statsBridge = new StatsBridge(binding.getBinaryMessenger(), videoPlayers);
 
     binding
         .getPlatformViewRegistry()
@@ -62,6 +65,10 @@ public class VideoPlayerPlugin implements FlutterPlugin, AndroidVideoPlayerApi {
     if (subtitleBridge != null) {
       subtitleBridge.dispose();
       subtitleBridge = null;
+    }
+    if (statsBridge != null) {
+      statsBridge.dispose();
+      statsBridge = null;
     }
     onDestroy();
   }
@@ -104,6 +111,7 @@ public class VideoPlayerPlugin implements FlutterPlugin, AndroidVideoPlayerApi {
             videoAsset,
             playerOptions);
 
+    videoPlayer.streamStats = videoAsset.streamStats();
     registerPlayerInstance(videoPlayer, id);
     return id;
   }
@@ -143,6 +151,7 @@ public class VideoPlayerPlugin implements FlutterPlugin, AndroidVideoPlayerApi {
             videoAsset,
             playerOptions);
 
+    videoPlayer.streamStats = videoAsset.streamStats();
     registerPlayerInstance(videoPlayer, id);
     return new TexturePlayerIds(id, handle.id());
   }
@@ -175,6 +184,7 @@ public class VideoPlayerPlugin implements FlutterPlugin, AndroidVideoPlayerApi {
   }
 
   private void registerPlayerInstance(VideoPlayer player, long id) {
+    // VesperTV patch: player.streamStats is set by the create methods before this.
     // Set up the instance-specific API handler, and make sure it is removed when the player is
     // disposed.
     BinaryMessenger messenger = flutterState.binaryMessenger;

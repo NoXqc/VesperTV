@@ -282,6 +282,11 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   /// animation playing out fully even though the actual boot is quick.
   static const _minSplashDuration = Duration(milliseconds: 2600);
 
+  /// Fast startup's splash: loads for this long at most (owner: 3-4 s is
+  /// fine if it buys stability), then the UI opens and the rest of the
+  /// catalog fills in behind it.
+  static const _fastSplashDuration = Duration(milliseconds: 3500);
+
   Future<void> _bootstrap() async {
     setState(() => _bootstrapError = null);
     final started = DateTime.now();
@@ -385,6 +390,11 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // so this is a fast local-database read in the common case, not a
       // network fetch — no artificial delay, this is genuinely the same
       // work that would otherwise happen the moment you opened either tab.
+      // Fast startup (opt-in, Settings > General > Startup): the UI opens
+      // now and Movies/TV Shows fill in behind it. Off by default — on a
+      // weak box early remote input during this load crashed the app
+      // (CLAUDE.md §10), which is why the splash waits for it.
+      final fast = _preferences.fastStartup;
       if (!didSync && _playlistManager.isXtream) {
         // One pre-load pass per enabled Xtream playlist — group names
         // alone aren't enough to route to the right playlist's session
@@ -405,7 +415,18 @@ class _NoxIptvAppState extends State<NoxIptvApp>
           futures.add(_playlistManager.ensureCategoriesLoaded(
               profile.id, seriesNames, 'series'));
         }
-        await Future.wait(futures);
+        final preload = Future.wait(futures);
+        if (fast) {
+          // Whatever loads within the fast splash is ready on arrival.
+          final left = _fastSplashDuration - DateTime.now().difference(started);
+          await Future.any([
+            preload.then((_) {},
+                onError: (Object e) => debugPrint('Fast startup preload: $e')),
+            Future<void>.delayed(left.isNegative ? Duration.zero : left),
+          ]);
+        } else {
+          await preload;
+        }
       }
 
       // Anything the pre-load above kicked off but didn't itself await
@@ -417,15 +438,17 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // opening for the resumed channel, and the EPG parse all used to
       // run at once. The splash is time the user already expects to
       // spend; a half-populated UI that then falls over is not.
-      await _waitForCategoriesToSettle();
+      await _waitForCategoriesToSettle(
+          fast ? started.add(_fastSplashDuration) : null);
 
       // A fixed floor on top of the real work above — on a very small
       // catalog (or M3U mode, which skips the pre-load entirely) that
       // work alone might finish in well under a second, too fast for the
       // splash's pulse animation to actually register at all.
+      final floor = fast ? _fastSplashDuration : _minSplashDuration;
       final elapsed = DateTime.now().difference(started);
-      if (elapsed < _minSplashDuration) {
-        await Future.delayed(_minSplashDuration - elapsed);
+      if (elapsed < floor) {
+        await Future.delayed(floor - elapsed);
       }
       if (mounted) setState(() => _ready = true);
       if (didSync) {
@@ -482,8 +505,9 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   /// ends is worse than a catalog that fills in late.
   static const _categorySettleTimeout = Duration(seconds: 30);
 
-  Future<void> _waitForCategoriesToSettle() async {
-    final deadline = DateTime.now().add(_categorySettleTimeout);
+  /// [until] (Fast startup) cuts the wait short; the load carries on.
+  Future<void> _waitForCategoriesToSettle([DateTime? until]) async {
+    final deadline = until ?? DateTime.now().add(_categorySettleTimeout);
     while (_playlistManager.isLoadingCategories &&
         DateTime.now().isBefore(deadline)) {
       await Future<void>.delayed(const Duration(milliseconds: 250));

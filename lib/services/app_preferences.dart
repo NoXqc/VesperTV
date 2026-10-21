@@ -47,6 +47,10 @@ class AppPreferences extends ChangeNotifier {
   /// instead of one block per playlist (Settings > General > Favourites).
   late bool mixFavoritePlaylists;
 
+  /// OK on a live channel also opens the Data pool card (stream details,
+  /// `widgets/data_pool_card.dart`). Settings > General, off by default.
+  late bool dataPool;
+
   /// Sports Trak / Settings / Search hide the background live channel's
   /// picture while open (stream and sound keep going) — see
   /// `TvHomeScreen._pushOverLiveVideo`.
@@ -85,6 +89,15 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Fast startup: see [AppConstants.keyFastStartup]. Read once by the
+  /// splash, so a change applies from the next launch.
+  bool get fastStartup => _storage.getFastStartup();
+
+  void setFastStartup(bool value) {
+    _storage.setFastStartup(value);
+    notifyListeners();
+  }
+
   Future<void> init() async {
     showClock = _storage.getShowClock();
     palette = _paletteById(_storage.getPaletteId());
@@ -97,6 +110,7 @@ class AppPreferences extends ChangeNotifier {
     hideMultiview = _storage.getHideMultiview();
     videoFill = _storage.getVideoFill();
     mixFavoritePlaylists = _storage.getMixFavoritePlaylists();
+    dataPool = _storage.getDataPool();
     hideVideoOnSports = _storage.getHideVideoOnSports();
     TimeFormat.use24h = _storage.getTime24h();
   }
@@ -181,6 +195,12 @@ class AppPreferences extends ChangeNotifier {
   void setHideVideoOnSports(bool value) {
     hideVideoOnSports = value;
     _storage.setHideVideoOnSports(value);
+    notifyListeners();
+  }
+
+  void setDataPool(bool value) {
+    dataPool = value;
+    _storage.setDataPool(value);
     notifyListeners();
   }
 

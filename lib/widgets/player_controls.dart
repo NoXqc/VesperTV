@@ -83,6 +83,11 @@ class VideoPlayerPane extends StatelessWidget {
     final channel = playback.currentChannel;
     final controller = playback.controller;
 
+    // Mid-switch: the old player is still being released (see
+    // PlaybackService.switching) — loading, not "nothing playing".
+    if (controller == null && playback.switching) {
+      return const Center(child: CircularProgressIndicator());
+    }
     if (channel == null || controller == null) {
       // play() can refuse before anything starts (a disabled playlist):
       // say why instead of "Select a channel".
