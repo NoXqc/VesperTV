@@ -756,6 +756,11 @@ const Map<String, String> kEs = {
       "Si terminaste de elegir tus grupos, pulsa Confirmar abajo.\n\nSi aún no, pulsa Izquierda para volver a tus categorías.",
   'No categories yet — load a playlist first.':
       "Aún no hay categorías; primero carga una lista.",
+  'Search groups (starts with)': 'Buscar grupos (empieza por)',
+  '{shown} of {total} groups': '{shown} de {total} grupos',
+  'Show results': 'Mostrar resultados',
+  'Hide results': 'Ocultar resultados',
+  'No groups start with "{query}".': 'Ningún grupo empieza por «{query}».',
   'Show All': "Mostrar todo",
   'Hide All': "Ocultar todo",
   'Hidden channels': "Canales ocultos",

@@ -8,6 +8,7 @@ import '../../utils/tv_theme.dart';
 import '../../widgets/mode_button.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_app_bar_button.dart';
+import '../../widgets/tv_text_field_gate.dart';
 import '../../l10n/l10n.dart';
 
 /// Lists every group/category (live, movies, TV shows) — including hidden
@@ -38,6 +39,9 @@ class GroupManagementScreen extends StatefulWidget {
 class _GroupManagementScreenState extends State<GroupManagementScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final _searchControllers = List.generate(3, (_) => TextEditingController());
+  final _searchNodes =
+      List.generate(3, (i) => FocusNode(debugLabel: 'group-search-$i'));
 
   /// Blocks every pop attempt (physical back, the Up-to-back shortcut,
   /// system back gesture) until either "Done" is pressed or the user
@@ -128,7 +132,13 @@ class _GroupManagementScreenState extends State<GroupManagementScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    for (final node in _searchNodes) {
+      node.addListener(_searchFocusChanged);
+    }
   }
+
+  // Number shortcuts must not switch categories while entering e.g. "24/7".
+  void _searchFocusChanged() => setState(() {});
 
   @override
   void dispose() {
@@ -137,6 +147,13 @@ class _GroupManagementScreenState extends State<GroupManagementScreen>
       scope.dispose();
     }
     _doneButtonFocusNode.dispose();
+    for (final node in _searchNodes) {
+      node.removeListener(_searchFocusChanged);
+      node.dispose();
+    }
+    for (final controller in _searchControllers) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -236,14 +253,16 @@ class _GroupManagementScreenState extends State<GroupManagementScreen>
                       _handleTabArrow(TraversalDirection.left, -1),
                   const SingleActivator(LogicalKeyboardKey.arrowRight): () =>
                       _handleTabArrow(TraversalDirection.right, 1),
-                  const SingleActivator(LogicalKeyboardKey.digit1): () =>
-                      _goToTab(0),
-                  const SingleActivator(LogicalKeyboardKey.digit2): () =>
-                      _goToTab(1),
-                  const SingleActivator(LogicalKeyboardKey.digit3): () =>
-                      _goToTab(2),
-                  const SingleActivator(LogicalKeyboardKey.digit4): () =>
-                      _goToTab(3),
+                  if (!_searchNodes.any((node) => node.hasFocus)) ...{
+                    const SingleActivator(LogicalKeyboardKey.digit1): () =>
+                        _goToTab(0),
+                    const SingleActivator(LogicalKeyboardKey.digit2): () =>
+                        _goToTab(1),
+                    const SingleActivator(LogicalKeyboardKey.digit3): () =>
+                        _goToTab(2),
+                    const SingleActivator(LogicalKeyboardKey.digit4): () =>
+                        _goToTab(3),
+                  },
                   const SingleActivator(LogicalKeyboardKey.arrowUp):
                       _handleUpArrow,
                 },
@@ -256,6 +275,8 @@ class _GroupManagementScreenState extends State<GroupManagementScreen>
                         groups: playlist.tvGroups
                             .where((g) => g.playlistId == widget.playlistId)
                             .toList(),
+                        searchController: _searchControllers[0],
+                        searchNode: _searchNodes[0],
                         playlist: playlist,
                         playlistId: widget.playlistId,
                         deferLoading: widget.deferLoading,
@@ -267,6 +288,8 @@ class _GroupManagementScreenState extends State<GroupManagementScreen>
                         groups: playlist.vodGroups
                             .where((g) => g.playlistId == widget.playlistId)
                             .toList(),
+                        searchController: _searchControllers[1],
+                        searchNode: _searchNodes[1],
                         playlist: playlist,
                         playlistId: widget.playlistId,
                         deferLoading: widget.deferLoading,
@@ -278,6 +301,8 @@ class _GroupManagementScreenState extends State<GroupManagementScreen>
                         groups: playlist.seriesGroups
                             .where((g) => g.playlistId == widget.playlistId)
                             .toList(),
+                        searchController: _searchControllers[2],
+                        searchNode: _searchNodes[2],
                         playlist: playlist,
                         playlistId: widget.playlistId,
                         deferLoading: widget.deferLoading,
@@ -328,11 +353,13 @@ class _ConfirmTab extends StatelessWidget {
   }
 }
 
-class _GroupList extends StatelessWidget {
+class _GroupList extends StatefulWidget {
   const _GroupList({
     required this.groups,
     required this.playlist,
     required this.playlistId,
+    required this.searchController,
+    required this.searchNode,
     this.deferLoading = false,
   });
 
@@ -340,135 +367,232 @@ class _GroupList extends StatelessWidget {
   final PlaylistManager playlist;
   final String playlistId;
   final bool deferLoading;
+  final TextEditingController searchController;
+  final FocusNode searchNode;
+
+  @override
+  State<_GroupList> createState() => _GroupListState();
+}
+
+class _GroupListState extends State<_GroupList> {
+  final _scroll = ScrollController();
+  final _showNode = FocusNode(debugLabel: 'group-search-show');
+  final _clearNode = FocusNode(debugLabel: 'group-search-clear');
+  late String _lastSearch;
+
+  @override
+  void initState() {
+    super.initState();
+    _lastSearch = widget.searchController.text;
+    widget.searchController.addListener(_searchChanged);
+  }
+
+  void _searchChanged() {
+    final text = widget.searchController.text;
+    // Cursor/selection changes aren't a filter.
+    if (text == _lastSearch) return;
+    _lastSearch = text;
+    if (_scroll.hasClients) _scroll.jumpTo(0);
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    widget.searchController.removeListener(_searchChanged);
+    _scroll.dispose();
+    _showNode.dispose();
+    _clearNode.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final groups = widget.groups;
+    final playlist = widget.playlist;
+    final playlistId = widget.playlistId;
+    final deferLoading = widget.deferLoading;
     if (groups.isEmpty) {
       return Center(
           child: Text(tr('No categories yet — load a playlist first.')));
     }
 
-    final titles = groups.map((g) => g.title);
+    final query = widget.searchController.text.trim().toLowerCase();
+    final filtered = query.isEmpty
+        ? groups
+        : groups
+            .where((g) => g.title.trimLeft().toLowerCase().startsWith(query))
+            .toList();
+    final titles = filtered.map((g) => g.title);
 
     return Column(
       children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+          child: TvTextFieldGate(
+            focusNode: widget.searchNode,
+            builder: (context, readOnly) => TextField(
+              controller: widget.searchController,
+              focusNode: widget.searchNode,
+              readOnly: readOnly,
+              textInputAction: TextInputAction.search,
+              onSubmitted: (_) => filtered.isEmpty
+                  ? _clearNode.requestFocus()
+                  : _showNode.requestFocus(),
+              decoration: InputDecoration(
+                labelText: tr('Search groups (starts with)'),
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: widget.searchController.text.isEmpty
+                    ? null
+                    : IconButton(
+                        focusNode: _clearNode,
+                        tooltip: tr('Clear search'),
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          widget.searchController.clear();
+                          widget.searchNode.requestFocus();
+                        },
+                      ),
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+          child: Text(tr('{shown} of {total} groups', {
+            'shown': '${filtered.length}',
+            'total': '${groups.length}',
+          })),
+        ),
         Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () => playlist.setGroupsHidden(
-                      playlistId, titles, false,
-                      loadImmediately: !deferLoading),
-                  child: Text(tr('Show All')),
+                  focusNode: _showNode,
+                  onPressed: filtered.isEmpty
+                      ? null
+                      : () => playlist.setGroupsHidden(
+                          playlistId, titles, false,
+                          loadImmediately: !deferLoading),
+                  child: Text(tr(query.isEmpty ? 'Show All' : 'Show results')),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () =>
-                      playlist.setGroupsHidden(playlistId, titles, true),
-                  child: Text(tr('Hide All')),
+                  onPressed: filtered.isEmpty
+                      ? null
+                      : () =>
+                          playlist.setGroupsHidden(playlistId, titles, true),
+                  child: Text(tr(query.isEmpty ? 'Hide All' : 'Hide results')),
                 ),
               ),
             ],
           ),
         ),
         Expanded(
-          child: ListView.builder(
-            itemCount: groups.length,
-            itemBuilder: (context, index) {
-              final group = groups[index];
-              // Confirmed on a real Formuler box: without any key, toggling
-              // visibility (individually, or via Show/Hide All) updated the
-              // underlying data immediately and correctly — leaving the
-              // screen and coming back always showed the right checkmarks —
-              // but the *already-mounted* checkbox never repainted in place
-              // to reflect it, even though the identical build worked fine
-              // on a Firestick. That's a stale-repaint bug in this device's
-              // GPU/renderer failing to redraw an in-place property change
-              // on the existing render object, not a logic bug.
-              //
-              // First fix attempt keyed the whole CheckboxListTile to its
-              // shown/hidden value, which did force a repaint — but it also
-              // tore down and rebuilt the row's own focus node every single
-              // toggle, so a D-pad user checking one box at a time watched
-              // focus jump to a neighboring row on its own (Flutter's focus
-              // manager losing the just-disposed node and auto-resolving to
-              // the nearest one). The row itself — and the focus/tap target
-              // it owns — must stay the *same* element across a toggle;
-              // only the small checkbox glyph that wasn't repainting needs
-              // to be torn down and recreated. So the key moves onto just
-              // that inner piece, and the row is built by hand (instead of
-              // CheckboxListTile) so that piece can be keyed independently
-              // of the focusable row around it.
-              //
-              // Second fix attempt: kept `Checkbox` itself, just wrapped in
-              // a `KeyedSubtree` keyed to `group.isHidden` — confirmed on
-              // the same Formuler box as STILL not reliably repainting.
-              // Data was verified correct throughout (toggling really did
-              // flip `_hiddenGroups`; a subsequent full sync used the
-              // correct set) — this is a pure paint bug, not a logic one,
-              // and it survives even a full Element recreation, which
-              // means the problem isn't identity/keying at all — it's
-              // something about repainting `Checkbox` specifically on this
-              // device. `Checkbox` is a full Material widget with its own
-              // ink/animation machinery; swapping to a bare `Icon` (no
-              // Material ink response, no internal AnimatedContainer, as
-              // simple a paint primitive as Flutter has) sidesteps
-              // whatever that is rather than trying to force it again.
-              //
-              // Three more fix attempts here, all confirmed on a real
-              // Fire Stick as NOT fixing this: forcing the whole
-              // `_GroupList` to rebuild once via a changing key a frame
-              // after this screen's first paint; forcing a brand new
-              // compositing *layer* via a keyed `RepaintBoundary` (kept
-              // anyway over the `KeyedSubtree` it replaced — a strict
-              // superset); and automatically popping this screen and
-              // silently pushing a fresh copy of itself, which got stuck
-              // exactly the same way on the very first toggle. That last
-              // one also ruled out "just needs elapsed time since the
-              // heavy load" (confirmed separately too: waiting 60+ real
-              // seconds before trying Hide All again changed nothing) —
-              // so nothing in *this* screen's own widget tree, however
-              // rebuilt, was ever going to fix it.
-              //
-              // The actual root cause turned out to live somewhere this
-              // file never touches at all: `PlaylistManager` firing
-              // `notifyListeners()` synchronously *during* `TvHomeScreen`'s
-              // own build (TvHomeScreen stays mounted, just covered, under
-              // the whole Add Playlist → Group Management stack, and
-              // still rebuilds when the provider above it notifies).
-              // Confirmed directly via a debug-mode Flutter assertion
-              // ("setState() or markNeedsBuild() called during build")
-              // that release mode has no equivalent safety net for — see
-              // `PlaylistManager._loadLiveChannelsOnce`'s doc comment for
-              // the actual fix. Real hardware confirmed fixed end-to-end
-              // after that change, so the `RepaintBoundary` above is
-              // likely no longer doing any real work — left in place
-              // anyway since it's strictly safe and costs nothing.
-              return ListTile(
-                key: ValueKey(group.title),
-                title: Text(group.title),
-                trailing: RepaintBoundary(
-                  key: ValueKey(group.isHidden),
-                  child: Icon(
-                    group.isHidden ? Icons.circle_outlined : Icons.check_circle,
-                    color: group.isHidden
-                        ? Colors.white54
-                        : Theme.of(context).colorScheme.primary,
-                  ),
+          child: filtered.isEmpty
+              ? Center(
+                  child: Text(tr('No groups start with "{query}".', {
+                  'query': widget.searchController.text.trim(),
+                })))
+              : ListView.builder(
+                  controller: _scroll,
+                  itemCount: filtered.length,
+                  itemBuilder: (context, index) {
+                    final group = filtered[index];
+                    // Confirmed on a real Formuler box: without any key, toggling
+                    // visibility (individually, or via Show/Hide All) updated the
+                    // underlying data immediately and correctly — leaving the
+                    // screen and coming back always showed the right checkmarks —
+                    // but the *already-mounted* checkbox never repainted in place
+                    // to reflect it, even though the identical build worked fine
+                    // on a Firestick. That's a stale-repaint bug in this device's
+                    // GPU/renderer failing to redraw an in-place property change
+                    // on the existing render object, not a logic bug.
+                    //
+                    // First fix attempt keyed the whole CheckboxListTile to its
+                    // shown/hidden value, which did force a repaint — but it also
+                    // tore down and rebuilt the row's own focus node every single
+                    // toggle, so a D-pad user checking one box at a time watched
+                    // focus jump to a neighboring row on its own (Flutter's focus
+                    // manager losing the just-disposed node and auto-resolving to
+                    // the nearest one). The row itself — and the focus/tap target
+                    // it owns — must stay the *same* element across a toggle;
+                    // only the small checkbox glyph that wasn't repainting needs
+                    // to be torn down and recreated. So the key moves onto just
+                    // that inner piece, and the row is built by hand (instead of
+                    // CheckboxListTile) so that piece can be keyed independently
+                    // of the focusable row around it.
+                    //
+                    // Second fix attempt: kept `Checkbox` itself, just wrapped in
+                    // a `KeyedSubtree` keyed to `group.isHidden` — confirmed on
+                    // the same Formuler box as STILL not reliably repainting.
+                    // Data was verified correct throughout (toggling really did
+                    // flip `_hiddenGroups`; a subsequent full sync used the
+                    // correct set) — this is a pure paint bug, not a logic one,
+                    // and it survives even a full Element recreation, which
+                    // means the problem isn't identity/keying at all — it's
+                    // something about repainting `Checkbox` specifically on this
+                    // device. `Checkbox` is a full Material widget with its own
+                    // ink/animation machinery; swapping to a bare `Icon` (no
+                    // Material ink response, no internal AnimatedContainer, as
+                    // simple a paint primitive as Flutter has) sidesteps
+                    // whatever that is rather than trying to force it again.
+                    //
+                    // Three more fix attempts here, all confirmed on a real
+                    // Fire Stick as NOT fixing this: forcing the whole
+                    // `_GroupList` to rebuild once via a changing key a frame
+                    // after this screen's first paint; forcing a brand new
+                    // compositing *layer* via a keyed `RepaintBoundary` (kept
+                    // anyway over the `KeyedSubtree` it replaced — a strict
+                    // superset); and automatically popping this screen and
+                    // silently pushing a fresh copy of itself, which got stuck
+                    // exactly the same way on the very first toggle. That last
+                    // one also ruled out "just needs elapsed time since the
+                    // heavy load" (confirmed separately too: waiting 60+ real
+                    // seconds before trying Hide All again changed nothing) —
+                    // so nothing in *this* screen's own widget tree, however
+                    // rebuilt, was ever going to fix it.
+                    //
+                    // The actual root cause turned out to live somewhere this
+                    // file never touches at all: `PlaylistManager` firing
+                    // `notifyListeners()` synchronously *during* `TvHomeScreen`'s
+                    // own build (TvHomeScreen stays mounted, just covered, under
+                    // the whole Add Playlist → Group Management stack, and
+                    // still rebuilds when the provider above it notifies).
+                    // Confirmed directly via a debug-mode Flutter assertion
+                    // ("setState() or markNeedsBuild() called during build")
+                    // that release mode has no equivalent safety net for — see
+                    // `PlaylistManager._loadLiveChannelsOnce`'s doc comment for
+                    // the actual fix. Real hardware confirmed fixed end-to-end
+                    // after that change, so the `RepaintBoundary` above is
+                    // likely no longer doing any real work — left in place
+                    // anyway since it's strictly safe and costs nothing.
+                    return ListTile(
+                      key: ValueKey(group.title),
+                      title: Text(group.title),
+                      trailing: RepaintBoundary(
+                        key: ValueKey(group.isHidden),
+                        child: Icon(
+                          group.isHidden
+                              ? Icons.circle_outlined
+                              : Icons.check_circle,
+                          color: group.isHidden
+                              ? Colors.white54
+                              : Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                      onTap: () => playlist.setGroupHidden(
+                        playlistId,
+                        group.title,
+                        !group.isHidden,
+                        loadImmediately: !deferLoading,
+                      ),
+                    );
+                  },
                 ),
-                onTap: () => playlist.setGroupHidden(
-                  playlistId,
-                  group.title,
-                  !group.isHidden,
-                  loadImmediately: !deferLoading,
-                ),
-              );
-            },
-          ),
         ),
       ],
     );

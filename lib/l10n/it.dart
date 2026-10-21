@@ -757,6 +757,11 @@ const Map<String, String> kIt = {
       "Se hai finito di scegliere i gruppi, premi Conferma qui sotto.\n\nAltrimenti premi Sinistra per tornare alle categorie.",
   'No categories yet — load a playlist first.':
       "Nessuna categoria: prima carica una lista.",
+  'Search groups (starts with)': 'Cerca gruppi (inizia con)',
+  '{shown} of {total} groups': '{shown} di {total} gruppi',
+  'Show results': 'Mostra risultati',
+  'Hide results': 'Nascondi risultati',
+  'No groups start with "{query}".': 'Nessun gruppo inizia con «{query}».',
   'Show All': "Mostra tutto",
   'Hide All': "Nascondi tutto",
   'Hidden channels': "Canali nascosti",

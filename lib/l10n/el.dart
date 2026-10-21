@@ -1060,6 +1060,11 @@ const Map<String, String> kEl = {
       "Αν τελειώσατε την επιλογή ομάδων, πατήστε Επιβεβαίωση παρακάτω.\n\nΑν όχι ακόμη, πατήστε Αριστερά για να επιστρέψετε στις κατηγορίες.",
   "No categories yet — load a playlist first.":
       "Δεν υπάρχουν ακόμη κατηγορίες — φορτώστε πρώτα μια λίστα.",
+  'Search groups (starts with)': 'Αναζήτηση ομάδων (αρχίζει με)',
+  '{shown} of {total} groups': '{shown} από {total} ομάδες',
+  'Show results': 'Εμφάνιση αποτελεσμάτων',
+  'Hide results': 'Απόκρυψη αποτελεσμάτων',
+  'No groups start with "{query}".': 'Καμία ομάδα δεν αρχίζει με «{query}».',
   "Show All":
       "Εμφάνιση όλων",
   "Hide All":
