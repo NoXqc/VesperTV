@@ -100,6 +100,8 @@ const Map<String, String> kEs = {
       "El proveedor rechazó la solicitud.",
   "Couldn't reach the provider's server. Check your internet connection, or the server may be down.":
       "No se pudo conectar con el servidor del proveedor. Comprueba tu conexión a Internet, o puede que el servidor esté caído.",
+  "Couldn't find the provider's server address. Check your internet connection or DNS settings, or try again later.":
+      "No se pudo encontrar la dirección del servidor del proveedor. Comprueba tu conexión a Internet o la configuración de DNS, o inténtalo de nuevo más tarde.",
   'Subtitles': "Subtítulos",
   'Off': "Desactivados",
   'Forced': "Forzados",

@@ -99,6 +99,8 @@ const Map<String, String> kIt = {
       "Il provider ha rifiutato la richiesta.",
   "Couldn't reach the provider's server. Check your internet connection, or the server may be down.":
       "Impossibile raggiungere il server del provider. Controlla la connessione a Internet, oppure il server potrebbe essere inattivo.",
+  "Couldn't find the provider's server address. Check your internet connection or DNS settings, or try again later.":
+      "Impossibile trovare l'indirizzo del server del provider. Controlla la connessione a Internet o le impostazioni DNS, oppure riprova più tardi.",
   'Subtitles': "Sottotitoli",
   'Off': "Disattivati",
   'Forced': "Forzati",

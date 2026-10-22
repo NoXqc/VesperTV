@@ -360,6 +360,10 @@ String _friendlyPlaybackError(String raw) {
                 : tr('The provider rejected the request.');
     return '${tr('Server error {code}', {'code': '$status'})}\n$hint';
   }
+  if (_isDnsLookupFailure(raw)) {
+    return tr(
+        'Couldn\'t find the provider\'s server address. Check your internet connection or DNS settings, or try again later.');
+  }
   if (raw.contains('ERROR_CODE_IO_NETWORK_CONNECTION_FAILED') ||
       raw.contains('ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT')) {
     return tr(
@@ -368,6 +372,18 @@ String _friendlyPlaybackError(String raw) {
   // Details are printed in full below the message, so only name the code.
   final code = RegExp(r'\[(ERROR_CODE_\w+)\]').firstMatch(raw)?.group(1);
   return tr('Playback error:\n{raw}', {'raw': code ?? tr('unknown error')});
+}
+
+bool _isDnsLookupFailure(String raw) {
+  final lower = raw.toLowerCase();
+  return lower.contains('unknownhostexception') ||
+      lower.contains('failed host lookup') ||
+      lower.contains('unable to resolve host') ||
+      lower.contains('no address associated with hostname') ||
+      lower.contains('getaddrinfo failed') ||
+      lower.contains('eai_noname') ||
+      lower.contains('name or service not known') ||
+      lower.contains('nodename nor servname');
 }
 
 /// Bottom-anchored playback controls: play/pause, seek bar, elapsed/total
