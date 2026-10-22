@@ -332,7 +332,11 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-22)
-- **Shipped: 1.0.36 (`+411`, 2026-10-22, latest; test builds `+402`..`+410` = pre-releases
+- **Shipped: 1.0.37 (`+413`, 2026-10-22, latest; test build `+412` = pre-release `1.0.36-test.412`,
+  deleted):** every bullet below marked Unreleased down to 1.0.36 (Codex batch: Data pool bottom
+  panel, live group sort, 1/3/6 h content updates, favourite networks kept, live CC fit; Claude:
+  Media Hub/Add-ons pages reach Add, Multiview Up hint). Notes in the release body.
+- **Shipped: 1.0.36 (`+411`, 2026-10-22; test builds `+402`..`+410` = pre-releases
   `1.0.36-test.*`, deleted):** every bullet below marked Unreleased (Codex + Claude) down to 1.0.35.
   Notes in the release body. Fire Stick-tested by the owner at work (Networks crash fixed in +405).
 - **Unreleased (Claude, 2026-10-22, `+412`):** the five Codex commits below are merged into main
