@@ -1,7 +1,7 @@
 name: nox_iptv
 description: "VesperTV - an M3U/EPG IPTV player for Android phones, boxes, and Firesticks."
 publish_to: 'none'
-version: 1.0.35+395
+version: 1.0.35+396
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
