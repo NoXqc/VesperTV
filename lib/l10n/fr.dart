@@ -777,6 +777,11 @@ const Map<String, String> kFr = {
       "Si vous avez fini de choisir vos groupes, appuyez sur Confirmer ci-dessous.\n\nSinon, appuyez sur Gauche pour revenir à vos catégories.",
   'No categories yet — load a playlist first.':
       "Aucune catégorie — chargez d'abord une liste.",
+  'Search groups (starts with)': 'Rechercher des groupes (commence par)',
+  '{shown} of {total} groups': '{shown} groupes sur {total}',
+  'Show results': 'Afficher les résultats',
+  'Hide results': 'Masquer les résultats',
+  'No groups start with "{query}".': 'Aucun groupe ne commence par « {query} ».',
   'Show All': "Tout afficher",
   'Hide All': "Tout masquer",
   'Hidden channels': "Chaînes masquées",

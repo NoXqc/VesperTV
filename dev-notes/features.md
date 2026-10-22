@@ -3,6 +3,14 @@
 Read before changing guide/Multiview/profiles/palettes/backup-server logic.
 
 ## 12. Features worth knowing
+- **Group Management search (2026-10-21):** TV/Movies/TV Shows have independent, session-only
+  prefix searches (`group_management_screen.dart`). Case-insensitive, narrows on each character;
+  whitespace around the query and leading whitespace in group titles are ignored. Keeps provider
+  order and includes hidden groups. Search resets list scroll to the top; Clear restores all groups.
+  While filtered, Show results / Hide results applies only to matching titles; unfiltered buttons
+  retain Show All / Hide All. Search fields use TvTextFieldGate; submit focuses Show results or
+  Clear search for no matches. Number-key tab shortcuts are inactive while search has focus, so
+  numeric group prefixes can be entered. Existing deferred initial-download behavior is preserved.
 - **Timeline guide** (Settings > Theme > Live TV guide = `guideViewMode` 'live'|'timeline'):
   `_TimelineGuide*` in tv_home_screen.dart. Left/Right step 30-minute slots (`moveHorizontal`),
   Up/Down keep the time column (live "now" for a currently-airing block), entering from groups and
