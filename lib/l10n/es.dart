@@ -107,6 +107,11 @@ const Map<String, String> kEs = {
   "Couldn't find the provider's server address. Check your internet connection or DNS settings, or try again later.":
       "No se pudo encontrar la dirección del servidor del proveedor. Comprueba tu conexión a Internet o la configuración de DNS, o inténtalo de nuevo más tarde.",
   'Subtitles': "Subtítulos",
+  "Subtitle size": "Tamaño de los subtítulos",
+  "Small": "Pequeño",
+  "Normal": "Normal",
+  "Large": "Grande",
+  "Extra large": "Muy grande",
   'Off': "Desactivados",
   'Forced': "Forzados",
   'Online':

@@ -108,6 +108,30 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Subtitle text size, a factor on the player's own size (two users asked
+  /// for bigger/smaller subtitles). Picked in the player's Subtitles menu;
+  /// read by `SubtitleOverlay` (Android) and the Windows player's
+  /// `SubtitleViewConfiguration`. Device-only: a TV and a phone differ.
+  double get subtitleScale => _storage.getSubtitleScale();
+
+  void setSubtitleScale(double value) {
+    _storage.setSubtitleScale(value);
+    notifyListeners();
+  }
+
+  /// The choices, smallest first, and their (untranslated) names.
+  static const subtitleSizes = [
+    (0.8, 'Small'),
+    (1.0, 'Normal'),
+    (1.25, 'Large'),
+    (1.5, 'Extra large'),
+  ];
+
+  /// The name of [scale] (nearest choice).
+  static String subtitleSizeName(double scale) => subtitleSizes
+      .reduce((a, b) => (a.$1 - scale).abs() <= (b.$1 - scale).abs() ? a : b)
+      .$2;
+
   /// Fast startup: see [AppConstants.keyFastStartup]. Read once by the
   /// splash, so a change applies from the next launch.
   bool get fastStartup => _storage.getFastStartup();

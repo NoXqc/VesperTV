@@ -8,6 +8,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:provider/provider.dart';
 
 import '../models/channel.dart';
+import '../services/app_preferences.dart';
 import '../services/desktop_mini_player.dart';
 import '../services/epg_service.dart';
 import '../services/playback_service.dart';
@@ -596,7 +597,12 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 Center(
                     child: Video(
                         controller: _videoController,
-                        controls: NoVideoControls)),
+                        controls: NoVideoControls,
+                        // Settings: the player's Subtitles menu > size.
+                        subtitleViewConfiguration: SubtitleViewConfiguration(
+                            textScaler: TextScaler.linear(context
+                                .watch<AppPreferences>()
+                                .subtitleScale)))),
                 if (_controlsVisible) ...[
                   Positioned(
                     top: 0,

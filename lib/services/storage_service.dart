@@ -313,6 +313,11 @@ class StorageService {
   Future<void> setFastStartup(bool value) =>
       _prefs.setBool(AppConstants.keyFastStartup, value);
 
+  double getSubtitleScale() =>
+      _prefs.getDouble(AppConstants.keySubtitleScale) ?? 1.0;
+  Future<void> setSubtitleScale(double value) =>
+      _prefs.setDouble(AppConstants.keySubtitleScale, value);
+
   bool getAudioPassthrough() =>
       _prefs.getBool(AppConstants.keyAudioPassthrough) ?? false;
   Future<void> setAudioPassthrough(bool value) =>
@@ -788,6 +793,7 @@ class StorageService {
     AppConstants.keyHideVideoOnSports,
     AppConstants.keyCompatVideo,
     AppConstants.keyAudioPassthrough,
+    AppConstants.keySubtitleScale,
     AppConstants.keyFastStartup,
     AppConstants.keyPlaylistEnabled,
     AppConstants.keyPinFailCount,

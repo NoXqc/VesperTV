@@ -106,6 +106,11 @@ const Map<String, String> kIt = {
   "Couldn't find the provider's server address. Check your internet connection or DNS settings, or try again later.":
       "Impossibile trovare l'indirizzo del server del provider. Controlla la connessione a Internet o le impostazioni DNS, oppure riprova più tardi.",
   'Subtitles': "Sottotitoli",
+  "Subtitle size": "Dimensione sottotitoli",
+  "Small": "Piccola",
+  "Normal": "Normale",
+  "Large": "Grande",
+  "Extra large": "Molto grande",
   'Off': "Disattivati",
   'Forced': "Forzati",
   'Online':

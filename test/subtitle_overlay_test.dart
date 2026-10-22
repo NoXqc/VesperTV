@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nox_iptv/services/app_preferences.dart';
 import 'package:nox_iptv/services/catalog_database.dart';
 import 'package:nox_iptv/services/playback_service.dart';
 import 'package:nox_iptv/services/playlist_manager.dart';
@@ -8,6 +9,7 @@ import 'package:nox_iptv/services/storage_service.dart';
 import 'package:nox_iptv/services/subtitle_tracks.dart';
 import 'package:nox_iptv/widgets/subtitle_overlay.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player_hdr/video_player_hdr.dart';
 
 class CaptionController extends VideoPlayerHdrController {
@@ -39,11 +41,18 @@ void main() {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
     final storage = StorageService();
+    await storage.init();
+    final prefs = AppPreferences(storage);
+    await prefs.init();
     final playlist = PlaylistManager(storage, CatalogDatabase());
     final playback = PlaybackService(storage, playlist);
-    await tester.pumpWidget(ChangeNotifierProvider<PlaybackService>.value(
-        value: playback,
+    await tester.pumpWidget(MultiProvider(
+        providers: [
+          ChangeNotifierProvider<PlaybackService>.value(value: playback),
+          ChangeNotifierProvider<AppPreferences>.value(value: prefs),
+        ],
         child: MaterialApp(
             home: Scaffold(body: SubtitleOverlay(controller: controller)))));
     await tester.pump();
@@ -77,6 +86,22 @@ void main() {
     // EventChannel delivery schedules a rebuild after the first frame.
     await tester.pump();
   }
+
+  testWidgets('the Subtitle size choice scales the text', (tester) async {
+    await pump(tester);
+    await cue(tester, 'Sized caption');
+    double size() =>
+        tester.widget<Text>(find.text('Sized caption')).style!.fontSize!;
+    final normal = size();
+    final prefs =
+        tester.element(find.byType(SubtitleOverlay)).read<AppPreferences>();
+    prefs.setSubtitleScale(1.5);
+    await tester.pump();
+    expect(size(), closeTo(normal * 1.5, 0.01));
+    expect(AppPreferences.subtitleSizeName(1.5), 'Extra large');
+    expect(AppPreferences.subtitleSizeName(1.0), 'Normal');
+    expect(AppPreferences.subtitleSizeName(0.95), 'Normal');
+  });
 
   testWidgets(
       'CC blank grace prevents flashes and repeated blanks do not extend it',
@@ -169,8 +194,12 @@ void main() {
     // Keep the provider and overlay element; exercise didUpdateWidget.
     final overlay = tester.element(find.byType(SubtitleOverlay));
     final playback = overlay.read<PlaybackService>();
-    await tester.pumpWidget(ChangeNotifierProvider<PlaybackService>.value(
-        value: playback,
+    final prefs = overlay.read<AppPreferences>();
+    await tester.pumpWidget(MultiProvider(
+        providers: [
+          ChangeNotifierProvider<PlaybackService>.value(value: playback),
+          ChangeNotifierProvider<AppPreferences>.value(value: prefs),
+        ],
         child: MaterialApp(
             home: Scaffold(body: SubtitleOverlay(controller: controller)))));
     expect(find.text('Old channel'), findsNothing);

@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../l10n/l10n.dart';
 import '../models/channel.dart';
 import '../services/addon_service.dart';
+import '../services/app_preferences.dart';
 import '../services/storage_service.dart';
 import '../services/subtitle_tracks.dart';
 import 'tv_menu_tile.dart';
@@ -243,9 +244,17 @@ class _DesktopSubtitleButtonState extends State<DesktopSubtitleButton> {
               title: tr('Search online subtitles'),
               subtitle: tr('From your add-ons (Settings > Add-ons)'),
               result: 'online'),
+        _option(sheet,
+            selected: false,
+            icon: Icons.format_size,
+            title: tr('Subtitle size'),
+            subtitle: tr(AppPreferences.subtitleSizeName(
+                context.read<AppPreferences>().subtitleScale)),
+            result: 'size'),
       ],
     );
     if (chosen == null || chosen == 'keep' || !mounted) return;
+    if (chosen == 'size') return _pickSize();
     if (chosen == 'online') return _searchOnline();
     if (chosen is ({String lang})) return _applyOnlineLang(chosen.lang);
     final track = chosen is mk.SubtitleTrack ? chosen : null;
@@ -258,6 +267,21 @@ class _DesktopSubtitleButtonState extends State<DesktopSubtitleButton> {
         label: track?.title));
     await _player.setSubtitleTrack(track ?? mk.SubtitleTrack.no());
     if (mounted) setState(() {});
+  }
+
+  /// Small / Normal / Large / Extra large ([AppPreferences.subtitleScale]).
+  Future<void> _pickSize() async {
+    final prefs = context.read<AppPreferences>();
+    final current = AppPreferences.subtitleSizeName(prefs.subtitleScale);
+    final scale = await _sheet<double>(
+      tr('Subtitle size'),
+      (sheet) => [
+        for (final (value, name) in AppPreferences.subtitleSizes)
+          _option(sheet,
+              selected: name == current, title: tr(name), result: value),
+      ],
+    );
+    if (scale != null) prefs.setSubtitleScale(scale);
   }
 
   Future<void> _searchOnline() async {

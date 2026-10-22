@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player_hdr/video_player_hdr.dart';
 
+import '../services/app_preferences.dart';
 import '../services/playback_service.dart';
 import '../services/storage_service.dart';
 import '../services/subtitle_tracks.dart';
@@ -135,6 +136,7 @@ class _SubtitleOverlayState extends State<SubtitleOverlay> {
     final text = raw.replaceAll(_tags, '').trim();
     if (text.isEmpty) return const SizedBox.shrink();
     final size = MediaQuery.sizeOf(context);
+    final scale = context.watch<AppPreferences>().subtitleScale;
     return Center(
       child: Container(
         constraints: BoxConstraints(
@@ -149,7 +151,7 @@ class _SubtitleOverlayState extends State<SubtitleOverlay> {
           textAlign: TextAlign.center,
           style: TextStyle(
             color: Colors.white,
-            fontSize: (size.shortestSide / 22).clamp(16.0, 30.0),
+            fontSize: (size.shortestSide / 22).clamp(16.0, 30.0) * scale,
             fontWeight: FontWeight.w600,
             height: 1.25,
           ),

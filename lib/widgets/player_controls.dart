@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:video_player_hdr/video_player_hdr.dart';
 
 import '../models/channel.dart';
+import '../services/app_preferences.dart';
 import '../services/epg_service.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
@@ -1420,9 +1421,17 @@ class _SubtitleButtonState extends State<_SubtitleButton> {
               title: tr('Search online subtitles'),
               subtitle: tr('From your add-ons (Settings > Add-ons)'),
               result: 'online'),
+        _option(sheet,
+            selected: false,
+            icon: Icons.format_size,
+            title: tr('Subtitle size'),
+            subtitle: tr(AppPreferences.subtitleSizeName(
+                context.read<AppPreferences>().subtitleScale)),
+            result: 'size'),
       ],
     );
     if (chosen == null || chosen == 'keep' || !mounted) return;
+    if (chosen == 'size') return _pickSize();
     if (chosen == 'online') return _searchOnline();
     if (chosen is ({String lang})) return _applyOnlineLang(chosen.lang);
     final track = chosen is SubtitleTrack ? chosen : null;
@@ -1439,6 +1448,21 @@ class _SubtitleButtonState extends State<_SubtitleButton> {
     } catch (_) {
       // The stream changed underneath: nothing to select any more.
     }
+  }
+
+  /// Small / Normal / Large / Extra large ([AppPreferences.subtitleScale]).
+  Future<void> _pickSize() async {
+    final prefs = context.read<AppPreferences>();
+    final current = AppPreferences.subtitleSizeName(prefs.subtitleScale);
+    final scale = await _sheet<double>(
+      tr('Subtitle size'),
+      (sheet) => [
+        for (final (value, name) in AppPreferences.subtitleSizes)
+          _option(sheet,
+              selected: name == current, title: tr(name), result: value),
+      ],
+    );
+    if (scale != null) prefs.setSubtitleScale(scale);
   }
 
   Future<void> _searchOnline() async {

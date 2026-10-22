@@ -262,6 +262,10 @@ class AppConstants {
   /// (device-only; AppPreferences.audioPassthrough).
   static const String keyAudioPassthrough = 'vesper_audio_passthrough';
 
+  /// Subtitle size picked in the player's Subtitles menu (device-only;
+  /// AppPreferences.subtitleScale).
+  static const String keySubtitleScale = 'vesper_subtitle_scale';
+
   /// Settings > General > Startup: Fast startup (opt-in, owner
   /// 2026-10-21) — the UI opens without waiting for Movies/TV Shows to
   /// pre-load. Device-only: the slow splash protects weak boxes (§10).
