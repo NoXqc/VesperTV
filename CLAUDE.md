@@ -49,7 +49,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
 4. `flutter analyze` must report the baseline **17** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `1.0.35` unless noted
+5. Check the current state of releases: `gh release list` (latest should be `1.0.36` unless noted
    in §13).
 
 ## 3. Layout (what matters)
@@ -118,7 +118,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
 - Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+360**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
-  (Currently **+410**, unreleased; 1.0.35 shipped as +396.)
+  (Currently **+411**, 1.0.36.)
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
 Only release when the owner asks ("update the latest", "cut it", "fully release"). Outline: bump `pubspec.yaml` (versionCode `+N` must always rise) → `flutter analyze` → build APK + verify signature (§5) → build Windows + zip → **commit & push first** → `gh release upload <tag> app-release.apk VesperTV-windows-x64.zip --clobber` → `gh release edit <tag> --tag <new> --notes-file …` → make sure the tag equals HEAD → verify downloads/hashes, the OLD `NoXqc/NoXPlayer` redirect links and AFTVnews code `1760256`. The updater offers any *different* tag (`_isDifferent`), never leave two `.zip`/`.apk` assets on the latest release.
@@ -332,6 +332,9 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-22)
+- **Shipped: 1.0.36 (`+411`, 2026-10-22, latest; test builds `+402`..`+410` = pre-releases
+  `1.0.36-test.*`, deleted):** every bullet below marked Unreleased (Codex + Claude) down to 1.0.35.
+  Notes in the release body. Fire Stick-tested by the owner at work (Networks crash fixed in +405).
 - **Codex unreleased sports ranking follow-up** (`codex/sports-ranking-measurement`):
   offline remeasurement in `dev-notes/sports-ranking-measurement/results.md` (current code vs flat
   cutoff, plus historical baseline). Found stale event feeds bypassing event-date checks through
