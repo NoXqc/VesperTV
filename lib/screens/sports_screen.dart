@@ -115,6 +115,41 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   /// Cleared by any [_setPreview].
   SportsGame? _heroPick;
 
+  /// The game previewing in the hero when Networks opened: back from
+  /// Networks it plays there again ([_closeNetworks]).
+  SportsGame? _gameBeforeNetworks;
+  Channel? _channelBeforeNetworks;
+
+  void _openNetworks() {
+    final live = _livePreview(context.read<PlaybackService>()) != null;
+    _gameBeforeNetworks = live ? _previewGame : null;
+    _channelBeforeNetworks = live ? _previewChannel : null;
+    setState(() => _channelsMode = true);
+  }
+
+  /// Back from Networks (owner: the mini player stopped). The hero shows a
+  /// game, so: the same stream still playing goes back to its game (no
+  /// restart); another channel picked in Networks gives way to the game
+  /// that played before; a Networks-only preview stops (nothing left
+  /// playing unseen behind Games).
+  void _closeNetworks() {
+    final game = _gameBeforeNetworks;
+    final channel = _channelBeforeNetworks;
+    _gameBeforeNetworks = null;
+    _channelBeforeNetworks = null;
+    setState(() => _channelsMode = false);
+    final playing = _previewChannel;
+    if (game != null && channel != null) {
+      if (playing?.id == channel.id) {
+        if (_previewGame == null) setState(() => _previewGame = game);
+      } else {
+        unawaited(_setPreview(game, channel));
+      }
+    } else if (playing != null && _previewGame == null) {
+      unawaited(_setPreview(null, null));
+    }
+  }
+
   /// Preview starts/stops run one at a time (see [_setPreview]).
   Future<void> _previewChain = Future.value();
   int _previewSeq = 0;
@@ -1113,7 +1148,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           : (_livePreview(context.read<PlaybackService>()) != null
               ? _previewChannel
               : null),
-      onGames: () => setState(() => _channelsMode = false),
+      onGames: _closeNetworks,
       onPreview: (channel) => _setPreview(null, channel),
       onFullScreen: (channel) => _play(channel, keepPreview: true),
     );
@@ -1430,7 +1465,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
             selected: false,
             compact: true,
             onFocus: () => _zone = 2,
-            onTap: () => setState(() => _channelsMode = true),
+            onTap: _openNetworks,
           ),
           if (_showRedZone)
             RedZonePill(

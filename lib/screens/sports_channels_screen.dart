@@ -723,15 +723,9 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
         .firstWhere((c) => c.id == picked, orElse: () => g.channels.first);
   }
 
-  /// Back to Games: a preview stops first, so its sound never carries on
-  /// behind the Games page or out of Sports Trak.
-  Future<void> _leave() async {
-    if (_preview != null) {
-      setState(() => _preview = null);
-      await widget.onPreview(null);
-    }
-    widget.onGames();
-  }
+  /// Back to Games. What plays is Sports Trak's call ([onGames]): the
+  /// game preview carries back to the Games hero (owner, 2026-10-22).
+  void _leave() => widget.onGames();
 
   bool _previewing(SportsNetworkGroup g) =>
       _preview != null && g.channels.any((c) => c.id == _preview!.id);
@@ -956,17 +950,12 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
     }.length;
     final activeFilters = _viewFilters.values.where((v) => v.isNotEmpty).length;
     final focused = _focused;
-    // Back: stop the preview, then back to Games — never out of Sports Trak.
+    // Back: to Games, never out of Sports Trak (the preview carries over,
+    // see SportsScreen._closeNetworks).
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        if (_preview != null) {
-          setState(() => _preview = null);
-          widget.onPreview(null);
-        } else {
-          widget.onGames();
-        }
+        if (!didPop) _leave();
       },
       child: Stack(
         children: [
