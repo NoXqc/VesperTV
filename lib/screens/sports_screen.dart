@@ -29,6 +29,7 @@ import '../utils/route_observer.dart';
 import '../utils/tv_theme.dart';
 import '../widgets/video_tap_layer.dart';
 import '../widgets/hold_to_activate.dart';
+import '../widgets/roll_down_menu.dart';
 import '../widgets/live_resume_hint.dart';
 import '../widgets/player_controls.dart';
 import '../widgets/rec_cue.dart';
@@ -609,6 +610,61 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   }
 
   // -------------------------------------------------------------- actions
+
+  /// Hold OK on "All": the leagues with games on the day shown (all of
+  /// them if none has any), each with its game / live counts — pick one to
+  /// filter to it (owner, 2026-10-22). With a league filter on, only its
+  /// games are loaded, so the day is fetched for every league (cached).
+  Future<void> _openLeagueMenu() async {
+    final anchor = rollDownAnchorOf(_chipNode('league:all').context);
+    List<SportsGame> games;
+    try {
+      games = _leagueFilter == null
+          ? _games
+          : await SportsService.instance.gamesForDay(_leagues, _day);
+    } catch (_) {
+      games = _games;
+    }
+    if (!mounted) return;
+    final counts = <String, (int, int)>{};
+    for (final g in games) {
+      final (n, live) = counts[g.league.id] ?? (0, 0);
+      counts[g.league.id] = (n + 1, live + (g.state == GameState.live ? 1 : 0));
+    }
+    final active = _leagues.where((l) => counts.containsKey(l.id)).toList();
+    final shown = active.isEmpty ? _leagues : active;
+    final picked = await showRollDownMenu<String>(
+      context,
+      anchor: anchor,
+      centered: false,
+      width: 340,
+      title: active.isEmpty ? tr('Your leagues') : tr('Leagues with games'),
+      items: [
+        RollDownMenuItem(
+          value: '',
+          icon: Icons.apps,
+          label: tr('All leagues'),
+          subtitle: tr('{n} games', {'n': games.length}),
+          selected: _leagueFilter == null,
+        ),
+        for (final l in shown)
+          RollDownMenuItem(
+            value: l.id,
+            icon: SportsBackdrop.sportIcon(l),
+            label: l.name,
+            subtitle: switch (counts[l.id]) {
+              null => tr('No games'),
+              (final n, 0) => tr('{n} games', {'n': n}),
+              (final n, final live) =>
+                tr('{n} games · {live} live', {'n': n, 'live': live}),
+            },
+            selected: _leagueFilter == l.id,
+          ),
+      ],
+    );
+    if (picked == null || !mounted) return;
+    _setLeagueFilter(picked.isEmpty ? null : picked);
+  }
 
   void _setLeagueFilter(String? id) {
     if (_leagueFilter == id) return;
@@ -1312,14 +1368,19 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  SportsChip(
+                  // Hold OK: the day's leagues in a roll-down menu.
+                  HoldToActivate(
                     key: const ValueKey('league:all'),
-                    focusNode: _chipNode('league:all'),
-                    enabled: _movingLeague == null,
-                    label: tr('All'),
-                    selected: _leagueFilter == null,
-                    onFocus: () => _zone = 0,
                     onTap: () => _setLeagueFilter(null),
+                    onHold: _movingLeague == null ? _openLeagueMenu : null,
+                    child: SportsChip(
+                      focusNode: _chipNode('league:all'),
+                      enabled: _movingLeague == null,
+                      label: tr('All'),
+                      selected: _leagueFilter == null,
+                      onFocus: () => _zone = 0,
+                      onTap: () => _setLeagueFilter(null),
+                    ),
                   ),
                   for (final l in _leagues)
                     HoldToActivate(
