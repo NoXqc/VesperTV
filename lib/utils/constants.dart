@@ -264,6 +264,8 @@ class AppConstants {
 
   /// Subtitle size picked in the player's Subtitles menu (device-only;
   /// AppPreferences.subtitleScale).
+  static const String keyLiveGroupSort = 'vesper_live_group_sort';
+
   static const String keySubtitleScale = 'vesper_subtitle_scale';
 
   /// Settings > General > Startup > Open on (device-only;

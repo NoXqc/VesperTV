@@ -57,7 +57,7 @@ class StorageService {
   /// there as one uninterrupted task — measured on real hardware as ~43%
   /// of the main thread's time across a cold start, because the big cache
   /// files (live channels, EPG) are tens of MB and channel names full of
-  /// non-ASCII (superscript "ᴴᴰ", "ᴿᴬᵂ"...) force the slow two-byte decode
+  /// non-ASCII (superscript "á´´á´°", "á´¿á´¬áµ‚"...) force the slow two-byte decode
   /// path. With Dart now sharing Android's main thread, a remote key press
   /// that lands during one of those decodes can wait past Android's 5s
   /// input timeout and get the app killed as not responding. Handing the
@@ -312,6 +312,10 @@ class StorageService {
   bool getFastStartup() => _prefs.getBool(AppConstants.keyFastStartup) ?? false;
   Future<void> setFastStartup(bool value) =>
       _prefs.setBool(AppConstants.keyFastStartup, value);
+
+  String? getLiveGroupSort() => _prefs.getString(AppConstants.keyLiveGroupSort);
+  Future<void> setLiveGroupSort(String value) =>
+      _prefs.setString(AppConstants.keyLiveGroupSort, value);
 
   String? getStartSection() => _prefs.getString(AppConstants.keyStartSection);
   bool getStartSectionPending() =>
@@ -802,6 +806,7 @@ class StorageService {
     AppConstants.keyCompatVideo,
     AppConstants.keyAudioPassthrough,
     AppConstants.keySubtitleScale,
+    AppConstants.keyLiveGroupSort,
     AppConstants.keyStartSection,
     AppConstants.keyStartSectionPending,
     AppConstants.keyFastStartup,

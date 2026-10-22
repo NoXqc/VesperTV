@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../l10n/l10n.dart';
 import '../models/cyberpunk_palette.dart';
 import '../utils/constants.dart';
+import '../utils/live_group_sort.dart';
 import '../utils/time_format.dart';
 import 'playback_service.dart';
 import 'storage_service.dart';
@@ -114,6 +115,17 @@ class AppPreferences extends ChangeNotifier {
   /// full screen" on and another section chosen, the channel resumes in
   /// the background instead (main.dart `_autoResumeLastChannel`): the
   /// chosen section wins. Device-only.
+  LiveGroupSort get liveGroupSort =>
+      LiveGroupSort.values
+          .where((s) => s.name == _storage.getLiveGroupSort())
+          .firstOrNull ??
+      LiveGroupSort.provider;
+
+  void setLiveGroupSort(LiveGroupSort value) {
+    _storage.setLiveGroupSort(value.name);
+    notifyListeners();
+  }
+
   String get startSection => _storage.getStartSection() ?? 'tv';
 
   void setStartSection(String value) {

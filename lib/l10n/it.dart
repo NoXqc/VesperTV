@@ -6,6 +6,11 @@
 /// the code; Italian plurals don't work that way (canale/canali), so those
 /// strings are phrased to avoid it.
 const Map<String, String> kIt = {
+  'Sort groups': 'Ordina gruppi',
+  'Provider order': 'Ordine del fornitore',
+  'Name A–Z': 'Nome A–Z',
+  'Name Z–A': 'Nome Z–A',
+
   // ── Startup / catalog sync ───────────────────────────────────────────
   'Starting...': "Avvio…",
   'Content updated': "Contenuti aggiornati",

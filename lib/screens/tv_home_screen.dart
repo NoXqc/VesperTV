@@ -1,3 +1,4 @@
+import '../utils/live_group_sort.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
@@ -401,6 +402,9 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     );
     if (!mounted) return;
 
+    if ((choice == 'move' || choice == 'move_top') && _tab == 'TV') {
+      context.read<AppPreferences>().setLiveGroupSort(LiveGroupSort.provider);
+    }
     switch (choice) {
       case 'move':
         setState(() {
@@ -491,6 +495,9 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       ),
     );
     if (!mounted) return;
+    if ((choice == 'move' || choice == 'move_top') && _tab == 'TV') {
+      context.read<AppPreferences>().setLiveGroupSort(LiveGroupSort.provider);
+    }
     switch (choice) {
       case 'move':
         setState(() {
@@ -3666,10 +3673,42 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     });
   }
 
+  Future<void> _showLiveGroupSort() async {
+    final prefs = context.read<AppPreferences>();
+    final choice = await showDialog<LiveGroupSort>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(tr('Sort groups')),
+        children: [
+          for (final (sort, label) in const [
+            (LiveGroupSort.provider, 'Provider order'),
+            (LiveGroupSort.aToZ, 'Name A–Z'),
+            (LiveGroupSort.zToA, 'Name Z–A'),
+          ])
+            TvDialogOption(
+              autofocus: prefs.liveGroupSort == sort,
+              onPressed: () => Navigator.of(context).pop(sort),
+              child: Text(tr(label)),
+            ),
+        ],
+      ),
+    );
+    if (!mounted || choice == null) return;
+    _endGroupMove();
+    prefs.setLiveGroupSort(choice);
+    if (_groupsScroll.hasClients) _groupsScroll.jumpTo(0);
+  }
+
   Widget _buildGroupsColumn(PlaylistManager playlist,
       {required bool collapsed}) {
     final allGroups = playlist.tvGroups.where((g) => !g.isHidden).toList();
-    final groups = _withoutHiddenPlaylists(allGroups, 'tv');
+    final sort = context.watch<AppPreferences>().liveGroupSort;
+    final visible = _withoutHiddenPlaylists(allGroups, 'tv');
+    final groups = [
+      for (final id in visible.map((g) => g.playlistId).toSet())
+        ...sort.sorted(
+            visible.where((g) => g.playlistId == id), (g) => g.title),
+    ];
     // No "All" row — see _effectiveLiveGroup's doc comment for why an
     // unfiltered dumping-ground was actively confusing to land back in.
     final effectiveGroup = _effectiveLiveGroup(playlist);
@@ -3688,90 +3727,108 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         rowsAbove: 3,
         currentPlaylistId: currentPlaylistId);
 
-    return ListView(
-      key: const ValueKey('TV'),
-      controller: _groupsScroll,
+    return Column(
       children: [
-        // Hold Select = clear this tab's Favourites (after a confirm).
-        HoldToActivate(
-          onTap: () => _onGroupSelected(_favoritesGroupSentinel),
-          onHold: _confirmClearFavorites,
-          child: _SelectableRow(
-            icon: Icons.star,
-            label: tr('Favourites'),
-            selected: effectiveGroup == _favoritesGroupSentinel,
-            collapsed: collapsed,
-            fontSize: _groupFontSize,
-            focusNode: _firstGroupRowFocusNode,
-            onTap: () => _onGroupSelected(_favoritesGroupSentinel),
-            onLongPress: _confirmClearFavorites,
+        Align(
+          alignment: Alignment.centerRight,
+          child: IconButton(
+            iconSize: 20,
+            visualDensity: VisualDensity.compact,
+            tooltip: tr('Sort groups'),
+            icon: const Icon(Icons.filter_list),
+            onPressed: _showLiveGroupSort,
           ),
         ),
-        // Hold Select = shortcut to Settings > General's channel-history
-        // clear (same HoldToActivate-over-InkWell shape as the live list).
-        HoldToActivate(
-          onTap: _showHistoryPopup,
-          onHold: _confirmClearChannelHistory,
-          child: _SelectableRow(
-            icon: Icons.history,
-            label: tr('History'),
-            selected: false,
-            collapsed: collapsed,
-            fontSize: _groupFontSize,
-            onTap: _showHistoryPopup,
-            onLongPress: _confirmClearChannelHistory,
-          ),
-        ), // The viewer's own groups (any playlist's channels): above every
-        // playlist's groups, never hidden with one.
-        for (final title in playlist.userGroups)
-          _GroupRow(
-            key: ValueKey(_groupKey(_myGroupsId, title)),
-            icon: Icons.folder_special_outlined,
-            label: title,
-            selected: effectiveGroup == title,
-            collapsed: collapsed,
-            fontSize: _groupFontSize,
-            isFavorited: false,
-            isPendingHide: false,
-            onTap: () => _onGroupSelected(title),
-            onLongPress: () => _showMyGroupOptions(title),
-            moving: _movingGroupKey == _groupKey(_myGroupsId, title),
-            onMove: (delta) => _moveGroupStep(_myGroupsId, title, delta),
-            onMoveDone: _endGroupMove,
-            focusOnBuild:
-                _focusGroupKeyOnBuild == _groupKey(_myGroupsId, title),
-            onFocusedOnBuild: () => _focusGroupKeyOnBuild = null,
-          ),
-        if (playlistsRow != null) playlistsRow,
-        ..._groupRowsWithPlaylistDividers(
-          groups,
-          playlist,
-          collapsed: collapsed,
-          rowBuilder: (group) => _GroupRow(
-            // Keyed so a moved group keeps its row Element (and focus)
-            // when the list reorders — see _movingGroupKey.
-            key: ValueKey(_groupKey(group.playlistId, group.title)),
-            icon: Icons.grid_view_rounded,
-            label: group.title,
-            selected: effectiveGroup == group.title,
-            collapsed: collapsed,
-            fontSize: _groupFontSize,
-            isFavorited:
-                playlist.isGroupFavorited(group.playlistId, group.title),
-            isPendingHide: _pendingHideGroups
-                .contains(_groupKey(group.playlistId, group.title)),
-            onTap: () =>
-                _onGroupSelected(group.title, playlistId: group.playlistId),
-            onLongPress: () => _showGroupOptions(group.playlistId, group.title),
-            moving: _movingGroupKey == _groupKey(group.playlistId, group.title),
-            onMove: (delta) =>
-                _moveGroupStep(group.playlistId, group.title, delta),
-            onMoveDone: _endGroupMove,
-            focusOnBuild: _focusGroupKeyOnBuild ==
-                _groupKey(group.playlistId, group.title),
-            onFocusedOnBuild: () => _focusGroupKeyOnBuild = null,
-          ),
-        ),
+        Expanded(
+            child: ListView(
+          key: const ValueKey('TV'),
+          controller: _groupsScroll,
+          children: [
+            // Hold Select = clear this tab's Favourites (after a confirm).
+            HoldToActivate(
+              onTap: () => _onGroupSelected(_favoritesGroupSentinel),
+              onHold: _confirmClearFavorites,
+              child: _SelectableRow(
+                icon: Icons.star,
+                label: tr('Favourites'),
+                selected: effectiveGroup == _favoritesGroupSentinel,
+                collapsed: collapsed,
+                fontSize: _groupFontSize,
+                focusNode: _firstGroupRowFocusNode,
+                onTap: () => _onGroupSelected(_favoritesGroupSentinel),
+                onLongPress: _confirmClearFavorites,
+              ),
+            ),
+            // Hold Select = shortcut to Settings > General's channel-history
+            // clear (same HoldToActivate-over-InkWell shape as the live list).
+            HoldToActivate(
+              onTap: _showHistoryPopup,
+              onHold: _confirmClearChannelHistory,
+              child: _SelectableRow(
+                icon: Icons.history,
+                label: tr('History'),
+                selected: false,
+                collapsed: collapsed,
+                fontSize: _groupFontSize,
+                onTap: _showHistoryPopup,
+                onLongPress: _confirmClearChannelHistory,
+              ),
+            ), // The viewer's own groups (any playlist's channels): above every
+            // playlist's groups, never hidden with one.
+            for (final title
+                in sort.sorted(playlist.userGroups, (title) => title))
+              _GroupRow(
+                key: ValueKey(_groupKey(_myGroupsId, title)),
+                icon: Icons.folder_special_outlined,
+                label: title,
+                selected: effectiveGroup == title,
+                collapsed: collapsed,
+                fontSize: _groupFontSize,
+                isFavorited: false,
+                isPendingHide: false,
+                onTap: () => _onGroupSelected(title),
+                onLongPress: () => _showMyGroupOptions(title),
+                moving: _movingGroupKey == _groupKey(_myGroupsId, title),
+                onMove: (delta) => _moveGroupStep(_myGroupsId, title, delta),
+                onMoveDone: _endGroupMove,
+                focusOnBuild:
+                    _focusGroupKeyOnBuild == _groupKey(_myGroupsId, title),
+                onFocusedOnBuild: () => _focusGroupKeyOnBuild = null,
+              ),
+            if (playlistsRow != null) playlistsRow,
+            ..._groupRowsWithPlaylistDividers(
+              groups,
+              playlist,
+              collapsed: collapsed,
+              rowBuilder: (group) => _GroupRow(
+                // Keyed so a moved group keeps its row Element (and focus)
+                // when the list reorders — see _movingGroupKey.
+                key: ValueKey(_groupKey(group.playlistId, group.title)),
+                icon: Icons.grid_view_rounded,
+                label: group.title,
+                selected: effectiveGroup == group.title,
+                collapsed: collapsed,
+                fontSize: _groupFontSize,
+                isFavorited:
+                    playlist.isGroupFavorited(group.playlistId, group.title),
+                isPendingHide: _pendingHideGroups
+                    .contains(_groupKey(group.playlistId, group.title)),
+                onTap: () =>
+                    _onGroupSelected(group.title, playlistId: group.playlistId),
+                onLongPress: () =>
+                    _showGroupOptions(group.playlistId, group.title),
+                moving:
+                    _movingGroupKey == _groupKey(group.playlistId, group.title),
+                onMove: (delta) =>
+                    _moveGroupStep(group.playlistId, group.title, delta),
+                onMoveDone: _endGroupMove,
+                focusOnBuild: _focusGroupKeyOnBuild ==
+                    _groupKey(group.playlistId, group.title),
+                onFocusedOnBuild: () => _focusGroupKeyOnBuild = null,
+              ),
+            ),
+          ],
+        )),
       ],
     );
   }

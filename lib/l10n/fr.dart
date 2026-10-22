@@ -5,6 +5,11 @@
 /// Keep every `{placeholder}` exactly as in the key. `{s}` is the plural "s"
 /// the code fills in ("chaîne{s}").
 const Map<String, String> kFr = {
+  'Sort groups': 'Trier les groupes',
+  'Provider order': 'Ordre du fournisseur',
+  'Name A–Z': 'Nom A–Z',
+  'Name Z–A': 'Nom Z–A',
+
   // ── Startup / catalog sync ───────────────────────────────────────────
   'Starting...': "Démarrage…",
   'Content updated': "Contenu mis à jour",
