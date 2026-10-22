@@ -336,7 +336,7 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   not MAX(stop): a few week-long listings hid a 2-day guide; nothing names it), shown on the
   hero, game menu, live list and side panel. `prepare(hidden: playlist.hiddenLiveChannels())` at
   **every** call site (the signature includes it; mixing would re-index each time). Restricted
-  viewers get no hidden list. Phone-installed `+393`; not box-tested.
+  viewers get no hidden list. Phone-installed `+394`; not box-tested.
 - **Shipped: 1.0.34 (`+388`, 2026-10-21, latest; test builds `+386`/`+387` = pre-releases
   `1.0.34-test.386`/`.387`, `+388` owner-tested on the Fire Stick):** **list-only add-ons** (`ArchiveSource.listOnly`,
   stored `listOnly`): a manifest with movie/series catalogs on IMDb ids (or no idPrefixes) and no
