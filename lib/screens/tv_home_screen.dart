@@ -2594,6 +2594,13 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                 child: Column(
                   children: [
                     _TvTopBar(
+                        // Wide phones/tablets (including unfolded phones) use
+                        // columns too. Full-video mode hides passed columns
+                        // completely, so touch users need a visible way back.
+                        onBack:
+                            !_compact && !prefs.isTelevision && _focusDepth > 0
+                                ? () => Navigator.of(context).maybePop()
+                                : null,
                         showClock: prefs.showClock,
                         isLoading: playlist.isLoading),
                     const CatalogWarmupBanner(),
@@ -3192,13 +3199,13 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         onTap: tapToExpand ? () => setState(() => _focusDepth = depth) : null,
         child: AbsorbPointer(
           absorbing: tapToExpand,
-          // Never lays the column out narrower than the icon strip — at
-          // 0 width (full-video mode) its rows would overflow; it's just
-          // clipped away instead. Always present so the tree never changes.
+          // Keep the child's layout wide enough while a column reopens:
+          // expanded rows are built before the width animation finishes.
+          // Clip the content until it fits instead of overflowing its rows.
           child: ClipRect(
             child: LayoutBuilder(builder: (context, constraints) {
-              final width =
-                  constraints.maxWidth < 56 ? 56.0 : constraints.maxWidth;
+              final minimum = collapsed ? 56.0 : expandedWidth;
+              final width = math.max(minimum, constraints.maxWidth);
               return OverflowBox(
                 alignment: Alignment.centerLeft,
                 minWidth: width,
@@ -6920,10 +6927,12 @@ class _WhatsNewCarouselState<T> extends State<_WhatsNewCarousel<T>>
 /// everywhere" the way a search entry point should be — costs nothing and
 /// actually works with a remote.
 class _TvTopBar extends StatelessWidget {
-  const _TvTopBar({required this.showClock, required this.isLoading});
+  const _TvTopBar(
+      {required this.showClock, required this.isLoading, this.onBack});
 
   final bool showClock;
   final bool isLoading;
+  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) {
@@ -6939,6 +6948,12 @@ class _TvTopBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
+          if (onBack != null)
+            IconButton(
+              tooltip: tr('Back'),
+              onPressed: onBack,
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+            ),
           ShaderMask(
             blendMode: BlendMode.srcIn,
             shaderCallback: (bounds) => LinearGradient(colors: [
