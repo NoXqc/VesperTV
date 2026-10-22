@@ -1347,6 +1347,19 @@ class PlaylistSession {
         .toList();
   }
 
+  /// The live channels [visibleChannels] leaves out (hidden groups and
+  /// channels): Sports Trak says when a game is only on one of them.
+  List<Channel> hiddenLiveChannels() {
+    final live = isXtream
+        ? liveChannels
+        : channels.where((c) => _classifyGroup(c.group) == 'tv');
+    return live
+        .where((c) =>
+            hiddenGroups.contains(liveGroupOf(c)) ||
+            hiddenChannels.contains(c.rawId))
+        .toList();
+  }
+
   /// Applies [channelOrder] for [groupTitle] — same rule as [_ordered]:
   /// ordered rawIds first, channels the provider added since follow in
   /// provider order.

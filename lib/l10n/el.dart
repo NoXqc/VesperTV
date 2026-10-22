@@ -482,8 +482,24 @@ const Map<String, String> kEl = {
       "Βρέθηκε από το όνομα",
   "Found in the guide":
       "Βρέθηκε στον οδηγό",
-  "National broadcast":
-      "Εθνική μετάδοση",
+  "Team's channel, no guide listing":
+      "Κανάλι της ομάδας, χωρίς καταχώριση στον οδηγό",
+  "Broadcaster, no guide listing":
+      "Κανάλι μετάδοσης, χωρίς καταχώριση στον οδηγό",
+  "Only on a hidden channel":
+      "Μόνο σε κρυφό κανάλι",
+  "Not in your guide yet":
+      "Δεν είναι ακόμα στον οδηγό σου",
+  "On a hidden channel — OK to pick one":
+      "Σε κρυφό κανάλι — OK για να διαλέξεις ένα",
+  "Not in your guide yet — OK to pick one":
+      "Δεν είναι ακόμα στον οδηγό σου — OK για να διαλέξεις ένα",
+  "Only found on {channel}, which is hidden in your lists.":
+      "Βρέθηκε μόνο στο {channel}, που είναι κρυφό στις λίστες σου.",
+  "Your guide doesn't cover this game's time yet. Update the guide closer to the game.":
+      "Ο οδηγός σου δεν καλύπτει ακόμα την ώρα αυτού του αγώνα. Ενημέρωσε τον οδηγό πιο κοντά στον αγώνα.",
+  "No channel name or guide listing names this game.":
+      "Κανένα όνομα καναλιού ή πρόγραμμα του οδηγού δεν αναφέρει αυτόν τον αγώνα.",
   "Some scores could not be loaded. Check the connection.":
       "Ορισμένα σκορ δεν φορτώθηκαν. Ελέγξτε τη σύνδεση.",
   "Unfollow":

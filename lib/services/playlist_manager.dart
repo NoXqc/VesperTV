@@ -1227,6 +1227,13 @@ class PlaylistManager extends ChangeNotifier {
         : all;
   }
 
+  /// Live channels hidden by the viewer, across enabled playlists — see
+  /// [SportsChannelMatcher.whyNoMatch]. None for a restricted viewer: what
+  /// a kid profile can't see isn't named to it either.
+  List<Channel> hiddenLiveChannels() => _activeViewerRestricted
+      ? const []
+      : _enabledSessionsSorted.expand((s) => s.hiddenLiveChannels()).toList();
+
   List<XtreamSeries> visibleSeries({String? playlistId, String? categoryName}) {
     if (playlistId != null)
       return _sessionFor(playlistId)?.visibleSeries(categoryName) ?? const [];

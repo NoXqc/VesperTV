@@ -313,6 +313,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       matcher: SportsChannelMatcher.shared(_epgService),
       picks: SportsChannelPicks.load(_storage),
       channels: _playlistManager.visibleChannels(category: 'tv'),
+      hiddenChannels: _playlistManager.hiddenLiveChannels(),
     );
   }
 

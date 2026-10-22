@@ -642,7 +642,11 @@ class _LiveRowState extends State<_LiveRow> {
         Flexible(
           child: Text(
             widget.match?.channel.name ??
-                (widget.matching ? tr('Looking…') : tr('No channel')),
+                (widget.matching
+                    ? tr('Looking…')
+                    : SportsChannelMatcher.sharedWhyNoMatch(widget.game)
+                            ?.card ??
+                        tr('No channel')),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
@@ -892,8 +896,15 @@ class _SportsGameDetailsDialogState extends State<SportsGameDetailsDialog> {
                       Padding(
                         padding: const EdgeInsets.only(right: 12),
                         child: Text(
-                            tr('No channel found. Hold OK on the game in {tab} to pick one.',
-                                {'tab': AppConstants.sportsTabName}),
+                            switch (SportsChannelMatcher.sharedWhyNoMatch(g)) {
+                              final why? =>
+                                '${why.reason} ${tr('Hold OK on the game in {tab} to pick one.', {
+                                      'tab': AppConstants.sportsTabName
+                                    })}',
+                              null => tr(
+                                  'No channel found. Hold OK on the game in {tab} to pick one.',
+                                  {'tab': AppConstants.sportsTabName}),
+                            },
                             style: const TextStyle(
                                 color: Colors.white54, fontSize: 13)),
                       ),

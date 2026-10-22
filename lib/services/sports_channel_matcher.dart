@@ -13,14 +13,60 @@ import '../l10n/l10n.dart';
 
 /// Why a channel was suggested for a game — shown next to it so the user
 /// can judge a match at a glance.
-enum MatchReason { pick, name, guide, network }
+/// [teamChannel] and [network] are suggestions the guide didn't confirm
+/// (a team's own channel, the broadcaster the schedule lists), and say so.
+enum MatchReason { pick, name, guide, teamChannel, network }
 
 extension MatchReasonLabel on MatchReason {
   String get label => switch (this) {
         MatchReason.pick => tr('Your pick'),
         MatchReason.name => tr('Found by its name'),
         MatchReason.guide => tr('Found in the guide'),
-        MatchReason.network => tr('National broadcast'),
+        MatchReason.teamChannel => tr("Team's channel, no guide listing"),
+        MatchReason.network => tr('Broadcaster, no guide listing'),
+      };
+}
+
+enum NoMatchCause { hiddenChannel, guideNotReaching, notFound }
+
+/// Why a game has no channel — Discord's top Sports Trak complaint was an
+/// unexplained "No channel found" (matching audit, 2026-10-21: of 63 empty
+/// results, 45 had no guide programme at game time and 25 matched only a
+/// channel the viewer had hidden).
+class NoMatch {
+  const NoMatch(this.cause, [this.channelName]);
+  final NoMatchCause cause;
+
+  /// The hidden channel that names the game ([NoMatchCause.hiddenChannel]).
+  final String? channelName;
+
+  /// One line under a game card.
+  String get short => switch (cause) {
+        NoMatchCause.hiddenChannel =>
+          tr('On a hidden channel — OK to pick one'),
+        NoMatchCause.guideNotReaching =>
+          tr('Not in your guide yet — OK to pick one'),
+        NoMatchCause.notFound => tr('No channel found — OK to pick one'),
+      };
+
+  /// The channel line of a small game card, where "Pick a channel" goes;
+  /// null when nothing more specific than that can be said.
+  String? get card => switch (cause) {
+        NoMatchCause.hiddenChannel => tr('Only on a hidden channel'),
+        NoMatchCause.guideNotReaching => tr('Not in your guide yet'),
+        NoMatchCause.notFound => null,
+      };
+
+  /// The reason in full (game menu, live games list, player side panel);
+  /// each screen adds how to pick a channel there.
+  String get reason => switch (cause) {
+        NoMatchCause.hiddenChannel => tr(
+            'Only found on {channel}, which is hidden in your lists.',
+            {'channel': channelName ?? ''}),
+        NoMatchCause.guideNotReaching => tr(
+            "Your guide doesn't cover this game's time yet. Update the guide closer to the game."),
+        NoMatchCause.notFound =>
+          tr('No channel name or guide listing names this game.'),
       };
 }
 
@@ -367,6 +413,21 @@ const Map<String, List<String>> _networkAliases = {
   ],
 };
 
+/// Schedule labels for US national networks that no exact channel name
+/// matches ("CBSSN", "NFL Net"). Stricter than [_networkAliases]: the
+/// channel must be tagged US and be exactly that network once the tag and
+/// quality are stripped — no Canadian USA Network, no West feed, no Plus
+/// service, no dated event channel named after the network. Measured on
+/// three providers' guides (dev-notes/sports-matcher-audit): 14 empty
+/// results got a channel, no wrong ones.
+const Map<String, List<String>> _usNetworkNames = {
+  'CBSSN': ['cbs sports network'],
+  'NFL NET': ['nfl network'],
+  'NHL NET': ['nhl network'],
+  'NBC SPORTS PHIL': ['nbc sports philadelphia'],
+  'USA NET': ['usa network', 'usa network east'],
+};
+
 /// A US/Canadian TV station's call sign ("KJZZ-TV", "KUNP 16", "WGN"):
 /// its channel names carry it ("US - KJZZ 14 SALT LAKE CITY").
 final RegExp _callSign =
@@ -464,7 +525,39 @@ class SportsChannelMatcher {
   final Map<String, List<int>> _byCanonical = {};
   final Map<String, List<int>> _byEpgId = {};
   final Map<String, int> _byId = {};
-  String? _preparedFor;
+  int? _preparedFor;
+
+  /// Channels the viewer hid (groups or one by one), never suggested — only
+  /// used to say a game's channel is one of them ([whyNoMatch]).
+  List<Channel> _hidden = const [];
+  List<String>? _hiddenNames;
+  final Map<String, String> _hiddenByEpgId = {};
+
+  /// [_hidden]'s names normalized, on first need: hidden groups can hold
+  /// most of a provider (every foreign country), and most days every game
+  /// has a channel.
+  Future<List<String>> _hiddenNormalized() async {
+    final done = _hiddenNames;
+    if (done != null) return done;
+    final hidden = _hidden;
+    final names = List<String>.filled(hidden.length, '');
+    for (var i = 0; i < hidden.length; i++) {
+      if (i % 3000 == 2999) await Future<void>.delayed(Duration.zero);
+      names[i] = sportsNormalize(hidden[i].name);
+    }
+    if (identical(hidden, _hidden)) _hiddenNames = names;
+    return names;
+  }
+
+  final Map<String, NoMatch> _noMatch = {};
+
+  /// Why [g] got no channel at its last [matchDay]; null when it has one or
+  /// hasn't been matched.
+  NoMatch? whyNoMatch(SportsGame g) => _noMatch[SportsChannelPicks.eventKey(g)];
+
+  /// [whyNoMatch] on the app's shared matcher; null before Sports Trak
+  /// has matched anything.
+  static NoMatch? sharedWhyNoMatch(SportsGame g) => _shared?.whyNoMatch(g);
 
   Channel? channelById(String id) {
     final i = _byId[id];
@@ -475,14 +568,29 @@ class SportsChannelMatcher {
 
   /// Indexes [channels] (tens of thousands on big providers). Yields to the
   /// event loop every few thousand rows so a weak box keeps drawing.
-  Future<void> prepare(List<Channel> channels) async {
-    // visibleChannels() builds a new list per call, so compare a cheap
-    // signature rather than identity.
-    final signature = channels.isEmpty
-        ? ''
-        : '${channels.length}|${channels.first.id}|${channels.last.id}';
+  /// [hidden]: the viewer's hidden live channels, see [whyNoMatch].
+  Future<void> prepare(List<Channel> channels,
+      {List<Channel> hidden = const []}) async {
+    // visibleChannels() builds a new list per call, so compare a signature
+    // rather than identity. Every id, name and guide id goes into it: the
+    // old count + first/last id missed a renamed channel or a changed EPG
+    // override in the middle, and kept matching against the stale index
+    // (matching audit, 2026-10-21).
+    var signature = Object.hash(channels.length, hidden.length);
+    for (final list in [channels, hidden]) {
+      for (final c in list) {
+        signature = Object.hash(signature, c.id, c.name, c.epgId);
+      }
+    }
     if (_preparedFor == signature) return;
     _preparedFor = signature;
+    _hidden = hidden;
+    _hiddenNames = null;
+    _hiddenByEpgId
+      ..clear()
+      ..addAll({
+        for (final c in hidden.reversed) normalizeEpgId(c.epgId): c.name,
+      });
     _channels = channels;
     _tokenIndex.clear();
     _byCanonical.clear();
@@ -755,6 +863,8 @@ class SportsChannelMatcher {
             o.value.every((group) => group.any(title.contains)));
 
     for (final g in games) {
+      // A guide programme naming the game on a channel the viewer hid.
+      String? hiddenInGuide;
       final found = <String, ChannelMatch>{};
       void add(int index, MatchReason reason, int score, [String? detail]) {
         final c = _channels[index];
@@ -800,7 +910,7 @@ class SportsChannelMatcher {
               if (!_names[i].trim().split(' ').contains(league)) continue;
               final bias = _regionBias(i, g.league);
               if (bias < 0) continue;
-              add(i, MatchReason.name, 65 + bias, t.shortName);
+              add(i, MatchReason.teamChannel, 65 + bias, t.shortName);
             }
           }
         }
@@ -827,6 +937,9 @@ class SportsChannelMatcher {
         final diff = g.end != null
             ? 0 // golf: all day, nothing to be early or late for
             : start.difference(g.start).inMinutes;
+        if (byName && !_byEpgId.containsKey(p.channelId)) {
+          hiddenInGuide ??= _hiddenByEpgId[p.channelId];
+        }
         for (final i in _byEpgId[p.channelId] ?? const <int>[]) {
           add(
               i,
@@ -859,7 +972,25 @@ class SportsChannelMatcher {
         if (_streamingOnly.contains(upper)) continue;
         final key = canonicalChannelKey(network);
         var hits = _byCanonical[key] ?? const <int>[];
-        if (hits.isEmpty) {
+        final usNames = _usNetworkNames[upper];
+        if (hits.isEmpty && usNames != null) {
+          final identities = usNames.map(canonicalChannelKey).toSet();
+          hits = (_channelsNaming(usNames).where((i) {
+            final n = _names[i];
+            if (!n.contains(' us ') ||
+                n.contains(' plus ') ||
+                n.contains(' alternate ')) {
+              return false;
+            }
+            // "(D)" is one provider's decoration on its channel names.
+            final name = _channels[i]
+                .name
+                .replaceAll(RegExp(r'\s*\(D\)\s*', caseSensitive: false), ' ');
+            return identities.contains(canonicalChannelKey(name));
+          }).toList()
+                ..sort((a, b) => _names[a].length.compareTo(_names[b].length)))
+              .toList();
+        } else if (hits.isEmpty) {
           final call = _callSign.firstMatch(upper)?.group(1);
           final phrases = _networkAliases[upper] ??
               (call != null ? [call.toLowerCase()] : const <String>[]);
@@ -888,8 +1019,38 @@ class SportsChannelMatcher {
               ? s
               : x.channel.name.length.compareTo(y.channel.name.length);
         });
-      out[SportsChannelPicks.eventKey(g)] =
-          list.length > limit ? list.sublist(0, limit) : list;
+      final key = SportsChannelPicks.eventKey(g);
+      out[key] = list.length > limit ? list.sublist(0, limit) : list;
+      if (list.isNotEmpty) {
+        _noMatch.remove(key);
+        continue;
+      }
+      var hiddenChannel = hiddenInGuide;
+      if (hiddenChannel == null && _hidden.isNotEmpty && groups.isNotEmpty) {
+        final names = await _hiddenNormalized();
+        final hidden = _hidden;
+        for (var i = 0; i < names.length && i < hidden.length; i++) {
+          if (i % 5000 == 4999) await Future<void>.delayed(Duration.zero);
+          if (groups.every((group) => group.any(names[i].contains))) {
+            hiddenChannel = hidden[i].name;
+            break;
+          }
+        }
+      }
+      if (hiddenChannel != null) {
+        _noMatch[key] = NoMatch(NoMatchCause.hiddenChannel, hiddenChannel);
+        continue;
+      }
+      // Under half the channels listed at kickoff: the guide hasn't
+      // reached the game yet, whatever a few week-long listings say. Only
+      // for games still to come: ended programmes are deleted, so every
+      // past kickoff would look uncovered.
+      final coverage = g.start.isAfter(DateTime.now())
+          ? await _epg.guideCoverageAt(g.start)
+          : null;
+      _noMatch[key] = NoMatch(coverage != null && coverage < 0.5
+          ? NoMatchCause.guideNotReaching
+          : NoMatchCause.notFound);
     }
     return out;
   }

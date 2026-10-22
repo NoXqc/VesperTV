@@ -636,6 +636,38 @@ class EpgService extends ChangeNotifier {
     }
   }
 
+  DateTime? _coverageStamp;
+  final Map<int, Future<int>> _airingCounts = {};
+
+  /// How much of the guide reaches [at]: channels with a programme on then,
+  /// over channels with one on now (0 = none, about 1 = as well covered as
+  /// today), or null without a guide. Sports Trak uses it to tell "your
+  /// guide doesn't reach this game yet" apart from "nothing names this
+  /// game". Not the guide's latest end: a few channels listed a week ahead
+  /// made a provider's 2-day guide look like it reached Friday (owner,
+  /// 2026-10-21). Counts are per hour and kept until the next refresh.
+  Future<double?> guideCoverageAt(DateTime at) async {
+    if (_coverageStamp != lastUpdated) {
+      _coverageStamp = lastUpdated;
+      _airingCounts.clear();
+    }
+    Future<int> airing(DateTime t) {
+      final hour = t.millisecondsSinceEpoch ~/ Duration.millisecondsPerHour;
+      return _airingCounts[hour] ??=
+          _db.countAiringAt(hour * Duration.millisecondsPerHour);
+    }
+
+    try {
+      final now = await airing(DateTime.now());
+      if (now == 0) return null;
+      return await airing(at) / now;
+    } catch (e) {
+      debugPrint('EpgService: guide coverage failed: $e');
+      _airingCounts.clear();
+      return null;
+    }
+  }
+
   /// Whether [channelId] has any programme that hasn't ended — without
   /// loading its rows.
   bool hasPrograms(String channelId) =>

@@ -167,7 +167,8 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
     final matcher = SportsChannelMatcher.shared(context.read<EpgService>());
     await playlist.ensureLiveChannelsLoaded();
     if (!mounted) return;
-    await matcher.prepare(playlist.visibleChannels(category: 'tv'));
+    await matcher.prepare(playlist.visibleChannels(category: 'tv'),
+        hidden: playlist.hiddenLiveChannels());
     if (!mounted) return;
     final matches = await matcher.matchDay(
         {...team, ...live}.toList(), SportsChannelPicks.load(storage));
@@ -213,7 +214,9 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
       channel =
           _matches[SportsChannelPicks.eventKey(games[i])]?.firstOrNull?.channel;
       if (channel == null) {
-        setState(() => _message = tr('No channel found for this game'));
+        final why = SportsChannelMatcher.sharedWhyNoMatch(games[i]);
+        setState(() =>
+            _message = why?.reason ?? tr('No channel found for this game'));
         return;
       }
     }

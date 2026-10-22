@@ -325,7 +325,24 @@ const Map<String, String> kFr = {
   'Your pick': "Votre choix",
   'Found by its name': "Trouvée par son nom",
   'Found in the guide': "Trouvée dans le guide",
-  'National broadcast': "Diffusion nationale",
+  "Team's channel, no guide listing":
+      "Chaîne de l'équipe, pas dans le guide",
+  "Broadcaster, no guide listing":
+      "Diffuseur, pas dans le guide",
+  "Only on a hidden channel":
+      "Seulement sur une chaîne masquée",
+  "Not in your guide yet":
+      "Pas encore dans votre guide",
+  "On a hidden channel — OK to pick one":
+      "Sur une chaîne masquée — OK pour en choisir une",
+  "Not in your guide yet — OK to pick one":
+      "Pas encore dans votre guide — OK pour en choisir une",
+  "Only found on {channel}, which is hidden in your lists.":
+      "Trouvé seulement sur {channel}, qui est masquée dans vos listes.",
+  "Your guide doesn't cover this game's time yet. Update the guide closer to the game.":
+      "Votre guide ne couvre pas encore l'heure de ce match. Mettez le guide à jour plus près du match.",
+  "No channel name or guide listing names this game.":
+      "Aucun nom de chaîne ni programme du guide ne mentionne ce match.",
   'Some scores could not be loaded. Check the connection.':
       "Certains pointages n'ont pas pu être chargés. Vérifiez la connexion.",
   'Unfollow': "Ne plus suivre",

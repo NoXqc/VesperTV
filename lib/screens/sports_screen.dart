@@ -243,7 +243,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     await playlist.ensureLiveChannelsLoaded();
     if (!mounted) return;
     final live = playlist.visibleChannels(category: 'tv');
-    await _matcher.prepare(live);
+    await _matcher.prepare(live, hidden: playlist.hiddenLiveChannels());
     final matches = await _matcher.matchDay(_games, _picks);
     if (!mounted || myToken != _loadToken) return;
     setState(() {
@@ -607,7 +607,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       List<SportsGame> games) async {
     final playlist = context.read<PlaylistManager>();
     await playlist.ensureLiveChannelsLoaded();
-    await _matcher.prepare(playlist.visibleChannels(category: 'tv'));
+    await _matcher.prepare(playlist.visibleChannels(category: 'tv'),
+        hidden: playlist.hiddenLiveChannels());
     return _matcher.matchDay(games, _picks);
   }
 
@@ -837,6 +838,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       matcher: _matcher,
       picks: _picks,
       channels: playlist.visibleChannels(category: 'tv'),
+      hiddenChannels: playlist.hiddenLiveChannels(),
     );
   }
 
@@ -2055,7 +2057,8 @@ class _Hero extends StatelessWidget {
           Text(
               matching
                   ? tr('Looking for the channel…')
-                  : tr('No channel found — OK to pick one'),
+                  : SportsChannelMatcher.sharedWhyNoMatch(game)?.short ??
+                      tr('No channel found — OK to pick one'),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 12, color: Colors.white54)),
@@ -2414,7 +2417,9 @@ class _GameCardState extends State<_GameCard> {
                               widget.match?.channel.name ??
                                   (widget.matching
                                       ? tr('Looking…')
-                                      : tr('Pick a channel')),
+                                      : SportsChannelMatcher.sharedWhyNoMatch(g)
+                                              ?.card ??
+                                          tr('Pick a channel')),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -2619,7 +2624,9 @@ class _GameDialog extends StatelessWidget {
                   matches.isEmpty
                       ? (matching
                           ? tr('Still looking for channels…')
-                          : tr('No channel found for this game'))
+                          : SportsChannelMatcher.sharedWhyNoMatch(game)
+                                  ?.reason ??
+                              tr('No channel found for this game'))
                       : tr('On {matches} channel{s}', {
                           'matches': matches.length,
                           's': matches.length == 1 ? '' : 's'

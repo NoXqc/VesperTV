@@ -325,7 +325,24 @@ const Map<String, String> kEs = {
   'Your pick': "Tu elección",
   'Found by its name': "Encontrado por su nombre",
   'Found in the guide': "Encontrado en la guía",
-  'National broadcast': "Transmisión nacional",
+  "Team's channel, no guide listing":
+      "Canal del equipo, sin ficha en la guía",
+  "Broadcaster, no guide listing":
+      "Cadena emisora, sin ficha en la guía",
+  "Only on a hidden channel":
+      "Solo en un canal oculto",
+  "Not in your guide yet":
+      "Aún no está en tu guía",
+  "On a hidden channel — OK to pick one":
+      "En un canal oculto — OK para elegir uno",
+  "Not in your guide yet — OK to pick one":
+      "Aún no está en tu guía — OK para elegir uno",
+  "Only found on {channel}, which is hidden in your lists.":
+      "Solo se encontró en {channel}, que está oculto en tus listas.",
+  "Your guide doesn't cover this game's time yet. Update the guide closer to the game.":
+      "Tu guía aún no cubre la hora de este partido. Actualiza la guía más cerca del partido.",
+  "No channel name or guide listing names this game.":
+      "Ningún nombre de canal ni ficha de la guía menciona este partido.",
   'Some scores could not be loaded. Check the connection.':
       "No se pudieron cargar algunos marcadores. Revisa la conexión.",
   'Unfollow': "Dejar de seguir",

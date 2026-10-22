@@ -323,7 +323,24 @@ const Map<String, String> kIt = {
   'Your pick': "La tua scelta",
   'Found by its name': "Trovato dal nome",
   'Found in the guide': "Trovato nella guida",
-  'National broadcast': "Trasmissione nazionale",
+  "Team's channel, no guide listing":
+      "Canale della squadra, non nella guida",
+  "Broadcaster, no guide listing":
+      "Emittente, non nella guida",
+  "Only on a hidden channel":
+      "Solo su un canale nascosto",
+  "Not in your guide yet":
+      "Non ancora nella tua guida",
+  "On a hidden channel — OK to pick one":
+      "Su un canale nascosto — OK per sceglierne uno",
+  "Not in your guide yet — OK to pick one":
+      "Non ancora nella tua guida — OK per sceglierne uno",
+  "Only found on {channel}, which is hidden in your lists.":
+      "Trovato solo su {channel}, che è nascosto nelle tue liste.",
+  "Your guide doesn't cover this game's time yet. Update the guide closer to the game.":
+      "La tua guida non copre ancora l'orario di questa partita. Aggiorna la guida più vicino alla partita.",
+  "No channel name or guide listing names this game.":
+      "Nessun nome di canale né programma della guida cita questa partita.",
   'Some scores could not be loaded. Check the connection.':
       "Alcuni risultati non sono stati caricati. Controlla la connessione.",
   'Unfollow': "Non seguire più",

@@ -991,7 +991,10 @@ class _GameRowState extends State<_GameRow> {
                           widget.match?.channel.name ??
                               (widget.matching
                                   ? tr('Looking…')
-                                  : tr('Pick a channel')),
+                                  : SportsChannelMatcher.sharedWhyNoMatch(
+                                              widget.game)
+                                          ?.card ??
+                                      tr('Pick a channel')),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(

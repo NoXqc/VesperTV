@@ -326,6 +326,17 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   .sendInitializedOrReportUnplayable` now pauses and errors with `[UNSUPPORTED_VIDEO: mime codecs
   size]`; `_friendlyPlaybackError` has a Dolby Vision message (owner-confirmed). DV profile 8 (and 4)
   already plays as HDR10 via media3's HEVC fallback; profile 5 can't; profile 7 could (not done).
+  **CFL** in Sports Trak (Codex, merged). **Sports matching, audit items 1+2**
+  (`dev-notes/sports-matcher-audit*`, harness on branch `codex/sports-matcher-audit`):
+  `_usNetworkNames` (CBSSN, NFL Net, NHL Net, NBC Sports Phil, USA Net: US-tagged exact network
+  only); `prepare` signature hashes every id/name/epgId (was count+first+last: stale index after a
+  rename); `MatchReason.teamChannel` + labels say "no guide listing" for team-channel/broadcaster
+  suggestions; `whyNoMatch`/`NoMatch` explain an empty game (only on a hidden channel — named;
+  upcoming game's kickoff has under half the channels listed as now — `EpgService.guideCoverageAt`,
+  not MAX(stop): a few week-long listings hid a 2-day guide; nothing names it), shown on the
+  hero, game menu, live list and side panel. `prepare(hidden: playlist.hiddenLiveChannels())` at
+  **every** call site (the signature includes it; mixing would re-index each time). Restricted
+  viewers get no hidden list. Phone-installed `+393`; not box-tested.
 - **Shipped: 1.0.34 (`+388`, 2026-10-21, latest; test builds `+386`/`+387` = pre-releases
   `1.0.34-test.386`/`.387`, `+388` owner-tested on the Fire Stick):** **list-only add-ons** (`ArchiveSource.listOnly`,
   stored `listOnly`): a manifest with movie/series catalogs on IMDb ids (or no idPrefixes) and no

@@ -510,6 +510,7 @@ class RecordingService extends ChangeNotifier {
     required SportsChannelMatcher matcher,
     required SportsChannelPicks picks,
     required List<Channel> channels,
+    List<Channel> hiddenChannels = const [],
   }) async {
     final team = _autoTeam;
     if (team == null || _refreshing || !supported) return;
@@ -535,7 +536,9 @@ class RecordingService extends ChangeNotifier {
         }
       }
       if (games.isEmpty) return;
-      await matcher.prepare(channels);
+      // The same hidden list as every other caller: the shared matcher
+      // re-indexes whenever the lists it's given differ.
+      await matcher.prepare(channels, hidden: hiddenChannels);
       final matches = await matcher.matchDay(games.values.toList(), picks);
       var changed = false;
       for (final g in games.values) {

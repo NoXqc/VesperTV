@@ -176,6 +176,16 @@ class EpgDatabase {
     return {for (final r in rows) r['channel_id'] as String};
   }
 
+  /// How many programmes are on at [atMs] — one per channel with guide
+  /// data then.
+  Future<int> countAiringAt(int atMs) async {
+    final db = await _database;
+    final rows = await db.rawQuery(
+        'SELECT COUNT(*) AS n FROM programme WHERE stop > ? AND start <= ?',
+        [atMs, atMs]);
+    return rows.first['n'] as int? ?? 0;
+  }
+
   Future<bool> isEmpty() async {
     final db = await _database;
     final rows = await db.rawQuery('SELECT 1 FROM programme LIMIT 1');
