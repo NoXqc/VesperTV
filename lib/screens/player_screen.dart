@@ -793,50 +793,55 @@ class _PlayerScreenState extends State<PlayerScreen> {
                           ),
                         ),
 
-                        // CH+/CH- info card (see _zapChannel), and the
-                        // Data pool card under it (OK, if enabled). The
-                        // Data pool is only built while shown — it polls.
+                        // CH+/CH- and OK channel information stay at the top.
                         Positioned(
                           top: 24,
                           left: 0,
                           right: 0,
                           child: IgnorePointer(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                AnimatedOpacity(
-                                  opacity: _zapInfoVisible ? 1 : 0,
-                                  duration: const Duration(milliseconds: 200),
-                                  child: Center(
-                                    child: _ZapInfoCard(channel: channel),
-                                  ),
-                                ),
-                                AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 200),
-                                  child: _dataPoolVisible && controller != null
-                                      ? Padding(
-                                          padding: const EdgeInsets.only(
-                                              top: 10, left: 24, right: 24),
-                                          child: DataPoolCard(
-                                              controller: controller,
-                                              since: playback.playingSince),
-                                        )
-                                      : const SizedBox.shrink(),
-                                ),
-                              ],
+                            child: AnimatedOpacity(
+                              opacity: _zapInfoVisible ? 1 : 0,
+                              duration: const Duration(milliseconds: 200),
+                              child:
+                                  Center(child: _ZapInfoCard(channel: channel)),
                             ),
                           ),
                         ),
 
-                        // Embedded subtitles picked in the controls'
-                        // Subtitles button (see SubtitleOverlay).
+                        // One bottom layout keeps captions above the actual panel
+                        // height, including on phones and with larger text. Only
+                        // build the Data pool while visible (it polls the player).
                         if (controller != null)
                           Positioned(
                             left: 0,
                             right: 0,
                             bottom: 48,
-                            child: IgnorePointer(
-                              child: SubtitleOverlay(controller: controller),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IgnorePointer(
+                                  child:
+                                      SubtitleOverlay(controller: controller),
+                                ),
+                                if (_dataPoolVisible)
+                                  Padding(
+                                    padding:
+                                        const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                                    child: ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                        maxHeight:
+                                            MediaQuery.sizeOf(context).height *
+                                                0.45,
+                                      ),
+                                      child: SingleChildScrollView(
+                                        child: DataPoolCard(
+                                          controller: controller,
+                                          since: playback.playingSince,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
 

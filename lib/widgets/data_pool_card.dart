@@ -10,7 +10,7 @@ import '../l10n/l10n.dart';
 import '../services/subtitle_tracks.dart';
 
 /// "Data pool" (Settings > General > Data pool display, off by default): a
-/// second floating card under the OK info card on a live channel, with the
+/// bottom panel with two tables beside each other, containing the
 /// nerdy details the player reports about the stream — resolution, frame
 /// rate, codecs, bitrate, quality variants, audio tracks, buffer, HDR
 /// (owner, 2026-10-20). Read from the playing stream only, never by probing
@@ -281,7 +281,7 @@ class _DataPoolCardState extends State<DataPoolCard> {
     final buffered = _buffered;
     final https = c.dataSource.toLowerCase().startsWith('https');
     return Container(
-      constraints: const BoxConstraints(maxWidth: 520),
+      width: double.infinity,
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
       decoration: BoxDecoration(
         // Same see-through card as the OK info card.
@@ -308,64 +308,82 @@ class _DataPoolCardState extends State<DataPoolCard> {
           if (!_read)
             Text(tr('Reading the stream…'),
                 style: const TextStyle(color: Colors.white70, fontSize: 12))
-          else ...[
-            _row(tr('Video'),
-                videoParts.isEmpty ? notReported : videoParts.join(' · ')),
-            _row(
-                tr('Stream bitrate'),
-                _measuredBitrate != null
-                    ? '${_rate(_measuredBitrate)} ${tr('(measured)')}'
-                    : _first == null || identical(_first, _last)
-                        ? tr('Measuring…')
-                        : notReported),
-            if (_rate(v?.bitrate) != null)
-              _row(tr('Declared bitrate'), _rate(v?.bitrate)!),
-            if (_last?['dropped'] is num)
-              _row(tr('Dropped frames'), '${_last!['dropped']}'),
-            if (size.width > 0 && size.height > 0)
-              _row(tr('Picture'),
-                  '${size.width.round()}×${size.height.round()} · ${_aspect(size)}'),
-            _row(
-                tr('Quality variants'),
-                heights.length > 1
-                    ? heights.map((h) => '${h}p').join(' · ')
-                    : tr('One (not adaptive)')),
-            _row(tr('Audio'),
-                audioParts.isEmpty ? notReported : audioParts.join(' · ')),
-            if (_audioTracks.length > 1)
-              _row(
-                  tr('Audio tracks'),
-                  languages.isEmpty
-                      ? '${_audioTracks.length}'
-                      : '${_audioTracks.length} · ${languages.join(', ')}'),
-            _row(
-                tr('Stream'), '${_container(c)} · ${https ? 'HTTPS' : 'HTTP'}'),
-            _row(
-                tr('Buffered'),
-                buffered == null
-                    ? notReported
-                    : tr('{seconds} s', {
-                        'seconds':
-                            (buffered.inMilliseconds / 1000).toStringAsFixed(1)
-                      })),
-            _row(
-                tr('State'),
-                value.isBuffering
-                    ? tr('Buffering…')
-                    : value.isPlaying
-                        ? tr('Playing for {time}', {
-                            'time': _clock(widget.since == null
-                                ? value.position
-                                : DateTime.now().difference(widget.since!))
-                          })
-                        : tr('Paused')),
-            FutureBuilder<String?>(
-              future: _hdr,
-              builder: (context, snap) => snap.data == null
-                  ? const SizedBox.shrink()
-                  : _row(tr('Device HDR'), snap.data!),
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  _row(
+                      tr('Video'),
+                      videoParts.isEmpty
+                          ? notReported
+                          : videoParts.join(' · ')),
+                  _row(
+                      tr('Stream bitrate'),
+                      _measuredBitrate != null
+                          ? '${_rate(_measuredBitrate)} ${tr('(measured)')}'
+                          : _first == null || identical(_first, _last)
+                              ? tr('Measuring…')
+                              : notReported),
+                  if (_rate(v?.bitrate) != null)
+                    _row(tr('Declared bitrate'), _rate(v?.bitrate)!),
+                  if (_last?['dropped'] is num)
+                    _row(tr('Dropped frames'), '${_last!['dropped']}'),
+                  if (size.width > 0 && size.height > 0)
+                    _row(tr('Picture'),
+                        '${size.width.round()}×${size.height.round()} · ${_aspect(size)}'),
+                  _row(
+                      tr('Quality variants'),
+                      heights.length > 1
+                          ? heights.map((h) => '${h}p').join(' · ')
+                          : tr('One (not adaptive)')),
+                ])),
+                const SizedBox(width: 16),
+                Expanded(
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  _row(
+                      tr('Audio'),
+                      audioParts.isEmpty
+                          ? notReported
+                          : audioParts.join(' · ')),
+                  if (_audioTracks.length > 1)
+                    _row(
+                        tr('Audio tracks'),
+                        languages.isEmpty
+                            ? '${_audioTracks.length}'
+                            : '${_audioTracks.length} · ${languages.join(', ')}'),
+                  _row(tr('Stream'),
+                      '${_container(c)} · ${https ? 'HTTPS' : 'HTTP'}'),
+                  _row(
+                      tr('Buffered'),
+                      buffered == null
+                          ? notReported
+                          : tr('{seconds} s', {
+                              'seconds': (buffered.inMilliseconds / 1000)
+                                  .toStringAsFixed(1)
+                            })),
+                  _row(
+                      tr('State'),
+                      value.isBuffering
+                          ? tr('Buffering…')
+                          : value.isPlaying
+                              ? tr('Playing for {time}', {
+                                  'time': _clock(widget.since == null
+                                      ? value.position
+                                      : DateTime.now()
+                                          .difference(widget.since!))
+                                })
+                              : tr('Paused')),
+                  FutureBuilder<String?>(
+                    future: _hdr,
+                    builder: (context, snap) => snap.data == null
+                        ? const SizedBox.shrink()
+                        : _row(tr('Device HDR'), snap.data!),
+                  ),
+                ])),
+              ],
             ),
-          ],
         ],
       ),
     );
@@ -376,12 +394,13 @@ class _DataPoolCardState extends State<DataPoolCard> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              width: 120,
+            Expanded(
+              flex: 2,
               child: Text(label,
                   style: const TextStyle(color: Colors.white54, fontSize: 12)),
             ),
             Expanded(
+              flex: 3,
               child: Text(value,
                   style: const TextStyle(color: Colors.white, fontSize: 12)),
             ),
