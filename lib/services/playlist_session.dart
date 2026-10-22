@@ -1091,8 +1091,7 @@ class PlaylistSession {
     if (!isXtream) return false;
     final last = storage.getLastFullSyncAt(profile.id);
     if (last == null) return true;
-    return DateTime.now().difference(last) >
-        Duration(days: profile.syncFrequencyDays);
+    return DateTime.now().difference(last) >= profile.syncInterval;
   }
 
   /// The blocking "Updating..." pass established players like TiviMate and

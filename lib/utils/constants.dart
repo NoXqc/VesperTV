@@ -206,13 +206,20 @@ class AppConstants {
 
   /// LEGACY global scalar — "how often" for the above. Per-playlist now,
   /// as `PlaylistProfile.syncFrequencyDays`; this bare key is only read
-  /// once, during migration. `defaultSyncFrequencyDays`/
-  /// `syncFrequencyDaysOptions` below are still live — they're
-  /// `PlaylistProfile.syncFrequencyDays`'s default value and the dropdown
-  /// options in its detail-panel UI, not tied to this legacy key.
+  /// once, during migration. The default remains days for old profiles;
+  /// the detail-panel choices below use hours (24 hours = one day).
   static const String keySyncFrequencyDays = 'nox_sync_frequency_days';
   static const int defaultSyncFrequencyDays = 3;
-  static const List<int> syncFrequencyDaysOptions = [1, 3, 7, 10, 14];
+  static const List<int> syncFrequencyHoursOptions = [
+    1,
+    3,
+    6,
+    24,
+    72,
+    168,
+    240,
+    336
+  ];
 
   // LEGACY global scalars — one playlist's mode/login, superseded by
   // PlaylistProfile. Only read once, during migration.

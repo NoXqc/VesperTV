@@ -6,6 +6,9 @@
 /// "s" filled in by the code; Spanish plurals don't always work that way
 /// (canal/canales), so those strings are phrased to avoid it.
 const Map<String, String> kEs = {
+  '1 hour': '1 hora',
+  '{h} hours': '{h} horas',
+
   'Sort groups': 'Ordenar grupos',
   'Provider order': 'Orden del proveedor',
   'Name A–Z': 'Nombre A–Z',

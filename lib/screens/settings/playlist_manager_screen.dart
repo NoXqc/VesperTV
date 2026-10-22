@@ -507,22 +507,34 @@ class _PlaylistDetailScreenState extends State<_PlaylistDetailScreen> {
                             SettingsPanel(
                               children: [
                                 DropdownButtonFormField<int>(
-                                  initialValue: profile.syncFrequencyDays,
+                                  key: ValueKey(
+                                      '${profile.id}:${profile.syncIntervalHours}'),
+                                  initialValue: profile.syncIntervalHours,
                                   decoration: InputDecoration(
                                     labelText: tr('Update content every'),
                                     border: const OutlineInputBorder(),
                                   ),
-                                  items: AppConstants.syncFrequencyDaysOptions
-                                      .map((d) => DropdownMenuItem(
-                                          value: d,
-                                          child: Text(d == 1
-                                              ? tr('1 day')
-                                              : tr('{d} days', {'d': d}))))
+                                  items: {
+                                    ...AppConstants.syncFrequencyHoursOptions,
+                                    profile.syncIntervalHours,
+                                  }
+                                      .map((h) => DropdownMenuItem(
+                                          value: h,
+                                          child: Text(h < 24
+                                              ? h == 1
+                                                  ? tr('1 hour')
+                                                  : tr('{h} hours', {'h': h})
+                                              : h % 24 != 0
+                                                  ? tr('{h} hours', {'h': h})
+                                                  : h == 24
+                                                      ? tr('1 day')
+                                                      : tr('{d} days',
+                                                          {'d': h ~/ 24}))))
                                       .toList(),
                                   onChanged: (value) {
                                     if (value != null) {
                                       playlist.updatePlaylist(profile.copyWith(
-                                          syncFrequencyDays: value));
+                                          syncFrequencyHours: value));
                                     }
                                   },
                                 ),

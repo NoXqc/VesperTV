@@ -561,6 +561,8 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
           sortOrder: _editingProfile?.sortOrder ?? playlist.profiles.length,
           syncFrequencyDays: _editingProfile?.syncFrequencyDays ??
               AppConstants.defaultSyncFrequencyDays,
+          syncFrequencyHours: _editingProfile?.syncFrequencyHours,
+          autoSync: _editingProfile?.autoSync ?? false,
           createdAt: _editingProfile?.createdAt ?? DateTime.now(),
         );
       } else {
@@ -582,6 +584,8 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
           sortOrder: _editingProfile?.sortOrder ?? playlist.profiles.length,
           syncFrequencyDays: _editingProfile?.syncFrequencyDays ??
               AppConstants.defaultSyncFrequencyDays,
+          syncFrequencyHours: _editingProfile?.syncFrequencyHours,
+          autoSync: _editingProfile?.autoSync ?? false,
           createdAt: _editingProfile?.createdAt ?? DateTime.now(),
         );
       }

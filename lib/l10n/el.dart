@@ -6,6 +6,9 @@
 /// English-style plural "s" filled in by the code; Greek plurals don't
 /// work that way, so those strings are phrased without it.
 const Map<String, String> kEl = {
+  '1 hour': '1 ώρα',
+  '{h} hours': '{h} ώρες',
+
   'Sort groups': 'Ταξινόμηση ομάδων',
   'Provider order': 'Σειρά παρόχου',
   'Name A–Z': 'Όνομα Α–Ω',

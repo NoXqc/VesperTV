@@ -21,6 +21,7 @@ class PlaylistProfile {
     this.vodSortOrder,
     this.seriesSortOrder,
     this.syncFrequencyDays = AppConstants.defaultSyncFrequencyDays,
+    this.syncFrequencyHours,
     this.autoSync = false,
     required this.createdAt,
     this.expiresAt,
@@ -85,6 +86,15 @@ class PlaylistProfile {
   /// (`AppConstants.keySyncFrequencyDays`); now per-playlist, since two
   /// playlists can reasonably want different refresh cadences.
   int syncFrequencyDays;
+
+  /// Hour intervals override the legacy days field. Missing on older saved
+  /// profiles/backups, which keep their exact day-based cadence.
+  int? syncFrequencyHours;
+  int get syncIntervalHours =>
+      syncFrequencyHours != null && syncFrequencyHours! > 0
+          ? syncFrequencyHours!
+          : syncFrequencyDays * 24;
+  Duration get syncInterval => Duration(hours: syncIntervalHours);
 
   /// A due full sync runs at launch without the "Update content now?"
   /// question (user request: "option to auto-update content"). Off keeps
@@ -182,6 +192,7 @@ class PlaylistProfile {
     int? seriesSortOrder,
     bool clearSeriesSortOrder = false,
     int? syncFrequencyDays,
+    int? syncFrequencyHours,
     bool? autoSync,
     DateTime? expiresAt,
     int? maxConnections,
@@ -207,6 +218,8 @@ class PlaylistProfile {
             ? null
             : (seriesSortOrder ?? this.seriesSortOrder),
         syncFrequencyDays: syncFrequencyDays ?? this.syncFrequencyDays,
+        syncFrequencyHours: syncFrequencyHours ??
+            (syncFrequencyDays != null ? null : this.syncFrequencyHours),
         autoSync: autoSync ?? this.autoSync,
         createdAt: createdAt,
         expiresAt: expiresAt ?? this.expiresAt,
@@ -230,6 +243,8 @@ class PlaylistProfile {
         'vodSortOrder': vodSortOrder,
         'seriesSortOrder': seriesSortOrder,
         'syncFrequencyDays': syncFrequencyDays,
+        if (syncFrequencyHours != null)
+          'syncFrequencyHours': syncFrequencyHours,
         'autoSync': autoSync,
         'createdAt': createdAt.toIso8601String(),
         'expiresAt': expiresAt?.toIso8601String(),
@@ -255,6 +270,7 @@ class PlaylistProfile {
         seriesSortOrder: json['seriesSortOrder'] as int?,
         syncFrequencyDays: json['syncFrequencyDays'] as int? ??
             AppConstants.defaultSyncFrequencyDays,
+        syncFrequencyHours: json['syncFrequencyHours'] as int?,
         autoSync: json['autoSync'] as bool? ?? false,
         createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
             DateTime.now(),
