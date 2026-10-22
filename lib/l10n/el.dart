@@ -152,6 +152,8 @@ const Map<String, String> kEl = {
       "Ο πάροχος απέρριψε το αίτημα.",
   "Couldn't reach the provider's server. Check your internet connection, or the server may be down.":
       "Δεν ήταν δυνατή η σύνδεση με τον διακομιστή του παρόχου. Ελέγξτε τη σύνδεσή σας στο διαδίκτυο, ή ο διακομιστής μπορεί να είναι εκτός λειτουργίας.",
+  "Couldn't find the provider's server address. Check your internet connection or DNS settings, or try again later.":
+      "Δεν ήταν δυνατός ο εντοπισμός της διεύθυνσης του διακομιστή του παρόχου. Ελέγξτε τη σύνδεσή σας στο διαδίκτυο ή τις ρυθμίσεις DNS και δοκιμάστε ξανά αργότερα.",
   "Subtitles":
       "Υπότιτλοι",
   "Off":

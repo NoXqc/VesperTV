@@ -103,6 +103,8 @@ const Map<String, String> kFr = {
       "Le fournisseur a rejeté la demande.",
   "Couldn't reach the provider's server. Check your internet connection, or the server may be down.":
       "Impossible de joindre le serveur du fournisseur. Vérifiez votre connexion Internet, ou le serveur est peut-être hors service.",
+  "Couldn't find the provider's server address. Check your internet connection or DNS settings, or try again later.":
+      "Impossible de trouver l'adresse du serveur du fournisseur. Vérifiez votre connexion Internet ou vos paramètres DNS, ou réessayez plus tard.",
   'Subtitles': "Sous-titres",
   'Off': "Désactivés",
   'Forced': "Forcés",
