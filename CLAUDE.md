@@ -332,6 +332,11 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   per-viewer order across playlists (`vesper_favorite_live_order`, composite channel ids), including
   favourited-group channels; manual order wins over playlist/A-Z defaults, new entries append.
   Provider/own-group order stays separate. Backup/Transfer carry the order. Remote tips updated.
+- **Unreleased (Codex, `codex/wide-guide-back`):** Wide non-TV layouts (unfolded phones/tablets)
+  show a header Back button when inside groups/content, using the existing PopScope handling.
+  Full-video guide mode hid the side columns while only compact portrait had a touch Back arrow.
+  Reopening columns now keeps their child layout wide enough during the animation (no row overflow).
+  Six widget regressions cover wide sizes, portrait, fold/unfold and TV; real foldable check pending.
 - **Shipped: 1.0.35 (`+396`, 2026-10-22, latest; `+395` owner-tested on the Formuler; test build `+389` = pre-release `1.0.35-test.389`):** **Hide Recordings** (Settings › Tabs, `hideRecordings`, Codex `codex/hide-recording-tab`). Media Hub show page shows its source chip (`SeriesDetailScreen
   .sourceLabel`) and an hourglass on the tapped episode + Play while streams load (`_startingId`,
   extra presses ignored). **Add-on links resolved once before playing** (`services/stream_resolver.dart`
