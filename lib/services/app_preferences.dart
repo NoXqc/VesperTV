@@ -37,6 +37,9 @@ class AppPreferences extends ChangeNotifier {
   /// hidden.
   late bool hideArchive;
 
+  /// The Recordings row hidden.
+  late bool hideRecordings;
+
   /// The Multiview row and the player's "Open in Multiview" hidden.
   late bool hideMultiview;
 
@@ -107,6 +110,7 @@ class AppPreferences extends ChangeNotifier {
     hideMovies = _storage.getHideMovies();
     hideShows = _storage.getHideShows();
     hideArchive = _storage.getHideArchive();
+    hideRecordings = _storage.getHideRecordings();
     hideMultiview = _storage.getHideMultiview();
     videoFill = _storage.getVideoFill();
     mixFavoritePlaylists = _storage.getMixFavoritePlaylists();
@@ -213,6 +217,12 @@ class AppPreferences extends ChangeNotifier {
   void setHideArchive(bool value) {
     hideArchive = value;
     _storage.setHideArchive(value);
+    notifyListeners();
+  }
+
+  void setHideRecordings(bool value) {
+    hideRecordings = value;
+    _storage.setHideRecordings(value);
     notifyListeners();
   }
 

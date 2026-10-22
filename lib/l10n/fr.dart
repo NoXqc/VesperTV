@@ -1192,9 +1192,11 @@ const Map<String, String> kFr = {
   "Check the link here, then press Add.": "Vérifiez le lien ici, puis appuyez sur Ajouter.",
   "Hide Movies": "Masquer Films",
   "Hide TV Shows": "Masquer Séries",
+  "Hide Recordings": "Masquer les enregistrements",
   "Paste the link and tap Send to TV.": "Collez le lien et touchez Envoyer à la télé.",
   "Removes the Movies tab and movie search results.": "Retire l'onglet Films et les films des résultats de recherche.",
   "Removes the TV Shows tab and show search results.": "Retire l'onglet Séries et les séries des résultats de recherche.",
+  "Removes the Recordings tab.": "Retire l’onglet Enregistrements.",
   "Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.": "Taper un long lien avec une télécommande, c'est pénible. Scannez ce code avec l'appareil photo de votre téléphone et collez-y le lien — il apparaît ici pour que vous le vérifiiez et l'ajoutiez.",
   // Archive: rows, search, stream picker
   'Popular': 'Populaires',
@@ -1384,8 +1386,8 @@ const Map<String, String> kFr = {
       "Interface",
   "How the app looks and what it shows: theme, tabs, the player's extras and reminders.":
       "L’apparence et ce qui s’affiche : thème, onglets, extras du lecteur et rappels.",
-  "Hide Movies, TV Shows, Media Hub or Multiview":
-      "Masquer Films, Séries, Media Hub ou Multiview",
+  "Hide Movies, TV Shows, Media Hub, Recordings or Multiview":
+      "Masquer Films, Séries, Media Hub, Enregistrements ou Multiview",
   "Fixes for the picture on some Fire TV sticks":
       "Correctifs pour l’image sur certaines clés Fire TV",
   "Stream details when you press OK on a channel":

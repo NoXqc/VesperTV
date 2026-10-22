@@ -176,7 +176,7 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
             _Entry(Icons.palette_outlined, tr('Theme'),
                 tr('Clock, accent color, layout'), (_) => const ThemeScreen()),
             _general('tabs', Icons.tab_outlined, tr('Tabs'),
-                tr('Hide Movies, TV Shows, Media Hub or Multiview')),
+                tr('Hide Movies, TV Shows, Media Hub, Recordings or Multiview')),
             // Windows: no platform-view video, OK info card or tip.
             if (!Platform.isWindows)
               _general(

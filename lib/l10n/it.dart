@@ -1193,9 +1193,11 @@ const Map<String, String> kIt = {
   "Check the link here, then press Add.": "Controlla il link qui, poi premi Aggiungi.",
   "Hide Movies": "Nascondi Film",
   "Hide TV Shows": "Nascondi Serie TV",
+  "Hide Recordings": "Nascondi registrazioni",
   "Paste the link and tap Send to TV.": "Incolla il link e tocca Invia alla TV.",
   "Removes the Movies tab and movie search results.": "Rimuove la scheda Film e i film dai risultati di ricerca.",
   "Removes the TV Shows tab and show search results.": "Rimuove la scheda Serie TV e le serie dai risultati di ricerca.",
+  "Removes the Recordings tab.": "Rimuove la scheda Registrazioni.",
   "Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.": "Digitare un link lungo con il telecomando è faticoso. Scansiona questo codice con la fotocamera del telefono e incolla lì il link — apparirà qui da controllare e aggiungere.",
   // Archive: rows, search, stream picker
   'Popular': 'Popolari',
@@ -1385,8 +1387,8 @@ const Map<String, String> kIt = {
       "Interfaccia",
   "How the app looks and what it shows: theme, tabs, the player's extras and reminders.":
       "Aspetto dell’app e cosa mostra: tema, schede, extra del lettore e promemoria.",
-  "Hide Movies, TV Shows, Media Hub or Multiview":
-      "Nascondi Film, Serie TV, Media Hub o Multiview",
+  "Hide Movies, TV Shows, Media Hub, Recordings or Multiview":
+      "Nascondi Film, Serie TV, Media Hub, Registrazioni o Multiview",
   "Fixes for the picture on some Fire TV sticks":
       "Correzioni per l’immagine su alcune chiavette Fire TV",
   "Stream details when you press OK on a channel":
