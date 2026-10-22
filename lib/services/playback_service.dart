@@ -434,7 +434,9 @@ class PlaybackService extends ChangeNotifier {
     }).catchError((e) async {
       // A `.ts` that was really HLS: once more as HLS, through [play]
       // (clearing currentChannel lets it past its same-channel guard).
-      if (learnHlsHost(channel.url, e) && currentChannel?.id == channel.id) {
+      if ((await learnHlsHost(channel.url, e) ||
+              unlearnHlsUrl(channel.url, e)) &&
+          currentChannel?.id == channel.id) {
         currentChannel = null;
         unawaited(play(channel));
         return;
@@ -755,9 +757,12 @@ class PlaybackService extends ChangeNotifier {
   /// account… — Media Hub TV show, user photo 2026-10-21). Logged without
   /// the link, for Send log.
   Future<StreamSniff?> _sniffUnreadable(Channel channel, Object error) async {
-    if (!error
-            .toString()
-            .contains('ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED') ||
+    final raw = error.toString();
+    // MANIFEST_MALFORMED: opened as HLS, but the reply wasn't a playlist —
+    // usually the provider's own error page (Romanian channel, Discord
+    // photo 2026-10-22: "Input does not start with the #EXTM3U header").
+    if (!(raw.contains('ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED') ||
+            raw.contains('ERROR_CODE_PARSING_MANIFEST_MALFORMED')) ||
         channel.url.startsWith('/') ||
         !_sniffedUrls.add(channel.url)) {
       return null;
@@ -858,6 +863,10 @@ bool isDecoderPlaybackError(String raw) {
 /// ("None of the available extractors…"). TiviMate goes by the response.
 /// Learned per host on the first such failure, for the app session.
 final Set<String> _hlsHosts = {};
+
+/// Live `.ts` links on an [_hlsHosts] host that were NOT a playlist when
+/// opened as HLS ([unlearnHlsUrl]): opened the normal way again.
+final Set<String> _notHlsUrls = {};
 
 /// Links of any shape found to serve an HLS playlist ([sniffStream]),
 /// opened as HLS for the app session.
@@ -960,7 +969,9 @@ VideoPlayerHdrController streamController(
   }
   final uri = Uri.parse(url);
   final hls = _hlsUrls.contains(url) ||
-      (_hlsHosts.contains(uri.host) && uri.path.toLowerCase().endsWith('.ts'));
+      (_hlsHosts.contains(uri.host) &&
+          uri.path.toLowerCase().endsWith('.ts') &&
+          !_notHlsUrls.contains(url));
   return VideoPlayerHdrController.networkUrl(
     uri,
     formatHint: hls ? VideoFormat.hls : null,
@@ -970,13 +981,43 @@ VideoPlayerHdrController streamController(
 }
 
 /// True (once per host) when [error] says [url]'s live `.ts` was not a TS
-/// stream: the caller then retries it, and [streamController] opens that
-/// host's channels as HLS from now on.
-bool learnHlsHost(String url, Object error) {
+/// stream **and** the link really answers with an HLS playlist: the caller
+/// then retries it, and [streamController] opens that host's channels as
+/// HLS from now on. Checked first since 1.0.36: one dead channel answering
+/// with an error page used to mark the whole server, and every other
+/// channel on it then failed with "Input does not start with the #EXTM3U
+/// header" until the app restarted (Romanian channels, Discord photo,
+/// 2026-10-22).
+Future<bool> learnHlsHost(String url, Object error,
+    {http.Client? client}) async {
   if (!error.toString().contains('ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED')) {
     return false;
   }
   final uri = Uri.tryParse(url);
-  if (uri == null || !uri.path.toLowerCase().endsWith('.ts')) return false;
+  if (uri == null ||
+      !uri.path.toLowerCase().endsWith('.ts') ||
+      _hlsHosts.contains(uri.host)) {
+    return false;
+  }
+  final sniff = await sniffStream(url, client: client);
+  if (sniff?.kind != 'hls') return false;
   return _hlsHosts.add(uri.host);
+}
+
+/// True (once per link) when [url] was opened as HLS only because its host
+/// is in [_hlsHosts] and the reply was not a playlist
+/// (MANIFEST_MALFORMED): this channel is a plain TS stream on a mixed
+/// server, so the caller retries it the normal way.
+bool unlearnHlsUrl(String url, Object error) {
+  if (!error.toString().contains('ERROR_CODE_PARSING_MANIFEST_MALFORMED')) {
+    return false;
+  }
+  final uri = Uri.tryParse(url);
+  if (uri == null ||
+      !uri.path.toLowerCase().endsWith('.ts') ||
+      !_hlsHosts.contains(uri.host) ||
+      _hlsUrls.contains(url)) {
+    return false;
+  }
+  return _notHlsUrls.add(url);
 }

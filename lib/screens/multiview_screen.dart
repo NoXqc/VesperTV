@@ -10,7 +10,8 @@ import '../models/channel.dart';
 import '../services/app_preferences.dart';
 import '../services/epg_service.dart';
 import '../services/multiview_sports.dart';
-import '../services/playback_service.dart' show learnHlsHost, streamController;
+import '../services/playback_service.dart'
+    show learnHlsHost, streamController, unlearnHlsUrl;
 import '../services/playlist_manager.dart';
 import '../services/real_4k_channels.dart';
 import '../services/storage_service.dart';
@@ -350,8 +351,11 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
       });
     } catch (e) {
       unawaited(newController.dispose());
-      // A `.ts` that was really HLS (see learnHlsHost): once more as HLS.
-      if (learnHlsHost(channel.url, e) && mounted) {
+      // A `.ts` that was really HLS (see learnHlsHost): once more as HLS;
+      // or one wrongly opened as HLS (unlearnHlsUrl): once more as TS.
+      if ((await learnHlsHost(channel.url, e) ||
+              unlearnHlsUrl(channel.url, e)) &&
+          mounted) {
         return _assign(index, channel);
       }
       if (mounted) {
