@@ -503,6 +503,10 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
   List<_CardRow> _rows = const [];
   final Map<String, FocusNode> _cardNodes = {};
   final Map<String, int> _lastColumn = {};
+  final Map<String, ScrollController> _rowScrolls = {};
+
+  /// Card width + gap: the lazy rows scroll by this to reach a card.
+  static const double _cardStride = _NetworkCard.width + 12;
   final List<FocusNode> _chipNodes = [for (var i = 0; i < 3; i++) FocusNode()];
 
   /// Rows are rebuilt only when the playlists, filters or lists change
@@ -534,6 +538,9 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
   @override
   void dispose() {
     _playlist.removeListener(_markDirty);
+    for (final c in _rowScrolls.values) {
+      c.dispose();
+    }
     for (final n in [..._cardNodes.values, ..._chipNodes]) {
       n.dispose();
     }
@@ -794,7 +801,8 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
       for (final row in const [
         'League networks',
         'Sports networks',
-        'Regional channels'
+        'Regional channels',
+        'Other sports channels',
       ])
         _CardRow(row, tr(row), SportsChannelLibrary.groups(filtered, row: row)),
     ].where((r) => r.cards.isNotEmpty || r.list != null).toList();
@@ -808,15 +816,42 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
     if (r.cards.isEmpty) return;
     final i = column.clamp(0, r.cards.length - 1);
     final node = _node(r.id, r.cards[i].id);
-    node.requestFocus();
     _lastColumn[r.id] = i;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    void focus() {
+      node.requestFocus();
       final ctx = node.context;
       if (ctx != null) Scrollable.ensureVisible(ctx, alignment: 0.5);
+    }
+
+    if (node.context != null) {
+      focus();
+      return;
+    }
+    // A lazy row hasn't built that card: scroll it into existence first.
+    final c = _rowScrolls[r.id];
+    if (c != null && c.hasClients) {
+      c.jumpTo((i * _cardStride - _cardStride)
+          .clamp(c.position.minScrollExtent, c.position.maxScrollExtent));
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) focus();
     });
   }
 
+  /// The focused card ([_NetworkCard.onFocus]); rows are lazy, so this
+  /// can't be found by asking every node.
+  (int, int)? _position;
+
   (int, int)? _focusedPosition() {
+    if (_position case final p?) {
+      final (r, c) = p;
+      if (r < _rows.length &&
+          c < _rows[r].cards.length &&
+          (_cardNodes['${_rows[r].id}/${_rows[r].cards[c].id}']?.hasFocus ??
+              false)) {
+        return p;
+      }
+    }
     for (final (ri, r) in _rows.indexed) {
       for (final (ci, g) in r.cards.indexed) {
         if (_cardNodes['${r.id}/${g.id}']?.hasFocus ?? false) return (ri, ci);
@@ -1038,13 +1073,20 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
             Text(tr('Empty list: hold OK on any channel card to add it here.'),
                 style: const TextStyle(fontSize: 13, color: Colors.white38))
           else
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              clipBehavior: Clip.none,
-              child: Row(
-                children: [
-                  for (final g in row.cards)
-                    Padding(
+            // Lazy: a big playlist can give hundreds of cards (each with a
+            // logo); building them all at once crashed a Fire Stick.
+            SizedBox(
+              height: _NetworkCard.height + 16,
+              child: ListView.builder(
+                controller: _rowScrolls[row.id] ??= ScrollController(),
+                scrollDirection: Axis.horizontal,
+                clipBehavior: Clip.none,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemExtent: _cardStride,
+                itemCount: row.cards.length,
+                itemBuilder: (context, i) {
+                  final g = row.cards[i];
+                  return Padding(
                       padding: const EdgeInsets.only(right: 12),
                       child: _NetworkCard(
                         focusNode: _node(row.id, g.id),
@@ -1052,6 +1094,8 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
                         playing: _previewing(g),
                         single: row.list != null,
                         onFocus: () {
+                          _position = (_rows.indexOf(row), i);
+                          _lastColumn[row.id] = i;
                           if (_focused?.id != g.id) {
                             setState(() => _focused = g);
                           }
@@ -1061,9 +1105,8 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
                           _watch(playing ?? _mainOf(g));
                         },
                         onHold: () => _menu(row, g),
-                      ),
-                    ),
-                ],
+                      ));
+                },
               ),
             ),
         ],

@@ -1255,9 +1255,6 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       child: Row(
         children: [
           const SportsBackButton(),
-          TextButton(
-              onPressed: () => setState(() => _channelsMode = true),
-              child: Text(tr('Channels'))),
           Text(AppConstants.sportsTabName,
               style: Theme.of(context)
                   .textTheme
@@ -1416,6 +1413,16 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
             compact: true,
             onFocus: () => _zone = 2,
             onTap: _openMyTeams,
+          ),
+          // Sports networks (TSN, ESPN…) as cards (SportsChannelsScreen).
+          SportsChip(
+            focusNode: _chipNode('networks'),
+            label: tr('Networks'),
+            icon: Icons.live_tv,
+            selected: false,
+            compact: true,
+            onFocus: () => _zone = 2,
+            onTap: () => setState(() => _channelsMode = true),
           ),
           if (_showRedZone)
             RedZonePill(

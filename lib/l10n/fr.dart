@@ -106,6 +106,8 @@ const Map<String, String> kFr = {
   "Couldn't find the provider's server address. Check your internet connection or DNS settings, or try again later.":
       "Impossible de trouver l'adresse du serveur du fournisseur. Vérifiez votre connexion Internet ou vos paramètres DNS, ou réessayez plus tard.",
   'Subtitles': "Sous-titres",
+  "Networks": "Réseaux",
+  "Other sports channels": "Autres chaînes sportives",
   "On now":
       "En ce moment",
   "No channel matches these filters.":

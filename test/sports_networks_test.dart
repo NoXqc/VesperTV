@@ -78,5 +78,14 @@ void main() {
     expect(row('CA: Sportsnet Ontario'), 'Sports networks');
     expect(sportsNetworkOf(ch('CA: Sportsnet Ontario'))?.id, 'sportsnet');
     expect(row('US: CNN'), '');
+    expect(
+        SportsChannelLibrary.category(Channel(
+            id: 'p::x',
+            rawId: 'x',
+            playlistId: 'p',
+            name: 'US: Big Event 3',
+            group: 'Sports',
+            url: 'http://x/1.ts')),
+        'Other sports channels');
   });
 }

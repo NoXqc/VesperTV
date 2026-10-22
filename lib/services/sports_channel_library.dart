@@ -205,7 +205,9 @@ class SportsChannelLibrary {
         SportsNetworkKind.league => 'League networks',
         SportsNetworkKind.regional => 'Regional channels',
         SportsNetworkKind.sports => 'Sports networks',
-        null => MultiviewSports.isSports(c) ? 'Sports networks' : '',
+        // No known network (often a whole "Sports" group of event
+        // feeds): their own last row, so Sports networks stays networks.
+        null => MultiviewSports.isSports(c) ? 'Other sports channels' : '',
       };
   static final _category = Expando<String>('sportsCategory');
 
