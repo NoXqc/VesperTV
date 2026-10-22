@@ -222,139 +222,145 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
     final sources = service.sources;
     return SettingsScaffold(
       title: tr('Media Hub sources'),
-      body: ListView(
+      // Not a lazy ListView: with many sources (each with its Show under
+      // Other switch) the Add field below was never built, so the remote's
+      // Down couldn't reach it (user with 11 add-ons).
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        children: [
-          Text(tr(
-              'The Media Hub tab shows films and series from sources you add here. Any source that follows the catalog/stream add-on format works; a source that only offers streams by IMDb id gets its posters and episodes from Cinemeta. Only direct video links are played; torrent links are ignored.')),
-          const SizedBox(height: 16),
-          SectionLabel(tr('Your sources')),
-          const SizedBox(height: 4),
-          if (sources.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text(tr('No sources yet.'),
-                  style: const TextStyle(color: Colors.white60)),
-            ),
-          for (final s in sources) ...[
-            HoldToActivate(
-              onTap: () => service.setEnabled(s, !s.enabled),
-              onHold: () => _remove(s),
-              child: TvSwitchListTile(
-                title: Text(s.name),
-                subtitle: !s.underOther
-                    ? Text(_summary(s),
-                        maxLines: 2, overflow: TextOverflow.ellipsis)
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(_summary(s),
-                              maxLines: 2, overflow: TextOverflow.ellipsis),
-                          const SizedBox(height: 2),
-                          // Not in the normal rows, search or Recently
-                          // watched (ArchiveService.otherGenre) — without
-                          // this, the source looks like it added nothing.
-                          Text(
-                            tr('Use the Other filter in Media Hub > Movies / TV Shows > Genre to see this source.'),
-                            style: TextStyle(
-                                color: Theme.of(context).colorScheme.primary),
-                          ),
-                        ],
-                      ),
-                value: s.enabled,
-                onChanged: (v) => service.setEnabled(s, v),
-              ),
-            ),
-            // Main rows or Other only, either way: the automatic choice
-            // (ArchiveSource.autoOther) is just the starting position.
-            if (s.server == null && s.tracker == null)
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(tr(
+                'The Media Hub tab shows films and series from sources you add here. Any source that follows the catalog/stream add-on format works; a source that only offers streams by IMDb id gets its posters and episodes from Cinemeta. Only direct video links are played; torrent links are ignored.')),
+            const SizedBox(height: 16),
+            SectionLabel(tr('Your sources')),
+            const SizedBox(height: 4),
+            if (sources.isEmpty)
               Padding(
-                padding: const EdgeInsets.only(left: 24),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(tr('No sources yet.'),
+                    style: const TextStyle(color: Colors.white60)),
+              ),
+            for (final s in sources) ...[
+              HoldToActivate(
+                onTap: () => service.setEnabled(s, !s.enabled),
+                onHold: () => _remove(s),
                 child: TvSwitchListTile(
-                  title: Text(tr('Show under Other')),
-                  subtitle: Text(tr(
-                      'On: this source only appears behind the Other genre filter (Movies and TV Shows). Off: in the main rows. Press Refresh in Media Hub after changing this.')),
-                  value: s.underOther,
-                  onChanged: (v) => service.setUnderOther(s, v),
+                  title: Text(s.name),
+                  subtitle: !s.underOther
+                      ? Text(_summary(s),
+                          maxLines: 2, overflow: TextOverflow.ellipsis)
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(_summary(s),
+                                maxLines: 2, overflow: TextOverflow.ellipsis),
+                            const SizedBox(height: 2),
+                            // Not in the normal rows, search or Recently
+                            // watched (ArchiveService.otherGenre) — without
+                            // this, the source looks like it added nothing.
+                            Text(
+                              tr('Use the Other filter in Media Hub > Movies / TV Shows > Genre to see this source.'),
+                              style: TextStyle(
+                                  color: Theme.of(context).colorScheme.primary),
+                            ),
+                          ],
+                        ),
+                  value: s.enabled,
+                  onChanged: (v) => service.setEnabled(s, v),
                 ),
               ),
-          ],
-          const Divider(height: 32),
-          SectionLabel(tr('Add a source')),
-          const SizedBox(height: 8),
-          TvTextFieldGate(
-            focusNode: _linkFocus,
-            builder: (context, readOnly) => TextField(
-              controller: _link,
-              focusNode: _linkFocus,
-              readOnly: readOnly,
-              textInputAction: TextInputAction.done,
-              // The keyboard's Done lands on Add (Fire OS also sends it
-              // for Back): the remote is never left with nothing focused.
-              onSubmitted: (_) {
-                _addFocus.requestFocus();
-                _add();
-              },
-              decoration: InputDecoration(
-                labelText: tr('Source link (ends with manifest.json)'),
-                helperText: tr('Several links at once work too.'),
-                border: const OutlineInputBorder(),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(spacing: 12, runSpacing: 8, children: [
-            OutlinedButton(
-              focusNode: _addFocus,
-              onPressed: _adding ? null : _add,
-              child: _adding
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2))
-                  : Text(tr('Add')),
-            ),
-            OutlinedButton.icon(
-              onPressed: _fromPhone,
-              icon: const Icon(Icons.qr_code_2),
-              label: Text(tr('From phone')),
-            ),
-            OutlinedButton.icon(
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => const StremioImportScreen())),
-              icon: const Icon(Icons.move_down),
-              label: Text(tr('Import from Stremio')),
-            ),
-            OutlinedButton.icon(
-              onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const MediaServerScreen())),
-              icon: const Icon(Icons.dns_outlined),
-              label: Text(tr('Connect Jellyfin / Emby')),
-            ),
-            OutlinedButton.icon(
-              onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const TrackersScreen())),
-              icon: const Icon(Icons.playlist_add_check),
-              label: Text(tr('Trakt & Simkl')),
-            ),
-          ]),
-          if (sources.isNotEmpty) ...[
+              // Main rows or Other only, either way: the automatic choice
+              // (ArchiveSource.autoOther) is just the starting position.
+              if (s.server == null && s.tracker == null)
+                Padding(
+                  padding: const EdgeInsets.only(left: 24),
+                  child: TvSwitchListTile(
+                    title: Text(tr('Show under Other')),
+                    subtitle: Text(tr(
+                        'On: this source only appears behind the Other genre filter (Movies and TV Shows). Off: in the main rows. Press Refresh in Media Hub after changing this.')),
+                    value: s.underOther,
+                    onChanged: (v) => service.setUnderOther(s, v),
+                  ),
+                ),
+            ],
             const Divider(height: 32),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: OutlinedButton.icon(
-                onPressed: _clearAll,
-                icon: const Icon(Icons.delete_sweep_outlined),
-                label: Text(tr('Clear Media Hub')),
+            SectionLabel(tr('Add a source')),
+            const SizedBox(height: 8),
+            TvTextFieldGate(
+              focusNode: _linkFocus,
+              builder: (context, readOnly) => TextField(
+                controller: _link,
+                focusNode: _linkFocus,
+                readOnly: readOnly,
+                textInputAction: TextInputAction.done,
+                // The keyboard's Done lands on Add (Fire OS also sends it
+                // for Back): the remote is never left with nothing focused.
+                onSubmitted: (_) {
+                  _addFocus.requestFocus();
+                  _add();
+                },
+                decoration: InputDecoration(
+                  labelText: tr('Source link (ends with manifest.json)'),
+                  helperText: tr('Several links at once work too.'),
+                  border: const OutlineInputBorder(),
+                ),
               ),
             ),
+            const SizedBox(height: 12),
+            Wrap(spacing: 12, runSpacing: 8, children: [
+              OutlinedButton(
+                focusNode: _addFocus,
+                onPressed: _adding ? null : _add,
+                child: _adding
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : Text(tr('Add')),
+              ),
+              OutlinedButton.icon(
+                onPressed: _fromPhone,
+                icon: const Icon(Icons.qr_code_2),
+                label: Text(tr('From phone')),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const StremioImportScreen())),
+                icon: const Icon(Icons.move_down),
+                label: Text(tr('Import from Stremio')),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const MediaServerScreen())),
+                icon: const Icon(Icons.dns_outlined),
+                label: Text(tr('Connect Jellyfin / Emby')),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const TrackersScreen())),
+                icon: const Icon(Icons.playlist_add_check),
+                label: Text(tr('Trakt & Simkl')),
+              ),
+            ]),
+            if (sources.isNotEmpty) ...[
+              const Divider(height: 32),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  onPressed: _clearAll,
+                  icon: const Icon(Icons.delete_sweep_outlined),
+                  label: Text(tr('Clear Media Hub')),
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+            Text(
+              tr('VesperTV ships no sources. The titles you open are requested from the source you added; nothing else is shared.'),
+              style: const TextStyle(fontSize: 12, color: Colors.white60),
+            ),
           ],
-          const SizedBox(height: 16),
-          Text(
-            tr('VesperTV ships no sources. The titles you open are requested from the source you added; nothing else is shared.'),
-            style: const TextStyle(fontSize: 12, color: Colors.white60),
-          ),
-        ],
+        ),
       ),
     );
   }

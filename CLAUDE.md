@@ -335,6 +335,12 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 - **Shipped: 1.0.36 (`+411`, 2026-10-22, latest; test builds `+402`..`+410` = pre-releases
   `1.0.36-test.*`, deleted):** every bullet below marked Unreleased (Codex + Claude) down to 1.0.35.
   Notes in the release body. Fire Stick-tested by the owner at work (Networks crash fixed in +405).
+- **Unreleased (Claude, 2026-10-22, `+412`):** the five Codex commits below are merged into main
+  (fast-forward) + review fixes `15bfb57`. **Media Hub sources** and **subtitle Add-ons** pages
+  are a non-lazy `SingleChildScrollView` + `Column`: with 11 sources the lazy ListView never built
+  the Add field, so the remote couldn't reach it (user: "is there a limit?" — there isn't).
+  **Multiview** (TV): a small Up-arrow tab at the top centre while the header is hidden, so users
+  find the header (2/4-screen layout); touch keeps its tap handle.
 - **Codex reverse-order fixes (unreleased, 2026-10-22):** four stacked branches above
   `551b5ed`: `codex/data-pool-bottom` → `codex/live-group-sort` →
   `codex/hourly-content-sync` → `codex/persist-favorite-networks` (tip contains all four;

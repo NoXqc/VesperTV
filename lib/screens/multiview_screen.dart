@@ -683,6 +683,30 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
               ),
             ),
           ),
+        // TV: the header is hidden on purpose, so a small Up arrow hints
+        // it's there (users didn't know about the 4-screen layout). Up from
+        // a top-row screen opens it (_onGridKey).
+        if (isTv && !_headerShown)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: IgnorePointer(
+              child: Center(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 2),
+                  decoration: const BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius:
+                        BorderRadius.vertical(bottom: Radius.circular(12)),
+                  ),
+                  child: const Icon(Icons.keyboard_arrow_up,
+                      color: Colors.white70, size: 20),
+                ),
+              ),
+            ),
+          ),
         Positioned(
           top: 0,
           left: 0,

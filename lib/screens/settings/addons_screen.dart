@@ -137,75 +137,81 @@ class _AddonsScreenState extends State<AddonsScreen> {
   Widget build(BuildContext context) {
     return SettingsScaffold(
       title: tr('Add-ons'),
-      body: ListView(
+      // Not a lazy ListView: the Add field must exist for the remote to
+      // reach it however many add-ons are listed (see ArchiveSourcesScreen).
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        children: [
-          Text(tr(
-              'Add-ons find subtitles online for movies and episodes, in many languages. They are free community services, separate from your provider — VesperTV only uses them for subtitles. Turn one on, then pick "Search online subtitles" in the player\'s Subtitles button.')),
-          const SizedBox(height: 16),
-          SectionLabel(tr('Subtitle add-ons')),
-          const SizedBox(height: 4),
-          for (var i = 0; i < _addons.length; i++)
-            HoldToActivate(
-              onTap: () => _toggle(i, !_addons[i].enabled),
-              onHold:
-                  _addons[i].manifestUrl == AddonService.openSubtitlesManifest
-                      ? null
-                      : () => _remove(i),
-              child: TvSwitchListTile(
-                title: Text(_addons[i].name),
-                subtitle: Text(
-                  _addons[i].manifestUrl == AddonService.openSubtitlesManifest
-                      ? tr('Subtitles in 60+ languages from OpenSubtitles.org')
-                      : '${_addons[i].description.isEmpty ? _addons[i].baseUrl : _addons[i].description}  ·  ${tr('Hold OK to remove')}',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(tr(
+                'Add-ons find subtitles online for movies and episodes, in many languages. They are free community services, separate from your provider — VesperTV only uses them for subtitles. Turn one on, then pick "Search online subtitles" in the player\'s Subtitles button.')),
+            const SizedBox(height: 16),
+            SectionLabel(tr('Subtitle add-ons')),
+            const SizedBox(height: 4),
+            for (var i = 0; i < _addons.length; i++)
+              HoldToActivate(
+                onTap: () => _toggle(i, !_addons[i].enabled),
+                onHold:
+                    _addons[i].manifestUrl == AddonService.openSubtitlesManifest
+                        ? null
+                        : () => _remove(i),
+                child: TvSwitchListTile(
+                  title: Text(_addons[i].name),
+                  subtitle: Text(
+                    _addons[i].manifestUrl == AddonService.openSubtitlesManifest
+                        ? tr(
+                            'Subtitles in 60+ languages from OpenSubtitles.org')
+                        : '${_addons[i].description.isEmpty ? _addons[i].baseUrl : _addons[i].description}  ·  ${tr('Hold OK to remove')}',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  value: _addons[i].enabled,
+                  onChanged: (v) => _toggle(i, v),
                 ),
-                value: _addons[i].enabled,
-                onChanged: (v) => _toggle(i, v),
               ),
-            ),
-          const Divider(height: 32),
-          SectionLabel(tr('Add an add-on')),
-          const SizedBox(height: 8),
-          TvTextFieldGate(
-            focusNode: _linkFocus,
-            builder: (context, readOnly) => TextField(
-              controller: _link,
+            const Divider(height: 32),
+            SectionLabel(tr('Add an add-on')),
+            const SizedBox(height: 8),
+            TvTextFieldGate(
               focusNode: _linkFocus,
-              readOnly: readOnly,
-              textInputAction: TextInputAction.done,
-              // Lands on Add, never on nothing (see ArchiveSourcesScreen).
-              onSubmitted: (_) {
-                _addFocus.requestFocus();
-                _add();
-              },
-              decoration: InputDecoration(
-                labelText: tr('Add-on link (ends with manifest.json)'),
-                border: const OutlineInputBorder(),
+              builder: (context, readOnly) => TextField(
+                controller: _link,
+                focusNode: _linkFocus,
+                readOnly: readOnly,
+                textInputAction: TextInputAction.done,
+                // Lands on Add, never on nothing (see ArchiveSourcesScreen).
+                onSubmitted: (_) {
+                  _addFocus.requestFocus();
+                  _add();
+                },
+                decoration: InputDecoration(
+                  labelText: tr('Add-on link (ends with manifest.json)'),
+                  border: const OutlineInputBorder(),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: OutlinedButton(
-              focusNode: _addFocus,
-              onPressed: _adding ? null : _add,
-              child: _adding
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2))
-                  : Text(tr('Add')),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton(
+                focusNode: _addFocus,
+                onPressed: _adding ? null : _add,
+                child: _adding
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : Text(tr('Add')),
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            tr('Only subtitle add-ons work here. When one is on, the title and episode you are watching are sent to it to find subtitles; nothing else is shared.'),
-            style: const TextStyle(fontSize: 12, color: Colors.white60),
-          ),
-        ],
+            const SizedBox(height: 16),
+            Text(
+              tr('Only subtitle add-ons work here. When one is on, the title and episode you are watching are sent to it to find subtitles; nothing else is shared.'),
+              style: const TextStyle(fontSize: 12, color: Colors.white60),
+            ),
+          ],
+        ),
       ),
     );
   }
