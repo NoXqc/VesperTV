@@ -316,6 +316,13 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
       (context) => Stack(
         children: [
           const Positioned.fill(child: SettingsGradientBackground()),
+          // The selected team's banner (its colour is _Glow's).
+          if (team != null)
+            Positioned.fill(
+              child: SportsBackdrop(
+                  logoUrl: schedule?.team.logoUrl,
+                  league: sportsLeagueById(team.leagueId)),
+            ),
           Positioned.fill(child: _Glow(color: schedule?.team.color)),
           Scaffold(
             backgroundColor: Colors.transparent,

@@ -579,3 +579,127 @@ class _SportsRowArrowsState extends State<SportsRowArrows> {
     );
   }
 }
+
+/// The picked league's (or team's) banner behind a Sports page: its logo
+/// large and dimmed on the right, its colour as a soft glow, the sport's
+/// icon when there's no logo (user request, Discord 2026-10-22: "a big
+/// background banner for each sport when browsing NBA, NFL"). Logos only —
+/// no player photos (no source we may use). Static, no scores, decoded at
+/// most 512 px wide so a Fire Stick doesn't pay for it.
+class SportsBackdrop extends StatelessWidget {
+  const SportsBackdrop({super.key, this.logoUrl, this.color, this.league});
+
+  final String? logoUrl;
+
+  /// Team colour (`SportsTeam.color`, hex); null = no glow.
+  final String? color;
+
+  /// For the sport icon when [logoUrl] is missing.
+  final SportsLeague? league;
+
+  static IconData sportIcon(SportsLeague? league) {
+    switch (league?.kind) {
+      case SportsKind.golf:
+        return Icons.sports_golf;
+      case SportsKind.racing:
+        return Icons.sports_motorsports;
+      case SportsKind.fight:
+        return Icons.sports_mma;
+      case SportsKind.tennis:
+        return Icons.sports_tennis;
+      case SportsKind.team:
+      case null:
+        break;
+    }
+    final sport = (league?.espnPath ?? '').split('/').first;
+    return switch (sport) {
+      'hockey' => Icons.sports_hockey,
+      'basketball' => Icons.sports_basketball,
+      'football' => Icons.sports_football,
+      'baseball' => Icons.sports_baseball,
+      'soccer' => Icons.sports_soccer,
+      _ => Icons.sports,
+    };
+  }
+
+  /// ESPN logos at [px] through its resizer; anything else as is (a
+  /// TheSportsDB `/tiny` is 100 px — too small for a banner).
+  static String? _src(String? url, int px) {
+    if (url == null || url.isEmpty) return null;
+    return url.startsWith('https://a.espncdn.com/')
+        ? sportsLogoUrl(url, size: px)
+        : url;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (logoUrl == null && color == null && league == null) {
+      return const SizedBox.shrink();
+    }
+    final glow = sportsTeamColor(color);
+    return IgnorePointer(
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 400),
+        child: LayoutBuilder(
+          key: ValueKey('$logoUrl|$color|${league?.id}'),
+          builder: (context, box) {
+            final side = (box.maxHeight * 0.75)
+                .clamp(0.0, box.maxWidth * 0.5)
+                .toDouble();
+            final px = (side * MediaQuery.of(context).devicePixelRatio)
+                .round()
+                .clamp(64, 512);
+            final src = _src(logoUrl, px);
+            final dark = _src(sportsDarkLogoUrl(logoUrl), px);
+            final icon =
+                Icon(sportIcon(league), size: side * 0.8, color: Colors.white);
+            return Stack(
+              children: [
+                if (glow != null)
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: RadialGradient(
+                          center: const Alignment(0.75, -0.3),
+                          radius: 1.1,
+                          colors: [
+                            glow.withValues(alpha: 0.22),
+                            Colors.transparent,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                Align(
+                  alignment: const Alignment(0.9, -0.2),
+                  child: Opacity(
+                    opacity: src == null ? 0.05 : 0.08,
+                    child: SizedBox.square(
+                      dimension: side,
+                      child: src == null
+                          ? icon
+                          : CachedNetworkImage(
+                              imageUrl: dark ?? src,
+                              fit: BoxFit.contain,
+                              memCacheWidth: px,
+                              fadeInDuration: Duration.zero,
+                              errorWidget: (_, __, ___) => dark == null
+                                  ? icon
+                                  : CachedNetworkImage(
+                                      imageUrl: src,
+                                      fit: BoxFit.contain,
+                                      memCacheWidth: px,
+                                      errorWidget: (_, __, ___) => icon,
+                                    ),
+                            ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}

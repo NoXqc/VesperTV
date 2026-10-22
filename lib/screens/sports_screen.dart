@@ -1095,6 +1095,15 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         (context) => Stack(
           children: [
             const Positioned.fill(child: SettingsGradientBackground()),
+            // The picked league's banner (none on "All").
+            if (_leagueFilter != null)
+              Positioned.fill(
+                child: Builder(builder: (context) {
+                  final league = sportsLeagueById(_leagueFilter!);
+                  return SportsBackdrop(
+                      logoUrl: league?.logoUrl, league: league);
+                }),
+              ),
             Positioned.fill(child: _TeamGlow(game: hero)),
             Scaffold(
               backgroundColor: Colors.transparent,
