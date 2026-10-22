@@ -1404,6 +1404,48 @@ class PlaylistManager extends ChangeNotifier {
         ];
       }).toList();
 
+  /// The list and Timeline share this order. Until the viewer moves a row,
+  /// keep the existing playlist/A-Z defaults; a saved manual order wins.
+  List<Channel> orderedFavoriteLiveChannels({bool mixPlaylists = false}) {
+    var channels = favoriteLiveChannelsWithGroups;
+    if (mixPlaylists) {
+      final starred = channels.where((c) => c.isFavorite).toList()
+        ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      channels = [...starred, ...channels.where((c) => !c.isFavorite)];
+    }
+    final order = _storage.getFavoriteLiveOrder();
+    if (order.isEmpty) return channels;
+    final byId = {for (final c in channels) c.id: c};
+    return [
+      for (final id in order)
+        if (byId.containsKey(id)) byId.remove(id)!,
+      for (final c in channels)
+        if (byId.containsKey(c.id)) c,
+    ];
+  }
+
+  /// Swap adjacent visible favourites, retaining unavailable channels in the
+  /// saved order for when their playlist/group becomes visible again.
+  /// Provider and own-group orders are deliberately independent.
+  Future<int?> moveFavoriteLiveChannel(Channel channel, int delta,
+      {bool mixPlaylists = false}) async {
+    final shown = orderedFavoriteLiveChannels(mixPlaylists: mixPlaylists);
+    final from = shown.indexWhere((c) => c.id == channel.id);
+    if (from < 0) return null;
+    final to = (from + delta).clamp(0, shown.length - 1);
+    if (from == to) return null;
+    final order = _storage.getFavoriteLiveOrder().toSet().toList();
+    final known = order.toSet();
+    order.addAll(shown.map((c) => c.id).where((id) => known.add(id)));
+    final a = order.indexOf(channel.id);
+    final b = order.indexOf(shown[to].id);
+    order[a] = shown[to].id;
+    order[b] = channel.id;
+    await _storage.setFavoriteLiveOrder(order);
+    notifyListeners();
+    return to;
+  }
+
   List<Channel> get favoriteLiveChannels => _enabledSessionsSorted
       .expand((s) => s.isXtream
           ? s.liveChannels.where((c) => c.isFavorite)
