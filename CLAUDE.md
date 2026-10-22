@@ -328,6 +328,10 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-22)
+- **Codex Sports Channels phase 1** (`codex/sports-channels`, unreleased): Games/Channels
+  within Sports Trak, conservative network categories, manual/group multi-select lists,
+  viewer-scoped composite references, Backup/Transfer and viewer deletion. Shared Sports
+  preview/fullscreen path; hold adds to list/versions. `dev-notes/sports-channels.md`.
 - **Unreleased fix (Codex, `codex/fix-vod-favorites`, 2026-10-22):** Movie/series favourites now
   toggle from saved ids and synchronize browse copies. Saved favourites are resolved from the
   catalog independently of the 300/category browse cap (400-id query batches, per viewer), with

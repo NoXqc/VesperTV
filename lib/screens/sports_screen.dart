@@ -37,6 +37,7 @@ import '../widgets/tv_menu_tile.dart';
 import '../widgets/tv_text_field_gate.dart';
 import 'desktop_player_screen.dart';
 import 'player_screen.dart';
+import 'sports_channels_screen.dart';
 import 'sports_live_list_screen.dart';
 import 'sports_my_teams_screen.dart';
 import 'sports_league_manager_screen.dart';
@@ -68,6 +69,7 @@ class _Section {
 }
 
 class _SportsScreenState extends State<SportsScreen> with RouteAware {
+  bool _channelsMode = false;
   late final StorageService _storage;
   late final SportsChannelMatcher _matcher;
   late SportsChannelPicks _picks;
@@ -880,14 +882,15 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   /// preview, so Back from the player shows it there (one stream, no
   /// reconnect — the hero's VideoPlayerPane stays under the player the same
   /// way the TV guide's preview box does).
-  Future<void> _play(Channel channel, {SportsGame? game}) async {
+  Future<void> _play(Channel channel,
+      {SportsGame? game, bool keepPreview = false}) async {
     // Same split as SearchScreen._openChannel: Windows has its own player.
     // A game takes the hero's session full screen (no reconnect); Back
     // there hands it back to DesktopMiniPlayer, i.e. the hero again.
     if (Platform.isWindows) {
       final mini = DesktopMiniPlayer.instance;
       (Player, VideoController)? session;
-      if (game != null) {
+      if (game != null || keepPreview) {
         await _setPreview(game, channel, waitReady: false);
         if (!mounted) return;
         if (mini.channel.value?.id == channel.id) session = mini.take();
@@ -907,7 +910,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
               )));
       return;
     }
-    if (game != null) {
+    if (game != null || keepPreview) {
       await _setPreview(game, channel, waitReady: false);
     } else {
       // RedZone: not a game; the hero goes back to normal and a preview
@@ -930,6 +933,13 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
+    if (_channelsMode) {
+      return SportsChannelsScreen(
+        onGames: () => setState(() => _channelsMode = false),
+        onPreview: (channel) => _setPreview(null, channel),
+        onFullScreen: (channel) => _play(channel, keepPreview: true),
+      );
+    }
     final sections = _sections;
     final preview = _livePreview(context.watch<PlaybackService>());
     // While a game plays in the hero it stays there, whatever is focused —
@@ -1058,6 +1068,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       child: Row(
         children: [
           const SportsBackButton(),
+          TextButton(
+              onPressed: () => setState(() => _channelsMode = true),
+              child: Text(tr('Channels'))),
           Text(AppConstants.sportsTabName,
               style: Theme.of(context)
                   .textTheme
