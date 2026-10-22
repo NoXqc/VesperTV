@@ -112,6 +112,7 @@ class SubtitleTrack {
     this.forced = false,
     this.selected = false,
     this.closedCaptions = false,
+    this.mimeType,
   });
 
   final int group;
@@ -124,6 +125,71 @@ class SubtitleTrack {
   /// Broadcast closed captions (CEA-608/708) on a live channel. Every .ts
   /// stream lists one; it stays empty on channels that don't carry them.
   final bool closedCaptions;
+  final String? mimeType;
+}
+
+/// One complete embedded-caption snapshot, not a delta to append to history.
+class SubtitleCueEvent {
+  const SubtitleCueEvent(
+      {required this.playerId,
+      required this.text,
+      this.closedCaptions = false,
+      this.enabled = true,
+      this.reset = false,
+      this.mimeType});
+
+  final int playerId;
+  final String text;
+  final bool closedCaptions;
+  final bool enabled;
+  final bool reset;
+  final String? mimeType;
+
+  factory SubtitleCueEvent.fromMap(Map data) {
+    final cc = data['cc'] == true;
+    var text = data['text'] as String? ?? '';
+    final rows = (data['cues'] as List? ?? const []).whereType<Map>().toList();
+    if (cc && rows.isNotEmpty) {
+      // Media3 orders boxes by priority, not screen row. Only sort when all
+      // rows share a known coordinate system; otherwise retain source order.
+      final type = rows.first['lineType'];
+      if (type is num &&
+          rows.every((r) =>
+              r['lineType'] == type &&
+              r['line'] is num &&
+              (r['line'] as num).isFinite)) {
+        final indexed = rows.indexed.toList();
+        double line(Map row) {
+          final value = (row['line'] as num).toDouble();
+          // Numbered negative rows count back from the bottom of the screen.
+          return type == 1 && value < 0 ? 1000000 + value : value;
+        }
+
+        indexed.sort((a, b) {
+          final order = line(a.$2).compareTo(line(b.$2));
+          if (order != 0) return order;
+          final x = (a.$2['position'] as num?)?.toDouble() ?? 0.5;
+          final y = (b.$2['position'] as num?)?.toDouble() ?? 0.5;
+          final horizontal = x.compareTo(y);
+          return horizontal != 0 ? horizontal : a.$1.compareTo(b.$1);
+        });
+        rows
+          ..clear()
+          ..addAll(indexed.map((r) => r.$2));
+      }
+      text = rows
+          .map((r) => r['text'] as String? ?? '')
+          .where((s) => s.trim().isNotEmpty)
+          .join('\n');
+    }
+    return SubtitleCueEvent(
+        playerId: (data['playerId'] as num).toInt(),
+        text: text,
+        closedCaptions: cc,
+        enabled: data['enabled'] != false,
+        reset: data['reset'] == true,
+        mimeType: data['mime'] as String?);
+  }
 }
 
 /// Embedded subtitles on Android, through the vendored ExoPlayer plugin's
@@ -136,14 +202,9 @@ class SubtitleTracks {
   static const _methods = MethodChannel('vespertv/subtitles');
   static const _events = EventChannel('vespertv/subtitles/cues');
 
-  static final Stream<({int playerId, String text})> cues =
-      _events.receiveBroadcastStream().map((e) {
-    final m = e as Map;
-    return (
-      playerId: (m['playerId'] as num).toInt(),
-      text: (m['text'] as String?) ?? '',
-    );
-  });
+  static final Stream<SubtitleCueEvent> cues = _events
+      .receiveBroadcastStream()
+      .map((e) => SubtitleCueEvent.fromMap(e as Map));
 
   /// The plugin's player id for [controller]. video_player_hdr marks
   /// `textureId` test-only, but it is exactly the id the native bridge keys
@@ -166,6 +227,7 @@ class SubtitleTracks {
           forced: m['forced'] == true,
           selected: m['selected'] == true,
           closedCaptions: m['cc'] == true,
+          mimeType: m['mime'] as String?,
         ),
     ];
   }

@@ -321,6 +321,19 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-22)
+
+- **Codex branch, unreleased: live caption readability** (`codex/live-caption-readability`).
+  `SubtitleBridge` sends selected MIME/CC state, explicit resets on Off/track change and cue row
+  coordinates; format-only diagnostics use logcat tag `VesperSubtitles` (no URLs/caption text).
+  `SubtitleOverlay` allows CEA-608/708 captions 90% screen width (was 80%) and bridges empty
+  updates for at most 1 second; repeated blanks do not extend the hold. Off, controller changes and
+  downloaded subtitles clear the hold immediately. Timed non-CEA/add-on captions keep exact clears;
+  per-series selection remains unchanged. Each CueGroup is a complete snapshot, not history to append:
+  preserve its multiline text and order positioned CC boxes by row when coordinates are comparable.
+  Widget coverage includes TV/phone sizes, blanks, source/track changes and downloaded captions.
+  Owner's actual track MIME and improvement on a real live stream are still unverified; this does
+  not add the separate subtitle font-size setting mentioned below. No build/install/release.
+
 - **Shipped: 1.0.35 (`+396`, 2026-10-22, latest; `+395` owner-tested on the Formuler; test build `+389` = pre-release `1.0.35-test.389`):** **Hide Recordings** (Settings › Tabs, `hideRecordings`, Codex `codex/hide-recording-tab`). Media Hub show page shows its source chip (`SeriesDetailScreen
   .sourceLabel`) and an hourglass on the tapped episode + Play while streams load (`_startingId`,
   extra presses ignored). **Add-on links resolved once before playing** (`services/stream_resolver.dart`

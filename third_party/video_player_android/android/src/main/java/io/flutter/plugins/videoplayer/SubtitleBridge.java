@@ -3,8 +3,8 @@
 // The stock plugin exposes audio/video tracks only. This adds, beside the pigeon API:
 //  * MethodChannel "vespertv/subtitles": getTextTracks(playerId) -> list of maps,
 //    selectTextTrack(playerId, group, track) (group < 0 = subtitles off);
-//  * EventChannel "vespertv/subtitles/cues": {playerId, text} whenever the shown cues change
-//    (text "" = nothing on screen). Flutter draws the text itself over the video.
+//  * EventChannel "vespertv/subtitles/cues": complete text/row snapshots, selected format and reset
+//    events. Flutter draws the text and briefly bridges empty CEA-608/708 updates.
 // Text tracks start disabled on every player (Multiview tiles and live channels never want them);
 // selecting one enables the text renderer. Image subtitles (PGS/VobSub) are not listed: their
 // cues are bitmaps, which this text-only bridge can't carry.
@@ -12,6 +12,7 @@
 package io.flutter.plugins.videoplayer;
 
 import android.util.LongSparseArray;
+import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
@@ -30,9 +31,11 @@ import io.flutter.plugin.common.EventChannel;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.WeakHashMap;
 
 @OptIn(markerClass = UnstableApi.class)
 final class SubtitleBridge implements MethodChannel.MethodCallHandler, EventChannel.StreamHandler {
@@ -40,6 +43,16 @@ final class SubtitleBridge implements MethodChannel.MethodCallHandler, EventChan
   private final MethodChannel methods;
   private final EventChannel events;
   @Nullable private EventChannel.EventSink sink;
+  private final Map<VideoPlayer, Selection> selections = new WeakHashMap<>();
+
+  private static final class Selection {
+    boolean enabled;
+    @Nullable String mime;
+
+    boolean isClosedCaption() {
+      return MimeTypes.APPLICATION_CEA608.equals(mime) || MimeTypes.APPLICATION_CEA708.equals(mime);
+    }
+  }
 
   SubtitleBridge(@NonNull BinaryMessenger messenger, @NonNull LongSparseArray<VideoPlayer> players) {
     this.players = players;
@@ -53,10 +66,13 @@ final class SubtitleBridge implements MethodChannel.MethodCallHandler, EventChan
     methods.setMethodCallHandler(null);
     events.setStreamHandler(null);
     sink = null;
+    selections.clear();
   }
 
   /** Called for every new player: text off, and its cues forwarded to Flutter. */
   void attach(@NonNull VideoPlayer player, long id) {
+    Selection selection = new Selection();
+    selections.put(player, selection);
     DefaultTrackSelector selector = player.trackSelector;
     if (selector != null) {
       selector.setParameters(
@@ -68,20 +84,40 @@ final class SubtitleBridge implements MethodChannel.MethodCallHandler, EventChan
             new Player.Listener() {
               @Override
               public void onCues(@NonNull CueGroup cueGroup) {
-                EventChannel.EventSink s = sink;
-                if (s == null) return;
-                StringBuilder text = new StringBuilder();
-                for (Cue cue : cueGroup.cues) {
-                  if (cue.text == null) continue;
-                  if (text.length() > 0) text.append('\n');
-                  text.append(cue.text);
-                }
-                Map<String, Object> event = new HashMap<>();
-                event.put("playerId", id);
-                event.put("text", text.toString());
-                s.success(event);
+                sendCues(id, selection, cueGroup.cues, false);
               }
             });
+  }
+
+  private void sendCues(long id, Selection selection, List<Cue> cues, boolean reset) {
+    EventChannel.EventSink s = sink;
+    if (s == null) return;
+    StringBuilder text = new StringBuilder();
+    List<Map<String, Object>> rows = new ArrayList<>();
+    if (selection.enabled && !reset) {
+      for (Cue cue : cues) {
+        if (cue.text == null) continue;
+        if (text.length() > 0) text.append('\n');
+        text.append(cue.text);
+        Map<String, Object> row = new HashMap<>();
+        row.put("text", cue.text.toString());
+        if (cue.line != Cue.DIMEN_UNSET) {
+          row.put("line", (double) cue.line);
+          row.put("lineType", cue.lineType);
+        }
+        if (cue.position != Cue.DIMEN_UNSET) row.put("position", (double) cue.position);
+        rows.add(row);
+      }
+    }
+    Map<String, Object> event = new HashMap<>();
+    event.put("playerId", id);
+    event.put("text", text.toString());
+    event.put("cues", rows);
+    event.put("enabled", selection.enabled);
+    event.put("cc", selection.isClosedCaption());
+    event.put("mime", selection.mime);
+    event.put("reset", reset);
+    s.success(event);
   }
 
   private static boolean isTextFormat(@Nullable String mime) {
@@ -107,7 +143,11 @@ final class SubtitleBridge implements MethodChannel.MethodCallHandler, EventChan
         Number group = call.argument("group");
         Number track = call.argument("track");
         try {
-          select(player, group == null ? -1 : group.intValue(), track == null ? 0 : track.intValue());
+          select(
+              player,
+              idArg.longValue(),
+              group == null ? -1 : group.intValue(),
+              track == null ? 0 : track.intValue());
           result.success(null);
         } catch (RuntimeException e) {
           result.error("select_failed", e.getMessage(), null);
@@ -133,6 +173,7 @@ final class SubtitleBridge implements MethodChannel.MethodCallHandler, EventChan
         m.put("track", t);
         m.put("language", f.language);
         m.put("label", f.label);
+        m.put("mime", mime);
         m.put("forced", (f.selectionFlags & C.SELECTION_FLAG_FORCED) != 0);
         // Live closed captions (see HttpVideoAsset.liveCaptionExtractors).
         m.put(
@@ -145,9 +186,11 @@ final class SubtitleBridge implements MethodChannel.MethodCallHandler, EventChan
     return out;
   }
 
-  private static void select(@NonNull VideoPlayer player, int groupIndex, int trackIndex) {
+  private void select(@NonNull VideoPlayer player, long id, int groupIndex, int trackIndex) {
     DefaultTrackSelector selector = player.trackSelector;
     if (selector == null) throw new IllegalStateException("No track selector");
+    Selection selection = selections.get(player);
+    if (selection == null) throw new IllegalStateException("No subtitle bridge");
     if (groupIndex < 0) {
       selector.setParameters(
           selector
@@ -155,6 +198,9 @@ final class SubtitleBridge implements MethodChannel.MethodCallHandler, EventChan
               .clearOverridesOfType(C.TRACK_TYPE_TEXT)
               .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
               .build());
+      selection.enabled = false;
+      selection.mime = null;
+      sendCues(id, selection, Collections.emptyList(), true);
       return;
     }
     Tracks tracks = player.getExoPlayer().getCurrentTracks();
@@ -171,6 +217,14 @@ final class SubtitleBridge implements MethodChannel.MethodCallHandler, EventChan
             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
             .setOverrideForType(new TrackSelectionOverride(group.getMediaTrackGroup(), trackIndex))
             .build());
+    Format format = group.getTrackFormat(trackIndex);
+    selection.enabled = true;
+    selection.mime = format.sampleMimeType != null ? format.sampleMimeType : format.codecs;
+    // Format only: never log caption text, stream URLs or user credentials.
+    Log.i(
+        "VesperSubtitles",
+        "player=" + id + " mime=" + selection.mime + " cc=" + selection.isClosedCaption());
+    sendCues(id, selection, Collections.emptyList(), true);
   }
 
   @Override
