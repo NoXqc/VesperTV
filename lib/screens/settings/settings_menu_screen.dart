@@ -184,6 +184,9 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
                   Icons.picture_in_picture_alt,
                   tr('Background video'),
                   tr('Fixes for the picture on some Fire TV sticks')),
+            if (Platform.isAndroid)
+              _general('audio', Icons.surround_sound_outlined, tr('Audio'),
+                  tr('Dolby Atmos to your soundbar or receiver')),
             if (!Platform.isWindows)
               _general('datapool', Icons.analytics_outlined, tr('Data pool'),
                   tr('Stream details when you press OK while watching')),

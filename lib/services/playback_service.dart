@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:video_player_hdr/video_player_hdr.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -512,6 +513,21 @@ class PlaybackService extends ChangeNotifier {
   /// against mashing the button mid-reload starting a second overlapping
   /// swap.
   bool _reloadingCurrentChannel = false;
+
+  static const _audioChannel = MethodChannel('vespertv/audio');
+
+  /// Tells the vendored player whether new main players pass Dolby audio
+  /// through over HDMI ([AppPreferences.audioPassthrough]). Read when a
+  /// player is created, so it applies from the next channel.
+  static Future<void> setAudioPassthrough(bool enabled) async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _audioChannel
+          .invokeMethod<void>('setPassthrough', {'enabled': enabled});
+    } catch (e) {
+      debugPrint('PlaybackService: audio passthrough not set: $e');
+    }
+  }
 
   /// Channel id → when [_watchRestartLoop] last reloaded it.
   final Map<String, DateTime> _restartLoopReloads = {};

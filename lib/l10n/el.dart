@@ -2027,6 +2027,12 @@ const Map<String, String> kEl = {
       "Απόκρυψη Ταινιών, Σειρών, Media Hub, Εγγραφών ή Multiview",
   "Fixes for the picture on some Fire TV sticks":
       "Διορθώσεις για την εικόνα σε ορισμένα Fire TV stick",
+  "Dolby Atmos to your soundbar or receiver":
+      "Dolby Atmos στο soundbar ή στον δέκτη σας",
+  "Surround passthrough (Dolby Atmos)":
+      "Απευθείας surround ήχος (Dolby Atmos)",
+  "Sends Dolby Digital, Dolby Atmos and DTS sound to your soundbar or receiver untouched (HDMI passthrough), so it can play Atmos. Off: this device turns that sound into plain stereo/5.1 first, so Atmos is lost. While on, the volume of that sound is set on your TV or receiver only, and if you hear nothing on a channel, turn this off. Multiview always uses plain sound (passthrough there kept muted screens playing). Applies from the next channel.":
+      "Στέλνει τον ήχο Dolby Digital, Dolby Atmos και DTS αυτούσιο στο soundbar ή στον δέκτη σας (HDMI passthrough), ώστε να παίζει Atmos. Ανενεργό: η συσκευή μετατρέπει πρώτα αυτόν τον ήχο σε απλό στερεοφωνικό/5.1 και το Atmos χάνεται. Όταν είναι ενεργό, η ένταση αυτού του ήχου ρυθμίζεται μόνο από την τηλεόραση ή τον δέκτη, και αν δεν ακούτε τίποτα σε ένα κανάλι, απενεργοποιήστε το. Το Multiview χρησιμοποιεί πάντα απλό ήχο (εκεί το passthrough άφηνε τις σιγασμένες οθόνες να παίζουν). Ισχύει από το επόμενο κανάλι.",
   "Stream details when you press OK on a channel":
       "Λεπτομέρειες ροής όταν πατάτε OK σε ένα κανάλι",
   "One list for every playlist, or one per playlist":

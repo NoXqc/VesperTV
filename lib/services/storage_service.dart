@@ -313,6 +313,11 @@ class StorageService {
   Future<void> setFastStartup(bool value) =>
       _prefs.setBool(AppConstants.keyFastStartup, value);
 
+  bool getAudioPassthrough() =>
+      _prefs.getBool(AppConstants.keyAudioPassthrough) ?? false;
+  Future<void> setAudioPassthrough(bool value) =>
+      _prefs.setBool(AppConstants.keyAudioPassthrough, value);
+
   /// Null = never chosen (auto, see AppPreferences.compatVideo).
   bool? getCompatVideo() => _prefs.getBool(AppConstants.keyCompatVideo);
   Future<void> setCompatVideo(bool value) =>
@@ -782,6 +787,7 @@ class StorageService {
     AppConstants.keyVideoFill,
     AppConstants.keyHideVideoOnSports,
     AppConstants.keyCompatVideo,
+    AppConstants.keyAudioPassthrough,
     AppConstants.keyFastStartup,
     AppConstants.keyPlaylistEnabled,
     AppConstants.keyPinFailCount,

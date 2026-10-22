@@ -1419,6 +1419,12 @@ const Map<String, String> kIt = {
       "Nascondi Film, Serie TV, Media Hub, Registrazioni o Multiview",
   "Fixes for the picture on some Fire TV sticks":
       "Correzioni per l’immagine su alcune chiavette Fire TV",
+  "Dolby Atmos to your soundbar or receiver":
+      "Dolby Atmos alla tua soundbar o al ricevitore",
+  "Surround passthrough (Dolby Atmos)":
+      "Audio surround diretto (Dolby Atmos)",
+  "Sends Dolby Digital, Dolby Atmos and DTS sound to your soundbar or receiver untouched (HDMI passthrough), so it can play Atmos. Off: this device turns that sound into plain stereo/5.1 first, so Atmos is lost. While on, the volume of that sound is set on your TV or receiver only, and if you hear nothing on a channel, turn this off. Multiview always uses plain sound (passthrough there kept muted screens playing). Applies from the next channel.":
+      "Invia l'audio Dolby Digital, Dolby Atmos e DTS così com'è alla soundbar o al ricevitore (passthrough HDMI), così può riprodurre l'Atmos. Disattivato: questo dispositivo converte prima quell'audio in stereo/5.1 normale e l'Atmos si perde. Attivato, il volume di quell'audio si regola solo sulla TV o sul ricevitore, e se su un canale non senti nulla, disattivalo. Il Multiview usa sempre l'audio normale (lì il passthrough lasciava suonare gli schermi silenziati). Vale dal canale successivo.",
   "Stream details when you press OK on a channel":
       "Dettagli del flusso quando premi OK su un canale",
   "One list for every playlist, or one per playlist":

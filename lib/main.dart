@@ -359,6 +359,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         _preferences.androidSdk = await DeviceTypeService.sdkInt();
       }
       PlaybackService.textureVideo = _preferences.compatVideo;
+      unawaited(
+          PlaybackService.setAudioPassthrough(_preferences.audioPassthrough));
 
       _catalogDb = CatalogDatabase();
 

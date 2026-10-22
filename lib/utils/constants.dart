@@ -258,6 +258,10 @@ class AppConstants {
   static const String keyHideVideoOnSports = 'vesper_hide_video_on_sports';
   static const String keyCompatVideo = 'vesper_compat_video';
 
+  /// Settings > Interface > Audio: HDMI passthrough on the main player
+  /// (device-only; AppPreferences.audioPassthrough).
+  static const String keyAudioPassthrough = 'vesper_audio_passthrough';
+
   /// Settings > General > Startup: Fast startup (opt-in, owner
   /// 2026-10-21) — the UI opens without waiting for Movies/TV Shows to
   /// pre-load. Device-only: the slow splash protects weak boxes (§10).
