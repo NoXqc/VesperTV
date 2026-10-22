@@ -217,6 +217,14 @@ time limits alone let a 4K remux fill ~140 MB of Java heap; the Fire Stick ran o
   dialogs/pickers without a node use `FocusNodeOwner`. `test/tv_text_field_gate_guard_test.dart`
   fails the build on any ungated `TextField`; a deliberate exception needs a
   `// tv-text-field-gate: exempt — why` comment (Timeline filter, Windows Multiview picker).
+  **Arrows on a gated field move focus on TV (1.0.35):** once a field has a cursor (typed in once),
+  EditableText's arrow actions moved the cursor and consumed the key even read-only with the
+  keyboard closed (Flutter's text-field fallback for arrows is "stay") — the long-standing "stuck in
+  the search field". The gate overrides `ExtendSelectionVerticallyToAdjacentLineIntent` /
+  `ExtendSelectionByCharacterIntent` with `focusInDirection`, deferred a microtask and skipped if
+  focus already moved: Flutter delivers the key to the field even after a `HardwareKeyboard`
+  handler handled it (Add Playlist's `_handleFieldEscapeKey`), and that handler must win.
+  `test/tv_text_field_gate_test.dart`.
 - **Sports Trak, Settings and Search keep a background live channel playing** (owner reverted the
   1.0.24 parking on all three, 2026-10-20). Movies/TV Shows/Media Hub still park it
   (`_parkLiveChannel`). The parking was added because the video stayed on screen over those pages
@@ -336,7 +344,7 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   not MAX(stop): a few week-long listings hid a 2-day guide; nothing names it), shown on the
   hero, game menu, live list and side panel. `prepare(hidden: playlist.hiddenLiveChannels())` at
   **every** call site (the signature includes it; mixing would re-index each time). Restricted
-  viewers get no hidden list. Phone-installed `+394`; not box-tested.
+  viewers get no hidden list. Phone-installed `+395`; not box-tested.
 - **Shipped: 1.0.34 (`+388`, 2026-10-21, latest; test builds `+386`/`+387` = pre-releases
   `1.0.34-test.386`/`.387`, `+388` owner-tested on the Fire Stick):** **list-only add-ons** (`ArchiveSource.listOnly`,
   stored `listOnly`): a manifest with movie/series catalogs on IMDb ids (or no idPrefixes) and no

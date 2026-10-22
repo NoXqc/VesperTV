@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -128,11 +130,45 @@ class _TvTextFieldGateState extends State<TvTextFieldGate> {
     return true;
   }
 
+  /// D-pad arrows on the field move focus, not the cursor. Once a field has
+  /// a cursor (typed in once), EditableText's own arrow actions move it —
+  /// Up/Down to the start/end of a one-line field, Left/Right a character —
+  /// and consume the key even with the keyboard closed and the field
+  /// read-only, and Flutter's fallback for arrows in a text field is "stay".
+  /// So on screens without their own arrow handling the remote could not
+  /// get past a search field it had typed in (the long-standing "stuck in
+  /// the text field" report, 2026-10-21). While the keyboard is up it owns
+  /// the D-pad, so this only acts once it's closed.
+  ///
+  /// A screen's own key handler (Add Playlist's field-to-field Up/Down) gets
+  /// the key first, but Flutter still delivers it to the field afterwards.
+  /// Its focus change is applied in a microtask queued before this one, so
+  /// the move only happens when nothing else has moved focus already.
+  void _move(TraversalDirection direction) => scheduleMicrotask(() {
+        if (mounted && widget.focusNode.hasPrimaryFocus) {
+          widget.focusNode.focusInDirection(direction);
+        }
+      });
+
   @override
   Widget build(BuildContext context) {
     if (!context.read<AppPreferences>().isTelevision) {
       return widget.builder(context, false);
     }
-    return widget.builder(context, !_typing);
+    return Actions(
+      actions: {
+        ExtendSelectionVerticallyToAdjacentLineIntent:
+            CallbackAction<ExtendSelectionVerticallyToAdjacentLineIntent>(
+          onInvoke: (i) => _move(
+              i.forward ? TraversalDirection.down : TraversalDirection.up),
+        ),
+        ExtendSelectionByCharacterIntent:
+            CallbackAction<ExtendSelectionByCharacterIntent>(
+          onInvoke: (i) => _move(
+              i.forward ? TraversalDirection.right : TraversalDirection.left),
+        ),
+      },
+      child: widget.builder(context, !_typing),
+    );
   }
 }
