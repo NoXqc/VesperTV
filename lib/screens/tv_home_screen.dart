@@ -1597,7 +1597,20 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   bool _openStartSection() {
     if (_startSectionOpened) return false;
     _startSectionOpened = true;
-    switch (context.read<AppPreferences>().effectiveStartSection) {
+    final section = context.read<AppPreferences>().effectiveStartSection;
+    if (section == 'tv') return false;
+    // Crash guard: a start section that takes the app down (Sports Trak
+    // froze a Fire Stick, 2026-10-22) would do it on every launch. Still
+    // marked from last time = it died there: open on TV this once.
+    final storage = context.read<StorageService>();
+    if (storage.getStartSectionPending()) {
+      unawaited(storage.setStartSectionPending(false));
+      return false;
+    }
+    unawaited(storage.setStartSectionPending(true));
+    Future<void>.delayed(const Duration(seconds: 15),
+        () => storage.setStartSectionPending(false));
+    switch (section) {
       case 'movies':
         _onTabChanged('Movies');
         return true;

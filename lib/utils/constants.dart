@@ -270,6 +270,10 @@ class AppConstants {
   /// AppPreferences.startSection).
   static const String keyStartSection = 'vesper_start_section';
 
+  /// Set while the start section opens, cleared 15 s later: still set at
+  /// the next launch = it crashed there, so that launch opens on TV.
+  static const String keyStartSectionPending = 'vesper_start_section_pending';
+
   /// Settings > General > Startup: Fast startup (opt-in, owner
   /// 2026-10-21) — the UI opens without waiting for Movies/TV Shows to
   /// pre-load. Device-only: the slow splash protects weak boxes (§10).

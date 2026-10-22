@@ -314,6 +314,10 @@ class StorageService {
       _prefs.setBool(AppConstants.keyFastStartup, value);
 
   String? getStartSection() => _prefs.getString(AppConstants.keyStartSection);
+  bool getStartSectionPending() =>
+      _prefs.getBool(AppConstants.keyStartSectionPending) ?? false;
+  Future<void> setStartSectionPending(bool value) =>
+      _prefs.setBool(AppConstants.keyStartSectionPending, value);
   Future<void> setStartSection(String value) =>
       _prefs.setString(AppConstants.keyStartSection, value);
 
@@ -799,6 +803,7 @@ class StorageService {
     AppConstants.keyAudioPassthrough,
     AppConstants.keySubtitleScale,
     AppConstants.keyStartSection,
+    AppConstants.keyStartSectionPending,
     AppConstants.keyFastStartup,
     AppConstants.keyPlaylistEnabled,
     AppConstants.keyPinFailCount,

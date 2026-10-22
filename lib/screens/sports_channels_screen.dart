@@ -505,10 +505,22 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
   final Map<String, int> _lastColumn = {};
   final List<FocusNode> _chipNodes = [for (var i = 0; i < 3; i++) FocusNode()];
 
+  /// Rows are rebuilt only when the playlists, filters or lists change
+  /// ([_dirty]), not on every focus move — grouping the whole catalogue on
+  /// each rebuild froze a Fire Stick.
+  bool _dirty = true;
+  SportsChannelLibrary? _library;
+  late final PlaylistManager _playlist;
+
+  void _markDirty() {
+    if (mounted) setState(() => _dirty = true);
+  }
+
   @override
   void initState() {
     super.initState();
     _store = SportsChannelLists(context.read<StorageService>());
+    _playlist = context.read<PlaylistManager>()..addListener(_markDirty);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (_rows.isNotEmpty && _rows.first.cards.isNotEmpty) {
@@ -521,6 +533,7 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
 
   @override
   void dispose() {
+    _playlist.removeListener(_markDirty);
     for (final n in [..._cardNodes.values, ..._chipNodes]) {
       n.dispose();
     }
@@ -595,7 +608,7 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
       ..addAll(matched.difference(chosen));
     if (rules.isNotEmpty) list.channels.removeWhere(matched.contains);
     await _store.save();
-    if (mounted) setState(() {});
+    if (mounted) setState(() => _dirty = true);
   }
 
   Future<void> _manage(SportsChannelList list) async {
@@ -656,7 +669,7 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
       _store.lists.remove(list);
     }
     await _store.save();
-    if (mounted) setState(() {});
+    if (mounted) setState(() => _dirty = true);
   }
 
   Future<String?> _name(String initial) async {
@@ -751,7 +764,7 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
       if (!action.channels.contains(main.id)) action.channels.add(main.id);
       action.excluded.remove(main.id);
       await _store.save();
-      if (mounted) setState(() {});
+      if (mounted) setState(() => _dirty = true);
     } else if (action == 'manage') {
       await _manage(row.list!);
     } else if (action == 'create') {
@@ -760,8 +773,11 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
   }
 
   List<_CardRow> _buildRows(SportsChannelLibrary library) {
+    // Sports channels only (cached per channel), before any filter work.
     final filtered = library.channels
-        .where((c) => library.accepts(c, _viewFilters))
+        .where((c) =>
+            SportsChannelLibrary.category(c).isNotEmpty &&
+            library.accepts(c, _viewFilters))
         .toList();
     return [
       for (final list in _store.lists)
@@ -852,11 +868,13 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final playlist = context.watch<PlaylistManager>();
-    final library = SportsChannelLibrary(
-        playlist.visibleChannels(category: 'tv'),
-        store: _store);
-    _rows = _buildRows(library);
+    if (_dirty || _library == null) {
+      _library = SportsChannelLibrary(_playlist.visibleChannels(category: 'tv'),
+          store: _store);
+      _rows = _buildRows(_library!);
+      _dirty = false;
+    }
+    final library = _library!;
     final total = {
       for (final r in _rows)
         if (r.list == null)
@@ -929,7 +947,10 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
                               final filters = await showSportsChannelFilters(
                                   context, library, _viewFilters);
                               if (filters != null && mounted) {
-                                setState(() => _viewFilters = filters);
+                                setState(() {
+                                  _viewFilters = filters;
+                                  _dirty = true;
+                                });
                               }
                             }),
                         const SizedBox(width: 8),

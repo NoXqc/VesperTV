@@ -1240,8 +1240,13 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         ),
       )),
     );
-    return IndexedStack(
-        index: _channelsMode ? 1 : 0, children: [gamesPage, channelPage]);
+    // Channels is built only while shown: hidden in the stack it ran its
+    // whole-catalogue grouping on every Games rebuild and took the focus
+    // (Fire Stick froze on opening Sports Trak, owner 2026-10-22).
+    return IndexedStack(index: _channelsMode ? 1 : 0, children: [
+      gamesPage,
+      if (_channelsMode) channelPage else const SizedBox.shrink(),
+    ]);
   }
 
   Widget _buildLeagueBar() {

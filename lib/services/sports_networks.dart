@@ -144,39 +144,65 @@ const kSportsNetworks = <SportsNetwork>[
   SportsNetwork('willow', 'Willow', SportsNetworkKind.sports, r'\bWILLOW\b'),
 ];
 
-/// The network [channel] belongs to, or null.
+/// The network [channel] belongs to, or null. Worked out once per channel
+/// object: ~45 patterns over a whole catalogue on every rebuild froze a
+/// Fire Stick.
 SportsNetwork? sportsNetworkOf(Channel channel) {
+  final cached = _networkOf[channel];
+  if (cached != null) return cached is SportsNetwork ? cached : null;
   final name = channel.name.toUpperCase();
+  SportsNetwork? found;
   for (final n in kSportsNetworks) {
-    if (n.regex.hasMatch(name)) return n;
+    if (n.regex.hasMatch(name)) {
+      found = n;
+      break;
+    }
   }
-  return null;
+  _networkOf[channel] = found ?? _none;
+  return found;
 }
+
+final _networkOf = Expando<Object>('sportsNetwork');
+const _none = Object();
 
 /// Order inside a network card: numbered feeds in order (TSN 1 before
 /// TSN 2), HD/FHD before 4K before SD at the same number — the first is
-/// what OK previews.
+/// what OK previews. Keys are worked out once per channel (a sort compares
+/// each channel many times).
 int compareNetworkChannels(Channel a, Channel b) {
-  int quality(String name) {
-    final n = name.toUpperCase();
-    if (RegExp(r'\b(FHD|1080)').hasMatch(n)) return 0;
-    if (RegExp(r'\bHD\b').hasMatch(n)) return 1;
-    if (RegExp(r'\b(4K|UHD|2160)').hasMatch(n)) return 2;
-    if (RegExp(r'\bSD\b').hasMatch(n)) return 4;
-    return 3;
-  }
-
-  String base(String name) => name
-      .toUpperCase()
-      .replaceAll(RegExp(r'\b(FHD|UHD|HD|SD|4K|1080P?|2160P?|HEVC)\b'), '')
-      .replaceAll(RegExp(r'\s+'), ' ')
-      .trim();
-  int number(String name) =>
-      int.tryParse(RegExp(r'(\d+)').firstMatch(base(name))?.group(1) ?? '') ??
-      0;
-  final byNumber = number(a.name).compareTo(number(b.name));
+  final ka = _orderKey(a);
+  final kb = _orderKey(b);
+  final byNumber = ka.$1.compareTo(kb.$1);
   if (byNumber != 0) return byNumber;
-  final byBase = base(a.name).compareTo(base(b.name));
+  final byBase = ka.$2.compareTo(kb.$2);
   if (byBase != 0) return byBase;
-  return quality(a.name).compareTo(quality(b.name));
+  return ka.$3.compareTo(kb.$3);
 }
+
+final _orderKeys = Expando<(int, String, int)>('sportsOrder');
+final _qualityWords = RegExp(r'\b(FHD|UHD|HD|SD|4K|1080P?|2160P?|HEVC)\b');
+final _firstNumber = RegExp(r'(\d+)');
+final _fhd = RegExp(r'\b(FHD|1080)');
+final _hd = RegExp(r'\bHD\b');
+final _uhd = RegExp(r'\b(4K|UHD|2160)');
+final _sd = RegExp(r'\bSD\b');
+
+(int, String, int) _orderKey(Channel c) => _orderKeys[c] ??= () {
+      final n = c.name.toUpperCase();
+      final base = n
+          .replaceAll(_qualityWords, '')
+          .replaceAll(RegExp(r'\s+'), ' ')
+          .trim();
+      final number =
+          int.tryParse(_firstNumber.firstMatch(base)?.group(1) ?? '') ?? 0;
+      final quality = _fhd.hasMatch(n)
+          ? 0
+          : _hd.hasMatch(n)
+              ? 1
+              : _uhd.hasMatch(n)
+                  ? 2
+                  : _sd.hasMatch(n)
+                      ? 4
+                      : 3;
+      return (number, base, quality);
+    }();

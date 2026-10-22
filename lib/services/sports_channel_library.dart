@@ -182,6 +182,8 @@ class SportsChannelLibrary {
   }
 
   bool accepts(Channel c, Map<String, List<String>> filters) {
+    // No filter set: skip building every channel's tags.
+    if (filters.values.every((v) => v.isEmpty)) return true;
     final tags = tagsFor(c);
     return filters.entries.every((e) =>
         e.key == 'All' ||
@@ -196,13 +198,16 @@ class SportsChannelLibrary {
                     : v == 'Unknown')));
   }
 
-  /// The Channels row [c] sits in ('' = not a sports channel).
-  static String category(Channel c) => switch (sportsNetworkOf(c)?.kind) {
+  /// The Channels row [c] sits in ('' = not a sports channel). Cached per
+  /// channel object, like [sportsNetworkOf].
+  static String category(Channel c) =>
+      _category[c] ??= switch (sportsNetworkOf(c)?.kind) {
         SportsNetworkKind.league => 'League networks',
         SportsNetworkKind.regional => 'Regional channels',
         SportsNetworkKind.sports => 'Sports networks',
         null => MultiviewSports.isSports(c) ? 'Sports networks' : '',
       };
+  static final _category = Expando<String>('sportsCategory');
 
   /// [channels] as network cards for [row] (a [category] name): every TSN
   /// feed and copy in one "TSN" card, ordered by [compareNetworkChannels].

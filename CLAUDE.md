@@ -118,7 +118,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
 - Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+360**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
-  (Currently **+403**, unreleased; 1.0.35 shipped as +396.)
+  (Currently **+404**, unreleased; 1.0.35 shipped as +396.)
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
 Only release when the owner asks ("update the latest", "cut it", "fully release"). Outline: bump `pubspec.yaml` (versionCode `+N` must always rise) → `flutter analyze` → build APK + verify signature (§5) → build Windows + zip → **commit & push first** → `gh release upload <tag> app-release.apk VesperTV-windows-x64.zip --clobber` → `gh release edit <tag> --tag <new> --notes-file …` → make sure the tag equals HEAD → verify downloads/hashes, the OLD `NoXqc/NoXPlayer` redirect links and AFTVnews code `1760256`. The updater offers any *different* tag (`_isDifferent`), never leave two `.zip`/`.apk` assets on the latest release.
@@ -368,7 +368,7 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   Full-video guide mode hid the side columns while only compact portrait had a touch Back arrow.
   Reopening columns now keeps their child layout wide enough during the animation (no row overflow).
   Six widget regressions cover wide sizes, portrait, fold/unfold and TV; real foldable check pending.
-- **Unreleased (Claude, 2026-10-22, `+403`, on the Formuler; all Codex branches above merged into main):**
+- **Unreleased (Claude, 2026-10-22, `+404`, on the Formuler; all Codex branches above merged into main):**
   **Restart-loop cap** (§9). **Live HLS host learning verified** (`learnHlsHost` sniffs first: one
   dead `.ts` answering with an error page marked its whole server as HLS, every other channel then
   failed "does not start with the #EXTM3U header" until restart — Romanian channels, Discord photo;
@@ -415,6 +415,12 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   rows My lists / League / Sports / Regional of `_NetworkCard`s with explicit arrows; OK previews
   the card's first (or held-picked) channel, OK again full screen, hold = pick a channel / add to
   list / Edit list. `test/sports_networks_test.dart`.
+  **+404 Fire Stick crash fix** (opening Sports Trak froze/killed the app): the Channels page sat
+  in Sports' `IndexedStack`, so it was built on every Games rebuild and took the focus; now built
+  only while shown. Network/category/sort keys cached per `Channel` (Expando); rows rebuilt only on
+  playlist/filter/list changes (`_dirty`). 20k channels: ~250 ms per rebuild -> ~30 ms once.
+  **Start-section crash guard**: `vesper_start_section_pending` set while opening, cleared after
+  15 s; still set at launch = open on TV that once.
 - **Codex branch, unreleased: live caption readability** (`codex/live-caption-readability`).
   `SubtitleBridge` sends selected MIME/CC state, explicit resets on Off/track change and cue row
   coordinates; format-only diagnostics use logcat tag `VesperSubtitles` (no URLs/caption text).
