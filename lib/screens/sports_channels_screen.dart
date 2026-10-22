@@ -1169,11 +1169,11 @@ class _GlassMenu extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.74),
+            child: Material(
+              color: Colors.black.withValues(alpha: 0.74),
+              shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.white12),
+                side: const BorderSide(color: Colors.white12),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,

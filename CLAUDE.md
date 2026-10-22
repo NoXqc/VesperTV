@@ -335,6 +335,26 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 - **Shipped: 1.0.36 (`+411`, 2026-10-22, latest; test builds `+402`..`+410` = pre-releases
   `1.0.36-test.*`, deleted):** every bullet below marked Unreleased (Codex + Claude) down to 1.0.35.
   Notes in the release body. Fire Stick-tested by the owner at work (Networks crash fixed in +405).
+- **Codex reverse-order fixes (unreleased, 2026-10-22):** four stacked branches above
+  `551b5ed`: `codex/data-pool-bottom` → `codex/live-group-sort` →
+  `codex/hourly-content-sync` → `codex/persist-favorite-networks` (tip contains all four;
+  no main merge/push/build). **Data pool**: bottom panel, two side-by-side stats tables,
+  bounded/scrollable on short screens; captions stack above its actual height. Existing OK,
+  10 s timeout and setting preserved. **Live groups**: filter icon above Favourites (Up then
+  OK), Provider order / Name A–Z / Name Z–A, device-only `vesper_live_group_sort`.
+  Each playlist stays together, own groups sort separately; manual moves restore stored order;
+  favourite channel order untouched. Remote tips updated; D-pad/persistence regression coverage.
+  **Update content every**: adds 1/3/6 hours to existing day choices. Optional
+  `PlaylistProfile.syncFrequencyHours` overrides legacy days; due check uses `syncInterval`.
+  Absent field keeps old cadence; backup/transfer, unrelated profile edits, launch prompt and
+  automatic-update decision tested. Playlist editor preserves interval and autoSync.
+  **Favourite networks**: reproduced an older picker saving over newer favourites.
+  `SportsChannelLists.save` preserves unedited sections and merges favourite additions/removals;
+  captured viewer prevents a delayed save writing to another viewer. Existing JSON keys/ids
+  retained; known/unknown cards, reopen, source picker, transfer and removal regressions.
+  Networks hold menu uses Material for its translucent background (ListTile ink/debug warning).
+  **Captions width/delay task not started:** owner requested confirmation before it begins.
+  Real device checks remain for these four changes.
 - **Codex unreleased sports ranking follow-up** (`codex/sports-ranking-measurement`):
   offline remeasurement in `dev-notes/sports-ranking-measurement/results.md` (current code vs flat
   cutoff, plus historical baseline). Found stale event feeds bypassing event-date checks through

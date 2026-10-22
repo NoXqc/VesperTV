@@ -623,10 +623,10 @@ class StorageService {
 
   /// [AppConstants.keyMyGroups]'s raw JSON (parsed by `UserGroups`).
   String? getMyGroups() => _prefs.getString(_vk(AppConstants.keyMyGroups));
-  String? getSportsChannelLists() =>
-      _prefs.getString(_vk('vesper_sports_channel_lists'));
-  Future<void> setSportsChannelLists(String json) =>
-      _prefs.setString(_vk('vesper_sports_channel_lists'), json);
+  String? getSportsChannelLists({String? viewerId}) =>
+      _prefs.getString(_vk('vesper_sports_channel_lists', viewerId: viewerId));
+  Future<void> setSportsChannelLists(String json, {String? viewerId}) => _prefs
+      .setString(_vk('vesper_sports_channel_lists', viewerId: viewerId), json);
   Future<void> setMyGroups(String json) =>
       _prefs.setString(_vk(AppConstants.keyMyGroups), json);
 
@@ -997,9 +997,12 @@ class StorageService {
   /// Appends the active viewer's suffix to [base] — a no-op for
   /// [AppConstants.mainViewerId]. Every per-viewer getter/setter is built
   /// from this (or [_vkp] for a key that's also namespaced per playlist).
-  String _vk(String base) => _activeViewerId == AppConstants.mainViewerId
-      ? base
-      : '$base${AppConstants.viewerKeySuffix}$_activeViewerId';
+  String _vk(String base, {String? viewerId}) {
+    final id = viewerId ?? _activeViewerId;
+    return id == AppConstants.mainViewerId
+        ? base
+        : '$base${AppConstants.viewerKeySuffix}$id';
+  }
 
   /// Same as [_vk], for a key namespaced per playlist *and* per viewer —
   /// the playlist suffix always comes first, viewer suffix last, so

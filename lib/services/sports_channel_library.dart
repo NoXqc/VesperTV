@@ -28,9 +28,12 @@ class SportsChannelList {
 }
 
 class SportsChannelLists {
-  SportsChannelLists(this.storage) {
+  SportsChannelLists(this.storage, {String? viewerId})
+      : _viewerId = viewerId ?? storage.getActiveViewerId() {
     try {
-      final data = jsonDecode(storage.getSportsChannelLists() ?? '{}') as Map;
+      final data =
+          jsonDecode(storage.getSportsChannelLists(viewerId: _viewerId) ?? '{}')
+              as Map;
       for (final row in data['lists'] as List? ?? []) {
         final list = SportsChannelList(
             id: row['id'] as String,
@@ -55,8 +58,13 @@ class SportsChannelLists {
     } catch (_) {
       lists.clear();
     }
+    _savedFields = _encodedFields();
+    _savedFavorites = {...favoriteNetworks};
   }
   final StorageService storage;
+  final String _viewerId;
+  late Map<String, String> _savedFields;
+  late Set<String> _savedFavorites;
   final List<SportsChannelList> lists = [];
 
   /// Network card ids ([SportsNetworkGroup.id]) favourited with hold OK:
@@ -70,13 +78,44 @@ class SportsChannelLists {
             e.key as String: (e.value as List).cast<String>(),
         }
       : {};
-  Future<void> save() => storage.setSportsChannelLists(jsonEncode({
+  Map<String, dynamic> _data() => {
         'version': 1,
         'lists': lists.map((e) => e.toJson()).toList(),
         'favoriteNetworks': favoriteNetworks.toList(),
         'tags': tags,
         'sources': sources,
-      }));
+      };
+
+  Map<String, String> _encodedFields() => {
+        for (final entry in _data().entries) entry.key: jsonEncode(entry.value),
+      };
+
+  Future<void> save() {
+    // Networks, list editors and game-source pickers hold separate snapshots.
+    // A save must not overwrite a section this caller never edited. Favourites
+    // merge per id so independent additions/removals survive an older picker.
+    final current = SportsChannelLists(storage, viewerId: _viewerId)._data();
+    final local = _data();
+    for (final key in ['lists', 'tags', 'sources']) {
+      if (jsonEncode(local[key]) != _savedFields[key]) {
+        current[key] = local[key];
+      }
+    }
+    final favorites =
+        (current['favoriteNetworks'] as List).cast<String>().toSet()
+          ..removeAll(_savedFavorites.difference(favoriteNetworks))
+          ..addAll(favoriteNetworks.difference(_savedFavorites));
+    favoriteNetworks
+      ..clear()
+      ..addAll(favorites);
+    current['favoriteNetworks'] = favorites.toList();
+    final result =
+        storage.setSportsChannelLists(jsonEncode(current), viewerId: _viewerId);
+    _savedFields = _encodedFields();
+    _savedFavorites = {...favoriteNetworks};
+    return result;
+  }
+
   SportsChannelList create(String name, Iterable<String> ids) {
     final list = SportsChannelList(
         id: DateTime.now().microsecondsSinceEpoch.toString(),
