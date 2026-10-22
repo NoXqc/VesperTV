@@ -18,7 +18,7 @@ Grab the latest release from the [Releases](../../releases) page or
 [vespertv.app](https://vespertv.app):
 
 - **Android** (phones, Android TV boxes, Fire TV): `app-release.apk`, installed
-  directly or side-loaded with [Downloader](https://amzn.to/2GYuEz9) — code **1760256**.
+  directly or side-loaded with [Downloader](https://amzn.to/2GYuEz9) — code **1760256** (or type `vespertv.app/apk`).
 - **Windows 10/11 (64-bit)**: `VesperTV-windows-x64.zip` — unzip, then run `VesperTV.exe`.
 
 ## Screenshots
