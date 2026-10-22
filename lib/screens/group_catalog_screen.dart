@@ -7,25 +7,13 @@ import '../services/catalog_database.dart';
 import '../services/playlist_manager.dart';
 import '../services/storage_service.dart';
 import '../services/tmdb_enrichment_service.dart';
+import '../utils/catalog_sort.dart';
 import '../utils/tv_theme.dart';
 import '../widgets/poster_card.dart';
 import '../widgets/settings_scaffold.dart';
 import 'movie_detail_screen.dart';
 import 'series_detail_screen.dart';
 import '../l10n/l10n.dart';
-
-/// How a [GroupCatalogScreen] orders its grid — see
-/// [_GroupCatalogScreenState._sort]'s doc comment. [addedDate] and [tmdb]
-/// are deliberately two separate options, not one: [addedDate] is the
-/// provider's own "when this showed up in their catalog" timestamp
-/// (`Channel.addedAt`/`XtreamSeries.addedAt`) — free, always available,
-/// same field the "What's New" carousel already uses. [tmdb] is the
-/// title's actual real-world release date (`Channel.releaseDate`) — only
-/// available once `TmdbEnrichmentService` has looked it up, which needs a
-/// user-supplied API key. Kept distinct per direct feedback: both are
-/// useful for different things ("what's new in this category" vs. "what
-/// actually just came out"), not one replacing the other.
-enum _SortMode { none, aToZ, zToA, rating, addedDate, tmdb }
 
 /// A single movies/TV-shows group expanded into its own full poster grid —
 /// "Expand catalog" on a group's hold-Select menu (see
@@ -72,7 +60,7 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
   /// up there rather than buried in a menu elsewhere. The last one picked
   /// is kept per category and used again next time (user request,
   /// 2026-10-21: "Date added/updated" was forgotten on leaving).
-  _SortMode _sort = _SortMode.none;
+  CatalogSort _sort = CatalogSort.none;
 
   /// Set only once real TMDB-fetched dates start arriving, so the grid
   /// doesn't re-sort to "everything with no date yet" the instant the user
@@ -109,18 +97,17 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
     super.initState();
     final saved =
         context.read<StorageService>().getCatalogSort(widget.category);
-    _sort = _SortMode.values.where((m) => m.name == saved).firstOrNull ??
-        _SortMode.none;
+    _sort = catalogSortFrom(saved);
     _loadItems();
   }
 
-  String _sortLabel(_SortMode mode) => switch (mode) {
-        _SortMode.none => tr('Default'),
-        _SortMode.aToZ => tr('A to Z'),
-        _SortMode.zToA => tr('Z to A'),
-        _SortMode.rating => tr('Rating (high to low)'),
-        _SortMode.addedDate => tr('Date added/updated'),
-        _SortMode.tmdb => 'TMDB',
+  String _sortLabel(CatalogSort mode) => switch (mode) {
+        CatalogSort.none => tr('Default'),
+        CatalogSort.aToZ => tr('A to Z'),
+        CatalogSort.zToA => tr('Z to A'),
+        CatalogSort.rating => tr('Rating (high to low)'),
+        CatalogSort.addedDate => tr('Date added/updated'),
+        CatalogSort.tmdb => 'TMDB',
       };
 
   Future<void> _loadItems() async {
@@ -171,10 +158,10 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
                     title: Text(widget.title,
                         maxLines: 1, overflow: TextOverflow.ellipsis),
                     actions: [
-                      PopupMenuButton<_SortMode>(
+                      PopupMenuButton<CatalogSort>(
                         // The sort in use, beside the icon: a remembered
                         // one must not look like the provider's order.
-                        icon: _sort == _SortMode.none
+                        icon: _sort == CatalogSort.none
                             ? const Icon(Icons.sort)
                             : Row(mainAxisSize: MainAxisSize.min, children: [
                                 const Icon(Icons.sort),
@@ -187,20 +174,22 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
                         onSelected: _onSortSelected,
                         itemBuilder: (context) => [
                           PopupMenuItem(
-                              value: _SortMode.none,
+                              value: CatalogSort.none,
                               child: Text(tr('Default'))),
                           PopupMenuItem(
-                              value: _SortMode.aToZ, child: Text(tr('A to Z'))),
+                              value: CatalogSort.aToZ,
+                              child: Text(tr('A to Z'))),
                           PopupMenuItem(
-                              value: _SortMode.zToA, child: Text(tr('Z to A'))),
+                              value: CatalogSort.zToA,
+                              child: Text(tr('Z to A'))),
                           PopupMenuItem(
-                              value: _SortMode.rating,
+                              value: CatalogSort.rating,
                               child: Text(tr('Rating (high to low)'))),
                           PopupMenuItem(
-                              value: _SortMode.addedDate,
+                              value: CatalogSort.addedDate,
                               child: Text(tr('Date added/updated'))),
                           const PopupMenuItem(
-                              value: _SortMode.tmdb, child: Text('TMDB')),
+                              value: CatalogSort.tmdb, child: Text('TMDB')),
                         ],
                       ),
                     ],
@@ -225,16 +214,23 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
 
   /// A saved TMDB sort needs its lookups once the items are in.
   void _resumeTmdbSort() {
-    if (_sort == _SortMode.tmdb && !_enrichmentStarted) {
+    if (_sort == CatalogSort.tmdb && !_enrichmentStarted) {
       _enrichmentStarted = true;
       _startEnrichment();
     }
   }
 
-  void _onSortSelected(_SortMode mode) {
+  void _onSortSelected(CatalogSort mode) {
     setState(() => _sort = mode);
-    context.read<StorageService>().setCatalogSort(widget.category, mode.name);
-    if (mode == _SortMode.tmdb && !_enrichmentStarted) {
+    context
+        .read<StorageService>()
+        .setCatalogSort(widget.category, mode.name)
+        .then((_) {
+      if (mounted) {
+        context.read<PlaylistManager>().applyCatalogSort(widget.category);
+      }
+    });
+    if (mode == CatalogSort.tmdb && !_enrichmentStarted) {
       _enrichmentStarted = true;
       _startEnrichment();
     }
@@ -357,64 +353,11 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
   /// *live* list `PlaylistManager`/the catalog database hands back, and
   /// sorting it directly would silently reorder that shared data for
   /// every other screen reading the same group.
-  List<Channel> _sortedChannels(List<Channel> items) {
-    final sorted = List<Channel>.from(items);
-    switch (_sort) {
-      case _SortMode.none:
-        break;
-      case _SortMode.aToZ:
-        sorted.sort(
-            (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-      case _SortMode.zToA:
-        sorted.sort(
-            (a, b) => b.name.toLowerCase().compareTo(a.name.toLowerCase()));
-      case _SortMode.rating:
-        sorted.sort((a, b) => (double.tryParse(b.rating ?? '') ?? -1)
-            .compareTo(double.tryParse(a.rating ?? '') ?? -1));
-      case _SortMode.addedDate:
-        sorted.sort((a, b) => _compareNullableDates(a.addedAt, b.addedAt));
-      case _SortMode.tmdb:
-        // No release date yet (lookup still running, or TMDB had nothing
-        // for it) sorts to the end rather than being treated as "ancient"
-        // — same reasoning `getRecentlyAddedVod` already uses for a
-        // missing `added_at`.
-        sorted.sort(
-            (a, b) => _compareNullableDates(a.releaseDate, b.releaseDate));
-    }
-    return sorted;
-  }
+  List<Channel> _sortedChannels(List<Channel> items) =>
+      sortCatalogChannels(items, _sort);
 
-  /// Newest first; a null date (not yet fetched/not reported) always
-  /// sorts last rather than being treated as oldest.
-  static int _compareNullableDates(DateTime? a, DateTime? b) {
-    if (a == null && b == null) return 0;
-    if (a == null) return 1;
-    if (b == null) return -1;
-    return b.compareTo(a);
-  }
-
-  List<XtreamSeries> _sortedSeries(List<XtreamSeries> items) {
-    final sorted = List<XtreamSeries>.from(items);
-    switch (_sort) {
-      case _SortMode.none:
-        break;
-      case _SortMode.aToZ:
-        sorted.sort(
-            (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-      case _SortMode.zToA:
-        sorted.sort(
-            (a, b) => b.name.toLowerCase().compareTo(a.name.toLowerCase()));
-      case _SortMode.rating:
-        sorted.sort((a, b) => (double.tryParse(b.rating ?? '') ?? -1)
-            .compareTo(double.tryParse(a.rating ?? '') ?? -1));
-      case _SortMode.addedDate:
-        sorted.sort((a, b) => _compareNullableDates(a.addedAt, b.addedAt));
-      case _SortMode.tmdb:
-        sorted.sort(
-            (a, b) => _compareNullableDates(a.releaseDate, b.releaseDate));
-    }
-    return sorted;
-  }
+  List<XtreamSeries> _sortedSeries(List<XtreamSeries> items) =>
+      sortCatalogSeries(items, _sort);
 
   // Catalog rows are separate DB objects. Stars read the manager's saved ids,
   // so returning from a detail page also reflects a toggle made there.

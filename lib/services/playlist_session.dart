@@ -11,6 +11,7 @@ import '../models/series_details.dart';
 import '../models/vod_details.dart';
 import '../models/xtream_category.dart';
 import '../models/xtream_series.dart';
+import '../utils/catalog_sort.dart';
 import '../utils/constants.dart';
 import 'catalog_database.dart';
 import 'm3u_parser.dart';
@@ -867,6 +868,18 @@ class PlaylistSession {
   /// then caches them (in memory for the rest of the session, and to the
   /// local catalog database). No-ops for live (already loaded whole) and
   /// for categories already cached in memory this session.
+  /// The Expand catalog sort saved for [tabCategory] (`vod`/`series`):
+  /// the browse rows follow it too (see `CatalogSort`).
+  CatalogSort _rowSort(String tabCategory) =>
+      catalogSortFrom(storage.getCatalogSort(tabCategory));
+
+  /// Drops [tabCategory]'s loaded rows so the next build reloads them in
+  /// the newly saved sort ([PlaylistManager.applyCatalogSort]).
+  void dropLoadedCategories(String tabCategory) {
+    if (tabCategory == 'vod') vodByCategoryName.clear();
+    if (tabCategory == 'series') seriesByCategoryName.clear();
+  }
+
   Future<void> ensureCategoryLoaded(
       String categoryName, String tabCategory) async {
     if (tabCategory == 'tv') return;
@@ -885,7 +898,7 @@ class PlaylistSession {
     try {
       if (tabCategory == 'vod') {
         final cached = await catalogDb.getVodCategory(profile.id, categoryName,
-            limit: _maxItemsPerCategory);
+            limit: _maxItemsPerCategory, orderBy: _rowSort('vod').orderBy);
         if (cached.isNotEmpty) {
           vodByCategoryName[categoryName] = cached;
           vodCategoryTotalCount[categoryName] =
@@ -902,12 +915,14 @@ class PlaylistSession {
         }
         await _persistVodCategory(categoryName, items);
         vodByCategoryName[categoryName] =
-            items.take(_maxItemsPerCategory).toList();
+            sortCatalogChannels(items, _rowSort('vod'))
+                .take(_maxItemsPerCategory)
+                .toList();
         vodCategoryTotalCount[categoryName] = items.length;
       } else {
         final cached = await catalogDb.getSeriesCategory(
             profile.id, categoryName,
-            limit: _maxItemsPerCategory);
+            limit: _maxItemsPerCategory, orderBy: _rowSort('series').orderBy);
         if (cached.isNotEmpty) {
           seriesByCategoryName[categoryName] = cached;
           seriesCategoryTotalCount[categoryName] =
@@ -923,7 +938,9 @@ class PlaylistSession {
         }
         await _persistSeriesCategory(categoryName, items);
         seriesByCategoryName[categoryName] =
-            items.take(_maxItemsPerCategory).toList();
+            sortCatalogSeries(items, _rowSort('series'))
+                .take(_maxItemsPerCategory)
+                .toList();
         seriesCategoryTotalCount[categoryName] = items.length;
       }
     } catch (e) {
@@ -997,7 +1014,9 @@ class PlaylistSession {
         channel.epgIdOverride = epgIdOverrides[channel.rawId];
       }
       await _persistVodCategory(cat.name, items);
-      vodByCategoryName[cat.name] = items.take(_maxItemsPerCategory).toList();
+      vodByCategoryName[cat.name] = sortCatalogChannels(items, _rowSort('vod'))
+          .take(_maxItemsPerCategory)
+          .toList();
       vodCategoryTotalCount[cat.name] = items.length;
     } catch (e) {
       debugPrint(
@@ -1024,7 +1043,9 @@ class PlaylistSession {
       }
       await _persistSeriesCategory(cat.name, items);
       seriesByCategoryName[cat.name] =
-          items.take(_maxItemsPerCategory).toList();
+          sortCatalogSeries(items, _rowSort('series'))
+              .take(_maxItemsPerCategory)
+              .toList();
       seriesCategoryTotalCount[cat.name] = items.length;
     } catch (e) {
       debugPrint(

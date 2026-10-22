@@ -225,10 +225,8 @@ class CatalogDatabase {
         }
         if (oldVersion < 7) {
           // Channel.backdropUrl — same reasoning as v5 -> v6 just above.
-          await _addColumnIfMissing(
-              db, 'vod_channels', 'backdrop_url', 'TEXT');
-          await _addColumnIfMissing(
-              db, 'series_items', 'backdrop_url', 'TEXT');
+          await _addColumnIfMissing(db, 'vod_channels', 'backdrop_url', 'TEXT');
+          await _addColumnIfMissing(db, 'series_items', 'backdrop_url', 'TEXT');
         }
         if (oldVersion < 8) {
           // Channel.providerPosterUrl/providerBackdropUrl and
@@ -299,8 +297,7 @@ class CatalogDatabase {
       url: row['url'] as String,
       logoUrl: row['logo_url'] as String?,
       subtitleUrl: row['subtitle_url'] as String?,
-      isFavorite:
-          isVodFavorite?.call(id) ?? (row['is_favorite'] as int) == 1,
+      isFavorite: isVodFavorite?.call(id) ?? (row['is_favorite'] as int) == 1,
       rating: row['rating'] as String?,
       addedAt:
           addedAt != null ? DateTime.fromMillisecondsSinceEpoch(addedAt) : null,
@@ -379,12 +376,15 @@ class CatalogDatabase {
     await batch.commit(noResult: true);
   }
 
+  /// [orderBy]: `CatalogSort.orderBy` (the saved Expand catalog sort), so
+  /// a [limit]ed browse row keeps the right titles.
   Future<List<Channel>> getVodCategory(String playlistId, String categoryName,
-      {int? limit}) async {
+      {int? limit, String? orderBy}) async {
     final db = await _database;
     final rows = await db.query('vod_channels',
         where: 'category_name = ? AND playlist_id = ?',
         whereArgs: [categoryName, playlistId],
+        orderBy: orderBy,
         limit: limit);
     return rows.map(_rowToChannel).toList();
   }
@@ -456,8 +456,8 @@ class CatalogDatabase {
     if (ids.isEmpty) return [];
     final db = await _database;
     final placeholders = List.filled(ids.length, '?').join(', ');
-    final rows =
-        await db.query('vod_channels', where: 'id IN ($placeholders)', whereArgs: ids);
+    final rows = await db.query('vod_channels',
+        where: 'id IN ($placeholders)', whereArgs: ids);
     return rows.map(_rowToChannel).toList();
   }
 
@@ -471,8 +471,9 @@ class CatalogDatabase {
   /// already case-insensitive for plain ASCII text like these.
   static const _adultCategoryKeywords = ['XXX', 'ADULT', 'PORN', '18+'];
 
-  static String _excludeAdultCategoriesClause() =>
-      _adultCategoryKeywords.map((_) => 'category_name NOT LIKE ?').join(' AND ');
+  static String _excludeAdultCategoriesClause() => _adultCategoryKeywords
+      .map((_) => 'category_name NOT LIKE ?')
+      .join(' AND ');
 
   static List<String> _excludeAdultCategoriesArgs() =>
       _adultCategoryKeywords.map((k) => '%$k%').toList();
@@ -515,11 +516,12 @@ class CatalogDatabase {
 
   Future<List<XtreamSeries>> getSeriesCategory(
       String playlistId, String categoryName,
-      {int? limit}) async {
+      {int? limit, String? orderBy}) async {
     final db = await _database;
     final rows = await db.query('series_items',
         where: 'category_name = ? AND playlist_id = ?',
         whereArgs: [categoryName, playlistId],
+        orderBy: orderBy,
         limit: limit);
     return rows.map(_rowToSeries).toList();
   }
@@ -611,7 +613,8 @@ class CatalogDatabase {
   /// itself has already populated this row.
   Future<void> setVodReleaseDate(String id, DateTime date) async {
     final db = await _database;
-    await db.update('vod_channels', {'release_date': date.millisecondsSinceEpoch},
+    await db.update(
+        'vod_channels', {'release_date': date.millisecondsSinceEpoch},
         where: 'id = ?', whereArgs: [id]);
   }
 

@@ -38,13 +38,13 @@ class ProbeCatalog extends CatalogDatabase {
 
   @override
   Future<List<Channel>> getVodCategory(String playlistId, String categoryName,
-          {int? limit}) async =>
+          {int? limit, String? orderBy}) async =>
       List.generate(limit ?? 301, (i) => movie(i + 1));
 
   @override
   Future<List<XtreamSeries>> getSeriesCategory(
           String playlistId, String categoryName,
-          {int? limit}) async =>
+          {int? limit, String? orderBy}) async =>
       List.generate(limit ?? 301, (i) => show(i + 1));
 
   @override

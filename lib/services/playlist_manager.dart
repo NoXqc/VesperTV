@@ -1233,6 +1233,15 @@ class PlaylistManager extends ChangeNotifier {
   Set<String> get allFavoritedGroupTitles =>
       _enabledSessionsSorted.expand((s) => s.favoritedGroups).toSet();
 
+  /// A new Expand catalog sort was saved for [tabCategory]: the Movies /
+  /// TV Shows rows reload in it (`CatalogSort`).
+  void applyCatalogSort(String tabCategory) {
+    for (final s in _sessions) {
+      s.dropLoadedCategories(tabCategory);
+    }
+    notifyListeners();
+  }
+
   Future<void> ensureCategoryLoaded(
           String playlistId, String categoryName, String tabCategory) =>
       _sessionFor(playlistId)
