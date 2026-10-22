@@ -321,6 +321,11 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-22)
+- **Unreleased (Codex, `codex/favorites-channel-order`):** TV Favourites supports the existing
+  hold OK → Move Up / Down mode in the live list and Timeline guide (unfiltered). Independent
+  per-viewer order across playlists (`vesper_favorite_live_order`, composite channel ids), including
+  favourited-group channels; manual order wins over playlist/A-Z defaults, new entries append.
+  Provider/own-group order stays separate. Backup/Transfer carry the order. Remote tips updated.
 - **Shipped: 1.0.35 (`+396`, 2026-10-22, latest; `+395` owner-tested on the Formuler; test build `+389` = pre-release `1.0.35-test.389`):** **Hide Recordings** (Settings › Tabs, `hideRecordings`, Codex `codex/hide-recording-tab`). Media Hub show page shows its source chip (`SeriesDetailScreen
   .sourceLabel`) and an hourglass on the tapped episode + Play while streams load (`_startingId`,
   extra presses ignored). **Add-on links resolved once before playing** (`services/stream_resolver.dart`

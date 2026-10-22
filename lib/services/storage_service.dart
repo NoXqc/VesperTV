@@ -604,6 +604,12 @@ class StorageService {
   Future<void> setMyGroups(String json) =>
       _prefs.setString(_vk(AppConstants.keyMyGroups), json);
 
+  /// Live Favourites order across playlists (per viewer).
+  List<String> getFavoriteLiveOrder() =>
+      _prefs.getStringList(_vk(AppConstants.keyFavoriteLiveOrder)) ?? [];
+  Future<void> setFavoriteLiveOrder(List<String> ids) async =>
+      _prefs.setStringList(_vk(AppConstants.keyFavoriteLiveOrder), ids);
+
   // --- Search history (per viewer) ------------------------------------------
 
   static const _maxRecentSearches = 10;

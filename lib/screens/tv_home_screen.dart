@@ -598,11 +598,13 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     final playlist = context.read<PlaylistManager>();
     final isFavorited = channel.isFavorite;
     final isHidden = playlist.isChannelHidden(channel);
-    // Only inside the channel's own group, unfiltered: Favourites mixes
-    // groups, and a filtered guide's row order isn't the group's order.
+    // Favourites has its own order across groups/playlists. Filtered rows
+    // cannot move because their neighbours differ from the full list.
+    final group = _effectiveLiveGroup(playlist);
     final canMove = !isHidden &&
         _timelineFilterQuery.trim().isEmpty &&
-        _effectiveLiveGroup(playlist) == playlist.liveGroupOf(channel);
+        (group == _favoritesGroupSentinel ||
+            group == playlist.liveGroupOf(channel));
     final inMyGroup = playlist.isUserGroup(playlist.liveGroupOf(channel));
     final recording = RecordingService.supported
         ? RecordingService.instance.recordingOf(channel)
@@ -783,7 +785,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
 
   /// Live channel in "Move Up / Down" mode (hold OK on a channel → menu),
   /// or null — the channel-list twin of [_movingGroupKey]: Up/Down move it
-  /// inside its group (plain list and Timeline guide alike, see
+  /// inside its group or Favourites (plain list and Timeline guide alike, see
   /// [_movingChannelBindings]), OK or Back finishes.
   Channel? _movingChannel;
 
@@ -805,7 +807,13 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   Future<void> _moveChannelStep(int delta) async {
     final channel = _movingChannel;
     if (channel == null) return;
-    await context.read<PlaylistManager>().moveChannel(channel, delta);
+    final playlist = context.read<PlaylistManager>();
+    if (_effectiveLiveGroup(playlist) == _favoritesGroupSentinel) {
+      await playlist.moveFavoriteLiveChannel(channel, delta,
+          mixPlaylists: _mixFavorites);
+    } else {
+      await playlist.moveChannel(channel, delta);
+    }
     if (!mounted) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || _movingChannel?.id != channel.id) return;
@@ -1793,15 +1801,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       return playlist.visibleChannels(
           groupTitle: _effectiveLiveGroup(playlist), category: 'tv');
     }
-    final favorites = playlist.favoriteLiveChannelsWithGroups;
-    if (!_mixFavorites) return favorites;
-    // Settings > General > Favourites "Mix playlists": every playlist's
-    // starred channels as one A-Z run, then the favourited groups'
-    // channels, instead of one block per playlist.
-    return [
-      ..._sortedByName(favorites.where((c) => c.isFavorite), (c) => c.name),
-      ...favorites.where((c) => !c.isFavorite),
-    ];
+    return playlist.orderedFavoriteLiveChannels(mixPlaylists: _mixFavorites);
   }
 
   bool get _mixFavorites => context.read<AppPreferences>().mixFavoritePlaylists;
@@ -4550,7 +4550,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   Widget _buildLiveList(PlaylistManager playlist) {
     final channels = _currentLiveChannels(playlist);
     // Favourites from two or more playlists: a playlist label above each
-    // one's first channel (the getter already groups them by playlist).
+    // playlist run's first channel (manual order can mix playlists).
     // Inside the row's item, not an extra list item, so row indexes stay
     // what _restoreLiveFocus expects.
     final labelPlaylists = !_mixFavorites &&
