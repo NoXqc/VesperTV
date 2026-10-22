@@ -1415,6 +1415,12 @@ const Map<String, String> kEs = {
       "Ocultar Películas, Series, Media Hub, Grabaciones o Multiview",
   "Fixes for the picture on some Fire TV sticks":
       "Arreglos para la imagen en algunos Fire TV Stick",
+  "Dolby Atmos to your soundbar or receiver":
+      "Dolby Atmos a tu barra de sonido o receptor",
+  "Surround passthrough (Dolby Atmos)":
+      "Sonido envolvente directo (Dolby Atmos)",
+  "Sends Dolby Digital, Dolby Atmos and DTS sound to your soundbar or receiver untouched (HDMI passthrough), so it can play Atmos. Off: this device turns that sound into plain stereo/5.1 first, so Atmos is lost. While on, the volume of that sound is set on your TV or receiver only, and if you hear nothing on a channel, turn this off. Multiview always uses plain sound (passthrough there kept muted screens playing). Applies from the next channel.":
+      "Envía el sonido Dolby Digital, Dolby Atmos y DTS sin tocar a tu barra de sonido o receptor (passthrough HDMI), para que pueda reproducir Atmos. Desactivado: este dispositivo convierte antes ese sonido en estéreo/5.1 normal y se pierde el Atmos. Activado, el volumen de ese sonido se ajusta solo en tu TV o receptor, y si no oyes nada en un canal, desactívalo. Multiview siempre usa sonido normal (allí el passthrough dejaba sonar las pantallas silenciadas). Se aplica desde el siguiente canal.",
   "Stream details when you press OK on a channel":
       "Detalles del flujo al pulsar OK en un canal",
   "One list for every playlist, or one per playlist":

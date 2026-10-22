@@ -346,6 +346,24 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                                 .setCompatVideo(v),
                           ),
                         ]),
+                  // Android only: Windows plays through media_kit.
+                  if (Platform.isAndroid)
+                    _section(
+                        'audio', Icons.surround_sound_outlined, tr('Audio'),
+                        children: [
+                          TvSwitchListTile(
+                            title:
+                                Text(tr('Surround passthrough (Dolby Atmos)')),
+                            subtitle: Text(tr(
+                                'Sends Dolby Digital, Dolby Atmos and DTS sound to your soundbar or receiver untouched (HDMI passthrough), so it can play Atmos. Off: this device turns that sound into plain stereo/5.1 first, so Atmos is lost. While on, the volume of that sound is set on your TV or receiver only, and if you hear nothing on a channel, turn this off. Multiview always uses plain sound (passthrough there kept muted screens playing). Applies from the next channel.')),
+                            value: context
+                                .watch<AppPreferences>()
+                                .audioPassthrough,
+                            onChanged: (v) => context
+                                .read<AppPreferences>()
+                                .setAudioPassthrough(v),
+                          ),
+                        ]),
                   // Windows has no OK info card yet, so no Data pool there.
                   if (!Platform.isWindows)
                     _section(

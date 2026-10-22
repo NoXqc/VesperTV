@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
@@ -89,6 +91,20 @@ class AppPreferences extends ChangeNotifier {
   void setCompatVideo(bool value) {
     _storage.setCompatVideo(value);
     PlaybackService.textureVideo = value;
+    notifyListeners();
+  }
+
+  /// HDMI audio passthrough on the main player (Android, off by default):
+  /// Dolby Digital / Atmos / DTS go to the soundbar or receiver undecoded
+  /// (vendored `AudioPassthrough`). Off since 2026-10-07 for every player
+  /// because passthrough audio ignores the app's volume, which let muted
+  /// Multiview screens keep playing; Multiview stays decoded either way.
+  /// Opt-in after a user missed Atmos (Discord, 2026-10-22). Device-only.
+  bool get audioPassthrough => _storage.getAudioPassthrough();
+
+  void setAudioPassthrough(bool value) {
+    _storage.setAudioPassthrough(value);
+    unawaited(PlaybackService.setAudioPassthrough(value));
     notifyListeners();
   }
 

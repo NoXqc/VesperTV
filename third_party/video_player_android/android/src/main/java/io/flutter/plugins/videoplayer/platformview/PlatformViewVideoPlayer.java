@@ -15,6 +15,7 @@ import androidx.media3.exoplayer.DefaultRenderersFactory;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.audio.AudioSink;
 import androidx.media3.exoplayer.audio.DefaultAudioSink;
+import io.flutter.plugins.videoplayer.AudioPassthrough;
 import io.flutter.plugins.videoplayer.ExoPlayerEventListener;
 import io.flutter.plugins.videoplayer.VideoAsset;
 import io.flutter.plugins.videoplayer.VideoPlayer;
@@ -110,6 +111,12 @@ public class PlatformViewVideoPlayer extends VideoPlayer {
           // FFmpeg extension below as fallback) instead of ever being
           // passed through as a raw bitstream — which keeps setVolume()
           // reliable regardless of how many instances are playing at once.
+          // Exception (opt-in, Settings > Interface > Audio): with
+          // AudioPassthrough on, this main player's sink gets the Context so
+          // Dolby Atmos / AC3 / DTS reach the receiver untouched; its volume
+          // is then the TV's. Multiview tiles are texture players and never
+          // get here.
+          final boolean passthrough = AudioPassthrough.isEnabled();
           DefaultRenderersFactory renderersFactory =
               new DefaultRenderersFactory(context) {
                 @Nullable
@@ -118,6 +125,12 @@ public class PlatformViewVideoPlayer extends VideoPlayer {
                     Context context,
                     boolean enableFloatOutput,
                     boolean enableAudioOutputPlaybackParams) {
+                  if (passthrough) {
+                    return new DefaultAudioSink.Builder(context)
+                        .setEnableFloatOutput(enableFloatOutput)
+                        .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
+                        .build();
+                  }
                   //noinspection deprecation — deliberate: see the comment above.
                   return new DefaultAudioSink.Builder()
                       .setEnableFloatOutput(enableFloatOutput)
