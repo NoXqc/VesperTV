@@ -328,6 +328,14 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-22)
+- **Codex unreleased sports ranking follow-up** (`codex/sports-ranking-measurement`):
+  offline remeasurement in `dev-notes/sports-ranking-measurement/results.md` (current code vs flat
+  cutoff, plus historical baseline). Found stale event feeds bypassing event-date checks through
+  the team fallback: same date guard now applies there, and dates accept `8th Nov` / `Nov 8th`.
+  Keeps undated team feeds and current dated events; no guide/user-pick change. Two regressions.
+  No observed copy-identity collision in 104 reviewed groups. CFL November-event false suggestions
+  removed; real TSN/RDS coverage still needs a fresh guide reaching Oct 23 23:00 UTC. No streams,
+  account configuration, device operation, build or release involved.
 - **Unreleased fix (Codex, `codex/fix-vod-favorites`, 2026-10-22):** Movie/series favourites now
   toggle from saved ids and synchronize browse copies. Saved favourites are resolved from the
   catalog independently of the 300/category browse cap (400-id query batches, per viewer), with

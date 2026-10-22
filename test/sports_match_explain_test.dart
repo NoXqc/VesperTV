@@ -21,11 +21,13 @@ void main() {
   SportsGame game(
           {List<String> broadcasts = const [],
           String home = 'Buffalo Bills',
-          String away = 'Las Vegas Raiders'}) =>
+          String away = 'Las Vegas Raiders',
+          String league = 'nfl',
+          DateTime? start}) =>
       SportsGame(
         id: 'g1',
-        league: sportsLeagueById('nfl')!,
-        start: DateTime.now().toUtc().add(const Duration(hours: 2)),
+        league: sportsLeagueById(league)!,
+        start: start ?? DateTime.now().toUtc().add(const Duration(hours: 2)),
         state: GameState.pre,
         statusText: '',
         home: SportsTeam(
@@ -122,5 +124,40 @@ void main() {
     final out = await matcher.matchDay([g], picks);
     expect(out[SportsChannelPicks.eventKey(g)]!.single.reason,
         MatchReason.teamChannel);
+  });
+
+  test('old one-team event feeds cannot bypass the event date guard', () async {
+    final (matcher, picks) = await setUp();
+    final g = game(start: DateTime.utc(2026, 10, 23, 23));
+    await matcher.prepare([
+      ch('old', 'US - NFL - Buffalo Bills vs Miami Dolphins Oct 18'),
+      ch('iso', 'US - NFL - Buffalo Bills vs Miami Dolphins 2026-10-18'),
+      ch('team', 'US - NFL TEAMS - BUFFALO BILLS FHD'),
+      ch('current', 'US - NFL - Buffalo Bills Oct 23rd'),
+    ]);
+    final out = await matcher.matchDay([g], picks);
+    expect(out[SportsChannelPicks.eventKey(g)]!.map((m) => m.channel.rawId),
+        unorderedEquals(['team', 'current']));
+  });
+
+  test('CFL November ordinal event names are not October team feeds', () async {
+    final (matcher, picks) = await setUp();
+    final g = game(
+        league: 'cfl',
+        home: 'Toronto Argonauts',
+        away: 'Montreal Alouettes',
+        start: DateTime.utc(2026, 10, 23, 23));
+    await matcher.prepare([
+      ch('old',
+          'CA | CFL 00: Montreal Alouettes vs Hamilton Tiger-Cats | Sat 8th Nov 3:00 PM ET'),
+      ch('oldBoth', 'CA | CFL Montreal Alouettes vs Toronto Argonauts Nov 8th'),
+      ch('current',
+          'CA | CFL Montreal Alouettes vs Toronto Argonauts 23rd Oct'),
+    ]);
+    final out = await matcher.matchDay([g], picks);
+    expect(out[SportsChannelPicks.eventKey(g)]!.map((m) => m.channel.rawId),
+        ['current']);
+    expect(
+        out[SportsChannelPicks.eventKey(g)]!.single.reason, MatchReason.name);
   });
 }
