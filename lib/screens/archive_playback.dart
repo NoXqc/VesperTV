@@ -239,6 +239,7 @@ Future<void> openArchiveSeries(
       episodes: episodes,
       plot: meta.description,
       details: SeriesDetails(
+        trailers: meta.trailers,
         backdropUrls: [if (meta.backgroundUrl != null) meta.backgroundUrl!],
         coverUrl: meta.posterUrl,
         genre: meta.genres.isEmpty ? null : meta.genres.join(', '),

@@ -8,6 +8,7 @@ class VodDetails {
     this.plot,
     this.posterUrl,
     this.backdropUrls = const [],
+    this.trailers = const [],
     this.genre,
     this.cast,
     this.director,
@@ -25,6 +26,7 @@ class VodDetails {
 
   /// `info.backdrop_path` — landscape fanart, usually TMDB.
   final List<String> backdropUrls;
+  final List<String> trailers;
   final String? genre;
   final String? cast;
   final String? director;

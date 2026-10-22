@@ -601,6 +601,10 @@ class StorageService {
 
   /// [AppConstants.keyMyGroups]'s raw JSON (parsed by `UserGroups`).
   String? getMyGroups() => _prefs.getString(_vk(AppConstants.keyMyGroups));
+  String? getSportsChannelLists() =>
+      _prefs.getString(_vk('vesper_sports_channel_lists'));
+  Future<void> setSportsChannelLists(String json) =>
+      _prefs.setString(_vk('vesper_sports_channel_lists'), json);
   Future<void> setMyGroups(String json) =>
       _prefs.setString(_vk(AppConstants.keyMyGroups), json);
 

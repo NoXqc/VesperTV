@@ -1,3 +1,5 @@
+import '../widgets/trailer_button.dart';
+import '../services/trailer_service.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
@@ -101,6 +103,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   final Map<int, int> _highlight = {};
 
   final _backNode = FocusNode(debugLabel: 'series-back');
+  final _trailerNode = FocusNode(debugLabel: 'trailer');
   final _playNode = FocusNode(debugLabel: 'series-play');
   final _restartNode = FocusNode(debugLabel: 'series-restart');
   final _favNode = FocusNode(debugLabel: 'series-fav');
@@ -850,13 +853,17 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     final next = _loaded ? _nextUp() : null;
     final nodes = <FocusNode>[
       if (next != null) _playNode,
+      _trailerNode,
       if (next != null && next.resume) _restartNode,
       if (widget.showFavorite) _favNode,
     ];
     void move(int delta) {
-      final i = nodes.indexWhere((n) => n.hasFocus);
-      final j = i + delta;
-      if (i >= 0 && j >= 0 && j < nodes.length) nodes[j].requestFocus();
+      final active = nodes.where((node) => node.context != null).toList();
+      final i = active.indexWhere((node) => node.hasFocus);
+      final next = i + delta;
+      if (i >= 0 && next >= 0 && next < active.length) {
+        active[next].requestFocus();
+      }
     }
 
     final buttons = <Widget>[
@@ -883,6 +890,19 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
             child: const CircularProgressIndicator(strokeWidth: 2.5),
           ),
         ),
+      TrailerButton(
+          scale: s,
+          onFocused: _revealTop,
+          focusNode: _trailerNode,
+          request: TrailerRequest(
+              title: widget.series.name,
+              series: true,
+              year: _details?.year,
+              tmdbId: widget.series.tmdbId,
+              imdbId: widget.imdbId,
+              supplied: _details?.trailers ?? const [],
+              language: L10n.code,
+              tmdbKey: context.read<StorageService>().getTmdbApiKey() ?? '')),
       if (next != null && next.resume)
         DetailPillButton(
           focusNode: _restartNode,

@@ -1,3 +1,5 @@
+import '../widgets/trailer_button.dart';
+import '../services/trailer_service.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
@@ -54,6 +56,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   bool _loading = true;
 
   final _backNode = FocusNode(debugLabel: 'movie-back');
+  final _trailerNode = FocusNode(debugLabel: 'trailer');
   final _playNode = FocusNode(debugLabel: 'movie-play');
   final _restartNode = FocusNode(debugLabel: 'movie-restart');
   final _favNode = FocusNode(debugLabel: 'movie-fav');
@@ -485,13 +488,17 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
 
     final nodes = <FocusNode>[
       _playNode,
+      _trailerNode,
       if (resume) _restartNode,
       _favNode,
     ];
     void move(int delta) {
-      final i = nodes.indexWhere((n) => n.hasFocus);
-      final j = i + delta;
-      if (i >= 0 && j >= 0 && j < nodes.length) nodes[j].requestFocus();
+      final active = nodes.where((node) => node.context != null).toList();
+      final i = active.indexWhere((node) => node.hasFocus);
+      final next = i + delta;
+      if (i >= 0 && next >= 0 && next < active.length) {
+        active[next].requestFocus();
+      }
     }
 
     final row = Wrap(
@@ -510,6 +517,18 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           onPressed: () => _play(restart: watched),
           onFocused: _revealTop,
         ),
+        TrailerButton(
+            scale: s,
+            onFocused: _revealTop,
+            focusNode: _trailerNode,
+            request: TrailerRequest(
+                title: widget.channel.name,
+                series: false,
+                year: _details?.year,
+                tmdbId: widget.channel.tmdbId,
+                supplied: _details?.trailers ?? const [],
+                language: L10n.code,
+                tmdbKey: context.read<StorageService>().getTmdbApiKey() ?? '')),
         if (resume)
           DetailPillButton(
             focusNode: _restartNode,

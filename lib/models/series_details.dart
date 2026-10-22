@@ -16,6 +16,7 @@ typedef SeriesEpisodesResult = ({
 class SeriesDetails {
   const SeriesDetails({
     this.backdropUrls = const [],
+    this.trailers = const [],
     this.coverUrl,
     this.genre,
     this.cast,
@@ -30,6 +31,7 @@ class SeriesDetails {
   /// `info.backdrop_path` — landscape fanart, usually TMDB. Empty when the
   /// panel sends none.
   final List<String> backdropUrls;
+  final List<String> trailers;
 
   /// `info.cover` — the poster again, sometimes a bigger copy than the one
   /// the `get_series` list carried.

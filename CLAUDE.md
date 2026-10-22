@@ -336,6 +336,18 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   No observed copy-identity collision in 104 reviewed groups. CFL November-event false suggestions
   removed; real TSN/RDS coverage still needs a fresh guide reaching Oct 23 23:00 UTC. No streams,
   account configuration, device operation, build or release involved.
+- **Codex external trailers** (`codex/external-trailers`, unreleased): IPTV/Hub movies and
+  shows share a handler-aware Trailer action. Supplied metadata -> user-key TMDB -> strict
+  Cinemeta identity; no guessed first result. External YouTube app/browser only, no movie
+  history/queue/tracking calls. `dev-notes/external-trailers.md`; device return checks pending.
+- **Codex Sports Channels phase 2** (`codex/sports-channel-rules`, dependent on phase 1):
+  filters including Unknown, user tag corrections, updating lists with manual overrides,
+  game/team/league user sources and lazy More sources. Composite IDs and viewer visibility
+  remain mandatory; see `dev-notes/sports-channels.md`. No stream probing or game-rights claims.
+- **Codex Sports Channels phase 1** (`codex/sports-channels`, unreleased): Games/Channels
+  within Sports Trak, conservative network categories, manual/group multi-select lists,
+  viewer-scoped composite references, Backup/Transfer and viewer deletion. Shared Sports
+  preview/fullscreen path; hold adds to list/versions. `dev-notes/sports-channels.md`.
 - **Unreleased fix (Codex, `codex/fix-vod-favorites`, 2026-10-22):** Movie/series favourites now
   toggle from saved ids and synchronize browse copies. Saved favourites are resolved from the
   catalog independently of the 300/category browse cap (400-id query batches, per viewer), with

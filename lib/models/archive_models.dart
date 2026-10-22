@@ -6,6 +6,8 @@
 /// Settings > Archive sources (see `ArchiveService`).
 library;
 
+import 'trailer.dart';
+
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
@@ -487,6 +489,7 @@ class ArchiveMeta {
     this.videos = const [],
     this.wireType,
     this.imdbId,
+    this.trailers = const [],
   });
 
   final String id;
@@ -496,6 +499,7 @@ class ArchiveMeta {
   /// The IMDb id when [id] isn't one (a Jellyfin/Emby item's provider id);
   /// see [imdb].
   final String? imdbId;
+  final List<String> trailers;
 
   /// The title's IMDb id (`tt…`), if known — what Trakt/Simkl are told.
   String? get imdb {
@@ -555,6 +559,7 @@ class ArchiveMeta {
       type: type,
       wireType: wire == null || wire == type.wire ? null : wire,
       imdbId: _str(j['imdb_id']),
+      trailers: TrailerLinks.fromMetadata(j),
       name: name,
       posterUrl: _str(j['poster']),
       backgroundUrl: _str(j['background']),
@@ -583,6 +588,10 @@ class ArchiveMeta {
         'id': id,
         'type': wire,
         'name': name,
+        if (trailers.isNotEmpty)
+          'trailerStreams': [
+            for (final id in trailers) {'ytId': id}
+          ],
         if (imdbId != null) 'imdb_id': imdbId,
         if (posterUrl != null) 'poster': posterUrl,
         if (backgroundUrl != null) 'background': backgroundUrl,

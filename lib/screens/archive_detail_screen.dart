@@ -1,3 +1,5 @@
+import '../widgets/trailer_button.dart';
+import '../services/trailer_service.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -30,6 +32,7 @@ class ArchiveDetailScreen extends StatefulWidget {
 }
 
 class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
+  final _trailerNode = FocusNode(debugLabel: 'trailer');
   final _playNode = FocusNode(debugLabel: 'archive-play');
   final _restartNode = FocusNode(debugLabel: 'archive-restart');
 
@@ -64,6 +67,7 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
 
   @override
   void dispose() {
+    _trailerNode.dispose();
     _playNode.dispose();
     _restartNode.dispose();
     super.dispose();
@@ -212,6 +216,17 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
             scale: 1,
             onPressed: () => _play(restart: watched),
           ),
+          TrailerButton(
+              focusNode: _trailerNode,
+              request: TrailerRequest(
+                  title: meta.name,
+                  series: false,
+                  year: int.tryParse(meta.year ?? ''),
+                  imdbId: meta.imdb,
+                  supplied: meta.trailers,
+                  language: L10n.code,
+                  tmdbKey:
+                      context.read<StorageService>().getTmdbApiKey() ?? '')),
           if (resume)
             DetailPillButton(
               focusNode: _restartNode,

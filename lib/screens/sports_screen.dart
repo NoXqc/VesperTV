@@ -20,6 +20,7 @@ import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../services/recording_service.dart';
 import '../services/sports_channel_matcher.dart';
+import '../services/sports_channel_library.dart';
 import '../services/sports_follows.dart';
 import '../services/sports_service.dart';
 import '../services/storage_service.dart';
@@ -37,6 +38,7 @@ import '../widgets/tv_menu_tile.dart';
 import '../widgets/tv_text_field_gate.dart';
 import 'desktop_player_screen.dart';
 import 'player_screen.dart';
+import 'sports_channels_screen.dart';
 import 'sports_live_list_screen.dart';
 import 'sports_my_teams_screen.dart';
 import 'sports_league_manager_screen.dart';
@@ -68,6 +70,7 @@ class _Section {
 }
 
 class _SportsScreenState extends State<SportsScreen> with RouteAware {
+  bool _channelsMode = false;
   late final StorageService _storage;
   late final SportsChannelMatcher _matcher;
   late SportsChannelPicks _picks;
@@ -246,6 +249,18 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     await _matcher.prepare(live, hidden: playlist.hiddenLiveChannels());
     final matches = await _matcher.matchDay(_games, _picks);
     if (!mounted || myToken != _loadToken) return;
+    final sourceStore = SportsChannelLists(context.read<StorageService>());
+    for (final game in _games) {
+      final saved = sourceStore.sourcesFor(game, _gameKey(game));
+      if (saved.isEmpty) continue;
+      matches[_gameKey(game)] = [
+        for (final c in live.where((c) => saved.contains(c.id)).take(8))
+          ChannelMatch(c, MatchReason.pick, 950,
+              detail: tr('Your added source')),
+        for (final m in matches[_gameKey(game)] ?? <ChannelMatch>[])
+          if (!saved.contains(m.channel.id)) m,
+      ];
+    }
     setState(() {
       _redZoneChoices = _findRedZones(live);
       _redZone = _redZoneChoices
@@ -754,8 +769,18 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       [List<ChannelMatch>? gameMatches,
       Future<void> Function(Channel, SportsGame)? watch]) async {
     final play = watch ?? _watch;
-    final matches =
-        gameMatches ?? _matches[_gameKey(game)] ?? const <ChannelMatch>[];
+    final playlist = context.read<PlaylistManager>();
+    final store = SportsChannelLists(context.read<StorageService>());
+    final saved = store.sourcesFor(game, _gameKey(game));
+    final matches = <ChannelMatch>[
+      for (final c in playlist.visibleChannels(category: 'tv'))
+        if (saved.contains(c.id))
+          ChannelMatch(c, MatchReason.pick, 950,
+              detail: tr('Your added source')),
+      for (final m
+          in gameMatches ?? _matches[_gameKey(game)] ?? const <ChannelMatch>[])
+        if (!saved.contains(m.channel.id)) m,
+    ];
     final result = await showDialog<_GameAction>(
       context: context,
       // Opened by a hold too: drop the held OK's repeats (see the widget).
@@ -789,6 +814,26 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         await play(channel, game);
       case _PickAction():
         await _pickChannel(game, play);
+      case _AddSourcesAction():
+        await _addSources(game);
+      case _MoreSourcesAction():
+        final found = await _matcher.matchDay([game], _picks, limit: 100000);
+        if (!mounted) return;
+        final all = found[_gameKey(game)] ?? [];
+        await showDialog<void>(
+            context: context,
+            builder: (dialog) =>
+                SimpleDialog(title: Text(tr('More sources')), children: [
+                  SizedBox(
+                      width: 600,
+                      height: MediaQuery.sizeOf(context).height * 0.65,
+                      child: SportsChannelTiles(
+                          channels: all.map((m) => m.channel).toList(),
+                          onTap: (c) {
+                            Navigator.pop(dialog);
+                            play(c, game);
+                          })),
+                ]));
       case _ForgetPickAction():
         await _picks.clearFor(game);
         await _rematch();
@@ -800,6 +845,62 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       case _AutoTeamAction(:final team):
         await _setAutoTeam(game, team);
     }
+  }
+
+  Future<void> _addSources(SportsGame game) async {
+    final playlist = context.read<PlaylistManager>();
+    final store = SportsChannelLists(context.read<StorageService>());
+    final library = SportsChannelLibrary(
+        playlist.visibleChannels(category: 'tv'),
+        store: store);
+    final listId = await showDialog<String>(
+        context: context,
+        builder: (dialog) =>
+            SimpleDialog(title: Text(tr('Add sources')), children: [
+              TvMenuTile(
+                  icon: Icons.live_tv,
+                  title: tr('Browse all channels'),
+                  onTap: () => Navigator.pop(dialog, 'all')),
+              for (final list in store.lists)
+                TvMenuTile(
+                    icon: Icons.list,
+                    title: list.name,
+                    onTap: () => Navigator.pop(dialog, list.id)),
+            ]));
+    if (listId == null || !mounted) return;
+    final list = store.lists.where((l) => l.id == listId).firstOrNull;
+    final chosen = await Navigator.push<Set<String>>(
+        context,
+        MaterialPageRoute(
+            builder: (_) => SportsChannelPicker(
+                channels:
+                    list == null ? library.channels : library.members(list),
+                selected: store.sourcesFor(game, _gameKey(game)))));
+    if (chosen == null || !mounted) return;
+    final scope = await showDialog<String>(
+        context: context,
+        builder: (dialog) =>
+            SimpleDialog(title: Text(tr('Add sources')), children: [
+              TvMenuTile(
+                  icon: Icons.event,
+                  title: tr('This game'),
+                  onTap: () =>
+                      Navigator.pop(dialog, 'event:${_gameKey(game)}')),
+              for (final team in [game.home, game.away])
+                TvMenuTile(
+                    icon: Icons.groups,
+                    title: team.name,
+                    onTap: () => Navigator.pop(
+                        dialog, 'team:${game.league.id}:${team.id}')),
+              TvMenuTile(
+                  icon: Icons.sports,
+                  title: game.league.name,
+                  onTap: () =>
+                      Navigator.pop(dialog, 'league:${game.league.id}')),
+            ]));
+    if (scope == null) return;
+    await store.setSources(scope, chosen, event: scope.startsWith('event:'));
+    if (mounted) await _rematch();
   }
 
   Future<void> _record(SportsGame game, Channel channel) async {
@@ -880,14 +981,15 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   /// preview, so Back from the player shows it there (one stream, no
   /// reconnect — the hero's VideoPlayerPane stays under the player the same
   /// way the TV guide's preview box does).
-  Future<void> _play(Channel channel, {SportsGame? game}) async {
+  Future<void> _play(Channel channel,
+      {SportsGame? game, bool keepPreview = false}) async {
     // Same split as SearchScreen._openChannel: Windows has its own player.
     // A game takes the hero's session full screen (no reconnect); Back
     // there hands it back to DesktopMiniPlayer, i.e. the hero again.
     if (Platform.isWindows) {
       final mini = DesktopMiniPlayer.instance;
       (Player, VideoController)? session;
-      if (game != null) {
+      if (game != null || keepPreview) {
         await _setPreview(game, channel, waitReady: false);
         if (!mounted) return;
         if (mini.channel.value?.id == channel.id) session = mini.take();
@@ -907,7 +1009,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
               )));
       return;
     }
-    if (game != null) {
+    if (game != null || keepPreview) {
       await _setPreview(game, channel, waitReady: false);
     } else {
       // RedZone: not a game; the hero goes back to normal and a preview
@@ -930,6 +1032,11 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
+    final channelPage = SportsChannelsScreen(
+      onGames: () => setState(() => _channelsMode = false),
+      onPreview: (channel) => _setPreview(null, channel),
+      onFullScreen: (channel) => _play(channel, keepPreview: true),
+    );
     final sections = _sections;
     final preview = _livePreview(context.watch<PlaybackService>());
     // While a game plays in the hero it stays there, whatever is focused —
@@ -970,10 +1077,10 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     ];
     // Back while moving a league chip = "done", not leave Sports; Back while
     // the hero plays stops it first.
-    return PopScope(
-      canPop: _movingLeague == null && preview == null,
+    final gamesPage = PopScope(
+      canPop: _channelsMode || (_movingLeague == null && preview == null),
       onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
+        if (didPop || _channelsMode) return;
         if (_movingLeague != null) {
           _endLeagueMove();
         } else if (pick != null) {
@@ -1050,6 +1157,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         ),
       )),
     );
+    return IndexedStack(
+        index: _channelsMode ? 1 : 0, children: [gamesPage, channelPage]);
   }
 
   Widget _buildLeagueBar() {
@@ -1058,6 +1167,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       child: Row(
         children: [
           const SportsBackButton(),
+          TextButton(
+              onPressed: () => setState(() => _channelsMode = true),
+              child: Text(tr('Channels'))),
           Text(AppConstants.sportsTabName,
               style: Theme.of(context)
                   .textTheme
@@ -2456,6 +2568,10 @@ class _WatchAction extends _GameAction {
 
 class _PickAction extends _GameAction {}
 
+class _AddSourcesAction extends _GameAction {}
+
+class _MoreSourcesAction extends _GameAction {}
+
 class _ForgetPickAction extends _GameAction {}
 
 class _RecordAction extends _GameAction {
@@ -2638,6 +2754,16 @@ class _GameDialog extends StatelessWidget {
                 child: ListView(
                   shrinkWrap: true,
                   children: [
+                    TvMenuTile(
+                        icon: Icons.playlist_add,
+                        title: tr('Add sources'),
+                        onTap: () =>
+                            Navigator.pop(context, _AddSourcesAction())),
+                    TvMenuTile(
+                        icon: Icons.list,
+                        title: tr('More sources'),
+                        onTap: () =>
+                            Navigator.pop(context, _MoreSourcesAction())),
                     if (offerPlayHere && matches.isNotEmpty)
                       TvMenuTile(
                         autofocus: true,
