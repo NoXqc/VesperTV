@@ -533,7 +533,12 @@ class _PlaylistDetailScreenState extends State<_PlaylistDetailScreen> {
                                       .toList(),
                                   onChanged: (value) {
                                     if (value != null) {
+                                      // Whole days also go in the legacy
+                                      // field, read by older app versions.
                                       playlist.updatePlaylist(profile.copyWith(
+                                          syncFrequencyDays: value % 24 == 0
+                                              ? value ~/ 24
+                                              : null,
                                           syncFrequencyHours: value));
                                     }
                                   },

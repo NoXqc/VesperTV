@@ -109,12 +109,8 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Where the app opens after the splash (user request: "load on Sports
-  /// Trak"): `tv` (default), `movies`, `series`, `hub` (Media Hub) or
-  /// `sports`. A hidden tab falls back to TV. With "Resume last channel in
-  /// full screen" on and another section chosen, the channel resumes in
-  /// the background instead (main.dart `_autoResumeLastChannel`): the
-  /// chosen section wins. Device-only.
+  /// Live TV groups column order (filter icon above Favourites): display-only,
+  /// device-only. Moving a group switches back to provider order.
   LiveGroupSort get liveGroupSort =>
       LiveGroupSort.values
           .where((s) => s.name == _storage.getLiveGroupSort())
@@ -126,6 +122,12 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Where the app opens after the splash (user request: "load on Sports
+  /// Trak"): `tv` (default), `movies`, `series`, `hub` (Media Hub) or
+  /// `sports`. A hidden tab falls back to TV. With "Resume last channel in
+  /// full screen" on and another section chosen, the channel resumes in
+  /// the background instead (main.dart `_autoResumeLastChannel`): the
+  /// chosen section wins. Device-only.
   String get startSection => _storage.getStartSection() ?? 'tv';
 
   void setStartSection(String value) {

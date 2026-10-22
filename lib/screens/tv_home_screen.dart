@@ -1,4 +1,3 @@
-import '../utils/live_group_sort.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
@@ -26,6 +25,7 @@ import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../services/storage_service.dart';
 import '../services/viewer_profile_service.dart';
+import '../utils/live_group_sort.dart';
 import '../utils/time_format.dart';
 import '../utils/constants.dart';
 import '../utils/display_title.dart';
