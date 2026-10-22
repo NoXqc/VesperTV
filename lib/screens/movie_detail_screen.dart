@@ -521,11 +521,12 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           ),
         DetailPillButton(
           focusNode: _favNode,
-          icon: current.isFavorite
+          icon: context.read<PlaylistManager>().isChannelFavorited(current.id)
               ? Icons.star_rounded
               : Icons.star_border_rounded,
           label: tr('Favorites'),
-          selected: current.isFavorite,
+          selected:
+              context.read<PlaylistManager>().isChannelFavorited(current.id),
           scale: s,
           onPressed: () => _toggleFavorite(current),
           onFocused: _revealTop,

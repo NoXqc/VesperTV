@@ -1,11 +1,15 @@
 # VOD favourites investigation — Codex, 2026-10-22
 
+**Fixed, unreleased:** `codex/fix-vod-favorites` implements both corrections
+below. The original diagnostic was replaced by ten desired-behaviour tests in
+`test/vod_favorites_test.dart`. Device verification remains pending.
+
 Report: Sony Android TV user says Live TV favourites work, but Movies and TV
 Series favourites do not save/appear. Owner could not reproduce on Fire Stick,
 phone or Formuler Z11. Source: screenshot supplied in this session. User's app
 version, source type, navigation route, star/toast behaviour remain unknown.
 
-## Confirmed code defects, not yet confirmed as this user's cause
+## Original code defects, not yet confirmed as this user's cause
 
 Reproduced with real PlaylistManager/PlaylistSession and mocked preferences,
 using a fake CatalogDatabase that models its fresh objects and category LIMIT.
@@ -48,27 +52,30 @@ not establish a Sony-specific bug or prove which route the reporter used.
 5. Check whether a star / Added to Favorites appears, whether it appears after
    restart, and whether a title within the first 300 behaves differently.
 
-Executable diagnostic (assertions deliberately describe the current defects,
-not the desired fixed behaviour):
+Regression suite (now asserts the corrected behaviour):
 
 ```powershell
-flutter test --no-pub dev-notes/vod_favorites_probe_test.dart
+flutter test --no-pub test/vod_favorites_test.dart
 ```
 
-Result: `00:00 +3: All tests passed!` — normal browse control plus two defects.
-Preference writes are verified; actual SQLite writes are mocked, so this does
-not test device disk persistence or a database exception.
+Ten tests pass: normal browse, detached copies/removal, item 301, restart with
+unloaded categories, non-Main viewer persistence, hidden groups and disabled
+playlists, in-flight viewer switches, restricted allowlists, clearing during
+loads, and batching/deduplication for 1,001 saved titles of each type.
+Preference writes are verified; actual SQLite reads/writes are mocked, so this
+does not test device disk persistence or a database exception.
 
-## Proposed correction for Claude review
+## Implemented correction
 
-- Toggle from the canonical saved id set, then synchronize any loaded copies.
-- Resolve Favourites from all saved ids through the catalog, independent of
-  the 300-item browse cap. Keep viewer/playlist/hidden-group filtering and M3U
-  behaviour; avoid loading the full catalog or dropping the memory cap.
-- Do not use SQLite's legacy `is_favorite` bit as the authoritative source:
-  non-Main viewers intentionally do not write it. Resolve saved ids per viewer.
-- Turn the probe scenarios into desired-behaviour regression tests, and cover
-  removal through a different copy, restart, viewer switch, disabled playlists,
-  hidden groups, and saved titles outside the loaded category slice.
+- Toggle from the saved id set and synchronize loaded copies. Search, Expand
+  and movie/series detail stars read the saved state instead of stale copies.
+- Resolve saved Xtream IDs through catalog `getVodByIds` / `getSeriesByIds` in
+  batches of 400. Cache only favourite rows, separately from browse categories.
+- Cache queries by viewer, saved ids and enabled playlists; invalidate on
+  catalog refresh, viewer change, toggle or clear. Ignore obsolete in-flight
+  query results. The Favourites view also ensures resolution is scheduled.
+- Keep viewer, enabled-playlist, hidden-group and restricted allowlist checks;
+  M3U stays on its existing loaded catalog. Retain the 300-item browse cap.
+- Do not use SQLite's legacy Main-only `is_favorite` bit as the source of truth.
 
-No production fix, build, install, merge, push or release was performed.
+No build, install, merge, push or release was performed.

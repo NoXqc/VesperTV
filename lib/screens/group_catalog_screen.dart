@@ -312,7 +312,7 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
   }
 
   Widget _buildVodGrid(BuildContext context) {
-    final playlist = context.read<PlaylistManager>();
+    final playlist = context.watch<PlaylistManager>();
     final storage = context.read<StorageService>();
     final items = _sortedChannels(_vodItems);
     return _posterGrid(
@@ -325,7 +325,7 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
         rating: c.rating,
         watched: storage.isFullyWatched(c.id),
         progressFraction: storage.getWatchedFraction(c.id),
-        isFavorite: c.isFavorite,
+        isFavorite: playlist.isChannelFavorited(c.id),
         onToggleFavorite: () =>
             _toggleFavoriteWithFeedback(context, playlist, c),
         onTap: () => Navigator.of(context).push(
@@ -336,7 +336,7 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
   }
 
   Widget _buildSeriesGrid(BuildContext context) {
-    final playlist = context.read<PlaylistManager>();
+    final playlist = context.watch<PlaylistManager>();
     final items = _sortedSeries(_seriesItems);
     return _posterGrid(
       items,
@@ -344,7 +344,7 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
         title: s.name,
         imageUrl: s.posterUrl ?? s.coverUrl,
         rating: s.rating,
-        isFavorite: s.isFavorite,
+        isFavorite: playlist.isSeriesFavorited(s.id),
         onToggleFavorite: () => _toggleSeriesFavoriteWithFeedback(playlist, s),
         onTap: () => Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => SeriesDetailScreen(series: s))),
@@ -416,12 +416,8 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
     return sorted;
   }
 
-  // These two mutate-then-setState directly rather than going through
-  // `context.watch<PlaylistManager>()` — this screen's items are its own
-  // `_vodItems`/`_seriesItems` queried straight from `CatalogDatabase` (see
-  // that fields' doc comment), not `PlaylistManager`'s capped in-memory
-  // lists, so a `PlaylistManager.notifyListeners()` rebuild wouldn't pick
-  // up the change here anyway.
+  // Catalog rows are separate DB objects. Stars read the manager's saved ids,
+  // so returning from a detail page also reflects a toggle made there.
   void _toggleFavoriteWithFeedback(
       BuildContext context, PlaylistManager playlist, Channel channel) {
     playlist.toggleFavorite(channel);

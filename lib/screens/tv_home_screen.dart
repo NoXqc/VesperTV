@@ -4885,6 +4885,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   }
 
   Widget _buildMoviesBrowse(PlaylistManager playlist) {
+    if (_showFavorites) unawaited(playlist.ensureFavoriteCatalogLoaded());
     // Temporary diagnostic — see PlaylistManager.ensureCategoryLoaded's
     // matching comment. Pins down whether a ~10s gap seen between
     // category-load batches is because this build method itself is only
@@ -5077,6 +5078,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   }
 
   Widget _buildShowsBrowse(PlaylistManager playlist) {
+    if (_showFavorites) unawaited(playlist.ensureFavoriteCatalogLoaded());
     // Temporary diagnostic — see _buildMoviesBrowse's matching comment.
     debugPrint('BuildShows at ${DateTime.now().toIso8601String()}');
     final groups = _withoutHiddenPlaylists(

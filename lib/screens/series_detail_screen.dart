@@ -845,6 +845,8 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   }
 
   Widget _buildActions(double s, {bool narrow = false}) {
+    final favorited = widget.showFavorite &&
+        context.watch<PlaylistManager>().isSeriesFavorited(widget.series.id);
     final next = _loaded ? _nextUp() : null;
     final nodes = <FocusNode>[
       if (next != null) _playNode,
@@ -893,11 +895,9 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
       if (widget.showFavorite)
         DetailPillButton(
           focusNode: _favNode,
-          icon: widget.series.isFavorite
-              ? Icons.star_rounded
-              : Icons.star_border_rounded,
+          icon: favorited ? Icons.star_rounded : Icons.star_border_rounded,
           label: tr('Favorites'),
-          selected: widget.series.isFavorite,
+          selected: favorited,
           scale: s,
           onPressed: _toggleFavorite,
           onFocused: _revealTop,
