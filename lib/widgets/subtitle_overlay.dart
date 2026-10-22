@@ -137,6 +137,19 @@ class _SubtitleOverlayState extends State<SubtitleOverlay> {
     if (text.isEmpty) return const SizedBox.shrink();
     final size = MediaQuery.sizeOf(context);
     final scale = context.watch<AppPreferences>().subtitleScale;
+    final caption = Text(
+      text,
+      textAlign: TextAlign.center,
+      // Broadcast snapshots already contain their row breaks. Wrapping a
+      // 32-column CEA-608 row adds lines the broadcaster never intended.
+      softWrap: !_closedCaptions,
+      style: TextStyle(
+        color: Colors.white,
+        fontSize: (size.shortestSide / 22).clamp(16.0, 30.0) * scale,
+        fontWeight: FontWeight.w600,
+        height: 1.25,
+      ),
+    );
     return Center(
       child: Container(
         constraints: BoxConstraints(
@@ -146,16 +159,13 @@ class _SubtitleOverlayState extends State<SubtitleOverlay> {
           color: Colors.black.withValues(alpha: 0.55),
           borderRadius: BorderRadius.circular(6),
         ),
-        child: Text(
-          text,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: (size.shortestSide / 22).clamp(16.0, 30.0) * scale,
-            fontWeight: FontWeight.w600,
-            height: 1.25,
-          ),
-        ),
+        // Fit the complete CC snapshot to the actual available width,
+        // including narrow parents and accessibility scaling. Only shrink
+        // when necessary; keep the chosen size whenever the rows already fit.
+        // Timed movie/file subtitles retain normal word wrapping.
+        child: _closedCaptions
+            ? FittedBox(fit: BoxFit.scaleDown, child: caption)
+            : caption,
       ),
     );
   }

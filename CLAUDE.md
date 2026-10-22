@@ -353,8 +353,17 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   captured viewer prevents a delayed save writing to another viewer. Existing JSON keys/ids
   retained; known/unknown cards, reopen, source picker, transfer and removal regressions.
   Networks hold menu uses Material for its translucent background (ListTile ink/debug warning).
-  **Captions width/delay task not started:** owner requested confirmation before it begins.
   Real device checks remain for these four changes.
+- **Codex caption follow-up** (`codex/live-caption-fit-timing`, stacked above the batch;
+  owner approved starting it): embedded CC preserves explicit broadcast rows and scales down
+  only when needed to fit the actual available width. Regression fixtures include 32-column
+  Small captions, narrow parents, phones and accessibility scaling. Movie/file subtitles keep
+  word wrapping. Incoming cue snapshots already replace text immediately: no Dart queue,
+  debounce or roll-up accumulation found. Tests now assert replacement without advancing time
+  and rapid roll-up snapshots without a backlog. The 1 s blank-only grace remains (new text
+  cancels it immediately), as do Off/track/source/controller clears. Vendored player unchanged.
+  Reported TSN1 speech lag is **not reproduced or confirmed fixed**: needs owner live-stream
+  comparison of arriving cues and speech. No build/install/device test.
 - **Codex unreleased sports ranking follow-up** (`codex/sports-ranking-measurement`):
   offline remeasurement in `dev-notes/sports-ranking-measurement/results.md` (current code vs flat
   cutoff, plus historical baseline). Found stale event feeds bypassing event-date checks through

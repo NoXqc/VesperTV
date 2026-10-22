@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
@@ -37,7 +38,10 @@ void main() {
   });
 
   Future<void> pump(WidgetTester tester,
-      {Size size = const Size(1920, 1080)}) async {
+      {Size size = const Size(1920, 1080),
+      double subtitleScale = 1,
+      double textScale = 1,
+      double? overlayWidth}) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -46,6 +50,7 @@ void main() {
     await storage.init();
     final prefs = AppPreferences(storage);
     await prefs.init();
+    prefs.setSubtitleScale(subtitleScale);
     final playlist = PlaylistManager(storage, CatalogDatabase());
     final playback = PlaybackService(storage, playlist);
     await tester.pumpWidget(MultiProvider(
@@ -54,7 +59,19 @@ void main() {
           ChangeNotifierProvider<AppPreferences>.value(value: prefs),
         ],
         child: MaterialApp(
-            home: Scaffold(body: SubtitleOverlay(controller: controller)))));
+          home: Builder(
+              builder: (context) => MediaQuery(
+                    data: MediaQuery.of(context)
+                        .copyWith(textScaler: TextScaler.linear(textScale)),
+                    child: Scaffold(
+                        body: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: SizedBox(
+                          width: overlayWidth,
+                          child: SubtitleOverlay(controller: controller)),
+                    )),
+                  )),
+        )));
     await tester.pump();
     addTearDown(() async {
       await tester.pumpWidget(const SizedBox.shrink());
@@ -114,6 +131,86 @@ void main() {
     await cue(tester, '');
     await tester.pump(const Duration(milliseconds: 401));
     expect(find.text('Readable caption'), findsNothing);
+  });
+
+  testWidgets('new CC snapshots replace held text without advancing time',
+      (tester) async {
+    await pump(tester);
+    await cue(tester, 'Older caption');
+    await cue(tester, '');
+    final before = tester.binding.clock.now();
+    await cue(tester, '>> THE NCAA HAS INVALIDATED THE');
+    expect(tester.binding.clock.now(), before);
+    expect(find.text('>> THE NCAA HAS INVALIDATED THE'), findsOneWidget);
+    expect(find.text('Older caption'), findsNothing);
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('>> THE NCAA HAS INVALIDATED THE'), findsOneWidget);
+  });
+
+  testWidgets('rapid roll-up snapshots show the newest rows without a backlog',
+      (tester) async {
+    await pump(tester);
+    final before = tester.binding.clock.now();
+    for (var i = 0; i < 10; i++) {
+      await cue(tester, 'Row $i\nRow ${i + 1}');
+      expect(find.text('Row $i\nRow ${i + 1}'), findsOneWidget);
+      if (i > 0) expect(find.text('Row ${i - 1}\nRow $i'), findsNothing);
+    }
+    expect(tester.binding.clock.now(), before);
+  });
+
+  for (final (size, width, textScale) in [
+    (const Size(320, 640), 320.0, 1.0),
+    (const Size(800, 400), 800.0, 2.0),
+    (const Size(1280, 720), 480.0, 1.0),
+    (const Size(1920, 1080), 1920.0, 1.0),
+  ]) {
+    testWidgets(
+        'Small CC fits 32 columns at $size, width $width, text scale $textScale',
+        (tester) async {
+      await pump(tester,
+          size: size,
+          subtitleScale: 0.8,
+          textScale: textScale,
+          overlayWidth: width);
+      final row = List.filled(32, 'W').join();
+      final caption = '$row\n>> THE NCAA HAS INVALIDATED THE';
+      await cue(tester, caption);
+      final text = find.text(caption);
+      final paragraph = tester.renderObject<RenderParagraph>(
+          find.descendant(of: text, matching: find.byType(RichText)));
+      final lines = paragraph.getBoxesForSelection(
+          TextSelection(baseOffset: 0, extentOffset: caption.length));
+      expect(lines, hasLength(2),
+          reason: 'Keep the two broadcast rows; never wrap or clip a row');
+      final container =
+          find.ancestor(of: text, matching: find.byType(Container)).first;
+      final box = tester.getRect(container);
+      for (final line in lines) {
+        final left = paragraph.localToGlobal(Offset(line.left, line.top));
+        final right = paragraph.localToGlobal(Offset(line.right, line.bottom));
+        expect(left.dx, greaterThanOrEqualTo(box.left + 9.5));
+        expect(right.dx, lessThanOrEqualTo(box.right - 9.5));
+      }
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('ordinary embedded subtitles still wrap at the selected size',
+      (tester) async {
+    await pump(tester, size: const Size(320, 640), subtitleScale: 0.8);
+    final text = List.filled(32, 'W').join();
+    await cue(tester, text, cc: false);
+    final paragraph = tester.renderObject<RenderParagraph>(
+        find.descendant(of: find.text(text), matching: find.byType(RichText)));
+    expect(
+        paragraph
+            .getBoxesForSelection(
+                TextSelection(baseOffset: 0, extentOffset: text.length))
+            .length,
+        greaterThan(1));
+    expect(tester.widget<Text>(find.text(text)).style!.fontSize, 12.8);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('next snapshot cancels a pending blank and replaces old rows',
