@@ -107,6 +107,8 @@ const Map<String, String> kEs = {
   "Couldn't find the provider's server address. Check your internet connection or DNS settings, or try again later.":
       "No se pudo encontrar la dirección del servidor del proveedor. Comprueba tu conexión a Internet o la configuración de DNS, o inténtalo de nuevo más tarde.",
   'Subtitles': "Subtítulos",
+  "1 game": "1 partido",
+  "{live} live": "{live} en vivo",
   "Leagues with games": "Ligas con partidos",
   "All leagues": "Todas las ligas",
   "{n} games": "{n} partidos",

@@ -611,8 +611,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   // -------------------------------------------------------------- actions
 
-  /// Hold OK on "All": the leagues with games on the day shown (all of
-  /// them if none has any), each with its game / live counts — pick one to
+  /// Hold OK on "All": every league in the bar, each with its game / live
+  /// counts for the day shown — pick one to
   /// filter to it (owner, 2026-10-22). With a league filter on, only its
   /// games are loaded, so the day is fetched for every league (cached).
   Future<void> _openLeagueMenu() async {
@@ -631,20 +631,23 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       final (n, live) = counts[g.league.id] ?? (0, 0);
       counts[g.league.id] = (n + 1, live + (g.state == GameState.live ? 1 : 0));
     }
-    final active = _leagues.where((l) => counts.containsKey(l.id)).toList();
-    final shown = active.isEmpty ? _leagues : active;
+    // Every league in the bar (owner: ECHL / AHL were missing on a day
+    // without their games), in bar order; a quiet one says No games.
+    final shown = _leagues;
+    String gamesLabel(int n) =>
+        n == 1 ? tr('1 game') : tr('{n} games', {'n': n});
     final picked = await showRollDownMenu<String>(
       context,
       anchor: anchor,
       centered: false,
       width: 340,
-      title: active.isEmpty ? tr('Your leagues') : tr('Leagues with games'),
+      title: tr('Your leagues'),
       items: [
         RollDownMenuItem(
           value: '',
           icon: Icons.apps,
           label: tr('All leagues'),
-          subtitle: tr('{n} games', {'n': games.length}),
+          subtitle: gamesLabel(games.length),
           selected: _leagueFilter == null,
         ),
         for (final l in shown)
@@ -654,9 +657,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
             label: l.name,
             subtitle: switch (counts[l.id]) {
               null => tr('No games'),
-              (final n, 0) => tr('{n} games', {'n': n}),
+              (final n, 0) => gamesLabel(n),
               (final n, final live) =>
-                tr('{n} games · {live} live', {'n': n, 'live': live}),
+                '${gamesLabel(n)} · ${tr('{live} live', {'live': live})}',
             },
             selected: _leagueFilter == l.id,
           ),
