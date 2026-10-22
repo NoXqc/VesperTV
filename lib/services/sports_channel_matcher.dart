@@ -70,6 +70,31 @@ class NoMatch {
       };
 }
 
+/// [sorted] (best first) cut to [limit] distinct channels: each one's best
+/// copy in order, then the other quality copies of those same channels
+/// (`TSN 1 4K` / `FHD` / `HD`, [channelCopyKey]) after them. Copies used to
+/// fill the 8 slots and push real matches out (audit item 5: 39 of 73
+/// over-full games lost a guide-matched channel at the cut), and the live
+/// list shows only the first 3. The copies stay pickable further down.
+List<ChannelMatch> distinctCopiesFirst(List<ChannelMatch> sorted, int limit) {
+  final leaders = <ChannelMatch>[];
+  final copies = <String, List<ChannelMatch>>{};
+  for (final m in sorted) {
+    final key = channelCopyKey(m.channel.name);
+    final group = key.isEmpty ? null : copies[key];
+    if (group != null) {
+      group.add(m);
+    } else if (leaders.length < limit) {
+      leaders.add(m);
+      if (key.isNotEmpty) copies[key] = [];
+    }
+  }
+  return [
+    ...leaders,
+    for (final m in leaders) ...?copies[channelCopyKey(m.channel.name)],
+  ];
+}
+
 class ChannelMatch {
   const ChannelMatch(this.channel, this.reason, this.score, {this.detail});
   final Channel channel;
@@ -1020,7 +1045,7 @@ class SportsChannelMatcher {
               : x.channel.name.length.compareTo(y.channel.name.length);
         });
       final key = SportsChannelPicks.eventKey(g);
-      out[key] = list.length > limit ? list.sublist(0, limit) : list;
+      out[key] = distinctCopiesFirst(list, limit);
       if (list.isNotEmpty) {
         _noMatch.remove(key);
         continue;

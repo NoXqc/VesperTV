@@ -82,3 +82,34 @@ String canonicalChannelKey(String name) {
   final tokens = normalizedChannelTokens(name).toList()..sort();
   return tokens.join('\u0000');
 }
+
+/// Resolution/format words that only say which copy of a channel this is.
+const Set<String> _copyTokens = {
+  ..._qualityTokens,
+  '4K',
+  '8K',
+  '2160P',
+  '1080P',
+  '720P',
+  '50FPS',
+  '60FPS',
+};
+
+/// Same real channel, different quality copy (`CA: TSN 1 4K` / `CA: TSN 1
+/// FHD` / `CA: TSN 1 HD`): the leading region tag is kept, unlike
+/// [canonicalChannelKey] — `US: ESPN` and `CA: ESPN` air different things.
+/// Anything else that differs (East/West, 1/2, ESPN/ESPN+) keeps them apart.
+String channelCopyKey(String name) {
+  final rest = _stripLeadingTag(name);
+  final tag = name.substring(0, name.length - rest.length).toUpperCase();
+  final tokens = rest
+      .toUpperCase()
+      .replaceAll(RegExp(r'[^\w+]'), ' ')
+      .split(RegExp(r'\s+'))
+      .where((t) => t.isNotEmpty && !_copyTokens.contains(t))
+      .toList()
+    ..sort();
+  return tokens.isEmpty
+      ? ''
+      : '${tag.replaceAll(RegExp(r'[^\w+]'), '')}|${tokens.join(' ')}';
+}
