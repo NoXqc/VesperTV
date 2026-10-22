@@ -18,6 +18,11 @@ public final class PlatformViewExoPlayerEventListener extends ExoPlayerEventList
     super(exoPlayer, events);
   }
 
+  @Override
+  protected boolean capRestartLoops() {
+    return true;
+  }
+
   @OptIn(markerClass = UnstableApi.class)
   @Override
   protected void sendInitialized() {

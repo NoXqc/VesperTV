@@ -7,6 +7,7 @@ package io.flutter.plugins.videoplayer;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.media3.common.C;
@@ -17,6 +18,9 @@ import androidx.media3.common.Timeline;
 import androidx.media3.common.Tracks;
 import androidx.media3.datasource.HttpDataSource;
 import androidx.media3.exoplayer.ExoPlayer;
+import java.util.ArrayDeque;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public abstract class ExoPlayerEventListener implements Player.Listener {
   static final long DURATION_UNSET_INITIALIZATION_TIMEOUT_MS = 2000;
@@ -48,6 +52,18 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
   // READY, so a live stream that recovers keeps recovering.
   private static final int MAX_CONSECUTIVE_ERRORS = 3;
   private int consecutiveErrors = 0;
+
+  // VesperTV: every in-place restart in the last minute (time + reason), for
+  // [restartLooping]. The caps above reset each time playback reaches READY,
+  // so a stream that plays for a moment and fails again (or keeps falling
+  // behind its live window, which was never counted) restarted forever: the
+  // preview box flashed until the viewer changed channel (Discord video,
+  // 2026-10-22, after Back from full screen).
+  private static final long RESTART_LOOP_WINDOW_MS = 60_000;
+  private static final int MAX_RESTARTS_PER_WINDOW = 6;
+  private static final String TAG = "VesperPlayer";
+  private final ArrayDeque<Long> restartTimes = new ArrayDeque<>();
+  private final ArrayDeque<String> restartReasons = new ArrayDeque<>();
   private boolean isInitialized = false;
   private boolean isWaitingForValidDuration = false;
   private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -62,6 +78,58 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
   private final Runnable recover;
   protected final ExoPlayer exoPlayer;
   protected final VideoPlayerCallbacks events;
+
+  /**
+   * Whether in-place restarts are capped per minute (see [restartLooping]). The main player only:
+   * Multiview tiles keep recovering on their own (a shared 1-connection account splices streams
+   * there, see CLAUDE.md §10).
+   */
+  protected boolean capRestartLoops() {
+    return false;
+  }
+
+  /**
+   * Counts an in-place restart for [reason]. True when the player restarted more than
+   * MAX_RESTARTS_PER_WINDOW times in RESTART_LOOP_WINDOW_MS: the player is stopped (its connection
+   * closed) and Dart gets one error tagged [RESTART_LOOP …], which reloads the channel from scratch
+   * (PlaybackService._watchRestartLoop) — the same thing that cured it by hand.
+   */
+  private boolean restartLooping(@NonNull String reason) {
+    Log.w(TAG, "in-place restart: " + reason);
+    if (!capRestartLoops()) {
+      return false;
+    }
+    long now = SystemClock.elapsedRealtime();
+    while (!restartTimes.isEmpty() && now - restartTimes.peekFirst() > RESTART_LOOP_WINDOW_MS) {
+      restartTimes.pollFirst();
+      restartReasons.pollFirst();
+    }
+    restartTimes.addLast(now);
+    restartReasons.addLast(reason);
+    if (restartTimes.size() <= MAX_RESTARTS_PER_WINDOW) {
+      return false;
+    }
+    Map<String, Integer> tally = new LinkedHashMap<>();
+    for (String r : restartReasons) {
+      Integer n = tally.get(r);
+      tally.put(r, n == null ? 1 : n + 1);
+    }
+    StringBuilder what = new StringBuilder();
+    for (Map.Entry<String, Integer> e : tally.entrySet()) {
+      if (what.length() > 0) what.append(", ");
+      what.append(e.getKey()).append(" x").append(e.getValue());
+    }
+    int count = restartTimes.size();
+    restartTimes.clear();
+    restartReasons.clear();
+    mainHandler.removeCallbacks(recover);
+    exoPlayer.stop();
+    events.onError(
+        "VideoError",
+        "The player kept restarting [RESTART_LOOP " + count + " in 60 s: " + what + "]",
+        null);
+    return true;
+  }
 
   /** Delay before an in-place error recovery; 0 = immediately. */
   protected long errorRetryDelayMs() {
@@ -187,7 +255,8 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
               && frames >= 0
               && now[0] == olderSample[0]
               && now[1] - olderSample[1] >= 3000
-              && allowRetry()) {
+              && allowRetry()
+              && !restartLooping("FROZEN_VIDEO")) {
             // stop() closes the connection first, so the retry delay keeps the provider's
             // connection count honest (see TextureExoPlayerEventListener.errorRetryDelayMs).
             exoPlayer.stop();
@@ -298,6 +367,9 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
         if (reconnectWhenLiveEnds()
             && (exoPlayer.isCurrentMediaItemLive() || exoPlayer.getDuration() == C.TIME_UNSET)
             && allowRetry()) {
+          if (restartLooping("LIVE_STREAM_ENDED")) {
+            return;
+          }
           // Reported to Dart as buffering, not ENDED — ENDED would mark the
           // controller completed/paused on the Dart side.
           platformState = PlatformPlaybackState.BUFFERING;
@@ -323,6 +395,9 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
   @Override
   public void onPlayerError(@NonNull final PlaybackException error) {
     if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) {
+      if (restartLooping(error.getErrorCodeName())) {
+        return;
+      }
       // See
       // https://exoplayer.dev/live-streaming.html#behindlivewindowexception-and-error_code_behind_live_window
       exoPlayer.seekToDefaultPosition();
@@ -331,6 +406,9 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
     }
 
     if (!isGoneError(error) && allowRetry()) {
+      if (restartLooping(error.getErrorCodeName())) {
+        return;
+      }
       // In-place recovery: re-preparing the same ExoPlayer instance resets
       // its internal renderers (including recreating the MediaCodec
       // decoders) without releasing the Surface/texture, so playback just

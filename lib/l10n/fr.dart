@@ -86,6 +86,8 @@ const Map<String, String> kFr = {
   'Technical details': "Détails techniques",
   "This is a Dolby Vision video, and this device can't play this kind of Dolby Vision. Pick a version without DV (HDR10 or SDR) if your source has one.":
       "Cette vidéo est en Dolby Vision, et cet appareil ne peut pas lire ce type de Dolby Vision. Choisissez une version sans DV (HDR10 ou SDR) si votre source en propose une.",
+  "This stream kept dropping and restarting, so playback was stopped. Try the channel again in a moment, or pick another one.":
+      "Ce flux n'arrêtait pas de se couper et de redémarrer, la lecture a donc été arrêtée. Réessayez la chaîne dans un instant ou choisissez-en une autre.",
   'This device\'s video decoder couldn\'t play this stream — likely 4K HDR (HEVC 10-bit). If your provider offers an HD (non-4K) version of this channel or title, try that. If another app plays this stream on this device, please report it with a photo of the technical details below.':
       "Le décodeur vidéo de cet appareil n'a pas pu lire ce flux — probablement du 4K HDR (HEVC 10 bits). Si votre fournisseur offre une version HD (non 4K) de cette chaîne ou de ce titre, essayez-la. Si une autre appli lit ce flux sur cet appareil, signalez-le avec une photo des détails techniques ci-dessous.",
   'Playback error:\n{raw}': "Erreur de lecture :\n{raw}",

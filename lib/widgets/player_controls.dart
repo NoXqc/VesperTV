@@ -339,6 +339,12 @@ String _friendlyPlaybackError(String raw) {
     return tr(
         "This is a Dolby Vision video, and this device can't play this kind of Dolby Vision. Pick a version without DV (HDR10 or SDR) if your source has one.");
   }
+  // ExoPlayerEventListener.restartLooping: kept failing and restarting, and
+  // a fresh reload didn't hold either (PlaybackService._watchRestartLoop).
+  if (raw.contains('[RESTART_LOOP')) {
+    return tr(
+        'This stream kept dropping and restarting, so playback was stopped. Try the channel again in a moment, or pick another one.');
+  }
   if (isDecoderPlaybackError(raw)) {
     return tr(
         'This device\'s video decoder couldn\'t play this stream — likely 4K HDR (HEVC 10-bit). If your provider offers an HD (non-4K) version of this channel or title, try that. If another app plays this stream on this device, please report it with a photo of the technical details below.');

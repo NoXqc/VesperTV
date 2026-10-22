@@ -382,6 +382,7 @@ class PlaybackService extends ChangeNotifier {
           : null,
     );
     controller = newController;
+    _watchRestartLoop(newController, channel);
     switching = false;
     playingSince = DateTime.now();
 
@@ -510,6 +511,49 @@ class PlaybackService extends ChangeNotifier {
   /// swap.
   bool _reloadingCurrentChannel = false;
 
+  /// Channel id → when [_watchRestartLoop] last reloaded it.
+  final Map<String, DateTime> _restartLoopReloads = {};
+
+  /// The main player tags its error `[RESTART_LOOP n in 60 s: reasons]`
+  /// when it restarted in place more than 6 times in a minute (vendored
+  /// `ExoPlayerEventListener.restartLooping`): the preview flashed until
+  /// the viewer changed channel or pressed Reload (Discord video,
+  /// 2026-10-22). Those restarts happen natively and never reach the app
+  /// log, so this line is the only trace Send log gets. A live channel is
+  /// reloaded from scratch once — what cured it by hand — after the
+  /// backup-server pause, so the provider has dropped the stopped player's
+  /// connection first (see [reloadCurrentChannel] on why an instant
+  /// automatic reload failed). A second loop within 2 minutes, or a VOD
+  /// title, shows the error instead.
+  void _watchRestartLoop(VideoPlayerHdrController c, Channel channel) {
+    late final VoidCallback listener;
+    listener = () {
+      final raw = c.value.errorDescription;
+      if (raw == null || !raw.contains('[RESTART_LOOP')) return;
+      c.removeListener(listener);
+      if (controller != c || currentChannel?.id != channel.id) return;
+      final live = Channel.isLiveId(channel.rawId);
+      debugPrint('PlaybackService: ${live ? 'live' : 'vod'} $raw');
+      final now = DateTime.now();
+      final last = _restartLoopReloads[channel.id];
+      if (!live ||
+          (last != null && now.difference(last) < const Duration(minutes: 2))) {
+        error = raw;
+        notifyListeners();
+        return;
+      }
+      _restartLoopReloads[channel.id] = now;
+      reconnectStatus = tr('Reconnecting...');
+      notifyListeners();
+      Future<void>.delayed(_backupServerDelay, () {
+        if (controller == c && currentChannel?.id == channel.id) {
+          unawaited(reloadCurrentChannel());
+        }
+      });
+    };
+    c.addListener(listener);
+  }
+
   /// Manually relaunches the current live channel against the exact same
   /// URL — the "Reload" button in [PlayerControls], for a channel that's
   /// silently stalled (frozen frame, no spinner, no error — see
@@ -556,6 +600,7 @@ class PlaybackService extends ChangeNotifier {
       // screen if this attempt fails too.
       final previous = controller;
       controller = newController;
+      _watchRestartLoop(newController, channel);
       await newController.play();
       unawaited(previous?.dispose());
       reconnectStatus = null;
@@ -644,6 +689,7 @@ class PlaybackService extends ChangeNotifier {
         // candidate turns out to be down too.
         final previous = controller;
         controller = retryController;
+        _watchRestartLoop(retryController, channel);
         await retryController.play();
         unawaited(previous?.dispose());
         reconnectStatus = null;

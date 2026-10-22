@@ -165,6 +165,13 @@ Uses `android.util.LongSparseArray`; new classes need `@OptIn(markerClass = Unst
 Next release: **`ExoPlayerEventListener`** gives up on HTTP 404/410 at once (`isGoneError`) and after
 3 failures in a row without reaching READY (`consecutiveErrors`); the 10 s window alone never fired
 when each attempt took ~6.5 s to fail (endless spinner on a dead Media Hub link).
+Unreleased (`+397`): **restart-loop cap** (`restartLooping`, main platform-view player only via
+`capRestartLoops`; Multiview tiles keep recovering): more than 6 in-place restarts in 60 s of any
+kind (errors, BEHIND_LIVE_WINDOW — never counted before — live ENDED, frozen video) even with READY
+in between → `stop()` + error `[RESTART_LOOP n in 60 s: reason xN]`. Dart
+`PlaybackService._watchRestartLoop` logs it (native restarts never reach Send log otherwise), shows
+Reconnecting..., waits 3 s and runs `reloadCurrentChannel` once per channel per 2 min; else the
+error screen. User video: guide preview flashing after Back from full screen until a channel change.
 Added in 1.0.34: **`BufferBudget.java`** — on devices under 2.5 GB RAM (or `isLowRamDevice`),
 `setTargetBufferBytes` 64 MB in `PlatformViewVideoPlayer` and 32 MB in `TextureVideoPlayer` (the
 time limits alone let a 4K remux fill ~140 MB of Java heap; the Fire Stick ran out of memory).
