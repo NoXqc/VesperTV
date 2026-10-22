@@ -422,7 +422,9 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // forever.
       var didSync = false;
       if (_playlistManager.needsFullSync()) {
-        final confirmed = await _confirmAutoSync();
+        // "Update automatically" on every due playlist: no question.
+        final confirmed =
+            _playlistManager.dueSyncIsAutomatic() || await _confirmAutoSync();
         if (confirmed) {
           didSync = true;
           if (mounted) setState(() => _syncing = true);
@@ -626,8 +628,13 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     await _playlistManager.ensureLiveChannelsLoaded();
     // Settings > General > Startup (both platforms): full screen (default),
     // or playing in the guide's preview box, or neither.
-    final fullscreen = _storage.getResumeLastChannelAtStartup();
-    final inGuide = !fullscreen && _storage.getResumeLastChannelInGuide();
+    // Another start section (Startup > Open on) wins over full screen: the
+    // channel then resumes in the background, like "with the guide open".
+    final elsewhere = _preferences.effectiveStartSection != 'tv';
+    final fullscreen = _storage.getResumeLastChannelAtStartup() && !elsewhere;
+    final inGuide = !fullscreen &&
+        (_storage.getResumeLastChannelInGuide() ||
+            (elsewhere && _storage.getResumeLastChannelAtStartup()));
     // visibleChannels, not the raw `channels` getter — a restricted
     // viewer's last-played channel may have had its group hidden since
     // they last watched (by whoever set up their profile), and silently

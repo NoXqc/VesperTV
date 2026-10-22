@@ -358,15 +358,32 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         games.first;
   }
 
+  /// [games] grouped by league in the user's league order (start order
+  /// kept inside each league), so a night of NHL + NBA + NFL reads as
+  /// blocks with a league divider between them (user request: "each league
+  /// on its own row" — kept as one row per Live / Later / Final instead, so
+  /// what's live stays first).
+  List<SportsGame> _byLeague(Iterable<SportsGame> games) {
+    final order = {for (final (i, l) in _leagues.indexed) l.id: i};
+    final list = games.indexed.toList()
+      ..sort((a, b) {
+        final c = (order[a.$2.league.id] ?? order.length)
+            .compareTo(order[b.$2.league.id] ?? order.length);
+        return c != 0 ? c : a.$1.compareTo(b.$1);
+      });
+    return [for (final e in list) e.$2];
+  }
+
   List<_Section> get _sections {
-    // My Teams' games first (stable: start order kept within each half).
+    // My Teams' games first (stable: start order kept within each half),
+    // then the rest by league.
     List<SportsGame> followedFirst(Iterable<SportsGame> games) => [
           ...games.where(_follows.involves),
-          ...games.where((g) => !_follows.involves(g)),
+          ..._byLeague(games.where((g) => !_follows.involves(g))),
         ];
     final live = followedFirst(_games.where((g) => g.state == GameState.live));
     final pre = followedFirst(_games.where((g) => g.state == GameState.pre));
-    final post = _games.where((g) => g.state == GameState.post).toList();
+    final post = _byLeague(_games.where((g) => g.state == GameState.post));
     final laterLabel = switch (_dayOffset) {
       0 => tr('Later today'),
       1 => tr('Tomorrow'),
@@ -433,24 +450,81 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   bool get _showLiveAll =>
       _games.where((g) => g.state == GameState.live).length >= 2;
 
-  bool get _onLiveAll => _chipNodes[_liveAllId]?.hasFocus ?? false;
+  /// Later / Final rows this long get "See all" (a grid of the row).
+  static const _seeAllMin = 5;
 
-  /// Up from one of Live now's first two cards reaches "See all" (it sits
-  /// above them); Down from it goes back to the row.
-  bool _liveAllStep(int delta, List<_Section> sections) {
-    if (!_showLiveAll || sections.firstOrNull?.id != 'live') return false;
-    if (_onLiveAll) {
-      _focusZone(delta < 0 ? _firstRowZone - 1 : _firstRowZone, sections);
+  /// The chip in [s]'s header: Live now's "See all · stats" (live list),
+  /// or "See all" (grid, [_openSectionGrid]); null = none.
+  String? _headerChipId(_Section s) => s.id == 'live'
+      ? (_showLiveAll ? _liveAllId : null)
+      : (s.games.length >= _seeAllMin ? 'seeall-${s.id}' : null);
+
+  /// Up from one of a row's first two cards reaches its header chip (it
+  /// sits above them); Down from the chip goes back to the row, Up to the
+  /// row (or header) above.
+  bool _headerChipStep(int delta, List<_Section> sections) {
+    for (final (i, s) in sections.indexed) {
+      final id = _headerChipId(s);
+      if (id == null) continue;
+      final zone = _firstRowZone + i;
+      if (_chipNodes[id]?.hasFocus ?? false) {
+        _focusZone(delta < 0 ? zone - 1 : zone, sections);
+        return true;
+      }
+      if (delta > 0 || _zone != zone) continue;
+      final c =
+          s.games.indexWhere((g) => _cardNodes[_gameKey(g)]?.hasFocus ?? false);
+      if (c < 0 || c > 1) return false;
+      _chipNode(id).requestFocus();
+      _ensureRowVisible(s.id);
       return true;
     }
-    if (delta > 0 || _zone != _firstRowZone) return false;
-    final live = sections.first.games;
-    final i =
-        live.indexWhere((g) => _cardNodes[_gameKey(g)]?.hasFocus ?? false);
-    if (i < 0 || i > 1) return false;
-    _chipNode(_liveAllId).requestFocus();
-    _ensureRowVisible('live');
-    return true;
+    return false;
+  }
+
+  /// "See all" on a long row: its games as a grid; OK on one comes back to
+  /// it in the row (selected, like moving there with the remote).
+  Future<void> _openSectionGrid(_Section s) async {
+    final picked = await Navigator.of(context).push<SportsGame>(
+      MaterialPageRoute(
+        builder: (_) => _SectionGridScreen(
+          title: s.label,
+          games: s.games,
+          cardFor: (g, focusNode, onTap) => _GameCard(
+            focusNode: focusNode,
+            game: g,
+            match: _matches[_gameKey(g)]?.firstOrNull,
+            matching: _matching,
+            hideScores: _hideScores,
+            starred: _follows.involves(g),
+            previewing: false,
+            onFocus: () {},
+            onTap: onTap,
+            onHold: onTap,
+          ),
+        ),
+      ),
+    );
+    if (picked == null || !mounted) return;
+    final sections = _sections;
+    final i = sections.indexWhere((x) => x.id == s.id);
+    if (i < 0) return;
+    final key = _gameKey(picked);
+    _lastCardInRow[s.id] = key;
+    // The row is lazy: scroll near the card first, then focus it.
+    final index = sections[i].games.indexWhere((g) => _gameKey(g) == key);
+    final c = _rowScrolls[s.id];
+    if (index >= 0 && c != null && c.hasClients) {
+      c.jumpTo((index * (_GameCard.width + 12))
+          .clamp(c.position.minScrollExtent, c.position.maxScrollExtent));
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _focusZone(_firstRowZone + i, sections);
+      final ctx = _cardNodes[key]?.context;
+      if (ctx != null) Scrollable.ensureVisible(ctx, alignment: 0.5);
+      _ensureRowVisible(s.id);
+    });
   }
 
   Future<void> _openLiveList() async {
@@ -471,7 +545,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   void _moveZone(int delta) {
     final sections = _sections;
-    if (_liveAllStep(delta, sections)) return;
+    if (_headerChipStep(delta, sections)) return;
     final target = _zone + delta;
     final rows = sections.isEmpty && _nextGame != null ? 1 : sections.length;
     if (target < 0 || target >= _firstRowZone + rows) return;
@@ -1495,6 +1569,17 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                   },
                   onTap: _openLiveList,
                 ),
+              ] else if (_headerChipId(s) case final id?) ...[
+                const SizedBox(width: 14),
+                SportsChip(
+                  focusNode: _chipNode(id),
+                  label: tr('See all'),
+                  icon: Icons.grid_view,
+                  compact: true,
+                  selected: false,
+                  onFocus: () => _zone = zoneIndex,
+                  onTap: () => _openSectionGrid(s),
+                ),
               ],
             ],
           ),
@@ -1513,7 +1598,13 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                   scrollDirection: Axis.horizontal,
                   clipBehavior: Clip.none,
                   children: [
-                    for (final g in s.games)
+                    for (final (k, g) in s.games.indexed) ...[
+                      // A league divider where the league changes (and
+                      // before the first card) when the row mixes leagues.
+                      if (_leagueFilter == null &&
+                          s.games.any((x) => x.league.id != g.league.id) &&
+                          (k == 0 || s.games[k - 1].league.id != g.league.id))
+                        _LeagueDivider(league: g.league),
                       _GameCard(
                         key: ValueKey('card-${_gameKey(g)}'),
                         focusNode: _cardNode(_gameKey(g)),
@@ -1533,6 +1624,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                         onTap: () => _activateGame(g),
                         onHold: () => _openGame(g),
                       ),
+                    ],
                   ],
                 ),
               ),
@@ -1545,6 +1637,109 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 }
 
 // =================================================================== widgets
+
+/// Between two leagues' blocks in a game row: the league's logo and short
+/// name over a thin line. Not focusable (row navigation is by game).
+class _LeagueDivider extends StatelessWidget {
+  const _LeagueDivider({required this.league});
+  final SportsLeague league;
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeFocus(
+      child: SizedBox(
+        width: 64,
+        height: _GameCard.height,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SportsLogo(
+                url: league.logoUrl, size: 34, fallback: league.shortName),
+            const SizedBox(height: 6),
+            Text(league.shortName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 11, color: Colors.white60)),
+            const SizedBox(height: 6),
+            Container(width: 2, height: 28, color: Colors.white12),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "See all": one row's games as a grid (user request: "multiple rows
+/// instead of one row scrolling right"). Not lazy, so D-pad traversal
+/// always has its neighbour built; OK returns the game to the row.
+class _SectionGridScreen extends StatefulWidget {
+  const _SectionGridScreen(
+      {required this.title, required this.games, required this.cardFor});
+  final String title;
+  final List<SportsGame> games;
+  final Widget Function(SportsGame, FocusNode, VoidCallback) cardFor;
+
+  @override
+  State<_SectionGridScreen> createState() => _SectionGridScreenState();
+}
+
+class _SectionGridScreenState extends State<_SectionGridScreen> {
+  late final List<FocusNode> _nodes = [
+    for (final _ in widget.games) FocusNode()
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _nodes.isNotEmpty) _nodes.first.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    for (final n in _nodes) {
+      n.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SportsScreenFrame(
+      child: withTvThemeIfNeeded(
+        context,
+        (context) => Stack(
+          children: [
+            const Positioned.fill(child: SettingsGradientBackground()),
+            Scaffold(
+              backgroundColor: Colors.transparent,
+              appBar: AppBar(
+                backgroundColor: Colors.transparent,
+                title: Text('${widget.title} · ${widget.games.length}'),
+              ),
+              body: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
+                child: Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    for (final (i, g) in widget.games.indexed)
+                      SizedBox(
+                        width: _GameCard.width,
+                        child: widget.cardFor(
+                            g, _nodes[i], () => Navigator.of(context).pop(g)),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 String _timeLabel(DateTime utc) => TimeFormat.hm.format(utc.toLocal());
 

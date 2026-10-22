@@ -1806,6 +1806,12 @@ class PlaylistManager extends ChangeNotifier {
   /// startup to decide whether to block behind [runFullCatalogSync].
   bool needsFullSync() => _enabledSessionsSorted.any((s) => s.needsFullSync());
 
+  /// Every playlist that needs a full sync has "Update automatically" on
+  /// ([PlaylistProfile.autoSync]): launch runs it without asking.
+  bool dueSyncIsAutomatic() => _enabledSessionsSorted
+      .where((s) => s.needsFullSync())
+      .every((s) => s.profile.autoSync);
+
   /// Runs every enabled Xtream playlist's full sync in turn (not in
   /// parallel — the blocking "Updating Content" screen shows one
   /// playlist's progress at a time via [_foregroundSession], which would

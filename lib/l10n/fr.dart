@@ -106,6 +106,16 @@ const Map<String, String> kFr = {
   "Couldn't find the provider's server address. Check your internet connection or DNS settings, or try again later.":
       "Impossible de trouver l'adresse du serveur du fournisseur. Vérifiez votre connexion Internet ou vos paramètres DNS, ou réessayez plus tard.",
   'Subtitles': "Sous-titres",
+  "See all":
+      "Tout voir",
+  "Update automatically":
+      "Mettre à jour automatiquement",
+  "On: when an update is due, it runs at launch without asking. Off: the app asks \"Update content now?\" first.":
+      "Activé : quand une mise à jour est due, elle se lance au démarrage sans demander. Désactivé : l'appli demande d'abord « Mettre à jour le contenu maintenant ? ».",
+  "Open on":
+      "Ouvrir sur",
+  "{section}. Where the app opens after starting. With \"Resume last channel in full screen\" on, the channel then plays in the background instead.":
+      "{section}. L'écran où l'appli s'ouvre au démarrage. Si « Reprendre la dernière chaîne en plein écran » est activé, la chaîne joue alors en arrière-plan.",
   "Subtitle size": "Taille des sous-titres",
   "Small": "Petite",
   "Normal": "Normale",

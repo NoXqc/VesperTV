@@ -1580,12 +1580,40 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       // welcome prompt may already have pushed a route over it) and nothing
       // real holds focus yet — never steal focus from another screen.
       if (ModalRoute.of(context)?.isCurrent == false) return;
+      if (_openStartSection()) return;
       final primary = FocusManager.instance.primaryFocus;
       if (primary == null || primary is FocusScopeNode) {
         _tvTabFocusNode.requestFocus();
       }
     });
     unawaited(_checkForUpdateOnLaunch());
+  }
+
+  /// Once per app launch (a layout switch rebuilds this screen).
+  static bool _startSectionOpened = false;
+
+  /// Settings > General > Startup > Open on: a tab is selected, Media Hub /
+  /// Sports Trak are opened over this screen. True when it did something.
+  bool _openStartSection() {
+    if (_startSectionOpened) return false;
+    _startSectionOpened = true;
+    switch (context.read<AppPreferences>().effectiveStartSection) {
+      case 'movies':
+        _onTabChanged('Movies');
+        return true;
+      case 'series':
+        _onTabChanged('TV Shows');
+        return true;
+      case 'hub':
+        _parkLiveChannel();
+        Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const ArchiveScreen()));
+        return true;
+      case 'sports':
+        unawaited(_openSports());
+        return true;
+    }
+    return false;
   }
 
   /// Once per app launch (a layout switch rebuilds this screen).

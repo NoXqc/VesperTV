@@ -106,6 +106,16 @@ const Map<String, String> kIt = {
   "Couldn't find the provider's server address. Check your internet connection or DNS settings, or try again later.":
       "Impossibile trovare l'indirizzo del server del provider. Controlla la connessione a Internet o le impostazioni DNS, oppure riprova più tardi.",
   'Subtitles': "Sottotitoli",
+  "See all":
+      "Vedi tutto",
+  "Update automatically":
+      "Aggiorna automaticamente",
+  "On: when an update is due, it runs at launch without asking. Off: the app asks \"Update content now?\" first.":
+      "Attivo: quando un aggiornamento è dovuto, parte all'avvio senza chiedere. Disattivo: l'app chiede prima «Aggiornare i contenuti ora?».",
+  "Open on":
+      "Apri su",
+  "{section}. Where the app opens after starting. With \"Resume last channel in full screen\" on, the channel then plays in the background instead.":
+      "{section}. Dove si apre l'app all'avvio. Con «Riprendi l'ultimo canale a schermo intero» attivo, il canale viene riprodotto in sottofondo.",
   "Subtitle size": "Dimensione sottotitoli",
   "Small": "Piccola",
   "Normal": "Normale",

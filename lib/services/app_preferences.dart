@@ -108,6 +108,36 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Where the app opens after the splash (user request: "load on Sports
+  /// Trak"): `tv` (default), `movies`, `series`, `hub` (Media Hub) or
+  /// `sports`. A hidden tab falls back to TV. With "Resume last channel in
+  /// full screen" on and another section chosen, the channel resumes in
+  /// the background instead (main.dart `_autoResumeLastChannel`): the
+  /// chosen section wins. Device-only.
+  String get startSection => _storage.getStartSection() ?? 'tv';
+
+  void setStartSection(String value) {
+    _storage.setStartSection(value);
+    notifyListeners();
+  }
+
+  /// The choices and their (untranslated) names.
+  static const startSections = [
+    ('tv', 'TV'),
+    ('movies', 'Movies'),
+    ('series', 'TV Shows'),
+    ('hub', 'Media Hub'),
+    ('sports', AppConstants.sportsTabName),
+  ];
+
+  /// [startSection] unless what it names is hidden (then `tv`).
+  String get effectiveStartSection => switch (startSection) {
+        'movies' when hideMovies => 'tv',
+        'series' when hideShows => 'tv',
+        'hub' when hideArchive => 'tv',
+        final s => s,
+      };
+
   /// Subtitle text size, a factor on the player's own size (two users asked
   /// for bigger/smaller subtitles). Picked in the player's Subtitles menu;
   /// read by `SubtitleOverlay` (Android) and the Windows player's

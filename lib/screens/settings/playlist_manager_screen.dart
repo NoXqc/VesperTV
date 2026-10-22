@@ -526,13 +526,13 @@ class _PlaylistDetailScreenState extends State<_PlaylistDetailScreen> {
                                     }
                                   },
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Text(
-                                    tr('A stale sync prompts "Update content now?" on launch instead of running automatically.'),
-                                    style:
-                                        Theme.of(context).textTheme.bodySmall,
-                                  ),
+                                TvSwitchListTile(
+                                  title: Text(tr('Update automatically')),
+                                  subtitle: Text(tr(
+                                      'On: when an update is due, it runs at launch without asking. Off: the app asks "Update content now?" first.')),
+                                  value: profile.autoSync,
+                                  onChanged: (v) => playlist.updatePlaylist(
+                                      profile.copyWith(autoSync: v)),
                                 ),
                               ],
                             ),

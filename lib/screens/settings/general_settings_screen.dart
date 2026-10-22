@@ -11,6 +11,7 @@ import '../../utils/constants.dart';
 import '../../utils/tv_theme.dart';
 import '../../widgets/live_resume_hint.dart';
 import '../../widgets/settings_scaffold.dart';
+import '../../widgets/tv_dialog_option.dart';
 import '../../widgets/tv_menu_tile.dart';
 import '../../widgets/tv_switch_list_tile.dart';
 import '../../l10n/l10n.dart';
@@ -228,6 +229,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                       ]),
                   _section('startup', Icons.power_settings_new, tr('Startup'),
                       children: [
+                        _StartSectionPicker(),
                         // At most one of the two is on; both off = nothing
                         // plays.
                         TvSwitchListTile(
@@ -443,5 +445,49 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                 ],
               ),
             ));
+  }
+}
+
+/// Startup > Open on: TV / Movies / TV Shows / Media Hub / Sports Trak
+/// ([AppPreferences.startSection]). One row; OK opens the choices.
+class _StartSectionPicker extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final prefs = context.watch<AppPreferences>();
+    final current = prefs.startSection;
+    final name = AppPreferences.startSections
+        .firstWhere((s) => s.$1 == current,
+            orElse: () => AppPreferences.startSections.first)
+        .$2;
+    return TvMenuTile(
+      leading: const Icon(Icons.home_outlined),
+      title: tr('Open on'),
+      subtitle: tr(
+          '{section}. Where the app opens after starting. With "Resume last channel in full screen" on, the channel then plays in the background instead.',
+          {'section': tr(name)}),
+      onTap: () async {
+        final picked = await showDialog<String>(
+          context: context,
+          builder: (dialogContext) => SimpleDialog(
+            title: Text(tr('Open on')),
+            children: [
+              for (final (id, label) in AppPreferences.startSections)
+                TvDialogOption(
+                  autofocus: id == current,
+                  onPressed: () => Navigator.of(dialogContext).pop(id),
+                  child: Row(children: [
+                    Icon(id == current
+                        ? Icons.check_circle
+                        : Icons.circle_outlined),
+                    const SizedBox(width: 12),
+                    Text(tr(label)),
+                  ]),
+                ),
+            ],
+          ),
+        );
+        if (picked != null) prefs.setStartSection(picked);
+      },
+    );
   }
 }

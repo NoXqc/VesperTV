@@ -156,6 +156,16 @@ const Map<String, String> kEl = {
       "Δεν ήταν δυνατός ο εντοπισμός της διεύθυνσης του διακομιστή του παρόχου. Ελέγξτε τη σύνδεσή σας στο διαδίκτυο ή τις ρυθμίσεις DNS και δοκιμάστε ξανά αργότερα.",
   "Subtitles":
       "Υπότιτλοι",
+  "See all":
+      "Όλα",
+  "Update automatically":
+      "Αυτόματη ενημέρωση",
+  "On: when an update is due, it runs at launch without asking. Off: the app asks \"Update content now?\" first.":
+      "Ενεργό: όταν οφείλεται ενημέρωση, γίνεται στην εκκίνηση χωρίς ερώτηση. Ανενεργό: η εφαρμογή ρωτά πρώτα «Ενημέρωση περιεχομένου τώρα;».",
+  "Open on":
+      "Άνοιγμα σε",
+  "{section}. Where the app opens after starting. With \"Resume last channel in full screen\" on, the channel then plays in the background instead.":
+      "{section}. Πού ανοίγει η εφαρμογή στην εκκίνηση. Με ενεργή τη «Συνέχιση τελευταίου καναλιού σε πλήρη οθόνη», το κανάλι παίζει τότε στο παρασκήνιο.",
   "Subtitle size": "Μέγεθος υποτίτλων",
   "Small": "Μικρό",
   "Normal": "Κανονικό",

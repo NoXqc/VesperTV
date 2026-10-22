@@ -21,6 +21,7 @@ class PlaylistProfile {
     this.vodSortOrder,
     this.seriesSortOrder,
     this.syncFrequencyDays = AppConstants.defaultSyncFrequencyDays,
+    this.autoSync = false,
     required this.createdAt,
     this.expiresAt,
     this.maxConnections,
@@ -84,6 +85,11 @@ class PlaylistProfile {
   /// (`AppConstants.keySyncFrequencyDays`); now per-playlist, since two
   /// playlists can reasonably want different refresh cadences.
   int syncFrequencyDays;
+
+  /// A due full sync runs at launch without the "Update content now?"
+  /// question (user request: "option to auto-update content"). Off keeps
+  /// asking, as before.
+  bool autoSync;
 
   final DateTime createdAt;
 
@@ -176,6 +182,7 @@ class PlaylistProfile {
     int? seriesSortOrder,
     bool clearSeriesSortOrder = false,
     int? syncFrequencyDays,
+    bool? autoSync,
     DateTime? expiresAt,
     int? maxConnections,
     List<String>? backupServers,
@@ -200,6 +207,7 @@ class PlaylistProfile {
             ? null
             : (seriesSortOrder ?? this.seriesSortOrder),
         syncFrequencyDays: syncFrequencyDays ?? this.syncFrequencyDays,
+        autoSync: autoSync ?? this.autoSync,
         createdAt: createdAt,
         expiresAt: expiresAt ?? this.expiresAt,
         maxConnections: maxConnections ?? this.maxConnections,
@@ -222,6 +230,7 @@ class PlaylistProfile {
         'vodSortOrder': vodSortOrder,
         'seriesSortOrder': seriesSortOrder,
         'syncFrequencyDays': syncFrequencyDays,
+        'autoSync': autoSync,
         'createdAt': createdAt.toIso8601String(),
         'expiresAt': expiresAt?.toIso8601String(),
         'maxConnections': maxConnections,
@@ -246,6 +255,7 @@ class PlaylistProfile {
         seriesSortOrder: json['seriesSortOrder'] as int?,
         syncFrequencyDays: json['syncFrequencyDays'] as int? ??
             AppConstants.defaultSyncFrequencyDays,
+        autoSync: json['autoSync'] as bool? ?? false,
         createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
             DateTime.now(),
         expiresAt: json['expiresAt'] == null

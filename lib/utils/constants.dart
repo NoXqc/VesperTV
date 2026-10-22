@@ -266,6 +266,10 @@ class AppConstants {
   /// AppPreferences.subtitleScale).
   static const String keySubtitleScale = 'vesper_subtitle_scale';
 
+  /// Settings > General > Startup > Open on (device-only;
+  /// AppPreferences.startSection).
+  static const String keyStartSection = 'vesper_start_section';
+
   /// Settings > General > Startup: Fast startup (opt-in, owner
   /// 2026-10-21) — the UI opens without waiting for Movies/TV Shows to
   /// pre-load. Device-only: the slow splash protects weak boxes (§10).

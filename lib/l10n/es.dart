@@ -107,6 +107,16 @@ const Map<String, String> kEs = {
   "Couldn't find the provider's server address. Check your internet connection or DNS settings, or try again later.":
       "No se pudo encontrar la dirección del servidor del proveedor. Comprueba tu conexión a Internet o la configuración de DNS, o inténtalo de nuevo más tarde.",
   'Subtitles': "Subtítulos",
+  "See all":
+      "Ver todo",
+  "Update automatically":
+      "Actualizar automáticamente",
+  "On: when an update is due, it runs at launch without asking. Off: the app asks \"Update content now?\" first.":
+      "Activado: cuando toca actualizar, se hace al abrir la app sin preguntar. Desactivado: la app pregunta antes «¿Actualizar el contenido ahora?».",
+  "Open on":
+      "Abrir en",
+  "{section}. Where the app opens after starting. With \"Resume last channel in full screen\" on, the channel then plays in the background instead.":
+      "{section}. Dónde se abre la app al iniciar. Si «Reanudar el último canal en pantalla completa» está activado, el canal se reproduce entonces en segundo plano.",
   "Subtitle size": "Tamaño de los subtítulos",
   "Small": "Pequeño",
   "Normal": "Normal",
