@@ -22,6 +22,7 @@ import '../widgets/settings_scaffold.dart';
 import '../widgets/tv_text_field_gate.dart';
 import 'archive_detail_screen.dart';
 import 'archive_playback.dart';
+import 'movie_detail_screen.dart';
 import 'desktop_player_screen.dart';
 import 'player_screen.dart';
 import 'series_detail_screen.dart';
@@ -302,6 +303,41 @@ class _SearchScreenState extends State<SearchScreen> {
 
   void _toggleSeriesFavorite(XtreamSeries series) {
     context.read<PlaylistManager>().toggleSeriesFavorite(series);
+    _favoriteFeedback(
+        context.read<PlaylistManager>().isSeriesFavorited(series.id));
+  }
+
+  /// Hold OK on a channel or movie result (user report: hold played the
+  /// title instead of adding it to Favourites).
+  Future<void> _toggleChannelFavorite(Channel channel) async {
+    final playlist = context.read<PlaylistManager>();
+    await playlist.toggleFavorite(channel);
+    _favoriteFeedback(playlist.isChannelFavorited(channel.id));
+  }
+
+  Future<void> _toggleHubFavorite(
+      ArchiveSource source, ArchiveMeta meta) async {
+    final added =
+        await context.read<ArchiveService>().toggleFavorite(source, meta);
+    _favoriteFeedback(added);
+  }
+
+  void _favoriteFeedback(bool added) {
+    if (!mounted) return;
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content:
+          Text(added ? tr('Added to Favorites') : tr('Removed from Favorites')),
+      duration: const Duration(seconds: 2),
+    ));
+  }
+
+  /// A movie (or an M3U show item) opens its page — Play, Trailer and the
+  /// description — like everywhere else; only live channels play at once.
+  void _openTitle(Channel channel) {
+    _recordSearch(_query);
+    Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => MovieDetailScreen(channel: channel)));
   }
 
   /// Explicit Up/Down between the search field and each result row — see
@@ -662,6 +698,11 @@ class _SearchScreenState extends State<SearchScreen> {
               rating: items[i].$2.year,
               ready: watch.isReady(items[i].$2.id),
               fetching: watch.fetching.value.contains(items[i].$2.id),
+              isFavorite: context
+                  .read<ArchiveService>()
+                  .isFavorite(items[i].$1, items[i].$2),
+              onToggleFavorite: () =>
+                  _toggleHubFavorite(items[i].$1, items[i].$2),
               onTap: () => _openHubTitle(items[i].$1, items[i].$2),
               onFocusGained: () {
                 _focusedZone = rowIndex;
@@ -699,7 +740,10 @@ class _SearchScreenState extends State<SearchScreen> {
           cardWidth: isPoster ? PosterCard.width : 64,
           cardPosterHeight: isPoster ? PosterCard.posterHeight : 64,
           fit: isPoster ? BoxFit.cover : BoxFit.contain,
-          onTap: () => _openChannel(items[i]),
+          isFavorite:
+              context.read<PlaylistManager>().isChannelFavorited(items[i].id),
+          onToggleFavorite: () => _toggleChannelFavorite(items[i]),
+          onTap: () => isPoster ? _openTitle(items[i]) : _openChannel(items[i]),
           onFocusGained: () {
             _focusedZone = rowIndex;
             _ensureRowVisible(rowKey);
