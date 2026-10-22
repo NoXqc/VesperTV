@@ -118,7 +118,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
 - Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+360**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
-  (Currently **+400**, unreleased; 1.0.35 shipped as +396.)
+  (Currently **+401**, unreleased; 1.0.35 shipped as +396.)
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
 Only release when the owner asks ("update the latest", "cut it", "fully release"). Outline: bump `pubspec.yaml` (versionCode `+N` must always rise) → `flutter analyze` → build APK + verify signature (§5) → build Windows + zip → **commit & push first** → `gh release upload <tag> app-release.apk VesperTV-windows-x64.zip --clobber` → `gh release edit <tag> --tag <new> --notes-file …` → make sure the tag equals HEAD → verify downloads/hashes, the OLD `NoXqc/NoXPlayer` redirect links and AFTVnews code `1760256`. The updater offers any *different* tag (`_isDifferent`), never leave two `.zip`/`.apk` assets on the latest release.
@@ -175,6 +175,10 @@ error screen. User video: guide preview flashing after Back from full screen unt
 Added in 1.0.34: **`BufferBudget.java`** — on devices under 2.5 GB RAM (or `isLowRamDevice`),
 `setTargetBufferBytes` 64 MB in `PlatformViewVideoPlayer` and 32 MB in `TextureVideoPlayer` (the
 time limits alone let a 4K remux fill ~140 MB of Java heap; the Fire Stick ran out of memory).
+Unreleased: **`AudioPassthrough.java`** (MethodChannel `vespertv/audio`, `setPassthrough`) — opt-in
+HDMI passthrough: `PlatformViewVideoPlayer.buildAudioSink` gives `DefaultAudioSink.Builder(context)`
+when on (AC3/E-AC3 Atmos/DTS to the receiver, app volume no longer applies); otherwise the
+context-less sink above. Texture players (Multiview, Compatibility video) never pass through.
 **Recording (1.0.32) is NOT in this plugin** — it is app-side Kotlin (`RecorderService.kt`,
 `RecorderScheduler.kt` in `android/app/.../nox_iptv/`), so a plugin re-sync doesn't touch it.
 
@@ -364,7 +368,7 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   Full-video guide mode hid the side columns while only compact portrait had a touch Back arrow.
   Reopening columns now keeps their child layout wide enough during the animation (no row overflow).
   Six widget regressions cover wide sizes, portrait, fold/unfold and TV; real foldable check pending.
-- **Unreleased (Claude, 2026-10-22, `+400`, on the Formuler; all Codex branches above merged into main):**
+- **Unreleased (Claude, 2026-10-22, `+401`, on the Formuler; all Codex branches above merged into main):**
   **Restart-loop cap** (§9). **Live HLS host learning verified** (`learnHlsHost` sniffs first: one
   dead `.ts` answering with an error page marked its whole server as HLS, every other channel then
   failed "does not start with the #EXTM3U header" until restart — Romanian channels, Discord photo;
@@ -381,6 +385,16 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   puts the newest in the row), provider loads sort the full list before `take(300)`; a new sort in
   Expand calls `PlaylistManager.applyCatalogSort` (drops that tab's loaded rows, they reload).
   User request (Discord). `test/catalog_sort_test.dart` checks SQL order == Dart order.
+  **Surround passthrough (Dolby Atmos)** — Settings › Interface › Audio (Android,
+  `AppPreferences.audioPassthrough`, device-only, off by default; §9). Atmos had been impossible
+  since 2026-10-07 (passthrough off for Multiview audio bleed); Discord user missed it. Multiview
+  entry points stop the main player first, so Multiview never needs the switch turned off.
+  **Sports banners** (`SportsBackdrop` in `widgets/sports_widgets.dart`): the picked league's logo
+  (Sports Trak, not on "All") / the selected team's (My Teams) large and dimmed behind the page,
+  sport icon without a logo; ≤512 px decode, static. No player photos (no source).
+  **Subtitle size** (Small 0.8 / Normal / Large 1.25 / Extra large 1.5; last row of the Subtitles
+  menu on Android + Windows; `AppPreferences.subtitleScale`, device-only): scales
+  `SubtitleOverlay` and the Windows `SubtitleViewConfiguration.textScaler`.
 - **Codex branch, unreleased: live caption readability** (`codex/live-caption-readability`).
   `SubtitleBridge` sends selected MIME/CC state, explicit resets on Off/track change and cue row
   coordinates; format-only diagnostics use logcat tag `VesperSubtitles` (no URLs/caption text).
