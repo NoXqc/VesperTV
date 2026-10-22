@@ -1,0 +1,476 @@
+source,game,startUtc,change,channel,reason,detail,retained
+owner-2,Coventry City at Tottenham Hotspur,2026-10-19T19:00:00.000Z,added,US - USA NETWORK EAST HD ◉,network,USA Net,True
+owner-2,Colorado Avalanche at Philadelphia Flyers,2026-10-19T23:00:00.000Z,added,US - NBC SPORTS PHILADELPHIA HD,network,NBC Sports Phil,True
+owner-2,Colorado Avalanche at Philadelphia Flyers,2026-10-19T23:00:00.000Z,removed,CA - NHL GAME 01 : PHILADELPHIA FLYERS VS BUFFALO SABRES OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Flyers,False
+owner-2,Colorado Avalanche at Philadelphia Flyers,2026-10-19T23:00:00.000Z,removed,US - NHL GAME 01 : PHILADELPHIA FLYERS VS BUFFALO SABRES OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Flyers,False
+owner-2,Borussia Dortmund at Sabah FK,2026-10-20T16:45:00.000Z,added,DK - TV3 SPORT 8K,guide,UEFA Champions League: Sabah Baku - Dortmund,True
+owner-2,Borussia Dortmund at Sabah FK,2026-10-20T16:45:00.000Z,removed,BR - TNT FHD,guide,Sabah FK x Borussia Dortmund - Ao Vivo,True
+owner-2,Boston Celtics at Detroit Pistons,2026-10-20T19:00:00.000Z,added,US - NBC 10 ADA (KTEN) FHD,guide,Boston Celtics at Detroit Pistons,True
+owner-2,Boston Celtics at Detroit Pistons,2026-10-20T19:00:00.000Z,removed,CA - SPORTSNET EAST HD ◉,guide,Boston Celtics vs. Detroit Pistons,True
+owner-2,PSV Eindhoven at FC Porto,2026-10-20T19:00:00.000Z,added,US - CBS SPORTS NETWORK HD ◉,network,CBSSN,True
+owner-2,San Jose Sharks at Montreal Canadiens,2026-10-20T23:00:00.000Z,added,CAFR - RDS HD ◉ [BK],guide,San Jose Sharks vs. Montréal Canadiens,True
+owner-2,San Jose Sharks at Montreal Canadiens,2026-10-20T23:00:00.000Z,added,US - NHL TEAMS - SAN JOSE SHARKS,teamChannel,Sharks,True
+owner-2,San Jose Sharks at Montreal Canadiens,2026-10-20T23:00:00.000Z,added,US - NHL TEAMS - MONTREAL CANADIENS ,teamChannel,Canadiens,True
+owner-2,San Jose Sharks at Montreal Canadiens,2026-10-20T23:00:00.000Z,removed,CAFR - RDS FHD ◉,guide,San Jose Sharks vs. Montréal Canadiens,True
+owner-2,San Jose Sharks at Montreal Canadiens,2026-10-20T23:00:00.000Z,removed,CA - TSN 2 FHD ◉,guide,San Jose Sharks vs. Montréal Canadiens,True
+owner-2,San Jose Sharks at Montreal Canadiens,2026-10-20T23:00:00.000Z,removed,CA - TSN 2 SD,guide,San Jose Sharks vs. Montréal Canadiens,True
+owner-2,Los Angeles Kings at Washington Capitals,2026-10-20T23:00:00.000Z,added,FR-CAR - BEIN SPORTS 3 HD,guide,Washington Capitals / Los Angeles Kings,True
+owner-2,Los Angeles Kings at Washington Capitals,2026-10-20T23:00:00.000Z,removed,FR - BEIN SPORTS 3 FHD,guide,Washington Capitals / Los Angeles Kings,True
+owner-2,Toronto Maple Leafs at Columbus Blue Jackets,2026-10-20T23:00:00.000Z,added,US - NHL TEAMS - COLUMBUS BLUE JACKETS ,teamChannel,Blue Jackets,True
+owner-2,Toronto Maple Leafs at Columbus Blue Jackets,2026-10-20T23:00:00.000Z,removed,US - NHL TEAMS - TORONTO MAPLE LEAFS ,name,Maple Leafs,True
+owner-2,Boston Bruins at Dallas Stars,2026-10-21T00:00:00.000Z,added,SI - ARENA SPORTS 2 HD,guide,"Hokej (M): Stars - B. Bruins, NHL 2026/2027",True
+owner-2,Boston Bruins at Dallas Stars,2026-10-21T00:00:00.000Z,added,US - NHL TEAMS - DALLAS STARS ,teamChannel,Stars,True
+owner-2,Boston Bruins at Dallas Stars,2026-10-21T00:00:00.000Z,removed,US - ESPN HD ◉,guide,Boston Bruins at Dallas Stars,True
+owner-2,Boston Bruins at Dallas Stars,2026-10-21T00:00:00.000Z,removed,LAT - ESPN HD,guide,Boston Bruins at Dallas Stars,True
+owner-2,Minnesota Wild at Edmonton Oilers,2026-10-21T01:00:00.000Z,removed,US - ESPN PLUS 168 : NHL – COLUMBUS BLUE JACKETS @ MINNESOTA WILD / CAROLINA HURRICANES @ CALGARY FLAMES OCT 18 – 7:30 PM ET / OCT 19 – 12:30 AM UK,name,Wild,False
+owner-2,Carolina Hurricanes at Vancouver Canucks,2026-10-21T02:00:00.000Z,added,US - NHL TEAMS - CAROLINA HURRICANES ,teamChannel,Hurricanes,True
+owner-2,Carolina Hurricanes at Vancouver Canucks,2026-10-21T02:00:00.000Z,removed,US - NHL TEAMS - VANCOUVER CANUCKS ,name,Canucks,True
+owner-2,Tampa Bay Lightning at Vegas Golden Knights,2026-10-21T02:45:00.000Z,added,US - NHL TEAMS - VEGAS GOLDEN KNIGHTS ,teamChannel,Golden Knights,True
+owner-2,Tampa Bay Lightning at Vegas Golden Knights,2026-10-21T02:45:00.000Z,added,US - NHL TEAMS - TAMPA BAY LIGHTNING,teamChannel,Lightning,True
+owner-2,Tampa Bay Lightning at Vegas Golden Knights,2026-10-21T02:45:00.000Z,removed,US - ESPN HD ◉,guide,Tampa Bay Lightning at Vegas Golden Knights,True
+owner-2,Tampa Bay Lightning at Vegas Golden Knights,2026-10-21T02:45:00.000Z,removed,LAT - ESPN HD,guide,Tampa Bay Lightning at Vegas Golden Knights,True
+owner-2,Minnesota Timberwolves at Miami Heat,2026-10-21T23:30:00.000Z,added,US - ESPN ACC NETWORK HD ◉,guide,Minnesota Timberwolves at Miami Heat,True
+owner-2,Minnesota Timberwolves at Miami Heat,2026-10-21T23:30:00.000Z,added,US - ESPN 1 HD ◉,guide,Minnesota Timberwolves at Miami Heat,True
+owner-2,Minnesota Timberwolves at Miami Heat,2026-10-21T23:30:00.000Z,added,US - ESPN SEC NETWORK HD ◉,guide,Minnesota Timberwolves at Miami Heat,True
+owner-2,Minnesota Timberwolves at Miami Heat,2026-10-21T23:30:00.000Z,removed,CA - TSN 5 FHD ◉,guide,Minnesota Timberwolves vs. Miami Heat,True
+owner-2,Minnesota Timberwolves at Miami Heat,2026-10-21T23:30:00.000Z,removed,CA - TSN 5 SD,guide,Minnesota Timberwolves vs. Miami Heat,True
+owner-2,Minnesota Timberwolves at Miami Heat,2026-10-21T23:30:00.000Z,removed,US - ESPN HD ◉,guide,Minnesota Timberwolves at Miami Heat,True
+owner-2,Chicago Bulls at Toronto Raptors,2026-10-21T23:30:00.000Z,added,CA - SPORTSNET PACIFIC HD ◉,guide,Chicago Bulls vs. Toronto Raptors,True
+owner-2,Chicago Bulls at Toronto Raptors,2026-10-21T23:30:00.000Z,added,US - CHICAGO SPORTS NETWORK HD,guide,Chicago Bulls at Toronto Raptors,True
+owner-2,Chicago Bulls at Toronto Raptors,2026-10-21T23:30:00.000Z,added,VIP - SPORTSNET ONE 4K,guide,Chicago Bulls vs. Toronto Raptors,True
+owner-2,Chicago Bulls at Toronto Raptors,2026-10-21T23:30:00.000Z,removed,CA - SPORTSNET EAST HD ◉,guide,Chicago Bulls vs. Toronto Raptors,True
+owner-2,Chicago Bulls at Toronto Raptors,2026-10-21T23:30:00.000Z,removed,CA - SPORTSNET ONE HD  ◉,guide,Chicago Bulls vs. Toronto Raptors,True
+owner-2,Chicago Bulls at Toronto Raptors,2026-10-21T23:30:00.000Z,removed,CA - SPORTSNET ONTARIO HD ◉,guide,Chicago Bulls vs. Toronto Raptors,True
+owner-2,Florida Panthers at Ottawa Senators,2026-10-21T23:30:00.000Z,added,US - SCRIPPS SPORTS FHD,network,Scripps Sports,True
+owner-2,Florida Panthers at Ottawa Senators,2026-10-21T23:30:00.000Z,added,PT - SPORT TV 3 HD,guide,NHL - Ottawa Senators x Florida Panthers (Direto),True
+owner-2,Florida Panthers at Ottawa Senators,2026-10-21T23:30:00.000Z,removed,US - NHL TEAMS - FLORIDA PANTHERS ,name,Panthers,True
+owner-2,Florida Panthers at Ottawa Senators,2026-10-21T23:30:00.000Z,removed,US - NHL TEAMS - OTTAWA SENATORS ,name,Senators,True
+owner-2,Golden State Warriors at Los Angeles Lakers,2026-10-22T02:00:00.000Z,added,US - ESPN ACC NETWORK HD ◉,guide,Golden State Warriors at Los Angeles Lakers,True
+owner-2,Golden State Warriors at Los Angeles Lakers,2026-10-22T02:00:00.000Z,added,US - ESPN SEC NETWORK HD ◉,guide,Golden State Warriors at Los Angeles Lakers,True
+owner-2,Golden State Warriors at Los Angeles Lakers,2026-10-22T02:00:00.000Z,removed,CA - SPORTSNET ONE HD  ◉,guide,Golden State Warriors vs. Los Angeles Lakers,True
+owner-2,Golden State Warriors at Los Angeles Lakers,2026-10-22T02:00:00.000Z,removed,US - ESPN HD ◉,guide,Golden State Warriors at Los Angeles Lakers,True
+owner-2,Minnesota Wild at Calgary Flames,2026-10-23T01:00:00.000Z,removed,US - ESPN PLUS 168 : NHL – COLUMBUS BLUE JACKETS @ MINNESOTA WILD / CAROLINA HURRICANES @ CALGARY FLAMES OCT 18 – 7:30 PM ET / OCT 19 – 12:30 AM UK,name,Flames,False
+owner-2,Carolina Hurricanes at Edmonton Oilers,2026-10-23T01:00:00.000Z,removed,US - ESPN PLUS 168 : NHL – COLUMBUS BLUE JACKETS @ MINNESOTA WILD / CAROLINA HURRICANES @ CALGARY FLAMES OCT 18 – 7:30 PM ET / OCT 19 – 12:30 AM UK,name,Hurricanes,False
+owner-2,Nottingham Forest at Ipswich Town,2026-10-23T19:00:00.000Z,added,US - USA NETWORK EAST HD ◉,network,USA Net,True
+owner-2,Chicago Bulls at Milwaukee Bucks,2026-10-23T20:00:00.000Z,removed,US - NBA GAME 02 : WASHINGTON WIZARDS VS MILWAUKEE BUCKS OCT 21 – 7:00 PM ET / OCT 22 – 12:00 AM UK,name,Bucks,False
+owner-2,Chicago Bulls at Milwaukee Bucks,2026-10-23T20:00:00.000Z,removed,US - NBA GAME 05 : TORONTO RAPTORS VS CHICAGO BULLS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Bulls,False
+owner-2,Atlanta Hawks at Charlotte Hornets,2026-10-23T23:00:00.000Z,removed,US - NBA GAME 01 : ORLANDO MAGIC VS ATLANTA HAWKS OCT 21 – 7:00 PM ET / OCT 22 – 12:00 AM UK,name,Hawks,False
+owner-2,Atlanta Hawks at Charlotte Hornets,2026-10-23T23:00:00.000Z,removed,US - NBA GAME 04 : BROOKLYN NETS VS CHARLOTTE HORNETS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Hornets,False
+owner-2,Dallas Mavericks at Indiana Pacers,2026-10-23T23:00:00.000Z,removed,US - NBA GAME 07 : NEW ORLEANS PELICANS VS INDIANA PACERS OCT 21 – 8:00 PM ET / OCT 22 – 1:00 AM UK,name,Pacers,False
+owner-2,Dallas Mavericks at Indiana Pacers,2026-10-23T23:00:00.000Z,removed,US - NBA GAME 08 : HOUSTON ROCKETS VS DALLAS MAVERICKS OCT 21 – 8:30 PM ET / OCT 22 – 1:30 AM UK,name,Mavericks,False
+owner-2,Minnesota Timberwolves at Orlando Magic,2026-10-23T23:00:00.000Z,removed,US - NBA GAME 01 : ORLANDO MAGIC VS ATLANTA HAWKS OCT 21 – 7:00 PM ET / OCT 22 – 12:00 AM UK,name,Magic,False
+owner-2,Minnesota Timberwolves at Orlando Magic,2026-10-23T23:00:00.000Z,removed,US - NBA GAME 03 : MIAMI HEAT VS MINNESOTA TIMBERWOLVES OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Timberwolves,False
+owner-2,Toronto Raptors at Washington Wizards,2026-10-23T23:00:00.000Z,removed,US - NBA GAME 02 : WASHINGTON WIZARDS VS MILWAUKEE BUCKS OCT 21 – 7:00 PM ET / OCT 22 – 12:00 AM UK,name,Wizards,False
+owner-2,Toronto Raptors at Washington Wizards,2026-10-23T23:00:00.000Z,removed,US - NBA GAME 05 : TORONTO RAPTORS VS CHICAGO BULLS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Raptors,False
+owner-2,Tampa Bay Rays at Milwaukee Brewers,2026-10-24T00:00:00.000Z,removed,US - MLB GAME 01 : CLEVELAND GUARDIANS @ TAMPA BAY RAYS OCT 19 – 8:08 PM ET / OCT 20 – 1:08 AM UK,name,Rays,False
+owner-2,Detroit Pistons at Miami Heat,2026-10-24T00:00:00.000Z,removed,US - NBA GAME 03 : MIAMI HEAT VS MINNESOTA TIMBERWOLVES OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Heat,False
+owner-2,Montreal Canadiens at Chicago Blackhawks,2026-10-24T00:00:00.000Z,added,US - NHL NETWORK HD,network,NHL Net,True
+owner-2,Houston Rockets at San Antonio Spurs,2026-10-24T01:30:00.000Z,removed,US - NBA GAME 08 : HOUSTON ROCKETS VS DALLAS MAVERICKS OCT 21 – 8:30 PM ET / OCT 22 – 1:30 AM UK,name,Rockets,False
+owner-2,New Orleans Pelicans at Utah Jazz,2026-10-24T01:30:00.000Z,removed,US - NBA GAME 06 : MEMPHIS GRIZZLIES VS UTAH JAZZ OCT 21 – 8:00 PM ET / OCT 22 – 1:00 AM UK,name,Jazz,False
+owner-2,New Orleans Pelicans at Utah Jazz,2026-10-24T01:30:00.000Z,removed,US - NBA GAME 07 : NEW ORLEANS PELICANS VS INDIANA PACERS OCT 21 – 8:00 PM ET / OCT 22 – 1:00 AM UK,name,Pelicans,False
+owner-2,Memphis Grizzlies at Golden State Warriors,2026-10-24T02:00:00.000Z,removed,US - NBA GAME 06 : MEMPHIS GRIZZLIES VS UTAH JAZZ OCT 21 – 8:00 PM ET / OCT 22 – 1:00 AM UK,name,Grizzlies,False
+owner-2,Memphis Grizzlies at Golden State Warriors,2026-10-24T02:00:00.000Z,removed,US - NBA GAME 09 : LOS ANGELES LAKERS VS GOLDEN STATE WARRIORS OCT 21 – 10:00 PM ET / OCT 22 – 3:00 AM UK,name,Warriors,False
+owner-2,LA Clippers at Los Angeles Lakers,2026-10-24T02:00:00.000Z,removed,US - NBA GAME 09 : LOS ANGELES LAKERS VS GOLDEN STATE WARRIORS OCT 21 – 10:00 PM ET / OCT 22 – 3:00 AM UK,name,Lakers,False
+owner-2,LA Clippers at Los Angeles Lakers,2026-10-24T02:00:00.000Z,removed,US - NBA GAME 11 : LA CLIPPERS VS SACRAMENTO KINGS OCT 21 – 10:30 PM ET / OCT 22 – 3:30 AM UK,name,Clippers,False
+owner-2,Portland Trail Blazers at Sacramento Kings,2026-10-24T02:00:00.000Z,removed,US - NBA GAME 10 : PORTLAND TRAIL BLAZERS VS PHOENIX SUNS OCT 21 – 10:00 PM ET / OCT 22 – 3:00 AM UK,name,Trail Blazers,False
+owner-2,Portland Trail Blazers at Sacramento Kings,2026-10-24T02:00:00.000Z,removed,US - NBA GAME 11 : LA CLIPPERS VS SACRAMENTO KINGS OCT 21 – 10:30 PM ET / OCT 22 – 3:30 AM UK,name,Kings,False
+owner-2,Manchester City at Aston Villa,2026-10-24T11:30:00.000Z,added,US - USA NETWORK EAST HD ◉,network,USA Net,True
+owner-2,Everton at Arsenal,2026-10-24T14:00:00.000Z,added,US - USA NETWORK EAST HD ◉,network,USA Net,True
+owner-2,Anaheim Ducks at Philadelphia Flyers,2026-10-24T17:00:00.000Z,added,US - NBC SPORTS PHILADELPHIA HD,network,NBC Sports Phil,True
+owner-2,Anaheim Ducks at Philadelphia Flyers,2026-10-24T17:00:00.000Z,added,US - NHL NETWORK HD,network,NHL Net,True
+owner-2,Anaheim Ducks at Philadelphia Flyers,2026-10-24T17:00:00.000Z,removed,CA - NHL GAME 01 : PHILADELPHIA FLYERS VS BUFFALO SABRES OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Flyers,False
+owner-2,Anaheim Ducks at Philadelphia Flyers,2026-10-24T17:00:00.000Z,removed,US - NHL GAME 01 : PHILADELPHIA FLYERS VS BUFFALO SABRES OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Flyers,False
+owner-2,Miami Heat at Charlotte Hornets,2026-10-24T22:00:00.000Z,removed,US - NBA GAME 03 : MIAMI HEAT VS MINNESOTA TIMBERWOLVES OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Heat,False
+owner-2,Miami Heat at Charlotte Hornets,2026-10-24T22:00:00.000Z,removed,US - NBA GAME 04 : BROOKLYN NETS VS CHARLOTTE HORNETS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Hornets,False
+owner-2,New York Rangers at Ottawa Senators,2026-10-24T23:00:00.000Z,added,US - NHL NETWORK HD,network,NHL Net,True
+owner-2,New York Rangers at Ottawa Senators,2026-10-24T23:00:00.000Z,removed,CA - NHL GAME 02 : FLORIDA PANTHERS VS OTTAWA SENATORS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Senators,False
+owner-2,New York Rangers at Ottawa Senators,2026-10-24T23:00:00.000Z,removed,US - NHL GAME 02 : FLORIDA PANTHERS VS OTTAWA SENATORS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Senators,False
+owner-2,Buffalo Sabres at Washington Capitals,2026-10-24T23:00:00.000Z,removed,CA - NHL GAME 01 : PHILADELPHIA FLYERS VS BUFFALO SABRES OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Sabres,False
+owner-2,Buffalo Sabres at Washington Capitals,2026-10-24T23:00:00.000Z,removed,US - NHL GAME 01 : PHILADELPHIA FLYERS VS BUFFALO SABRES OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Sabres,False
+owner-2,Vegas Golden Knights at Columbus Blue Jackets,2026-10-24T23:00:00.000Z,removed,US - ESPN PLUS 168 : NHL – COLUMBUS BLUE JACKETS @ MINNESOTA WILD / CAROLINA HURRICANES @ CALGARY FLAMES OCT 18 – 7:30 PM ET / OCT 19 – 12:30 AM UK,name,Blue Jackets,False
+owner-2,Carolina Hurricanes at St. Louis Blues,2026-10-24T23:00:00.000Z,removed,US - ESPN PLUS 168 : NHL – COLUMBUS BLUE JACKETS @ MINNESOTA WILD / CAROLINA HURRICANES @ CALGARY FLAMES OCT 18 – 7:30 PM ET / OCT 19 – 12:30 AM UK,name,Hurricanes,False
+owner-2,Brooklyn Nets at Cleveland Cavaliers,2026-10-24T23:30:00.000Z,removed,US - NBA GAME 04 : BROOKLYN NETS VS CHARLOTTE HORNETS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Nets,False
+owner-2,Milwaukee Bucks at Philadelphia 76ers,2026-10-24T23:30:00.000Z,removed,US - NBA GAME 02 : WASHINGTON WIZARDS VS MILWAUKEE BUCKS OCT 21 – 7:00 PM ET / OCT 22 – 12:00 AM UK,name,Bucks,False
+owner-2,Tampa Bay Rays at Milwaukee Brewers,2026-10-25T00:00:00.000Z,removed,US - MLB GAME 01 : CLEVELAND GUARDIANS @ TAMPA BAY RAYS OCT 19 – 8:08 PM ET / OCT 20 – 1:08 AM UK,name,Rays,False
+owner-2,Washington Wizards at Chicago Bulls,2026-10-25T00:00:00.000Z,removed,US - NBA GAME 02 : WASHINGTON WIZARDS VS MILWAUKEE BUCKS OCT 21 – 7:00 PM ET / OCT 22 – 12:00 AM UK,name,Wizards,False
+owner-2,Washington Wizards at Chicago Bulls,2026-10-25T00:00:00.000Z,removed,US - NBA GAME 05 : TORONTO RAPTORS VS CHICAGO BULLS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Bulls,False
+owner-2,San Antonio Spurs at Dallas Mavericks,2026-10-25T00:00:00.000Z,removed,US - NBA GAME 08 : HOUSTON ROCKETS VS DALLAS MAVERICKS OCT 21 – 8:30 PM ET / OCT 22 – 1:30 AM UK,name,Mavericks,False
+owner-2,Houston Rockets at Atlanta Hawks,2026-10-25T00:30:00.000Z,removed,US - NBA GAME 01 : ORLANDO MAGIC VS ATLANTA HAWKS OCT 21 – 7:00 PM ET / OCT 22 – 12:00 AM UK,name,Hawks,False
+owner-2,Houston Rockets at Atlanta Hawks,2026-10-25T00:30:00.000Z,removed,US - NBA GAME 08 : HOUSTON ROCKETS VS DALLAS MAVERICKS OCT 21 – 8:30 PM ET / OCT 22 – 1:30 AM UK,name,Rockets,False
+owner-2,New Orleans Pelicans at Denver Nuggets,2026-10-25T01:00:00.000Z,removed,US - NBA GAME 07 : NEW ORLEANS PELICANS VS INDIANA PACERS OCT 21 – 8:00 PM ET / OCT 22 – 1:00 AM UK,name,Pelicans,False
+owner-2,Golden State Warriors at Phoenix Suns,2026-10-25T02:00:00.000Z,removed,US - NBA GAME 09 : LOS ANGELES LAKERS VS GOLDEN STATE WARRIORS OCT 21 – 10:00 PM ET / OCT 22 – 3:00 AM UK,name,Warriors,False
+owner-2,Golden State Warriors at Phoenix Suns,2026-10-25T02:00:00.000Z,removed,US - NBA GAME 10 : PORTLAND TRAIL BLAZERS VS PHOENIX SUNS OCT 21 – 10:00 PM ET / OCT 22 – 3:00 AM UK,name,Suns,False
+owner-2,Detroit Red Wings at Calgary Flames,2026-10-25T02:00:00.000Z,removed,US - ESPN PLUS 168 : NHL – COLUMBUS BLUE JACKETS @ MINNESOTA WILD / CAROLINA HURRICANES @ CALGARY FLAMES OCT 18 – 7:30 PM ET / OCT 19 – 12:30 AM UK,name,Flames,False
+owner-2,Minnesota Wild at Seattle Kraken,2026-10-25T02:00:00.000Z,removed,US - ESPN PLUS 168 : NHL – COLUMBUS BLUE JACKETS @ MINNESOTA WILD / CAROLINA HURRICANES @ CALGARY FLAMES OCT 18 – 7:30 PM ET / OCT 19 – 12:30 AM UK,name,Wild,False
+owner-2,Pittsburgh Steelers at New Orleans Saints,2026-10-25T13:30:00.000Z,added,US - NFL NETWORK HD ◉,network,NFL Net,True
+owner-2,Newcastle United at Crystal Palace,2026-10-25T14:00:00.000Z,added,US - USA NETWORK EAST HD ◉,network,USA Net,True
+owner-2,Leeds United at Sunderland,2026-10-25T16:30:00.000Z,added,US - USA NETWORK EAST HD ◉,network,USA Net,True
+owner-2,Florida Panthers at Chicago Blackhawks,2026-10-25T19:00:00.000Z,removed,CA - NHL GAME 02 : FLORIDA PANTHERS VS OTTAWA SENATORS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Panthers,False
+owner-2,Florida Panthers at Chicago Blackhawks,2026-10-25T19:00:00.000Z,removed,US - NHL GAME 02 : FLORIDA PANTHERS VS OTTAWA SENATORS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Panthers,False
+owner-2,Green Bay Packers at Detroit Lions,2026-10-25T20:25:00.000Z,removed,US - ESPN PLUS 175 : DALLAS COWBOYS @ GREEN BAY PACKERS – NFL WEEK 6 OCT 19 – 2:30 AM ET / 7:30 AM UK,name,Packers,False
+owner-2,Los Angeles Lakers at Utah Jazz,2026-10-25T21:00:00.000Z,removed,US - NBA GAME 06 : MEMPHIS GRIZZLIES VS UTAH JAZZ OCT 21 – 8:00 PM ET / OCT 22 – 1:00 AM UK,name,Jazz,False
+owner-2,Los Angeles Lakers at Utah Jazz,2026-10-25T21:00:00.000Z,removed,US - NBA GAME 09 : LOS ANGELES LAKERS VS GOLDEN STATE WARRIORS OCT 21 – 10:00 PM ET / OCT 22 – 3:00 AM UK,name,Lakers,False
+owner-2,Indiana Pacers at Brooklyn Nets,2026-10-25T22:00:00.000Z,removed,US - NBA GAME 04 : BROOKLYN NETS VS CHARLOTTE HORNETS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Nets,False
+owner-2,Indiana Pacers at Brooklyn Nets,2026-10-25T22:00:00.000Z,removed,US - NBA GAME 07 : NEW ORLEANS PELICANS VS INDIANA PACERS OCT 21 – 8:00 PM ET / OCT 22 – 1:00 AM UK,name,Pacers,False
+owner-2,Orlando Magic at New York Knicks,2026-10-25T23:00:00.000Z,removed,US - NBA GAME 01 : ORLANDO MAGIC VS ATLANTA HAWKS OCT 21 – 7:00 PM ET / OCT 22 – 12:00 AM UK,name,Magic,False
+owner-2,Toronto Raptors at Minnesota Timberwolves,2026-10-25T23:00:00.000Z,removed,US - NBA GAME 03 : MIAMI HEAT VS MINNESOTA TIMBERWOLVES OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Timberwolves,False
+owner-2,Toronto Raptors at Minnesota Timberwolves,2026-10-25T23:00:00.000Z,removed,US - NBA GAME 05 : TORONTO RAPTORS VS CHICAGO BULLS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Raptors,False
+owner-2,LA Clippers at Oklahoma City Thunder,2026-10-25T23:00:00.000Z,removed,US - NBA GAME 11 : LA CLIPPERS VS SACRAMENTO KINGS OCT 21 – 10:30 PM ET / OCT 22 – 3:30 AM UK,name,Clippers,False
+owner-2,Memphis Grizzlies at Sacramento Kings,2026-10-26T01:00:00.000Z,removed,US - NBA GAME 06 : MEMPHIS GRIZZLIES VS UTAH JAZZ OCT 21 – 8:00 PM ET / OCT 22 – 1:00 AM UK,name,Grizzlies,False
+owner-2,Memphis Grizzlies at Sacramento Kings,2026-10-26T01:00:00.000Z,removed,US - NBA GAME 11 : LA CLIPPERS VS SACRAMENTO KINGS OCT 21 – 10:30 PM ET / OCT 22 – 3:30 AM UK,name,Kings,False
+owner-2,Minnesota Wild at Vancouver Canucks,2026-10-26T02:00:00.000Z,removed,US - ESPN PLUS 168 : NHL – COLUMBUS BLUE JACKETS @ MINNESOTA WILD / CAROLINA HURRICANES @ CALGARY FLAMES OCT 18 – 7:30 PM ET / OCT 19 – 12:30 AM UK,name,Wild,False
+owner-2-visible,Coventry City at Tottenham Hotspur,2026-10-19T19:00:00.000Z,added,US - USA NETWORK EAST HD ◉,network,USA Net,True
+owner-2-visible,Colorado Avalanche at Philadelphia Flyers,2026-10-19T23:00:00.000Z,added,US - NBC SPORTS PHILADELPHIA HD,network,NBC Sports Phil,True
+owner-2-visible,Colorado Avalanche at Philadelphia Flyers,2026-10-19T23:00:00.000Z,removed,US - NHL GAME 01 : PHILADELPHIA FLYERS VS BUFFALO SABRES OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Flyers,False
+owner-2-visible,Boston Celtics at Detroit Pistons,2026-10-20T19:00:00.000Z,added,US - NBC 2 HOUSTON TX HD ◉,guide,Boston Celtics at Detroit Pistons,True
+owner-2-visible,Boston Celtics at Detroit Pistons,2026-10-20T19:00:00.000Z,removed,CA - SPORTSNET EAST HD ◉,guide,Boston Celtics vs. Detroit Pistons,True
+owner-2-visible,PSV Eindhoven at FC Porto,2026-10-20T19:00:00.000Z,added,US - CBS SPORTS NETWORK HD ◉,network,CBSSN,True
+owner-2-visible,San Jose Sharks at Montreal Canadiens,2026-10-20T23:00:00.000Z,added,CAFR - RDS HD ◉ [BK],guide,San Jose Sharks vs. Montréal Canadiens,True
+owner-2-visible,San Jose Sharks at Montreal Canadiens,2026-10-20T23:00:00.000Z,added,US - NHL TEAMS - SAN JOSE SHARKS,teamChannel,Sharks,True
+owner-2-visible,San Jose Sharks at Montreal Canadiens,2026-10-20T23:00:00.000Z,added,US - NHL TEAMS - MONTREAL CANADIENS ,teamChannel,Canadiens,True
+owner-2-visible,San Jose Sharks at Montreal Canadiens,2026-10-20T23:00:00.000Z,removed,CAFR - RDS FHD ◉,guide,San Jose Sharks vs. Montréal Canadiens,True
+owner-2-visible,San Jose Sharks at Montreal Canadiens,2026-10-20T23:00:00.000Z,removed,CA - TSN 2 FHD ◉,guide,San Jose Sharks vs. Montréal Canadiens,True
+owner-2-visible,San Jose Sharks at Montreal Canadiens,2026-10-20T23:00:00.000Z,removed,CA - TSN 2 SD,guide,San Jose Sharks vs. Montréal Canadiens,True
+owner-2-visible,Toronto Maple Leafs at Columbus Blue Jackets,2026-10-20T23:00:00.000Z,added,US - NHL TEAMS - COLUMBUS BLUE JACKETS ,teamChannel,Blue Jackets,True
+owner-2-visible,Toronto Maple Leafs at Columbus Blue Jackets,2026-10-20T23:00:00.000Z,removed,US - NHL TEAMS - TORONTO MAPLE LEAFS ,name,Maple Leafs,True
+owner-2-visible,Minnesota Wild at Edmonton Oilers,2026-10-21T01:00:00.000Z,removed,US - ESPN PLUS 168 : NHL – COLUMBUS BLUE JACKETS @ MINNESOTA WILD / CAROLINA HURRICANES @ CALGARY FLAMES OCT 18 – 7:30 PM ET / OCT 19 – 12:30 AM UK,name,Wild,False
+owner-2-visible,Carolina Hurricanes at Vancouver Canucks,2026-10-21T02:00:00.000Z,added,US - NHL TEAMS - CAROLINA HURRICANES ,teamChannel,Hurricanes,True
+owner-2-visible,Carolina Hurricanes at Vancouver Canucks,2026-10-21T02:00:00.000Z,removed,US - NHL TEAMS - VANCOUVER CANUCKS ,name,Canucks,True
+owner-2-visible,Shakhtar Donetsk at Internazionale,2026-10-21T19:00:00.000Z,added,US - CBS SPORTS NETWORK HD ◉,network,CBSSN,True
+owner-2-visible,Minnesota Timberwolves at Miami Heat,2026-10-21T23:30:00.000Z,added,US - ESPN ACC NETWORK HD ◉,guide,Minnesota Timberwolves at Miami Heat,True
+owner-2-visible,Minnesota Timberwolves at Miami Heat,2026-10-21T23:30:00.000Z,added,US - ESPN 1 HD ◉,guide,Minnesota Timberwolves at Miami Heat,True
+owner-2-visible,Minnesota Timberwolves at Miami Heat,2026-10-21T23:30:00.000Z,added,US - ESPN SEC NETWORK HD ◉,guide,Minnesota Timberwolves at Miami Heat,True
+owner-2-visible,Minnesota Timberwolves at Miami Heat,2026-10-21T23:30:00.000Z,removed,CA - TSN 5 FHD ◉,guide,Minnesota Timberwolves vs. Miami Heat,True
+owner-2-visible,Minnesota Timberwolves at Miami Heat,2026-10-21T23:30:00.000Z,removed,CA - TSN 5 SD,guide,Minnesota Timberwolves vs. Miami Heat,True
+owner-2-visible,Minnesota Timberwolves at Miami Heat,2026-10-21T23:30:00.000Z,removed,US - ESPN HD ◉,guide,Minnesota Timberwolves at Miami Heat,True
+owner-2-visible,Chicago Bulls at Toronto Raptors,2026-10-21T23:30:00.000Z,added,CA - SPORTSNET PACIFIC HD ◉,guide,Chicago Bulls vs. Toronto Raptors,True
+owner-2-visible,Chicago Bulls at Toronto Raptors,2026-10-21T23:30:00.000Z,added,US - CHICAGO SPORTS NETWORK HD,guide,Chicago Bulls at Toronto Raptors,True
+owner-2-visible,Chicago Bulls at Toronto Raptors,2026-10-21T23:30:00.000Z,added,US - NBA TEAMS - CHICAGO BULLS FHD,teamChannel,Bulls,True
+owner-2-visible,Chicago Bulls at Toronto Raptors,2026-10-21T23:30:00.000Z,removed,CA - SPORTSNET EAST HD ◉,guide,Chicago Bulls vs. Toronto Raptors,True
+owner-2-visible,Chicago Bulls at Toronto Raptors,2026-10-21T23:30:00.000Z,removed,CA - SPORTSNET ONE HD  ◉,guide,Chicago Bulls vs. Toronto Raptors,True
+owner-2-visible,Chicago Bulls at Toronto Raptors,2026-10-21T23:30:00.000Z,removed,CA - SPORTSNET ONTARIO HD ◉,guide,Chicago Bulls vs. Toronto Raptors,True
+owner-2-visible,Golden State Warriors at Los Angeles Lakers,2026-10-22T02:00:00.000Z,added,US - ESPN ACC NETWORK HD ◉,guide,Golden State Warriors at Los Angeles Lakers,True
+owner-2-visible,Golden State Warriors at Los Angeles Lakers,2026-10-22T02:00:00.000Z,added,US - ESPN SEC NETWORK HD ◉,guide,Golden State Warriors at Los Angeles Lakers,True
+owner-2-visible,Golden State Warriors at Los Angeles Lakers,2026-10-22T02:00:00.000Z,removed,CA - SPORTSNET ONE HD  ◉,guide,Golden State Warriors vs. Los Angeles Lakers,True
+owner-2-visible,Golden State Warriors at Los Angeles Lakers,2026-10-22T02:00:00.000Z,removed,US - ESPN HD ◉,guide,Golden State Warriors at Los Angeles Lakers,True
+owner-2-visible,Minnesota Wild at Calgary Flames,2026-10-23T01:00:00.000Z,removed,US - ESPN PLUS 168 : NHL – COLUMBUS BLUE JACKETS @ MINNESOTA WILD / CAROLINA HURRICANES @ CALGARY FLAMES OCT 18 – 7:30 PM ET / OCT 19 – 12:30 AM UK,name,Flames,False
+owner-2-visible,Carolina Hurricanes at Edmonton Oilers,2026-10-23T01:00:00.000Z,removed,US - ESPN PLUS 168 : NHL – COLUMBUS BLUE JACKETS @ MINNESOTA WILD / CAROLINA HURRICANES @ CALGARY FLAMES OCT 18 – 7:30 PM ET / OCT 19 – 12:30 AM UK,name,Hurricanes,False
+owner-2-visible,Nottingham Forest at Ipswich Town,2026-10-23T19:00:00.000Z,added,US - USA NETWORK EAST HD ◉,network,USA Net,True
+owner-2-visible,Chicago Bulls at Milwaukee Bucks,2026-10-23T20:00:00.000Z,removed,US - NBA GAME 02 : WASHINGTON WIZARDS VS MILWAUKEE BUCKS OCT 21 – 7:00 PM ET / OCT 22 – 12:00 AM UK,name,Bucks,False
+owner-2-visible,Chicago Bulls at Milwaukee Bucks,2026-10-23T20:00:00.000Z,removed,US - NBA GAME 05 : TORONTO RAPTORS VS CHICAGO BULLS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Bulls,False
+owner-2-visible,Atlanta Hawks at Charlotte Hornets,2026-10-23T23:00:00.000Z,removed,US - NBA GAME 01 : ORLANDO MAGIC VS ATLANTA HAWKS OCT 21 – 7:00 PM ET / OCT 22 – 12:00 AM UK,name,Hawks,False
+owner-2-visible,Atlanta Hawks at Charlotte Hornets,2026-10-23T23:00:00.000Z,removed,US - NBA GAME 04 : BROOKLYN NETS VS CHARLOTTE HORNETS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Hornets,False
+owner-2-visible,Dallas Mavericks at Indiana Pacers,2026-10-23T23:00:00.000Z,removed,US - NBA GAME 07 : NEW ORLEANS PELICANS VS INDIANA PACERS OCT 21 – 8:00 PM ET / OCT 22 – 1:00 AM UK,name,Pacers,False
+owner-2-visible,Dallas Mavericks at Indiana Pacers,2026-10-23T23:00:00.000Z,removed,US - NBA GAME 08 : HOUSTON ROCKETS VS DALLAS MAVERICKS OCT 21 – 8:30 PM ET / OCT 22 – 1:30 AM UK,name,Mavericks,False
+owner-2-visible,Minnesota Timberwolves at Orlando Magic,2026-10-23T23:00:00.000Z,removed,US - NBA GAME 01 : ORLANDO MAGIC VS ATLANTA HAWKS OCT 21 – 7:00 PM ET / OCT 22 – 12:00 AM UK,name,Magic,False
+owner-2-visible,Minnesota Timberwolves at Orlando Magic,2026-10-23T23:00:00.000Z,removed,US - NBA GAME 03 : MIAMI HEAT VS MINNESOTA TIMBERWOLVES OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Timberwolves,False
+owner-2-visible,Toronto Raptors at Washington Wizards,2026-10-23T23:00:00.000Z,removed,US - NBA GAME 02 : WASHINGTON WIZARDS VS MILWAUKEE BUCKS OCT 21 – 7:00 PM ET / OCT 22 – 12:00 AM UK,name,Wizards,False
+owner-2-visible,Toronto Raptors at Washington Wizards,2026-10-23T23:00:00.000Z,removed,US - NBA GAME 05 : TORONTO RAPTORS VS CHICAGO BULLS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Raptors,False
+owner-2-visible,Tampa Bay Rays at Milwaukee Brewers,2026-10-24T00:00:00.000Z,removed,US - MLB GAME 01 : CLEVELAND GUARDIANS @ TAMPA BAY RAYS OCT 19 – 8:08 PM ET / OCT 20 – 1:08 AM UK,name,Rays,False
+owner-2-visible,Detroit Pistons at Miami Heat,2026-10-24T00:00:00.000Z,removed,US - NBA GAME 03 : MIAMI HEAT VS MINNESOTA TIMBERWOLVES OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Heat,False
+owner-2-visible,Montreal Canadiens at Chicago Blackhawks,2026-10-24T00:00:00.000Z,added,US - NHL NETWORK HD,network,NHL Net,True
+owner-2-visible,Houston Rockets at San Antonio Spurs,2026-10-24T01:30:00.000Z,removed,US - NBA GAME 08 : HOUSTON ROCKETS VS DALLAS MAVERICKS OCT 21 – 8:30 PM ET / OCT 22 – 1:30 AM UK,name,Rockets,False
+owner-2-visible,New Orleans Pelicans at Utah Jazz,2026-10-24T01:30:00.000Z,removed,US - NBA GAME 06 : MEMPHIS GRIZZLIES VS UTAH JAZZ OCT 21 – 8:00 PM ET / OCT 22 – 1:00 AM UK,name,Jazz,False
+owner-2-visible,New Orleans Pelicans at Utah Jazz,2026-10-24T01:30:00.000Z,removed,US - NBA GAME 07 : NEW ORLEANS PELICANS VS INDIANA PACERS OCT 21 – 8:00 PM ET / OCT 22 – 1:00 AM UK,name,Pelicans,False
+owner-2-visible,Memphis Grizzlies at Golden State Warriors,2026-10-24T02:00:00.000Z,removed,US - NBA GAME 06 : MEMPHIS GRIZZLIES VS UTAH JAZZ OCT 21 – 8:00 PM ET / OCT 22 – 1:00 AM UK,name,Grizzlies,False
+owner-2-visible,Memphis Grizzlies at Golden State Warriors,2026-10-24T02:00:00.000Z,removed,US - NBA GAME 09 : LOS ANGELES LAKERS VS GOLDEN STATE WARRIORS OCT 21 – 10:00 PM ET / OCT 22 – 3:00 AM UK,name,Warriors,False
+owner-2-visible,LA Clippers at Los Angeles Lakers,2026-10-24T02:00:00.000Z,removed,US - NBA GAME 09 : LOS ANGELES LAKERS VS GOLDEN STATE WARRIORS OCT 21 – 10:00 PM ET / OCT 22 – 3:00 AM UK,name,Lakers,False
+owner-2-visible,LA Clippers at Los Angeles Lakers,2026-10-24T02:00:00.000Z,removed,US - NBA GAME 11 : LA CLIPPERS VS SACRAMENTO KINGS OCT 21 – 10:30 PM ET / OCT 22 – 3:30 AM UK,name,Clippers,False
+owner-2-visible,Portland Trail Blazers at Sacramento Kings,2026-10-24T02:00:00.000Z,removed,US - NBA GAME 10 : PORTLAND TRAIL BLAZERS VS PHOENIX SUNS OCT 21 – 10:00 PM ET / OCT 22 – 3:00 AM UK,name,Trail Blazers,False
+owner-2-visible,Portland Trail Blazers at Sacramento Kings,2026-10-24T02:00:00.000Z,removed,US - NBA GAME 11 : LA CLIPPERS VS SACRAMENTO KINGS OCT 21 – 10:30 PM ET / OCT 22 – 3:30 AM UK,name,Kings,False
+owner-2-visible,Manchester City at Aston Villa,2026-10-24T11:30:00.000Z,added,US - USA NETWORK EAST HD ◉,network,USA Net,True
+owner-2-visible,Everton at Arsenal,2026-10-24T14:00:00.000Z,added,US - USA NETWORK EAST HD ◉,network,USA Net,True
+owner-2-visible,Anaheim Ducks at Philadelphia Flyers,2026-10-24T17:00:00.000Z,added,US - NBC SPORTS PHILADELPHIA HD,network,NBC Sports Phil,True
+owner-2-visible,Anaheim Ducks at Philadelphia Flyers,2026-10-24T17:00:00.000Z,added,US - NHL NETWORK HD,network,NHL Net,True
+owner-2-visible,Anaheim Ducks at Philadelphia Flyers,2026-10-24T17:00:00.000Z,removed,US - NHL GAME 01 : PHILADELPHIA FLYERS VS BUFFALO SABRES OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Flyers,False
+owner-2-visible,Miami Heat at Charlotte Hornets,2026-10-24T22:00:00.000Z,removed,US - NBA GAME 03 : MIAMI HEAT VS MINNESOTA TIMBERWOLVES OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Heat,False
+owner-2-visible,Miami Heat at Charlotte Hornets,2026-10-24T22:00:00.000Z,removed,US - NBA GAME 04 : BROOKLYN NETS VS CHARLOTTE HORNETS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Hornets,False
+owner-2-visible,New York Rangers at Ottawa Senators,2026-10-24T23:00:00.000Z,added,US - NHL NETWORK HD,network,NHL Net,True
+owner-2-visible,New York Rangers at Ottawa Senators,2026-10-24T23:00:00.000Z,removed,US - NHL GAME 02 : FLORIDA PANTHERS VS OTTAWA SENATORS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Senators,False
+owner-2-visible,Buffalo Sabres at Washington Capitals,2026-10-24T23:00:00.000Z,removed,US - NHL GAME 01 : PHILADELPHIA FLYERS VS BUFFALO SABRES OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Sabres,False
+owner-2-visible,Vegas Golden Knights at Columbus Blue Jackets,2026-10-24T23:00:00.000Z,removed,US - ESPN PLUS 168 : NHL – COLUMBUS BLUE JACKETS @ MINNESOTA WILD / CAROLINA HURRICANES @ CALGARY FLAMES OCT 18 – 7:30 PM ET / OCT 19 – 12:30 AM UK,name,Blue Jackets,False
+owner-2-visible,Carolina Hurricanes at St. Louis Blues,2026-10-24T23:00:00.000Z,removed,US - ESPN PLUS 168 : NHL – COLUMBUS BLUE JACKETS @ MINNESOTA WILD / CAROLINA HURRICANES @ CALGARY FLAMES OCT 18 – 7:30 PM ET / OCT 19 – 12:30 AM UK,name,Hurricanes,False
+owner-2-visible,Brooklyn Nets at Cleveland Cavaliers,2026-10-24T23:30:00.000Z,removed,US - NBA GAME 04 : BROOKLYN NETS VS CHARLOTTE HORNETS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Nets,False
+owner-2-visible,Milwaukee Bucks at Philadelphia 76ers,2026-10-24T23:30:00.000Z,removed,US - NBA GAME 02 : WASHINGTON WIZARDS VS MILWAUKEE BUCKS OCT 21 – 7:00 PM ET / OCT 22 – 12:00 AM UK,name,Bucks,False
+owner-2-visible,Tampa Bay Rays at Milwaukee Brewers,2026-10-25T00:00:00.000Z,removed,US - MLB GAME 01 : CLEVELAND GUARDIANS @ TAMPA BAY RAYS OCT 19 – 8:08 PM ET / OCT 20 – 1:08 AM UK,name,Rays,False
+owner-2-visible,Washington Wizards at Chicago Bulls,2026-10-25T00:00:00.000Z,removed,US - NBA GAME 02 : WASHINGTON WIZARDS VS MILWAUKEE BUCKS OCT 21 – 7:00 PM ET / OCT 22 – 12:00 AM UK,name,Wizards,False
+owner-2-visible,Washington Wizards at Chicago Bulls,2026-10-25T00:00:00.000Z,removed,US - NBA GAME 05 : TORONTO RAPTORS VS CHICAGO BULLS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Bulls,False
+owner-2-visible,San Antonio Spurs at Dallas Mavericks,2026-10-25T00:00:00.000Z,removed,US - NBA GAME 08 : HOUSTON ROCKETS VS DALLAS MAVERICKS OCT 21 – 8:30 PM ET / OCT 22 – 1:30 AM UK,name,Mavericks,False
+owner-2-visible,Houston Rockets at Atlanta Hawks,2026-10-25T00:30:00.000Z,removed,US - NBA GAME 01 : ORLANDO MAGIC VS ATLANTA HAWKS OCT 21 – 7:00 PM ET / OCT 22 – 12:00 AM UK,name,Hawks,False
+owner-2-visible,Houston Rockets at Atlanta Hawks,2026-10-25T00:30:00.000Z,removed,US - NBA GAME 08 : HOUSTON ROCKETS VS DALLAS MAVERICKS OCT 21 – 8:30 PM ET / OCT 22 – 1:30 AM UK,name,Rockets,False
+owner-2-visible,New Orleans Pelicans at Denver Nuggets,2026-10-25T01:00:00.000Z,removed,US - NBA GAME 07 : NEW ORLEANS PELICANS VS INDIANA PACERS OCT 21 – 8:00 PM ET / OCT 22 – 1:00 AM UK,name,Pelicans,False
+owner-2-visible,Golden State Warriors at Phoenix Suns,2026-10-25T02:00:00.000Z,removed,US - NBA GAME 09 : LOS ANGELES LAKERS VS GOLDEN STATE WARRIORS OCT 21 – 10:00 PM ET / OCT 22 – 3:00 AM UK,name,Warriors,False
+owner-2-visible,Golden State Warriors at Phoenix Suns,2026-10-25T02:00:00.000Z,removed,US - NBA GAME 10 : PORTLAND TRAIL BLAZERS VS PHOENIX SUNS OCT 21 – 10:00 PM ET / OCT 22 – 3:00 AM UK,name,Suns,False
+owner-2-visible,Detroit Red Wings at Calgary Flames,2026-10-25T02:00:00.000Z,removed,US - ESPN PLUS 168 : NHL – COLUMBUS BLUE JACKETS @ MINNESOTA WILD / CAROLINA HURRICANES @ CALGARY FLAMES OCT 18 – 7:30 PM ET / OCT 19 – 12:30 AM UK,name,Flames,False
+owner-2-visible,Minnesota Wild at Seattle Kraken,2026-10-25T02:00:00.000Z,removed,US - ESPN PLUS 168 : NHL – COLUMBUS BLUE JACKETS @ MINNESOTA WILD / CAROLINA HURRICANES @ CALGARY FLAMES OCT 18 – 7:30 PM ET / OCT 19 – 12:30 AM UK,name,Wild,False
+owner-2-visible,Pittsburgh Steelers at New Orleans Saints,2026-10-25T13:30:00.000Z,added,US - NFL NETWORK HD ◉,network,NFL Net,True
+owner-2-visible,Newcastle United at Crystal Palace,2026-10-25T14:00:00.000Z,added,US - USA NETWORK EAST HD ◉,network,USA Net,True
+owner-2-visible,Leeds United at Sunderland,2026-10-25T16:30:00.000Z,added,US - USA NETWORK EAST HD ◉,network,USA Net,True
+owner-2-visible,Florida Panthers at Chicago Blackhawks,2026-10-25T19:00:00.000Z,removed,US - NHL GAME 02 : FLORIDA PANTHERS VS OTTAWA SENATORS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Panthers,False
+owner-2-visible,Green Bay Packers at Detroit Lions,2026-10-25T20:25:00.000Z,removed,US - ESPN PLUS 175 : DALLAS COWBOYS @ GREEN BAY PACKERS – NFL WEEK 6 OCT 19 – 2:30 AM ET / 7:30 AM UK,name,Packers,False
+owner-2-visible,Los Angeles Lakers at Utah Jazz,2026-10-25T21:00:00.000Z,removed,US - NBA GAME 06 : MEMPHIS GRIZZLIES VS UTAH JAZZ OCT 21 – 8:00 PM ET / OCT 22 – 1:00 AM UK,name,Jazz,False
+owner-2-visible,Los Angeles Lakers at Utah Jazz,2026-10-25T21:00:00.000Z,removed,US - NBA GAME 09 : LOS ANGELES LAKERS VS GOLDEN STATE WARRIORS OCT 21 – 10:00 PM ET / OCT 22 – 3:00 AM UK,name,Lakers,False
+owner-2-visible,Indiana Pacers at Brooklyn Nets,2026-10-25T22:00:00.000Z,removed,US - NBA GAME 04 : BROOKLYN NETS VS CHARLOTTE HORNETS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Nets,False
+owner-2-visible,Indiana Pacers at Brooklyn Nets,2026-10-25T22:00:00.000Z,removed,US - NBA GAME 07 : NEW ORLEANS PELICANS VS INDIANA PACERS OCT 21 – 8:00 PM ET / OCT 22 – 1:00 AM UK,name,Pacers,False
+owner-2-visible,Orlando Magic at New York Knicks,2026-10-25T23:00:00.000Z,removed,US - NBA GAME 01 : ORLANDO MAGIC VS ATLANTA HAWKS OCT 21 – 7:00 PM ET / OCT 22 – 12:00 AM UK,name,Magic,False
+owner-2-visible,Toronto Raptors at Minnesota Timberwolves,2026-10-25T23:00:00.000Z,removed,US - NBA GAME 03 : MIAMI HEAT VS MINNESOTA TIMBERWOLVES OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Timberwolves,False
+owner-2-visible,Toronto Raptors at Minnesota Timberwolves,2026-10-25T23:00:00.000Z,removed,US - NBA GAME 05 : TORONTO RAPTORS VS CHICAGO BULLS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Raptors,False
+owner-2-visible,LA Clippers at Oklahoma City Thunder,2026-10-25T23:00:00.000Z,removed,US - NBA GAME 11 : LA CLIPPERS VS SACRAMENTO KINGS OCT 21 – 10:30 PM ET / OCT 22 – 3:30 AM UK,name,Clippers,False
+owner-2-visible,Memphis Grizzlies at Sacramento Kings,2026-10-26T01:00:00.000Z,removed,US - NBA GAME 06 : MEMPHIS GRIZZLIES VS UTAH JAZZ OCT 21 – 8:00 PM ET / OCT 22 – 1:00 AM UK,name,Grizzlies,False
+owner-2-visible,Memphis Grizzlies at Sacramento Kings,2026-10-26T01:00:00.000Z,removed,US - NBA GAME 11 : LA CLIPPERS VS SACRAMENTO KINGS OCT 21 – 10:30 PM ET / OCT 22 – 3:30 AM UK,name,Kings,False
+owner-2-visible,Minnesota Wild at Vancouver Canucks,2026-10-26T02:00:00.000Z,removed,US - ESPN PLUS 168 : NHL – COLUMBUS BLUE JACKETS @ MINNESOTA WILD / CAROLINA HURRICANES @ CALGARY FLAMES OCT 18 – 7:30 PM ET / OCT 19 – 12:30 AM UK,name,Wild,False
+provided-c,Coventry City at Tottenham Hotspur,2026-10-19T19:00:00.000Z,added,US - USA NETWORK EAST HD ◉,network,USA Net,True
+provided-c,Colorado Avalanche at Philadelphia Flyers,2026-10-19T23:00:00.000Z,added,US - NBC SPORTS PHILADELPHIA HD,network,NBC Sports Phil,True
+provided-c,Colorado Avalanche at Philadelphia Flyers,2026-10-19T23:00:00.000Z,removed,CA - NHL GAME 01 : PHILADELPHIA FLYERS VS BUFFALO SABRES OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Flyers,False
+provided-c,Colorado Avalanche at Philadelphia Flyers,2026-10-19T23:00:00.000Z,removed,US - NHL GAME 01 : PHILADELPHIA FLYERS VS BUFFALO SABRES OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Flyers,False
+provided-c,PSV Eindhoven at FC Porto,2026-10-20T19:00:00.000Z,added,US - CBS SPORTS NETWORK HD ◉,network,CBSSN,True
+provided-c,Toronto Maple Leafs at Columbus Blue Jackets,2026-10-20T23:00:00.000Z,removed,US - ESPN PLUS 168 : NHL – COLUMBUS BLUE JACKETS @ MINNESOTA WILD / CAROLINA HURRICANES @ CALGARY FLAMES OCT 18 – 7:30 PM ET / OCT 19 – 12:30 AM UK,name,Blue Jackets,False
+provided-c,Boston Bruins at Dallas Stars,2026-10-21T00:00:00.000Z,added,SI - ARENA SPORTS 2 HD,guide,"Hokej (M): Stars - B. Bruins, NHL 2026/2027",True
+provided-c,Boston Bruins at Dallas Stars,2026-10-21T00:00:00.000Z,added,US - NHL TEAMS - DALLAS STARS ,teamChannel,Stars,True
+provided-c,Boston Bruins at Dallas Stars,2026-10-21T00:00:00.000Z,removed,US - ESPN HD ◉,guide,Boston Bruins at Dallas Stars,True
+provided-c,Boston Bruins at Dallas Stars,2026-10-21T00:00:00.000Z,removed,LAT - ESPN HD,guide,Boston Bruins at Dallas Stars,True
+provided-c,Minnesota Wild at Edmonton Oilers,2026-10-21T01:00:00.000Z,removed,US - ESPN PLUS 168 : NHL – COLUMBUS BLUE JACKETS @ MINNESOTA WILD / CAROLINA HURRICANES @ CALGARY FLAMES OCT 18 – 7:30 PM ET / OCT 19 – 12:30 AM UK,name,Wild,False
+provided-c,Carolina Hurricanes at Vancouver Canucks,2026-10-21T02:00:00.000Z,added,US - NHL TEAMS - CAROLINA HURRICANES ,teamChannel,Hurricanes,True
+provided-c,Carolina Hurricanes at Vancouver Canucks,2026-10-21T02:00:00.000Z,removed,US - NHL TEAMS - VANCOUVER CANUCKS ,name,Canucks,True
+provided-c,Tampa Bay Lightning at Vegas Golden Knights,2026-10-21T02:45:00.000Z,added,US - NHL TEAMS - VEGAS GOLDEN KNIGHTS ,teamChannel,Golden Knights,True
+provided-c,Tampa Bay Lightning at Vegas Golden Knights,2026-10-21T02:45:00.000Z,added,US - NHL TEAMS - TAMPA BAY LIGHTNING,teamChannel,Lightning,True
+provided-c,Tampa Bay Lightning at Vegas Golden Knights,2026-10-21T02:45:00.000Z,removed,US - ESPN HD ◉,guide,Tampa Bay Lightning at Vegas Golden Knights,True
+provided-c,Tampa Bay Lightning at Vegas Golden Knights,2026-10-21T02:45:00.000Z,removed,LAT - ESPN HD,guide,Tampa Bay Lightning at Vegas Golden Knights,True
+provided-c,Minnesota Timberwolves at Miami Heat,2026-10-21T23:30:00.000Z,added,US - ESPN ACC NETWORK HD ◉,guide,Minnesota Timberwolves at Miami Heat,True
+provided-c,Minnesota Timberwolves at Miami Heat,2026-10-21T23:30:00.000Z,added,US - ESPN 1 HD ◉,guide,Minnesota Timberwolves at Miami Heat,True
+provided-c,Minnesota Timberwolves at Miami Heat,2026-10-21T23:30:00.000Z,added,US - ESPN SEC NETWORK HD ◉,guide,Minnesota Timberwolves at Miami Heat,True
+provided-c,Minnesota Timberwolves at Miami Heat,2026-10-21T23:30:00.000Z,removed,CA - TSN 5 FHD ◉,guide,Minnesota Timberwolves vs. Miami Heat,True
+provided-c,Minnesota Timberwolves at Miami Heat,2026-10-21T23:30:00.000Z,removed,CA - TSN 5 SD,guide,Minnesota Timberwolves vs. Miami Heat,True
+provided-c,Minnesota Timberwolves at Miami Heat,2026-10-21T23:30:00.000Z,removed,US - ESPN HD ◉,guide,Minnesota Timberwolves at Miami Heat,True
+provided-c,Chicago Bulls at Toronto Raptors,2026-10-21T23:30:00.000Z,added,CA - SPORTSNET PACIFIC HD ◉,guide,Chicago Bulls vs. Toronto Raptors,True
+provided-c,Chicago Bulls at Toronto Raptors,2026-10-21T23:30:00.000Z,added,US - CHICAGO SPORTS NETWORK HD,guide,Chicago Bulls at Toronto Raptors,True
+provided-c,Chicago Bulls at Toronto Raptors,2026-10-21T23:30:00.000Z,added,VIP - SPORTSNET ONE 4K,guide,Chicago Bulls vs. Toronto Raptors,True
+provided-c,Chicago Bulls at Toronto Raptors,2026-10-21T23:30:00.000Z,removed,CA - SPORTSNET EAST HD ◉,guide,Chicago Bulls vs. Toronto Raptors,True
+provided-c,Chicago Bulls at Toronto Raptors,2026-10-21T23:30:00.000Z,removed,CA - SPORTSNET ONE HD  ◉,guide,Chicago Bulls vs. Toronto Raptors,True
+provided-c,Chicago Bulls at Toronto Raptors,2026-10-21T23:30:00.000Z,removed,CA - SPORTSNET ONTARIO HD ◉,guide,Chicago Bulls vs. Toronto Raptors,True
+provided-c,Florida Panthers at Ottawa Senators,2026-10-21T23:30:00.000Z,added,US - SCRIPPS SPORTS FHD,network,Scripps Sports,True
+provided-c,Florida Panthers at Ottawa Senators,2026-10-21T23:30:00.000Z,added,PT - SPORT TV 3 HD,guide,NHL - Ottawa Senators x Florida Panthers (Direto),True
+provided-c,Florida Panthers at Ottawa Senators,2026-10-21T23:30:00.000Z,removed,US - NHL TEAMS - FLORIDA PANTHERS ,name,Panthers,True
+provided-c,Florida Panthers at Ottawa Senators,2026-10-21T23:30:00.000Z,removed,US - NHL TEAMS - OTTAWA SENATORS ,name,Senators,True
+provided-c,Golden State Warriors at Los Angeles Lakers,2026-10-22T02:00:00.000Z,added,US - ESPN ACC NETWORK HD ◉,guide,Golden State Warriors at Los Angeles Lakers,True
+provided-c,Golden State Warriors at Los Angeles Lakers,2026-10-22T02:00:00.000Z,added,US - ESPN SEC NETWORK HD ◉,guide,Golden State Warriors at Los Angeles Lakers,True
+provided-c,Golden State Warriors at Los Angeles Lakers,2026-10-22T02:00:00.000Z,removed,CA - SPORTSNET ONE HD  ◉,guide,Golden State Warriors vs. Los Angeles Lakers,True
+provided-c,Golden State Warriors at Los Angeles Lakers,2026-10-22T02:00:00.000Z,removed,US - ESPN HD ◉,guide,Golden State Warriors at Los Angeles Lakers,True
+provided-c,Cleveland Cavaliers at Philadelphia 76ers,2026-10-22T23:00:00.000Z,added,SI - SPORTKLUB 1 HD,guide,LIVE: Košarka: NBA: Philadelphia 76ers - Cleveland Cavaliers,True
+provided-c,Cleveland Cavaliers at Philadelphia 76ers,2026-10-22T23:00:00.000Z,removed,US - ESPN HD ◉,guide,Cleveland Cavaliers at Philadelphia 76ers,True
+provided-c,San Jose Sharks at Ottawa Senators,2026-10-22T23:00:00.000Z,added,CAFR - RDS HD ◉ [BK],guide,San Jose Sharks vs. Ottawa Senators,True
+provided-c,San Jose Sharks at Ottawa Senators,2026-10-22T23:00:00.000Z,added,US - NHL TEAMS - SAN JOSE SHARKS,teamChannel,Sharks,True
+provided-c,San Jose Sharks at Ottawa Senators,2026-10-22T23:00:00.000Z,added,US - NHL TEAMS - OTTAWA SENATORS ,teamChannel,Senators,True
+provided-c,San Jose Sharks at Ottawa Senators,2026-10-22T23:00:00.000Z,removed,CAFR - RDS FHD ◉,guide,San Jose Sharks vs. Ottawa Senators,True
+provided-c,San Jose Sharks at Ottawa Senators,2026-10-22T23:00:00.000Z,removed,CA - TSN 5 FHD ◉,guide,San Jose Sharks vs. Ottawa Senators,True
+provided-c,San Jose Sharks at Ottawa Senators,2026-10-22T23:00:00.000Z,removed,CA - TSN 5 SD,guide,San Jose Sharks vs. Ottawa Senators,True
+provided-c,Florida Panthers at Pittsburgh Penguins,2026-10-22T23:00:00.000Z,added,CAFR -  TVA SPORTS HD [BK],guide,Florida Panthers vs. Pittsburgh Penguins,True
+provided-c,Florida Panthers at Pittsburgh Penguins,2026-10-22T23:00:00.000Z,added,US - NHL TEAMS - FLORIDA PANTHERS ,teamChannel,Panthers,True
+provided-c,Florida Panthers at Pittsburgh Penguins,2026-10-22T23:00:00.000Z,added,US - NHL TEAMS - PITTSBURGH PENGUINS,teamChannel,Penguins,True
+provided-c,Florida Panthers at Pittsburgh Penguins,2026-10-22T23:00:00.000Z,removed,CA - SPORTSNET EAST HD ◉,guide,Florida Panthers vs. Pittsburgh Penguins,True
+provided-c,Florida Panthers at Pittsburgh Penguins,2026-10-22T23:00:00.000Z,removed,CA - SPORTSNET ONTARIO HD ◉,guide,Florida Panthers vs. Pittsburgh Penguins,True
+provided-c,Florida Panthers at Pittsburgh Penguins,2026-10-22T23:00:00.000Z,removed,CA - SPORTSNET PACIFIC HD ◉,guide,Florida Panthers vs. Pittsburgh Penguins,True
+provided-c,Minnesota Wild at Calgary Flames,2026-10-23T01:00:00.000Z,removed,US - ESPN PLUS 168 : NHL – COLUMBUS BLUE JACKETS @ MINNESOTA WILD / CAROLINA HURRICANES @ CALGARY FLAMES OCT 18 – 7:30 PM ET / OCT 19 – 12:30 AM UK,name,Flames,False
+provided-c,Carolina Hurricanes at Edmonton Oilers,2026-10-23T01:00:00.000Z,removed,US - ESPN PLUS 168 : NHL – COLUMBUS BLUE JACKETS @ MINNESOTA WILD / CAROLINA HURRICANES @ CALGARY FLAMES OCT 18 – 7:30 PM ET / OCT 19 – 12:30 AM UK,name,Hurricanes,False
+provided-c,Nottingham Forest at Ipswich Town,2026-10-23T19:00:00.000Z,added,US - USA NETWORK EAST HD ◉,network,USA Net,True
+provided-c,Chicago Bulls at Milwaukee Bucks,2026-10-23T20:00:00.000Z,removed,US - NBA GAME 02 : WASHINGTON WIZARDS VS MILWAUKEE BUCKS OCT 21 – 7:00 PM ET / OCT 22 – 12:00 AM UK,name,Bucks,False
+provided-c,Chicago Bulls at Milwaukee Bucks,2026-10-23T20:00:00.000Z,removed,US - NBA GAME 05 : TORONTO RAPTORS VS CHICAGO BULLS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Bulls,False
+provided-c,Atlanta Hawks at Charlotte Hornets,2026-10-23T23:00:00.000Z,removed,US - NBA GAME 01 : ORLANDO MAGIC VS ATLANTA HAWKS OCT 21 – 7:00 PM ET / OCT 22 – 12:00 AM UK,name,Hawks,False
+provided-c,Atlanta Hawks at Charlotte Hornets,2026-10-23T23:00:00.000Z,removed,US - NBA GAME 04 : BROOKLYN NETS VS CHARLOTTE HORNETS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Hornets,False
+provided-c,Dallas Mavericks at Indiana Pacers,2026-10-23T23:00:00.000Z,removed,US - NBA GAME 07 : NEW ORLEANS PELICANS VS INDIANA PACERS OCT 21 – 8:00 PM ET / OCT 22 – 1:00 AM UK,name,Pacers,False
+provided-c,Dallas Mavericks at Indiana Pacers,2026-10-23T23:00:00.000Z,removed,US - NBA GAME 08 : HOUSTON ROCKETS VS DALLAS MAVERICKS OCT 21 – 8:30 PM ET / OCT 22 – 1:30 AM UK,name,Mavericks,False
+provided-c,Minnesota Timberwolves at Orlando Magic,2026-10-23T23:00:00.000Z,removed,US - NBA GAME 01 : ORLANDO MAGIC VS ATLANTA HAWKS OCT 21 – 7:00 PM ET / OCT 22 – 12:00 AM UK,name,Magic,False
+provided-c,Minnesota Timberwolves at Orlando Magic,2026-10-23T23:00:00.000Z,removed,US - NBA GAME 03 : MIAMI HEAT VS MINNESOTA TIMBERWOLVES OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Timberwolves,False
+provided-c,Toronto Raptors at Washington Wizards,2026-10-23T23:00:00.000Z,removed,US - NBA GAME 02 : WASHINGTON WIZARDS VS MILWAUKEE BUCKS OCT 21 – 7:00 PM ET / OCT 22 – 12:00 AM UK,name,Wizards,False
+provided-c,Toronto Raptors at Washington Wizards,2026-10-23T23:00:00.000Z,removed,US - NBA GAME 05 : TORONTO RAPTORS VS CHICAGO BULLS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Raptors,False
+provided-c,Tampa Bay Rays at Milwaukee Brewers,2026-10-24T00:00:00.000Z,removed,US - MLB GAME 01 : CLEVELAND GUARDIANS @ TAMPA BAY RAYS OCT 19 – 8:08 PM ET / OCT 20 – 1:08 AM UK,name,Rays,False
+provided-c,Detroit Pistons at Miami Heat,2026-10-24T00:00:00.000Z,removed,US - NBA GAME 03 : MIAMI HEAT VS MINNESOTA TIMBERWOLVES OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Heat,False
+provided-c,Montreal Canadiens at Chicago Blackhawks,2026-10-24T00:00:00.000Z,added,US - NHL NETWORK HD,network,NHL Net,True
+provided-c,Houston Rockets at San Antonio Spurs,2026-10-24T01:30:00.000Z,removed,US - NBA GAME 08 : HOUSTON ROCKETS VS DALLAS MAVERICKS OCT 21 – 8:30 PM ET / OCT 22 – 1:30 AM UK,name,Rockets,False
+provided-c,New Orleans Pelicans at Utah Jazz,2026-10-24T01:30:00.000Z,removed,US - NBA GAME 06 : MEMPHIS GRIZZLIES VS UTAH JAZZ OCT 21 – 8:00 PM ET / OCT 22 – 1:00 AM UK,name,Jazz,False
+provided-c,New Orleans Pelicans at Utah Jazz,2026-10-24T01:30:00.000Z,removed,US - NBA GAME 07 : NEW ORLEANS PELICANS VS INDIANA PACERS OCT 21 – 8:00 PM ET / OCT 22 – 1:00 AM UK,name,Pelicans,False
+provided-c,Memphis Grizzlies at Golden State Warriors,2026-10-24T02:00:00.000Z,removed,US - NBA GAME 06 : MEMPHIS GRIZZLIES VS UTAH JAZZ OCT 21 – 8:00 PM ET / OCT 22 – 1:00 AM UK,name,Grizzlies,False
+provided-c,Memphis Grizzlies at Golden State Warriors,2026-10-24T02:00:00.000Z,removed,US - NBA GAME 09 : LOS ANGELES LAKERS VS GOLDEN STATE WARRIORS OCT 21 – 10:00 PM ET / OCT 22 – 3:00 AM UK,name,Warriors,False
+provided-c,LA Clippers at Los Angeles Lakers,2026-10-24T02:00:00.000Z,removed,US - NBA GAME 09 : LOS ANGELES LAKERS VS GOLDEN STATE WARRIORS OCT 21 – 10:00 PM ET / OCT 22 – 3:00 AM UK,name,Lakers,False
+provided-c,LA Clippers at Los Angeles Lakers,2026-10-24T02:00:00.000Z,removed,US - NBA GAME 11 : LA CLIPPERS VS SACRAMENTO KINGS OCT 21 – 10:30 PM ET / OCT 22 – 3:30 AM UK,name,Clippers,False
+provided-c,Portland Trail Blazers at Sacramento Kings,2026-10-24T02:00:00.000Z,removed,US - NBA GAME 10 : PORTLAND TRAIL BLAZERS VS PHOENIX SUNS OCT 21 – 10:00 PM ET / OCT 22 – 3:00 AM UK,name,Trail Blazers,False
+provided-c,Portland Trail Blazers at Sacramento Kings,2026-10-24T02:00:00.000Z,removed,US - NBA GAME 11 : LA CLIPPERS VS SACRAMENTO KINGS OCT 21 – 10:30 PM ET / OCT 22 – 3:30 AM UK,name,Kings,False
+provided-c,Manchester City at Aston Villa,2026-10-24T11:30:00.000Z,added,US - USA NETWORK EAST HD ◉,network,USA Net,True
+provided-c,Everton at Arsenal,2026-10-24T14:00:00.000Z,added,US - USA NETWORK EAST HD ◉,network,USA Net,True
+provided-c,Anaheim Ducks at Philadelphia Flyers,2026-10-24T17:00:00.000Z,added,US - NBC SPORTS PHILADELPHIA HD,network,NBC Sports Phil,True
+provided-c,Anaheim Ducks at Philadelphia Flyers,2026-10-24T17:00:00.000Z,added,US - NHL NETWORK HD,network,NHL Net,True
+provided-c,Anaheim Ducks at Philadelphia Flyers,2026-10-24T17:00:00.000Z,removed,CA - NHL GAME 01 : PHILADELPHIA FLYERS VS BUFFALO SABRES OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Flyers,False
+provided-c,Anaheim Ducks at Philadelphia Flyers,2026-10-24T17:00:00.000Z,removed,US - NHL GAME 01 : PHILADELPHIA FLYERS VS BUFFALO SABRES OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Flyers,False
+provided-c,Miami Heat at Charlotte Hornets,2026-10-24T22:00:00.000Z,removed,US - NBA GAME 03 : MIAMI HEAT VS MINNESOTA TIMBERWOLVES OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Heat,False
+provided-c,Miami Heat at Charlotte Hornets,2026-10-24T22:00:00.000Z,removed,US - NBA GAME 04 : BROOKLYN NETS VS CHARLOTTE HORNETS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Hornets,False
+provided-c,New York Rangers at Ottawa Senators,2026-10-24T23:00:00.000Z,added,US - NHL NETWORK HD,network,NHL Net,True
+provided-c,New York Rangers at Ottawa Senators,2026-10-24T23:00:00.000Z,removed,CA - NHL GAME 02 : FLORIDA PANTHERS VS OTTAWA SENATORS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Senators,False
+provided-c,New York Rangers at Ottawa Senators,2026-10-24T23:00:00.000Z,removed,US - NHL GAME 02 : FLORIDA PANTHERS VS OTTAWA SENATORS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Senators,False
+provided-c,Buffalo Sabres at Washington Capitals,2026-10-24T23:00:00.000Z,removed,CA - NHL GAME 01 : PHILADELPHIA FLYERS VS BUFFALO SABRES OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Sabres,False
+provided-c,Buffalo Sabres at Washington Capitals,2026-10-24T23:00:00.000Z,removed,US - NHL GAME 01 : PHILADELPHIA FLYERS VS BUFFALO SABRES OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Sabres,False
+provided-c,Vegas Golden Knights at Columbus Blue Jackets,2026-10-24T23:00:00.000Z,removed,US - ESPN PLUS 168 : NHL – COLUMBUS BLUE JACKETS @ MINNESOTA WILD / CAROLINA HURRICANES @ CALGARY FLAMES OCT 18 – 7:30 PM ET / OCT 19 – 12:30 AM UK,name,Blue Jackets,False
+provided-c,Carolina Hurricanes at St. Louis Blues,2026-10-24T23:00:00.000Z,removed,US - ESPN PLUS 168 : NHL – COLUMBUS BLUE JACKETS @ MINNESOTA WILD / CAROLINA HURRICANES @ CALGARY FLAMES OCT 18 – 7:30 PM ET / OCT 19 – 12:30 AM UK,name,Hurricanes,False
+provided-c,Brooklyn Nets at Cleveland Cavaliers,2026-10-24T23:30:00.000Z,removed,US - NBA GAME 04 : BROOKLYN NETS VS CHARLOTTE HORNETS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Nets,False
+provided-c,Milwaukee Bucks at Philadelphia 76ers,2026-10-24T23:30:00.000Z,removed,US - NBA GAME 02 : WASHINGTON WIZARDS VS MILWAUKEE BUCKS OCT 21 – 7:00 PM ET / OCT 22 – 12:00 AM UK,name,Bucks,False
+provided-c,Tampa Bay Rays at Milwaukee Brewers,2026-10-25T00:00:00.000Z,removed,US - MLB GAME 01 : CLEVELAND GUARDIANS @ TAMPA BAY RAYS OCT 19 – 8:08 PM ET / OCT 20 – 1:08 AM UK,name,Rays,False
+provided-c,Washington Wizards at Chicago Bulls,2026-10-25T00:00:00.000Z,removed,US - NBA GAME 02 : WASHINGTON WIZARDS VS MILWAUKEE BUCKS OCT 21 – 7:00 PM ET / OCT 22 – 12:00 AM UK,name,Wizards,False
+provided-c,Washington Wizards at Chicago Bulls,2026-10-25T00:00:00.000Z,removed,US - NBA GAME 05 : TORONTO RAPTORS VS CHICAGO BULLS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Bulls,False
+provided-c,San Antonio Spurs at Dallas Mavericks,2026-10-25T00:00:00.000Z,removed,US - NBA GAME 08 : HOUSTON ROCKETS VS DALLAS MAVERICKS OCT 21 – 8:30 PM ET / OCT 22 – 1:30 AM UK,name,Mavericks,False
+provided-c,Houston Rockets at Atlanta Hawks,2026-10-25T00:30:00.000Z,removed,US - NBA GAME 01 : ORLANDO MAGIC VS ATLANTA HAWKS OCT 21 – 7:00 PM ET / OCT 22 – 12:00 AM UK,name,Hawks,False
+provided-c,Houston Rockets at Atlanta Hawks,2026-10-25T00:30:00.000Z,removed,US - NBA GAME 08 : HOUSTON ROCKETS VS DALLAS MAVERICKS OCT 21 – 8:30 PM ET / OCT 22 – 1:30 AM UK,name,Rockets,False
+provided-c,New Orleans Pelicans at Denver Nuggets,2026-10-25T01:00:00.000Z,removed,US - NBA GAME 07 : NEW ORLEANS PELICANS VS INDIANA PACERS OCT 21 – 8:00 PM ET / OCT 22 – 1:00 AM UK,name,Pelicans,False
+provided-c,Golden State Warriors at Phoenix Suns,2026-10-25T02:00:00.000Z,removed,US - NBA GAME 09 : LOS ANGELES LAKERS VS GOLDEN STATE WARRIORS OCT 21 – 10:00 PM ET / OCT 22 – 3:00 AM UK,name,Warriors,False
+provided-c,Golden State Warriors at Phoenix Suns,2026-10-25T02:00:00.000Z,removed,US - NBA GAME 10 : PORTLAND TRAIL BLAZERS VS PHOENIX SUNS OCT 21 – 10:00 PM ET / OCT 22 – 3:00 AM UK,name,Suns,False
+provided-c,Detroit Red Wings at Calgary Flames,2026-10-25T02:00:00.000Z,removed,US - ESPN PLUS 168 : NHL – COLUMBUS BLUE JACKETS @ MINNESOTA WILD / CAROLINA HURRICANES @ CALGARY FLAMES OCT 18 – 7:30 PM ET / OCT 19 – 12:30 AM UK,name,Flames,False
+provided-c,Minnesota Wild at Seattle Kraken,2026-10-25T02:00:00.000Z,removed,US - ESPN PLUS 168 : NHL – COLUMBUS BLUE JACKETS @ MINNESOTA WILD / CAROLINA HURRICANES @ CALGARY FLAMES OCT 18 – 7:30 PM ET / OCT 19 – 12:30 AM UK,name,Wild,False
+provided-c,Pittsburgh Steelers at New Orleans Saints,2026-10-25T13:30:00.000Z,added,US - NFL NETWORK HD ◉,network,NFL Net,True
+provided-c,Newcastle United at Crystal Palace,2026-10-25T14:00:00.000Z,added,US - USA NETWORK EAST HD ◉,network,USA Net,True
+provided-c,Leeds United at Sunderland,2026-10-25T16:30:00.000Z,added,US - USA NETWORK EAST HD ◉,network,USA Net,True
+provided-c,Florida Panthers at Chicago Blackhawks,2026-10-25T19:00:00.000Z,removed,CA - NHL GAME 02 : FLORIDA PANTHERS VS OTTAWA SENATORS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Panthers,False
+provided-c,Florida Panthers at Chicago Blackhawks,2026-10-25T19:00:00.000Z,removed,US - NHL GAME 02 : FLORIDA PANTHERS VS OTTAWA SENATORS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Panthers,False
+provided-c,Green Bay Packers at Detroit Lions,2026-10-25T20:25:00.000Z,removed,US - ESPN PLUS 175 : DALLAS COWBOYS @ GREEN BAY PACKERS – NFL WEEK 6 OCT 19 – 2:30 AM ET / 7:30 AM UK,name,Packers,False
+provided-c,Los Angeles Lakers at Utah Jazz,2026-10-25T21:00:00.000Z,removed,US - NBA GAME 06 : MEMPHIS GRIZZLIES VS UTAH JAZZ OCT 21 – 8:00 PM ET / OCT 22 – 1:00 AM UK,name,Jazz,False
+provided-c,Los Angeles Lakers at Utah Jazz,2026-10-25T21:00:00.000Z,removed,US - NBA GAME 09 : LOS ANGELES LAKERS VS GOLDEN STATE WARRIORS OCT 21 – 10:00 PM ET / OCT 22 – 3:00 AM UK,name,Lakers,False
+provided-c,Indiana Pacers at Brooklyn Nets,2026-10-25T22:00:00.000Z,removed,US - NBA GAME 04 : BROOKLYN NETS VS CHARLOTTE HORNETS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Nets,False
+provided-c,Indiana Pacers at Brooklyn Nets,2026-10-25T22:00:00.000Z,removed,US - NBA GAME 07 : NEW ORLEANS PELICANS VS INDIANA PACERS OCT 21 – 8:00 PM ET / OCT 22 – 1:00 AM UK,name,Pacers,False
+provided-c,Orlando Magic at New York Knicks,2026-10-25T23:00:00.000Z,removed,US - NBA GAME 01 : ORLANDO MAGIC VS ATLANTA HAWKS OCT 21 – 7:00 PM ET / OCT 22 – 12:00 AM UK,name,Magic,False
+provided-c,Toronto Raptors at Minnesota Timberwolves,2026-10-25T23:00:00.000Z,removed,US - NBA GAME 03 : MIAMI HEAT VS MINNESOTA TIMBERWOLVES OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Timberwolves,False
+provided-c,Toronto Raptors at Minnesota Timberwolves,2026-10-25T23:00:00.000Z,removed,US - NBA GAME 05 : TORONTO RAPTORS VS CHICAGO BULLS OCT 21 – 7:30 PM ET / OCT 22 – 12:30 AM UK,name,Raptors,False
+provided-c,LA Clippers at Oklahoma City Thunder,2026-10-25T23:00:00.000Z,removed,US - NBA GAME 11 : LA CLIPPERS VS SACRAMENTO KINGS OCT 21 – 10:30 PM ET / OCT 22 – 3:30 AM UK,name,Clippers,False
+provided-c,Memphis Grizzlies at Sacramento Kings,2026-10-26T01:00:00.000Z,removed,US - NBA GAME 06 : MEMPHIS GRIZZLIES VS UTAH JAZZ OCT 21 – 8:00 PM ET / OCT 22 – 1:00 AM UK,name,Grizzlies,False
+provided-c,Memphis Grizzlies at Sacramento Kings,2026-10-26T01:00:00.000Z,removed,US - NBA GAME 11 : LA CLIPPERS VS SACRAMENTO KINGS OCT 21 – 10:30 PM ET / OCT 22 – 3:30 AM UK,name,Kings,False
+provided-c,Minnesota Wild at Vancouver Canucks,2026-10-26T02:00:00.000Z,removed,US - ESPN PLUS 168 : NHL – COLUMBUS BLUE JACKETS @ MINNESOTA WILD / CAROLINA HURRICANES @ CALGARY FLAMES OCT 18 – 7:30 PM ET / OCT 19 – 12:30 AM UK,name,Wild,False
+strong8k-test,Coventry City at Tottenham Hotspur,2026-10-19T19:00:00.000Z,added,US: USA NETWORK EAST HD,network,USA Net,True
+strong8k-test,Coventry City at Tottenham Hotspur,2026-10-19T19:00:00.000Z,added,US: USA NETWORK HD,network,USA Net,True
+strong8k-test,Colorado Avalanche at Philadelphia Flyers,2026-10-19T23:00:00.000Z,added,US: NBC SPORTS PHILADELPHIA (D) ᴿᴬᵂ,network,NBC Sports Phil,True
+strong8k-test,Boston Celtics at Detroit Pistons,2026-10-20T19:00:00.000Z,added,####### NBC ᴴᴰ/ᴿᴬᵂ ⁶⁰ᶠᵖˢ #######,network,NBC,True
+strong8k-test,Boston Celtics at Detroit Pistons,2026-10-20T19:00:00.000Z,removed,NBA: DETROIT PISTONS SD,name,Pistons,True
+strong8k-test,Philadelphia 76ers at New York Knicks,2026-10-20T23:00:00.000Z,added,NBA: NEW YORK KNICKS (NYK) ᴴᴰ,teamChannel,Knicks,True
+strong8k-test,Philadelphia 76ers at New York Knicks,2026-10-20T23:00:00.000Z,added,AMP: NBC,network,NBC,True
+strong8k-test,Philadelphia 76ers at New York Knicks,2026-10-20T23:00:00.000Z,removed,NBA: PHILADELPHIA 76ERS ᴴᴰ,name,76ers,True
+strong8k-test,Philadelphia 76ers at New York Knicks,2026-10-20T23:00:00.000Z,removed,NBA: PHILADELPHIA 76ERS SD,name,76ers,True
+strong8k-test,Manchester United at Como,2026-10-21T16:45:00.000Z,added,Como vs Man United @ Oct 21 6:40 PM :Viaplay DK  12,name,,True
+strong8k-test,Manchester United at Como,2026-10-21T16:45:00.000Z,added,Como Manchester United @ Oct 21 7:00 PM :MTV FI  08,name,,True
+strong8k-test,Manchester United at Como,2026-10-21T16:45:00.000Z,removed,AU (STAN 06) | Como v Manchester United  UEFA Champions League Matchday 3 2026/2027 (2026-10-22 03:40:15),name,,True
+strong8k-test,Manchester United at Como,2026-10-21T16:45:00.000Z,removed,UEFA | 01 - Como vs Manchester United 17:45 pm,name,,True
+strong8k-test,Galatasaray at Lille,2026-10-21T16:45:00.000Z,added,End | Lille U19 vs. Galatasaray U19 | all | 21-10-2026 | 13:52 (GMT) | 8K EXCLUSIVE | CA: SOCCER PPV 12,name,,True
+strong8k-test,Galatasaray at Lille,2026-10-21T16:45:00.000Z,removed,AU (STAN 07) | Lille v Galatasaray  UEFA Champions League Matchday 3 2026/2027 (2026-10-22 03:40:15),name,,True
+strong8k-test,Arsenal at Bayern Munich,2026-10-21T19:00:00.000Z,added,Football: Bayern – Arsenal @ Oct 21 20:00 :Tv2Play NO  27,name,,True
+strong8k-test,Arsenal at Bayern Munich,2026-10-21T19:00:00.000Z,removed,AU (STAN 09) | Bayern München v Arsenal  UEFA Champions League Matchday 3 2026/2027 (2026-10-22 05:55:15),name,,True
+strong8k-test,Lens at Club Brugge,2026-10-21T19:00:00.000Z,added,Club Brugge Lens @ Oct 21 9:45 PM :MTV FI  12,name,,True
+strong8k-test,Lens at Club Brugge,2026-10-21T19:00:00.000Z,removed,AU (STAN 15) | Club Brugge v Lens  UEFA Champions League Matchday 3 2026/2027 (2026-10-22 05:55:15),name,,True
+strong8k-test,Shakhtar Donetsk at Internazionale,2026-10-21T19:00:00.000Z,added,End | Inter U19 vs. Shakhtar Donetsk U19 | all | 21-10-2026 | 15:52 (GMT) | 8K EXCLUSIVE | CA: SOCCER PPV 5,name,,True
+strong8k-test,Shakhtar Donetsk at Internazionale,2026-10-21T19:00:00.000Z,removed,AU (STAN 14) | Internazionale v Shakhtar Donetsk  UEFA Champions League Matchday 3 2026/2027 (2026-10-22 05:55:15),name,,True
+strong8k-test,Feyenoord Rotterdam at Real Betis,2026-10-21T19:00:00.000Z,added,Real Betis vs Feyenoord @ Oct 21 21:45 :Telia FI  28,name,,True
+strong8k-test,Feyenoord Rotterdam at Real Betis,2026-10-21T19:00:00.000Z,added,Real Betis Feyenoord @ Oct 21 9:45 PM :MTV FI  15,name,,True
+strong8k-test,Feyenoord Rotterdam at Real Betis,2026-10-21T19:00:00.000Z,removed,UEFA | 07 - Real Betis  vs Feyenoord 8:00pm,name,,True
+strong8k-test,Feyenoord Rotterdam at Real Betis,2026-10-21T19:00:00.000Z,removed,AU (STAN 12) | Real Betis v Feyenoord  UEFA Champions League Matchday 3 2026/2027 (2026-10-22 05:55:15),name,,True
+strong8k-test,RB Leipzig at Real Madrid,2026-10-21T19:00:00.000Z,added,ENDED | REAL MADRID - RB LEIPZIG | Wed 21 Oct 21:45 EEST (FI) | 8K EXCLUSIVE | FI: MTV PPV 7,name,,True
+strong8k-test,RB Leipzig at Real Madrid,2026-10-21T19:00:00.000Z,removed,AU (STAN 10) | Real Madrid v RB Leipzig  UEFA Champions League Matchday 3 2026/2027 (2026-10-22 05:55:15),name,,True
+strong8k-test,Atlanta Hawks at Orlando Magic,2026-10-21T23:00:00.000Z,added,Next | Hawks vs. Magic | all | 21-10-2026 | 01:00 (GMT) | 8K EXCLUSIVE | ES: SOCCER PPV 16,name,,True
+strong8k-test,Atlanta Hawks at Orlando Magic,2026-10-21T23:00:00.000Z,removed,Orlando Magic vs Atlanta Hawks @ Oct 21 7:00 PM :NBA  01,name,,True
+strong8k-test,Minnesota Timberwolves at Miami Heat,2026-10-21T23:30:00.000Z,added,LIVE | MIA - HEAT VS MIN - TIMBERWOLVES | Wed 21 Oct 20:30 -02 (BR) | 8K EXCLUSIVE | BR: NBA PASS PPV 3,name,,True
+strong8k-test,Minnesota Timberwolves at Miami Heat,2026-10-21T23:30:00.000Z,removed,Miami Heat vs Minnesota Timberwolves @ Oct 21 7:30 PM :NBA  03,name,,True
+strong8k-test,Utah Jazz at Memphis Grizzlies,2026-10-22T00:00:00.000Z,added,Next | Jazz vs. Grizzlies | all | 21-10-2026 | 02:00 (GMT) | 8K EXCLUSIVE | ES: SOCCER PPV 23,name,,True
+strong8k-test,Utah Jazz at Memphis Grizzlies,2026-10-22T00:00:00.000Z,removed,Memphis Grizzlies vs Utah Jazz @ Oct 21 8:00 PM :NBA  06,name,,True
+strong8k-test,Indiana Pacers at New Orleans Pelicans,2026-10-22T00:00:00.000Z,added,Next | Pacers vs. Pelicans | all | 21-10-2026 | 02:00 (GMT) | 8K EXCLUSIVE | ES: SOCCER PPV 22,name,,True
+strong8k-test,Indiana Pacers at New Orleans Pelicans,2026-10-22T00:00:00.000Z,removed,New Orleans Pelicans vs Indiana Pacers @ Oct 21 8:00 PM :NBA  07,name,,True
+strong8k-test,Dallas Mavericks at Houston Rockets,2026-10-22T00:30:00.000Z,added,"TV: DALLAS, TX KFAA IND 29 A3 HD MIAMI ᶜᶦᵗʸ ᴿᴬᵂ",network,KFAA-TV,True
+strong8k-test,Dallas Mavericks at Houston Rockets,2026-10-22T00:30:00.000Z,removed,NBA: DALLAS MAVERICKS ᴴᴰ,name,Mavericks,True
+strong8k-test,Golden State Warriors at Los Angeles Lakers,2026-10-22T02:00:00.000Z,added,SI: SPORT KLUB 1 ᴿᴬᵂ,guide,LIVE: Košarka: NBA: Los Angeles Lakers - Golden State Warriors,True
+strong8k-test,Golden State Warriors at Los Angeles Lakers,2026-10-22T02:00:00.000Z,removed,Los Angeles Lakers vs Golden State Warriors @ Oct 21 10:00 PM :NBA  09,name,,True
+strong8k-test,Phoenix Suns at Portland Trail Blazers,2026-10-22T02:00:00.000Z,added,Next | Suns vs. Trail Blazers | all | 22-10-2026 | 04:00 (GMT) | 8K EXCLUSIVE | FR: SOCCER PPV 40,name,,True
+strong8k-test,Phoenix Suns at Portland Trail Blazers,2026-10-22T02:00:00.000Z,removed,Portland Trail Blazers vs Phoenix Suns @ Oct 21 10:00 PM :NBA  10,name,,True
+strong8k-test,Cleveland Cavaliers at Philadelphia 76ers,2026-10-22T23:00:00.000Z,added,8K: beIN SP⚽RTS 1 FRANCE ᴴᴰ ◉,guide,Philadelphia 76ers / Cleveland Cavaliers,True
+strong8k-test,Cleveland Cavaliers at Philadelphia 76ers,2026-10-22T23:00:00.000Z,added,◉: beIN Sp⚽rts 1 FRANCE 4K,guide,Philadelphia 76ers / Cleveland Cavaliers,True
+strong8k-test,Cleveland Cavaliers at Philadelphia 76ers,2026-10-22T23:00:00.000Z,removed,VIP: BEIN SPORTS 1 ᴿᴬᵂ,guide,Philadelphia 76ers / Cleveland Cavaliers,True
+strong8k-test,Cleveland Cavaliers at Philadelphia 76ers,2026-10-22T23:00:00.000Z,removed,SKYGO: SKY SPORT 2 4K,guide,Live NBA: Cleveland Cavaliers @ Philadelphia 76ers,True
+strong8k-test,Denver Nuggets at Oklahoma City Thunder,2026-10-23T01:30:00.000Z,added,4K: ESPN ᵁᴴᴰ ³⁸⁴⁰ᴾ,network,ESPN,True
+strong8k-test,Denver Nuggets at Oklahoma City Thunder,2026-10-23T01:30:00.000Z,added,PLAY+: ESPN ᴴᴰ,network,ESPN,True
+strong8k-test,Denver Nuggets at Oklahoma City Thunder,2026-10-23T01:30:00.000Z,removed,NBA: DENVER NUGGETS SD,name,Nuggets,True
+strong8k-test,Denver Nuggets at Oklahoma City Thunder,2026-10-23T01:30:00.000Z,removed,NBA: OKLAHOMA CITY THUNDER ᴴᴰ,name,Thunder,True
+strong8k-test,Nottingham Forest at Ipswich Town,2026-10-23T19:00:00.000Z,added,US: USA NETWORK EAST HD,network,USA Net,True
+strong8k-test,Nottingham Forest at Ipswich Town,2026-10-23T19:00:00.000Z,added,US: USA NETWORK HD,network,USA Net,True
+strong8k-test,Chicago Bulls at Milwaukee Bucks,2026-10-23T20:00:00.000Z,removed,Toronto Raptors vs Chicago Bulls @ Oct 21 7:30 PM :NBA  05,name,Bulls,False
+strong8k-test,Chicago Bulls at Milwaukee Bucks,2026-10-23T20:00:00.000Z,removed,Toronto Raptors vs Chicago Bulls @ Oct 21 7:30 PM :NBA  05,name,Bulls,False
+strong8k-test,Montreal Alouettes at Toronto Argonauts,2026-10-23T23:00:00.000Z,removed,CA | CFL 00ⓧ: Montreal Alouettes vs Hamilton Tiger-Cats | Sat 8th Nov 3:00 PM ET,name,Alouettes,False
+strong8k-test,Atlanta Hawks at Charlotte Hornets,2026-10-23T23:00:00.000Z,removed,Orlando Magic vs Atlanta Hawks @ Oct 21 7:00 PM :NBA  01,name,Hawks,False
+strong8k-test,Atlanta Hawks at Charlotte Hornets,2026-10-23T23:00:00.000Z,removed,Orlando Magic vs Atlanta Hawks @ Oct 21 7:00 PM :NBA  01,name,Hawks,False
+strong8k-test,Dallas Mavericks at Indiana Pacers,2026-10-23T23:00:00.000Z,added,"TV: DALLAS, TX KFAA IND 29 A3 HD MIAMI ᶜᶦᵗʸ ᴿᴬᵂ",network,KFAA-TV,True
+strong8k-test,Dallas Mavericks at Indiana Pacers,2026-10-23T23:00:00.000Z,removed,Houston Rockets vs Dallas Mavericks @ Oct 21 8:30 PM :NBA  08,name,Mavericks,False
+strong8k-test,Dallas Mavericks at Indiana Pacers,2026-10-23T23:00:00.000Z,removed,Houston Rockets vs Dallas Mavericks @ Oct 21 8:30 PM :NBA  08,name,Mavericks,False
+strong8k-test,Minnesota Timberwolves at Orlando Magic,2026-10-23T23:00:00.000Z,removed,Orlando Magic vs Atlanta Hawks @ Oct 21 7:00 PM :NBA  01,name,Magic,False
+strong8k-test,Minnesota Timberwolves at Orlando Magic,2026-10-23T23:00:00.000Z,removed,Orlando Magic vs Atlanta Hawks @ Oct 21 7:00 PM :NBA  01,name,Magic,False
+strong8k-test,Toronto Raptors at Washington Wizards,2026-10-23T23:00:00.000Z,added,TV: MONUMENTAL SPORTS NETWORK ALTERNATE ᴿᴬᵂ,network,MNMT,True
+strong8k-test,Toronto Raptors at Washington Wizards,2026-10-23T23:00:00.000Z,added,US: MONUMENTAL SPORTS NETWORK HD,network,MNMT,True
+strong8k-test,Toronto Raptors at Washington Wizards,2026-10-23T23:00:00.000Z,removed,Toronto Raptors vs Chicago Bulls @ Oct 21 7:30 PM :NBA  05,name,Raptors,False
+strong8k-test,Toronto Raptors at Washington Wizards,2026-10-23T23:00:00.000Z,removed,Toronto Raptors vs Chicago Bulls @ Oct 21 7:30 PM :NBA  05,name,Raptors,False
+strong8k-test,Detroit Pistons at Miami Heat,2026-10-24T00:00:00.000Z,removed,Miami Heat vs Minnesota Timberwolves @ Oct 21 7:30 PM :NBA  03,name,Heat,False
+strong8k-test,Detroit Pistons at Miami Heat,2026-10-24T00:00:00.000Z,removed,Miami Heat vs Minnesota Timberwolves @ Oct 21 7:30 PM :NBA  03,name,Heat,False
+strong8k-test,Montreal Canadiens at Chicago Blackhawks,2026-10-24T00:00:00.000Z,added,US: NHL NETWORK,network,NHL Net,True
+strong8k-test,Houston Rockets at San Antonio Spurs,2026-10-24T01:30:00.000Z,removed,Houston Rockets vs Dallas Mavericks @ Oct 21 8:30 PM :NBA  08,name,Rockets,False
+strong8k-test,Houston Rockets at San Antonio Spurs,2026-10-24T01:30:00.000Z,removed,Houston Rockets vs Dallas Mavericks @ Oct 21 8:30 PM :NBA  08,name,Rockets,False
+strong8k-test,New Orleans Pelicans at Utah Jazz,2026-10-24T01:30:00.000Z,added,"TV: SALT LAKE CITY, UT KJZZ IND 14 A3 HD PHILADELPHIA ᶜᶦᵗʸ ᴿᴬᵂ",network,KJZZ-TV,True
+strong8k-test,New Orleans Pelicans at Utah Jazz,2026-10-24T01:30:00.000Z,removed,Memphis Grizzlies vs Utah Jazz @ Oct 21 8:00 PM :NBA  06,name,Jazz,False
+strong8k-test,New Orleans Pelicans at Utah Jazz,2026-10-24T01:30:00.000Z,removed,Memphis Grizzlies vs Utah Jazz @ Oct 21 8:00 PM :NBA  06,name,Jazz,False
+strong8k-test,Memphis Grizzlies at Golden State Warriors,2026-10-24T02:00:00.000Z,removed,Memphis Grizzlies vs Utah Jazz @ Oct 21 8:00 PM :NBA  06,name,Grizzlies,False
+strong8k-test,Memphis Grizzlies at Golden State Warriors,2026-10-24T02:00:00.000Z,removed,Memphis Grizzlies vs Utah Jazz @ Oct 21 8:00 PM :NBA  06,name,Grizzlies,False
+strong8k-test,LA Clippers at Los Angeles Lakers,2026-10-24T02:00:00.000Z,removed,NBA: Golden State vs Los Angeles Lakers @ Oct 21 10:00 PM :Sportsnet+  11,name,Lakers,False
+strong8k-test,LA Clippers at Los Angeles Lakers,2026-10-24T02:00:00.000Z,removed,Los Angeles Lakers vs Golden State Warriors @ Oct 21 10:00 PM :NBA  09,name,Lakers,False
+strong8k-test,LA Clippers at Los Angeles Lakers,2026-10-24T02:00:00.000Z,removed,LA Clippers vs Sacramento Kings @ Oct 21 10:30 PM :NBA  11,name,Clippers,False
+strong8k-test,LA Clippers at Los Angeles Lakers,2026-10-24T02:00:00.000Z,removed,Los Angeles Lakers vs Golden State Warriors @ Oct 21 10:00 PM :NBA  09,name,Lakers,False
+strong8k-test,LA Clippers at Los Angeles Lakers,2026-10-24T02:00:00.000Z,removed,LA Clippers vs Sacramento Kings @ Oct 21 10:30 PM :NBA  11,name,Clippers,False
+strong8k-test,Portland Trail Blazers at Sacramento Kings,2026-10-24T02:00:00.000Z,removed,LA Clippers vs Sacramento Kings @ Oct 21 10:30 PM :NBA  11,name,Kings,False
+strong8k-test,Portland Trail Blazers at Sacramento Kings,2026-10-24T02:00:00.000Z,removed,LA Clippers vs Sacramento Kings @ Oct 21 10:30 PM :NBA  11,name,Kings,False
+strong8k-test,Manchester City at Aston Villa,2026-10-24T11:30:00.000Z,added,US: USA NETWORK EAST HD,network,USA Net,True
+strong8k-test,Manchester City at Aston Villa,2026-10-24T11:30:00.000Z,added,US: USA NETWORK HD,network,USA Net,True
+strong8k-test,Manchester City at Aston Villa,2026-10-24T11:30:00.000Z,removed,AU (STAN 41) | Aston Villa v Manchester City  Premier League Matchweek 8 2026/2027 (2026-10-24 21:30:15),name,,True
+strong8k-test,Manchester City at Aston Villa,2026-10-24T11:30:00.000Z,removed,AU (STAN 43) |  • Aston Villa v Manchester City  Premier League Matchweek 8 2026/2027 (2026-10-24 22:20:15),name,,True
+strong8k-test,Everton at Arsenal,2026-10-24T14:00:00.000Z,added,US: USA NETWORK EAST HD,network,USA Net,True
+strong8k-test,Everton at Arsenal,2026-10-24T14:00:00.000Z,added,US: USA NETWORK HD,network,USA Net,True
+strong8k-test,Anaheim Ducks at Philadelphia Flyers,2026-10-24T17:00:00.000Z,added,US: NBC SPORTS PHILADELPHIA (D) ᴿᴬᵂ,network,NBC Sports Phil,True
+strong8k-test,Anaheim Ducks at Philadelphia Flyers,2026-10-24T17:00:00.000Z,added,US: NHL NETWORK,network,NHL Net,True
+strong8k-test,Ottawa RedBlacks at Hamilton Tiger-Cats,2026-10-24T19:00:00.000Z,removed,CA | CFL 00ⓧ: Montreal Alouettes vs Hamilton Tiger-Cats | Sat 8th Nov 3:00 PM ET,name,Tiger-Cats,False
+strong8k-test,Edmonton Elks at Saskatchewan Roughriders,2026-10-24T19:00:00.000Z,removed,CA | CFL 01ⓧ: Saskatchewan Roughriders vs B.C. Lions | Sat 8th Nov 6:30 PM ET,name,Roughriders,False
+strong8k-test,Miami Heat at Charlotte Hornets,2026-10-24T22:00:00.000Z,removed,Brooklyn Nets vs Charlotte Hornets @ Oct 21 7:30 PM :NBA  04,name,Hornets,False
+strong8k-test,Miami Heat at Charlotte Hornets,2026-10-24T22:00:00.000Z,removed,Brooklyn Nets vs Charlotte Hornets @ Oct 21 7:30 PM :NBA  04,name,Hornets,False
+strong8k-test,New York Rangers at Ottawa Senators,2026-10-24T23:00:00.000Z,added,US: NHL NETWORK,network,NHL Net,True
+strong8k-test,Brooklyn Nets at Cleveland Cavaliers,2026-10-24T23:30:00.000Z,removed,Brooklyn Nets vs Charlotte Hornets @ Oct 21 7:30 PM :NBA  04,name,Nets,False
+strong8k-test,Brooklyn Nets at Cleveland Cavaliers,2026-10-24T23:30:00.000Z,removed,Brooklyn Nets vs Charlotte Hornets @ Oct 21 7:30 PM :NBA  04,name,Nets,False
+strong8k-test,Milwaukee Bucks at Philadelphia 76ers,2026-10-24T23:30:00.000Z,added,VIP: NBA TV,network,NBA TV,True
+strong8k-test,Milwaukee Bucks at Philadelphia 76ers,2026-10-24T23:30:00.000Z,removed,Washington Wizards vs Milwaukee Bucks @ Oct 21 7:00 PM :NBA  02,name,Bucks,False
+strong8k-test,Washington Wizards at Chicago Bulls,2026-10-25T00:00:00.000Z,added,TV: MONUMENTAL SPORTS NETWORK ALTERNATE ᴿᴬᵂ,network,MNMT,True
+strong8k-test,Washington Wizards at Chicago Bulls,2026-10-25T00:00:00.000Z,added,US: MONUMENTAL SPORTS NETWORK HD,network,MNMT,True
+strong8k-test,Washington Wizards at Chicago Bulls,2026-10-25T00:00:00.000Z,removed,Toronto Raptors vs Chicago Bulls @ Oct 21 7:30 PM :NBA  05,name,Bulls,False
+strong8k-test,Washington Wizards at Chicago Bulls,2026-10-25T00:00:00.000Z,removed,Toronto Raptors vs Chicago Bulls @ Oct 21 7:30 PM :NBA  05,name,Bulls,False
+strong8k-test,San Antonio Spurs at Dallas Mavericks,2026-10-25T00:00:00.000Z,removed,Houston Rockets vs Dallas Mavericks @ Oct 21 8:30 PM :NBA  08,name,Mavericks,False
+strong8k-test,San Antonio Spurs at Dallas Mavericks,2026-10-25T00:00:00.000Z,removed,Houston Rockets vs Dallas Mavericks @ Oct 21 8:30 PM :NBA  08,name,Mavericks,False
+strong8k-test,Houston Rockets at Atlanta Hawks,2026-10-25T00:30:00.000Z,removed,Orlando Magic vs Atlanta Hawks @ Oct 21 7:00 PM :NBA  01,name,Hawks,False
+strong8k-test,Houston Rockets at Atlanta Hawks,2026-10-25T00:30:00.000Z,removed,Orlando Magic vs Atlanta Hawks @ Oct 21 7:00 PM :NBA  01,name,Hawks,False
+strong8k-test,New Orleans Pelicans at Denver Nuggets,2026-10-25T01:00:00.000Z,removed,New Orleans Pelicans vs Indiana Pacers @ Oct 21 8:00 PM :NBA  07,name,Pelicans,False
+strong8k-test,New Orleans Pelicans at Denver Nuggets,2026-10-25T01:00:00.000Z,removed,New Orleans Pelicans vs Indiana Pacers @ Oct 21 8:00 PM :NBA  07,name,Pelicans,False
+strong8k-test,Golden State Warriors at Phoenix Suns,2026-10-25T02:00:00.000Z,added,VIP: NBA TV,network,NBA TV,True
+strong8k-test,Golden State Warriors at Phoenix Suns,2026-10-25T02:00:00.000Z,added,AF: NBA TV,network,NBA TV,True
+strong8k-test,Golden State Warriors at Phoenix Suns,2026-10-25T02:00:00.000Z,removed,Portland Trail Blazers vs Phoenix Suns @ Oct 21 10:00 PM :NBA  10,name,Suns,False
+strong8k-test,Golden State Warriors at Phoenix Suns,2026-10-25T02:00:00.000Z,removed,Portland Trail Blazers vs Phoenix Suns @ Oct 21 10:00 PM :NBA  10,name,Suns,False
+strong8k-test,Pittsburgh Steelers at New Orleans Saints,2026-10-25T13:30:00.000Z,added,US: NFL NETWORK HD,network,NFL Net,True
+strong8k-test,Pittsburgh Steelers at New Orleans Saints,2026-10-25T13:30:00.000Z,added,US: NFL NETWORK ᴴᴰ,network,NFL Net,True
+strong8k-test,Newcastle United at Crystal Palace,2026-10-25T14:00:00.000Z,added,US: USA NETWORK EAST HD,network,USA Net,True
+strong8k-test,Newcastle United at Crystal Palace,2026-10-25T14:00:00.000Z,added,US: USA NETWORK HD,network,USA Net,True
+strong8k-test,Leeds United at Sunderland,2026-10-25T16:30:00.000Z,added,US: USA NETWORK EAST HD,network,USA Net,True
+strong8k-test,Leeds United at Sunderland,2026-10-25T16:30:00.000Z,added,US: USA NETWORK HD,network,USA Net,True
+strong8k-test,Los Angeles Lakers at Utah Jazz,2026-10-25T21:00:00.000Z,added,"TV: SALT LAKE CITY, UT KJZZ IND 14 A3 HD PHILADELPHIA ᶜᶦᵗʸ ᴿᴬᵂ",network,KJZZ-TV,True
+strong8k-test,Los Angeles Lakers at Utah Jazz,2026-10-25T21:00:00.000Z,removed,Memphis Grizzlies vs Utah Jazz @ Oct 21 8:00 PM :NBA  06,name,Jazz,False
+strong8k-test,Los Angeles Lakers at Utah Jazz,2026-10-25T21:00:00.000Z,removed,Memphis Grizzlies vs Utah Jazz @ Oct 21 8:00 PM :NBA  06,name,Jazz,False
+strong8k-test,Indiana Pacers at Brooklyn Nets,2026-10-25T22:00:00.000Z,removed,Brooklyn Nets vs Charlotte Hornets @ Oct 21 7:30 PM :NBA  04,name,Nets,False
+strong8k-test,Indiana Pacers at Brooklyn Nets,2026-10-25T22:00:00.000Z,removed,Brooklyn Nets vs Charlotte Hornets @ Oct 21 7:30 PM :NBA  04,name,Nets,False
+strong8k-test,Orlando Magic at New York Knicks,2026-10-25T23:00:00.000Z,removed,Orlando Magic vs Atlanta Hawks @ Oct 21 7:00 PM :NBA  01,name,Magic,False
+strong8k-test,Orlando Magic at New York Knicks,2026-10-25T23:00:00.000Z,removed,Orlando Magic vs Atlanta Hawks @ Oct 21 7:00 PM :NBA  01,name,Magic,False
+strong8k-test,Toronto Raptors at Minnesota Timberwolves,2026-10-25T23:00:00.000Z,added,VIP: NBA TV,network,NBA TV,True
+strong8k-test,Toronto Raptors at Minnesota Timberwolves,2026-10-25T23:00:00.000Z,added,AF: NBA TV,network,NBA TV,True
+strong8k-test,Toronto Raptors at Minnesota Timberwolves,2026-10-25T23:00:00.000Z,removed,Toronto Raptors vs Chicago Bulls @ Oct 21 7:30 PM :NBA  05,name,Raptors,False
+strong8k-test,Toronto Raptors at Minnesota Timberwolves,2026-10-25T23:00:00.000Z,removed,Toronto Raptors vs Chicago Bulls @ Oct 21 7:30 PM :NBA  05,name,Raptors,False
+strong8k-test,LA Clippers at Oklahoma City Thunder,2026-10-25T23:00:00.000Z,removed,LA Clippers vs Sacramento Kings @ Oct 21 10:30 PM :NBA  11,name,Clippers,False
+strong8k-test,LA Clippers at Oklahoma City Thunder,2026-10-25T23:00:00.000Z,removed,LA Clippers vs Sacramento Kings @ Oct 21 10:30 PM :NBA  11,name,Clippers,False
+strong8k-test,Memphis Grizzlies at Sacramento Kings,2026-10-26T01:00:00.000Z,removed,Memphis Grizzlies vs Utah Jazz @ Oct 21 8:00 PM :NBA  06,name,Grizzlies,False
+strong8k-test,Memphis Grizzlies at Sacramento Kings,2026-10-26T01:00:00.000Z,removed,Memphis Grizzlies vs Utah Jazz @ Oct 21 8:00 PM :NBA  06,name,Grizzlies,False

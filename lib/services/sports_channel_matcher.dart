@@ -747,13 +747,13 @@ class SportsChannelMatcher {
   /// next meeting of the same two teams — be told apart from today's.
   static ({int month, int day})? _dateInName(String norm) {
     final m1 = RegExp(
-            r' (jan|feb|mar|apr|may|jun|jul|aug|sept?|oct|nov|dec)[a-z]* (\d{1,2}) ')
+            r' (jan|feb|mar|apr|may|jun|jul|aug|sept?|oct|nov|dec)[a-z]* (\d{1,2})(?:st|nd|rd|th)? ')
         .firstMatch(norm);
     if (m1 != null) {
       return (month: _months[m1.group(1)]!, day: int.parse(m1.group(2)!));
     }
     final m2 = RegExp(
-            r' (\d{1,2}) (jan|feb|mar|apr|may|jun|jul|aug|sept?|oct|nov|dec)[a-z]* ')
+            r' (\d{1,2})(?:st|nd|rd|th)? (jan|feb|mar|apr|may|jun|jul|aug|sept?|oct|nov|dec)[a-z]* ')
         .firstMatch(norm);
     if (m2 != null) {
       return (month: _months[m2.group(2)]!, day: int.parse(m2.group(1)!));
@@ -933,6 +933,10 @@ class SportsChannelMatcher {
             if (full.split(' ').length < 2) continue;
             for (final i in _channelsNaming([full])) {
               if (!_names[i].trim().split(' ').contains(league)) continue;
+              // A dated event feed is not a permanent team channel. Apply
+              // the same stale-date guard as the both-team event path above.
+              final date = _dateInName(_names[i]);
+              if (date != null && !_dateFits(date, g.start)) continue;
               final bias = _regionBias(i, g.league);
               if (bias < 0) continue;
               add(i, MatchReason.teamChannel, 65 + bias, t.shortName);
