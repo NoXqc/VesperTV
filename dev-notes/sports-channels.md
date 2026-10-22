@@ -17,3 +17,15 @@ suggestions based on visible names/groups, not claims of game broadcast rights.
 
 Host tests are metadata/widget tests. Actual remote/touch/Windows playback needs
 owner device checks; no Formuler automation or build/install is part of this work.
+
+Phase 2 adds faceted filters (OR within one facet, AND between facets), Unknown,
+bulk country/network/sport/league overrides and updating lists. Membership is
+saved-filter matches plus explicit IDs minus exclusions, intersected with visible
+live channels. Tags are inferred conservatively and cached per Channel object;
+manual tags override inference. Facet choices and results use lazy lists.
+Keep this list updated records group/search/facet rules; manual selection remains
+the default. Clearing or changing a filter never clears existing selections.
+Game menus offer Add sources from All channels/My lists, scoped to game (7-day
+expiry), team or league; they use separate references from the preferred pick.
+User choices retain their own label. More sources exposes unlimited matcher
+results through the lazy picker rather than truncating at eight distinct feeds.

@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nox_iptv/models/channel.dart';
+import 'package:nox_iptv/models/sports.dart';
 import 'package:nox_iptv/services/storage_service.dart';
 import 'package:nox_iptv/services/sports_channel_library.dart';
 
@@ -68,5 +69,89 @@ void main() {
     expect(SportsChannelLists(r).lists.single.name, 'Kid');
     await r.deleteViewerData('kid');
     expect(SportsChannelLists(r).lists, isEmpty);
+  });
+
+  test(
+      'updating membership includes new matches, manual additions, and exclusions win',
+      () async {
+    final s = await storage();
+    final store = SportsChannelLists(s);
+    final list = store.create('Canada', ['p::manual']);
+    list.filters = {
+      'Country': ['CA']
+    };
+    list.excluded.add('p::excluded');
+    await store.save();
+    final reloaded = SportsChannelLists(s);
+    final library = SportsChannelLibrary([
+      c('new', 'CA: TSN 2 HD'),
+      c('excluded', 'CA: TSN 1 HD'),
+      c('manual', 'Unknown local'),
+      c('other', 'US: ESPN')
+    ], store: reloaded);
+    expect(library.members(reloaded.lists.single).map((c) => c.id),
+        ['p::manual', 'p::new']);
+    expect(
+        SportsChannelLibrary([c('other', 'US: ESPN')], store: reloaded)
+            .members(reloaded.lists.single),
+        isEmpty);
+  });
+  test('filter dimensions use AND; values use OR; unknown and manual tags work',
+      () async {
+    final s = await storage();
+    final store = SportsChannelLists(s);
+    final local = c('local', 'Unclassified');
+    store.tags[local.id] = {
+      'Country': ['CA'],
+      'Sport': ['hockey'],
+      'Network': ['Local']
+    };
+    final library = SportsChannelLibrary([local], store: store);
+    expect(
+        library.accepts(local, {
+          'Country': ['US', 'CA'],
+          'Sport': ['hockey']
+        }),
+        isTrue);
+    expect(
+        library.accepts(local, {
+          'Country': ['US'],
+          'Sport': ['hockey']
+        }),
+        isFalse);
+    expect(
+        library.accepts(c('none', 'Unknown'), {
+          'Country': ['Unknown']
+        }),
+        isTrue);
+    expect(library.tagsFor(c('plus', 'US: ESPN+'))['Network'], ['ESPN+']);
+    expect(library.tagsFor(c('base', 'US: ESPN'))['Network'], ['ESPN']);
+  });
+  test(
+      'game/team/league sources persist independently and expired events disappear',
+      () async {
+    final s = await storage();
+    final store = SportsChannelLists(s);
+    final game = SportsGame(
+        id: 'one',
+        league: sportsLeagueById('nhl')!,
+        start: DateTime.utc(2026, 10, 23),
+        state: GameState.pre,
+        statusText: '',
+        home: const SportsTeam(
+            id: 'h', name: 'Home Team', shortName: 'Home', abbreviation: 'H'),
+        away: const SportsTeam(
+            id: 'a', name: 'Away Team', shortName: 'Away', abbreviation: 'A'));
+    await store.setSources('event:one', ['p::event'], event: true);
+    await store.setSources('team:nhl:h', ['p::team']);
+    await store.setSources('league:nhl', ['p::league']);
+    expect(SportsChannelLists(s).sourcesFor(game, 'one'),
+        {'p::event', 'p::team', 'p::league'});
+    store.sources['event:one']!['until'] = 0;
+    await store.save();
+    expect(SportsChannelLists(s).sourcesFor(game, 'one'),
+        {'p::team', 'p::league'});
+    await s.setActiveViewerId('kid');
+    expect(SportsChannelLists(s).sourcesFor(game, 'one'), isEmpty);
   });
 }

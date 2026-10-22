@@ -23,23 +23,88 @@ class SportsChannelPicker extends StatefulWidget {
       required this.channels,
       this.selected = const {},
       this.multiple = true,
-      this.groupFirst = false});
+      this.groupFirst = false,
+      this.allowRules = false,
+      this.initialRules = const {},
+      this.onSaveRules});
   final List<Channel> channels;
   final Set<String> selected;
   final bool multiple;
   final bool groupFirst;
+  final bool allowRules;
+  final Map<String, List<String>> initialRules;
+  final ValueChanged<Map<String, List<String>>>? onSaveRules;
   @override
   State<SportsChannelPicker> createState() => _SportsChannelPickerState();
 }
 
 class _SportsChannelPickerState extends State<SportsChannelPicker> {
-  late final _selected = {...widget.selected};
+  late final _selected =
+      widget.selected.intersection(widget.channels.map((c) => c.id).toSet());
   String _query = '';
   String? _group;
+  late final _store = SportsChannelLists(context.read<StorageService>());
+  late Map<String, List<String>> _filters = {...widget.initialRules};
+  late bool _updated = widget.initialRules.isNotEmpty;
+  Future<void> _filter(SportsChannelLibrary library) async {
+    final picked = await showSportsChannelFilters(context, library, _filters);
+    if (picked != null && mounted) setState(() => _filters = picked);
+  }
+
+  Future<void> _tags() async {
+    final kind = await showDialog<String>(
+        context: context,
+        builder: (dialog) =>
+            SimpleDialog(title: Text(tr('Edit tags')), children: [
+              for (final key in ['Country', 'Network', 'Sport', 'League'])
+                TvMenuTile(
+                    icon: Icons.label,
+                    title: tr(key),
+                    onTap: () => Navigator.pop(dialog, key)),
+            ]));
+    if (kind == null || !mounted) return;
+    final controller = TextEditingController();
+    final value = await showDialog<String>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+                title: Text(tr(kind)),
+                content: FocusNodeOwner(
+                    builder: (_, node) => TvTextFieldGate(
+                        focusNode: node,
+                        builder: (_, readOnly) => TextField(
+                            controller: controller,
+                            focusNode: node,
+                            readOnly: readOnly,
+                            decoration: InputDecoration(
+                                hintText: tr('Comma-separated tags'))))),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(dialog),
+                      child: Text(tr('Cancel'))),
+                  TextButton(
+                      onPressed: () => Navigator.pop(dialog, controller.text),
+                      child: Text(tr('Save')))
+                ]));
+    WidgetsBinding.instance.addPostFrameCallback((_) => controller.dispose());
+    if (value == null) return;
+    for (final id in _selected) {
+      (_store.tags[id] ??= {})[kind] = value
+          .split(',')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
+    }
+    await _store.save();
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
-    final library = SportsChannelLibrary(widget.channels);
-    final results = library.search(query: _query, group: _group);
+    final library = SportsChannelLibrary(widget.channels, store: _store);
+    final results = library
+        .search(query: _query, group: _group)
+        .where((c) => library.accepts(c, _filters))
+        .toList();
     final groups = {
       for (final c in library.channels) '${c.playlistId}::${c.group}': c
     };
@@ -47,7 +112,20 @@ class _SportsChannelPickerState extends State<SportsChannelPicker> {
     return Scaffold(
       appBar: AppBar(title: Text(tr('Pick channels myself')), actions: [
         TextButton(
-            onPressed: () => Navigator.pop(context, _selected),
+            onPressed: () {
+              widget.onSaveRules?.call(_updated
+                  ? {
+                      ..._filters,
+                      if (_group != null) 'Group': [_group!],
+                      if (_query.trim().isNotEmpty) 'Query': [_query],
+                      if (_filters.isEmpty &&
+                          _group == null &&
+                          _query.trim().isEmpty)
+                        'All': ['true']
+                    }
+                  : {});
+              Navigator.pop(context, _selected);
+            },
             child: Text(tr('Save'))),
       ]),
       body: Column(children: [
@@ -79,6 +157,11 @@ class _SportsChannelPickerState extends State<SportsChannelPicker> {
                   ],
                   onChanged: (v) => setState(() => _group = v)),
               Wrap(spacing: 12, children: [
+                TextButton(
+                    onPressed: () => _filter(library),
+                    child: Text(tr('Filters'))),
+                if (_selected.isNotEmpty)
+                  TextButton(onPressed: _tags, child: Text(tr('Edit tags'))),
                 Text(tr('{count} selected', {'count': _selected.length})),
                 if (widget.multiple)
                   TextButton(
@@ -90,6 +173,16 @@ class _SportsChannelPickerState extends State<SportsChannelPicker> {
                         () => _selected.removeAll(results.map((c) => c.id))),
                     child: Text(tr('Clear results'))),
               ]),
+              if (widget.allowRules)
+                CheckboxListTile(
+                    title: Text(tr('Keep this list updated')),
+                    value: _updated,
+                    onChanged: (v) => setState(() {
+                          _updated = v ?? false;
+                          if (_updated) {
+                            _selected.addAll(results.map((c) => c.id));
+                          }
+                        })),
             ])),
         Expanded(
             child: results.isEmpty
@@ -98,6 +191,7 @@ class _SportsChannelPickerState extends State<SportsChannelPicker> {
                         onPressed: () => setState(() {
                               _query = '';
                               _group = null;
+                              _filters = {};
                             }),
                         child: Text(tr('Browse all channels'))))
                 : SportsChannelTiles(
@@ -217,6 +311,146 @@ class _SportsChannelTilesState extends State<SportsChannelTiles> {
   }
 }
 
+Future<Map<String, List<String>>?> showSportsChannelFilters(
+    BuildContext context,
+    SportsChannelLibrary library,
+    Map<String, List<String>> initial) {
+  final selected = {
+    for (final e in initial.entries) e.key: [...e.value]
+  };
+  final counts = <String, Map<String, int>>{};
+  for (final c in library.channels) {
+    for (final e in library.tagsFor(c).entries) {
+      final facet = counts[e.key] ??= {};
+      for (final value in e.value.isEmpty ? ['Unknown'] : e.value) {
+        facet[value] = (facet[value] ?? 0) + 1;
+      }
+    }
+  }
+  return showDialog<Map<String, List<String>>>(
+      context: context,
+      builder: (dialog) => StatefulBuilder(
+          builder: (_, update) => AlertDialog(
+                title: Text(tr('Filters')),
+                content: SizedBox(
+                    width: 600,
+                    child: SingleChildScrollView(
+                        child: Column(children: [
+                      for (final dimension in [
+                        'Playlist',
+                        'Group',
+                        'Network',
+                        'Country',
+                        'Sport',
+                        'League'
+                      ])
+                        TvMenuTile(
+                            icon: Icons.filter_list,
+                            title: tr(dimension),
+                            subtitle: selected[dimension]?.join(', '),
+                            onTap: () async {
+                              final options = {
+                                'Unknown',
+                                ...?counts[dimension]?.keys,
+                                ...?selected[dimension]
+                              }.toList()
+                                ..sort();
+                              var query = '';
+                              await showDialog<void>(
+                                  context: dialog,
+                                  builder:
+                                      (facetDialog) =>
+                                          StatefulBuilder(builder: (_, change) {
+                                            final visible = options
+                                                .where((s) => s
+                                                    .toLowerCase()
+                                                    .contains(
+                                                        query.toLowerCase()))
+                                                .toList();
+                                            String label(String value) =>
+                                                dimension == 'Playlist'
+                                                    ? context
+                                                        .read<PlaylistManager>()
+                                                        .playlistNameFor(value)
+                                                    : dimension == 'Group' &&
+                                                            value.contains('::')
+                                                        ? value
+                                                            .split('::')
+                                                            .skip(1)
+                                                            .join('::')
+                                                        : tr(value);
+                                            return AlertDialog(
+                                                title: Text(tr(dimension)),
+                                                content: SizedBox(
+                                                    width: 560,
+                                                    height: 360,
+                                                    child: Column(children: [
+                                                      FocusNodeOwner(
+                                                          builder: (_, node) => TvTextFieldGate(
+                                                              focusNode: node,
+                                                              builder: (_, readOnly) => TextField(
+                                                                  focusNode:
+                                                                      node,
+                                                                  readOnly:
+                                                                      readOnly,
+                                                                  decoration: InputDecoration(
+                                                                      labelText: tr(
+                                                                          'Search')),
+                                                                  onChanged: (v) =>
+                                                                      change(() =>
+                                                                          query =
+                                                                              v)))),
+                                                      Expanded(
+                                                          child:
+                                                              ListView.builder(
+                                                                  itemCount:
+                                                                      visible
+                                                                          .length,
+                                                                  itemBuilder:
+                                                                      (_, i) {
+                                                                    final value =
+                                                                        visible[
+                                                                            i];
+                                                                    return CheckboxListTile(
+                                                                        title: Text(
+                                                                            '${label(value)} (${counts[dimension]?[value] ?? 0})'),
+                                                                        value: selected[dimension]?.contains(value) ??
+                                                                            false,
+                                                                        onChanged: (on) =>
+                                                                            change(() {
+                                                                              final values = selected[dimension] ??= [];
+                                                                              on == true ? values.add(value) : values.remove(value);
+                                                                            }));
+                                                                  })),
+                                                    ])),
+                                                actions: [
+                                                  TextButton(
+                                                      onPressed: () =>
+                                                          Navigator.pop(
+                                                              facetDialog),
+                                                      child: Text(tr('Save')))
+                                                ]);
+                                          }));
+                              update(() {});
+                            }),
+                    ]))),
+                actions: [
+                  TextButton(
+                      onPressed: () => update(selected.clear),
+                      child: Text(tr('Clear all'))),
+                  TextButton(
+                      onPressed: () => Navigator.pop(dialog),
+                      child: Text(tr('Cancel'))),
+                  TextButton(
+                      onPressed: () => Navigator.pop(
+                          dialog,
+                          Map<String, List<String>>.fromEntries(selected.entries
+                              .where((e) => e.value.isNotEmpty))),
+                      child: Text(tr('Save')))
+                ],
+              )));
+}
+
 class SportsChannelsScreen extends StatefulWidget {
   const SportsChannelsScreen(
       {super.key,
@@ -235,6 +469,7 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
   String _section = 'My lists';
   String? _list;
   Channel? _preview;
+  Map<String, List<String>> _viewFilters = {};
   @override
   void initState() {
     super.initState();
@@ -262,13 +497,20 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
     }
     final playlist = context.read<PlaylistManager>();
     final visible = playlist.visibleChannels(category: 'tv');
+    final library = SportsChannelLibrary(visible, store: _store);
+    Map<String, List<String>> rules = list?.filters ?? {};
     final chosen = await Navigator.push<Set<String>>(
         context,
         MaterialPageRoute(
             builder: (_) => SportsChannelPicker(
                 channels: visible,
-                selected: list?.channels.toSet() ?? {},
-                groupFirst: groupFirst)));
+                selected: list == null
+                    ? {}
+                    : library.members(list).map((c) => c.id).toSet(),
+                groupFirst: groupFirst,
+                allowRules: true,
+                initialRules: rules,
+                onSaveRules: (value) => rules = value)));
     if (chosen == null || !mounted) return;
     // Keep temporarily unavailable references without displaying their names.
     final missing =
@@ -279,11 +521,26 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
       if (name == null || !mounted) return;
       final made = _store.create(name, chosen);
       _list = made.id;
+      list = made;
     } else {
       list.channels
         ..clear()
         ..addAll({...chosen, ...missing});
     }
+    _store.tags
+      ..clear()
+      ..addAll(SportsChannelLists(context.read<StorageService>()).tags);
+    final matched = rules.isEmpty
+        ? <String>{}
+        : library.channels
+            .where((c) => library.accepts(c, rules))
+            .map((c) => c.id)
+            .toSet();
+    list.filters = rules;
+    list.excluded
+      ..clear()
+      ..addAll(matched.difference(chosen));
+    if (rules.isNotEmpty) list.channels.removeWhere(matched.contains);
     await _store.save();
     if (mounted) setState(() {});
   }
@@ -394,6 +651,7 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
                       if (!list.channels.contains(channel.id)) {
                         list.channels.add(channel.id);
                       }
+                      list.excluded.remove(channel.id);
                       await _store.save();
                       if (dialog.mounted) Navigator.pop(dialog);
                       if (mounted) setState(() {});
@@ -429,14 +687,17 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
   @override
   Widget build(BuildContext context) {
     final playlist = context.watch<PlaylistManager>();
-    final library =
-        SportsChannelLibrary(playlist.visibleChannels(category: 'tv'));
+    final library = SportsChannelLibrary(
+        playlist.visibleChannels(category: 'tv'),
+        store: _store);
     final list = _store.lists.where((l) => l.id == _list).firstOrNull;
-    final channels = _section == 'My lists'
+    final sectionChannels = _section == 'My lists'
         ? (list == null ? <Channel>[] : library.members(list))
         : library.channels
             .where((c) => SportsChannelLibrary.category(c) == _section)
             .toList();
+    final channels =
+        sectionChannels.where((c) => library.accepts(c, _viewFilters)).toList();
     final mini =
         Platform.isWindows ? DesktopMiniPlayer.instance.controller : null;
     return PopScope(
@@ -449,6 +710,16 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
         },
         child: Scaffold(
             appBar: AppBar(title: Text(tr('Channels')), actions: [
+              IconButton(
+                  tooltip: tr('Filters'),
+                  icon: const Icon(Icons.filter_list),
+                  onPressed: () async {
+                    final filters = await showSportsChannelFilters(
+                        context, library, _viewFilters);
+                    if (filters != null && mounted) {
+                      setState(() => _viewFilters = filters);
+                    }
+                  }),
               TextButton(onPressed: widget.onGames, child: Text(tr('Games'))),
               TextButton(
                   onPressed: () => _edit(), child: Text(tr('Create list'))),
