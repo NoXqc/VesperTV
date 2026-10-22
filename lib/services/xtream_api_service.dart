@@ -1,3 +1,4 @@
+import '../models/trailer.dart';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -220,6 +221,7 @@ class XtreamApiService {
     final info = decoded['info'];
     if (info is! Map) return VodDetails.empty;
     return VodDetails(
+      trailers: TrailerLinks.fromMetadata(info),
       plot: _nonEmpty(info['plot']) ?? _nonEmpty(info['description']),
       posterUrl: _httpUrl(info['cover_big']) ?? _httpUrl(info['movie_image']),
       backdropUrls: backdropUrlsOf(info['backdrop_path']),
@@ -367,6 +369,7 @@ class XtreamApiService {
     if (info is Map) {
       final backdrops = backdropUrlsOf(info['backdrop_path']);
       details = SeriesDetails(
+        trailers: TrailerLinks.fromMetadata(info),
         backdropUrls: backdrops,
         coverUrl: _nonEmpty(info['cover']),
         genre: _nonEmpty(info['genre']),

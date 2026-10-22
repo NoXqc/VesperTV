@@ -1,3 +1,4 @@
+import '../models/trailer.dart';
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
@@ -211,7 +212,7 @@ class MediaServerApi {
       'Recursive': 'true',
       'IncludeItemTypes':
           catalog.type == ArchiveType.series ? 'Series' : 'Movie',
-      'Fields': 'Overview,Genres,ProductionYear,ProviderIds',
+      'Fields': 'Overview,Genres,ProductionYear,ProviderIds,RemoteTrailers',
       'EnableImageTypes': 'Primary,Backdrop',
       'ImageTypeLimit': '1',
       'StartIndex': '$skip',
@@ -326,6 +327,7 @@ class MediaServerApi {
     return ArchiveMeta(
       id: id,
       imdbId: imdb != null && imdb.startsWith('tt') ? imdb : null,
+      trailers: TrailerLinks.fromMetadata(j),
       type: j['Type'] == 'Series' ? ArchiveType.series : ArchiveType.movie,
       name: name,
       posterUrl: _image(s, j, 'Primary', 'maxHeight=600'),

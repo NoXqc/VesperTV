@@ -2369,4 +2369,7 @@ const Map<String, String> kEl = {
   "tennis": "Τένις",
   "golf": "Γκολφ",
   "racing": "Μηχανοκίνητος αθλητισμός",
+
+  "Trailer": "Τρέιλερ",
+  "Unable to open trailer": "Δεν ήταν δυνατό το άνοιγμα του τρέιλερ",
 };

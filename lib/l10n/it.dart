@@ -1761,4 +1761,7 @@ const Map<String, String> kIt = {
   "tennis": "Tennis",
   "golf": "Golf",
   "racing": "Automobilismo",
+
+  "Trailer": "Trailer",
+  "Unable to open trailer": "Impossibile aprire il trailer",
 };

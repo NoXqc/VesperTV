@@ -1760,4 +1760,7 @@ const Map<String, String> kFr = {
   "tennis": "Tennis",
   "golf": "Golf",
   "racing": "Course automobile",
+
+  "Trailer": "Bande-annonce",
+  "Unable to open trailer": "Impossible d’ouvrir la bande-annonce",
 };

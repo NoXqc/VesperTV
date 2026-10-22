@@ -1757,4 +1757,7 @@ const Map<String, String> kEs = {
   "tennis": "Tenis",
   "golf": "Golf",
   "racing": "Automovilismo",
+
+  "Trailer": "Tráiler",
+  "Unable to open trailer": "No se pudo abrir el tráiler",
 };
