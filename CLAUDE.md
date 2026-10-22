@@ -321,6 +321,12 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-22)
+- **Unreleased fix (Codex, `codex/fix-vod-favorites`, 2026-10-22):** Movie/series favourites now
+  toggle from saved ids and synchronize browse copies. Saved favourites are resolved from the
+  catalog independently of the 300/category browse cap (400-id query batches, per viewer), with
+  hidden/allowed-group and enabled-playlist filtering. Search/Expand/detail stars read saved state.
+  Ten regressions in `test/vod_favorites_test.dart`; investigation and fix notes in
+  `dev-notes/vod-favorites-investigation.md`. Sony-specific user reproduction still unconfirmed.
 - **Shipped: 1.0.35 (`+396`, 2026-10-22, latest; `+395` owner-tested on the Formuler; test build `+389` = pre-release `1.0.35-test.389`):** **Hide Recordings** (Settings › Tabs, `hideRecordings`, Codex `codex/hide-recording-tab`). Media Hub show page shows its source chip (`SeriesDetailScreen
   .sourceLabel`) and an hourglass on the tapped episode + Play while streams load (`_startingId`,
   extra presses ignored). **Add-on links resolved once before playing** (`services/stream_resolver.dart`

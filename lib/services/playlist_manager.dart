@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
@@ -76,6 +77,29 @@ class PlaylistManager extends ChangeNotifier {
 
   Set<String> _favoriteIds = {};
   Set<String> _favoriteSeriesIds = {};
+
+  // Only favourited catalog items, independent of the 300/category browse cap.
+  final Map<String, Channel> _favoriteVod = {};
+  final Map<String, XtreamSeries> _favoriteShows = {};
+  String? _favoriteCatalogKey;
+  Future<void>? _favoriteCatalogFuture;
+  int _favoriteCatalogGeneration = 0;
+
+  void _invalidateFavoriteCatalog({bool clear = false}) {
+    _favoriteCatalogGeneration++;
+    _favoriteCatalogKey = null;
+    _favoriteCatalogFuture = null;
+    if (clear) {
+      _favoriteVod.clear();
+      _favoriteShows.clear();
+    }
+  }
+
+  @override
+  void dispose() {
+    _favoriteCatalogGeneration++;
+    super.dispose();
+  }
 
   /// See this class' own doc comment. Read live by every `PlaylistSession`
   /// via the `isRestrictedViewer` callback passed to its constructor —
@@ -167,6 +191,7 @@ class PlaylistManager extends ChangeNotifier {
   // --- Init / migration -----------------------------------------------------
 
   Future<void> init() async {
+    _invalidateFavoriteCatalog(clear: true);
     // Set synchronously, before the first `await` — matches the old
     // single-playlist behavior where whatever's on screen the instant it
     // renders needs to already read "loading", not a flash of "no
@@ -204,6 +229,7 @@ class PlaylistManager extends ChangeNotifier {
       // independently via its own `onNotify`, so the UI fills in
       // playlist-by-playlist rather than waiting for the slowest one.
       await Future.wait(_enabledSessionsSorted.map((s) => s.restoreOrLoad()));
+      await ensureFavoriteCatalogLoaded();
     } finally {
       _initializing = false;
       notifyListeners();
@@ -217,9 +243,13 @@ class PlaylistManager extends ChangeNotifier {
   /// `XtreamApiService.maxConnections` was added to prevent for the
   /// concurrent-category-fetch path; a manual, user-initiated single retry
   /// is a different, much smaller thing than that was.
-  Future<void> retryFailedConnections() => Future.wait(_enabledSessionsSorted
-      .where((s) => s.error != null)
-      .map((s) => s.restoreOrLoad()));
+  Future<void> retryFailedConnections() async {
+    await Future.wait(_enabledSessionsSorted
+        .where((s) => s.error != null)
+        .map((s) => s.restoreOrLoad()));
+    _invalidateFavoriteCatalog(clear: true);
+    await ensureFavoriteCatalogLoaded();
+  }
 
   /// Upgrading from the pre-multi-playlist version: the old single set of
   /// global scalar prefs (server/username/password, hidden/favorited
@@ -311,6 +341,7 @@ class PlaylistManager extends ChangeNotifier {
   /// opposed to which parts of it are hidden/favorited) is shared across
   /// every viewer regardless.
   void applyActiveViewer() {
+    _invalidateFavoriteCatalog(clear: true);
     _activeViewerRestricted = _activeViewerIsRestricted();
     _favoriteIds = _storage.getFavorites();
     _favoriteSeriesIds = _storage.getFavoriteSeries();
@@ -319,6 +350,7 @@ class PlaylistManager extends ChangeNotifier {
       session.reloadViewerState();
       session.restampFavorites();
     }
+    unawaited(ensureFavoriteCatalogLoaded());
     notifyListeners();
   }
 
@@ -492,6 +524,8 @@ class PlaylistManager extends ChangeNotifier {
       final url = session.profile.m3uUrl;
       if (url != null && url.isNotEmpty) await session.loadFromUrl(url);
     }
+    _invalidateFavoriteCatalog(clear: true);
+    await ensureFavoriteCatalogLoaded();
     notifyListeners();
   }
 
@@ -1332,6 +1366,13 @@ class PlaylistManager extends ChangeNotifier {
   bool _isHiddenForActiveViewer(String playlistId, String group) =>
       _sessionFor(playlistId)?.hiddenGroups.contains(group) ?? false;
 
+  // A saved favourite can belong to a category not loaded this session.
+  // Restricted viewers must still opt in to that category explicitly.
+  bool _isFavoriteGroupVisible(String playlistId, String group) =>
+      !_isHiddenForActiveViewer(playlistId, group) &&
+      (!_activeViewerRestricted ||
+          _storage.getShownGroups(playlistId).contains(group));
+
   List<Channel> get favoriteChannels => _enabledSessionsSorted
           .expand((s) =>
               s.isXtream ? [...s.liveChannels, ...s.allCachedVod] : s.channels)
@@ -1371,19 +1412,97 @@ class PlaylistManager extends ChangeNotifier {
       .where((c) => !_isHiddenForActiveViewer(c.playlistId, c.group))
       .toList();
 
-  List<Channel> get favoriteMovies => _enabledSessionsSorted
-      .expand((s) => (s.isXtream
-          ? s.allCachedVod
-          : s.channels.where((c) => _classifyGroupPublic(c.group) == 'vod')))
-      .where((c) =>
-          c.isFavorite && !_isHiddenForActiveViewer(c.playlistId, c.group))
-      .toList();
+  /// Resolve saved ids, never the database's legacy Main-only favourite bit.
+  /// Cached by viewer/ids/enabled playlists so calling from build is safe.
+  /// Small batches also support older Android SQLite variable limits.
+  Future<void> ensureFavoriteCatalogLoaded() {
+    final playlists = _enabledSessionsSorted.where((s) => s.isXtream).toList();
+    final vodIds = _favoriteIds
+        .where((id) =>
+            playlists.any((s) => id.startsWith('${s.profile.id}::xt_vod_')))
+        .toList();
+    final seriesIds = _favoriteSeriesIds
+        .where((id) => playlists.any((s) => id.startsWith('${s.profile.id}::')))
+        .toList();
+    final key = jsonEncode([
+      _storage.getActiveViewerId(),
+      playlists.map((s) => s.profile.id).toList(),
+      vodIds,
+      seriesIds,
+    ]);
+    if (_favoriteCatalogKey == key && _favoriteCatalogFuture != null) {
+      return _favoriteCatalogFuture!;
+    }
+    _favoriteCatalogKey = key;
+    final generation = ++_favoriteCatalogGeneration;
+    return _favoriteCatalogFuture =
+        _loadFavoriteCatalog(generation, vodIds, seriesIds);
+  }
+
+  Future<List<T>> _favoriteRows<T>(
+      List<String> ids, Future<List<T>> Function(List<String>) read) async {
+    final rows = <T>[];
+    for (var offset = 0; offset < ids.length; offset += 400) {
+      rows.addAll(
+          await read(ids.sublist(offset, (offset + 400).clamp(0, ids.length))));
+    }
+    return rows;
+  }
+
+  Future<void> _loadFavoriteCatalog(
+      int generation, List<String> vodIds, List<String> seriesIds) async {
+    try {
+      final (movies, shows) = await (
+        _favoriteRows(vodIds, _catalogDb.getVodByIds),
+        _favoriteRows(seriesIds, _catalogDb.getSeriesByIds),
+      ).wait;
+      if (generation != _favoriteCatalogGeneration) return;
+      _favoriteVod
+        ..clear()
+        ..addEntries(movies.where((c) => _favoriteIds.contains(c.id)).map((c) {
+          c.isFavorite = true;
+          return MapEntry(c.id, c);
+        }));
+      _favoriteShows
+        ..clear()
+        ..addEntries(
+            shows.where((s) => _favoriteSeriesIds.contains(s.id)).map((s) {
+          s.isFavorite = true;
+          return MapEntry(s.id, s);
+        }));
+      notifyListeners();
+    } catch (e) {
+      // Permit a later visit/rebuild to retry; a viewer switch invalidates
+      // this request and must never receive its rows or error state.
+      if (generation == _favoriteCatalogGeneration) _favoriteCatalogKey = null;
+      debugPrint('Favourite catalog load failed: $e');
+    }
+  }
+
+  List<Channel> get favoriteMovies => _enabledSessionsSorted.expand((s) {
+        final byId = <String, Channel>{
+          if (s.isXtream)
+            for (final c in _favoriteVod.values)
+              if (c.playlistId == s.profile.id) c.id: c,
+          for (final c in s.isXtream
+              ? s.allCachedVod
+              : s.channels.where((c) => _classifyGroupPublic(c.group) == 'vod'))
+            c.id: c,
+        };
+        return byId.values.where((c) =>
+            _favoriteIds.contains(c.id) &&
+            _isFavoriteGroupVisible(c.playlistId, c.group));
+      }).toList();
 
   List<XtreamSeries> get favoriteSeries => _enabledSessionsSorted
       .where((s) => s.isXtream)
-      .expand((s) => s.allCachedSeries)
-      .where((s) =>
-          s.isFavorite && !_isHiddenForActiveViewer(s.playlistId, s.categoryId))
+      .expand((s) => <String, XtreamSeries>{
+            for (final item in _favoriteShows.values)
+              if (item.playlistId == s.profile.id) item.id: item,
+            for (final item in s.allCachedSeries) item.id: item,
+          }.values.where((item) =>
+              _favoriteSeriesIds.contains(item.id) &&
+              _isFavoriteGroupVisible(item.playlistId, item.categoryId)))
       .toList();
 
   List<Channel> get favoriteShowChannels => _enabledSessionsSorted
@@ -1406,11 +1525,30 @@ class PlaylistManager extends ChangeNotifier {
   }
 
   Future<void> toggleFavorite(Channel channel) async {
-    channel.isFavorite = !channel.isFavorite;
+    channel.isFavorite = !_favoriteIds.contains(channel.id);
     if (channel.isFavorite) {
       _favoriteIds.add(channel.id);
     } else {
       _favoriteIds.remove(channel.id);
+    }
+    if (channel.isFavorite &&
+        (_sessionFor(channel.playlistId)?.isXtream ?? false) &&
+        channel.rawId.startsWith('xt_vod_')) {
+      _favoriteVod[channel.id] = channel;
+    } else {
+      _favoriteVod.remove(channel.id);
+    }
+    _invalidateFavoriteCatalog();
+    for (final session in _sessions) {
+      for (final list in [
+        session.channels,
+        session.liveChannels,
+        ...session.vodByCategoryName.values,
+      ]) {
+        for (final copy in list) {
+          if (copy.id == channel.id) copy.isFavorite = channel.isFavorite;
+        }
+      }
     }
     await _storage.setFavorites(_favoriteIds);
     // Only while Main is active — downgrade insurance, not the source of
@@ -1435,11 +1573,24 @@ class PlaylistManager extends ChangeNotifier {
   bool isChannelFavorited(String channelId) => _favoriteIds.contains(channelId);
 
   Future<void> toggleSeriesFavorite(XtreamSeries series) async {
-    series.isFavorite = !series.isFavorite;
+    series.isFavorite = !_favoriteSeriesIds.contains(series.id);
     if (series.isFavorite) {
       _favoriteSeriesIds.add(series.id);
     } else {
       _favoriteSeriesIds.remove(series.id);
+    }
+    if (series.isFavorite) {
+      _favoriteShows[series.id] = series;
+    } else {
+      _favoriteShows.remove(series.id);
+    }
+    _invalidateFavoriteCatalog();
+    for (final session in _sessions) {
+      for (final list in session.seriesByCategoryName.values) {
+        for (final copy in list) {
+          if (copy.id == series.id) copy.isFavorite = series.isFavorite;
+        }
+      }
     }
     await _storage.setFavoriteSeries(_favoriteSeriesIds);
     // See the matching comment in toggleFavorite above.
@@ -1480,6 +1631,9 @@ class PlaylistManager extends ChangeNotifier {
         : const <String>{};
     _favoriteIds.removeAll(channelIds);
     _favoriteSeriesIds.removeAll(seriesIds);
+    _favoriteVod.removeWhere((id, _) => channelIds.contains(id));
+    _favoriteShows.removeWhere((id, _) => seriesIds.contains(id));
+    _invalidateFavoriteCatalog();
     await _storage.setFavorites(_favoriteIds);
     await _storage.setFavoriteSeries(_favoriteSeriesIds);
     // See the matching comment in toggleFavorite.
@@ -1614,6 +1768,8 @@ class PlaylistManager extends ChangeNotifier {
       notifyListeners();
       await session.runFullCatalogSync();
     }
+    _invalidateFavoriteCatalog(clear: true);
+    await ensureFavoriteCatalogLoaded();
   }
 
   Future<void> warmAllCategories(String playlistId) =>

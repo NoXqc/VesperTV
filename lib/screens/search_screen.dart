@@ -721,7 +721,8 @@ class _SearchScreenState extends State<SearchScreen> {
           title: items[i].name,
           sourceLabel: _sourceNames?[items[i].playlistId],
           imageUrl: items[i].coverUrl,
-          isFavorite: items[i].isFavorite,
+          isFavorite:
+              context.read<PlaylistManager>().isSeriesFavorited(items[i].id),
           onToggleFavorite: () => _toggleSeriesFavorite(items[i]),
           onTap: () => _openSeries(items[i]),
           onFocusGained: () {
