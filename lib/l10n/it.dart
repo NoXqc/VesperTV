@@ -106,6 +106,18 @@ const Map<String, String> kIt = {
   "Couldn't find the provider's server address. Check your internet connection or DNS settings, or try again later.":
       "Impossibile trovare l'indirizzo del server del provider. Controlla la connessione a Internet o le impostazioni DNS, oppure riprova più tardi.",
   'Subtitles': "Sottotitoli",
+  "On now":
+      "In onda",
+  "No channel matches these filters.":
+      "Nessun canale corrisponde a questi filtri.",
+  "No sports channels found in your playlists.":
+      "Nessun canale sportivo trovato nelle tue playlist.",
+  "Empty list: hold OK on any channel card to add it here.":
+      "Lista vuota: tieni premuto OK su una scheda canale per aggiungerla qui.",
+  "OK · Full screen   Hold OK · Pick a channel   Back · Stop":
+      "OK · Schermo intero   Tieni OK · Scegli un canale   Indietro · Ferma",
+  "OK · Preview   Hold OK · Pick a channel or add to a list":
+      "OK · Anteprima   Tieni OK · Scegli un canale o aggiungilo a una lista",
   "See all":
       "Vedi tutto",
   "Update automatically":

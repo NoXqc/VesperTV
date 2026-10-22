@@ -156,6 +156,18 @@ const Map<String, String> kEl = {
       "Δεν ήταν δυνατός ο εντοπισμός της διεύθυνσης του διακομιστή του παρόχου. Ελέγξτε τη σύνδεσή σας στο διαδίκτυο ή τις ρυθμίσεις DNS και δοκιμάστε ξανά αργότερα.",
   "Subtitles":
       "Υπότιτλοι",
+  "On now":
+      "Τώρα",
+  "No channel matches these filters.":
+      "Κανένα κανάλι δεν ταιριάζει με αυτά τα φίλτρα.",
+  "No sports channels found in your playlists.":
+      "Δεν βρέθηκαν αθλητικά κανάλια στις λίστες σας.",
+  "Empty list: hold OK on any channel card to add it here.":
+      "Κενή λίστα: κρατήστε OK σε μια κάρτα καναλιού για να την προσθέσετε εδώ.",
+  "OK · Full screen   Hold OK · Pick a channel   Back · Stop":
+      "OK · Πλήρης οθόνη   Κράτημα OK · Επιλογή καναλιού   Πίσω · Διακοπή",
+  "OK · Preview   Hold OK · Pick a channel or add to a list":
+      "OK · Προεπισκόπηση   Κράτημα OK · Επιλογή καναλιού ή προσθήκη σε λίστα",
   "See all":
       "Όλα",
   "Update automatically":

@@ -107,6 +107,18 @@ const Map<String, String> kEs = {
   "Couldn't find the provider's server address. Check your internet connection or DNS settings, or try again later.":
       "No se pudo encontrar la dirección del servidor del proveedor. Comprueba tu conexión a Internet o la configuración de DNS, o inténtalo de nuevo más tarde.",
   'Subtitles': "Subtítulos",
+  "On now":
+      "Ahora",
+  "No channel matches these filters.":
+      "Ningún canal coincide con estos filtros.",
+  "No sports channels found in your playlists.":
+      "No se encontraron canales deportivos en tus listas.",
+  "Empty list: hold OK on any channel card to add it here.":
+      "Lista vacía: mantén OK en una tarjeta de canal para añadirla aquí.",
+  "OK · Full screen   Hold OK · Pick a channel   Back · Stop":
+      "OK · Pantalla completa   Mantener OK · Elegir canal   Atrás · Detener",
+  "OK · Preview   Hold OK · Pick a channel or add to a list":
+      "OK · Vista previa   Mantener OK · Elegir canal o añadir a una lista",
   "See all":
       "Ver todo",
   "Update automatically":

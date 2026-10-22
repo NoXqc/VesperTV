@@ -3,6 +3,7 @@ import '../models/channel.dart';
 import '../models/sports.dart';
 import '../utils/channel_name_matching.dart';
 import 'multiview_sports.dart';
+import 'sports_networks.dart';
 import 'storage_service.dart';
 
 /// References only: never copies stream URLs or changes groups/favourites.
@@ -100,6 +101,20 @@ class SportsChannelLists {
       };
 }
 
+/// One Channels card: a network and the user's channels of it.
+class SportsNetworkGroup {
+  SportsNetworkGroup(this.id, this.name, this.network);
+  final String id;
+  final String name;
+  final SportsNetwork? network;
+  final List<Channel> channels = [];
+
+  /// The first channel with a logo (providers mostly share one per brand).
+  String? get logoUrl => channels
+      .map((c) => c.logoUrl)
+      .firstWhere((u) => u != null && u.isNotEmpty, orElse: () => null);
+}
+
 class SportsChannelLibrary {
   SportsChannelLibrary(Iterable<Channel> visible, {this.store})
       : channels = {
@@ -120,10 +135,7 @@ class SportsChannelLibrary {
             r'^\s*(US|USA|CA|CAFR|UK|GB|GR|FR|IT|ES|DE|BR|PT|AU|NZ|IE|RO|RS|HR|BG)\s*[:|\-]')
         .firstMatch(name)
         ?.group(1);
-    final network = RegExp(
-            r'\b(ESPN\+|ESPN PLUS|ESPN\d*|TSN\s*\d*|RDS\s*\d*|SPORTSNET|NBA TV|NFL NETWORK|NHL NETWORK|MLB NETWORK|BEIN SPORTS|EUROSPORT|DAZN)(?!\w)')
-        .firstMatch(name)
-        ?.group(1);
+    final network = sportsNetworkOf(c);
     final sports = <String>[];
     for (final e in {
       'hockey': r'\b(HOCKEY|NHL|AHL)\b',
@@ -137,6 +149,14 @@ class SportsChannelLibrary {
     }.entries) {
       if (RegExp(e.value).hasMatch(text)) sports.add(e.key);
     }
+    // A network counts for the sports it carries: every sport for TSN,
+    // ESPN, Sportsnet… (the hockey filter missed them all — owner,
+    // 2026-10-22), only its own for NHL Network.
+    if (network != null) {
+      for (final sport in network.sports ?? kChannelSports) {
+        if (!sports.contains(sport)) sports.add(sport);
+      }
+    }
     return {
       'Playlist': [c.playlistId],
       'Group': ['${c.playlistId}::${c.group}'],
@@ -149,7 +169,7 @@ class SportsChannelLibrary {
                     ? 'UK'
                     : country ?? 'Unknown'
       ],
-      'Network': [network ?? 'Unknown'],
+      'Network': [network?.name ?? 'Unknown'],
       'Sport': sports.isEmpty ? ['Unknown'] : sports,
       'League': [
         for (final token in (RegExp(
@@ -176,18 +196,56 @@ class SportsChannelLibrary {
                     : v == 'Unknown')));
   }
 
-  static String category(Channel c) {
-    final text = c.name.toUpperCase();
-    if (RegExp(r'\b(NBA TV|NFL NETWORK|NHL NETWORK|MLB NETWORK|CFL)\b')
-        .hasMatch(text)) {
-      return 'League networks';
+  /// The Channels row [c] sits in ('' = not a sports channel).
+  static String category(Channel c) => switch (sportsNetworkOf(c)?.kind) {
+        SportsNetworkKind.league => 'League networks',
+        SportsNetworkKind.regional => 'Regional channels',
+        SportsNetworkKind.sports => 'Sports networks',
+        null => MultiviewSports.isSports(c) ? 'Sports networks' : '',
+      };
+
+  /// [channels] as network cards for [row] (a [category] name): every TSN
+  /// feed and copy in one "TSN" card, ordered by [compareNetworkChannels].
+  /// A sports channel of no known network gets a card of its own (its
+  /// quality copies together). Cards with more channels first, then A–Z.
+  static List<SportsNetworkGroup> groups(Iterable<Channel> channels,
+      {required String row}) {
+    final byId = <String, SportsNetworkGroup>{};
+    for (final c in channels) {
+      if (category(c) != row) continue;
+      final network = sportsNetworkOf(c);
+      final copy = channelCopyKey(c.name);
+      final id = network?.id ?? 'own:${copy.isEmpty ? c.id : copy}';
+      (byId[id] ??= SportsNetworkGroup(
+              id, network?.name ?? _displayName(c.name), network))
+          .channels
+          .add(c);
     }
-    if (RegExp(
-            r'\b(REGIONAL|BALLY|FAN(DUEL)? SPORTS|MONUMENTAL|NBC SPORTS|SPORTSNET (EAST|WEST|ONTARIO|PACIFIC))\b')
-        .hasMatch(text)) {
-      return 'Regional channels';
+    final out = byId.values.toList();
+    for (final g in out) {
+      g.channels.sort(compareNetworkChannels);
     }
-    return MultiviewSports.isSports(c) ? 'Sports networks' : '';
+    out.sort((a, b) {
+      final known = (b.network != null ? 1 : 0) - (a.network != null ? 1 : 0);
+      if (known != 0) return known;
+      final size = b.channels.length.compareTo(a.channels.length);
+      return size != 0 ? size : a.name.compareTo(b.name);
+    });
+    return out;
+  }
+
+  /// "US| ESPN NEWS FHD" -> "ESPN NEWS": the region tag and quality words
+  /// off, for a card of no known network.
+  static String _displayName(String name) {
+    final noTag = name.replaceFirst(RegExp(r'^[^:|]{1,6}[:|]\s*'), '');
+    final clean = noTag
+        .replaceAll(
+            RegExp(r'\b(FHD|UHD|HD|SD|4K|HEVC|1080P?|2160P?)\b',
+                caseSensitive: false),
+            '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    return clean.isEmpty ? name : clean;
   }
 
   List<Channel> search({String query = '', String? group, Set<String>? ids}) {

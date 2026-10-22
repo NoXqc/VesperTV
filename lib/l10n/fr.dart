@@ -106,6 +106,18 @@ const Map<String, String> kFr = {
   "Couldn't find the provider's server address. Check your internet connection or DNS settings, or try again later.":
       "Impossible de trouver l'adresse du serveur du fournisseur. Vérifiez votre connexion Internet ou vos paramètres DNS, ou réessayez plus tard.",
   'Subtitles': "Sous-titres",
+  "On now":
+      "En ce moment",
+  "No channel matches these filters.":
+      "Aucune chaîne ne correspond à ces filtres.",
+  "No sports channels found in your playlists.":
+      "Aucune chaîne sportive trouvée dans vos listes.",
+  "Empty list: hold OK on any channel card to add it here.":
+      "Liste vide : maintenez OK sur une carte de chaîne pour l'ajouter ici.",
+  "OK · Full screen   Hold OK · Pick a channel   Back · Stop":
+      "OK · Plein écran   Maintenir OK · Choisir une chaîne   Retour · Arrêter",
+  "OK · Preview   Hold OK · Pick a channel or add to a list":
+      "OK · Aperçu   Maintenir OK · Choisir une chaîne ou l'ajouter à une liste",
   "See all":
       "Tout voir",
   "Update automatically":
