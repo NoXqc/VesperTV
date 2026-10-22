@@ -49,8 +49,8 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
 4. `flutter analyze` must report the baseline **17** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `1.0.34` unless noted
-   in §11).
+5. Check the current state of releases: `gh release list` (latest should be `1.0.35` unless noted
+   in §13).
 
 ## 3. Layout (what matters)
 - `lib/main.dart` — bootstrap + splash, layout choice (TV vs phone), welcome/add-playlist prompt for
@@ -118,7 +118,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
 - Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+360**) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
-  (Currently **+388**, 1.0.34.)
+  (Currently **+398**, unreleased; 1.0.35 shipped as +396.)
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
 Only release when the owner asks ("update the latest", "cut it", "fully release"). Outline: bump `pubspec.yaml` (versionCode `+N` must always rise) → `flutter analyze` → build APK + verify signature (§5) → build Windows + zip → **commit & push first** → `gh release upload <tag> app-release.apk VesperTV-windows-x64.zip --clobber` → `gh release edit <tag> --tag <new> --notes-file …` → make sure the tag equals HEAD → verify downloads/hashes, the OLD `NoXqc/NoXPlayer` redirect links and AFTVnews code `1760256`. The updater offers any *different* tag (`_isDifferent`), never leave two `.zip`/`.apk` assets on the latest release.
@@ -344,7 +344,16 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   Full-video guide mode hid the side columns while only compact portrait had a touch Back arrow.
   Reopening columns now keeps their child layout wide enough during the animation (no row overflow).
   Six widget regressions cover wide sizes, portrait, fold/unfold and TV; real foldable check pending.
-
+- **Unreleased (Claude, 2026-10-22, `+398`; all Codex branches above merged into main):**
+  **Restart-loop cap** (§9). **Live HLS host learning verified** (`learnHlsHost` sniffs first: one
+  dead `.ts` answering with an error page marked its whole server as HLS, every other channel then
+  failed "does not start with the #EXTM3U header" until restart — Romanian channels, Discord photo;
+  `unlearnHlsUrl` retries a wrongly-HLS `.ts` once as TS; MANIFEST_MALFORMED gets the source-reply
+  sniff; `test/hls_host_test.dart`). **Sports audit item 5** (`distinctCopiesFirst`,
+  `channelCopyKey` keeps the region tag, drops 4K/FHD/HD…: 8 distinct channels, then their quality
+  copies; `test/sports_channel_copies_test.dart`; not re-run through the audit harness).
+  **`vespertv.app/apk`** (`docs/apk/index.html`): backup to Downloader code 1760256 when a network
+  blocks go.aftvnews.com.
 - **Codex branch, unreleased: live caption readability** (`codex/live-caption-readability`).
   `SubtitleBridge` sends selected MIME/CC state, explicit resets on Off/track change and cue row
   coordinates; format-only diagnostics use logcat tag `VesperSubtitles` (no URLs/caption text).
