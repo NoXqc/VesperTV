@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' show ImageFilter;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -465,9 +466,13 @@ Future<Map<String, List<String>>?> showSportsChannelFilters(
 class SportsChannelsScreen extends StatefulWidget {
   const SportsChannelsScreen(
       {super.key,
+      this.initialPreview,
       required this.onGames,
       required this.onPreview,
       required this.onFullScreen});
+
+  /// Already playing in the Sports hero when Networks opens.
+  final Channel? initialPreview;
   final VoidCallback onGames;
   final Future<void> Function(Channel?) onPreview;
   final Future<void> Function(Channel) onFullScreen;
@@ -525,6 +530,7 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
     super.initState();
     _store = SportsChannelLists(context.read<StorageService>());
     _playlist = context.read<PlaylistManager>()..addListener(_markDirty);
+    _preview = widget.initialPreview;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (_rows.isNotEmpty && _rows.first.cards.isNotEmpty) {
@@ -717,6 +723,16 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
         .firstWhere((c) => c.id == picked, orElse: () => g.channels.first);
   }
 
+  /// Back to Games: a preview stops first, so its sound never carries on
+  /// behind the Games page or out of Sports Trak.
+  Future<void> _leave() async {
+    if (_preview != null) {
+      setState(() => _preview = null);
+      await widget.onPreview(null);
+    }
+    widget.onGames();
+  }
+
   bool _previewing(SportsNetworkGroup g) =>
       _preview != null && g.channels.any((c) => c.id == _preview!.id);
 
@@ -734,10 +750,19 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
   Future<void> _menu(_CardRow row, SportsNetworkGroup g) async {
     final epg = context.read<EpgService>();
     final main = _mainOf(g);
+    final favorite = _store.favoriteNetworks.contains(g.id);
     final action = await showDialog<Object>(
         context: context,
+        barrierColor: Colors.black26,
         builder: (dialog) => SwallowHeldActivate(
-                child: SimpleDialog(title: Text(g.name), children: [
+                child: _GlassMenu(title: g.name, children: [
+              if (row.list == null)
+                TvMenuTile(
+                    icon: favorite ? Icons.star : Icons.star_outline,
+                    title: favorite
+                        ? tr('Remove from favourite networks')
+                        : tr('Favourite this network'),
+                    onTap: () => Navigator.pop(dialog, 'favorite')),
               for (final c in g.channels)
                 TvMenuTile(
                     autofocus: c.id == main.id,
@@ -772,6 +797,12 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
       action.excluded.remove(main.id);
       await _store.save();
       if (mounted) setState(() => _dirty = true);
+    } else if (action == 'favorite') {
+      if (!_store.favoriteNetworks.remove(g.id)) {
+        _store.favoriteNetworks.add(g.id);
+      }
+      await _store.save();
+      if (mounted) setState(() => _dirty = true);
     } else if (action == 'manage') {
       await _manage(row.list!);
     } else if (action == 'create') {
@@ -786,7 +817,21 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
             SportsChannelLibrary.category(c).isNotEmpty &&
             library.accepts(c, _viewFilters))
         .toList();
+    final networkRows = {
+      for (final row in const [
+        'League networks',
+        'Sports networks',
+        'Regional channels',
+        'Other sports channels',
+      ])
+        row: SportsChannelLibrary.groups(filtered, row: row),
+    };
+    final favorites = [
+      for (final cards in networkRows.values)
+        ...cards.where((g) => _store.favoriteNetworks.contains(g.id)),
+    ];
     return [
+      _CardRow('favorites', tr('Favourite networks'), favorites),
       for (final list in _store.lists)
         _CardRow(
             'list:${list.id}',
@@ -798,13 +843,7 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
                     ..channels.add(c),
             ],
             list: list),
-      for (final row in const [
-        'League networks',
-        'Sports networks',
-        'Regional channels',
-        'Other sports channels',
-      ])
-        _CardRow(row, tr(row), SportsChannelLibrary.groups(filtered, row: row)),
+      for (final e in networkRows.entries) _CardRow(e.key, tr(e.key), e.value),
     ].where((r) => r.cards.isNotEmpty || r.list != null).toList();
   }
 
@@ -917,12 +956,16 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
     }.length;
     final activeFilters = _viewFilters.values.where((v) => v.isNotEmpty).length;
     final focused = _focused;
+    // Back: stop the preview, then back to Games — never out of Sports Trak.
     return PopScope(
-      canPop: _preview == null,
+      canPop: false,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) {
+        if (didPop) return;
+        if (_preview != null) {
           setState(() => _preview = null);
           widget.onPreview(null);
+        } else {
+          widget.onGames();
         }
       },
       child: Stack(
@@ -967,7 +1010,7 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
                             compact: true,
                             selected: false,
                             onFocus: () {},
-                            onTap: widget.onGames),
+                            onTap: _leave),
                         const SizedBox(width: 8),
                         SportsChip(
                             focusNode: _chipNodes[1],
@@ -1110,6 +1153,68 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// The Networks hold menu: a dark, blurred, see-through panel (like the
+/// full-screen player's side panel, a little more opaque) instead of the
+/// theme's flat dialog (owner: "looks bland").
+class _GlassMenu extends StatelessWidget {
+  const _GlassMenu({required this.title, required this.children});
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 48, vertical: 32),
+      child: ConstrainedBox(
+        constraints:
+            BoxConstraints(maxWidth: 760, maxHeight: size.height * 0.8),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.74),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.white12),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
+                    child: Text(title,
+                        style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white)),
+                  ),
+                  const Divider(height: 1, color: Colors.white12),
+                  Flexible(
+                    // Not lazy: autofocus on the picked channel needs it built.
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: children,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -1107,6 +1107,12 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   @override
   Widget build(BuildContext context) {
     final channelPage = SportsChannelsScreen(
+      // What the Games hero plays carries into Networks' hero.
+      initialPreview: Platform.isWindows
+          ? DesktopMiniPlayer.instance.channel.value
+          : (_livePreview(context.read<PlaybackService>()) != null
+              ? _previewChannel
+              : null),
       onGames: () => setState(() => _channelsMode = false),
       onPreview: (channel) => _setPreview(null, channel),
       onFullScreen: (channel) => _play(channel, keepPreview: true),
@@ -1152,7 +1158,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     // Back while moving a league chip = "done", not leave Sports; Back while
     // the hero plays stops it first.
     final gamesPage = PopScope(
-      canPop: _channelsMode || (_movingLeague == null && preview == null),
+      // Networks handles Back itself (back to Games, never out of Sports
+      // Trak: leaving from there moved its preview to the main player).
+      canPop: !_channelsMode && _movingLeague == null && preview == null,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop || _channelsMode) return;
         if (_movingLeague != null) {

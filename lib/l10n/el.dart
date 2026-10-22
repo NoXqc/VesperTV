@@ -156,6 +156,9 @@ const Map<String, String> kEl = {
       "Δεν ήταν δυνατός ο εντοπισμός της διεύθυνσης του διακομιστή του παρόχου. Ελέγξτε τη σύνδεσή σας στο διαδίκτυο ή τις ρυθμίσεις DNS και δοκιμάστε ξανά αργότερα.",
   "Subtitles":
       "Υπότιτλοι",
+  "Favourite networks": "Αγαπημένα δίκτυα",
+  "Favourite this network": "Προσθήκη δικτύου στα αγαπημένα",
+  "Remove from favourite networks": "Αφαίρεση από τα αγαπημένα δίκτυα",
   "Networks": "Δίκτυα",
   "Other sports channels": "Άλλα αθλητικά κανάλια",
   "On now":

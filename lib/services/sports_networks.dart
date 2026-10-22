@@ -59,13 +59,19 @@ const kSportsNetworks = <SportsNetwork>[
   SportsNetwork('mlb_network', 'MLB Network', SportsNetworkKind.league,
       r'\bMLB ?(NETWORK|STRIKE ?ZONE)\b',
       sports: {'baseball'}),
-  SportsNetwork('mls', 'MLS', SportsNetworkKind.league, r'\bMLS\b',
+  // Only the channel itself, never an event feed that names the sport
+  // ("TSN+ 01: ATP 250 Tennis…" landed in Tennis Channel, owner photo).
+  SportsNetwork('mls', 'MLS Season Pass', SportsNetworkKind.league,
+      r'\bMLS ?(SEASON PASS|NETWORK)\b',
       sports: {'soccer'}),
-  SportsNetwork(
-      'golf', 'Golf Channel', SportsNetworkKind.league, r'\bGOLF( CHANNEL)?\b',
+  SportsNetwork('golf', 'Golf Channel', SportsNetworkKind.league,
+      r'\bGOLF ?(CHANNEL|TV)\b',
       sports: {'golf'}),
+  SportsNetwork('tennis_plus', 'Tennis+', SportsNetworkKind.league,
+      r'\bTENNIS ?(\+|PLUS)',
+      sports: {'tennis'}),
   SportsNetwork('tennis', 'Tennis Channel', SportsNetworkKind.league,
-      r'\bTENNIS( CHANNEL)?\b',
+      r'\bTENNIS ?CHANNEL\b',
       sports: {'tennis'}),
   SportsNetwork('big_ten', 'Big Ten Network', SportsNetworkKind.league,
       r'\b(BIG ?TEN|BTN)\b'),
@@ -103,6 +109,8 @@ const kSportsNetworks = <SportsNetwork>[
   SportsNetwork(
       'espn_plus', 'ESPN+', SportsNetworkKind.sports, r'\bESPN ?(\+|PLUS)'),
   SportsNetwork('espn', 'ESPN', SportsNetworkKind.sports, r'\bESPN'),
+  SportsNetwork(
+      'tsn_plus', 'TSN+', SportsNetworkKind.sports, r'\bTSN ?(\+|PLUS)'),
   SportsNetwork('tsn', 'TSN', SportsNetworkKind.sports, r'\bTSN'),
   SportsNetwork('sportsnet', 'Sportsnet', SportsNetworkKind.sports,
       r'\b(SPORTSNET|SN ?(ONE|1|360|WORLD|EAST|WEST|ONTARIO|PACIFIC))\b'),

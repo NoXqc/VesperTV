@@ -107,6 +107,9 @@ const Map<String, String> kEs = {
   "Couldn't find the provider's server address. Check your internet connection or DNS settings, or try again later.":
       "No se pudo encontrar la dirección del servidor del proveedor. Comprueba tu conexión a Internet o la configuración de DNS, o inténtalo de nuevo más tarde.",
   'Subtitles': "Subtítulos",
+  "Favourite networks": "Cadenas favoritas",
+  "Favourite this network": "Añadir esta cadena a favoritos",
+  "Remove from favourite networks": "Quitar de cadenas favoritas",
   "Networks": "Cadenas",
   "Other sports channels": "Otros canales deportivos",
   "On now":

@@ -40,6 +40,8 @@ class SportsChannelLists {
         list.excluded.addAll((row['excluded'] as List? ?? []).cast<String>());
         lists.add(list);
       }
+      favoriteNetworks
+          .addAll((data['favoriteNetworks'] as List? ?? []).cast<String>());
       for (final entry in (data['tags'] as Map? ?? {}).entries) {
         tags[entry.key as String] = _filters(entry.value);
       }
@@ -56,6 +58,10 @@ class SportsChannelLists {
   }
   final StorageService storage;
   final List<SportsChannelList> lists = [];
+
+  /// Network card ids ([SportsNetworkGroup.id]) favourited with hold OK:
+  /// their own first row on the Networks page.
+  final Set<String> favoriteNetworks = {};
   final Map<String, Map<String, List<String>>> tags = {};
   final Map<String, Map<String, dynamic>> sources = {};
   static Map<String, List<String>> _filters(dynamic raw) => raw is Map
@@ -67,6 +73,7 @@ class SportsChannelLists {
   Future<void> save() => storage.setSportsChannelLists(jsonEncode({
         'version': 1,
         'lists': lists.map((e) => e.toJson()).toList(),
+        'favoriteNetworks': favoriteNetworks.toList(),
         'tags': tags,
         'sources': sources,
       }));

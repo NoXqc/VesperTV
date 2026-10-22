@@ -106,6 +106,9 @@ const Map<String, String> kIt = {
   "Couldn't find the provider's server address. Check your internet connection or DNS settings, or try again later.":
       "Impossibile trovare l'indirizzo del server del provider. Controlla la connessione a Internet o le impostazioni DNS, oppure riprova più tardi.",
   'Subtitles': "Sottotitoli",
+  "Favourite networks": "Reti preferite",
+  "Favourite this network": "Aggiungi questa rete ai preferiti",
+  "Remove from favourite networks": "Rimuovi dalle reti preferite",
   "Networks": "Reti",
   "Other sports channels": "Altri canali sportivi",
   "On now":

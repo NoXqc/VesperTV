@@ -78,6 +78,13 @@ void main() {
     expect(row('CA: Sportsnet Ontario'), 'Sports networks');
     expect(sportsNetworkOf(ch('CA: Sportsnet Ontario'))?.id, 'sportsnet');
     expect(row('US: CNN'), '');
+    // Owner photo: event feeds that name a sport are not that network.
+    expect(sportsNetworkOf(ch('TSN+ 01: ATP 250 Tennis: Almaty - Day #3'))?.id,
+        'tsn_plus');
+    expect(sportsNetworkOf(ch('US: Tennis Channel 2'))?.id, 'tennis');
+    expect(sportsNetworkOf(ch('Plex: Tennis+'))?.id, 'tennis_plus');
+    expect(sportsNetworkOf(ch('US: PGA Tour Golf Live'))?.id, isNot('golf'));
+    expect(sportsNetworkOf(ch('CA: TSN 3'))?.id, 'tsn');
     expect(
         SportsChannelLibrary.category(Channel(
             id: 'p::x',
