@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../services/app_preferences.dart';
 import '../../services/playback_service.dart';
+import '../../services/recording_service.dart';
 import '../../services/storage_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/tv_theme.dart';
@@ -301,6 +302,14 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                       onChanged: (v) =>
                           context.read<AppPreferences>().setHideArchive(v),
                     ),
+                    if (RecordingService.supported)
+                      TvSwitchListTile(
+                        title: Text(tr('Hide Recordings')),
+                        subtitle: Text(tr('Removes the Recordings tab.')),
+                        value: context.watch<AppPreferences>().hideRecordings,
+                        onChanged: (v) =>
+                            context.read<AppPreferences>().setHideRecordings(v),
+                      ),
                     TvSwitchListTile(
                       title: Text(tr('Hide Multiview')),
                       subtitle: Text(tr(

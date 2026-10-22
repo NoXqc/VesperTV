@@ -1213,9 +1213,11 @@ const Map<String, String> kEs = {
   "Check the link here, then press Add.": "Revisa el enlace aquí y pulsa Añadir.",
   "Hide Movies": "Ocultar Películas",
   "Hide TV Shows": "Ocultar Series",
+  "Hide Recordings": "Ocultar grabaciones",
   "Paste the link and tap Send to TV.": "Pega el enlace y toca Enviar a la TV.",
   "Removes the Movies tab and movie search results.": "Quita la pestaña Películas y las películas de la búsqueda.",
   "Removes the TV Shows tab and show search results.": "Quita la pestaña Series y las series de la búsqueda.",
+  "Removes the Recordings tab.": "Quita la pestaña Grabaciones.",
   "Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.": "Escribir un enlace largo con el mando es un suplicio. Escanea este código con la cámara del móvil y pega ahí el enlace — aparecerá aquí para que lo revises y lo añadas.",
   // Archive: rows, search, stream picker
   'Popular': 'Populares',
@@ -1405,8 +1407,8 @@ const Map<String, String> kEs = {
       "Interfaz",
   "How the app looks and what it shows: theme, tabs, the player's extras and reminders.":
       "Cómo se ve la app y qué muestra: tema, pestañas, extras del reproductor y recordatorios.",
-  "Hide Movies, TV Shows, Media Hub or Multiview":
-      "Ocultar Películas, Series, Media Hub o Multiview",
+  "Hide Movies, TV Shows, Media Hub, Recordings or Multiview":
+      "Ocultar Películas, Series, Media Hub, Grabaciones o Multiview",
   "Fixes for the picture on some Fire TV sticks":
       "Arreglos para la imagen en algunos Fire TV Stick",
   "Stream details when you press OK on a channel":

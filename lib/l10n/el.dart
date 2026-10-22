@@ -1727,12 +1727,16 @@ const Map<String, String> kEl = {
       "Απόκρυψη Ταινιών",
   "Hide TV Shows":
       "Απόκρυψη Σειρών",
+  "Hide Recordings":
+      "Απόκρυψη εγγραφών",
   "Paste the link and tap Send to TV.":
       "Επικολλήστε τον σύνδεσμο και πατήστε Αποστολή στην TV.",
   "Removes the Movies tab and movie search results.":
       "Αφαιρεί την καρτέλα Ταινίες και τα αποτελέσματα αναζήτησης ταινιών.",
   "Removes the TV Shows tab and show search results.":
       "Αφαιρεί την καρτέλα Σειρές και τα αποτελέσματα αναζήτησης σειρών.",
+  "Removes the Recordings tab.":
+      "Αφαιρεί την καρτέλα Εγγραφές.",
   "Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.":
       "Η πληκτρολόγηση ενός μεγάλου συνδέσμου με τηλεχειριστήριο είναι κουραστική. Σαρώστε αυτόν τον κωδικό με την κάμερα του κινητού σας και επικολλήστε τον σύνδεσμο εκεί — εμφανίζεται εδώ για έλεγχο και προσθήκη.",
   "Popular":
@@ -2015,8 +2019,8 @@ const Map<String, String> kEl = {
       "Διεπαφή",
   "How the app looks and what it shows: theme, tabs, the player's extras and reminders.":
       "Η εμφάνιση της εφαρμογής και τι δείχνει: θέμα, καρτέλες, έξτρα του player και υπενθυμίσεις.",
-  "Hide Movies, TV Shows, Media Hub or Multiview":
-      "Απόκρυψη Ταινιών, Σειρών, Media Hub ή Multiview",
+  "Hide Movies, TV Shows, Media Hub, Recordings or Multiview":
+      "Απόκρυψη Ταινιών, Σειρών, Media Hub, Εγγραφών ή Multiview",
   "Fixes for the picture on some Fire TV sticks":
       "Διορθώσεις για την εικόνα σε ορισμένα Fire TV stick",
   "Stream details when you press OK on a channel":

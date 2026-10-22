@@ -3305,7 +3305,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
             ),
           if (!context.watch<AppPreferences>().hideArchive)
             _archiveRow(collapsed),
-          if (RecordingService.supported)
+          if (RecordingService.supported &&
+              !context.watch<AppPreferences>().hideRecordings)
             _SelectableRow(
               icon: Icons.fiber_smart_record_outlined,
               label: tr('Recordings'),
