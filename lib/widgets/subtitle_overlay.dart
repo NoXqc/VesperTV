@@ -23,19 +23,22 @@ class SubtitleOverlay extends StatefulWidget {
 }
 
 class _SubtitleOverlayState extends State<SubtitleOverlay> {
-  StreamSubscription<({int playerId, String text})>? _sub;
+  StreamSubscription<SubtitleCueEvent>? _sub;
   String _cue = '';
+  bool _closedCaptions = false;
+  Timer? _pendingClear;
+
+  // Broadcast captions can briefly clear between paint/roll-up commands.
+  // Hold only CEA-608/708 blanks, never timed VOD or downloaded subtitles.
+  static const _blankGrace = Duration(seconds: 1);
 
   int get _playerId => SubtitleTracks.playerIdOf(widget.controller);
 
   @override
   void initState() {
     super.initState();
-    _sub = SubtitleTracks.cues.listen((c) {
-      if (c.playerId == _playerId && c.text != _cue && mounted) {
-        setState(() => _cue = c.text);
-      }
-    });
+    _sub = SubtitleTracks.cues.listen(_onCue);
+    SubtitleTracks.externalFor.addListener(_onExternalChanged);
     _applySeriesChoice();
   }
 
@@ -43,8 +46,53 @@ class _SubtitleOverlayState extends State<SubtitleOverlay> {
   void didUpdateWidget(SubtitleOverlay old) {
     super.didUpdateWidget(old);
     if (old.controller != widget.controller) {
+      _pendingClear?.cancel();
+      _pendingClear = null;
       _cue = '';
+      _closedCaptions = false;
       _applySeriesChoice();
+    }
+  }
+
+  void _onExternalChanged() {
+    if (SubtitleTracks.externalFor.value != _playerId) return;
+    _clear();
+  }
+
+  void _clear() {
+    _pendingClear?.cancel();
+    _pendingClear = null;
+    if (mounted) {
+      setState(() {
+        _cue = '';
+        _closedCaptions = false;
+      });
+    }
+  }
+
+  void _onCue(SubtitleCueEvent event) {
+    if (!mounted || event.playerId != _playerId) return;
+    if (event.reset || !event.enabled) {
+      _clear();
+      return;
+    }
+    if (SubtitleTracks.externalFor.value == _playerId) return;
+    final text = event.text.replaceAll(_tags, '').trim();
+    if (text.isEmpty &&
+        event.closedCaptions &&
+        _cue.isNotEmpty &&
+        _closedCaptions) {
+      // Repeated blanks must not keep extending stale captions indefinitely.
+      _pendingClear ??= Timer(_blankGrace, _clear);
+      return;
+    }
+    _pendingClear?.cancel();
+    _pendingClear = null;
+    if (text != _cue || event.closedCaptions != _closedCaptions) {
+      setState(() {
+        _cue = text;
+        _closedCaptions = event.closedCaptions;
+      });
     }
   }
 
@@ -61,6 +109,8 @@ class _SubtitleOverlayState extends State<SubtitleOverlay> {
   @override
   void dispose() {
     _sub?.cancel();
+    _pendingClear?.cancel();
+    SubtitleTracks.externalFor.removeListener(_onExternalChanged);
     super.dispose();
   }
 
@@ -87,7 +137,8 @@ class _SubtitleOverlayState extends State<SubtitleOverlay> {
     final size = MediaQuery.sizeOf(context);
     return Center(
       child: Container(
-        constraints: BoxConstraints(maxWidth: size.width * 0.8),
+        constraints: BoxConstraints(
+            maxWidth: size.width * (_closedCaptions ? 0.9 : 0.8)),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
           color: Colors.black.withValues(alpha: 0.55),
