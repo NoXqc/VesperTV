@@ -16,6 +16,7 @@ import '../services/subtitle_tracks.dart';
 import '../utils/video_quality.dart';
 import 'epg_guide.dart';
 import 'rec_cue.dart';
+import 'player_bar_title.dart';
 import 'tv_menu_tile.dart';
 import '../l10n/l10n.dart';
 
@@ -574,14 +575,7 @@ class PlayerControls extends StatelessWidget {
                   builder: (context, box) => Row(
                         children: [
                           Expanded(
-                            child: Text(
-                              title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold),
-                            ),
+                            child: PlayerBarTitle(title: title),
                           ),
                           // Capped so FittedBox has a width to scale down to.
                           ConstrainedBox(
