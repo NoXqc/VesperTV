@@ -1359,6 +1359,14 @@ class _ProfilesStrip extends StatelessWidget {
         child: Padding(
             padding: EdgeInsets.fromLTRB(20, compact ? 6 : 14, 20, 0),
             child: Row(children: [
+              if (Platform.isWindows)
+                ExcludeFocus(
+                  child: IconButton(
+                    tooltip: tr('Back'),
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => Navigator.of(context).maybePop(),
+                  ),
+                ),
               Expanded(
                   child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
