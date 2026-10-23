@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' show ImageFilter;
 import 'package:cached_network_image/cached_network_image.dart';
@@ -501,9 +502,6 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
   /// The card focused last (hero text + backdrop) and its row.
   SportsNetworkGroup? _focused;
 
-  /// The channel picked for a card with hold OK (card id -> channel id).
-  final Map<String, String> _picked = {};
-
   /// Rows as last built, for the arrow keys.
   List<_CardRow> _rows = const [];
   final Map<String, FocusNode> _cardNodes = {};
@@ -718,7 +716,7 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
   /// The channel OK previews on [g]: the one picked with hold OK, else the
   /// first ([compareNetworkChannels]: TSN 1 before TSN 2, FHD before 4K).
   Channel _mainOf(SportsNetworkGroup g) {
-    final picked = _picked[g.id];
+    final picked = _store.networkPicks[g.id];
     return g.channels
         .firstWhere((c) => c.id == picked, orElse: () => g.channels.first);
   }
@@ -784,7 +782,8 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
             ])));
     if (!mounted || action == null) return;
     if (action is Channel) {
-      _picked[g.id] = action.id;
+      _store.networkPicks[g.id] = action.id;
+      unawaited(_store.save());
       await _watch(action);
     } else if (action is SportsChannelList) {
       if (!action.channels.contains(main.id)) action.channels.add(main.id);

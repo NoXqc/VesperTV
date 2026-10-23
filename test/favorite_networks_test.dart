@@ -7,6 +7,7 @@ import 'package:nox_iptv/services/playlist_manager.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nox_iptv/models/channel.dart';
 import 'package:nox_iptv/services/sports_channel_library.dart';
+import 'package:nox_iptv/services/sports_networks.dart';
 import 'package:nox_iptv/services/storage_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -170,5 +171,36 @@ void main() {
     playlist.dispose();
     epg.dispose();
     await tester.pump();
+  });
+  test(
+      'the channel picked for a network card is saved, and an older '
+      'snapshot does not erase it', () async {
+    final older = SportsChannelLists(storage);
+    final networks = SportsChannelLists(storage);
+    networks.networkPicks['tsn'] = 'p::tsn4';
+    await networks.save();
+    expect(SportsChannelLists(storage).networkPicks, {'tsn': 'p::tsn4'});
+    older.favoriteNetworks.add('espn');
+    await older.save();
+    final now = SportsChannelLists(storage);
+    expect(now.networkPicks, {'tsn': 'p::tsn4'});
+    expect(now.favoriteNetworks, {'espn'});
+  });
+
+  test('a known network card uses the network logo', () {
+    final espn = kSportsNetworks.firstWhere((n) => n.id == 'espn');
+    final group = SportsNetworkGroup('espn', 'ESPN', espn)
+      ..channels.add(Channel(
+          id: 'p::ocho',
+          rawId: 'ocho',
+          playlistId: 'p',
+          name: 'US: ESPN Ocho',
+          group: 'Sports',
+          url: 'https://example.com/live',
+          logoUrl: 'https://example.com/ocho.png'));
+    expect(group.logoUrl, endsWith('/united-states/espn-us.png'));
+    final unknown = SportsNetworkGroup('x', 'X', null)
+      ..channels.addAll(group.channels);
+    expect(unknown.logoUrl, 'https://example.com/ocho.png');
   });
 }

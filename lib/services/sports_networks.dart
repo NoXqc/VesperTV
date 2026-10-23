@@ -29,7 +29,50 @@ class SportsNetwork {
 
   RegExp get regex => _regexes[id] ??= RegExp(pattern);
   static final _regexes = <String, RegExp>{};
+
+  /// The network's own brand logo (tv-logo/tv-logos on GitHub, through the
+  /// jsDelivr CDN), not a provider's channel logo: an ESPN card showed
+  /// "ESPN 8 The Ocho" because that was its first channel (user photo,
+  /// 2026-10-23). Null = no clean generic logo there; the card keeps the
+  /// channel's.
+  String? get logoUrl => switch (_kNetworkLogos[id]) {
+        final path? => '$_logoBase/$path',
+        null => null,
+      };
 }
+
+const _logoBase = 'https://cdn.jsdelivr.net/gh/tv-logo/tv-logos@main/countries';
+
+/// Network id -> logo path (every one checked to load, 2026-10-23).
+const _kNetworkLogos = {
+  'espn': 'united-states/espn-us.png',
+  'tsn': 'canada/tsn-ca.png',
+  'sportsnet': 'canada/sportsnet-ca.png',
+  'rds': 'canada/rds-ca.png',
+  'tva_sports': 'canada/tva-sports-ca.png',
+  'fox_sports': 'united-states/fox-sports-us.png',
+  'cbs_sports': 'united-states/cbs-sports-network-us.png',
+  'tnt_sports': 'argentina/tnt-sports-ar.png',
+  'bein': 'united-states/bein-sports-us.png',
+  'dazn': 'canada/dazn-ca.png',
+  'prima_sport': 'romania/prima-sport-ro.png',
+  'canal_sport': 'france/canal-plus-sport-fr.png',
+  'willow': 'united-states/willow-us.png',
+  'nhl_network': 'united-states/nhl-network-us.png',
+  'nba_tv': 'united-states/nba-tv-us.png',
+  'nfl_network': 'united-states/nfl-network-us.png',
+  'mlb_network': 'united-states/mlb-network-us.png',
+  'mls': 'united-states/mls-logo-us.png',
+  'golf': 'united-states/nbc-golf-channel-us.png',
+  'tennis': 'united-states/tennis-channel-us.png',
+  'big_ten': 'united-states/big-ten-network-us.png',
+  'sec_network': 'united-states/sec-network-us.png',
+  'acc_network': 'united-states/acc-network-us.png',
+  'msg': 'united-states/msg-us.png',
+  'nesn': 'united-states/nesn-us.png',
+  'monumental': 'united-states/monumental-sports-network-us.png',
+  'space_city': 'united-states/space-city-home-network-us.png',
+};
 
 /// Every sport key [SportsChannelLibrary] tags with.
 const kChannelSports = [

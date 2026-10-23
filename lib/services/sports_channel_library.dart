@@ -45,6 +45,11 @@ class SportsChannelLists {
       }
       favoriteNetworks
           .addAll((data['favoriteNetworks'] as List? ?? []).cast<String>());
+      for (final entry in (data['picks'] as Map? ?? {}).entries) {
+        if (entry.value is String) {
+          networkPicks[entry.key as String] = entry.value as String;
+        }
+      }
       for (final entry in (data['tags'] as Map? ?? {}).entries) {
         tags[entry.key as String] = _filters(entry.value);
       }
@@ -70,6 +75,11 @@ class SportsChannelLists {
   /// Network card ids ([SportsNetworkGroup.id]) favourited with hold OK:
   /// their own first row on the Networks page.
   final Set<String> favoriteNetworks = {};
+
+  /// The channel picked for a network card with hold OK (card id ->
+  /// channel id): what OK on the card plays. Was kept only while the page
+  /// was open, so it was forgotten on every visit (user report, 2026-10-23).
+  final Map<String, String> networkPicks = {};
   final Map<String, Map<String, List<String>>> tags = {};
   final Map<String, Map<String, dynamic>> sources = {};
   static Map<String, List<String>> _filters(dynamic raw) => raw is Map
@@ -82,6 +92,7 @@ class SportsChannelLists {
         'version': 1,
         'lists': lists.map((e) => e.toJson()).toList(),
         'favoriteNetworks': favoriteNetworks.toList(),
+        'picks': networkPicks,
         'tags': tags,
         'sources': sources,
       };
@@ -96,7 +107,7 @@ class SportsChannelLists {
     // merge per id so independent additions/removals survive an older picker.
     final current = SportsChannelLists(storage, viewerId: _viewerId)._data();
     final local = _data();
-    for (final key in ['lists', 'tags', 'sources']) {
+    for (final key in ['lists', 'picks', 'tags', 'sources']) {
       if (jsonEncode(local[key]) != _savedFields[key]) {
         current[key] = local[key];
       }
@@ -155,10 +166,13 @@ class SportsNetworkGroup {
   final SportsNetwork? network;
   final List<Channel> channels = [];
 
-  /// The first channel with a logo (providers mostly share one per brand).
-  String? get logoUrl => channels
-      .map((c) => c.logoUrl)
-      .firstWhere((u) => u != null && u.isNotEmpty, orElse: () => null);
+  /// The network's own logo, else the first channel with a logo (providers
+  /// mostly share one per brand).
+  String? get logoUrl =>
+      network?.logoUrl ??
+      channels
+          .map((c) => c.logoUrl)
+          .firstWhere((u) => u != null && u.isNotEmpty, orElse: () => null);
 }
 
 class SportsChannelLibrary {
