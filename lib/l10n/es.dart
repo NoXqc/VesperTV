@@ -1846,4 +1846,8 @@ const Map<String, String> kEs = {
   "Back 10 seconds": "Retroceder 10 segundos",
   "Forward 10 seconds": "Avanzar 10 segundos",
   "Play / pause": "Reproducir / pausar",
+  "Mark season watched": "Marcar temporada como vista",
+  "Mark season unwatched": "Marcar temporada como no vista",
+  "Season {season} marked as watched": "Temporada {season} marcada como vista",
+  "Season {season} marked as unwatched": "Temporada {season} marcada como no vista",
 };

@@ -1850,4 +1850,8 @@ const Map<String, String> kIt = {
   "Back 10 seconds": "Indietro di 10 secondi",
   "Forward 10 seconds": "Avanti di 10 secondi",
   "Play / pause": "Riproduci / pausa",
+  "Mark season watched": "Segna stagione come vista",
+  "Mark season unwatched": "Segna stagione come non vista",
+  "Season {season} marked as watched": "Stagione {season} segnata come vista",
+  "Season {season} marked as unwatched": "Stagione {season} segnata come non vista",
 };

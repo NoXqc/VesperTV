@@ -27,6 +27,7 @@ import '../utils/tv_theme.dart';
 import '../widgets/detail_header.dart';
 import '../widgets/hd_network_image.dart';
 import '../widgets/hold_to_activate.dart';
+import '../widgets/tv_dialog_option.dart';
 import '../widgets/sports_widgets.dart' show SportsRowArrows;
 import 'desktop_player_screen.dart';
 import 'player_screen.dart';
@@ -371,18 +372,9 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
               tmdb: tmdb, season: numbers.$1, episode: numbers.$2),
           watched: !wasWatched));
     }
-    if (wasWatched) {
-      await storage.setLastPosition(episode.id, 0);
-    } else {
-      var durationMs = storage.getLastDuration(episode.id);
-      if (durationMs <= 0) {
-        durationMs =
-            (_details?.episodes[episode.id]?.durationSeconds ?? 0) * 1000;
-      }
-      if (durationMs <= 0) durationMs = 1;
-      await storage.setLastDuration(episode.id, durationMs);
-      await storage.setLastPosition(episode.id, durationMs);
-    }
+    await TrackerSync.setLocalWatched(storage, episode.id,
+        watched: !wasWatched,
+        durationSeconds: _details?.episodes[episode.id]?.durationSeconds ?? 0);
     if (!mounted) return;
     setState(() {});
     ScaffoldMessenger.of(context)
@@ -400,6 +392,53 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     // unfocusing before the pop leaves nothing "armed" for it to hit.
     FocusManager.instance.primaryFocus?.unfocus();
     Navigator.of(context).maybePop();
+  }
+
+  Future<void> _seasonMenu(int season) async {
+    if (!_loaded) await _load();
+    if (!mounted) return;
+    final episodes = _episodesOf(season);
+    if (episodes.isEmpty) return;
+    final storage = context.read<StorageService>();
+    final watched = !episodes.every((e) => storage.isFullyWatched(e.id));
+    final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) =>
+            SimpleDialog(title: Text(_seasonLabel(season)), children: [
+              TvDialogOption(
+                  autofocus: true,
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: Text(tr(watched
+                      ? 'Mark season watched'
+                      : 'Mark season unwatched'))),
+              TvDialogOption(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: Text(tr('Cancel'))),
+            ]));
+    if (confirmed != true || !mounted) return;
+    for (final episode in episodes) {
+      await TrackerSync.setLocalWatched(storage, episode.id,
+          watched: watched,
+          durationSeconds:
+              _details?.episodes[episode.id]?.durationSeconds ?? 0);
+    }
+    final numbers = _episodeNumbers(_data!);
+    unawaited(TrackerSync.instance.setSeasonWatched(
+        TrackedItem.movie(widget.imdbId, tmdb: widget.series.tmdbId),
+        season,
+        [for (final e in episodes) numbers[e.id]?.$2 ?? _episodeNumber(e)],
+        watched: watched));
+    if (!mounted) return;
+    setState(() {});
+    _seasonNode(season).requestFocus();
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+          content: Text(tr(
+              watched
+                  ? 'Season {season} marked as watched'
+                  : 'Season {season} marked as unwatched',
+              {'season': season}))));
   }
 
   void _selectSeason(int season) {
@@ -450,7 +489,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   }
 
   void _focusSeasonsOrEpisodes() {
-    if (_seasons.length > 1 && _season != null) {
+    if (_seasons.isNotEmpty && _season != null) {
       _seasonNode(_season!).requestFocus();
     } else {
       _focusEpisode(_highlight[_season] ?? 0);
@@ -981,7 +1020,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     return [
       KeyedSubtree(
         key: _seasonsKey,
-        child: _seasons.length > 1
+        child: _seasons.isNotEmpty
             ? _buildSeasonChips(s, pad)
             : Padding(
                 padding: EdgeInsets.symmetric(horizontal: pad),
@@ -999,7 +1038,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
         key: _episodesKey,
         child: CallbackShortcuts(
           bindings: _arrows(
-            up: () => _seasons.length > 1
+            up: () => _seasons.isNotEmpty
                 ? _seasonNode(season).requestFocus()
                 : _playNode.requestFocus(),
             left: () => _focusEpisode((_highlight[season] ?? 0) - 1),
@@ -1088,6 +1127,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                     selected: season == _season,
                     scale: s,
                     compact: true,
+                    onHold: () => _seasonMenu(season),
                     // Focus already selected it (Apple TV style); Select
                     // drops into that season's episodes.
                     onPressed: () {
@@ -1176,7 +1216,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
           ),
         if (_loaded && season != null) ...[
           SliverToBoxAdapter(
-            child: _seasons.length > 1
+            child: _seasons.isNotEmpty
                 ? SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     padding:
@@ -1192,6 +1232,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                               selected: x == season,
                               scale: 1,
                               compact: true,
+                              onHold: () => _seasonMenu(x),
                               onPressed: () => _selectSeason(x),
                             ),
                           ),

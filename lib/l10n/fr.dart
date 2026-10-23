@@ -1849,4 +1849,8 @@ const Map<String, String> kFr = {
   "Back 10 seconds": "Reculer de 10 secondes",
   "Forward 10 seconds": "Avancer de 10 secondes",
   "Play / pause": "Lecture / pause",
+  "Mark season watched": "Marquer la saison comme vue",
+  "Mark season unwatched": "Marquer la saison comme non vue",
+  "Season {season} marked as watched": "Saison {season} marquée comme vue",
+  "Season {season} marked as unwatched": "Saison {season} marquée comme non vue",
 };

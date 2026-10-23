@@ -649,6 +649,38 @@ class TrackerApi {
   }
 
   // ---- scrobbling ----------------------------------------------------------
+  Future<bool> setSeasonWatched(
+      TrackerLogin login, TrackedItem show, int season, List<int> episodes,
+      {required bool watched}) async {
+    if (!show.hasIds || episodes.isEmpty) return false;
+    final base = login.kind == TrackerKind.trakt ? _trakt : _simkl;
+    try {
+      final response = await _client
+          .post(
+            Uri.parse('$base/sync/history${watched ? '' : '/remove'}'),
+            headers: _headers(login.kind, login.accessToken),
+            body: jsonEncode({
+              'shows': [
+                {
+                  'ids': show.ids,
+                  'seasons': [
+                    {
+                      'number': season,
+                      'episodes': [
+                        for (final n in episodes.toSet()) {'number': n}
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }),
+          )
+          .timeout(_timeout);
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (_) {
+      return false;
+    }
+  }
 
   /// Tells [login]'s service that [item] started / paused / stopped at
   /// [progress] percent. A stop at 80 %+ marks it watched (both services).

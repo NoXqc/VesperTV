@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../utils/image_urls.dart';
 import 'hd_network_image.dart';
+import 'hold_to_activate.dart';
 
 /// Shared pieces of the series and movie detail pages
 /// (`SeriesDetailScreen`, `MovieDetailScreen`): the pill buttons, metadata
@@ -67,6 +68,7 @@ class DetailPillButton extends StatefulWidget {
     this.selected = false,
     this.compact = false,
     this.onFocused,
+    this.onHold,
   });
 
   final FocusNode focusNode;
@@ -78,6 +80,7 @@ class DetailPillButton extends StatefulWidget {
   final bool selected;
   final bool compact;
   final VoidCallback? onFocused;
+  final VoidCallback? onHold;
 
   @override
   State<DetailPillButton> createState() => _DetailPillButtonState();
@@ -98,7 +101,7 @@ class _DetailPillButtonState extends State<DetailPillButton> {
             ? scheme.primary
             : Colors.white;
     final label = widget.label;
-    return Material(
+    final button = Material(
       type: MaterialType.transparency,
       child: InkWell(
         focusNode: widget.focusNode,
@@ -144,6 +147,10 @@ class _DetailPillButtonState extends State<DetailPillButton> {
         ),
       ),
     );
+    return widget.onHold == null
+        ? button
+        : HoldToActivate(
+            onTap: widget.onPressed, onHold: widget.onHold!, child: button);
   }
 }
 

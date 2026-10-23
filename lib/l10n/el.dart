@@ -2458,4 +2458,8 @@ const Map<String, String> kEl = {
   "Back 10 seconds": "Πίσω 10 δευτερόλεπτα",
   "Forward 10 seconds": "Μπροστά 10 δευτερόλεπτα",
   "Play / pause": "Αναπαραγωγή / παύση",
+  "Mark season watched": "Σήμανση σεζόν ως προβληθείσας",
+  "Mark season unwatched": "Σήμανση σεζόν ως μη προβληθείσας",
+  "Season {season} marked as watched": "Η σεζόν {season} σημάνθηκε ως προβληθείσα",
+  "Season {season} marked as unwatched": "Η σεζόν {season} σημάνθηκε ως μη προβληθείσα",
 };

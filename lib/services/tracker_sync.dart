@@ -160,6 +160,32 @@ class TrackerSync {
   }
 
   /// The app's own "watched" (position = duration). Leaves an existing
+  Future<void> setSeasonWatched(
+      TrackedItem show, int season, List<int> episodes,
+      {required bool watched}) async {
+    try {
+      final logins = await _service?.trackerLogins() ?? [];
+      await Future.wait([
+        for (final login in logins)
+          _api.setSeasonWatched(login, show, season, episodes, watched: watched)
+      ]);
+      invalidate();
+    } catch (_) {/* Same best-effort behavior as a single episode. */}
+  }
+
+  /// Set rather than toggle, so a season operation also handles mixed states.
+  static Future<void> setLocalWatched(StorageService storage, String id,
+      {required bool watched, int durationSeconds = 0}) async {
+    var duration = storage.getLastDuration(id);
+    if (duration <= 0 || storage.isResumeFraction(id)) {
+      duration = durationSeconds > 0 ? durationSeconds * 1000 : 1;
+    }
+    await storage.clearResumeFraction(id);
+    if (watched) await storage.setLastDuration(id, duration);
+    await storage.setLastPosition(id, watched ? duration : 0);
+  }
+
+  /// The app's own "watched" (position = duration). Leaves an existing
   /// mark alone. 1 ms stands in for an unknown duration (same as the
   /// series page's hold-OK toggle); the next play writes the real one.
   Future<bool> _markWatched(StorageService storage, String id) async {
