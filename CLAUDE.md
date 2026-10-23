@@ -332,6 +332,16 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-22)
+- **Codex unfolded Back tap fix** (`codex/unfolded-back-tap`, unreleased): owner reports
+  visible header arrow does nothing on an unfolded Google Pixel 10 Pro Fold. Reproduced
+  focus-dependent navigation in a widget regression: when the destination column cannot
+  accept focus, `requestFocus` emits no column-change callback and the groups stay hidden.
+  Header arrow/system Back now share `_handleBack`; non-TV Back explicitly updates visible
+  depth as well as requesting focus. TV remote handling stays on its existing focus path.
+  Full-video layout uses Flutter's target platform so Android tests on Windows exercise its
+  fully hidden columns (the old dart:io Windows guard silently skipped that layout in tests).
+  Coverage includes Android/Windows sizes, blocked focus for tap/system Back, folding and
+  unfolding, compact portrait and TV. Actual Pixel device check pending; no build/install.
 - **Shipped: 1.0.37 (`+413`, 2026-10-22, latest; test build `+412` = pre-release `1.0.36-test.412`,
   deleted):** every bullet below marked Unreleased down to 1.0.36 (Codex batch: Data pool bottom
   panel, live group sort, 1/3/6 h content updates, favourite networks kept, live CC fit; Claude:

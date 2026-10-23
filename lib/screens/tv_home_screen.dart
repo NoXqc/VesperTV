@@ -3,6 +3,8 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/services.dart';
@@ -1542,6 +1544,55 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     }
   }
 
+  /// Shared by system Back and the wide-layout touch arrow.
+  void _handleBack() {
+    // Back mid "Move Up / Down" just finishes the move.
+    if (_movingGroupKey != null) {
+      _endGroupMove();
+      return;
+    }
+    if (_movingChannel != null) {
+      _endChannelMove();
+      return;
+    }
+    if (_compact) {
+      // The bottom bar replaced the tabs page as the way between
+      // tabs: content -> groups -> exit; "More" (page 0) -> groups.
+      if (_phonePage == 2) {
+        if (_timelineFilterActive) _closeTimelineFilter();
+        setState(() => _phonePage = 1);
+      } else if (_phonePage == 0) {
+        setState(() => _phonePage = 1);
+      } else {
+        _confirmExit();
+      }
+      return;
+    }
+    if (_focusDepth == 0) {
+      _confirmExit();
+      return;
+    }
+    // Back while focus is literally inside the Timeline keyboard
+    // closes it and drops into the guide instead of the normal
+    // column-by-column walk below — requested directly. Clears the
+    // query too (not just the keyboard UI) — Back here means
+    // "quit filtering," not "keep it applied but hide the keyboard."
+    if (_timelineKeyboardScope.hasFocus) {
+      _closeTimelineFilter(toGuide: true);
+      return;
+    }
+    final previousDepth = (_focusDepth - 1).clamp(0, 2);
+    _moveColumnFocus(-1, 2);
+    // Touch navigation changes the visible page even when the target column
+    // cannot take focus or already owns it after a fold/resize. A focus request
+    // alone need not fire onFocusChange, which used to leave the arrow inert.
+    // Keep the TV's existing remote focus traversal unchanged.
+    if (!context.read<AppPreferences>().isTelevision &&
+        _focusDepth != previousDepth) {
+      setState(() => _focusDepth = previousDepth);
+    }
+  }
+
   /// Explicitly jumps D-pad focus one column left/right, clamped to
   /// [maxDepth]. Bound to the arrow keys via [CallbackShortcuts] in
   /// [build] instead of relying on default directional traversal — see the
@@ -2556,7 +2607,9 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         !_compact &&
         // Also with nothing playing (owner's choice): the layout stays put
         // over a dark background instead of jumping when a channel starts.
-        !Platform.isWindows;
+        // Presentation follows Flutter's platform, so Android widget tests
+        // can exercise the same hidden-column layout as a real foldable.
+        defaultTargetPlatform != TargetPlatform.windows;
     _fullArt = isBrowseTab && _showWhatsNew && !_compact;
 
     return Theme(
@@ -2569,43 +2622,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         // (_confirmExit) instead of closing the app straight away.
         canPop: false,
         onPopInvokedWithResult: (didPop, _) {
-          if (didPop) return;
-          // Back mid "Move Up / Down" just finishes the move.
-          if (_movingGroupKey != null) {
-            _endGroupMove();
-            return;
-          }
-          if (_movingChannel != null) {
-            _endChannelMove();
-            return;
-          }
-          if (_compact) {
-            // The bottom bar replaced the tabs page as the way between
-            // tabs: content -> groups -> exit; "More" (page 0) -> groups.
-            if (_phonePage == 2) {
-              if (_timelineFilterActive) _closeTimelineFilter();
-              setState(() => _phonePage = 1);
-            } else if (_phonePage == 0) {
-              setState(() => _phonePage = 1);
-            } else {
-              _confirmExit();
-            }
-            return;
-          }
-          if (_focusDepth == 0) {
-            _confirmExit();
-            return;
-          }
-          // Back while focus is literally inside the Timeline keyboard
-          // closes it and drops into the guide instead of the normal
-          // column-by-column walk below — requested directly. Clears the
-          // query too (not just the keyboard UI) — Back here means
-          // "quit filtering," not "keep it applied but hide the keyboard."
-          if (_timelineKeyboardScope.hasFocus) {
-            _closeTimelineFilter(toGuide: true);
-            return;
-          }
-          _moveColumnFocus(-1, 2);
+          if (!didPop) _handleBack();
         },
         child: Scaffold(
           backgroundColor: Colors.transparent,
@@ -2647,7 +2664,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                         // completely, so touch users need a visible way back.
                         onBack:
                             !_compact && !prefs.isTelevision && _focusDepth > 0
-                                ? () => Navigator.of(context).maybePop()
+                                ? _handleBack
                                 : null,
                         showClock: prefs.showClock,
                         isLoading: playlist.isLoading),
