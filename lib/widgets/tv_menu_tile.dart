@@ -11,7 +11,7 @@ import '../utils/tv_theme.dart';
 /// comment for why that overlay isn't enough on a TV). [leading]/
 /// [trailing] let a row that needs something other than the default
 /// icon-circle/chevron (`PlaylistManagerScreen`'s enabled/paused status
-/// icon, `ProfilePickerScreen`/`ProfilesScreen`'s initial-letter avatar
+/// icon, `ProfilesScreen`'s initial-letter avatar
 /// and "currently active" check) reuse this same contour treatment
 /// instead of falling back to a bare `ListTile` — confirmed directly as
 /// still showing the old translucent pastel wash on real hardware.

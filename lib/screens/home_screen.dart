@@ -32,7 +32,8 @@ import 'desktop_player_screen.dart';
 import 'movie_detail_screen.dart';
 import 'player_screen.dart';
 import 'series_detail_screen.dart';
-import 'settings/profiles_screen.dart';
+import 'settings/profile_editor_screen.dart';
+import '../widgets/profile_card.dart';
 import 'sports_screen.dart';
 
 /// The Home page (top of the tabs column, or Settings > Startup > Open on:
@@ -618,8 +619,16 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _manageProfiles() async {
     final viewers = context.read<ViewerProfileService>();
     if (!await viewers.requireUnlock(context) || !mounted) return;
-    await Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const ProfilesScreen()));
+    final id = await Navigator.of(context).push<String>(
+        MaterialPageRoute(builder: (_) => const AddProfileScreen()));
+    if (mounted) {
+      final index = viewers.profiles.indexWhere((p) => p.id == id);
+      _focusProfiles(index < 0 ? null : index);
+    }
+  }
+
+  Future<void> _editProfile(ViewerProfile profile) async {
+    await openProfileEditor(context, profile.id);
     if (mounted) _focusProfiles();
   }
 
@@ -747,6 +756,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     nodes: _profileNode,
                     addNode: _addProfileNode,
                     onPick: _switchProfile,
+                    onEdit: _editProfile,
                     onAdd: _manageProfiles,
                     onFocus: (i) {
                       if (!_inProfiles || _profileIndex != i) {
@@ -1270,162 +1280,72 @@ class _GameCardFace extends StatelessWidget {
   }
 }
 
-/// The viewer's profiles: round avatars, the active one ringed in gold; the
-/// focused one grows and shows its name. "+" = Settings > Profiles.
+/// Portraits are all built so D-pad focus can reach even off-screen viewers.
 class _ProfilesStrip extends StatelessWidget {
-  const _ProfilesStrip({
-    required this.nodes,
-    required this.addNode,
-    required this.onPick,
-    required this.onAdd,
-    required this.onFocus,
-  });
-
+  const _ProfilesStrip(
+      {required this.nodes,
+      required this.addNode,
+      required this.onPick,
+      required this.onEdit,
+      required this.onAdd,
+      required this.onFocus});
   final FocusNode Function(int) nodes;
   final FocusNode addNode;
-  final void Function(ViewerProfile) onPick;
+  final void Function(ViewerProfile) onPick, onEdit;
   final VoidCallback onAdd;
   final void Function(int) onFocus;
-
   @override
   Widget build(BuildContext context) {
     final viewers = context.watch<ViewerProfileService>();
-    final profiles = viewers.profiles;
+    final scale = MediaQuery.sizeOf(context).width < 600 ? .8 : 1.0;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(40, 22, 48, 0),
-      child: Row(children: [
-        for (final (i, p) in profiles.indexed)
-          _Avatar(
-            focusNode: nodes(i),
-            label: p.displayName,
-            color: kProfileColors[p.colorIndex % kProfileColors.length],
-            letter: p.name.isEmpty ? '?' : p.name[0].toUpperCase(),
-            active: p.id == viewers.active.id,
-            restricted: p.isRestricted,
-            onTap: () => onPick(p),
-            onFocus: () => onFocus(i),
-          ),
-        _Avatar(
-          focusNode: addNode,
-          label: tr('Profiles'),
-          icon: Icons.add,
-          color: Colors.white12,
-          active: false,
-          onTap: onAdd,
-          onFocus: () => onFocus(profiles.length),
-        ),
-        const Spacer(),
-        StreamBuilder<void>(
-          stream: Stream<void>.periodic(const Duration(seconds: 20)),
-          builder: (context, _) => Text(TimeFormat.hm.format(DateTime.now()),
-              style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white70)),
-        ),
-      ]),
-    );
-  }
-}
-
-class _Avatar extends StatefulWidget {
-  const _Avatar({
-    required this.focusNode,
-    required this.label,
-    required this.color,
-    required this.active,
-    required this.onTap,
-    required this.onFocus,
-    this.letter,
-    this.icon,
-    this.restricted = false,
-  });
-
-  final FocusNode focusNode;
-  final String label;
-  final Color color;
-  final bool active;
-  final bool restricted;
-  final String? letter;
-  final IconData? icon;
-  final VoidCallback onTap;
-  final VoidCallback onFocus;
-
-  @override
-  State<_Avatar> createState() => _AvatarState();
-}
-
-class _AvatarState extends State<_Avatar> {
-  bool _focused = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final ring = _focused
-        ? Colors.white
-        : widget.active
-            ? scheme.primary
-            : Colors.transparent;
-    return InkWell(
-      focusNode: widget.focusNode,
-      onTap: widget.onTap,
-      customBorder: const CircleBorder(),
-      focusColor: Colors.transparent,
-      hoverColor: Colors.transparent,
-      splashColor: Colors.transparent,
-      highlightColor: Colors.transparent,
-      onFocusChange: (f) {
-        setState(() => _focused = f);
-        if (f) widget.onFocus();
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          AnimatedScale(
-            scale: _focused ? 1.18 : 1.0,
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOutBack,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              width: 44,
-              height: 44,
-              padding: const EdgeInsets.all(3),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: ring, width: 2.5),
-              ),
-              child: CircleAvatar(
-                backgroundColor: widget.color,
-                child: widget.icon != null
-                    ? Icon(widget.icon, color: Colors.white)
-                    : Text(widget.letter ?? '?',
-                        style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white)),
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          AnimatedOpacity(
-            opacity: _focused || widget.active ? 1 : 0.0,
-            duration: const Duration(milliseconds: 180),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              if (widget.restricted)
-                const Padding(
-                  padding: EdgeInsets.only(right: 3),
-                  child:
-                      Icon(Icons.child_care, size: 12, color: Colors.white70),
-                ),
-              Text(widget.label,
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: widget.active ? scheme.primary : Colors.white)),
-            ]),
-          ),
-        ]),
-      ),
-    );
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+        child: Row(children: [
+          Expanded(
+              child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                  child: Row(children: [
+                    for (final (i, p) in viewers.profiles.indexed)
+                      Builder(
+                          builder: (cardContext) => ProfileCard(
+                              profile: p,
+                              label: p.displayName,
+                              focusNode: nodes(i),
+                              active: p.id == viewers.active.id,
+                              scale: scale,
+                              onTap: () => onPick(p),
+                              onHold: () => onEdit(p),
+                              onFocused: () {
+                                onFocus(i);
+                                Scrollable.ensureVisible(cardContext,
+                                    duration: Duration.zero,
+                                    alignmentPolicy:
+                                        ScrollPositionAlignmentPolicy
+                                            .keepVisibleAtEnd);
+                              })),
+                    Builder(
+                        builder: (cardContext) => ProfileCard(
+                            label: tr('Add Profile'),
+                            focusNode: addNode,
+                            scale: scale,
+                            onTap: onAdd,
+                            onFocused: () {
+                              onFocus(viewers.profiles.length);
+                              Scrollable.ensureVisible(cardContext,
+                                  duration: Duration.zero,
+                                  alignmentPolicy: ScrollPositionAlignmentPolicy
+                                      .keepVisibleAtEnd);
+                            })),
+                  ]))),
+          if (MediaQuery.sizeOf(context).width >= 800)
+            StreamBuilder<void>(
+                stream: Stream<void>.periodic(const Duration(seconds: 20)),
+                builder: (context, _) => Text(
+                    TimeFormat.hm.format(DateTime.now()),
+                    style:
+                        const TextStyle(fontSize: 20, color: Colors.white70))),
+        ]));
   }
 }

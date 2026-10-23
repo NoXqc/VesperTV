@@ -5,6 +5,10 @@ import '../widgets/pin_pad.dart';
 import 'playback_service.dart';
 import 'playlist_manager.dart';
 import 'storage_service.dart';
+import 'dart:typed_data';
+import 'dart:io';
+import '../models/profile_copy.dart';
+import 'profile_photos.dart';
 
 /// Owns viewer-profile CRUD and the switch sequence — see `ViewerProfile`'s
 /// doc comment for the feature. Depends on `PlaylistManager`/
@@ -12,7 +16,8 @@ import 'storage_service.dart';
 /// neither of those depends back on this class (see `PlaylistManager`'s own
 /// doc comment on why).
 class ViewerProfileService extends ChangeNotifier {
-  ViewerProfileService(this._storage, this._playlistManager, this._playbackService) {
+  ViewerProfileService(
+      this._storage, this._playlistManager, this._playbackService) {
     _profiles = _storage.getViewerProfiles();
     _activeId = _storage.getActiveViewerId();
     // Catches an impossible-but-cheap-to-guard-against state: an active id
@@ -33,10 +38,47 @@ class ViewerProfileService extends ChangeNotifier {
 
   List<ViewerProfile> get profiles => List.unmodifiable(_profiles);
 
-  ViewerProfile get active =>
-      _profiles.firstWhere((p) => p.id == _activeId, orElse: ViewerProfile.main);
+  ViewerProfile get active => _profiles.firstWhere((p) => p.id == _activeId,
+      orElse: ViewerProfile.main);
 
   bool get isActiveRestricted => active.isRestricted;
+  ProfilePhotos get photos => _storage.profilePhotos;
+  Future<File> photoFile(String id) => photos.file(id);
+  Future<void> setPhoto(String id, Uint8List bytes) async {
+    final profile = _profiles.firstWhere((p) => p.id == id);
+    final target = await photos.file(id);
+    await FileImage(target).evict();
+    await photos.save(id, bytes);
+    await FileImage(target).evict();
+    if (!_profiles.any((p) => p.id == id)) {
+      await photos.remove(id);
+      return;
+    }
+    _profiles = _profiles
+        .map((p) =>
+            p.id == id ? p.copyWith(photoVersion: profile.photoVersion + 1) : p)
+        .toList();
+    await _persist();
+    notifyListeners();
+  }
+
+  Future<void> removePhoto(String id) async {
+    await FileImage(await photos.file(id)).evict();
+    await photos.remove(id);
+    _profiles = _profiles
+        .map((p) => p.id == id ? p.copyWith(photoVersion: 0) : p)
+        .toList();
+    await _persist();
+    notifyListeners();
+  }
+
+  Future<void> setColour(String id, int index) async {
+    _profiles = _profiles
+        .map((p) => p.id == id ? p.copyWith(colorIndex: index) : p)
+        .toList();
+    await _persist();
+    notifyListeners();
+  }
 
   Future<void> _persist() => _storage.setViewerProfiles(_profiles);
 
@@ -50,7 +92,9 @@ class ViewerProfileService extends ChangeNotifier {
   Future<ViewerProfile> createProfile(
       {required String name,
       required int colorIndex,
-      required bool isRestricted}) async {
+      required bool isRestricted,
+      Set<ProfileCopy> copyFromMain = const {},
+      Uint8List? photo}) async {
     final profile = ViewerProfile(
       id: 'vp${DateTime.now().microsecondsSinceEpoch}',
       name: name,
@@ -58,16 +102,19 @@ class ViewerProfileService extends ChangeNotifier {
       isRestricted: isRestricted,
       createdAt: DateTime.now(),
     );
-    _profiles = [..._profiles, profile];
+    await _storage.copyMainToViewer(profile.id, copyFromMain,
+        restricted: isRestricted);
+    if (photo != null) await photos.save(profile.id, photo);
+    final created = profile.copyWith(photoVersion: photo == null ? 0 : 1);
+    _profiles = [..._profiles, created];
     await _persist();
     notifyListeners();
-    return profile;
+    return created;
   }
 
   Future<void> renameProfile(String id, String name) async {
-    _profiles = _profiles
-        .map((p) => p.id == id ? p.copyWith(name: name) : p)
-        .toList();
+    _profiles =
+        _profiles.map((p) => p.id == id ? p.copyWith(name: name) : p).toList();
     await _persist();
     notifyListeners();
   }
@@ -82,6 +129,7 @@ class ViewerProfileService extends ChangeNotifier {
     await _persist();
     await _storage.deleteViewerData(id);
     await _storage.deleteCacheFile('recently_played_vp_$id');
+    await photos.remove(id);
     notifyListeners();
     return true;
   }

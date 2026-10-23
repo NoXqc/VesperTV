@@ -332,6 +332,12 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-22)
+- **Profile proposal (Codex, 2026-10-23):** portrait cards/hold-to-edit, LAN QR/local
+  photos, new create/edit pages and opt-in independent copies from Main; season-wide
+  watched/unwatched with one tracker batch per account. See `dev-notes/profile-cards-photos.md`.
+  Includes the Hub-key/empty-recent-history isolation fixes also pending in Claude's
+  checkout; review overlap when integrating. switchTo/applyActiveViewer unchanged.
+  Native device acceptance pending; no build/push/release.
 - **In-app trailers (Codex, 2026-10-23):** official YouTube IFrame on Android/Windows;
   user-installed add-ons only, Xtream supplied trailers first, strict IMDb identity. Direct
   trailers use transient normal-player channels (no history/tracking). See

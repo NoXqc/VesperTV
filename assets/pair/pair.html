@@ -114,6 +114,16 @@
     </form>
   </section>
 
+  <section id="photo-view" hidden>
+    <h1>Add a profile photo to <span>VesperTV</span></h1>
+    <p class="lead">Choose a photo. A square preview is resized on this phone and sent only over your Wi-Fi.</p>
+    <form id="photo-form">
+      <input id="photo-file" type="file" accept="image/*" capture="user" required>
+      <canvas id="photo-preview" width="512" height="512" style="max-width:100%;height:auto" hidden></canvas>
+      <button class="send" id="photo-send" type="submit" disabled>Send to TV</button>
+      <div class="msg" id="photo-msg"></div>
+    </form>
+  </section>
   <section class="done" id="done-view">
     <div class="big">✓</div>
     <h1>Sent to your TV</h1>
@@ -134,8 +144,35 @@
   // kind the same with "server".
   var linkKind = parts[parts.length - 1] === "link";
   var serverKind = parts[parts.length - 1] === "server";
-  if (linkKind || serverKind) parts.pop();
+  var photoKind = parts[parts.length - 1] === "photo";
+  if (linkKind || serverKind || photoKind) parts.pop();
   var relay = parts.length === 2 && parts[0].length >= 16 && parts[1].length >= 40;
+  if (photoKind) {
+    relay = false;
+    $("form-view").hidden = true;
+    $("photo-view").hidden = false;
+    document.title = "VesperTV · Profile photo";
+  }
+  var photoData = null, photoGeneration = 0;
+  $("photo-file").onchange = function () {
+    var generation = ++photoGeneration;
+    photoData = null; $("photo-send").disabled = true;
+    var file = this.files[0];
+    if (!file || file.type.indexOf("image/") !== 0) { show("Choose an image.", "err"); return; }
+    var url = URL.createObjectURL(file), image = new Image();
+    image.onload = function () {
+      URL.revokeObjectURL(url);
+      if (generation !== photoGeneration) return;
+      var side = Math.min(image.naturalWidth, image.naturalHeight), canvas = $("photo-preview");
+      var ctx = canvas.getContext("2d");
+      ctx.fillStyle = "black"; ctx.fillRect(0, 0, 512, 512);
+      ctx.drawImage(image, (image.naturalWidth-side)/2, (image.naturalHeight-side)/2, side, side, 0, 0, 512, 512);
+      photoData = canvas.toDataURL("image/jpeg", 0.85).split(",")[1];
+      canvas.hidden = false; $("photo-send").disabled = false;
+    };
+    image.onerror = function () { URL.revokeObjectURL(url); show("Could not read this photo. Try JPEG or PNG.", "err"); };
+    image.src = url;
+  };
   if (linkKind) {
     $("form-view").hidden = true;
     $("link-view").hidden = false;
@@ -158,7 +195,7 @@
   $("tab-m3u").onclick = function () { setMode("m3u"); };
 
   function show(text, kind) {
-    var el = $(linkKind ? "link-msg" : serverKind ? "server-msg" : "msg");
+    var el = $(photoKind ? "photo-msg" : linkKind ? "link-msg" : serverKind ? "server-msg" : "msg");
     el.textContent = text;
     el.className = "msg " + (kind || "");
     el.style.display = "block";
@@ -230,9 +267,9 @@
 
   async function submit(e) {
     e.preventDefault();
-    var data = linkKind ? collectLink() : serverKind ? collectServer() : collect();
+    var data = photoKind ? (photoData ? {mode:"photo", mime:"image/jpeg", photo:photoData} : "Choose a photo first.") : linkKind ? collectLink() : serverKind ? collectServer() : collect();
     if (typeof data === "string") { show(data, "err"); return; }
-    var btn = $(linkKind ? "link-send" : serverKind ? "server-send" : "send");
+    var btn = $(photoKind ? "photo-send" : linkKind ? "link-send" : serverKind ? "server-send" : "send");
     btn.disabled = true; btn.textContent = "Sending…";
     try {
       var json = JSON.stringify(data);
@@ -240,6 +277,8 @@
       $("form-view").hidden = true;
       $("link-view").hidden = true;
       $("server-view").hidden = true;
+      $("photo-view").hidden = true;
+      if (photoKind) $("done-hint").textContent = "Your photo is on the TV. You can close this page.";
       if (linkKind) $("done-hint").textContent = "Check it there, then press Add. You can close this page.";
       if (serverKind) $("done-hint").textContent = "Check the details there, then press Connect. You can close this page.";
       $("done-view").style.display = "block";
@@ -251,6 +290,7 @@
   $("form").addEventListener("submit", submit);
   $("link-form").addEventListener("submit", submit);
   $("server-form").addEventListener("submit", submit);
+  $("photo-form").addEventListener("submit", submit);
 })();
 </script>
 </body>

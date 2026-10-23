@@ -93,7 +93,7 @@ class BackupService {
       'app': '${info.version}+${info.buildNumber}',
       'platform': Platform.operatingSystem,
       'created': now.toIso8601String(),
-      'data': _storage.exportForBackup(),
+      'data': await _storage.withProfilePhotos(_storage.exportForBackup()),
     });
     final name = '${auto ? autoPrefix : manualPrefix}${_stamp(now)}.json';
     final String id;

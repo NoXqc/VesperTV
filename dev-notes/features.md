@@ -78,6 +78,8 @@ Read before changing guide/Multiview/profiles/palettes/backup-server logic.
   (Neon Green, id `neon_green`) = seeded like Neon Purple but keeps the raw neon as `primary`
   with black text on it (seeding turned it pale mint).
 - **Viewer profiles** (`ViewerProfile`, `ViewerProfileService`): several viewers sharing one
+- **Profile cards/photos and copying Main:** see `dev-notes/profile-cards-photos.md` for
+  the new create/edit flow, LAN-only avatar upload, storage/backup and copy-key table.
   device's playlists, each with their own favorites/hidden-groups/watch-history. Main's data lives
   under every *existing* unsuffixed storage key, completely unchanged — never add a step that
   rewrites Main's keys on upgrade; a second-or-later viewer's keys get `__vp_<id>` appended by

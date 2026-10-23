@@ -109,9 +109,11 @@ class _SendScreenState extends State<_SendScreen> {
   }
 
   Future<void> _start() async {
-    final session = TransferSendSession(context
-        .read<StorageService>()
-        .exportForTransfer(includeArchive: widget.includeArchive));
+    final storage = context.read<StorageService>();
+    final payload = await storage.withProfilePhotos(
+        storage.exportForTransfer(includeArchive: widget.includeArchive));
+    if (!mounted) return;
+    final session = TransferSendSession(payload);
     _session = session;
     try {
       await session.start();
@@ -263,7 +265,8 @@ class _CloudSendScreenState extends State<_CloudSendScreen> {
     });
     try {
       final upload = await uploadCloudTransfer(
-          _storage.exportForTransfer(includeArchive: widget.includeArchive),
+          await _storage.withProfilePhotos(_storage.exportForTransfer(
+              includeArchive: widget.includeArchive)),
           lifetime);
       await _storage.setCloudTransfer(upload.toJson());
       // The old upload would otherwise stay readable until it expires.

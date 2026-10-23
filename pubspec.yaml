@@ -29,6 +29,9 @@ dependencies:
   # undeclared transitive API surface.
   flutter_cache_manager: ^3.4.1
   file: ^7.0.0
+  file_selector: ^1.1.0
+  # Already present through the icon tooling; normalize private profile photos.
+  image: ^4.9.2
   # Already pulled in transitively by other packages — added explicitly
   # for ParentalPin's own PIN hashing rather than relying on an undeclared
   # transitive API surface (same reasoning as flutter_cache_manager above).

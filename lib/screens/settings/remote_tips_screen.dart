@@ -27,6 +27,7 @@ class RemoteTipsScreen extends StatelessWidget {
           Text(tr(
               'Every hold menu and remote shortcut, on one page: hold OK on channels, groups and posters, the side panel on ← in full screen, Multiview, Sports Trak and more.')),
           const SizedBox(height: 20),
+          Text(tr('Hold OK on a profile to edit it. Hold OK on a season to mark it watched or unwatched.')),
           Wrap(
             spacing: 24,
             runSpacing: 16,

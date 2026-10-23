@@ -220,7 +220,10 @@ class PlaybackService extends ChangeNotifier {
 
   Future<void> init() async {
     final raw = await _storage.readCacheFile(_recentlyPlayedCacheKeyForViewer);
-    if (raw == null) return;
+    if (raw == null) {
+      _recentlyPlayed = [];
+      return;
+    }
     try {
       _recentlyPlayed = (jsonDecode(raw) as List)
           .map((e) => Channel.fromJson(e as Map<String, dynamic>))

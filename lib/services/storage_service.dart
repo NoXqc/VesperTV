@@ -7,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/channel.dart';
 import '../models/playlist_profile.dart';
 import '../models/viewer_profile.dart';
+import '../models/profile_copy.dart';
+import 'profile_photos.dart';
 import '../utils/constants.dart';
 
 /// Wraps [SharedPreferences] for small settings values, and the OS temp
@@ -15,8 +17,67 @@ import '../utils/constants.dart';
 /// and living under the temp dir means the OS can reclaim them under
 /// storage pressure with no worse outcome than "re-fetch from network".
 class StorageService {
+  StorageService({ProfilePhotos? photos})
+      : profilePhotos = photos ?? ProfilePhotos();
   late SharedPreferences _prefs;
   Directory? _cacheDir;
+  final ProfilePhotos profilePhotos;
+
+  Future<Map<String, Object>> withProfilePhotos(
+          Map<String, Object> values) async =>
+      {
+        ...values,
+        'vesper_profile_photos': await profilePhotos.export(getViewerProfiles()
+            .where((p) => p.photoVersion > 0)
+            .map((p) => p.id)),
+      };
+
+  /// Only a newly created viewer is a valid destination. Main is read-only.
+  Future<void> copyMainToViewer(String id, Set<ProfileCopy> options,
+      {required bool restricted}) async {
+    if (id == AppConstants.mainViewerId || !ProfilePhotos.validId(id) ||
+        getViewerProfiles().any((p) => p.id == id)) {
+      throw ArgumentError('Invalid destination');
+    }
+    final selected = {...options};
+    if (restricted) selected.remove(ProfileCopy.visibility);
+    for (final key
+        in _prefs.getKeys().where((k) => copyMainKey(k, selected)).toList()) {
+      final target = _vk(key, viewerId: id);
+      final value = _prefs.get(key);
+      switch (value) {
+        case String s:
+          await _prefs.setString(target, s);
+        case bool b:
+          await _prefs.setBool(target, b);
+        case int n:
+          await _prefs.setInt(target, n);
+        case double n:
+          await _prefs.setDouble(target, n);
+        case List<String> l:
+          await _prefs.setStringList(target, [...l]);
+      }
+    }
+    if (selected.contains(ProfileCopy.history)) {
+      final history = await readCacheFile('recently_played');
+      if (history != null) {
+        await writeCacheFile('recently_played_vp_$id', history);
+      }
+    }
+  }
+
+  int viewerGroupCount(String playlistId, String viewerId,
+          {bool allowed = false}) =>
+      (_prefs.getStringList(_vk(
+                  '${allowed ? AppConstants.keyShownGroups : AppConstants.keyHiddenGroups}_$playlistId',
+                  viewerId: viewerId)) ??
+              [])
+          .length;
+  int viewerHiddenChannelCount(String playlistId, String viewerId) =>
+      (_prefs.getStringList(_vk('${AppConstants.keyHiddenChannels}_$playlistId',
+                  viewerId: viewerId)) ??
+              [])
+          .length;
 
   /// See the "Viewer-profile scoping" section below for what this drives.
   /// Loaded once at [init] and kept in memory rather than read from
@@ -180,21 +241,21 @@ class StorageService {
       _prefs.setBool(AppConstants.keyDesktopMuted, value);
 
   String? getArchiveFavoritesJson() =>
-      _prefs.getString(AppConstants.keyArchiveFavorites);
+      _prefs.getString(_vk(AppConstants.keyArchiveFavorites));
   Future<void> setArchiveFavoritesJson(String? json) => json == null
-      ? _prefs.remove(AppConstants.keyArchiveFavorites)
-      : _prefs.setString(AppConstants.keyArchiveFavorites, json);
+      ? _prefs.remove(_vk(AppConstants.keyArchiveFavorites))
+      : _prefs.setString(_vk(AppConstants.keyArchiveFavorites), json);
 
   String? getArchiveHistoryJson() =>
-      _prefs.getString(AppConstants.keyArchiveHistory);
+      _prefs.getString(_vk(AppConstants.keyArchiveHistory));
   Future<void> setArchiveHistoryJson(String? json) => json == null
-      ? _prefs.remove(AppConstants.keyArchiveHistory)
-      : _prefs.setString(AppConstants.keyArchiveHistory, json);
+      ? _prefs.remove(_vk(AppConstants.keyArchiveHistory))
+      : _prefs.setString(_vk(AppConstants.keyArchiveHistory), json);
 
   String? getArchiveRecentSearchesJson() =>
-      _prefs.getString(AppConstants.keyArchiveRecentSearches);
+      _prefs.getString(_vk(AppConstants.keyArchiveRecentSearches));
   Future<void> setArchiveRecentSearchesJson(String json) =>
-      _prefs.setString(AppConstants.keyArchiveRecentSearches, json);
+      _prefs.setString(_vk(AppConstants.keyArchiveRecentSearches), json);
 
   String? getArchiveSourcesJson() =>
       _prefs.getString(AppConstants.keyArchiveSources);
@@ -647,10 +708,11 @@ class StorageService {
 
   /// [AppConstants.keyMyGroups]'s raw JSON (parsed by `UserGroups`).
   String? getMyGroups() => _prefs.getString(_vk(AppConstants.keyMyGroups));
-  String? getSportsChannelLists({String? viewerId}) =>
-      _prefs.getString(_vk('vesper_sports_channel_lists', viewerId: viewerId));
-  Future<void> setSportsChannelLists(String json, {String? viewerId}) => _prefs
-      .setString(_vk('vesper_sports_channel_lists', viewerId: viewerId), json);
+  String? getSportsChannelLists({String? viewerId}) => _prefs
+      .getString(_vk(AppConstants.keySportsChannelLists, viewerId: viewerId));
+  Future<void> setSportsChannelLists(String json, {String? viewerId}) =>
+      _prefs.setString(
+          _vk(AppConstants.keySportsChannelLists, viewerId: viewerId), json);
   Future<void> setMyGroups(String json) =>
       _prefs.setString(_vk(AppConstants.keyMyGroups), json);
 
@@ -911,11 +973,13 @@ class StorageService {
   Future<void> _importWhere(
       Map<String, Object?> values, bool Function(String key) include,
       {bool Function(String key)? keep}) async {
+    final previous = getViewerProfiles();
     for (final key in _prefs.getKeys().toList()) {
       if (keep?.call(key) ?? false) continue;
       if (include(key)) await _prefs.remove(key);
     }
     for (final entry in values.entries) {
+      if (entry.key == 'vesper_profile_photos') continue;
       if (!include(entry.key)) continue;
       if (entry.key == _transferArchiveExcluded) continue;
       if (keep?.call(entry.key) ?? false) continue;
@@ -938,6 +1002,15 @@ class StorageService {
           ]);
       }
     }
+    final photoIds = {
+      ...previous.where((p) => p.photoVersion > 0).map((p) => p.id),
+      ...getViewerProfiles().where((p) => p.photoVersion > 0).map((p) => p.id)
+    };
+    if (photoIds.isNotEmpty) {
+      final photos = values['vesper_profile_photos'];
+      await profilePhotos.restore(
+          photos is Map ? photos : {}, photoIds.where(ProfilePhotos.validId));
+    }
   }
 
   /// Settings > Backup & restore: automatic weekly backup (off by default)
@@ -959,9 +1032,9 @@ class StorageService {
   /// and never transfers.
   static bool _isArchiveKey(String key) =>
       key == AppConstants.keyArchiveSources ||
-      key == AppConstants.keyArchiveHistory ||
-      key == AppConstants.keyArchiveFavorites ||
-      key == AppConstants.keyArchiveRecentSearches ||
+      key.startsWith(AppConstants.keyArchiveHistory) ||
+      key.startsWith(AppConstants.keyArchiveFavorites) ||
+      key.startsWith(AppConstants.keyArchiveRecentSearches) ||
       key.contains('archive::arc_');
 
   /// Present in a payload sent without the Archive tab's data: the

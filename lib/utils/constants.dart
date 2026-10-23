@@ -313,6 +313,7 @@ class AppConstants {
   /// Sports tab, per viewer: leagues shown (ordered ids), spoiler mode, and
   /// the user's own game -> channel picks (JSON, see `SportsChannelPicks`).
   static const String keySportsLeagues = 'vesper_sports_leagues';
+  static const String keySportsChannelLists = 'vesper_sports_channel_lists';
 
   /// Home page rows, per viewer: ordered row ids, a hidden row as `-id`
   /// (`HomeRows`). Null = never edited (the default order).

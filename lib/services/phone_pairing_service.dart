@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'profile_photos.dart';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/foundation.dart';
@@ -30,7 +31,8 @@ const Map<String, String> kRelayAppHeaders = {'X-VesperTV-App': '1'};
 enum PairingKind {
   playlist,
   link,
-  mediaServer;
+  mediaServer,
+  photo;
 
   bool get isWifiOnly => this != playlist;
 
@@ -39,6 +41,7 @@ enum PairingKind {
         playlist => null,
         link => 'link',
         mediaServer => 'server',
+        photo => 'photo',
       };
 }
 
@@ -53,6 +56,7 @@ class PairingResult {
     this.password = '',
     this.m3uUrl = '',
     this.epgUrl = '',
+    this.photo,
   });
 
   /// 'xtream', 'm3u', 'link' or 'server' (Jellyfin / Emby: [server],
@@ -67,6 +71,7 @@ class PairingResult {
   final String password;
   final String m3uUrl;
   final String epgUrl;
+  final Uint8List? photo;
 
   /// Null when the payload isn't something the form could have produced.
   static PairingResult? fromJson(Object? json) {
@@ -79,6 +84,25 @@ class PairingResult {
     }
 
     final mode = s('mode', 10);
+    if (mode == 'photo') {
+      final encoded = json['photo'];
+      if (encoded is! String ||
+          encoded.length > (ProfilePhotos.maxBytes * 4 / 3).ceil() + 4) {
+        return null;
+      }
+      try {
+        final bytes = base64Decode(encoded);
+        final mime = ProfilePhotos.mime(bytes);
+        if (bytes.length > ProfilePhotos.maxBytes ||
+            mime == null ||
+            mime != json['mime']) {
+          return null;
+        }
+        return PairingResult(mode: mode, photo: bytes);
+      } catch (_) {
+        return null;
+      }
+    }
     final r = PairingResult(
       mode: mode,
       name: s('name', 80),
@@ -133,6 +157,7 @@ class PhonePairingSession {
         PairingKind.playlist => '',
         PairingKind.link => 'link',
         PairingKind.mediaServer => 'server',
+        PairingKind.photo => 'photo',
       };
 
   bool _accepts(PairingResult r) => kind.mode == null
@@ -182,7 +207,7 @@ class PhonePairingSession {
   /// Starts polling the relay (only while the relay QR is on screen, so a
   /// Wi-Fi-only pairing never touches the VPS).
   void startRelayPolling() {
-    if (_done || _relayPoll != null) return;
+    if (kind.isWifiOnly || _done || _relayPoll != null) return;
     _relayPoll =
         Timer.periodic(const Duration(seconds: 2), (_) => _pollRelay());
   }
@@ -235,11 +260,20 @@ class PhonePairingSession {
         res.statusCode = HttpStatus.methodNotAllowed;
         return;
       }
-      final body = await _readLimited(req, 16 * 1024);
+      final body = await _readLimited(
+          req, kind == PairingKind.photo ? 2800000 : 16 * 1024);
       final result = body == null ? null : _decodeResult(body);
       if (result == null || !_accepts(result)) {
         res.statusCode = HttpStatus.badRequest;
         return;
+      }
+      if (result.photo case final photo?) {
+        try {
+          await compute(ProfilePhotos.normalize, photo);
+        } catch (_) {
+          res.statusCode = HttpStatus.badRequest;
+          return;
+        }
       }
       res.statusCode = HttpStatus.noContent;
       received = result;
@@ -256,11 +290,17 @@ class PhonePairingSession {
 
   static Future<String?> _readLimited(HttpRequest req, int max) async {
     final bytes = <int>[];
-    await for (final chunk in req) {
-      bytes.addAll(chunk);
-      if (bytes.length > max) return null;
+    var tooLarge = false;
+    await for (final chunk in req.timeout(const Duration(seconds: 20))) {
+      if (!tooLarge && bytes.length + chunk.length > max) {
+        tooLarge = true;
+        bytes.clear();
+      }
+      // Drain a rejected request without retaining it: cancelling its body
+      // stream here closes the HTTP connection before the phone gets a 400.
+      if (!tooLarge) bytes.addAll(chunk);
     }
-    return utf8.decode(bytes, allowMalformed: true);
+    return tooLarge ? null : utf8.decode(bytes, allowMalformed: true);
   }
 
   static PairingResult? _decodeResult(String json) {

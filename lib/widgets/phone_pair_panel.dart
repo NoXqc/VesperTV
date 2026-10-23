@@ -140,6 +140,7 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
 
     final isLink = widget.kind == PairingKind.link;
     final isServer = widget.kind == PairingKind.mediaServer;
+    final isPhoto = widget.kind == PairingKind.photo;
     final wifiOnly = widget.kind.isWifiOnly;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -147,78 +148,93 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
         Text(tr('Add from your phone'), style: theme.textTheme.titleLarge),
         const SizedBox(height: 4),
         Text(
-          isLink
-              ? tr(
-                  'Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.')
-              : isServer
+          isPhoto
+              ? tr('Scan with your phone to add a photo')
+              : isLink
                   ? tr(
-                      'Typing a server address and password with a remote is painful. Scan this code with your phone camera and sign in there — the details appear here for you to check and connect.')
-                  : tr(
-                      'Typing a long password with a remote is painful. Scan this code with your phone camera and fill in the form there — it appears here for you to check and add.'),
+                      'Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.')
+                  : isServer
+                      ? tr(
+                          'Typing a server address and password with a remote is painful. Scan this code with your phone camera and sign in there — the details appear here for you to check and connect.')
+                      : tr(
+                          'Typing a long password with a remote is painful. Scan this code with your phone camera and fill in the form there — it appears here for you to check and add.'),
           style: muted,
         ),
         const SizedBox(height: 16),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            code,
-            const SizedBox(width: 20),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _Step(
-                      n: 1,
-                      text: _relay
-                          ? tr('Scan with your phone (mobile data is fine).')
-                          : tr(
-                              'Connect your phone to the same Wi-Fi as this TV, then scan.')),
-                  _Step(
-                      n: 2,
-                      text: isLink
-                          ? tr('Paste the link and tap Send to TV.')
-                          : tr('Fill in the form and tap Send to TV.')),
-                  _Step(
-                      n: 3,
-                      text: isLink
-                          ? tr('Check the link here, then press Add.')
-                          : isServer
-                              ? tr(
-                                  'Check the details here, then press Connect.')
-                              : tr(
-                                  'Check the details here, then press Add Playlist.')),
-                  const SizedBox(height: 12),
-                  if (!_starting && !_expired)
-                    Row(
-                      children: [
-                        const SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(strokeWidth: 2)),
-                        const SizedBox(width: 10),
-                        Text(tr('Waiting for your phone…'), style: muted),
-                      ],
-                    ),
-                  if (!_relay && url != null && !_expired) ...[
-                    const SizedBox(height: 10),
-                    Text(tr('Or open on the phone:'), style: muted),
-                    SelectableText(url,
-                        style: const TextStyle(
-                            fontFamily: 'monospace', fontSize: 13)),
-                  ],
-                  if (_relay)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 10),
-                      child: Text(
-                        tr('Your details are encrypted on the phone; the relay only passes along scrambled data and deletes it.'),
-                        style: muted,
+        LayoutBuilder(
+            builder: (context, limits) => Wrap(
+                  spacing: 20,
+                  runSpacing: 16,
+                  children: [
+                    code,
+                    SizedBox(
+                      width: limits.maxWidth < 520
+                          ? limits.maxWidth
+                          : limits.maxWidth - 240,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _Step(
+                              n: 1,
+                              text: _relay
+                                  ? tr(
+                                      'Scan with your phone (mobile data is fine).')
+                                  : tr(
+                                      'Connect your phone to the same Wi-Fi as this TV, then scan.')),
+                          _Step(
+                              n: 2,
+                              text: isPhoto
+                                  ? tr('Choose a photo and tap Send to TV.')
+                                  : isLink
+                                      ? tr('Paste the link and tap Send to TV.')
+                                      : tr(
+                                          'Fill in the form and tap Send to TV.')),
+                          _Step(
+                              n: 3,
+                              text: isPhoto
+                                  ? tr('Your photo appears here automatically.')
+                                  : isLink
+                                      ? tr(
+                                          'Check the link here, then press Add.')
+                                      : isServer
+                                          ? tr(
+                                              'Check the details here, then press Connect.')
+                                          : tr(
+                                              'Check the details here, then press Add Playlist.')),
+                          const SizedBox(height: 12),
+                          if (!_starting && !_expired)
+                            Row(
+                              children: [
+                                const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2)),
+                                const SizedBox(width: 10),
+                                Text(tr('Waiting for your phone…'),
+                                    style: muted),
+                              ],
+                            ),
+                          if (!_relay && url != null && !_expired) ...[
+                            const SizedBox(height: 10),
+                            Text(tr('Or open on the phone:'), style: muted),
+                            SelectableText(url,
+                                style: const TextStyle(
+                                    fontFamily: 'monospace', fontSize: 13)),
+                          ],
+                          if (_relay)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 10),
+                              child: Text(
+                                tr('Your details are encrypted on the phone; the relay only passes along scrambled data and deletes it.'),
+                                style: muted,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                ],
-              ),
-            ),
-          ],
-        ),
+                  ],
+                )),
         const SizedBox(height: 16),
         // Wi-Fi-only kinds: no relay code to switch to — the button just
         // leaves (it's still the screen's focus target, CLAUDE.md §10).

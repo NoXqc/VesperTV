@@ -32,6 +32,7 @@ class ViewerProfile {
     required this.colorIndex,
     required this.isRestricted,
     required this.createdAt,
+    this.photoVersion = 0,
   });
 
   static const String mainId = 'main';
@@ -49,6 +50,7 @@ class ViewerProfile {
   /// first version doesn't support.
   final bool isRestricted;
   final DateTime createdAt;
+  final int photoVersion;
 
   bool get isMain => id == mainId;
 
@@ -64,12 +66,14 @@ class ViewerProfile {
         createdAt: DateTime.now(),
       );
 
-  ViewerProfile copyWith({String? name, int? colorIndex}) => ViewerProfile(
+  ViewerProfile copyWith({String? name, int? colorIndex, int? photoVersion}) =>
+      ViewerProfile(
         id: id,
         name: name ?? this.name,
         colorIndex: colorIndex ?? this.colorIndex,
         isRestricted: isRestricted,
         createdAt: createdAt,
+        photoVersion: photoVersion ?? this.photoVersion,
       );
 
   Map<String, dynamic> toJson() => {
@@ -78,10 +82,12 @@ class ViewerProfile {
         'colorIndex': colorIndex,
         'isRestricted': isRestricted,
         'createdAt': createdAt.millisecondsSinceEpoch,
+        'photoVersion': photoVersion,
       };
 
   factory ViewerProfile.fromJson(Map<String, dynamic> json) => ViewerProfile(
         id: json['id'] as String,
+        photoVersion: (json['photoVersion'] as num?)?.toInt() ?? 0,
         name: json['name'] as String,
         colorIndex: json['colorIndex'] as int? ?? 0,
         isRestricted: json['isRestricted'] as bool? ?? false,
