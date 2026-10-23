@@ -336,6 +336,10 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-23)
+- **Codex, unreleased: Media Hub movie resume source** — `codex/media-hub-resume-source`
+  saves the selected provider/file as viewer-scoped fingerprints, re-matches fresh
+  stream links on resume, and falls back to alternatives if absent/unreachable.
+  Details/limits: `dev-notes/features.md` (Media Hub movie resume source).
 - **Shipped: 1.0.38 (`+419`, 2026-10-23, latest; test builds `+414`/`+416`/`+417` = pre-releases
   `1.0.37-test.*`, not deleted yet — owner OK needed):** Home page (profile cards that shrink
   while browsing rows, hero, Today's games: My Teams → starred league → rest, finals gone 60 min

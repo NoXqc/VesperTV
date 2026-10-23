@@ -35,7 +35,8 @@ class StorageService {
   /// Only a newly created viewer is a valid destination. Main is read-only.
   Future<void> copyMainToViewer(String id, Set<ProfileCopy> options,
       {required bool restricted}) async {
-    if (id == AppConstants.mainViewerId || !ProfilePhotos.validId(id) ||
+    if (id == AppConstants.mainViewerId ||
+        !ProfilePhotos.validId(id) ||
         getViewerProfiles().any((p) => p.id == id)) {
       throw ArgumentError('Invalid destination');
     }
@@ -790,6 +791,16 @@ class StorageService {
       _vk('${AppConstants.keyLastPositionPrefix}$channelId');
   String _durationKey(String channelId) =>
       _vk('${AppConstants.keyLastDurationPrefix}$channelId');
+
+  /// Fingerprints only: never persist expiring add-on/CDN links here.
+  String? getArchiveResumeSource(String channelId, {String? viewerId}) =>
+      _prefs.getString(
+          _vk('vesper_archive_resume_source_$channelId', viewerId: viewerId));
+  Future<void> setArchiveResumeSource(String channelId, String json,
+          {String? viewerId}) =>
+      _prefs.setString(
+          _vk('vesper_archive_resume_source_$channelId', viewerId: viewerId),
+          json);
 
   int getLastPosition(String channelId) =>
       _prefs.getInt(_positionKey(channelId)) ?? 0;
