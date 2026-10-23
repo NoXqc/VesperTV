@@ -62,6 +62,13 @@ final class StatsBridge implements MethodChannel.MethodCallHandler {
     @Nullable Format format = player.getExoPlayer().getVideoFormat();
     if (format != null) {
       m.put("hdr", hdrKind(format));
+      // Dolby Vision only: the profile (dvhe.08.06 -> 8) and the base layer a
+      // non-DV device falls back to ("hdr10", "hlg" or "" when not signalled).
+      int dvProfile = dvProfile(format);
+      if (dvProfile >= 0) {
+        m.put("dvProfile", dvProfile);
+        m.put("dvBase", dvBase(format));
+      }
       m.put("frameRate", (double) format.frameRate);
       m.put("width", format.width);
       m.put("height", format.height);
@@ -69,6 +76,28 @@ final class StatsBridge implements MethodChannel.MethodCallHandler {
     double ptsFps = player.frameRateProbe.fps();
     if (ptsFps > 0) m.put("ptsFps", ptsFps);
     result.success(m);
+  }
+
+  /** Dolby Vision profile from the codecs string (dvhe.08.06 -> 8), else -1. */
+  static int dvProfile(@NonNull Format format) {
+    String codecs = format.codecs == null ? "" : format.codecs;
+    if (!"dolby_vision".equals(hdrKind(format))) return -1;
+    String[] parts = codecs.split("\\.");
+    if (parts.length < 2) return -1;
+    try {
+      return Integer.parseInt(parts[1]);
+    } catch (NumberFormatException e) {
+      return -1;
+    }
+  }
+
+  /** The base layer's transfer as signalled by the container: "hdr10", "hlg" or "". */
+  static String dvBase(@NonNull Format format) {
+    @Nullable ColorInfo color = format.colorInfo;
+    if (color == null) return "";
+    if (color.colorTransfer == C.COLOR_TRANSFER_ST2084) return "hdr10";
+    if (color.colorTransfer == C.COLOR_TRANSFER_HLG) return "hlg";
+    return "";
   }
 
   /** "dolby_vision", "hdr10", "hlg" or "sdr" (an unknown transfer counts as SDR). */
