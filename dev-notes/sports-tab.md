@@ -109,6 +109,11 @@ Kotlin Android TV app (fork of OwnTV, GPL-3.0 like us), files under
   the 2022 Grey Cup, Swiss Super League stopped Sept 2025; both removed. Check the default
   window's event dates (not just HTTP 200) before adding a league. Event sports: golf/UFC/PFL/F1/
   NASCAR/IndyCar added in 1.0.9 (see "Event sports" below); tennis not yet.
+- **2026-10-23: English league tiers** - added EFL League One (`eng.3`, EFL1) and
+  EFL League Two (`eng.4`, EFL2) to the England bank beside the existing Championship
+  (`eng.2`). Premier League (`eng.1`) remains a base league; Carabao/EFL Cup is separate.
+  ESPN scoreboard for 2026-10-24 returned 12/11 upcoming fixtures; both standings feeds
+  returned 24 teams. League logos verified as `25.png` / `26.png`. Add through League manager.
 - **Takeaway for us:** adding leagues is cheap: one `SportsLeague(espnPath: ...)` entry each (we have 13).
   To scale past a handful we'd need what they built: a lazy catalogue (active vs available), a
   searchable "all leagues" picker, and event-sport (athlete) parsing for golf/F1/UFC/tennis.

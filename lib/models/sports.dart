@@ -363,6 +363,22 @@ const List<SportsLeague> kSportsLeagueBank = [
       region: 'England',
       soccer: true),
   SportsLeague(
+      id: 'eng.3',
+      espnPath: 'soccer/eng.3',
+      name: 'EFL League One',
+      shortName: 'EFL1',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/25.png',
+      region: 'England',
+      soccer: true),
+  SportsLeague(
+      id: 'eng.4',
+      espnPath: 'soccer/eng.4',
+      name: 'EFL League Two',
+      shortName: 'EFL2',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/26.png',
+      region: 'England',
+      soccer: true),
+  SportsLeague(
       id: 'esp.2',
       espnPath: 'soccer/esp.2',
       name: 'LALIGA 2',
