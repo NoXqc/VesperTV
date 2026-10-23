@@ -175,6 +175,7 @@ const Map<String, String> kEs = {
   "{section}. Where the app opens after starting. With \"Resume last channel in full screen\" on, the channel then plays in the background instead.":
       "{section}. Dónde se abre la app al iniciar. Si «Reanudar el último canal en pantalla completa» está activado, el canal se reproduce entonces en segundo plano.",
   "Subtitle size": "Tamaño de los subtítulos",
+  "Extra small": "Muy pequeño",
   "Small": "Pequeño",
   "Normal": "Normal",
   "Large": "Grande",

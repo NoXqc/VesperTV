@@ -549,28 +549,14 @@ class PlayerControls extends StatelessWidget {
               // navigation (e.g. PlayerScreen's "Left always goes back").
               // Touch/mouse dragging is unaffected — this only removes it
               // from keyboard/remote focus traversal.
+              // The Slider itself stays out of focus; [_ScrubBar] is the
+              // remote's way onto it (Up from the buttons).
               if (showSeek)
-                ExcludeFocus(
-                  // 24 px instead of Slider's 48: the bar was too tall.
-                  child: SizedBox(
-                    height: 24,
-                    child: SliderTheme(
-                      data: SliderTheme.of(context).copyWith(
-                        trackHeight: 3,
-                        thumbShape:
-                            const RoundSliderThumbShape(enabledThumbRadius: 6),
-                        overlayShape: SliderComponentShape.noOverlay,
-                      ),
-                      child: Slider(
-                        value: position.inMilliseconds
-                            .clamp(0, duration.inMilliseconds)
-                            .toDouble(),
-                        max: duration.inMilliseconds.toDouble(),
-                        onChanged: (v) => controller
-                            .seekTo(Duration(milliseconds: v.toInt())),
-                      ),
-                    ),
-                  ),
+                _ScrubBar(
+                  controller: controller,
+                  position: position,
+                  duration: duration,
+                  onActivity: onActivity,
                 ),
               // Favorite sits with the transport: alone above the seek bar
               // it was out of reach of up/down movement within this bar.
@@ -1450,7 +1436,7 @@ class _SubtitleButtonState extends State<_SubtitleButton> {
     }
   }
 
-  /// Small / Normal / Large / Extra large ([AppPreferences.subtitleScale]).
+  /// Extra small / Small / Normal / Large / Extra large ([AppPreferences.subtitleScale]).
   Future<void> _pickSize() async {
     final prefs = context.read<AppPreferences>();
     final current = AppPreferences.subtitleSizeName(prefs.subtitleScale);
@@ -1702,6 +1688,159 @@ class _LabeledIconButtonState extends State<_LabeledIconButton> {
 /// held Select/Enter key) — Flutter has no built-in "key held for N ms"
 /// primitive, so this tracks key down/up timing by hand, the same
 /// technique used for the group-row long-press menu in TvHomeScreen.
+/// The VOD seek bar. Touch/mouse drag it as before; on a remote, Up from
+/// the buttons focuses it and Left/Right scrub a target marker — jumps grow
+/// while the key is held (10 s → 30 s → 1 → 2 → 5 min) — then one seek
+/// lands 700 ms after the last press (or at once on OK). One seek instead
+/// of one per step: each seek re-buffers, and IPTV servers are slow to.
+class _ScrubBar extends StatefulWidget {
+  const _ScrubBar({
+    required this.controller,
+    required this.position,
+    required this.duration,
+    this.onActivity,
+  });
+
+  final VideoPlayerHdrController controller;
+  final Duration position;
+  final Duration duration;
+  final VoidCallback? onActivity;
+
+  @override
+  State<_ScrubBar> createState() => _ScrubBarState();
+}
+
+class _ScrubBarState extends State<_ScrubBar> {
+  final _focus = FocusNode(debugLabel: 'scrub-bar');
+  Duration? _target;
+  int _steps = 0;
+  Timer? _commit;
+
+  static const _commitDelay = Duration(milliseconds: 700);
+
+  @override
+  void dispose() {
+    _commit?.cancel();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  /// Seconds per step: the more steps in this scrub, the bigger the jump.
+  static int stepSeconds(int steps) => steps < 3
+      ? 10
+      : steps < 6
+          ? 30
+          : steps < 10
+              ? 60
+              : steps < 15
+                  ? 120
+                  : 300;
+
+  void _move(int sign) {
+    widget.onActivity?.call();
+    final from = _target ?? widget.position;
+    final next = from + Duration(seconds: sign * stepSeconds(_steps++));
+    setState(() => _target = next < Duration.zero
+        ? Duration.zero
+        : next > widget.duration
+            ? widget.duration
+            : next);
+    _commit?.cancel();
+    _commit = Timer(_commitDelay, _seek);
+  }
+
+  void _seek() {
+    _commit?.cancel();
+    final target = _target;
+    if (target != null) widget.controller.seekTo(target);
+    if (mounted) setState(() => _target = null);
+    _steps = 0;
+  }
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (event is KeyUpEvent) return KeyEventResult.ignored;
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.arrowLeft) {
+      _move(-1);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowRight) {
+      _move(1);
+      return KeyEventResult.handled;
+    }
+    if (_target != null &&
+        event is KeyDownEvent &&
+        (key == LogicalKeyboardKey.select ||
+            key == LogicalKeyboardKey.enter ||
+            key == LogicalKeyboardKey.numpadEnter)) {
+      _seek();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final focused = _focus.hasFocus;
+    final shown = _target ?? widget.position;
+    final max = widget.duration.inMilliseconds;
+    return Focus(
+      focusNode: _focus,
+      onKeyEvent: _onKey,
+      onFocusChange: (has) {
+        // Leaving mid-scrub still lands the seek the viewer picked.
+        if (!has && _target != null) _seek();
+        setState(() {});
+      },
+      child: Row(children: [
+        Expanded(
+          child: ExcludeFocus(
+            // 24 px instead of Slider's 48: the bar was too tall.
+            child: SizedBox(
+              height: 24,
+              child: SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  trackHeight: focused ? 5 : 3,
+                  activeTrackColor: focused ? scheme.primary : null,
+                  thumbColor: focused ? Colors.white : null,
+                  thumbShape: RoundSliderThumbShape(
+                      enabledThumbRadius: focused ? 9 : 6),
+                  overlayShape: SliderComponentShape.noOverlay,
+                ),
+                child: Slider(
+                  value: shown.inMilliseconds.clamp(0, max).toDouble(),
+                  max: max.toDouble(),
+                  onChanged: (v) => widget.controller
+                      .seekTo(Duration(milliseconds: v.toInt())),
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (_target != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 10),
+            child: Text(
+              '${_clock(shown)}  (${_target! >= widget.position ? '+' : '−'}'
+              '${_clock((_target! - widget.position).abs())})',
+              style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white),
+            ),
+          ),
+      ]),
+    );
+  }
+
+  static String _clock(Duration d) {
+    final h = d.inHours, m = d.inMinutes % 60, s = d.inSeconds % 60;
+    String two(int v) => v.toString().padLeft(2, '0');
+    return h > 0 ? '$h:${two(m)}:${two(s)}' : '$m:${two(s)}';
+  }
+}
+
 class _SkipButton extends StatefulWidget {
   const _SkipButton({required this.icon, required this.onSeek});
 

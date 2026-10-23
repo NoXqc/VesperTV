@@ -174,6 +174,7 @@ const Map<String, String> kFr = {
   "{section}. Where the app opens after starting. With \"Resume last channel in full screen\" on, the channel then plays in the background instead.":
       "{section}. L'écran où l'appli s'ouvre au démarrage. Si « Reprendre la dernière chaîne en plein écran » est activé, la chaîne joue alors en arrière-plan.",
   "Subtitle size": "Taille des sous-titres",
+  "Extra small": "Très petite",
   "Small": "Petite",
   "Normal": "Normale",
   "Large": "Grande",

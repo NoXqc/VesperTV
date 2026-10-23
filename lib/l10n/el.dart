@@ -224,6 +224,7 @@ const Map<String, String> kEl = {
   "{section}. Where the app opens after starting. With \"Resume last channel in full screen\" on, the channel then plays in the background instead.":
       "{section}. Πού ανοίγει η εφαρμογή στην εκκίνηση. Με ενεργή τη «Συνέχιση τελευταίου καναλιού σε πλήρη οθόνη», το κανάλι παίζει τότε στο παρασκήνιο.",
   "Subtitle size": "Μέγεθος υποτίτλων",
+  "Extra small": "Πολύ μικρό",
   "Small": "Μικρό",
   "Normal": "Κανονικό",
   "Large": "Μεγάλο",

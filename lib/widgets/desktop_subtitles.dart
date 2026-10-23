@@ -269,7 +269,7 @@ class _DesktopSubtitleButtonState extends State<DesktopSubtitleButton> {
     if (mounted) setState(() {});
   }
 
-  /// Small / Normal / Large / Extra large ([AppPreferences.subtitleScale]).
+  /// Extra small / Small / Normal / Large / Extra large ([AppPreferences.subtitleScale]).
   Future<void> _pickSize() async {
     final prefs = context.read<AppPreferences>();
     final current = AppPreferences.subtitleSizeName(prefs.subtitleScale);

@@ -202,6 +202,7 @@ class AppPreferences extends ChangeNotifier {
 
   /// The choices, smallest first, and their (untranslated) names.
   static const subtitleSizes = [
+    (0.6, 'Extra small'),
     (0.8, 'Small'),
     (1.0, 'Normal'),
     (1.25, 'Large'),
