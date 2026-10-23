@@ -66,6 +66,8 @@ final class StatsBridge implements MethodChannel.MethodCallHandler {
       m.put("width", format.width);
       m.put("height", format.height);
     }
+    double ptsFps = player.frameRateProbe.fps();
+    if (ptsFps > 0) m.put("ptsFps", ptsFps);
     result.success(m);
   }
 
