@@ -265,6 +265,9 @@ class AppConstants {
   static const String keyHideVideoOnSports = 'vesper_hide_video_on_sports';
   static const String keyCompatVideo = 'vesper_compat_video';
 
+  /// Last downloaded automatic per-device defaults list (DeviceDefaults).
+  static const String keyDeviceDefaults = 'vesper_device_defaults';
+
   /// Settings > Interface > Audio: HDMI passthrough on the main player
   /// (device-only; AppPreferences.audioPassthrough).
   static const String keyAudioPassthrough = 'vesper_audio_passthrough';

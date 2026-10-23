@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../services/app_preferences.dart';
+import '../../services/device_defaults.dart';
 import '../../services/playback_service.dart';
 import '../../services/recording_service.dart';
 import '../../services/storage_service.dart';
@@ -148,6 +149,13 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
   /// Sections open right now (all closed on entry — the screen had grown
   /// into a long scroll).
   final Set<String> _open = {};
+
+  /// [text] plus a note when [setting] is on only because this device is on
+  /// the automatic list (DeviceDefaults); the user's own choice drops it.
+  String _withAutomatic(BuildContext context, String setting, String text) =>
+      context.watch<AppPreferences>().isAutomaticOn(setting)
+          ? '$text\n${tr('Automatic: on for this device.')}'
+          : text;
 
   /// One collapsible category: a [TvMenuTile] header (same focus look as
   /// the rest of Settings, so D-pad needs nothing special) that rolls its
@@ -328,9 +336,11 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                           TvSwitchListTile(
                             title: Text(
                                 tr('Hide the live picture behind other pages')),
-                            subtitle: Text(tr(
-                                'A live channel keeps playing behind {tab}, Settings and Search. Some Fire TV sticks keep showing its picture on top of those pages. Turn this on if that happens: the sound keeps going, only the picture is hidden until you go back. Updating the device\'s software (Fire TV: Settings > My Fire TV > About > Check for Updates) may fix it too.',
-                                {'tab': AppConstants.sportsTabName})),
+                            subtitle: Text(_withAutomatic(
+                                context,
+                                DeviceDefaults.hideVideoOnSports,
+                                tr('A live channel keeps playing behind {tab}, Settings and Search. Some Fire TV sticks keep showing its picture on top of those pages. Turn this on if that happens: the sound keeps going, only the picture is hidden until you go back. Updating the device\'s software (Fire TV: Settings > My Fire TV > About > Check for Updates) may fix it too.',
+                                    {'tab': AppConstants.sportsTabName}))),
                             value: context
                                 .watch<AppPreferences>()
                                 .hideVideoOnSports,
@@ -340,8 +350,10 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                           ),
                           TvSwitchListTile(
                             title: Text(tr('Compatibility video')),
-                            subtitle: Text(tr(
-                                'Turn this on if the picture shows twice, in the wrong size or as coloured stripes (older Fire TV sticks). Applies from the next channel. On by default on Android 7 and older.')),
+                            subtitle: Text(_withAutomatic(
+                                context,
+                                DeviceDefaults.compatVideo,
+                                tr('Turn this on if the picture shows twice, in the wrong size or as coloured stripes (older Fire TV sticks). Applies from the next channel. On by default on Android 7 and older.'))),
                             value: context.watch<AppPreferences>().compatVideo,
                             onChanged: (v) => context
                                 .read<AppPreferences>()

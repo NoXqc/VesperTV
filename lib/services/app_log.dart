@@ -10,6 +10,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/playlist_profile.dart';
+import 'device_defaults.dart';
 import 'phone_pairing_service.dart' show kPairRelayBase, kRelayAppHeaders;
 
 /// Settings > Device & data > Send log. Keeps the app's own `print` /
@@ -168,6 +169,7 @@ class AppLog {
     }
     lines.add('CPUs: ${Platform.numberOfProcessors}');
     lines.add('Locale: ${Platform.localeName}');
+    lines.add(DeviceDefaults.describe());
     return lines;
   }
 

@@ -5,6 +5,7 @@
 /// Keep every `{placeholder}` exactly as in the key. `{s}` is the plural "s"
 /// the code fills in ("chaîne{s}").
 const Map<String, String> kFr = {
+  'Automatic: on for this device.': 'Automatique : activé pour cet appareil.',
   '1 hour': '1 heure',
   '{h} hours': '{h} heures',
 

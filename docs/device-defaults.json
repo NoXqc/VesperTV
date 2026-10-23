@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "about": "Automatic per-device defaults for VesperTV (lib/services/device_defaults.dart). A matching rule turns a setting on by default; the user's own choice always wins. match: every field must equal (case-insensitive) manufacturer / model / hardware / socModel / sdk. set: compatVideo, hideVideoOnSports. Same id as a bundled rule replaces it; an empty set turns it off.",
+  "rules": [
+    {
+      "id": "fire-tv-cube-3",
+      "note": "Fire TV Cube (3rd gen): live picture stayed on top of other pages (2026-10-23)",
+      "match": { "model": "AFTGAZL" },
+      "set": { "hideVideoOnSports": true }
+    }
+  ]
+}

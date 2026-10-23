@@ -6,6 +6,7 @@
 /// the code; Italian plurals don't work that way (canale/canali), so those
 /// strings are phrased to avoid it.
 const Map<String, String> kIt = {
+  'Automatic: on for this device.': 'Automatico: attivo per questo dispositivo.',
   '1 hour': '1 ora',
   '{h} hours': '{h} ore',
 
