@@ -90,10 +90,10 @@ class _HomeRow {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  static const _posterW = 128.0, _posterH = 192.0;
-  static const _wideW = 248.0, _wideH = 140.0;
-  static const _gap = 16.0;
-  static const _sidePad = 48.0;
+  static const _posterW = 100.0, _posterH = 150.0;
+  static const _wideW = 176.0, _wideH = 99.0;
+  static const _gap = 14.0;
+  static const _sidePad = 40.0;
 
   late HomeRows _rowsConfig;
   List<_HomeRow> _rows = const [];
@@ -111,6 +111,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Fades the page out and back in around a profile switch.
   bool _switching = false;
+
+  /// False until the remote moves the selector: a slower row appearing
+  /// above (Today's games) then takes it, so the page starts at the top.
+  bool _userMoved = false;
 
   final _pageScroll = ScrollController();
   final Map<HomeRowKind, ScrollController> _rowScrolls = {};
@@ -211,7 +215,13 @@ class _HomeScreenState extends State<HomeScreen> {
         _focused = _rows[_row].items.first;
       }
     });
-    if (focusFirst && !hadFocus && _rows.isNotEmpty) {
+    if (focusFirst && done && hadFocus && !_userMoved && _rows.isNotEmpty) {
+      _row = 0;
+      _focused = _rows.first.items.first;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_userMoved && !_inProfiles) _focusCard(0, 0);
+      });
+    } else if (focusFirst && !hadFocus && _rows.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && !_inProfiles) {
           _focusCard(_row, _cardIndex[_rows[_row].kind] ?? 0);
@@ -514,6 +524,12 @@ class _HomeScreenState extends State<HomeScreen> {
       return KeyEventResult.ignored;
     }
     final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowDown ||
+        key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight) {
+      _userMoved = true;
+    }
     if (_inProfiles) {
       final count = context.read<ViewerProfileService>().profiles.length;
       if (key == LogicalKeyboardKey.arrowRight) {
@@ -707,7 +723,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final size = MediaQuery.sizeOf(context);
-    final heroHeight = (size.height * 0.40).clamp(200.0, 420.0);
+    // Profiles + hero stay put; only the rows scroll under them.
+    final heroHeight = (size.height * 0.34).clamp(150.0, 380.0);
     final focused = _focused;
     return Scaffold(
       backgroundColor: Colors.black,
@@ -723,49 +740,57 @@ class _HomeScreenState extends State<HomeScreen> {
               opacity: _switching ? 0 : 1,
               duration: const Duration(milliseconds: 220),
               curve: Curves.easeOut,
-              child: SingleChildScrollView(
-                controller: _pageScroll,
-                padding: const EdgeInsets.only(bottom: 48),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _ProfilesStrip(
-                      nodes: _profileNode,
-                      addNode: _addProfileNode,
-                      onPick: _switchProfile,
-                      onAdd: _manageProfiles,
-                      onFocus: (i) {
-                        if (!_inProfiles || _profileIndex != i) {
-                          setState(() {
-                            _inProfiles = true;
-                            _profileIndex = i;
-                          });
-                        }
-                      },
-                    ),
-                    SizedBox(
-                      height: heroHeight,
-                      child: _Hero(item: focused, scheme: scheme),
-                    ),
-                    if (_rows.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: _sidePad, vertical: 24),
-                        child: _loading
-                            ? const SizedBox(
-                                width: 28,
-                                height: 28,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2.5))
-                            : Text(
-                                tr(
-                                    'Nothing here yet. Watch a channel, a movie or a show and it shows up on Home.'),
-                                style: const TextStyle(
-                                    color: Colors.white70, fontSize: 16)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _ProfilesStrip(
+                    nodes: _profileNode,
+                    addNode: _addProfileNode,
+                    onPick: _switchProfile,
+                    onAdd: _manageProfiles,
+                    onFocus: (i) {
+                      if (!_inProfiles || _profileIndex != i) {
+                        setState(() {
+                          _inProfiles = true;
+                          _profileIndex = i;
+                        });
+                      }
+                    },
+                  ),
+                  SizedBox(
+                    height: heroHeight,
+                    child: _Hero(item: focused, scheme: scheme),
+                  ),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      controller: _pageScroll,
+                      padding: const EdgeInsets.only(bottom: 40),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (_rows.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: _sidePad, vertical: 24),
+                              child: _loading
+                                  ? const SizedBox(
+                                      width: 28,
+                                      height: 28,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2.5))
+                                  : Text(
+                                      tr(
+                                          'Nothing here yet. Watch a channel, a movie or a show and it shows up on Home.'),
+                                      style: const TextStyle(
+                                          color: Colors.white70, fontSize: 16)),
+                            ),
+                          for (var r = 0; r < _rows.length; r++)
+                            _buildRow(r, scheme),
+                        ],
                       ),
-                    for (var r = 0; r < _rows.length; r++) _buildRow(r, scheme),
-                  ],
-                ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -785,11 +810,11 @@ class _HomeScreenState extends State<HomeScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(_sidePad, 18, _sidePad, 10),
+          padding: const EdgeInsets.fromLTRB(_sidePad, 10, _sidePad, 8),
           child: AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 180),
             style: TextStyle(
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.2,
                 color: active ? scheme.primary : Colors.white),
@@ -798,7 +823,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         SizedBox(
           // Room for the focused card's zoom and its title underneath.
-          height: h + 58,
+          height: h + 48,
           child: ListView.builder(
             controller: _rowScroll(row.kind),
             scrollDirection: Axis.horizontal,
@@ -928,16 +953,16 @@ class _Hero extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (item.live)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _LivePill(color: scheme.error),
+                        const Padding(
+                          padding: EdgeInsets.only(bottom: 10),
+                          child: _LivePill(),
                         ),
                       if (item.game != null) _GameLogos(game: item.game!),
                       Text(item.title,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                              fontSize: 36,
+                              fontSize: 28,
                               height: 1.1,
                               fontWeight: FontWeight.w700,
                               color: Colors.white)),
@@ -952,7 +977,7 @@ class _Hero extends StatelessWidget {
                                     : item.game!.statusText,
                               ].join('  ·  '),
                               style: TextStyle(
-                                  fontSize: 18,
+                                  fontSize: 15,
                                   fontWeight: FontWeight.w600,
                                   color: scheme.primary)),
                         ),
@@ -963,7 +988,7 @@ class _Hero extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                  fontSize: 16, color: Colors.white70)),
+                                  fontSize: 14, color: Colors.white70)),
                         ),
                       if (item.game == null &&
                           (item.description?.isNotEmpty ?? false))
@@ -973,7 +998,7 @@ class _Hero extends StatelessWidget {
                               maxLines: 3,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                  fontSize: 15,
+                                  fontSize: 13,
                                   height: 1.35,
                                   color: Colors.white70)),
                         ),
@@ -1018,15 +1043,17 @@ class _GameLogos extends StatelessWidget {
   }
 }
 
+/// Broadcast red whatever the theme (the palette's error colour came out
+/// salmon on Neon Green).
 class _LivePill extends StatelessWidget {
-  const _LivePill({required this.color});
-  final Color color;
+  const _LivePill();
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration:
-            BoxDecoration(color: color, borderRadius: BorderRadius.circular(4)),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+            color: const Color(0xFFE50914),
+            borderRadius: BorderRadius.circular(4)),
         child: Text(tr('LIVE'),
             style: const TextStyle(
                 fontSize: 11,
@@ -1118,8 +1145,7 @@ class _HomeCardState extends State<_HomeCard> {
         clipBehavior: Clip.antiAlias,
         child: Stack(fit: StackFit.expand, children: [
           art,
-          if (item.live)
-            Positioned(left: 8, top: 8, child: _LivePill(color: scheme.error)),
+          if (item.live) const Positioned(left: 8, top: 8, child: _LivePill()),
           if (progress != null && progress > 0)
             Positioned(
               left: 0,
@@ -1154,12 +1180,12 @@ class _HomeCardState extends State<_HomeCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             card,
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Text(item.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 12.5,
                     fontWeight: FontWeight.w600,
                     color: _focused ? Colors.white : Colors.white70)),
             if (!widget.poster &&
@@ -1168,7 +1194,7 @@ class _HomeCardState extends State<_HomeCard> {
               Text(item.subtitle!,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 12, color: Colors.white54)),
+                  style: const TextStyle(fontSize: 11, color: Colors.white54)),
           ],
         ),
       ),
@@ -1188,14 +1214,14 @@ class _GameCardFace extends StatelessWidget {
     Widget team(SportsTeam t) => Expanded(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             SizedBox(
-              width: 46,
-              height: 46,
+              width: 34,
+              height: 34,
               child: t.logoUrl == null
                   ? const Icon(Icons.shield_outlined, color: Colors.white38)
                   : HdNetworkImage(
                       url: t.logoUrl!,
                       kind: ImageKind.poster,
-                      decodeWidth: 92,
+                      decodeWidth: 68,
                       fit: BoxFit.contain,
                       errorWidget: (_) => const Icon(Icons.shield_outlined,
                           color: Colors.white38),
@@ -1205,7 +1231,7 @@ class _GameCardFace extends StatelessWidget {
             Text(t.abbreviation.isEmpty ? t.shortName : t.abbreviation,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12, color: Colors.white70)),
+                style: const TextStyle(fontSize: 11, color: Colors.white70)),
           ]),
         );
     final middle = game.state == GameState.pre
@@ -1233,7 +1259,7 @@ class _GameCardFace extends StatelessWidget {
         team(game.first),
         Text(middle,
             style: TextStyle(
-                fontSize: game.state == GameState.pre ? 15 : 22,
+                fontSize: game.state == GameState.pre ? 13 : 18,
                 fontWeight: FontWeight.w800,
                 color: game.state == GameState.live
                     ? scheme.primary
@@ -1361,8 +1387,8 @@ class _AvatarState extends State<_Avatar> {
             curve: Curves.easeOutBack,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 220),
-              width: 52,
-              height: 52,
+              width: 44,
+              height: 44,
               padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
