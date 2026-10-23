@@ -49,7 +49,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
 4. `flutter analyze` must report the baseline **17** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `1.0.36` unless noted
+5. Check the current state of releases: `gh release list` (latest should be `1.0.38` unless noted
    in §13).
 
 ## 3. Layout (what matters)
@@ -120,9 +120,9 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   `apksigner verify --print-certs app-release.apk` → SHA-256 must be
   `c92a346ac5b6191a373b3572fa0fbd72abdd5f64db497bd321617b8cc4562431`.
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
-- Android requires `versionCode` (the `+N` in `pubspec.yaml`, currently **+360**) to never go
+- Android requires `versionCode` (the `+N` in `pubspec.yaml`) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
-  (Currently **+411**, 1.0.36.)
+  (Currently **+419**, 1.0.38.)
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
 Only release when the owner asks ("update the latest", "cut it", "fully release"). Outline: bump `pubspec.yaml` (versionCode `+N` must always rise) → `flutter analyze` → build APK + verify signature (§5) → build Windows + zip → **commit & push first** → `gh release upload <tag> app-release.apk VesperTV-windows-x64.zip --clobber` → `gh release edit <tag> --tag <new> --notes-file …` → make sure the tag equals HEAD → verify downloads/hashes, the OLD `NoXqc/NoXPlayer` redirect links and AFTVnews code `1760256`. The updater offers any *different* tag (`_isDifferent`), never leave two `.zip`/`.apk` assets on the latest release.
