@@ -45,6 +45,35 @@ class MultiviewSports {
     required StorageService storage,
     required PlaylistManager playlist,
     required EpgService epg,
+  }) =>
+      _games(storage: storage, playlist: playlist, epg: epg, liveOnly: true);
+
+  /// Today's games in the viewer's leagues for the Home page: live first,
+  /// then upcoming, then final; a game with no channel is kept (empty
+  /// matches — Home opens Sports Trak for it).
+  static Future<List<LiveGameChannel>> todaysGames({
+    required StorageService storage,
+    required PlaylistManager playlist,
+    required EpgService epg,
+  }) async {
+    final all = await _games(
+        storage: storage, playlist: playlist, epg: epg, liveOnly: false);
+    int rank(GameState s) => switch (s) {
+          GameState.live => 0,
+          GameState.pre => 1,
+          _ => 2,
+        };
+    return [...all]..sort((a, b) {
+        final r = rank(a.game.state).compareTo(rank(b.game.state));
+        return r != 0 ? r : a.game.start.compareTo(b.game.start);
+      });
+  }
+
+  static Future<List<LiveGameChannel>> _games({
+    required StorageService storage,
+    required PlaylistManager playlist,
+    required EpgService epg,
+    required bool liveOnly,
   }) async {
     final follows = SportsFollows.load(storage);
     final leagues = <String, SportsLeague>{
@@ -55,7 +84,7 @@ class MultiviewSports {
     if (leagues.isEmpty) return const [];
     final games = (await SportsService.instance
             .gamesForDay(leagues.values.toList(), DateTime.now()))
-        .where((g) => g.state == GameState.live)
+        .where((g) => !liveOnly || g.state == GameState.live)
         .toList()
       ..sort((a, b) => a.start.compareTo(b.start));
     if (games.isEmpty) return const [];
@@ -69,7 +98,9 @@ class MultiviewSports {
       for (final g in games)
         if (matches[SportsChannelPicks.eventKey(g)] case final m?
             when m.isNotEmpty)
-          (game: g, matches: m),
+          (game: g, matches: m)
+        else if (!liveOnly)
+          (game: g, matches: const <ChannelMatch>[]),
     ];
   }
 

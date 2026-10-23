@@ -20,14 +20,7 @@ import '../../l10n/l10n.dart';
 /// Every color swatch a profile's avatar can use — just `colorIndex` into
 /// this fixed list rather than a full color picker, which would be a lot
 /// of extra D-pad-navigable UI for something purely decorative.
-const _profileColors = [
-  Colors.deepPurple,
-  Colors.teal,
-  Colors.orange,
-  Colors.pink,
-  Colors.blue,
-  Colors.green,
-];
+const _profileColors = kProfileColors;
 
 /// Same focusable-swatch shape as `ThemeScreen`'s `_PaletteSwatch` — a
 /// real focusable widget (`InkWell`), not the bare unfocusable

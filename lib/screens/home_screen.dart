@@ -1,0 +1,1405 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+
+import '../l10n/l10n.dart';
+import '../models/archive_models.dart';
+import '../models/channel.dart';
+import '../models/sports.dart';
+import '../models/viewer_profile.dart';
+import '../models/xtream_series.dart';
+import '../services/app_preferences.dart';
+import '../services/archive_service.dart';
+import '../services/desktop_mini_player.dart';
+import '../services/epg_service.dart';
+import '../services/home_rows.dart';
+import '../services/multiview_sports.dart';
+import '../services/playback_service.dart';
+import '../services/playlist_manager.dart';
+import '../services/storage_service.dart';
+import '../services/viewer_profile_service.dart';
+import '../utils/image_urls.dart';
+import '../utils/time_format.dart';
+import '../widgets/hd_network_image.dart';
+import '../widgets/hold_to_activate.dart';
+import '../widgets/tv_dialog_option.dart';
+import 'archive_detail_screen.dart';
+import 'archive_playback.dart';
+import 'desktop_player_screen.dart';
+import 'movie_detail_screen.dart';
+import 'player_screen.dart';
+import 'series_detail_screen.dart';
+import 'settings/profiles_screen.dart';
+import 'sports_screen.dart';
+
+/// The Home page (top of the tabs column, or Settings > Startup > Open on:
+/// Home): the viewer's profiles strip, a hero for the focused card, then
+/// rows bringing the app together — today's games, Continue Watching across
+/// playlists and Media Hub, recent and favourite channels, new movies and
+/// shows. Each viewer picks and orders their rows (hold OK on a card,
+/// [HomeRows]). User request (Samiam23, Discord, 2026-10-23); the profiles
+/// strip replaces the tabs column's profile row (owner).
+///
+/// D-pad: explicit dispatch like the Media Hub rows (one handler for the
+/// page, exact card slots, `jumpTo` only — CLAUDE.md §10).
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+/// One card on the page, whatever it opens.
+class _HomeItem {
+  const _HomeItem({
+    required this.key,
+    required this.title,
+    required this.open,
+    this.subtitle,
+    this.imageUrl,
+    this.backdropUrl,
+    this.description,
+    this.progress,
+    this.live = false,
+    this.game,
+  });
+
+  final String key;
+  final String title;
+  final String? subtitle;
+  final String? imageUrl;
+  final String? backdropUrl;
+  final String? description;
+  final double? progress;
+  final bool live;
+  final SportsGame? game;
+  final Future<void> Function(BuildContext context) open;
+}
+
+/// Poster (movies/shows) or wide (channels, games, Continue Watching).
+enum _CardShape { poster, wide }
+
+class _HomeRow {
+  const _HomeRow(this.kind, this.shape, this.items);
+  final HomeRowKind kind;
+  final _CardShape shape;
+  final List<_HomeItem> items;
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  static const _posterW = 128.0, _posterH = 192.0;
+  static const _wideW = 248.0, _wideH = 140.0;
+  static const _gap = 16.0;
+  static const _sidePad = 48.0;
+
+  late HomeRows _rowsConfig;
+  List<_HomeRow> _rows = const [];
+  bool _loading = true;
+
+  /// Bumped per load: an older, slower load never overwrites a newer one.
+  int _loadId = 0;
+
+  /// Which zone has the selector: the profiles strip or the rows.
+  bool _inProfiles = false;
+  int _profileIndex = 0;
+  int _row = 0;
+  final Map<HomeRowKind, int> _cardIndex = {};
+  _HomeItem? _focused;
+
+  /// Fades the page out and back in around a profile switch.
+  bool _switching = false;
+
+  final _pageScroll = ScrollController();
+  final Map<HomeRowKind, ScrollController> _rowScrolls = {};
+  final Map<String, FocusNode> _nodes = {};
+  final Map<HomeRowKind, GlobalKey> _rowKeys = {};
+  final List<FocusNode> _profileNodes = [];
+  final _addProfileNode = FocusNode(debugLabel: 'home add profile');
+
+  @override
+  void initState() {
+    super.initState();
+    _rowsConfig = HomeRows.load(context.read<StorageService>());
+    unawaited(_load(focusFirst: true));
+  }
+
+  @override
+  void dispose() {
+    _pageScroll.dispose();
+    for (final c in _rowScrolls.values) {
+      c.dispose();
+    }
+    for (final n in _nodes.values) {
+      n.dispose();
+    }
+    for (final n in _profileNodes) {
+      n.dispose();
+    }
+    _addProfileNode.dispose();
+    super.dispose();
+  }
+
+  FocusNode _node(HomeRowKind kind, int i) =>
+      _nodes.putIfAbsent('${kind.id}#$i', () => FocusNode());
+
+  ScrollController _rowScroll(HomeRowKind kind) =>
+      _rowScrolls.putIfAbsent(kind, ScrollController.new);
+
+  GlobalKey _rowKey(HomeRowKind kind) =>
+      _rowKeys.putIfAbsent(kind, GlobalKey.new);
+
+  // ---------------------------------------------------------------- data --
+
+  Future<void> _load({bool focusFirst = false}) async {
+    final id = ++_loadId;
+    final storage = context.read<StorageService>();
+    final playlist = context.read<PlaylistManager>();
+    final epg = context.read<EpgService>();
+    final prefs = context.read<AppPreferences>();
+    final visible = _rowsConfig.visible;
+
+    // The quick rows first, so the page is never empty while the guide /
+    // catalog queries run.
+    final quick = <HomeRowKind, _HomeRow?>{
+      if (visible.contains(HomeRowKind.continueWatching))
+        HomeRowKind.continueWatching: _continueRow(),
+      if (visible.contains(HomeRowKind.recentChannels))
+        HomeRowKind.recentChannels: _recentRow(epg),
+      if (visible.contains(HomeRowKind.favourites))
+        HomeRowKind.favourites: _favouritesRow(epg, playlist, prefs),
+    };
+    _apply(id, quick, focusFirst: focusFirst, done: false);
+
+    final slow = <HomeRowKind, _HomeRow?>{...quick};
+    await Future.wait([
+      if (visible.contains(HomeRowKind.games))
+        _gamesRow(storage, playlist, epg)
+            .then((r) => slow[HomeRowKind.games] = r),
+      if (visible.contains(HomeRowKind.newMovies))
+        _newMoviesRow(playlist).then((r) => slow[HomeRowKind.newMovies] = r),
+      if (visible.contains(HomeRowKind.newShows))
+        _newShowsRow(playlist).then((r) => slow[HomeRowKind.newShows] = r),
+    ].map((f) => f.catchError((Object e) {
+          debugPrint('HomeScreen: row failed: $e');
+          return null;
+        })));
+    _apply(id, slow, focusFirst: focusFirst, done: true);
+  }
+
+  void _apply(int id, Map<HomeRowKind, _HomeRow?> byKind,
+      {required bool focusFirst, required bool done}) {
+    if (!mounted || id != _loadId) return;
+    final hadFocus = _rows.isNotEmpty;
+    final previous =
+        _rows.isEmpty ? null : _rows[_row.clamp(0, _rows.length - 1)].kind;
+    setState(() {
+      _rows = [
+        for (final k in _rowsConfig.visible)
+          if (byKind[k] case final r? when r.items.isNotEmpty) r,
+      ];
+      _loading = !done;
+      // Keep the selector on the same row when a slower row appears above.
+      final keep =
+          previous == null ? -1 : _rows.indexWhere((r) => r.kind == previous);
+      _row = keep >= 0
+          ? keep
+          : _row.clamp(0, _rows.isEmpty ? 0 : _rows.length - 1);
+      if (_focused == null && _rows.isNotEmpty) {
+        _focused = _rows[_row].items.first;
+      }
+    });
+    if (focusFirst && !hadFocus && _rows.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_inProfiles) {
+          _focusCard(_row, _cardIndex[_rows[_row].kind] ?? 0);
+        }
+      });
+    } else if (focusFirst && _rows.isEmpty && !_inProfiles) {
+      // Nothing to show yet (slow rows still loading, or none at all): the
+      // remote needs a target, so the profiles strip takes it.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _rows.isEmpty) _focusProfiles();
+      });
+    }
+  }
+
+  _HomeRow? _continueRow() {
+    final playback = context.read<PlaybackService>();
+    final storage = context.read<StorageService>();
+    final hub = context.read<ArchiveService>();
+    final items = <({int at, _HomeItem item})>[];
+    final played = playback.recentlyPlayed;
+
+    // Playlists' movies and episodes (one card per show), newest first.
+    final seenSeries = <String>{};
+    for (var i = 0; i < played.length; i++) {
+      final c = played[i];
+      if (Channel.isLiveId(c.rawId) ||
+          c.playlistId == ArchiveService.playlistId ||
+          storage.getLastPosition(c.id) <= 0 ||
+          storage.isFullyWatched(c.id)) {
+        continue;
+      }
+      final isEpisode = c.rawId.startsWith('xt_ep_');
+      if (isEpisode && c.seriesId != null) {
+        if (!seenSeries.add('${c.playlistId}:${c.seriesId}')) continue;
+        final series = XtreamSeries(
+          seriesId: c.seriesId!,
+          playlistId: c.playlistId,
+          name: c.seriesName ?? c.name,
+          categoryId: '',
+          coverUrl: c.seriesCoverUrl,
+        );
+        items.add((
+          at: i,
+          item: _HomeItem(
+            key: 'cw:${c.id}',
+            title: c.seriesName ?? c.name,
+            subtitle: c.name,
+            imageUrl: c.backdropUrl ?? c.seriesCoverUrl ?? c.logoUrl,
+            backdropUrl: c.backdropUrl,
+            progress: storage.getWatchedFraction(c.id),
+            open: (ctx) => Navigator.of(ctx).push(MaterialPageRoute(
+                builder: (_) => SeriesDetailScreen(series: series))),
+          )
+        ));
+      } else if (!isEpisode) {
+        items.add((
+          at: i,
+          item: _HomeItem(
+            key: 'cw:${c.id}',
+            title: c.name,
+            subtitle: tr('Movie'),
+            imageUrl: c.backdropUrl ?? c.posterUrl ?? c.logoUrl,
+            backdropUrl: c.backdropUrl,
+            progress: storage.getWatchedFraction(c.id),
+            open: (ctx) => Navigator.of(ctx).push(MaterialPageRoute(
+                builder: (_) => MovieDetailScreen(channel: c))),
+          )
+        ));
+      }
+    }
+
+    // Media Hub (add-ons / debrid / Jellyfin): its own history, placed
+    // where its last play sits among the playlists' plays.
+    for (final (:source, :meta) in hub.recentlyWatched()) {
+      final movie = meta.type == ArchiveType.movie;
+      if (movie) {
+        final id = ArchiveService.channelId(source, meta.id, episode: false);
+        if (storage.isFullyWatched(id)) continue;
+      }
+      final vod = 'arc_vod_${source.key}_${meta.id}';
+      final ep = 'arc_ep_${source.key}_${meta.id}';
+      var at =
+          played.indexWhere((c) => c.rawId == vod || c.rawId.startsWith(ep));
+      if (at < 0) at = played.length;
+      final progress = movie
+          ? storage.getWatchedFraction(
+              ArchiveService.channelId(source, meta.id, episode: false))
+          : null;
+      items.add((
+        at: at,
+        item: _HomeItem(
+          key: 'hub:${source.key}:${meta.id}',
+          title: meta.name,
+          subtitle: source.name,
+          imageUrl: meta.backgroundUrl ?? meta.posterUrl,
+          backdropUrl: meta.backgroundUrl,
+          description: meta.description,
+          progress: progress,
+          open: (ctx) => movie
+              ? Navigator.of(ctx).push(MaterialPageRoute(
+                  builder: (_) =>
+                      ArchiveDetailScreen(source: source, preview: meta)))
+              : openArchiveSeries(ctx, source, meta),
+        )
+      ));
+    }
+    items.sort((a, b) => a.at.compareTo(b.at));
+    return _HomeRow(HomeRowKind.continueWatching, _CardShape.wide,
+        [for (final e in items.take(20)) e.item]);
+  }
+
+  _HomeItem _channelItem(Channel c, EpgService epg, String prefix) {
+    final now = epg.getCurrentProgram(c.epgId);
+    return _HomeItem(
+      key: '$prefix:${c.id}',
+      title: c.name,
+      subtitle: now?.title ?? c.group,
+      imageUrl: c.logoUrl,
+      live: true,
+      open: (ctx) => _playChannel(ctx, c),
+    );
+  }
+
+  _HomeRow? _recentRow(EpgService epg) {
+    final seen = <String>{};
+    final live = [
+      for (final c in context.read<PlaybackService>().recentlyPlayed)
+        if (Channel.isLiveId(c.rawId) && seen.add(c.id)) c,
+    ];
+    return _HomeRow(HomeRowKind.recentChannels, _CardShape.wide,
+        [for (final c in live.take(20)) _channelItem(c, epg, 'rc')]);
+  }
+
+  _HomeRow? _favouritesRow(
+      EpgService epg, PlaylistManager playlist, AppPreferences prefs) {
+    final channels = playlist.orderedFavoriteLiveChannels(
+        mixPlaylists: prefs.mixFavoritePlaylists);
+    return _HomeRow(HomeRowKind.favourites, _CardShape.wide,
+        [for (final c in channels.take(30)) _channelItem(c, epg, 'fav')]);
+  }
+
+  Future<_HomeRow?> _gamesRow(
+      StorageService storage, PlaylistManager playlist, EpgService epg) async {
+    final games = await MultiviewSports.todaysGames(
+        storage: storage, playlist: playlist, epg: epg);
+    final hideScores = storage.getSportsHideScores();
+    return _HomeRow(HomeRowKind.games, _CardShape.wide, [
+      for (final g in games.take(20))
+        _HomeItem(
+          key: 'game:${g.game.id}',
+          title: g.game.title,
+          subtitle: g.matches.isEmpty
+              ? g.game.league.name
+              : '${g.game.league.name} · ${g.matches.first.channel.name}',
+          live: g.game.state == GameState.live,
+          game: g.game,
+          description: hideScores ? null : _scoreLine(g.game),
+          open: (ctx) async {
+            if (g.matches.isEmpty) {
+              await Navigator.of(ctx).push(
+                  MaterialPageRoute(builder: (_) => const SportsScreen()));
+            } else {
+              await MultiviewSports.rememberPick(
+                  storage, g.game, g.matches.first.channel);
+              if (ctx.mounted) await _playChannel(ctx, g.matches.first.channel);
+            }
+          },
+        ),
+    ]);
+  }
+
+  Future<_HomeRow?> _newMoviesRow(PlaylistManager playlist) async {
+    final movies = await playlist.whatsNewVod(limit: 20);
+    return _HomeRow(HomeRowKind.newMovies, _CardShape.poster, [
+      for (final c in movies)
+        _HomeItem(
+          key: 'nm:${c.id}',
+          title: c.name,
+          subtitle: c.rating,
+          imageUrl: c.posterUrl ?? c.logoUrl,
+          backdropUrl: c.anyBackdropUrl,
+          open: (ctx) => Navigator.of(ctx).push(
+              MaterialPageRoute(builder: (_) => MovieDetailScreen(channel: c))),
+        ),
+    ]);
+  }
+
+  Future<_HomeRow?> _newShowsRow(PlaylistManager playlist) async {
+    final shows = await playlist.whatsNewSeries(limit: 20);
+    return _HomeRow(HomeRowKind.newShows, _CardShape.poster, [
+      for (final s in shows)
+        _HomeItem(
+          key: 'ns:${s.id}',
+          title: s.name,
+          subtitle: s.rating,
+          imageUrl: s.posterUrl ?? s.coverUrl,
+          backdropUrl: s.anyBackdropUrl,
+          open: (ctx) => Navigator.of(ctx).push(
+              MaterialPageRoute(builder: (_) => SeriesDetailScreen(series: s))),
+        ),
+    ]);
+  }
+
+  static String? _scoreLine(SportsGame g) {
+    if (g.state == GameState.pre) return null;
+    final a = g.first.score, b = g.second.score;
+    if (a == null || b == null) return null;
+    return '${g.first.abbreviation} $a – $b ${g.second.abbreviation}';
+  }
+
+  /// Plays [c] full screen (Windows: its own player), like the live list.
+  static Future<void> _playChannel(BuildContext context, Channel c) async {
+    if (Platform.isWindows) {
+      DesktopMiniPlayer.instance.clear();
+      await Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => DesktopPlayerScreen(channel: c)));
+      return;
+    }
+    final playback = context.read<PlaybackService>();
+    // Awaited: PlayerScreen's own play() must find it current (see
+    // TvHomeScreen._selectChannel).
+    await playback.play(c);
+    if (!context.mounted) return;
+    await Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => PlayerScreen(channel: c)));
+  }
+
+  Future<void> _open(_HomeItem item) async {
+    await item.open(context);
+    // Back on Home: what was watched moves to the front of its rows.
+    if (mounted) unawaited(_load());
+  }
+
+  // --------------------------------------------------------------- focus --
+
+  double _extent(_CardShape s) =>
+      (s == _CardShape.poster ? _posterW : _wideW) + _gap;
+
+  void _focusCard(int r, int i) {
+    if (_rows.isEmpty) return;
+    r = r.clamp(0, _rows.length - 1);
+    final row = _rows[r];
+    i = i.clamp(0, row.items.length - 1);
+    _row = r;
+    _inProfiles = false;
+    final c = _rowScrolls[row.kind];
+    if (c != null && c.hasClients) {
+      final pos = c.position;
+      final ext = _extent(row.shape);
+      final start = i * ext;
+      double? to;
+      if (start - ext < pos.pixels) {
+        to = start - ext;
+      } else if (start + 2 * ext > pos.pixels + pos.viewportDimension) {
+        to = start + 2 * ext - pos.viewportDimension;
+      }
+      if (to != null) c.jumpTo(to.clamp(0.0, pos.maxScrollExtent));
+    }
+    final ctx = _rowKey(row.kind).currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(ctx, alignment: 0.0, duration: Duration.zero);
+    }
+    _focusWhenBuilt(_node(row.kind, i));
+  }
+
+  void _focusWhenBuilt(FocusNode node, [int framesLeft = 4]) {
+    if (node.context != null) {
+      node.requestFocus();
+    } else if (framesLeft > 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _focusWhenBuilt(node, framesLeft - 1);
+      });
+    }
+  }
+
+  void _focusProfiles([int? index]) {
+    final count = context.read<ViewerProfileService>().profiles.length;
+    _profileIndex = (index ?? _activeProfileIndex()).clamp(0, count);
+    setState(() => _inProfiles = true);
+    if (_pageScroll.hasClients) _pageScroll.jumpTo(0);
+    _focusWhenBuilt(
+        _profileIndex == count ? _addProfileNode : _profileNode(_profileIndex));
+  }
+
+  int _activeProfileIndex() {
+    final viewers = context.read<ViewerProfileService>();
+    final i = viewers.profiles.indexWhere((p) => p.id == viewers.active.id);
+    return i < 0 ? 0 : i;
+  }
+
+  FocusNode _profileNode(int i) {
+    while (_profileNodes.length <= i) {
+      _profileNodes.add(FocusNode(debugLabel: 'home profile $i'));
+    }
+    return _profileNodes[i];
+  }
+
+  KeyEventResult _onKey(FocusNode _, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    final key = event.logicalKey;
+    if (_inProfiles) {
+      final count = context.read<ViewerProfileService>().profiles.length;
+      if (key == LogicalKeyboardKey.arrowRight) {
+        if (_profileIndex < count) _focusProfiles(_profileIndex + 1);
+        return KeyEventResult.handled;
+      }
+      if (key == LogicalKeyboardKey.arrowLeft) {
+        if (_profileIndex > 0) {
+          _focusProfiles(_profileIndex - 1);
+        } else {
+          Navigator.of(context).maybePop();
+        }
+        return KeyEventResult.handled;
+      }
+      if (key == LogicalKeyboardKey.arrowDown) {
+        if (_rows.isNotEmpty) {
+          _focusCard(0, _cardIndex[_rows.first.kind] ?? 0);
+        }
+        return KeyEventResult.handled;
+      }
+      if (key == LogicalKeyboardKey.arrowUp) return KeyEventResult.handled;
+      return KeyEventResult.ignored;
+    }
+    if (_rows.isEmpty) return KeyEventResult.ignored;
+    final row = _rows[_row.clamp(0, _rows.length - 1)];
+    final i = _cardIndex[row.kind] ?? 0;
+    if (key == LogicalKeyboardKey.arrowDown) {
+      if (_row < _rows.length - 1) {
+        _focusCard(_row + 1, _cardIndex[_rows[_row + 1].kind] ?? 0);
+      }
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowUp) {
+      if (_row > 0) {
+        _focusCard(_row - 1, _cardIndex[_rows[_row - 1].kind] ?? 0);
+      } else {
+        _focusProfiles();
+      }
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowRight) {
+      if (i < row.items.length - 1) _focusCard(_row, i + 1);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowLeft) {
+      if (i > 0) {
+        _focusCard(_row, i - 1);
+      } else {
+        // Like the other tabs: Left from the first card = the tabs column.
+        Navigator.of(context).maybePop();
+      }
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  // ------------------------------------------------------------ profiles --
+
+  Future<void> _switchProfile(ViewerProfile p) async {
+    final viewers = context.read<ViewerProfileService>();
+    if (p.id == viewers.active.id) {
+      if (_rows.isNotEmpty) _focusCard(0, 0);
+      return;
+    }
+    setState(() => _switching = true);
+    await Future<void>.delayed(const Duration(milliseconds: 220));
+    if (!mounted) return;
+    final switched = await viewers.switchTo(context, p.id);
+    if (!mounted) return;
+    if (switched) {
+      _rowsConfig = HomeRows.load(context.read<StorageService>());
+      _cardIndex.clear();
+      _focused = null;
+      _row = 0;
+      _rows = const [];
+      _loading = true;
+      for (final c in _rowScrolls.values) {
+        if (c.hasClients) c.jumpTo(0);
+      }
+      unawaited(_load());
+    }
+    setState(() => _switching = false);
+    _focusProfiles();
+  }
+
+  Future<void> _manageProfiles() async {
+    final viewers = context.read<ViewerProfileService>();
+    if (!await viewers.requireUnlock(context) || !mounted) return;
+    await Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const ProfilesScreen()));
+    if (mounted) _focusProfiles();
+  }
+
+  // ---------------------------------------------------------- row editing --
+
+  Future<void> _rowMenu(HomeRowKind kind) async {
+    final shown = _rowsConfig.visible;
+    final i = shown.indexOf(kind);
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(tr(kind.title)),
+        children: [
+          if (i > 0)
+            TvDialogOption(
+              autofocus: true,
+              onPressed: () => Navigator.of(context).pop('up'),
+              child: Text(tr('Move row up')),
+            ),
+          if (i < shown.length - 1)
+            TvDialogOption(
+              autofocus: i == 0,
+              onPressed: () => Navigator.of(context).pop('down'),
+              child: Text(tr('Move row down')),
+            ),
+          TvDialogOption(
+            autofocus: shown.length == 1,
+            onPressed: () => Navigator.of(context).pop('hide'),
+            child: Text(tr('Hide this row')),
+          ),
+          TvDialogOption(
+            onPressed: () => Navigator.of(context).pop('edit'),
+            child: Text(tr('Edit Home rows…')),
+          ),
+          TvDialogOption(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(tr('Cancel')),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || choice == null) return;
+    switch (choice) {
+      case 'up' || 'down':
+        _rowsConfig.move(kind, choice == 'up' ? -1 : 1);
+      case 'hide':
+        _rowsConfig.setHidden(kind, true);
+      case 'edit':
+        await _editRows();
+        return;
+    }
+    await _saveRows(keep: choice == 'hide' ? null : kind);
+  }
+
+  /// Every row with a switch (a hidden row comes back from here).
+  Future<void> _editRows() async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialog) => SimpleDialog(
+          title: Text(tr('Home rows')),
+          children: [
+            for (final (n, k) in _rowsConfig.order.indexed)
+              TvDialogOption(
+                autofocus: n == 0,
+                onPressed: () => setDialog(() =>
+                    _rowsConfig.setHidden(k, !_rowsConfig.hidden.contains(k))),
+                child: Row(children: [
+                  Icon(
+                      _rowsConfig.hidden.contains(k)
+                          ? Icons.check_box_outline_blank
+                          : Icons.check_box,
+                      size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text(tr(k.title))),
+                ]),
+              ),
+            TvDialogOption(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(tr('Done')),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (mounted) await _saveRows();
+  }
+
+  Future<void> _saveRows({HomeRowKind? keep}) async {
+    await _rowsConfig.save(context.read<StorageService>());
+    if (!mounted) return;
+    await _load();
+    if (!mounted || _rows.isEmpty) return;
+    final r = keep == null ? 0 : _rows.indexWhere((x) => x.kind == keep);
+    _focusCard(r < 0 ? 0 : r, keep == null ? 0 : (_cardIndex[keep] ?? 0));
+  }
+
+  // --------------------------------------------------------------- build --
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final size = MediaQuery.sizeOf(context);
+    final heroHeight = (size.height * 0.40).clamp(200.0, 420.0);
+    final focused = _focused;
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        onKeyEvent: _onKey,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            _Backdrop(item: focused),
+            AnimatedOpacity(
+              opacity: _switching ? 0 : 1,
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOut,
+              child: SingleChildScrollView(
+                controller: _pageScroll,
+                padding: const EdgeInsets.only(bottom: 48),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _ProfilesStrip(
+                      nodes: _profileNode,
+                      addNode: _addProfileNode,
+                      onPick: _switchProfile,
+                      onAdd: _manageProfiles,
+                      onFocus: (i) {
+                        if (!_inProfiles || _profileIndex != i) {
+                          setState(() {
+                            _inProfiles = true;
+                            _profileIndex = i;
+                          });
+                        }
+                      },
+                    ),
+                    SizedBox(
+                      height: heroHeight,
+                      child: _Hero(item: focused, scheme: scheme),
+                    ),
+                    if (_rows.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: _sidePad, vertical: 24),
+                        child: _loading
+                            ? const SizedBox(
+                                width: 28,
+                                height: 28,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2.5))
+                            : Text(
+                                tr(
+                                    'Nothing here yet. Watch a channel, a movie or a show and it shows up on Home.'),
+                                style: const TextStyle(
+                                    color: Colors.white70, fontSize: 16)),
+                      ),
+                    for (var r = 0; r < _rows.length; r++) _buildRow(r, scheme),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRow(int r, ColorScheme scheme) {
+    final row = _rows[r];
+    final poster = row.shape == _CardShape.poster;
+    final w = poster ? _posterW : _wideW;
+    final h = poster ? _posterH : _wideH;
+    final active = !_inProfiles && r == _row;
+    return Column(
+      key: _rowKey(row.kind),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(_sidePad, 18, _sidePad, 10),
+          child: AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 180),
+            style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.2,
+                color: active ? scheme.primary : Colors.white),
+            child: Text(tr(row.kind.title)),
+          ),
+        ),
+        SizedBox(
+          // Room for the focused card's zoom and its title underneath.
+          height: h + 58,
+          child: ListView.builder(
+            controller: _rowScroll(row.kind),
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: _sidePad - 8),
+            itemExtent: w + _gap,
+            clipBehavior: Clip.none,
+            itemCount: row.items.length,
+            itemBuilder: (_, i) {
+              final item = row.items[i];
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: _gap / 2),
+                child: _HomeCard(
+                  item: item,
+                  width: w,
+                  height: h,
+                  poster: poster,
+                  focusNode: _node(row.kind, i),
+                  onTap: () => _open(item),
+                  onHold: () => _rowMenu(row.kind),
+                  onFocus: () {
+                    _cardIndex[row.kind] = i;
+                    if (identical(_focused, item) &&
+                        _row == r &&
+                        !_inProfiles) {
+                      return;
+                    }
+                    setState(() {
+                      _row = r;
+                      _inProfiles = false;
+                      _focused = item;
+                    });
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Full-screen art of the focused card, cross-faded, darkened toward the
+/// rows and the left edge so text always reads.
+class _Backdrop extends StatelessWidget {
+  const _Backdrop({required this.item});
+  final _HomeItem? item;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = item?.backdropUrl;
+    final width = MediaQuery.sizeOf(context).width;
+    return Stack(fit: StackFit.expand, children: [
+      AnimatedSwitcher(
+        duration: const Duration(milliseconds: 450),
+        switchInCurve: Curves.easeOut,
+        child: url == null || url.isEmpty
+            ? const SizedBox.expand(key: ValueKey('none'))
+            : Align(
+                key: ValueKey(url),
+                alignment: Alignment.topRight,
+                child: FractionallySizedBox(
+                  widthFactor: 0.75,
+                  heightFactor: 0.7,
+                  alignment: Alignment.topRight,
+                  child: HdNetworkImage(
+                    url: url,
+                    kind: ImageKind.backdrop,
+                    decodeWidth: (width * 0.75).round(),
+                    errorWidget: (_) => const SizedBox.shrink(),
+                  ),
+                ),
+              ),
+      ),
+      const DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [Colors.black, Color(0xCC000000), Color(0x33000000)],
+            stops: [0.25, 0.5, 1],
+          ),
+        ),
+      ),
+      const DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0x66000000), Colors.transparent, Colors.black],
+            stops: [0, 0.3, 0.68],
+          ),
+        ),
+      ),
+    ]);
+  }
+}
+
+class _Hero extends StatelessWidget {
+  const _Hero({required this.item, required this.scheme});
+  final _HomeItem? item;
+  final ColorScheme scheme;
+
+  @override
+  Widget build(BuildContext context) {
+    final item = this.item;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(48, 8, 48, 8),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 260),
+        transitionBuilder: (child, a) => FadeTransition(
+          opacity: a,
+          child: SlideTransition(
+              position: Tween(begin: const Offset(0, 0.04), end: Offset.zero)
+                  .animate(a),
+              child: child),
+        ),
+        child: item == null
+            ? const SizedBox.shrink(key: ValueKey('none'))
+            : Align(
+                key: ValueKey(item.key),
+                alignment: Alignment.bottomLeft,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 640),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (item.live)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _LivePill(color: scheme.error),
+                        ),
+                      if (item.game != null) _GameLogos(game: item.game!),
+                      Text(item.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 36,
+                              height: 1.1,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white)),
+                      if (item.game?.statusText.isNotEmpty ?? false)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                              [
+                                if (item.description != null) item.description!,
+                                item.game!.state == GameState.pre
+                                    ? TimeFormat.hm.format(item.game!.start)
+                                    : item.game!.statusText,
+                              ].join('  ·  '),
+                              style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: scheme.primary)),
+                        ),
+                      if (item.subtitle != null && item.subtitle!.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(item.subtitle!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontSize: 16, color: Colors.white70)),
+                        ),
+                      if (item.game == null &&
+                          (item.description?.isNotEmpty ?? false))
+                        Padding(
+                          padding: const EdgeInsets.only(top: 10),
+                          child: Text(item.description!,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontSize: 15,
+                                  height: 1.35,
+                                  color: Colors.white70)),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+      ),
+    );
+  }
+}
+
+class _GameLogos extends StatelessWidget {
+  const _GameLogos({required this.game});
+  final SportsGame game;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget logo(String? url) => SizedBox(
+          width: 44,
+          height: 44,
+          child: url == null
+              ? const Icon(Icons.shield_outlined, color: Colors.white54)
+              : HdNetworkImage(
+                  url: url,
+                  kind: ImageKind.poster,
+                  decodeWidth: 88,
+                  fit: BoxFit.contain,
+                  errorWidget: (_) =>
+                      const Icon(Icons.shield_outlined, color: Colors.white54),
+                ),
+        );
+    if (game.league.kind != SportsKind.team) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        logo(game.first.logoUrl),
+        const SizedBox(width: 14),
+        logo(game.second.logoUrl),
+      ]),
+    );
+  }
+}
+
+class _LivePill extends StatelessWidget {
+  const _LivePill({required this.color});
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration:
+            BoxDecoration(color: color, borderRadius: BorderRadius.circular(4)),
+        child: Text(tr('LIVE'),
+            style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1,
+                color: Colors.white)),
+      );
+}
+
+/// A card: art with rounded corners that grows and gets a gold edge when
+/// focused, the title (and progress / LIVE) underneath.
+class _HomeCard extends StatefulWidget {
+  const _HomeCard({
+    required this.item,
+    required this.width,
+    required this.height,
+    required this.poster,
+    required this.focusNode,
+    required this.onTap,
+    required this.onHold,
+    required this.onFocus,
+  });
+
+  final _HomeItem item;
+  final double width;
+  final double height;
+  final bool poster;
+  final FocusNode focusNode;
+  final VoidCallback onTap;
+  final VoidCallback onHold;
+  final VoidCallback onFocus;
+
+  @override
+  State<_HomeCard> createState() => _HomeCardState();
+}
+
+class _HomeCardState extends State<_HomeCard> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final item = widget.item;
+    final url = item.imageUrl;
+    // Channel logos sit on a panel; real art fills the card.
+    final logo = item.live && !widget.poster && item.backdropUrl == null;
+    final art = url == null || url.isEmpty
+        ? Center(
+            child: item.game != null
+                ? _GameCardFace(game: item.game!)
+                : Icon(widget.poster ? Icons.movie_outlined : Icons.live_tv,
+                    color: Colors.white38, size: 36))
+        : Padding(
+            padding: logo ? const EdgeInsets.all(22) : EdgeInsets.zero,
+            child: HdNetworkImage(
+              url: url,
+              kind: widget.poster ? ImageKind.poster : ImageKind.backdrop,
+              decodeWidth: (widget.width * 2).round(),
+              fit: logo ? BoxFit.contain : BoxFit.cover,
+              errorWidget: (_) => const Center(
+                  child: Icon(Icons.image_not_supported_outlined,
+                      color: Colors.white24)),
+            ),
+          );
+    final progress = item.progress;
+    final card = AnimatedScale(
+      scale: _focused ? 1.08 : 1.0,
+      duration: const Duration(milliseconds: 160),
+      curve: Curves.easeOut,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        width: widget.width,
+        height: widget.height,
+        decoration: BoxDecoration(
+          color: const Color(0xFF16161A),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+              color: _focused ? scheme.primary : Colors.white10,
+              width: _focused ? 3 : 1),
+          boxShadow: _focused
+              ? [
+                  BoxShadow(
+                      color: scheme.primary.withValues(alpha: 0.35),
+                      blurRadius: 18,
+                      spreadRadius: 1)
+                ]
+              : const [],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(fit: StackFit.expand, children: [
+          art,
+          if (item.live)
+            Positioned(left: 8, top: 8, child: _LivePill(color: scheme.error)),
+          if (progress != null && progress > 0)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: LinearProgressIndicator(
+                value: progress.clamp(0.0, 1.0),
+                minHeight: 4,
+                backgroundColor: Colors.black54,
+                color: scheme.primary,
+              ),
+            ),
+        ]),
+      ),
+    );
+    return HoldToActivate(
+      onTap: widget.onTap,
+      onHold: widget.onHold,
+      child: InkWell(
+        focusNode: widget.focusNode,
+        onTap: widget.onTap,
+        onLongPress: widget.onHold,
+        focusColor: Colors.transparent,
+        hoverColor: Colors.transparent,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        onFocusChange: (f) {
+          setState(() => _focused = f);
+          if (f) widget.onFocus();
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            card,
+            const SizedBox(height: 10),
+            Text(item.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: _focused ? Colors.white : Colors.white70)),
+            if (!widget.poster &&
+                item.subtitle != null &&
+                item.subtitle!.isNotEmpty)
+              Text(item.subtitle!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12, color: Colors.white54)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A game card without art: both logos, the score or kick-off time.
+class _GameCardFace extends StatelessWidget {
+  const _GameCardFace({required this.game});
+  final SportsGame game;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final hideScores = context.read<StorageService>().getSportsHideScores();
+    Widget team(SportsTeam t) => Expanded(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            SizedBox(
+              width: 46,
+              height: 46,
+              child: t.logoUrl == null
+                  ? const Icon(Icons.shield_outlined, color: Colors.white38)
+                  : HdNetworkImage(
+                      url: t.logoUrl!,
+                      kind: ImageKind.poster,
+                      decodeWidth: 92,
+                      fit: BoxFit.contain,
+                      errorWidget: (_) => const Icon(Icons.shield_outlined,
+                          color: Colors.white38),
+                    ),
+            ),
+            const SizedBox(height: 6),
+            Text(t.abbreviation.isEmpty ? t.shortName : t.abbreviation,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12, color: Colors.white70)),
+          ]),
+        );
+    final middle = game.state == GameState.pre
+        ? TimeFormat.hm.format(game.start)
+        : hideScores || game.first.score == null
+            ? game.statusText
+            : '${game.first.score} – ${game.second.score}';
+    if (game.league.kind != SportsKind.team) {
+      return Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          const Icon(Icons.emoji_events_outlined, color: Colors.white54),
+          const SizedBox(height: 6),
+          Text(game.title,
+              maxLines: 2,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 13, color: Colors.white)),
+        ]),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      child: Row(children: [
+        team(game.first),
+        Text(middle,
+            style: TextStyle(
+                fontSize: game.state == GameState.pre ? 15 : 22,
+                fontWeight: FontWeight.w800,
+                color: game.state == GameState.live
+                    ? scheme.primary
+                    : Colors.white)),
+        team(game.second),
+      ]),
+    );
+  }
+}
+
+/// The viewer's profiles: round avatars, the active one ringed in gold; the
+/// focused one grows and shows its name. "+" = Settings > Profiles.
+class _ProfilesStrip extends StatelessWidget {
+  const _ProfilesStrip({
+    required this.nodes,
+    required this.addNode,
+    required this.onPick,
+    required this.onAdd,
+    required this.onFocus,
+  });
+
+  final FocusNode Function(int) nodes;
+  final FocusNode addNode;
+  final void Function(ViewerProfile) onPick;
+  final VoidCallback onAdd;
+  final void Function(int) onFocus;
+
+  @override
+  Widget build(BuildContext context) {
+    final viewers = context.watch<ViewerProfileService>();
+    final profiles = viewers.profiles;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(40, 22, 48, 0),
+      child: Row(children: [
+        for (final (i, p) in profiles.indexed)
+          _Avatar(
+            focusNode: nodes(i),
+            label: p.displayName,
+            color: kProfileColors[p.colorIndex % kProfileColors.length],
+            letter: p.name.isEmpty ? '?' : p.name[0].toUpperCase(),
+            active: p.id == viewers.active.id,
+            restricted: p.isRestricted,
+            onTap: () => onPick(p),
+            onFocus: () => onFocus(i),
+          ),
+        _Avatar(
+          focusNode: addNode,
+          label: tr('Profiles'),
+          icon: Icons.add,
+          color: Colors.white12,
+          active: false,
+          onTap: onAdd,
+          onFocus: () => onFocus(profiles.length),
+        ),
+        const Spacer(),
+        StreamBuilder<void>(
+          stream: Stream<void>.periodic(const Duration(seconds: 20)),
+          builder: (context, _) => Text(TimeFormat.hm.format(DateTime.now()),
+              style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white70)),
+        ),
+      ]),
+    );
+  }
+}
+
+class _Avatar extends StatefulWidget {
+  const _Avatar({
+    required this.focusNode,
+    required this.label,
+    required this.color,
+    required this.active,
+    required this.onTap,
+    required this.onFocus,
+    this.letter,
+    this.icon,
+    this.restricted = false,
+  });
+
+  final FocusNode focusNode;
+  final String label;
+  final Color color;
+  final bool active;
+  final bool restricted;
+  final String? letter;
+  final IconData? icon;
+  final VoidCallback onTap;
+  final VoidCallback onFocus;
+
+  @override
+  State<_Avatar> createState() => _AvatarState();
+}
+
+class _AvatarState extends State<_Avatar> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final ring = _focused
+        ? Colors.white
+        : widget.active
+            ? scheme.primary
+            : Colors.transparent;
+    return InkWell(
+      focusNode: widget.focusNode,
+      onTap: widget.onTap,
+      customBorder: const CircleBorder(),
+      focusColor: Colors.transparent,
+      hoverColor: Colors.transparent,
+      splashColor: Colors.transparent,
+      highlightColor: Colors.transparent,
+      onFocusChange: (f) {
+        setState(() => _focused = f);
+        if (f) widget.onFocus();
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          AnimatedScale(
+            scale: _focused ? 1.18 : 1.0,
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutBack,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              width: 52,
+              height: 52,
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: ring, width: 2.5),
+              ),
+              child: CircleAvatar(
+                backgroundColor: widget.color,
+                child: widget.icon != null
+                    ? Icon(widget.icon, color: Colors.white)
+                    : Text(widget.letter ?? '?',
+                        style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          AnimatedOpacity(
+            opacity: _focused || widget.active ? 1 : 0.0,
+            duration: const Duration(milliseconds: 180),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              if (widget.restricted)
+                const Padding(
+                  padding: EdgeInsets.only(right: 3),
+                  child:
+                      Icon(Icons.child_care, size: 12, color: Colors.white70),
+                ),
+              Text(widget.label,
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: widget.active ? scheme.primary : Colors.white)),
+            ]),
+          ),
+        ]),
+      ),
+    );
+  }
+}

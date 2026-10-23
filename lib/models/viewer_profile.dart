@@ -1,4 +1,17 @@
+import 'package:flutter/material.dart';
+
 import '../l10n/l10n.dart';
+
+/// Every color swatch a profile's avatar can use — `colorIndex` into this
+/// fixed list (Settings > Profiles, the Home page's profiles strip).
+const kProfileColors = [
+  Colors.deepPurple,
+  Colors.teal,
+  Colors.orange,
+  Colors.pink,
+  Colors.blue,
+  Colors.green,
+];
 
 /// One of several viewers sharing this device's playlists — the same
 /// catalog/credentials, but each with their own favorites, hidden groups/

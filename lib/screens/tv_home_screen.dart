@@ -58,7 +58,7 @@ import 'desktop_player_screen.dart';
 import 'multiview_screen.dart';
 import 'movie_detail_screen.dart';
 import 'player_screen.dart';
-import 'profile_picker_screen.dart';
+import 'home_screen.dart';
 import 'search_screen.dart';
 import 'sports_screen.dart';
 import 'archive_screen.dart';
@@ -1675,6 +1675,9 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       case 'series':
         _onTabChanged('TV Shows');
         return true;
+      case 'home':
+        _openHome();
+        return true;
       case 'hub':
         _parkLiveChannel();
         Navigator.of(context)
@@ -2276,9 +2279,12 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// See [_pushOverLiveVideo].
   bool _videoHiddenForSports = false;
 
-  void _openProfilePicker() {
+  /// Home parks a background live channel like Media Hub: it's a browse
+  /// page, and its own cards start what plays next.
+  void _openHome() {
+    _parkLiveChannel();
     Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const ProfilePickerScreen()));
+        .push(MaterialPageRoute(builder: (_) => const HomeScreen()));
   }
 
   Future<void> _openSearch() => _pushOverLiveVideo(
@@ -3304,6 +3310,15 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   Widget _buildTabsColumn({required bool collapsed}) {
     return ListView(
       children: [
+        // Home: profiles strip + rows across the app (HomeScreen). It also
+        // replaced this column's profile row (owner, 2026-10-23).
+        _SelectableRow(
+          icon: Icons.home_outlined,
+          label: tr('Home'),
+          selected: false,
+          collapsed: collapsed,
+          onTap: _openHome,
+        ),
         _SelectableRow(
           icon: Icons.search,
           label: tr('Search'),
@@ -3395,13 +3410,6 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
           selected: false,
           collapsed: collapsed,
           onTap: () => _refreshPlaylist(context),
-        ),
-        _SelectableRow(
-          icon: Icons.account_circle_outlined,
-          label: context.watch<ViewerProfileService>().active.displayName,
-          selected: false,
-          collapsed: collapsed,
-          onTap: _openProfilePicker,
         ),
         _SelectableRow(
           icon: Icons.settings,

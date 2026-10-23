@@ -594,6 +594,20 @@ class ArchiveService extends ChangeNotifier {
     _notify();
   }
 
+  /// Every played title (movies and shows), newest first, whose source is
+  /// still enabled and not under Other — the Home page's Continue watching.
+  List<({ArchiveSource source, ArchiveMeta meta})> recentlyWatched() {
+    final byUrl = {for (final s in enabledSources) s.manifestUrl: s};
+    return [
+      for (final e in _historyEntries())
+        if (byUrl[e['src']] case final source? when !source.underOther)
+          if (e['meta'] case final Map m)
+            if (ArchiveMeta.fromJson(Map<String, dynamic>.from(m))
+                case final meta?)
+              (source: source, meta: meta),
+    ];
+  }
+
   /// "Recently watched" for [type]: played titles whose source is still
   /// enabled, newest first. Not narrowed by the genre filter.
   ArchiveRow? _historyRow(ArchiveType type) => _savedRow(

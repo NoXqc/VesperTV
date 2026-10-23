@@ -381,6 +381,12 @@ class StorageService {
   Future<void> setShowResumePill(bool value) =>
       _prefs.setBool(AppConstants.keyShowResumePill, value);
 
+  /// Home page rows for the active viewer (see `HomeRows`).
+  List<String>? getHomeRows() =>
+      _prefs.getStringList(_vk(AppConstants.keyHomeRows));
+  Future<void> setHomeRows(List<String> ids) =>
+      _prefs.setStringList(_vk(AppConstants.keyHomeRows), ids);
+
   /// Sports tab league ids in display order; null = never chosen (the
   /// screen falls back to its own default set).
   List<String>? getSportsLeagues() =>

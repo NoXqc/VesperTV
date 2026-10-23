@@ -161,6 +161,7 @@ class AppPreferences extends ChangeNotifier {
 
   /// The choices and their (untranslated) names.
   static const startSections = [
+    ('home', 'Home'),
     ('tv', 'TV'),
     ('movies', 'Movies'),
     ('series', 'TV Shows'),
