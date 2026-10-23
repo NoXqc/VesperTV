@@ -339,6 +339,11 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 - **Codex lower player bar clock** (`codex/player-bar-clock`, unreleased): current local time
   beside the channel/stream title on Android/TV and Windows (`widgets/player_bar_title.dart`),
   using the existing 12/24-hour setting. No player changes; native device check pending.
+- **Codex Open on startup flash fix** (`codex/start-on-home`, unreleased): all destinations
+  resolve before the first frame. Home/Media Hub/Sports use the initial route stack; Movies/TV
+  Shows initialize the keyed TV root on the chosen tab. Keeps Back navigation, selected-tab
+  focus, hidden-tab/crash fallback and Sports background-video workaround. Routing is in
+  `utils/startup_routes.dart`; Fast startup/splash budgets unchanged. Native checks pending.
 - **Shipped: 1.0.38 (`+419`, 2026-10-23, latest; test builds `+414`/`+416`/`+417` = pre-releases
   `1.0.37-test.*`, not deleted yet — owner OK needed):** Home page (profile cards that shrink
   while browsing rows, hero, Today's games: My Teams → starred league → rest, finals gone 60 min

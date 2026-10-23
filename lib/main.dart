@@ -18,6 +18,9 @@ import 'services/desktop_window.dart';
 import 'screens/player_screen.dart';
 import 'screens/settings/add_playlist_screen.dart';
 import 'screens/tv_home_screen.dart';
+import 'screens/home_screen.dart';
+import 'screens/archive_screen.dart';
+import 'screens/sports_screen.dart';
 import 'screens/welcome_add_playlist_screen.dart';
 import 'services/app_log.dart';
 import 'services/app_preferences.dart';
@@ -38,6 +41,7 @@ import 'services/playlist_manager.dart';
 import 'services/storage_service.dart';
 import 'services/viewer_profile_service.dart';
 import 'utils/constants.dart';
+import 'utils/startup_routes.dart';
 import 'utils/route_observer.dart';
 import 'utils/splash_greeting.dart';
 import 'utils/tv_theme.dart';
@@ -166,6 +170,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   late final ParentalPin _parentalPin;
   late final ArchiveService _archiveService;
   bool _ready = false;
+  final _startupRoutes = StartupRoutes();
 
   /// True while [PlaylistManager.runFullCatalogSync] is blocking the
   /// launch — see [CatalogSyncScreen] and [_bootstrap] for the whole
@@ -268,6 +273,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   @override
   void dispose() {
     _splashController.dispose();
+    _startupRoutes.dispose();
     if (Platform.isWindows) windowManager.removeListener(this);
     super.dispose();
   }
@@ -887,6 +893,16 @@ class _NoxIptvAppState extends State<NoxIptvApp>
           scaffoldMessengerKey: _scaffoldMessengerKey,
           navigatorKey: _navigatorKey,
           navigatorObservers: [appRouteObserver],
+          onGenerateInitialRoutes: (_) => _startupRoutes.generate(
+            preferences: prefs,
+            storage: _storage,
+            rootBuilder: _buildTvRoot,
+            destinations: {
+              'home': (_) => const HomeScreen(),
+              'hub': (_) => const ArchiveScreen(),
+              'sports': (_) => const SportsScreen(),
+            },
+          ),
           // Flutter's own widget strings (text-selection menu, tooltips)
           // follow the app language, not the device's (see L10n).
           locale: L10n.locale,
@@ -919,36 +935,45 @@ class _NoxIptvAppState extends State<NoxIptvApp>
                 buildPaletteColorScheme(prefs.palette, Brightness.dark),
             useMaterial3: true,
           ),
-          home: Builder(
-            builder: (context) {
-              // TvHomeScreen is the only home: it adapts to phones itself
-              // (one column at a time in portrait, bottom tab bar). The old
-              // phone HomeScreen was removed (owner, 2026-10-18).
-              // `Consumer<ViewerProfileService>` plus a `ValueKey` on the
-              // active viewer's id is what actually makes a profile switch
-              // take effect on screen — nothing else in this ancestor
-              // chain (just `Consumer<AppPreferences>` above) listens to
-              // that service at all, so without this, `switchTo` would
-              // update every service's own state correctly but the UI
-              // would silently keep showing the OLD viewer's screen,
-              // confirmed as a real gap during this feature's own review.
-              // A full remount (not just a rebuild) is deliberate too —
-              // see `ViewerProfileService.switchTo`'s doc comment: it's
-              // what tears down `TvHomeScreen`'s own pending-hide timers
-              // and resets its focus/selection state via a clean `dispose`
-              // instead of needing dozens of fields manually reset.
-              return Consumer<ViewerProfileService>(
-                builder: (context, viewerService, _) {
-                  // The language is part of the key for the same reason:
-                  // a language change remounts home so every tr() string
-                  // is rebuilt (General settings pops back here first).
-                  final key =
-                      ValueKey('${viewerService.active.id}|${L10n.code}');
-                  return TvHomeScreen(key: key);
-                },
-              );
-            },
-          ),
+          routes: {Navigator.defaultRouteName: _buildTvRoot},
+        );
+      },
+    );
+  }
+
+  Widget _buildTvRoot(BuildContext context) {
+    // TvHomeScreen is the only home: it adapts to phones itself
+    // (one column at a time in portrait, bottom tab bar). The old
+    // phone HomeScreen was removed (owner, 2026-10-18).
+    // `Consumer<ViewerProfileService>` plus a `ValueKey` on the
+    // active viewer's id is what actually makes a profile switch
+    // take effect on screen — nothing else in this ancestor
+    // chain (just `Consumer<AppPreferences>` above) listens to
+    // that service at all, so without this, `switchTo` would
+    // update every service's own state correctly but the UI
+    // would silently keep showing the OLD viewer's screen,
+    // confirmed as a real gap during this feature's own review.
+    // A full remount (not just a rebuild) is deliberate too —
+    // see `ViewerProfileService.switchTo`'s doc comment: it's
+    // what tears down `TvHomeScreen`'s own pending-hide timers
+    // and resets its focus/selection state via a clean `dispose`
+    // instead of needing dozens of fields manually reset.
+    return Consumer<ViewerProfileService>(
+      builder: (context, viewerService, _) {
+        // The language is part of the key for the same reason:
+        // a language change remounts home so every tr() string
+        // is rebuilt (General settings pops back here first).
+        final key = ValueKey('${viewerService.active.id}|${L10n.code}');
+        final section = _startupRoutes.takeRootSection();
+        return TvHomeScreen(
+          key: key,
+          initialTab: switch (section) {
+            'movies' => 'Movies',
+            'series' => 'TV Shows',
+            _ => 'TV',
+          },
+          startupSportsCovered: section == 'sports',
+          startupBrowseCovered: section == 'home' || section == 'hub',
         );
       },
     );
