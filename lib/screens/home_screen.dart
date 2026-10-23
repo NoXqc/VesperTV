@@ -885,28 +885,31 @@ class _Backdrop extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final url = item?.backdropUrl;
+    final game = item?.game;
     final width = MediaQuery.sizeOf(context).width;
     return Stack(fit: StackFit.expand, children: [
       AnimatedSwitcher(
         duration: const Duration(milliseconds: 450),
         switchInCurve: Curves.easeOut,
-        child: url == null || url.isEmpty
-            ? const SizedBox.expand(key: ValueKey('none'))
-            : Align(
-                key: ValueKey(url),
-                alignment: Alignment.topRight,
-                child: FractionallySizedBox(
-                  widthFactor: 0.75,
-                  heightFactor: 0.7,
-                  alignment: Alignment.topRight,
-                  child: HdNetworkImage(
-                    url: url,
-                    kind: ImageKind.backdrop,
-                    decodeWidth: (width * 0.75).round(),
-                    errorWidget: (_) => const SizedBox.shrink(),
+        child: game != null && game.league.kind == SportsKind.team
+            ? _GameBackdrop(key: ValueKey('game:${game.id}'), game: game)
+            : url == null || url.isEmpty
+                ? const SizedBox.expand(key: ValueKey('none'))
+                : Align(
+                    key: ValueKey(url),
+                    alignment: Alignment.topRight,
+                    child: FractionallySizedBox(
+                      widthFactor: 0.75,
+                      heightFactor: 0.7,
+                      alignment: Alignment.topRight,
+                      child: HdNetworkImage(
+                        url: url,
+                        kind: ImageKind.backdrop,
+                        decodeWidth: (width * 0.75).round(),
+                        errorWidget: (_) => const SizedBox.shrink(),
+                      ),
+                    ),
                   ),
-                ),
-              ),
       ),
       const DecoratedBox(
         decoration: BoxDecoration(
@@ -967,7 +970,6 @@ class _Hero extends StatelessWidget {
                           padding: EdgeInsets.only(bottom: 10),
                           child: _LivePill(),
                         ),
-                      if (item.game != null) _GameLogos(game: item.game!),
                       Text(item.title,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -1021,37 +1023,90 @@ class _Hero extends StatelessWidget {
   }
 }
 
-class _GameLogos extends StatelessWidget {
-  const _GameLogos({required this.game});
+/// A focused game's backdrop, in the movie art's place: both logos large
+/// with the time / score between, a glow in each team's colour, faded so
+/// the backdrop's gradients keep the hero text readable.
+class _GameBackdrop extends StatelessWidget {
+  const _GameBackdrop({super.key, required this.game});
   final SportsGame game;
+
+  static Color? _teamColor(String? hex) {
+    final v = int.tryParse(hex ?? '', radix: 16);
+    return v == null || hex!.length != 6 ? null : Color(0xFF000000 | v);
+  }
 
   @override
   Widget build(BuildContext context) {
-    Widget logo(String? url) => SizedBox(
-          width: 44,
-          height: 44,
-          child: url == null
-              ? const Icon(Icons.shield_outlined, color: Colors.white54)
-              : HdNetworkImage(
-                  url: url,
-                  kind: ImageKind.poster,
-                  decodeWidth: 88,
-                  fit: BoxFit.contain,
-                  errorWidget: (_) =>
-                      const Icon(Icons.shield_outlined, color: Colors.white54),
+    final hideScores = context.read<StorageService>().getSportsHideScores();
+    return Align(
+      alignment: Alignment.topRight,
+      child: FractionallySizedBox(
+        widthFactor: 0.62,
+        heightFactor: 0.62,
+        alignment: Alignment.topRight,
+        child: LayoutBuilder(builder: (context, box) {
+          final logoSize = box.maxHeight * 0.46;
+          Widget side(SportsTeam t, Alignment glowAt) {
+            final glow = _teamColor(t.color);
+            return Expanded(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: glow == null
+                      ? null
+                      : RadialGradient(
+                          center: glowAt,
+                          radius: 0.9,
+                          colors: [
+                            glow.withValues(alpha: 0.35),
+                            glow.withValues(alpha: 0)
+                          ],
+                        ),
                 ),
-        );
-    if (game.league.kind != SportsKind.team) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        logo(game.first.logoUrl),
-        const SizedBox(width: 14),
-        logo(game.second.logoUrl),
-      ]),
+                child: Center(
+                  child: SizedBox.square(
+                    dimension: logoSize,
+                    child: t.logoUrl == null
+                        ? const Icon(Icons.shield_outlined,
+                            color: Colors.white24, size: 96)
+                        : HdNetworkImage(
+                            url: t.logoUrl!,
+                            kind: ImageKind.poster,
+                            decodeWidth: (logoSize * 1.5).round(),
+                            fit: BoxFit.contain,
+                            errorWidget: (_) => const SizedBox.shrink(),
+                          ),
+                  ),
+                ),
+              ),
+            );
+          }
+
+          return Opacity(
+            opacity: 0.55,
+            child: Row(children: [
+              side(game.first, Alignment.centerLeft),
+              Text(_gameMiddle(game, hideScores),
+                  style: TextStyle(
+                      fontSize: (logoSize * 0.3).clamp(28.0, 64.0),
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white)),
+              side(game.second, Alignment.centerRight),
+            ]),
+          );
+        }),
+      ),
     );
   }
 }
+
+/// Start time before the game, else the score (or the status when scores
+/// are hidden / not posted) — shared by the card face and the backdrop.
+String _gameMiddle(SportsGame game, bool hideScores) =>
+    game.state == GameState.pre
+        ? TimeFormat.hm.format(game.start)
+        : hideScores || game.first.score == null
+            ? game.statusText
+            : '${game.first.score} – ${game.second.score}';
 
 /// Broadcast red whatever the theme (the palette's error colour came out
 /// salmon on Neon Green).
@@ -1244,11 +1299,7 @@ class _GameCardFace extends StatelessWidget {
                 style: const TextStyle(fontSize: 11, color: Colors.white70)),
           ]),
         );
-    final middle = game.state == GameState.pre
-        ? TimeFormat.hm.format(game.start)
-        : hideScores || game.first.score == null
-            ? game.statusText
-            : '${game.first.score} – ${game.second.score}';
+    final middle = _gameMiddle(game, hideScores);
     if (game.league.kind != SportsKind.team) {
       return Padding(
         padding: const EdgeInsets.all(14),
