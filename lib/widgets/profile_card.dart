@@ -91,7 +91,8 @@ class ProfileCard extends StatefulWidget {
       this.onHold,
       this.onFocused,
       this.active = false,
-      this.scale = 1});
+      this.scale = 1,
+      this.compact = false});
   final ViewerProfile? profile;
   final String label;
   final FocusNode focusNode;
@@ -99,6 +100,10 @@ class ProfileCard extends StatefulWidget {
   final VoidCallback? onHold, onFocused;
   final bool active;
   final double scale;
+
+  /// Home while the rows have focus: a small avatar, no name, so the hero
+  /// and rows get the room; full card again when focus comes back up.
+  final bool compact;
   @override
   State<ProfileCard> createState() => _ProfileCardState();
 }
@@ -107,7 +112,8 @@ class _ProfileCardState extends State<ProfileCard> {
   bool _focused = false;
   @override
   Widget build(BuildContext context) {
-    final s = widget.scale, primary = Theme.of(context).colorScheme.primary;
+    final primary = Theme.of(context).colorScheme.primary;
+    final s = widget.compact ? 0.3 : widget.scale;
     return HoldToActivate(
         onTap: widget.onTap,
         onHold: widget.onHold,
@@ -120,7 +126,7 @@ class _ProfileCardState extends State<ProfileCard> {
               if (f) widget.onFocused?.call();
             },
             child: SizedBox(
-                width: 124 * s,
+                width: widget.compact ? 44 : 124 * s,
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   AnimatedScale(
                       scale: _focused ? 1.1 : 1,
@@ -149,13 +155,14 @@ class _ProfileCardState extends State<ProfileCard> {
                                       color: Colors.white12,
                                       borderRadius: BorderRadius.circular(14)),
                                   child: const Icon(Icons.add, size: 40)))),
-                  const SizedBox(height: 7),
-                  Text(widget.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          color: widget.active ? primary : Colors.white,
-                          fontSize: 13 * s)),
+                  if (!widget.compact) const SizedBox(height: 7),
+                  if (!widget.compact)
+                    Text(widget.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            color: widget.active ? primary : Colors.white,
+                            fontSize: 13 * s)),
                 ]))));
   }
 }

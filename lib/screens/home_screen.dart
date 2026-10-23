@@ -753,6 +753,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _ProfilesStrip(
+                    compact: !_inProfiles,
                     nodes: _profileNode,
                     addNode: _addProfileNode,
                     onPick: _switchProfile,
@@ -1339,7 +1340,9 @@ class _ProfilesStrip extends StatelessWidget {
       required this.onPick,
       required this.onEdit,
       required this.onAdd,
-      required this.onFocus});
+      required this.onFocus,
+      this.compact = false});
+  final bool compact;
   final FocusNode Function(int) nodes;
   final FocusNode addNode;
   final void Function(ViewerProfile) onPick, onEdit;
@@ -1349,54 +1352,61 @@ class _ProfilesStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final viewers = context.watch<ViewerProfileService>();
     final scale = MediaQuery.sizeOf(context).width < 600 ? .8 : 1.0;
-    return Padding(
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-        child: Row(children: [
-          Expanded(
-              child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-                  child: Row(children: [
-                    for (final (i, p) in viewers.profiles.indexed)
-                      Builder(
-                          builder: (cardContext) => ProfileCard(
-                              profile: p,
-                              label: p.displayName,
-                              focusNode: nodes(i),
-                              active: p.id == viewers.active.id,
-                              scale: scale,
-                              onTap: () => onPick(p),
-                              onHold: () => onEdit(p),
-                              onFocused: () {
-                                onFocus(i);
-                                Scrollable.ensureVisible(cardContext,
-                                    duration: Duration.zero,
-                                    alignmentPolicy:
-                                        ScrollPositionAlignmentPolicy
-                                            .keepVisibleAtEnd);
-                              })),
-                    Builder(
-                        builder: (cardContext) => ProfileCard(
-                            label: tr('Add Profile'),
-                            focusNode: addNode,
-                            scale: scale,
-                            onTap: onAdd,
-                            onFocused: () {
-                              onFocus(viewers.profiles.length);
-                              Scrollable.ensureVisible(cardContext,
-                                  duration: Duration.zero,
-                                  alignmentPolicy: ScrollPositionAlignmentPolicy
-                                      .keepVisibleAtEnd);
-                            })),
-                  ]))),
-          if (MediaQuery.sizeOf(context).width >= 800)
-            StreamBuilder<void>(
-                stream: Stream<void>.periodic(const Duration(seconds: 20)),
-                builder: (context, _) => Text(
-                    TimeFormat.hm.format(DateTime.now()),
-                    style:
-                        const TextStyle(fontSize: 20, color: Colors.white70))),
-        ]));
+    return AnimatedSize(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+        alignment: Alignment.topLeft,
+        child: Padding(
+            padding: EdgeInsets.fromLTRB(20, compact ? 6 : 14, 20, 0),
+            child: Row(children: [
+              Expanded(
+                  child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      padding: EdgeInsets.symmetric(
+                          vertical: compact ? 4 : 12, horizontal: 12),
+                      child: Row(children: [
+                        for (final (i, p) in viewers.profiles.indexed)
+                          Builder(
+                              builder: (cardContext) => ProfileCard(
+                                  profile: p,
+                                  label: p.displayName,
+                                  focusNode: nodes(i),
+                                  active: p.id == viewers.active.id,
+                                  scale: scale,
+                                  compact: compact,
+                                  onTap: () => onPick(p),
+                                  onHold: () => onEdit(p),
+                                  onFocused: () {
+                                    onFocus(i);
+                                    Scrollable.ensureVisible(cardContext,
+                                        duration: Duration.zero,
+                                        alignmentPolicy:
+                                            ScrollPositionAlignmentPolicy
+                                                .keepVisibleAtEnd);
+                                  })),
+                        Builder(
+                            builder: (cardContext) => ProfileCard(
+                                label: tr('Add Profile'),
+                                focusNode: addNode,
+                                scale: scale,
+                                compact: compact,
+                                onTap: onAdd,
+                                onFocused: () {
+                                  onFocus(viewers.profiles.length);
+                                  Scrollable.ensureVisible(cardContext,
+                                      duration: Duration.zero,
+                                      alignmentPolicy:
+                                          ScrollPositionAlignmentPolicy
+                                              .keepVisibleAtEnd);
+                                })),
+                      ]))),
+              if (MediaQuery.sizeOf(context).width >= 800)
+                StreamBuilder<void>(
+                    stream: Stream<void>.periodic(const Duration(seconds: 20)),
+                    builder: (context, _) => Text(
+                        TimeFormat.hm.format(DateTime.now()),
+                        style: const TextStyle(
+                            fontSize: 20, color: Colors.white70))),
+            ])));
   }
 }
