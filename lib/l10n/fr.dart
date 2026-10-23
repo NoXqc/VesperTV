@@ -5,6 +5,20 @@
 /// Keep every `{placeholder}` exactly as in the key. `{s}` is the plural "s"
 /// the code fills in ("chaîne{s}").
 const Map<String, String> kFr = {
+  "Remind me for every game: {team}": "Me rappeler chaque match : {team}",
+  "Stop team reminders: {team}": "Désactiver les rappels : {team}",
+  "Remind me": "Me rappeler",
+  "Cancel reminder": "Annuler le rappel",
+  "15 minutes before and at game time (while VesperTV is open)":
+      "15 minutes avant et au début du match (VesperTV doit être ouvert)",
+  "Reminder set": "Rappel activé",
+  "Reminder cancelled": "Rappel annulé",
+  "Could not save reminder.": "Impossible d’enregistrer le rappel.",
+  "This game has already started.": "Ce match a déjà commencé.",
+  "Your team: {home} vs {away}": "Votre équipe : {home} contre {away}",
+  "Starts in 15 minutes": "Commence dans 15 minutes",
+  "Is about to start": "Le match va commencer",
+
   "Display": "Affichage",
   "Match the TV to the video's frame rate and resolution": "Adapter le téléviseur à la fréquence d’images et à la résolution de la vidéo",
   "Match frame rate": "Adapter la fréquence d’images",

@@ -1,3 +1,5 @@
+import 'package:provider/provider.dart';
+import '../services/game_reminders.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -167,6 +169,10 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
       _standings[league.id] =
           (results[1] as SportsStandings?) ?? _standings[league.id];
     });
+    final schedule = results[0] as SportsTeamSchedule?;
+    if (schedule != null) {
+      context.read<GameReminders>().reconcile(schedule.games);
+    }
     if (_selectedTeam == t) unawaited(_matchTeam(t));
   }
 
@@ -283,6 +289,7 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
     final confirmed =
         await showSportsFollowDialog(context, team: team, followed: true);
     if (!confirmed || !mounted) return;
+    await context.read<GameReminders>().setTeam(t, false);
     await widget.follows.unfollow(t.leagueId, t.teamId);
     if (!mounted) return;
     setState(() {

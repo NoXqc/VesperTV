@@ -6,6 +6,20 @@
 /// English-style plural "s" filled in by the code; Greek plurals don't
 /// work that way, so those strings are phrased without it.
 const Map<String, String> kEl = {
+  "Remind me for every game: {team}": "Υπενθύμιση για κάθε αγώνα: {team}",
+  "Stop team reminders: {team}": "Διακοπή υπενθυμίσεων: {team}",
+  "Remind me": "Υπενθύμιση αγώνα",
+  "Cancel reminder": "Ακύρωση υπενθύμισης",
+  "15 minutes before and at game time (while VesperTV is open)":
+      "15 λεπτά πριν και στην έναρξη (με το VesperTV ανοιχτό)",
+  "Reminder set": "Η υπενθύμιση ορίστηκε",
+  "Reminder cancelled": "Η υπενθύμιση ακυρώθηκε",
+  "Could not save reminder.": "Δεν ήταν δυνατή η αποθήκευση της υπενθύμισης.",
+  "This game has already started.": "Αυτός ο αγώνας έχει ήδη ξεκινήσει.",
+  "Your team: {home} vs {away}": "Η ομάδα σας: {home} εναντίον {away}",
+  "Starts in 15 minutes": "Ξεκινά σε 15 λεπτά",
+  "Is about to start": "Πρόκειται να ξεκινήσει",
+
   "Display": "Οθόνη",
   "Match the TV to the video's frame rate and resolution": "Προσαρμογή της τηλεόρασης στον ρυθμό καρέ και την ανάλυση του βίντεο",
   "Match frame rate": "Προσαρμογή ρυθμού καρέ",

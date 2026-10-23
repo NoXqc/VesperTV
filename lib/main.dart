@@ -39,6 +39,8 @@ import 'models/channel.dart';
 import 'widgets/recording_conflict_dialog.dart';
 import 'services/playlist_manager.dart';
 import 'services/storage_service.dart';
+import 'services/game_reminders.dart';
+import 'widgets/game_reminder_overlay.dart';
 import 'services/viewer_profile_service.dart';
 import 'utils/constants.dart';
 import 'utils/startup_routes.dart';
@@ -171,6 +173,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   late final ArchiveService _archiveService;
   bool _ready = false;
   final _startupRoutes = StartupRoutes();
+  GameReminders? _gameReminders;
 
   /// True while [PlaylistManager.runFullCatalogSync] is blocking the
   /// launch — see [CatalogSyncScreen] and [_bootstrap] for the whole
@@ -274,6 +277,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   void dispose() {
     _splashController.dispose();
     _startupRoutes.dispose();
+    _gameReminders?.dispose();
     if (Platform.isWindows) windowManager.removeListener(this);
     super.dispose();
   }
@@ -344,6 +348,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     try {
       _storage = StorageService();
       await _storage.init();
+      _gameReminders = GameReminders(_storage);
       LiveResumeHint.pillEnabled.value = _storage.getShowResumePill();
 
       Real4kChannels.init(_storage);
@@ -855,6 +860,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     return MultiProvider(
       providers: [
         Provider<StorageService>.value(value: _storage),
+        ChangeNotifierProvider<GameReminders>.value(value: _gameReminders!),
         Provider<CatalogDatabase>.value(value: _catalogDb),
         ChangeNotifierProvider<AppPreferences>.value(value: _preferences),
         ChangeNotifierProvider<PlaylistManager>.value(value: _playlistManager),
@@ -922,6 +928,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
               // than reusing LiveResumeHint/PlaybackService.
               if (Platform.isWindows)
                 DesktopLiveResumeHint(navigatorKey: _navigatorKey),
+              const GameReminderOverlay(),
             ],
           ),
           // Always dark, regardless of the OS/system light-dark setting —

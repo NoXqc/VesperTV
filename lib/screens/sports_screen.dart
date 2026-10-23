@@ -1,3 +1,5 @@
+import '../services/game_reminders.dart';
+import '../widgets/game_reminder_menu_tile.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -959,6 +961,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         matching: gameMatches == null && _matching,
         hideScores: _hideScores,
         hasPick: _picks.channelIdFor(game) != null,
+        offerReminder: _follows.involves(game) ||
+            context.read<GameReminders>().isSet(game),
         offerPlayHere: watch != null || !_isPreviewing(game),
         playFullScreen: watch != null,
         recording: RecordingService.supported
@@ -982,6 +986,21 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         await play(channel, game);
       case _PickAction():
         await _pickChannel(game, play);
+      case _ReminderAction():
+        final reminders = context.read<GameReminders>();
+        if (!reminders.isSet(game) && !reminders.canSet(game)) {
+          _toast(tr('This game has already started.'));
+          return;
+        }
+        try {
+          final enabled = await reminders.toggle(game);
+          if (mounted) {
+            _toast(enabled ? tr('Reminder set') : tr('Reminder cancelled'));
+          }
+        } catch (_) {
+          if (mounted) _toast(tr('Could not save reminder.'));
+        }
+
       case _AddSourcesAction():
         await _addSources(game);
       case _MoreSourcesAction():
@@ -2891,6 +2910,8 @@ class _WatchAction extends _GameAction {
 
 class _PickAction extends _GameAction {}
 
+class _ReminderAction extends _GameAction {}
+
 class _AddSourcesAction extends _GameAction {}
 
 class _MoreSourcesAction extends _GameAction {}
@@ -2924,6 +2945,7 @@ class _GameDialog extends StatelessWidget {
     this.autoTeam,
     required this.offerPlayHere,
     this.playFullScreen = false,
+    this.offerReminder = false,
   });
 
   final SportsGame game;
@@ -2931,6 +2953,7 @@ class _GameDialog extends StatelessWidget {
   final bool matching;
   final bool hideScores;
   final bool hasPick;
+  final bool offerReminder;
 
   /// First entry "Play here" (the hero mini player): some remotes have no
   /// Play/Pause key (user report, 2026-10-18), so hold OK > OK starts it.
@@ -3077,6 +3100,11 @@ class _GameDialog extends StatelessWidget {
                 child: ListView(
                   shrinkWrap: true,
                   children: [
+                    if (offerReminder)
+                      GameReminderMenuTile(
+                          game: game,
+                          onTap: () =>
+                              Navigator.pop(context, _ReminderAction())),
                     TvMenuTile(
                         icon: Icons.playlist_add,
                         title: tr('Add sources'),

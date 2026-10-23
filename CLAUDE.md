@@ -344,6 +344,13 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   Shows initialize the keyed TV root on the chosen tab. Keeps Back navigation, selected-tab
   focus, hidden-tab/crash fallback and Sports background-video workaround. Routing is in
   `utils/startup_routes.dart`; Fast startup/splash budgets unchanged. Native checks pending.
+
+- **Codex, unreleased: game reminders** — `codex/game-reminders`: hold an upcoming
+  My Teams/followed-team game > Remind me / Cancel reminder, or automatic reminders
+  for every game from either followed team (30-minute foreground schedule refresh).
+  Faded selected-team logo behind the popup text. Global non-focus-stealing
+  popups 15 minutes before and at scheduled start while foregrounded, per viewer/device.
+  Details and limits: `dev-notes/sports-tab.md` (Per-game reminders).
 - **Shipped: 1.0.38 (`+419`, 2026-10-23, latest; test builds `+414`/`+416`/`+417` = pre-releases
   `1.0.37-test.*`, not deleted yet — owner OK needed):** Home page (profile cards that shrink
   while browsing rows, hero, Today's games: My Teams → starred league → rest, finals gone 60 min

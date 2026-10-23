@@ -6,6 +6,20 @@
 /// "s" filled in by the code; Spanish plurals don't always work that way
 /// (canal/canales), so those strings are phrased to avoid it.
 const Map<String, String> kEs = {
+  "Remind me for every game: {team}": "Recordarme cada partido: {team}",
+  "Stop team reminders: {team}": "Desactivar recordatorios: {team}",
+  "Remind me": "Recordármelo",
+  "Cancel reminder": "Cancelar recordatorio",
+  "15 minutes before and at game time (while VesperTV is open)":
+      "15 minutos antes y al comenzar el partido (con VesperTV abierto)",
+  "Reminder set": "Recordatorio activado",
+  "Reminder cancelled": "Recordatorio cancelado",
+  "Could not save reminder.": "No se pudo guardar el recordatorio.",
+  "This game has already started.": "Este partido ya ha comenzado.",
+  "Your team: {home} vs {away}": "Tu equipo: {home} contra {away}",
+  "Starts in 15 minutes": "Empieza en 15 minutos",
+  "Is about to start": "Está a punto de empezar",
+
   "Display": "Pantalla",
   "Match the TV to the video's frame rate and resolution": "Ajustar el televisor a la frecuencia de imagen y la resolución del vídeo",
   "Match frame rate": "Ajustar frecuencia de imagen",
