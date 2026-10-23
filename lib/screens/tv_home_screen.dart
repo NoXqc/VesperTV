@@ -95,11 +95,17 @@ void _ensureVisible(BuildContext context) {
 /// column currently in use (and anything to its right, not yet visited)
 /// stays full width.
 class TvHomeScreen extends StatefulWidget {
-  const TvHomeScreen({super.key, this.startupHomeHandled = false});
+  const TvHomeScreen({
+    super.key,
+    this.initialTab = 'TV',
+    this.startupSportsCovered = false,
+    this.startupBrowseCovered = false,
+  });
 
-  /// The app already placed Home in the initial route stack. Do not open
-  /// it again when this root first builds or a viewer/language remounts it.
-  final bool startupHomeHandled;
+  /// The app resolved the destination before constructing the first frame.
+  final String initialTab;
+  final bool startupSportsCovered;
+  final bool startupBrowseCovered;
 
   @override
   State<TvHomeScreen> createState() => _TvHomeScreenState();
@@ -196,11 +202,13 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   FocusScopeNode _col1Scope = FocusScopeNode(debugLabel: 'tv-col1');
   FocusScopeNode _col2Scope = FocusScopeNode(debugLabel: 'tv-col2');
 
-  /// The "TV" row in the tabs rail. Focused once at launch (see initState)
+  /// The initially selected tab row. Focused once at launch (see initState)
   /// so the D-pad cursor starts somewhere visible — before, nothing was
   /// focused until the first key press, which then landed at an arbitrary
   /// spot (top, bottom or inside the channel list).
-  final FocusNode _tvTabFocusNode = FocusNode(debugLabel: 'tv-tab-TV');
+  final FocusNode _initialTabFocusNode = FocusNode(debugLabel: 'tv-start-tab');
+  late final String _initialTab;
+  bool _startupSportsCovered = false;
 
   /// The groups column's own top row — whichever of Favourites/"All"/
   /// "What's New" renders first for the currently active tab (only one of
@@ -1636,65 +1644,33 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   @override
   void initState() {
     super.initState();
-    if (widget.startupHomeHandled) {
-      _startSectionOpened = true;
+    _initialTab = widget.initialTab;
+    _tab = _initialTab;
+    _showWhatsNew = _isBrowseTab(_tab);
+    if (_showWhatsNew) {
+      _phonePage = 1;
     }
+    _startupSportsCovered = widget.startupSportsCovered &&
+        defaultTargetPlatform != TargetPlatform.windows &&
+        context.read<AppPreferences>().hideVideoOnSports;
+    _videoHiddenForSports = _startupSportsCovered;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      // Preserve the browse pages' live-video parking without deferring
+      // the selected screen's first paint or changing resume behavior.
+      if (_isBrowseTab(_initialTab) || widget.startupBrowseCovered) {
+        unawaited(_parkLiveChannel());
+      }
       // Only when this screen is on top (the startup auto-resume or the
       // welcome prompt may already have pushed a route over it) and nothing
       // real holds focus yet — never steal focus from another screen.
       if (ModalRoute.of(context)?.isCurrent == false) return;
-      if (_openStartSection()) return;
       final primary = FocusManager.instance.primaryFocus;
       if (primary == null || primary is FocusScopeNode) {
-        _tvTabFocusNode.requestFocus();
+        _initialTabFocusNode.requestFocus();
       }
     });
     unawaited(_checkForUpdateOnLaunch());
-  }
-
-  /// Once per app launch (a layout switch rebuilds this screen).
-  static bool _startSectionOpened = false;
-
-  /// Settings > General > Startup > Open on: a tab is selected, Media Hub /
-  /// Sports Trak are opened over this screen. True when it did something.
-  bool _openStartSection() {
-    if (_startSectionOpened) return false;
-    _startSectionOpened = true;
-    final section = context.read<AppPreferences>().effectiveStartSection;
-    if (section == 'tv') return false;
-    // Crash guard: a start section that takes the app down (Sports Trak
-    // froze a Fire Stick, 2026-10-22) would do it on every launch. Still
-    // marked from last time = it died there: open on TV this once.
-    final storage = context.read<StorageService>();
-    if (storage.getStartSectionPending()) {
-      unawaited(storage.setStartSectionPending(false));
-      return false;
-    }
-    unawaited(storage.setStartSectionPending(true));
-    Future<void>.delayed(const Duration(seconds: 15),
-        () => storage.setStartSectionPending(false));
-    switch (section) {
-      case 'movies':
-        _onTabChanged('Movies');
-        return true;
-      case 'series':
-        _onTabChanged('TV Shows');
-        return true;
-      case 'home':
-        _openHome();
-        return true;
-      case 'hub':
-        _parkLiveChannel();
-        Navigator.of(context)
-            .push(MaterialPageRoute(builder: (_) => const ArchiveScreen()));
-        return true;
-      case 'sports':
-        unawaited(_openSports());
-        return true;
-    }
-    return false;
   }
 
   /// Once per app launch (a layout switch rebuilds this screen).
@@ -1751,6 +1727,12 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final route = ModalRoute.of(context);
+    // The covered root can be built lazily, after the initial Sports page
+    // has already closed. Never leave its video hidden in that case.
+    if (_startupSportsCovered && route?.isCurrent == true) {
+      _startupSportsCovered = false;
+      _videoHiddenForSports = false;
+    }
     if (route is PageRoute<void>) appRouteObserver.subscribe(this, route);
   }
 
@@ -1758,7 +1740,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   void dispose() {
     appRouteObserver.unsubscribe(this);
     _releasePreviewHint?.call();
-    _tvTabFocusNode.dispose();
+    _initialTabFocusNode.dispose();
     _leftEdgeArmTimer?.cancel();
     _descriptionDwellTimer?.cancel();
     _leftEdgeHintOverlay?.remove();
@@ -1801,6 +1783,10 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// list instead of the current channel" after backing out of fullscreen.
   @override
   void didPopNext() {
+    if (_startupSportsCovered) {
+      _startupSportsCovered = false;
+      setState(() => _videoHiddenForSports = false);
+    }
     _previewCovered = false;
     _syncPreviewHint(_previewHintWanted);
     if (_pendingUpdate != null) {
@@ -3394,7 +3380,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
               label: tr(tab),
               selected: _tab == tab,
               collapsed: collapsed,
-              focusNode: tab == 'TV' ? _tvTabFocusNode : null,
+              focusNode: tab == _initialTab ? _initialTabFocusNode : null,
               onTap: () => _onTabChanged(tab),
             ),
           if (!context.watch<AppPreferences>().hideArchive)

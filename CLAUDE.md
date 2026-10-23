@@ -336,10 +336,11 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-23)
-- **Codex startup Home flash fix** (`codex/start-on-home`, unreleased): Home is placed in
-  the initial Navigator stack instead of pushed after TV paints. Back still reaches the keyed
-  TV root; the startup crash guard and other sections retain their existing handling. Fast
-  startup/splash budgets unchanged; native fast-start device confirmation pending.
+- **Codex Open on startup flash fix** (`codex/start-on-home`, unreleased): all destinations
+  resolve before the first frame. Home/Media Hub/Sports use the initial route stack; Movies/TV
+  Shows initialize the keyed TV root on the chosen tab. Keeps Back navigation, selected-tab
+  focus, hidden-tab/crash fallback and Sports background-video workaround. Routing is in
+  `utils/startup_routes.dart`; Fast startup/splash budgets unchanged. Native checks pending.
 - **Shipped: 1.0.38 (`+419`, 2026-10-23, latest; test builds `+414`/`+416`/`+417` = pre-releases
   `1.0.37-test.*`, not deleted yet — owner OK needed):** Home page (profile cards that shrink
   while browsing rows, hero, Today's games: My Teams → starred league → rest, finals gone 60 min

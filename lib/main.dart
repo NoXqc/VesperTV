@@ -19,6 +19,8 @@ import 'screens/player_screen.dart';
 import 'screens/settings/add_playlist_screen.dart';
 import 'screens/tv_home_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/archive_screen.dart';
+import 'screens/sports_screen.dart';
 import 'screens/welcome_add_playlist_screen.dart';
 import 'services/app_log.dart';
 import 'services/app_preferences.dart';
@@ -39,7 +41,7 @@ import 'services/playlist_manager.dart';
 import 'services/storage_service.dart';
 import 'services/viewer_profile_service.dart';
 import 'utils/constants.dart';
-import 'utils/startup_home_routes.dart';
+import 'utils/startup_routes.dart';
 import 'utils/route_observer.dart';
 import 'utils/splash_greeting.dart';
 import 'utils/tv_theme.dart';
@@ -168,7 +170,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   late final ParentalPin _parentalPin;
   late final ArchiveService _archiveService;
   bool _ready = false;
-  final _startupHomeRoutes = StartupHomeRoutes();
+  final _startupRoutes = StartupRoutes();
 
   /// True while [PlaylistManager.runFullCatalogSync] is blocking the
   /// launch — see [CatalogSyncScreen] and [_bootstrap] for the whole
@@ -271,7 +273,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   @override
   void dispose() {
     _splashController.dispose();
-    _startupHomeRoutes.dispose();
+    _startupRoutes.dispose();
     if (Platform.isWindows) windowManager.removeListener(this);
     super.dispose();
   }
@@ -891,11 +893,15 @@ class _NoxIptvAppState extends State<NoxIptvApp>
           scaffoldMessengerKey: _scaffoldMessengerKey,
           navigatorKey: _navigatorKey,
           navigatorObservers: [appRouteObserver],
-          onGenerateInitialRoutes: (_) => _startupHomeRoutes.generate(
+          onGenerateInitialRoutes: (_) => _startupRoutes.generate(
             preferences: prefs,
             storage: _storage,
             rootBuilder: _buildTvRoot,
-            homeBuilder: (_) => const HomeScreen(),
+            destinations: {
+              'home': (_) => const HomeScreen(),
+              'hub': (_) => const ArchiveScreen(),
+              'sports': (_) => const SportsScreen(),
+            },
           ),
           // Flutter's own widget strings (text-selection menu, tooltips)
           // follow the app language, not the device's (see L10n).
@@ -958,8 +964,17 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         // a language change remounts home so every tr() string
         // is rebuilt (General settings pops back here first).
         final key = ValueKey('${viewerService.active.id}|${L10n.code}');
+        final section = _startupRoutes.takeRootSection();
         return TvHomeScreen(
-            key: key, startupHomeHandled: _startupHomeRoutes.homeHandled);
+          key: key,
+          initialTab: switch (section) {
+            'movies' => 'Movies',
+            'series' => 'TV Shows',
+            _ => 'TV',
+          },
+          startupSportsCovered: section == 'sports',
+          startupBrowseCovered: section == 'home' || section == 'hub',
+        );
       },
     );
   }
