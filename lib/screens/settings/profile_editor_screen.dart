@@ -26,8 +26,9 @@ Future<void> openProfileEditor(BuildContext context, String id) async {
       !context.mounted) {
     return;
   }
-  await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => SwallowHeldActivate(child: ProfileDetailScreen(profileId: id))));
+  await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) =>
+          SwallowHeldActivate(child: ProfileDetailScreen(profileId: id))));
 }
 
 class ProfileColourRow extends StatefulWidget {
@@ -81,18 +82,22 @@ Widget _heading(String text) => Padding(
     child: Text(tr(text),
         style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)));
 
-Widget _layout(Widget preview, Widget form) => LayoutBuilder(
-    builder: (context, limits) => SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: limits.maxWidth >= 800
-            ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                SizedBox(width: 240, child: preview),
-                const SizedBox(width: 32),
-                Expanded(child: form)
-              ])
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [preview, const SizedBox(height: 20), form])));
+/// [controller]: lets the first field scroll the page back to the very top
+/// (focus only scrolled far enough to show the field, cutting the preview).
+Widget _layout(Widget preview, Widget form, {ScrollController? controller}) =>
+    LayoutBuilder(
+        builder: (context, limits) => SingleChildScrollView(
+            controller: controller,
+            padding: const EdgeInsets.all(24),
+            child: limits.maxWidth >= 800
+                ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    SizedBox(width: 240, child: preview),
+                    const SizedBox(width: 32),
+                    Expanded(child: form)
+                  ])
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [preview, const SizedBox(height: 20), form])));
 
 class AddProfileScreen extends StatefulWidget {
   const AddProfileScreen({super.key});
@@ -105,21 +110,40 @@ class _AddProfileScreenState extends State<AddProfileScreen> {
       _nameNode = FocusNode(),
       _colourNode = FocusNode(),
       _skipNode = FocusNode();
+  final _scroll = ScrollController();
   final _options = <ProfileCopy>{};
   int _colour = 0;
   bool _restricted = false, _saving = false;
   Uint8List? _photo;
+  @override
+  void initState() {
+    super.initState();
+    _nameNode.addListener(() {
+      if (_nameNode.hasFocus && _scroll.hasClients) _scroll.jumpTo(0);
+    });
+  }
+
   @override
   void dispose() {
     _name.dispose();
     _nameNode.dispose();
     _colourNode.dispose();
     _skipNode.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
-    if (_saving || _name.text.trim().isEmpty) return;
+    if (_saving) return;
+    // Create stays enabled (a disabled button can't take remote focus, so
+    // the page looked like it had no end): no name = say so, go to Name.
+    if (_name.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(tr('Enter a name first'))));
+      _nameNode.requestFocus();
+      return;
+    }
     setState(() => _saving = true);
     try {
       if (_restricted && !context.read<ParentalPin>().isSet) {
@@ -249,12 +273,14 @@ class _AddProfileScreenState extends State<AddProfileScreen> {
                                         }
                                       })),
                       const SizedBox(height: 20),
-                      OutlinedButton(
-                          onPressed: _saving || _name.text.trim().isEmpty
-                              ? null
-                              : _save,
-                          child: Text(tr(_saving ? 'Saving…' : 'Create'))),
-                    ]))));
+                      FilledButton(
+                          onPressed: _saving ? null : _save,
+                          child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              child: Text(tr(_saving ? 'Saving…' : 'Create'),
+                                  style: const TextStyle(fontSize: 18)))),
+                    ]),
+                controller: _scroll)));
   }
 }
 
@@ -269,12 +295,22 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
   final _name = TextEditingController(),
       _nameNode = FocusNode(),
       _colourNode = FocusNode();
+  final _scroll = ScrollController();
   bool _initialized = false;
+  @override
+  void initState() {
+    super.initState();
+    _nameNode.addListener(() {
+      if (_nameNode.hasFocus && _scroll.hasClients) _scroll.jumpTo(0);
+    });
+  }
+
   @override
   void dispose() {
     _name.dispose();
     _nameNode.dispose();
     _colourNode.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -446,6 +482,7 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
                                           'Switch to another profile before deleting this one')
                                       : null,
                               onTap: () => _delete(profile))),
-                    ]))));
+                    ]),
+                controller: _scroll)));
   }
 }

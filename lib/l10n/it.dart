@@ -174,6 +174,7 @@ const Map<String, String> kIt = {
   "{section}. Where the app opens after starting. With \"Resume last channel in full screen\" on, the channel then plays in the background instead.":
       "{section}. Dove si apre l'app all'avvio. Con «Riprendi l'ultimo canale a schermo intero» attivo, il canale viene riprodotto in sottofondo.",
   "Subtitle size": "Dimensione sottotitoli",
+  "Enter a name first": "Inserisci prima un nome",
   "Extra small": "Molto piccola",
   "Small": "Piccola",
   "Normal": "Normale",
