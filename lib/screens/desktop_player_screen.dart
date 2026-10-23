@@ -20,6 +20,7 @@ import '../services/watch_tracker.dart';
 import '../l10n/l10n.dart';
 import '../widgets/player_side_panel.dart';
 import '../widgets/desktop_subtitles.dart';
+import '../widgets/player_bar_title.dart';
 
 /// A deliberately standalone, Windows-only playback screen — see
 /// `pubspec.yaml`'s media_kit comment for why this exists at all:
@@ -509,10 +510,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    _currentChannel.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: PlayerBarTitle(
+                    title: _currentChannel.name,
                     style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,
