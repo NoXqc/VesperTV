@@ -338,6 +338,18 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                                 .read<AppPreferences>()
                                 .setHideVideoOnSports(v),
                           ),
+                          if (Platform.isAndroid)
+                            TvSwitchListTile(
+                              title: Text(tr('Green flicker fix (test)')),
+                              subtitle: Text(tr(
+                                  'For green flashes on the picture while the guide or a menu is over it (NVIDIA Shield). Unlike Compatibility video it keeps HDR. Applies from the next channel. If the guide or menus disappear behind the video, turn it off.')),
+                              value: context
+                                  .watch<AppPreferences>()
+                                  .videoMediaOverlay,
+                              onChanged: (v) => context
+                                  .read<AppPreferences>()
+                                  .setVideoMediaOverlay(v),
+                            ),
                           TvSwitchListTile(
                             title: Text(tr('Compatibility video')),
                             subtitle: Text(tr(

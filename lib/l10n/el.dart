@@ -16,6 +16,8 @@ const Map<String, String> kEl = {
   "Switches the TV to the video's resolution (1080p, 4K…) so the TV does the upscaling. Off: this device scales every video to its current resolution.": "Αλλάζει την τηλεόραση στην ανάλυση του βίντεο (1080p, 4K…) ώστε την κλιμάκωση να την κάνει η τηλεόραση. Ανενεργό: αυτή η συσκευή κλιμακώνει κάθε βίντεο στην τρέχουσα ανάλυσή της.",
   "Stream HDR": "HDR ροής",
   "No (SDR)": "Όχι (SDR)",
+  "Green flicker fix (test)": "Διόρθωση πράσινου τρεμοπαίγματος (δοκιμή)",
+  "For green flashes on the picture while the guide or a menu is over it (NVIDIA Shield). Unlike Compatibility video it keeps HDR. Applies from the next channel. If the guide or menus disappear behind the video, turn it off.": "Για πράσινες αναλαμπές στην εικόνα όταν ο οδηγός ή ένα μενού είναι από πάνω (NVIDIA Shield). Σε αντίθεση με το Συμβατό βίντεο, διατηρεί το HDR. Ισχύει από το επόμενο κανάλι. Αν ο οδηγός ή τα μενού χαθούν πίσω από το βίντεο, απενεργοποιήστε το.",
   '1 hour': '1 ώρα',
   '{h} hours': '{h} ώρες',
 

@@ -15,6 +15,8 @@ const Map<String, String> kFr = {
   "Switches the TV to the video's resolution (1080p, 4K…) so the TV does the upscaling. Off: this device scales every video to its current resolution.": "Passe le téléviseur à la résolution de la vidéo (1080p, 4K…) pour que le téléviseur fasse la mise à l’échelle. Désactivé : cet appareil met chaque vidéo à sa résolution actuelle.",
   "Stream HDR": "HDR du flux",
   "No (SDR)": "Non (SDR)",
+  "Green flicker fix (test)": "Correctif du scintillement vert (test)",
+  "For green flashes on the picture while the guide or a menu is over it (NVIDIA Shield). Unlike Compatibility video it keeps HDR. Applies from the next channel. If the guide or menus disappear behind the video, turn it off.": "Pour les éclairs verts sur l’image quand le guide ou un menu est par-dessus (NVIDIA Shield). Contrairement à Vidéo compatible, le HDR est conservé. S’applique à la prochaine chaîne. Si le guide ou les menus disparaissent derrière la vidéo, désactivez-le.",
   '1 hour': '1 heure',
   '{h} hours': '{h} heures',
 

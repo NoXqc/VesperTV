@@ -16,6 +16,8 @@ const Map<String, String> kIt = {
   "Switches the TV to the video's resolution (1080p, 4K…) so the TV does the upscaling. Off: this device scales every video to its current resolution.": "Porta il televisore alla risoluzione del video (1080p, 4K…) così l’upscaling lo fa il televisore. Disattivato: questo dispositivo scala ogni video alla sua risoluzione attuale.",
   "Stream HDR": "HDR dello stream",
   "No (SDR)": "No (SDR)",
+  "Green flicker fix (test)": "Correzione sfarfallio verde (test)",
+  "For green flashes on the picture while the guide or a menu is over it (NVIDIA Shield). Unlike Compatibility video it keeps HDR. Applies from the next channel. If the guide or menus disappear behind the video, turn it off.": "Per i lampi verdi sull’immagine quando la guida o un menu è sopra (NVIDIA Shield). A differenza di Video compatibile mantiene l’HDR. Si applica dal canale successivo. Se la guida o i menu spariscono dietro il video, disattivalo.",
   '1 hour': '1 ora',
   '{h} hours': '{h} ore',
 

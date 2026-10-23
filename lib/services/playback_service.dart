@@ -518,6 +518,19 @@ class PlaybackService extends ChangeNotifier {
   bool _reloadingCurrentChannel = false;
 
   static const _audioChannel = MethodChannel('vespertv/audio');
+  static const _videoChannel = MethodChannel('vespertv/video');
+
+  /// Tells the vendored player whether new main players' video surface is a
+  /// media overlay ([AppPreferences.videoMediaOverlay]); from the next channel.
+  static Future<void> setVideoMediaOverlay(bool enabled) async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _videoChannel
+          .invokeMethod<void>('setMediaOverlay', {'enabled': enabled});
+    } catch (e) {
+      debugPrint('PlaybackService: video layering not set: $e');
+    }
+  }
 
   /// Tells the vendored player whether new main players pass Dolby audio
   /// through over HDMI ([AppPreferences.audioPassthrough]). Read when a

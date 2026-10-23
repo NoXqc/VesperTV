@@ -16,6 +16,8 @@ const Map<String, String> kEs = {
   "Switches the TV to the video's resolution (1080p, 4K…) so the TV does the upscaling. Off: this device scales every video to its current resolution.": "Cambia el televisor a la resolución del vídeo (1080p, 4K…) para que el televisor haga el escalado. Desactivado: este dispositivo escala cada vídeo a su resolución actual.",
   "Stream HDR": "HDR del stream",
   "No (SDR)": "No (SDR)",
+  "Green flicker fix (test)": "Arreglo del parpadeo verde (prueba)",
+  "For green flashes on the picture while the guide or a menu is over it (NVIDIA Shield). Unlike Compatibility video it keeps HDR. Applies from the next channel. If the guide or menus disappear behind the video, turn it off.": "Para destellos verdes en la imagen cuando la guía o un menú está encima (NVIDIA Shield). A diferencia de Vídeo compatible, mantiene el HDR. Se aplica desde el siguiente canal. Si la guía o los menús desaparecen detrás del vídeo, desactívalo.",
   '1 hour': '1 hora',
   '{h} hours': '{h} horas',
 
