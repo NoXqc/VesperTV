@@ -45,3 +45,12 @@ Protocol references: [Stremio metadata](https://stremio.github.io/stremio-addon-
 [stream objects](https://stremio.github.io/stremio-addon-sdk/api/responses/stream.html),
 [YouTube IFrame API](https://developers.google.com/youtube/iframe_api_reference),
 [YouTube embedded-player requirements](https://developers.google.com/youtube/terms/required-minimum-functionality).
+
+## 2026-10-23 fixes (Claude, owner test)
+- Trailer played the movie: a stream add-on's `/stream/` answer (TorBox, Torrentio…) is the title
+  itself, and the first playable entry was taken. Now only `ytId` entries or rows labelled
+  "trailer" count.
+- No trailer add-on needed: after the user's add-ons, Cinemeta's own meta
+  (`v3-cinemeta.strem.io/meta/{type}/{imdb}.json`, `trailerStreams`/`trailers`, YouTube ids) is
+  used — what Stremio shows. Owner had tried `v3-channels.strem.io` (Stremio's YouTube *channel*
+  browser, type `channel`, no trailers); it's correctly refused as a Media Hub source.

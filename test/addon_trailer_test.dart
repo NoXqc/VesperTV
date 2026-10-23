@@ -32,11 +32,44 @@ void main() {
         'stream': ['movie']
       });
 
-  test('no configured add-ons means no built-in YouTube provider or lookup',
+  // Owner (2026-10-23): with no trailer add-on, use Cinemeta's own trailer
+  // ids (what Stremio shows) instead of finding nothing.
+  test('no add-ons: Cinemeta trailer ids for the exact IMDb id', () async {
+    final asked = <String>[];
+    final service = TrailerService(client: MockClient((r) async {
+      asked.add(r.url.toString());
+      return http.Response(
+          jsonEncode({
+            'meta': {
+              'id': 'tt123',
+              'type': 'movie',
+              'trailerStreams': [
+                {'title': 'Film', 'ytId': id}
+              ]
+            }
+          }),
+          200);
+    }));
+    expect((await service.resolve(request))!.queryParameters['v'], id);
+    expect(asked, ['https://v3-cinemeta.strem.io/meta/movie/tt123.json']);
+  });
+
+  test('a stream add-on answering with the title itself is never a trailer',
       () async {
     final service = TrailerService(
-        client: MockClient((_) async => throw StateError('No HTTP allowed')));
-    expect(await service.resolve(request), isNull);
+        client: MockClient((r) async => http.Response(
+            r.url.path.contains('/stream/')
+                ? jsonEncode({
+                    'streams': [
+                      {
+                        'name': 'TorBox 4K',
+                        'url': 'https://cdn.example/film.mkv'
+                      }
+                    ]
+                  })
+                : '{}',
+            200)));
+    expect(await service.resolve(request, addons: const [source]), isNull);
   });
 
   test(

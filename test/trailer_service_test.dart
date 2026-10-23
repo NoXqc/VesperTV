@@ -181,11 +181,13 @@ void main() {
           service.resolve(request, addons: addons)
         ]),
         [null, null]);
-    expect(calls, 1);
+    // One lookup's requests (add-on, then Cinemeta), shared by both callers.
+    final perLookup = calls;
+    expect(perLookup, greaterThan(0));
     await service.resolve(request, addons: addons);
-    expect(calls, 1);
+    expect(calls, perLookup);
     now = now.add(const Duration(minutes: 11));
     await service.resolve(request, addons: addons);
-    expect(calls, 2);
+    expect(calls, 2 * perLookup);
   });
 }

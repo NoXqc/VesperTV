@@ -132,9 +132,6 @@ class TrailerService {
         sources.add(source);
       }
     }
-    if (sources.isEmpty) {
-      return null; // No bundled YouTube source or implicit trailer provider.
-    }
     final imdb = await _imdb(r);
     if (imdb == null) return null;
     for (final source in sources) {
@@ -161,19 +158,38 @@ class TrailerService {
               ...ArchiveStream.trailersFromMetadata(meta)
             ];
           } else {
+            // A stream add-on answers with the title itself (TorBox,
+            // Torrentio…): only YouTube entries or links labelled as a
+            // trailer count, never "the first playable stream".
             candidates = [
               if (data['streams'] is List)
                 for (final row in data['streams'])
                   if (row is Map)
-                    if (ArchiveStream.fromJson(row) case final stream?) stream
+                    if (ArchiveStream.fromJson(row) case final stream?)
+                      if (stream.ytId != null || _labelledTrailer(row)) stream
             ];
           }
           if (candidates.isNotEmpty) return candidates.first.playbackUri;
         } catch (_) {/* A failing add-on does not block the next source. */}
       }
     }
+    // Cinemeta's meta carries the trailers Stremio itself shows
+    // (trailerStreams / trailers with YouTube ids) — no add-on needed.
+    try {
+      final data = await _get(
+          Uri.parse('https://v3-cinemeta.strem.io/meta/$type/$imdb.json'));
+      final meta = data['meta'];
+      if (meta is Map && meta['id'] == imdb) {
+        for (final id in TrailerLinks.fromMetadata(meta)) {
+          return _youtube(id);
+        }
+      }
+    } catch (_) {/* No trailer rather than a wrong one. */}
     return null;
   }
+
+  static bool _labelledTrailer(Map row) => [row['name'], row['title']]
+      .any((v) => v is String && v.toLowerCase().contains('trailer'));
 
   Future<String?> _imdb(TrailerRequest r) async {
     final type = r.series ? 'series' : 'movie';
