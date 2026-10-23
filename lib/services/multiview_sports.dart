@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../models/channel.dart';
 import '../models/sports.dart';
 import 'epg_service.dart';
@@ -58,12 +60,63 @@ class MultiviewSports {
   }) async {
     final all = await _games(
         storage: storage, playlist: playlist, epg: epg, liveOnly: false);
+    final now = DateTime.now();
+    for (final g in all) {
+      if (g.game.state != GameState.post) _lastUnfinished[g.game.id] = now;
+    }
+    return sortTodaysGames(
+        all
+            .where((g) => !isExpired(g.game, now, _lastUnfinished[g.game.id]))
+            .toList(),
+        follows: SportsFollows.load(storage),
+        favoriteLeagueId: storage.getSportsFavoriteLeague());
+  }
+
+  /// Last time each game was seen live or upcoming this session.
+  static final Map<String, DateTime> _lastUnfinished = {};
+
+  /// Home's Today's games drops a final 60 min after it ended (owner). The
+  /// feeds give no end time: it ended at the later of a typical length for
+  /// its sport and when it was last seen still running, so overtime keeps it.
+  @visibleForTesting
+  static bool isExpired(
+      SportsGame game, DateTime now, DateTime? lastUnfinished) {
+    if (game.state != GameState.post) return false;
+    final sport = game.league.espnPath.split('/').first;
+    final typical = switch (sport) {
+      'soccer' => const Duration(hours: 2),
+      'basketball' => const Duration(minutes: 150),
+      'hockey' => const Duration(minutes: 165),
+      'baseball' => const Duration(minutes: 195),
+      'football' => const Duration(minutes: 210),
+      _ => const Duration(hours: 3),
+    };
+    var ended = game.start.add(typical);
+    if (lastUnfinished != null && lastUnfinished.isAfter(ended)) {
+      ended = lastUnfinished;
+    }
+    return now.difference(ended) > const Duration(minutes: 60);
+  }
+
+  /// Home's Today's games order (owner): My Teams' games always first,
+  /// then the starred league (League manager's favourite), then the rest;
+  /// within each, live, then upcoming, then final, by start time.
+  @visibleForTesting
+  static List<LiveGameChannel> sortTodaysGames(List<LiveGameChannel> games,
+      {required SportsFollows follows, String? favoriteLeagueId}) {
+    int tier(SportsGame g) => follows.involves(g)
+        ? 0
+        : g.league.id == favoriteLeagueId
+            ? 1
+            : 2;
     int rank(GameState s) => switch (s) {
           GameState.live => 0,
           GameState.pre => 1,
           _ => 2,
         };
-    return [...all]..sort((a, b) {
+    return [...games]..sort((a, b) {
+        final t = tier(a.game).compareTo(tier(b.game));
+        if (t != 0) return t;
         final r = rank(a.game.state).compareTo(rank(b.game.state));
         return r != 0 ? r : a.game.start.compareTo(b.game.start);
       });
