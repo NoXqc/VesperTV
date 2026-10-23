@@ -41,8 +41,8 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    (originals also on drive `E:\`). Files are CRLF here (autocrlf) — "LF will be replaced by CRLF"
    warnings are normal. `flutter pub get` dirties generated plugin files under linux/macos/windows —
    `git checkout` them before committing.
-   **VPS** (NOX-VPS, `ssh root@107.175.31.191`, key auth from `~/.ssh/id_ed25519`, works from the
-   Bash tool): runs the pairing relay + transfer vault (`tools/pair_relay/`, `pair.vespertv.app`)
+   **VPS** (NOX-VPS; login + details in the owner's private `C:\Users\aarse\VPS.md`, key auth from
+   `~/.ssh/id_ed25519`, works from the Bash tool): runs the pairing relay + transfer vault (`tools/pair_relay/`, `pair.vespertv.app`)
    **and the owner's streams (Tuliprox) behind the same nginx** — back up first, `nginx -t`, then
    `systemctl reload nginx` (never restart). Deploy steps: `tools/pair_relay/README.md`.
 3. Use Bash (Git Bash) or PowerShell. In Git Bash, **prefix adb commands that take `/sdcard`-style
