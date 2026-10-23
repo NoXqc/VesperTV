@@ -92,6 +92,13 @@ public class PlatformViewVideoPlayer extends VideoPlayer {
           builder.setLoadControl(loadControlBuilder.build());
           androidx.media3.exoplayer.trackselection.DefaultTrackSelector trackSelector =
               new androidx.media3.exoplayer.trackselection.DefaultTrackSelector(context);
+          // Opt-in test (VideoLayering.setTunneling): tunneled playback. ExoPlayer only
+          // tunnels when the device's video + audio decoders support it for these tracks;
+          // otherwise it plays normally (StatsBridge reports which).
+          if (io.flutter.plugins.videoplayer.VideoLayering.isTunneling()) {
+            trackSelector.setParameters(
+                trackSelector.buildUponParameters().setTunnelingEnabled(true));
+          }
           // Root cause of the multiview/mini-player audio bleed-through
           // (confirmed via two A/B diagnostic builds): DefaultAudioSink
           // auto-detects the device's real HDMI passthrough capability

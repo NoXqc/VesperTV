@@ -116,6 +116,18 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Tunneled playback test (Android, off by default, device-only): asks the
+  /// main player to tunnel video to the hardware plane (vendored
+  /// `VideoLayering.setTunneling`). AMD's Fire TV Cube decoded 4K HDR to a
+  /// 1080p SDR copy through the normal surface (2026-10-23).
+  bool get videoTunneling => _storage.getVideoTunneling();
+
+  void setVideoTunneling(bool value) {
+    _storage.setVideoTunneling(value);
+    unawaited(PlaybackService.setVideoTunneling(value));
+    notifyListeners();
+  }
+
   void setAudioPassthrough(bool value) {
     _storage.setAudioPassthrough(value);
     unawaited(PlaybackService.setAudioPassthrough(value));

@@ -350,6 +350,18 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                                   .read<AppPreferences>()
                                   .setVideoMediaOverlay(v),
                             ),
+                          if (Platform.isAndroid)
+                            TvSwitchListTile(
+                              title: Text(tr('Tunneled playback (test)')),
+                              subtitle: Text(tr(
+                                  "For 4K HDR that doesn't switch the TV into HDR (Fire TV Cube). Sends the video straight to the box's video hardware. Applies from the next channel. The Data pool shows whether the box accepted it. Turn it off if a channel won't start.")),
+                              value: context
+                                  .watch<AppPreferences>()
+                                  .videoTunneling,
+                              onChanged: (v) => context
+                                  .read<AppPreferences>()
+                                  .setVideoTunneling(v),
+                            ),
                           TvSwitchListTile(
                             title: Text(tr('Compatibility video')),
                             subtitle: Text(tr(

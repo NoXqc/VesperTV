@@ -4,9 +4,11 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:video_player_hdr/video_player_hdr.dart';
 
 import '../l10n/l10n.dart';
+import '../services/app_preferences.dart';
 import '../services/subtitle_tracks.dart';
 
 /// "Data pool" (Settings > General > Data pool display, off by default): a
@@ -369,6 +371,11 @@ class _DataPoolCardState extends State<DataPoolCard> {
                         _last!['hdr'] == 'dolby_vision'
                             ? _dolbyVision(_last!)
                             : _hdrKind(_last!['hdr'] as String)),
+                  // Only once asked for (Settings > Background video).
+                  if (_last?['tunneling'] is bool &&
+                      context.read<AppPreferences>().videoTunneling)
+                    _row(tr('Tunneled playback'),
+                        _last!['tunneling'] == true ? tr('Yes') : tr('No')),
                   _row(
                       tr('Quality variants'),
                       heights.length > 1

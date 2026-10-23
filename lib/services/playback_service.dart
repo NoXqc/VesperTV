@@ -541,6 +541,18 @@ class PlaybackService extends ChangeNotifier {
     }
   }
 
+  /// Tells the vendored player whether new main players ask for tunneled
+  /// playback ([AppPreferences.videoTunneling]); from the next channel.
+  static Future<void> setVideoTunneling(bool enabled) async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _videoChannel
+          .invokeMethod<void>('setTunneling', {'enabled': enabled});
+    } catch (e) {
+      debugPrint('PlaybackService: tunneling not set: $e');
+    }
+  }
+
   /// Tells the vendored player whether new main players pass Dolby audio
   /// through over HDMI ([AppPreferences.audioPassthrough]). Read when a
   /// player is created, so it applies from the next channel.

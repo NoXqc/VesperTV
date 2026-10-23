@@ -59,6 +59,8 @@ final class StatsBridge implements MethodChannel.MethodCallHandler {
     }
     // The playing video format: Data pool's "Stream HDR" row and Match frame rate (Dart
     // DisplayMatch) read it. frameRate is -1 when the stream doesn't declare one (live TS).
+    // Whether the playing tracks really are tunneled (the test switch only asks for it).
+    m.put("tunneling", player.getExoPlayer().isTunnelingEnabled());
     @Nullable Format format = player.getExoPlayer().getVideoFormat();
     if (format != null) {
       m.put("hdr", hdrKind(format));

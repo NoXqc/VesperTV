@@ -273,6 +273,10 @@ class AppConstants {
   /// (device-only; AppPreferences.videoMediaOverlay).
   static const String keyVideoMediaOverlay = 'vesper_video_media_overlay';
 
+  /// Settings > Interface > Background video: tunneled playback test
+  /// (device-only; AppPreferences.videoTunneling).
+  static const String keyVideoTunneling = 'vesper_video_tunneling';
+
   /// Settings > Interface > Display (device-only; DisplayMatch).
   static const String keyMatchFrameRate = 'vesper_match_frame_rate';
   static const String keyMatch5060Only = 'vesper_match_5060_only';

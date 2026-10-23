@@ -35,7 +35,8 @@ class StorageService {
   /// Only a newly created viewer is a valid destination. Main is read-only.
   Future<void> copyMainToViewer(String id, Set<ProfileCopy> options,
       {required bool restricted}) async {
-    if (id == AppConstants.mainViewerId || !ProfilePhotos.validId(id) ||
+    if (id == AppConstants.mainViewerId ||
+        !ProfilePhotos.validId(id) ||
         getViewerProfiles().any((p) => p.id == id)) {
       throw ArgumentError('Invalid destination');
     }
@@ -400,6 +401,10 @@ class StorageService {
       _prefs.getBool(AppConstants.keyVideoMediaOverlay) ?? false;
   Future<void> setVideoMediaOverlay(bool value) =>
       _prefs.setBool(AppConstants.keyVideoMediaOverlay, value);
+  bool getVideoTunneling() =>
+      _prefs.getBool(AppConstants.keyVideoTunneling) ?? false;
+  Future<void> setVideoTunneling(bool value) =>
+      _prefs.setBool(AppConstants.keyVideoTunneling, value);
 
   bool getMatchFrameRate() =>
       _prefs.getBool(AppConstants.keyMatchFrameRate) ?? false;
@@ -892,6 +897,7 @@ class StorageService {
     AppConstants.keyCompatVideo,
     AppConstants.keyAudioPassthrough,
     AppConstants.keyVideoMediaOverlay,
+    AppConstants.keyVideoTunneling,
     AppConstants.keyMatchFrameRate,
     AppConstants.keyMatch5060Only,
     AppConstants.keyMatchResolution,
