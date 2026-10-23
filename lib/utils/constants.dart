@@ -322,6 +322,7 @@ class AppConstants {
   static const String keySportsHideScores = 'vesper_sports_hide_scores';
   static const String keySportsChannelPicks = 'vesper_sports_channel_picks';
   static const String keySportsFollowedTeams = 'vesper_sports_followed_teams';
+  static const String keyGameReminders = 'vesper_game_reminders';
 
   /// Per viewer: the favourite league (League manager, hold OK): Sports Trak
   /// opens on it and its games lead the player side panel's Live now.

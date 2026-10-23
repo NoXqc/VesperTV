@@ -397,3 +397,21 @@ info version rejected — keep the VS layout). Fire Stick check pending.
   only searches games the hub hasn't (`initialGames` / `initialMatches`).
 - Owner-tested on the Formuler (+321..+329): stats load fast (focus prefetch), backdrop opacity
   0.10 "perfect", channels instant on re-entering the hub.
+
+
+## Per-game reminders (Codex, 2026-10-23; unreleased)
+
+- Hold OK on an upcoming followed-team game, including My Teams, then choose
+  **Remind me**. The same menu offers **Cancel reminder** afterwards.
+- `GameReminders` persists opt-in games per viewer, on this device only; reminders
+  are excluded from transfer/backup. No additional provider requests or OS alarms.
+- `GameReminderOverlay` lives above the root Navigator, including fullscreen
+  players. Popups at 15 minutes before and at scheduled start dismiss after 12
+  seconds, queue simultaneous games, and never request playback focus.
+- App must be foregrounded. On resume, skip advance alerts over one minute late
+  and start alerts over two minutes late; delivery state prevents repeats.
+- Fresh My Teams schedules reconcile changed start times and remove cancelled,
+  postponed, suspended or completed games. With no fresh schedule, the saved
+  scheduled time is used. Profile switches clear visible/queued notices.
+- Tests cover timing, persistence, viewer isolation, rescheduling/cancellation,
+  focus during a pushed stream, background/resume, and narrow phone layout.

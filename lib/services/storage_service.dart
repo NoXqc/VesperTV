@@ -35,7 +35,8 @@ class StorageService {
   /// Only a newly created viewer is a valid destination. Main is read-only.
   Future<void> copyMainToViewer(String id, Set<ProfileCopy> options,
       {required bool restricted}) async {
-    if (id == AppConstants.mainViewerId || !ProfilePhotos.validId(id) ||
+    if (id == AppConstants.mainViewerId ||
+        !ProfilePhotos.validId(id) ||
         getViewerProfiles().any((p) => p.id == id)) {
       throw ArgumentError('Invalid destination');
     }
@@ -708,6 +709,13 @@ class StorageService {
 
   /// [AppConstants.keyMyGroups]'s raw JSON (parsed by `UserGroups`).
   String? getMyGroups() => _prefs.getString(_vk(AppConstants.keyMyGroups));
+
+  /// Pending game reminders stay on this device and belong to one viewer.
+  String? getGameReminders({String? viewerId}) =>
+      _prefs.getString(_vk(AppConstants.keyGameReminders, viewerId: viewerId));
+  Future<void> setGameReminders(String json, {String? viewerId}) => _prefs
+      .setString(_vk(AppConstants.keyGameReminders, viewerId: viewerId), json);
+
   String? getSportsChannelLists({String? viewerId}) => _prefs
       .getString(_vk(AppConstants.keySportsChannelLists, viewerId: viewerId));
   Future<void> setSportsChannelLists(String json, {String? viewerId}) =>
@@ -914,8 +922,12 @@ class StorageService {
   };
 
   /// Prefix-matched skips: the per-playlist full-sync timestamps (a copied
-  /// one would tell the new, empty device its catalog is fresh).
-  static const _transferSkipPrefixes = [AppConstants.keyLastFullSyncAt];
+  /// one would tell the new, empty device its catalog is fresh), and transient
+  /// device-local game reminders (restoring them could replay old alerts).
+  static const _transferSkipPrefixes = [
+    AppConstants.keyLastFullSyncAt,
+    AppConstants.keyGameReminders,
+  ];
 
   static bool _transferable(String key) =>
       !_transferSkipExact.contains(key) &&

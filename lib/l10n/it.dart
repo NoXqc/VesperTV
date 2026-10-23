@@ -6,6 +6,18 @@
 /// the code; Italian plurals don't work that way (canale/canali), so those
 /// strings are phrased to avoid it.
 const Map<String, String> kIt = {
+  "Remind me": "Ricordamelo",
+  "Cancel reminder": "Annulla promemoria",
+  "15 minutes before and at game time (while VesperTV is open)":
+      "15 minuti prima e all’inizio della partita (con VesperTV aperto)",
+  "Reminder set": "Promemoria impostato",
+  "Reminder cancelled": "Promemoria annullato",
+  "Could not save reminder.": "Impossibile salvare il promemoria.",
+  "This game has already started.": "Questa partita è già iniziata.",
+  "Your team: {home} vs {away}": "La tua squadra: {home} contro {away}",
+  "Starts in 15 minutes": "Inizia tra 15 minuti",
+  "Is about to start": "Sta per iniziare",
+
   "Display": "Schermo",
   "Match the TV to the video's frame rate and resolution": "Adatta il televisore alla frequenza dei fotogrammi e alla risoluzione del video",
   "Match frame rate": "Adatta frequenza fotogrammi",
