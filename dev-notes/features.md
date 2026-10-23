@@ -259,3 +259,27 @@ Reference schemas: https://developer.themoviedb.org/reference/tv-series-details 
 https://github.com/Stremio/stremio-addon-sdk/blob/master/docs/api/responses/meta.md
 Fixtures and widget checks: `test/episode_air_date_test.dart`. Real-device check pending;
 IPTV without future metadata needs a known TMDB id plus the existing user TMDB key.
+
+
+## Media Hub movie resume source (Codex, 2026-10-23; unreleased)
+
+- `archive_playback.dart` records the selected movie stream through
+  `ArchiveResumeSource`. Resume with an unfinished saved position reuses that
+  choice from the freshly fetched stream list instead of reopening the picker.
+- Match the same add-on and exact URL fingerprint first, then a unique full
+  name/title fingerprint (allows refreshed signed Debrid/TorBox links). Never
+  guess from quality alone or choose a different file silently.
+- Resume probes the fresh selection with a one-byte range GET, following redirects
+  once and passing the resulting URL to either platform's player. Missing,
+  ambiguous or unreachable selection falls back to available choices; an HTTP
+  failure is excluded. A sole alternative plays, multiple alternatives use the
+  existing picker, none uses the existing no-playable-stream message.
+- Store hashes only, never signed URLs, source manifest credentials or file labels.
+  Keys contain the same channel id as progress and use the viewer suffix, so Media
+  Hub transfer exclusion and viewer deletion also cover them.
+- Original selections from older builds were not saved: choose once after this
+  change. Play from beginning / completed titles keep normal source selection.
+  Movie progress ids and episode/auto-next behavior are unchanged.
+- HTTP reachability cannot promise codec support or detect every provider's
+  successful-HTTP placeholder clip. Existing player/ArchiveReadyWatch handles
+  errors/clips after startup. No real-account/native playback verified here.

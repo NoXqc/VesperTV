@@ -351,6 +351,10 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   Faded selected-team logo behind the popup text. Global non-focus-stealing
   popups 15 minutes before and at scheduled start while foregrounded, per viewer/device.
   Details and limits: `dev-notes/sports-tab.md` (Per-game reminders).
+- **Codex, unreleased: Media Hub movie resume source** — `codex/media-hub-resume-source`
+  saves the selected provider/file as viewer-scoped fingerprints, re-matches fresh
+  stream links on resume, and falls back to alternatives if absent/unreachable.
+  Details/limits: `dev-notes/features.md` (Media Hub movie resume source).
 - **Shipped: 1.0.38 (`+419`, 2026-10-23, latest; test builds `+414`/`+416`/`+417` = pre-releases
   `1.0.37-test.*`, not deleted yet — owner OK needed):** Home page (profile cards that shrink
   while browsing rows, hero, Today's games: My Teams → starred league → rest, finals gone 60 min

@@ -799,6 +799,16 @@ class StorageService {
   String _durationKey(String channelId) =>
       _vk('${AppConstants.keyLastDurationPrefix}$channelId');
 
+  /// Fingerprints only: never persist expiring add-on/CDN links here.
+  String? getArchiveResumeSource(String channelId, {String? viewerId}) =>
+      _prefs.getString(
+          _vk('vesper_archive_resume_source_$channelId', viewerId: viewerId));
+  Future<void> setArchiveResumeSource(String channelId, String json,
+          {String? viewerId}) =>
+      _prefs.setString(
+          _vk('vesper_archive_resume_source_$channelId', viewerId: viewerId),
+          json);
+
   int getLastPosition(String channelId) =>
       _prefs.getInt(_positionKey(channelId)) ?? 0;
   Future<void> setLastPosition(String channelId, int milliseconds) =>

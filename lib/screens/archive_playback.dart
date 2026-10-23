@@ -10,6 +10,8 @@ import '../models/channel.dart';
 import '../models/series_details.dart';
 import '../models/xtream_series.dart';
 import '../services/archive_service.dart';
+import '../services/archive_resume_source.dart';
+import '../services/storage_service.dart';
 import '../services/desktop_mini_player.dart';
 import '../services/playback_service.dart';
 import '../services/tracker_api.dart';
@@ -152,6 +154,10 @@ Future<void> playArchiveTitle(
 }) async {
   final service = context.read<ArchiveService>();
   final playback = context.read<PlaybackService>();
+  final resumeSource = episode == null
+      ? ArchiveResumeSource(context.read<StorageService>(),
+          ArchiveService.channelId(source, meta.id, episode: false))
+      : null;
   List<ArchiveStreamOption> options;
   try {
     options = await service.streams(source, meta, episode: episode);
@@ -160,11 +166,22 @@ Future<void> playArchiveTitle(
   }
   if (!context.mounted) return;
   if (options.isEmpty) return _noStream(context);
-  // One stream plays at once; several (qualities, languages…) = pick.
-  var picked = options.length == 1
-      ? options.single
-      : await pickArchiveStream(context, options);
-  if (picked == null || !context.mounted) return;
+  final restored = await resumeSource?.restore(options);
+  if (!context.mounted || (resumeSource != null && !resumeSource.isCurrent)) {
+    return;
+  }
+  options = restored?.options ?? options;
+  if (options.isEmpty) return _noStream(context);
+  // Resume the exact prior choice; absent/unavailable choices use the picker.
+  var picked = restored?.picked ??
+      (options.length == 1
+          ? options.single
+          : await pickArchiveStream(context, options));
+  if (picked == null ||
+      !context.mounted ||
+      (resumeSource != null && !resumeSource.isCurrent)) {
+    return;
+  }
   if (picked.stream.ytId case final video?) {
     await playYouTubeVideo(context, video, meta.name);
     return;
@@ -172,8 +189,16 @@ Future<void> playArchiveTitle(
   final tracked =
       service.channelFor(source, meta, picked.stream, episode: episode);
   _track(tracked, meta, episode);
-  final channel = tracked.copyWith(url: await _playUrl(picked));
-  if (!context.mounted) return;
+  final channel =
+      tracked.copyWith(url: restored?.url ?? await _playUrl(picked));
+  if (resumeSource != null) {
+    try {
+      await resumeSource.remember(picked);
+    } catch (_) {/* Playback still works if preferences cannot be written. */}
+  }
+  if (!context.mounted || (resumeSource != null && !resumeSource.isCurrent)) {
+    return;
+  }
   // Extras' "Recently watched" row (the show, for an episode).
   unawaited(service.recordWatched(source, meta));
 
