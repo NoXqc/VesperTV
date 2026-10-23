@@ -119,7 +119,51 @@ void main() {
       expect(find.byTooltip('Back'), findsNothing);
       expect(find.byType(TvHomeScreen), findsOneWidget);
       expect(tester.takeException(), isNull);
-    });
+    },
+        variant: const TargetPlatformVariant(
+            {TargetPlatform.android, TargetPlatform.windows}));
+  }
+
+  for (final systemBack in [false, true]) {
+    testWidgets(
+        '${systemBack ? 'System' : 'Touch'} Back reopens columns when focus cannot move during resize',
+        (tester) async {
+      await pumpHome(tester, const Size(840, 960));
+      await tester.tap(find.text('Test group'));
+      await tester.pumpAndSettle();
+      final columns = tester
+          .widgetList<FocusScope>(find.byType(FocusScope))
+          .map((w) => w.focusNode)
+          .whereType<FocusScopeNode>()
+          .where((n) => n.debugLabel == 'tv-col1' || n.debugLabel == 'tv-tabs')
+          .toList();
+      expect(columns, hasLength(2));
+      // Touch navigation must work even while the newly laid-out column
+      // cannot accept focus (for example during fold/unfold reparenting).
+      for (final node in columns) {
+        node.canRequestFocus = false;
+      }
+      await tester.pump();
+      expect(find.byTooltip('Back'), findsOneWidget);
+      expect(find.text('Test group').hitTestable(), findsNothing);
+      if (systemBack) {
+        await tester.binding.handlePopRoute();
+      } else {
+        await tester.tap(find.byTooltip('Back'));
+      }
+      await tester.pumpAndSettle();
+      expect(find.text('Test group').hitTestable(), findsOneWidget);
+      expect(find.byTooltip('Back'), findsOneWidget);
+      if (systemBack) {
+        await tester.binding.handlePopRoute();
+      } else {
+        await tester.tap(find.byTooltip('Back'));
+      }
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Back'), findsNothing);
+      expect(find.byType(TvHomeScreen), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.android));
   }
 
   testWidgets('compact portrait retains its existing single back arrow',
@@ -131,7 +175,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byIcon(Icons.arrow_back), findsNothing);
     expect(find.byType(TvHomeScreen), findsOneWidget);
-  });
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
   testWidgets('folding and unfolding keeps a way back from the guide',
       (tester) async {
@@ -150,7 +194,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Test group').hitTestable(), findsOneWidget);
     expect(tester.takeException(), isNull);
-  });
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
   testWidgets('real TV keeps remote navigation without a header back button',
       (tester) async {
@@ -158,5 +202,5 @@ void main() {
     await tester.tap(find.text('Test group'));
     await tester.pumpAndSettle();
     expect(find.byTooltip('Back'), findsNothing);
-  });
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 }
