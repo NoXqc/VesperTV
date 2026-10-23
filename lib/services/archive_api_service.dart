@@ -76,6 +76,24 @@ class ArchiveApiService {
     final resources = resourceList
         .map((e) => e is Map ? e['name']?.toString() : e?.toString())
         .toSet();
+    final imdbResources = <String, List<String>>{};
+    for (final resource in resourceList) {
+      final row =
+          resource is Map ? resource : <String, dynamic>{'name': resource};
+      final name = row['name'];
+      if (name != 'meta' && name != 'stream') continue;
+      final prefixes = row['idPrefixes'] ?? j['idPrefixes'] ?? const [];
+      if (prefixes is! List ||
+          (prefixes.isNotEmpty && !prefixes.any((p) => p.toString() == 'tt'))) {
+        continue;
+      }
+      final types = row['types'] ?? j['types'] ?? const [];
+      if (types is! List) continue;
+      imdbResources[name.toString()] = [
+        for (final t in types)
+          if (t == 'movie' || t == 'series') t.toString()
+      ];
+    }
     // A manifest can omit 'catalog' from resources and still list catalogs.
     final hasStreams = resources.contains('stream');
     final catalogs = <ArchiveCatalog>[];
@@ -99,7 +117,9 @@ class ArchiveApiService {
           p.toString(),
       };
       final lists = catalogs.where((c) => c.wireType == null).toList();
-      if (lists.isEmpty ||
+      final metadataOnly =
+          lists.isEmpty && (imdbResources['meta']?.isNotEmpty ?? false);
+      if ((lists.isEmpty && !metadataOnly) ||
           !(prefixes.isEmpty || prefixes.any((p) => p.startsWith('tt')))) {
         throw ArchiveApiException('This source offers no streams.');
       }
@@ -112,6 +132,7 @@ class ArchiveApiService {
         logoUrl: j['logo']?.toString(),
         catalogs: lists,
         listOnly: true,
+        imdbResources: imdbResources,
       );
     }
     String? providerUrl;
@@ -159,6 +180,7 @@ class ArchiveApiService {
       logoUrl: j['logo']?.toString(),
       catalogs: catalogs,
       catalogProviderUrl: providerUrl,
+      imdbResources: imdbResources,
     );
   }
 
@@ -213,7 +235,7 @@ class ArchiveApiService {
 
   /// Direct, playable streams for a movie id or an episode id
   /// (`{id}:{season}:{episode}`, or whatever id the series meta's video
-  /// carries). Torrent/YouTube/external entries are skipped — see
+  /// carries). Torrent and external browser entries are skipped — see
   /// [ArchiveStream].
   Future<List<ArchiveStream>> fetchStreams(
       String baseUrl, ArchiveType type, String videoId,
@@ -223,28 +245,8 @@ class ArchiveApiService {
     final out = <ArchiveStream>[];
     for (final s in (j['streams'] as List? ?? const [])) {
       if (s is! Map) continue;
-      final url = s['url']?.toString();
-      if (url == null) continue;
-      final uri = Uri.tryParse(url);
-      if (uri == null || !(uri.scheme == 'http' || uri.scheme == 'https')) {
-        continue;
-      }
-      String? text(Object? v) {
-        final t = v?.toString().trim();
-        return (t == null || t.isEmpty) ? null : t;
-      }
-
-      String? sub;
-      final subs = s['subtitles'];
-      if (subs is List && subs.isNotEmpty && subs.first is Map) {
-        sub = (subs.first as Map)['url']?.toString();
-      }
-      out.add(ArchiveStream(
-        url: url,
-        name: text(s['name']),
-        title: text(s['title']) ?? text(s['description']),
-        subtitleUrl: sub,
-      ));
+      final stream = ArchiveStream.fromJson(s);
+      if (stream != null) out.add(stream);
     }
     return out;
   }

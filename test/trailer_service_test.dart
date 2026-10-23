@@ -8,6 +8,14 @@ import 'package:nox_iptv/services/trailer_service.dart';
 
 void main() {
   const id = 'AbCdEfGhI12';
+  const addons = [
+    ArchiveSource(
+        manifestUrl: 'https://addon.example/manifest.json',
+        name: 'User trailer source',
+        imdbResources: {
+          'meta': ['movie', 'series']
+        })
+  ];
   test(
       'YouTube normalization rejects arbitrary hosts, schemes and malformed ids',
       () {
@@ -87,18 +95,21 @@ void main() {
             }),
             200)));
     expect(
-        await service
-            .resolve(const TrailerRequest(title: 'Film (2014)', series: false)),
+        await service.resolve(
+            const TrailerRequest(title: 'Film (2014)', series: false),
+            addons: addons),
         isNull);
     expect(
-        await service
-            .resolve(const TrailerRequest(title: 'Different', series: false)),
+        await service.resolve(
+            const TrailerRequest(title: 'Different', series: false),
+            addons: addons),
         isNull);
   });
   test(
       'known IMDb id uses the right media type and validates returned identity',
       () async {
     final service = TrailerService(client: MockClient((request) async {
+      expect(request.url.host, 'addon.example');
       expect(request.url.path, '/meta/series/tt123.json');
       return http.Response(
           jsonEncode({
@@ -113,44 +124,44 @@ void main() {
           200);
     }));
     expect(
-        (await service.resolve(const TrailerRequest(
-                title: 'Show', series: true, imdbId: 'tt123')))!
+        (await service.resolve(
+                const TrailerRequest(
+                    title: 'Show', series: true, imdbId: 'tt123'),
+                addons: addons))!
             .queryParameters['v'],
         id);
   });
-  test('TMDB prefers official trailers and the chosen language', () async {
+  test(
+      'TMDB resolves identity but trailer playback comes only from user add-ons',
+      () async {
+    final hosts = <String>[];
     final service = TrailerService(client: MockClient((request) async {
-      expect(request.url.path, '/3/tv/10/videos');
+      hosts.add(request.url.host);
+      if (request.url.host == 'api.themoviedb.org') {
+        expect(request.url.path, '/3/tv/10/external_ids');
+        return http.Response(jsonEncode({'imdb_id': 'tt123'}), 200);
+      }
+      expect(request.url.host, 'addon.example');
+      expect(request.url.queryParameters, isEmpty);
+      expect(request.url.path, '/meta/series/tt123.json');
       return http.Response(
           jsonEncode({
-            'results': [
-              {
-                'site': 'YouTube',
-                'key': 'OtherFilm12',
-                'type': 'Teaser',
-                'official': true,
-                'iso_639_1': 'fr'
-              },
-              {
-                'site': 'YouTube',
-                'key': id,
-                'type': 'Trailer',
-                'official': true,
-                'iso_639_1': 'fr'
-              },
-            ]
+            'meta': {
+              'id': 'tt123',
+              'type': 'series',
+              'trailerStreams': [
+                {'ytId': id}
+              ]
+            }
           }),
           200);
     }));
-    expect(
-        (await service.resolve(const TrailerRequest(
-                title: 'Show',
-                series: true,
-                tmdbId: '10',
-                tmdbKey: 'test-key',
-                language: 'fr')))!
-            .queryParameters['v'],
-        id);
+    final result = await service.resolve(
+        const TrailerRequest(
+            title: 'Show', series: true, tmdbId: '10', tmdbKey: 'test-key'),
+        addons: addons);
+    expect(result!.queryParameters['v'], id);
+    expect(hosts, ['api.themoviedb.org', 'addon.example']);
   });
   test('concurrent negative lookups deduplicate, expire and tolerate failures',
       () async {
@@ -165,13 +176,16 @@ void main() {
     const request =
         TrailerRequest(title: 'Film', series: false, imdbId: 'tt123');
     expect(
-        await Future.wait([service.resolve(request), service.resolve(request)]),
+        await Future.wait([
+          service.resolve(request, addons: addons),
+          service.resolve(request, addons: addons)
+        ]),
         [null, null]);
     expect(calls, 1);
-    await service.resolve(request);
+    await service.resolve(request, addons: addons);
     expect(calls, 1);
     now = now.add(const Duration(minutes: 11));
-    await service.resolve(request);
+    await service.resolve(request, addons: addons);
     expect(calls, 2);
   });
 }

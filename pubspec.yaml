@@ -58,6 +58,8 @@ dependencies:
   # AppUpdateService's own doc comment), so it hands the release zip's
   # URL to the system browser instead and lets the user grab it that way.
   url_launcher: ^6.3.1
+  # Official YouTube IFrame in Android System WebView / Windows WebView2.
+  flutter_inappwebview: ^6.1.5
   # Windows only — this app never had real OS-level fullscreen on Windows
   # at all; the native runner (windows/runner/win32_window.cpp) only ever
   # shows a normal bordered window, so even maximizing it still leaves the

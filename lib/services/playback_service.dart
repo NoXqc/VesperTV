@@ -278,6 +278,7 @@ class PlaybackService extends ChangeNotifier {
   }
 
   Future<void> _recordRecentlyPlayed(Channel channel) async {
+    if (channel.transientPlayback) return;
     _recentlyPlayed.removeWhere((c) => c.id == channel.id);
     _recentlyPlayed.insert(0, channel);
     if (_recentlyPlayed.length > _maxRecentlyPlayed) {
@@ -376,7 +377,9 @@ class PlaybackService extends ChangeNotifier {
     // above (a live channel getting treated as if it had a saved VOD
     // resume position).
     final isLive = Channel.isLiveId(channel.rawId);
-    final savedPositionMs = isLive ? 0 : _storage.getLastPosition(channel.id);
+    final savedPositionMs = isLive || channel.transientPlayback
+        ? 0
+        : _storage.getLastPosition(channel.id);
     final newController = streamController(
       openUrl,
       closedCaptionFile: channel.subtitleUrl != null
@@ -421,7 +424,9 @@ class PlaybackService extends ChangeNotifier {
       // there was nothing here telling the OS playback is active.
       unawaited(WakelockPlus.enable());
       // Trakt/Simkl, for Media Hub titles (a no-op otherwise).
-      unawaited(WatchTracker.instance.started(channel.id));
+      if (!channel.transientPlayback) {
+        unawaited(WatchTracker.instance.started(channel.id));
+      }
       if (isLive) unawaited(_recordRealResolution(newController, channel));
       unawaited(DisplayMatch.start(
           _storage, newController, () => controller == newController));
@@ -474,6 +479,7 @@ class PlaybackService extends ChangeNotifier {
       // reading one back.
       if (c != null &&
           ch != null &&
+          !ch.transientPlayback &&
           c.value.isInitialized &&
           !Channel.isLiveId(ch.rawId) &&
           // A "being downloaded" clip: no resume point, and no auto-advance
@@ -837,6 +843,7 @@ class PlaybackService extends ChangeNotifier {
     final ch = currentChannel;
     final old = controller;
     if (ch != null &&
+        !ch.transientPlayback &&
         old != null &&
         old.value.isInitialized &&
         !Channel.isLiveId(ch.rawId) &&

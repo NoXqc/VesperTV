@@ -223,7 +223,12 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
                   series: false,
                   year: int.tryParse(meta.year ?? ''),
                   imdbId: meta.imdb,
-                  supplied: meta.trailers,
+                  supplied: widget.source.suppliesOwnMetadata
+                      ? meta.trailers
+                      : const [],
+                  suppliedStreams: widget.source.suppliesOwnMetadata
+                      ? meta.trailerStreams
+                      : const [],
                   language: L10n.code,
                   tmdbKey:
                       context.read<StorageService>().getTmdbApiKey() ?? '')),

@@ -31,6 +31,7 @@ class Channel {
     this.backdropUrl,
     this.providerPosterUrl,
     this.providerBackdropUrl,
+    this.transientPlayback = false,
   });
 
   /// Stable identifier: the M3U `tvg-id` when present (used to match EPG
@@ -62,6 +63,22 @@ class Channel {
   final String name;
   final String group;
   final String url;
+
+  /// One-off trailer playback: no library history, resume or watch tracking.
+  /// In memory only; trailers are never persisted as catalog entries.
+  final bool transientPlayback;
+
+  factory Channel.trailer({required String title, required String url}) {
+    final raw = 'arc_vod_trailer_${DateTime.now().microsecondsSinceEpoch}';
+    return Channel(
+        id: 'trailer::$raw',
+        rawId: raw,
+        playlistId: 'trailer',
+        name: title,
+        group: '',
+        url: url,
+        transientPlayback: true);
+  }
   final String? logoUrl;
   final String? subtitleUrl;
   bool isFavorite;
@@ -249,6 +266,7 @@ class Channel {
         backdropUrl: backdropUrl,
         providerPosterUrl: providerPosterUrl,
         providerBackdropUrl: providerBackdropUrl,
+        transientPlayback: transientPlayback,
       );
 
   Map<String, dynamic> toJson() => {

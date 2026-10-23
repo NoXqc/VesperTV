@@ -869,7 +869,7 @@ class ArchiveService extends ChangeNotifier {
             ? _servers.streams(s, videoId)
             : await _api.fetchStreams(s.baseUrl, meta.type, videoId,
                 wire: meta.wire)) {
-          if (urls.add(st.url)) {
+          if (urls.add(st.identity)) {
             out.add(ArchiveStreamOption(source: s, stream: st));
           }
         }

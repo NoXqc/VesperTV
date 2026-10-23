@@ -1844,4 +1844,10 @@ const Map<String, String> kIt = {
   "Unable to open trailer": "Impossibile aprire il trailer",
   "Next episode airs {date}": "Il prossimo episodio va in onda il {date}",
   "Next episode: {code} · {date}": "Prossimo episodio: {code} · {date}",
+  "YouTube playback needs Android System WebView or Microsoft Edge WebView2.": "La riproduzione di YouTube richiede Android System WebView o Microsoft Edge WebView2.",
+  "YouTube could not play this video ({code}).": "YouTube non può riprodurre questo video ({code}).",
+  "Open in YouTube": "Apri in YouTube",
+  "Back 10 seconds": "Indietro di 10 secondi",
+  "Forward 10 seconds": "Avanti di 10 secondi",
+  "Play / pause": "Riproduci / pausa",
 };

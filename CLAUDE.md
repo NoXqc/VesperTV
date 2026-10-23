@@ -332,6 +332,11 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-22)
+- **In-app trailers (Codex, 2026-10-23):** official YouTube IFrame on Android/Windows;
+  user-installed add-ons only, Xtream supplied trailers first, strict IMDb identity. Direct
+  trailers use transient normal-player channels (no history/tracking). See
+  `dev-notes/external-trailers.md` for origin/Referer, WebView prerequisites and controls.
+  Native playback/remote checks pending; no build/push/release.
 - **Codex next episode air date** (`codex/next-episode-air-date`, unreleased): shared series
   header shows the next known airing from supplied episode dates, or exact-id TMDB (user key) /
   Cinemeta metadata. Hidden when unknown; no playback/watch-state changes. Details and limitations:

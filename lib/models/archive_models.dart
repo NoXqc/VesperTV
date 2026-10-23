@@ -334,6 +334,7 @@ class ArchiveSource {
     this.tracker,
     this.otherChoice,
     this.listOnly = false,
+    this.imdbResources = const {},
   });
 
   final String manifestUrl;
@@ -356,12 +357,26 @@ class ArchiveSource {
 
   bool get streamOnly => catalogProviderUrl != null;
 
+  /// Built-in catalog metadata may identify a title but is not an implicitly
+  /// installed YouTube trailer add-on. Only the user's own source supplies media.
+  bool get suppliesOwnMetadata => !streamOnly && !listOnly && tracker == null;
+
   /// An add-on with catalogs of IMDb ids and no streams of its own
   /// ("Streaming Catalogs": Netflix, Disney+… lists; user request,
   /// 2026-10-21). Like a tracker's lists: its rows come from its own
   /// `/catalog/`, metas from [ArchiveCatalogProvider], and Play asks every
   /// stream-only source.
   final bool listOnly;
+
+  /// Manifest-declared resources accepting IMDb movie/series ids. Old stored
+  /// stream-only sources still have a known stream capability.
+  final Map<String, List<String>> imdbResources;
+  bool supportsImdb(String resource, String type) =>
+      imdbResources[resource]?.contains(type) == true ||
+      (resource == 'stream' &&
+          imdbResources.isEmpty &&
+          streamOnly &&
+          catalogs.any((c) => c.type.wire == type));
 
   /// The user's "Show under Other" switch (Settings > Media Hub sources):
   /// true = the whole source only behind the genre filter's Other entry
@@ -423,6 +438,7 @@ class ArchiveSource {
         tracker: tracker ?? this.tracker,
         otherChoice: otherChoice ?? this.otherChoice,
         listOnly: listOnly,
+        imdbResources: imdbResources,
       );
 
   Map<String, dynamic> toJson() => {
@@ -437,6 +453,7 @@ class ArchiveSource {
         if (tracker != null) 'tracker': tracker!.toJson(),
         if (otherChoice != null) 'other': otherChoice,
         if (listOnly) 'listOnly': true,
+        if (imdbResources.isNotEmpty) 'imdbResources': imdbResources,
       };
 
   factory ArchiveSource.fromJson(Map<String, dynamic> j) {
@@ -466,6 +483,16 @@ class ArchiveSource {
       tracker: TrackerLogin.fromJson(j['tracker']),
       otherChoice: j['other'] is bool ? j['other'] as bool : null,
       listOnly: j['listOnly'] == true,
+      imdbResources: {
+        for (final entry in (j['imdbResources'] is Map
+            ? (j['imdbResources'] as Map).entries
+            : <MapEntry>[]))
+          if (entry.value is List)
+            entry.key.toString(): [
+              for (final t in entry.value)
+                if (t == 'movie' || t == 'series') t.toString()
+            ],
+      },
     );
   }
 }
@@ -490,6 +517,7 @@ class ArchiveMeta {
     this.wireType,
     this.imdbId,
     this.trailers = const [],
+    this.trailerStreams = const [],
   });
 
   final String id;
@@ -500,6 +528,7 @@ class ArchiveMeta {
   /// see [imdb].
   final String? imdbId;
   final List<String> trailers;
+  final List<ArchiveStream> trailerStreams;
 
   /// The title's IMDb id (`tt…`), if known — what Trakt/Simkl are told.
   String? get imdb {
@@ -560,6 +589,7 @@ class ArchiveMeta {
       wireType: wire == null || wire == type.wire ? null : wire,
       imdbId: _str(j['imdb_id']),
       trailers: TrailerLinks.fromMetadata(j),
+      trailerStreams: ArchiveStream.trailersFromMetadata(j),
       name: name,
       posterUrl: _str(j['poster']),
       backgroundUrl: _str(j['background']),
@@ -588,9 +618,12 @@ class ArchiveMeta {
         'id': id,
         'type': wire,
         'name': name,
-        if (trailers.isNotEmpty)
+        if (trailers.isNotEmpty || trailerStreams.isNotEmpty)
           'trailerStreams': [
-            for (final id in trailers) {'ytId': id}
+            for (final id in trailers) {'ytId': id},
+            for (final stream in trailerStreams)
+              if (stream.ytId == null || !trailers.contains(stream.ytId))
+                stream.toJson(),
           ],
         if (imdbId != null) 'imdb_id': imdbId,
         if (posterUrl != null) 'poster': posterUrl,
@@ -644,12 +677,62 @@ class ArchiveVideo {
 }
 
 /// One playable stream from `/stream/`. Only direct http(s) URLs are kept —
-/// torrent (`infoHash`), YouTube (`ytId`) and `externalUrl` entries are
-/// dropped by [ArchiveApiService.fetchStreams]: the app plays files, it
-/// doesn't fetch torrents.
+/// YouTube (`ytId`) uses the official embed; direct URLs use the normal
+/// player. Torrent (`infoHash`) and external browser entries are not playable.
 class ArchiveStream {
   const ArchiveStream(
-      {required this.url, this.name, this.title, this.subtitleUrl});
+      {this.url = '', this.ytId, this.name, this.title, this.subtitleUrl});
+
+  final String? ytId;
+  String get identity => ytId == null ? url : 'yt:$ytId';
+  Uri? get playbackUri => ytId != null
+      ? (TrailerLinks.videoId(ytId) == null
+          ? null
+          : Uri.https('www.youtube.com', '/watch', {'v': ytId!}))
+      : Uri.tryParse(url);
+
+  static ArchiveStream? fromJson(Map row) {
+    final video =
+        TrailerLinks.videoId(row['ytId']) ?? TrailerLinks.videoId(row['url']);
+    final uri = row['url'] is String ? Uri.tryParse(row['url']) : null;
+    if (video == null &&
+        (uri == null ||
+            !['http', 'https'].contains(uri.scheme) ||
+            uri.host.isEmpty)) {
+      return null;
+    }
+    return ArchiveStream(
+        url: video == null ? uri.toString() : '',
+        ytId: video,
+        name: ArchiveMeta._str(row['name']),
+        title: ArchiveMeta._str(row['title'] ?? row['description']),
+        subtitleUrl: row['subtitles'] is List &&
+                (row['subtitles'] as List).isNotEmpty &&
+                row['subtitles'][0] is Map
+            ? ArchiveMeta._str(row['subtitles'][0]['url'])
+            : null);
+  }
+
+  Map<String, dynamic> toJson() => {
+        if (ytId != null) 'ytId': ytId,
+        if (url.isNotEmpty) 'url': url,
+        if (name != null) 'name': name,
+        if (title != null) 'title': title
+      };
+
+  static List<ArchiveStream> trailersFromMetadata(Map data) => [
+        for (final key in ['trailers', 'trailerStreams', 'RemoteTrailers'])
+          if (data[key] is List)
+            for (final row in data[key])
+              if (row is Map && row['type'] != 'Clip')
+                if (fromJson({
+                  ...row,
+                  if (row['source'] != null) 'ytId': row['source'],
+                  if (row['Url'] != null) 'url': row['Url']
+                })
+                    case final stream?)
+                  stream,
+      ];
 
   final String url;
 

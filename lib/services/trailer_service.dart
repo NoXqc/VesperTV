@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/trailer.dart';
+import '../models/archive_models.dart';
+import 'archive_api_service.dart';
 import '../utils/display_title.dart';
 
 class TrailerRequest {
@@ -11,6 +13,7 @@ class TrailerRequest {
       this.imdbId,
       this.tmdbId,
       this.supplied = const [],
+      this.suppliedStreams = const [],
       this.language = 'en',
       this.tmdbKey = ''});
   final String title;
@@ -19,6 +22,7 @@ class TrailerRequest {
   final String? imdbId;
   final String? tmdbId;
   final List<String> supplied;
+  final List<ArchiveStream> suppliedStreams;
   final String language;
   final String tmdbKey;
   String get cacheKey => jsonEncode([
@@ -28,6 +32,7 @@ class TrailerRequest {
         imdbId,
         tmdbId,
         supplied,
+        [for (final stream in suppliedStreams) stream.identity],
         language,
         tmdbKey.hashCode
       ]);
@@ -44,15 +49,20 @@ class TrailerService {
   final DateTime Function() _now;
   final _cache = <String, ({DateTime until, Uri? url})>{};
   final _pending = <String, Future<Uri?>>{};
-  Future<Uri?> resolve(TrailerRequest request) {
-    final key = request.cacheKey;
+  final _capabilities = <String, ({DateTime until, ArchiveSource source})>{};
+  Future<Uri?> resolve(TrailerRequest request,
+      {List<ArchiveSource> addons = const []}) {
+    final key = jsonEncode([
+      request.cacheKey,
+      for (final s in addons.where((s) => s.enabled)) [s.key, s.imdbResources]
+    ]);
     final cached = _cache[key];
     if (cached != null && cached.until.isAfter(_now())) {
       return Future.value(cached.url);
     }
     return _pending.putIfAbsent(
         key,
-        () => _resolve(request)
+        () => _resolve(request, addons)
                 .timeout(const Duration(seconds: 15), onTimeout: () => null)
                 .catchError((_) => null)
                 .then((url) {
@@ -75,56 +85,112 @@ class TrailerService {
   }
 
   Uri _youtube(String id) => Uri.https('www.youtube.com', '/watch', {'v': id});
-  Future<Uri?> _resolve(TrailerRequest r) async {
+  Future<Uri?> _resolve(TrailerRequest r, List<ArchiveSource> addons) async {
     for (final raw in r.supplied) {
       if (TrailerLinks.videoId(raw) case final id?) return _youtube(id);
     }
-    final type = r.series ? 'series' : 'movie';
-    final tmdbType = r.series ? 'tv' : 'movie';
-    if (r.tmdbKey.trim().isNotEmpty) {
-      try {
-        var tmdb = r.tmdbId;
-        if (tmdb == null && r.imdbId != null) {
-          final found = await _get(Uri.https(
-              'api.themoviedb.org',
-              '/3/find/${r.imdbId}',
-              {'api_key': r.tmdbKey, 'external_source': 'imdb_id'}));
-          final matches =
-              found[r.series ? 'tv_results' : 'movie_results'] as List? ?? [];
-          if (matches.length == 1) {
-            tmdb = (matches.single as Map)['id']?.toString();
-          }
-        }
-        if (tmdb != null && RegExp(r'^\d+$').hasMatch(tmdb)) {
-          final data = await _get(
-              Uri.https('api.themoviedb.org', '/3/$tmdbType/$tmdb/videos', {
-            'api_key': r.tmdbKey,
-            'language': r.language,
-            'include_video_language': '${r.language},en,null'
-          }));
-          final videos = (data['results'] as List? ?? [])
-              .whereType<Map>()
-              .where((v) =>
-                  v['site'] == 'YouTube' &&
-                  ['Trailer', 'Teaser'].contains(v['type']) &&
-                  TrailerLinks.videoId(v['key']) != null)
-              .toList();
-          int rank(Map v) =>
-              (v['type'] == 'Trailer' ? 100 : 0) +
-              (v['official'] == true ? 40 : 0) +
-              (v['iso_639_1'] == r.language
-                  ? 20
-                  : v['iso_639_1'] == 'en'
-                      ? 10
-                      : 0);
-          videos.sort((a, b) => rank(b).compareTo(rank(a)));
-          if (videos.isNotEmpty) {
-            return _youtube(TrailerLinks.videoId(videos.first['key'])!);
-          }
-        }
-      } catch (_) {/* Missing/invalid key or metadata never blocks Play. */}
+    for (final stream in r.suppliedStreams) {
+      final uri = stream.playbackUri;
+      if (uri != null &&
+          ['http', 'https'].contains(uri.scheme) &&
+          uri.host.isNotEmpty) {
+        return uri;
+      }
     }
+    final type = r.series ? 'series' : 'movie';
+    final timer = Stopwatch()..start();
+    final sources = <ArchiveSource>[];
+    for (var source in addons) {
+      if (!source.enabled || source.server != null || source.tracker != null) {
+        continue;
+      }
+      // Older saved sources predate resource declarations. Re-read only their
+      // own manifest in memory; never rewrite user settings or assume IMDb support.
+      if (source.imdbResources.isEmpty && !source.streamOnly) {
+        final cached = _capabilities[source.key];
+        if (cached != null && cached.until.isAfter(_now())) {
+          source = cached.source;
+        } else {
+          if (timer.elapsed.inSeconds >= 12) continue;
+          try {
+            final fresh = await ArchiveApiService(client: _client)
+                .fetchManifest(source.manifestUrl)
+                .timeout(const Duration(seconds: 5));
+            if (_capabilities.length >= 128) {
+              _capabilities.remove(_capabilities.keys.first);
+            }
+            _capabilities[source.key] =
+                (until: _now().add(const Duration(hours: 6)), source: fresh);
+            source = fresh;
+          } catch (_) {
+            continue;
+          }
+        }
+      }
+      if (source.supportsImdb('meta', type) ||
+          source.supportsImdb('stream', type)) {
+        sources.add(source);
+      }
+    }
+    if (sources.isEmpty) {
+      return null; // No bundled YouTube source or implicit trailer provider.
+    }
+    final imdb = await _imdb(r);
+    if (imdb == null) return null;
+    for (final source in sources) {
+      for (final resource in ['meta', 'stream']) {
+        if (!source.supportsImdb(resource, type) ||
+            timer.elapsed.inSeconds >= 12) {
+          continue;
+        }
+        try {
+          final base = source.baseUrl.replaceAll(RegExp(r'/+$'), '');
+          final data =
+              await _get(Uri.parse('$base/$resource/$type/$imdb.json'));
+          List<ArchiveStream> candidates;
+          if (resource == 'meta') {
+            final meta = data['meta'];
+            if (meta is! Map ||
+                meta['id'] != imdb ||
+                (meta['type'] != null && meta['type'] != type)) {
+              continue;
+            }
+            candidates = [
+              for (final id in TrailerLinks.fromMetadata(meta))
+                ArchiveStream(ytId: id),
+              ...ArchiveStream.trailersFromMetadata(meta)
+            ];
+          } else {
+            candidates = [
+              if (data['streams'] is List)
+                for (final row in data['streams'])
+                  if (row is Map)
+                    if (ArchiveStream.fromJson(row) case final stream?) stream
+            ];
+          }
+          if (candidates.isNotEmpty) return candidates.first.playbackUri;
+        } catch (_) {/* A failing add-on does not block the next source. */}
+      }
+    }
+    return null;
+  }
+
+  Future<String?> _imdb(TrailerRequest r) async {
+    final type = r.series ? 'series' : 'movie';
     var imdb = r.imdbId;
+    if (imdb != null && RegExp(r'^tt\d+$').hasMatch(imdb)) return imdb;
+    if (r.tmdbKey.trim().isNotEmpty &&
+        RegExp(r'^[1-9]\d*$').hasMatch(r.tmdbId ?? '')) {
+      try {
+        final data = await _get(Uri.https(
+            'api.themoviedb.org',
+            '/3/${r.series ? 'tv' : 'movie'}/${r.tmdbId}/external_ids',
+            {'api_key': r.tmdbKey}));
+        final id = data['imdb_id'];
+        if (id is String && RegExp(r'^tt\d+$').hasMatch(id)) return id;
+      } catch (_) {/* Strict catalog identity can still resolve the title. */}
+    }
+    imdb = null;
     if (imdb == null) {
       final year = r.year ??
           int.tryParse(
@@ -148,16 +214,7 @@ class TrailerService {
       if (matches.length != 1) return null;
       imdb = matches.single['id']?.toString();
     }
-    if (imdb == null || !RegExp(r'^tt\d+$').hasMatch(imdb)) return null;
-    final meta = (await _get(
-        Uri.https('v3-cinemeta.strem.io', '/meta/$type/$imdb.json')))['meta'];
-    if (meta is! Map ||
-        meta['id'] != imdb ||
-        (meta['type'] != null && meta['type'] != type)) {
-      return null;
-    }
-    final ids = TrailerLinks.fromMetadata(meta);
-    return ids.isEmpty ? null : _youtube(ids.first);
+    return imdb != null && RegExp(r'^tt\d+$').hasMatch(imdb) ? imdb : null;
   }
 
   static String normalizeTitle(String title) => title

@@ -910,6 +910,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
               tmdbId: widget.series.tmdbId,
               imdbId: widget.imdbId,
               supplied: _details?.trailers ?? const [],
+              suppliedStreams: _details?.trailerStreams ?? const [],
               language: L10n.code,
               tmdbKey: context.read<StorageService>().getTmdbApiKey() ?? '')),
       if (next != null && next.resume)

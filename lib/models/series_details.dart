@@ -1,4 +1,5 @@
 import 'channel.dart';
+import 'archive_models.dart';
 
 /// What `get_series_info` returns for one show: the playable episodes per
 /// season, the series plot (kept as its own field — the browse hero and the
@@ -17,6 +18,7 @@ class SeriesDetails {
   const SeriesDetails({
     this.backdropUrls = const [],
     this.trailers = const [],
+    this.trailerStreams = const [],
     this.coverUrl,
     this.genre,
     this.cast,
@@ -32,6 +34,7 @@ class SeriesDetails {
   /// panel sends none.
   final List<String> backdropUrls;
   final List<String> trailers;
+  final List<ArchiveStream> trailerStreams;
 
   /// `info.cover` — the poster again, sometimes a bigger copy than the one
   /// the `get_series` list carried.

@@ -20,6 +20,7 @@ import '../widgets/tv_menu_tile.dart';
 import 'desktop_player_screen.dart';
 import 'player_screen.dart';
 import 'series_detail_screen.dart';
+import 'youtube_playback.dart';
 
 /// Starting playback of Archive titles, shared by the movie page
 /// (`ArchiveDetailScreen`) and Archive shows, which open the regular
@@ -164,6 +165,10 @@ Future<void> playArchiveTitle(
       ? options.single
       : await pickArchiveStream(context, options);
   if (picked == null || !context.mounted) return;
+  if (picked.stream.ytId case final video?) {
+    await playYouTubeVideo(context, video, meta.name);
+    return;
+  }
   final tracked =
       service.channelFor(source, meta, picked.stream, episode: episode);
   _track(tracked, meta, episode);
@@ -178,6 +183,7 @@ Future<void> playArchiveTitle(
     final next = await service.streams(source, meta, episode: video);
     if (next.isEmpty) return null;
     final o = preferredArchiveStream(next, picked);
+    if (o.stream.ytId != null) return null;
     picked = o; // the episode after follows this one
     final ch = service.channelFor(source, meta, o.stream, episode: video);
     _track(ch, meta, video);
@@ -239,7 +245,9 @@ Future<void> openArchiveSeries(
       episodes: episodes,
       plot: meta.description,
       details: SeriesDetails(
-        trailers: meta.trailers,
+        trailers: source.suppliesOwnMetadata ? meta.trailers : const [],
+        trailerStreams:
+            source.suppliesOwnMetadata ? meta.trailerStreams : const [],
         backdropUrls: [if (meta.backgroundUrl != null) meta.backgroundUrl!],
         coverUrl: meta.posterUrl,
         genre: meta.genres.isEmpty ? null : meta.genres.join(', '),

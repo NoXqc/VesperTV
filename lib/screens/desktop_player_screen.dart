@@ -201,7 +201,9 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     }
     if (_isLive) _DesktopLiveHistory.record(_currentChannel);
     // Trakt/Simkl, for Media Hub titles (a no-op otherwise).
-    unawaited(WatchTracker.instance.started(_currentChannel.id));
+    if (!_currentChannel.transientPlayback) {
+      unawaited(WatchTracker.instance.started(_currentChannel.id));
+    }
     // DesktopPlayerScreen deliberately never calls PlaybackService.play()
     // (see this class's own doc comment) — meaning nothing on Windows
     // ever recorded a "last channel" at all, since StorageService
@@ -237,6 +239,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   /// Trakt/Simkl: where [_currentChannel] stopped (this player keeps no
   /// resume positions, so it reports straight from mpv's state).
   void _reportStopped() {
+    if (_currentChannel.transientPlayback) return;
     final state = _player.state;
     // A Media Hub source's "being downloaded" clip isn't the title.
     if (ArchiveReadyWatch.instance.ended(_currentChannel.id, state.duration)) {

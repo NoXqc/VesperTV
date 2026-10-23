@@ -2452,4 +2452,10 @@ const Map<String, String> kEl = {
   "Unable to open trailer": "Δεν ήταν δυνατό το άνοιγμα του τρέιλερ",
   "Next episode airs {date}": "Το επόμενο επεισόδιο προβάλλεται στις {date}",
   "Next episode: {code} · {date}": "Επόμενο επεισόδιο: {code} · {date}",
+  "YouTube playback needs Android System WebView or Microsoft Edge WebView2.": "Η αναπαραγωγή YouTube απαιτεί Android System WebView ή Microsoft Edge WebView2.",
+  "YouTube could not play this video ({code}).": "Το YouTube δεν μπορεί να αναπαράγει αυτό το βίντεο ({code}).",
+  "Open in YouTube": "Άνοιγμα στο YouTube",
+  "Back 10 seconds": "Πίσω 10 δευτερόλεπτα",
+  "Forward 10 seconds": "Μπροστά 10 δευτερόλεπτα",
+  "Play / pause": "Αναπαραγωγή / παύση",
 };

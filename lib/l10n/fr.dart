@@ -1843,4 +1843,10 @@ const Map<String, String> kFr = {
   "Unable to open trailer": "Impossible d’ouvrir la bande-annonce",
   "Next episode airs {date}": "Le prochain épisode sera diffusé le {date}",
   "Next episode: {code} · {date}": "Prochain épisode : {code} · {date}",
+  "YouTube playback needs Android System WebView or Microsoft Edge WebView2.": "La lecture YouTube nécessite Android System WebView ou Microsoft Edge WebView2.",
+  "YouTube could not play this video ({code}).": "YouTube ne peut pas lire cette vidéo ({code}).",
+  "Open in YouTube": "Ouvrir dans YouTube",
+  "Back 10 seconds": "Reculer de 10 secondes",
+  "Forward 10 seconds": "Avancer de 10 secondes",
+  "Play / pause": "Lecture / pause",
 };

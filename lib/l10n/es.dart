@@ -1840,4 +1840,10 @@ const Map<String, String> kEs = {
   "Unable to open trailer": "No se pudo abrir el tráiler",
   "Next episode airs {date}": "El próximo episodio se emite el {date}",
   "Next episode: {code} · {date}": "Próximo episodio: {code} · {date}",
+  "YouTube playback needs Android System WebView or Microsoft Edge WebView2.": "La reproducción de YouTube requiere Android System WebView o Microsoft Edge WebView2.",
+  "YouTube could not play this video ({code}).": "YouTube no puede reproducir este vídeo ({code}).",
+  "Open in YouTube": "Abrir en YouTube",
+  "Back 10 seconds": "Retroceder 10 segundos",
+  "Forward 10 seconds": "Avanzar 10 segundos",
+  "Play / pause": "Reproducir / pausar",
 };
