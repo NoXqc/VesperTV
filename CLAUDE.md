@@ -49,7 +49,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
 4. `flutter analyze` must report the baseline **17** info-level issues (no errors). Don't add new ones.
-5. Check the current state of releases: `gh release list` (latest should be `1.0.38` unless noted
+5. Check the current state of releases: `gh release list` (latest should be `1.0.39` unless noted
    in §13).
 
 ## 3. Layout (what matters)
@@ -122,7 +122,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
 - Android requires `versionCode` (the `+N` in `pubspec.yaml`) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
-  (Currently **+419**, 1.0.38.)
+  (Currently **+422**, 1.0.39.)
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
 Only release when the owner asks ("update the latest", "cut it", "fully release"). Outline: bump `pubspec.yaml` (versionCode `+N` must always rise) → `flutter analyze` → build APK + verify signature (§5) → build Windows + zip → **commit & push first** → `gh release upload <tag> app-release.apk VesperTV-windows-x64.zip --clobber` → `gh release edit <tag> --tag <new> --notes-file …` → make sure the tag equals HEAD → verify downloads/hashes, the OLD `NoXqc/NoXPlayer` redirect links and AFTVnews code `1760256`. The updater offers any *different* tag (`_isDifferent`), never leave two `.zip`/`.apk` assets on the latest release.
@@ -336,22 +336,27 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-23)
-- **Codex lower player bar clock** (`codex/player-bar-clock`, unreleased): current local time
+- **Release 1.0.39 (`+422`, 2026-10-23):** integrates the five completed Codex branches
+  below: Windows Home Back arrow, player clock, all Open on startup destinations,
+  per-game/automatic team reminders with faded-logo popup, and Media Hub movie
+  resume from the selected stream. Tunneling test +420 is excluded. Native-device
+  checks remain pending except the owner-confirmed Windows Home arrow.
+- **Codex lower player bar clock** (`codex/player-bar-clock`, included in 1.0.39): current local time
   beside the channel/stream title on Android/TV and Windows (`widgets/player_bar_title.dart`),
   using the existing 12/24-hour setting. No player changes; native device check pending.
-- **Codex Open on startup flash fix** (`codex/start-on-home`, unreleased): all destinations
+- **Codex Open on startup flash fix** (`codex/start-on-home`, included in 1.0.39): all destinations
   resolve before the first frame. Home/Media Hub/Sports use the initial route stack; Movies/TV
   Shows initialize the keyed TV root on the chosen tab. Keeps Back navigation, selected-tab
   focus, hidden-tab/crash fallback and Sports background-video workaround. Routing is in
   `utils/startup_routes.dart`; Fast startup/splash budgets unchanged. Native checks pending.
 
-- **Codex, unreleased: game reminders** — `codex/game-reminders`: hold an upcoming
+- **Codex, included in 1.0.39: game reminders** — `codex/game-reminders`: hold an upcoming
   My Teams/followed-team game > Remind me / Cancel reminder, or automatic reminders
   for every game from either followed team (30-minute foreground schedule refresh).
   Faded selected-team logo behind the popup text. Global non-focus-stealing
   popups 15 minutes before and at scheduled start while foregrounded, per viewer/device.
   Details and limits: `dev-notes/sports-tab.md` (Per-game reminders).
-- **Codex, unreleased: Media Hub movie resume source** — `codex/media-hub-resume-source`
+- **Codex, included in 1.0.39: Media Hub movie resume source** — `codex/media-hub-resume-source`
   saves the selected provider/file as viewer-scoped fingerprints, re-matches fresh
   stream links on resume, and falls back to alternatives if absent/unreachable.
   Details/limits: `dev-notes/features.md` (Media Hub movie resume source).
