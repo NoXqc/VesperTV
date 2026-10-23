@@ -32,6 +32,8 @@ public class VideoPlayerPlugin implements FlutterPlugin, AndroidVideoPlayerApi {
   @Nullable private StatsBridge statsBridge;
   // VesperTV patch: opt-in HDMI audio passthrough, see AudioPassthrough.
   @Nullable private AudioPassthrough audioPassthrough;
+  // VesperTV patch: opt-in Shield green-flicker fix, see VideoLayering.
+  @Nullable private VideoLayering videoLayering;
 
   /** Register this with the v2 embedding for the plugin to respond to lifecycle callbacks. */
   public VideoPlayerPlugin() {}
@@ -50,6 +52,7 @@ public class VideoPlayerPlugin implements FlutterPlugin, AndroidVideoPlayerApi {
     subtitleBridge = new SubtitleBridge(binding.getBinaryMessenger(), videoPlayers);
     statsBridge = new StatsBridge(binding.getBinaryMessenger(), videoPlayers);
     audioPassthrough = new AudioPassthrough(binding.getBinaryMessenger());
+    videoLayering = new VideoLayering(binding.getBinaryMessenger());
 
     binding
         .getPlatformViewRegistry()
@@ -72,6 +75,10 @@ public class VideoPlayerPlugin implements FlutterPlugin, AndroidVideoPlayerApi {
     if (statsBridge != null) {
       statsBridge.dispose();
       statsBridge = null;
+    }
+    if (videoLayering != null) {
+      videoLayering.dispose();
+      videoLayering = null;
     }
     if (audioPassthrough != null) {
       audioPassthrough.dispose();

@@ -41,6 +41,8 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
   @UnstableApi @Nullable protected DefaultTrackSelector trackSelector;
   // VesperTV patch: set by VideoPlayerPlugin from the asset, read by StatsBridge.
   @Nullable StreamStats streamStats;
+  // VesperTV patch: frame rate from the first frames' timestamps (Match frame rate).
+  final FrameRateProbe frameRateProbe = new FrameRateProbe();
 
   private final Handler mainHandler = new Handler(Looper.getMainLooper());
   private boolean isDisposed = false;
@@ -83,6 +85,7 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
       trackSelector = (DefaultTrackSelector) exoPlayer.getTrackSelector();
     }
 
+    exoPlayer.setVideoFrameMetadataListener(frameRateProbe);
     exoPlayer.setMediaItem(mediaItem);
     exoPlayer.prepare();
     exoPlayerEventListener = createExoPlayerEventListener(exoPlayer, surfaceProducer);

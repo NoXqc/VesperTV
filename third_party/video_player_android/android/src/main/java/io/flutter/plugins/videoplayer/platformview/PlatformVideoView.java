@@ -15,6 +15,7 @@ import androidx.annotation.OptIn;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.exoplayer.ExoPlayer;
 import io.flutter.plugin.platform.PlatformView;
+import io.flutter.plugins.videoplayer.VideoLayering;
 
 /**
  * A class used to create a native video view that can be embedded in a Flutter app. It wraps an
@@ -35,7 +36,8 @@ public final class PlatformVideoView implements PlatformView {
 
     setupSurfaceWithCallback(exoPlayer);
 
-    if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.N_MR1) {
+    // VesperTV patch: also when the opt-in green-flicker fix is on (VideoLayering).
+    if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.N_MR1 || VideoLayering.isMediaOverlay()) {
       // Avoid blank space instead of a video on Android versions below 8 by adjusting video's
       // z-layer within the Android view hierarchy:
       surfaceView.setZOrderMediaOverlay(true);

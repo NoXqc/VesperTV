@@ -28,6 +28,8 @@ const Map<String, String> kFr = {
   "Edit Home rows…": "Modifier les rangées de l’accueil…",
   "Home rows": "Rangées de l’accueil",
   "Nothing here yet. Watch a channel, a movie or a show and it shows up on Home.": "Rien pour l’instant. Regardez une chaîne, un film ou une série et ils apparaîtront ici.",
+  "Green flicker fix (test)": "Correctif du scintillement vert (test)",
+  "For green flashes on the picture while the guide or a menu is over it (NVIDIA Shield). Unlike Compatibility video it keeps HDR. Applies from the next channel. If the guide or menus disappear behind the video, turn it off.": "Pour les éclairs verts sur l’image quand le guide ou un menu est par-dessus (NVIDIA Shield). Contrairement à Vidéo compatible, le HDR est conservé. S’applique à la prochaine chaîne. Si le guide ou les menus disparaissent derrière la vidéo, désactivez-le.",
   '1 hour': '1 heure',
   '{h} hours': '{h} heures',
 

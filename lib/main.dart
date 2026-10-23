@@ -361,6 +361,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       PlaybackService.textureVideo = _preferences.compatVideo;
       unawaited(
           PlaybackService.setAudioPassthrough(_preferences.audioPassthrough));
+      unawaited(
+          PlaybackService.setVideoMediaOverlay(_preferences.videoMediaOverlay));
 
       _catalogDb = CatalogDatabase();
 

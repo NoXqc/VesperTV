@@ -35,22 +35,36 @@ class DisplayMatch {
       bool Function() isCurrent) async {
     if (!enabled(storage)) return;
     try {
-      // The first frames: the size is 0 and the counters start late.
-      await Future<void>.delayed(const Duration(seconds: 2));
-      if (!isCurrent()) return;
       final id = SubtitleTracks.playerIdOf(c);
-      final first = await _sample(id);
-      if (first == null) return;
-      var fps = (first['frameRate'] as num?)?.toDouble() ?? -1;
-      if (fps <= 0 && storage.getMatchFrameRate()) {
-        await Future<void>.delayed(const Duration(seconds: 2));
+      final wantRate = storage.getMatchFrameRate();
+      // As soon as the stream says what it is: its declared frame rate, else
+      // the first frames' timestamps (native FrameRateProbe, ~0.3 s after the
+      // picture starts). Was 2 s + 2 s of counting, so the TV switched ~4 s
+      // into the picture ("clunky", Fire TV Cube user, 2026-10-23).
+      Map<Object?, Object?>? first;
+      Map<Object?, Object?>? sample;
+      var fps = -1.0;
+      final started = DateTime.now();
+      while (DateTime.now().difference(started) < const Duration(seconds: 6)) {
+        await Future<void>.delayed(const Duration(milliseconds: 150));
         if (!isCurrent()) return;
-        final second = await _sample(id);
-        fps = _measured(first, second) ?? -1;
+        sample = await _sample(id);
+        if (sample == null) continue;
+        final w = (sample['width'] as num?)?.toInt() ?? 0;
+        if (w <= 0) continue;
+        first ??= sample;
+        final declared = (sample['frameRate'] as num?)?.toDouble() ?? -1;
+        final pts = (sample['ptsFps'] as num?)?.toDouble() ?? -1;
+        fps = declared > 0 ? declared : pts;
+        if (fps > 0 || !wantRate) break;
       }
-      if (!isCurrent()) return;
-      final width = (first['width'] as num?)?.toInt() ?? 0;
-      final height = (first['height'] as num?)?.toInt() ?? 0;
+      // Fallback: count rendered frames over what was sampled.
+      if (fps <= 0 && wantRate && first != null) {
+        fps = _measured(first, sample) ?? -1;
+      }
+      if (!isCurrent() || sample == null) return;
+      final width = (sample['width'] as num?)?.toInt() ?? 0;
+      final height = (sample['height'] as num?)?.toInt() ?? 0;
       final mode = await _display.invokeMethod<String>('match', {
         'fps': fps,
         'width': width,
@@ -61,7 +75,8 @@ class DisplayMatch {
       });
       if (mode != null && mode != 'same') _requested = true;
       debugPrint('DisplayMatch: video ${width}x$height '
-          '${fps > 0 ? fps.toStringAsFixed(2) : '?'} fps -> '
+          '${fps > 0 ? fps.toStringAsFixed(2) : '?'} fps after '
+          '${DateTime.now().difference(started).inMilliseconds} ms -> '
           '${mode ?? 'no matching mode'}');
     } catch (e) {
       debugPrint('DisplayMatch: $e');

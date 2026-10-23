@@ -29,6 +29,8 @@ const Map<String, String> kEs = {
   "Edit Home rows…": "Editar filas de Inicio…",
   "Home rows": "Filas de Inicio",
   "Nothing here yet. Watch a channel, a movie or a show and it shows up on Home.": "Aún no hay nada. Mira un canal, una película o una serie y aparecerá en Inicio.",
+  "Green flicker fix (test)": "Arreglo del parpadeo verde (prueba)",
+  "For green flashes on the picture while the guide or a menu is over it (NVIDIA Shield). Unlike Compatibility video it keeps HDR. Applies from the next channel. If the guide or menus disappear behind the video, turn it off.": "Para destellos verdes en la imagen cuando la guía o un menú está encima (NVIDIA Shield). A diferencia de Vídeo compatible, mantiene el HDR. Se aplica desde el siguiente canal. Si la guía o los menús desaparecen detrás del vídeo, desactívalo.",
   '1 hour': '1 hora',
   '{h} hours': '{h} horas',
 

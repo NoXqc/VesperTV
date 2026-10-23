@@ -29,6 +29,8 @@ const Map<String, String> kEl = {
   "Edit Home rows…": "Επεξεργασία σειρών Αρχικής…",
   "Home rows": "Σειρές Αρχικής",
   "Nothing here yet. Watch a channel, a movie or a show and it shows up on Home.": "Τίποτα ακόμα. Δείτε ένα κανάλι, μια ταινία ή μια σειρά και θα εμφανιστεί στην Αρχική.",
+  "Green flicker fix (test)": "Διόρθωση πράσινου τρεμοπαίγματος (δοκιμή)",
+  "For green flashes on the picture while the guide or a menu is over it (NVIDIA Shield). Unlike Compatibility video it keeps HDR. Applies from the next channel. If the guide or menus disappear behind the video, turn it off.": "Για πράσινες αναλαμπές στην εικόνα όταν ο οδηγός ή ένα μενού είναι από πάνω (NVIDIA Shield). Σε αντίθεση με το Συμβατό βίντεο, διατηρεί το HDR. Ισχύει από το επόμενο κανάλι. Αν ο οδηγός ή τα μενού χαθούν πίσω από το βίντεο, απενεργοποιήστε το.",
   '1 hour': '1 ώρα',
   '{h} hours': '{h} ώρες',
 

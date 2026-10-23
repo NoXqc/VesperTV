@@ -76,8 +76,9 @@ class DisplayModes(private val activity: Activity) {
         window.attributes = params
     }
 
+    // No "@": Send log's redaction read "3840x2160@50.00" as an e-mail address.
     private fun describe(mode: Display.Mode) =
-        "${mode.physicalWidth}x${mode.physicalHeight}@${"%.2f".format(java.util.Locale.ROOT, mode.refreshRate)}"
+        "${mode.physicalWidth}x${mode.physicalHeight} ${"%.2f".format(java.util.Locale.ROOT, mode.refreshRate)} Hz"
 }
 
 /** The mode choice, kept free of Android types. */

@@ -269,6 +269,10 @@ class AppConstants {
   /// (device-only; AppPreferences.audioPassthrough).
   static const String keyAudioPassthrough = 'vesper_audio_passthrough';
 
+  /// Settings > Interface > Background video: Shield green-flicker fix
+  /// (device-only; AppPreferences.videoMediaOverlay).
+  static const String keyVideoMediaOverlay = 'vesper_video_media_overlay';
+
   /// Settings > Interface > Display (device-only; DisplayMatch).
   static const String keyMatchFrameRate = 'vesper_match_frame_rate';
   static const String keyMatch5060Only = 'vesper_match_5060_only';

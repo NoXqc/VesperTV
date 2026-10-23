@@ -335,14 +335,18 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 - **Unreleased (Claude, `claude/match-frame-rate`, 2026-10-23): Match frame rate / resolution**
   (TiviMate-style, AMD's Fire TV Cube request). Settings > Interface > **Display** (Android,
   device-only, off by default): Match frame rate (+ "Only switch between 50 and 60 Hz") and
-  Match resolution. `services/display_match.dart`: 2 s after the main player starts, declared fps
-  (StatsBridge `frameRate`) else measured over 2 s → `vespertv/display` `match` in app-side
+  Match resolution. `services/display_match.dart`: as soon as frames arrive, declared fps
+  (StatsBridge `frameRate`) else the first 16 frames' timestamps (vendored `FrameRateProbe`, a
+  `VideoFrameMetadataListener`, median gap, StatsBridge `ptsFps`; ~0.3 s; was 2 s + 2 s of frame
+  counting = "clunky" on AMD's Cube, LOG-HR6JNB) → `vespertv/display` `match` in app-side
   `DisplayModes.kt` (`DisplayModePicker`: snaps to 23.976/24/25/29.97/30/50/59.94/60; 25/30 →
   50/60 Hz, 24p kept unless 50/60-only; resolution = smallest mode holding the video) →
   window `preferredDisplayModeId`. Zapping keeps the mode; `PlaybackService.stop()` resets;
   Android restores it when the app leaves the screen. Send log: `DisplayMatch:` lines. Data pool
   got a **Stream HDR** row (StatsBridge `hdrKind`: DV / HDR10 / HLG / SDR — "Device HDR" is only
-  what the box supports). Compiled (release APK); **not run on any box yet**.
+  what the box supports). Mode text logs as `3840x2160 50.00 Hz` (an `@` was redacted as an e-mail).
+  Formuler: 1080p60 → 1080p50 confirmed. AMD's Cube: rate + resolution switch work; **HDR10 doesn't
+  trigger** there (open: is the stream HDR? does HDR trigger with matching off?).
 - **Codex unfolded Back tap fix** (`codex/unfolded-back-tap`, unreleased): owner reports
   visible header arrow does nothing on an unfolded Google Pixel 10 Pro Fold. Reproduced
   focus-dependent navigation in a widget regression: when the destination column cannot

@@ -104,6 +104,18 @@ class AppPreferences extends ChangeNotifier {
   /// Opt-in after a user missed Atmos (Discord, 2026-10-22). Device-only.
   bool get audioPassthrough => _storage.getAudioPassthrough();
 
+  /// Green-flicker fix (Android, off by default, device-only): the main
+  /// player's video surface as a media overlay (vendored `VideoLayering`),
+  /// for NVIDIA Shield green frames under the translucent guide without
+  /// losing HDR the way Compatibility video does (Shield user, 2026-10-23).
+  bool get videoMediaOverlay => _storage.getVideoMediaOverlay();
+
+  void setVideoMediaOverlay(bool value) {
+    _storage.setVideoMediaOverlay(value);
+    unawaited(PlaybackService.setVideoMediaOverlay(value));
+    notifyListeners();
+  }
+
   void setAudioPassthrough(bool value) {
     _storage.setAudioPassthrough(value);
     unawaited(PlaybackService.setAudioPassthrough(value));
