@@ -232,3 +232,28 @@ Read before changing guide/Multiview/profiles/palettes/backup-server logic.
   Picker sheets (audio, subtitles, online results, Recall) use `TvMenuTile` (ListTile showed a pastel
   focus fill on TV). OK with no bar focused on a live channel toggles the CH+/- info card (4 s,
   45 % black).
+
+
+## Next episode air date (Codex, unreleased)
+
+The shared series detail header (IPTV and Media Hub, narrow and wide) shows the earliest known
+upcoming episode as `Next episode: SxxEyy · date`, or a date alone when numbering is missing.
+`NextEpisodeAirDate` is non-focusable; queue order, Play/Resume, watched marks and season controls
+are unchanged. A future airing is schedule information, not a promise of a playable stream.
+
+`EpisodeAirDateService` prefers the episode air dates already in `SeriesDetails`. Without a usable
+future date, a known TMDB series id can use the user-configured TMDB key and `/tv/{id}`
+`next_episode_to_air`; a known IMDb id can use the existing Cinemeta `/meta/series/{id}.json` videos.
+No name search, guessing, embedded key, provider URL/credential forwarding or watch-state request.
+Missing identities, dates or metadata failures hide the line without blocking playback.
+
+Calendar-only dates include today because their airing time is unknown; ISO timestamps compare
+instants and display their local calendar date. Invalid dates/placeholders are dropped. The cache
+is bounded to 128 identities, six hours positive / ten minutes empty, reselects the next episode
+as time passes, and shares in-flight requests. Late responses cannot replace another show.
+EN/FR/ES/IT/EL text; dates follow the selected UI language.
+
+Reference schemas: https://developer.themoviedb.org/reference/tv-series-details and
+https://github.com/Stremio/stremio-addon-sdk/blob/master/docs/api/responses/meta.md
+Fixtures and widget checks: `test/episode_air_date_test.dart`. Real-device check pending;
+IPTV without future metadata needs a known TMDB id plus the existing user TMDB key.

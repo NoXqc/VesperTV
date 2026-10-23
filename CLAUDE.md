@@ -332,6 +332,10 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-22)
+- **Codex next episode air date** (`codex/next-episode-air-date`, unreleased): shared series
+  header shows the next known airing from supplied episode dates, or exact-id TMDB (user key) /
+  Cinemeta metadata. Hidden when unknown; no playback/watch-state changes. Details and limitations:
+  `dev-notes/features.md` → Next episode air date. Not built or device-tested.
 - **Unreleased (Claude, `claude/match-frame-rate`, 2026-10-23): Match frame rate / resolution**
   (TiviMate-style, AMD's Fire TV Cube request). Settings > Interface > **Display** (Android,
   device-only, off by default): Match frame rate (+ "Only switch between 50 and 60 Hz") and

@@ -1838,4 +1838,6 @@ const Map<String, String> kEs = {
 
   "Trailer": "Tráiler",
   "Unable to open trailer": "No se pudo abrir el tráiler",
+  "Next episode airs {date}": "El próximo episodio se emite el {date}",
+  "Next episode: {code} · {date}": "Próximo episodio: {code} · {date}",
 };

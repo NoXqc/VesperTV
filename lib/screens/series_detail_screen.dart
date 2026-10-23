@@ -1,4 +1,5 @@
 import '../widgets/trailer_button.dart';
+import '../widgets/next_episode_air_date.dart';
 import '../services/trailer_service.dart';
 import 'dart:async';
 import 'dart:io';
@@ -816,6 +817,14 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
               DetailMetaChip(scale: s, label: widget.sourceLabel!),
           ],
         ),
+        if (_loaded)
+          NextEpisodeAirDate(
+            details: _details,
+            imdbId: widget.imdbId,
+            tmdbId: widget.series.tmdbId,
+            tmdbKey: context.read<StorageService>().getTmdbApiKey() ?? '',
+            scale: s,
+          ),
         if (plot != null) ...[
           SizedBox(height: 8 * s),
           Text(
