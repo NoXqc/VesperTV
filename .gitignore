@@ -69,3 +69,4 @@ app.*.map.json
 
 # Users' Send-log files the owner saves for the agents to read (never commit)
 /Logs/
+AGENTS.md
