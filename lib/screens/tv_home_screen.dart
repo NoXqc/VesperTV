@@ -95,7 +95,11 @@ void _ensureVisible(BuildContext context) {
 /// column currently in use (and anything to its right, not yet visited)
 /// stays full width.
 class TvHomeScreen extends StatefulWidget {
-  const TvHomeScreen({super.key});
+  const TvHomeScreen({super.key, this.startupHomeHandled = false});
+
+  /// The app already placed Home in the initial route stack. Do not open
+  /// it again when this root first builds or a viewer/language remounts it.
+  final bool startupHomeHandled;
 
   @override
   State<TvHomeScreen> createState() => _TvHomeScreenState();
@@ -1632,6 +1636,9 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   @override
   void initState() {
     super.initState();
+    if (widget.startupHomeHandled) {
+      _startSectionOpened = true;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       // Only when this screen is on top (the startup auto-resume or the
