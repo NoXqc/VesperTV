@@ -7,6 +7,7 @@ import '../models/cyberpunk_palette.dart';
 import '../utils/constants.dart';
 import '../utils/live_group_sort.dart';
 import '../utils/time_format.dart';
+import 'display_match.dart';
 import 'playback_service.dart';
 import 'storage_service.dart';
 
@@ -106,6 +107,29 @@ class AppPreferences extends ChangeNotifier {
   void setAudioPassthrough(bool value) {
     _storage.setAudioPassthrough(value);
     unawaited(PlaybackService.setAudioPassthrough(value));
+    notifyListeners();
+  }
+
+  /// Settings > Interface > Display (Android, device-only, off by default):
+  /// switch the TV to the video's frame rate / resolution ([DisplayMatch]).
+  bool get matchFrameRate => _storage.getMatchFrameRate();
+  bool get match5060Only => _storage.getMatch5060Only();
+  bool get matchResolution => _storage.getMatchResolution();
+
+  void setMatchFrameRate(bool value) {
+    _storage.setMatchFrameRate(value);
+    if (!DisplayMatch.enabled(_storage)) unawaited(DisplayMatch.reset());
+    notifyListeners();
+  }
+
+  void setMatch5060Only(bool value) {
+    _storage.setMatch5060Only(value);
+    notifyListeners();
+  }
+
+  void setMatchResolution(bool value) {
+    _storage.setMatchResolution(value);
+    if (!DisplayMatch.enabled(_storage)) unawaited(DisplayMatch.reset());
     notifyListeners();
   }
 

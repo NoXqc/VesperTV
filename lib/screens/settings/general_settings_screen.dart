@@ -366,6 +366,43 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                                 .setAudioPassthrough(v),
                           ),
                         ]),
+                  // Android only (DisplayMatch); Windows follows the monitor.
+                  if (Platform.isAndroid)
+                    _section('display', Icons.tv_outlined, tr('Display'),
+                        children: [
+                          TvSwitchListTile(
+                            title: Text(tr('Match frame rate')),
+                            subtitle: Text(tr(
+                                'Switches the TV to the video\'s frame rate a few seconds after it starts (50 Hz for UK and European channels, 24 Hz for films), for smooth motion. The screen goes black for a second or two while the TV switches; channels with the same rate don\'t switch again. Leaving the app gives the TV its own setting back.')),
+                            value:
+                                context.watch<AppPreferences>().matchFrameRate,
+                            onChanged: (v) => context
+                                .read<AppPreferences>()
+                                .setMatchFrameRate(v),
+                          ),
+                          if (context.watch<AppPreferences>().matchFrameRate)
+                            TvSwitchListTile(
+                              title:
+                                  Text(tr('Only switch between 50 and 60 Hz')),
+                              subtitle: Text(tr(
+                                  'Films at 24 frames per second keep the current rate, so fewer switches.')),
+                              value:
+                                  context.watch<AppPreferences>().match5060Only,
+                              onChanged: (v) => context
+                                  .read<AppPreferences>()
+                                  .setMatch5060Only(v),
+                            ),
+                          TvSwitchListTile(
+                            title: Text(tr('Match resolution')),
+                            subtitle: Text(tr(
+                                'Switches the TV to the video\'s resolution (1080p, 4K…) so the TV does the upscaling. Off: this device scales every video to its current resolution.')),
+                            value:
+                                context.watch<AppPreferences>().matchResolution,
+                            onChanged: (v) => context
+                                .read<AppPreferences>()
+                                .setMatchResolution(v),
+                          ),
+                        ]),
                   // Windows has no OK info card yet, so no Data pool there.
                   if (!Platform.isWindows)
                     _section(

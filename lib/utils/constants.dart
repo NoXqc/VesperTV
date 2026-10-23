@@ -269,6 +269,11 @@ class AppConstants {
   /// (device-only; AppPreferences.audioPassthrough).
   static const String keyAudioPassthrough = 'vesper_audio_passthrough';
 
+  /// Settings > Interface > Display (device-only; DisplayMatch).
+  static const String keyMatchFrameRate = 'vesper_match_frame_rate';
+  static const String keyMatch5060Only = 'vesper_match_5060_only';
+  static const String keyMatchResolution = 'vesper_match_resolution';
+
   /// Subtitle size picked in the player's Subtitles menu (device-only;
   /// AppPreferences.subtitleScale).
   static const String keyLiveGroupSort = 'vesper_live_group_sort';

@@ -6,6 +6,16 @@
 /// English-style plural "s" filled in by the code; Greek plurals don't
 /// work that way, so those strings are phrased without it.
 const Map<String, String> kEl = {
+  "Display": "Οθόνη",
+  "Match the TV to the video's frame rate and resolution": "Προσαρμογή της τηλεόρασης στον ρυθμό καρέ και την ανάλυση του βίντεο",
+  "Match frame rate": "Προσαρμογή ρυθμού καρέ",
+  "Switches the TV to the video's frame rate a few seconds after it starts (50 Hz for UK and European channels, 24 Hz for films), for smooth motion. The screen goes black for a second or two while the TV switches; channels with the same rate don't switch again. Leaving the app gives the TV its own setting back.": "Αλλάζει την τηλεόραση στον ρυθμό καρέ του βίντεο λίγα δευτερόλεπτα μετά την έναρξη (50 Hz για βρετανικά και ευρωπαϊκά κανάλια, 24 Hz για ταινίες), για ομαλή κίνηση. Η οθόνη μαυρίζει για ένα-δυο δευτερόλεπτα κατά την αλλαγή· κανάλια με τον ίδιο ρυθμό δεν αλλάζουν ξανά. Όταν βγαίνετε από την εφαρμογή, η τηλεόραση επιστρέφει στη δική της ρύθμιση.",
+  "Only switch between 50 and 60 Hz": "Αλλαγή μόνο μεταξύ 50 και 60 Hz",
+  "Films at 24 frames per second keep the current rate, so fewer switches.": "Οι ταινίες στα 24 καρέ ανά δευτερόλεπτο κρατούν τον τρέχοντα ρυθμό, άρα λιγότερες αλλαγές.",
+  "Match resolution": "Προσαρμογή ανάλυσης",
+  "Switches the TV to the video's resolution (1080p, 4K…) so the TV does the upscaling. Off: this device scales every video to its current resolution.": "Αλλάζει την τηλεόραση στην ανάλυση του βίντεο (1080p, 4K…) ώστε την κλιμάκωση να την κάνει η τηλεόραση. Ανενεργό: αυτή η συσκευή κλιμακώνει κάθε βίντεο στην τρέχουσα ανάλυσή της.",
+  "Stream HDR": "HDR ροής",
+  "No (SDR)": "Όχι (SDR)",
   '1 hour': '1 ώρα',
   '{h} hours': '{h} ώρες',
 
@@ -2068,8 +2078,8 @@ const Map<String, String> kEl = {
       "Ό,τι χρησιμοποιεί το Media Hub: πηγές add-on, online υπότιτλοι, παρακολούθηση Trakt και Simkl και το προαιρετικό κλειδί TMDB.",
   "Interface":
       "Διεπαφή",
-  "How the app looks and what it shows: theme, tabs, the player's extras and reminders.":
-      "Η εμφάνιση της εφαρμογής και τι δείχνει: θέμα, καρτέλες, έξτρα του player και υπενθυμίσεις.",
+  "How the app looks and what it shows: theme, tabs, matching the TV's frame rate, the player's extras and reminders.":
+      "Η εμφάνιση της εφαρμογής και τι δείχνει: θέμα, καρτέλες, ρυθμός καρέ της τηλεόρασης, έξτρα του player και υπενθυμίσεις.",
   "Hide Movies, TV Shows, Media Hub, Recordings or Multiview":
       "Απόκρυψη Ταινιών, Σειρών, Media Hub, Εγγραφών ή Multiview",
   "Fixes for the picture on some Fire TV sticks":

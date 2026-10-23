@@ -6,6 +6,16 @@
 /// "s" filled in by the code; Spanish plurals don't always work that way
 /// (canal/canales), so those strings are phrased to avoid it.
 const Map<String, String> kEs = {
+  "Display": "Pantalla",
+  "Match the TV to the video's frame rate and resolution": "Ajustar el televisor a la frecuencia de imagen y la resolución del vídeo",
+  "Match frame rate": "Ajustar frecuencia de imagen",
+  "Switches the TV to the video's frame rate a few seconds after it starts (50 Hz for UK and European channels, 24 Hz for films), for smooth motion. The screen goes black for a second or two while the TV switches; channels with the same rate don't switch again. Leaving the app gives the TV its own setting back.": "Cambia el televisor a la frecuencia de imagen del vídeo unos segundos después de empezar (50 Hz para canales del Reino Unido y Europa, 24 Hz para películas), para un movimiento fluido. La pantalla se pone negra uno o dos segundos mientras cambia; los canales con la misma frecuencia no vuelven a cambiar. Al salir de la app, el televisor recupera su propio ajuste.",
+  "Only switch between 50 and 60 Hz": "Cambiar solo entre 50 y 60 Hz",
+  "Films at 24 frames per second keep the current rate, so fewer switches.": "Las películas a 24 imágenes por segundo mantienen la frecuencia actual: menos cambios.",
+  "Match resolution": "Ajustar resolución",
+  "Switches the TV to the video's resolution (1080p, 4K…) so the TV does the upscaling. Off: this device scales every video to its current resolution.": "Cambia el televisor a la resolución del vídeo (1080p, 4K…) para que el televisor haga el escalado. Desactivado: este dispositivo escala cada vídeo a su resolución actual.",
+  "Stream HDR": "HDR del stream",
+  "No (SDR)": "No (SDR)",
   '1 hour': '1 hora',
   '{h} hours': '{h} horas',
 
@@ -1456,8 +1466,8 @@ const Map<String, String> kEs = {
       "Todo lo que usa el Media Hub: sus fuentes de add-ons, subtítulos en línea, el seguimiento de Trakt y Simkl y la clave TMDB opcional.",
   "Interface":
       "Interfaz",
-  "How the app looks and what it shows: theme, tabs, the player's extras and reminders.":
-      "Cómo se ve la app y qué muestra: tema, pestañas, extras del reproductor y recordatorios.",
+  "How the app looks and what it shows: theme, tabs, matching the TV's frame rate, the player's extras and reminders.":
+      "Cómo se ve la app y qué muestra: tema, pestañas, ajustar la frecuencia de imagen del televisor, extras del reproductor y recordatorios.",
   "Hide Movies, TV Shows, Media Hub, Recordings or Multiview":
       "Ocultar Películas, Series, Media Hub, Grabaciones o Multiview",
   "Fixes for the picture on some Fire TV sticks":

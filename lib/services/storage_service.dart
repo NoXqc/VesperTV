@@ -335,6 +335,19 @@ class StorageService {
   Future<void> setAudioPassthrough(bool value) =>
       _prefs.setBool(AppConstants.keyAudioPassthrough, value);
 
+  bool getMatchFrameRate() =>
+      _prefs.getBool(AppConstants.keyMatchFrameRate) ?? false;
+  Future<void> setMatchFrameRate(bool value) =>
+      _prefs.setBool(AppConstants.keyMatchFrameRate, value);
+  bool getMatch5060Only() =>
+      _prefs.getBool(AppConstants.keyMatch5060Only) ?? false;
+  Future<void> setMatch5060Only(bool value) =>
+      _prefs.setBool(AppConstants.keyMatch5060Only, value);
+  bool getMatchResolution() =>
+      _prefs.getBool(AppConstants.keyMatchResolution) ?? false;
+  Future<void> setMatchResolution(bool value) =>
+      _prefs.setBool(AppConstants.keyMatchResolution, value);
+
   /// Null = never chosen (auto, see AppPreferences.compatVideo).
   bool? getCompatVideo() => _prefs.getBool(AppConstants.keyCompatVideo);
   Future<void> setCompatVideo(bool value) =>
@@ -805,6 +818,9 @@ class StorageService {
     AppConstants.keyHideVideoOnSports,
     AppConstants.keyCompatVideo,
     AppConstants.keyAudioPassthrough,
+    AppConstants.keyMatchFrameRate,
+    AppConstants.keyMatch5060Only,
+    AppConstants.keyMatchResolution,
     AppConstants.keySubtitleScale,
     AppConstants.keyLiveGroupSort,
     AppConstants.keyStartSection,

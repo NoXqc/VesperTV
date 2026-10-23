@@ -6,6 +6,16 @@
 /// the code; Italian plurals don't work that way (canale/canali), so those
 /// strings are phrased to avoid it.
 const Map<String, String> kIt = {
+  "Display": "Schermo",
+  "Match the TV to the video's frame rate and resolution": "Adatta il televisore alla frequenza dei fotogrammi e alla risoluzione del video",
+  "Match frame rate": "Adatta frequenza fotogrammi",
+  "Switches the TV to the video's frame rate a few seconds after it starts (50 Hz for UK and European channels, 24 Hz for films), for smooth motion. The screen goes black for a second or two while the TV switches; channels with the same rate don't switch again. Leaving the app gives the TV its own setting back.": "Porta il televisore alla frequenza dei fotogrammi del video pochi secondi dopo l’avvio (50 Hz per i canali britannici ed europei, 24 Hz per i film), per un movimento fluido. Lo schermo diventa nero per un secondo o due durante il cambio; i canali con la stessa frequenza non cambiano più. Uscendo dall’app il televisore torna alla sua impostazione.",
+  "Only switch between 50 and 60 Hz": "Cambia solo tra 50 e 60 Hz",
+  "Films at 24 frames per second keep the current rate, so fewer switches.": "I film a 24 fotogrammi al secondo mantengono la frequenza attuale: meno cambi.",
+  "Match resolution": "Adatta risoluzione",
+  "Switches the TV to the video's resolution (1080p, 4K…) so the TV does the upscaling. Off: this device scales every video to its current resolution.": "Porta il televisore alla risoluzione del video (1080p, 4K…) così l’upscaling lo fa il televisore. Disattivato: questo dispositivo scala ogni video alla sua risoluzione attuale.",
+  "Stream HDR": "HDR dello stream",
+  "No (SDR)": "No (SDR)",
   '1 hour': '1 ora',
   '{h} hours': '{h} ore',
 
@@ -1460,8 +1470,8 @@ const Map<String, String> kIt = {
       "Tutto ciò che usa il Media Hub: le fonti add-on, i sottotitoli online, il monitoraggio Trakt e Simkl e la chiave TMDB facoltativa.",
   "Interface":
       "Interfaccia",
-  "How the app looks and what it shows: theme, tabs, the player's extras and reminders.":
-      "Aspetto dell’app e cosa mostra: tema, schede, extra del lettore e promemoria.",
+  "How the app looks and what it shows: theme, tabs, matching the TV's frame rate, the player's extras and reminders.":
+      "Aspetto dell’app e cosa mostra: tema, schede, frequenza dei fotogrammi del televisore, extra del lettore e promemoria.",
   "Hide Movies, TV Shows, Media Hub, Recordings or Multiview":
       "Nascondi Film, Serie TV, Media Hub, Registrazioni o Multiview",
   "Fixes for the picture on some Fire TV sticks":

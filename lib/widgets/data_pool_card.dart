@@ -227,6 +227,14 @@ class _DataPoolCardState extends State<DataPoolCard> {
     return d == null || d.$1 <= 0 ? null : d.$1 / d.$2;
   }
 
+  /// StatsBridge.hdrKind's answer for the playing video track.
+  static String _hdrKind(String kind) => switch (kind) {
+        'dolby_vision' => 'Dolby Vision',
+        'hdr10' => 'HDR10',
+        'hlg' => 'HLG',
+        _ => tr('No (SDR)'),
+      };
+
   static String _clock(Duration d) {
     final h = d.inHours;
     final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
@@ -333,6 +341,9 @@ class _DataPoolCardState extends State<DataPoolCard> {
                   if (size.width > 0 && size.height > 0)
                     _row(tr('Picture'),
                         '${size.width.round()}×${size.height.round()} · ${_aspect(size)}'),
+                  // The stream itself (Device HDR = what the box supports).
+                  if (_last?['hdr'] is String)
+                    _row(tr('Stream HDR'), _hdrKind(_last!['hdr'] as String)),
                   _row(
                       tr('Quality variants'),
                       heights.length > 1

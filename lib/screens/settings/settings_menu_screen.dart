@@ -171,7 +171,7 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
         _Category(
           Icons.dashboard_customize_outlined,
           tr('Interface'),
-          tr('How the app looks and what it shows: theme, tabs, the player\'s extras and reminders.'),
+          tr('How the app looks and what it shows: theme, tabs, matching the TV\'s frame rate, the player\'s extras and reminders.'),
           [
             _Entry(Icons.palette_outlined, tr('Theme'),
                 tr('Clock, accent color, layout'), (_) => const ThemeScreen()),
@@ -187,6 +187,9 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
             if (Platform.isAndroid)
               _general('audio', Icons.surround_sound_outlined, tr('Audio'),
                   tr('Dolby Atmos to your soundbar or receiver')),
+            if (Platform.isAndroid)
+              _general('display', Icons.tv_outlined, tr('Display'),
+                  tr('Match the TV to the video\'s frame rate and resolution')),
             if (!Platform.isWindows)
               _general('datapool', Icons.analytics_outlined, tr('Data pool'),
                   tr('Stream details when you press OK while watching')),

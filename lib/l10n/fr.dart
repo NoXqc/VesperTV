@@ -5,6 +5,16 @@
 /// Keep every `{placeholder}` exactly as in the key. `{s}` is the plural "s"
 /// the code fills in ("chaîne{s}").
 const Map<String, String> kFr = {
+  "Display": "Affichage",
+  "Match the TV to the video's frame rate and resolution": "Adapter le téléviseur à la fréquence d’images et à la résolution de la vidéo",
+  "Match frame rate": "Adapter la fréquence d’images",
+  "Switches the TV to the video's frame rate a few seconds after it starts (50 Hz for UK and European channels, 24 Hz for films), for smooth motion. The screen goes black for a second or two while the TV switches; channels with the same rate don't switch again. Leaving the app gives the TV its own setting back.": "Passe le téléviseur à la fréquence d’images de la vidéo quelques secondes après le début (50 Hz pour les chaînes britanniques et européennes, 24 Hz pour les films), pour un mouvement fluide. L’écran devient noir une ou deux secondes pendant le changement; les chaînes à la même fréquence ne changent plus. En quittant l’app, le téléviseur reprend son propre réglage.",
+  "Only switch between 50 and 60 Hz": "Changer seulement entre 50 et 60 Hz",
+  "Films at 24 frames per second keep the current rate, so fewer switches.": "Les films à 24 images par seconde gardent la fréquence actuelle : moins de changements.",
+  "Match resolution": "Adapter la résolution",
+  "Switches the TV to the video's resolution (1080p, 4K…) so the TV does the upscaling. Off: this device scales every video to its current resolution.": "Passe le téléviseur à la résolution de la vidéo (1080p, 4K…) pour que le téléviseur fasse la mise à l’échelle. Désactivé : cet appareil met chaque vidéo à sa résolution actuelle.",
+  "Stream HDR": "HDR du flux",
+  "No (SDR)": "Non (SDR)",
   '1 hour': '1 heure',
   '{h} hours': '{h} heures',
 
@@ -1459,8 +1469,8 @@ const Map<String, String> kFr = {
       "Tout ce que le Media Hub utilise : ses sources d’add-ons, les sous-titres en ligne, le suivi Trakt et Simkl et la clé TMDB facultative.",
   "Interface":
       "Interface",
-  "How the app looks and what it shows: theme, tabs, the player's extras and reminders.":
-      "L’apparence et ce qui s’affiche : thème, onglets, extras du lecteur et rappels.",
+  "How the app looks and what it shows: theme, tabs, matching the TV's frame rate, the player's extras and reminders.":
+      "L’apparence et ce qui s’affiche : thème, onglets, fréquence d’images du téléviseur, extras du lecteur et rappels.",
   "Hide Movies, TV Shows, Media Hub, Recordings or Multiview":
       "Masquer Films, Séries, Media Hub, Enregistrements ou Multiview",
   "Fixes for the picture on some Fire TV sticks":

@@ -16,6 +16,7 @@ import 'playlist_manager.dart';
 import 'real_4k_channels.dart';
 import 'storage_service.dart';
 import 'archive_ready_watch.dart';
+import 'display_match.dart';
 import 'archive_service.dart';
 import 'watch_tracker.dart';
 import '../l10n/l10n.dart';
@@ -422,6 +423,8 @@ class PlaybackService extends ChangeNotifier {
       // Trakt/Simkl, for Media Hub titles (a no-op otherwise).
       unawaited(WatchTracker.instance.started(channel.id));
       if (isLive) unawaited(_recordRealResolution(newController, channel));
+      unawaited(DisplayMatch.start(
+          _storage, newController, () => controller == newController));
       await _storage.setLastChannelId(channel.id);
       // Live streams report zero/unknown duration — that's fine, it just
       // means StorageService.getWatchedFraction has nothing to compute a
@@ -752,6 +755,9 @@ class PlaybackService extends ChangeNotifier {
 
   Future<void> stop() async {
     await _teardown();
+    // Nothing plays any more: the TV goes back to its own mode. A channel
+    // change doesn't come here, so zapping keeps a matched mode.
+    unawaited(DisplayMatch.reset());
     currentChannel = null;
     reconnectStatus = null;
     // Otherwise `LiveResumeHint` reads "currentChannel is null" as "show

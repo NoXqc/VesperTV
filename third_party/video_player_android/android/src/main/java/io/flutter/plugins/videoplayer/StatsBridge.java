@@ -8,6 +8,10 @@ import android.util.LongSparseArray;
 import androidx.annotation.NonNull;
 import androidx.annotation.OptIn;
 import androidx.annotation.Nullable;
+import androidx.media3.common.C;
+import androidx.media3.common.ColorInfo;
+import androidx.media3.common.Format;
+import androidx.media3.common.MimeTypes;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.exoplayer.DecoderCounters;
 import io.flutter.plugin.common.BinaryMessenger;
@@ -53,6 +57,33 @@ final class StatsBridge implements MethodChannel.MethodCallHandler {
       m.put("rendered", video.renderedOutputBufferCount);
       m.put("dropped", video.droppedBufferCount);
     }
+    // The playing video format: Data pool's "Stream HDR" row and Match frame rate (Dart
+    // DisplayMatch) read it. frameRate is -1 when the stream doesn't declare one (live TS).
+    @Nullable Format format = player.getExoPlayer().getVideoFormat();
+    if (format != null) {
+      m.put("hdr", hdrKind(format));
+      m.put("frameRate", (double) format.frameRate);
+      m.put("width", format.width);
+      m.put("height", format.height);
+    }
     result.success(m);
+  }
+
+  /** "dolby_vision", "hdr10", "hlg" or "sdr" (an unknown transfer counts as SDR). */
+  static String hdrKind(@NonNull Format format) {
+    String codecs = format.codecs == null ? "" : format.codecs;
+    if (MimeTypes.VIDEO_DOLBY_VISION.equals(format.sampleMimeType)
+        || codecs.startsWith("dvhe")
+        || codecs.startsWith("dvh1")
+        || codecs.startsWith("dvav")
+        || codecs.startsWith("dva1")) {
+      return "dolby_vision";
+    }
+    @Nullable ColorInfo color = format.colorInfo;
+    if (color != null) {
+      if (color.colorTransfer == C.COLOR_TRANSFER_ST2084) return "hdr10";
+      if (color.colorTransfer == C.COLOR_TRANSFER_HLG) return "hlg";
+    }
+    return "sdr";
   }
 }

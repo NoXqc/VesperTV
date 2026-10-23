@@ -332,6 +332,17 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-22)
+- **Unreleased (Claude, `claude/match-frame-rate`, 2026-10-23): Match frame rate / resolution**
+  (TiviMate-style, AMD's Fire TV Cube request). Settings > Interface > **Display** (Android,
+  device-only, off by default): Match frame rate (+ "Only switch between 50 and 60 Hz") and
+  Match resolution. `services/display_match.dart`: 2 s after the main player starts, declared fps
+  (StatsBridge `frameRate`) else measured over 2 s → `vespertv/display` `match` in app-side
+  `DisplayModes.kt` (`DisplayModePicker`: snaps to 23.976/24/25/29.97/30/50/59.94/60; 25/30 →
+  50/60 Hz, 24p kept unless 50/60-only; resolution = smallest mode holding the video) →
+  window `preferredDisplayModeId`. Zapping keeps the mode; `PlaybackService.stop()` resets;
+  Android restores it when the app leaves the screen. Send log: `DisplayMatch:` lines. Data pool
+  got a **Stream HDR** row (StatsBridge `hdrKind`: DV / HDR10 / HLG / SDR — "Device HDR" is only
+  what the box supports). Compiled (release APK); **not run on any box yet**.
 - **Codex unfolded Back tap fix** (`codex/unfolded-back-tap`, unreleased): owner reports
   visible header arrow does nothing on an unfolded Google Pixel 10 Pro Fold. Reproduced
   focus-dependent navigation in a widget regression: when the destination column cannot
