@@ -104,6 +104,10 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   (output `build\windows\x64\runner\Release\VesperTV.exe`) and zip the **whole Release folder** as
   `VesperTV-windows-x64.zip` (the exe needs the DLLs/`data` folder beside it — a bare .exe will
   not run, which is why the site links the zip, not the exe).
+- Windows build needs **`nuget`** on PATH since the in-app trailers (flutter_inappwebview_windows
+  downloads WebView2 with it; `NUGET-NOTFOUND` = missing). Installed via
+  `winget install Microsoft.NuGet` (2026-10-23). Android: the plugin is vendored (§9-style,
+  `third_party/flutter_inappwebview_android`, proguard file fix).
 - Only run `dart format` on files you edited (`dart format lib` reformats unrelated files).
 - Don't launch the Windows exe from an automated PowerShell session to test it — it can show a blank
   white window there (proven unrelated to `window_manager`); the owner launching it normally works.
@@ -331,7 +335,17 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 ## 12. Features (details in `dev-notes/features.md`)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
-## 13. Status & open items (as of 2026-10-22)
+## 13. Status & open items (as of 2026-10-23)
+- **Shipped: 1.0.38 (`+419`, 2026-10-23, latest; test builds `+414`/`+416`/`+417` = pre-releases
+  `1.0.37-test.*`, not deleted yet — owner OK needed):** Home page (profile cards that shrink
+  while browsing rows, hero, Today's games: My Teams → starred league → rest, finals gone 60 min
+  after ending, matchup backdrop), profile photos/editor/copy-from-Main and per-profile Media
+  Hub + Recent channels, Networks remembered picks, EFL1/EFL2, Match frame rate/resolution +
+  Stream HDR, Green flicker fix (test), in-app YouTube trailers (Cinemeta built in, never the
+  title from a stream add-on), season mark-watched, next-episode air date, remote scrub bar,
+  Extra small subtitles, Data pool Dolby Vision profile + fallback. Every bullet below marked
+  Unreleased/Codex down to 1.0.37 is in it. **Open:** HDR10 on AMD's Cube; frozen frame while
+  zapping (next).
 - **Profile proposal (Codex, 2026-10-23):** portrait cards/hold-to-edit, LAN QR/local
   photos, new create/edit pages and opt-in independent copies from Main; season-wide
   watched/unwatched with one tracker batch per account. See `dev-notes/profile-cards-photos.md`.
