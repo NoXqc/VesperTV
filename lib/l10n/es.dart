@@ -6,6 +6,8 @@
 /// "s" filled in by the code; Spanish plurals don't always work that way
 /// (canal/canales), so those strings are phrased to avoid it.
 const Map<String, String> kEs = {
+  "Remind me for every game: {team}": "Recordarme cada partido: {team}",
+  "Stop team reminders: {team}": "Desactivar recordatorios: {team}",
   "Remind me": "Recordármelo",
   "Cancel reminder": "Cancelar recordatorio",
   "15 minutes before and at game time (while VesperTV is open)":

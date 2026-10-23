@@ -289,6 +289,7 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
     final confirmed =
         await showSportsFollowDialog(context, team: team, followed: true);
     if (!confirmed || !mounted) return;
+    await context.read<GameReminders>().setTeam(t, false);
     await widget.follows.unfollow(t.leagueId, t.teamId);
     if (!mounted) return;
     setState(() {

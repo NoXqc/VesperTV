@@ -22,6 +22,7 @@ class _GameReminderOverlayState extends State<GameReminderOverlay>
   GameReminderNotice? _notice;
   Timer? _alarm;
   Timer? _hide;
+  Timer? _scheduleRefresh;
   String? _viewer;
   bool _active = true;
 
@@ -57,11 +58,18 @@ class _GameReminderOverlayState extends State<GameReminderOverlay>
   }
 
   void _refresh() {
+    _scheduleRefresh?.cancel();
     _alarm?.cancel();
     if (!mounted || !_active) return;
     final service = _reminders!;
     service.loadViewer();
     if (service.viewerId != _viewer) return;
+    if (service.hasTeamReminders) {
+      unawaited(service.refreshSchedules());
+      final delay = service.nextScheduleRefresh.difference(service.now());
+      _scheduleRefresh =
+          Timer(delay.isNegative ? Duration.zero : delay, _refresh);
+    }
     _queue.addAll(service.poll());
     if ((_notice == null && _queue.isNotEmpty) ||
         (_notice != null && !service.isCurrent(_notice!.reminder))) {
@@ -94,6 +102,7 @@ class _GameReminderOverlayState extends State<GameReminderOverlay>
     _active = state == AppLifecycleState.resumed;
     _alarm?.cancel();
     _hide?.cancel();
+    _scheduleRefresh?.cancel();
     _queue.clear();
     setState(() => _notice = null);
     if (_active) _refresh();
@@ -103,6 +112,7 @@ class _GameReminderOverlayState extends State<GameReminderOverlay>
   void dispose() {
     _alarm?.cancel();
     _hide?.cancel();
+    _scheduleRefresh?.cancel();
     _reminders?.removeListener(_refresh);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -125,45 +135,58 @@ class _GameReminderOverlayState extends State<GameReminderOverlay>
               color: const Color(0xF21A1A1A),
               elevation: 12,
               borderRadius: BorderRadius.circular(14),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 6, 12),
-                child: Row(children: [
-                  Icon(Icons.notifications_active,
-                      color: Theme.of(context).colorScheme.primary),
-                  const SizedBox(width: 12),
-                  Expanded(
-                      child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                        Text(
-                            tr('Your team: {home} vs {away}', {
-                              'home': notice.reminder.home,
-                              'away': notice.reminder.away
-                            }),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 4),
-                        Text(
-                            notice.atStart
-                                ? tr('Is about to start')
-                                : tr('Starts in 15 minutes'),
-                            style: const TextStyle(
-                                color: Colors.white70, fontSize: 14)),
-                      ])),
-                  ExcludeFocus(
-                      child: Semantics(
-                          label: tr('Close'),
-                          button: true,
-                          child: IconButton(
-                              icon: const Icon(Icons.close),
-                              onPressed: _showNext))),
-                ]),
-              ),
+              clipBehavior: Clip.antiAlias,
+              child: Stack(children: [
+                if (notice.reminder.logoUrl?.isNotEmpty == true)
+                  Positioned.fill(
+                      child: IgnorePointer(
+                          child: ExcludeSemantics(
+                              child: Opacity(
+                    opacity: 0.14,
+                    child: Image.network(notice.reminder.logoUrl!,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+                  )))),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 6, 12),
+                  child: Row(children: [
+                    Icon(Icons.notifications_active,
+                        color: Theme.of(context).colorScheme.primary),
+                    const SizedBox(width: 12),
+                    Expanded(
+                        child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                          Text(
+                              tr('Your team: {home} vs {away}', {
+                                'home': notice.reminder.home,
+                                'away': notice.reminder.away
+                              }),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 4),
+                          Text(
+                              notice.atStart
+                                  ? tr('Is about to start')
+                                  : tr('Starts in 15 minutes'),
+                              style: const TextStyle(
+                                  color: Colors.white70, fontSize: 14)),
+                        ])),
+                    ExcludeFocus(
+                        child: Semantics(
+                            label: tr('Close'),
+                            button: true,
+                            child: IconButton(
+                                icon: const Icon(Icons.close),
+                                onPressed: _showNext))),
+                  ]),
+                ),
+              ]),
             ),
           ),
         ),

@@ -16,15 +16,49 @@ class GameReminderMenuTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final reminders = context.watch<GameReminders>();
     final enabled = reminders.isSet(game);
-    if (!enabled && !reminders.canSet(game)) return const SizedBox.shrink();
-    return TvMenuTile(
-      icon: enabled
-          ? Icons.notifications_off_outlined
-          : Icons.notifications_active_outlined,
-      title: enabled ? tr('Cancel reminder') : tr('Remind me'),
-      subtitle:
-          tr('15 minutes before and at game time (while VesperTV is open)'),
-      onTap: onTap,
-    );
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      if (enabled || reminders.canSet(game))
+        TvMenuTile(
+          icon: enabled
+              ? Icons.notifications_off_outlined
+              : Icons.notifications_active_outlined,
+          title: enabled ? tr('Cancel reminder') : tr('Remind me'),
+          subtitle:
+              tr('15 minutes before and at game time (while VesperTV is open)'),
+          onTap: onTap,
+        ),
+      for (final followed in reminders.followedTeams)
+        if (followed.leagueId == game.league.id &&
+            (followed.teamId == game.home.id ||
+                followed.teamId == game.away.id))
+          TvMenuTile(
+            icon: reminders.teamEnabled(followed)
+                ? Icons.notifications_off_outlined
+                : Icons.notifications_active_outlined,
+            title: tr(
+                reminders.teamEnabled(followed)
+                    ? 'Stop team reminders: {team}'
+                    : 'Remind me for every game: {team}',
+                {
+                  'team':
+                      (followed.teamId == game.home.id ? game.home : game.away)
+                          .shortName
+                }),
+            subtitle: tr(
+                '15 minutes before and at game time (while VesperTV is open)'),
+            onTap: () async {
+              try {
+                await reminders.setTeam(
+                    followed, !reminders.teamEnabled(followed),
+                    games: [game]);
+              } catch (_) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(tr('Could not save reminder.'))));
+                }
+              }
+            },
+          ),
+    ]);
   }
 }

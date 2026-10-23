@@ -6,6 +6,8 @@
 /// the code; Italian plurals don't work that way (canale/canali), so those
 /// strings are phrased to avoid it.
 const Map<String, String> kIt = {
+  "Remind me for every game: {team}": "Ricordami ogni partita: {team}",
+  "Stop team reminders: {team}": "Disattiva promemoria: {team}",
   "Remind me": "Ricordamelo",
   "Cancel reminder": "Annulla promemoria",
   "15 minutes before and at game time (while VesperTV is open)":

@@ -6,6 +6,8 @@
 /// English-style plural "s" filled in by the code; Greek plurals don't
 /// work that way, so those strings are phrased without it.
 const Map<String, String> kEl = {
+  "Remind me for every game: {team}": "Υπενθύμιση για κάθε αγώνα: {team}",
+  "Stop team reminders: {team}": "Διακοπή υπενθυμίσεων: {team}",
   "Remind me": "Υπενθύμιση αγώνα",
   "Cancel reminder": "Ακύρωση υπενθύμισης",
   "15 minutes before and at game time (while VesperTV is open)":

@@ -404,7 +404,8 @@ info version rejected — keep the VS layout). Fire Stick check pending.
 - Hold OK on an upcoming followed-team game, including My Teams, then choose
   **Remind me**. The same menu offers **Cancel reminder** afterwards.
 - `GameReminders` persists opt-in games per viewer, on this device only; reminders
-  are excluded from transfer/backup. No additional provider requests or OS alarms.
+  are excluded from transfer/backup. No OS alarms. Automatic team reminders refresh opted-in team schedules every
+  30 minutes while foregrounded, using the existing SportsService cache.
 - `GameReminderOverlay` lives above the root Navigator, including fullscreen
   players. Popups at 15 minutes before and at scheduled start dismiss after 12
   seconds, queue simultaneous games, and never request playback focus.
@@ -415,3 +416,13 @@ info version rejected — keep the VS layout). Fire Stick check pending.
   scheduled time is used. Profile switches clear visible/queued notices.
 - Tests cover timing, persistence, viewer isolation, rescheduling/cancellation,
   focus during a pushed stream, background/resume, and narrow phone layout.
+
+- Extension: the same game hold menu offers **Remind me for every game: {team}**
+  for each followed side, and **Stop team reminders: {team}**. Unfollow also stops
+  that team's automatic reminders. Individual cancellations survive refresh/restart;
+  disabling a team keeps manual reminders and games covered by another enabled team.
+- Popup background: selected enabled team's logo at 14% opacity behind the text,
+  clipped to the rounded panel. Missing/failed images leave the readable dark panel.
+- Preference schema reads the original per-game list and now writes entries,
+  enabled team keys and skipped game keys together; viewer fences reject late
+  schedule responses after switching profiles. Duplicate games share one notice.

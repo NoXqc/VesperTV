@@ -1,3 +1,4 @@
+import 'dart:async' show Completer;
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -11,7 +12,8 @@ SportsGame reminderGame(DateTime start,
         {String id = 'game',
         GameState state = GameState.pre,
         String status = 'Scheduled',
-        String leagueId = 'nhl'}) =>
+        String leagueId = 'nhl',
+        String? homeLogo}) =>
     SportsGame(
         id: id,
         league: SportsLeague(
@@ -23,7 +25,8 @@ SportsGame reminderGame(DateTime start,
         start: start,
         state: state,
         statusText: status,
-        home: const SportsTeam(
+        home: SportsTeam(
+            logoUrl: homeLogo,
             id: 'mtl',
             name: 'Montreal Canadiens',
             shortName: 'Canadiens',
@@ -50,6 +53,139 @@ void main() {
     reminders = GameReminders(storage, now: () => time);
   });
   tearDown(() => reminders.dispose());
+
+  test('team opt-in adds future games, persists and avoids duplicate opponents',
+      () async {
+    reminders.dispose();
+    var calls = 0;
+    final next = reminderGame(time.add(const Duration(days: 2)), id: 'next');
+    reminders = GameReminders(storage,
+        now: () => time,
+        loadSchedule: (league, id) async {
+          calls++;
+          return SportsTeamSchedule(
+              league: game.league, team: game.home, games: [game, next]);
+        });
+    const team = FollowedTeam('nhl', 'mtl');
+    await reminders.setTeam(team, true);
+    expect(reminders.isSet(game), isTrue);
+    expect(reminders.isSet(next), isTrue);
+    expect(calls, 1);
+    await reminders.refreshSchedules();
+    expect(calls, 1);
+    await reminders.setTeam(const FollowedTeam('nhl', 'buf'), true);
+    time = game.start.subtract(const Duration(minutes: 15));
+    expect(reminders.poll(), hasLength(1));
+    await drain();
+    final reopened = GameReminders(storage,
+        now: () => time, loadSchedule: (_, __) async => null);
+    expect(reopened.teamEnabled(team), isTrue);
+    expect(reopened.isSet(next), isTrue);
+    expect(reopened.poll(), isEmpty);
+    reopened.dispose();
+  });
+
+  test('later foreground refresh discovers games added to a team schedule',
+      () async {
+    reminders.dispose();
+    final next = reminderGame(time.add(const Duration(days: 4)), id: 'new');
+    var games = [game];
+    reminders = GameReminders(storage,
+        now: () => time,
+        loadSchedule: (league, _) async =>
+            SportsTeamSchedule(league: league, team: game.home, games: games));
+    await reminders.setTeam(const FollowedTeam('nhl', 'mtl'), true);
+    games = [game, next];
+    time = time.add(const Duration(minutes: 30));
+    await reminders.refreshSchedules();
+    expect(reminders.isSet(next), isTrue);
+    expect(reminders.teamEnabled(const FollowedTeam('nhl', 'mtl')), isTrue);
+  });
+
+  test('one-game cancellation stays skipped while team continues', () async {
+    reminders.dispose();
+    reminders = GameReminders(storage,
+        now: () => time, loadSchedule: (_, __) async => null);
+    const team = FollowedTeam('nhl', 'mtl');
+    await reminders.setTeam(team, true, games: [game]);
+    await reminders.toggle(game);
+    final next = reminderGame(time.add(const Duration(days: 2)), id: 'next');
+    reminders.reconcile([game, next]);
+    expect(reminders.isSet(game), isFalse);
+    expect(reminders.isSet(next), isTrue);
+    await drain();
+    final reopened = GameReminders(storage,
+        now: () => time, loadSchedule: (_, __) async => null);
+    reopened.reconcile([game]);
+    expect(reopened.isSet(game), isFalse);
+    reopened.dispose();
+  });
+
+  test('disabling a team retains manual reminders and the other team',
+      () async {
+    reminders.dispose();
+    reminders = GameReminders(storage,
+        now: () => time, loadSchedule: (_, __) async => null);
+    await reminders.toggle(game);
+    final next = reminderGame(time.add(const Duration(days: 2)), id: 'next');
+    const home = FollowedTeam('nhl', 'mtl');
+    const away = FollowedTeam('nhl', 'buf');
+    await reminders.setTeam(home, true, games: [game, next]);
+    await reminders.setTeam(away, true, games: [game, next]);
+    await reminders.setTeam(home, false);
+    expect(reminders.isSet(next), isTrue);
+    await reminders.setTeam(away, false);
+    expect(reminders.isSet(next), isFalse);
+    expect(reminders.isSet(game), isTrue);
+  });
+
+  test('late schedule response cannot populate another viewer', () async {
+    reminders.dispose();
+    final pending = Completer<SportsTeamSchedule?>();
+    reminders = GameReminders(storage,
+        now: () => time, loadSchedule: (_, __) => pending.future);
+    final enabling = reminders.setTeam(const FollowedTeam('nhl', 'mtl'), true);
+    await drain();
+    await storage.setActiveViewerId('kids');
+    reminders.loadViewer();
+    pending.complete(SportsTeamSchedule(
+        league: game.league, team: game.home, games: [game]));
+    await enabling;
+    expect(reminders.hasTeamReminders, isFalse);
+    expect(reminders.isSet(game), isFalse);
+  });
+
+  test('automatic logo uses enabled away team before another followed team',
+      () async {
+    reminders.dispose();
+    await storage.setSportsFollowedTeams(['nhl|mtl', 'nhl|buf']);
+    reminders = GameReminders(storage,
+        now: () => time, loadSchedule: (_, __) async => null);
+    final branded = SportsGame(
+        id: game.id,
+        league: game.league,
+        start: game.start,
+        state: GameState.pre,
+        statusText: 'Scheduled',
+        home: const SportsTeam(
+            id: 'mtl',
+            name: 'Montreal',
+            shortName: 'MTL',
+            abbreviation: 'MTL',
+            logoUrl: 'https://example.com/home.png'),
+        away: const SportsTeam(
+            id: 'buf',
+            name: 'Buffalo',
+            shortName: 'BUF',
+            abbreviation: 'BUF',
+            logoUrl: 'https://example.com/away.png'));
+    await reminders
+        .setTeam(const FollowedTeam('nhl', 'buf'), true, games: [branded]);
+    time = branded.start.subtract(const Duration(minutes: 15));
+    final entry = reminders.poll().single.reminder;
+    expect(entry.logoUrl, 'https://example.com/away.png');
+    expect(GameReminder.parse(entry.toJson())!.logoUrl, entry.logoUrl);
+  });
 
   test('exactly two stages, stored before restart and never repeated',
       () async {

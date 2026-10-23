@@ -5,6 +5,8 @@
 /// Keep every `{placeholder}` exactly as in the key. `{s}` is the plural "s"
 /// the code fills in ("chaîne{s}").
 const Map<String, String> kFr = {
+  "Remind me for every game: {team}": "Me rappeler chaque match : {team}",
+  "Stop team reminders: {team}": "Désactiver les rappels : {team}",
   "Remind me": "Me rappeler",
   "Cancel reminder": "Annuler le rappel",
   "15 minutes before and at game time (while VesperTV is open)":

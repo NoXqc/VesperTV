@@ -84,6 +84,44 @@ void main() {
     await tester.pump();
   }
 
+  testWidgets('team menu enables all games and can stop them', (tester) async {
+    await storage.setSportsFollowedTeams(['nhl|mtl']);
+    reminders = GameReminders(storage,
+        now: () => time, loadSchedule: (_, __) async => null);
+    final game = reminderGame(time.add(const Duration(hours: 1)));
+    await mount(tester, page: GameReminderMenuTile(game: game, onTap: () {}));
+    await tester.tap(find.text('Remind me for every game: Canadiens'));
+    await tester.pump();
+    expect(find.text('Stop team reminders: Canadiens'), findsOneWidget);
+    expect(reminders.isSet(game), isTrue);
+    await tester.tap(find.text('Stop team reminders: Canadiens'));
+    await tester.pump();
+    expect(reminders.isSet(game), isFalse);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets(
+      'popup paints faded team logo behind text and handles image failure',
+      (tester) async {
+    reminders = GameReminders(storage, now: () => time);
+    final game = reminderGame(time.add(const Duration(hours: 1)),
+        homeLogo: 'https://example.com/logo.png');
+    await reminders.toggle(game);
+    await mount(tester);
+    time = game.start.subtract(const Duration(minutes: 15));
+    await tester.pump(const Duration(minutes: 45));
+    expect(find.text('Starts in 15 minutes'), findsOneWidget);
+    final image = tester.widget<Image>(find.byType(Image));
+    expect((image.image as NetworkImage).url, 'https://example.com/logo.png');
+    final fade = tester.widget<Opacity>(find
+        .ancestor(of: find.byType(Image), matching: find.byType(Opacity))
+        .first);
+    expect(fade.opacity, 0.14);
+    expect(image.errorBuilder, isNotNull);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('alerts appear above a pushed stream without taking focus',
       (tester) async {
     reminders = GameReminders(storage, now: () => time);
