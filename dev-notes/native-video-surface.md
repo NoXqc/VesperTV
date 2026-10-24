@@ -250,3 +250,25 @@ release certificate and package `com.nox.nox_iptv` /versionCode427 verified.
 APK SHA256: `5046c986de045746226452cdc5dc13b07eed1798f4b17068aa37043b617e4051`.
 Local copy: `C:\Users\aarse\VesperTV-test427\VesperTV-1.0.39-test.427.apk`.
 No GitHub upload/push/tag/Discord; owner-authorized ADB install only, no UI driving.
+
+## Combined GitHub beta +428 (Codex, 2026-10-24)
+
+- Owner requested Claude's NativeVideoSurface.java changes and GitHub beta for
+  Sam/AMD. Applied the exact diagnostic delta from Claude commit `d87c688`
+  (`claude/native-surface-prepare`) over our common `ff0523c` implementation,
+  retaining the newer native-live replacement path. Do not overwrite the file
+  wholesale: it would remove replaceLive/PendingSwap and reintroduce session churn.
+- Claude's early-bind behavior was already included in+426/+427. New addition:
+  Send log `prepare` reports ON native surface, WITHOUT because owner busy,
+  or WITHOUT because no native view. Tests assert successful and busy cases.
+- Cube context from Claude: LOG-Y74UW3 on+425 still produced1080p despite
+  HDR4K input. Early binding is the candidate fix; no Cube HDR success claimed.
+- Includes all prior combined work: live reuse, browse return, per-profile themes,
+  compact reminders and Coming soon episodes. Beta remains opt-in/restart-applied.
+- Checks: `17 issues found. (ran in 8.8s)`; `00:27 +428: All tests passed!`;
+  native104 tests with zero failures/errors/skips, `BUILD SUCCESSFUL in 14s`.
+- Owner-authorized publication uses existing tag/asset `1.0.39-test.423` /
+  `VesperTV-1.0.39-test.423.apk`, retaining the URL; APK versionCode is428.
+  Push only the Codex source branch, keep prerelease true, no main/stable/Discord.
+- Release APK built in43.4s /81.3MB; expected signing certificate verified.
+- APK SHA256: `6b12eeb840cc7fa24ea1f2c6dfa24cdb9b631152d43ee1693d77a5dbdfa5192b`.

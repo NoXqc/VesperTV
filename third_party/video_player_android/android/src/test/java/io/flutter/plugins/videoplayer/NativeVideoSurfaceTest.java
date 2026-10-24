@@ -101,6 +101,8 @@ public class NativeVideoSurfaceTest {
     invoke("configure", Map.of("enabled", true));
     SurfaceHolder holder = surface.holderForPreparation();
     assertNotNull(holder);
+    assertTrue(((Map<?, ?>) invoke("diagnostics", null)).get("prepare").toString()
+        .contains("prepared ON the native surface"));
     VideoPlayerOptions options = new VideoPlayerOptions();
     options.nativeSurfaceHolder = holder;
     VideoPlayer player = new PlatformViewVideoPlayer(mock(VideoPlayerCallbacks.class),
@@ -111,6 +113,8 @@ public class NativeVideoSurfaceTest {
     verify(exo, times(1)).setVideoSurfaceHolder(holder);
     // Preparing a retry must not steal a still-playing owner's output.
     assertNull(surface.holderForPreparation());
+    assertTrue(((Map<?, ?>) invoke("diagnostics", null)).get("prepare").toString()
+        .contains("prepared WITHOUT the native surface (player 2 still owns it)"));
     surface.onPlayerDisposed(2L);
     player.dispose();
     assertSame(holder, surface.holderForPreparation());

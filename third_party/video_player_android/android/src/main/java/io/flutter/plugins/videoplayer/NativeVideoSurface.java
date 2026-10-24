@@ -67,6 +67,7 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
   private String firstFrame = "-";
   private int droppedFrames = 0;
   private String lastError = "-";
+  private String lastPrepare = "-";
 
   NativeVideoSurface(@NonNull BinaryMessenger messenger, @NonNull LongSparseArray<VideoPlayer> players) {
     this.players = players;
@@ -167,7 +168,21 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
   @Nullable SurfaceHolder holderForPreparation() {
     // Backup retries can prepare a candidate while the current player is still
     // running. Preserve that player's output until the candidate is adopted.
-    if (!enabled || attachedPlayer != null || !ensureView()) return null;
+    if (!enabled) return null;
+    if (attachedPlayer != null) {
+      lastPrepare = "new player prepared WITHOUT the native surface (player " + attachedId + " still owns it)";
+      Log.i(TAG, lastPrepare);
+      return null;
+    }
+    if (!ensureView()) {
+      lastPrepare = "new player prepared WITHOUT the native surface (no view)";
+      Log.i(TAG, lastPrepare);
+      return null;
+    }
+    // Why this matters (AMD's Fire TV Cube, LOG-Y74UW3): a decoder configured on a placeholder
+    // surface and moved to the SurfaceView later stayed in 1080p SDR output on Amlogic.
+    lastPrepare = "new player prepared ON the native surface (surface " + surfaceState + ")";
+    Log.i(TAG, lastPrepare);
     return view.getHolder();
   }
 
@@ -472,6 +487,7 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
     out.put("firstFrame", firstFrame);
     out.put("dropped", droppedFrames);
     out.put("error", lastError);
+    out.put("prepare", lastPrepare);
     out.put("display", displayInfo());
     out.put("windowTransparent", windowTransparent());
     if (attachedPlayer != null) {

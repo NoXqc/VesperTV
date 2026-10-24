@@ -336,6 +336,11 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Combined native beta +428** (`codex/native-live-zap`): owner requested GitHub
+  beta including Claude's `d87c688` prepare diagnostics, layered on the existing
+  early-bind fix and newer live reuse. All pending theme/reminder/browse/episode
+  work included. Analyze17, Flutter428/native104 tests pass; device results pending.
+  Keep the existing beta tag/asset URL and prerelease status; stable unchanged.
 - **Codex native live zap** (`codex/native-live-zap`, owner test +427):
   reuse the native live player's session/output across channel zaps; reset stats,
   recovery and metadata state, guard rapid A->B->A, fall back on failure.
