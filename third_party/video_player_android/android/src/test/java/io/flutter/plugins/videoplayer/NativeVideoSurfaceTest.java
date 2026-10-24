@@ -233,4 +233,63 @@ public class NativeVideoSurfaceTest {
     surface.onPlayerDisposed(3L);
     player.dispose();
   }
+
+  @Test
+  public void formulerRejectsSolidGreenCaptureAndClearsPreviousPicture() {
+    org.robolectric.shadows.ShadowBuild.setManufacturer("FORMULER");
+    org.robolectric.shadows.ShadowBuild.setModel("Formuler Z11 Pro MAX");
+    VideoPlayer player = nativePlayer();
+    android.graphics.Bitmap good = android.graphics.Bitmap.createBitmap(90, 90,
+        android.graphics.Bitmap.Config.ARGB_8888);
+    good.eraseColor(android.graphics.Color.BLUE);
+    surface.retainCapturedPicture(good);
+    android.graphics.Bitmap green = android.graphics.Bitmap.createBitmap(90, 90,
+        android.graphics.Bitmap.Config.ARGB_8888);
+    green.eraseColor(android.graphics.Color.rgb(8, 240, 8));
+    surface.retainCapturedPicture(green);
+    assertTrue(green.isRecycled());
+    assertEquals("solid-green rejected; logo fallback",
+        ((Map<?, ?>) invoke("diagnostics", null)).get("zapCapture"));
+    android.widget.ImageView cover = org.robolectric.util.ReflectionHelpers.getField(surface, "zapCover");
+    assertFalse(cover.getDrawable() instanceof android.graphics.drawable.BitmapDrawable);
+    assertNull(org.robolectric.util.ReflectionHelpers.getField(surface, "lastPicture"));
+    player.dispose();
+  }
+
+  @Test
+  public void otherDevicesKeepTheirCapturedFrame() {
+    org.robolectric.shadows.ShadowBuild.setManufacturer("NVIDIA");
+    org.robolectric.shadows.ShadowBuild.setModel("SHIELD Android TV");
+    android.graphics.Bitmap green = android.graphics.Bitmap.createBitmap(90, 90,
+        android.graphics.Bitmap.Config.ARGB_8888);
+    green.eraseColor(android.graphics.Color.GREEN);
+    surface.retainCapturedPicture(green);
+    assertFalse(green.isRecycled());
+    assertEquals("last frame retained", ((Map<?, ?>) invoke("diagnostics", null)).get("zapCapture"));
+  }
+
+  @Test
+  public void texturedGreenSportsPictureIsNotRejected() {
+    android.graphics.Bitmap field = android.graphics.Bitmap.createBitmap(90, 90,
+        android.graphics.Bitmap.Config.ARGB_8888);
+    for (int y = 0; y < 90; y++) {
+      for (int x = 0; x < 90; x++) {
+        field.setPixel(x, y, android.graphics.Color.rgb(8, 180 + x % 70, 8));
+      }
+    }
+    assertFalse(NativeVideoSurface.isSolidGreenFrame(field));
+    field.eraseColor(android.graphics.Color.BLACK);
+    assertFalse(NativeVideoSurface.isSolidGreenFrame(field));
+    field.eraseColor(android.graphics.Color.TRANSPARENT);
+    assertFalse(NativeVideoSurface.isSolidGreenFrame(field));
+    field.eraseColor(android.graphics.Color.GREEN);
+    assertTrue(NativeVideoSurface.isSolidGreenFrame(field));
+    // A small bitmap must also be safe to sample.
+    android.graphics.Bitmap tiny = android.graphics.Bitmap.createBitmap(1, 1,
+        android.graphics.Bitmap.Config.ARGB_8888);
+    tiny.eraseColor(android.graphics.Color.GREEN);
+    assertTrue(NativeVideoSurface.isSolidGreenFrame(tiny));
+    tiny.recycle();
+    field.recycle();
+  }
 }
