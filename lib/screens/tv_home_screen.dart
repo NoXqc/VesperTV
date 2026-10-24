@@ -1090,15 +1090,19 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         if (mounted) _restoreLiveFocus();
       });
     }
-    if (tab == 'Movies' || tab == 'TV Shows') _parkLiveChannel();
+    if (_isBrowseTab(tab)) {
+      unawaited(_parkLiveChannel(keepNativeSurface: true));
+    }
   }
 
   /// Browsing Movies/TV Shows stops a live channel playing in the background
   /// (no hidden audio, frees the decoder + provider connection) but keeps it
   /// resumable: it becomes the pending-resume channel, so the "Hold > to
   /// resume" pill and hold-Right still bring it back (a fresh start, same as
-  /// the cold-launch resume). Android only — Windows has its own stack.
-  Future<void> _parkLiveChannel() async {
+  /// the cold-launch resume). Movies/TV Shows keep an already-running native
+  /// beta player instead, so returning does not reconnect. Android only —
+  /// Windows has its own stack.
+  Future<void> _parkLiveChannel({bool keepNativeSurface = false}) async {
     final playback = context.read<PlaybackService>();
     final channel = playback.currentChannel;
     if (channel == null ||
@@ -1106,6 +1110,12 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         !Channel.isLiveId(channel.rawId)) {
       return;
     }
+    // Movies/TV Shows replace the preview within this route, unlike
+    // Settings. Keep the beta's existing player/connection alive: with no
+    // hole the native surface moves offscreen without being detached, and
+    // returning to TV or holding Right reuses the same controller. Legacy
+    // platform views still park to avoid showing video over the catalog.
+    if (keepNativeSurface && playback.usesNativeSurface) return;
     await playback.stop();
     // stop() clears the pending channel, so set it after.
     playback.setPendingResumeChannel(channel);
@@ -1660,7 +1670,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       // Preserve the browse pages' live-video parking without deferring
       // the selected screen's first paint or changing resume behavior.
       if (_isBrowseTab(_initialTab) || widget.startupBrowseCovered) {
-        unawaited(_parkLiveChannel());
+        unawaited(
+            _parkLiveChannel(keepNativeSurface: _isBrowseTab(_initialTab)));
       }
       // Only when this screen is on top (the startup auto-resume or the
       // welcome prompt may already have pushed a route over it) and nothing

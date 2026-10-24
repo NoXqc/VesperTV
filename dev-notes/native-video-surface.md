@@ -117,3 +117,23 @@ and play **Media Hub video normally** (start, resume, pause/play without a black
 paused-surface workaround still missing here —, seek, subtitles, audio tracks, next episode, stream
 picker, trailers). Full list in HANDOFF.md "Beta acceptance".
 
+
+## Movies / TV Shows return follow-up (Codex, 2026-10-24; not packaged)
+
+- Owner reported +425 fixed Settings return but Movies/TV Shows still rebuilt
+  a playing live stream. Unlike Settings routes, those tabs explicitly called
+  `_parkLiveChannel` -> `stop` -> controller disposal. Retaining a covered
+  route's native rect cannot preserve a player that has been disposed.
+- `codex/browse-video-transition` keeps an existing native-surface controller
+  alive when entering Movies/TV Shows (including the initial-tab path).
+  `PlaybackService.usesNativeSurface` checks the controller's original mode,
+  so changing Compatibility video does not reclassify an existing session.
+- The tab removes its hole: the native surface moves offscreen at the same
+  size, retaining its player. Returning to TV or holding Right reuses it.
+  Sound/connection continue while browsing, matching Settings behavior.
+- Beta-off/platform/texture players retain the prior stop-and-resume behavior;
+  Home and Media Hub continue parking live video. No codec/native Java changes.
+- Regression coverage: both tabs, startup vs tab selection, native vs legacy
+  parking (8 widget cases), plus hole removal/restoration without a new attach.
+- Owner confirmation still needed on the box; no APK built or beta updated
+  for this follow-up. Release +425 remains the published package.
