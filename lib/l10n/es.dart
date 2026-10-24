@@ -1901,4 +1901,5 @@ const Map<String, String> kEs = {
   "{groups} groups hidden · {channels} channels hidden": "{groups} grupos ocultos · {channels} canales ocultos",
   "Main cannot be deleted": "No se puede eliminar Principal",
   "Hold OK on a profile to edit it. Hold OK on a season to mark it watched or unwatched.": "Mantén OK en un perfil para editarlo o en una temporada para marcarla vista o no vista.",
+  'Coming soon': 'Próximamente',
 };

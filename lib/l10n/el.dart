@@ -2513,4 +2513,5 @@ const Map<String, String> kEl = {
   "{groups} groups hidden · {channels} channels hidden": "{groups} κρυφές ομάδες · {channels} κρυφά κανάλια",
   "Main cannot be deleted": "Το Κύριο προφίλ δεν μπορεί να διαγραφεί",
   "Hold OK on a profile to edit it. Hold OK on a season to mark it watched or unwatched.": "Κρατήστε OK σε προφίλ για επεξεργασία ή σε σεζόν για σήμανση ως προβληθείσας ή μη.",
+  'Coming soon': 'Προσεχώς',
 };

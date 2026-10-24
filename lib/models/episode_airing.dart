@@ -42,6 +42,12 @@ class EpisodeAiring {
       ? !date.isBefore(DateTime(now.year, now.month, now.day))
       : !date.isBefore(now);
 
+  /// A future release, rather than today's date-only schedule whose exact
+  /// availability is unknown. Used for the episode card's Coming soon tag.
+  bool unreleased(DateTime now) => dateOnly
+      ? date.isAfter(DateTime(now.year, now.month, now.day))
+      : date.isAfter(now);
+
   DateTime get displayDate => dateOnly ? date : date.toLocal();
 
   String? get code => season != null &&

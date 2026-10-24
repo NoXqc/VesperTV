@@ -1905,4 +1905,5 @@ const Map<String, String> kIt = {
   "{groups} groups hidden · {channels} channels hidden": "{groups} gruppi nascosti · {channels} canali nascosti",
   "Main cannot be deleted": "Impossibile eliminare Principale",
   "Hold OK on a profile to edit it. Hold OK on a season to mark it watched or unwatched.": "Tieni premuto OK su un profilo per modificarlo o su una stagione per segnarla vista o non vista.",
+  'Coming soon': 'Prossimamente',
 };

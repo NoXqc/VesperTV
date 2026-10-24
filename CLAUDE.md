@@ -336,6 +336,10 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Codex episode Coming soon tag** (`codex/episode-coming-soon`, not packaged):
+  future-dated IPTV/Media Hub episodes show a translated badge on shared series
+  thumbnails (wide cards and phone list). Uses validated `EpisodeAiring` dates;
+  unknown/invalid dates and date-only today stay unlabelled; playback unchanged.
 - **Codex native beta follow-ups** (`codex/native-surface-fixes` 6222f16, included in beta +425, from
   `f1ceb95`): retain last surface rect beneath covering routes/transitions, seed
   decoder/format diagnostics from player creation/current format, and guard

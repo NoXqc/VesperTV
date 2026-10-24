@@ -27,6 +27,22 @@ http.Response meta(String id, List<Map<String, Object?>> videos) =>
         200);
 
 void main() {
+  test('Coming soon excludes date-only today but respects future instants', () {
+    expect(EpisodeAiring.parse('2026-10-24')!.unreleased(now), isTrue);
+    expect(EpisodeAiring.parse('2026-10-23')!.unreleased(now), isFalse);
+    expect(EpisodeAiring.parse('2026-10-22')!.unreleased(now), isFalse);
+    final instant = DateTime.utc(2026, 10, 23, 12);
+    expect(
+        EpisodeAiring.parse('2026-10-23T14:01:00+02:00')!.unreleased(instant),
+        isTrue);
+    expect(
+        EpisodeAiring.parse('2026-10-23T14:00:00+02:00')!.unreleased(instant),
+        isFalse);
+    expect(
+        EpisodeAiring.parse('2026-10-23T13:59:00+02:00')!.unreleased(instant),
+        isFalse);
+  });
+
   test(
       'dates reject missing, placeholders, invalid calendars and incomplete years',
       () {

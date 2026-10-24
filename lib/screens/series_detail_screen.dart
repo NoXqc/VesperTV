@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 
 import '../l10n/l10n.dart';
 import '../models/channel.dart';
+import '../models/episode_airing.dart';
 import '../models/series_details.dart';
 import '../models/xtream_series.dart';
 import '../services/desktop_mini_player.dart';
@@ -701,6 +702,8 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
       plot: d?.plot,
       durationText: durationText,
       airDate: airDate,
+      comingSoon:
+          EpisodeAiring.parse(rawDate)?.unreleased(DateTime.now()) ?? false,
       watched: watched,
       progress: fraction,
       images: _episodeImages(episode.logoUrl),
@@ -1276,6 +1279,7 @@ class _EpisodeInfo {
     required this.plot,
     required this.durationText,
     required this.airDate,
+    required this.comingSoon,
     required this.watched,
     required this.progress,
     required this.images,
@@ -1289,6 +1293,7 @@ class _EpisodeInfo {
   final String? plot;
   final String? durationText;
   final String? airDate;
+  final bool comingSoon;
   final bool watched;
 
   /// 0-1 for a started, unfinished episode; null otherwise.
@@ -1318,6 +1323,30 @@ class _ThumbOverlays extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
+        if (info.comingSoon)
+          Positioned(
+            top: 5 * s,
+            left: 5 * s,
+            right: info.watched ? 30 * s : 5 * s,
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: Container(
+                padding:
+                    EdgeInsets.symmetric(horizontal: 6 * s, vertical: 3 * s),
+                decoration: BoxDecoration(
+                  color: Colors.black87,
+                  borderRadius: BorderRadius.circular(4 * s),
+                ),
+                child: Text(tr('Coming soon'),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 10 * s,
+                        fontWeight: FontWeight.w700,
+                        color: scheme.primary)),
+              ),
+            ),
+          ),
         if (info.watched)
           Positioned(
             top: 5 * s,

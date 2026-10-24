@@ -1904,4 +1904,5 @@ const Map<String, String> kFr = {
   "{groups} groups hidden · {channels} channels hidden": "{groups} groupes masqués · {channels} chaînes masquées",
   "Main cannot be deleted": "Le profil Principal ne peut pas être supprimé",
   "Hold OK on a profile to edit it. Hold OK on a season to mark it watched or unwatched.": "Maintenez OK sur un profil pour le modifier, ou sur une saison pour la marquer vue ou non vue.",
+  'Coming soon': 'Bientôt disponible',
 };
