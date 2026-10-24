@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:provider/provider.dart';
@@ -63,6 +64,22 @@ Future<void> main() => AppLog.capture(_main);
 
 Future<void> _main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // sqflite on Android runs EVERY database (guide, catalog, Media Hub cache and
+  // the image cache's metadata) on ONE worker thread. A long query on a big
+  // guide (Sports Trak's channel search) then froze all of them: blank logos,
+  // posters and Home cards, 1,000+ "database locked for 10 s" warnings (Shield
+  // user, LOG-K2RDQM). With several workers different databases run side by
+  // side; one database's own queries stay in order (plugin contract). Must run
+  // before the first database opens.
+  if (Platform.isAndroid) {
+    try {
+      await const MethodChannel('com.tekartik.sqflite')
+          .invokeMethod<void>('options', {'androidThreadCount': 4});
+      debugPrint('Sqflite: 4 database worker threads');
+    } catch (e) {
+      debugPrint('Sqflite: thread count not set: $e');
+    }
+  }
   // Plain `sqflite` has no Windows/Linux implementation at all — confirmed
   // via .flutter-plugins-dependencies: sqflite_android/sqflite_darwin exist
   // for the platforms this app already shipped on, nothing for
