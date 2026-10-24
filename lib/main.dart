@@ -396,8 +396,9 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // Trakt/Simkl scrobbling reads the connected accounts from here.
       WatchTracker.instance.attach(_archiveService);
       TrackerSync.instance.attach(_archiveService);
-      _viewerProfileService =
-          ViewerProfileService(_storage, _playlistManager, _playbackService);
+      _viewerProfileService = ViewerProfileService(
+          _storage, _playlistManager, _playbackService,
+          onViewerChanged: _preferences.reloadPaletteForViewer);
 
       // Restores category lists (small, fast regardless of catalog size —
       // see that method's doc comment for why live channels/category
