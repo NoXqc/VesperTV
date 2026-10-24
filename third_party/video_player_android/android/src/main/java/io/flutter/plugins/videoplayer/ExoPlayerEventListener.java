@@ -65,6 +65,16 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
   private final ArrayDeque<Long> restartTimes = new ArrayDeque<>();
   private final ArrayDeque<String> restartReasons = new ArrayDeque<>();
   private boolean isInitialized = false;
+  // A live source change keeps the Dart controller initialized, but must not
+  // inherit the previous channel's recovery budget or delayed recovery task.
+  void resetForNewSource() {
+    mainHandler.removeCallbacks(recover);
+    errorWindowStartMs = 0;
+    errorsInWindow = 0;
+    consecutiveErrors = 0;
+    restartTimes.clear();
+    restartReasons.clear();
+  }
   private boolean isWaitingForValidDuration = false;
   private final Handler mainHandler = new Handler(Looper.getMainLooper());
   private final Runnable initializationFallback =

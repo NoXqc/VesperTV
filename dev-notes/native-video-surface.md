@@ -207,3 +207,46 @@ release, early attachment, and no hidden/rect excursion during channel loading.
 - Code checks from ff0523c remain valid (version-only packaging): analyze17,
   Flutter426 tests passed, Android96 tests passed. No code changed for packaging.
 - No GitHub upload/push/tag/Discord; public beta link still contains+425.
+
+## Native live zap follow-up +427 (Codex, 2026-10-24)
+
+LOG-MBF8SN confirms owner+426 on Formuler, whole-TV black for guide-preview
+1080p->reported SDR4K. At09:47:17-09:47:19 the native rect remains558x314;
+there is no hide/resize/destroy at that zap and display matching says same.
+The remaining lifecycle is releasing the AVC ExoPlayer and creating HEVC output.
+This rules out the prior temporary offscreen move as the cause of that example;
+it does not prove the TV's HDMI/color transition or guarantee seamless HDR changes.
+
+Branch codex/native-live-zap (from combined+426) adds replaceLive on the native
+channel, narrowly for initialized, healthy, native live->live HTTP(S) playback
+without external caption files, with Compatibility video off. The native owner
+must still match; changed audio-passthrough configuration rejects reuse.
+- Same ExoPlayer, holder, native player id and Dart controller: replace the
+  MediaSource, prepare and play. No output clear/detach or player release.
+- The new media source gets fresh HTTP transfer stats and frame-rate probe;
+  previous audio/text track overrides and recovery counters/tasks reset.
+  Keep the existing initialized event state; never initialize a Dart controller twice.
+- Wait for READY (15s bound); native error, disposal or superseding zap completes
+  the waiting request and cancels its listener/timeout. Unsupported/failed reuse
+  falls back to the existing recreation/HLS-learning/backup flow.
+- Service updates current channel, history, start time and picture dimensions;
+  replaces its restart-loop listener and invalidates delayed old-channel metadata
+  and display-match work. Generation guards cover rapid A->B->A and stop/disposal.
+- Native diagnostics are logged after successful reuse. Look for reusing player N
+  for live zap / reused live player, with the same id across guide selections.
+- VOD, Multiview/texture, beta-off, external-caption and uninitialized/error paths
+  keep the existing lifecycle. This does not implement Multiview HDR tone mapping.
+
+Tests: two Flutter cases verify controller/history/size and late A->B->A failure;
+native SDK28/30 tests verify no release/output clear, READY completion, supersession,
+dispose cancellation and unsupported rejection. No new user-visible strings.
+Owner must still verify whether this removes the whole-TV blackout on Realtek;
+codec changes inside ExoPlayer and genuine HDR output changes may still black out.
+
+Final checks: `17 issues found. (ran in 9.2s)`; `00:22 +428: All tests passed!`;
+Android104 tests, zero failures/errors/skips, `BUILD SUCCESSFUL in 27s`.
+Final release APK rebuilt after A->B->A generation guard:40.6s /81.3MB; expected
+release certificate and package `com.nox.nox_iptv` /versionCode427 verified.
+APK SHA256: `5046c986de045746226452cdc5dc13b07eed1798f4b17068aa37043b617e4051`.
+Local copy: `C:\Users\aarse\VesperTV-test427\VesperTV-1.0.39-test.427.apk`.
+No GitHub upload/push/tag/Discord; owner-authorized ADB install only, no UI driving.

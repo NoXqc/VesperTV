@@ -9,6 +9,7 @@ import static androidx.media3.common.Player.REPEAT_MODE_OFF;
 
 import android.os.Handler;
 import android.os.Looper;
+import android.content.Context;
 import android.view.SurfaceHolder;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -48,7 +49,8 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
   @Nullable String nativeVideoDecoderName;
   @Nullable SurfaceHolder nativeSurfaceHolder;
   // VesperTV patch: frame rate from the first frames' timestamps (Match frame rate).
-  final FrameRateProbe frameRateProbe = new FrameRateProbe();
+  FrameRateProbe frameRateProbe = new FrameRateProbe();
+  private final boolean nativePassthrough;
 
   private final Handler mainHandler = new Handler(Looper.getMainLooper());
   private boolean isDisposed = false;
@@ -85,6 +87,7 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
     this.videoPlayerEvents = events;
     this.surfaceProducer = surfaceProducer;
     exoPlayer = exoPlayerProvider.get();
+    nativePassthrough = AudioPassthrough.isEnabled();
     nativeSurfaceHolder = options.nativeSurfaceHolder;
     exoPlayer.addAnalyticsListener(
         new AnalyticsListener() {
@@ -120,6 +123,26 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
 
   public void setDisposeHandler(@Nullable DisposeHandler handler) {
     disposeHandler = handler;
+  }
+
+  boolean canReplaceNativeStream() {
+    return !isDisposed && nativeSurfaceHolder != null
+        && nativePassthrough == AudioPassthrough.isEnabled();
+  }
+
+  /** A live zap keeps the same ExoPlayer and output; no detach/release/placeholder. */
+  void replaceNativeStream(@NonNull Context context, @NonNull VideoAsset asset) {
+    if (exoPlayerEventListener != null) exoPlayerEventListener.resetForNewSource();
+    if (trackSelector != null) {
+      trackSelector.setParameters(trackSelector.buildUponParameters()
+          .clearOverrides().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true));
+    }
+    streamStats = asset.streamStats();
+    frameRateProbe = new FrameRateProbe();
+    exoPlayer.setVideoFrameMetadataListener(frameRateProbe);
+    exoPlayer.setMediaSource(asset.getMediaSourceFactory(context).createMediaSource(asset.getMediaItem()));
+    exoPlayer.prepare();
+    exoPlayer.play();
   }
 
   @NonNull

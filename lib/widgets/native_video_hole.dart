@@ -34,6 +34,11 @@ class NativeVideoSurface {
     await _channel.invokeMethod<void>('configure', {'enabled': active});
   }
 
+  static Future<Map<String, Object?>?> replaceLive(int playerId, String url,
+          {required bool hls}) =>
+      _channel.invokeMapMethod<String, Object?>(
+          'replaceLive', {'playerId': playerId, 'url': url, 'hls': hls});
+
   static final _holes = <_NativeVideoHoleState>[];
   static bool _hooked = false;
   static int? _attached;

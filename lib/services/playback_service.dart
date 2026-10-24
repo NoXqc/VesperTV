@@ -412,6 +412,8 @@ class PlaybackService extends ChangeNotifier {
     // both share one provider connection.
     final openUrl = await openUrlFor?.call(channel) ?? channel.url;
 
+    if (await _reuseNativeLive(channel, openUrl)) return;
+
     // Before the teardown: it reads currentChannel for the old title's
     // resume save, so only the flag changes here.
     switching = true;
@@ -497,7 +499,10 @@ class PlaybackService extends ChangeNotifier {
       }
       if (isLive) unawaited(_recordRealResolution(newController, channel));
       unawaited(DisplayMatch.start(
-          _storage, newController, () => controller == newController));
+          _storage,
+          newController,
+          () =>
+              controller == newController && currentChannel?.id == channel.id));
       await _storage.setLastChannelId(channel.id);
       // Live streams report zero/unknown duration — that's fine, it just
       // means StorageService.getWatchedFraction has nothing to compute a
@@ -579,7 +584,11 @@ class PlaybackService extends ChangeNotifier {
       VideoPlayerHdrController c, Channel channel) async {
     for (final wait in const [Duration(seconds: 4), Duration(seconds: 12)]) {
       await Future<void>.delayed(wait);
-      if (controller != c || !c.value.isInitialized) return;
+      if (controller != c ||
+          currentChannel?.id != channel.id ||
+          !c.value.isInitialized) {
+        return;
+      }
       final size = c.value.size;
       Real4kChannels.record(
           channel.id, size.width.round(), size.height.round());
@@ -621,6 +630,78 @@ class PlaybackService extends ChangeNotifier {
 
   /// Channel id → when [_watchRestartLoop] last reloaded it.
   final Map<String, DateTime> _restartLoopReloads = {};
+  final _restartLoopListeners = Expando<VoidCallback>();
+  int _nativeZapGeneration = 0;
+
+  Future<bool> _reuseNativeLive(Channel channel, String url) async {
+    final c = controller;
+    final previous = currentChannel;
+    if (!NativeVideoSurface.active ||
+        textureVideo ||
+        !usesNativeSurface ||
+        c == null ||
+        !c.value.isInitialized ||
+        c.value.hasError ||
+        previous == null ||
+        !Channel.isLiveId(previous.rawId) ||
+        !Channel.isLiveId(channel.rawId) ||
+        previous.subtitleUrl != null ||
+        channel.subtitleUrl != null) {
+      return false;
+    }
+    final generation = ++_nativeZapGeneration;
+    currentChannel = channel;
+    error = null;
+    reconnectStatus = null;
+    notifyListeners();
+    try {
+      // The native response waits for READY; it never creates a new player.
+      // ignore: invalid_use_of_visible_for_testing_member
+      final response = await NativeVideoSurface.replaceLive(c.textureId, url,
+          hls: _streamUsesHls(url));
+      if (generation != _nativeZapGeneration ||
+          controller != c ||
+          currentChannel?.id != channel.id) {
+        return true;
+      }
+      if (response?['accepted'] != true) {
+        currentChannel = previous;
+        return false;
+      }
+      final width = (response?['width'] as num?)?.toDouble() ?? 0;
+      final height = (response?['height'] as num?)?.toDouble() ?? 0;
+      c.value = c.value.copyWith(
+          position: Duration.zero,
+          duration: Duration.zero,
+          buffered: [],
+          size: width > 0 && height > 0 ? Size(width, height) : c.value.size,
+          isCompleted: false,
+          errorDescription: null);
+      pendingResumeChannel = null;
+      playingSince = DateTime.now();
+      _autoAdvanceDismissed = false;
+      _watchRestartLoop(c, channel);
+      unawaited(_recordRecentlyPlayed(channel));
+      unawaited(_recordRealResolution(c, channel));
+      unawaited(DisplayMatch.start(_storage, c,
+          () => controller == c && currentChannel?.id == channel.id));
+      debugPrint('NativeSurface: reused live player for channel zap');
+      unawaited(NativeVideoSurface.logDiagnostics());
+      notifyListeners();
+      return true;
+    } catch (e) {
+      if (generation != _nativeZapGeneration ||
+          controller != c ||
+          currentChannel?.id != channel.id) {
+        return true;
+      }
+      // Retry with the established creation/format-learning/backup path.
+      debugPrint(
+          'NativeSurface: live reuse failed; recreating player (${e.runtimeType})');
+      currentChannel = previous;
+      return false;
+    }
+  }
 
   /// The main player tags its error `[RESTART_LOOP n in 60 s: reasons]`
   /// when it restarted in place more than 6 times in a minute (vendored
@@ -634,6 +715,8 @@ class PlaybackService extends ChangeNotifier {
   /// automatic reload failed). A second loop within 2 minutes, or a VOD
   /// title, shows the error instead.
   void _watchRestartLoop(VideoPlayerHdrController c, Channel channel) {
+    final previous = _restartLoopListeners[c];
+    if (previous != null) c.removeListener(previous);
     late final VoidCallback listener;
     listener = () {
       final raw = c.value.errorDescription;
@@ -660,6 +743,7 @@ class PlaybackService extends ChangeNotifier {
       });
     };
     c.addListener(listener);
+    _restartLoopListeners[c] = listener;
   }
 
   /// Manually relaunches the current live channel against the exact same
@@ -843,6 +927,7 @@ class PlaybackService extends ChangeNotifier {
   }
 
   Future<void> stop() async {
+    _nativeZapGeneration++;
     _cancelNativeSwitchHolds();
     await _teardown();
     // Nothing plays any more: the TV goes back to its own mode. A channel
@@ -939,6 +1024,7 @@ class PlaybackService extends ChangeNotifier {
 
   @override
   void dispose() {
+    _nativeZapGeneration++;
     _cancelNativeSwitchHolds();
     _teardown();
     super.dispose();
@@ -1082,10 +1168,7 @@ VideoPlayerHdrController streamController(
         videoPlayerOptions: videoPlayerOptions);
   }
   final uri = Uri.parse(url);
-  final hls = _hlsUrls.contains(url) ||
-      (_hlsHosts.contains(uri.host) &&
-          uri.path.toLowerCase().endsWith('.ts') &&
-          !_notHlsUrls.contains(url));
+  final hls = _streamUsesHls(url);
   return VideoPlayerHdrController.networkUrl(
     uri,
     formatHint: hls ? VideoFormat.hls : null,
@@ -1134,4 +1217,12 @@ bool unlearnHlsUrl(String url, Object error) {
     return false;
   }
   return _notHlsUrls.add(url);
+}
+
+bool _streamUsesHls(String url) {
+  final uri = Uri.parse(url);
+  return _hlsUrls.contains(url) ||
+      (_hlsHosts.contains(uri.host) &&
+          uri.path.toLowerCase().endsWith('.ts') &&
+          !_notHlsUrls.contains(url));
 }

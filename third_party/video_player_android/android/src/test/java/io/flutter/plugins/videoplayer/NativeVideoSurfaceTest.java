@@ -7,6 +7,7 @@ import android.util.LongSparseArray;
 import androidx.media3.common.Format;
 import androidx.media3.common.VideoSize;
 import androidx.media3.common.MediaItem;
+import androidx.media3.common.Player;
 import android.view.SurfaceHolder;
 import io.flutter.plugins.videoplayer.platformview.PlatformViewVideoPlayer;
 import androidx.media3.exoplayer.ExoPlayer;
@@ -127,5 +128,75 @@ public class NativeVideoSurfaceTest {
     // An explicitly detached, retained player must bind again on return.
     invoke("attach", Map.of("playerId", 1L));
     verify(exo, times(2)).setVideoSurfaceHolder(any());
+  }
+
+  private VideoPlayer nativePlayer() {
+    invoke("configure", Map.of("enabled", true));
+    VideoPlayerOptions options = new VideoPlayerOptions();
+    options.nativeSurfaceHolder = surface.holderForPreparation();
+    VideoPlayer player = new PlatformViewVideoPlayer(mock(VideoPlayerCallbacks.class),
+        MediaItem.fromUri("https://example.com/old"), options, () -> exo);
+    players.put(3L, player);
+    surface.onPlayerCreated(player, 3L);
+    return player;
+  }
+  private void zap(MethodChannel.Result result, String path) {
+    surface.onMethodCall(new MethodCall("replaceLive", Map.of("playerId", 3L,
+        "url", "https://example.com/" + path, "hls", true)), result);
+  }
+  private Player.Listener swapListener() {
+    ArgumentCaptor<Player.Listener> capture = ArgumentCaptor.forClass(Player.Listener.class);
+    verify(exo, atLeastOnce()).addListener(capture.capture());
+    return capture.getValue();
+  }
+  @Test
+  public void liveZapUsesSamePlayerAndOutputAndWaitsForReady() {
+    VideoPlayer player = nativePlayer();
+    MethodChannel.Result result = mock(MethodChannel.Result.class);
+    zap(result, "next.m3u8");
+    verify(result, never()).success(any());
+    verify(exo).setMediaSource(any());
+    verify(exo, times(2)).prepare();
+    verify(exo, times(1)).setVideoSurfaceHolder(any());
+    verify(exo, never()).clearVideoSurfaceHolder(any());
+    verify(exo, never()).release();
+    swapListener().onPlaybackStateChanged(Player.STATE_READY);
+    verify(result).success(Map.of("accepted", true, "width", 3840, "height", 2160));
+    surface.onPlayerDisposed(3L);
+    player.dispose();
+  }
+  @Test
+  public void supersededZapCannotCompleteOrFailNewRequest() {
+    VideoPlayer player = nativePlayer();
+    MethodChannel.Result first = mock(MethodChannel.Result.class);
+    zap(first, "first");
+    Player.Listener stale = swapListener();
+    MethodChannel.Result second = mock(MethodChannel.Result.class);
+    zap(second, "second");
+    verify(first).error("NativeLiveZap", "superseded", null);
+    stale.onPlaybackStateChanged(Player.STATE_READY);
+    verify(second, never()).success(any());
+    swapListener().onPlaybackStateChanged(Player.STATE_READY);
+    verify(second).success(any());
+    surface.onPlayerDisposed(3L);
+    player.dispose();
+  }
+  @Test
+  public void disposeDuringZapCompletesWaitingRequestAndCancelsTimeout() {
+    VideoPlayer player = nativePlayer();
+    MethodChannel.Result result = mock(MethodChannel.Result.class);
+    zap(result, "next");
+    surface.onPlayerDisposed(3L);
+    verify(result).error("NativeLiveZap", "disposed", null);
+    org.robolectric.shadows.ShadowLooper.idleMainLooper(20, java.util.concurrent.TimeUnit.SECONDS);
+    verify(result, times(1)).error(anyString(), anyString(), isNull());
+    player.dispose();
+  }
+  @Test
+  public void unownedOrDisabledZapIsRejectedWithoutChangingOutput() {
+    MethodChannel.Result result = mock(MethodChannel.Result.class);
+    zap(result, "next");
+    verify(result).success(Map.of("accepted", false));
+    verify(exo, never()).setMediaSource(any());
   }
 }

@@ -12,6 +12,8 @@ package io.flutter.plugins.videoplayer;
 
 import android.app.Activity;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.util.LongSparseArray;
 import android.view.Display;
@@ -26,6 +28,7 @@ import androidx.annotation.OptIn;
 import androidx.media3.common.ColorInfo;
 import androidx.media3.common.Format;
 import androidx.media3.common.PlaybackException;
+import androidx.media3.common.Player;
 import androidx.media3.common.VideoSize;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.exoplayer.DecoderReuseEvaluation;
@@ -51,6 +54,8 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
   @Nullable private ExoPlayer attachedPlayer;
   private boolean shown = false;
   private boolean enabled = false;
+  private final Handler swapHandler = new Handler(Looper.getMainLooper());
+  @Nullable private PendingSwap pendingSwap;
   private int left, top, width = 1, height = 1;
 
   // Last known facts, returned by "diagnostics" so Dart puts them in the session log too
@@ -70,6 +75,7 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
   }
 
   void dispose() {
+    cancelSwap("disposed");
     methods.setMethodCallHandler(null);
     detach();
     removeView();
@@ -84,6 +90,7 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
   /** The plugin is disposing this player: let go of it first. */
   void onPlayerDisposed(long id) {
     if (id == attachedId) {
+      cancelSwap("disposed");
       Log.i(TAG, "player " + id + " disposed while attached");
       // release() follows immediately. Clearing the holder first needlessly
       // switches the decoder to a placeholder surface just before teardown.
@@ -95,6 +102,9 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
   public void onMethodCall(@NonNull MethodCall call, @NonNull MethodChannel.Result result) {
     try {
       switch (call.method) {
+        case "replaceLive":
+          replaceLive(call, result);
+          return;
         case "configure":
           enabled = Boolean.TRUE.equals(call.argument("enabled"));
           if (enabled) ensureView();
@@ -159,6 +169,70 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
     // running. Preserve that player's output until the candidate is adopted.
     if (!enabled || attachedPlayer != null || !ensureView()) return null;
     return view.getHolder();
+  }
+
+  private void replaceLive(MethodCall call, MethodChannel.Result result) {
+    Number id = call.argument("playerId");
+    String url = call.argument("url");
+    VideoPlayer player = id == null ? null : players.get(id.longValue());
+    if (!enabled || activity == null || player == null || id.longValue() != attachedId
+        || player.getExoPlayer() != attachedPlayer || !player.canReplaceNativeStream()
+        || url == null || !(url.startsWith("http://") || url.startsWith("https://"))) {
+      result.success(java.util.Collections.singletonMap("accepted", false));
+      return;
+    }
+    cancelSwap("superseded");
+    VideoAsset asset = VideoAsset.fromRemoteUrl(url,
+        Boolean.TRUE.equals(call.argument("hls")) ? VideoAsset.StreamingFormat.HTTP_LIVE
+            : VideoAsset.StreamingFormat.UNKNOWN, new HashMap<>(), null);
+    PendingSwap swap = new PendingSwap(player.getExoPlayer(), result);
+    pendingSwap = swap;
+    swap.exo.addListener(swap);
+    swapHandler.postDelayed(swap.timeout, 15000);
+    firstFrame = lastError = "-";
+    droppedFrames = 0;
+    Log.i(TAG, "reusing player " + attachedId + " for live zap (surface " + surfaceState + ")");
+    try {
+      player.replaceNativeStream(activity, asset);
+    } catch (RuntimeException e) {
+      swap.fail("source replacement failed");
+    }
+  }
+
+  private void cancelSwap(String reason) {
+    if (pendingSwap != null) pendingSwap.fail(reason);
+  }
+
+  private final class PendingSwap implements Player.Listener {
+    final ExoPlayer exo;
+    final MethodChannel.Result result;
+    final Runnable timeout = () -> fail("live zap timed out");
+    PendingSwap(ExoPlayer exo, MethodChannel.Result result) {
+      this.exo = exo;
+      this.result = result;
+    }
+    private boolean finish() {
+      if (pendingSwap != this) return false;
+      pendingSwap = null;
+      swapHandler.removeCallbacks(timeout);
+      exo.removeListener(this);
+      return true;
+    }
+    void fail(String reason) {
+      if (finish()) result.error("NativeLiveZap", reason, null);
+    }
+    @Override public void onPlayerError(@NonNull PlaybackException error) {
+      fail("live source error " + error.getErrorCodeName());
+    }
+    @Override public void onPlaybackStateChanged(int state) {
+      if (state != Player.STATE_READY || !finish()) return;
+      VideoSize size = exo.getVideoSize();
+      Map<String, Object> response = new HashMap<>();
+      response.put("accepted", true);
+      response.put("width", size.width);
+      response.put("height", size.height);
+      result.success(response);
+    }
   }
 
   void onPlayerCreated(VideoPlayer player, long id) {
@@ -272,6 +346,7 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
   }
 
   private void detach(boolean clearOutput) {
+    cancelSwap("detached");
     if (attachedPlayer != null) {
       try {
         attachedPlayer.removeAnalyticsListener(analytics);

@@ -336,6 +336,11 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Codex native live zap** (`codex/native-live-zap`, owner test +427):
+  reuse the native live player's session/output across channel zaps; reset stats,
+  recovery and metadata state, guard rapid A->B->A, fall back on failure.
+  +426 preview log showed stable rect yet blackouts; actual improvement needs
+  owner testing. Details: `dev-notes/native-video-surface.md` (Native live zap).
 - **Codex native channel handoff** (`codex/native-channel-handoff`, owner test APK +426):
   bind native output before prepare, skip clear-before-release, retain rectangle
   while replacing a player; texture/beta-off unchanged. Includes pending browse,
