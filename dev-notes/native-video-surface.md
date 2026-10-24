@@ -137,3 +137,16 @@ picker, trailers). Full list in HANDOFF.md "Beta acceptance".
   parking (8 widget cases), plus hole removal/restoration without a new attach.
 - Owner confirmation still needed on the box; no APK built or beta updated
   for this follow-up. Release +425 remains the published package.
+
+### Owner clarification: HDR / 4K only
+- Owner reports tab-switch flicker with HDR / 4K streams, apparently not
+  1080p (2026-10-24). HDR vs resolution has not been isolated independently.
+- Source check: `PlaybackService.stop` disposes the controller and calls
+  `DisplayMatch.reset`. That reset asks Android to restore its display mode
+  only if frame-rate/resolution matching previously requested a change.
+- Avoiding stop for native browse transitions also avoids this explicit reset.
+  Ending HDR output may itself cause a TV mode transition; this is a plausible
+  explanation, not a confirmed device diagnosis. Do not disable HDR/matching.
+- Device validation should compare HDR 4K, SDR 4K and SDR 1080p, with the
+  same tab-switch sequence. Check Send log DisplayMatch/NativeSurface lines
+  if the retained-player fix still flickers. No additional code change yet.
