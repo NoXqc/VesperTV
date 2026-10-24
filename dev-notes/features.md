@@ -298,3 +298,16 @@ IPTV without future metadata needs a known TMDB id plus the existing user TMDB k
   saving the active id and reloading playback, before announcing the switch.
   main.dart wires `AppPreferences.reloadPaletteForViewer` to rebuild the app theme.
   Device settings and avatar colours are unchanged; no playlist/network reload.
+
+## Cinemeta catalog visibility (Codex, 2026-10-24; unreleased)
+
+Settings > Media Hub sources > **Show Cinemeta catalog**, on by default. Off
+hides the automatic Popular / New / Featured rows attached to stream-only
+Cinemeta sources, their genre choices and catalog search results. Custom
+catalogs, tracker lists, Favourites and Recently watched remain available;
+stream-only add-ons stay enabled to play IMDb titles from catalog/list add-ons.
+Cinemeta metadata (posters, movie details, episode lists) remains available.
+The setting is shared like Media Hub sources, persists across restarts and
+travels with Media Hub data in backup/transfer. Toggling clears current search
+and genre filters and applies immediately; enabling refreshes catalog rows.
+Regression: `test/archive_cinemeta_catalog_test.dart`. Not built or box-tested.

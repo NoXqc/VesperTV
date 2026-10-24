@@ -199,6 +199,23 @@ class ArchiveService extends ChangeNotifier {
   List<ArchiveSource> get enabledSources =>
       sources.where((s) => s.enabled).toList();
 
+  bool get showCinemetaCatalog => _storage.getArchiveCinemetaCatalog();
+
+  Future<void> setShowCinemetaCatalog(bool on) async {
+    await _storage.setArchiveCinemetaCatalog(on);
+    _search.clear();
+    _genre.clear();
+    _notify();
+    if (on) await refresh();
+  }
+
+  // Hide only the automatic browse/search catalogs. Stream resolution and
+  // metadata still use these enabled sources, including saved titles.
+  bool _showCatalogs(ArchiveSource source) =>
+      showCinemetaCatalog ||
+      !source.streamOnly ||
+      source.catalogProviderUrl != ArchiveCatalogProvider.baseUrl;
+
   Future<void> _saveSources(List<ArchiveSource> list) async {
     await _storage
         .setArchiveSourcesJson(jsonEncode([for (final s in list) s.toJson()]));
@@ -342,12 +359,13 @@ class ArchiveService extends ChangeNotifier {
     final shown = <String>{};
     return [
       for (final s in enabledSources)
-        for (final base in s.catalogs)
-          if (base.type == type && s.underOther == other)
-            if (genre == null ? base : base.withGenre(genre) case final c?)
-              if (!s.streamOnly ||
-                  shown.add('${s.catalogBaseUrl}|${c.wire}|${c.slug}'))
-                (s, c),
+        if (_showCatalogs(s))
+          for (final base in s.catalogs)
+            if (base.type == type && s.underOther == other)
+              if (genre == null ? base : base.withGenre(genre) case final c?)
+                if (!s.streamOnly ||
+                    shown.add('${s.catalogBaseUrl}|${c.wire}|${c.slug}'))
+                  (s, c),
     ];
   }
 
@@ -370,6 +388,7 @@ class ArchiveService extends ChangeNotifier {
     final regular = <String>{};
     var other = false;
     for (final s in enabledSources) {
+      if (!_showCatalogs(s)) continue;
       for (final c in s.catalogs) {
         if (c.type != type) continue;
         if (s.underOther) {
@@ -730,7 +749,10 @@ class ArchiveService extends ChangeNotifier {
   }
 
   bool hasAny(ArchiveType type) =>
-      enabledSources.any((s) => s.catalogs.any((c) => c.type == type));
+      enabledSources.any(
+          (s) => _showCatalogs(s) && s.catalogs.any((c) => c.type == type)) ||
+      _favoritesRow(type) != null ||
+      _historyRow(type) != null;
 
   /// Call when the Archive tab opens: draws the cached rows at once, then
   /// refreshes stale catalogs behind them.

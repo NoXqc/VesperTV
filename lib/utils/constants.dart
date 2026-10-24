@@ -52,6 +52,8 @@ class AppConstants {
   static const String keyAddons = 'vesper_addons';
   // Archive tab sources (Stremio-schema catalogs + streams), JSON list.
   static const String keyArchiveSources = 'vesper_archive_sources';
+  static const String keyArchiveCinemetaCatalog =
+      'vesper_archive_cinemeta_catalog';
 
   /// Extras: titles played (newest first, JSON) and recent searches per
   /// category (JSON `{movie: [...], series: [...]}`). Sent with "Include

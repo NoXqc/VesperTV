@@ -1902,4 +1902,7 @@ const Map<String, String> kEs = {
   "Main cannot be deleted": "No se puede eliminar Principal",
   "Hold OK on a profile to edit it. Hold OK on a season to mark it watched or unwatched.": "Mantén OK en un perfil para editarlo o en una temporada para marcarla vista o no vista.",
   'Coming soon': 'Próximamente',
+  "Show Cinemeta catalog": "Mostrar el catálogo de Cinemeta",
+  "Show the default Popular, New and Featured rows and Cinemeta search results. Turn off to browse only your own catalogs. Posters and episode details may still use Cinemeta.":
+      "Mostrar las filas predeterminadas Populares, Novedades y Destacados y los resultados de búsqueda de Cinemeta. Desactívalo para explorar solo tus propios catálogos. Los pósteres y los detalles de episodios pueden seguir usando Cinemeta.",
 };

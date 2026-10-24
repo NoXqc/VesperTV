@@ -336,6 +336,10 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Codex Cinemeta catalog switch** (`codex/cinemeta-catalog-toggle`, unreleased):
+  Settings > Media Hub sources > Show Cinemeta catalog (default on). Off hides
+  automatic browse/search rows; custom catalogs, stream add-ons and metadata
+  remain available. Details: `dev-notes/features.md` (Cinemeta catalog visibility).
 - **Combined native beta +428** (`codex/native-live-zap`): owner requested GitHub
   beta including Claude's `d87c688` prepare diagnostics, layered on the existing
   early-bind fix and newer live reuse. All pending theme/reminder/browse/episode

@@ -234,6 +234,13 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
                 'The Media Hub tab shows films and series from sources you add here. Any source that follows the catalog/stream add-on format works; a source that only offers streams by IMDb id gets its posters and episodes from Cinemeta. Only direct video links are played; torrent links are ignored.')),
             const SizedBox(height: 16),
             SectionLabel(tr('Your sources')),
+            TvSwitchListTile(
+              title: Text(tr('Show Cinemeta catalog')),
+              subtitle: Text(tr(
+                  'Show the default Popular, New and Featured rows and Cinemeta search results. Turn off to browse only your own catalogs. Posters and episode details may still use Cinemeta.')),
+              value: service.showCinemetaCatalog,
+              onChanged: service.setShowCinemetaCatalog,
+            ),
             const SizedBox(height: 4),
             if (sources.isEmpty)
               Padding(

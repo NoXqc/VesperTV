@@ -276,6 +276,10 @@ class StorageService {
 
   String? getArchiveSourcesJson() =>
       _prefs.getString(AppConstants.keyArchiveSources);
+  bool getArchiveCinemetaCatalog() =>
+      _prefs.getBool(AppConstants.keyArchiveCinemetaCatalog) ?? true;
+  Future<void> setArchiveCinemetaCatalog(bool on) =>
+      _prefs.setBool(AppConstants.keyArchiveCinemetaCatalog, on);
   Future<void> setArchiveSourcesJson(String json) =>
       _prefs.setString(AppConstants.keyArchiveSources, json);
 
@@ -1075,6 +1079,7 @@ class StorageService {
   /// `ArchiveService.channelId`). Its catalog cache is a separate database
   /// and never transfers.
   static bool _isArchiveKey(String key) =>
+      key == AppConstants.keyArchiveCinemetaCatalog ||
       key == AppConstants.keyArchiveSources ||
       key.startsWith(AppConstants.keyArchiveHistory) ||
       key.startsWith(AppConstants.keyArchiveFavorites) ||

@@ -1906,4 +1906,7 @@ const Map<String, String> kIt = {
   "Main cannot be deleted": "Impossibile eliminare Principale",
   "Hold OK on a profile to edit it. Hold OK on a season to mark it watched or unwatched.": "Tieni premuto OK su un profilo per modificarlo o su una stagione per segnarla vista o non vista.",
   'Coming soon': 'Prossimamente',
+  "Show Cinemeta catalog": "Mostra il catalogo Cinemeta",
+  "Show the default Popular, New and Featured rows and Cinemeta search results. Turn off to browse only your own catalogs. Posters and episode details may still use Cinemeta.":
+      "Mostra le righe predefinite Popolari, Novità e In evidenza e i risultati di ricerca di Cinemeta. Disattiva per sfogliare solo i tuoi cataloghi. Le locandine e i dettagli degli episodi potrebbero ancora usare Cinemeta.",
 };

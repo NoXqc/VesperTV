@@ -2514,4 +2514,7 @@ const Map<String, String> kEl = {
   "Main cannot be deleted": "Το Κύριο προφίλ δεν μπορεί να διαγραφεί",
   "Hold OK on a profile to edit it. Hold OK on a season to mark it watched or unwatched.": "Κρατήστε OK σε προφίλ για επεξεργασία ή σε σεζόν για σήμανση ως προβληθείσας ή μη.",
   'Coming soon': 'Προσεχώς',
+  "Show Cinemeta catalog": "Εμφάνιση καταλόγου Cinemeta",
+  "Show the default Popular, New and Featured rows and Cinemeta search results. Turn off to browse only your own catalogs. Posters and episode details may still use Cinemeta.":
+      "Εμφάνιση των προεπιλεγμένων σειρών Δημοφιλή, Νέα και Προτεινόμενα και των αποτελεσμάτων αναζήτησης Cinemeta. Απενεργοποιήστε για περιήγηση μόνο στους δικούς σας καταλόγους. Οι αφίσες και οι λεπτομέρειες επεισοδίων ενδέχεται να εξακολουθούν να χρησιμοποιούν το Cinemeta.",
 };

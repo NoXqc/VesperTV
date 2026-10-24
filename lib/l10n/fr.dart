@@ -1905,4 +1905,7 @@ const Map<String, String> kFr = {
   "Main cannot be deleted": "Le profil Principal ne peut pas être supprimé",
   "Hold OK on a profile to edit it. Hold OK on a season to mark it watched or unwatched.": "Maintenez OK sur un profil pour le modifier, ou sur une saison pour la marquer vue ou non vue.",
   'Coming soon': 'Bientôt disponible',
+  "Show Cinemeta catalog": "Afficher le catalogue Cinemeta",
+  "Show the default Popular, New and Featured rows and Cinemeta search results. Turn off to browse only your own catalogs. Posters and episode details may still use Cinemeta.":
+      "Afficher les lignes par défaut Populaires, Nouveautés et À la une et les résultats de recherche Cinemeta. Désactivez pour parcourir uniquement vos propres catalogues. Les affiches et les détails des épisodes peuvent toujours provenir de Cinemeta.",
 };
