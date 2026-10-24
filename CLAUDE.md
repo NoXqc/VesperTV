@@ -359,6 +359,9 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   viewer-scoped palette keys, one-time preservation of existing shared colours, and
   immediate theme reload on profile switch. Main key stays unchanged. Details:
   `dev-notes/features.md` (Per-profile theme colours).
+- **Codex, unreleased: reminder card styling** — `codex/reminder-card-style`: prominent
+  64px team crest, stronger faded background logo, accent border and time badge.
+  Reminder timing/focus behavior unchanged. Owner confirmed 1.0.39 reminders work.
 - **Release 1.0.39 (`+422`, 2026-10-23):** integrates the five completed Codex branches
   below: Windows Home Back arrow, player clock, all Open on startup destinations,
   per-game/automatic team reminders with faded-logo popup, and Media Hub movie

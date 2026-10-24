@@ -124,66 +124,136 @@ class _GameReminderOverlayState extends State<GameReminderOverlay>
     if (notice == null || _reminders?.viewerId != _viewer) {
       return const SizedBox.shrink();
     }
+    final accent = Theme.of(context).colorScheme.primary;
+    final logoUrl = notice.reminder.logoUrl;
+    final hasLogo = logoUrl?.isNotEmpty == true;
     return SafeArea(
       child: Align(
         alignment: Alignment.topRight,
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 440),
+            constraints: const BoxConstraints(maxWidth: 420),
             child: Material(
-              color: const Color(0xF21A1A1A),
+              color: const Color(0xFA15171C),
               elevation: 12,
-              borderRadius: BorderRadius.circular(14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+                side: BorderSide(color: accent.withValues(alpha: 0.55)),
+              ),
               clipBehavior: Clip.antiAlias,
               child: Stack(children: [
-                if (notice.reminder.logoUrl?.isNotEmpty == true)
-                  Positioned.fill(
-                      child: IgnorePointer(
-                          child: ExcludeSemantics(
-                              child: Opacity(
-                    opacity: 0.14,
-                    child: Image.network(notice.reminder.logoUrl!,
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => const SizedBox.shrink()),
-                  )))),
+                if (hasLogo)
+                  Positioned(
+                    top: -24,
+                    bottom: -24,
+                    right: -12,
+                    width: 160,
+                    child: IgnorePointer(
+                        child: ExcludeSemantics(
+                            child: Opacity(
+                      opacity: 0.28,
+                      child: Image.network(logoUrl!,
+                          key: const ValueKey('reminder-watermark'),
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) =>
+                              const SizedBox.shrink()),
+                    ))),
+                  ),
+                Positioned.fill(
+                    child: IgnorePointer(
+                        child: DecoratedBox(
+                  decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                    colors: [
+                      accent.withValues(alpha: 0.12),
+                      Colors.transparent
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )),
+                ))),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 6, 12),
-                  child: Row(children: [
-                    Icon(Icons.notifications_active,
-                        color: Theme.of(context).colorScheme.primary),
-                    const SizedBox(width: 12),
-                    Expanded(
-                        child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
+                  padding: const EdgeInsets.fromLTRB(12, 4, 10, 12),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Row(children: [
+                      Icon(Icons.notifications_active, size: 15, color: accent),
+                      const SizedBox(width: 7),
+                      Expanded(
+                          child: Text(tr('My Teams'),
+                              style: TextStyle(
+                                  color: accent,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700))),
+                      ExcludeFocus(
+                          child: Semantics(
+                        label: tr('Close'),
+                        button: true,
+                        child: IconButton(
+                          visualDensity: VisualDensity.compact,
+                          constraints: const BoxConstraints.tightFor(
+                              width: 32, height: 32),
+                          padding: EdgeInsets.zero,
+                          icon: const Icon(Icons.close,
+                              color: Colors.white70, size: 19),
+                          onPressed: _showNext,
+                        ),
+                      )),
+                    ]),
+                    const SizedBox(height: 2),
+                    Row(children: [
+                      ExcludeSemantics(
+                          child: SizedBox(
+                        width: 64,
+                        height: 64,
+                        child: hasLogo
+                            ? Image.network(logoUrl!,
+                                key: const ValueKey('reminder-crest'),
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) =>
+                                    Icon(Icons.sports, color: accent, size: 38))
+                            : Icon(Icons.sports, color: accent, size: 38),
+                      )),
+                      const SizedBox(width: 12),
+                      Expanded(
+                          child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
                               tr('Your team: {home} vs {away}', {
                                 'home': notice.reminder.home,
-                                'away': notice.reminder.away
+                                'away': notice.reminder.away,
                               }),
-                              maxLines: 2,
+                              maxLines: 3,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 4),
-                          Text(
-                              notice.atStart
-                                  ? tr('Is about to start')
-                                  : tr('Starts in 15 minutes'),
-                              style: const TextStyle(
-                                  color: Colors.white70, fontSize: 14)),
-                        ])),
-                    ExcludeFocus(
-                        child: Semantics(
-                            label: tr('Close'),
-                            button: true,
-                            child: IconButton(
-                                icon: const Icon(Icons.close),
-                                onPressed: _showNext))),
+                                  fontSize: 17,
+                                  height: 1.15,
+                                  fontWeight: FontWeight.w800)),
+                          const SizedBox(height: 9),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 9, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xE615171C),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                  color: accent.withValues(alpha: 0.4)),
+                            ),
+                            child: Text(
+                                notice.atStart
+                                    ? tr('Is about to start')
+                                    : tr('Starts in 15 minutes'),
+                                style: TextStyle(
+                                    color: accent,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700)),
+                          ),
+                        ],
+                      )),
+                    ]),
                   ]),
                 ),
               ]),
