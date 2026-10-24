@@ -238,6 +238,17 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
 
   /** One temporary, bounded frame; never saved to disk or included in logs. */
   private void captureBeforeSwap(PendingSwap swap, Runnable replace) {
+    if (io.flutter.plugins.videoplayer.platformview.FormulerVideoRenderer.isTargetDevice()) {
+      // LOG-A44B6U: copy callbacks arrive after the intended 80 ms budget,
+      // and the green-frame filter never fires despite visible green.
+      // Avoid copying this device's video plane. Show the existing opaque logo
+      // cover immediately and start loading without waiting for PixelCopy.
+      hideZapCover();
+      lastCapture = "Formuler capture skipped; logo fallback";
+      Log.i(TAG, lastCapture);
+      replace.run();
+      return;
+    }
     if (Build.VERSION.SDK_INT < 26 || view == null || !shown
         || view.getHolder().getSurface() == null || !view.getHolder().getSurface().isValid()) {
       replace.run();
@@ -277,45 +288,12 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
     }
   }
 
-  // PixelCopy.SUCCESS only means a buffer was copied. The Formuler's 4K
-  // output can copy as uniform green; holding that bitmap prolongs the flash
-  // for the entire source load. Reject only that narrow pattern on this box.
   void retainCapturedPicture(Bitmap picture) {
     hideZapCover();
-    if (io.flutter.plugins.videoplayer.platformview.FormulerVideoRenderer.isTargetDevice()
-        && isSolidGreenFrame(picture)) {
-      picture.recycle();
-      lastCapture = "solid-green rejected; logo fallback";
-      Log.w(TAG, lastCapture);
-      return;
-    }
     lastPicture = picture;
     if (zapCover != null) zapCover.setImageBitmap(picture);
     lastCapture = "last frame retained";
     Log.i(TAG, "last video frame retained for decoder swap");
-  }
-
-  /** Bounded sampling, not a scan/copy of the 4K frame; never logs image content. */
-  static boolean isSolidGreenFrame(Bitmap picture) {
-    int matching = 0;
-    int minGreen = 255, maxGreen = 0;
-    for (int y = 0; y < 9; y++) {
-      for (int x = 0; x < 9; x++) {
-        int pixel = picture.getPixel((2 * x + 1) * picture.getWidth() / 18,
-            (2 * y + 1) * picture.getHeight() / 18);
-        int green = Color.green(pixel);
-        if (Color.alpha(pixel) >= 250 && green >= 180
-            && Color.red(pixel) <= 32 && Color.blue(pixel) <= 32) {
-          matching++;
-          minGreen = Math.min(minGreen, green);
-          maxGreen = Math.max(maxGreen, green);
-        }
-      }
-    }
-    // A football field is green but textured: require >=95% saturated green,
-    // with nearly uniform brightness. A false rejection only uses the logo
-    // while loading, never drops or changes a decoded playback frame.
-    return matching >= 77 && maxGreen - minGreen <= 24;
   }
 
   private void cancelSwap(String reason) {

@@ -235,24 +235,32 @@ public class NativeVideoSurfaceTest {
   }
 
   @Test
-  public void formulerRejectsSolidGreenCaptureAndClearsPreviousPicture() {
+  @org.robolectric.annotation.LooperMode(org.robolectric.annotation.LooperMode.Mode.PAUSED)
+  public void formulerStartsZapImmediatelyWithLogoInFullscreenAndGuide() {
     org.robolectric.shadows.ShadowBuild.setManufacturer("FORMULER");
     org.robolectric.shadows.ShadowBuild.setModel("Formuler Z11 Pro MAX");
     VideoPlayer player = nativePlayer();
-    android.graphics.Bitmap good = android.graphics.Bitmap.createBitmap(90, 90,
-        android.graphics.Bitmap.Config.ARGB_8888);
-    good.eraseColor(android.graphics.Color.BLUE);
-    surface.retainCapturedPicture(good);
-    android.graphics.Bitmap green = android.graphics.Bitmap.createBitmap(90, 90,
-        android.graphics.Bitmap.Config.ARGB_8888);
-    green.eraseColor(android.graphics.Color.rgb(8, 240, 8));
-    surface.retainCapturedPicture(green);
-    assertTrue(green.isRecycled());
-    assertEquals("solid-green rejected; logo fallback",
-        ((Map<?, ?>) invoke("diagnostics", null)).get("zapCapture"));
-    android.widget.ImageView cover = org.robolectric.util.ReflectionHelpers.getField(surface, "zapCover");
-    assertFalse(cover.getDrawable() instanceof android.graphics.drawable.BitmapDrawable);
-    assertNull(org.robolectric.util.ReflectionHelpers.getField(surface, "lastPicture"));
+    for (int width : new int[] {1920, 558}) {
+      invoke("setRect", Map.of("left", 0, "top", 0, "width", width, "height", width * 9 / 16));
+      clearInvocations(exo);
+      MethodChannel.Result result = mock(MethodChannel.Result.class);
+      zap(result, "next");
+      // No looper advance: source replacement must start in the same call,
+      // without a PixelCopy callback or the 80 ms fallback timer.
+      verify(exo).setMediaSource(any());
+      verify(exo).prepare();
+      Map<?, ?> diagnostics = (Map<?, ?>) invoke("diagnostics", null);
+      assertEquals("Formuler capture skipped; logo fallback", diagnostics.get("zapCapture"));
+      assertEquals(true, diagnostics.get("zapCover"));
+      assertNull(org.robolectric.util.ReflectionHelpers.getField(surface, "lastPicture"));
+      // Listener was registered before clearInvocations; retrieve the retained field instead.
+      AnalyticsListener analytics = org.robolectric.util.ReflectionHelpers.getField(surface, "analytics");
+      analytics.onRenderedFirstFrame(mock(AnalyticsListener.EventTime.class), new Object(), 0);
+      assertEquals(false, ((Map<?, ?>) invoke("diagnostics", null)).get("zapCover"));
+      swapListener().onPlaybackStateChanged(Player.STATE_READY);
+      verify(result).success(any());
+    }
+    surface.onPlayerDisposed(3L);
     player.dispose();
   }
 
@@ -268,28 +276,4 @@ public class NativeVideoSurfaceTest {
     assertEquals("last frame retained", ((Map<?, ?>) invoke("diagnostics", null)).get("zapCapture"));
   }
 
-  @Test
-  public void texturedGreenSportsPictureIsNotRejected() {
-    android.graphics.Bitmap field = android.graphics.Bitmap.createBitmap(90, 90,
-        android.graphics.Bitmap.Config.ARGB_8888);
-    for (int y = 0; y < 90; y++) {
-      for (int x = 0; x < 90; x++) {
-        field.setPixel(x, y, android.graphics.Color.rgb(8, 180 + x % 70, 8));
-      }
-    }
-    assertFalse(NativeVideoSurface.isSolidGreenFrame(field));
-    field.eraseColor(android.graphics.Color.BLACK);
-    assertFalse(NativeVideoSurface.isSolidGreenFrame(field));
-    field.eraseColor(android.graphics.Color.TRANSPARENT);
-    assertFalse(NativeVideoSurface.isSolidGreenFrame(field));
-    field.eraseColor(android.graphics.Color.GREEN);
-    assertTrue(NativeVideoSurface.isSolidGreenFrame(field));
-    // A small bitmap must also be safe to sample.
-    android.graphics.Bitmap tiny = android.graphics.Bitmap.createBitmap(1, 1,
-        android.graphics.Bitmap.Config.ARGB_8888);
-    tiny.eraseColor(android.graphics.Color.GREEN);
-    assertTrue(NativeVideoSurface.isSolidGreenFrame(tiny));
-    tiny.recycle();
-    field.recycle();
-  }
 }
