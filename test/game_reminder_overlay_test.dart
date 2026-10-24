@@ -111,12 +111,18 @@ void main() {
     time = game.start.subtract(const Duration(minutes: 15));
     await tester.pump(const Duration(minutes: 45));
     expect(find.text('Starts in 15 minutes'), findsOneWidget);
-    final image = tester.widget<Image>(find.byType(Image));
+    final image =
+        tester.widget<Image>(find.byKey(const ValueKey('reminder-watermark')));
+    final crest =
+        tester.widget<Image>(find.byKey(const ValueKey('reminder-crest')));
+    expect((crest.image as NetworkImage).url, 'https://example.com/logo.png');
     expect((image.image as NetworkImage).url, 'https://example.com/logo.png');
     final fade = tester.widget<Opacity>(find
-        .ancestor(of: find.byType(Image), matching: find.byType(Opacity))
+        .ancestor(
+            of: find.byKey(const ValueKey('reminder-watermark')),
+            matching: find.byType(Opacity))
         .first);
-    expect(fade.opacity, 0.14);
+    expect(fade.opacity, 0.28);
     expect(image.errorBuilder, isNotNull);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());

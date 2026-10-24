@@ -426,3 +426,7 @@ info version rejected — keep the VS layout). Fire Stick check pending.
 - Preference schema reads the original per-game list and now writes entries,
   enabled team keys and skipped game keys together; viewer fences reject late
   schedule responses after switching profiles. Duplicate games share one notice.
+
+- Unreleased reminder card restyle (`codex/reminder-card-style`, owner feedback):
+  72px foreground crest plus a 28% background watermark (was 14%), rounded accent
+  border, My Teams header and time badge. No new strings or scheduler changes.

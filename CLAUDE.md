@@ -336,6 +336,9 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-23)
+- **Codex, unreleased: reminder card styling** — `codex/reminder-card-style`: prominent
+  72px team crest, stronger faded background logo, accent border and time badge.
+  Reminder timing/focus behavior unchanged. Owner confirmed 1.0.39 reminders work.
 - **Release 1.0.39 (`+422`, 2026-10-23):** integrates the five completed Codex branches
   below: Windows Home Back arrow, player clock, all Open on startup destinations,
   per-game/automatic team reminders with faded-logo popup, and Media Hub movie
