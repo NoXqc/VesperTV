@@ -108,6 +108,7 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
     if (links.length > 1) return _addMany(links);
     final messenger = ScaffoldMessenger.of(context);
     final service = context.read<ArchiveService>();
+    final storage = context.read<StorageService>();
     setState(() => _adding = true);
     String? error;
     ArchiveSource? added;
@@ -116,6 +117,18 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
     } on StateError {
       error = tr('That source is already in the list.');
     } on ArchiveApiException {
+      // Not movies/shows: a subtitles-only add-on (OpenSubtitles v3...) goes
+      // to Settings > Add-ons, like in a multi-link paste (_addMany).
+      final result = await AddonImporter(service, AddonService(storage))
+          .importLinks([url]);
+      if (result.subtitles.isNotEmpty || result.alreadyThere.isNotEmpty) {
+        if (!mounted) return;
+        setState(() => _adding = false);
+        _link.clear();
+        messenger.showSnackBar(
+            SnackBar(content: Text(addonImportSummary(result))));
+        return;
+      }
       error = tr(
           'That link isn\'t a Media Hub source (it needs movie or series streams).');
     } catch (_) {
