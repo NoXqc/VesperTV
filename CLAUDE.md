@@ -335,7 +335,13 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 ## 12. Features (details in `dev-notes/features.md`)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
-## 13. Status & open items (as of 2026-10-23)
+## 13. Status & open items (as of 2026-10-24)
+- **Native video surface (beta)** (`claude/native-surface`, test build `+423`, not committed/released
+  yet): opt-in, restart-applied; main Android player in a plain SurfaceView behind a transparent
+  Flutter view instead of the platform view. For AMD's Fire TV Cube (4K HDR10 decoded as 1080p SDR,
+  LOG-CFN2FE) and Sam's NVIDIA Shield (green flicker; Compatibility video loses HDR). Tunneling test
+  `+420` is not the fix. Full Send-log diagnostics (`NativeSurface:` / `VesperNativeSurface`).
+  Design, risks, test checklist: `dev-notes/native-video-surface.md`. Codex takes diagnostics.
 - **Release 1.0.39 (`+422`, 2026-10-23):** integrates the five completed Codex branches
   below: Windows Home Back arrow, player clock, all Open on startup destinations,
   per-game/automatic team reminders with faded-logo popup, and Media Hub movie

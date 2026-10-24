@@ -41,6 +41,7 @@ import 'services/playlist_manager.dart';
 import 'services/storage_service.dart';
 import 'services/game_reminders.dart';
 import 'widgets/game_reminder_overlay.dart';
+import 'widgets/native_video_hole.dart';
 import 'services/viewer_profile_service.dart';
 import 'utils/constants.dart';
 import 'utils/startup_routes.dart';
@@ -370,6 +371,13 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         _preferences.androidSdk = await DeviceTypeService.sdkInt();
       }
       PlaybackService.textureVideo = _preferences.compatVideo;
+      NativeVideoSurface.active =
+          Platform.isAndroid && _preferences.nativeVideoSurface;
+      if (NativeVideoSurface.active) {
+        debugPrint('NativeSurface: beta ON at launch (SDK '
+            '${_preferences.androidSdk}, compatibility video '
+            '${_preferences.compatVideo ? 'on: native surface unused' : 'off'})');
+      }
       unawaited(
           PlaybackService.setAudioPassthrough(_preferences.audioPassthrough));
       unawaited(

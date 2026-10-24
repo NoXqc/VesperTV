@@ -15,6 +15,7 @@ import '../services/storage_service.dart';
 import '../services/subtitle_tracks.dart';
 import '../utils/video_quality.dart';
 import 'epg_guide.dart';
+import 'native_video_hole.dart';
 import 'rec_cue.dart';
 import 'player_bar_title.dart';
 import 'tv_menu_tile.dart';
@@ -203,8 +204,16 @@ class VideoPlayerPane extends StatelessWidget {
                       // earlier this session: force element recreation
                       // via a changing key instead of relying on an
                       // in-place update this hardware silently drops.
-                      child: VideoPlayerHdr(controller,
-                          key: ObjectKey(controller)),
+                      // Native video surface (beta): a hole the
+                      // SurfaceView behind Flutter shows through.
+                      child: PlaybackService.drawsNativeSurface(controller)
+                          ? NativeVideoHole(
+                              // The plugin player id; no public getter.
+                              // ignore: invalid_use_of_visible_for_testing_member
+                              playerId: controller.textureId,
+                              key: ObjectKey(controller))
+                          : VideoPlayerHdr(controller,
+                              key: ObjectKey(controller)),
                     ),
                   ),
                   // A reconnect (either a manual Reload or an automatic

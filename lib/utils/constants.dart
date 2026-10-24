@@ -273,6 +273,11 @@ class AppConstants {
   /// (device-only; AppPreferences.videoMediaOverlay).
   static const String keyVideoMediaOverlay = 'vesper_video_media_overlay';
 
+  /// Settings > Interface > Background video: Native video surface (beta,
+  /// device-only; AppPreferences.nativeVideoSurface). MainActivity reads it
+  /// as `flutter.vesper_native_video_surface` — keep the two in step.
+  static const String keyNativeVideoSurface = 'vesper_native_video_surface';
+
   /// Settings > Interface > Display (device-only; DisplayMatch).
   static const String keyMatchFrameRate = 'vesper_match_frame_rate';
   static const String keyMatch5060Only = 'vesper_match_5060_only';

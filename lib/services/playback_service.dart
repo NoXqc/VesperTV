@@ -12,6 +12,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import '../models/channel.dart';
 import '../models/playlist_profile.dart';
 import '../utils/constants.dart';
+import '../widgets/native_video_hole.dart';
 import 'playlist_manager.dart';
 import 'real_4k_channels.dart';
 import 'storage_service.dart';
@@ -306,6 +307,23 @@ class PlaybackService extends ChangeNotifier {
   static VideoViewType get _viewType =>
       textureVideo ? VideoViewType.textureView : VideoViewType.platformView;
 
+  static final _nativeSurfaceControllers = Expando<bool>();
+
+  /// The view type for [c], remembering whether it draws through the native
+  /// video surface (beta): decided when its channel starts, like
+  /// [textureVideo], so a settings change never flips a running player.
+  static VideoViewType _viewTypeFor(VideoPlayerHdrController c) {
+    if (NativeVideoSurface.active && !textureVideo) {
+      _nativeSurfaceControllers[c] = true;
+    }
+    return _viewType;
+  }
+
+  /// [VideoPlayerPane] shows a [NativeVideoHole] instead of the platform
+  /// view for this controller.
+  static bool drawsNativeSurface(VideoPlayerHdrController c) =>
+      _nativeSurfaceControllers[c] ?? false;
+
   Future<void> play(Channel channel) async {
     // A queued episode whose stream isn't known yet (Archive Next / auto-
     // advance): resolve it first. Guarded, so the position timer's repeat
@@ -394,7 +412,9 @@ class PlaybackService extends ChangeNotifier {
     switching = false;
     playingSince = DateTime.now();
 
-    initFuture = newController.initialize(viewType: _viewType).then((_) async {
+    initFuture = newController
+        .initialize(viewType: _viewTypeFor(newController))
+        .then((_) async {
       if (savedPositionMs > 0) {
         var seekMs = savedPositionMs;
         // A Trakt/Simkl resume point saved as a fraction (length unknown
@@ -630,7 +650,8 @@ class PlaybackService extends ChangeNotifier {
     final newController =
         streamController(await openUrlFor?.call(channel) ?? channel.url);
     try {
-      final future = newController.initialize(viewType: _viewType);
+      final future =
+          newController.initialize(viewType: _viewTypeFor(newController));
       initFuture = future;
       await future;
       if (currentChannel?.id != channel.id) {
@@ -716,7 +737,8 @@ class PlaybackService extends ChangeNotifier {
       final retryUrl = _swapOrigin(channel.url, server);
       final retryController = streamController(retryUrl);
       try {
-        final future = retryController.initialize(viewType: _viewType);
+        final future =
+            retryController.initialize(viewType: _viewTypeFor(retryController));
         initFuture = future;
         await future;
         // Initialising took real time, and the viewer may have moved on

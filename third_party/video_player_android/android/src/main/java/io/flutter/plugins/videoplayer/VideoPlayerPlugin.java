@@ -13,6 +13,8 @@ import androidx.media3.common.util.UnstableApi;
 import io.flutter.FlutterInjector;
 import io.flutter.Log;
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
+import io.flutter.embedding.engine.plugins.activity.ActivityAware;
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
 import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugins.videoplayer.platformview.PlatformVideoViewFactory;
 import io.flutter.plugins.videoplayer.platformview.PlatformViewVideoPlayer;
@@ -20,7 +22,7 @@ import io.flutter.plugins.videoplayer.texture.TextureVideoPlayer;
 import io.flutter.view.TextureRegistry;
 
 /** Android platform implementation of the VideoPlayerPlugin. */
-public class VideoPlayerPlugin implements FlutterPlugin, AndroidVideoPlayerApi {
+public class VideoPlayerPlugin implements FlutterPlugin, ActivityAware, AndroidVideoPlayerApi {
   private static final String TAG = "VideoPlayerPlugin";
   private final LongSparseArray<VideoPlayer> videoPlayers = new LongSparseArray<>();
   private FlutterState flutterState;
@@ -34,6 +36,8 @@ public class VideoPlayerPlugin implements FlutterPlugin, AndroidVideoPlayerApi {
   @Nullable private AudioPassthrough audioPassthrough;
   // VesperTV patch: opt-in Shield green-flicker fix, see VideoLayering.
   @Nullable private VideoLayering videoLayering;
+  // VesperTV patch: Native video surface (beta), see NativeVideoSurface.
+  @Nullable private NativeVideoSurface nativeVideoSurface;
 
   /** Register this with the v2 embedding for the plugin to respond to lifecycle callbacks. */
   public VideoPlayerPlugin() {}
@@ -53,6 +57,7 @@ public class VideoPlayerPlugin implements FlutterPlugin, AndroidVideoPlayerApi {
     statsBridge = new StatsBridge(binding.getBinaryMessenger(), videoPlayers);
     audioPassthrough = new AudioPassthrough(binding.getBinaryMessenger());
     videoLayering = new VideoLayering(binding.getBinaryMessenger());
+    nativeVideoSurface = new NativeVideoSurface(binding.getBinaryMessenger(), videoPlayers);
 
     binding
         .getPlatformViewRegistry()
@@ -84,7 +89,32 @@ public class VideoPlayerPlugin implements FlutterPlugin, AndroidVideoPlayerApi {
       audioPassthrough.dispose();
       audioPassthrough = null;
     }
+    if (nativeVideoSurface != null) {
+      nativeVideoSurface.dispose();
+      nativeVideoSurface = null;
+    }
     onDestroy();
+  }
+
+  // VesperTV patch: the native video surface lives in the activity's content view.
+  @Override
+  public void onAttachedToActivity(@NonNull ActivityPluginBinding binding) {
+    if (nativeVideoSurface != null) nativeVideoSurface.setActivity(binding.getActivity());
+  }
+
+  @Override
+  public void onDetachedFromActivityForConfigChanges() {
+    if (nativeVideoSurface != null) nativeVideoSurface.setActivity(null);
+  }
+
+  @Override
+  public void onReattachedToActivityForConfigChanges(@NonNull ActivityPluginBinding binding) {
+    onAttachedToActivity(binding);
+  }
+
+  @Override
+  public void onDetachedFromActivity() {
+    if (nativeVideoSurface != null) nativeVideoSurface.setActivity(null);
   }
 
   private void disposeAllPlayers() {
@@ -230,6 +260,7 @@ public class VideoPlayerPlugin implements FlutterPlugin, AndroidVideoPlayerApi {
   @Override
   public void dispose(long playerId) {
     VideoPlayer player = getPlayer(playerId);
+    if (nativeVideoSurface != null) nativeVideoSurface.onPlayerDisposed(playerId);
     player.dispose();
     videoPlayers.remove(playerId);
   }

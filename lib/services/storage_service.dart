@@ -402,6 +402,11 @@ class StorageService {
   Future<void> setVideoMediaOverlay(bool value) =>
       _prefs.setBool(AppConstants.keyVideoMediaOverlay, value);
 
+  bool getNativeVideoSurface() =>
+      _prefs.getBool(AppConstants.keyNativeVideoSurface) ?? false;
+  Future<void> setNativeVideoSurface(bool value) =>
+      _prefs.setBool(AppConstants.keyNativeVideoSurface, value);
+
   bool getMatchFrameRate() =>
       _prefs.getBool(AppConstants.keyMatchFrameRate) ?? false;
   Future<void> setMatchFrameRate(bool value) =>
@@ -910,6 +915,7 @@ class StorageService {
     AppConstants.keyCompatVideo,
     AppConstants.keyAudioPassthrough,
     AppConstants.keyVideoMediaOverlay,
+    AppConstants.keyNativeVideoSurface,
     AppConstants.keyMatchFrameRate,
     AppConstants.keyMatch5060Only,
     AppConstants.keyMatchResolution,

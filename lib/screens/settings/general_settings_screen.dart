@@ -350,6 +350,23 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                                   .read<AppPreferences>()
                                   .setVideoMediaOverlay(v),
                             ),
+                          if (Platform.isAndroid)
+                            TvSwitchListTile(
+                              title: Text(tr('Native video surface (beta)')),
+                              subtitle: Text(tr(
+                                  'Plays the picture the way native TV apps do, for HDR that looks washed out or green flashes under the guide (Fire TV Cube, NVIDIA Shield). Restart the app after changing it. If the picture is missing, in the wrong place or menus look wrong, turn it off and send us a log.')),
+                              value: context
+                                  .watch<AppPreferences>()
+                                  .nativeVideoSurface,
+                              onChanged: (v) {
+                                context
+                                    .read<AppPreferences>()
+                                    .setNativeVideoSurface(v);
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                    content: Text(tr(
+                                        'Restart the app to apply this change.'))));
+                              },
+                            ),
                           TvSwitchListTile(
                             title: Text(tr('Compatibility video')),
                             subtitle: Text(tr(

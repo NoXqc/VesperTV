@@ -9,7 +9,9 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import androidx.core.content.FileProvider
+import android.util.Log
 import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.TransparencyMode
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
@@ -38,6 +40,20 @@ class MainActivity : FlutterActivity() {
     private val backupStore by lazy { BackupStore(this) }
     private val recorderBridge by lazy { RecorderBridge(this) }
     private val displayModes by lazy { DisplayModes(this) }
+
+    /**
+     * Native video surface (beta, Settings > Interface > Background video): Flutter starts
+     * transparent so the vendored player's SurfaceView behind it shows through the video
+     * hole (see NativeVideoSurface in third_party/video_player_android). Read once at
+     * launch from Flutter's SharedPreferences file, so the switch applies after a restart.
+     */
+    override fun getTransparencyMode(): TransparencyMode {
+        val on = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+            .getBoolean("flutter.vesper_native_video_surface", false)
+        Log.i("VesperNativeSurface", "startup: native video surface ${if (on) "ON (transparent Flutter view)" else "off"}, " +
+            "${Build.MANUFACTURER} ${Build.MODEL} SDK ${Build.VERSION.SDK_INT}")
+        return if (on) TransparencyMode.transparent else super.getTransparencyMode()
+    }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         if (!backupStore.onPermissionResult(requestCode, grantResults)) {
