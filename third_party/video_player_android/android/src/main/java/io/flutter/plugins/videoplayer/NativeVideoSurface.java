@@ -117,6 +117,17 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
           hide();
           result.success(null);
           return;
+        case "status":
+          {
+            Map<String, Object> s = new HashMap<>();
+            s.put("surfaceAdded", view != null);
+            s.put("attached", attachedId);
+            s.put("shown", shown);
+            s.put("surface", surfaceState);
+            s.put("windowTransparent", windowTransparent());
+            result.success(s);
+            return;
+          }
         case "diagnostics":
           result.success(diagnostics());
           return;
@@ -264,6 +275,14 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
     Log.i(TAG, "hidden (no video hole on screen)");
   }
 
+  /** Whether MainActivity started Flutter transparent (the beta is really on). */
+  private boolean windowTransparent() {
+    if (activity == null) return false;
+    android.graphics.drawable.Drawable bg = activity.getWindow().getDecorView().getBackground();
+    return bg instanceof android.graphics.drawable.ColorDrawable
+        && ((android.graphics.drawable.ColorDrawable) bg).getAlpha() == 0;
+  }
+
   private String displayInfo() {
     if (activity == null) return "display: no activity";
     StringBuilder sb = new StringBuilder();
@@ -341,6 +360,7 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
     out.put("dropped", droppedFrames);
     out.put("error", lastError);
     out.put("display", displayInfo());
+    out.put("windowTransparent", windowTransparent());
     if (attachedPlayer != null) {
       out.put("tunneling", attachedPlayer.isTunnelingEnabled());
       Format f = attachedPlayer.getVideoFormat();

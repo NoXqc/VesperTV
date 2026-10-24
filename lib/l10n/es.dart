@@ -45,7 +45,7 @@ const Map<String, String> kEs = {
   "Nothing here yet. Watch a channel, a movie or a show and it shows up on Home.": "Aún no hay nada. Mira un canal, una película o una serie y aparecerá en Inicio.",
   "Native video surface (beta)": "Superficie de vídeo nativa (beta)",
   "Plays the picture the way native TV apps do, for HDR that looks washed out or green flashes under the guide (Fire TV Cube, NVIDIA Shield). Restart the app after changing it. If the picture is missing, in the wrong place or menus look wrong, turn it off and send us a log.": "Muestra la imagen como las apps de TV nativas, para un HDR que se ve deslavado o destellos verdes bajo la guía (Fire TV Cube, NVIDIA Shield). Reinicia la app después de cambiarlo. Si falta la imagen, está en el lugar equivocado o los menús se ven mal, desactívalo y envíanos un registro.",
-  "Restart the app to apply this change.": "Reinicia la app para aplicar este cambio.",
+  "Close the app completely and open it again to apply this change.": "Cierra la app por completo y vuelve a abrirla para aplicar este cambio.",
   "Green flicker fix (test)": "Arreglo del parpadeo verde (prueba)",
   "For green flashes on the picture while the guide or a menu is over it (NVIDIA Shield). Unlike Compatibility video it keeps HDR. Applies from the next channel. If the guide or menus disappear behind the video, turn it off.": "Para destellos verdes en la imagen cuando la guía o un menú está encima (NVIDIA Shield). A diferencia de Vídeo compatible, mantiene el HDR. Se aplica desde el siguiente canal. Si la guía o los menús desaparecen detrás del vídeo, desactívalo.",
   '1 hour': '1 hora',

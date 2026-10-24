@@ -108,6 +108,25 @@ class NativeVideoSurface {
     }));
   }
 
+  /// One line for Settings: is the beta really running (Dart flag set at
+  /// launch, transparent window, video attached to the native surface)?
+  static Future<String> statusLine() async {
+    if (!active) return 'off';
+    try {
+      final s = await _channel.invokeMapMethod<String, Object?>('status');
+      if (s == null) return 'unknown';
+      final transparent = s['windowTransparent'] == true;
+      final attached = s['attached'];
+      final line =
+          'on · window ${transparent ? 'transparent' : 'NOT transparent'}'
+          ' · video ${s['surfaceAdded'] == true && attached != -1 ? 'on native surface (${s['surface']})' : 'not playing on it yet'}';
+      debugPrint('NativeSurface: status $line');
+      return line;
+    } catch (e) {
+      return 'error: $e';
+    }
+  }
+
   /// Writes what the native side knows (decoder, input format incl. HDR
   /// colour info, video/surface size, display mode + HDR support, dropped
   /// frames, tunneling) into the session log — logcat rolls over, this

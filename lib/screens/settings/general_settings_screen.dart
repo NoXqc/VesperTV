@@ -9,6 +9,7 @@ import '../../services/recording_service.dart';
 import '../../services/storage_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/tv_theme.dart';
+import '../../widgets/native_video_hole.dart';
 import '../../widgets/live_resume_hint.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_dialog_option.dart';
@@ -353,8 +354,23 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                           if (Platform.isAndroid)
                             TvSwitchListTile(
                               title: Text(tr('Native video surface (beta)')),
-                              subtitle: Text(tr(
-                                  'Plays the picture the way native TV apps do, for HDR that looks washed out or green flashes under the guide (Fire TV Cube, NVIDIA Shield). Restart the app after changing it. If the picture is missing, in the wrong place or menus look wrong, turn it off and send us a log.')),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(tr(
+                                      'Plays the picture the way native TV apps do, for HDR that looks washed out or green flashes under the guide (Fire TV Cube, NVIDIA Shield). Restart the app after changing it. If the picture is missing, in the wrong place or menus look wrong, turn it off and send us a log.')),
+                                  // Live state, so testers can see it's
+                                  // really on (English: diagnostic text).
+                                  FutureBuilder<String>(
+                                    future: NativeVideoSurface.statusLine(),
+                                    builder: (context, snap) => Text(
+                                        'Status: ${snap.data ?? '…'}',
+                                        style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.white70)),
+                                  ),
+                                ],
+                              ),
                               value: context
                                   .watch<AppPreferences>()
                                   .nativeVideoSurface,
@@ -364,7 +380,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                                     .setNativeVideoSurface(v);
                                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                                     content: Text(tr(
-                                        'Restart the app to apply this change.'))));
+                                        'Close the app completely and open it again to apply this change.'))));
                               },
                             ),
                           TvSwitchListTile(
