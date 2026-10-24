@@ -50,11 +50,43 @@ class DesktopWindow {
       await windowManager.show();
       await windowManager.focus();
     });
+    unawaited(Future<void>.delayed(
+        const Duration(seconds: 3), () => logState('started')));
+  }
+
+  /// Send log: how big the window really is against the screen (a user on a
+  /// 1440p monitor showed the app drawn in only part of it, 2026-10-24).
+  static Future<void> logState(String why) async {
+    if (!Platform.isWindows) return;
+    try {
+      final view = WidgetsBinding.instance.platformDispatcher.views.first;
+      final b = await windowManager.getBounds();
+      final full = await windowManager.isFullScreen();
+      final d = view.display;
+      debugPrint('DesktopWindow: $why windowed=${windowed.value} '
+          'fullScreen=$full window ${b.width.toInt()}x${b.height.toInt()} '
+          'at ${b.left.toInt()},${b.top.toInt()}; Flutter view '
+          '${view.physicalSize.width.toInt()}x'
+          '${view.physicalSize.height.toInt()} px, scale '
+          '${view.devicePixelRatio}; screen '
+          '${d.size.width.toInt()}x${d.size.height.toInt()} px');
+    } catch (e) {
+      debugPrint('DesktopWindow: state failed: $e');
+    }
+  }
+
+  static Timer? _logTimer;
+
+  /// Logs the size after the window settles (resize / full screen changes).
+  static void logStateSoon(String why) {
+    _logTimer?.cancel();
+    _logTimer = Timer(const Duration(milliseconds: 900), () => logState(why));
   }
 
   static Future<void> setWindowed(bool value) async {
     if (!Platform.isWindows) return;
     windowed.value = value;
+    logStateSoon(value ? 'switched to windowed' : 'switched to full screen');
     await _prefs?.setBool(AppConstants.keyWindowsWindowed, value);
     if (value) {
       await windowManager.setFullScreen(false);
@@ -89,6 +121,7 @@ class DesktopWindow {
 
   /// Moved or resized while windowed: remember where (debounced).
   static void onBoundsChanged() {
+    logStateSoon('resized/moved');
     if (!windowed.value) return;
     _saveTimer?.cancel();
     _saveTimer = Timer(const Duration(milliseconds: 600), () async {

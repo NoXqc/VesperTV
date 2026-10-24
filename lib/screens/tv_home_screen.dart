@@ -7547,12 +7547,24 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
     // animated scroll on a real device was confirmed elsewhere in this
     // file as the direct cause of an ANR-length freeze on a long list;
     // that lesson applies here just as much.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _gridHScroll.hasClients) {
-        _gridHScroll.jumpTo(_xFor(_floorToSlot(DateTime.now()))
-            .clamp(0.0, _gridHScroll.position.maxScrollExtent));
+    // A scroll position has no extents until the first layout (on a slow box
+    // this callback ran earlier: "Null check operator" in maxScrollExtent, the
+    // guide then opened at its start instead of "now" — owner's Formuler,
+    // LOG-NDQPJU). Wait for the layout, a few frames at most.
+    void jumpToNow(int triesLeft) {
+      if (!mounted || !_gridHScroll.hasClients) return;
+      if (!_gridHScroll.position.hasContentDimensions) {
+        if (triesLeft > 0) {
+          WidgetsBinding.instance
+              .addPostFrameCallback((_) => jumpToNow(triesLeft - 1));
+        }
+        return;
       }
-    });
+      _gridHScroll.jumpTo(_xFor(_floorToSlot(DateTime.now()))
+          .clamp(0.0, _gridHScroll.position.maxScrollExtent));
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => jumpToNow(5));
   }
 
   @override

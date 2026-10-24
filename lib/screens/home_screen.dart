@@ -187,8 +187,11 @@ class _HomeScreenState extends State<HomeScreen> {
         _newMoviesRow(playlist).then((r) => slow[HomeRowKind.newMovies] = r),
       if (visible.contains(HomeRowKind.newShows))
         _newShowsRow(playlist).then((r) => slow[HomeRowKind.newShows] = r),
-    ].map((f) => f.catchError((Object e) {
-          debugPrint('HomeScreen: row failed: $e');
+    ].map((f) => f.catchError((Object e, StackTrace st) {
+          // The first frames of the stack say which row and which call:
+          // "RangeError (length) 0..5440: 40600" (LOG-NDQPJU) had no origin.
+          final where = st.toString().split('\n').take(6).join(' | ');
+          debugPrint('HomeScreen: row failed: $e [$where]');
           return null;
         })));
     _apply(id, slow, focusFirst: focusFirst, done: true);
