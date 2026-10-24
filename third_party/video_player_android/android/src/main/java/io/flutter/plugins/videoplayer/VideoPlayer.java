@@ -9,6 +9,7 @@ import static androidx.media3.common.Player.REPEAT_MODE_OFF;
 
 import android.os.Handler;
 import android.os.Looper;
+import android.view.SurfaceHolder;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.media3.common.AudioAttributes;
@@ -45,6 +46,7 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
   // Native-surface diagnostics may attach after prepare has started the decoder.
   // Keep its actual name from creation; DecoderCounters does not expose a name.
   @Nullable String nativeVideoDecoderName;
+  @Nullable SurfaceHolder nativeSurfaceHolder;
   // VesperTV patch: frame rate from the first frames' timestamps (Match frame rate).
   final FrameRateProbe frameRateProbe = new FrameRateProbe();
 
@@ -83,6 +85,7 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
     this.videoPlayerEvents = events;
     this.surfaceProducer = surfaceProducer;
     exoPlayer = exoPlayerProvider.get();
+    nativeSurfaceHolder = options.nativeSurfaceHolder;
     exoPlayer.addAnalyticsListener(
         new AnalyticsListener() {
           @Override
@@ -105,6 +108,9 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
     }
 
     exoPlayer.setVideoFrameMetadataListener(frameRateProbe);
+    // Bind before prepare, so 4K does not start on a placeholder output and
+    // then switch to the real SurfaceView after Dart receives initialized.
+    if (nativeSurfaceHolder != null) exoPlayer.setVideoSurfaceHolder(nativeSurfaceHolder);
     exoPlayer.setMediaItem(mediaItem);
     exoPlayer.prepare();
     exoPlayerEventListener = createExoPlayerEventListener(exoPlayer, surfaceProducer);

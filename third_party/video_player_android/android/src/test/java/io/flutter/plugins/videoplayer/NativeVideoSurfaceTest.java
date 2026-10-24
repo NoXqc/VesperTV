@@ -6,6 +6,9 @@ import android.app.Activity;
 import android.util.LongSparseArray;
 import androidx.media3.common.Format;
 import androidx.media3.common.VideoSize;
+import androidx.media3.common.MediaItem;
+import android.view.SurfaceHolder;
+import io.flutter.plugins.videoplayer.platformview.PlatformViewVideoPlayer;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.analytics.AnalyticsListener;
 import io.flutter.plugin.common.BinaryMessenger;
@@ -84,5 +87,45 @@ public class NativeVideoSurfaceTest {
     assertEquals("-", data.get("decoder"));
     assertEquals("-", data.get("format"));
     assertEquals("-", data.get("videoSize"));
+  }
+
+  @Test
+  public void betaOffDoesNotCreateSurfaceDuringPreparation() {
+    assertNull(surface.holderForPreparation());
+    assertEquals(false, ((Map<?, ?>) invoke("status", null)).get("surfaceAdded"));
+  }
+
+  @Test
+  public void preparedPlayerIsNotReboundAtRegistrationOrDartAttach() {
+    invoke("configure", Map.of("enabled", true));
+    SurfaceHolder holder = surface.holderForPreparation();
+    assertNotNull(holder);
+    VideoPlayerOptions options = new VideoPlayerOptions();
+    options.nativeSurfaceHolder = holder;
+    VideoPlayer player = new PlatformViewVideoPlayer(mock(VideoPlayerCallbacks.class),
+        MediaItem.fromUri("https://example.com/live"), options, () -> exo);
+    players.put(2L, player);
+    surface.onPlayerCreated(player, 2L);
+    invoke("attach", Map.of("playerId", 2L));
+    verify(exo, times(1)).setVideoSurfaceHolder(holder);
+    // Preparing a retry must not steal a still-playing owner's output.
+    assertNull(surface.holderForPreparation());
+    surface.onPlayerDisposed(2L);
+    player.dispose();
+    assertSame(holder, surface.holderForPreparation());
+    verify(exo, never()).clearVideoSurfaceHolder(any());
+  }
+
+  @Test
+  public void disposingOwnerSkipsPlaceholderButExplicitDetachStillClears() {
+    invoke("attach", Map.of("playerId", 1L));
+    surface.onPlayerDisposed(1L);
+    verify(exo, never()).clearVideoSurfaceHolder(any());
+    invoke("attach", Map.of("playerId", 1L));
+    invoke("detach", Map.of("playerId", 1L));
+    verify(exo).clearVideoSurfaceHolder(any());
+    // An explicitly detached, retained player must bind again on return.
+    invoke("attach", Map.of("playerId", 1L));
+    verify(exo, times(2)).setVideoSurfaceHolder(any());
   }
 }

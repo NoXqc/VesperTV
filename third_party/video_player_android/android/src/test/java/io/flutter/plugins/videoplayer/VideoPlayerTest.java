@@ -124,6 +124,26 @@ public final class VideoPlayerTest {
   }
 
   @Test
+  public void nativeOutputIsBoundBeforeMediaItemAndPrepare() {
+    VideoPlayerOptions options = new VideoPlayerOptions();
+    options.nativeSurfaceHolder = mock(android.view.SurfaceHolder.class);
+    VideoPlayer player = createVideoPlayer(options);
+    org.mockito.InOrder order = inOrder(mockExoPlayer);
+    order.verify(mockExoPlayer).setVideoSurfaceHolder(options.nativeSurfaceHolder);
+    order.verify(mockExoPlayer).setMediaItem(any(MediaItem.class));
+    order.verify(mockExoPlayer).prepare();
+    assertEquals(options.nativeSurfaceHolder, player.nativeSurfaceHolder);
+    player.dispose();
+  }
+
+  @Test
+  public void legacyPlayerDoesNotBindNativeOutput() {
+    VideoPlayer player = createVideoPlayer();
+    verify(mockExoPlayer, never()).setVideoSurfaceHolder(any());
+    player.dispose();
+  }
+
+  @Test
   public void loadsAndPreparesProvidedMediaEnablesAudioFocusByDefault() {
     VideoPlayer videoPlayer = createVideoPlayer();
 

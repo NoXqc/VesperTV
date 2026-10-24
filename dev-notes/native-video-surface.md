@@ -117,3 +117,19 @@ and play **Media Hub video normally** (start, resume, pause/play without a black
 paused-surface workaround still missing here —, seek, subtitles, audio tracks, next episode, stream
 picker, trailers). Full list in HANDOFF.md "Beta acceptance".
 
+
+## AMD +425 result and the bind-before-prepare fix (Claude, 2026-10-24, build +427)
+- LOG-Y74UW3 (Cube, +425, beta ON, window transparent, video on the native surface): still no HDR,
+  washed out. Source `3840x2160 hevc PQ (HDR10) BT.2020`, display switched to 3840x2160 50 Hz and
+  supports DV/HLG/HDR10, but the decoder's output is `1920x1080` (`Resolution change … to
+  1920x1080`, `videoResolution.FHD`). Player 2's decoder had already output its first format before
+  our surface was attached: the main player prepares with no surface (placeholder) and the hole only
+  appears after `isInitialized`, so the Amlogic decoder is configured for GPU/1080p output and keeps it
+  after the switch. Same order on the old platform-view path. (Formuler decoded 3840x2160 anyway.)
+- Fix = Codex's `ff0523c` (surface created at startup via `configure`, handed to each new main player
+  before `prepare()`), cherry-picked alone onto this beta (branch `claude/native-surface-prepare`,
+  without Codex's unrelated theme/reminder/browse work), plus a `prepare` diagnostic: Send log
+  `NativeSurface: prepare = new player prepared ON the native surface (…)` / `WITHOUT … (reason)`.
+- What to look for in AMD's next log: `prepare = … ON`, `videoSize = 3840x2160`, Amlogic
+  `Resolution change … to 3840x2160`. If it's ON and still 1920x1080, next ideas: `holder.setFixedSize`
+  to the video size, then tunneling with the native surface (owner's `+420` switch idea).

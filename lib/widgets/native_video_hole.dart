@@ -27,12 +27,33 @@ class NativeVideoSurface {
   static bool active = false;
 
   static const _channel = MethodChannel('vespertv/native_surface');
+
+  /// Enable early binding before any platform-view player can prepare its
+  /// decoder. This is called only at beta startup, never for texture players.
+  static Future<void> configure() async {
+    await _channel.invokeMethod<void>('configure', {'enabled': active});
+  }
+
   static final _holes = <_NativeVideoHoleState>[];
   static bool _hooked = false;
   static int? _attached;
   static Rect? _sentRect;
   static bool _shown = false;
   static Timer? _diagTimer;
+  static int _switchHolds = 0;
+
+  /// Keep the native output in place while a replacement initializes. The
+  /// owner must release on completion, failure or explicit stop/disposal.
+  static VoidCallback retainForPlayerSwitch() {
+    _switchHolds++;
+    var released = false;
+    return () {
+      if (released) return;
+      released = true;
+      _switchHolds--;
+      SchedulerBinding.instance.scheduleFrame();
+    };
+  }
 
   static void _register(_NativeVideoHoleState hole) {
     _holes.add(hole);
@@ -70,7 +91,10 @@ class NativeVideoSurface {
       // An opaque route turns the retained preview's tickers off. Keep its
       // last native rect beneath that route, including its reverse transition;
       // recalculating an offstage box can send an intermediate/negative rect.
-      if (_shown && _holes.any((hole) => hole.coveredByRoute)) return;
+      if (_shown &&
+          (_switchHolds > 0 || _holes.any((hole) => hole.coveredByRoute))) {
+        return;
+      }
       if (_shown) {
         _shown = false;
         _sentRect = null;

@@ -6,6 +6,7 @@ package io.flutter.plugins.videoplayer;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import android.view.SurfaceHolder;
 
 public class VideoPlayerOptions {
   public boolean mixWithOthers;
@@ -15,11 +16,15 @@ public class VideoPlayerOptions {
    */
   @Nullable public Long backBufferDurationMs;
 
+  // Per-player only: the opt-in native beta's real output before prepare.
+  @Nullable public SurfaceHolder nativeSurfaceHolder;
+
   public VideoPlayerOptions() {}
 
   /** Copy constructor to ensure all options are reliably copied. */
   public VideoPlayerOptions(@NonNull VideoPlayerOptions other) {
     this.mixWithOthers = other.mixWithOthers;
     this.backBufferDurationMs = other.backBufferDurationMs;
+    this.nativeSurfaceHolder = other.nativeSurfaceHolder;
   }
 }

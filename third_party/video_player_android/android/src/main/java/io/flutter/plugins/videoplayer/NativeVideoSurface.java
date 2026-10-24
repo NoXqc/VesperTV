@@ -50,6 +50,7 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
   private long attachedId = -1;
   @Nullable private ExoPlayer attachedPlayer;
   private boolean shown = false;
+  private boolean enabled = false;
   private int left, top, width = 1, height = 1;
 
   // Last known facts, returned by "diagnostics" so Dart puts them in the session log too
@@ -61,6 +62,7 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
   private String firstFrame = "-";
   private int droppedFrames = 0;
   private String lastError = "-";
+  private String lastPrepare = "-";
 
   NativeVideoSurface(@NonNull BinaryMessenger messenger, @NonNull LongSparseArray<VideoPlayer> players) {
     this.players = players;
@@ -84,7 +86,9 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
   void onPlayerDisposed(long id) {
     if (id == attachedId) {
       Log.i(TAG, "player " + id + " disposed while attached");
-      detach();
+      // release() follows immediately. Clearing the holder first needlessly
+      // switches the decoder to a placeholder surface just before teardown.
+      detach(false);
     }
   }
 
@@ -92,6 +96,11 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
   public void onMethodCall(@NonNull MethodCall call, @NonNull MethodChannel.Result result) {
     try {
       switch (call.method) {
+        case "configure":
+          enabled = Boolean.TRUE.equals(call.argument("enabled"));
+          if (enabled) ensureView();
+          result.success(null);
+          return;
         case "attach":
           {
             Number id = call.argument("playerId");
@@ -143,6 +152,32 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
   private static int intArg(MethodCall call, String key) {
     Number n = call.argument(key);
     return n == null ? 0 : n.intValue();
+  }
+
+  /** Only a new main player with no existing owner may claim the native output. */
+  @Nullable SurfaceHolder holderForPreparation() {
+    // Backup retries can prepare a candidate while the current player is still
+    // running. Preserve that player's output until the candidate is adopted.
+    if (!enabled) return null;
+    if (attachedPlayer != null) {
+      lastPrepare = "new player prepared WITHOUT the native surface (player " + attachedId + " still owns it)";
+      Log.i(TAG, lastPrepare);
+      return null;
+    }
+    if (!ensureView()) {
+      lastPrepare = "new player prepared WITHOUT the native surface (no view)";
+      Log.i(TAG, lastPrepare);
+      return null;
+    }
+    // Why this matters (AMD's Fire TV Cube, LOG-Y74UW3): a decoder configured on a placeholder
+    // surface and moved to the SurfaceView later stayed in 1080p SDR output on Amlogic.
+    lastPrepare = "new player prepared ON the native surface (surface " + surfaceState + ")";
+    Log.i(TAG, lastPrepare);
+    return view.getHolder();
+  }
+
+  void onPlayerCreated(VideoPlayer player, long id) {
+    if (view != null && player.nativeSurfaceHolder == view.getHolder()) attach(id);
   }
 
   private boolean ensureView() {
@@ -237,7 +272,10 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
         videoSize = currentSize.width + "x" + currentSize.height;
       }
       exo.addAnalyticsListener(analytics);
-      exo.setVideoSurfaceHolder(view.getHolder());
+      if (player.nativeSurfaceHolder != view.getHolder()) {
+        exo.setVideoSurfaceHolder(view.getHolder());
+        player.nativeSurfaceHolder = view.getHolder();
+      }
       Log.i(TAG, "attached player " + id + " (surface " + surfaceState + ")");
     }
     out.put("ok", true);
@@ -245,10 +283,18 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
   }
 
   private void detach() {
+    detach(true);
+  }
+
+  private void detach(boolean clearOutput) {
     if (attachedPlayer != null) {
       try {
         attachedPlayer.removeAnalyticsListener(analytics);
-        if (view != null) attachedPlayer.clearVideoSurfaceHolder(view.getHolder());
+        if (clearOutput && view != null) {
+          attachedPlayer.clearVideoSurfaceHolder(view.getHolder());
+          VideoPlayer previous = players.get(attachedId);
+          if (previous != null) previous.nativeSurfaceHolder = null;
+        }
       } catch (Exception e) {
         Log.w(TAG, "detach: " + e);
       }
@@ -366,6 +412,7 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
     out.put("firstFrame", firstFrame);
     out.put("dropped", droppedFrames);
     out.put("error", lastError);
+    out.put("prepare", lastPrepare);
     out.put("display", displayInfo());
     out.put("windowTransparent", windowTransparent());
     if (attachedPlayer != null) {

@@ -39,6 +39,50 @@ void main() {
     expect(tester.takeException(), isNull);
   }
 
+  testWidgets(
+      'player switch keeps output in place until replacement is laid out',
+      (tester) async {
+    final shown = ValueNotifier<int?>(player);
+    addTearDown(shown.dispose);
+    await mount(tester,
+        home: Scaffold(
+            body: ValueListenableBuilder<int?>(
+                valueListenable: shown,
+                builder: (_, id, __) =>
+                    id == null ? const SizedBox() : hole(id))));
+    final release = NativeVideoSurface.retainForPlayerSwitch();
+    addTearDown(release);
+    shown.value = null;
+    await tester.pump();
+    expect(calls.where((c) => c.method == 'hide'), isEmpty);
+    shown.value = nextPlayer++;
+    await tester.pump();
+    release();
+    await tester.pump();
+    expect(calls.where((c) => c.method == 'hide'), isEmpty);
+    expect(calls.where((c) => c.method == 'attach'), hasLength(2));
+    await finish(tester);
+    expect(calls.last.method, 'hide');
+  });
+
+  testWidgets('cancelled and overlapping switch holds release safely',
+      (tester) async {
+    await mount(tester);
+    final first = NativeVideoSurface.retainForPlayerSwitch();
+    final second = NativeVideoSurface.retainForPlayerSwitch();
+    addTearDown(first);
+    addTearDown(second);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+    first();
+    first();
+    await tester.pump();
+    expect(calls.where((c) => c.method == 'hide'), isEmpty);
+    second();
+    await tester.pump();
+    expect(calls.last.method, 'hide');
+  });
+
   testWidgets('Settings coverage and pop keep native surface in place',
       (tester) async {
     await mount(tester);

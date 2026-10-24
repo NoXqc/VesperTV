@@ -324,7 +324,52 @@ class PlaybackService extends ChangeNotifier {
   static bool drawsNativeSurface(VideoPlayerHdrController c) =>
       _nativeSurfaceControllers[c] ?? false;
 
+  /// Whether the current controller uses the restart-applied native beta.
+  /// Consult the controller's original choice, not a newly changed setting.
+  bool get usesNativeSurface {
+    final current = controller;
+    return current != null && drawsNativeSurface(current);
+  }
+
+  final _nativeSwitchReleases = <VoidCallback>{};
+
   Future<void> play(Channel channel) async {
+    if (!usesNativeSurface ||
+        !NativeVideoSurface.active ||
+        textureVideo ||
+        currentChannel?.id == channel.id) {
+      return _playChannel(channel);
+    }
+    final release = NativeVideoSurface.retainForPlayerSwitch();
+    _nativeSwitchReleases.add(release);
+    void finish() {
+      _nativeSwitchReleases.remove(release);
+      release();
+    }
+
+    try {
+      await _playChannel(channel);
+      final initializing = initFuture;
+      if (initializing == null) {
+        finish();
+      } else {
+        unawaited(initializing.then((_) => finish(),
+            onError: (Object _, StackTrace __) => finish()));
+      }
+    } catch (_) {
+      finish();
+      rethrow;
+    }
+  }
+
+  void _cancelNativeSwitchHolds() {
+    for (final release in _nativeSwitchReleases) {
+      release();
+    }
+    _nativeSwitchReleases.clear();
+  }
+
+  Future<void> _playChannel(Channel channel) async {
     // A queued episode whose stream isn't known yet (Archive Next / auto-
     // advance): resolve it first. Guarded, so the position timer's repeat
     // calls near the end don't start a second lookup.
@@ -798,6 +843,7 @@ class PlaybackService extends ChangeNotifier {
   }
 
   Future<void> stop() async {
+    _cancelNativeSwitchHolds();
     await _teardown();
     // Nothing plays any more: the TV goes back to its own mode. A channel
     // change doesn't come here, so zapping keeps a matched mode.
@@ -893,6 +939,7 @@ class PlaybackService extends ChangeNotifier {
 
   @override
   void dispose() {
+    _cancelNativeSwitchHolds();
     _teardown();
     super.dispose();
   }
