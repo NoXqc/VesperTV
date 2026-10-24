@@ -27,6 +27,7 @@ import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../services/storage_service.dart';
 import '../services/viewer_profile_service.dart';
+import '../utils/scroll_safety.dart';
 import '../utils/live_group_sort.dart';
 import '../utils/time_format.dart';
 import '../utils/constants.dart';
@@ -7580,7 +7581,11 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
     // been browsed, landing on an unrelated channel instead of the new
     // group's first one. jumpTo, not animateTo — same ANR-avoidance
     // reasoning as everywhere else in this file.
-    if (_gridVScroll.hasClients) _gridVScroll.jumpTo(0);
+    if (!jumpToIfLaidOut(_gridVScroll, 0)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) jumpToIfLaidOut(_gridVScroll, 0);
+      });
+    }
     _focusedRowIndex = null;
     _focusedProgram = null;
     _cursorSlot = null;
@@ -7591,11 +7596,11 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   }
 
   void _mirrorRuler() {
-    if (_rulerHScroll.hasClients) _rulerHScroll.jumpTo(_gridHScroll.offset);
+    jumpToIfLaidOut(_rulerHScroll, _gridHScroll.offset);
   }
 
   void _mirrorLabels() {
-    if (_labelVScroll.hasClients) _labelVScroll.jumpTo(_gridVScroll.offset);
+    jumpToIfLaidOut(_labelVScroll, _gridVScroll.offset);
   }
 
   void _onGuideRowsLoaded() {

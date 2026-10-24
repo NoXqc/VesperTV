@@ -12,8 +12,9 @@ import 'package:flutter/widgets.dart';
 /// view around it. A [NativeVideoHole] stands where the video goes: it clears
 /// its rect to transparent and, after every frame, the topmost visible hole's
 /// rect (physical pixels) and player id go to the native side, which moves
-/// the SurfaceView there. No hole on screen = the surface is moved off screen
-/// (kept alive, so playback isn't disturbed).
+/// the SurfaceView there. A covered route retains its last rect beneath
+/// Flutter until it returns. When no video hole remains (or the current one
+/// is explicitly hidden), the surface moves off screen without being destroyed.
 ///
 /// Why: through the platform view AMD's Fire TV Cube showed 4K HDR10 as
 /// washed-out 1080p (LOG-CFN2FE) and Sam's NVIDIA Shield green flicker under
@@ -46,6 +47,10 @@ class NativeVideoSurface {
 
   static void _unregister(_NativeVideoHoleState hole) {
     _holes.remove(hole);
+    if (_holes.isEmpty) {
+      _diagTimer?.cancel();
+      _diagTimer = null;
+    }
     SchedulerBinding.instance.scheduleFrame();
   }
 
@@ -62,6 +67,10 @@ class NativeVideoSurface {
     }
     final box = top?.renderBox;
     if (top == null || box == null || !box.attached || !box.hasSize) {
+      // An opaque route turns the retained preview's tickers off. Keep its
+      // last native rect beneath that route, including its reverse transition;
+      // recalculating an offstage box can send an intermediate/negative rect.
+      if (_shown && _holes.any((hole) => hole.coveredByRoute)) return;
       if (_shown) {
         _shown = false;
         _sentRect = null;
@@ -159,12 +168,21 @@ class NativeVideoHole extends StatefulWidget {
 class _NativeVideoHoleState extends State<NativeVideoHole> {
   final _key = GlobalKey();
   bool _tickerOn = true;
+  ModalRoute<dynamic>? _route;
   double devicePixelRatio = 1;
 
   RenderBox? get renderBox =>
       _key.currentContext?.findRenderObject() as RenderBox?;
 
   bool get visible => mounted && _tickerOn;
+
+  bool get coveredByRoute {
+    final route = _route;
+    if (!mounted || route == null || !route.isActive) return false;
+    return !route.isCurrent ||
+        (route.secondaryAnimation?.value ?? 0) > 0 ||
+        (route.secondaryAnimation?.isAnimating ?? false);
+  }
 
   @override
   void initState() {
@@ -177,6 +195,7 @@ class _NativeVideoHoleState extends State<NativeVideoHole> {
     super.didChangeDependencies();
     // Off on a route covered by an opaque one (and in hidden Visibility).
     _tickerOn = TickerMode.valuesOf(context).enabled;
+    _route = ModalRoute.of(context);
     devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
     SchedulerBinding.instance.scheduleFrame();
   }

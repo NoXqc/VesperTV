@@ -25,6 +25,7 @@ import androidx.media3.common.TrackGroup;
 import androidx.media3.common.TrackSelectionOverride;
 import androidx.media3.common.Tracks;
 import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.exoplayer.analytics.AnalyticsListener;
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector;
 import com.google.common.collect.ImmutableList;
 import io.flutter.plugins.videoplayer.platformview.PlatformViewExoPlayerEventListener;
@@ -41,6 +42,7 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 import org.robolectric.RobolectricTestRunner;
+import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLooper;
 
 /**
@@ -56,6 +58,7 @@ import org.robolectric.shadows.ShadowLooper;
  * in order to figure out how to set everything up so the player "works".
  */
 @RunWith(RobolectricTestRunner.class)
+@Config(sdk = {28, 30})
 public final class VideoPlayerTest {
   private static final String FAKE_ASSET_URL = "https://flutter.dev/movie.mp4";
   private FakeVideoAsset fakeVideoAsset;
@@ -99,6 +102,25 @@ public final class VideoPlayerTest {
   private VideoPlayer createVideoPlayer(VideoPlayerOptions options) {
     return new TestVideoPlayer(
         mockEvents, fakeVideoAsset.getMediaItem(), options, null, () -> mockExoPlayer);
+  }
+
+  @Test
+  public void decoderNameIsRetainedBeforeNativeSurfaceCanAttach() {
+    VideoPlayer player = createVideoPlayer();
+    ArgumentCaptor<AnalyticsListener> capture = ArgumentCaptor.forClass(AnalyticsListener.class);
+    org.mockito.InOrder order = inOrder(mockExoPlayer);
+    order.verify(mockExoPlayer).addAnalyticsListener(capture.capture());
+    order.verify(mockExoPlayer).prepare();
+    AnalyticsListener listener = capture.getValue();
+    AnalyticsListener.EventTime time = mock(AnalyticsListener.EventTime.class);
+    listener.onVideoDecoderInitialized(time, "OMX.amlogic.hevc.decoder.awesome", 0, 0);
+    assertEquals("OMX.amlogic.hevc.decoder.awesome", player.nativeVideoDecoderName);
+    listener.onVideoDecoderInitialized(time, "c2.android.hevc.decoder", 0, 0);
+    listener.onVideoDecoderReleased(time, "OMX.amlogic.hevc.decoder.awesome");
+    assertEquals("c2.android.hevc.decoder", player.nativeVideoDecoderName);
+    listener.onVideoDecoderReleased(time, "c2.android.hevc.decoder");
+    assertNull(player.nativeVideoDecoderName);
+    player.dispose();
   }
 
   @Test

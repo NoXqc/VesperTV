@@ -229,6 +229,13 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
       attachedPlayer = exo;
       decoder = inputFormat = videoSize = firstFrame = lastError = "-";
       droppedFrames = 0;
+      decoder = player.nativeVideoDecoderName == null ? "-" : player.nativeVideoDecoderName;
+      Format currentFormat = exo.getVideoFormat();
+      if (currentFormat != null) inputFormat = describe(currentFormat);
+      VideoSize currentSize = exo.getVideoSize();
+      if (currentSize != null && currentSize.width > 0 && currentSize.height > 0) {
+        videoSize = currentSize.width + "x" + currentSize.height;
+      }
       exo.addAnalyticsListener(analytics);
       exo.setVideoSurfaceHolder(view.getHolder());
       Log.i(TAG, "attached player " + id + " (surface " + surfaceState + ")");

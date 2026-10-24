@@ -21,6 +21,7 @@ import androidx.media3.common.TrackSelectionOverride;
 import androidx.media3.common.Tracks;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.exoplayer.analytics.AnalyticsListener;
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector;
 import io.flutter.view.TextureRegistry.SurfaceProducer;
 import java.util.ArrayList;
@@ -41,6 +42,9 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
   @UnstableApi @Nullable protected DefaultTrackSelector trackSelector;
   // VesperTV patch: set by VideoPlayerPlugin from the asset, read by StatsBridge.
   @Nullable StreamStats streamStats;
+  // Native-surface diagnostics may attach after prepare has started the decoder.
+  // Keep its actual name from creation; DecoderCounters does not expose a name.
+  @Nullable String nativeVideoDecoderName;
   // VesperTV patch: frame rate from the first frames' timestamps (Match frame rate).
   final FrameRateProbe frameRateProbe = new FrameRateProbe();
 
@@ -79,6 +83,21 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
     this.videoPlayerEvents = events;
     this.surfaceProducer = surfaceProducer;
     exoPlayer = exoPlayerProvider.get();
+    exoPlayer.addAnalyticsListener(
+        new AnalyticsListener() {
+          @Override
+          public void onVideoDecoderInitialized(
+              @NonNull EventTime eventTime, @NonNull String decoderName,
+              long initializedTimestampMs, long initializationDurationMs) {
+            nativeVideoDecoderName = decoderName;
+          }
+
+          @Override
+          public void onVideoDecoderReleased(
+              @NonNull EventTime eventTime, @NonNull String decoderName) {
+            if (decoderName.equals(nativeVideoDecoderName)) nativeVideoDecoderName = null;
+          }
+        });
 
     // Try to get the track selector from the ExoPlayer if it was built with one
     if (exoPlayer.getTrackSelector() instanceof DefaultTrackSelector) {

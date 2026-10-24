@@ -1,6 +1,6 @@
 # Native video surface (beta)
 
-Branch `claude/native-surface` (from main `ebb0fa5`, test build `1.0.39+423`). Android main player only.
+Branch `claude/native-surface` (from main `ebb0fa5`, test builds `1.0.39+423` / `+424`). Android main player only.
 
 ## Why
 - **AMD, Fire TV Cube** (AFTGAZL, Android 9 / SDK 28, Amlogic): 4K HDR10 channels look washed out.
@@ -29,7 +29,8 @@ Branch `claude/native-surface` (from main `ebb0fa5`, test build `1.0.39+423`). A
 - Dart `widgets/native_video_hole.dart`: `NativeVideoSurface.active` (set once in main.dart, Android
   only); `NativeVideoHole` paints `BlendMode.clear` in its own `RepaintBoundary`; a persistent frame
   callback sends the topmost visible hole's rect + player id after every frame (holes whose
-  `TickerMode` is off — covered routes — are skipped; last registered wins).
+  `TickerMode` is off are skipped for geometry; covered routes retain the last native rect
+  beneath Flutter through transitions. Last registered visible hole wins).
 - `PlaybackService._viewTypeFor` marks controllers created while the beta is on (and Compatibility
   video off); `VideoPlayerPane` shows `NativeVideoHole` for those, `VideoPlayerHdr` otherwise.
   Multiview / texture players / Windows unchanged.
@@ -63,3 +64,32 @@ Branch `claude/native-surface` (from main `ebb0fa5`, test build `1.0.39+423`). A
 5. Mini player / pill, Sports hero preview, Settings/Search over live video, Multiview in and out,
    Media Hub movie, trailer.
 6. Turn off, restart: everything as before.
+
+
+## Codex fixes after Formuler +424 feedback (2026-10-24; unreleased)
+
+Branch `codex/native-surface-fixes`, based on `claude/native-surface` at `f1ceb95`.
+`LOG-5NEAZT` confirms format/decoder events precede native attach and the guide
+reset throws from a ScrollPosition without content dimensions. Both captured
+sessions had the beta on; no beta-off device reproduction is claimed.
+
+- Covered video routes keep their last native rect while TickerMode is off,
+  including reverse transitions. Flutter's opaque Settings page covers the
+  surface. Visible/translucent/fullscreen holes still take priority; removing
+  the last hole or explicitly disabling it still hides the surface. Cancel the
+  pending diagnostics timer when the last hole is removed.
+- Cache the actual video decoder name through a lightweight AnalyticsListener
+  installed before ExoPlayer.prepare in VideoPlayer. DecoderCounters has no
+  decoder-name field. Native attach seeds decoder name, current Format and
+  VideoSize before listening for subsequent changes; switching players resets
+  prior facts. This does not alter surface selection/codec behavior when off.
+- Guide group changes only jump once all attached positions have pixels and
+  content dimensions; retry a reset after layout when needed. Mirrored ruler/
+  channel-label scrolls use the same guard. This applies to both beta modes.
+- Regression coverage: Settings push/pop, translucent overlay, explicit hidden
+  TickerMode, fullscreen priority/return, unmeasured/shared scroll positions,
+  late decoder/format attach and subsequent changes. Android unit tests use
+  SDK28 (Cube) and SDK30 (Shield/Formuler) with the repo's Java17 runtime.
+- No version bump, APK package, installation, merge, push or release in this
+  fix task. Owner device check: return from Settings without late video pop-in;
+  Send log should contain seeded decoder/format; startup guide error absent.
