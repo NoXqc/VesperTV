@@ -355,6 +355,10 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   LOG-CFN2FE) and Sam's NVIDIA Shield (green flicker; Compatibility video loses HDR). Tunneling test
   `+420` is not the fix. Full Send-log diagnostics (`NativeSurface:` / `VesperNativeSurface`).
   Design, risks, test checklist: `dev-notes/native-video-surface.md`. Codex takes diagnostics.
+- **Codex, unreleased: independent profile theme colours** — `codex/profile-theme-colours`:
+  viewer-scoped palette keys, one-time preservation of existing shared colours, and
+  immediate theme reload on profile switch. Main key stays unchanged. Details:
+  `dev-notes/features.md` (Per-profile theme colours).
 - **Release 1.0.39 (`+422`, 2026-10-23):** integrates the five completed Codex branches
   below: Windows Home Back arrow, player clock, all Open on startup destinations,
   per-game/automatic team reminders with faded-logo popup, and Media Hub movie

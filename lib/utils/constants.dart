@@ -332,7 +332,11 @@ class AppConstants {
   /// Per viewer: the favourite league (League manager, hold OK): Sports Trak
   /// opens on it and its games lead the player side panel's Live now.
   static const String keySportsFavoriteLeague = 'vesper_sports_favorite_league';
+
+  /// Per viewer; Main retains its original unsuffixed key.
   static const String keyPaletteId = 'nox_palette_id';
+  static const String keyViewerPalettesMigrated =
+      'vesper_viewer_palettes_migrated';
 
   /// UI layout: 'auto' picks phone vs TV by screen size, 'phone'/'tv' force
   /// one regardless — needed because plenty of real Android boxes (this

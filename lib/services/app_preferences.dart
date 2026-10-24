@@ -279,6 +279,15 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// A profile switch only reloads viewer-specific appearance. Device
+  /// settings (layout, video compatibility, clock, etc.) stay as they are.
+  void reloadPaletteForViewer() {
+    final next = _paletteById(_storage.getPaletteId());
+    if (palette.id == next.id) return;
+    palette = next;
+    notifyListeners();
+  }
+
   void setPalette(CyberpunkPalette newPalette) {
     palette = newPalette;
     _storage.setPaletteId(newPalette.id);

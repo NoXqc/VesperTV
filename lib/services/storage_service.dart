@@ -92,6 +92,22 @@ class StorageService {
     _prefs = await SharedPreferences.getInstance();
     _activeViewerId = _prefs.getString(AppConstants.keyActiveViewerId) ??
         AppConstants.mainViewerId;
+    await _migrateViewerPalettes();
+  }
+
+  /// Snapshot the old shared colour for existing viewers once. Main's
+  /// original key is read only; future profiles start with the default.
+  Future<void> _migrateViewerPalettes() async {
+    if (_prefs.getBool(AppConstants.keyViewerPalettesMigrated) == true) return;
+    final legacy = _prefs.getString(AppConstants.keyPaletteId);
+    if (legacy != null) {
+      for (final viewer in getViewerProfiles()) {
+        if (viewer.id == AppConstants.mainViewerId) continue;
+        final key = _vk(AppConstants.keyPaletteId, viewerId: viewer.id);
+        if (!_prefs.containsKey(key)) await _prefs.setString(key, legacy);
+      }
+    }
+    await _prefs.setBool(AppConstants.keyViewerPalettesMigrated, true);
   }
 
   Future<Directory> _ensureCacheDir() async {
@@ -512,10 +528,10 @@ class StorageService {
   /// the old single-seed-color storage, a fresh sensible default is simpler
   /// than trying to map an arbitrary old color onto the closest palette.
   String getPaletteId() =>
-      _prefs.getString(AppConstants.keyPaletteId) ??
+      _prefs.getString(_vk(AppConstants.keyPaletteId)) ??
       AppConstants.cyberpunkPalettes.first.id;
   Future<void> setPaletteId(String id) =>
-      _prefs.setString(AppConstants.keyPaletteId, id);
+      _prefs.setString(_vk(AppConstants.keyPaletteId), id);
 
   /// 'auto' or 'tv'. A saved 'phone' (the old phone-only home screen,
   /// removed) reads as 'auto'.

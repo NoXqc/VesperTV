@@ -17,7 +17,9 @@ import 'profile_photos.dart';
 /// doc comment on why).
 class ViewerProfileService extends ChangeNotifier {
   ViewerProfileService(
-      this._storage, this._playlistManager, this._playbackService) {
+      this._storage, this._playlistManager, this._playbackService,
+      {VoidCallback? onViewerChanged})
+      : _onViewerChanged = onViewerChanged {
     _profiles = _storage.getViewerProfiles();
     _activeId = _storage.getActiveViewerId();
     // Catches an impossible-but-cheap-to-guard-against state: an active id
@@ -29,6 +31,8 @@ class ViewerProfileService extends ChangeNotifier {
     }
   }
 
+  /// main.dart reloads viewer-scoped appearance before the switch is announced.
+  final VoidCallback? _onViewerChanged;
   final StorageService _storage;
   final PlaylistManager _playlistManager;
   final PlaybackService _playbackService;
@@ -166,6 +170,7 @@ class ViewerProfileService extends ChangeNotifier {
     await _storage.setActiveViewerId(targetId);
     _playlistManager.applyActiveViewer();
     await _playbackService.reloadForViewer();
+    _onViewerChanged?.call();
     notifyListeners();
     return true;
   }

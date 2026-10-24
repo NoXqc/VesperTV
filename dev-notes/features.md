@@ -283,3 +283,18 @@ IPTV without future metadata needs a known TMDB id plus the existing user TMDB k
 - HTTP reachability cannot promise codec support or detect every provider's
   successful-HTTP placeholder clip. Existing player/ArchiveReadyWatch handles
   errors/clips after startup. No real-account/native playback verified here.
+
+
+## Per-profile theme colours (Codex, 2026-10-24; unreleased)
+
+- `StorageService.getPaletteId`/`setPaletteId` use the viewer suffix. Main keeps
+  the original `nox_palette_id` key unchanged; other viewers have independent keys.
+- `StorageService.init` snapshots the old shared palette into existing non-Main
+  profiles once, preserving explicit profile palettes. The migration marker travels
+  with backup/transfer; importing an old backup removes it and migrates next launch.
+- New profiles start with the normal default (Platinum), including when copying
+  Main's lists/history. A missing viewer palette never falls back to Main's colour.
+- `ViewerProfileService.switchTo` invokes its `onViewerChanged` callback after
+  saving the active id and reloading playback, before announcing the switch.
+  main.dart wires `AppPreferences.reloadPaletteForViewer` to rebuild the app theme.
+  Device settings and avatar colours are unchanged; no playlist/network reload.
