@@ -336,6 +336,13 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Codex frozen-frame + spinner follow-up** (`codex/frozen-zap-spinner`, local test +435):
+  owner confirms +434 covers green but dislikes logo on every zap. Prepare one recent
+  720px-max frame on a worker while the Formuler channel plays, never wait during zap;
+  display cached frame + small spinner until first frame. Reject dark/bright uniform
+  green and blank captures; invalidate late results on source change/hide/dispose.
+  Logo + spinner remains if capture unavailable. See dev-notes/frozen-zap-spinner.md.
+  Actual 4K capture validity still needs the owner's box test; no GitHub publication.
 - **Codex Formuler transition follow-up** (`codex/formuler-green-cover`, local test +434):
   +433 green-capture heuristic did not help. LOG-A44B6U shows no green rejection,
   capture callbacks after 180-224 ms on several zaps, and some source loads around

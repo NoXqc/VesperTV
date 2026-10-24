@@ -13,6 +13,11 @@ package io.flutter.plugins.videoplayer;
 import android.app.Activity;
 import android.os.Build;
 import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.SystemClock;
+import android.view.Surface;
+import android.widget.ProgressBar;
+import android.content.res.ColorStateList;
 import android.os.Looper;
 import android.util.Log;
 import android.util.LongSparseArray;
@@ -56,6 +61,18 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
   @Nullable private Activity activity;
   @Nullable private SurfaceView view;
   @Nullable private ImageView zapCover;
+  @Nullable private FrameLayout zapLayer;
+  @Nullable private ProgressBar zapSpinner;
+  private final ZapFrameCache frameCache = new ZapFrameCache();
+  @Nullable private HandlerThread captureThread;
+  @Nullable private Handler captureWorker;
+  private boolean captureInFlight;
+  private boolean disposed;
+  private boolean frameReady;
+  private int warmFailures;
+  private long frameEpoch;
+  private String warmCapture = "not captured";
+  private final Runnable warmCaptureTask = () -> captureWarmFrame();
   @Nullable private Bitmap lastPicture;
   private final Runnable coverTimeout = () -> hideZapCover();
   private long attachedId = -1;
@@ -85,6 +102,9 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
   }
 
   void dispose() {
+    disposed = true;
+    cancelWarmCapture(true);
+    if (captureThread != null) captureThread.quitSafely();
     cancelSwap("disposed");
     methods.setMethodCallHandler(null);
     detach();
@@ -214,7 +234,12 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
       result.success(java.util.Collections.singletonMap("accepted", false));
       return;
     }
+    Bitmap interruptedPicture = lastPicture;
     cancelSwap("superseded");
+    if (interruptedPicture != null
+        && io.flutter.plugins.videoplayer.platformview.FormulerVideoRenderer.isTargetDevice()) {
+      retainCapturedPicture(interruptedPicture);
+    }
     VideoAsset asset = VideoAsset.fromRemoteUrl(url,
         Boolean.TRUE.equals(call.argument("hls")) ? VideoAsset.StreamingFormat.HTTP_LIVE
             : VideoAsset.StreamingFormat.UNKNOWN, new HashMap<>(), null);
@@ -239,12 +264,19 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
   /** One temporary, bounded frame; never saved to disk or included in logs. */
   private void captureBeforeSwap(PendingSwap swap, Runnable replace) {
     if (io.flutter.plugins.videoplayer.platformview.FormulerVideoRenderer.isTargetDevice()) {
-      // LOG-A44B6U: copy callbacks arrive after the intended 80 ms budget,
-      // and the green-frame filter never fires despite visible green.
-      // Avoid copying this device's video plane. Show the existing opaque logo
-      // cover immediately and start loading without waiting for PixelCopy.
+      // The zap itself never waits for a copy. A recent snapshot was prepared
+      // while this channel was stable; in-flight copies are invalidated here.
+      Bitmap frozen = frameCache.take(SystemClock.uptimeMillis());
+      Bitmap previous = lastPicture;
+      cancelWarmCapture(true);
       hideZapCover();
-      lastCapture = "Formuler capture skipped; logo fallback";
+      if (frozen == null) frozen = previous; // rapid zaps keep the last valid outgoing picture
+      if (frozen != null) {
+        retainCapturedPicture(frozen);
+        lastCapture = "cached frame + spinner";
+      } else {
+        lastCapture = "no usable cached frame; logo + spinner";
+      }
       Log.i(TAG, lastCapture);
       replace.run();
       return;
@@ -286,6 +318,83 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
       picture.recycle();
       start.run();
     }
+  }
+
+  private void cancelWarmCapture(boolean forgetFrame) {
+    frameEpoch++;
+    swapHandler.removeCallbacks(warmCaptureTask);
+    if (forgetFrame) {
+      frameReady = false;
+      warmFailures = 0;
+      warmCapture = "awaiting stable frame";
+      frameCache.clear();
+    }
+  }
+
+  private void scheduleWarmCapture(long delay) {
+    swapHandler.removeCallbacks(warmCaptureTask);
+    if (!disposed && enabled && shown && frameReady && warmFailures < 3 && attachedPlayer != null
+        && io.flutter.plugins.videoplayer.platformview.FormulerVideoRenderer.isTargetDevice()) {
+      swapHandler.postDelayed(warmCaptureTask, delay);
+    }
+  }
+
+  private void captureWarmFrame() {
+    if (disposed || !frameReady || !shown || view == null || attachedPlayer == null) return;
+    if (captureInFlight) { scheduleWarmCapture(1500); return; }
+    final Surface target = view.getHolder().getSurface();
+    if (target == null || !target.isValid()) { scheduleWarmCapture(1500); return; }
+    if (captureWorker == null) {
+      captureThread = new HandlerThread("VesperZapCapture");
+      captureThread.start();
+      captureWorker = new Handler(captureThread.getLooper());
+    }
+    final Handler worker = captureWorker;
+    final long epoch = frameEpoch;
+    final long capturedAt = SystemClock.uptimeMillis();
+    final float scale = Math.min(1f, 720f / Math.max(width, height));
+    final int bitmapWidth = Math.max(1, Math.round(width * scale));
+    final int bitmapHeight = Math.max(1, Math.round(height * scale));
+    captureInFlight = true;
+    worker.post(() -> {
+      final Bitmap picture;
+      try {
+        picture = Bitmap.createBitmap(bitmapWidth, bitmapHeight, Bitmap.Config.ARGB_8888);
+      } catch (OutOfMemoryError | IllegalArgumentException error) {
+        swapHandler.post(() -> finishWarmCapture(epoch, capturedAt, null, false));
+        return;
+      }
+      try {
+        PixelCopy.request(target, picture, status -> {
+          boolean usable = status == PixelCopy.SUCCESS && ZapFrameCache.usable(picture);
+          swapHandler.post(() -> finishWarmCapture(epoch, capturedAt, picture, usable));
+        }, worker);
+      } catch (RuntimeException error) {
+        swapHandler.post(() -> finishWarmCapture(epoch, capturedAt, picture, false));
+      }
+    });
+  }
+
+  // Main-thread publication: stale captures never become another channel's cover.
+  void finishWarmCapture(long epoch, long capturedAt, @Nullable Bitmap picture, boolean usable) {
+    captureInFlight = false;
+    if (disposed || epoch != frameEpoch || !frameReady || !shown) {
+      if (picture != null) picture.recycle();
+      return;
+    }
+    String previousStatus = warmCapture;
+    if (picture != null && usable && SystemClock.uptimeMillis() - capturedAt <= 2500) {
+      frameCache.put(picture, capturedAt);
+      warmFailures = 0;
+      warmCapture = "usable frame cached";
+    } else {
+      if (picture != null) picture.recycle();
+      warmFailures++;
+      warmCapture = warmFailures >= 3 ? "capture unavailable; retries stopped for this channel"
+          : "blank/green/failed copy rejected";
+    }
+    if (!warmCapture.equals(previousStatus)) Log.i(TAG, "warm capture: " + warmCapture);
+    scheduleWarmCapture(1500);
   }
 
   void retainCapturedPicture(Bitmap picture) {
@@ -364,6 +473,7 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
 
           @Override
           public void surfaceDestroyed(@NonNull SurfaceHolder holder) {
+            cancelWarmCapture(true);
             surfaceState = "destroyed";
             Log.i(TAG, "surface destroyed");
           }
@@ -376,19 +486,30 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
     zapCover.setImageDrawable(activity.getApplicationInfo().loadIcon(activity.getPackageManager()));
     zapCover.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
     zapCover.setBackgroundColor(Color.rgb(12, 12, 16));
-    zapCover.setVisibility(View.GONE);
-    content.addView(zapCover, 1, params());
+    zapLayer = new FrameLayout(activity);
+    zapLayer.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
+    zapLayer.addView(zapCover, new FrameLayout.LayoutParams(-1, -1));
+    zapSpinner = new ProgressBar(activity, null, android.R.attr.progressBarStyleSmall);
+    zapSpinner.setIndeterminate(true);
+    zapSpinner.setIndeterminateTintList(ColorStateList.valueOf(Color.WHITE));
+    int spinnerSize = Math.round(32 * activity.getResources().getDisplayMetrics().density);
+    zapLayer.addView(zapSpinner, new FrameLayout.LayoutParams(spinnerSize, spinnerSize, Gravity.CENTER));
+    zapLayer.setVisibility(View.GONE);
+    content.addView(zapLayer, 1, params());
     logDisplay();
     return true;
   }
 
   private void showZapCover() {
     if (zapCover == null || !shown) return;
-    zapCover.setLayoutParams(params());
+    zapLayer.setLayoutParams(params());
+    int spinnerSize = Math.max(1, Math.min(Math.round(32 * activity.getResources().getDisplayMetrics().density),
+        Math.min(width, height) / 8));
+    zapSpinner.setLayoutParams(new FrameLayout.LayoutParams(spinnerSize, spinnerSize, Gravity.CENTER));
     int pad = lastPicture == null ? Math.max(1, Math.min(width, height) / 3) : 0;
     zapCover.setScaleType(lastPicture == null ? ImageView.ScaleType.CENTER_INSIDE : ImageView.ScaleType.FIT_XY);
     zapCover.setPadding(pad, pad, pad, pad);
-    zapCover.setVisibility(View.VISIBLE);
+    zapLayer.setVisibility(View.VISIBLE);
     swapHandler.removeCallbacks(coverTimeout);
     swapHandler.postDelayed(coverTimeout, 15000);
   }
@@ -396,7 +517,7 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
   private void hideZapCover() {
     swapHandler.removeCallbacks(coverTimeout);
     if (zapCover != null) {
-      zapCover.setVisibility(View.GONE);
+      if (zapLayer != null) zapLayer.setVisibility(View.GONE);
       if (activity != null) {
         zapCover.setImageDrawable(activity.getApplicationInfo().loadIcon(activity.getPackageManager()));
       }
@@ -409,11 +530,14 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
   }
 
   private void removeView() {
+    cancelWarmCapture(true);
     hideZapCover();
-    if (zapCover != null) {
-      ViewGroup coverParent = (ViewGroup) zapCover.getParent();
-      if (coverParent != null) coverParent.removeView(zapCover);
+    if (zapLayer != null) {
+      ViewGroup coverParent = (ViewGroup) zapLayer.getParent();
+      if (coverParent != null) coverParent.removeView(zapLayer);
       zapCover = null;
+      zapSpinner = null;
+      zapLayer = null;
     }
     if (view == null) return;
     ViewGroup parent = (ViewGroup) view.getParent();
@@ -486,6 +610,7 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
   }
 
   private void detach(boolean clearOutput) {
+    cancelWarmCapture(true);
     cancelSwap("detached");
     hideZapCover();
     if (attachedPlayer != null) {
@@ -516,7 +641,8 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
     height = h;
     shown = true;
     view.setLayoutParams(params());
-    if (zapCover != null) zapCover.setLayoutParams(params());
+    if (zapLayer != null) zapLayer.setLayoutParams(params());
+    if (!wasShown) scheduleWarmCapture(250);
     // Positions change every frame during animations: log only show/size changes.
     if (!wasShown || sizeChanged) {
       Log.i(TAG, "rect " + w + "x" + h + " at " + l + "," + t);
@@ -524,11 +650,12 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
   }
 
   private void hide() {
+    cancelWarmCapture(false);
     hideZapCover();
     if (view == null || !shown) return;
     shown = false;
     view.setLayoutParams(params());
-    if (zapCover != null) zapCover.setLayoutParams(params());
+    if (zapLayer != null) zapLayer.setLayoutParams(params());
     Log.i(TAG, "hidden (no video hole on screen)");
   }
 
@@ -618,7 +745,8 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
     out.put("error", lastError);
     out.put("prepare", lastPrepare);
     out.put("zapCapture", lastCapture);
-    out.put("zapCover", zapCover != null && zapCover.getVisibility() == View.VISIBLE);
+    out.put("warmCapture", warmCapture);
+    out.put("zapCover", zapLayer != null && zapLayer.getVisibility() == View.VISIBLE);
     out.put("display", displayInfo());
     out.put("windowTransparent", windowTransparent());
     if (attachedPlayer != null) {
@@ -667,6 +795,8 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
         public void onRenderedFirstFrame(
             @NonNull EventTime eventTime, @NonNull Object output, long renderTimeMs) {
           hideZapCover();
+          frameReady = true;
+          scheduleWarmCapture(250);
           firstFrame = "rendered to " + output.getClass().getSimpleName();
           Log.i(TAG, "first frame " + firstFrame + " (surface " + surfaceState + ")");
         }
@@ -680,6 +810,8 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
 
         @Override
         public void onPlayerError(@NonNull EventTime eventTime, @NonNull PlaybackException error) {
+          cancelWarmCapture(true);
+          hideZapCover();
           lastError = error.getErrorCodeName() + ": " + error.getMessage();
           Log.w(TAG, "player error " + lastError);
         }

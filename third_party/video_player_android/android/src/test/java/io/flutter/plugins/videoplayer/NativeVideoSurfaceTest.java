@@ -236,7 +236,7 @@ public class NativeVideoSurfaceTest {
 
   @Test
   @org.robolectric.annotation.LooperMode(org.robolectric.annotation.LooperMode.Mode.PAUSED)
-  public void formulerStartsZapImmediatelyWithLogoInFullscreenAndGuide() {
+  public void formulerStartsZapImmediatelyWithSpinnerInFullscreenAndGuide() {
     org.robolectric.shadows.ShadowBuild.setManufacturer("FORMULER");
     org.robolectric.shadows.ShadowBuild.setModel("Formuler Z11 Pro MAX");
     VideoPlayer player = nativePlayer();
@@ -250,7 +250,7 @@ public class NativeVideoSurfaceTest {
       verify(exo).setMediaSource(any());
       verify(exo).prepare();
       Map<?, ?> diagnostics = (Map<?, ?>) invoke("diagnostics", null);
-      assertEquals("Formuler capture skipped; logo fallback", diagnostics.get("zapCapture"));
+      assertEquals("no usable cached frame; logo + spinner", diagnostics.get("zapCapture"));
       assertEquals(true, diagnostics.get("zapCover"));
       assertNull(org.robolectric.util.ReflectionHelpers.getField(surface, "lastPicture"));
       // Listener was registered before clearInvocations; retrieve the retained field instead.
@@ -274,6 +274,104 @@ public class NativeVideoSurfaceTest {
     surface.retainCapturedPicture(green);
     assertFalse(green.isRecycled());
     assertEquals("last frame retained", ((Map<?, ?>) invoke("diagnostics", null)).get("zapCapture"));
+  }
+
+  @Test
+  @org.robolectric.annotation.LooperMode(org.robolectric.annotation.LooperMode.Mode.PAUSED)
+  public void formulerUsesCachedFrameWithoutWaitingAndKeepsItDuringRapidZaps() {
+    org.robolectric.shadows.ShadowBuild.setManufacturer("FORMULER");
+    org.robolectric.shadows.ShadowBuild.setModel("Formuler Z11 Pro MAX");
+    VideoPlayer player = nativePlayer();
+    invoke("setRect", Map.of("left", 10, "top", 20, "width", 558, "height", 314));
+    org.robolectric.util.ReflectionHelpers.setField(surface, "frameReady", true);
+    long epoch = org.robolectric.util.ReflectionHelpers.getField(surface, "frameEpoch");
+    android.graphics.Bitmap picture = android.graphics.Bitmap.createBitmap(90, 90,
+        android.graphics.Bitmap.Config.ARGB_8888);
+    picture.eraseColor(android.graphics.Color.BLUE);
+    surface.finishWarmCapture(epoch, android.os.SystemClock.uptimeMillis(), picture, true);
+    clearInvocations(exo);
+    MethodChannel.Result first = mock(MethodChannel.Result.class);
+    zap(first, "first");
+    verify(exo).setMediaSource(any());
+    assertSame(picture, org.robolectric.util.ReflectionHelpers.getField(surface, "lastPicture"));
+    assertEquals("cached frame + spinner", ((Map<?, ?>) invoke("diagnostics", null)).get("zapCapture"));
+    android.widget.ProgressBar spinner = org.robolectric.util.ReflectionHelpers.getField(surface, "zapSpinner");
+    assertTrue(spinner.isIndeterminate());
+    assertEquals(android.view.View.VISIBLE, ((android.view.View) spinner.getParent()).getVisibility());
+    zap(mock(MethodChannel.Result.class), "second");
+    verify(first).error("NativeLiveZap", "superseded", null);
+    assertSame(picture, org.robolectric.util.ReflectionHelpers.getField(surface, "lastPicture"));
+    AnalyticsListener analytics = org.robolectric.util.ReflectionHelpers.getField(surface, "analytics");
+    analytics.onRenderedFirstFrame(mock(AnalyticsListener.EventTime.class), new Object(), 0);
+    assertEquals(android.view.View.GONE, ((android.view.View) spinner.getParent()).getVisibility());
+    assertNull(org.robolectric.util.ReflectionHelpers.getField(surface, "lastPicture"));
+    surface.onPlayerDisposed(3L);
+    player.dispose();
+  }
+
+  @Test
+  @org.robolectric.annotation.LooperMode(org.robolectric.annotation.LooperMode.Mode.PAUSED)
+  public void staleWarmCaptureCannotBecomeTheNextChannelsPicture() {
+    org.robolectric.shadows.ShadowBuild.setManufacturer("FORMULER");
+    org.robolectric.shadows.ShadowBuild.setModel("Formuler Z11 Pro MAX");
+    VideoPlayer player = nativePlayer();
+    invoke("setRect", Map.of("left", 0, "top", 0, "width", 1920, "height", 1080));
+    org.robolectric.util.ReflectionHelpers.setField(surface, "frameReady", true);
+    long oldEpoch = org.robolectric.util.ReflectionHelpers.getField(surface, "frameEpoch");
+    zap(mock(MethodChannel.Result.class), "next");
+    org.robolectric.util.ReflectionHelpers.setField(surface, "frameReady", true);
+    android.graphics.Bitmap stale = android.graphics.Bitmap.createBitmap(10, 10,
+        android.graphics.Bitmap.Config.ARGB_8888);
+    surface.finishWarmCapture(oldEpoch, android.os.SystemClock.uptimeMillis(), stale, true);
+    assertTrue(stale.isRecycled());
+    assertNull(org.robolectric.util.ReflectionHelpers.getField(surface, "lastPicture"));
+    ZapFrameCache cache = org.robolectric.util.ReflectionHelpers.getField(surface, "frameCache");
+    assertNull(cache.take(android.os.SystemClock.uptimeMillis()));
+    surface.onPlayerDisposed(3L);
+    player.dispose();
+  }
+
+  @Test
+  @org.robolectric.annotation.LooperMode(org.robolectric.annotation.LooperMode.Mode.PAUSED)
+  public void repeatedUnusableWarmFramesStopRetryingAndNeverReachTheCover() {
+    org.robolectric.shadows.ShadowBuild.setManufacturer("FORMULER");
+    org.robolectric.shadows.ShadowBuild.setModel("Formuler Z11 Pro MAX");
+    VideoPlayer player = nativePlayer();
+    invoke("setRect", Map.of("left", 0, "top", 0, "width", 558, "height", 314));
+    org.robolectric.util.ReflectionHelpers.setField(surface, "frameReady", true);
+    long epoch = org.robolectric.util.ReflectionHelpers.getField(surface, "frameEpoch");
+    for (int i = 0; i < 3; i++) {
+      android.graphics.Bitmap invalid = android.graphics.Bitmap.createBitmap(10, 10,
+          android.graphics.Bitmap.Config.ARGB_8888);
+      surface.finishWarmCapture(epoch, android.os.SystemClock.uptimeMillis(), invalid, false);
+      assertTrue(invalid.isRecycled());
+    }
+    assertEquals("capture unavailable; retries stopped for this channel",
+        ((Map<?, ?>) invoke("diagnostics", null)).get("warmCapture"));
+    ZapFrameCache cache = org.robolectric.util.ReflectionHelpers.getField(surface, "frameCache");
+    assertNull(cache.take(android.os.SystemClock.uptimeMillis()));
+    surface.onPlayerDisposed(3L);
+    player.dispose();
+  }
+
+  @Test
+  @org.robolectric.annotation.LooperMode(org.robolectric.annotation.LooperMode.Mode.PAUSED)
+  public void errorAfterReadyStillClearsSpinnerAndCancelsWarmCapture() {
+    org.robolectric.shadows.ShadowBuild.setManufacturer("FORMULER");
+    org.robolectric.shadows.ShadowBuild.setModel("Formuler Z11 Pro MAX");
+    VideoPlayer player = nativePlayer();
+    invoke("setRect", Map.of("left", 0, "top", 0, "width", 558, "height", 314));
+    zap(mock(MethodChannel.Result.class), "next");
+    swapListener().onPlaybackStateChanged(Player.STATE_READY);
+    assertEquals(true, ((Map<?, ?>) invoke("diagnostics", null)).get("zapCover"));
+    AnalyticsListener analytics = org.robolectric.util.ReflectionHelpers.getField(surface, "analytics");
+    analytics.onPlayerError(mock(AnalyticsListener.EventTime.class),
+        new androidx.media3.common.PlaybackException("test failure", null,
+            androidx.media3.common.PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS));
+    assertEquals(false, ((Map<?, ?>) invoke("diagnostics", null)).get("zapCover"));
+    assertEquals(false, org.robolectric.util.ReflectionHelpers.getField(surface, "frameReady"));
+    surface.onPlayerDisposed(3L);
+    player.dispose();
   }
 
 }
