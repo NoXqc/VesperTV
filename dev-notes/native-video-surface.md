@@ -194,3 +194,16 @@ no clear-before-release, explicit reattachment, busy-owner guard, and texture ex
 No APK built/released or box driven. Owner must test same-stream tab transitions
 and HDR4K/SDR4K/1080p channel swaps; compare new logs for no placeholder switch on
 release, early attachment, and no hidden/rect excursion during channel loading.
+
+## Owner test package +426 (Codex, 2026-10-24)
+
+- Owner requested a local APK build and installation on their Formuler.
+- Built `1.0.39+426` from `codex/native-channel-handoff` (code ff0523c),
+  including profile themes, compact reminders, browse retention and Coming soon.
+- `flutter build apk --release` succeeded in42.4s; apksigner matches the
+  expected release certificate; aapt verifies package/versionCode426.
+- APK SHA256: `afee2b538287faebda37502cbf035ed5d8b01aeda3a7c40f7c0fb2b1e5569b20`.
+- Retained local copy outside checkout: `C:\Users\aarse\VesperTV-test426\`.
+- Code checks from ff0523c remain valid (version-only packaging): analyze17,
+  Flutter426 tests passed, Android96 tests passed. No code changed for packaging.
+- No GitHub upload/push/tag/Discord; public beta link still contains+425.
