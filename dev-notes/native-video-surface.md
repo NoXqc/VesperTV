@@ -18,8 +18,8 @@ Branch `claude/native-surface` (from main `ebb0fa5`, test build `1.0.39+423`). A
 - Setting: Settings > Interface > Background video > **Native video surface (beta)**
   (`AppPreferences.nativeVideoSurface`, key `vesper_native_video_surface`, device-only, off by default,
   **applies after a restart**). Old path is untouched when off.
-- `MainActivity.getTransparencyMode()` reads `flutter.vesper_native_video_surface` from
-  `FlutterSharedPreferences` → `TransparencyMode.transparent` (FlutterActivity then also uses texture
+- `MainActivity.getBackgroundMode()` (NOT getTransparencyMode: FlutterActivity derives window + render mode from it; +423 got this wrong, so the beta was effectively off) reads `flutter.vesper_native_video_surface` from
+  `FlutterSharedPreferences` → `BackgroundMode.transparent` (FlutterActivity then also uses texture
   render mode and a transparent window).
 - Vendored plugin `NativeVideoSurface.java` (channel `vespertv/native_surface`, plugin is now
   `ActivityAware`): one `SurfaceView` added at index 0 of `android.R.id.content` (behind Flutter).
