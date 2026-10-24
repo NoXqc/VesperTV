@@ -374,6 +374,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       NativeVideoSurface.active =
           Platform.isAndroid && _preferences.nativeVideoSurface;
       if (NativeVideoSurface.active) {
+        await NativeVideoSurface.configure();
         debugPrint('NativeSurface: beta ON at launch (SDK '
             '${_preferences.androidSdk}, compatibility video '
             '${_preferences.compatVideo ? 'on: native surface unused' : 'off'})');

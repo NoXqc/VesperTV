@@ -147,6 +147,9 @@ public class VideoPlayerPlugin implements FlutterPlugin, ActivityAware, AndroidV
     final String streamInstance = Long.toString(id);
     VideoPlayerOptions playerOptions = new VideoPlayerOptions(sharedOptions);
     playerOptions.backBufferDurationMs = options.getBackBufferDurationMs();
+    if (nativeVideoSurface != null) {
+      playerOptions.nativeSurfaceHolder = nativeVideoSurface.holderForPreparation();
+    }
 
     VideoPlayer videoPlayer =
         PlatformViewVideoPlayer.create(
@@ -238,6 +241,7 @@ public class VideoPlayerPlugin implements FlutterPlugin, ActivityAware, AndroidV
         () -> VideoPlayerInstanceApi.Companion.setUp(messenger, null, channelSuffix));
 
     videoPlayers.put(id, player);
+    if (nativeVideoSurface != null) nativeVideoSurface.onPlayerCreated(player, id);
     if (subtitleBridge != null) subtitleBridge.attach(player, id);
   }
 

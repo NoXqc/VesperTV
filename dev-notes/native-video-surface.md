@@ -150,3 +150,47 @@ picker, trailers). Full list in HANDOFF.md "Beta acceptance".
 - Device validation should compare HDR 4K, SDR 4K and SDR 1080p, with the
   same tab-switch sequence. Check Send log DisplayMatch/NativeSurface lines
   if the retained-player fix still flickers. No additional code change yet.
+
+## Native channel handoff follow-up (Codex, 2026-10-24; not packaged)
+
+Owner log LOG-M25S33 (+425, Formuler Z11 Pro MAX / Realtek / SDK30) includes
+HDR4K -> reported SDR4K -> SDR4K ->1080p swaps. Around09:24:32-09:24:51 each
+replacement releases its ExoPlayer, clears the native output, prepares a new
+player, then assigns the real surface after initialization. Flutter also hides
+the surface during the gap with no video widget. DisplayMatch reports same;
+recorded display mode remains1920x1080/60. This does not prove an HDMI mode
+change or app restart. The last SDR selections lack full five-second snapshots;
+missing transfer metadata must not be called verified SDR.
+
+Branch codex/native-channel-handoff removes the unnecessary output transitions:
+- Dart awaits native configure at opt-in beta startup; native creates its one
+  offscreen SurfaceView early. Beta-off does not configure/create a surface.
+- The main player's per-instance VideoPlayerOptions receives that holder only
+  when no existing native owner is running. VideoPlayer binds it BEFORE
+  setMediaItem/prepare, then registration attaches diagnostics without rebinding.
+- If a backup/reload candidate is prepared while an owner is running, it gets
+  no early native holder; it binds only when adopted. Texture/Multiview players
+  never receive a native holder. No HDR, codec, tunneling or matching changes.
+- onPlayerDisposed removes diagnostics/references but skips clearVideoSurfaceHolder
+  just before release; explicit detach/switch-away still clears a retained player,
+  and its binding marker resets so it can be attached again later.
+- PlaybackService retains the last native rectangle across the temporary widget
+  gap until initialization finishes/fails. Holds overlap safely and are cancelled
+  on explicit stop/service disposal. No speculative time-based hold or fake frame.
+- Existing browse fix avoids stop entirely on Movies/TV Shows. HDR-vs-SDR output
+  changes may still require a hardware blackout; channel loading is not eliminated.
+
+Owner-authorized integration on this branch includes codex/browse-video-transition,
+codex/profile-theme-colours and codex/reminder-card-style; Coming soon episode tags
+are also included. Main/stable and published beta+425 remain untouched. The profile
+onViewerChanged callback and native configure call both remain wired in main.dart.
+
+Verification: flutter analyze17 baseline infos (8.7s); flutter test426 passed
+(00:22). Native Gradle tests96 passed, zero failures/errors/skips, SDK28/30,
+BUILD SUCCESSFUL in11s (NativeVideoSurfaceTest, VideoPlayerTest, VideoPlayerPluginTest).
+Plugin test fixtures now provide an ExoPlayer for SubtitleBridge, and use SDK28/30
+with the repo JDK17. Native tests cover early prepare order, no duplicate binding,
+no clear-before-release, explicit reattachment, busy-owner guard, and texture exclusion.
+No APK built/released or box driven. Owner must test same-stream tab transitions
+and HDR4K/SDR4K/1080p channel swaps; compare new logs for no placeholder switch on
+release, early attachment, and no hidden/rect excursion during channel loading.
