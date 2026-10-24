@@ -294,11 +294,15 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       if (saved.isEmpty) continue;
       matches[_gameKey(game)] = [
         for (final c in live.where((c) => saved.contains(c.id)).take(8))
-          ChannelMatch(c, MatchReason.pick, 950,
+          ChannelMatch(c, MatchReason.pick,
+              _picks.channelIdFor(game) == c.id ? 1000 : 950,
               detail: tr('Your added source')),
         for (final m in matches[_gameKey(game)] ?? <ChannelMatch>[])
           if (!saved.contains(m.channel.id)) m,
       ]..sort((a, b) => b.score.compareTo(a.score));
+      if (_picks.preferQuality) {
+        matches[_gameKey(game)] = preferSportsSources(matches[_gameKey(game)]!);
+      }
     }
     setState(() {
       _redZoneChoices = _findRedZones(live);
@@ -951,15 +955,18 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final playlist = context.read<PlaylistManager>();
     final store = SportsChannelLists(context.read<StorageService>());
     final saved = store.sourcesFor(game, _gameKey(game));
-    final matches = <ChannelMatch>[
+    var matches = <ChannelMatch>[
       for (final c in playlist.visibleChannels(category: 'tv'))
         if (saved.contains(c.id))
-          ChannelMatch(c, MatchReason.pick, 950,
+          ChannelMatch(c, MatchReason.pick,
+              _picks.channelIdFor(game) == c.id ? 1000 : 950,
               detail: tr('Your added source')),
       for (final m
           in gameMatches ?? _matches[_gameKey(game)] ?? const <ChannelMatch>[])
         if (!saved.contains(m.channel.id)) m,
     ];
+    matches.sort((a, b) => b.score.compareTo(a.score));
+    if (_picks.preferQuality) matches = preferSportsSources(matches);
     final result = await showDialog<_GameAction>(
       context: context,
       // Opened by a hold too: drop the held OK's repeats (see the widget).

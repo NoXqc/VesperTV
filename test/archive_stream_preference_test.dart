@@ -60,10 +60,10 @@ void main() {
     expect((await first.restore([b, a])).picked, same(a));
     expect((await second.restore([a, b])).picked, same(b));
     await storage.setArchiveAutoLargest(true);
-    await storage.setSportsPreferQuality(true);
+    await storage.setSportsPreferQuality(false);
     await storage.setActiveViewerId('viewer_other');
     expect(storage.getArchiveAutoLargest(), isFalse);
-    expect(storage.getSportsPreferQuality(), isFalse);
+    expect(storage.getSportsPreferQuality(), isTrue);
     expect((await first.restore([a, b])).picked, isNull);
   });
 

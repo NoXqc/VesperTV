@@ -502,7 +502,7 @@ class StorageService {
       : _prefs.setString(_vk(AppConstants.keySportsFavoriteLeague), id);
 
   bool getSportsPreferQuality() =>
-      _prefs.getBool(_vk('vesper_sports_prefer_quality')) ?? false;
+      _prefs.getBool(_vk('vesper_sports_prefer_quality')) ?? true;
   Future<void> setSportsPreferQuality(bool value) =>
       _prefs.setBool(_vk('vesper_sports_prefer_quality'), value);
   bool getArchiveAutoLargest() =>

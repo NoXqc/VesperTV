@@ -115,16 +115,17 @@ void main() {
     expect(loaded.channelIdFor(g), 'p::manual');
     expect(loaded.channelIdFor(other), 'p::second');
   });
-  test('quality moves only copies and keeps explicit picks', () {
+  test('quality offers matched 4K broadcasters first and keeps explicit picks',
+      () {
     final hd =
         ChannelMatch(channel('hd', 'CA: TSN 1 HD'), MatchReason.guide, 80);
     final uhd =
         ChannelMatch(channel('4k', 'CA: TSN 1 4K'), MatchReason.guide, 80);
     final other =
         ChannelMatch(channel('other', 'US: ESPN 4K'), MatchReason.network, 50);
-    expect(preferQualityCopies([hd, uhd, other]), [uhd, hd, other]);
+    expect(preferSportsSources([hd, uhd, other]), [uhd, other, hd]);
     final picked = ChannelMatch(hd.channel, MatchReason.pick, 1000);
-    expect(preferQualityCopies([picked, uhd, other]).first, same(picked));
+    expect(preferSportsSources([picked, uhd, other]).first, same(picked));
   });
   test('indexed slices paginate equal starts without gaps or duplicate matches',
       () async {

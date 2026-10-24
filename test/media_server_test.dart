@@ -5,11 +5,23 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:nox_iptv/models/archive_models.dart';
 import 'package:nox_iptv/services/archive_api_service.dart';
+import 'package:nox_iptv/services/archive_cache.dart';
 import 'package:nox_iptv/services/archive_service.dart';
 import 'package:nox_iptv/services/media_server_api.dart';
 import 'package:nox_iptv/services/storage_service.dart';
 import 'package:nox_iptv/utils/constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+// This unit test exercises server routing; a background refresh must not call
+// the real device-only path_provider/sqflite cache after the assertions finish.
+class _MemoryCache extends ArchiveCache {
+  @override
+  Future<DateTime?> fetchedAt(String sourceKey, ArchiveCatalog catalog) async =>
+      null;
+  @override
+  Future<void> write(String sourceKey, ArchiveCatalog catalog,
+      List<ArchiveMeta> items) async {}
+}
 
 /// A fake Jellyfin (API at the root) or Emby (API under `/emby`, legacy
 /// headers) server. Records each request with the auth it carried.
@@ -173,6 +185,7 @@ void main() {
     await storage.init();
     final log = <String>[];
     final service = ArchiveService(storage,
+        cache: _MemoryCache(),
         servers:
             MediaServerApi(client: fakeServer(MediaServerKind.jellyfin, log)));
     final s = await service.addMediaServer('nas:8096', 'ann', 'pw');

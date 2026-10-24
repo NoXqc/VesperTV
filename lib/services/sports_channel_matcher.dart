@@ -1107,7 +1107,7 @@ class SportsChannelMatcher {
           }
         }
         if (picks.preferQuality) {
-          hits = preferQualityCopies([
+          hits = preferSportsSources([
             for (final index in hits)
               ChannelMatch(_channels[index], MatchReason.network, 0)
           ]).map((m) => _byId[m.channel.id]!).toList();
@@ -1132,7 +1132,7 @@ class SportsChannelMatcher {
         });
       final key = SportsChannelPicks.eventKey(g);
       out[key] = distinctCopiesFirst(
-          picks.preferQuality ? preferQualityCopies(list) : list, limit);
+          picks.preferQuality ? preferSportsSources(list) : list, limit);
       if (list.isNotEmpty) {
         _noMatch.remove(key);
         continue;
@@ -1195,7 +1195,9 @@ int _sportsQuality(Channel c) {
   return 1;
 }
 
-List<ChannelMatch> preferQualityCopies(List<ChannelMatch> matches) {
+/// Saved choices first, then matched 4K sources across all broadcasters.
+/// Keep the existing copy/score ordering for the remaining fallback sources.
+List<ChannelMatch> preferSportsSources(List<ChannelMatch> matches) {
   final groups = <String, List<ChannelMatch>>{};
   for (final m in matches) {
     final key = channelCopyKey(m.channel.name);
@@ -1211,5 +1213,30 @@ List<ChannelMatch> preferQualityCopies(List<ChannelMatch> matches) {
       return quality != 0 ? quality : b.score.compareTo(a.score);
     });
   }
-  return [for (final group in groups.values) ...group];
+  final ordered = [for (final group in groups.values) ...group];
+  final previousOrder = {for (final (i, m) in ordered.indexed) m: i};
+  int priority(ChannelMatch m) =>
+      m.reason == MatchReason.pick && m.score >= 1000
+          ? 3
+          : _sportsQuality(m.channel) >= 4
+              ? 2
+              : m.reason == MatchReason.pick
+                  ? 1
+                  : 0;
+  ordered.sort((a, b) {
+    final rank = priority(b).compareTo(priority(a));
+    if (rank != 0) return rank;
+    if (priority(a) == 3 || priority(a) == 1) {
+      final pick = b.score.compareTo(a.score);
+      if (pick != 0) return pick;
+    } else if (priority(a) == 2) {
+      final quality =
+          _sportsQuality(b.channel).compareTo(_sportsQuality(a.channel));
+      if (quality != 0) return quality;
+      final evidence = b.score.compareTo(a.score);
+      if (evidence != 0) return evidence;
+    }
+    return previousOrder[a]!.compareTo(previousOrder[b]!);
+  });
+  return ordered;
 }

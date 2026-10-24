@@ -336,6 +336,13 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Owner release preference (2026-10-24):** wait for an explicit request before
+  publishing future updates to GitHub. Sports +432 stays local; public beta stays +431.
+- **Codex Sports 4K default correction** (`codex/sports-default-4k`, local test build +432, unpublished):
+  highest-quality preference now defaults on. Saved picks first, then matched 4K
+  sources across broadcasters (not only copies of one channel); game cards and
+  menus keep the same ordering after merging added sources. Explicit opt-out stays
+  respected. Media Hub largest-file setting and episode resume remain unchanged.
 - **Codex handoff batch +431** (`codex/handoff-fixes`, owner authorised all handoff tasks):
   merged Claude diagnostics/thread/guide fixes and subtitle-link routing, retaining Cinemeta toggle.
   Bounded indexed Sports title slices with shared caches/background literal matching; atomic
