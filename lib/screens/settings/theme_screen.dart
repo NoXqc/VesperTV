@@ -118,11 +118,20 @@ class ThemeScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     TvSwitchListTile(
                       title: Text(tr('Full-screen video behind the guide')),
-                      subtitle: Text(tr(
-                          'The live channel fills the screen behind a see-through guide showing 3 rows')),
+                      subtitle: Text(tr(prefs.guideExpanded
+                          ? 'The live channel fills the screen behind a see-through guide'
+                          : 'The live channel fills the screen behind a see-through guide showing 3 rows')),
                       value: prefs.guideFullVideo,
                       onChanged: prefs.setGuideFullVideo,
                     ),
+                    if (prefs.guideFullVideo)
+                      TvSwitchListTile(
+                        title: Text(tr('Expand')),
+                        subtitle:
+                            Text(tr('Fill the screen with the Timeline guide')),
+                        value: prefs.guideExpanded,
+                        onChanged: prefs.setGuideExpanded,
+                      ),
                   ],
                 ],
               ),

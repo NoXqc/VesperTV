@@ -2522,4 +2522,9 @@ const Map<String, String> kEl = {
   "Show Cinemeta catalog": "Εμφάνιση καταλόγου Cinemeta",
   "Show the default Popular, New and Featured rows and Cinemeta search results. Turn off to browse only your own catalogs. Posters and episode details may still use Cinemeta.":
       "Εμφάνιση των προεπιλεγμένων σειρών Δημοφιλή, Νέα και Προτεινόμενα και των αποτελεσμάτων αναζήτησης Cinemeta. Απενεργοποιήστε για περιήγηση μόνο στους δικούς σας καταλόγους. Οι αφίσες και οι λεπτομέρειες επεισοδίων ενδέχεται να εξακολουθούν να χρησιμοποιούν το Cinemeta.",
+  "Expand": "Ανάπτυξη",
+  "Fill the screen with the Timeline guide":
+      "Γεμίστε την οθόνη με τον οδηγό προγράμματος",
+  "The live channel fills the screen behind a see-through guide":
+      "Το ζωντανό κανάλι γεμίζει την οθόνη πίσω από έναν ημιδιαφανή οδηγό",
 };

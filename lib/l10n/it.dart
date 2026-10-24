@@ -1914,4 +1914,9 @@ const Map<String, String> kIt = {
   "Show Cinemeta catalog": "Mostra il catalogo Cinemeta",
   "Show the default Popular, New and Featured rows and Cinemeta search results. Turn off to browse only your own catalogs. Posters and episode details may still use Cinemeta.":
       "Mostra le righe predefinite Popolari, Novità e In evidenza e i risultati di ricerca di Cinemeta. Disattiva per sfogliare solo i tuoi cataloghi. Le locandine e i dettagli degli episodi potrebbero ancora usare Cinemeta.",
+  "Expand": "Espandi",
+  "Fill the screen with the Timeline guide":
+      "Riempi lo schermo con la guida dei programmi",
+  "The live channel fills the screen behind a see-through guide":
+      "Il canale in diretta riempie lo schermo dietro una guida semitrasparente",
 };

@@ -32,6 +32,9 @@ class AppPreferences extends ChangeNotifier {
   /// Timeline guide: video full screen behind a translucent guide.
   late bool guideFullVideo;
 
+  /// Fill the full-video Timeline area instead of limiting it to three rows.
+  late bool guideExpanded;
+
   /// Movies / TV Shows tabs (and their search results) hidden, each on its
   /// own switch (Settings > General > Tabs).
   late bool hideMovies;
@@ -243,6 +246,7 @@ class AppPreferences extends ChangeNotifier {
     layoutMode = _storage.getLayoutMode();
     guideViewMode = _storage.getGuideViewMode();
     guideFullVideo = _storage.getGuideFullVideo();
+    guideExpanded = _storage.getGuideExpanded();
     hideMovies = _storage.getHideMovies();
     hideShows = _storage.getHideShows();
     hideArchive = _storage.getHideArchive();
@@ -320,6 +324,12 @@ class AppPreferences extends ChangeNotifier {
   void setGuideFullVideo(bool value) {
     guideFullVideo = value;
     _storage.setGuideFullVideo(value);
+    notifyListeners();
+  }
+
+  void setGuideExpanded(bool value) {
+    guideExpanded = value;
+    _storage.setGuideExpanded(value);
     notifyListeners();
   }
 

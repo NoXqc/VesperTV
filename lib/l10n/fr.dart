@@ -1913,4 +1913,9 @@ const Map<String, String> kFr = {
   "Show Cinemeta catalog": "Afficher le catalogue Cinemeta",
   "Show the default Popular, New and Featured rows and Cinemeta search results. Turn off to browse only your own catalogs. Posters and episode details may still use Cinemeta.":
       "Afficher les lignes par défaut Populaires, Nouveautés et À la une et les résultats de recherche Cinemeta. Désactivez pour parcourir uniquement vos propres catalogues. Les affiches et les détails des épisodes peuvent toujours provenir de Cinemeta.",
+  "Expand": "Agrandir",
+  "Fill the screen with the Timeline guide":
+      "Afficher le guide horaire sur tout l’écran",
+  "The live channel fills the screen behind a see-through guide":
+      "La chaîne en direct remplit l’écran derrière un guide transparent",
 };

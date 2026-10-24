@@ -1910,4 +1910,9 @@ const Map<String, String> kEs = {
   "Show Cinemeta catalog": "Mostrar el catálogo de Cinemeta",
   "Show the default Popular, New and Featured rows and Cinemeta search results. Turn off to browse only your own catalogs. Posters and episode details may still use Cinemeta.":
       "Mostrar las filas predeterminadas Populares, Novedades y Destacados y los resultados de búsqueda de Cinemeta. Desactívalo para explorar solo tus propios catálogos. Los pósteres y los detalles de episodios pueden seguir usando Cinemeta.",
+  "Expand": "Expandir",
+  "Fill the screen with the Timeline guide":
+      "Llenar la pantalla con la guía de programación",
+  "The live channel fills the screen behind a see-through guide":
+      "El canal en directo ocupa toda la pantalla detrás de una guía semitransparente",
 };

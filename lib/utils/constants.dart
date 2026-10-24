@@ -386,6 +386,8 @@ class AppConstants {
   /// translucent guide (and a 3-row grid) instead of the small corner box.
   static const String keyGuideFullVideo = 'vesper_guide_full_video';
 
+  static const String keyGuideExpanded = 'vesper_guide_expanded';
+
   /// LEGACY global scalar — "enable/disable playlist" (freeing a
   /// provider's connection slot for another device without touching
   /// cached catalog/credentials). Per-playlist now, as

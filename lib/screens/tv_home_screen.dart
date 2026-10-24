@@ -2929,8 +2929,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                   ],
                 ),
               ),
-              // Hidden while filtering: the filter keyboard uses that area.
-              if (_fullVideo && !_timelineFilterActive)
+              // Expanded rows and the filter keyboard need the description card's area.
+              if (_fullVideo && !prefs.guideExpanded && !_timelineFilterActive)
                 Positioned(
                   top: 12,
                   right: 12,
@@ -4489,6 +4489,14 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
           }
         },
       );
+
+      // Expanded Timeline replaces the preview spacer with more guide rows.
+      // The existing filter layout still owns its keyboard space when open.
+      if (_fullVideo &&
+          context.watch<AppPreferences>().guideExpanded &&
+          !_timelineFilterActive) {
+        return _fullVideoScrim(guide);
+      }
 
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -336,6 +336,12 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Codex Expand Timeline guide** (`codex/expand-timeline-guide`, unbuilt):
+  Android Theme > Live TV guide > Timeline > Full-screen video now has Expand.
+  Off by default, saved on device like other guide layout preferences. On fills
+  the guide area with rows and hides the floating programme card; filtering keeps
+  its keyboard space. Grid state and Back preserved. No player changes; +435
+  frozen-frame capture still awaiting owner test. No build/install/release yet.
 - **Codex frozen-frame + spinner follow-up** (`codex/frozen-zap-spinner`, local test +435):
   owner confirms +434 covers green but dislikes logo on every zap. Prepare one recent
   720px-max frame on a worker while the Formuler channel plays, never wait during zap;

@@ -196,6 +196,33 @@ void main() {
     expect(tester.takeException(), isNull);
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
+  testWidgets(
+      'expanded Timeline uses full height, persists and keeps guide state and Back',
+      (tester) async {
+    await pumpHome(tester, const Size(1920, 1080));
+    await tester.tap(find.text('Test group'));
+    await tester.pumpAndSettle();
+    final guide = find
+        .byWidgetPredicate((w) => w.runtimeType.toString() == '_TimelineGuide');
+    final originalState = tester.state(guide);
+    final collapsedHeight = tester.getSize(guide).height;
+    final context = tester.element(find.byType(TvHomeScreen));
+    final prefs = context.read<AppPreferences>();
+    expect(prefs.guideExpanded, isFalse);
+    prefs.setGuideExpanded(true);
+    await tester.pumpAndSettle();
+    expect(tester.getSize(guide).height, greaterThan(collapsedHeight * 1.8));
+    expect(tester.state(guide), same(originalState));
+    final restored = AppPreferences(context.read<StorageService>());
+    await restored.init();
+    expect(restored.guideExpanded, isTrue);
+    restored.dispose();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('Test group').hitTestable(), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
   testWidgets('real TV keeps remote navigation without a header back button',
       (tester) async {
     await pumpHome(tester, const Size(1920, 1080), television: true);
