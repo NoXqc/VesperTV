@@ -1,6 +1,6 @@
 # Native video surface (beta)
 
-Branch `claude/native-surface` (from main `ebb0fa5`, test builds `1.0.39+423` / `+424`). Android main player only.
+Branch `claude/native-surface` (from main `ebb0fa5`, test builds `1.0.39+423` / `+424` / `+425`). Android main player only.
 
 ## Why
 - **AMD, Fire TV Cube** (AFTGAZL, Android 9 / SDK 28, Amlogic): 4K HDR10 channels look washed out.
@@ -66,9 +66,9 @@ Branch `claude/native-surface` (from main `ebb0fa5`, test builds `1.0.39+423` / 
 6. Turn off, restart: everything as before.
 
 
-## Codex fixes after Formuler +424 feedback (2026-10-24; unreleased)
+## Codex fixes after Formuler +424 feedback (2026-10-24; beta +425)
 
-Branch `codex/native-surface-fixes`, based on `claude/native-surface` at `f1ceb95`.
+Branch `codex/native-surface-fixes` (6222f16), based on `claude/native-surface` at `f1ceb95`, fast-forwarded into the beta branch for +425.
 `LOG-5NEAZT` confirms format/decoder events precede native attach and the guide
 reset throws from a ScrollPosition without content dimensions. Both captured
 sessions had the beta on; no beta-off device reproduction is claimed.
@@ -90,6 +90,22 @@ sessions had the beta on; no beta-off device reproduction is claimed.
   TickerMode, fullscreen priority/return, unmeasured/shared scroll positions,
   late decoder/format attach and subsequent changes. Android unit tests use
   SDK28 (Cube) and SDK30 (Shield/Formuler) with the repo's Java17 runtime.
-- No version bump, APK package, installation, merge, push or release in this
-  fix task. Owner device check: return from Settings without late video pop-in;
+- No version bump, APK package, installation, merge, push or release in the original
+  fix task; the owner subsequently requested beta +425. Owner device check: return from Settings without late video pop-in;
   Send log should contain seeded decoder/format; startup guide error absent.
+
+## Beta +425 packaging (Codex, 2026-10-24)
+
+- Owner requested Android beta only, retaining tag `1.0.39-test.423` and asset
+  `VesperTV-1.0.39-test.423.apk` so the download link stays unchanged.
+- Includes only the three follow-ups above; per-profile palettes and compact
+  reminder-card styling remain on their separate Codex branches.
+- Required checks: analyze baseline 17; all 403 Flutter tests passed. The fix
+  branch also passed 76 Android unit tests across SDK28/30.
+- Beta stays off by default and applies after restart. Installing over an
+  existing beta preserves its switch; Android installation restarts the app.
+- No device installation/test in this packaging task. Cube HDR and Shield
+  flicker outcomes still require owner/device feedback. Stable +422 untouched.
+- Release APK built successfully; apksigner verified the expected release
+  certificate (see CLAUDE.md section 5); aapt confirms versionCode425 / 1.0.39.
+- APK SHA-256: `2d31025af217aae87f1d96f5d6e2757a9b0408f04d1f6331982d99b24c62f195`.

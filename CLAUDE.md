@@ -122,7 +122,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
 - Never commit the keystore/passwords. Losing the key = existing installs can never update.
 - Android requires `versionCode` (the `+N` in `pubspec.yaml`) to never go
   down, even if the visible version resets. Always bump N on every build you intend to install.
-  (Currently **+422**, 1.0.39.)
+  (Stable **+422**, 1.0.39; native-surface beta **+425**.)
 
 ## 6. Release workflow (details in `dev-notes/release.md` — read it before releasing)
 Only release when the owner asks ("update the latest", "cut it", "fully release"). Outline: bump `pubspec.yaml` (versionCode `+N` must always rise) → `flutter analyze` → build APK + verify signature (§5) → build Windows + zip → **commit & push first** → `gh release upload <tag> app-release.apk VesperTV-windows-x64.zip --clobber` → `gh release edit <tag> --tag <new> --notes-file …` → make sure the tag equals HEAD → verify downloads/hashes, the OLD `NoXqc/NoXPlayer` redirect links and AFTVnews code `1760256`. The updater offers any *different* tag (`_isDifferent`), never leave two `.zip`/`.apk` assets on the latest release.
@@ -336,13 +336,13 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
-- **Codex native beta follow-ups** (`codex/native-surface-fixes`, unreleased, from
+- **Codex native beta follow-ups** (`codex/native-surface-fixes` 6222f16, included in beta +425, from
   `f1ceb95`): retain last surface rect beneath covering routes/transitions, seed
   decoder/format diagnostics from player creation/current format, and guard
   guide scroll resets/mirroring until dimensions exist. Details and device checks:
   `dev-notes/native-video-surface.md` (Codex fixes after Formuler +424 feedback).
-- **Native video surface (beta)** (`claude/native-surface`, committed test builds `+423`/`+424`;
-  Codex follow-ups above unbuilt): opt-in, restart-applied; main Android player in a plain SurfaceView behind a transparent
+- **Native video surface (beta)** (`claude/native-surface`, test builds `+423`/`+424`/`+425`;
+  Codex follow-ups above included in +425): opt-in, restart-applied; main Android player in a plain SurfaceView behind a transparent
   Flutter view instead of the platform view. For AMD's Fire TV Cube (4K HDR10 decoded as 1080p SDR,
   LOG-CFN2FE) and Sam's NVIDIA Shield (green flicker; Compatibility video loses HDR). Tunneling test
   `+420` is not the fix. Full Send-log diagnostics (`NativeSurface:` / `VesperNativeSurface`).
