@@ -170,6 +170,7 @@ class EpgService extends ChangeNotifier {
     try {
       await _db.open();
       await _reloadCaches();
+      unawaited(Future<void>.delayed(const Duration(seconds: 25), _db.logStats));
     } catch (e) {
       debugPrint('EpgService.init: $e');
     }

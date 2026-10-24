@@ -142,6 +142,10 @@ class EpgDatabase {
     if (terms.isEmpty) return const [];
     final db = await _database;
     final result = <EpgRow>[];
+    // Timed for Send log: on a big guide this one scan is suspected of
+    // holding the single database thread for minutes (Shield user, 1000+
+    // "database has been locked" warnings, 2026-10-24).
+    final watch = Stopwatch()..start();
     const chunk = 400;
     for (var i = 0; i < terms.length; i += chunk) {
       final part =
@@ -162,7 +166,34 @@ class EpgDatabase {
         ));
       }
     }
+    debugPrint('EpgDatabase: title scan ${terms.length} terms '
+        '(${(terms.length / chunk).ceil()} scans) -> ${result.length} rows '
+        'in ${watch.elapsedMilliseconds} ms');
     return result;
+  }
+
+  /// One line for Send log: how big the guide is (programmes, channels, the
+  /// time span) and how long counting it took. Run once, a while after
+  /// startup, so it never competes with the splash.
+  Future<void> logStats() async {
+    try {
+      final db = await _database;
+      final watch = Stopwatch()..start();
+      final r = (await db.rawQuery('SELECT COUNT(*) AS n, '
+              'COUNT(DISTINCT channel_id) AS c, MIN(start) AS a, '
+              'MAX(stop) AS b FROM programme'))
+          .first;
+      String day(Object? ms) => ms is int
+          ? DateTime.fromMillisecondsSinceEpoch(ms)
+              .toIso8601String()
+              .substring(0, 16)
+          : '-';
+      debugPrint('EpgDatabase: guide ${r['n']} programmes, ${r['c']} '
+          'channels, ${day(r['a'])} to ${day(r['b'])} '
+          '(counted in ${watch.elapsedMilliseconds} ms)');
+    } catch (e) {
+      debugPrint('EpgDatabase: stats failed: $e');
+    }
   }
 
   /// Distinct channel ids that still have any programme ending after
