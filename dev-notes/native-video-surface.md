@@ -109,3 +109,11 @@ sessions had the beta on; no beta-off device reproduction is claimed.
 - Release APK built successfully; apksigner verified the expected release
   certificate (see CLAUDE.md section 5); aapt confirms versionCode425 / 1.0.39.
 - APK SHA-256: `2d31025af217aae87f1d96f5d6e2757a9b0408f04d1f6331982d99b24c62f195`.
+
+## Acceptance (owner, 2026-10-24)
+Sam (Shield) and AMD (Cube) must, with the beta on, play **HDR normally** (TV switches to HDR, not
+washed out; no Shield green flicker; Cube decodes 4K at 3840x2160) on live channels **and Media Hub**,
+and play **Media Hub video normally** (start, resume, pause/play without a black picture — Android 9
+paused-surface workaround still missing here —, seek, subtitles, audio tracks, next episode, stream
+picker, trailers). Full list in HANDOFF.md "Beta acceptance".
+
