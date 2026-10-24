@@ -337,7 +337,7 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 
 ## 13. Status & open items (as of 2026-10-23)
 - **Codex, unreleased: reminder card styling** — `codex/reminder-card-style`: prominent
-  72px team crest, stronger faded background logo, accent border and time badge.
+  64px team crest, stronger faded background logo, accent border and time badge.
   Reminder timing/focus behavior unchanged. Owner confirmed 1.0.39 reminders work.
 - **Release 1.0.39 (`+422`, 2026-10-23):** integrates the five completed Codex branches
   below: Windows Home Back arrow, player clock, all Open on startup destinations,

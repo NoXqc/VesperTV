@@ -133,7 +133,7 @@ class _GameReminderOverlayState extends State<GameReminderOverlay>
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 460),
+            constraints: const BoxConstraints(maxWidth: 420),
             child: Material(
               color: const Color(0xFA15171C),
               elevation: 12,
@@ -148,7 +148,7 @@ class _GameReminderOverlayState extends State<GameReminderOverlay>
                     top: -24,
                     bottom: -24,
                     right: -12,
-                    width: 190,
+                    width: 160,
                     child: IgnorePointer(
                         child: ExcludeSemantics(
                             child: Opacity(
@@ -174,7 +174,7 @@ class _GameReminderOverlayState extends State<GameReminderOverlay>
                   )),
                 ))),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 6, 10, 16),
+                  padding: const EdgeInsets.fromLTRB(12, 4, 10, 12),
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
                     Row(children: [
                       Icon(Icons.notifications_active, size: 15, color: accent),
@@ -191,6 +191,9 @@ class _GameReminderOverlayState extends State<GameReminderOverlay>
                         button: true,
                         child: IconButton(
                           visualDensity: VisualDensity.compact,
+                          constraints: const BoxConstraints.tightFor(
+                              width: 32, height: 32),
+                          padding: EdgeInsets.zero,
                           icon: const Icon(Icons.close,
                               color: Colors.white70, size: 19),
                           onPressed: _showNext,
@@ -201,8 +204,8 @@ class _GameReminderOverlayState extends State<GameReminderOverlay>
                     Row(children: [
                       ExcludeSemantics(
                           child: SizedBox(
-                        width: 72,
-                        height: 72,
+                        width: 64,
+                        height: 64,
                         child: hasLogo
                             ? Image.network(logoUrl!,
                                 key: const ValueKey('reminder-crest'),
@@ -211,7 +214,7 @@ class _GameReminderOverlayState extends State<GameReminderOverlay>
                                     Icon(Icons.sports, color: accent, size: 38))
                             : Icon(Icons.sports, color: accent, size: 38),
                       )),
-                      const SizedBox(width: 14),
+                      const SizedBox(width: 12),
                       Expanded(
                           child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -226,7 +229,7 @@ class _GameReminderOverlayState extends State<GameReminderOverlay>
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 18,
+                                  fontSize: 17,
                                   height: 1.15,
                                   fontWeight: FontWeight.w800)),
                           const SizedBox(height: 9),

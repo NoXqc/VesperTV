@@ -428,5 +428,5 @@ info version rejected — keep the VS layout). Fire Stick check pending.
   schedule responses after switching profiles. Duplicate games share one notice.
 
 - Unreleased reminder card restyle (`codex/reminder-card-style`, owner feedback):
-  72px foreground crest plus a 28% background watermark (was 14%), rounded accent
+  64px foreground crest plus a 28% background watermark (was 14%), rounded accent
   border, My Teams header and time badge. No new strings or scheduler changes.
