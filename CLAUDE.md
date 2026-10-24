@@ -340,6 +340,10 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   future-dated IPTV/Media Hub episodes show a translated badge on shared series
   thumbnails (wide cards and phone list). Uses validated `EpisodeAiring` dates;
   unknown/invalid dates and date-only today stay unlabelled; playback unchanged.
+- **Codex Movies/TV Shows native return** (`codex/browse-video-transition`, unbuilt):
+  retain the playing native beta controller across browse tabs instead of disposing
+  it; audio continues like Settings. Legacy parking and Home/Media Hub unchanged.
+  See `dev-notes/native-video-surface.md` (Movies / TV Shows return follow-up).
 - **Codex native beta follow-ups** (`codex/native-surface-fixes` 6222f16, included in beta +425, from
   `f1ceb95`): retain last surface rect beneath covering routes/transitions, seed
   decoder/format diagnostics from player creation/current format, and guard

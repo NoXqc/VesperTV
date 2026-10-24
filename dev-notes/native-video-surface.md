@@ -117,3 +117,36 @@ and play **Media Hub video normally** (start, resume, pause/play without a black
 paused-surface workaround still missing here —, seek, subtitles, audio tracks, next episode, stream
 picker, trailers). Full list in HANDOFF.md "Beta acceptance".
 
+
+## Movies / TV Shows return follow-up (Codex, 2026-10-24; not packaged)
+
+- Owner reported +425 fixed Settings return but Movies/TV Shows still rebuilt
+  a playing live stream. Unlike Settings routes, those tabs explicitly called
+  `_parkLiveChannel` -> `stop` -> controller disposal. Retaining a covered
+  route's native rect cannot preserve a player that has been disposed.
+- `codex/browse-video-transition` keeps an existing native-surface controller
+  alive when entering Movies/TV Shows (including the initial-tab path).
+  `PlaybackService.usesNativeSurface` checks the controller's original mode,
+  so changing Compatibility video does not reclassify an existing session.
+- The tab removes its hole: the native surface moves offscreen at the same
+  size, retaining its player. Returning to TV or holding Right reuses it.
+  Sound/connection continue while browsing, matching Settings behavior.
+- Beta-off/platform/texture players retain the prior stop-and-resume behavior;
+  Home and Media Hub continue parking live video. No codec/native Java changes.
+- Regression coverage: both tabs, startup vs tab selection, native vs legacy
+  parking (8 widget cases), plus hole removal/restoration without a new attach.
+- Owner confirmation still needed on the box; no APK built or beta updated
+  for this follow-up. Release +425 remains the published package.
+
+### Owner clarification: HDR / 4K only
+- Owner reports tab-switch flicker with HDR / 4K streams, apparently not
+  1080p (2026-10-24). HDR vs resolution has not been isolated independently.
+- Source check: `PlaybackService.stop` disposes the controller and calls
+  `DisplayMatch.reset`. That reset asks Android to restore its display mode
+  only if frame-rate/resolution matching previously requested a change.
+- Avoiding stop for native browse transitions also avoids this explicit reset.
+  Ending HDR output may itself cause a TV mode transition; this is a plausible
+  explanation, not a confirmed device diagnosis. Do not disable HDR/matching.
+- Device validation should compare HDR 4K, SDR 4K and SDR 1080p, with the
+  same tab-switch sequence. Check Send log DisplayMatch/NativeSurface lines
+  if the retained-player fix still flickers. No additional code change yet.

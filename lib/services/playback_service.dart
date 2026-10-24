@@ -324,6 +324,13 @@ class PlaybackService extends ChangeNotifier {
   static bool drawsNativeSurface(VideoPlayerHdrController c) =>
       _nativeSurfaceControllers[c] ?? false;
 
+  /// Whether the current controller uses the restart-applied native beta.
+  /// Consult the controller's original choice, not a newly changed setting.
+  bool get usesNativeSurface {
+    final current = controller;
+    return current != null && drawsNativeSurface(current);
+  }
+
   Future<void> play(Channel channel) async {
     // A queued episode whose stream isn't known yet (Archive Next / auto-
     // advance): resolve it first. Guarded, so the position timer's repeat

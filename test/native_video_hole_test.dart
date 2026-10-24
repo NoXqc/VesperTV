@@ -112,4 +112,27 @@ void main() {
     expect(calls.where((c) => c.method == 'hide'), isEmpty);
     await finish(tester);
   });
+
+  testWidgets(
+      'browse tab removes picture and returns without reattaching player',
+      (tester) async {
+    final browsing = ValueNotifier(false);
+    addTearDown(browsing.dispose);
+    await mount(tester,
+        home: Scaffold(
+            body: ValueListenableBuilder<bool>(
+                valueListenable: browsing,
+                builder: (_, browse, __) =>
+                    browse ? const Text('Movies / TV Shows') : hole(player))));
+    final before = calls.lastWhere((c) => c.method == 'setRect').arguments;
+    browsing.value = true;
+    await tester.pump();
+    expect(calls.last.method, 'hide');
+    browsing.value = false;
+    await tester.pump();
+    expect(calls.last.method, 'setRect');
+    expect(calls.last.arguments, before);
+    expect(calls.where((c) => c.method == 'attach'), hasLength(1));
+    await finish(tester);
+  });
 }
