@@ -501,6 +501,15 @@ class StorageService {
       ? _prefs.remove(_vk(AppConstants.keySportsFavoriteLeague))
       : _prefs.setString(_vk(AppConstants.keySportsFavoriteLeague), id);
 
+  bool getSportsPreferQuality() =>
+      _prefs.getBool(_vk('vesper_sports_prefer_quality')) ?? false;
+  Future<void> setSportsPreferQuality(bool value) =>
+      _prefs.setBool(_vk('vesper_sports_prefer_quality'), value);
+  bool getArchiveAutoLargest() =>
+      _prefs.getBool(_vk('vesper_archive_auto_largest')) ?? false;
+  Future<void> setArchiveAutoLargest(bool value) =>
+      _prefs.setBool(_vk('vesper_archive_auto_largest'), value);
+
   bool getSportsHideScores() =>
       _prefs.getBool(_vk(AppConstants.keySportsHideScores)) ?? false;
   Future<void> setSportsHideScores(bool value) =>
@@ -1081,6 +1090,7 @@ class StorageService {
   static bool _isArchiveKey(String key) =>
       key == AppConstants.keyArchiveCinemetaCatalog ||
       key == AppConstants.keyArchiveSources ||
+      key.startsWith('vesper_archive_auto_largest') ||
       key.startsWith(AppConstants.keyArchiveHistory) ||
       key.startsWith(AppConstants.keyArchiveFavorites) ||
       key.startsWith(AppConstants.keyArchiveRecentSearches) ||

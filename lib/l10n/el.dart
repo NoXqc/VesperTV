@@ -6,6 +6,11 @@
 /// English-style plural "s" filled in by the code; Greek plurals don't
 /// work that way, so those strings are phrased without it.
 const Map<String, String> kEl = {
+
+  "Remove from history": "Αφαίρεση από το ιστορικό",
+  "Automatically play the largest file": "Αυτόματη αναπαραγωγή του μεγαλύτερου αρχείου",
+  "Use the largest known file size when starting a title. Resume keeps your selected stream.": "Επιλέγει το μεγαλύτερο γνωστό αρχείο στην έναρξη. Η συνέχιση διατηρεί την επιλεγμένη ροή.",
+  "Prefer highest quality": "Προτίμηση υψηλότερης ποιότητας",
   "Remind me for every game: {team}": "Υπενθύμιση για κάθε αγώνα: {team}",
   "Stop team reminders: {team}": "Διακοπή υπενθυμίσεων: {team}",
   "Remind me": "Υπενθύμιση αγώνα",

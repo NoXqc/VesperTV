@@ -119,6 +119,26 @@ public class PlatformViewVideoPlayer extends VideoPlayer {
           final boolean passthrough = AudioPassthrough.isEnabled();
           DefaultRenderersFactory renderersFactory =
               new DefaultRenderersFactory(context) {
+                @Override
+                protected void buildVideoRenderers(
+                    Context rendererContext, int extensionMode,
+                    androidx.media3.exoplayer.mediacodec.MediaCodecSelector selector,
+                    boolean fallback, android.os.Handler handler,
+                    androidx.media3.exoplayer.video.VideoRendererEventListener listener,
+                    long joiningMs, java.util.ArrayList<androidx.media3.exoplayer.Renderer> out) {
+                  if (options.nativeSurfaceHolder != null && FormulerVideoRenderer.isTargetDevice()) {
+                    out.add(new FormulerVideoRenderer(rendererContext,
+                        new androidx.media3.exoplayer.video.MediaCodecVideoRenderer.Builder(rendererContext)
+                            .setCodecAdapterFactory(getCodecAdapterFactory())
+                            .setMediaCodecSelector(selector).setEnableDecoderFallback(fallback)
+                            .setAllowedJoiningTimeMs(joiningMs).setEventHandler(handler)
+                            .setEventListener(listener).setMaxDroppedFramesToNotify(50)));
+                    return;
+                  }
+                  super.buildVideoRenderers(rendererContext, extensionMode, selector, fallback,
+                      handler, listener, joiningMs, out);
+                }
+
                 @Nullable
                 @Override
                 protected AudioSink buildAudioSink(

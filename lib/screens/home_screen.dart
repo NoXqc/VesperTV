@@ -66,6 +66,7 @@ class _HomeItem {
     this.progress,
     this.live = false,
     this.game,
+    this.removeFromHistory,
   });
 
   final String key;
@@ -77,6 +78,7 @@ class _HomeItem {
   final double? progress;
   final bool live;
   final SportsGame? game;
+  final Future<void> Function()? removeFromHistory;
   final Future<void> Function(BuildContext context) open;
 }
 
@@ -271,6 +273,7 @@ class _HomeScreenState extends State<HomeScreen> {
           at: i,
           item: _HomeItem(
             key: 'cw:${c.id}',
+            removeFromHistory: () => playback.removeFromHistory(c),
             title: c.seriesName ?? c.name,
             subtitle: c.name,
             imageUrl: c.backdropUrl ?? c.seriesCoverUrl ?? c.logoUrl,
@@ -285,6 +288,7 @@ class _HomeScreenState extends State<HomeScreen> {
           at: i,
           item: _HomeItem(
             key: 'cw:${c.id}',
+            removeFromHistory: () => playback.removeFromHistory(c),
             title: c.name,
             subtitle: tr('Movie'),
             imageUrl: c.backdropUrl ?? c.posterUrl ?? c.logoUrl,
@@ -318,6 +322,7 @@ class _HomeScreenState extends State<HomeScreen> {
         at: at,
         item: _HomeItem(
           key: 'hub:${source.key}:${meta.id}',
+          removeFromHistory: () => hub.removeFromHistory(source, meta),
           title: meta.name,
           subtitle: source.name,
           imageUrl: meta.backgroundUrl ?? meta.posterUrl,
@@ -341,6 +346,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final now = epg.getCurrentProgram(c.epgId);
     return _HomeItem(
       key: '$prefix:${c.id}',
+      removeFromHistory: prefix == 'rc'
+          ? () => context.read<PlaybackService>().removeFromHistory(c)
+          : null,
       title: c.name,
       subtitle: now?.title ?? c.group,
       imageUrl: c.logoUrl,
@@ -637,7 +645,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ---------------------------------------------------------- row editing --
 
-  Future<void> _rowMenu(HomeRowKind kind) async {
+  Future<void> _rowMenu(HomeRowKind kind, [_HomeItem? item]) async {
+    final storage = context.read<StorageService>();
+    final viewer = storage.getActiveViewerId();
     final shown = _rowsConfig.visible;
     final i = shown.indexOf(kind);
     final choice = await showDialog<String>(
@@ -645,20 +655,26 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context) => SimpleDialog(
         title: Text(tr(kind.title)),
         children: [
-          if (i > 0)
+          if (item?.removeFromHistory != null)
             TvDialogOption(
               autofocus: true,
+              onPressed: () => Navigator.of(context).pop('remove'),
+              child: Text(tr('Remove from history')),
+            ),
+          if (i > 0)
+            TvDialogOption(
+              autofocus: item?.removeFromHistory == null,
               onPressed: () => Navigator.of(context).pop('up'),
               child: Text(tr('Move row up')),
             ),
           if (i < shown.length - 1)
             TvDialogOption(
-              autofocus: i == 0,
+              autofocus: i == 0 && item?.removeFromHistory == null,
               onPressed: () => Navigator.of(context).pop('down'),
               child: Text(tr('Move row down')),
             ),
           TvDialogOption(
-            autofocus: shown.length == 1,
+            autofocus: shown.length == 1 && item?.removeFromHistory == null,
             onPressed: () => Navigator.of(context).pop('hide'),
             child: Text(tr('Hide this row')),
           ),
@@ -673,7 +689,27 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
-    if (!mounted || choice == null) return;
+    if (!mounted || choice == null || storage.getActiveViewerId() != viewer) {
+      return;
+    }
+    if (choice == 'remove') {
+      await item?.removeFromHistory?.call();
+      if (!mounted || storage.getActiveViewerId() != viewer) return;
+      _focused = null;
+      // _load paints the quick history rows before fetching games/catalogs.
+      // Restore remote focus on that first frame, without waiting on a feed.
+      unawaited(_load());
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || storage.getActiveViewerId() != viewer) return;
+        if (_rows.isEmpty) {
+          _focusProfiles();
+        } else {
+          final row = _rows.indexWhere((r) => r.kind == kind);
+          _focusCard(row < 0 ? 0 : row, _cardIndex[kind] ?? 0);
+        }
+      });
+      return;
+    }
     switch (choice) {
       case 'up' || 'down':
         _rowsConfig.move(kind, choice == 'up' ? -1 : 1);
@@ -856,7 +892,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   poster: poster,
                   focusNode: _node(row.kind, i),
                   onTap: () => _open(item),
-                  onHold: () => _rowMenu(row.kind),
+                  onHold: () => _rowMenu(row.kind, item),
                   onFocus: () {
                     _cardIndex[row.kind] = i;
                     if (identical(_focused, item) &&

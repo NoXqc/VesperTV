@@ -34,6 +34,9 @@ class NativeVideoSurface {
     await _channel.invokeMethod<void>('configure', {'enabled': active});
   }
 
+  static Future<void> prepareNewPlayer() =>
+      _channel.invokeMethod<void>('prepareNewPlayer');
+
   static Future<Map<String, Object?>?> replaceLive(int playerId, String url,
           {required bool hls}) =>
       _channel.invokeMapMethod<String, Object?>(

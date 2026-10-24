@@ -21,6 +21,11 @@ import android.view.Gravity;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.ViewGroup;
+import android.view.View;
+import android.widget.ImageView;
+import android.graphics.Color;
+import android.graphics.Bitmap;
+import android.view.PixelCopy;
 import android.widget.FrameLayout;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -50,6 +55,9 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
   private final LongSparseArray<VideoPlayer> players;
   @Nullable private Activity activity;
   @Nullable private SurfaceView view;
+  @Nullable private ImageView zapCover;
+  @Nullable private Bitmap lastPicture;
+  private final Runnable coverTimeout = () -> hideZapCover();
   private long attachedId = -1;
   @Nullable private ExoPlayer attachedPlayer;
   private boolean shown = false;
@@ -103,6 +111,15 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
   public void onMethodCall(@NonNull MethodCall call, @NonNull MethodChannel.Result result) {
     try {
       switch (call.method) {
+        case "prepareNewPlayer":
+          // Explicit replacement only; background retry candidates keep the
+          // existing owner until adopted. No new decoder starts surface-less.
+          if (enabled && attachedPlayer != null) {
+            attachedPlayer.pause();
+            detach();
+          }
+          result.success(null);
+          return;
         case "replaceLive":
           replaceLive(call, result);
           return;
@@ -207,10 +224,58 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
     firstFrame = lastError = "-";
     droppedFrames = 0;
     Log.i(TAG, "reusing player " + attachedId + " for live zap (surface " + surfaceState + ")");
+    captureBeforeSwap(swap, () -> {
+      if (pendingSwap != swap || activity == null) return;
+      showZapCover();
+      try {
+        player.replaceNativeStream(activity, asset);
+      } catch (RuntimeException e) {
+        swap.fail("source replacement failed");
+      }
+    });
+  }
+
+  /** One temporary, bounded frame; never saved to disk or included in logs. */
+  private void captureBeforeSwap(PendingSwap swap, Runnable replace) {
+    if (Build.VERSION.SDK_INT < 26 || view == null || !shown
+        || view.getHolder().getSurface() == null || !view.getHolder().getSurface().isValid()) {
+      replace.run();
+      return;
+    }
+    final Bitmap picture;
     try {
-      player.replaceNativeStream(activity, asset);
-    } catch (RuntimeException e) {
-      swap.fail("source replacement failed");
+      float scale = Math.min(1f, 1280f / Math.max(width, height));
+      picture = Bitmap.createBitmap(Math.max(1, Math.round(width * scale)),
+          Math.max(1, Math.round(height * scale)), Bitmap.Config.ARGB_8888);
+    } catch (OutOfMemoryError | IllegalArgumentException error) {
+      replace.run();
+      return;
+    }
+    final boolean[] started = {false};
+    Runnable start = () -> {
+      if (started[0]) return;
+      started[0] = true;
+      replace.run();
+    };
+    // A slow/unsupported copy must not delay the zap or leave audio waiting.
+    swapHandler.postDelayed(start, 80);
+    try {
+      PixelCopy.request(view, picture, status -> {
+        swapHandler.removeCallbacks(start);
+        if (!started[0] && pendingSwap == swap && status == PixelCopy.SUCCESS) {
+          hideZapCover();
+          lastPicture = picture;
+          if (zapCover != null) zapCover.setImageBitmap(picture);
+          Log.i(TAG, "last video frame retained for decoder swap");
+        } else {
+          picture.recycle();
+        }
+        start.run();
+      }, swapHandler);
+    } catch (RuntimeException error) {
+      swapHandler.removeCallbacks(start);
+      picture.recycle();
+      start.run();
     }
   }
 
@@ -234,7 +299,7 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
       return true;
     }
     void fail(String reason) {
-      if (finish()) result.error("NativeLiveZap", reason, null);
+      if (finish()) { hideZapCover(); result.error("NativeLiveZap", reason, null); }
     }
     @Override public void onPlayerError(@NonNull PlaybackException error) {
       fail("live source error " + error.getErrorCodeName());
@@ -290,11 +355,49 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
     // (transparent) window, under Flutter's own drawing.
     content.addView(view, 0, params());
     Log.i(TAG, "video surface added behind Flutter (content children " + content.getChildCount() + ")");
+    zapCover = new ImageView(activity);
+    zapCover.setImageDrawable(activity.getApplicationInfo().loadIcon(activity.getPackageManager()));
+    zapCover.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+    zapCover.setBackgroundColor(Color.rgb(12, 12, 16));
+    zapCover.setVisibility(View.GONE);
+    content.addView(zapCover, 1, params());
     logDisplay();
     return true;
   }
 
+  private void showZapCover() {
+    if (zapCover == null || !shown) return;
+    zapCover.setLayoutParams(params());
+    int pad = lastPicture == null ? Math.max(1, Math.min(width, height) / 3) : 0;
+    zapCover.setScaleType(lastPicture == null ? ImageView.ScaleType.CENTER_INSIDE : ImageView.ScaleType.FIT_XY);
+    zapCover.setPadding(pad, pad, pad, pad);
+    zapCover.setVisibility(View.VISIBLE);
+    swapHandler.removeCallbacks(coverTimeout);
+    swapHandler.postDelayed(coverTimeout, 15000);
+  }
+
+  private void hideZapCover() {
+    swapHandler.removeCallbacks(coverTimeout);
+    if (zapCover != null) {
+      zapCover.setVisibility(View.GONE);
+      if (activity != null) {
+        zapCover.setImageDrawable(activity.getApplicationInfo().loadIcon(activity.getPackageManager()));
+      }
+    }
+    if (lastPicture != null) {
+      // A RenderThread display list can still reference the previous drawable
+      // for this frame. Let the VM release it after that list retires.
+      lastPicture = null;
+    }
+  }
+
   private void removeView() {
+    hideZapCover();
+    if (zapCover != null) {
+      ViewGroup coverParent = (ViewGroup) zapCover.getParent();
+      if (coverParent != null) coverParent.removeView(zapCover);
+      zapCover = null;
+    }
     if (view == null) return;
     ViewGroup parent = (ViewGroup) view.getParent();
     if (parent != null) parent.removeView(view);
@@ -350,6 +453,11 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
         exo.setVideoSurfaceHolder(view.getHolder());
         player.nativeSurfaceHolder = view.getHolder();
       }
+      // Match PlatformVideoView's API-28 paused-output workaround.
+      if (Build.VERSION.SDK_INT == 28 && !exo.getPlayWhenReady()) {
+        long position = exo.getCurrentPosition();
+        exo.seekTo(position == 0 ? 1 : position);
+      }
       Log.i(TAG, "attached player " + id + " (surface " + surfaceState + ")");
     }
     out.put("ok", true);
@@ -362,6 +470,7 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
 
   private void detach(boolean clearOutput) {
     cancelSwap("detached");
+    hideZapCover();
     if (attachedPlayer != null) {
       try {
         attachedPlayer.removeAnalyticsListener(analytics);
@@ -390,6 +499,7 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
     height = h;
     shown = true;
     view.setLayoutParams(params());
+    if (zapCover != null) zapCover.setLayoutParams(params());
     // Positions change every frame during animations: log only show/size changes.
     if (!wasShown || sizeChanged) {
       Log.i(TAG, "rect " + w + "x" + h + " at " + l + "," + t);
@@ -397,9 +507,11 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
   }
 
   private void hide() {
+    hideZapCover();
     if (view == null || !shown) return;
     shown = false;
     view.setLayoutParams(params());
+    if (zapCover != null) zapCover.setLayoutParams(params());
     Log.i(TAG, "hidden (no video hole on screen)");
   }
 
@@ -488,6 +600,7 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
     out.put("dropped", droppedFrames);
     out.put("error", lastError);
     out.put("prepare", lastPrepare);
+    out.put("zapCover", zapCover != null && zapCover.getVisibility() == View.VISIBLE);
     out.put("display", displayInfo());
     out.put("windowTransparent", windowTransparent());
     if (attachedPlayer != null) {
@@ -520,6 +633,10 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
             @Nullable DecoderReuseEvaluation decoderReuseEvaluation) {
           inputFormat = describe(format);
           Log.i(TAG, "video format " + inputFormat);
+          if (decoderReuseEvaluation != null) {
+            Log.i(TAG, "decoder reuse result=" + decoderReuseEvaluation.result
+                + " reasons=" + decoderReuseEvaluation.discardReasons);
+          }
         }
 
         @Override
@@ -531,6 +648,7 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
         @Override
         public void onRenderedFirstFrame(
             @NonNull EventTime eventTime, @NonNull Object output, long renderTimeMs) {
+          hideZapCover();
           firstFrame = "rendered to " + output.getClass().getSimpleName();
           Log.i(TAG, "first frame " + firstFrame + " (surface " + surfaceState + ")");
         }

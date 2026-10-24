@@ -5,6 +5,11 @@
 /// Keep every `{placeholder}` exactly as in the key. `{s}` is the plural "s"
 /// the code fills in ("chaîne{s}").
 const Map<String, String> kFr = {
+
+  "Remove from history": "Retirer de l’historique",
+  "Automatically play the largest file": "Lire automatiquement le plus gros fichier",
+  "Use the largest known file size when starting a title. Resume keeps your selected stream.": "Choisir le plus gros fichier connu au démarrage. La reprise conserve le flux sélectionné.",
+  "Prefer highest quality": "Préférer la meilleure qualité",
   "Remind me for every game: {team}": "Me rappeler chaque match : {team}",
   "Stop team reminders: {team}": "Désactiver les rappels : {team}",
   "Remind me": "Me rappeler",

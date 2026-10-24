@@ -336,6 +336,15 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Codex handoff batch +431** (`codex/handoff-fixes`, owner authorised all handoff tasks):
+  merged Claude diagnostics/thread/guide fixes and subtitle-link routing, retaining Cinemeta toggle.
+  Bounded indexed Sports title slices with shared caches/background literal matching; atomic
+  matcher snapshots fix concurrent-index RangeErrors; saved picks persist; optional quality copies.
+  Media Hub episodes remember their stream like movies; optional largest-file start per viewer.
+  Home history hold removal; Sports frame uses actual constraints; private image/row diagnostics.
+  Native Formuler-only Realtek-first renderer, equivalent-HDR metadata reuse, transient last-frame
+  cover for decoder swaps; explicit new-playback surface handoff and Android 9 paused output fix.
+  Hardware acceptance remains pending. See `dev-notes/handoff-fixes-431.md`.
 - **Codex Cinemeta catalog switch** (`codex/cinemeta-catalog-toggle`, unreleased):
   Settings > Media Hub sources > Show Cinemeta catalog (default on). Off hides
   automatic browse/search rows; custom catalogs, stream add-ons and metadata

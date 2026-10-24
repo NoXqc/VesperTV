@@ -406,29 +406,40 @@ class SportsScreenFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final mq = MediaQuery.of(context);
-    final scale = (mq.size.width / _designWidth).clamp(1.0, 3.0);
-    Widget content = child;
-    if (scale > 1.0) {
-      final size = mq.size / scale;
-      content = FittedBox(
-        fit: BoxFit.fill,
-        alignment: Alignment.topLeft,
-        child: SizedBox.fromSize(
-          size: size,
-          child: MediaQuery(
-            data: mq.copyWith(
-              size: size,
-              devicePixelRatio: mq.devicePixelRatio * scale,
-              padding: mq.padding / scale,
-              viewPadding: mq.viewPadding / scale,
-              viewInsets: mq.viewInsets / scale,
+    final inherited = MediaQuery.of(context);
+    final content = LayoutBuilder(builder: (context, constraints) {
+      final bounds = Size(
+          constraints.hasBoundedWidth
+              ? constraints.maxWidth
+              : inherited.size.width,
+          constraints.hasBoundedHeight
+              ? constraints.maxHeight
+              : inherited.size.height);
+      final mq = inherited.copyWith(size: bounds);
+      final scale = (mq.size.width / _designWidth).clamp(1.0, 3.0);
+      Widget content = MediaQuery(data: mq, child: child);
+      if (scale > 1.0) {
+        final size = mq.size / scale;
+        content = FittedBox(
+          fit: BoxFit.fill,
+          alignment: Alignment.topLeft,
+          child: SizedBox.fromSize(
+            size: size,
+            child: MediaQuery(
+              data: mq.copyWith(
+                size: size,
+                devicePixelRatio: mq.devicePixelRatio * scale,
+                padding: mq.padding / scale,
+                viewPadding: mq.viewPadding / scale,
+                viewInsets: mq.viewInsets / scale,
+              ),
+              child: child,
             ),
-            child: child,
           ),
-        ),
-      );
-    }
+        );
+      }
+      return SizedBox.fromSize(size: bounds, child: content);
+    });
     if (!Platform.isWindows) return content;
     return CallbackShortcuts(
       bindings: {

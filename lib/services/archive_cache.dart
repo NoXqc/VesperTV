@@ -24,7 +24,7 @@ class ArchiveCache {
     try {
       _db = await _open(path);
     } catch (e) {
-      debugPrint('ArchiveCache: reopening after $e');
+      debugPrint('ArchiveCache: reopening after ${e.runtimeType}');
       await deleteDatabase(path);
       _db = await _open(path);
     }

@@ -268,6 +268,19 @@ class PlaybackService extends ChangeNotifier {
   /// `DesktopPlayerScreen`'s doc comment) but should still feed History.
   Future<void> recordWatched(Channel channel) => _recordRecentlyPlayed(channel);
 
+  /// Remove the chosen Home history card; resume/watched state remains available.
+  /// An episode card represents its series, so remove that series' history entries.
+  Future<void> removeFromHistory(Channel channel) async {
+    _recentlyPlayed.removeWhere((c) =>
+        c.id == channel.id ||
+        (channel.seriesId != null &&
+            c.seriesId == channel.seriesId &&
+            c.playlistId == channel.playlistId));
+    await _storage.writeCacheFile(_recentlyPlayedCacheKeyForViewer,
+        jsonEncode(_recentlyPlayed.map((c) => c.toJson()).toList()));
+    notifyListeners();
+  }
+
   /// Settings > General history clearing, for the active viewer. [live]
   /// true drops the live channels (the "History" popup); false drops the
   /// movies/episodes (Continue Watching) plus their saved positions.
@@ -418,6 +431,9 @@ class PlaybackService extends ChangeNotifier {
     // resume save, so only the flag changes here.
     switching = true;
     await _teardown();
+    if (NativeVideoSurface.active && !textureVideo) {
+      await NativeVideoSurface.prepareNewPlayer();
+    }
     currentChannel = channel;
     error = null;
     reconnectStatus = null;

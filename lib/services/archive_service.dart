@@ -86,6 +86,11 @@ class ArchiveService extends ChangeNotifier {
   final StorageService _storage;
   final ArchiveApiService _api;
   final ArchiveCache _cache;
+  bool get autoPlayLargest => _storage.getArchiveAutoLargest();
+  Future<void> setAutoPlayLargest(bool value) async {
+    await _storage.setArchiveAutoLargest(value);
+    _notify();
+  }
 
   /// Jellyfin/Emby sources ([ArchiveSource.server]) go here instead of
   /// [_api]; everything else (rows, cache, search, history, Play) is the
@@ -97,14 +102,35 @@ class ArchiveService extends ChangeNotifier {
 
   Future<List<ArchiveMeta>> _page(ArchiveSource s, ArchiveCatalog c,
       {int skip = 0, String? search}) async {
-    if (s.tracker != null) {
-      if (search != null) return const []; // lists aren't searchable
-      final login = await _freshTracker(s);
-      return _trackers.fetchCatalog(login, c, skip: skip);
+    final watch = Stopwatch()..start();
+    final kind = s.tracker != null
+        ? 'tracker'
+        : s.server != null
+            ? 'server'
+            : 'addon';
+    try {
+      final List<ArchiveMeta> items;
+      if (s.tracker != null) {
+        if (search != null) return const [];
+        final login = await _freshTracker(s);
+        items = await _trackers.fetchCatalog(login, c, skip: skip);
+      } else {
+        items = s.server != null
+            ? await _servers.fetchCatalog(s, c, skip: skip, search: search)
+            : await _api.fetchCatalog(s.catalogBaseUrl, c,
+                skip: skip, search: search);
+      }
+      final art = items.where((m) => m.posterUrl?.isNotEmpty ?? false).length;
+      debugPrint('ArchiveRow: source=${s.key} kind=$kind type=${c.wire} '
+          'items=${items.length} posters=$art missing=${items.length - art} '
+          'fetchMs=${watch.elapsedMilliseconds}');
+      return items;
+    } catch (error) {
+      debugPrint(
+          'ArchiveRow: source=${s.key} kind=$kind failed=${error.runtimeType} '
+          'fetchMs=${watch.elapsedMilliseconds}');
+      rethrow;
     }
-    return s.server != null
-        ? _servers.fetchCatalog(s, c, skip: skip, search: search)
-        : _api.fetchCatalog(s.catalogBaseUrl, c, skip: skip, search: search);
   }
 
   // ---- Trakt / Simkl -------------------------------------------------------
@@ -418,7 +444,7 @@ class ArchiveService extends ChangeNotifier {
       try {
         _items[key] = await _cache.read(s.key, c);
       } catch (e) {
-        debugPrint('ArchiveService: cache read failed: $e');
+        debugPrint('ArchiveService: cache read failed: ${e.runtimeType}');
       }
     }
     _notify();
@@ -765,7 +791,7 @@ class ArchiveService extends ChangeNotifier {
           try {
             _items[_rowKey(s, c)] = await _cache.read(s.key, c);
           } catch (e) {
-            debugPrint('ArchiveService: cache read failed: $e');
+            debugPrint('ArchiveService: cache read failed: ${e.runtimeType}');
           }
         }
       }

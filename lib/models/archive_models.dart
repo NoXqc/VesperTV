@@ -681,7 +681,12 @@ class ArchiveVideo {
 /// player. Torrent (`infoHash`) and external browser entries are not playable.
 class ArchiveStream {
   const ArchiveStream(
-      {this.url = '', this.ytId, this.name, this.title, this.subtitleUrl});
+      {this.url = '',
+      this.ytId,
+      this.name,
+      this.title,
+      this.subtitleUrl,
+      this.sizeBytes});
 
   final String? ytId;
   String get identity => ytId == null ? url : 'yt:$ytId';
@@ -704,6 +709,9 @@ class ArchiveStream {
     return ArchiveStream(
         url: video == null ? uri.toString() : '',
         ytId: video,
+        sizeBytes: (row['behaviorHints'] is Map
+            ? num.tryParse('${row['behaviorHints']['videoSize']}')?.toInt()
+            : null),
         name: ArchiveMeta._str(row['name']),
         title: ArchiveMeta._str(row['title'] ?? row['description']),
         subtitleUrl: row['subtitles'] is List &&
@@ -714,6 +722,7 @@ class ArchiveStream {
   }
 
   Map<String, dynamic> toJson() => {
+        if (sizeBytes != null) 'behaviorHints': {'videoSize': sizeBytes},
         if (ytId != null) 'ytId': ytId,
         if (url.isNotEmpty) 'url': url,
         if (name != null) 'name': name,
@@ -735,6 +744,7 @@ class ArchiveStream {
       ];
 
   final String url;
+  final int? sizeBytes;
 
   /// The schema's `name`: usually the source plus quality ("My Source 4K").
   final String? name;

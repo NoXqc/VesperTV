@@ -11,6 +11,7 @@ import '../models/series_details.dart';
 import '../models/xtream_series.dart';
 import '../services/archive_service.dart';
 import '../services/archive_resume_source.dart';
+import '../services/archive_stream_size.dart';
 import '../services/storage_service.dart';
 import '../services/desktop_mini_player.dart';
 import '../services/playback_service.dart';
@@ -154,10 +155,12 @@ Future<void> playArchiveTitle(
 }) async {
   final service = context.read<ArchiveService>();
   final playback = context.read<PlaybackService>();
-  final resumeSource = episode == null
-      ? ArchiveResumeSource(context.read<StorageService>(),
-          ArchiveService.channelId(source, meta.id, episode: false))
-      : null;
+  final storage = context.read<StorageService>();
+  final resumeSource = ArchiveResumeSource(
+      storage,
+      service
+          .channelFor(source, meta, const ArchiveStream(), episode: episode)
+          .id);
   List<ArchiveStreamOption> options;
   try {
     options = await service.streams(source, meta, episode: episode);
@@ -166,20 +169,21 @@ Future<void> playArchiveTitle(
   }
   if (!context.mounted) return;
   if (options.isEmpty) return _noStream(context);
-  final restored = await resumeSource?.restore(options);
-  if (!context.mounted || (resumeSource != null && !resumeSource.isCurrent)) {
+  final restored = await resumeSource.restore(options);
+  if (!context.mounted || !resumeSource.isCurrent) {
     return;
   }
-  options = restored?.options ?? options;
+  options = restored.options;
   if (options.isEmpty) return _noStream(context);
   // Resume the exact prior choice; absent/unavailable choices use the picker.
-  var picked = restored?.picked ??
+  var picked = restored.picked ??
+      (storage.getArchiveAutoLargest()
+          ? largestArchiveStream(options)
+          : null) ??
       (options.length == 1
           ? options.single
           : await pickArchiveStream(context, options));
-  if (picked == null ||
-      !context.mounted ||
-      (resumeSource != null && !resumeSource.isCurrent)) {
+  if (picked == null || !context.mounted || !resumeSource.isCurrent) {
     return;
   }
   if (picked.stream.ytId case final video?) {
@@ -189,14 +193,11 @@ Future<void> playArchiveTitle(
   final tracked =
       service.channelFor(source, meta, picked.stream, episode: episode);
   _track(tracked, meta, episode);
-  final channel =
-      tracked.copyWith(url: restored?.url ?? await _playUrl(picked));
-  if (resumeSource != null) {
-    try {
-      await resumeSource.remember(picked);
-    } catch (_) {/* Playback still works if preferences cannot be written. */}
-  }
-  if (!context.mounted || (resumeSource != null && !resumeSource.isCurrent)) {
+  final channel = tracked.copyWith(url: restored.url ?? await _playUrl(picked));
+  try {
+    await resumeSource.remember(picked);
+  } catch (_) {/* Playback still works if preferences cannot be written. */}
+  if (!context.mounted || !resumeSource.isCurrent) {
     return;
   }
   // Extras' "Recently watched" row (the show, for an episode).
@@ -204,15 +205,23 @@ Future<void> playArchiveTitle(
 
   Future<Channel?> resolve(Channel placeholder) async {
     final video = videosById[placeholder.id];
-    if (video == null) return null;
+    if (video == null || !resumeSource.isCurrent) return null;
     final next = await service.streams(source, meta, episode: video);
     if (next.isEmpty) return null;
-    final o = preferredArchiveStream(next, picked);
+    final nextResume = ArchiveResumeSource(storage, placeholder.id);
+    final restoredNext = await nextResume.restore(next);
+    if (!nextResume.isCurrent || restoredNext.options.isEmpty) return null;
+    final o = restoredNext.picked ??
+        (storage.getArchiveAutoLargest()
+            ? largestArchiveStream(restoredNext.options)
+            : null) ??
+        preferredArchiveStream(restoredNext.options, picked);
+    await nextResume.remember(o);
     if (o.stream.ytId != null) return null;
     picked = o; // the episode after follows this one
     final ch = service.channelFor(source, meta, o.stream, episode: video);
     _track(ch, meta, video);
-    return ch.copyWith(url: await _playUrl(o));
+    return ch.copyWith(url: restoredNext.url ?? await _playUrl(o));
   }
 
   final hasQueue = queue != null && queue.isNotEmpty;

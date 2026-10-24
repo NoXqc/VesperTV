@@ -6,6 +6,11 @@
 /// "s" filled in by the code; Spanish plurals don't always work that way
 /// (canal/canales), so those strings are phrased to avoid it.
 const Map<String, String> kEs = {
+
+  "Remove from history": "Eliminar del historial",
+  "Automatically play the largest file": "Reproducir automáticamente el archivo más grande",
+  "Use the largest known file size when starting a title. Resume keeps your selected stream.": "Elige el archivo de mayor tamaño conocido al iniciar. Al reanudar se conserva el flujo seleccionado.",
+  "Prefer highest quality": "Preferir la máxima calidad",
   "Remind me for every game: {team}": "Recordarme cada partido: {team}",
   "Stop team reminders: {team}": "Desactivar recordatorios: {team}",
   "Remind me": "Recordármelo",

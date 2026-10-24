@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../utils/image_urls.dart';
+import '../services/image_diagnostics.dart';
 
 /// A [CachedNetworkImage] for posters, backdrops and episode stills that
 /// asks TMDB for a rendition sized to [decodeWidth] (see [hdImageUrl]) and
@@ -86,19 +87,25 @@ class HdNetworkImage extends StatelessWidget {
       memCacheWidth: decodeWidth,
       fadeInDuration: fadeInDuration,
       imageBuilder: builder,
-      errorWidget: (c, _, __) => hd == url
-          ? fallback(c)
-          // The upgraded rendition failed (a dead path, a CDN hiccup) —
-          // the provider's own link may still work.
-          : CachedNetworkImage(
-              imageUrl: url,
-              fit: fit,
-              alignment: alignment,
-              memCacheWidth: decodeWidth,
-              fadeInDuration: fadeInDuration,
-              imageBuilder: builder,
-              errorWidget: (c2, _, __) => fallback(c2),
-            ),
+      errorWidget: (c, failedUrl, error) {
+        ImageDiagnostics.failure(failedUrl, error);
+        return hd == url
+            ? fallback(c)
+            // The upgraded rendition failed (a dead path, a CDN hiccup) —
+            // the provider's own link may still work.
+            : CachedNetworkImage(
+                imageUrl: url,
+                fit: fit,
+                alignment: alignment,
+                memCacheWidth: decodeWidth,
+                fadeInDuration: fadeInDuration,
+                imageBuilder: builder,
+                errorWidget: (c2, failedUrl, error) {
+                  ImageDiagnostics.failure(failedUrl, error);
+                  return fallback(c2);
+                },
+              );
+      },
     );
   }
 }

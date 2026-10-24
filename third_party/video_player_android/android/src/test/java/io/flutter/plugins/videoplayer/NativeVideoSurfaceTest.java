@@ -203,4 +203,34 @@ public class NativeVideoSurfaceTest {
     verify(result).success(Map.of("accepted", false));
     verify(exo, never()).setMediaSource(any());
   }
+
+  @Test
+  public void explicitNewPlaybackHandsOffSurfaceBeforePreparation() {
+    VideoPlayer player = nativePlayer();
+    invoke("prepareNewPlayer", null);
+    verify(exo).pause();
+    verify(exo).clearVideoSurfaceHolder(any());
+    assertNotNull(surface.holderForPreparation());
+    assertTrue(((Map<?, ?>) invoke("diagnostics", null)).get("prepare").toString()
+        .contains("prepared ON the native surface"));
+    player.dispose();
+  }
+
+  @Test
+  @org.robolectric.annotation.LooperMode(org.robolectric.annotation.LooperMode.Mode.PAUSED)
+  public void visibleZapCoverClearsAtFirstFrameAndOnFailure() {
+    VideoPlayer player = nativePlayer();
+    invoke("setRect", Map.of("left", 10, "top", 20, "width", 558, "height", 314));
+    MethodChannel.Result result = mock(MethodChannel.Result.class);
+    zap(result, "next");
+    org.robolectric.shadows.ShadowLooper.idleMainLooper(100, java.util.concurrent.TimeUnit.MILLISECONDS);
+    Map<?, ?> covered = (Map<?, ?>) invoke("diagnostics", null);
+    assertEquals(covered + " logs=" + org.robolectric.shadows.ShadowLog.getLogsForTag("VesperNativeSurface"), true, covered.get("zapCover"));
+    ArgumentCaptor<AnalyticsListener> capture = ArgumentCaptor.forClass(AnalyticsListener.class);
+    verify(exo, atLeastOnce()).addAnalyticsListener(capture.capture());
+    capture.getValue().onRenderedFirstFrame(mock(AnalyticsListener.EventTime.class), new Object(), 0);
+    assertEquals(false, ((Map<?, ?>) invoke("diagnostics", null)).get("zapCover"));
+    surface.onPlayerDisposed(3L);
+    player.dispose();
+  }
 }

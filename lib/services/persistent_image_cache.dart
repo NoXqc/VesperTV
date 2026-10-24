@@ -6,6 +6,7 @@ import 'package:file/file.dart' hide FileSystem;
 import 'package:file/local.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:path/path.dart' as p;
+import 'image_diagnostics.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// `CachedNetworkImage`'s own default cache manager splits its cache
@@ -42,6 +43,7 @@ import 'package:path_provider/path_provider.dart';
 /// stale period must stay under ~180 days.
 final CacheManager persistentImageCacheManager = CacheManager(
   Config('noxplayer_posters',
+      fileService: DiagnosticImageFileService(),
       stalePeriod: const Duration(days: 60),
       maxNrOfCacheObjects: 1500,
       fileSystem: _PersistentFileSystem('noxplayer_posters')),

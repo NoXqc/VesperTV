@@ -125,8 +125,8 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
         if (!mounted) return;
         setState(() => _adding = false);
         _link.clear();
-        messenger.showSnackBar(
-            SnackBar(content: Text(addonImportSummary(result))));
+        messenger
+            .showSnackBar(SnackBar(content: Text(addonImportSummary(result))));
         return;
       }
       error = tr(
@@ -246,6 +246,13 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
             Text(tr(
                 'The Media Hub tab shows films and series from sources you add here. Any source that follows the catalog/stream add-on format works; a source that only offers streams by IMDb id gets its posters and episodes from Cinemeta. Only direct video links are played; torrent links are ignored.')),
             const SizedBox(height: 16),
+            TvSwitchListTile(
+              title: Text(tr('Automatically play the largest file')),
+              subtitle: Text(tr(
+                  'Use the largest known file size when starting a title. Resume keeps your selected stream.')),
+              value: service.autoPlayLargest,
+              onChanged: service.setAutoPlayLargest,
+            ),
             SectionLabel(tr('Your sources')),
             TvSwitchListTile(
               title: Text(tr('Show Cinemeta catalog')),

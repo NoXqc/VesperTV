@@ -6,6 +6,11 @@
 /// the code; Italian plurals don't work that way (canale/canali), so those
 /// strings are phrased to avoid it.
 const Map<String, String> kIt = {
+
+  "Remove from history": "Rimuovi dalla cronologia",
+  "Automatically play the largest file": "Riproduci automaticamente il file più grande",
+  "Use the largest known file size when starting a title. Resume keeps your selected stream.": "Scegli il file di dimensione nota maggiore all’avvio. La ripresa mantiene il flusso selezionato.",
+  "Prefer highest quality": "Preferisci la qualità più alta",
   "Remind me for every game: {team}": "Ricordami ogni partita: {team}",
   "Stop team reminders: {team}": "Disattiva promemoria: {team}",
   "Remind me": "Ricordamelo",

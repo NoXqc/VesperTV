@@ -9,6 +9,7 @@ import 'greek_sports_names.dart';
 import '../utils/channel_name_matching.dart';
 import 'epg_service.dart';
 import 'storage_service.dart';
+import 'real_4k_channels.dart';
 import '../l10n/l10n.dart';
 
 /// Why a channel was suggested for a game — shown next to it so the user
@@ -156,18 +157,21 @@ class SportsChannelPicks {
           : teams[teamKey(g, g.first)] ?? teams[teamKey(g, g.second)]);
 
   Future<void> pickForSeries(SportsGame g, String channelId) {
+    _reload();
     teams[seriesKey(g)] = channelId;
     _events.remove(eventKey(g));
     return _save();
   }
 
   Future<void> pickForGame(SportsGame g, String channelId) {
+    _reload();
     _events[eventKey(g)] =
         _EventPick(channelId, DateTime.now().millisecondsSinceEpoch);
     return _save();
   }
 
   Future<void> pickForTeam(SportsGame g, SportsTeam t, String channelId) {
+    _reload();
     teams[teamKey(g, t)] = channelId;
     // A fresh team pick should win over an older pick for this game.
     _events.remove(eventKey(g));
@@ -180,6 +184,7 @@ class SportsChannelPicks {
   String? get redZoneChannelId => teams[_redZoneKey];
 
   Future<void> setRedZone(String? channelId) {
+    _reload();
     if (channelId == null) {
       teams.remove(_redZoneKey);
     } else {
@@ -189,6 +194,7 @@ class SportsChannelPicks {
   }
 
   Future<void> clearFor(SportsGame g) {
+    _reload();
     _events.remove(eventKey(g));
     final c = teams[teamKey(g, g.first)];
     final d = teams[teamKey(g, g.second)];
@@ -196,6 +202,18 @@ class SportsChannelPicks {
     if (d != null) teams.remove(teamKey(g, g.second));
     teams.remove(seriesKey(g));
     return _save();
+  }
+
+  bool get preferQuality => _storage.getSportsPreferQuality();
+
+  void _reload() {
+    final latest = SportsChannelPicks.load(_storage);
+    _events
+      ..clear()
+      ..addAll(latest._events);
+    teams
+      ..clear()
+      ..addAll(latest.teams);
   }
 
   Future<void> _save() => _storage.setSportsChannelPicks(jsonEncode({
@@ -546,17 +564,17 @@ class SportsChannelMatcher {
 
   List<Channel> _channels = const [];
   List<String> _names = const [];
-  final Map<String, List<int>> _tokenIndex = {};
-  final Map<String, List<int>> _byCanonical = {};
-  final Map<String, List<int>> _byEpgId = {};
-  final Map<String, int> _byId = {};
+  Map<String, List<int>> _tokenIndex = {};
+  Map<String, List<int>> _byCanonical = {};
+  Map<String, List<int>> _byEpgId = {};
+  Map<String, int> _byId = {};
   int? _preparedFor;
 
   /// Channels the viewer hid (groups or one by one), never suggested — only
   /// used to say a game's channel is one of them ([whyNoMatch]).
   List<Channel> _hidden = const [];
   List<String>? _hiddenNames;
-  final Map<String, String> _hiddenByEpgId = {};
+  Map<String, String> _hiddenByEpgId = {};
 
   /// [_hidden]'s names normalized, on first need: hidden groups can hold
   /// most of a provider (every foreign country), and most days every game
@@ -608,36 +626,40 @@ class SportsChannelMatcher {
       }
     }
     if (_preparedFor == signature) return;
-    _preparedFor = signature;
-    _hidden = hidden;
-    _hiddenNames = null;
-    _hiddenByEpgId
-      ..clear()
-      ..addAll({
-        for (final c in hidden.reversed) normalizeEpgId(c.epgId): c.name,
-      });
-    _channels = channels;
-    _tokenIndex.clear();
-    _byCanonical.clear();
-    _byEpgId.clear();
-    _byId.clear();
+    final tokenIndex = <String, List<int>>{};
+    final byCanonical = <String, List<int>>{};
+    final byEpgId = <String, List<int>>{};
+    final byId = <String, int>{};
+    channels = List.of(channels);
+    hidden = List.of(hidden);
     final names = List<String>.filled(channels.length, '');
     for (var i = 0; i < channels.length; i++) {
       if (i % 3000 == 2999) await Future<void>.delayed(Duration.zero);
       final c = channels[i];
       final norm = sportsNormalize(c.name);
       names[i] = norm;
-      _byId[c.id] = i;
+      byId[c.id] = i;
       for (final t in norm.trim().split(' ')) {
         if (t.length < 3) continue;
-        final list = _tokenIndex[t] ??= <int>[];
+        final list = tokenIndex[t] ??= <int>[];
         if (list.isEmpty || list.last != i) list.add(i);
       }
       final canon = canonicalChannelKey(c.name);
-      if (canon.isNotEmpty) (_byCanonical[canon] ??= <int>[]).add(i);
-      (_byEpgId[normalizeEpgId(c.epgId)] ??= <int>[]).add(i);
+      if (canon.isNotEmpty) (byCanonical[canon] ??= <int>[]).add(i);
+      (byEpgId[normalizeEpgId(c.epgId)] ??= <int>[]).add(i);
     }
+    _channels = channels;
     _names = names;
+    _tokenIndex = tokenIndex;
+    _byCanonical = byCanonical;
+    _byEpgId = byEpgId;
+    _byId = byId;
+    _hidden = hidden;
+    _hiddenNames = null;
+    _hiddenByEpgId = {
+      for (final c in hidden.reversed) normalizeEpgId(c.epgId): c.name,
+    };
+    _preparedFor = signature;
   }
 
   /// Name phrases a channel or programme title may use for [t] — nickname
@@ -811,10 +833,18 @@ class SportsChannelMatcher {
   /// hub stayed on "Looking…", and every 30 s score refresh ran it again.
   /// The guide barely changes, so a hit is reused for 15 minutes, and a
   /// scan already running is shared instead of started twice.
-  final Map<String, (Future<List<EpgProgram>>, DateTime)> _guideCache = {};
+  Map<String, (Future<List<EpgProgram>>, DateTime)> _guideCache = {};
 
   Future<List<EpgProgram>> _guideHits(
       DateTime from, DateTime to, Set<String> terms) {
+    // Stable outward-rounded hours preserve candidates and cache reuse.
+    const hour = Duration.millisecondsPerHour;
+    from = DateTime.fromMillisecondsSinceEpoch(
+        from.millisecondsSinceEpoch ~/ hour * hour,
+        isUtc: true);
+    to = DateTime.fromMillisecondsSinceEpoch(
+        (to.millisecondsSinceEpoch + hour - 1) ~/ hour * hour,
+        isUtc: true);
     // A guide refresh changes lastUpdated: rescan at once, not after 15 min.
     final key = '${_epg.lastUpdated?.millisecondsSinceEpoch}|'
         '${from.millisecondsSinceEpoch}|${to.millisecondsSinceEpoch}|'
@@ -824,6 +854,7 @@ class SportsChannelMatcher {
         (_, v) => now.difference(v.$2) > const Duration(minutes: 15));
     final hit = _guideCache[key];
     if (hit != null) return hit.$1;
+    if (_guideCache.length >= 128) _guideCache.remove(_guideCache.keys.first);
     final future = _epg.findProgrammesByTitle(from, to, terms.toList());
     _guideCache[key] = (future, now);
     return future;
@@ -834,6 +865,38 @@ class SportsChannelMatcher {
   Future<Map<String, List<ChannelMatch>>> matchDay(
       List<SportsGame> games, SportsChannelPicks picks,
       {int limit = 8}) async {
+    // prepare() can replace the shared index during a guide query or hidden
+    // name normalization. One match uses an immutable snapshot throughout.
+    final snapshot = SportsChannelMatcher(_epg)
+      .._channels = _channels
+      .._names = _names
+      .._tokenIndex = _tokenIndex
+      .._byCanonical = _byCanonical
+      .._byEpgId = _byEpgId
+      .._byId = _byId
+      .._hidden = _hidden
+      .._hiddenNames = _hiddenNames
+      .._hiddenByEpgId = _hiddenByEpgId
+      .._guideCache = _guideCache;
+    final result =
+        await snapshot._matchDay(List.of(games), picks, limit: limit);
+    if (identical(_channels, snapshot._channels)) {
+      for (final g in games) {
+        final key = SportsChannelPicks.eventKey(g);
+        final reason = snapshot._noMatch[key];
+        if (reason == null) {
+          _noMatch.remove(key);
+        } else {
+          _noMatch[key] = reason;
+        }
+      }
+    }
+    return result;
+  }
+
+  Future<Map<String, List<ChannelMatch>>> _matchDay(
+      List<SportsGame> games, SportsChannelPicks picks,
+      {int limit = 8}) async {
     final out = <String, List<ChannelMatch>>{};
     if (games.isEmpty) return out;
 
@@ -842,8 +905,21 @@ class SportsChannelMatcher {
     // group per game to find every candidate. Terms containing a shorter
     // term are dropped too ("georgia bulldogs" ⊃ "georgia"). Each term is a
     // LIKE over every guide row of the day: fewer terms, faster hub.
+    final now = DateTime.now().toUtc();
+    // A selected future day still works; mixed My Teams dates may not expand
+    // a scan across weeks. Only nearby games contribute SQL candidate terms.
+    final ordered = [...games]..sort((a, b) => a.start.compareTo(b.start));
+    final anchor =
+        ordered.where((g) => _guideWindow(g).$2.isAfter(now)).firstOrNull ??
+            ordered.last;
+    final lower = _guideWindow(anchor).$1;
+    final upper = lower.add(const Duration(hours: 36));
+    final scanGames = games.where((g) {
+      final (from, to) = _guideWindow(g);
+      return from.isBefore(upper) && to.isAfter(lower);
+    }).toList();
     final raw = <String>{};
-    for (final g in games) {
+    for (final g in scanGames) {
       final groups = _nameGroups(g);
       if (groups.isNotEmpty) {
         for (final p in groups.first) {
@@ -866,13 +942,13 @@ class SportsChannelMatcher {
     for (final t in byLength) {
       if (!terms.any(t.contains)) terms.add(t);
     }
-    var earliest = _guideWindow(games.first).$1;
-    var latest = _guideWindow(games.first).$2;
-    for (final g in games) {
-      final (from, to) = _guideWindow(g);
-      if (from.isBefore(earliest)) earliest = from;
+    final earliest = lower;
+    var latest = _guideWindow(anchor).$2;
+    for (final g in scanGames) {
+      final (_, to) = _guideWindow(g);
       if (to.isAfter(latest)) latest = to;
     }
+    if (latest.isAfter(upper)) latest = upper;
     final List<EpgProgram> programmes =
         _byEpgId.isEmpty ? const [] : await _guideHits(earliest, latest, terms);
 
@@ -1030,6 +1106,12 @@ class SportsChannelMatcher {
                 .toList();
           }
         }
+        if (picks.preferQuality) {
+          hits = preferQualityCopies([
+            for (final index in hits)
+              ChannelMatch(_channels[index], MatchReason.network, 0)
+          ]).map((m) => _byId[m.channel.id]!).toList();
+        }
         var taken = 0;
         for (final i in hits) {
           if (taken >= 3) break;
@@ -1049,7 +1131,8 @@ class SportsChannelMatcher {
               : x.channel.name.length.compareTo(y.channel.name.length);
         });
       final key = SportsChannelPicks.eventKey(g);
-      out[key] = distinctCopiesFirst(list, limit);
+      out[key] = distinctCopiesFirst(
+          picks.preferQuality ? preferQualityCopies(list) : list, limit);
       if (list.isNotEmpty) {
         _noMatch.remove(key);
         continue;
@@ -1100,4 +1183,33 @@ class SportsChannelMatcher {
     }
     return out;
   }
+}
+
+int _sportsQuality(Channel c) {
+  if (Real4kChannels.contains(c.id)) return 5;
+  final name = c.name.toUpperCase();
+  if (RegExp(r'\b(4K|UHD|2160P?)\b').hasMatch(name)) return 4;
+  if (RegExp(r'\b(FHD|1080P?)\b').hasMatch(name)) return 3;
+  if (RegExp(r'\bHD\b').hasMatch(name)) return 2;
+  if (RegExp(r'\bSD\b').hasMatch(name)) return 0;
+  return 1;
+}
+
+List<ChannelMatch> preferQualityCopies(List<ChannelMatch> matches) {
+  final groups = <String, List<ChannelMatch>>{};
+  for (final m in matches) {
+    final key = channelCopyKey(m.channel.name);
+    (groups[key.isEmpty ? m.channel.id : key] ??= []).add(m);
+  }
+  for (final group in groups.values) {
+    group.sort((a, b) {
+      if (a.reason == MatchReason.pick || b.reason == MatchReason.pick) {
+        return b.score.compareTo(a.score);
+      }
+      final quality =
+          _sportsQuality(b.channel).compareTo(_sportsQuality(a.channel));
+      return quality != 0 ? quality : b.score.compareTo(a.score);
+    });
+  }
+  return [for (final group in groups.values) ...group];
 }

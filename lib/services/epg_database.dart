@@ -27,6 +27,7 @@ typedef EpgRow = ({
 /// Fully re-derivable from the EPG URLs, so a database that won't open is
 /// deleted and recreated rather than surfaced as an error.
 class EpgDatabase {
+  EpgDatabase({@visibleForTesting Database? database}) : _db = database;
   Database? _db;
 
   Future<Database> get _database async {
@@ -49,7 +50,9 @@ class EpgDatabase {
 
   Future<Database> _open(String path) => openDatabase(
         path,
-        version: 1,
+        version: 2,
+        // The sports index is built lazily, outside cold-start guide loading.
+        onUpgrade: (db, oldVersion, newVersion) async {},
         onCreate: (db, version) async {
           // (channel_id, start) is the natural key and also exactly the
           // lookup every read does — WITHOUT ROWID stores rows in that
@@ -139,37 +142,90 @@ class EpgDatabase {
   /// game. Chunked to stay under SQLite's bound parameter limit.
   Future<List<EpgRow>> programmesStartingWithTitle(
       int fromMs, int toMs, List<String> terms) async {
-    if (terms.isEmpty) return const [];
-    final db = await _database;
-    final result = <EpgRow>[];
-    // Timed for Send log: on a big guide this one scan is suspected of
-    // holding the single database thread for minutes (Shield user, 1000+
-    // "database has been locked" warnings, 2026-10-24).
+    if (terms.isEmpty || toMs <= fromMs) return const [];
     final watch = Stopwatch()..start();
-    const chunk = 400;
-    for (var i = 0; i < terms.length; i += chunk) {
-      final part =
-          terms.sublist(i, i + chunk > terms.length ? terms.length : i + chunk);
-      final likes = List.filled(part.length, 'title LIKE ?').join(' OR ');
-      final rows = await db.rawQuery(
-        'SELECT channel_id, start, stop, title FROM programme '
-        'WHERE stop > ? AND start >= ? AND start < ? AND ($likes)',
-        [fromMs, fromMs, toMs, for (final t in part) '%$t%'],
-      );
-      for (final r in rows) {
-        result.add((
-          channelId: r['channel_id'] as String,
-          startMs: r['start'] as int,
-          stopMs: r['stop'] as int,
-          title: r['title'] as String,
-          description: null,
-        ));
-      }
+    final result = <EpgRow>[];
+    const sliceMs = 6 * Duration.millisecondsPerHour;
+    var scans = 0;
+    for (var slice = fromMs ~/ sliceMs * sliceMs;
+        slice < toMs;
+        slice += sliceMs) {
+      final rows = await _sportsSlice(slice);
+      // Literal terms, not SQL wildcards. Expensive title matching runs away
+      // from both the UI isolate and sqflite's guide connection.
+      result.addAll(
+          await compute(filterSportsTitles, (rows, terms, fromMs, toMs)));
+      scans++;
+      await Future<void>.delayed(Duration.zero);
     }
     debugPrint('EpgDatabase: title scan ${terms.length} terms '
-        '(${(terms.length / chunk).ceil()} scans) -> ${result.length} rows '
+        '($scans slices) -> ${result.length} rows '
         'in ${watch.elapsedMilliseconds} ms');
     return result;
+  }
+
+  Future<void>? _sportsIndex;
+  final Map<int, (Future<List<EpgRow>>, DateTime)> _sportsSlices = {};
+
+  void _invalidateSports() => _sportsSlices.clear();
+
+  Future<List<EpgRow>> _sportsSlice(int from) {
+    final now = DateTime.now();
+    _sportsSlices.removeWhere(
+        (_, entry) => now.difference(entry.$2) > const Duration(minutes: 15));
+    final hit = _sportsSlices[from];
+    if (hit != null) return hit.$1;
+    // Bound title-only cache memory. Pending readers retain their own future.
+    while (_sportsSlices.length >= 6) {
+      _sportsSlices.remove(_sportsSlices.keys.first);
+    }
+    final future = _readSportsSlice(from);
+    _sportsSlices[from] = (future, now);
+    return future;
+  }
+
+  Future<List<EpgRow>> _readSportsSlice(int from) async {
+    try {
+      final db = await _database;
+      await (_sportsIndex ??= db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_programme_start ON programme(start)'));
+      final rows = <EpgRow>[];
+      final to = from + 6 * Duration.millisecondsPerHour;
+      var start = from;
+      String? channel;
+      // Keyset pagination keeps each DB turn small and avoids OFFSET rescans.
+      while (true) {
+        final batch = await db.rawQuery(
+          'SELECT channel_id, start, stop, title FROM programme '
+          'INDEXED BY idx_programme_start WHERE start >= ? AND start < ? '
+          '${channel == null ? '' : 'AND (start > ? OR (start = ? AND channel_id > ?)) '}'
+          'ORDER BY start, channel_id LIMIT 1000',
+          [
+            start,
+            to,
+            if (channel != null) ...[start, start, channel]
+          ],
+        );
+        for (final r in batch) {
+          rows.add((
+            channelId: r['channel_id'] as String,
+            startMs: r['start'] as int,
+            stopMs: r['stop'] as int,
+            title: r['title'] as String,
+            description: null
+          ));
+        }
+        if (batch.length < 1000) break;
+        start = batch.last['start'] as int;
+        channel = batch.last['channel_id'] as String;
+        await Future<void>.delayed(Duration.zero);
+      }
+      return rows;
+    } catch (_) {
+      _sportsIndex = null;
+      _sportsSlices.remove(from);
+      rethrow;
+    }
   }
 
   /// One line for Send log: how big the guide is (programmes, channels, the
@@ -254,6 +310,7 @@ class EpgDatabase {
       );
     }
     await batch.commit(noResult: true);
+    _invalidateSports();
   }
 
   /// After a *successful* refresh of [sourceUrl]: drops every row that
@@ -263,6 +320,7 @@ class EpgDatabase {
   /// previous data survives a network error.
   Future<void> deleteStaleFromSource(String sourceUrl, int gen) async {
     final db = await _database;
+    _invalidateSports();
     await db.delete('programme',
         where: 'source_url = ? AND gen <> ?', whereArgs: [sourceUrl, gen]);
   }
@@ -270,11 +328,28 @@ class EpgDatabase {
   /// Rolling-window trim: drops programmes that ended before [minStopMs].
   Future<void> deleteEndedBefore(int minStopMs) async {
     final db = await _database;
+    _invalidateSports();
     await db.delete('programme', where: 'stop < ?', whereArgs: [minStopMs]);
   }
 
   Future<void> clearAll() async {
     final db = await _database;
+    _invalidateSports();
     await db.delete('programme');
   }
+}
+
+/// Isolate entry point; preserve literal case-insensitive substring semantics.
+List<EpgRow> filterSportsTitles((List<EpgRow>, List<String>, int, int) input) {
+  final (rows, terms, from, to) = input;
+  final needles =
+      terms.map((s) => s.toLowerCase()).where((s) => s.isNotEmpty).toList();
+  return [
+    for (final r in rows)
+      if (r.startMs >= from &&
+          r.startMs < to &&
+          r.stopMs > from &&
+          needles.any(r.title.toLowerCase().contains))
+        r
+  ];
 }

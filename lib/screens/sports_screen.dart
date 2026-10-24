@@ -285,6 +285,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     if (!mounted) return;
     final live = playlist.visibleChannels(category: 'tv');
     await _matcher.prepare(live, hidden: playlist.hiddenLiveChannels());
+    _picks = SportsChannelPicks.load(_storage);
     final matches = await _matcher.matchDay(_games, _picks);
     if (!mounted || myToken != _loadToken) return;
     final sourceStore = SportsChannelLists(context.read<StorageService>());
@@ -297,7 +298,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
               detail: tr('Your added source')),
         for (final m in matches[_gameKey(game)] ?? <ChannelMatch>[])
           if (!saved.contains(m.channel.id)) m,
-      ];
+      ]..sort((a, b) => b.score.compareTo(a.score));
     }
     setState(() {
       _redZoneChoices = _findRedZones(live);
@@ -794,6 +795,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     await playlist.ensureLiveChannelsLoaded();
     await _matcher.prepare(playlist.visibleChannels(category: 'tv'),
         hidden: playlist.hiddenLiveChannels());
+    _picks = SportsChannelPicks.load(_storage);
     return _matcher.matchDay(games, _picks);
   }
 
@@ -938,6 +940,13 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   Future<void> _openGame(SportsGame game,
       [List<ChannelMatch>? gameMatches,
       Future<void> Function(Channel, SportsGame)? watch]) async {
+    // The mixed My Teams schedule only scans a near-day window. An explicitly
+    // opened future game gets its own bounded lookup (and shares the cache).
+    if (game.start.isAfter(DateTime.now().add(const Duration(hours: 36)))) {
+      final found = await _matchGames([game]);
+      if (!mounted) return;
+      gameMatches = found[_gameKey(game)];
+    }
     final play = watch ?? _watch;
     final playlist = context.read<PlaylistManager>();
     final store = SportsChannelLists(context.read<StorageService>());
@@ -1432,6 +1441,20 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                     selected: false,
                     onFocus: () => _zone = 0,
                     onTap: _editLeagues,
+                  ),
+                  SportsChip(
+                    key: const ValueKey('league:quality'),
+                    focusNode: _chipNode('league:quality'),
+                    enabled: _movingLeague == null,
+                    label: tr('Prefer highest quality'),
+                    icon: Icons.high_quality,
+                    selected: _storage.getSportsPreferQuality(),
+                    onFocus: () => _zone = 0,
+                    onTap: () async {
+                      await _storage.setSportsPreferQuality(
+                          !_storage.getSportsPreferQuality());
+                      if (mounted) await _rematch();
+                    },
                   ),
                   SportsChip(
                     key: const ValueKey('league:scores'),
