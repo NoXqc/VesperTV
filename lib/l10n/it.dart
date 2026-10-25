@@ -1931,4 +1931,5 @@ const Map<String, String> kIt = {
   "Trailers": "Trailer",
   "Play trailers automatically on movie and show pages": "Riproduzione automatica dei trailer nelle pagine di film e serie",
   "On Fire TV sticks, the trailer plays full screen.": "Sui Fire TV Stick il trailer viene riprodotto a schermo intero.",
+  "Remove \"{title}\" from history?": "Rimuovere \"{title}\" dalla cronologia?",
 };

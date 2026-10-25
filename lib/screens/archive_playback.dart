@@ -20,6 +20,7 @@ import '../services/archive_ready_watch.dart';
 import '../services/stream_resolver.dart';
 import '../services/watch_tracker.dart';
 import '../widgets/tv_menu_tile.dart';
+import '../widgets/roll_down_menu.dart';
 import 'desktop_player_screen.dart';
 import 'player_screen.dart';
 import 'series_detail_screen.dart';
@@ -334,7 +335,29 @@ Future<void> openArchiveSeries(
 Future<void> holdArchiveTitle(BuildContext context, ArchiveRow row,
     ArchiveSource source, ArchiveMeta meta) async {
   final service = context.read<ArchiveService>();
-  if (row.isHistory) return service.removeFromHistory(source, meta);
+  if (row.isHistory) {
+    final confirmed = await showRollDownMenu<bool>(context,
+        anchor: Rect.fromLTWH(MediaQuery.sizeOf(context).width / 2,
+            MediaQuery.sizeOf(context).height * .3, 0, 0),
+        centered: true,
+        width: 380,
+        title: tr('Remove "{title}" from history?', {'title': meta.name}),
+        items: [
+          RollDownMenuItem(
+              value: false,
+              icon: Icons.close,
+              label: tr('Cancel'),
+              selected: true),
+          RollDownMenuItem(
+              value: true,
+              icon: Icons.history,
+              label: tr('Remove from history')),
+        ]);
+    if (confirmed == true && context.mounted) {
+      await service.removeFromHistory(source, meta);
+    }
+    return;
+  }
   final messenger = ScaffoldMessenger.of(context);
   final added = await service.toggleFavorite(source, meta);
   messenger.showSnackBar(SnackBar(

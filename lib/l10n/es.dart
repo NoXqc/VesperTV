@@ -1927,4 +1927,5 @@ const Map<String, String> kEs = {
   "Trailers": "Tráilers",
   "Play trailers automatically on movie and show pages": "Reproducción automática de tráilers en las páginas de películas y series",
   "On Fire TV sticks, the trailer plays full screen.": "En los Fire TV Stick, el tráiler se reproduce a pantalla completa.",
+  "Remove \"{title}\" from history?": "¿Quitar «{title}» del historial?",
 };

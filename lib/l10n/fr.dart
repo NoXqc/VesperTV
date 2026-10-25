@@ -1930,4 +1930,5 @@ const Map<String, String> kFr = {
   "Trailers": "Bandes-annonces",
   "Play trailers automatically on movie and show pages": "Lecture automatique des bandes-annonces sur les pages de films et séries",
   "On Fire TV sticks, the trailer plays full screen.": "Sur les Fire TV Stick, la bande-annonce s'affiche en plein écran.",
+  "Remove \"{title}\" from history?": "Retirer « {title} » de l’historique ?",
 };

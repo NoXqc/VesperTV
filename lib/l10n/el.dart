@@ -2539,4 +2539,6 @@ const Map<String, String> kEl = {
   "Trailers": "Τρέιλερ",
   "Play trailers automatically on movie and show pages": "Αυτόματη αναπαραγωγή τρέιλερ στις σελίδες ταινιών και σειρών",
   "On Fire TV sticks, the trailer plays full screen.": "Στα Fire TV Stick το τρέιλερ παίζει σε πλήρη οθόνη.",
+  "Remove \"{title}\" from history?":
+      "Να αφαιρεθεί το «{title}» από το ιστορικό;",
 };
