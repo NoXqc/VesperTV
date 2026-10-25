@@ -23,6 +23,7 @@ class _Harness {
   final pending = <Completer<Uri?>>[];
   void Function(Object?)? event;
   int lookups = 0;
+  Widget child = const Center(key: ValueKey('details'), child: Text('Details'));
   bool deferred = false;
   Uri? result = _url;
   Future<void> Function(String)? execute;
@@ -53,8 +54,7 @@ class _Harness {
               return const ColoredBox(
                   key: ValueKey('preview'), color: Colors.blue);
             },
-            child:
-                const Center(key: ValueKey('details'), child: Text('Details')),
+            child: child,
           )));
 }
 
@@ -97,6 +97,52 @@ class _FakeVideo extends VideoPlayerPlatform {
 }
 
 void main() {
+  testWidgets(
+      'backdrop fade keeps Play focus and returns to artwork at trailer end',
+      (tester) async {
+    final node = FocusNode();
+    var pressed = 0;
+    final h = _Harness()
+      ..child = Center(
+          child: TextButton(
+              autofocus: true,
+              focusNode: node,
+              onPressed: () => pressed++,
+              child: const Text('Play')));
+    await tester.pumpWidget(h.page());
+    await tester.pumpAndSettle();
+    expect(node.hasFocus, isTrue);
+    h.event!({'type': 'playing'});
+    await tester.pumpAndSettle();
+    expect(node.hasFocus, isTrue);
+    expect(
+        tester
+            .widget<DetailTrailerBackdrop>(find.byType(DetailTrailerBackdrop))
+            .progress,
+        1);
+    await tester.tap(find.text('Play'));
+    expect(pressed, 1);
+    h.event!({'type': 'ended'});
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    final fading = tester
+        .widget<DetailTrailerBackdrop>(find.byType(DetailTrailerBackdrop))
+        .progress;
+    expect(fading, greaterThan(0));
+    expect(fading, lessThan(1));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('preview')), findsNothing);
+    expect(
+        tester
+            .widget<DetailTrailerBackdrop>(find.byType(DetailTrailerBackdrop))
+            .progress,
+        0);
+    expect(node.hasFocus, isTrue);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+    node.dispose();
+  });
+
   testWidgets('dialogs pause and dismissing restores the preview',
       (tester) async {
     final h = _Harness();
@@ -152,7 +198,7 @@ void main() {
   });
 
   for (final size in [const Size(1000, 600), const Size(400, 800)]) {
-    testWidgets('YouTube stays uncovered and at least 200x200 at $size',
+    testWidgets('trailer fills the backdrop without moving details at $size',
         (tester) async {
       tester.view.physicalSize = size;
       tester.view.devicePixelRatio = 1;
@@ -163,11 +209,33 @@ void main() {
       await tester.pumpAndSettle();
       final preview = tester.getRect(find.byKey(const ValueKey('preview')));
       final details = tester.getRect(find.byKey(const ValueKey('details')));
-      expect(preview.width, greaterThanOrEqualTo(200));
-      expect(preview.height, greaterThanOrEqualTo(200));
-      expect(preview.overlaps(details), isFalse);
+      expect(preview.size, size);
+      expect(preview.overlaps(details), isTrue);
+      expect(details.size, size);
+      expect(
+          tester
+              .widget<Opacity>(
+                  find.byKey(const ValueKey('detail-trailer-video')))
+              .opacity,
+          0);
       expect(h.documents.single.muted, isTrue);
       h.event!({'type': 'playing'});
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      final fading = tester
+          .widget<Opacity>(find.byKey(const ValueKey('detail-trailer-video')))
+          .opacity;
+      expect(fading, greaterThan(0));
+      expect(fading, lessThan(1));
+      await tester.pumpAndSettle();
+      expect(
+          tester
+              .widget<Opacity>(
+                  find.byKey(const ValueKey('detail-trailer-video')))
+              .opacity,
+          1);
+      expect(tester.getRect(find.byKey(const ValueKey('details'))), details);
+      expect(h.documents.single.controls, isFalse);
       await tester.pumpWidget(const SizedBox());
       await tester.pumpAndSettle();
       expect(h.scripts, contains('window.vesperPause();'));
@@ -348,7 +416,16 @@ void main() {
     }
     expect(stopped, isTrue);
     expect(video.calls.last, 'dispose');
-    expect(find.byType(DetailTrailerBackdrop), findsNothing);
+    expect(
+        tester
+            .widget<DetailTrailerBackdrop>(find.byType(DetailTrailerBackdrop))
+            .playing,
+        isFalse);
+    expect(
+        tester
+            .widget<DetailTrailerBackdrop>(find.byType(DetailTrailerBackdrop))
+            .progress,
+        0);
     await video.events.close();
   });
 }

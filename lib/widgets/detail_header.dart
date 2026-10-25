@@ -211,36 +211,39 @@ class DetailBackdrop extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final url = this.url;
-    final trailer = DetailTrailerBackdrop.active(context);
-    if (url == null && !trailer) {
-      return DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-            colors: [
-              Color.alphaBlend(
-                  scheme.primary.withValues(alpha: 0.16), Colors.black),
-              Colors.black,
-            ],
-          ),
-        ),
-      );
+    final progress = DetailTrailerBackdrop.progressOf(context);
+    if (url == null) {
+      return Opacity(
+          opacity: 1 - progress,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+                colors: [
+                  Color.alphaBlend(
+                      scheme.primary.withValues(alpha: 0.16), Colors.black),
+                  Colors.black,
+                ],
+              ),
+            ),
+          ));
     }
     return LayoutBuilder(builder: (context, c) {
       return RepaintBoundary(
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (!trailer)
-              HdSwapImage(
-                url: url!,
-                kind: ImageKind.backdrop,
-                decodeWidth:
-                    HdNetworkImage.screenDecodeWidth(context, c.maxWidth),
-                alignment: Alignment.topCenter,
-                fadeInDuration: const Duration(milliseconds: 300),
-              ),
+            Opacity(
+                opacity: 1 - progress,
+                child: HdSwapImage(
+                  url: url,
+                  kind: ImageKind.backdrop,
+                  decodeWidth:
+                      HdNetworkImage.screenDecodeWidth(context, c.maxWidth),
+                  alignment: Alignment.topCenter,
+                  fadeInDuration: const Duration(milliseconds: 300),
+                )),
             if (fadeLeft)
               const DecoratedBox(
                 decoration: BoxDecoration(
@@ -304,11 +307,20 @@ class DetailPoster extends StatelessWidget {
 }
 
 /// Keeps the existing readability gradients but replaces static artwork only
-/// while a direct trailer is actually mounted behind the detail content.
+/// while a trailer fades in behind the detail content.
 class DetailTrailerBackdrop extends InheritedWidget {
   const DetailTrailerBackdrop(
-      {super.key, required this.playing, required super.child});
+      {super.key,
+      required this.playing,
+      this.progress = 0,
+      required super.child});
   final bool playing;
+  final double progress;
+  static double progressOf(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<DetailTrailerBackdrop>()
+          ?.progress ??
+      0;
   static bool active(BuildContext context) =>
       context
           .dependOnInheritedWidgetOfExactType<DetailTrailerBackdrop>()
@@ -316,5 +328,5 @@ class DetailTrailerBackdrop extends InheritedWidget {
       false;
   @override
   bool updateShouldNotify(DetailTrailerBackdrop oldWidget) =>
-      oldWidget.playing != playing;
+      oldWidget.playing != playing || oldWidget.progress != progress;
 }

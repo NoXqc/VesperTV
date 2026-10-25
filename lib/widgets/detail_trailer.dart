@@ -40,7 +40,9 @@ class DetailTrailer extends StatefulWidget {
 }
 
 class DetailTrailerState extends State<DetailTrailer>
-    with RouteAware, WidgetsBindingObserver {
+    with RouteAware, WidgetsBindingObserver, SingleTickerProviderStateMixin {
+  late final _fade = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 650));
   var _playerKey = GlobalKey<_PreviewState>();
   PageRoute<void>? _route;
   Uri? _uri;
@@ -101,6 +103,7 @@ class DetailTrailerState extends State<DetailTrailer>
   /// pickers. Route notifications alone arrive too late for await play().
   Future<void> stop() async {
     _stopped = true;
+    _fade.reset();
     ++_generation;
     final closing = _closePlayer();
     if (mounted) setState(() => _uri = null);
@@ -120,6 +123,7 @@ class DetailTrailerState extends State<DetailTrailer>
     if (_signature == signature) return;
     _signature = signature;
     final generation = ++_generation;
+    _fade.reset();
     final closing = _closePlayer();
     setState(() {
       _uri = null;
@@ -153,7 +157,15 @@ class DetailTrailerState extends State<DetailTrailer>
   void _finish() {
     if (!mounted || _finished) return;
     _finished = true;
-    unawaited(_refresh());
+    unawaited(_returnToArtwork());
+  }
+
+  Future<void> _returnToArtwork() async {
+    final generation = _generation;
+    try {
+      await _fade.reverse().orCancel;
+      if (mounted && generation == _generation) await _refresh();
+    } on TickerCanceled {/* Leaving the page cancels the visual transition. */}
   }
 
   void _visibility(bool visible) {
@@ -179,53 +191,52 @@ class DetailTrailerState extends State<DetailTrailer>
     appRouteObserver.unsubscribe(this);
     WidgetsBinding.instance.removeObserver(this);
     unawaited(_closePlayer());
+    _fade.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final uri = _uri;
-    if (uri == null) return widget.child;
-    final youtube = TrailerLinks.videoId(uri.toString()) != null;
-    final preview = _Preview(
-        key: _playerKey,
-        uri: uri,
-        onFinished: _finish,
-        onPlaying: () {
-          if (mounted) setState(() => _picture = true);
-        },
-        youtubeBuilder: widget.youtubeBuilder);
-    if (!youtube) {
-      return Stack(fit: StackFit.expand, children: [
-        Positioned.fill(child: preview),
-        DetailTrailerBackdrop(playing: _picture, child: widget.child),
-      ]);
-    }
-    // YouTube's official player must stay visible, at least 200x200, with no
-    // details/gradients over its controls. Direct videos can be full backdrops.
-    return LayoutBuilder(builder: (context, c) {
-      if (c.maxWidth >= 900 && c.maxHeight >= 300) {
-        return Row(children: [
-          Expanded(flex: 3, child: widget.child),
-          Expanded(
-              flex: 2,
-              child: Center(
-                  child: SizedBox(
-                      width: c.maxWidth * .4,
-                      height:
-                          (c.maxWidth * .4 * 9 / 16).clamp(200, c.maxHeight),
-                      child: preview))),
-        ]);
-      }
-      if (c.maxHeight < 400 || c.maxWidth < 200) return widget.child;
-      return Column(children: [
-        SizedBox(
-            width: double.infinity,
-            height: (c.maxWidth * 9 / 16).clamp(200, c.maxHeight * .5),
-            child: preview),
-        Expanded(child: widget.child),
-      ]);
-    });
+    final preview = uri == null
+        ? null
+        : _Preview(
+            key: _playerKey,
+            uri: uri,
+            onFinished: _finish,
+            onPlaying: () {
+              if (!mounted || _picture) return;
+              _picture = true;
+              _fade.forward();
+            },
+            youtubeBuilder: widget.youtubeBuilder);
+    // Keep the detail subtree in the same place throughout lookup/playback so
+    // poster, text, scrolling and remote focus never jump to another layout.
+    return AnimatedBuilder(
+        animation: _fade,
+        builder: (context, _) {
+          final progress = Curves.easeInOut.transform(_fade.value);
+          return Stack(fit: StackFit.expand, children: [
+            Positioned.fill(
+                child: IgnorePointer(
+                    child: ExcludeFocus(
+                        child: Opacity(
+                            key: const ValueKey('detail-trailer-video'),
+                            opacity: progress,
+                            child: preview ?? const SizedBox.shrink())))),
+            Positioned.fill(
+                child: IgnorePointer(
+                    child: ColoredBox(
+                        color:
+                            Colors.black.withValues(alpha: .20 * progress)))),
+            Positioned.fill(
+                key: const ValueKey('detail-trailer-content'),
+                child: DetailTrailerBackdrop(
+                    playing: _picture && uri != null,
+                    progress: progress,
+                    child: widget.child)),
+          ]);
+        });
   }
 }
 
@@ -254,8 +265,9 @@ class _PreviewState extends State<_Preview> {
   Timer? _timeout;
   Future<void>? _closed;
   late final String? _youtube = TrailerLinks.videoId(widget.uri.toString());
-  late final YouTubeEmbedDocument? _document =
-      _youtube == null ? null : YouTubeEmbedDocument(_youtube, muted: true);
+  late final YouTubeEmbedDocument? _document = _youtube == null
+      ? null
+      : YouTubeEmbedDocument(_youtube, muted: true, controls: false);
   bool _ready = false;
 
   @override
@@ -308,7 +320,10 @@ class _PreviewState extends State<_Preview> {
 
   void _event(Object? event) {
     if (!mounted || _closed != null || event is! Map) return;
-    if (event['type'] == 'playing') _timeout?.cancel();
+    if (event['type'] == 'playing') {
+      _timeout?.cancel();
+      widget.onPlaying();
+    }
     if (event['type'] == 'error' || event['type'] == 'ended') {
       widget.onFinished();
     }
