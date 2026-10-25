@@ -72,12 +72,12 @@ class _MediaFileInfoOverlayState extends State<MediaFileInfoOverlay> {
                 child: Container(
                   constraints: BoxConstraints(
                       maxWidth:
-                          math.min(320, MediaQuery.sizeOf(context).width - 48)),
+                          math.min(240, MediaQuery.sizeOf(context).width - 48)),
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.78),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(9),
                     border:
                         Border.all(color: Colors.white.withValues(alpha: 0.18)),
                   ),
@@ -92,16 +92,19 @@ class _MediaFileInfoOverlayState extends State<MediaFileInfoOverlay> {
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 15,
+                              fontSize: 12,
+                              height: 1.2,
                               fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 3),
                       Text(
                           widget.info.formattedSize == null
                               ? tr('File size unavailable')
                               : tr('File size: {size}',
                                   {'size': widget.info.formattedSize!}),
                           style: const TextStyle(
-                              color: Colors.white70, fontSize: 14)),
+                              color: Colors.white70,
+                              fontSize: 11,
+                              height: 1.2)),
                     ],
                   ),
                 ),

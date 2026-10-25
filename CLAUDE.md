@@ -336,6 +336,14 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Codex compact source popup** (codex/compact-source-popup, 2026-10-25):
+  owner requests smaller Media Hub source/size cue, roughly three rows. Width
+  320 -> 240 logical pixels, padding 16/12 -> 10/8, source/size text 15/14 ->
+  12/11. Source wraps up to two lines above file size; same shared Android,
+  Windows and in-app YouTube overlay, 5-second timeout and focus unchanged.
+  No new strings, version bump, APK or install. Includes prior combined manager
+  commit f5baae0 as its parent; local main still 6d05ae4.
+
 - **Codex combined Playlist Manager** (codex/playlist-manager-panes, 2026-10-25):
   persistent playlist list and inline details on one route. D-pad highlighting
   selects details without enabling an account or changing playback; OK/click
