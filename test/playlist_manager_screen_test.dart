@@ -45,12 +45,18 @@ class _Playlists extends PlaylistManager {
   }
 }
 
-Future<_Playlists> _open(WidgetTester tester, Size size) async {
+Future<_Playlists> _open(WidgetTester tester, Size size,
+    {bool xtream = false}) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
   final playlists = _Playlists();
+  if (xtream) {
+    for (var i = 0; i < playlists.entries.length; i++) {
+      playlists.entries[i] = playlists.entries[i].copyWith(mode: 'xtream');
+    }
+  }
   final prefs = AppPreferences(StorageService())
     ..layoutMode = 'auto'
     ..palette = AppConstants.cyberpunkPalettes.first;
@@ -68,6 +74,40 @@ Future<_Playlists> _open(WidgetTester tester, Size size) async {
 Finder _row(String id) => find.byKey(ValueKey('playlist-row-$id'));
 
 void main() {
+  for (final size in [const Size(1280, 720), const Size(1920, 1080)]) {
+    testWidgets('Xtream enabled switch reachable across all panels at $size',
+        (tester) async {
+      final playlists = await _open(tester, size, xtream: true);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+      expect(FocusManager.instance.primaryFocus?.debugLabel, 'Playlist 2');
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+      expect(
+          FocusManager.instance.primaryFocus?.debugLabel, 'Playlist enabled');
+      expect(playlists.changes, isEmpty);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(playlists.entries.last.enabled, isTrue);
+      expect(playlists.changes, ['enable:2']);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+      expect(FocusManager.instance.primaryFocus?.debugLabel,
+          'Playlist content controls');
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pumpAndSettle();
+      expect(
+          FocusManager.instance.primaryFocus?.debugLabel, 'Playlist enabled');
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pumpAndSettle();
+      expect(FocusManager.instance.primaryFocus?.debugLabel, 'Playlist 2');
+      expect(playlists.changes, ['enable:2']);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('D-pad highlighting updates the pane without enabling a playlist',
       (tester) async {
     final playlists = await _open(tester, const Size(1440, 900));

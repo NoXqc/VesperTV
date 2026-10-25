@@ -35,6 +35,7 @@ class PlaylistManagerScreen extends StatefulWidget {
 class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
   String? _selectedId;
   final _detailsFocus = FocusScopeNode(debugLabel: 'Playlist details');
+  final _enabledFocus = FocusNode(debugLabel: 'Playlist enabled');
   final _listFocus = FocusScopeNode(debugLabel: 'Playlist list');
   final _playlistNodes = <String, FocusNode>{};
 
@@ -55,6 +56,7 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
 
   @override
   void dispose() {
+    _enabledFocus.dispose();
     _detailsFocus.dispose();
     _listFocus.dispose();
     for (final node in _playlistNodes.values) {
@@ -161,7 +163,7 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
                                   WidgetsBinding.instance
                                       .addPostFrameCallback((_) {
                                     if (mounted && _selectedId == profile.id) {
-                                      _detailsFocus.nextFocus();
+                                      _enabledFocus.requestFocus();
                                     }
                                   });
                                 },
@@ -191,13 +193,14 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
                           ? const SizedBox.expand()
                           : _PlaylistDetailsPane(
                               key: ValueKey(selectedId),
-                              playlistId: selectedId)),
+                              playlistId: selectedId,
+                              enabledFocus: _enabledFocus)),
                 );
                 final rail = FocusScope(
                     node: _listFocus,
                     child: CallbackShortcuts(bindings: {
                       const SingleActivator(LogicalKeyboardKey.arrowRight):
-                          () => _detailsFocus.nextFocus(),
+                          () => _enabledFocus.requestFocus(),
                     }, child: list));
                 return wide
                     ? Row(
@@ -221,15 +224,25 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
 }
 
 class _PlaylistDetailsPane extends StatefulWidget {
-  const _PlaylistDetailsPane({super.key, required this.playlistId});
+  const _PlaylistDetailsPane(
+      {super.key, required this.playlistId, required this.enabledFocus});
 
   final String playlistId;
+  final FocusNode enabledFocus;
 
   @override
   State<_PlaylistDetailsPane> createState() => _PlaylistDetailsPaneState();
 }
 
 class _PlaylistDetailsPaneState extends State<_PlaylistDetailsPane> {
+  final _contentFocus = FocusNode(debugLabel: 'Playlist content controls');
+
+  @override
+  void dispose() {
+    _contentFocus.dispose();
+    super.dispose();
+  }
+
   Future<void> _confirmDelete(
       PlaylistManager playlist, PlaylistProfile profile) async {
     final confirmed = await showDialog<bool>(
@@ -374,6 +387,8 @@ class _PlaylistDetailsPaneState extends State<_PlaylistDetailsPane> {
             child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: _PlaylistSections(
+            focusEnabled: widget.enabledFocus.requestFocus,
+            focusContent: _contentFocus.requestFocus,
             children: [
               Expanded(
                 child: Column(
@@ -385,6 +400,7 @@ class _PlaylistDetailsPaneState extends State<_PlaylistDetailsPane> {
                       padding: EdgeInsets.zero,
                       children: [
                         TvSwitchListTile(
+                          focusNode: widget.enabledFocus,
                           title: Text(tr('Playlist enabled')),
                           subtitle: Text(
                             tr('Frees up this account\'s stream slot for another device — stops playback here immediately, keeps everything else intact.'),
@@ -555,6 +571,7 @@ class _PlaylistDetailsPaneState extends State<_PlaylistDetailsPane> {
                         const SizedBox(height: 16),
                         OutlinedButton.icon(
                           icon: const Icon(Icons.visibility_outlined),
+                          focusNode: _contentFocus,
                           label: Text(tr('Group Management')),
                           onPressed: () => Navigator.of(context).push(
                             MaterialPageRoute(
@@ -667,12 +684,34 @@ class _PlaylistPanel extends StatelessWidget {
 
 /// Keep the detail quadrants readable after reserving space for the playlist rail.
 class _PlaylistSections extends StatelessWidget {
-  const _PlaylistSections({required this.children});
+  const _PlaylistSections(
+      {required this.children,
+      required this.focusEnabled,
+      required this.focusContent});
+  final VoidCallback focusEnabled;
+  final VoidCallback focusContent;
   final List<Expanded> children;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(builder: (context, c) {
-        final sections = children.map((w) => w.child).toList();
+        // Group each column; horizontal movement has
+        // concrete targets rather than skipping the tall enabled tile.
+        final sections = [
+          for (var i = 0; i < children.length; i++)
+            FocusTraversalGroup(
+              child: CallbackShortcuts(
+                bindings: {
+                  if (i == 0)
+                    const SingleActivator(LogicalKeyboardKey.arrowRight):
+                        focusContent
+                  else
+                    const SingleActivator(LogicalKeyboardKey.arrowLeft):
+                        focusEnabled,
+                },
+                child: children[i].child,
+              ),
+            ),
+        ];
         return c.maxWidth >= 640
             ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Expanded(child: sections[0]),

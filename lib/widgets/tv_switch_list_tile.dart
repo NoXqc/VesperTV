@@ -13,8 +13,10 @@ class TvSwitchListTile extends StatefulWidget {
     required this.value,
     required this.onChanged,
     this.subtitle,
+    this.focusNode,
   });
 
+  final FocusNode? focusNode;
   final Widget title;
   final Widget? subtitle;
   final bool value;
@@ -78,6 +80,7 @@ class _TvSwitchListTileState extends State<TvSwitchListTile> {
         active: false,
         borderRadius: 8,
         child: SwitchListTile(
+          focusNode: widget.focusNode,
           contentPadding: EdgeInsets.zero,
           onFocusChange: (f) => setState(() => _focused = f),
           title: DefaultTextStyle.merge(
