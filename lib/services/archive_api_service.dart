@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:crypto/crypto.dart';
 
 import '../models/archive_models.dart';
 
@@ -28,7 +29,25 @@ class ArchiveApiException implements Exception {
 /// [ArchiveCatalogProvider] for a stream-only source), stream calls to the
 /// source's own `baseUrl`.
 class ArchiveApiService {
-  ArchiveApiService({http.Client? client}) : _client = client ?? http.Client();
+  ArchiveApiService({http.Client? client, this.diagnostics})
+      : _client = client ?? http.Client();
+
+  final void Function(String)? diagnostics;
+
+  // Public title/catalog slugs are useful for replaying a failed request.
+  // Keep URLs, long opaque values and configured credentials out of logs.
+  static String diagnosticReference(String value) {
+    final simple = RegExp(
+        r'^(?:tt[0-9]+(?::[0-9]+:[0-9]+)?|[a-zA-Z0-9_-]{1,24}:[a-zA-Z0-9_.-]{1,24})$');
+    return simple.hasMatch(value)
+        ? value
+        : 'hash:${sha1.convert(utf8.encode(value)).toString().substring(0, 12)}';
+  }
+
+  static String _sourceKey(String baseUrl) => sha1
+      .convert(utf8.encode('$baseUrl/manifest.json'))
+      .toString()
+      .substring(0, 12);
 
   final http.Client _client;
   static const _timeout = Duration(seconds: 20);
@@ -211,7 +230,7 @@ class ArchiveApiService {
     });
     final j = await _getJson(Uri.parse(
         '$baseUrl/catalog/${_seg(catalog.wire)}/${_seg(catalog.id)}$extra.json'));
-    return [
+    final out = [
       for (final m in (j['metas'] as List? ?? const []))
         if (m is Map)
           if (ArchiveMeta.fromJson(Map<String, dynamic>.from(m),
@@ -219,6 +238,10 @@ class ArchiveApiService {
               case final meta?)
             meta,
     ];
+    diagnostics?.call('ArchiveCatalog: source=${_sourceKey(baseUrl)} '
+        'catalog=${diagnosticReference(catalog.id)} skip=$skip '
+        'raw=${(j['metas'] as List? ?? const []).length} accepted=${out.length}');
+    return out;
   }
 
   /// Full meta — needed for a series (its `videos` are the episodes) and
@@ -250,6 +273,13 @@ class ArchiveApiService {
       final stream = ArchiveStream.fromJson(s);
       if (stream != null) out.add(stream);
     }
+    final rows = (j['streams'] as List? ?? const []).whereType<Map>();
+    diagnostics?.call('ArchiveStreamResponse: source=${_sourceKey(baseUrl)} '
+        'ref=${diagnosticReference(videoId)} type=${wire ?? type.wire} '
+        'raw=${(j['streams'] as List? ?? const []).length} '
+        'urls=${rows.where((r) => r['url'] is String).length} '
+        'torrents=${rows.where((r) => r['infoHash'] != null).length} '
+        'accepted=${out.length}');
     return out;
   }
 

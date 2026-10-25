@@ -79,7 +79,7 @@ class ArchiveService extends ChangeNotifier {
       ArchiveCache? cache,
       MediaServerApi? servers,
       TrackerApi? trackers})
-      : _api = api ?? ArchiveApiService(),
+      : _api = api ?? ArchiveApiService(diagnostics: debugPrint),
         _cache = cache ?? ArchiveCache(),
         _servers = servers ?? MediaServerApi(),
         _trackers = trackers ?? TrackerApi();
@@ -253,14 +253,14 @@ class ArchiveService extends ChangeNotifier {
   /// Custom sources can replace their catalog ids without changing the
   /// manifest link. Re-read their definitions on open and explicit Refresh,
   /// keeping the saved definition if the source cannot answer.
-  Future<void> _recheckCustomOnlySources() async {
+  Future<void> _recheckCustomSources() async {
     for (final s in sources) {
       if (!s.enabled ||
           s.streamOnly ||
           s.server != null ||
           s.tracker != null ||
           s.catalogs.isEmpty ||
-          s.catalogs.any((c) => c.wireType == null)) {
+          !s.catalogs.any((c) => c.wireType != null)) {
         continue;
       }
       try {
@@ -277,9 +277,11 @@ class ArchiveService extends ChangeNotifier {
             enabled: saved.enabled, otherChoice: saved.otherChoice);
         if (jsonEncode(current[index].toJson()) != jsonEncode(saved.toJson())) {
           await _saveSources(current);
-          debugPrint('ArchiveManifest: source=${s.key} '
-              'catalogs=${fresh.catalogs.length} updated');
         }
+        debugPrint('ArchiveManifest: source=${s.key} '
+            'catalogs=${fresh.catalogs.length} '
+            'custom=${fresh.catalogs.where((c) => c.wireType != null).length} '
+            'genres=${fresh.catalogs.expand((c) => c.genres).toSet().length} checked');
       } catch (e) {
         debugPrint('ArchiveManifest: source=${s.key} '
             'failed=${e.runtimeType}; keeping saved catalogs');
@@ -793,7 +795,7 @@ class ArchiveService extends ChangeNotifier {
   Future<void> open() async {
     if (!_loadedFromCache) {
       _loadedFromCache = true;
-      await _recheckCustomOnlySources();
+      await _recheckCustomSources();
       for (final type in ArchiveType.values) {
         for (final (s, c) in _catalogs(type)) {
           try {
@@ -821,7 +823,7 @@ class ArchiveService extends ChangeNotifier {
     lastError = null;
     _notify();
     try {
-      if (force) await _recheckCustomOnlySources();
+      if (force) await _recheckCustomSources();
       for (final type in ArchiveType.values) {
         for (final (s, c) in _catalogs(type)) {
           final key = _rowKey(s, c);

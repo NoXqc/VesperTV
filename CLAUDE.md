@@ -337,6 +337,14 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 
 ## 13. Status & open items (as of 2026-10-24)
 
+- **Codex diagnostic follow-up +448 (2026-10-25):** LOG-9XBM8M finally captures the custom
+  source with type AdultVideo, playable=0. Rendering has not started for this failure.
+  Genre menu deliberately excludes genres of sources grouped under Other; Other alone does
+  not prove a catalog/type mismatch (or a native-video problem). Source checks from desktop
+  still succeed; device playback root cause remains unresolved. Log raw vs accepted catalog/stream
+  counts, manifest counts even when unchanged, and short public lookup references (URLs and long
+  opaque ids hashed). Refresh now includes mixed standard/custom catalogs, previously skipped.
+
 - **Codex, 2026-10-25: custom Media Hub source investigation** (`codex/custom-source-refresh`).
   +446 owner log shows custom rows empty; exact playback failure remains unconfirmed.
   Owner clarified adult source says "No playable stream", distinct from Torrentio upstream

@@ -206,4 +206,95 @@ void main() {
       api.close();
     }
   });
+  test('mixed standard and custom catalogs also refresh their definitions',
+      () async {
+    final storage = await _storage();
+    await storage.setArchiveSourcesJson(jsonEncode([
+      _old.copyWith(catalogs: [
+        ..._old.catalogs,
+        const ArchiveCatalog(
+            type: ArchiveType.movie, id: 'standard', name: 'Standard'),
+      ]).toJson(),
+    ]));
+    final api = ArchiveApiService(
+        client: MockClient((request) async =>
+            request.url.path == '/manifest.json' ? _manifest() : _catalog()));
+    final service = ArchiveService(storage, api: api, cache: _Cache());
+    await service.refresh(force: true);
+    expect(service.sources.single.catalogs.single.id, 'current');
+    expect(service.rows(ArchiveType.movie).single.items, hasLength(1));
+    service.dispose();
+    api.close();
+  });
+
+  test('stream diagnostics distinguish empty responses from rejected entries',
+      () async {
+    final logs = <String>[];
+    var empty = false;
+    final api = ArchiveApiService(
+        diagnostics: logs.add,
+        client: MockClient((request) async => http.Response(
+            jsonEncode({
+              'streams': empty
+                  ? []
+                  : [
+                      {
+                        'url':
+                            'https://cdn.example/video.m3u8?token=private-token'
+                      },
+                      {'infoHash': 'sample-torrent-hash'},
+                      {'externalUrl': 'https://external.example'},
+                    ],
+            }),
+            200)));
+    final options = await api.fetchStreams('https://source.example/private-key',
+        ArchiveType.movie, 'own:sample-12',
+        wire: 'CustomVideo');
+    expect(options, hasLength(1));
+    expect(logs.single, contains('ref=own:sample-12'));
+    expect(logs.single, contains('raw=3 urls=1 torrents=1 accepted=1'));
+    empty = true;
+    await api.fetchStreams('https://source.example/private-key',
+        ArchiveType.movie, 'own:sample-12',
+        wire: 'CustomVideo');
+    expect(logs.last, contains('raw=0 urls=0 torrents=0 accepted=0'));
+    expect(logs.join(), isNot(contains('private-key')));
+    expect(logs.join(), isNot(contains('private-token')));
+    expect(logs.join(), isNot(contains('source.example')));
+    api.close();
+  });
+
+  test(
+      'catalog diagnostics expose discarded metadata without catalog credentials',
+      () async {
+    final logs = <String>[];
+    final api = ArchiveApiService(
+        diagnostics: logs.add,
+        client: MockClient((request) async => http.Response(
+            jsonEncode({
+              'metas': [
+                {'id': 'own:1'}
+              ],
+            }),
+            200)));
+    final items = await api.fetchCatalog(
+        'https://source.example/private-key', _old.catalogs.single);
+    expect(items, isEmpty);
+    expect(logs.single, contains('raw=1 accepted=0'));
+    expect(logs.single, isNot(contains('private-key')));
+    api.close();
+  });
+
+  test('lookup references exclude URLs and long opaque identifiers', () {
+    expect(ArchiveApiService.diagnosticReference('tt123:1:2'), 'tt123:1:2');
+    for (final value in [
+      'https://source.example?token=secret',
+      'own:1234567890123456789012345678901234567890',
+      'opaque-private-value',
+    ]) {
+      expect(ArchiveApiService.diagnosticReference(value), startsWith('hash:'));
+      expect(
+          ArchiveApiService.diagnosticReference(value), isNot(contains(value)));
+    }
+  });
 }
