@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nox_iptv/models/media_file_info.dart';
+import 'package:nox_iptv/widgets/media_file_info_overlay.dart';
 import 'package:nox_iptv/models/archive_models.dart';
 import 'package:nox_iptv/models/channel.dart';
 import 'package:nox_iptv/models/youtube_embed.dart';
@@ -65,6 +67,8 @@ void main() {
                     builder: (_) => YouTubePlayerScreen(
                           videoId: id,
                           title: 'User trailer',
+                          mediaFileInfo: const MediaFileInfo(
+                              source: 'TB+', sizeBytes: 3200000000),
                           television: true,
                           viewBuilder: (document, controller, onEvent) {
                             controller((script) async {
@@ -87,6 +91,15 @@ void main() {
       await tester.sendKeyEvent(key);
       await tester.pump();
     }
+    expect(find.text('Source: TB+'), findsOneWidget);
+    expect(find.text('File size: 3.2 GB'), findsOneWidget);
+    expect(
+        tester
+            .widget<AnimatedOpacity>(find.descendant(
+                of: find.byType(MediaFileInfoOverlay),
+                matching: find.byType(AnimatedOpacity)))
+            .opacity,
+        1);
     expect(scripts, [
       'window.vesperToggle();',
       'window.vesperSeek(-10);',

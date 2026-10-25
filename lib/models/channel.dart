@@ -1,3 +1,5 @@
+import 'media_file_info.dart';
+
 /// A manual cross-playlist link — see
 /// `AppConstants.keyChannelLinks`'s doc comment. Identifies another
 /// [Channel] by its own (playlistId, rawId), the same pair
@@ -32,6 +34,7 @@ class Channel {
     this.providerPosterUrl,
     this.providerBackdropUrl,
     this.transientPlayback = false,
+    this.mediaFileInfo,
   });
 
   /// Stable identifier: the M3U `tvg-id` when present (used to match EPG
@@ -67,6 +70,9 @@ class Channel {
   /// One-off trailer playback: no library history, resume or watch tracking.
   /// In memory only; trailers are never persisted as catalog entries.
   final bool transientPlayback;
+
+  /// Selected Media Hub file, in memory only; refreshed when streams resolve.
+  final MediaFileInfo? mediaFileInfo;
 
   factory Channel.trailer({required String title, required String url}) {
     final raw = 'arc_vod_trailer_${DateTime.now().microsecondsSinceEpoch}';
@@ -242,7 +248,8 @@ class Channel {
           String? id,
           String? rawId,
           String? epgKey,
-          String? url}) =>
+          String? url,
+          MediaFileInfo? mediaFileInfo}) =>
       Channel(
         id: id ?? this.id,
         rawId: rawId ?? this.rawId,
@@ -267,6 +274,7 @@ class Channel {
         providerPosterUrl: providerPosterUrl,
         providerBackdropUrl: providerBackdropUrl,
         transientPlayback: transientPlayback,
+        mediaFileInfo: mediaFileInfo ?? this.mediaFileInfo,
       );
 
   Map<String, dynamic> toJson() => {

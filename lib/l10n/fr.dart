@@ -1918,4 +1918,7 @@ const Map<String, String> kFr = {
       "Afficher le guide horaire sur tout l’écran",
   "The live channel fills the screen behind a see-through guide":
       "La chaîne en direct remplit l’écran derrière un guide transparent",
+  "Source: {source}": "Source : {source}",
+  "File size: {size}": "Taille du fichier : {size}",
+  "File size unavailable": "Taille du fichier indisponible",
 };

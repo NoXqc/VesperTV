@@ -1919,4 +1919,7 @@ const Map<String, String> kIt = {
       "Riempi lo schermo con la guida dei programmi",
   "The live channel fills the screen behind a see-through guide":
       "Il canale in diretta riempie lo schermo dietro una guida semitrasparente",
+  "Source: {source}": "Fonte: {source}",
+  "File size: {size}": "Dimensione del file: {size}",
+  "File size unavailable": "Dimensione del file non disponibile",
 };

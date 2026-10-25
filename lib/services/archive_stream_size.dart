@@ -1,4 +1,5 @@
 import 'archive_service.dart';
+import '../models/media_file_info.dart';
 
 /// Prefer structured bytes; many add-ons only supply a labelled size.
 int archiveStreamBytes(ArchiveStreamOption option) {
@@ -17,6 +18,22 @@ int archiveStreamBytes(ArchiveStreamOption option) {
     bytes *= base;
   }
   return bytes.round();
+}
+
+/// Metadata follows the selected stream provider, not the catalog's source.
+MediaFileInfo archiveMediaFileInfo(ArchiveStreamOption option) {
+  String label(String text) => text
+      .replaceAll(RegExp(r'https?://\S+', caseSensitive: false), '')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+  // Provider labels are safe to show; transport URLs can contain access tokens.
+  final name = label(option.stream.name ?? '');
+  final fallback = label(option.source.name);
+  final bytes = archiveStreamBytes(option);
+  return MediaFileInfo(
+      source:
+          name.isNotEmpty ? name : (fallback.isEmpty ? 'Media Hub' : fallback),
+      sizeBytes: bytes > 0 ? bytes : null);
 }
 
 /// Unknown sizes retain the picker. Equal sizes preserve provider order.

@@ -24,6 +24,7 @@ import '../widgets/player_side_panel.dart';
 import 'multiview_screen.dart';
 import 'search_screen.dart';
 import '../l10n/l10n.dart';
+import '../widgets/media_file_info_overlay.dart';
 
 /// Fullscreen playback screen. Pushed when a channel is tapped on a phone,
 /// or when the mini-player bar is tapped to expand back into fullscreen —
@@ -80,6 +81,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
   /// collapsed again next time it's revealed.
   bool _moreVisible = false;
   Timer? _hideTimer;
+
+  /// Request counter for the independent Media Hub selected-file cue.
+  final _fileInfoRequests = ValueNotifier<int>(0);
 
   /// CH+/CH- info card ([_ZapInfoCard]) — separate from the top bar so a
   /// zap shows what's on without moving focus or the bars.
@@ -336,6 +340,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
       _closePanel();
       return;
     }
+    if ((_playback.currentChannel ?? widget.channel).mediaFileInfo != null) {
+      _fileInfoRequests.value++;
+    }
     // Phone/tablet: a tap shows both bars (the top one holds the
     // fullscreen button, which turns the phone landscape without the
     // system rotation lock), and a second tap hides them again.
@@ -433,6 +440,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   void _toggleInfoCard() {
     if (_panelOpen) return;
     final current = _playback.currentChannel ?? widget.channel;
+    if (current.mediaFileInfo != null) _fileInfoRequests.value++;
     final live = Channel.isLiveId(current.rawId);
     final dataPool = context.read<AppPreferences>().dataPool;
     if (!live && !dataPool) return;
@@ -540,6 +548,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _hideTimer?.cancel();
     _zapInfoTimer?.cancel();
     _dataPoolTimer?.cancel();
+    _fileInfoRequests.dispose();
     _topScope.removeListener(_onBarFocusChange);
     _bottomScope.removeListener(_onBarFocusChange);
     _switchButtonFocus.removeListener(_onBarFocusChange);
@@ -793,6 +802,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
                           ),
                         ),
 
+                        if (channel.mediaFileInfo case final info?)
+                          MediaFileInfoOverlay(
+                            key: ValueKey('file-info-${channel.id}'),
+                            top: _touch ? 72 : 16,
+                            info: info,
+                            requests: _fileInfoRequests,
+                          ),
                         // CH+/CH- and OK channel information stay at the top.
                         Positioned(
                           top: 24,

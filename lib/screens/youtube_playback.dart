@@ -3,12 +3,13 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/youtube_embed.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/media_file_info.dart';
 import '../services/desktop_mini_player.dart';
 import '../services/playback_service.dart';
 import 'youtube_player_screen.dart';
 
-Future<void> playYouTubeVideo(
-    BuildContext context, String id, String title) async {
+Future<void> playYouTubeVideo(BuildContext context, String id, String title,
+    {MediaFileInfo? mediaFileInfo}) async {
   if (!Platform.isAndroid && !Platform.isWindows) {
     await launchUrl(YouTubeEmbedDocument(id).externalUrl,
         mode: LaunchMode.externalApplication);
@@ -21,5 +22,6 @@ Future<void> playYouTubeVideo(
   }
   if (!context.mounted) return;
   await Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => YouTubePlayerScreen(videoId: id, title: title)));
+      builder: (_) => YouTubePlayerScreen(
+          videoId: id, title: title, mediaFileInfo: mediaFileInfo)));
 }

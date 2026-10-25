@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../l10n/l10n.dart';
+import '../models/media_file_info.dart';
+import '../widgets/media_file_info_overlay.dart';
 import '../models/youtube_embed.dart';
 import '../services/device_memory_service.dart';
 import '../widgets/youtube_platform_view.dart';
@@ -17,7 +19,9 @@ class YouTubePlayerScreen extends StatefulWidget {
       required this.title,
       this.viewBuilder,
       this.openExternal,
-      this.television});
+      this.television,
+      this.mediaFileInfo});
+  final MediaFileInfo? mediaFileInfo;
   final String videoId;
   final String title;
   final YouTubeViewBuilder? viewBuilder;
@@ -30,6 +34,7 @@ class YouTubePlayerScreen extends StatefulWidget {
 class _YouTubePlayerScreenState extends State<YouTubePlayerScreen>
     with WidgetsBindingObserver {
   late final _document = YouTubeEmbedDocument(widget.videoId);
+  final _fileInfoRequests = ValueNotifier<int>(0);
   final _focus = FocusNode(debugLabel: 'youtube-remote');
   Future<void> Function(String)? _execute;
   Timer? _timeout;
@@ -50,6 +55,9 @@ class _YouTubePlayerScreenState extends State<YouTubePlayerScreen>
   }
 
   Future<void> _command(String command) async {
+    if (command == 'toggle' && widget.mediaFileInfo != null) {
+      _fileInfoRequests.value++;
+    }
     try {
       await _execute
           ?.call(YouTubeEmbedDocument.command(command))
@@ -102,6 +110,7 @@ class _YouTubePlayerScreenState extends State<YouTubePlayerScreen>
     _timeout?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _focus.dispose();
+    _fileInfoRequests.dispose();
     super.dispose();
   }
 
@@ -132,6 +141,7 @@ class _YouTubePlayerScreenState extends State<YouTubePlayerScreen>
             : [
                 LogicalKeyboardKey.select,
                 LogicalKeyboardKey.enter,
+                LogicalKeyboardKey.numpadEnter,
                 LogicalKeyboardKey.space,
                 LogicalKeyboardKey.mediaPlayPause
               ].contains(key)
@@ -216,6 +226,9 @@ class _YouTubePlayerScreenState extends State<YouTubePlayerScreen>
                                                                   _execute =
                                                                       execute,
                                                           onEvent: _event)))))),
+                              if (widget.mediaFileInfo case final info?)
+                                MediaFileInfoOverlay(
+                                    info: info, requests: _fileInfoRequests),
                               if (_loading)
                                 const Center(
                                     child: CircularProgressIndicator()),

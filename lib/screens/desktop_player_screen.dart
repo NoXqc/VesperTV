@@ -18,6 +18,7 @@ import '../services/storage_service.dart';
 import '../services/archive_ready_watch.dart';
 import '../services/watch_tracker.dart';
 import '../l10n/l10n.dart';
+import '../widgets/media_file_info_overlay.dart';
 import '../widgets/player_side_panel.dart';
 import '../widgets/desktop_subtitles.dart';
 import '../widgets/player_bar_title.dart';
@@ -107,6 +108,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   late final VideoController _videoController;
   late Channel _currentChannel;
   bool _controlsVisible = true;
+  final _fileInfoRequests = ValueNotifier<int>(0);
 
   /// [PlayerSidePanel] (Last channels / My Teams / Live now) on a live
   /// channel: the left-edge tab or the Left key opens it, Esc / a click on
@@ -252,6 +254,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
 
   @override
   void dispose() {
+    _fileInfoRequests.dispose();
     if (!_handedOffToMiniPlayer) _reportStopped();
     _completedSubscription?.cancel();
     _heightSubscription?.cancel();
@@ -563,6 +566,17 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
           focusNode: _rootFocus,
           autofocus: true,
           onKeyEvent: (_, event) {
+            if (event is KeyDownEvent &&
+                _rootFocus.hasPrimaryFocus &&
+                _currentChannel.mediaFileInfo != null &&
+                [
+                  LogicalKeyboardKey.select,
+                  LogicalKeyboardKey.enter,
+                  LogicalKeyboardKey.numpadEnter
+                ].contains(event.logicalKey)) {
+              _fileInfoRequests.value++;
+              return KeyEventResult.handled;
+            }
             // M = mute / unmute, like most desktop players.
             if (event is KeyDownEvent &&
                 event.logicalKey == LogicalKeyboardKey.keyM) {
@@ -581,9 +595,16 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
             return KeyEventResult.ignored;
           },
           child: GestureDetector(
-            onTap: () => _panelOpen
-                ? _closePanel()
-                : setState(() => _controlsVisible = !_controlsVisible),
+            onTap: () {
+              if (_panelOpen) {
+                _closePanel();
+                return;
+              }
+              if (_currentChannel.mediaFileInfo != null) {
+                _fileInfoRequests.value++;
+              }
+              setState(() => _controlsVisible = !_controlsVisible);
+            },
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -661,6 +682,11 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                       ),
                     ),
                 ],
+                if (_currentChannel.mediaFileInfo case final info?)
+                  MediaFileInfoOverlay(
+                      key: ValueKey('file-info-${_currentChannel.id}'),
+                      info: info,
+                      requests: _fileInfoRequests),
                 if (_panelOpen)
                   Positioned(
                     left: 0,

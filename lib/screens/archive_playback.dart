@@ -187,11 +187,13 @@ Future<void> playArchiveTitle(
     return;
   }
   if (picked.stream.ytId case final video?) {
-    await playYouTubeVideo(context, video, meta.name);
+    await playYouTubeVideo(context, video, meta.name,
+        mediaFileInfo: archiveMediaFileInfo(picked));
     return;
   }
-  final tracked =
-      service.channelFor(source, meta, picked.stream, episode: episode);
+  final tracked = service
+      .channelFor(source, meta, picked.stream, episode: episode)
+      .copyWith(mediaFileInfo: archiveMediaFileInfo(picked));
   _track(tracked, meta, episode);
   final channel = tracked.copyWith(url: restored.url ?? await _playUrl(picked));
   try {
@@ -219,7 +221,9 @@ Future<void> playArchiveTitle(
     await nextResume.remember(o);
     if (o.stream.ytId != null) return null;
     picked = o; // the episode after follows this one
-    final ch = service.channelFor(source, meta, o.stream, episode: video);
+    final ch = service
+        .channelFor(source, meta, o.stream, episode: video)
+        .copyWith(mediaFileInfo: archiveMediaFileInfo(o));
     _track(ch, meta, video);
     return ch.copyWith(url: restoredNext.url ?? await _playUrl(o));
   }

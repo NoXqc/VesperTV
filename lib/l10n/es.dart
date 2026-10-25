@@ -1915,4 +1915,7 @@ const Map<String, String> kEs = {
       "Llenar la pantalla con la guía de programación",
   "The live channel fills the screen behind a see-through guide":
       "El canal en directo ocupa toda la pantalla detrás de una guía semitransparente",
+  "Source: {source}": "Fuente: {source}",
+  "File size: {size}": "Tamaño del archivo: {size}",
+  "File size unavailable": "Tamaño del archivo no disponible",
 };

@@ -2527,4 +2527,7 @@ const Map<String, String> kEl = {
       "Γεμίστε την οθόνη με τον οδηγό προγράμματος",
   "The live channel fills the screen behind a see-through guide":
       "Το ζωντανό κανάλι γεμίζει την οθόνη πίσω από έναν ημιδιαφανή οδηγό",
+  "Source: {source}": "Πηγή: {source}",
+  "File size: {size}": "Μέγεθος αρχείου: {size}",
+  "File size unavailable": "Μη διαθέσιμο μέγεθος αρχείου",
 };
