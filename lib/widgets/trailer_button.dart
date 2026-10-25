@@ -21,6 +21,7 @@ class TrailerButton extends StatefulWidget {
       required this.focusNode,
       this.scale = 1,
       this.onFocused,
+      this.beforeOpen,
       this.service,
       this.available,
       this.open});
@@ -28,6 +29,7 @@ class TrailerButton extends StatefulWidget {
   final FocusNode focusNode;
   final double scale;
   final VoidCallback? onFocused;
+  final Future<void> Function()? beforeOpen;
   final TrailerService? service;
   final Future<bool> Function(Uri)? available;
   final Future<bool> Function(Uri)? open;
@@ -77,6 +79,8 @@ class _TrailerButtonState extends State<TrailerButton> {
     if (url == null || _launching) return;
     _launching = true;
     try {
+      await widget.beforeOpen?.call();
+      if (!mounted) return;
       if (Platform.isWindows) {
         await DesktopMiniPlayer.instance.controller?.player.pause();
       } else {

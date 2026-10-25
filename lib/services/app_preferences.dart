@@ -327,6 +327,14 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Device-only: trailer playback while browsing movie/show details, opt-in.
+  bool get autoTrailers => _storage.getAutoTrailers();
+
+  void setAutoTrailers(bool value) {
+    _storage.setAutoTrailers(value);
+    notifyListeners();
+  }
+
   void setGuideExpanded(bool value) {
     guideExpanded = value;
     _storage.setGuideExpanded(value);

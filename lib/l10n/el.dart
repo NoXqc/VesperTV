@@ -2530,4 +2530,9 @@ const Map<String, String> kEl = {
   "Source: {source}": "Πηγή: {source}",
   "File size: {size}": "Μέγεθος αρχείου: {size}",
   "File size unavailable": "Μη διαθέσιμο μέγεθος αρχείου",
+
+  // Automatic detail trailers.
+  "Automatic trailers": "Αυτόματα τρέιλερ",
+  "Play available trailers automatically on IPTV and Media Hub movie and show pages. Starts muted.":
+      "Αυτόματη αναπαραγωγή διαθέσιμων τρέιλερ στις σελίδες ταινιών και σειρών IPTV και Media Hub. Ξεκινούν χωρίς ήχο.",
 };

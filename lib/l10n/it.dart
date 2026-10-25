@@ -1922,4 +1922,9 @@ const Map<String, String> kIt = {
   "Source: {source}": "Fonte: {source}",
   "File size: {size}": "Dimensione del file: {size}",
   "File size unavailable": "Dimensione del file non disponibile",
+
+  // Automatic detail trailers.
+  "Automatic trailers": "Trailer automatici",
+  "Play available trailers automatically on IPTV and Media Hub movie and show pages. Starts muted.":
+      "Riproduci automaticamente i trailer disponibili nelle pagine di film e serie IPTV e Media Hub. Avvio senza audio.",
 };

@@ -574,6 +574,11 @@ class StorageService {
   Future<void> setGuideFullVideo(bool value) =>
       _prefs.setBool(AppConstants.keyGuideFullVideo, value);
 
+  bool getAutoTrailers() =>
+      _prefs.getBool(AppConstants.keyAutoTrailers) ?? false;
+  Future<void> setAutoTrailers(bool value) =>
+      _prefs.setBool(AppConstants.keyAutoTrailers, value);
+
   bool getGuideExpanded() =>
       _prefs.getBool(AppConstants.keyGuideExpanded) ?? false;
   Future<void> setGuideExpanded(bool value) =>
@@ -945,6 +950,7 @@ class StorageService {
     AppConstants.keyDesktopVolume,
     AppConstants.keyDesktopMuted,
     AppConstants.keyVideoFill,
+    AppConstants.keyAutoTrailers,
     AppConstants.keyHideVideoOnSports,
     AppConstants.keyCompatVideo,
     AppConstants.keyAudioPassthrough,

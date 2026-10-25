@@ -4,11 +4,12 @@ import 'trailer.dart';
 /// Only a validated id and public app origin enter the official YouTube player.
 /// No stream extraction, API key, add-on URL or playback credentials are used.
 class YouTubeEmbedDocument {
-  YouTubeEmbedDocument(String video)
+  YouTubeEmbedDocument(String video, {this.muted = false})
       : videoId = TrailerLinks.videoId(video) ??
             (throw ArgumentError('Invalid YouTube video id'));
 
   final String videoId;
+  final bool muted;
   static final url = Uri.parse('https://vespertv.app/_local/youtube.html');
   Uri get externalUrl => Uri.https('www.youtube.com', '/watch', {'v': videoId});
   static bool needsExternalPlayer(int error) => error == 101 || error == 150;
@@ -36,7 +37,8 @@ window.addEventListener('flutterInAppWebViewPlatformReady',window.vesperBridgeCo
 function onYouTubeIframeAPIReady(){player=new YT.Player('player',{
   width:'100%',height:'100%',videoId:${jsonEncode(videoId)},
   playerVars:{autoplay:1,controls:1,disablekb:1,playsinline:1,origin:'https://vespertv.app'},
-  events:{onReady:function(){report({type:'ready'});player.playVideo();},
+  events:{onReady:function(){${muted ? 'player.mute();' : ''}report({type:'ready'});player.playVideo();},
+    onStateChange:function(event){if(event.data===1){report({type:'playing'});}if(event.data===0){report({type:'ended'});}},
     onError:function(event){report({type:'error',code:event.data});}}
 });}
 window.vesperToggle=function(){if(player&&player.getPlayerState){

@@ -211,7 +211,8 @@ class DetailBackdrop extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final url = this.url;
-    if (url == null) {
+    final trailer = DetailTrailerBackdrop.active(context);
+    if (url == null && !trailer) {
       return DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -231,14 +232,15 @@ class DetailBackdrop extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            HdSwapImage(
-              url: url,
-              kind: ImageKind.backdrop,
-              decodeWidth:
-                  HdNetworkImage.screenDecodeWidth(context, c.maxWidth),
-              alignment: Alignment.topCenter,
-              fadeInDuration: const Duration(milliseconds: 300),
-            ),
+            if (!trailer)
+              HdSwapImage(
+                url: url!,
+                kind: ImageKind.backdrop,
+                decodeWidth:
+                    HdNetworkImage.screenDecodeWidth(context, c.maxWidth),
+                alignment: Alignment.topCenter,
+                fadeInDuration: const Duration(milliseconds: 300),
+              ),
             if (fadeLeft)
               const DecoratedBox(
                 decoration: BoxDecoration(
@@ -299,4 +301,20 @@ class DetailPoster extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Keeps the existing readability gradients but replaces static artwork only
+/// while a direct trailer is actually mounted behind the detail content.
+class DetailTrailerBackdrop extends InheritedWidget {
+  const DetailTrailerBackdrop(
+      {super.key, required this.playing, required super.child});
+  final bool playing;
+  static bool active(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<DetailTrailerBackdrop>()
+          ?.playing ??
+      false;
+  @override
+  bool updateShouldNotify(DetailTrailerBackdrop oldWidget) =>
+      oldWidget.playing != playing;
 }

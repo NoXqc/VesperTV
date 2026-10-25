@@ -1,3 +1,5 @@
+import '../widgets/detail_trailer.dart';
+import '../services/app_preferences.dart';
 import '../widgets/trailer_button.dart';
 import '../services/trailer_service.dart';
 import 'dart:io';
@@ -32,6 +34,18 @@ class ArchiveDetailScreen extends StatefulWidget {
 }
 
 class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
+  final _backgroundTrailer = GlobalKey<DetailTrailerState>();
+  TrailerRequest get _trailerRequest => TrailerRequest(
+      title: _meta.name,
+      series: false,
+      year: int.tryParse(_meta.year ?? ''),
+      imdbId: _meta.imdb,
+      supplied: widget.source.suppliesOwnMetadata ? _meta.trailers : const [],
+      suppliedStreams:
+          widget.source.suppliesOwnMetadata ? _meta.trailerStreams : const [],
+      language: L10n.code,
+      tmdbKey: context.read<StorageService>().getTmdbApiKey() ?? '');
+
   final _trailerNode = FocusNode(debugLabel: 'trailer');
   final _playNode = FocusNode(debugLabel: 'archive-play');
   final _restartNode = FocusNode(debugLabel: 'archive-restart');
@@ -88,6 +102,8 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
 
   Future<void> _play({bool restart = false}) async {
     if (_starting) return;
+    await _backgroundTrailer.currentState?.stop();
+    if (!mounted || _starting) return;
     setState(() => _starting = true);
     if (restart) {
       await context.read<StorageService>().setLastPosition(
@@ -117,43 +133,48 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
       },
       child: Scaffold(
         backgroundColor: Colors.black,
-        body: Stack(
-          children: [
-            Positioned.fill(
-              child: DetailBackdrop(
-                  url: backdrop ?? meta.posterUrl, fadeLeft: !narrow),
-            ),
-            SafeArea(
-              child: ListView(
-                padding: EdgeInsets.fromLTRB(
-                    narrow ? 16 : 40, narrow ? 8 : 32, narrow ? 16 : 40, 32),
-                children: [
-                  if (narrow || Platform.isWindows)
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: ExcludeFocus(
-                        excluding: !narrow,
-                        child: IconButton(
-                          tooltip: tr('Back'),
-                          icon: const Icon(Icons.arrow_back),
-                          onPressed: () => Navigator.of(context).maybePop(),
+        body: DetailTrailer(
+          key: _backgroundTrailer,
+          enabled: context.watch<AppPreferences?>()?.autoTrailers ?? false,
+          request: _trailerRequest,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: DetailBackdrop(
+                    url: backdrop ?? meta.posterUrl, fadeLeft: !narrow),
+              ),
+              SafeArea(
+                child: ListView(
+                  padding: EdgeInsets.fromLTRB(
+                      narrow ? 16 : 40, narrow ? 8 : 32, narrow ? 16 : 40, 32),
+                  children: [
+                    if (narrow || Platform.isWindows)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: ExcludeFocus(
+                          excluding: !narrow,
+                          child: IconButton(
+                            tooltip: tr('Back'),
+                            icon: const Icon(Icons.arrow_back),
+                            onPressed: () => Navigator.of(context).maybePop(),
+                          ),
                         ),
                       ),
-                    ),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (meta.posterUrl != null && !narrow) ...[
-                        DetailPoster(url: meta.posterUrl!, width: 150),
-                        const SizedBox(width: 24),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (meta.posterUrl != null && !narrow) ...[
+                          DetailPoster(url: meta.posterUrl!, width: 150),
+                          const SizedBox(width: 24),
+                        ],
+                        Expanded(child: _buildInfo(meta)),
                       ],
-                      Expanded(child: _buildInfo(meta)),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -218,20 +239,8 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
           ),
           TrailerButton(
               focusNode: _trailerNode,
-              request: TrailerRequest(
-                  title: meta.name,
-                  series: false,
-                  year: int.tryParse(meta.year ?? ''),
-                  imdbId: meta.imdb,
-                  supplied: widget.source.suppliesOwnMetadata
-                      ? meta.trailers
-                      : const [],
-                  suppliedStreams: widget.source.suppliesOwnMetadata
-                      ? meta.trailerStreams
-                      : const [],
-                  language: L10n.code,
-                  tmdbKey:
-                      context.read<StorageService>().getTmdbApiKey() ?? '')),
+              beforeOpen: () async => _backgroundTrailer.currentState?.stop(),
+              request: _trailerRequest),
           if (resume)
             DetailPillButton(
               focusNode: _restartNode,

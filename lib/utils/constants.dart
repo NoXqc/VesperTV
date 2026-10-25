@@ -6,6 +6,8 @@ import '../models/cyberpunk_palette.dart';
 /// keys used by [StorageService]. Centralized here so key names never drift
 /// between the services that read and write them.
 class AppConstants {
+  static const String keyAutoTrailers = 'vesper_auto_trailers';
+
   static const String appName = 'VesperTV';
 
   /// The Sports tab's name (owner, 2026-10-17). A brand: not translated.

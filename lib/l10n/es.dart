@@ -1918,4 +1918,9 @@ const Map<String, String> kEs = {
   "Source: {source}": "Fuente: {source}",
   "File size: {size}": "Tamaño del archivo: {size}",
   "File size unavailable": "Tamaño del archivo no disponible",
+
+  // Automatic detail trailers.
+  "Automatic trailers": "Tráilers automáticos",
+  "Play available trailers automatically on IPTV and Media Hub movie and show pages. Starts muted.":
+      "Reproducir automáticamente los tráilers disponibles en las páginas de películas y series de IPTV y Media Hub. Empieza sin sonido.",
 };

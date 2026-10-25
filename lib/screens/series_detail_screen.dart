@@ -1,3 +1,5 @@
+import '../widgets/detail_trailer.dart';
+import '../services/app_preferences.dart';
 import '../widgets/trailer_button.dart';
 import '../widgets/next_episode_air_date.dart';
 import '../services/trailer_service.dart';
@@ -106,6 +108,18 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   final Map<int, int> _highlight = {};
 
   final _backNode = FocusNode(debugLabel: 'series-back');
+  final _backgroundTrailer = GlobalKey<DetailTrailerState>();
+  TrailerRequest get _trailerRequest => TrailerRequest(
+      title: widget.series.name,
+      series: true,
+      year: _details?.year,
+      tmdbId: widget.series.tmdbId,
+      imdbId: widget.imdbId,
+      supplied: _details?.trailers ?? const [],
+      suppliedStreams: _details?.trailerStreams ?? const [],
+      language: L10n.code,
+      tmdbKey: context.read<StorageService>().getTmdbApiKey() ?? '');
+
   final _trailerNode = FocusNode(debugLabel: 'trailer');
   final _playNode = FocusNode(debugLabel: 'series-play');
   final _restartNode = FocusNode(debugLabel: 'series-restart');
@@ -305,6 +319,8 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   String? _startingId;
 
   Future<void> _play(Channel episode, {bool restart = false}) async {
+    await _backgroundTrailer.currentState?.stop();
+    if (!mounted) return;
     if (_startingId != null) return;
     final storage = context.read<StorageService>();
     // A watched episode starts over: one marked by hold sits at 100%, so
@@ -718,26 +734,31 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
       context,
       (context) => Scaffold(
         backgroundColor: Colors.black,
-        body: SwallowHeldActivate(
-          child: CallbackShortcuts(
-            bindings: {
-              if (Platform.isWindows)
-                const SingleActivator(LogicalKeyboardKey.escape): _goBack,
-            },
-            child: LayoutBuilder(builder: (context, c) {
-              final narrow = c.maxWidth < 640 || c.maxHeight > c.maxWidth;
-              final s = narrow
-                  ? 1.0
-                  : math
-                      .min(c.maxWidth / 960, c.maxHeight / 540)
-                      .clamp(1.0, 2.2);
-              _cardExtent = (168 + 14) * s;
-              _rowPadding = 24 * s;
-              return DefaultTextStyle.merge(
-                style: const TextStyle(color: Colors.white),
-                child: narrow ? _buildNarrow(c) : _buildWide(c, s),
-              );
-            }),
+        body: DetailTrailer(
+          key: _backgroundTrailer,
+          enabled: context.watch<AppPreferences?>()?.autoTrailers ?? false,
+          request: _trailerRequest,
+          child: SwallowHeldActivate(
+            child: CallbackShortcuts(
+              bindings: {
+                if (Platform.isWindows)
+                  const SingleActivator(LogicalKeyboardKey.escape): _goBack,
+              },
+              child: LayoutBuilder(builder: (context, c) {
+                final narrow = c.maxWidth < 640 || c.maxHeight > c.maxWidth;
+                final s = narrow
+                    ? 1.0
+                    : math
+                        .min(c.maxWidth / 960, c.maxHeight / 540)
+                        .clamp(1.0, 2.2);
+                _cardExtent = (168 + 14) * s;
+                _rowPadding = 24 * s;
+                return DefaultTextStyle.merge(
+                  style: const TextStyle(color: Colors.white),
+                  child: narrow ? _buildNarrow(c) : _buildWide(c, s),
+                );
+              }),
+            ),
           ),
         ),
       ),
@@ -945,16 +966,8 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
           scale: s,
           onFocused: _revealTop,
           focusNode: _trailerNode,
-          request: TrailerRequest(
-              title: widget.series.name,
-              series: true,
-              year: _details?.year,
-              tmdbId: widget.series.tmdbId,
-              imdbId: widget.imdbId,
-              supplied: _details?.trailers ?? const [],
-              suppliedStreams: _details?.trailerStreams ?? const [],
-              language: L10n.code,
-              tmdbKey: context.read<StorageService>().getTmdbApiKey() ?? '')),
+          beforeOpen: () async => _backgroundTrailer.currentState?.stop(),
+          request: _trailerRequest),
       if (next != null && next.resume)
         DetailPillButton(
           focusNode: _restartNode,

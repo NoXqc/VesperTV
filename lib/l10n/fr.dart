@@ -1921,4 +1921,9 @@ const Map<String, String> kFr = {
   "Source: {source}": "Source : {source}",
   "File size: {size}": "Taille du fichier : {size}",
   "File size unavailable": "Taille du fichier indisponible",
+
+  // Automatic detail trailers.
+  "Automatic trailers": "Bandes-annonces automatiques",
+  "Play available trailers automatically on IPTV and Media Hub movie and show pages. Starts muted.":
+      "Lire automatiquement les bandes-annonces disponibles sur les pages des films et séries IPTV et Media Hub. Démarre sans son.",
 };

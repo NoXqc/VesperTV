@@ -1,3 +1,5 @@
+import '../widgets/detail_trailer.dart';
+import '../services/app_preferences.dart';
 import '../widgets/trailer_button.dart';
 import '../services/trailer_service.dart';
 import 'dart:async';
@@ -56,6 +58,16 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   bool _loading = true;
 
   final _backNode = FocusNode(debugLabel: 'movie-back');
+  final _backgroundTrailer = GlobalKey<DetailTrailerState>();
+  TrailerRequest get _trailerRequest => TrailerRequest(
+      title: widget.channel.name,
+      series: false,
+      year: _details?.year,
+      tmdbId: widget.channel.tmdbId,
+      supplied: _details?.trailers ?? const [],
+      language: L10n.code,
+      tmdbKey: context.read<StorageService>().getTmdbApiKey() ?? '');
+
   final _trailerNode = FocusNode(debugLabel: 'trailer');
   final _playNode = FocusNode(debugLabel: 'movie-play');
   final _restartNode = FocusNode(debugLabel: 'movie-restart');
@@ -131,6 +143,8 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   }
 
   Future<void> _play({bool restart = false}) async {
+    await _backgroundTrailer.currentState?.stop();
+    if (!mounted) return;
     final channel = widget.channel;
     final storage = context.read<StorageService>();
     if (restart) await storage.setLastPosition(channel.id, 0);
@@ -288,26 +302,31 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       context,
       (context) => Scaffold(
         backgroundColor: Colors.black,
-        body: SwallowHeldActivate(
-          child: CallbackShortcuts(
-            bindings: {
-              if (Platform.isWindows)
-                const SingleActivator(LogicalKeyboardKey.escape): _goBack,
-            },
-            child: LayoutBuilder(builder: (context, c) {
-              final narrow = c.maxWidth < 640 || c.maxHeight > c.maxWidth;
-              final s = narrow
-                  ? 1.0
-                  : math
-                      .min(c.maxWidth / 960, c.maxHeight / 540)
-                      .clamp(1.0, 2.2);
-              return DefaultTextStyle.merge(
-                style: const TextStyle(color: Colors.white),
-                child: narrow
-                    ? _buildNarrow(c, current)
-                    : _buildWide(c, s, current),
-              );
-            }),
+        body: DetailTrailer(
+          key: _backgroundTrailer,
+          enabled: context.watch<AppPreferences?>()?.autoTrailers ?? false,
+          request: _trailerRequest,
+          child: SwallowHeldActivate(
+            child: CallbackShortcuts(
+              bindings: {
+                if (Platform.isWindows)
+                  const SingleActivator(LogicalKeyboardKey.escape): _goBack,
+              },
+              child: LayoutBuilder(builder: (context, c) {
+                final narrow = c.maxWidth < 640 || c.maxHeight > c.maxWidth;
+                final s = narrow
+                    ? 1.0
+                    : math
+                        .min(c.maxWidth / 960, c.maxHeight / 540)
+                        .clamp(1.0, 2.2);
+                return DefaultTextStyle.merge(
+                  style: const TextStyle(color: Colors.white),
+                  child: narrow
+                      ? _buildNarrow(c, current)
+                      : _buildWide(c, s, current),
+                );
+              }),
+            ),
           ),
         ),
       ),
@@ -521,14 +540,8 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
             scale: s,
             onFocused: _revealTop,
             focusNode: _trailerNode,
-            request: TrailerRequest(
-                title: widget.channel.name,
-                series: false,
-                year: _details?.year,
-                tmdbId: widget.channel.tmdbId,
-                supplied: _details?.trailers ?? const [],
-                language: L10n.code,
-                tmdbKey: context.read<StorageService>().getTmdbApiKey() ?? '')),
+            beforeOpen: () async => _backgroundTrailer.currentState?.stop(),
+            request: _trailerRequest),
         if (resume)
           DetailPillButton(
             focusNode: _restartNode,
