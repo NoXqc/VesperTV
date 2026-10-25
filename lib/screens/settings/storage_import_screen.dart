@@ -118,22 +118,7 @@ class _StorageImportScreenState extends State<StorageImportScreen> {
     final name = p.basenameWithoutExtension(item.name);
     final confirmed = await showDialog<bool>(
         context: context,
-        builder: (ctx) => AlertDialog(
-              title: Text(tr('Import from storage?')),
-              content: Text(tr(
-                  'Import "{name}"? M3U playlists and included Media Hub sources are added without replacing your current setup.',
-                  {'name': name})),
-              actions: [
-                ModeButton(
-                    label: tr('Cancel'),
-                    selected: false,
-                    onTap: () => Navigator.pop(ctx, false)),
-                ModeButton(
-                    label: tr('Import'),
-                    selected: false,
-                    onTap: () => Navigator.pop(ctx, true)),
-              ],
-            ));
+        builder: (_) => _StorageImportConfirmation(name: name));
     if (confirmed != true || !mounted) return;
     setState(() => _busy = true);
     final manager = context.read<PlaylistManager>();
@@ -282,4 +267,42 @@ class _StorageImportScreenState extends State<StorageImportScreen> {
                   ],
                 )),
           ));
+}
+
+/// A concrete default target keeps a remote from opening an unfocused dialog.
+class _StorageImportConfirmation extends StatefulWidget {
+  const _StorageImportConfirmation({required this.name});
+  final String name;
+  @override
+  State<_StorageImportConfirmation> createState() =>
+      _StorageImportConfirmationState();
+}
+
+class _StorageImportConfirmationState
+    extends State<_StorageImportConfirmation> {
+  final _cancel = FocusNode(debugLabel: 'storage-import-cancel')
+    ..requestFocus();
+  @override
+  void dispose() {
+    _cancel.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+          title: Text(tr('Import from storage?')),
+          content: Text(tr(
+              'Import "{name}"? M3U playlists and included Media Hub sources are added without replacing your current setup.',
+              {'name': widget.name})),
+          actions: [
+            ModeButton(
+                focusNode: _cancel,
+                label: tr('Cancel'),
+                selected: false,
+                onTap: () => Navigator.pop(context, false)),
+            ModeButton(
+                label: tr('Import'),
+                selected: false,
+                onTap: () => Navigator.pop(context, true)),
+          ]);
 }

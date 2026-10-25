@@ -97,6 +97,8 @@ void main() {
       await tester.tap(find.text('channels.m3u'));
       await tester.pumpAndSettle();
       expect(importer.reads, 0);
+      expect(FocusManager.instance.primaryFocus?.debugLabel,
+          'storage-import-cancel');
       await tester.tap(find.text(confirm ? 'Import' : 'Cancel'));
       await tester.pumpAndSettle();
       expect(importer.reads, confirm ? 1 : 0);

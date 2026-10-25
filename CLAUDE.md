@@ -339,7 +339,9 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 - **Codex focus/history/storage batch** (2026-10-25, based on Claude +444):
   theme colour work explicitly on HOLD. Focus recovery uses concrete tab nodes;
   Home/Hub/Sports return to TV rail with guide closed. Empty/lazy movie entry
-  retains a selector. Playlist Manager Right enters details, Left/Back returns
+  retains a selector. Distant group/poster jumps defer focus until layout, with
+  bounded retries invalidated by Back/tab/route changes. Return also clears the
+  Timeline filter/keyboard. Playlist Manager Right enters details, Left/Back returns
   to selected playlist. Media Hub history hold asks Cancel/Remove in glass menu.
   Backup & restore imports M3U files and included Media Hub manifest sources
   from USB/external storage; owner clarified this scope instead of local-video

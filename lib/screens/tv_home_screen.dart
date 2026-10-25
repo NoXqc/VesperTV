@@ -212,6 +212,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       tab, () => FocusNode(debugLabel: 'tv-tab-$tab'));
   bool _returnToTv = false;
   bool _focusRecoveryScheduled = false;
+  int _browseFocusRequest = 0;
 
   void _scheduleFocusRecovery() {
     if (!mounted || _focusRecoveryScheduled) return;
@@ -240,9 +241,12 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     if (_tab != 'TV') {
       _onTabChanged('TV', restoreLiveFocus: false);
     }
+    _timelineFilterController.clear();
     setState(() {
       _focusDepth = 0;
       _phonePage = 1;
+      _timelineFilterActive = false;
+      _timelineFilterQuery = '';
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && ModalRoute.of(context)?.isCurrent == true) {
@@ -1072,6 +1076,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   }
 
   void _onTabChanged(String tab, {bool restoreLiveFocus = true}) {
+    ++_browseFocusRequest;
     _disarmLeftEdge();
     // _col1Scope/_col2Scope are shared across every tab (see the widget
     // tree below — Live TV and Movies/TV Shows both build their groups/
@@ -1383,7 +1388,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     // entirely), which then dragged the scroll right back to wherever
     // that was.
     if (mounted)
-      _firstPosterFocusNodeForGroup(playlistId, title).requestFocus();
+      _focusBrowseWhenBuilt(_firstPosterFocusNodeForGroup(playlistId, title));
     // _categoryRowHeight is an exact value now, not a guess (every row is
     // pinned to it — see that getter's own doc comment for the drift bug
     // this replaced), so the jumpTo above should already land precisely.
@@ -1458,14 +1463,29 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         _browseScrollController.offset > 0) {
       _browseScrollController.jumpTo(0);
     }
+    _focusBrowseWhenBuilt(targetNode);
+  }
+
+  /// A jump only schedules layout; an off-screen poster has no focus context
+  /// until the next frame. Invalidate retries on later navigation.
+  void _focusBrowseWhenBuilt(FocusNode node,
+      {int? request, int framesLeft = 4}) {
+    final id = request ?? ++_browseFocusRequest;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
-      if (targetNode.context != null && targetNode.canRequestFocus) {
-        targetNode.requestFocus();
+      if (!mounted ||
+          id != _browseFocusRequest ||
+          ModalRoute.of(context)?.isCurrent != true) {
+        return;
+      }
+      if (node.context != null && node.canRequestFocus) {
+        node.requestFocus();
+      } else if (framesLeft > 0) {
+        _focusBrowseWhenBuilt(node, request: id, framesLeft: framesLeft - 1);
       } else {
         _firstGroupRowFocusNode.requestFocus();
       }
     });
+    WidgetsBinding.instance.scheduleFrame();
   }
 
   void _scrollBrowseToTop() {
@@ -1619,6 +1639,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
 
   /// Shared by system Back and the wide-layout touch arrow.
   void _handleBack() {
+    ++_browseFocusRequest;
     // Back mid "Move Up / Down" just finishes the move.
     if (_movingGroupKey != null) {
       _endGroupMove();
@@ -1671,6 +1692,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// [build] instead of relying on default directional traversal — see the
   /// field doc on the `_colNScope` nodes for why.
   void _moveColumnFocus(int delta, int maxDepth) {
+    ++_browseFocusRequest;
     final target = (_focusDepth + delta).clamp(0, maxDepth);
     if (target == _focusDepth) return;
     final scope = switch (target) {
@@ -3111,6 +3133,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
 
   @override
   void didPushNext() {
+    ++_browseFocusRequest;
     _previewCovered = true;
     _releasePreviewHint?.call();
     _releasePreviewHint = null;

@@ -43,6 +43,33 @@ class GuidePlaylist extends PlaylistManager {
       [live];
 }
 
+class MovieGuidePlaylist extends GuidePlaylist {
+  MovieGuidePlaylist(super.storage);
+  final movies = [
+    for (var i = 0; i < 8; i++)
+      Channel(
+          id: 'p::xt_vod_$i',
+          rawId: 'xt_vod_$i',
+          playlistId: 'p',
+          name: 'Film $i',
+          group: 'Movie group $i',
+          url: 'https://example.com/movie$i')
+  ];
+  @override
+  List<M3uGroup> get vodGroups => [
+        for (final movie in movies)
+          M3uGroup(title: movie.group, playlistId: 'p', channels: [movie])
+      ];
+  @override
+  List<Channel> visibleChannels(
+          {String? playlistId, String? groupTitle, required String category}) =>
+      category == 'vod'
+          ? movies
+              .where((c) => groupTitle == null || c.group == groupTitle)
+              .toList()
+          : [live];
+}
+
 class GuideEpg extends EpgService {
   GuideEpg(super.storage);
 
@@ -58,7 +85,7 @@ void main() {
             (_) async => const StandardMessageCodec().encodeMessage([null]));
   });
   Future<void> pumpHome(WidgetTester tester, Size size,
-      {bool television = false}) async {
+      {bool television = false, bool movies = false}) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -72,7 +99,8 @@ void main() {
     prefs.isTelevision = television;
     prefs.guideViewMode = 'timeline';
     prefs.guideFullVideo = true;
-    final playlist = GuidePlaylist(storage);
+    final playlist =
+        movies ? MovieGuidePlaylist(storage) : GuidePlaylist(storage);
     final playback = PlaybackService(storage, playlist);
     final epg = GuideEpg(storage);
     final viewers = ViewerProfileService(storage, playlist, playback);
@@ -105,6 +133,24 @@ void main() {
       await tester.pump();
     });
   }
+
+  testWidgets(
+      'picking an unbuilt movie group materializes and focuses its poster',
+      (tester) async {
+    await pumpHome(tester, const Size(1280, 720),
+        television: true, movies: true);
+    await tester.tap(find.text('Movies'));
+    await tester.pumpAndSettle();
+    final group = find.text('Movie group 5');
+    await tester.ensureVisible(group);
+    await tester.tap(group);
+    await tester.pumpAndSettle();
+    final primary = FocusManager.instance.primaryFocus;
+    expect(primary, isNot(isA<FocusScopeNode>()));
+    expect(FocusScope.of(primary!.context!).debugLabel, 'tv-col2');
+    expect(find.text('Film 5'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('cold focus loss recovers a concrete TV tab selector',
       (tester) async {
