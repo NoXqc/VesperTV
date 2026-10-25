@@ -85,6 +85,15 @@ void main() {
     expect(
         FocusScope.of(FocusManager.instance.primaryFocus!.context!).debugLabel,
         'Playlist details');
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'Playlist 2');
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'Playlist 2');
+    expect(find.byType(PlaylistManagerScreen), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

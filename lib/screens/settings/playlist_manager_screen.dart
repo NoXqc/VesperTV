@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -34,10 +35,31 @@ class PlaylistManagerScreen extends StatefulWidget {
 class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
   String? _selectedId;
   final _detailsFocus = FocusScopeNode(debugLabel: 'Playlist details');
+  final _listFocus = FocusScopeNode(debugLabel: 'Playlist list');
+  final _playlistNodes = <String, FocusNode>{};
+
+  FocusNode _playlistNode(String id) => _playlistNodes.putIfAbsent(
+      id, () => FocusNode(debugLabel: 'Playlist $id'));
+
+  void _backToList() {
+    final profiles = context.read<PlaylistManager>().profiles;
+    final id = profiles.any((p) => p.id == _selectedId)
+        ? _selectedId
+        : profiles.firstOrNull?.id;
+    if (id != null && _playlistNode(id).context != null) {
+      _playlistNode(id).requestFocus();
+    } else {
+      _listFocus.nextFocus();
+    }
+  }
 
   @override
   void dispose() {
     _detailsFocus.dispose();
+    _listFocus.dispose();
+    for (final node in _playlistNodes.values) {
+      node.dispose();
+    }
     super.dispose();
   }
 
@@ -54,7 +76,12 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
         : profiles.firstOrNull?.id;
     return withTvThemeIfNeeded(
         context,
-        (context) => SettingsScaffold(
+        (context) => PopScope(
+            canPop: !_detailsFocus.hasFocus,
+            onPopInvokedWithResult: (didPop, _) {
+              if (!didPop) _backToList();
+            },
+            child: SettingsScaffold(
               title: tr('Playlist Manager'),
               body: LayoutBuilder(builder: (context, constraints) {
                 final wide = constraints.maxWidth >= 760;
@@ -113,6 +140,7 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
                               type: MaterialType.transparency,
                               child: TvMenuTile(
                                 key: ValueKey('playlist-row-${profile.id}'),
+                                focusNode: _playlistNode(profile.id),
                                 autofocus: profile.id == selectedId,
                                 icon: profile.isXtream ? Icons.dns : Icons.link,
                                 title: profile.name,
@@ -151,29 +179,44 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
                 );
                 final details = FocusScope(
                   node: _detailsFocus,
-                  child: selectedId == null
-                      ? const SizedBox.expand()
-                      : _PlaylistDetailsPane(
-                          key: ValueKey(selectedId), playlistId: selectedId),
+                  onFocusChange: (_) {
+                    if (mounted) setState(() {});
+                  },
+                  child: CallbackShortcuts(
+                      bindings: {
+                        const SingleActivator(LogicalKeyboardKey.arrowLeft):
+                            _backToList,
+                      },
+                      child: selectedId == null
+                          ? const SizedBox.expand()
+                          : _PlaylistDetailsPane(
+                              key: ValueKey(selectedId),
+                              playlistId: selectedId)),
                 );
+                final rail = FocusScope(
+                    node: _listFocus,
+                    child: CallbackShortcuts(bindings: {
+                      const SingleActivator(LogicalKeyboardKey.arrowRight):
+                          () => _detailsFocus.nextFocus(),
+                    }, child: list));
                 return wide
                     ? Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                             SizedBox(
                                 width: constraints.maxWidth < 1000 ? 250 : 300,
-                                child: list),
+                                child: rail),
                             const VerticalDivider(width: 1),
                             Expanded(child: details),
                           ])
                     : Column(children: [
                         SizedBox(
-                            height: constraints.maxHeight * .32, child: list),
+                            height: constraints.maxHeight * .32, child: rail),
                         const Divider(height: 1),
                         Expanded(child: details),
                       ]);
               }),
-            ));
+            )));
   }
 }
 

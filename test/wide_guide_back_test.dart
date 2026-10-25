@@ -14,6 +14,8 @@ import 'package:nox_iptv/services/storage_service.dart';
 import 'package:nox_iptv/services/viewer_profile_service.dart';
 import 'package:nox_iptv/utils/constants.dart';
 import 'package:provider/provider.dart';
+import 'package:nox_iptv/services/archive_service.dart';
+import 'package:nox_iptv/utils/route_observer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class GuidePlaylist extends PlaylistManager {
@@ -74,14 +76,19 @@ void main() {
     final playback = PlaybackService(storage, playlist);
     final epg = GuideEpg(storage);
     final viewers = ViewerProfileService(storage, playlist, playback);
-    await tester.pumpWidget(MultiProvider(providers: [
-      Provider.value(value: storage),
-      ChangeNotifierProvider.value(value: prefs),
-      ChangeNotifierProvider<PlaylistManager>.value(value: playlist),
-      ChangeNotifierProvider.value(value: playback),
-      ChangeNotifierProvider<EpgService>.value(value: epg),
-      ChangeNotifierProvider.value(value: viewers),
-    ], child: const MaterialApp(home: TvHomeScreen())));
+    await tester.pumpWidget(MultiProvider(
+        providers: [
+          Provider.value(value: storage),
+          ChangeNotifierProvider.value(value: prefs),
+          ChangeNotifierProvider<PlaylistManager>.value(value: playlist),
+          ChangeNotifierProvider.value(value: playback),
+          ChangeNotifierProvider<EpgService>.value(value: epg),
+          ChangeNotifierProvider.value(value: viewers),
+          ChangeNotifierProvider(create: (_) => ArchiveService(storage)),
+        ],
+        child: MaterialApp(
+            navigatorObservers: [appRouteObserver],
+            home: const TvHomeScreen())));
     await tester.pumpAndSettle();
     // Drain the one-off launch-update delay/timeout in virtual test time.
     // Widget tests block HTTP; no real update request is made.
@@ -98,6 +105,41 @@ void main() {
       await tester.pump();
     });
   }
+
+  testWidgets('cold focus loss recovers a concrete TV tab selector',
+      (tester) async {
+    await pumpHome(tester, const Size(1280, 720), television: true);
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'tv-tab-TV');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('return from Media Hub focuses TV with the guide closed',
+      (tester) async {
+    await pumpHome(tester, const Size(1280, 720), television: true);
+    await tester.tap(find.text('Media Hub'));
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'tv-tab-TV');
+    expect(find.byType(TvHomeScreen), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('empty movie carousel keeps a real group selector',
+      (tester) async {
+    await pumpHome(tester, const Size(1280, 720), television: true);
+    await tester.tap(find.text('Movies'));
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus, isNot(isA<FocusScopeNode>()));
+    expect(FocusManager.instance.primaryFocus?.context, isNotNull);
+    expect(tester.takeException(), isNull);
+  });
 
   for (final size in [
     const Size(720, 720),

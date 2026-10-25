@@ -207,7 +207,50 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// so the D-pad cursor starts somewhere visible — before, nothing was
   /// focused until the first key press, which then landed at an arbitrary
   /// spot (top, bottom or inside the channel list).
-  final FocusNode _initialTabFocusNode = FocusNode(debugLabel: 'tv-start-tab');
+  final Map<String, FocusNode> _tabFocusNodes = {};
+  FocusNode _tabFocusNode(String tab) => _tabFocusNodes.putIfAbsent(
+      tab, () => FocusNode(debugLabel: 'tv-tab-$tab'));
+  bool _returnToTv = false;
+  bool _focusRecoveryScheduled = false;
+
+  void _scheduleFocusRecovery() {
+    if (!mounted || _focusRecoveryScheduled) return;
+    _focusRecoveryScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusRecoveryScheduled = false;
+      if (!mounted || ModalRoute.of(context)?.isCurrent != true || _compact) {
+        return;
+      }
+      final primary = FocusManager.instance.primaryFocus;
+      if (primary != null &&
+          primary is! FocusScopeNode &&
+          primary.context != null) {
+        return;
+      }
+      if (_focusDepth == 1 && _firstGroupRowFocusNode.context != null) {
+        _firstGroupRowFocusNode.requestFocus();
+      } else {
+        // Never leave a scope itself as the remote's invisible selector.
+        _tabFocusNode(_tab).requestFocus();
+      }
+    });
+  }
+
+  void _restoreTvTab() {
+    if (_tab != 'TV') {
+      _onTabChanged('TV', restoreLiveFocus: false);
+    }
+    setState(() {
+      _focusDepth = 0;
+      _phonePage = 1;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+        _tabFocusNode('TV').requestFocus();
+      }
+    });
+  }
+
   late final String _initialTab;
   bool _startupSportsCovered = false;
 
@@ -1028,7 +1071,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     return _tabs.where((t) => !prefs.isTabHidden(t)).toList();
   }
 
-  void _onTabChanged(String tab) {
+  void _onTabChanged(String tab, {bool restoreLiveFocus = true}) {
     _disarmLeftEdge();
     // _col1Scope/_col2Scope are shared across every tab (see the widget
     // tree below — Live TV and Movies/TV Shows both build their groups/
@@ -1085,7 +1128,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     // (didPopNext) — this is the same restoration, just for the other way
     // of returning to this tab. Needs a frame so the channel list has
     // actually rebuilt for the new group/tab before scrolling within it.
-    if (tab == 'TV') {
+    if (tab == 'TV' && restoreLiveFocus) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _restoreLiveFocus();
       });
@@ -1373,7 +1416,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       if (playNode.context != null) {
         playNode.requestFocus();
       } else {
-        _col2Scope.requestFocus();
+        _firstGroupRowFocusNode.requestFocus();
       }
       return;
     }
@@ -1401,7 +1444,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                     groups.first.playlistId, groups.first.title)
                 : null;
     if (targetNode == null) {
-      _col2Scope.requestFocus();
+      _firstGroupRowFocusNode.requestFocus();
       return;
     }
     // The target row's PosterCard (and its focusNode) only exists once
@@ -1415,7 +1458,14 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         _browseScrollController.offset > 0) {
       _browseScrollController.jumpTo(0);
     }
-    targetNode.requestFocus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
+      if (targetNode.context != null && targetNode.canRequestFocus) {
+        targetNode.requestFocus();
+      } else {
+        _firstGroupRowFocusNode.requestFocus();
+      }
+    });
   }
 
   void _scrollBrowseToTop() {
@@ -1655,6 +1705,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   @override
   void initState() {
     super.initState();
+    FocusManager.instance.addListener(_scheduleFocusRecovery);
+    _returnToTv = widget.startupBrowseCovered || widget.startupSportsCovered;
     _initialTab = widget.initialTab;
     _tab = _initialTab;
     _showWhatsNew = _isBrowseTab(_tab);
@@ -1679,7 +1731,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       if (ModalRoute.of(context)?.isCurrent == false) return;
       final primary = FocusManager.instance.primaryFocus;
       if (primary == null || primary is FocusScopeNode) {
-        _initialTabFocusNode.requestFocus();
+        _tabFocusNode(_initialTab).requestFocus();
       }
     });
     unawaited(_checkForUpdateOnLaunch());
@@ -1752,7 +1804,10 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   void dispose() {
     appRouteObserver.unsubscribe(this);
     _releasePreviewHint?.call();
-    _initialTabFocusNode.dispose();
+    FocusManager.instance.removeListener(_scheduleFocusRecovery);
+    for (final node in _tabFocusNodes.values) {
+      node.dispose();
+    }
     _leftEdgeArmTimer?.cancel();
     _descriptionDwellTimer?.cancel();
     _leftEdgeHintOverlay?.remove();
@@ -1806,6 +1861,12 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         if (mounted) _maybeShowUpdatePrompt();
       });
     }
+    if (_returnToTv) {
+      _returnToTv = false;
+      _restoreTvTab();
+      return;
+    }
+    _scheduleFocusRecovery();
     final isBrowseTab = _isBrowseTab(_tab);
     // Back from Settings with Movies/TV Shows just hidden while one of them
     // was the open tab: fall back to TV. Here rather than in build so the
@@ -2261,8 +2322,11 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         MaterialPageRoute(builder: (_) => const SettingsMenuScreen()));
   }
 
-  Future<void> _openSports() => _pushOverLiveVideo(
-      MaterialPageRoute(builder: (_) => const SportsScreen()));
+  Future<void> _openSports() {
+    _returnToTv = true;
+    return _pushOverLiveVideo(
+        MaterialPageRoute(builder: (_) => const SportsScreen()));
+  }
 
   /// Sports Trak, Settings and Search open over a background live channel
   /// and keep it playing (owner, 2026-10-20: the parking added in 1.0.24
@@ -2287,6 +2351,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// Home parks a background live channel like Media Hub: it's a browse
   /// page, and its own cards start what plays next.
   void _openHome() {
+    _returnToTv = true;
     _parkLiveChannel();
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => const HomeScreen()));
@@ -3228,6 +3293,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
               // General > Tabs > Hide Extras removes it.
               if (!context.watch<AppPreferences>().hideArchive)
                 item(Icons.local_movies_outlined, tr('Media Hub'), false, () {
+                  _returnToTv = true;
                   _parkLiveChannel();
                   Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const ArchiveScreen()));
@@ -3306,6 +3372,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         selected: false,
         collapsed: collapsed,
         onTap: () {
+          _returnToTv = true;
           _parkLiveChannel();
           Navigator.of(context)
               .push(MaterialPageRoute(builder: (_) => const ArchiveScreen()));
@@ -3392,7 +3459,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
               label: tr(tab),
               selected: _tab == tab,
               collapsed: collapsed,
-              focusNode: tab == _initialTab ? _initialTabFocusNode : null,
+              focusNode: _tabFocusNode(tab),
               onTap: () => _onTabChanged(tab),
             ),
           if (!context.watch<AppPreferences>().hideArchive)
