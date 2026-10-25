@@ -337,6 +337,16 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 
 ## 13. Status & open items (as of 2026-10-24)
 
+- **Codex, 2026-10-25: custom Media Hub source investigation** (`codex/custom-source-refresh`).
+  +446 owner log shows custom rows empty; exact playback failure remains unconfirmed.
+  Owner clarified adult source says "No playable stream", distinct from Torrentio upstream
+  TorBox-unavailable response reproduced outside the app. Same ArchiveApiService live test
+  successfully fetched custom catalogs, full metadata and playable links; native surface untouched.
+  Fix: custom-only source manifests update on open/explicit Refresh (previously only accepted
+  transitions to stream-only). Preserve latest enable/Other choices, retain saved data on failure,
+  do not resurrect removed sources; queued force refresh retains force. Hashed ArchiveStreams
+  diagnostics distinguish empty options from HTTP failures without URLs/credentials.
+
 - **Codex, 2026-10-25: Native video surface defaults ON** (`codex/native-surface-default`, +446).
   Missing device preference defaults to true in BOTH StorageService and MainActivity startup
   (transparent Flutter window must match Dart on the first launch). Explicit saved on/off choices

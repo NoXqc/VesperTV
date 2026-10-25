@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 
@@ -197,6 +198,7 @@ class ArchiveService extends ChangeNotifier {
   bool _loadedFromCache = false;
   bool _refreshing = false;
   bool _refreshAgain = false;
+  bool _forceRefreshAgain = false;
   String? lastError;
 
   bool get refreshing => _refreshing;
@@ -248,17 +250,13 @@ class ArchiveService extends ChangeNotifier {
     _notify();
   }
 
-  /// Sources added on 1.0.24-1.0.27 whose catalogs are all of a custom
-  /// type may be stream-only IMDb add-ons misread (see
-  /// [ArchiveApiService.fetchManifest]): their manifest is read again once
-  /// per launch, and a source that now comes back stream-only replaces
-  /// the stored one (same link, same on/off). Quick: such sources are rare.
+  /// Custom sources can replace their catalog ids without changing the
+  /// manifest link. Re-read their definitions on open and explicit Refresh,
+  /// keeping the saved definition if the source cannot answer.
   Future<void> _recheckCustomOnlySources() async {
-    final list = sources;
-    var changed = false;
-    for (var i = 0; i < list.length; i++) {
-      final s = list[i];
-      if (s.streamOnly ||
+    for (final s in sources) {
+      if (!s.enabled ||
+          s.streamOnly ||
           s.server != null ||
           s.tracker != null ||
           s.catalogs.isEmpty ||
@@ -269,14 +267,24 @@ class ArchiveService extends ChangeNotifier {
         final fresh = await _api
             .fetchManifest(s.manifestUrl)
             .timeout(const Duration(seconds: 10));
-        if (!fresh.streamOnly) continue;
-        list[i] = fresh.copyWith(enabled: s.enabled);
-        changed = true;
+        // Settings may have changed while the network request was pending.
+        // Never resurrect a removed source or overwrite its current choices.
+        final current = sources;
+        final index = current.indexWhere((p) => p.manifestUrl == s.manifestUrl);
+        if (index < 0) continue;
+        final saved = current[index];
+        current[index] = fresh.copyWith(
+            enabled: saved.enabled, otherChoice: saved.otherChoice);
+        if (jsonEncode(current[index].toJson()) != jsonEncode(saved.toJson())) {
+          await _saveSources(current);
+          debugPrint('ArchiveManifest: source=${s.key} '
+              'catalogs=${fresh.catalogs.length} updated');
+        }
       } catch (e) {
-        debugPrint('ArchiveService: recheck ${s.manifestUrl} failed: $e');
+        debugPrint('ArchiveManifest: source=${s.key} '
+            'failed=${e.runtimeType}; keeping saved catalogs');
       }
     }
-    if (changed) await _saveSources(list);
   }
 
   /// Checks [link]'s manifest without adding it (same errors as
@@ -806,12 +814,14 @@ class ArchiveService extends ChangeNotifier {
     if (_refreshing) {
       // A genre picked mid-refresh adds rows the running pass won't reach.
       _refreshAgain = true;
+      _forceRefreshAgain |= force;
       return;
     }
     _refreshing = true;
     lastError = null;
     _notify();
     try {
+      if (force) await _recheckCustomOnlySources();
       for (final type in ArchiveType.values) {
         for (final (s, c) in _catalogs(type)) {
           final key = _rowKey(s, c);
@@ -849,7 +859,9 @@ class ArchiveService extends ChangeNotifier {
     }
     if (_refreshAgain) {
       _refreshAgain = false;
-      await refresh();
+      final forceAgain = _forceRefreshAgain;
+      _forceRefreshAgain = false;
+      await refresh(force: forceAgain);
     }
   }
 
@@ -911,19 +923,26 @@ class ArchiveService extends ChangeNotifier {
     final out = <ArchiveStreamOption>[];
     final urls = <String>{};
     Object? error;
+    final titleKey =
+        sha1.convert(utf8.encode(videoId)).toString().substring(0, 12);
     for (final s in _streamSources(source)) {
       try {
-        for (final st in s.server != null
+        final streams = s.server != null
             ? _servers.streams(s, videoId)
             : await _api.fetchStreams(s.baseUrl, meta.type, videoId,
-                wire: meta.wire)) {
+                wire: meta.wire);
+        debugPrint('ArchiveStreams: source=${s.key} title=$titleKey '
+            'type=${meta.wire} playable=${streams.length}');
+        for (final st in streams) {
           if (urls.add(st.identity)) {
             out.add(ArchiveStreamOption(source: s, stream: st));
           }
         }
       } catch (e) {
         error ??= e;
-        debugPrint('ArchiveService: ${s.name} streams failed: $e');
+        debugPrint('ArchiveStreams: source=${s.key} title=$titleKey '
+            'type=${meta.wire} failed=${e.runtimeType}'
+            '${e is ArchiveApiException && e.statusCode != null ? ' http=${e.statusCode}' : ''}');
       }
     }
     if (out.isEmpty && error != null) throw error;

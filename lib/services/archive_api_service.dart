@@ -7,7 +7,8 @@ import '../models/archive_models.dart';
 /// Thrown when a source answers with something that isn't the schema
 /// (wrong status code, not JSON, missing fields).
 class ArchiveApiException implements Exception {
-  ArchiveApiException(this.message);
+  ArchiveApiException(this.message, {this.statusCode});
+  final int? statusCode;
   final String message;
   @override
   String toString() => 'ArchiveApiException: $message';
@@ -49,10 +50,11 @@ class ArchiveApiService {
   Future<Map<String, dynamic>> _getJson(Uri uri) async {
     final r = await _client.get(uri).timeout(_timeout);
     if (r.statusCode != 200) {
-      throw ArchiveApiException('HTTP ${r.statusCode} for $uri');
+      throw ArchiveApiException('HTTP ${r.statusCode}',
+          statusCode: r.statusCode);
     }
     final body = jsonDecode(utf8.decode(r.bodyBytes));
-    if (body is! Map) throw ArchiveApiException('Not a JSON object: $uri');
+    if (body is! Map) throw ArchiveApiException('Not a JSON object');
     return Map<String, dynamic>.from(body);
   }
 
