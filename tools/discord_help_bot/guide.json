@@ -1,0 +1,434 @@
+[
+  {
+    "id": "26de316e520e20fd",
+    "category": "Live TV",
+    "title": "Preview, then full screen",
+    "answer": "The first OK plays the channel in the preview box; OK again opens it full screen.",
+    "controls": "OK then OK",
+    "url": "https://vespertv.app/remote.html#Live%20TV"
+  },
+  {
+    "id": "ad2f3fe6d3ade9fd",
+    "category": "Live TV",
+    "title": "Channel menu",
+    "answer": "Add to / Remove from Favourites, Hide this channel, Move Up / Down (your own order inside the group or Favourites), Move to group…, Remove from a group, and Record on Android. To reorder Favourites in the list or Timeline guide, hold OK on a channel, choose Move Up / Down, use ↑ / ↓, then OK or Back to finish. Each viewer's order is saved across playlists and takes priority over the default playlist or A-Z order. Clear the guide's search filter before moving a channel.",
+    "controls": "Hold OK on a channel",
+    "url": "https://vespertv.app/remote.html#Live%20TV"
+  },
+  {
+    "id": "2ea0b9c08f3c7a95",
+    "category": "Live TV",
+    "title": "Sort live groups",
+    "answer": "The filter icon offers Provider order, Name A–Z and Name Z–A. Each playlist stays together; your own groups sort separately. The choice is remembered on this device. Manual Move Up / Down or Move to Top restores the stored order. Favourites channel order stays as you arranged it.",
+    "controls": "↑ above Favourites, then OK",
+    "url": "https://vespertv.app/remote.html#Live%20TV"
+  },
+  {
+    "id": "a35f7fab13c78eec",
+    "category": "Live TV",
+    "title": "Group menu",
+    "answer": "Add to Favourites, Hide Group, Move Up / Down, Move to Top, and New group… to start your own group.",
+    "controls": "Hold OK on a group",
+    "url": "https://vespertv.app/remote.html#Live%20TV"
+  },
+  {
+    "id": "2086cf69a409bc57",
+    "category": "Live TV",
+    "title": "Your group's menu",
+    "answer": "Move Up / Down, Move to Top, New group…, Delete. Your groups sit under Favourites and History and mix channels from every playlist.",
+    "controls": "Hold OK on your own group",
+    "url": "https://vespertv.app/remote.html#Live%20TV"
+  },
+  {
+    "id": "a5181bb484f86291",
+    "category": "Live TV",
+    "title": "Clear this tab's favourites",
+    "answer": "Asks first. Works on the Favourites row of TV, Movies and TV Shows.",
+    "controls": "Hold OK on Favourites",
+    "url": "https://vespertv.app/remote.html#Live%20TV"
+  },
+  {
+    "id": "e99bb76165a1115c",
+    "category": "Live TV",
+    "title": "Clear channel history",
+    "answer": "Asks first.",
+    "controls": "Hold OK on History",
+    "url": "https://vespertv.app/remote.html#Live%20TV"
+  },
+  {
+    "id": "50a1931feaf2c8cf",
+    "category": "Live TV",
+    "title": "Jump to a playlist, or hide its groups here",
+    "answer": "OK jumps to that playlist's groups. → on a playlist hides or shows all its groups in this tab only (its channels stay in Search and Favourites).",
+    "controls": "OK on Playlists ▾, then →",
+    "url": "https://vespertv.app/remote.html#Live%20TV"
+  },
+  {
+    "id": "2bb0ae78128afbc0",
+    "category": "Live TV",
+    "title": "Resume the last channel",
+    "answer": "What the \"Hold > to resume\" pill means. Works even with the pill turned off in Settings.",
+    "controls": "Hold →",
+    "url": "https://vespertv.app/remote.html#Live%20TV"
+  },
+  {
+    "id": "9263d5bf61445188",
+    "category": "Live TV",
+    "title": "Hide the resume reminder",
+    "answer": "Turn off Show the \"Hold > to resume\" reminder. This hides the pill while a channel plays in the background. On Android, holding Right still resumes the last channel.",
+    "controls": "Settings → Interface → Resume reminder",
+    "url": "https://vespertv.app/remote.html#Live%20TV"
+  },
+  {
+    "id": "e6de9b283101b4b8",
+    "category": "Full screen",
+    "title": "Side panel",
+    "answer": "Last channels, My Teams and Live now, without leaving the video. OK on one switches to it; Back closes the panel. Phone: swipe right to open, swipe left to close.",
+    "controls": "← LIVE",
+    "url": "https://vespertv.app/remote.html#Full%20screen"
+  },
+  {
+    "id": "77219e28e277a3ad",
+    "category": "Full screen",
+    "title": "Pull stats",
+    "answer": "The game's box score and stats open beside the panel, over the video.",
+    "controls": "Hold OK on a game in the side panel",
+    "url": "https://vespertv.app/remote.html#Full%20screen"
+  },
+  {
+    "id": "6d16610d9ad9e6d3",
+    "category": "Full screen",
+    "title": "Info card",
+    "answer": "What's on now and next. With Settings › Interface › Data pool on, a second card shows resolution, fps, codecs and bitrate.",
+    "controls": "OK LIVE",
+    "url": "https://vespertv.app/remote.html#Full%20screen"
+  },
+  {
+    "id": "7dd60da1eb923f65",
+    "category": "Full screen",
+    "title": "Data pool",
+    "answer": "With Settings › Interface › Data pool on, OK opens the stream details card: resolution, frame rate, codecs, measured bitrate, buffer and playback state.",
+    "controls": "OK MOVIE / EPISODE · ANDROID",
+    "url": "https://vespertv.app/remote.html#Full%20screen"
+  },
+  {
+    "id": "631313a545b6fb65",
+    "category": "Full screen",
+    "title": "Player bar",
+    "answer": "Opens the bar with Play/Pause already selected: audio track, subtitles, Multiview and more are on the same row.",
+    "controls": "↓",
+    "url": "https://vespertv.app/remote.html#Full%20screen"
+  },
+  {
+    "id": "8ac3f1c47c3cf734",
+    "category": "Full screen",
+    "title": "Next / previous channel",
+    "answer": "Zaps through the list you opened the channel from. Page Up / Page Down do the same.",
+    "controls": "CH+ CH−",
+    "url": "https://vespertv.app/remote.html#Full%20screen"
+  },
+  {
+    "id": "99d7c33eb952c673",
+    "category": "Full screen",
+    "title": "Scrub the time bar",
+    "answer": "On a movie or episode, Up from the buttons selects the time bar. Hold Left or Right: the marker jumps further the longer you hold (10 s up to 5 min) and shows the target time. Let go and it seeks there; OK seeks at once. Down returns to the buttons. Smaller subtitles: Subtitles › Subtitle size › Extra small.",
+    "controls": "↑ then hold ← / → MOVIES",
+    "url": "https://vespertv.app/remote.html#Full%20screen"
+  },
+  {
+    "id": "29f1f49f260982d1",
+    "category": "Full screen",
+    "title": "Play / Pause",
+    "answer": "The remote's own Play/Pause key works anywhere in the player.",
+    "controls": "⏯",
+    "url": "https://vespertv.app/remote.html#Full%20screen"
+  },
+  {
+    "id": "ee9e6c9cd3e66fc3",
+    "category": "Full screen",
+    "title": "Leave full screen",
+    "answer": "With the side panel open, Back closes the panel first.",
+    "controls": "Back",
+    "url": "https://vespertv.app/remote.html#Full%20screen"
+  },
+  {
+    "id": "c7703c69dc0eef12",
+    "category": "Movies & Shows",
+    "title": "Favourite on / off",
+    "answer": "A star appears on the poster, and the title joins Favourites.",
+    "controls": "Hold OK on a poster",
+    "url": "https://vespertv.app/remote.html#Movies%20%26%20Shows"
+  },
+  {
+    "id": "5ac2664e81c45477",
+    "category": "Movies & Shows",
+    "title": "Mark watched / unwatched",
+    "answer": "A watched episode starts over from the beginning. Synced to Trakt / Simkl when signed in.",
+    "controls": "Hold OK on a season chip to mark the whole season watched / unwatched; on an episode",
+    "url": "https://vespertv.app/remote.html#Movies%20%26%20Shows"
+  },
+  {
+    "id": "32c9f27f491315af",
+    "category": "Movies & Shows",
+    "title": "Expand catalog",
+    "answer": "The whole group as a grid, with sorting (and TMDB release-date sorting if you added a TMDB key).",
+    "controls": "Hold OK on a group",
+    "url": "https://vespertv.app/remote.html#Movies%20%26%20Shows"
+  },
+  {
+    "id": "b39e8c0bc4e5d4f3",
+    "category": "Media Hub",
+    "title": "Floating bar",
+    "answer": "Search, a button for each row, and Genre. Genre › Other holds add-on catalogs that aren't plain movies or series.",
+    "controls": "↑ from the first row",
+    "url": "https://vespertv.app/remote.html#Media%20Hub"
+  },
+  {
+    "id": "83a12cb7beac7a79",
+    "category": "Media Hub",
+    "title": "Favourite on / off",
+    "answer": "On Recently watched, hold removes the title from that row instead.",
+    "controls": "Hold OK on a poster",
+    "url": "https://vespertv.app/remote.html#Media%20Hub"
+  },
+  {
+    "id": "8760eb9482bf560a",
+    "category": "Media Hub",
+    "title": "Row menu",
+    "answer": "Expand catalog (the whole row as a grid) or Go to row.",
+    "controls": "Hold OK on a row's bar button",
+    "url": "https://vespertv.app/remote.html#Media%20Hub"
+  },
+  {
+    "id": "01e8da6092162e2d",
+    "category": "Media Hub",
+    "title": "Your source finished fetching it",
+    "answer": "If a title played a short \"being downloaded\" video, press Back and carry on. The poster gets a Ready tag when the full file is there. Optional: add your debrid key in Settings › Media Hub › Debrid accounts for an exact check.",
+    "controls": "Gold Ready tag",
+    "url": "https://vespertv.app/remote.html#Media%20Hub"
+  },
+  {
+    "id": "dcc9cd10f6827288",
+    "category": "Media Hub",
+    "title": "Mark watched / unwatched",
+    "answer": "Same as provider shows.",
+    "controls": "Hold OK on a season chip to mark the whole season watched / unwatched; on an episode",
+    "url": "https://vespertv.app/remote.html#Media%20Hub"
+  },
+  {
+    "id": "2470317a035810ce",
+    "category": "Sports Trak",
+    "title": "Choose the best quality copy",
+    "answer": "On by default, per profile. Offers a matched 4K game source first, even from a different broadcaster; your explicit channel pick always wins. Turn it off to use the usual match order.",
+    "controls": "OK on Prefer highest quality",
+    "url": "https://vespertv.app/remote.html#Sports%20Trak"
+  },
+  {
+    "id": "cd2291acb44aed4d",
+    "category": "Sports Trak",
+    "title": "Select it",
+    "answer": "Shows the game's details in the hero at the top.",
+    "controls": "OK on a game",
+    "url": "https://vespertv.app/remote.html#Sports%20Trak"
+  },
+  {
+    "id": "7ec4b03904b2548f",
+    "category": "Sports Trak",
+    "title": "Watch in the hero",
+    "answer": "Plays the game's channel in the small player at the top. OK on the playing game goes full screen; Back stops it.",
+    "controls": "⏯ on a game",
+    "url": "https://vespertv.app/remote.html#Sports%20Trak"
+  },
+  {
+    "id": "878b488e13fadad1",
+    "category": "Sports Trak",
+    "title": "Game menu",
+    "answer": "Play here, choose another channel, Record until the show ends / until I stop it (Android).",
+    "controls": "Hold OK on a game",
+    "url": "https://vespertv.app/remote.html#Sports%20Trak"
+  },
+  {
+    "id": "f023f540e1a838e1",
+    "category": "Sports Trak",
+    "title": "Reorder leagues",
+    "answer": "Move the chip with ← →, then OK to drop it.",
+    "controls": "Hold OK on a league chip",
+    "url": "https://vespertv.app/remote.html#Sports%20Trak"
+  },
+  {
+    "id": "8c352c95e49d8366",
+    "category": "Sports Trak",
+    "title": "Your leagues",
+    "answer": "A menu of all your leagues with how many games each has on the day shown and how many are live. Pick one to see only that league.",
+    "controls": "Hold OK on All",
+    "url": "https://vespertv.app/remote.html#Sports%20Trak"
+  },
+  {
+    "id": "35ccff28c7c77e2a",
+    "category": "Sports Trak",
+    "title": "Pick its channel",
+    "answer": "NFL Sundays.",
+    "controls": "Hold OK on the RedZone pill",
+    "url": "https://vespertv.app/remote.html#Sports%20Trak"
+  },
+  {
+    "id": "9d2efc0cad7d4a29",
+    "category": "Sports Trak",
+    "title": "Live games list",
+    "answer": "Every live game in one list. OK = stats pop-up, Hold OK = channel menu, ⏯ = play full screen.",
+    "controls": "OK on See all · stats",
+    "url": "https://vespertv.app/remote.html#Sports%20Trak"
+  },
+  {
+    "id": "f2b323344a59b700",
+    "category": "Sports Trak",
+    "title": "Follow it (My Teams)",
+    "answer": "Followed teams' games come first, with a star.",
+    "controls": "OK on a team in Standings",
+    "url": "https://vespertv.app/remote.html#Sports%20Trak"
+  },
+  {
+    "id": "2bc2a22e3814bc89",
+    "category": "Sports Trak",
+    "title": "Remind me",
+    "answer": "Choose Remind me for a popup 15 minutes before and at game time, above any screen or stream while VesperTV is open. Choose Remind me for every game to enable automatic reminders for that team, or Stop team reminders to disable them. Hold again to Cancel reminder for one game. A faded team logo appears behind the popup text. Reminders belong to the current viewer on this device.",
+    "controls": "Hold OK on an upcoming My Teams game",
+    "url": "https://vespertv.app/remote.html#Sports%20Trak"
+  },
+  {
+    "id": "4df9d3183d28ad0e",
+    "category": "Sports Trak",
+    "title": "Unfollow",
+    "answer": "",
+    "controls": "Hold OK on a team in My Teams",
+    "url": "https://vespertv.app/remote.html#Sports%20Trak"
+  },
+  {
+    "id": "05385729a65f1266",
+    "category": "Sports Trak",
+    "title": "Show / hide, favourite, send back",
+    "answer": "OK shows or hides a league in the tab. Hold: Make favourite league (Sports Trak opens on it), Send back to the league bank. Add more leagues from the bank below.",
+    "controls": "League manager: OK / Hold OK",
+    "url": "https://vespertv.app/remote.html#Sports%20Trak"
+  },
+  {
+    "id": "57a77f9a32518492",
+    "category": "Multiview",
+    "title": "Move the sound",
+    "answer": "The speaker dot shows which screen you hear.",
+    "controls": "OK on a screen",
+    "url": "https://vespertv.app/remote.html#Multiview"
+  },
+  {
+    "id": "386b965a76a6dd71",
+    "category": "Multiview",
+    "title": "Screen menu",
+    "answer": "Full screen, Reload, Change channel, Remove.",
+    "controls": "Hold OK on a screen",
+    "url": "https://vespertv.app/remote.html#Multiview"
+  },
+  {
+    "id": "01b3be2f69ff07db",
+    "category": "Multiview",
+    "title": "Header",
+    "answer": "The 2 / 4 screens switch and Multiview's other buttons. ↓ goes back to the screens.",
+    "controls": "↑ from the top row",
+    "url": "https://vespertv.app/remote.html#Multiview"
+  },
+  {
+    "id": "02dee293b201ca70",
+    "category": "Multiview",
+    "title": "Show the controls",
+    "answer": "The first OK only brings back the name and back arrow. Back always works.",
+    "controls": "OK in Multiview full screen",
+    "url": "https://vespertv.app/remote.html#Multiview"
+  },
+  {
+    "id": "40b36e677d77dd3b",
+    "category": "Recordings",
+    "title": "Play it",
+    "answer": "",
+    "controls": "OK on a recording",
+    "url": "https://vespertv.app/remote.html#Recordings"
+  },
+  {
+    "id": "4c9febe75a7c1d5e",
+    "category": "Recordings",
+    "title": "Recording menu",
+    "answer": "While it records: Watch live, Play from the start, Stop recording (keeps it), Cancel recording.",
+    "controls": "Hold OK on a recording",
+    "url": "https://vespertv.app/remote.html#Recordings"
+  },
+  {
+    "id": "7b60e5009aeab80e",
+    "category": "Settings",
+    "title": "Filter Group Management",
+    "answer": "TV, Movies and TV Shows each have their own search. Type US to show groups starting with US; the list narrows with each letter. Show results / Hide results affects only those matches. Clear search restores every group. The keyboard's Search key moves to Show results, or Clear search if there are no matches.",
+    "controls": "OK on Search groups",
+    "url": "https://vespertv.app/remote.html#Settings"
+  },
+  {
+    "id": "4fe0c60f0a97b1c3",
+    "category": "Settings",
+    "title": "In and out of a category",
+    "answer": "",
+    "controls": "→ / OK , ← / Back",
+    "url": "https://vespertv.app/remote.html#Settings"
+  },
+  {
+    "id": "ea0a8a23a86050c1",
+    "category": "Settings",
+    "title": "Type",
+    "answer": "The keyboard only opens on OK, so the arrows can pass over a text box. On a Fire TV the on-screen keyboard keeps the Back key for itself; use its own close or Done key.",
+    "controls": "OK on a text box",
+    "url": "https://vespertv.app/remote.html#Settings"
+  },
+  {
+    "id": "6740b481c4f18114",
+    "category": "Settings",
+    "title": "On / off, or remove",
+    "answer": "Settings › Media Hub › Add-ons and Media Hub sources.",
+    "controls": "OK / Hold OK on an add-on",
+    "url": "https://vespertv.app/remote.html#Settings"
+  },
+  {
+    "id": "eb70da87eaa2bb47",
+    "category": "Windows",
+    "title": "Select, then open",
+    "answer": "One click selects a poster or channel (and fills the banner), a second click opens it.",
+    "controls": "Click, double-click",
+    "url": "https://vespertv.app/remote.html#Windows"
+  },
+  {
+    "id": "af248a58208ed428",
+    "category": "Windows",
+    "title": "Hold menus",
+    "answer": "Holding the mouse button opens the same menus as Hold OK.",
+    "controls": "Long-press",
+    "url": "https://vespertv.app/remote.html#Windows"
+  },
+  {
+    "id": "724d50b4ac049aab",
+    "category": "Windows",
+    "title": "Back",
+    "answer": "",
+    "controls": "Esc",
+    "url": "https://vespertv.app/remote.html#Windows"
+  },
+  {
+    "id": "835f211f2d746bb5",
+    "category": "Windows",
+    "title": "Mute",
+    "answer": "The volume slider sits in the player bar and is remembered.",
+    "controls": "M",
+    "url": "https://vespertv.app/remote.html#Windows"
+  },
+  {
+    "id": "68d0e92ec79e8d15",
+    "category": "Windows",
+    "title": "Side panel",
+    "answer": "Same as on a TV, when the player bar isn't selected.",
+    "controls": "← LIVE",
+    "url": "https://vespertv.app/remote.html#Windows"
+  }
+]

@@ -343,6 +343,8 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 
 ## 13. Status & open items (as of 2026-10-24)
 
+- **cdx, 2026-10-25: Discord help prepared locally.** `tools/discord_help_bot/README.md` documents a no-AI `/howto` app indexed from `docs/remote.html`; regenerate `guide.json` when the guide changes. Node HTTP and Worker adapters included. Not registered/deployed: hosting and Discord application setup pending. Release-announcement webhook is not a bot credential.
+
 - **Prepared release: VesperTV 1.0.40 (beta), +449 (2026-10-25).** Owner requested
   the current integrated tree and Live now grid, APK + Windows, GitHub publication with
   (beta) in title and Downloader pointing to it. Publish as latest (not GitHub prerelease,
