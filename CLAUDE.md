@@ -97,6 +97,11 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
 - `windows/runner/main.cpp`, `Runner.rc` — Windows runner (window title "VesperTV").
 
 ## 4. Build / check
+- Native Robolectric tests default to compile SDK 36 and need Java 21. Use a temporary
+  Gradle -Dorg.gradle.java.home path; do not change signing/build secrets. On release +449,
+  the extra native run exposed four existing ExoPlayerEventListenerTest fixture failures:
+  mocked getCurrentTracks() returns null (real ExoPlayer returns Tracks). Owner instructed
+  publish/announce; Flutter analyze 17 and all 515 Flutter tests passed. Native suite is NOT green.
 - `flutter analyze` — baseline **17** info issues, none errors. `flutter test` — `test/device_transfer_test.dart` (real LAN sockets).
 - Android: `flutter build apk --release` → `build/app/outputs/flutter-apk/app-release.apk` (~68 MB).
 - Windows: **kill the running app first** (`Get-Process VesperTV | Stop-Process -Force`) or the link
@@ -336,6 +341,12 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+
+- **Prepared release: VesperTV 1.0.40 (beta), +449 (2026-10-25).** Owner requested
+  the current integrated tree and Live now grid, APK + Windows, GitHub publication with
+  (beta) in title and Downloader pointing to it. Publish as latest (not GitHub prerelease,
+  otherwise Downloader/updater skip it). Source/provider outages remain separate known issues;
+  no claim that TorBox service errors or every custom-source title are fixed.
 
 - **Codex Live now grid (2026-10-25, codex/live-games-grid, unreleased):** Sports Trak
   Live now > See all uses the same _GameCard, width and Wrap spacing as Later today.
