@@ -46,6 +46,7 @@ class DetailTrailerState extends State<DetailTrailer>
   var _playerKey = GlobalKey<_PreviewState>();
   PageRoute<void>? _route;
   Uri? _uri;
+  TrailerRequest? _activeRequest;
   bool _picture = false;
   Future<void>? _pausing;
   bool _foreground = true, _visible = true, _stopped = false, _finished = false;
@@ -113,30 +114,56 @@ class DetailTrailerState extends State<DetailTrailer>
     } catch (_) {/* A failed live pause must not prevent the selected movie. */}
   }
 
+  bool _sameTitle(TrailerRequest a, TrailerRequest b) =>
+      a.title == b.title &&
+      a.series == b.series &&
+      (a.year == null || b.year == null || a.year == b.year) &&
+      (a.imdbId == null || b.imdbId == null || a.imdbId == b.imdbId) &&
+      (a.tmdbId == null || b.tmdbId == null || a.tmdbId == b.tmdbId);
+
+  Future<void> _clearPreview() {
+    final closing = _closePlayer();
+    _fade.reset();
+    setState(() {
+      _uri = null;
+      _picture = false;
+      _activeRequest = null;
+    });
+    return closing;
+  }
+
   Future<void> _refresh() async {
+    final request = widget.request;
     final sources = context.read<ArchiveService?>()?.enabledSources ??
         const <ArchiveSource>[];
     final allowed =
         widget.enabled && _foreground && _visible && !_stopped && !_finished;
     final signature =
-        '$allowed:${widget.request.cacheKey}:${sources.map((s) => s.key).join('|')}';
+        '$allowed:${request.cacheKey}:${sources.map((s) => s.key).join('|')}';
     if (_signature == signature) return;
     _signature = signature;
     final generation = ++_generation;
-    _fade.reset();
-    final closing = _closePlayer();
-    setState(() {
-      _uri = null;
-      _picture = false;
-    });
-    await closing;
+    // Late year/cast/provider metadata must not reload the same YouTube iframe.
+    // Keep a same-title preview while resolving, then replace only if its URL changes.
+    final preserve = allowed &&
+        _uri != null &&
+        _activeRequest != null &&
+        _sameTitle(_activeRequest!, request);
+    if (!preserve) await _clearPreview();
     if (!allowed || !mounted || generation != _generation) return;
     try {
-      final uri = await (widget.resolve?.call(widget.request, sources) ??
-          TrailerService.instance.resolve(widget.request, addons: sources));
-      if (!mounted || generation != _generation || uri == null) return;
-      // Pause an existing channel before using another decoder. As with the
-      // manual Trailer action, opening details never starts/resumes live TV.
+      final uri = await (widget.resolve?.call(request, sources) ??
+          TrailerService.instance.resolve(request, addons: sources));
+      if (!mounted || generation != _generation) return;
+      if (preserve) {
+        if (uri == _uri) {
+          _activeRequest = request;
+          return;
+        }
+        await _clearPreview();
+        if (!mounted || generation != _generation) return;
+      }
+      if (uri == null) return;
       if (Platform.isWindows) {
         _pausing = DesktopMiniPlayer.instance.controller?.player.pause();
       } else {
@@ -146,11 +173,12 @@ class DetailTrailerState extends State<DetailTrailer>
       if (mounted && generation == _generation && (_route?.isCurrent ?? true)) {
         setState(() {
           _playerKey = GlobalKey<_PreviewState>();
+          _activeRequest = request;
           _uri = uri;
         });
       }
     } catch (_) {
-      /* Keep the artwork; never launch another app automatically. */
+      /* Keep existing preview/artwork; never launch another app automatically. */
     }
   }
 

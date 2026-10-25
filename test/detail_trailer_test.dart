@@ -363,12 +363,47 @@ void main() {
     expect(find.text('Details'), findsOneWidget);
   });
 
-  testWidgets(
-      'metadata refresh replaces an active session even for the same URL',
+  testWidgets('metadata refresh preserves an active session for the same URL',
       (tester) async {
     final h = _Harness();
     await tester.pumpWidget(h.page());
     await tester.pumpAndSettle();
+    await tester.pumpWidget(h.page(
+        request:
+            const TrailerRequest(title: 'Film', series: false, year: 2026)));
+    await tester.pumpAndSettle();
+    expect(h.documents, hasLength(1));
+    expect(h.scripts, isEmpty);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('late metadata keeps the loading preview until its URL resolves',
+      (tester) async {
+    final h = _Harness();
+    await tester.pumpWidget(h.page());
+    await tester.pumpAndSettle();
+    h.deferred = true;
+    await tester.pumpWidget(h.page(
+        request:
+            const TrailerRequest(title: 'Film', series: false, year: 2026)));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('preview')), findsOneWidget);
+    expect(h.scripts, isEmpty);
+    h.pending.single.complete(_url);
+    await tester.pumpAndSettle();
+    expect(h.documents, hasLength(1));
+    expect(h.scripts, isEmpty);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('metadata selecting another URL replaces the preview',
+      (tester) async {
+    final h = _Harness();
+    await tester.pumpWidget(h.page());
+    await tester.pumpAndSettle();
+    h.result = Uri.parse('https://www.youtube.com/watch?v=ZyXwVuTsR98');
     await tester.pumpWidget(h.page(
         request:
             const TrailerRequest(title: 'Film', series: false, year: 2026)));

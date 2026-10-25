@@ -336,6 +336,14 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Codex IPTV trailer shading/startup** (codex/iptv-trailer-shading, 2026-10-25):
+  owner confirms Hub movie looks correct; IPTV has a rectangular brightness boundary.
+  Wide movie/series retained backdrop gradients were bounded to a partial art panel;
+  use full-viewport bounds to match the trailer. Keep same-title, same-URL preview
+  alive when late metadata resolves rather than restarting its iframe. No deliberate
+  startup delay; lookup/provider buffering remains. Local +441 test; hardware
+  confirmation pending. See `dev-notes/automatic-detail-trailers.md`.
+
 - **Codex trailer playback follow-up** (codex/trailer-playback-performance, 2026-10-25):
   owner reports +439 stuttering and no sound. Remove Opacity around the platform
   video (always painted, including preload); fade an ordinary Flutter cover and

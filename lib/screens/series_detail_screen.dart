@@ -769,18 +769,15 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
 
   Widget _buildWide(BoxConstraints c, double s) {
     final w = c.maxWidth;
-    final h = c.maxHeight;
     final backdrop = _backdropUrl;
     final poster = backdrop == null ? _posterUrl : null;
     final pad = 32 * s;
     return Stack(
       fit: StackFit.expand,
       children: [
-        Positioned(
-          top: 0,
-          right: 0,
-          width: backdrop != null ? w * 0.74 : w,
-          height: h * 0.74,
+        // The trailer fills this viewport; its readability fade must share
+        // those bounds, otherwise the old art panel leaves a dark rectangle.
+        Positioned.fill(
           child: DetailBackdrop(url: backdrop, fadeLeft: true),
         ),
         SingleChildScrollView(

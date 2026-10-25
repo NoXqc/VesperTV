@@ -61,3 +61,20 @@ Read-only renderer log check produced no relevant messages (Android SDK 30).
 No decoder, hybrid-composition mode or native plugin changes made speculatively.
 Test hardware again; if stutter persists, compare explicit Trailer playback and
 collect a fresh Send log before choosing another rendering path.
+
+## IPTV shading and startup (+441)
+
+The IPTV wide movie/series artwork panel occupied only the upper-right 74% width,
+80%/74% height. Its gradients remain visible during trailers, producing a hard
+rectangular brightness boundary over full-screen video. Give that backdrop the
+same full-viewport bounds as the trailer (as Hub movies already do). Foreground
+controls keep their layout. No decoder, colour-space or Media Hub movie changes.
+
+There is no intentional 6-7 second startup wait. Trailer lookup, provider iframe
+startup and buffering can take that long. Late detail metadata previously closed
+and recreated an active iframe even when resolving to the same trailer URL. Keep
+a same-title preview mounted during that lookup; retain it if the URL matches,
+replace it if the URL differs. Known differing IDs/year or title still clear the
+old preview immediately. Route/stop generation guards still cancel stale results.
+Tests cover preserved pending lookup, unchanged URL, changed URL and stale lookup.
+Hardware startup time and visual acceptance must still be checked by the owner.

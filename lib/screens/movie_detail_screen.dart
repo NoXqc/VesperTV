@@ -343,11 +343,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        Positioned(
-          top: 0,
-          right: 0,
-          width: backdrop != null ? w * 0.74 : w,
-          height: h * 0.8,
+        // The trailer fills this viewport; its readability fade must share
+        // those bounds, otherwise the old art panel leaves a dark rectangle.
+        Positioned.fill(
           child: DetailBackdrop(url: backdrop, fadeLeft: true),
         ),
         SingleChildScrollView(
