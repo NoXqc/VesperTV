@@ -62,7 +62,7 @@ class ThemeScreen extends StatelessWidget {
                   TvSwitchListTile(
                     title: Text(tr('Automatic trailers')),
                     subtitle: Text(tr(
-                        'Play available trailers automatically on IPTV and Media Hub movie and show pages. Starts muted.')),
+                        'Play available trailers automatically with sound on IPTV and Media Hub movie and show pages.')),
                     value: prefs.autoTrailers,
                     onChanged: prefs.setAutoTrailers,
                   ),

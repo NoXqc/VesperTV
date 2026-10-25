@@ -1926,6 +1926,6 @@ const Map<String, String> kIt = {
 
   // Automatic detail trailers.
   "Automatic trailers": "Trailer automatici",
-  "Play available trailers automatically on IPTV and Media Hub movie and show pages. Starts muted.":
-      "Riproduci automaticamente i trailer disponibili nelle pagine di film e serie IPTV e Media Hub. Avvio senza audio.",
+  "Play available trailers automatically with sound on IPTV and Media Hub movie and show pages.":
+      "Riproduci automaticamente con audio i trailer disponibili nelle pagine di film e serie IPTV e Media Hub.",
 };

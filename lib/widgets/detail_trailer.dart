@@ -220,10 +220,16 @@ class DetailTrailerState extends State<DetailTrailer>
             Positioned.fill(
                 child: IgnorePointer(
                     child: ExcludeFocus(
-                        child: Opacity(
+                        child: SizedBox.expand(
                             key: const ValueKey('detail-trailer-video'),
-                            opacity: progress,
                             child: preview ?? const SizedBox.shrink())))),
+            // Fade a Flutter cover, never the platform video surface itself.
+            // Fractional platform-view opacity can require expensive readback.
+            Positioned.fill(
+                child: IgnorePointer(
+                    child: ColoredBox(
+                        key: const ValueKey('detail-trailer-cover'),
+                        color: Colors.black.withValues(alpha: 1 - progress)))),
             Positioned.fill(
                 child: IgnorePointer(
                     child: ColoredBox(
@@ -265,9 +271,8 @@ class _PreviewState extends State<_Preview> {
   Timer? _timeout;
   Future<void>? _closed;
   late final String? _youtube = TrailerLinks.videoId(widget.uri.toString());
-  late final YouTubeEmbedDocument? _document = _youtube == null
-      ? null
-      : YouTubeEmbedDocument(_youtube, muted: true, controls: false);
+  late final YouTubeEmbedDocument? _document =
+      _youtube == null ? null : YouTubeEmbedDocument(_youtube, controls: false);
   bool _ready = false;
 
   @override
@@ -288,7 +293,7 @@ class _PreviewState extends State<_Preview> {
         _errors = player.stream.error.listen((_) {
           if (_closed == null) widget.onFinished();
         });
-        await player.setVolume(0);
+        await player.setVolume(100);
         if (_closed != null) return;
         await player.open(mk.Media(widget.uri.toString()));
       } else {
@@ -297,7 +302,7 @@ class _PreviewState extends State<_Preview> {
             videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true));
         await controller.initialize(viewType: VideoViewType.textureView);
         if (_closed != null) return;
-        await controller.setVolume(0);
+        await controller.setVolume(1);
         if (_closed != null) return;
         controller.addListener(_androidChanged);
         await controller.play();

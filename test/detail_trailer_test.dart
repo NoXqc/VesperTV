@@ -212,28 +212,28 @@ void main() {
       expect(preview.size, size);
       expect(preview.overlaps(details), isTrue);
       expect(details.size, size);
+      // The video platform view stays fully painted, including while loading.
       expect(
-          tester
-              .widget<Opacity>(
-                  find.byKey(const ValueKey('detail-trailer-video')))
-              .opacity,
-          0);
-      expect(h.documents.single.muted, isTrue);
+          find.ancestor(
+              of: find.byKey(const ValueKey('preview')),
+              matching: find.byType(Opacity)),
+          findsNothing);
+      double coverAlpha() => tester
+          .widget<ColoredBox>(
+              find.byKey(const ValueKey('detail-trailer-cover')))
+          .color
+          .a;
+      expect(coverAlpha(), 1);
+      expect(h.documents.single.muted, isFalse);
+      expect(h.documents.single.html,
+          contains('player.unMute();player.setVolume(100);'));
       h.event!({'type': 'playing'});
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
-      final fading = tester
-          .widget<Opacity>(find.byKey(const ValueKey('detail-trailer-video')))
-          .opacity;
-      expect(fading, greaterThan(0));
-      expect(fading, lessThan(1));
+      expect(coverAlpha(), greaterThan(0));
+      expect(coverAlpha(), lessThan(1));
       await tester.pumpAndSettle();
-      expect(
-          tester
-              .widget<Opacity>(
-                  find.byKey(const ValueKey('detail-trailer-video')))
-              .opacity,
-          1);
+      expect(coverAlpha(), 0);
       expect(tester.getRect(find.byKey(const ValueKey('details'))), details);
       expect(h.documents.single.controls, isFalse);
       await tester.pumpWidget(const SizedBox());
@@ -380,7 +380,7 @@ void main() {
   });
 
   testWidgets(
-      'direct trailer mutes before play and releases its independent player on stop',
+      'direct trailer has sound and releases its independent player on stop',
       (tester) async {
     final previous = VideoPlayerPlatform.instance;
     final video = _FakeVideo();
@@ -397,7 +397,8 @@ void main() {
         size: const Size(1280, 720)));
     await tester.pumpAndSettle();
     expect(video.calls, contains('play'));
-    expect(video.calls.indexOf('volume:0.0'),
+    expect(video.calls, isNot(contains('volume:0.0')));
+    expect(video.calls.lastIndexOf('volume:1.0'),
         lessThan(video.calls.indexOf('play')));
     expect(
         tester

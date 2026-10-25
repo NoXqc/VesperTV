@@ -1922,6 +1922,6 @@ const Map<String, String> kEs = {
 
   // Automatic detail trailers.
   "Automatic trailers": "Tráilers automáticos",
-  "Play available trailers automatically on IPTV and Media Hub movie and show pages. Starts muted.":
-      "Reproducir automáticamente los tráilers disponibles en las páginas de películas y series de IPTV y Media Hub. Empieza sin sonido.",
+  "Play available trailers automatically with sound on IPTV and Media Hub movie and show pages.":
+      "Reproducir automáticamente con sonido los tráilers disponibles en las páginas de películas y series de IPTV y Media Hub.",
 };

@@ -2534,6 +2534,6 @@ const Map<String, String> kEl = {
 
   // Automatic detail trailers.
   "Automatic trailers": "Αυτόματα τρέιλερ",
-  "Play available trailers automatically on IPTV and Media Hub movie and show pages. Starts muted.":
-      "Αυτόματη αναπαραγωγή διαθέσιμων τρέιλερ στις σελίδες ταινιών και σειρών IPTV και Media Hub. Ξεκινούν χωρίς ήχο.",
+  "Play available trailers automatically with sound on IPTV and Media Hub movie and show pages.":
+      "Αυτόματη αναπαραγωγή με ήχο των διαθέσιμων τρέιλερ στις σελίδες ταινιών και σειρών IPTV και Media Hub.",
 };

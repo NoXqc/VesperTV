@@ -1925,6 +1925,6 @@ const Map<String, String> kFr = {
 
   // Automatic detail trailers.
   "Automatic trailers": "Bandes-annonces automatiques",
-  "Play available trailers automatically on IPTV and Media Hub movie and show pages. Starts muted.":
-      "Lire automatiquement les bandes-annonces disponibles sur les pages des films et séries IPTV et Media Hub. Démarre sans son.",
+  "Play available trailers automatically with sound on IPTV and Media Hub movie and show pages.":
+      "Lire automatiquement avec le son les bandes-annonces disponibles sur les pages des films et séries IPTV et Media Hub.",
 };

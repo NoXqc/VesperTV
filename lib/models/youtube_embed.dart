@@ -38,7 +38,7 @@ window.addEventListener('flutterInAppWebViewPlatformReady',window.vesperBridgeCo
 function onYouTubeIframeAPIReady(){player=new YT.Player('player',{
   width:'100%',height:'100%',videoId:${jsonEncode(videoId)},
   playerVars:{autoplay:1,controls:${controls ? 1 : 0},disablekb:1,playsinline:1,origin:'https://vespertv.app'},
-  events:{onReady:function(){${muted ? 'player.mute();' : ''}report({type:'ready'});player.playVideo();},
+  events:{onReady:function(){${muted ? 'player.mute();' : !controls ? 'player.unMute();player.setVolume(100);' : ''}report({type:'ready'});player.playVideo();},
     onStateChange:function(event){if(event.data===1){report({type:'playing'});}if(event.data===0){report({type:'ended'});}},
     onError:function(event){report({type:'error',code:event.data});}}
 });}

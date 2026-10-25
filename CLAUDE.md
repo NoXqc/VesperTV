@@ -336,6 +336,13 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Codex trailer playback follow-up** (codex/trailer-playback-performance, 2026-10-25):
+  owner reports +439 stuttering and no sound. Remove Opacity around the platform
+  video (always painted, including preload); fade an ordinary Flutter cover and
+  artwork instead. Enable audible automatic trailers; update all four languages.
+  Local +440 test. Composition is a suspected cause, not a proved hardware fix;
+  device acceptance pending. No native player or WebView composition-mode edits.
+
 - **Codex trailer backdrop follow-up** (codex/trailer-backdrop-fade, 2026-10-25):
   owner tested +438 and requested full-page video behind poster/details instead of
   split preview. Retain original detail layout, 650ms artwork/video fade on playing,
