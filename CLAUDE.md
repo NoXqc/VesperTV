@@ -99,7 +99,8 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
 ## 4. Build / check
 - Native Robolectric tests default to compile SDK 36 and need Java 21. Use a temporary
   Gradle -Dorg.gradle.java.home path; do not change signing/build secrets. On release +449,
-  the extra native run exposed four existing ExoPlayerEventListenerTest fixture failures:
+  the extra native run completed 187 tests: 175 passed, 12 fixture failures across listener/
+  texture tests (all with the same unstubbed track return):
   mocked getCurrentTracks() returns null (real ExoPlayer returns Tracks). Owner instructed
   publish/announce; Flutter analyze 17 and all 515 Flutter tests passed. Native suite is NOT green.
 - `flutter analyze` — baseline **17** info issues, none errors. `flutter test` — `test/device_transfer_test.dart` (real LAN sockets).
