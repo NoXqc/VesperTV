@@ -337,6 +337,12 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 
 ## 13. Status & open items (as of 2026-10-24)
 
+- **Codex Live now grid (2026-10-25, codex/live-games-grid, unreleased):** Sports Trak
+  Live now > See all uses the same _GameCard, width and Wrap spacing as Later today.
+  SportsLiveListScreen retains polling, final-game retention, stats on OK, menu on hold and
+  watch on Play/Pause; optional card builder replaces dense rows for the hub. Explicit D-pad
+  moves by actual grid columns; partial last row remains reachable without horizontal wrapping.
+
 - **Codex diagnostic follow-up +448 (2026-10-25):** LOG-9XBM8M finally captures the custom
   source with type AdultVideo, playable=0. Rendering has not started for this failure.
   Genre menu deliberately excludes genres of sources grouped under Other; Other alone does

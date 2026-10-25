@@ -496,7 +496,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   /// Later / Final rows this long get "See all" (a grid of the row).
   static const _seeAllMin = 5;
 
-  /// The chip in [s]'s header: Live now's "See all · stats" (live list),
+  /// The chip in [s]'s header: Live now's "See all" (live card grid),
   /// or "See all" (grid, [_openSectionGrid]); null = none.
   String? _headerChipId(_Section s) => s.id == 'live'
       ? (_showLiveAll ? _liveAllId : null)
@@ -582,6 +582,20 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         onMenu: (game, matches, watch) => _openGame(game, matches, watch),
         initialGames: _games,
         initialMatches: _matches,
+        cardWidth: _GameCard.width,
+        cardBuilder: (game, match, matching, node, onFocus, onTap, onHold) =>
+            _GameCard(
+          focusNode: node,
+          game: game,
+          match: match,
+          matching: matching,
+          hideScores: _hideScores,
+          starred: _follows.involves(game),
+          previewing: false,
+          onFocus: onFocus,
+          onTap: onTap,
+          onHold: onHold,
+        ),
       ),
     ));
   }
@@ -1727,13 +1741,12 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                 const SizedBox(width: 14),
                 SportsChip(
                   focusNode: _chipNode(_liveAllId),
-                  label: tr('See all · stats'),
-                  icon: Icons.view_list,
+                  label: tr('See all'),
+                  icon: Icons.grid_view,
                   compact: true,
                   selected: false,
                   onFocus: () {
                     _zone = zoneIndex;
-                    precacheLeagueBackdrop(context, s.games.first.league);
                   },
                   onTap: _openLiveList,
                 ),

@@ -45,12 +45,21 @@ class SportsLiveListScreen extends StatefulWidget {
     required this.onMenu,
     this.initialMatches = const {},
     this.initialGames = const [],
+    this.cardBuilder,
+    this.cardWidth = 268,
+    this.service,
   });
 
   /// What the hub already has, so the list (backdrop, rows, channels) is
   /// drawn from the first frame instead of after its own load and search.
   final Map<String, List<ChannelMatch>> initialMatches;
   final List<SportsGame> initialGames;
+
+  /// The hub supplies the same cards used by its Later today grid.
+  final Widget Function(SportsGame, ChannelMatch?, bool, FocusNode,
+      VoidCallback, VoidCallback, VoidCallback)? cardBuilder;
+  final double cardWidth;
+  final SportsService? service;
 
   final List<SportsLeague> leagues;
   final DateTime day;
@@ -73,6 +82,8 @@ class SportsLiveListScreen extends StatefulWidget {
 
 class _SportsLiveListScreenState extends State<SportsLiveListScreen>
     with RouteAware {
+  SportsService get _service => widget.service ?? SportsService.instance;
+
   static String _key(SportsGame g) => SportsChannelPicks.eventKey(g);
 
   final Set<String> _keys = {};
@@ -95,6 +106,32 @@ class _SportsLiveListScreenState extends State<SportsLiveListScreen>
   final Map<String, GlobalKey> _rowKeys = {};
   final ScrollController _scroll = ScrollController();
   int _focused = 0;
+  int _columns = 1;
+
+  void _vertical(int delta) {
+    if (_games.isEmpty) return;
+    final lastRow = (_games.length - 1) ~/ _columns;
+    final row = _focused ~/ _columns;
+    if (row + delta < 0 || row + delta > lastRow) return;
+    _focusRow(_focused + delta * _columns);
+  }
+
+  void _horizontal(int delta) {
+    if (widget.cardBuilder == null || _games.isEmpty) return;
+    final column = _focused % _columns;
+    if (column + delta < 0 || column + delta >= _columns) return;
+    final target = _focused + delta;
+    if (target >= 0 && target < _games.length) _focusRow(target);
+  }
+
+  void _onGameFocus(int index, SportsGame game) {
+    final leagueChanged =
+        _games[_focused.clamp(0, _games.length - 1)].league.id !=
+            game.league.id;
+    _focused = index;
+    if (leagueChanged) setState(() {});
+    _prefetchSoon(game);
+  }
 
   Timer? _pollTimer;
   bool _covered = false;
@@ -105,8 +142,8 @@ class _SportsLiveListScreenState extends State<SportsLiveListScreen>
 
   void _prefetchSoon(SportsGame g) {
     _prefetchTimer?.cancel();
-    _prefetchTimer = Timer(const Duration(milliseconds: 400),
-        () => SportsService.instance.prefetchSummary(g));
+    _prefetchTimer = Timer(
+        const Duration(milliseconds: 400), () => _service.prefetchSummary(g));
   }
 
   @override
@@ -156,8 +193,7 @@ class _SportsLiveListScreenState extends State<SportsLiveListScreen>
       _nodes[key] ??= FocusNode(debugLabel: 'sports-live-$key');
 
   Future<void> _load({bool first = false}) async {
-    final all =
-        await SportsService.instance.gamesForDay(widget.leagues, widget.day);
+    final all = await _service.gamesForDay(widget.leagues, widget.day);
     if (!mounted) return;
     final games = _ordered([
       for (final g in all)
@@ -266,22 +302,26 @@ class _SportsLiveListScreenState extends State<SportsLiveListScreen>
         (context) => Stack(
           children: [
             const Positioned.fill(child: SettingsGradientBackground()),
-            Positioned.fill(
-                child: _LeagueBackdrop(
-                    league: _games.isEmpty
-                        ? null
-                        : _games[_focused.clamp(0, _games.length - 1)].league)),
+            if (widget.cardBuilder == null)
+              Positioned.fill(
+                  child: _LeagueBackdrop(
+                      league: _games.isEmpty
+                          ? null
+                          : _games[_focused.clamp(0, _games.length - 1)]
+                              .league)),
             Scaffold(
               backgroundColor: Colors.transparent,
               body: SafeArea(
                 child: CallbackShortcuts(
                   bindings: {
                     const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
-                        _focusRow(_focused - 1),
+                        _vertical(-1),
                     const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
-                        _focusRow(_focused + 1),
-                    const SingleActivator(LogicalKeyboardKey.arrowLeft): () {},
-                    const SingleActivator(LogicalKeyboardKey.arrowRight): () {},
+                        _vertical(1),
+                    const SingleActivator(LogicalKeyboardKey.arrowLeft): () =>
+                        _horizontal(-1),
+                    const SingleActivator(LogicalKeyboardKey.arrowRight): () =>
+                        _horizontal(1),
                     const SingleActivator(LogicalKeyboardKey.mediaPlayPause):
                         _onPlayKey,
                     const SingleActivator(LogicalKeyboardKey.mediaPlay):
@@ -350,6 +390,36 @@ class _SportsLiveListScreenState extends State<SportsLiveListScreen>
             style: const TextStyle(color: Colors.white70, fontSize: 16)),
       );
     }
+    if (widget.cardBuilder != null) {
+      return LayoutBuilder(builder: (context, constraints) {
+        final width = math.min(widget.cardWidth, constraints.maxWidth);
+        _columns =
+            math.max(1, ((constraints.maxWidth + 12) / (width + 12)).floor());
+        return SingleChildScrollView(
+          controller: _scroll,
+          padding: const EdgeInsets.only(top: 8, bottom: 32),
+          child: Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              for (final (i, game) in _games.indexed)
+                SizedBox(
+                  key: _rowKeys[_key(game)] ??= GlobalKey(),
+                  width: width,
+                  child: widget.cardBuilder!(
+                      game,
+                      _matches[_key(game)]?.firstOrNull,
+                      _matching,
+                      _node(_key(game)),
+                      () => _onGameFocus(i, game),
+                      () => _openDetails(game),
+                      () => _openMenu(game)),
+                ),
+            ],
+          ),
+        );
+      });
+    }
     // Not lazy: Up/Down focus rows that may be off screen (CLAUDE.md §10).
     return SingleChildScrollView(
       controller: _scroll,
@@ -366,15 +436,7 @@ class _SportsLiveListScreenState extends State<SportsLiveListScreen>
               hideScores: widget.hideScores,
               starred: widget.follows.involves(g),
               narrow: _narrow,
-              onFocus: () {
-                final leagueChanged =
-                    _games[_focused.clamp(0, _games.length - 1)].league.id !=
-                        g.league.id;
-                _focused = i;
-                // The backdrop follows the focused game's league.
-                if (leagueChanged) setState(() {});
-                _prefetchSoon(g);
-              },
+              onFocus: () => _onGameFocus(i, g),
               onTap: () => _openDetails(g),
               onHold: () => _openMenu(g),
             ),
