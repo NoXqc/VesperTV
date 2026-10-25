@@ -16,6 +16,7 @@ import 'catalog_database.dart';
 import 'epg_service.dart';
 import 'playlist_session.dart';
 import 'storage_service.dart';
+import 'local_playlist_files.dart';
 import 'tmdb_enrichment_service.dart';
 import 'user_groups.dart';
 
@@ -442,6 +443,11 @@ class PlaylistManager extends ChangeNotifier {
   }
 
   Future<void> removePlaylist(String playlistId) async {
+    final removed =
+        _storage.getPlaylists().where((p) => p.id == playlistId).firstOrNull;
+    if (removed != null) {
+      await LocalPlaylistFiles().delete(removed.m3uUrl);
+    }
     final updated =
         _storage.getPlaylists().where((p) => p.id != playlistId).toList();
     await _storage.setPlaylists(updated);

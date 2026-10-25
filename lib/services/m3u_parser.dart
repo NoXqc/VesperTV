@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
@@ -20,6 +21,15 @@ class M3uParser {
   /// phones with a capped per-app heap (Android's default ~256MB ceiling).
   static Future<List<Channel>> fetchAndParse(String url,
       {required String playlistId}) async {
+    if (Uri.tryParse(url)?.scheme == 'file') {
+      final state = _ParseState(playlistId: playlistId);
+      await File.fromUri(Uri.parse(url))
+          .openRead()
+          .transform(const Utf8Decoder(allowMalformed: true))
+          .transform(const LineSplitter())
+          .forEach(state.consumeLine);
+      return state.channels;
+    }
     final client = http.Client();
     try {
       final request = http.Request('GET', Uri.parse(url));

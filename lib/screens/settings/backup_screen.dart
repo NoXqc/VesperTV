@@ -15,6 +15,7 @@ import '../../widgets/tv_menu_tile.dart';
 import '../../widgets/tv_switch_list_tile.dart';
 import '../../l10n/l10n.dart';
 import 'replace_setup.dart';
+import 'storage_import_screen.dart';
 
 /// Settings > Backup & restore — see [BackupService]. Restoring first saves
 /// the current setup as an automatic backup, so a wrong pick can be undone.
@@ -235,6 +236,15 @@ class _BackupScreenState extends State<BackupScreen> {
                 enabled: !_busy,
                 onTap: _restoreFromFile,
               ),
+            TvMenuTile(
+              icon: Icons.usb,
+              title: tr('Import from storage'),
+              subtitle: tr(
+                  'Add M3U playlists and Media Hub sources from USB or external storage'),
+              enabled: !_busy,
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => const StorageImportScreen())),
+            ),
             const Divider(height: 32),
             SectionLabel(tr('Backups')),
             const SizedBox(height: 4),

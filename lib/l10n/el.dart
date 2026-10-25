@@ -2541,4 +2541,24 @@ const Map<String, String> kEl = {
   "On Fire TV sticks, the trailer plays full screen.": "Στα Fire TV Stick το τρέιλερ παίζει σε πλήρη οθόνη.",
   "Remove \"{title}\" from history?":
       "Να αφαιρεθεί το «{title}» από το ιστορικό;",
+  "Import from storage": "Εισαγωγή από αποθηκευτικό μέσο",
+  "Add M3U playlists and Media Hub sources from USB or external storage":
+      "Προσθήκη λιστών M3U και πηγών Media Hub από USB ή εξωτερικό μέσο",
+  "Choose a folder": "Επιλογή φακέλου",
+  "Import from storage?": "Εισαγωγή από αποθηκευτικό μέσο;",
+  "Import": "Εισαγωγή",
+  "Import \"{name}\"? M3U playlists and included Media Hub sources are added without replacing your current setup.":
+      "Εισαγωγή του «{name}»; Οι λίστες M3U και οι πηγές Media Hub προστίθενται χωρίς αντικατάσταση της τρέχουσας διαμόρφωσης.",
+  "Import M3U playlists and Media Hub source links from USB, SD card or external storage. Choose M3U/M3U8 playlists or TXT/JSON source files.":
+      "Εισαγάγετε λίστες M3U και συνδέσμους πηγών Media Hub από USB, κάρτα SD ή εξωτερικό μέσο. Επιλέξτε λίστες M3U/M3U8 ή αρχεία πηγών TXT/JSON.",
+  "Could not read this storage location. Use Choose a folder to grant access.":
+      "Δεν ήταν δυνατή η ανάγνωση. Χρησιμοποιήστε Επιλογή φακέλου για παραχώρηση πρόσβασης.",
+  "No folder picker on this device. Browse the storage devices below instead.":
+      "Αυτή η συσκευή δεν διαθέτει επιλογέα φακέλων. Περιηγηθείτε στα παρακάτω αποθηκευτικά μέσα.",
+  "No playlists or source files in this folder.":
+      "Δεν υπάρχουν λίστες ή αρχεία πηγών σε αυτόν τον φάκελο.",
+  "Imported {items} playlist items and {sources} Media Hub sources. {existing} sources already existed; {failed} could not be reached.":
+      "Εισήχθησαν {items} στοιχεία λιστών και {sources} πηγές Media Hub. {existing} πηγές υπήρχαν ήδη· δεν ήταν δυνατή η σύνδεση με {failed}.",
+  "Could not import this file. Choose an M3U channel playlist or a TXT/JSON file containing Media Hub manifest links.":
+      "Δεν ήταν δυνατή η εισαγωγή. Επιλέξτε λίστα καναλιών M3U ή αρχείο TXT/JSON με συνδέσμους manifest του Media Hub.",
 };

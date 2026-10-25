@@ -9,6 +9,7 @@ import '../models/playlist_profile.dart';
 import '../models/viewer_profile.dart';
 import '../models/profile_copy.dart';
 import 'profile_photos.dart';
+import 'local_playlist_files.dart';
 import '../utils/constants.dart';
 
 /// Wraps [SharedPreferences] for small settings values, and the OS temp
@@ -17,20 +18,26 @@ import '../utils/constants.dart';
 /// and living under the temp dir means the OS can reclaim them under
 /// storage pressure with no worse outcome than "re-fetch from network".
 class StorageService {
-  StorageService({ProfilePhotos? photos})
-      : profilePhotos = photos ?? ProfilePhotos();
+  StorageService({ProfilePhotos? photos, LocalPlaylistFiles? localPlaylists})
+      : profilePhotos = photos ?? ProfilePhotos(),
+        localPlaylists = localPlaylists ?? LocalPlaylistFiles();
   late SharedPreferences _prefs;
   Directory? _cacheDir;
   final ProfilePhotos profilePhotos;
+  final LocalPlaylistFiles localPlaylists;
 
+  /// Include associated private files alongside the preference payload.
   Future<Map<String, Object>> withProfilePhotos(
-          Map<String, Object> values) async =>
-      {
-        ...values,
-        'vesper_profile_photos': await profilePhotos.export(getViewerProfiles()
-            .where((p) => p.photoVersion > 0)
-            .map((p) => p.id)),
-      };
+      Map<String, Object> values) async {
+    final snapshots = await localPlaylists.export(getPlaylists());
+    return {
+      ...values,
+      'vesper_profile_photos': await profilePhotos.export(getViewerProfiles()
+          .where((p) => p.photoVersion > 0)
+          .map((p) => p.id)),
+      if (snapshots.isNotEmpty) 'vesper_imported_playlists': snapshots,
+    };
+  }
 
   /// Only a newly created viewer is a valid destination. Main is read-only.
   Future<void> copyMainToViewer(String id, Set<ProfileCopy> options,
@@ -1055,7 +1062,10 @@ class StorageService {
       if (include(key)) await _prefs.remove(key);
     }
     for (final entry in values.entries) {
-      if (entry.key == 'vesper_profile_photos') continue;
+      if (entry.key == 'vesper_profile_photos' ||
+          entry.key == 'vesper_imported_playlists') {
+        continue;
+      }
       if (!include(entry.key)) continue;
       if (entry.key == _transferArchiveExcluded) continue;
       if (keep?.call(entry.key) ?? false) continue;
@@ -1077,6 +1087,11 @@ class StorageService {
               if (s is String) s
           ]);
       }
+    }
+    final snapshots = values['vesper_imported_playlists'];
+    if (snapshots is Map && snapshots.isNotEmpty) {
+      await setPlaylists(
+          await localPlaylists.restore(getPlaylists(), snapshots));
     }
     final photoIds = {
       ...previous.where((p) => p.photoVersion > 0).map((p) => p.id),

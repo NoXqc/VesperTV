@@ -1184,6 +1184,16 @@ VideoPlayerHdrController streamController(
         videoPlayerOptions: videoPlayerOptions);
   }
   final uri = Uri.parse(url);
+  if (uri.scheme == 'file') {
+    return VideoPlayerHdrController.file(File.fromUri(uri),
+        closedCaptionFile: closedCaptionFile,
+        videoPlayerOptions: videoPlayerOptions);
+  }
+  if (uri.scheme == 'content' && Platform.isAndroid) {
+    return VideoPlayerHdrController.contentUri(uri,
+        closedCaptionFile: closedCaptionFile,
+        videoPlayerOptions: videoPlayerOptions);
+  }
   final hls = _streamUsesHls(url);
   return VideoPlayerHdrController.networkUrl(
     uri,

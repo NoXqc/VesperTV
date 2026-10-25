@@ -38,6 +38,7 @@ class MainActivity : FlutterActivity() {
     private val DEVICE_CHANNEL = "com.nox.nox_iptv/device_type"
     private val BACKUP_CHANNEL = "com.nox.nox_iptv/backup"
     private val backupStore by lazy { BackupStore(this) }
+    private val localImportStore by lazy { LocalImportStore(this) }
     private val recorderBridge by lazy { RecorderBridge(this) }
     private val displayModes by lazy { DisplayModes(this) }
 
@@ -66,13 +67,22 @@ class MainActivity : FlutterActivity() {
 
     @Deprecated("Activity result API; FlutterActivity still routes through this")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        if (!backupStore.onActivityResult(requestCode, resultCode, data)) {
+        if (!localImportStore.onActivityResult(requestCode, resultCode, data) &&
+            !backupStore.onActivityResult(requestCode, resultCode, data)) {
             super.onActivityResult(requestCode, resultCode, data)
         }
     }
 
+    override fun onDestroy() {
+        localImportStore.close()
+        super.onDestroy()
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.nox.nox_iptv/storage_import")
+            .setMethodCallHandler(localImportStore::handle)
 
         // Settings > Backup & restore — see BackupStore.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, BACKUP_CHANNEL)

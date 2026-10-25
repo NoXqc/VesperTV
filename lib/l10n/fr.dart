@@ -1931,4 +1931,24 @@ const Map<String, String> kFr = {
   "Play trailers automatically on movie and show pages": "Lecture automatique des bandes-annonces sur les pages de films et séries",
   "On Fire TV sticks, the trailer plays full screen.": "Sur les Fire TV Stick, la bande-annonce s'affiche en plein écran.",
   "Remove \"{title}\" from history?": "Retirer « {title} » de l’historique ?",
+  "Import from storage": "Importer depuis un stockage",
+  "Add M3U playlists and Media Hub sources from USB or external storage":
+      "Ajouter des listes M3U et sources Media Hub depuis USB ou un stockage externe",
+  "Choose a folder": "Choisir un dossier",
+  "Import from storage?": "Importer depuis ce stockage ?",
+  "Import": "Importer",
+  "Import \"{name}\"? M3U playlists and included Media Hub sources are added without replacing your current setup.":
+      "Importer « {name} » ? Les listes M3U et les sources Media Hub incluses sont ajoutées sans remplacer votre configuration.",
+  "Import M3U playlists and Media Hub source links from USB, SD card or external storage. Choose M3U/M3U8 playlists or TXT/JSON source files.":
+      "Importez des listes M3U et liens de sources Media Hub depuis USB, carte SD ou stockage externe. Choisissez des listes M3U/M3U8 ou des fichiers de sources TXT/JSON.",
+  "Could not read this storage location. Use Choose a folder to grant access.":
+      "Impossible de lire ce stockage. Utilisez Choisir un dossier pour autoriser l’accès.",
+  "No folder picker on this device. Browse the storage devices below instead.":
+      "Aucun sélecteur de dossier sur cet appareil. Parcourez les stockages ci-dessous.",
+  "No playlists or source files in this folder.":
+      "Aucune liste ni fichier de sources dans ce dossier.",
+  "Imported {items} playlist items and {sources} Media Hub sources. {existing} sources already existed; {failed} could not be reached.":
+      "{items} éléments de liste et {sources} sources Media Hub importés. {existing} sources existaient déjà ; {failed} étaient injoignables.",
+  "Could not import this file. Choose an M3U channel playlist or a TXT/JSON file containing Media Hub manifest links.":
+      "Importation impossible. Choisissez une liste de chaînes M3U ou un fichier TXT/JSON contenant des liens de manifestes Media Hub.",
 };

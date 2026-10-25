@@ -336,6 +336,17 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Codex focus/history/storage batch** (2026-10-25, based on Claude +444):
+  theme colour work explicitly on HOLD. Focus recovery uses concrete tab nodes;
+  Home/Hub/Sports return to TV rail with guide closed. Empty/lazy movie entry
+  retains a selector. Playlist Manager Right enters details, Left/Back returns
+  to selected playlist. Media Hub history hold asks Cancel/Remove in glass menu.
+  Backup & restore imports M3U files and included Media Hub manifest sources
+  from USB/external storage; owner clarified this scope instead of local-video
+  collection import. Private M3U snapshots accompany backup/transfer and clean up
+  with their playlist. See `dev-notes/external-storage-import.md`. Owner requested
+  build/install on Formuler when complete; no GitHub/Discord publication.
+
 - **Claude, 2026-10-25: Fire TV trailers + Trailers setting** (`claude/firestick-trailer`, on +442;
   test build **+444** installed on Formuler + Fire Stick): Fire OS's WebView draws `<video>` on its
   own native overlay (`SurfaceViewOverlayCore$NoPunchingSurfaceView`, seen in `dumpsys activity top`).
