@@ -3,7 +3,7 @@
 Initial implementation: codex/automatic-detail-trailers.
 Owner-requested backdrop follow-up: codex/trailer-backdrop-fade, 2026-10-25.
 Playback follow-up after +439: codex/trailer-playback-performance (+440).
-Settings > Theme > Automatic trailers, device preference, **off by default**.
+Settings > Interface > Trailers > Automatic trailers (moved from Theme, 2026-10-25), device preference, **off by default**. Fire TV (manufacturer Amazon): the trailer WebView uses texture composition, because Fire OS puts <video> on its own native overlay (`SurfaceViewOverlayCore$NoPunchingSurfaceView`): under hybrid composition it was black with audio; now it shows but on top of everything, so trailers play full screen there (the setting says so). Other devices keep hybrid composition.
 Uses the strict trailer lookup in dev-notes/external-trailers.md, with one shared
 request for the manual button and automatic preview. Covers IPTV movies/shows
 and Media Hub movies/shows (Hub shows use SeriesDetailScreen).

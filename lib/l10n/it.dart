@@ -1928,4 +1928,7 @@ const Map<String, String> kIt = {
   "Automatic trailers": "Trailer automatici",
   "Play available trailers automatically with sound on IPTV and Media Hub movie and show pages.":
       "Riproduci automaticamente con audio i trailer disponibili nelle pagine di film e serie IPTV e Media Hub.",
+  "Trailers": "Trailer",
+  "Play trailers automatically on movie and show pages": "Riproduzione automatica dei trailer nelle pagine di film e serie",
+  "On Fire TV sticks, the trailer plays full screen.": "Sui Fire TV Stick il trailer viene riprodotto a schermo intero.",
 };

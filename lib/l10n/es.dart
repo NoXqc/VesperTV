@@ -1924,4 +1924,7 @@ const Map<String, String> kEs = {
   "Automatic trailers": "Tráilers automáticos",
   "Play available trailers automatically with sound on IPTV and Media Hub movie and show pages.":
       "Reproducir automáticamente con sonido los tráilers disponibles en las páginas de películas y series de IPTV y Media Hub.",
+  "Trailers": "Tráilers",
+  "Play trailers automatically on movie and show pages": "Reproducción automática de tráilers en las páginas de películas y series",
+  "On Fire TV sticks, the trailer plays full screen.": "En los Fire TV Stick, el tráiler se reproduce a pantalla completa.",
 };

@@ -336,6 +336,23 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-10-25: Fire TV trailers + Trailers setting** (`claude/firestick-trailer`, on +442;
+  test build **+444** installed on Formuler + Fire Stick): Fire OS's WebView draws `<video>` on its
+  own native overlay (`SurfaceViewOverlayCore$NoPunchingSurfaceView`, seen in `dumpsys activity top`).
+  Hybrid composition = black with audio (background and Trailer button, beta on or off); texture
+  composition shows it but **above all Flutter UI**, so Fire TV plays trailers full screen. Texture
+  mode only for manufacturer Amazon (`youtube_platform_view.dart`, getprop once); other devices keep
+  hybrid. Toggle moved Theme -> Settings > Interface > **Trailers** with the note "On Fire TV sticks,
+  the trailer plays full screen." (4 languages). Analyze 17, 481 tests. Formuler re-check pending.
+- **Claude, 2026-10-25: Formuler zap frozen frame** (in Codex's +442 integration): Formuler 4K/HDR
+  video is on a hardware plane that PixelCopy/screencap read as solid (0,150,0) green, so capture can't
+  work. `NativeVideoSurface` keeps two SurfaceViews on the Z11 Pro MAX: a zap moves the decoder to the
+  offscreen one, the old one stays on screen with its last real frame + spinner, swap 120 ms after the
+  new first frame. Owner: "works well". Also guide `_ensureRowVisible` viewport guard (Back crash).
+- **Known, not bugs (2026-10-25):** Multiview tiles can't show HDR (texture path): Formuler 4K tile is
+  green, Shield tile washed out; full screen fine. Proposed: tiles prefer the channel's HD copy; owner
+  is asking Sam to compare TiviMate Multiview first. Fire Stick 4K freezing = weak Wi-Fi (resolved).
+
 - **Codex large custom Media Hub catalogs** (codex/mediahub-large-catalog,
   2026-10-25): owner confirms slow main horizontal rows under Other after refresh.
   Vertical browse used an eager Column: every catalog's poster strip stayed

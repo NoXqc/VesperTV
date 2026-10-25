@@ -193,6 +193,8 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
             if (!Platform.isWindows)
               _general('datapool', Icons.analytics_outlined, tr('Data pool'),
                   tr('Stream details when you press OK while watching')),
+            _general('trailers', Icons.movie_outlined, tr('Trailers'),
+                tr('Play trailers automatically on movie and show pages')),
             _general('favourites', Icons.star_outline, tr('Favourites'),
                 tr('One list for every playlist, or one per playlist')),
             if (!Platform.isWindows)

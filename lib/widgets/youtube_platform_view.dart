@@ -30,8 +30,10 @@ class YouTubePlatformView extends StatefulWidget {
 
 class _YouTubePlatformViewState extends State<YouTubePlatformView> {
   static Future<WebViewEnvironment>? _windowsEnvironment;
+  static Future<bool>? _amazon;
   WebViewEnvironment? _environment;
   bool _ready = false;
+  bool _hybrid = true;
   @override
   void initState() {
     super.initState();
@@ -52,6 +54,16 @@ class _YouTubePlatformViewState extends State<YouTubePlatformView> {
                       '${root.path}${Platform.pathSeparator}youtube_webview'));
         })();
         _environment = await _windowsEnvironment;
+      }
+      if (Platform.isAndroid) {
+        // Fire OS's WebView puts <video> on its own native layer. Under hybrid
+        // composition that layer sat behind the opaque page (black, audio only);
+        // texture composition shows it, but on top of everything: Fire TV plays
+        // trailers full screen (Settings > Interface > Trailers says so).
+        _amazon ??= Process.run('getprop', ['ro.product.manufacturer']).then(
+            (r) => '${r.stdout}'.trim().toLowerCase() == 'amazon',
+            onError: (_) => false);
+        _hybrid = !await _amazon!;
       }
       if (mounted) setState(() => _ready = true);
     } catch (_) {
@@ -89,6 +101,7 @@ class _YouTubePlatformViewState extends State<YouTubePlatformView> {
               useShouldInterceptRequest: true,
               useShouldOverrideUrlLoading: true,
               supportMultipleWindows: true,
+              useHybridComposition: _hybrid,
               isInspectable: false),
           onWebViewCreated: (controller) {
             controller.addJavaScriptHandler(

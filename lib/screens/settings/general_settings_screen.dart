@@ -474,6 +474,20 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                                 context.read<AppPreferences>().setDataPool(v),
                           ),
                         ]),
+                  _section('trailers', Icons.movie_outlined, tr('Trailers'),
+                      children: [
+                        TvSwitchListTile(
+                          title: Text(tr('Automatic trailers')),
+                          subtitle: Text([
+                            tr('Play available trailers automatically with sound on IPTV and Media Hub movie and show pages.'),
+                            if (Platform.isAndroid)
+                              tr('On Fire TV sticks, the trailer plays full screen.'),
+                          ].join(' ')),
+                          value: context.watch<AppPreferences>().autoTrailers,
+                          onChanged: (v) =>
+                              context.read<AppPreferences>().setAutoTrailers(v),
+                        ),
+                      ]),
                   _section('favourites', Icons.star_outline, tr('Favourites'),
                       children: [
                         TvSwitchListTile(

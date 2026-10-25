@@ -1927,4 +1927,7 @@ const Map<String, String> kFr = {
   "Automatic trailers": "Bandes-annonces automatiques",
   "Play available trailers automatically with sound on IPTV and Media Hub movie and show pages.":
       "Lire automatiquement avec le son les bandes-annonces disponibles sur les pages des films et séries IPTV et Media Hub.",
+  "Trailers": "Bandes-annonces",
+  "Play trailers automatically on movie and show pages": "Lecture automatique des bandes-annonces sur les pages de films et séries",
+  "On Fire TV sticks, the trailer plays full screen.": "Sur les Fire TV Stick, la bande-annonce s'affiche en plein écran.",
 };
