@@ -32,8 +32,8 @@ import 'settings/media_server_screen.dart';
 /// D-pad: explicit dispatch inside the rows (Up/Down = neighbour row at
 /// its remembered card, Left on the first card = rail), per CLAUDE.md's
 /// rule that default traversal is unreliable across differently shaped
-/// rows. Rows are a non-lazy Column so a neighbour row's card always has
-/// a context to focus; each row's cards are lazy horizontally, so moving
+/// rows. Both rows and cards are lazy: navigation scrolls an off-screen row
+/// into the viewport before requesting its card's focus. Moving
 /// along a row jumps its own scroll controller to the card first (a card
 /// the list hasn't built can't take focus), and nearing the end of a row
 /// loads its next page. Search and Genre sit in a floating bar at the top
@@ -64,7 +64,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
   final _scroll = ScrollController();
 
   /// Card focus nodes by row key, created on demand.
-  final Map<String, List<FocusNode>> _nodes = {};
+  final Map<String, Map<int, FocusNode>> _nodes = {};
 
   /// Last focused card index per row, so Up/Down lands where you were.
   final Map<String, int> _lastIndex = {};
@@ -126,7 +126,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
       c.dispose();
     }
     for (final list in _nodes.values) {
-      for (final n in list) {
+      for (final n in list.values) {
         n.dispose();
       }
     }
@@ -134,12 +134,15 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
   }
 
   FocusNode _node(String rowKey, int i) {
-    final list = _nodes.putIfAbsent(rowKey, () => []);
-    while (list.length <= i) {
-      list.add(FocusNode(debugLabel: 'archive-card'));
-    }
-    return list[i];
+    // Jumping into a large catalog must not allocate nodes for every earlier item.
+    return _nodes
+        .putIfAbsent(rowKey, () => {})
+        .putIfAbsent(i, () => FocusNode(debugLabel: 'archive-card'));
   }
+
+  double get _rowHeaderHeight =>
+      MediaQuery.textScalerOf(context).scale(15) * 1.3 + 20;
+  double get _rowExtent => _rowHeaderHeight + PosterCard.height + 16;
 
   GlobalKey _rowKey(String key) => _rowKeys.putIfAbsent(key, GlobalKey.new);
 
@@ -331,7 +334,14 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
     final row = rows[r];
     final i = (_lastIndex[row.key] ?? 0).clamp(0, row.items.length - 1);
     final ctx = _rowKey(row.key).currentContext;
-    if (ctx != null) Scrollable.ensureVisible(ctx, alignment: 0.05);
+    if (ctx != null) {
+      Scrollable.ensureVisible(ctx, alignment: 0.05);
+    } else if (_scroll.hasClients) {
+      // Lazy rows have no context yet. Materialize the destination first,
+      // including long jumps from the catalog buttons in the floating bar.
+      _scroll.jumpTo(
+          (r * _rowExtent).clamp(0.0, _scroll.position.maxScrollExtent));
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focusCard(row, i);
     });
@@ -500,9 +510,12 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                         onPressed: () => Navigator.of(context).maybePop(),
                       ),
                     ),
-                  Text(tr('Media Hub'),
-                      style: const TextStyle(
-                          fontSize: 20, fontWeight: FontWeight.w700)),
+                  Expanded(
+                      child: Text(tr('Media Hub'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.w700))),
                 ]),
               ),
               _RailTile(
@@ -926,16 +939,18 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
               ),
             ),
             Expanded(
-              child: SingleChildScrollView(
+              child: ListView.builder(
                 controller: _scroll,
                 padding: const EdgeInsets.only(bottom: 40),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (var r = 0; r < rows.length; r++)
-                      _buildRow(service, rows, r, scheme),
-                  ],
-                ),
+                itemExtent: _rowExtent,
+                scrollCacheExtent: ScrollCacheExtent.pixels(_rowExtent),
+                itemCount: rows.length,
+                findChildIndexCallback: (key) {
+                  final index =
+                      rows.indexWhere((row) => _rowKeys[row.key] == key);
+                  return index < 0 ? null : index;
+                },
+                itemBuilder: (_, r) => _buildRow(service, rows, r, scheme),
               ),
             ),
           ],
@@ -951,15 +966,20 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
       key: _rowKey(row.key),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 14, 24, 6),
-          child: Text(_rowTitle(service, row),
-              style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: r == _focusedRow && _contentScope.hasFocus
-                      ? scheme.primary
-                      : Colors.white)),
+        SizedBox(
+          height: _rowHeaderHeight,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 14, 24, 6),
+            child: Text(_rowTitle(service, row),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: r == _focusedRow && _contentScope.hasFocus
+                        ? scheme.primary
+                        : Colors.white)),
+          ),
         ),
         SizedBox(
           height: PosterCard.height + 16,

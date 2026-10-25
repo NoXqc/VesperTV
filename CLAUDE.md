@@ -336,6 +336,19 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Codex large custom Media Hub catalogs** (codex/mediahub-large-catalog,
+  2026-10-25): owner confirms slow main horizontal rows under Other after refresh.
+  Vertical browse used an eager Column: every catalog's poster strip stayed
+  mounted/loaded, and focus rebuilt all rows. Use fixed-extent lazy vertical rows
+  with one-row cache; row jumps materialize destination before card focus. Keep
+  remembered horizontal positions and custom IDs/Other filtering. Sparse focus
+  nodes avoid allocating every preceding card on distant jumps. Row headings are
+  one line; Windows rail title is constrained to avoid overflow. Synthetic
+  100,000-item/100-row regressions cover bounded posters, D-pad and distant jumps.
+  This addresses a concrete scaling cost; the reported unexpected exit has no
+  crash/OOM log yet, so its cause remains unconfirmed. Owner requests +442 build
+  and Formuler install including preceding manager/popup changes. No publication.
+
 - **Codex compact source popup** (codex/compact-source-popup, 2026-10-25):
   owner requests smaller Media Hub source/size cue, roughly three rows. Width
   320 -> 240 logical pixels, padding 16/12 -> 10/8, source/size text 15/14 ->
