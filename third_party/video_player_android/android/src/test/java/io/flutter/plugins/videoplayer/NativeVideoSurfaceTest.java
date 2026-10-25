@@ -134,6 +134,53 @@ public class NativeVideoSurfaceTest {
     verify(exo, times(2)).setVideoSurfaceHolder(any());
   }
 
+  @Test
+  @org.robolectric.annotation.LooperMode(org.robolectric.annotation.LooperMode.Mode.PAUSED)
+  public void formulerSpareKeepsOutgoingPictureThroughRapidZapsAndIgnoresOldFrames() {
+    org.robolectric.shadows.ShadowBuild.setManufacturer("FORMULER");
+    org.robolectric.shadows.ShadowBuild.setModel("Formuler Z11 Pro MAX");
+    VideoPlayer player = nativePlayer();
+    invoke("setRect", Map.of("left", 10, "top", 20, "width", 558, "height", 314));
+    android.view.SurfaceView outgoing = org.robolectric.util.ReflectionHelpers.getField(surface, "view");
+    android.view.SurfaceView unused = org.robolectric.util.ReflectionHelpers.getField(surface, "spare");
+    assertNotNull(unused);
+    ((android.view.ViewGroup) unused.getParent()).removeView(unused);
+    // Robolectric has no valid hardware plane; supply one to exercise the spare path.
+    android.view.SurfaceView next = mock(android.view.SurfaceView.class);
+    SurfaceHolder holder = mock(SurfaceHolder.class);
+    android.view.Surface output = mock(android.view.Surface.class);
+    when(next.getHolder()).thenReturn(holder);
+    when(holder.getSurface()).thenReturn(output);
+    when(output.isValid()).thenReturn(true);
+    org.robolectric.util.ReflectionHelpers.setField(surface, "spare", next);
+    clearInvocations(exo);
+    MethodChannel.Result first = mock(MethodChannel.Result.class);
+    zap(first, "first");
+    org.mockito.InOrder order = inOrder(exo);
+    order.verify(exo).setMediaSource(any());
+    order.verify(exo).setVideoSurfaceHolder(holder);
+    assertSame(outgoing, org.robolectric.util.ReflectionHelpers.getField(surface, "spare"));
+    assertEquals(true, org.robolectric.util.ReflectionHelpers.getField(surface, "frozen"));
+    assertEquals(10, ((android.widget.FrameLayout.LayoutParams) outgoing.getLayoutParams()).leftMargin);
+    android.widget.ImageView cover = org.robolectric.util.ReflectionHelpers.getField(surface, "zapCover");
+    assertEquals(android.view.View.INVISIBLE, cover.getVisibility());
+    zap(mock(MethodChannel.Result.class), "second");
+    verify(first).error("NativeLiveZap", "superseded", null);
+    assertSame(outgoing, org.robolectric.util.ReflectionHelpers.getField(surface, "spare"));
+    AnalyticsListener analytics = org.robolectric.util.ReflectionHelpers.getField(surface, "analytics");
+    analytics.onRenderedFirstFrame(mock(AnalyticsListener.EventTime.class), mock(android.view.Surface.class), 0);
+    org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(120));
+    assertEquals(true, org.robolectric.util.ReflectionHelpers.getField(surface, "frozen"));
+    analytics.onRenderedFirstFrame(mock(AnalyticsListener.EventTime.class), output, 0);
+    org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(119));
+    assertEquals(true, org.robolectric.util.ReflectionHelpers.getField(surface, "frozen"));
+    org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(1));
+    assertEquals(false, org.robolectric.util.ReflectionHelpers.getField(surface, "frozen"));
+    assertTrue(((android.widget.FrameLayout.LayoutParams) outgoing.getLayoutParams()).leftMargin > 10);
+    surface.onPlayerDisposed(3L);
+    player.dispose();
+  }
+
   private VideoPlayer nativePlayer() {
     invoke("configure", Map.of("enabled", true));
     VideoPlayerOptions options = new VideoPlayerOptions();

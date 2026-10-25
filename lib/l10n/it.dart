@@ -53,6 +53,7 @@ const Map<String, String> kIt = {
   "Close the app completely and open it again to apply this change.": "Chiudi completamente l’app e riaprila per applicare questa modifica.",
   "Green flicker fix (test)": "Correzione sfarfallio verde (test)",
   "For green flashes on the picture while the guide or a menu is over it (NVIDIA Shield). Unlike Compatibility video it keeps HDR. Applies from the next channel. If the guide or menus disappear behind the video, turn it off.": "Per i lampi verdi sull’immagine quando la guida o un menu è sopra (NVIDIA Shield). A differenza di Video compatibile mantiene l’HDR. Si applica dal canale successivo. Se la guida o i menu spariscono dietro il video, disattivalo.",
+  'Automatic: on for this device.': 'Automatico: attivo per questo dispositivo.',
   '1 hour': '1 ora',
   '{h} hours': '{h} ore',
 

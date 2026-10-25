@@ -53,6 +53,7 @@ const Map<String, String> kEl = {
   "Close the app completely and open it again to apply this change.": "Κλείστε εντελώς την εφαρμογή και ανοίξτε την ξανά για να εφαρμοστεί η αλλαγή.",
   "Green flicker fix (test)": "Διόρθωση πράσινου τρεμοπαίγματος (δοκιμή)",
   "For green flashes on the picture while the guide or a menu is over it (NVIDIA Shield). Unlike Compatibility video it keeps HDR. Applies from the next channel. If the guide or menus disappear behind the video, turn it off.": "Για πράσινες αναλαμπές στην εικόνα όταν ο οδηγός ή ένα μενού είναι από πάνω (NVIDIA Shield). Σε αντίθεση με το Συμβατό βίντεο, διατηρεί το HDR. Ισχύει από το επόμενο κανάλι. Αν ο οδηγός ή τα μενού χαθούν πίσω από το βίντεο, απενεργοποιήστε το.",
+  'Automatic: on for this device.': 'Αυτόματο: ενεργό για αυτή τη συσκευή.',
   '1 hour': '1 ώρα',
   '{h} hours': '{h} ώρες',
 

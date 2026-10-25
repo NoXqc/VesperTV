@@ -53,6 +53,7 @@ const Map<String, String> kEs = {
   "Close the app completely and open it again to apply this change.": "Cierra la app por completo y vuelve a abrirla para aplicar este cambio.",
   "Green flicker fix (test)": "Arreglo del parpadeo verde (prueba)",
   "For green flashes on the picture while the guide or a menu is over it (NVIDIA Shield). Unlike Compatibility video it keeps HDR. Applies from the next channel. If the guide or menus disappear behind the video, turn it off.": "Para destellos verdes en la imagen cuando la guía o un menú está encima (NVIDIA Shield). A diferencia de Vídeo compatible, mantiene el HDR. Se aplica desde el siguiente canal. Si la guía o los menús desaparecen detrás del vídeo, desactívalo.",
+  'Automatic: on for this device.': 'Automático: activado para este dispositivo.',
   '1 hour': '1 hora',
   '{h} hours': '{h} horas',
 

@@ -336,6 +336,12 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Owner-authorised local integration (Codex, 2026-10-25):** completed Codex stack plus
+  Claude's device-defaults branch and source snapshot from claude/zap-freeze-surface
+  integrated for main. Claude's snapshot retains version 1.0.39+437; no new package
+  built, installed, pushed or released here. Formuler dual SurfaceViews retain the
+  outgoing hardware frame instead of PixelCopy, plus guide viewport-dimension guard.
+  Details and excluded historical experiments: dev-notes/merge-all-20261025.md.
 - **Codex automatic detail trailers** (codex/automatic-detail-trailers, unbuilt, 2026-10-25):
   Settings > Theme > Automatic trailers, off by default, IPTV and Media Hub movies/shows.
   Muted direct-video backdrop; official YouTube preview beside/above details (uncovered).
@@ -510,6 +516,15 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   fully hidden columns (the old dart:io Windows guard silently skipped that layout in tests).
   Coverage includes Android/Windows sizes, blocked focus for tap/system Back, folding and
   unfolding, compact portrait and TV. Actual Pixel device check pending; no build/install.
+- **Unreleased (Claude, `claude/device-defaults`, 2026-10-23): automatic per-device defaults**
+  (`services/device_defaults.dart`). Rules match getprop manufacturer/model/hardware/socModel/sdk
+  and turn `hideVideoOnSports` / `compatVideo` on by default; a user's own switch always wins
+  (storage getters return null = never set). Bundled list + `docs/device-defaults.json`
+  (vespertv.app, fetched once per launch, cached in `vesper_device_defaults`; same id replaces a
+  bundled rule, empty `set` disables). Settings shows "Automatic: on for this device."; Send log
+  prints `Device defaults: …` + fingerprint. First entry: **Fire TV Cube 3rd gen `AFTGAZL`** →
+  Background video (user report). **Keep the bundled list and the JSON in sync** (a test checks).
+  Shield → compatVideo deliberately not added yet (Samiam23's Media Hub stall, HANDOFF).
 - **Shipped: 1.0.37 (`+413`, 2026-10-22, latest; test build `+412` = pre-release `1.0.36-test.412`,
   deleted):** every bullet below marked Unreleased down to 1.0.36 (Codex batch: Data pool bottom
   panel, live group sort, 1/3/6 h content updates, favourite networks kept, live CC fit; Claude:

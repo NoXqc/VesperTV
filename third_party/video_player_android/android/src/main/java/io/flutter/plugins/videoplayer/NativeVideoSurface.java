@@ -60,6 +60,14 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
   private final LongSparseArray<VideoPlayer> players;
   @Nullable private Activity activity;
   @Nullable private SurfaceView view;
+  // Formuler only: the second SurfaceView of a ping-pong pair. Its 4K/HDR video sits on a
+  // hardware plane that PixelCopy/screencap read back as solid (0,150,0) green (checked on the
+  // box 2026-10-24, ESPN 4K playing), so the outgoing picture can't be captured. Instead a live
+  // zap moves the decoder to the spare surface, offscreen, and leaves the old surface on screen
+  // holding its last real frame; the two swap once the new channel's first frame is drawn.
+  @Nullable private SurfaceView spare;
+  private boolean frozen; // spare is on screen showing the outgoing frame
+  private final Runnable revealTask = () -> hideZapCover();
   @Nullable private ImageView zapCover;
   @Nullable private FrameLayout zapLayer;
   @Nullable private ProgressBar zapSpinner;
@@ -235,7 +243,8 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
       return;
     }
     Bitmap interruptedPicture = lastPicture;
-    cancelSwap("superseded");
+    // Not cancelSwap: that would drop the cover/frozen frame just before this zap reuses it.
+    if (pendingSwap != null) pendingSwap.supersede();
     if (interruptedPicture != null
         && io.flutter.plugins.videoplayer.platformview.FormulerVideoRenderer.isTargetDevice()) {
       retainCapturedPicture(interruptedPicture);
@@ -250,6 +259,7 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
     firstFrame = lastError = "-";
     droppedFrames = 0;
     Log.i(TAG, "reusing player " + attachedId + " for live zap (surface " + surfaceState + ")");
+    if (freezeOnSpare(player, asset, swap)) return;
     captureBeforeSwap(swap, () -> {
       if (pendingSwap != swap || activity == null) return;
       showZapCover();
@@ -259,6 +269,40 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
         swap.fail("source replacement failed");
       }
     });
+  }
+
+  /**
+   * Formuler: leave the outgoing channel's last frame on screen (no pixel copy) and start the
+   * new stream on the offscreen spare surface. A zap during a zap keeps the same frozen frame.
+   */
+  private boolean freezeOnSpare(VideoPlayer player, VideoAsset asset, PendingSwap swap) {
+    if (spare == null || !shown || activity == null) return false;
+    if (!frozen) {
+      Surface next = spare.getHolder().getSurface();
+      if (next == null || !next.isValid()) return false;
+      SurfaceView outgoing = view;
+      view = spare;
+      spare = outgoing;
+      frozen = true;
+    }
+    swapHandler.removeCallbacks(revealTask);
+    lastCapture = "outgoing frame kept on screen + spinner";
+    Log.i(TAG, lastCapture);
+    try {
+      // Source first, output second: the old decoder stops while still on the frozen surface,
+      // so no outgoing-channel frame can reach (and "first frame"-reveal) the new one.
+      player.replaceNativeStream(activity, asset);
+      if (player.nativeSurfaceHolder != view.getHolder()) {
+        swap.exo.setVideoSurfaceHolder(view.getHolder());
+        player.nativeSurfaceHolder = view.getHolder();
+      }
+    } catch (RuntimeException e) {
+      swap.fail("source replacement failed");
+      return true;
+    }
+    layout();
+    showZapCover();
+    return true;
   }
 
   /** One temporary, bounded frame; never saved to disk or included in logs. */
@@ -334,6 +378,7 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
   private void scheduleWarmCapture(long delay) {
     swapHandler.removeCallbacks(warmCaptureTask);
     if (!disposed && enabled && shown && frameReady && warmFailures < 3 && attachedPlayer != null
+        && spare == null
         && io.flutter.plugins.videoplayer.platformview.FormulerVideoRenderer.isTargetDevice()) {
       swapHandler.postDelayed(warmCaptureTask, delay);
     }
@@ -424,6 +469,9 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
       exo.removeListener(this);
       return true;
     }
+    void supersede() {
+      if (finish()) result.error("NativeLiveZap", "superseded", null);
+    }
     void fail(String reason) {
       if (finish()) { hideZapCover(); result.error("NativeLiveZap", reason, null); }
     }
@@ -456,32 +504,16 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
       Log.w(TAG, "no content view: cannot create the video surface");
       return false;
     }
-    view = new SurfaceView(activity);
-    view.getHolder().addCallback(
-        new SurfaceHolder.Callback() {
-          @Override
-          public void surfaceCreated(@NonNull SurfaceHolder holder) {
-            surfaceState = "created";
-            Log.i(TAG, "surface created");
-          }
-
-          @Override
-          public void surfaceChanged(@NonNull SurfaceHolder holder, int format, int w, int h) {
-            surfaceState = w + "x" + h + " fmt " + format;
-            Log.i(TAG, "surface changed " + surfaceState);
-          }
-
-          @Override
-          public void surfaceDestroyed(@NonNull SurfaceHolder holder) {
-            cancelWarmCapture(true);
-            surfaceState = "destroyed";
-            Log.i(TAG, "surface destroyed");
-          }
-        });
+    view = newSurface("A");
     // Index 0 = behind the Flutter view. Default z-order: the surface punches through the
     // (transparent) window, under Flutter's own drawing.
-    content.addView(view, 0, params());
-    Log.i(TAG, "video surface added behind Flutter (content children " + content.getChildCount() + ")");
+    content.addView(view, 0, params(shown));
+    if (io.flutter.plugins.videoplayer.platformview.FormulerVideoRenderer.isTargetDevice()) {
+      spare = newSurface("B");
+      content.addView(spare, 0, params(false));
+    }
+    Log.i(TAG, "video surface added behind Flutter (content children " + content.getChildCount()
+        + (spare != null ? ", spare for zaps" : "") + ")");
     zapCover = new ImageView(activity);
     zapCover.setImageDrawable(activity.getApplicationInfo().loadIcon(activity.getPackageManager()));
     zapCover.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
@@ -495,14 +527,59 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
     int spinnerSize = Math.round(32 * activity.getResources().getDisplayMetrics().density);
     zapLayer.addView(zapSpinner, new FrameLayout.LayoutParams(spinnerSize, spinnerSize, Gravity.CENTER));
     zapLayer.setVisibility(View.GONE);
-    content.addView(zapLayer, 1, params());
+    // After both surfaces: a SurfaceView clears its rect in the window when drawn, which
+    // would erase a spinner drawn before it.
+    int above = Math.max(content.indexOfChild(view), spare == null ? -1 : content.indexOfChild(spare));
+    content.addView(zapLayer, above + 1, params(shown));
     logDisplay();
     return true;
   }
 
+  private SurfaceView newSurface(String label) {
+    SurfaceView surface = new SurfaceView(activity);
+    surface.getHolder().addCallback(
+        new SurfaceHolder.Callback() {
+          // Only the surface the player draws into reports into the diagnostics.
+          private boolean current(SurfaceHolder holder) {
+            return view != null && holder == view.getHolder();
+          }
+
+          @Override
+          public void surfaceCreated(@NonNull SurfaceHolder holder) {
+            if (current(holder)) surfaceState = "created";
+            Log.i(TAG, "surface " + label + " created");
+          }
+
+          @Override
+          public void surfaceChanged(@NonNull SurfaceHolder holder, int format, int w, int h) {
+            String state = w + "x" + h + " fmt " + format;
+            if (current(holder)) surfaceState = state;
+            Log.i(TAG, "surface " + label + " changed " + state);
+          }
+
+          @Override
+          public void surfaceDestroyed(@NonNull SurfaceHolder holder) {
+            if (current(holder)) {
+              cancelWarmCapture(true);
+              surfaceState = "destroyed";
+            }
+            Log.i(TAG, "surface " + label + " destroyed");
+          }
+        });
+    return surface;
+  }
+
+  private void layout() {
+    if (view != null) view.setLayoutParams(params(shown && !frozen));
+    if (spare != null) spare.setLayoutParams(params(shown && frozen));
+    if (zapLayer != null) zapLayer.setLayoutParams(params(shown));
+  }
+
   private void showZapCover() {
     if (zapCover == null || !shown) return;
-    zapLayer.setLayoutParams(params());
+    zapLayer.setLayoutParams(params(shown));
+    // Frozen: the real outgoing frame is on screen below, so only the spinner shows.
+    zapCover.setVisibility(frozen ? View.INVISIBLE : View.VISIBLE);
     int spinnerSize = Math.max(1, Math.min(Math.round(32 * activity.getResources().getDisplayMetrics().density),
         Math.min(width, height) / 8));
     zapSpinner.setLayoutParams(new FrameLayout.LayoutParams(spinnerSize, spinnerSize, Gravity.CENTER));
@@ -516,6 +593,11 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
 
   private void hideZapCover() {
     swapHandler.removeCallbacks(coverTimeout);
+    swapHandler.removeCallbacks(revealTask);
+    if (frozen) {
+      frozen = false;
+      layout(); // the new channel's surface on screen, the frozen one off
+    }
     if (zapCover != null) {
       if (zapLayer != null) zapLayer.setVisibility(View.GONE);
       if (activity != null) {
@@ -539,6 +621,11 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
       zapSpinner = null;
       zapLayer = null;
     }
+    if (spare != null) {
+      ViewGroup spareParent = (ViewGroup) spare.getParent();
+      if (spareParent != null) spareParent.removeView(spare);
+      spare = null;
+    }
     if (view == null) return;
     ViewGroup parent = (ViewGroup) view.getParent();
     if (parent != null) parent.removeView(view);
@@ -548,11 +635,11 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
   }
 
   /** Off-screen (right of the display) instead of GONE: GONE destroys the surface. */
-  private FrameLayout.LayoutParams params() {
+  private FrameLayout.LayoutParams params(boolean onScreen) {
     int w = Math.max(width, 1);
     int h = Math.max(height, 1);
     FrameLayout.LayoutParams p = new FrameLayout.LayoutParams(w, h, Gravity.TOP | Gravity.START);
-    if (shown) {
+    if (onScreen) {
       p.leftMargin = left;
       p.topMargin = top;
     } else {
@@ -640,8 +727,7 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
     width = w;
     height = h;
     shown = true;
-    view.setLayoutParams(params());
-    if (zapLayer != null) zapLayer.setLayoutParams(params());
+    layout();
     if (!wasShown) scheduleWarmCapture(250);
     // Positions change every frame during animations: log only show/size changes.
     if (!wasShown || sizeChanged) {
@@ -654,8 +740,7 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
     hideZapCover();
     if (view == null || !shown) return;
     shown = false;
-    view.setLayoutParams(params());
-    if (zapLayer != null) zapLayer.setLayoutParams(params());
+    layout();
     Log.i(TAG, "hidden (no video hole on screen)");
   }
 
@@ -794,7 +879,15 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
         @Override
         public void onRenderedFirstFrame(
             @NonNull EventTime eventTime, @NonNull Object output, long renderTimeMs) {
-          hideZapCover();
+          if (frozen && view != null && output == view.getHolder().getSurface()) {
+            // Reported when the frame is released to the surface, a vsync or two before it
+            // is latched: keep the frozen frame up a moment longer so the swap never shows
+            // the spare's stale content.
+            swapHandler.removeCallbacks(revealTask);
+            swapHandler.postDelayed(revealTask, 120);
+          } else if (!frozen) {
+            hideZapCover();
+          }
           frameReady = true;
           scheduleWarmCapture(250);
           firstFrame = "rendered to " + output.getClass().getSimpleName();

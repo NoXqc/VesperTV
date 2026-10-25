@@ -7712,9 +7712,11 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   /// it only ever handles the horizontal axis.
   void _ensureRowVisible(int rowIndex) {
     if (!_gridVScroll.hasClients) return;
+    final pos = _gridVScroll.position;
+    // Backing out of fullscreen can reach here with the grid attached but not laid out yet.
+    if (!pos.hasViewportDimension) return;
     final top = rowIndex * _rowHeight;
     final bottom = top + _rowHeight;
-    final pos = _gridVScroll.position;
     final viewTop = pos.pixels;
     final viewBottom = viewTop + pos.viewportDimension;
     if (top < viewTop) {

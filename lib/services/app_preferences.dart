@@ -8,6 +8,7 @@ import '../utils/constants.dart';
 import '../utils/live_group_sort.dart';
 import '../utils/time_format.dart';
 import 'display_match.dart';
+import 'device_defaults.dart';
 import 'playback_service.dart';
 import 'storage_service.dart';
 
@@ -63,8 +64,35 @@ class AppPreferences extends ChangeNotifier {
 
   /// Sports Trak / Settings / Search hide the background live channel's
   /// picture while open (stream and sound keep going) — see
-  /// `TvHomeScreen._pushOverLiveVideo`.
-  late bool hideVideoOnSports;
+  /// `TvHomeScreen._pushOverLiveVideo`. Off unless the user turned it on
+  /// or this device is on the DeviceDefaults list.
+  bool get hideVideoOnSports =>
+      _storage.getHideVideoOnSports() ??
+      DeviceDefaults.values[DeviceDefaults.hideVideoOnSports] ??
+      false;
+
+  /// True when [setting] (a DeviceDefaults name) is on only because this
+  /// device is on the list — Settings says "Automatic" under it.
+  bool isAutomaticOn(String setting) {
+    if (DeviceDefaults.values[setting] != true) return false;
+    return switch (setting) {
+          DeviceDefaults.hideVideoOnSports => _storage.getHideVideoOnSports(),
+          DeviceDefaults.compatVideo => _storage.getCompatVideo(),
+          _ => true,
+        } ==
+        null;
+  }
+
+  /// Downloads the current device list in the background; a change applies
+  /// at once (compatVideo from the next channel).
+  Future<void> refreshDeviceDefaults() async {
+    final json = await DeviceDefaults.fetch();
+    if (json == null || json == _storage.getDeviceDefaults()) return;
+    await _storage.setDeviceDefaults(json);
+    DeviceDefaults.apply(json);
+    PlaybackService.textureVideo = compatVideo;
+    notifyListeners();
+  }
 
   /// Both Movies and TV Shows hidden.
   bool get hideMoviesShows => hideMovies && hideShows;
@@ -91,7 +119,9 @@ class AppPreferences extends ChangeNotifier {
   /// the picture twice (a small copy top-left over the full one) and
   /// striped garbage with the native view (user photos, 2026-10-20).
   bool get compatVideo =>
-      _storage.getCompatVideo() ?? (androidSdk > 0 && androidSdk < 26);
+      _storage.getCompatVideo() ??
+      DeviceDefaults.values[DeviceDefaults.compatVideo] ??
+      (androidSdk > 0 && androidSdk < 26);
 
   void setCompatVideo(bool value) {
     _storage.setCompatVideo(value);
@@ -255,7 +285,6 @@ class AppPreferences extends ChangeNotifier {
     videoFill = _storage.getVideoFill();
     mixFavoritePlaylists = _storage.getMixFavoritePlaylists();
     dataPool = _storage.getDataPool();
-    hideVideoOnSports = _storage.getHideVideoOnSports();
     TimeFormat.use24h = _storage.getTime24h();
   }
 
@@ -360,7 +389,6 @@ class AppPreferences extends ChangeNotifier {
   }
 
   void setHideVideoOnSports(bool value) {
-    hideVideoOnSports = value;
     _storage.setHideVideoOnSports(value);
     notifyListeners();
   }

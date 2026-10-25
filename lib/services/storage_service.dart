@@ -369,8 +369,10 @@ class StorageService {
   bool getVideoFill() => _prefs.getBool(AppConstants.keyVideoFill) ?? false;
   Future<void> setVideoFill(bool value) =>
       _prefs.setBool(AppConstants.keyVideoFill, value);
-  bool getHideVideoOnSports() =>
-      _prefs.getBool(AppConstants.keyHideVideoOnSports) ?? false;
+
+  /// Null = never set by the user (AppPreferences uses the device default).
+  bool? getHideVideoOnSports() =>
+      _prefs.getBool(AppConstants.keyHideVideoOnSports);
   Future<void> setHideVideoOnSports(bool value) =>
       _prefs.setBool(AppConstants.keyHideVideoOnSports, value);
 
@@ -442,6 +444,11 @@ class StorageService {
 
   /// Null = never chosen (auto, see AppPreferences.compatVideo).
   bool? getCompatVideo() => _prefs.getBool(AppConstants.keyCompatVideo);
+
+  String? getDeviceDefaults() =>
+      _prefs.getString(AppConstants.keyDeviceDefaults);
+  Future<void> setDeviceDefaults(String json) =>
+      _prefs.setString(AppConstants.keyDeviceDefaults, json);
   Future<void> setCompatVideo(bool value) =>
       _prefs.setBool(AppConstants.keyCompatVideo, value);
 
@@ -953,6 +960,7 @@ class StorageService {
     AppConstants.keyAutoTrailers,
     AppConstants.keyHideVideoOnSports,
     AppConstants.keyCompatVideo,
+    AppConstants.keyDeviceDefaults,
     AppConstants.keyAudioPassthrough,
     AppConstants.keyVideoMediaOverlay,
     AppConstants.keyNativeVideoSurface,

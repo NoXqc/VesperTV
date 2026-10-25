@@ -26,6 +26,7 @@ import 'screens/welcome_add_playlist_screen.dart';
 import 'services/app_log.dart';
 import 'services/app_preferences.dart';
 import 'services/catalog_database.dart';
+import 'services/device_defaults.dart';
 import 'services/device_memory_service.dart';
 import 'services/epg_service.dart';
 import 'services/parental_pin.dart';
@@ -387,6 +388,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       if (Platform.isAndroid) {
         _preferences.androidSdk = await DeviceTypeService.sdkInt();
       }
+      await DeviceDefaults.load(_storage.getDeviceDefaults());
+      unawaited(_preferences.refreshDeviceDefaults());
       PlaybackService.textureVideo = _preferences.compatVideo;
       NativeVideoSurface.active =
           Platform.isAndroid && _preferences.nativeVideoSurface;
