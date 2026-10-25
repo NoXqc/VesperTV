@@ -8,6 +8,14 @@
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
   {
+    "id": "ba9cc8950d070a30",
+    "category": "Live TV",
+    "title": "Search channels",
+    "answer": "Open Search from the side menu and enter the channel name. Matching channels appear in the Live TV row. Move to a channel and press OK to play it. Search also shows matching movies, TV shows and Media Hub titles in separate rows.",
+    "controls": "Search (magnifying glass) in the side menu",
+    "url": "https://vespertv.app/remote.html#Live%20TV"
+  },
+  {
     "id": "ad2f3fe6d3ade9fd",
     "category": "Live TV",
     "title": "Channel menu",

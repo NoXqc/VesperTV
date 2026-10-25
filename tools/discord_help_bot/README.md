@@ -23,7 +23,7 @@ node --test tools/discord_help_bot/*.test.mjs
 ```
 
 Commit `guide.json` with the website change and redeploy the bot when answers
-change. The index currently contains 54 guide entries. Links use the website's
+change. The index currently contains 55 guide entries. Links use the website's
 existing category fragments; publishing the website is a separate step.
 
 ## Discord setup (one time)

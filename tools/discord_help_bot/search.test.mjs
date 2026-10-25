@@ -5,6 +5,11 @@ import { searchGuide, guideReply } from './search.mjs';
 
 const entries = JSON.parse(await readFile(new URL('./guide.json', import.meta.url), 'utf8'));
 
+test('channel-search questions return search instructions instead of the channel hold menu', () => {
+  assert.equal(searchGuide(entries, 'how do i search channels')[0].entry.title, 'Search channels');
+  assert.match(guideReply(entries, 'how do i search channels').content, /Open Search from the side menu/);
+});
+
 test('answers the real resume-reminder question from the website', () => {
   for (const query of ['how do I hide the resume remindee', 'turn off resume pill', 'cacher rappel reprise']) {
     const result = searchGuide(entries, query)[0];

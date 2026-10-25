@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { Client, Events, GatewayIntentBits, Options } from 'discord.js';
+import { Client, Events, GatewayIntentBits, Options, PermissionFlagsBits } from 'discord.js';
 import entries from './guide.json' with { type: 'json' };
 import { createAutoResponder } from './auto-reply.mjs';
 
@@ -21,7 +21,7 @@ const client = new Client({
 });
 const answer = createAutoResponder({ entries, guildId, channelId });
 let connected = false;
-client.once(Events.ClientReady, ready => {
+client.once(Events.ClientReady, async ready => {
   if (process.env.DISCORD_APPLICATION_ID && ready.user.id !== process.env.DISCORD_APPLICATION_ID) {
     console.error('Token belongs to a different bot application.');
     client.destroy();
@@ -30,6 +30,27 @@ client.once(Events.ClientReady, ready => {
   }
   connected = true;
   console.log('VesperTV automatic help connected; one channel enabled.');
+  // Log only configuration/access status, never credentials or message content.
+  if (!ready.guilds.cache.has(guildId)) {
+    console.error('Configured server unavailable: install this application with the bot scope.');
+    return;
+  }
+  try {
+    const channel = await ready.channels.fetch(channelId);
+    if (channel?.guildId !== guildId) {
+      console.error('Configured help channel does not belong to the configured server.');
+      return;
+    }
+    const permissions = channel.permissionsFor(ready.user);
+    if (!permissions?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages,
+      PermissionFlagsBits.ReadMessageHistory])) {
+      console.error('Help channel permissions missing: View Channel, Send Messages or Read Message History.');
+      return;
+    }
+    console.log('Help channel access verified.');
+  } catch {
+    console.error('Help channel unavailable: check channel ID and View Channel permission.');
+  }
 });
 client.on(Events.MessageCreate, message => {
   if (!connected) return;
