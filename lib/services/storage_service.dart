@@ -432,7 +432,7 @@ class StorageService {
       _prefs.setBool(AppConstants.keyVideoMediaOverlay, value);
 
   bool getNativeVideoSurface() =>
-      _prefs.getBool(AppConstants.keyNativeVideoSurface) ?? false;
+      _prefs.getBool(AppConstants.keyNativeVideoSurface) ?? true;
   Future<void> setNativeVideoSurface(bool value) =>
       _prefs.setBool(AppConstants.keyNativeVideoSurface, value);
 

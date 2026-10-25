@@ -143,7 +143,7 @@ class AppPreferences extends ChangeNotifier {
   /// losing HDR the way Compatibility video does (Shield user, 2026-10-23).
   bool get videoMediaOverlay => _storage.getVideoMediaOverlay();
 
-  /// Native video surface (beta, Android, off by default, device-only): the
+  /// Native video surface (beta, Android, on by default, device-only): the
   /// main player in a plain SurfaceView behind a transparent Flutter view
   /// (`widgets/native_video_hole.dart`). Read at launch: applies after a
   /// restart. For HDR / green flicker through the platform view (Fire TV

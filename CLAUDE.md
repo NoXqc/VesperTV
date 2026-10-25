@@ -336,6 +336,13 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+
+- **Codex, 2026-10-25: Native video surface defaults ON** (`codex/native-surface-default`, +446).
+  Missing device preference defaults to true in BOTH StorageService and MainActivity startup
+  (transparent Flutter window must match Dart on the first launch). Explicit saved on/off choices
+  remain unchanged. Owner requested hiding the Green flicker fix and Compatibility video
+  switches from Settings; their stored preferences/device fallback logic remain intact.
+  Playlist enabled D-pad fix is a1e8c38 (`codex/playlist-enable-focus`), included in this build.
 - **Codex focus/history/storage batch** (2026-10-25, based on Claude +444):
   theme colour work explicitly on HOLD. Focus recovery uses concrete tab nodes;
   Home/Hub/Sports return to TV rail with guide closed. Empty/lazy movie entry

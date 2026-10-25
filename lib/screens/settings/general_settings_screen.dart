@@ -351,18 +351,6 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                           ),
                           if (Platform.isAndroid)
                             TvSwitchListTile(
-                              title: Text(tr('Green flicker fix (test)')),
-                              subtitle: Text(tr(
-                                  'For green flashes on the picture while the guide or a menu is over it (NVIDIA Shield). Unlike Compatibility video it keeps HDR. Applies from the next channel. If the guide or menus disappear behind the video, turn it off.')),
-                              value: context
-                                  .watch<AppPreferences>()
-                                  .videoMediaOverlay,
-                              onChanged: (v) => context
-                                  .read<AppPreferences>()
-                                  .setVideoMediaOverlay(v),
-                            ),
-                          if (Platform.isAndroid)
-                            TvSwitchListTile(
                               title: Text(tr('Native video surface (beta)')),
                               subtitle: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -393,17 +381,6 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                                         'Close the app completely and open it again to apply this change.'))));
                               },
                             ),
-                          TvSwitchListTile(
-                            title: Text(tr('Compatibility video')),
-                            subtitle: Text(_withAutomatic(
-                                context,
-                                DeviceDefaults.compatVideo,
-                                tr('Turn this on if the picture shows twice, in the wrong size or as coloured stripes (older Fire TV sticks). Applies from the next channel. On by default on Android 7 and older.'))),
-                            value: context.watch<AppPreferences>().compatVideo,
-                            onChanged: (v) => context
-                                .read<AppPreferences>()
-                                .setCompatVideo(v),
-                          ),
                         ]),
                   // Android only: Windows plays through media_kit.
                   if (Platform.isAndroid)

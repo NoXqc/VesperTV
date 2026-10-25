@@ -53,7 +53,7 @@ class MainActivity : FlutterActivity() {
      */
     override fun getBackgroundMode(): BackgroundMode {
         val on = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-            .getBoolean("flutter.vesper_native_video_surface", false)
+            .getBoolean("flutter.vesper_native_video_surface", true)
         Log.i("VesperNativeSurface", "startup: native video surface ${if (on) "ON (transparent Flutter view)" else "off"}, " +
             "${Build.MANUFACTURER} ${Build.MODEL} SDK ${Build.VERSION.SDK_INT}")
         return if (on) BackgroundMode.transparent else super.getBackgroundMode()
