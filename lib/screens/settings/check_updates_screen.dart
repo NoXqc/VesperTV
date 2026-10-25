@@ -223,11 +223,6 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
             tr('Version {version} is available', {'version': update.version}),
             style: Theme.of(context).textTheme.titleMedium,
           ),
-          if (update.releaseNotes.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(update.releaseNotes,
-                style: Theme.of(context).textTheme.bodySmall),
-          ],
           const SizedBox(height: 16),
           if (Platform.isWindows) ...[
             FilledButton.icon(
@@ -242,10 +237,20 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
             ),
           ] else
             FilledButton.icon(
+              autofocus: true,
               icon: const Icon(Icons.download),
               label: Text(tr('Download & Install')),
               onPressed: _download,
             ),
+          // After the button, capped: long release notes used to push the button
+          // below the fold of a lazy list, out of the remote's reach (1.0.40).
+          if (update.releaseNotes.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text(update.releaseNotes,
+                maxLines: 12,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall),
+          ],
         ];
       case _Status.downloading:
         return [
