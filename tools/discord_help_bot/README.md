@@ -1,7 +1,7 @@
 # VesperTV guide help
 
 A Discord `/howto` command that searches the official remote guide. No AI model,
-AI API key, paid API, runtime packages, or outgoing lookup requests are needed.
+AI API key, paid API, or outgoing answer-lookup requests are needed. HTTP mode has no runtime packages; automatic replies use the pinned discord.js dependency.
 Hosting is separate: use an existing Node server or the included Cloudflare Worker
 adapter. Nothing in this folder has been deployed or registered automatically.
 
@@ -9,7 +9,7 @@ Example: `/howto question:hide resume reminder` returns the documented setting,
 the instructions, and a link to the appropriate website tab. Autocomplete suggests
 guide topics. If the question has no clear match, the app links to the guide and
 asks for a shorter topic. This is keyword search, so it cannot answer every
-wording or questions absent from the guide. It does not monitor channel messages.
+wording or questions absent from the guide. The HTTP mode does not monitor channel messages. The optional Gateway mode below answers automatically in one configured help channel.
 
 ## Maintain the answers
 
@@ -47,8 +47,8 @@ existing category fragments; publishing the website is a separate step.
 The existing release-announcement webhook cannot be reused as an application
 credential. Keep the bot token out of chat, source control, and command history.
 It is needed only locally for command registration; obtain it from this new
-application's Bot page. The runtime intentionally has no token-based messaging
-capability.
+application's Bot page. The HTTP runtime has no token-based messaging capability; Gateway mode below
+uses a separate private runtime token.
 
 From this directory, preview the command without credentials:
 
@@ -114,3 +114,35 @@ messages would require a separate transport and explicit channel configuration.
 
 Protocol reference:
 [Discord interactions overview](https://docs.discord.com/developers/interactions/overview).
+
+## Automatic replies in one help channel (Gateway mode)
+
+`gateway.mjs` is a separate process; the HTTP `/howto` endpoint can stay running.
+Run `npm ci --omit=dev --ignore-scripts` to install the locked discord.js dependency.
+Configure these public environment variables:
+
+- `DISCORD_APPLICATION_ID`: intended application ID (rejects a different bot).
+- `DISCORD_GUILD_ID`: exactly one server ID.
+- `DISCORD_HELP_CHANNEL_ID`: exactly one text channel ID.
+- `DISCORD_TOKEN_FILE`: path to the private runtime token file; defaults to
+  `/run/secrets/discord-bot-token`. Never commit the file or put its value in logs.
+
+Enable **Message Content Intent** on the application's Bot page. Install the
+application with both `bot` and `applications.commands` scopes. Give it View
+Channel, Send Messages, and Read Message History in the help channel; restrict
+its role's access to other channels if desired. No administrator permission is
+needed. Start with `node gateway.mjs`.
+
+Only new human messages in the configured server/channel are considered. The
+bot answers questions or recognized guide topics, ignores bot/webhook/system
+messages and slash commands, and does not fetch history. Replies mention nobody.
+There is a 30-second cooldown per author and 3-second channel-wide cooldown;
+no questions or message history are retained. Unknown questions receive the
+same guide fallback. It uses the documented guide, so it is not a general AI
+assistant and cannot diagnose accounts or undocumented app behavior.
+
+Unlike the HTTP runtime, automatic replies require a persistent Discord token
+and outbound Gateway/Discord API connectivity. Store that token on the server
+in a dedicated restricted file, mounted read-only into the bot container.
+Provision it through a hidden local prompt, never through chat. Routine bot
+updates should preserve that file without reading or displaying it.
