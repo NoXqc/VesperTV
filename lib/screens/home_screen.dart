@@ -1025,7 +1025,8 @@ class _Hero extends StatelessWidget {
                               [
                                 if (item.description != null) item.description!,
                                 item.game!.state == GameState.pre
-                                    ? TimeFormat.hm.format(item.game!.start)
+                                    ? TimeFormat.hm
+                                        .format(item.game!.start.toLocal())
                                     : item.game!.statusText,
                               ].join('  ·  '),
                               style: TextStyle(
@@ -1143,7 +1144,7 @@ class _GameBackdrop extends StatelessWidget {
 /// are hidden / not posted) — shared by the card face and the backdrop.
 String _gameMiddle(SportsGame game, bool hideScores) =>
     game.state == GameState.pre
-        ? TimeFormat.hm.format(game.start)
+        ? TimeFormat.hm.format(game.start.toLocal())
         : hideScores || game.first.score == null
             ? game.statusText
             : '${game.first.score} – ${game.second.score}';

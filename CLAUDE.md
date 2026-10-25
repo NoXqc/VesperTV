@@ -336,6 +336,11 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Codex Home game timezone fix** (`codex/home-game-local-time`, unbuilt, 2026-10-25):
+  Home's game cards/backdrop and hero status formatted SportsGame.start as UTC;
+  Sports Trak already converts to device-local time. Add toLocal at both Home
+  format sites. Keep model/feed times UTC and existing 12/24-hour preference.
+  No feed/cache change, hardcoded timezone or offset. No build/install/release.
 - **Codex Media Hub selected-file cue** (`codex/mediahub-file-info`, unbuilt, 2026-10-25):
   OK on movies/episodes shows source label + reported file size in the top-right for
   5 seconds, independently of Data pool. Main-player taps and in-app YouTube controls
