@@ -336,6 +336,15 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Codex combined Playlist Manager** (codex/playlist-manager-panes, 2026-10-25):
+  persistent playlist list and inline details on one route. D-pad highlighting
+  selects details without enabling an account or changing playback; OK/click
+  enters the details pane. Wide screens use a sidebar, phones a list above details;
+  detail quadrants stack in narrow panes. Existing edit/delete, backup servers,
+  groups, hidden channels and sync controls retained. Delete stays on this route
+  and falls back to another playlist or the empty Add Playlist state. No new
+  settings, strings, version bump or APK. Device acceptance pending.
+
 - **Codex IPTV trailer shading/startup** (codex/iptv-trailer-shading, 2026-10-25):
   owner confirms Hub movie looks correct; IPTV has a rectangular brightness boundary.
   Wide movie/series retained backdrop gradients were bounded to a partial art panel;

@@ -22,38 +22,47 @@ import 'hidden_channels_screen.dart';
 import 'playlist_priority_screen.dart';
 import '../../l10n/l10n.dart';
 
-/// Replaces the old single-playlist `ContentManagerScreen` — a
-/// MyTVOnline3-style list of every playlist (unlimited, not capped),
-/// each with its own enable/disable, login, content counts, and full
-/// catalog sync cadence. Selecting one drills into [_PlaylistDetailScreen]
-/// as its own screen (the reference's list stays visible in a persistent
-/// side pane instead) — this app's other Settings screens are all
-/// single-column drill-down navigation on both phone and TV, and matching
-/// that for the list-to-detail step is simpler and more consistent than a
-/// responsive two-pane layout for what's otherwise a small,
-/// infrequently-used screen. [_PlaylistDetailScreen] itself *does* use
-/// the reference's side-by-side quadrant layout once you're on it though
-/// — reported directly: with only a single column, that screen's own
-/// content needed scrolling to see all of it despite comfortably fitting
-/// a TV-sized screen width-wise.
-class PlaylistManagerScreen extends StatelessWidget {
+/// Playlist selection and management share one route. Highlighting a playlist
+/// only selects its detail pane; it does not enable it or start playback.
+class PlaylistManagerScreen extends StatefulWidget {
   const PlaylistManagerScreen({super.key});
+
+  @override
+  State<PlaylistManagerScreen> createState() => _PlaylistManagerScreenState();
+}
+
+class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
+  String? _selectedId;
+  final _detailsFocus = FocusScopeNode(debugLabel: 'Playlist details');
+
+  @override
+  void dispose() {
+    _detailsFocus.dispose();
+    super.dispose();
+  }
+
+  void _select(String id) {
+    if (_selectedId != id) setState(() => _selectedId = id);
+  }
 
   @override
   Widget build(BuildContext context) {
     final playlist = context.watch<PlaylistManager>();
     final profiles = playlist.profiles;
-
+    final selectedId = profiles.any((p) => p.id == _selectedId)
+        ? _selectedId
+        : profiles.firstOrNull?.id;
     return withTvThemeIfNeeded(
         context,
         (context) => SettingsScaffold(
               title: tr('Playlist Manager'),
-              body: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  SettingsPanel(
-                    padding: EdgeInsets.zero,
-                    children: [
+              body: LayoutBuilder(builder: (context, constraints) {
+                final wide = constraints.maxWidth >= 760;
+                final list = ListView(
+                  key: const PageStorageKey('playlist-manager-list'),
+                  padding: const EdgeInsets.all(12),
+                  children: [
+                    _PlaylistPanel(padding: EdgeInsets.zero, children: [
                       TvMenuTile(
                         icon: Icons.add,
                         title: tr('Add Playlist'),
@@ -66,69 +75,118 @@ class PlaylistManagerScreen extends StatelessWidget {
                         TvMenuTile(
                           icon: Icons.low_priority,
                           title: tr('Playlist Priority'),
-                          subtitle: tr(
-                              'Which playlist\'s groups show first, per tab'),
                           onTap: () => Navigator.of(context).push(
                               MaterialPageRoute(
                                   builder: (_) =>
                                       const PlaylistPriorityScreen())),
                         ),
                       ],
-                      if (profiles.isNotEmpty) const Divider(height: 1),
-                      for (var i = 0; i < profiles.length; i++) ...[
-                        if (i > 0) const Divider(height: 1),
-                        _PlaylistRow(profile: profiles[i]),
-                      ],
-                    ],
-                  ),
-                  if (profiles.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 16),
-                      child: Text(
-                        tr('No playlists yet — tap "Add Playlist" above to get started.'),
-                        style: Theme.of(context).textTheme.bodySmall,
+                    ]),
+                    const SizedBox(height: 12),
+                    for (final profile in profiles)
+                      Padding(
+                        key: ValueKey(profile.id),
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Focus(
+                          canRequestFocus: false,
+                          onFocusChange: (focused) {
+                            if (focused) _select(profile.id);
+                          },
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: selectedId == profile.id
+                                  ? Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withValues(alpha: .12)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                  color: selectedId == profile.id
+                                      ? Theme.of(context)
+                                          .colorScheme
+                                          .primary
+                                          .withValues(alpha: .5)
+                                      : Colors.transparent),
+                            ),
+                            child: Material(
+                              type: MaterialType.transparency,
+                              child: TvMenuTile(
+                                key: ValueKey('playlist-row-${profile.id}'),
+                                autofocus: profile.id == selectedId,
+                                icon: profile.isXtream ? Icons.dns : Icons.link,
+                                title: profile.name,
+                                titleMaxLines: 2,
+                                subtitle: profile.isXtream
+                                    ? tr('Xtream Codes')
+                                    : 'M3U',
+                                trailing: Icon(
+                                    profile.enabled
+                                        ? Icons.check_circle
+                                        : Icons.pause_circle_outline,
+                                    color: profile.enabled
+                                        ? Colors.greenAccent
+                                        : Colors.white38,
+                                    size: 20),
+                                onTap: () {
+                                  _select(profile.id);
+                                  WidgetsBinding.instance
+                                      .addPostFrameCallback((_) {
+                                    if (mounted && _selectedId == profile.id) {
+                                      _detailsFocus.nextFocus();
+                                    }
+                                  });
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                ],
-              ),
+                    if (profiles.isEmpty)
+                      Padding(
+                          padding: const EdgeInsets.only(top: 16),
+                          child: Text(tr(
+                              'No playlists yet — tap "Add Playlist" above to get started.'))),
+                  ],
+                );
+                final details = FocusScope(
+                  node: _detailsFocus,
+                  child: selectedId == null
+                      ? const SizedBox.expand()
+                      : _PlaylistDetailsPane(
+                          key: ValueKey(selectedId), playlistId: selectedId),
+                );
+                return wide
+                    ? Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                            SizedBox(
+                                width: constraints.maxWidth < 1000 ? 250 : 300,
+                                child: list),
+                            const VerticalDivider(width: 1),
+                            Expanded(child: details),
+                          ])
+                    : Column(children: [
+                        SizedBox(
+                            height: constraints.maxHeight * .32, child: list),
+                        const Divider(height: 1),
+                        Expanded(child: details),
+                      ]);
+              }),
             ));
   }
 }
 
-class _PlaylistRow extends StatelessWidget {
-  const _PlaylistRow({required this.profile});
-
-  final PlaylistProfile profile;
-
-  @override
-  Widget build(BuildContext context) {
-    return TvMenuTile(
-      icon: profile.isXtream ? Icons.dns : Icons.link,
-      title: profile.name,
-      subtitle: profile.isXtream ? tr('Xtream Codes') : 'M3U',
-      trailing: Icon(
-        profile.enabled ? Icons.check_circle : Icons.pause_circle_outline,
-        color: profile.enabled ? Colors.greenAccent : Colors.white38,
-        size: 20,
-      ),
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(
-            builder: (_) => _PlaylistDetailScreen(playlistId: profile.id)),
-      ),
-    );
-  }
-}
-
-class _PlaylistDetailScreen extends StatefulWidget {
-  const _PlaylistDetailScreen({required this.playlistId});
+class _PlaylistDetailsPane extends StatefulWidget {
+  const _PlaylistDetailsPane({super.key, required this.playlistId});
 
   final String playlistId;
 
   @override
-  State<_PlaylistDetailScreen> createState() => _PlaylistDetailScreenState();
+  State<_PlaylistDetailsPane> createState() => _PlaylistDetailsPaneState();
 }
 
-class _PlaylistDetailScreenState extends State<_PlaylistDetailScreen> {
+class _PlaylistDetailsPaneState extends State<_PlaylistDetailsPane> {
   Future<void> _confirmDelete(
       PlaylistManager playlist, PlaylistProfile profile) async {
     final confirmed = await showDialog<bool>(
@@ -159,7 +217,6 @@ class _PlaylistDetailScreenState extends State<_PlaylistDetailScreen> {
     );
     if (confirmed != true || !mounted) return;
     await playlist.removePlaylist(profile.id);
-    if (mounted) Navigator.of(context).pop();
   }
 
   Future<void> _promptForBackupServer(
@@ -233,12 +290,6 @@ class _PlaylistDetailScreenState extends State<_PlaylistDetailScreen> {
       }
     }
     if (found == null) {
-      // Deleted out from under this screen (e.g. via a race with another
-      // route) — nothing left to show, pop back rather than crash on a
-      // null profile.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) Navigator.of(context).pop();
-      });
       return const SizedBox.shrink();
     }
     // A separate, genuinely final binding — `found` above is reassigned
@@ -249,319 +300,348 @@ class _PlaylistDetailScreenState extends State<_PlaylistDetailScreen> {
     final summary = playlist.summaryFor(profile.id);
     final lastLoaded = playlist.lastLoadedFor(profile.id);
 
-    return withTvThemeIfNeeded(
-        context,
-        (context) => SettingsScaffold(
-              title: profile.name,
-              actions: [
-                TvAppBarButton.icon(
-                  icon: Icons.edit_outlined,
-                  tooltip: tr('Edit login'),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) =>
-                            AddPlaylistScreen(editPlaylistId: profile.id)),
-                  ),
-                ),
-                TvAppBarButton.icon(
-                  icon: Icons.delete_outline,
-                  tooltip: tr('Delete playlist'),
-                  onTap: () => _confirmDelete(playlist, profile),
-                ),
-              ],
-              // Quadrant layout (Login Details | Content Overview side by
-              // side, like the MyTVOnline3 reference this whole screen is
-              // modeled on) instead of one long vertical stack — reported
-              // directly: everything fit on one already-large TV screen
-              // just fine width-wise, so making it scroll vertically to
-              // see the rest was wasted space, not a real space
-              // constraint. Still wrapped in a scroll view (SingleChildScrollView, not ListView, since
-              // there's exactly one child now) as a safety net for a
-              // narrow/short viewport, not the primary layout.
-              body: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
+          child: Row(children: [
+            Expanded(
+                child: Text(profile.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleLarge)),
+            TvAppBarButton.icon(
+              icon: Icons.edit_outlined,
+              tooltip: tr('Edit login'),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                    builder: (_) =>
+                        AddPlaylistScreen(editPlaylistId: profile.id)),
+              ),
+            ),
+            TvAppBarButton.icon(
+              icon: Icons.delete_outline,
+              tooltip: tr('Delete playlist'),
+              onTap: () => _confirmDelete(playlist, profile),
+            ),
+          ]),
+        ),
+        Expanded(
+            child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: _PlaylistSections(
+            children: [
+              Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    SectionLabel(tr('This Playlist')),
+                    const SizedBox(height: 8),
+                    _PlaylistPanel(
+                      padding: EdgeInsets.zero,
+                      children: [
+                        TvSwitchListTile(
+                          title: Text(tr('Playlist enabled')),
+                          subtitle: Text(
+                            tr('Frees up this account\'s stream slot for another device — stops playback here immediately, keeps everything else intact.'),
+                          ),
+                          value: profile.enabled,
+                          onChanged: (value) {
+                            playlist.setPlaylistEnabled(profile.id, value);
+                            if (!value) {
+                              context.read<PlaybackService>().stop();
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    SectionLabel(tr('Login Details')),
+                    const SizedBox(height: 8),
+                    _PlaylistPanel(
+                      children: [
+                        if (profile.isXtream) ...[
+                          _DetailRow(
+                              label: tr('Server'),
+                              value: profile.xtreamServer ?? ''),
+                          _DetailRow(
+                              label: tr('Username'),
+                              value: profile.xtreamUsername ?? ''),
+                          _DetailRow(
+                              label: tr('Password'),
+                              value:
+                                  '•' * (profile.xtreamPassword?.length ?? 0)),
+                          // Only ever shown once a connect has
+                          // actually reported one (see
+                          // PlaylistProfile.expiresAt's doc
+                          // comment) — an M3U playlist, or an
+                          // Xtream account that hasn't connected
+                          // yet or genuinely has no expiry to
+                          // report, shows nothing here rather than
+                          // a fabricated placeholder.
+                          if (profile.expiresAt != null)
+                            _DetailRow(
+                              label: tr('Expires'),
+                              value: DateFormat('yyyy-MM-dd')
+                                  .format(profile.expiresAt!),
+                              valueColor:
+                                  profile.expiresAt!.isBefore(DateTime.now())
+                                      ? Colors.redAccent
+                                      : null,
+                            ),
+                          // Same "only shown once actually reported"
+                          // rule as Expires above — see
+                          // PlaylistProfile.maxConnections' own doc
+                          // comment for why this is worth surfacing:
+                          // a provider's own per-stream connection
+                          // cap is easy to mistake for a playback
+                          // bug, especially in Multiview.
+                          if (profile.maxConnections != null)
+                            _DetailRow(
+                              label: tr('Max connections'),
+                              value: '${profile.maxConnections}',
+                            ),
+                        ] else
+                          _DetailRow(
+                              label: tr('M3U URL'),
+                              value: profile.m3uUrl ?? ''),
+                      ],
+                    ),
+                    if (profile.isXtream) ...[
+                      const SizedBox(height: 20),
+                      SectionLabel(tr('Backup Servers')),
+                      const SizedBox(height: 8),
+                      _PlaylistPanel(
                         children: [
-                          SectionLabel(tr('This Playlist')),
-                          const SizedBox(height: 8),
-                          SettingsPanel(
-                            padding: EdgeInsets.zero,
-                            children: [
-                              TvSwitchListTile(
-                                title: Text(tr('Playlist enabled')),
-                                subtitle: Text(
-                                  tr('Frees up this account\'s stream slot for another device — stops playback here immediately, keeps everything else intact.'),
-                                ),
-                                value: profile.enabled,
-                                onChanged: (value) {
-                                  playlist.setPlaylistEnabled(
-                                      profile.id, value);
-                                  if (!value) {
-                                    context.read<PlaybackService>().stop();
-                                  }
+                          if (profile.backupServers.isEmpty)
+                            Text(
+                              tr('None yet. If your provider gave you more than one server address for this same account, add them here and this playlist will try them in order whenever the main one can\'t be reached.'),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            )
+                          else
+                            for (final backup in profile.backupServers)
+                              _BackupServerRow(
+                                server: backup,
+                                isLastWorking:
+                                    profile.lastWorkingServer == backup,
+                                onRemove: () async {
+                                  await playlist.removeBackupServer(
+                                      profile.id, backup);
+                                  // Same repaint reasoning as
+                                  // _promptForBackupServer.
+                                  if (mounted) setState(() {});
                                 },
                               ),
-                            ],
+                          const SizedBox(height: 16),
+                          OutlinedButton.icon(
+                            icon: const Icon(Icons.dns_outlined),
+                            label: Text(tr('Add backup server')),
+                            onPressed: () =>
+                                _promptForBackupServer(context, playlist),
                           ),
-                          const SizedBox(height: 20),
-                          SectionLabel(tr('Login Details')),
-                          const SizedBox(height: 8),
-                          SettingsPanel(
-                            children: [
-                              if (profile.isXtream) ...[
-                                _DetailRow(
-                                    label: tr('Server'),
-                                    value: profile.xtreamServer ?? ''),
-                                _DetailRow(
-                                    label: tr('Username'),
-                                    value: profile.xtreamUsername ?? ''),
-                                _DetailRow(
-                                    label: tr('Password'),
-                                    value: '•' *
-                                        (profile.xtreamPassword?.length ?? 0)),
-                                // Only ever shown once a connect has
-                                // actually reported one (see
-                                // PlaylistProfile.expiresAt's doc
-                                // comment) — an M3U playlist, or an
-                                // Xtream account that hasn't connected
-                                // yet or genuinely has no expiry to
-                                // report, shows nothing here rather than
-                                // a fabricated placeholder.
-                                if (profile.expiresAt != null)
-                                  _DetailRow(
-                                    label: tr('Expires'),
-                                    value: DateFormat('yyyy-MM-dd')
-                                        .format(profile.expiresAt!),
-                                    valueColor: profile.expiresAt!
-                                            .isBefore(DateTime.now())
-                                        ? Colors.redAccent
-                                        : null,
-                                  ),
-                                // Same "only shown once actually reported"
-                                // rule as Expires above — see
-                                // PlaylistProfile.maxConnections' own doc
-                                // comment for why this is worth surfacing:
-                                // a provider's own per-stream connection
-                                // cap is easy to mistake for a playback
-                                // bug, especially in Multiview.
-                                if (profile.maxConnections != null)
-                                  _DetailRow(
-                                    label: tr('Max connections'),
-                                    value: '${profile.maxConnections}',
-                                  ),
-                              ] else
-                                _DetailRow(
-                                    label: tr('M3U URL'),
-                                    value: profile.m3uUrl ?? ''),
-                            ],
-                          ),
-                          if (profile.isXtream) ...[
-                            const SizedBox(height: 20),
-                            SectionLabel(tr('Backup Servers')),
-                            const SizedBox(height: 8),
-                            SettingsPanel(
-                              children: [
-                                if (profile.backupServers.isEmpty)
-                                  Text(
-                                    tr('None yet. If your provider gave you more than one server address for this same account, add them here and this playlist will try them in order whenever the main one can\'t be reached.'),
-                                    style:
-                                        Theme.of(context).textTheme.bodySmall,
-                                  )
-                                else
-                                  for (final backup in profile.backupServers)
-                                    _BackupServerRow(
-                                      server: backup,
-                                      isLastWorking:
-                                          profile.lastWorkingServer == backup,
-                                      onRemove: () async {
-                                        await playlist.removeBackupServer(
-                                            profile.id, backup);
-                                        // Same repaint reasoning as
-                                        // _promptForBackupServer.
-                                        if (mounted) setState(() {});
-                                      },
-                                    ),
-                                const SizedBox(height: 16),
-                                OutlinedButton.icon(
-                                  icon: const Icon(Icons.dns_outlined),
-                                  label: Text(tr('Add backup server')),
-                                  onPressed: () =>
-                                      _promptForBackupServer(context, playlist),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Text(
-                                    tr('Same username and password as above — only the address differs. Tried in order, a few seconds apart, and whichever answers is used first next time.'),
-                                    style:
-                                        Theme.of(context).textTheme.bodySmall,
-                                  ),
-                                ),
-                              ],
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              tr('Same username and password as above — only the address differs. Tried in order, a few seconds apart, and whichever answers is used first next time.'),
+                              style: Theme.of(context).textTheme.bodySmall,
                             ),
-                          ],
+                          ),
                         ],
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SectionLabel(tr('Content Overview')),
-                          const SizedBox(height: 8),
-                          SettingsPanel(
-                            children: [
-                              if (summary == null)
-                                Text(tr('Not loaded yet.'))
-                              else
-                                Text(
-                                  profile.isXtream
-                                      ? tr(
-                                          '{p} live channels · {p2} movie categories · {p3} TV show categories',
-                                          {
-                                              'p': summary['tv'],
-                                              'p2': summary['vod'],
-                                              'p3': summary['series']
-                                            })
-                                      : tr(
-                                          '{p} live · {p2} movies · {p3} TV shows',
-                                          {
-                                              'p': summary['tv'],
-                                              'p2': summary['vod'],
-                                              'p3': summary['series']
-                                            }),
-                                ),
-                              if (lastLoaded != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Text(
-                                    tr('Last updated: {p}',
-                                        {'p': TimeFormat.dateTime(lastLoaded)}),
-                                    style:
-                                        Theme.of(context).textTheme.bodySmall,
-                                  ),
-                                ),
-                              // Persisted, unlike "Last updated" above
-                              // (only ever set in-memory during a live
-                              // add/edit — resets to nothing on every
-                              // cold restart regardless of which playlist
-                              // it is). Reported directly as needed after
-                              // several failed add attempts against the
-                              // same login silently left duplicate
-                              // profiles behind (fixed separately) — with
-                              // several identically-named entries and no
-                              // "Last updated" to go by post-restart,
-                              // there was no way to tell which one was
-                              // the original, deliberately-configured
-                              // playlist apart from the orphaned retries.
-                              Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Text(
-                                  tr('Added: {p}', {
-                                    'p': TimeFormat.dateTime(profile.createdAt)
-                                  }),
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              OutlinedButton.icon(
-                                icon: const Icon(Icons.visibility_outlined),
-                                label: Text(tr('Group Management')),
-                                onPressed: () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                      builder: (_) => GroupManagementScreen(
-                                          playlistId: profile.id)),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8),
-                                child: OutlinedButton.icon(
-                                  icon:
-                                      const Icon(Icons.visibility_off_outlined),
-                                  label: Text(tr('Hidden Channels')),
-                                  onPressed: () => Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                        builder: (_) => HiddenChannelsScreen(
-                                            playlistId: profile.id)),
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Text(
-                                  tr('Hide a group here and it\'s excluded from the background download too, not just the browse tabs.'),
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (profile.isXtream) ...[
-                            const SizedBox(height: 20),
-                            SectionLabel(tr('Full Catalog Sync')),
-                            const SizedBox(height: 8),
-                            SettingsPanel(
-                              children: [
-                                DropdownButtonFormField<int>(
-                                  key: ValueKey(
-                                      '${profile.id}:${profile.syncIntervalHours}'),
-                                  initialValue: profile.syncIntervalHours,
-                                  decoration: InputDecoration(
-                                    labelText: tr('Update content every'),
-                                    border: const OutlineInputBorder(),
-                                  ),
-                                  items: {
-                                    ...AppConstants.syncFrequencyHoursOptions,
-                                    profile.syncIntervalHours,
-                                  }
-                                      .map((h) => DropdownMenuItem(
-                                          value: h,
-                                          child: Text(h < 24
-                                              ? h == 1
-                                                  ? tr('1 hour')
-                                                  : tr('{h} hours', {'h': h})
-                                              : h % 24 != 0
-                                                  ? tr('{h} hours', {'h': h})
-                                                  : h == 24
-                                                      ? tr('1 day')
-                                                      : tr('{d} days',
-                                                          {'d': h ~/ 24}))))
-                                      .toList(),
-                                  onChanged: (value) {
-                                    if (value != null) {
-                                      // Whole days also go in the legacy
-                                      // field, read by older app versions.
-                                      playlist.updatePlaylist(profile.copyWith(
-                                          syncFrequencyDays: value % 24 == 0
-                                              ? value ~/ 24
-                                              : null,
-                                          syncFrequencyHours: value));
-                                    }
-                                  },
-                                ),
-                                TvSwitchListTile(
-                                  title: Text(tr('Update automatically')),
-                                  subtitle: Text(tr(
-                                      'On: when an update is due, it runs at launch without asking. Off: the app asks "Update content now?" first.')),
-                                  value: profile.autoSync,
-                                  onChanged: (v) => playlist.updatePlaylist(
-                                      profile.copyWith(autoSync: v)),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
+                    ],
                   ],
                 ),
               ),
-            ));
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SectionLabel(tr('Content Overview')),
+                    const SizedBox(height: 8),
+                    _PlaylistPanel(
+                      children: [
+                        if (summary == null)
+                          Text(tr('Not loaded yet.'))
+                        else
+                          Text(
+                            profile.isXtream
+                                ? tr(
+                                    '{p} live channels · {p2} movie categories · {p3} TV show categories',
+                                    {
+                                        'p': summary['tv'],
+                                        'p2': summary['vod'],
+                                        'p3': summary['series']
+                                      })
+                                : tr('{p} live · {p2} movies · {p3} TV shows', {
+                                    'p': summary['tv'],
+                                    'p2': summary['vod'],
+                                    'p3': summary['series']
+                                  }),
+                          ),
+                        if (lastLoaded != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              tr('Last updated: {p}',
+                                  {'p': TimeFormat.dateTime(lastLoaded)}),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                        // Persisted, unlike "Last updated" above
+                        // (only ever set in-memory during a live
+                        // add/edit — resets to nothing on every
+                        // cold restart regardless of which playlist
+                        // it is). Reported directly as needed after
+                        // several failed add attempts against the
+                        // same login silently left duplicate
+                        // profiles behind (fixed separately) — with
+                        // several identically-named entries and no
+                        // "Last updated" to go by post-restart,
+                        // there was no way to tell which one was
+                        // the original, deliberately-configured
+                        // playlist apart from the orphaned retries.
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            tr('Added: {p}',
+                                {'p': TimeFormat.dateTime(profile.createdAt)}),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.visibility_outlined),
+                          label: Text(tr('Group Management')),
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) => GroupManagementScreen(
+                                    playlistId: profile.id)),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.visibility_off_outlined),
+                            label: Text(tr('Hidden Channels')),
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (_) => HiddenChannelsScreen(
+                                      playlistId: profile.id)),
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            tr('Hide a group here and it\'s excluded from the background download too, not just the browse tabs.'),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (profile.isXtream) ...[
+                      const SizedBox(height: 20),
+                      SectionLabel(tr('Full Catalog Sync')),
+                      const SizedBox(height: 8),
+                      _PlaylistPanel(
+                        children: [
+                          DropdownButtonFormField<int>(
+                            key: ValueKey(
+                                '${profile.id}:${profile.syncIntervalHours}'),
+                            initialValue: profile.syncIntervalHours,
+                            decoration: InputDecoration(
+                              labelText: tr('Update content every'),
+                              border: const OutlineInputBorder(),
+                            ),
+                            items: {
+                              ...AppConstants.syncFrequencyHoursOptions,
+                              profile.syncIntervalHours,
+                            }
+                                .map((h) => DropdownMenuItem(
+                                    value: h,
+                                    child: Text(h < 24
+                                        ? h == 1
+                                            ? tr('1 hour')
+                                            : tr('{h} hours', {'h': h})
+                                        : h % 24 != 0
+                                            ? tr('{h} hours', {'h': h})
+                                            : h == 24
+                                                ? tr('1 day')
+                                                : tr('{d} days',
+                                                    {'d': h ~/ 24}))))
+                                .toList(),
+                            onChanged: (value) {
+                              if (value != null) {
+                                // Whole days also go in the legacy
+                                // field, read by older app versions.
+                                playlist.updatePlaylist(profile.copyWith(
+                                    syncFrequencyDays:
+                                        value % 24 == 0 ? value ~/ 24 : null,
+                                    syncFrequencyHours: value));
+                              }
+                            },
+                          ),
+                          TvSwitchListTile(
+                            title: Text(tr('Update automatically')),
+                            subtitle: Text(tr(
+                                'On: when an update is due, it runs at launch without asking. Off: the app asks "Update content now?" first.')),
+                            value: profile.autoSync,
+                            onChanged: (v) => playlist
+                                .updatePlaylist(profile.copyWith(autoSync: v)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        )),
+      ],
+    );
   }
+}
+
+/// Ink paints above the panel fill instead of beneath its decoration.
+class _PlaylistPanel extends StatelessWidget {
+  const _PlaylistPanel(
+      {required this.children, this.padding = const EdgeInsets.all(16)});
+  final List<Widget> children;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) =>
+      SettingsPanel(padding: padding, children: [
+        Material(
+            type: MaterialType.transparency,
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: children))
+      ]);
+}
+
+/// Keep the detail quadrants readable after reserving space for the playlist rail.
+class _PlaylistSections extends StatelessWidget {
+  const _PlaylistSections({required this.children});
+  final List<Expanded> children;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(builder: (context, c) {
+        final sections = children.map((w) => w.child).toList();
+        return c.maxWidth >= 640
+            ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(child: sections[0]),
+                const SizedBox(width: 16),
+                Expanded(child: sections[1]),
+              ])
+            : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                sections[0],
+                const SizedBox(height: 20),
+                sections[1],
+              ]);
+      });
 }
 
 /// One configured backup server, with its own remove action. Marks the
