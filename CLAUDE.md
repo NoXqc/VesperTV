@@ -336,6 +336,10 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Owner-requested Formuler test package (Codex, 2026-10-25):** build 1.0.39+438
+  from the combined main integration. Analyzer baseline 17; all 472 Flutter tests
+  pass; integrated native suite 134 pass. Signing/install result and artifact
+  recorded in the main-checkout HANDOFF.md. No GitHub/Discord publication.
 - **Owner-authorised local integration (Codex, 2026-10-25):** completed Codex stack plus
   Claude's device-defaults branch and source snapshot from claude/zap-freeze-surface
   integrated for main. Claude's snapshot retains version 1.0.39+437; no new package
