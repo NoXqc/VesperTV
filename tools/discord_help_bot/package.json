@@ -1,0 +1,18 @@
+{
+  "name": "vespertv-guide-help",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "build-guide": "python build_guide.py",
+    "check-guide": "python build_guide.py --check",
+    "test": "node --test *.test.mjs",
+    "start": "node server.mjs",
+    "register-preview": "node register-command.mjs"
+  },
+  "dependencies": {
+    "discord.js": "14.27.0"
+  }
+}
