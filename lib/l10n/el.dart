@@ -2589,4 +2589,8 @@ const Map<String, String> kEl = {
       "Δεν ήταν δυνατή η αλλαγή ροής. Δοκιμάστε άλλη πηγή.",
   "Current stream": "Τρέχουσα ροή",
   "Size unknown": "Άγνωστο μέγεθος",
+  "View source URL": "Προβολή URL πηγής",
+  "Source URL": "URL πηγής",
+  "Copy URL": "Αντιγραφή URL",
+  "URL copied": "Το URL αντιγράφηκε",
 };

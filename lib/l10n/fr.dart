@@ -1980,4 +1980,8 @@ const Map<String, String> kFr = {
       "Impossible de changer de flux. Essayez une autre source.",
   "Current stream": "Flux actuel",
   "Size unknown": "Taille inconnue",
+  "View source URL": "Voir l’URL de la source",
+  "Source URL": "URL de la source",
+  "Copy URL": "Copier l’URL",
+  "URL copied": "URL copiée",
 };

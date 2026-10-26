@@ -1980,4 +1980,8 @@ const Map<String, String> kIt = {
       "Impossibile cambiare streaming. Prova un’altra sorgente.",
   "Current stream": "Streaming attuale",
   "Size unknown": "Dimensione sconosciuta",
+  "View source URL": "Visualizza URL della fonte",
+  "Source URL": "URL della fonte",
+  "Copy URL": "Copia URL",
+  "URL copied": "URL copiato",
 };

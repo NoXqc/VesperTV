@@ -77,6 +77,41 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
     return false;
   }
 
+  Future<void> _viewSourceUrl(ArchiveSource source) async {
+    final url = source.server == null ? source.manifestUrl : source.baseUrl;
+    final copied = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(tr('Source URL')),
+        content: SizedBox(
+          width: 640,
+          child: SingleChildScrollView(child: SelectableText(url)),
+        ),
+        actions: [
+          TextButton.icon(
+            autofocus: true,
+            icon: const Icon(Icons.copy),
+            label: Text(tr('Copy URL')),
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: url));
+              if (dialogContext.mounted) {
+                Navigator.of(dialogContext).pop(true);
+              }
+            },
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(tr('OK')),
+          ),
+        ],
+      ),
+    );
+    if (mounted && copied == true) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(tr('URL copied'))));
+    }
+  }
+
   Future<void> _remove(ArchiveSource source) async {
     final service = context.read<ArchiveService>();
     final ok = await showDialog<bool>(
@@ -292,6 +327,15 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
               ),
               // Main rows or Other only, either way: the automatic choice
               // (ArchiveSource.autoOther) is just the starting position.
+              if (s.tracker == null)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => _viewSourceUrl(s),
+                    icon: const Icon(Icons.link),
+                    label: Text(tr('View source URL')),
+                  ),
+                ),
               if (s.server == null && s.tracker == null)
                 Padding(
                   padding: const EdgeInsets.only(left: 24),

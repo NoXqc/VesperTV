@@ -1976,4 +1976,8 @@ const Map<String, String> kEs = {
       "No se pudo cambiar de fuente. Prueba otra.",
   "Current stream": "Fuente actual",
   "Size unknown": "Tamaño desconocido",
+  "View source URL": "Ver URL de la fuente",
+  "Source URL": "URL de la fuente",
+  "Copy URL": "Copiar URL",
+  "URL copied": "URL copiada",
 };

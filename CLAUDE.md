@@ -349,6 +349,8 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 
 ## 13. Status & open items (as of 2026-10-24)
 
+- **cdx, 2026-10-26: Retrieve saved source URL** on `codex/view-source-url` (based on Windows resume branch): Media Hub source settings add View source URL for add-ons and media servers. Opens full selectable/scrollable URL with Copy URL; add-ons copy exact saved manifest URL, media servers copy base URL without internal user fragment. Tracker rows omitted. URLs remain hidden until requested and are never logged by this action. No source state changes.
+
 - **cdx, 2026-10-26: Windows VOD resume** on `codex/windows-vod-resume`: desktop player now saves per-viewer movie/episode position and duration every5s and before exit/source changes, records Continue Watching history, and opens files at saved positions through media_kit Media.start. Applies to IPTV and Media Hub, including M3U VOD. Tracker fraction resume waits for known duration; source-file changes keep explicit current position. Live/transient/download-placeholder playback excluded; no native player edits or Windows binary built yet.
 
 - **cdx, 2026-10-26: All Codex branches merged into main locally (owner requested).** Includes M3U movie controls/cache migration, per-profile audio/subtitle resume, Playback settings, live playlist tag, Boxing/WWE/AEW, Media Hub Right source drawer and phone PiP. Discord bot source and historical research/audit also merged; generated help index refreshed from current guide. Old proposals archived under `dev-notes/legacy-*-proposal*.md` so the owner's root PROPOSAL.md remains untouched. No new APK/version, deployment, push, release or announcement. Merge verification is in HANDOFF.md.
