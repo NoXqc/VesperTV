@@ -844,6 +844,12 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   Owner's actual track MIME and improvement on a real live stream are still unverified; this does
   not add the separate subtitle font-size setting mentioned below. No build/install/release.
 
+## 13. Status & open items (as of 2026-10-22)
+- **Historical trailer research (Codex, 2026-10-22; superseded by shipped trailer work):** `dev-notes/trailers-research.md` covers IPTV + Media
+  Hub movies/shows. Four public Cinemeta samples supply YouTube trailer IDs without a key;
+  external Trailer buttons are the recommended first cut, optional TMDB fallback. No feature
+  implemented; earlier external-only/on-hold decision remains. Embedded YouTube needs a separate
+  platform spike/product decision; direct server trailer files are another playback kind.
 - **Shipped: 1.0.35 (`+396`, 2026-10-22, latest; `+395` owner-tested on the Formuler; test build `+389` = pre-release `1.0.35-test.389`):** **Hide Recordings** (Settings › Tabs, `hideRecordings`, Codex `codex/hide-recording-tab`). Media Hub show page shows its source chip (`SeriesDetailScreen
   .sourceLabel`) and an hourglass on the tapped episode + Play while streams load (`_startingId`,
   extra presses ignored). **Add-on links resolved once before playing** (`services/stream_resolver.dart`
