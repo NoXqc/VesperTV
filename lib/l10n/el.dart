@@ -2604,4 +2604,9 @@ const Map<String, String> kEl = {
   "Refined finish": "Εκλεπτυσμένο φινίρισμα",
   "Subtle glass-like surfaces and highlights. Keeps your layout and theme colour.":
       "Διακριτικές γυάλινες επιφάνειες και αντανακλάσεις. Διατηρεί τη διάταξη και το χρώμα θέματος.",
+  "Video HDR": "HDR βίντεο",
+  "Decoder HDR": "HDR αποκωδικοποιητή",
+  "Unknown / not reported": "Άγνωστο / δεν αναφέρεται",
+  "{format} (stream)": "{format} (ροή)",
+  "{format} (decoder)": "{format} (αποκωδικοποιητής)",
 };

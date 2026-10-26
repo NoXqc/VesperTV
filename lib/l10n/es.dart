@@ -1991,4 +1991,9 @@ const Map<String, String> kEs = {
   "Refined finish": "Acabado refinado",
   "Subtle glass-like surfaces and highlights. Keeps your layout and theme colour.":
       "Superficies y reflejos sutiles de cristal. Conserva la distribución y el color del tema.",
+  "Video HDR": "HDR del vídeo",
+  "Decoder HDR": "HDR decodificado",
+  "Unknown / not reported": "Desconocido / no indicado",
+  "{format} (stream)": "{format} (flujo)",
+  "{format} (decoder)": "{format} (decodificador)",
 };

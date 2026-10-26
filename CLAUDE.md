@@ -1367,3 +1367,11 @@ profile change or backgrounding is silent. See `dev-notes/sports-tab.md` for det
  RefinedFinish ThemeExtension must survive root/TV theme boundaries. Do not
  re-enable MinimalGlassFocus blur or add live-video filtering for this setting.
  See `dev-notes/refined-finish.md`; actual device performance/appearance needs QA.
+
+### Codex 2026-10-26: decoder HDR reporting (unreleased branch)
+
+`codex/decoder-hdr-reporting` corrects unknown colour metadata being labelled SDR
+and adds decoder-output fallback via existing FrameRateProbe callbacks. StatsBridge
+retains both input and output evidence; Data pool labels stream/decoder and shows
+known disagreement separately. No codec/display/surface configuration changes.
+See `dev-notes/decoder-hdr-reporting.md`; a real Shield retest is still required.

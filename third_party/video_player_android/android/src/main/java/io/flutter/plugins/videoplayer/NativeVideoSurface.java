@@ -838,6 +838,8 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
       out.put("tunneling", attachedPlayer.isTunnelingEnabled());
       Format f = attachedPlayer.getVideoFormat();
       if (f != null) out.put("playingFormat", describe(f));
+      VideoPlayer registered = players.get(attachedId);
+      if (registered != null) StatsBridge.addHdrStats(out, f, registered.frameRateProbe);
     }
     return out;
   }

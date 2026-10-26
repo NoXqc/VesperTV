@@ -1995,4 +1995,9 @@ const Map<String, String> kFr = {
   "Refined finish": "Finition raffinée",
   "Subtle glass-like surfaces and highlights. Keeps your layout and theme colour.":
       "Surfaces et reflets subtils façon verre. Conserve la disposition et la couleur du thème.",
+  "Video HDR": "HDR vidéo",
+  "Decoder HDR": "HDR décodé",
+  "Unknown / not reported": "Inconnu / non indiqué",
+  "{format} (stream)": "{format} (flux)",
+  "{format} (decoder)": "{format} (décodeur)",
 };

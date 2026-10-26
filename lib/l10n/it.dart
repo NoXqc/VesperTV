@@ -1995,4 +1995,9 @@ const Map<String, String> kIt = {
   "Refined finish": "Finitura raffinata",
   "Subtle glass-like surfaces and highlights. Keeps your layout and theme colour.":
       "Superfici e riflessi delicati effetto vetro. Mantiene la disposizione e il colore del tema.",
+  "Video HDR": "HDR video",
+  "Decoder HDR": "HDR decodificato",
+  "Unknown / not reported": "Sconosciuto / non indicato",
+  "{format} (stream)": "{format} (flusso)",
+  "{format} (decoder)": "{format} (decoder)",
 };

@@ -3,6 +3,8 @@ package io.flutter.plugins.videoplayer;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import android.app.Activity;
+import android.media.MediaFormat;
+import androidx.media3.common.C;
 import android.util.LongSparseArray;
 import androidx.media3.common.Format;
 import androidx.media3.common.VideoSize;
@@ -39,6 +41,7 @@ public class NativeVideoSurfaceTest {
     surface.setActivity(Robolectric.buildActivity(Activity.class).setup().get());
     exo = mock(ExoPlayer.class);
     VideoPlayer player = mock(VideoPlayer.class);
+    player.frameRateProbe = new FrameRateProbe();
     when(player.getExoPlayer()).thenReturn(exo);
     player.nativeVideoDecoderName = "OMX.amlogic.hevc.decoder.awesome";
     players.put(1L, player);
@@ -62,6 +65,19 @@ public class NativeVideoSurfaceTest {
     assertEquals("OMX.amlogic.hevc.decoder.awesome", data.get("decoder"));
     assertTrue(data.get("format").toString().contains("3840x2160"));
     assertEquals("3840x2160", data.get("videoSize"));
+  }
+  @Test
+  public void diagnosticsRetainStreamAndDecoderHdrWithoutDataPoolOpen() {
+    invoke("attach", Map.of("playerId", 1L));
+    MediaFormat decoded = MediaFormat.createVideoFormat("video/raw", 3840, 2160);
+    decoded.setInteger(MediaFormat.KEY_COLOR_TRANSFER, C.COLOR_TRANSFER_ST2084);
+    players.get(1L).frameRateProbe.onVideoFrameAboutToBeRendered(
+        0, 0, exo.getVideoFormat(), decoded);
+    Map<?, ?> data = (Map<?, ?>) invoke("diagnostics", null);
+    assertEquals("unknown", data.get("streamHdr"));
+    assertEquals("hdr10", data.get("decoderHdr"));
+    assertEquals("hdr10", data.get("hdr"));
+    assertEquals("decoder", data.get("hdrSource"));
   }
   @Test
   public void subsequentDecoderAndFormatEventsStillUpdateDiagnostics() {

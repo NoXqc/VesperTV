@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:video_player_hdr/video_player_hdr.dart';
 
 import '../l10n/l10n.dart';
+import '../utils/video_hdr_report.dart';
 import '../services/subtitle_tracks.dart';
 
 /// "Data pool" (Settings > General > Data pool display, off by default): a
@@ -122,7 +123,7 @@ class _DataPoolCardState extends State<DataPoolCard> {
         buffered = r.end - value.position;
       }
     }
-    if (!mounted) return;
+    if (!mounted || widget.controller != c) return;
     setState(() {
       _videoTracks = videoTracks;
       _audioTracks = audioTracks;
@@ -227,35 +228,6 @@ class _DataPoolCardState extends State<DataPoolCard> {
     final d = _delta('rendered');
     return d == null || d.$1 <= 0 ? null : d.$1 / d.$2;
   }
-
-  /// Dolby Vision with its profile and what a non-DV device falls back to
-  /// (Samiam23: an "HDR" release showed only "Dolby Vision" — profile 8.1 is
-  /// both). Profile 5 has no fallback; 7 and 8.1 carry HDR10, 8.4 HLG.
-  static String _dolbyVision(Map stats) {
-    final profile = stats['dvProfile'];
-    if (profile is! int) return 'Dolby Vision';
-    final base = stats['dvBase'] as String? ?? '';
-    if (profile == 5) {
-      return tr('Dolby Vision (profile {p}, no HDR10 fallback)', {'p': '5'});
-    }
-    if (base == 'hdr10' || profile == 7) {
-      return tr(
-          'Dolby Vision (profile {p}, HDR10 compatible)', {'p': '$profile'});
-    }
-    if (base == 'hlg') {
-      return tr(
-          'Dolby Vision (profile {p}, HLG compatible)', {'p': '$profile'});
-    }
-    return tr('Dolby Vision (profile {p})', {'p': '$profile'});
-  }
-
-  /// StatsBridge.hdrKind's answer for the playing video track.
-  static String _hdrKind(String kind) => switch (kind) {
-        'dolby_vision' => 'Dolby Vision',
-        'hdr10' => 'HDR10',
-        'hlg' => 'HLG',
-        _ => tr('No (SDR)'),
-      };
 
   static String _clock(Duration d) {
     final h = d.inHours;
@@ -366,13 +338,13 @@ class _DataPoolCardState extends State<DataPoolCard> {
                   if (size.width > 0 && size.height > 0)
                     _row(tr('Picture'),
                         '${size.width.round()}×${size.height.round()} · ${_aspect(size)}'),
-                  // The stream itself (Device HDR = what the box supports).
+                  // Source or decoder evidence, not the TV's active HDMI mode.
                   if (_last?['hdr'] is String)
-                    _row(
-                        tr('Stream HDR'),
-                        _last!['hdr'] == 'dolby_vision'
-                            ? _dolbyVision(_last!)
-                            : _hdrKind(_last!['hdr'] as String)),
+                    _row(tr('Video HDR'), VideoHdrReport.label(_last!)),
+                  if (_last != null &&
+                      VideoHdrReport.decoderDifference(_last!) != null)
+                    _row(tr('Decoder HDR'),
+                        VideoHdrReport.decoderDifference(_last!)!),
                   _row(
                       tr('Quality variants'),
                       heights.length > 1

@@ -16,12 +16,25 @@ import java.util.Arrays;
 
 @OptIn(markerClass = UnstableApi.class)
 final class FrameRateProbe implements VideoFrameMetadataListener {
-  /** Frames looked at; after that the probe stops doing anything. */
+  /** Frames used for the FPS estimate; HDR observations continue afterwards. */
   private static final int FRAMES = 16;
 
   private final long[] times = new long[FRAMES];
   private int count = 0;
   private volatile double fps = -1;
+  // One immutable observation crosses from the playback thread to the stats reader.
+  private static final class HdrSample {
+    final Format input;
+    final String kind;
+    HdrSample(Format input, String kind) { this.input = input; this.kind = kind; }
+  }
+  @Nullable private volatile HdrSample hdrSample;
+
+  /** Never use a previous adaptive format's colour info for the current format. */
+  String decoderHdrKind(@NonNull Format current) {
+    HdrSample sample = hdrSample;
+    return sample != null && sample.input.equals(current) ? sample.kind : "unknown";
+  }
 
   /** Frames per second, or -1 until enough frames were seen. */
   double fps() {
@@ -34,6 +47,13 @@ final class FrameRateProbe implements VideoFrameMetadataListener {
       long releaseTimeNs,
       @NonNull Format format,
       @Nullable MediaFormat mediaFormat) {
+    // Read only reported output metadata; do not configure the decoder or infer HDR
+    // from HEVC, ten-bit video, BT.2020 or the display's advertised capabilities.
+    String kind = StatsBridge.decoderHdrKind(mediaFormat);
+    HdrSample sample = hdrSample;
+    if (sample == null || sample.input != format || !sample.kind.equals(kind)) {
+      hdrSample = new HdrSample(format, kind);
+    }
     if (count >= FRAMES) return;
     // A seek or restart goes back in time: start over.
     if (count > 0 && presentationTimeUs <= times[count - 1]) count = 0;
