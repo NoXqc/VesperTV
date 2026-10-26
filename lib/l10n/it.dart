@@ -1959,4 +1959,15 @@ const Map<String, String> kIt = {
   "Source default": "Predefinita della sorgente",
   "Movies and episodes use these languages when available. Your manual track choices take priority when resuming.":
       "Film ed episodi usano queste lingue quando disponibili. Le tracce scelte manualmente hanno la priorità alla ripresa.",
+  "Playback": "Riproduzione",
+  "Frame rate & resolution": "Frequenza fotogrammi e risoluzione",
+  "Video, audio, subtitles, trailers and player behaviour.":
+      "Video, audio, sottotitoli, trailer e comportamento del lettore.",
+  "Theme, tabs, favourites and how the app looks.":
+      "Tema, schede, preferiti e aspetto dell’app.",
+  "Audio languages, subtitles and surround sound":
+      "Lingue audio, sottotitoli e audio surround",
+  "Media Hub playback": "Riproduzione Media Hub",
+  "Default stream selection for movies and episodes":
+      "Selezione predefinita del flusso per film ed episodi",
 };

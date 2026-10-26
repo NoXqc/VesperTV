@@ -1959,4 +1959,15 @@ const Map<String, String> kFr = {
   "Source default": "Par défaut de la source",
   "Movies and episodes use these languages when available. Your manual track choices take priority when resuming.":
       "Les films et épisodes utilisent ces langues si elles sont disponibles. Vos choix manuels de pistes sont prioritaires à la reprise.",
+  "Playback": "Lecture",
+  "Frame rate & resolution": "Fréquence d’images et résolution",
+  "Video, audio, subtitles, trailers and player behaviour.":
+      "Vidéo, audio, sous-titres, bandes-annonces et comportement du lecteur.",
+  "Theme, tabs, favourites and how the app looks.":
+      "Thème, onglets, favoris et apparence de l’application.",
+  "Audio languages, subtitles and surround sound":
+      "Langues audio, sous-titres et son ambiophonique",
+  "Media Hub playback": "Lecture du Media Hub",
+  "Default stream selection for movies and episodes":
+      "Sélection du flux par défaut pour les films et épisodes",
 };

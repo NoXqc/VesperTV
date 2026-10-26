@@ -2569,4 +2569,15 @@ const Map<String, String> kEl = {
   "Source default": "Προεπιλογή πηγής",
   "Movies and episodes use these languages when available. Your manual track choices take priority when resuming.":
       "Οι ταινίες και τα επεισόδια χρησιμοποιούν αυτές τις γλώσσες όταν είναι διαθέσιμες. Οι χειροκίνητες επιλογές κομματιών έχουν προτεραιότητα στη συνέχιση.",
+  "Playback": "Αναπαραγωγή",
+  "Frame rate & resolution": "Ρυθμός καρέ και ανάλυση",
+  "Video, audio, subtitles, trailers and player behaviour.":
+      "Βίντεο, ήχος, υπότιτλοι, τρέιλερ και συμπεριφορά του προγράμματος αναπαραγωγής.",
+  "Theme, tabs, favourites and how the app looks.":
+      "Θέμα, καρτέλες, αγαπημένα και εμφάνιση της εφαρμογής.",
+  "Audio languages, subtitles and surround sound":
+      "Γλώσσες ήχου, υπότιτλοι και ήχος surround",
+  "Media Hub playback": "Αναπαραγωγή Media Hub",
+  "Default stream selection for movies and episodes":
+      "Προεπιλεγμένη επιλογή ροής για ταινίες και επεισόδια",
 };

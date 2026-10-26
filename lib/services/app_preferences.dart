@@ -177,7 +177,7 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Settings > Interface > Display (Android, device-only, off by default):
+  /// Settings > Playback > Frame rate & resolution (Android, device-only, off by default):
   /// switch the TV to the video's frame rate / resolution ([DisplayMatch]).
   bool get matchFrameRate => _storage.getMatchFrameRate();
   bool get match5060Only => _storage.getMatch5060Only();

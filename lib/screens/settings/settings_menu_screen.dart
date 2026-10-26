@@ -105,7 +105,7 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
     return _railNodes[i];
   }
 
-  /// Interface / General rows open the General screen on one section.
+  /// Category destinations open the shared settings screen on one section.
   static _Entry _general(
           String id, IconData icon, String title, String subtitle) =>
       _Entry(icon, title, subtitle,
@@ -171,13 +171,21 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
         _Category(
           Icons.dashboard_customize_outlined,
           tr('Interface'),
-          tr('How the app looks and what it shows: theme, tabs, matching the TV\'s frame rate, the player\'s extras and reminders.'),
+          tr('Theme, tabs, favourites and how the app looks.'),
           [
             _Entry(Icons.palette_outlined, tr('Theme'),
                 tr('Clock, accent color, layout'), (_) => const ThemeScreen()),
             _general('tabs', Icons.tab_outlined, tr('Tabs'),
                 tr('Hide Movies, TV Shows, Media Hub, Recordings or Multiview')),
-            // Windows: no platform-view video, OK info card or tip.
+            _general('favourites', Icons.star_outline, tr('Favourites'),
+                tr('One list for every playlist, or one per playlist')),
+          ],
+        ),
+        _Category(
+          Icons.play_circle_outline,
+          tr('Playback'),
+          tr('Video, audio, subtitles, trailers and player behaviour.'),
+          [
             if (!Platform.isWindows)
               _general(
                   'background',
@@ -186,17 +194,23 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
                   tr('Fixes for the picture on some Fire TV sticks')),
             if (Platform.isAndroid)
               _general('audio', Icons.surround_sound_outlined, tr('Audio'),
-                  tr('Dolby Atmos to your soundbar or receiver')),
+                  tr('Audio languages, subtitles and surround sound')),
             if (Platform.isAndroid)
-              _general('display', Icons.tv_outlined, tr('Display'),
+              _general(
+                  'display',
+                  Icons.tv_outlined,
+                  tr('Frame rate & resolution'),
                   tr('Match the TV to the video\'s frame rate and resolution')),
             if (!Platform.isWindows)
               _general('datapool', Icons.analytics_outlined, tr('Data pool'),
                   tr('Stream details when you press OK while watching')),
             _general('trailers', Icons.movie_outlined, tr('Trailers'),
                 tr('Play trailers automatically on movie and show pages')),
-            _general('favourites', Icons.star_outline, tr('Favourites'),
-                tr('One list for every playlist, or one per playlist')),
+            _general(
+                'streamselection',
+                Icons.video_library_outlined,
+                tr('Media Hub playback'),
+                tr('Default stream selection for movies and episodes')),
             if (!Platform.isWindows)
               _general('multiview', Icons.grid_view, tr('Multiview'),
                   tr('The connections tip when opening Multiview')),

@@ -275,20 +275,20 @@ class AppConstants {
   /// Last downloaded automatic per-device defaults list (DeviceDefaults).
   static const String keyDeviceDefaults = 'vesper_device_defaults';
 
-  /// Settings > Interface > Audio: HDMI passthrough on the main player
+  /// Settings > Playback > Audio: HDMI passthrough on the main player
   /// (device-only; AppPreferences.audioPassthrough).
   static const String keyAudioPassthrough = 'vesper_audio_passthrough';
 
-  /// Settings > Interface > Background video: Shield green-flicker fix
+  /// Settings > Playback > Background video: Shield green-flicker fix
   /// (device-only; AppPreferences.videoMediaOverlay).
   static const String keyVideoMediaOverlay = 'vesper_video_media_overlay';
 
-  /// Settings > Interface > Background video: Native video surface (beta,
+  /// Settings > Playback > Background video: Native video surface (beta,
   /// device-only; AppPreferences.nativeVideoSurface). MainActivity reads it
   /// as `flutter.vesper_native_video_surface` — keep the two in step.
   static const String keyNativeVideoSurface = 'vesper_native_video_surface';
 
-  /// Settings > Interface > Display (device-only; DisplayMatch).
+  /// Settings > Playback > Frame rate & resolution (device-only; DisplayMatch).
   static const String keyMatchFrameRate = 'vesper_match_frame_rate';
   static const String keyMatch5060Only = 'vesper_match_5060_only';
   static const String keyMatchResolution = 'vesper_match_resolution';

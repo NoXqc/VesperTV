@@ -8,7 +8,7 @@ import 'package:video_player_hdr/video_player_hdr.dart';
 import 'storage_service.dart';
 import 'subtitle_tracks.dart';
 
-/// Settings > Interface > Display (Android): Match frame rate (optionally
+/// Settings > Playback > Frame rate & resolution (Android): Match frame rate (optionally
 /// only between 50 and 60 Hz) and Match resolution, like TiviMate. A few
 /// seconds into the main player's stream the video's frame rate (declared,
 /// else measured from rendered frames — live TS rarely declares one) and

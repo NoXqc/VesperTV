@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../services/app_preferences.dart';
+import '../../services/archive_service.dart';
 import '../../services/device_defaults.dart';
 import '../../services/playback_service.dart';
 import '../../services/recording_service.dart';
@@ -493,7 +494,8 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                         ]),
                   // Android only (DisplayMatch); Windows follows the monitor.
                   if (Platform.isAndroid)
-                    _section('display', Icons.tv_outlined, tr('Display'),
+                    _section('display', Icons.tv_outlined,
+                        tr('Frame rate & resolution'),
                         children: [
                           TvSwitchListTile(
                             title: Text(tr('Match frame rate')),
@@ -556,6 +558,19 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                               context.read<AppPreferences>().setAutoTrailers(v),
                         ),
                       ]),
+                  if (context.watch<ArchiveService?>() case final archive?)
+                    _section('streamselection', Icons.video_library_outlined,
+                        tr('Media Hub playback'),
+                        children: [
+                          TvSwitchListTile(
+                            title:
+                                Text(tr('Automatically play the largest file')),
+                            subtitle: Text(tr(
+                                'Use the largest known file size when starting a title. Resume keeps your selected stream.')),
+                            value: archive.autoPlayLargest,
+                            onChanged: archive.setAutoPlayLargest,
+                          ),
+                        ]),
                   _section('favourites', Icons.star_outline, tr('Favourites'),
                       children: [
                         TvSwitchListTile(

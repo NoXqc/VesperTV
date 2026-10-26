@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -73,12 +75,27 @@ void main() {
     await tester.pumpAndSettle();
     expect(focusedLabel(), 'Media Hub');
 
-    // Interface holds the small display switches.
+    // Interface retains appearance settings; Playback owns player settings.
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pumpAndSettle();
     expect(focusedLabel(), 'Interface');
     expect(find.text('Tabs'), findsOneWidget);
+    expect(find.text('Resume reminder'), findsNothing);
+    expect(find.text('Trailers'), findsNothing);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(focusedLabel(), 'Playback');
     expect(find.text('Resume reminder'), findsOneWidget);
+    expect(find.text('Trailers'), findsOneWidget);
+    expect(find.text('Media Hub playback'), findsOneWidget);
+    expect(find.text('Tabs'), findsNothing);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    expect(
+        focusedLabel(), Platform.isWindows ? 'Trailers' : 'Background video');
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pumpAndSettle();
+    expect(focusedLabel(), 'Playback');
   });
 }
 

@@ -1955,4 +1955,15 @@ const Map<String, String> kEs = {
   "Source default": "Predeterminado de la fuente",
   "Movies and episodes use these languages when available. Your manual track choices take priority when resuming.":
       "Las películas y los episodios usan estos idiomas cuando están disponibles. Tus selecciones manuales de pistas tienen prioridad al reanudar.",
+  "Playback": "Reproducción",
+  "Frame rate & resolution": "Frecuencia de imagen y resolución",
+  "Video, audio, subtitles, trailers and player behaviour.":
+      "Vídeo, audio, subtítulos, tráileres y comportamiento del reproductor.",
+  "Theme, tabs, favourites and how the app looks.":
+      "Tema, pestañas, favoritos y apariencia de la aplicación.",
+  "Audio languages, subtitles and surround sound":
+      "Idiomas de audio, subtítulos y sonido envolvente",
+  "Media Hub playback": "Reproducción de Media Hub",
+  "Default stream selection for movies and episodes":
+      "Selección de transmisión predeterminada para películas y episodios",
 };

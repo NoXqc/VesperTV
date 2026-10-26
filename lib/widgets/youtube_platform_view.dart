@@ -59,7 +59,7 @@ class _YouTubePlatformViewState extends State<YouTubePlatformView> {
         // Fire OS's WebView puts <video> on its own native layer. Under hybrid
         // composition that layer sat behind the opaque page (black, audio only);
         // texture composition shows it, but on top of everything: Fire TV plays
-        // trailers full screen (Settings > Interface > Trailers says so).
+        // trailers full screen (Settings > Playback > Trailers says so).
         _amazon ??= Process.run('getprop', ['ro.product.manufacturer']).then(
             (r) => '${r.stdout}'.trim().toLowerCase() == 'amazon',
             onError: (_) => false);
