@@ -564,7 +564,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     final key = event.logicalKey;
     if (key == LogicalKeyboardKey.escape || key == LogicalKeyboardKey.goBack) {
-      Navigator.of(context).maybePop();
+      if (event is KeyDownEvent) Navigator.of(context).maybePop();
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowUp ||

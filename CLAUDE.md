@@ -349,6 +349,8 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 
 ## 13. Status & open items (as of 2026-10-24)
 
+- **cdx, 2026-10-26: Home Back regression correction (+453).** Owner reported Back returns Home to TV then opens Exit in +452. Duplicate key/platform Back reproduces this in tests. TV root ignores exit requests for700ms after returning from Home/Hub/Sports; normal later Back still confirms Exit. Covered root cannot handle Back, Home ignores Back repeats. Tested profiles visible/hidden and initial Home/sidebar Home with system/key/duplicate paths. No native player changes.
+
 - **cdx, 2026-10-26: Local test build +452 (owner requested merge/build/install).** All Codex work including Windows movie/episode resume and saved source URL retrieval merged locally. Production-signed VesperTV-1.0.40-test.452.apk installed in place on Formuler Z11 Pro MAX; installed version452 and SHA256 match verified. Windows ZIP VesperTV-1.0.40-test.452-windows-x64.zip built (exe version1.0.40+452), full release folder/CRC checked. Analyze17, all552tests passed. No Windows launch or box UI navigation. No push, GitHub release, VPS deploy or Discord announcement; published release unchanged. See HANDOFF.md for hashes/artifacts.
 
 - **cdx, 2026-10-26: Retrieve saved source URL** on `codex/view-source-url` (merged locally in +452): Media Hub source settings add View source URL for add-ons and media servers. Opens full selectable/scrollable URL with Copy URL; add-ons copy exact saved manifest URL, media servers copy base URL without internal user fragment. Tracker rows omitted. URLs remain hidden until requested and are never logged by this action. No source state changes.

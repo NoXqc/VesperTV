@@ -211,6 +211,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   FocusNode _tabFocusNode(String tab) => _tabFocusNodes.putIfAbsent(
       tab, () => FocusNode(debugLabel: 'tv-tab-$tab'));
   bool _returnToTv = false;
+  Timer? _returnBackGuard;
   bool _focusRecoveryScheduled = false;
   int _browseFocusRequest = 0;
 
@@ -1637,6 +1638,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
 
   /// Shared by system Back and the wide-layout touch arrow.
   void _handleBack() {
+    if (ModalRoute.of(context)?.isCurrent != true) return;
     ++_browseFocusRequest;
     // Back mid "Move Up / Down" just finishes the move.
     if (_movingGroupKey != null) {
@@ -1822,6 +1824,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
 
   @override
   void dispose() {
+    _returnBackGuard?.cancel();
     appRouteObserver.unsubscribe(this);
     _releasePreviewHint?.call();
     FocusManager.instance.removeListener(_scheduleFocusRecovery);
@@ -1883,6 +1886,13 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     }
     if (_returnToTv) {
       _returnToTv = false;
+      // Some TV remotes deliver both a Back key and a platform pop, or a
+      // trailing repeat. Home has already consumed that press by closing;
+      // its tail must not immediately open the root's Exit confirmation.
+      _returnBackGuard?.cancel();
+      _returnBackGuard = Timer(const Duration(milliseconds: 700), () {
+        _returnBackGuard = null;
+      });
       _restoreTvTab();
       return;
     }
@@ -2498,7 +2508,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// Stay is focused by default so a stray extra Back/Select press can't
   /// close the app by accident.
   Future<void> _confirmExit() async {
-    if (_exitPromptOpen) return;
+    if (_exitPromptOpen || (_returnBackGuard?.isActive ?? false)) return;
     _exitPromptOpen = true;
     final exit = await showDialog<bool>(
       context: context,
