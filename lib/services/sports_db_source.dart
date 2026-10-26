@@ -161,6 +161,9 @@ SportsGame? _parseEvent(Map<String, dynamic> e, SportsLeague league) {
     'LIVE' || 'INT' => (GameState.live, ''),
     _ => (GameState.pre, ''),
   };
+  if (league.kind == SportsKind.fight) {
+    return _combatEvent(e, league, id, start, state, text);
+  }
   String? score(String key) {
     final s = e[key]?.toString();
     return state == GameState.pre || s == null || s.isEmpty ? null : s;
@@ -187,6 +190,70 @@ SportsGame? _parseEvent(Map<String, dynamic> e, SportsLeague league) {
     home: team('Home'),
     away: team('Away'),
   );
+}
+
+/// Fighting feeds use strEvent instead of team fields. Preserve show/card
+/// names when a genuine two-fighter matchup is unavailable; never invent scores.
+SportsGame? _combatEvent(Map<String, dynamic> e, SportsLeague league, String id,
+    DateTime start, GameState state, String status) {
+  String value(String key) => (e[key] ?? '').toString().trim();
+  final title = value('strEvent');
+  if (title.isEmpty ||
+      (!RegExp(r'T\d{2}:\d{2}').hasMatch(value('strTimestamp')) &&
+          value('strTime').isEmpty)) {
+    return null;
+  }
+  var first = value('strHomeTeam');
+  var second = value('strAwayTeam');
+  if (first.isEmpty || second.isEmpty) {
+    first = '';
+    second = '';
+    // Wrestling titles are shows, not head-to-head competitors. For boxing,
+    // split only clearly named bouts; promotional titles remain whole cards.
+    if (league.id == 'boxing') {
+      final billed = title.split(': ').last;
+      final sides =
+          billed.split(RegExp(r'\s+(?:vs\.?|v\.)\s+', caseSensitive: false));
+      if (sides.length == 2 &&
+          sides.every(
+              (s) => s.trim().isNotEmpty && !RegExp(r'\d').hasMatch(s))) {
+        first = sides[0].trim();
+        second = sides[1].trim();
+      }
+    }
+  }
+  SportsTeam fighter(String name, String badge) => SportsTeam(
+      id: name.isEmpty ? '' : '${league.id}:$name',
+      name: name,
+      shortName: name,
+      abbreviation: name
+          .split(' ')
+          .where((w) => w.isNotEmpty)
+          .map((w) => w[0])
+          .take(2)
+          .join()
+          .toUpperCase(),
+      logoUrl: name.isEmpty
+          ? league.logoUrl
+          : value(badge).isEmpty
+              ? null
+              : value(badge));
+  final venue = [value('strVenue'), value('strCity'), value('strCountry')]
+      .where((s) => s.isNotEmpty)
+      .toSet()
+      .join(', ');
+  return SportsGame(
+      id: id,
+      league: league,
+      start: start,
+      state: state,
+      statusText: status,
+      home: fighter(first, 'strHomeTeamBadge'),
+      away: fighter(second, 'strAwayTeamBadge'),
+      event: SportsEventInfo(
+          title: title,
+          session: league.shortName,
+          venue: venue.isEmpty ? null : venue));
 }
 
 /// TheSportsDB uses registered club names ("Hapoel Tel Aviv BC", "Virtus

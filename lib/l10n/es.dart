@@ -1966,4 +1966,5 @@ const Map<String, String> kEs = {
   "Media Hub playback": "Reproducción de Media Hub",
   "Default stream selection for movies and episodes":
       "Selección de transmisión predeterminada para películas y episodios",
+  "Boxing": "Boxeo",
 };

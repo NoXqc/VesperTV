@@ -2580,4 +2580,5 @@ const Map<String, String> kEl = {
   "Media Hub playback": "Αναπαραγωγή Media Hub",
   "Default stream selection for movies and episodes":
       "Προεπιλεγμένη επιλογή ροής για ταινίες και επεισόδια",
+  "Boxing": "Πυγμαχία",
 };

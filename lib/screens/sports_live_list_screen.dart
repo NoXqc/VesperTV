@@ -654,14 +654,22 @@ class _LiveRowState extends State<_LiveRow> {
 
     final teams = SizedBox(
       width: widget.narrow ? null : 200,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          teamLine(g.first),
-          const SizedBox(height: 3),
-          teamLine(g.second)
-        ],
-      ),
+      child: g.isEventOnly
+          ? Text(g.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700))
+          : Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                teamLine(g.first),
+                const SizedBox(height: 3),
+                teamLine(g.second)
+              ],
+            ),
     );
 
     final leaderBlock = Column(
@@ -1107,6 +1115,22 @@ class _ScoreHeader extends StatelessWidget {
       );
     }
 
+    if (g.isEventOnly) {
+      return Column(children: [
+        Text(g.title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w700)),
+        const SizedBox(height: 4),
+        Text(_clock(g), style: const TextStyle(color: Colors.white60)),
+        if (g.event?.venue case final venue?)
+          Text(venue,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white60, fontSize: 12)),
+      ]);
+    }
     final sit = g.situation;
     return Column(
       children: [

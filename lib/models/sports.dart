@@ -275,6 +275,42 @@ const List<SportsLeague> kSportsLeagueBank = [
       kind: SportsKind.fight,
       seriesPhrases: ['pfl']),
   SportsLeague(
+      id: 'boxing',
+      espnPath: 'boxing/boxing',
+      sportsDbId: '4445',
+      name: 'Boxing',
+      shortName: 'BOXING',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/j14hx41784791003.png',
+      region: 'Fighting',
+      hasStandings: false,
+      kind: SportsKind.fight,
+      seriesPhrases: ['boxing']),
+  SportsLeague(
+      id: 'wrestling.wwe',
+      espnPath: 'wrestling/wwe',
+      sportsDbId: '4444',
+      name: 'WWE',
+      shortName: 'WWE',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/ywtxyv1453504109.png',
+      region: 'Fighting',
+      hasStandings: false,
+      kind: SportsKind.fight,
+      seriesPhrases: ['wwe']),
+  SportsLeague(
+      id: 'wrestling.aew',
+      espnPath: 'wrestling/aew',
+      sportsDbId: '4563',
+      name: 'AEW',
+      shortName: 'AEW',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/zb3zn01708517335.png',
+      region: 'Fighting',
+      hasStandings: false,
+      kind: SportsKind.fight,
+      seriesPhrases: ['aew']),
+  SportsLeague(
       id: 'racing.f1',
       espnPath: 'racing/f1',
       name: 'Formula 1',
@@ -1163,7 +1199,13 @@ class SportsGame {
   SportsTeam get second => _homeFirst ? away : home;
   String get joiner => _homeFirst ? 'vs' : 'at';
 
-  String get title => league.isField
+  /// Show-level combat events have no announced two-fighter matchup.
+  bool get isEventOnly =>
+      league.isField ||
+      (league.kind == SportsKind.fight &&
+          (home.name.isEmpty || away.name.isEmpty));
+
+  String get title => isEventOnly
       ? (event?.title ?? first.name)
       : '${first.shortName} $joiner ${second.shortName}';
 }

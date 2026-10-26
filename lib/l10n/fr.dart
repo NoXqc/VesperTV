@@ -1970,4 +1970,5 @@ const Map<String, String> kFr = {
   "Media Hub playback": "Lecture du Media Hub",
   "Default stream selection for movies and episodes":
       "Sélection du flux par défaut pour les films et épisodes",
+  "Boxing": "Boxe",
 };

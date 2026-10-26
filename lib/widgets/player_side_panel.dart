@@ -530,8 +530,8 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
       _ => trSports(g.statusText),
     };
     final showScore =
-        !_hideScores && g.state != GameState.pre && !g.league.isField;
-    final title = g.league.isField
+        !_hideScores && g.state != GameState.pre && !g.isEventOnly;
+    final title = g.isEventOnly
         ? g.title
         : showScore
             ? '${g.first.abbreviation} ${g.first.score ?? ''}  -  ${g.second.score ?? ''} ${g.second.abbreviation}'
@@ -570,7 +570,7 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
         );
     return Row(
       children: [
-        if (g.league.isField)
+        if (g.isEventOnly)
           SportsLogo(
               url: g.league.logoUrl, size: 32, fallback: g.league.shortName)
         else ...[

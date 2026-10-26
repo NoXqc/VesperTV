@@ -164,7 +164,7 @@ class RecordingService extends ChangeNotifier {
     final vol = await currentVolume();
     final id = DateTime.now().microsecondsSinceEpoch.toRadixString(36);
     final start = game.start.toLocal();
-    final title = game.league.isField ? game.title : _gameTitle(game);
+    final title = game.isEventOnly ? game.title : _gameTitle(game);
     final entry = RecordingEntry(
       id: id,
       title: title,
@@ -181,13 +181,13 @@ class RecordingService extends ChangeNotifier {
       path: '${vol?.path ?? ''}/${_fileName(title, start, id)}',
       auto: auto,
       logo: game.first.logoUrl,
-      logo2: game.league.isField ? null : game.second.logoUrl,
-      team1: game.league.isField ? game.title : game.first.shortName,
-      team2: game.league.isField ? '' : game.second.shortName,
+      logo2: game.isEventOnly ? null : game.second.logoUrl,
+      team1: game.isEventOnly ? game.title : game.first.shortName,
+      team2: game.isEventOnly ? '' : game.second.shortName,
       abbr1: game.first.abbreviation,
-      abbr2: game.league.isField ? '' : game.second.abbreviation,
+      abbr2: game.isEventOnly ? '' : game.second.abbreviation,
       color1: game.first.color,
-      color2: game.league.isField ? null : game.second.color,
+      color2: game.isEventOnly ? null : game.second.color,
       channelLogo: channel.logoUrl,
     );
     _items.add(entry);
@@ -213,7 +213,7 @@ class RecordingService extends ChangeNotifier {
       'basketball' => const Duration(hours: 2, minutes: 30),
       'hockey' => const Duration(hours: 2, minutes: 40),
       'tennis' => const Duration(hours: 3),
-      'mma' => const Duration(hours: 4),
+      'mma' || 'boxing' || 'wrestling' => const Duration(hours: 4),
       'golf' => const Duration(hours: 5),
       'racing' => const Duration(hours: 2, minutes: 30),
       _ => const Duration(hours: 3),

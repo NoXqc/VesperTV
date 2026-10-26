@@ -1970,4 +1970,5 @@ const Map<String, String> kIt = {
   "Media Hub playback": "Riproduzione Media Hub",
   "Default stream selection for movies and episodes":
       "Selezione predefinita del flusso per film ed episodi",
+  "Boxing": "Pugilato",
 };

@@ -343,6 +343,8 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 
 ## 13. Status & open items (as of 2026-10-24)
 
+- **cdx, 2026-10-26: Boxing / WWE / AEW events** on `codex/boxing-wrestling-events` (unmerged). Optional Fighting bank entries use verified TheSportsDB schedules (4445/4444/4563), existing UFC workflow. Named boxing bouts show fighters; wrestling/unpaired cards show event title/time/venue, same themed cards and channel controls. SportsGame.isEventOnly guards absent opponents in menus, side panel and recordings. No invented live scores/winners, standings or announced matches. Free feed schedule/result completeness limited; official website importers not used. See dev-notes/sports-tab.md.
+
 - **cdx, 2026-10-26: Live playlist gold tag** on `codex/live-playlist-tag` (based on Playback settings). Android live OK/zap info card shows current channel's playlist name beside the channel title, even without EPG; Windows live player bar shows the same label. Resolves via channel.playlistId; unknown/blank names omitted, long labels ellipsised. GoldTag extracted from Real4kTag so both use the existing amber outline pattern. No behavior/default/native changes; not merged/built.
 
 - **cdx, 2026-10-26: Playback settings category** on `codex/playback-settings`, based on track-resume f8e49ce. Moves Background video, Audio (including new language defaults), Frame rate & resolution (formerly Display), Data pool, Trailers, Multiview tips, Resume reminder and Media Hub largest-file playback into Playback. Interface retains theme/tabs/favourites; General retains Startup. Same preference keys/defaults/platform gates. Largest-file option moved from source management without changing its behavior. Not merged/built; see HANDOFF.md.

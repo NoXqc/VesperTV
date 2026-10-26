@@ -682,6 +682,25 @@ class SportsChannelMatcher {
   /// "Allen vs Duncan".
   /// Golf/racing: the event alone ("singapore grand prix").
   static List<List<String>> _nameGroups(SportsGame g) {
+    if (g.isEventOnly && g.league.kind == SportsKind.fight) {
+      final title =
+          (g.event?.title ?? '').replaceAll(RegExp(r'#\d+'), '').trim();
+      final normalized = sportsNormalize(title);
+      final names = <String>{if (title.isNotEmpty) normalized};
+      final lower = title.toLowerCase();
+      final shows = g.league.id == 'wrestling.wwe'
+          ? ['raw', 'smackdown', 'nxt']
+          : g.league.id == 'wrestling.aew'
+              ? ['dynamite', 'collision']
+              : <String>[];
+      for (final show in shows) {
+        if (RegExp('\\b$show\\b').hasMatch(lower)) {
+          names.add(sportsNormalize('${g.league.shortName} $show'));
+          names.add(sportsNormalize(show));
+        }
+      }
+      return names.isEmpty ? const [] : [names.toList()];
+    }
     switch (g.league.kind) {
       case SportsKind.team:
         return [_teamPhrases(g.home), _teamPhrases(g.away)];

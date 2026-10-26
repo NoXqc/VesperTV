@@ -2039,61 +2039,91 @@ class _EventHero extends StatelessWidget {
     final ev = game.event;
     final leaders =
         hideScores ? const <SportsEventEntry>[] : (ev?.leaders ?? const []);
-    return SizedBox(
-      height: 168,
-      child: Row(
-        children: [
-          Expanded(
-            child: Row(
-              children: [
-                SportsLogo(
-                    url: game.league.logoUrl,
-                    size: 92,
-                    fallback: game.league.shortName),
-                const SizedBox(width: 14),
-                Flexible(
+    return LayoutBuilder(builder: (context, constraints) {
+      if (game.league.kind == SportsKind.fight && constraints.maxWidth < 650) {
+        return SizedBox(
+            height: 168,
+            child: Row(children: [
+              Expanded(
                   child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(game.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white)),
-                      if (ev?.session != null)
-                        Text(trSports(ev!.session!),
-                            style: const TextStyle(
-                                fontSize: 15, color: Colors.white70)),
-                      if (ev?.venue != null)
-                        Text(ev!.venue!,
-                            maxLines: 1,
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(game.title,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700)),
+                  if (ev?.venue case final venue?)
+                    Text(venue,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            color: Colors.white60, fontSize: 12)),
+                ],
+              )),
+              SizedBox(width: constraints.maxWidth * 0.45, child: center),
+            ]));
+      }
+      return SizedBox(
+        height: 168,
+        child: Row(
+          children: [
+            Expanded(
+              child: Row(
+                children: [
+                  SportsLogo(
+                      url: game.league.logoUrl,
+                      size: 92,
+                      fallback: game.league.shortName),
+                  const SizedBox(width: 14),
+                  Flexible(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(game.title,
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                                fontSize: 13, color: Colors.white54)),
-                    ],
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white)),
+                        if (ev?.session != null)
+                          Text(trSports(ev!.session!),
+                              style: const TextStyle(
+                                  fontSize: 15, color: Colors.white70)),
+                        if (ev?.venue != null)
+                          Text(ev!.venue!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontSize: 13, color: Colors.white54)),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          SizedBox(width: 230, child: center),
-          Expanded(
-            child: leaders.isEmpty
-                ? const SizedBox()
-                : Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      for (final e in leaders.take(5))
-                        _EventLeaderLine(entry: e, fontSize: 15, flagSize: 15),
-                    ],
-                  ),
-          ),
-        ],
-      ),
-    );
+            SizedBox(width: 230, child: center),
+            Expanded(
+              child: leaders.isEmpty
+                  ? const SizedBox()
+                  : Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        for (final e in leaders.take(5))
+                          _EventLeaderLine(
+                              entry: e, fontSize: 15, flagSize: 15),
+                      ],
+                    ),
+            ),
+          ],
+        ),
+      );
+    });
   }
 }
 
@@ -2214,7 +2244,7 @@ class _Hero extends StatelessWidget {
   Widget build(BuildContext context) {
     final showScore = game.state != GameState.pre && !hideScores;
     if (playing) return _buildPlaying(context, showScore);
-    if (game.league.isField) {
+    if (game.isEventOnly) {
       return _EventHero(
           game: game, center: _center(context, false), hideScores: hideScores);
     }
@@ -2257,7 +2287,7 @@ class _Hero extends StatelessWidget {
     const videoHeight = height - 8;
     // The normal VS layout, smaller, beside the video (owner: the stacked
     // version wasn't nice).
-    final info = game.league.isField
+    final info = game.isEventOnly
         ? Row(
             children: [
               Expanded(
@@ -2331,7 +2361,7 @@ class _Hero extends StatelessWidget {
             return video(w, w * 9 / 16);
           }),
           const SizedBox(height: 8),
-          if (game.league.isField)
+          if (game.isEventOnly)
             SizedBox(
                 height: 130, child: _center(context, false, channel: channel))
           else
@@ -2484,7 +2514,7 @@ class _Hero extends StatelessWidget {
             style: const TextStyle(
                 fontSize: 12, letterSpacing: 1.2, color: Colors.white54)),
         const SizedBox(height: 4),
-        if (game.league.isField)
+        if (game.isEventOnly)
           Text(
               game.state == GameState.pre
                   ? _preLabel(game)
@@ -2890,7 +2920,7 @@ class _GameCardState extends State<_GameCard> {
                         ],
                       ),
                       const SizedBox(height: 5),
-                      if (g.league.isField)
+                      if (g.isEventOnly)
                         _EventCardBody(game: g, hideScores: widget.hideScores)
                       else ...[
                         teamLine(g.first, leading: true),
@@ -3044,7 +3074,7 @@ class _GameDialog extends StatelessWidget {
             Navigator.of(context).pop(_RecordAction(matches.first.channel)),
       ));
     }
-    if (!game.league.isField) {
+    if (!game.isEventOnly) {
       for (final team in [game.first, game.second]) {
         final isAuto = RecordingService.instance.isAutoTeam(game, team);
         tiles.add(TvMenuTile(
@@ -3069,7 +3099,7 @@ class _GameDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final showScore =
-        game.state != GameState.pre && !hideScores && !game.league.isField;
+        game.state != GameState.pre && !hideScores && !game.isEventOnly;
     return Dialog(
       backgroundColor: const Color(0xFF15151A),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -3114,7 +3144,7 @@ class _GameDialog extends StatelessWidget {
                     ),
                   ),
                   // Golf/racing: both "sides" are the league placeholder.
-                  if (!game.league.isField) ...[
+                  if (!game.isEventOnly) ...[
                     const SizedBox(width: 10),
                     SportsLogo(
                         url: game.second.logoUrl,
@@ -3340,7 +3370,7 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
     // Tour") and the network. Fighters go by last name on event channels.
     String lastName(SportsTeam t) =>
         t.name.split(' ').where((w) => w.length > 3).lastOrNull ?? t.name;
-    _suggestions = (g.league.isField
+    _suggestions = (g.isEventOnly
             ? {
                 g.league.name,
                 g.league.shortName,

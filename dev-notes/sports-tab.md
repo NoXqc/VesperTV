@@ -145,8 +145,20 @@ NASCAR Cup `racing/nascar-premier`, IndyCar `racing/irl`). Parsing in `sports_se
   button "{name} championship"; no Follow on racing rows; hidden from My Teams' Add team.
   **Not done:** UFC rankings (ESPN's are frozen ~2021: Usman P4P #1), golf points race (core API:
   600 unsorted athlete `$ref`s — top 30 would need 30 extra calls). Owner: racing only for now.
-- Wrestling / horse racing: no free source (TheSportsDB free key truncates to 5, no horse racing).
-  Idea offered, not built: an EPG-driven "From your guide" category (WWE/AEW, racing channels).
+- cdx, 2026-10-26: Boxing / WWE / AEW added to the Fighting bank on
+  `codex/boxing-wrestling-events`. TheSportsDB IDs 4445/4444/4563; verified real upcoming/day
+  responses, unlike ESPN boxing/wrestling endpoints (400/404). Name searches are truncated and
+  misleading: these leagues all use sport Fighting, not Boxing/Wrestling. Free next returns one
+  event; season/day responses are capped. Existing daily loading/rate limiting still applies.
+- cdx: Combat parser reads strEvent (team fields are null). Clearly named boxing bouts use the
+  UFC fighter layout; branded cards/WWE/AEW shows use event-title cards (SportsGame.isEventOnly),
+  not fictional teams. Source status only; no inferred live/end/winners. Missing title/time omitted.
+  Show aliases omit episode numbers for Raw/SmackDown/NXT/Dynamite/Collision channel matching.
+  Existing manual picks, whole-series picks, preview/fullscreen and recording flows reused.
+  No standings/My Teams; no full match card/results guarantee. Recording fallback length4h like UFC.
+- cdx: Official WWE/AEW/TNA pages are alternative future schedule importers, not used here.
+  Arena/taping times can differ from broadcast times; provider timings are not independently
+  verified against TV schedules. Horse racing remains unimplemented.
 - Lazy-list focus gotcha (fixed twice here): `requestFocus` on a chip/tile that a lazy `ListView`
   hasn't built does nothing — League manager `_bank` is now in screen (region) order; the Sports
   league chip row is a `SingleChildScrollView` + `ensureVisible`.
