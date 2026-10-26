@@ -2561,4 +2561,7 @@ const Map<String, String> kEl = {
       "Εισήχθησαν {items} στοιχεία λιστών και {sources} πηγές Media Hub. {existing} πηγές υπήρχαν ήδη· δεν ήταν δυνατή η σύνδεση με {failed}.",
   "Could not import this file. Choose an M3U channel playlist or a TXT/JSON file containing Media Hub manifest links.":
       "Δεν ήταν δυνατή η εισαγωγή. Επιλέξτε λίστα καναλιών M3U ή αρχείο TXT/JSON με συνδέσμους manifest του Media Hub.",
+  "Hide profiles": "Απόκρυψη προφίλ",
+  "Hides the profiles row on Home.":
+      "Αποκρύπτει τη σειρά προφίλ στην αρχική σελίδα.",
 };

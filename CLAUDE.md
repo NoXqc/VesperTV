@@ -343,6 +343,8 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 
 ## 13. Status & open items (as of 2026-10-24)
 
+- **cdx, 2026-10-26: Hide profiles** under Settings > Interface > Tabs on `codex/hide-home-profiles` (not released). Off by default, stored per viewer with Home settings; removes only Home profile cards, keeps clock/Windows Back and safe D-pad focus including empty Home. Home profile-copy includes the setting. See HANDOFF.md for verification.
+
 - **Prepared release: VesperTV 1.0.40 (beta), +449 (2026-10-25).** Owner requested
   the current integrated tree and Live now grid, APK + Windows, GitHub publication with
   (beta) in title and Downloader pointing to it. Publish as latest (not GitHub prerelease,

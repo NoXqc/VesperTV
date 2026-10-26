@@ -51,6 +51,14 @@ class AppPreferences extends ChangeNotifier {
   /// The Multiview row and the player's "Open in Multiview" hidden.
   late bool hideMultiview;
 
+  /// Home's profiles strip is optional, like that viewer's other Home rows.
+  bool get hideProfiles => _storage.getHideProfiles();
+
+  void setHideProfiles(bool value) {
+    _storage.setHideProfiles(value);
+    notifyListeners();
+  }
+
   /// Fullscreen player zooms the picture to fill the screen (no black bars).
   late bool videoFill;
 

@@ -25,7 +25,7 @@ const profileCopyKeys = <ProfileCopy, Set<String>>{
     AppConstants.keySportsChannelLists
   },
   ProfileCopy.visibility: {AppConstants.keyMyGroups},
-  ProfileCopy.home: {AppConstants.keyHomeRows},
+  ProfileCopy.home: {AppConstants.keyHomeRows, AppConstants.keyHideProfiles},
 };
 const profileCopyPrefixes = <ProfileCopy, Set<String>>{
   ProfileCopy.favourites: {'${AppConstants.keyFavoritedGroups}_'},

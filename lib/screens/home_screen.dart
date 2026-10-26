@@ -125,12 +125,29 @@ class _HomeScreenState extends State<HomeScreen> {
   final Map<HomeRowKind, GlobalKey> _rowKeys = {};
   final List<FocusNode> _profileNodes = [];
   final _addProfileNode = FocusNode(debugLabel: 'home add profile');
+  final _emptyFocus = FocusNode(debugLabel: 'home empty');
+  bool _profilesHidden = false;
 
   @override
   void initState() {
     super.initState();
     _rowsConfig = HomeRows.load(context.read<StorageService>());
     unawaited(_load(focusFirst: true));
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final hidden = context.watch<AppPreferences>().hideProfiles;
+    if (hidden != _profilesHidden) {
+      _profilesHidden = hidden;
+      if (_inProfiles || _rows.isEmpty) {
+        _inProfiles = false;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _focusProfiles();
+        });
+      }
+    }
   }
 
   @override
@@ -146,6 +163,7 @@ class _HomeScreenState extends State<HomeScreen> {
       n.dispose();
     }
     _addProfileNode.dispose();
+    _emptyFocus.dispose();
     super.dispose();
   }
 
@@ -510,6 +528,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _focusProfiles([int? index]) {
+    if (context.read<AppPreferences>().hideProfiles) {
+      if (_inProfiles) setState(() => _inProfiles = false);
+      if (_rows.isEmpty) {
+        _emptyFocus.requestFocus();
+      } else {
+        _focusCard(0, _cardIndex[_rows.first.kind] ?? 0);
+      }
+      return;
+    }
     final count = context.read<ViewerProfileService>().profiles.length;
     _profileIndex = (index ?? _activeProfileIndex()).clamp(0, count);
     setState(() => _inProfiles = true);
@@ -536,6 +563,10 @@ class _HomeScreenState extends State<HomeScreen> {
       return KeyEventResult.ignored;
     }
     final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.escape || key == LogicalKeyboardKey.goBack) {
+      Navigator.of(context).maybePop();
+      return KeyEventResult.handled;
+    }
     if (key == LogicalKeyboardKey.arrowUp ||
         key == LogicalKeyboardKey.arrowDown ||
         key == LogicalKeyboardKey.arrowLeft ||
@@ -565,7 +596,18 @@ class _HomeScreenState extends State<HomeScreen> {
       if (key == LogicalKeyboardKey.arrowUp) return KeyEventResult.handled;
       return KeyEventResult.ignored;
     }
-    if (_rows.isEmpty) return KeyEventResult.ignored;
+    if (_rows.isEmpty) {
+      if (key == LogicalKeyboardKey.arrowLeft) Navigator.of(context).maybePop();
+      if ([
+        LogicalKeyboardKey.arrowLeft,
+        LogicalKeyboardKey.arrowRight,
+        LogicalKeyboardKey.arrowUp,
+        LogicalKeyboardKey.arrowDown
+      ].contains(key)) {
+        return KeyEventResult.handled;
+      }
+      return KeyEventResult.ignored;
+    }
     final row = _rows[_row.clamp(0, _rows.length - 1)];
     final i = _cardIndex[row.kind] ?? 0;
     if (key == LogicalKeyboardKey.arrowDown) {
@@ -769,6 +811,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final hideProfiles = context.watch<AppPreferences>().hideProfiles;
     final scheme = Theme.of(context).colorScheme;
     final size = MediaQuery.sizeOf(context);
     // Profiles + hero stay put; only the rows scroll under them.
@@ -777,7 +820,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: Focus(
-        canRequestFocus: false,
+        focusNode: _emptyFocus,
+        canRequestFocus: hideProfiles && _rows.isEmpty,
         skipTraversal: true,
         onKeyEvent: _onKey,
         child: Stack(
@@ -791,22 +835,40 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _ProfilesStrip(
-                    compact: !_inProfiles,
-                    nodes: _profileNode,
-                    addNode: _addProfileNode,
-                    onPick: _switchProfile,
-                    onEdit: _editProfile,
-                    onAdd: _manageProfiles,
-                    onFocus: (i) {
-                      if (!_inProfiles || _profileIndex != i) {
-                        setState(() {
-                          _inProfiles = true;
-                          _profileIndex = i;
-                        });
-                      }
-                    },
-                  ),
+                  if (hideProfiles && (Platform.isWindows || size.width >= 800))
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 6),
+                      child: Row(children: [
+                        if (Platform.isWindows)
+                          ExcludeFocus(
+                              child: IconButton(
+                            tooltip: tr('Back'),
+                            icon: const Icon(Icons.arrow_back,
+                                color: Colors.white),
+                            onPressed: () => Navigator.of(context).maybePop(),
+                          )),
+                        const Spacer(),
+                        if (size.width >= 800) const _HomeClock(),
+                      ]),
+                    ),
+                  if (!hideProfiles)
+                    _ProfilesStrip(
+                      compact: !_inProfiles,
+                      nodes: _profileNode,
+                      addNode: _addProfileNode,
+                      onPick: _switchProfile,
+                      onEdit: _editProfile,
+                      onAdd: _manageProfiles,
+                      onFocus: (i) {
+                        if (!_inProfiles || _profileIndex != i) {
+                          setState(() {
+                            _inProfiles = true;
+                            _profileIndex = i;
+                          });
+                        }
+                      },
+                    ),
                   SizedBox(
                     height: heroHeight,
                     child: _Hero(item: focused, scheme: scheme),
@@ -1448,13 +1510,17 @@ class _ProfilesStrip extends StatelessWidget {
                                               .keepVisibleAtEnd);
                                 })),
                       ]))),
-              if (MediaQuery.sizeOf(context).width >= 800)
-                StreamBuilder<void>(
-                    stream: Stream<void>.periodic(const Duration(seconds: 20)),
-                    builder: (context, _) => Text(
-                        TimeFormat.hm.format(DateTime.now()),
-                        style: const TextStyle(
-                            fontSize: 20, color: Colors.white70))),
+              if (MediaQuery.sizeOf(context).width >= 800) const _HomeClock(),
             ])));
   }
+}
+
+class _HomeClock extends StatelessWidget {
+  const _HomeClock();
+
+  @override
+  Widget build(BuildContext context) => StreamBuilder<void>(
+      stream: Stream<void>.periodic(const Duration(seconds: 20)),
+      builder: (context, _) => Text(TimeFormat.hm.format(DateTime.now()),
+          style: const TextStyle(fontSize: 20, color: Colors.white70)));
 }

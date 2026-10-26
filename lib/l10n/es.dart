@@ -1948,4 +1948,6 @@ const Map<String, String> kEs = {
       "Se importaron {items} elementos de listas y {sources} fuentes de Media Hub. {existing} fuentes ya existían; no se pudo contactar con {failed}.",
   "Could not import this file. Choose an M3U channel playlist or a TXT/JSON file containing Media Hub manifest links.":
       "No se pudo importar este archivo. Elige una lista de canales M3U o un archivo TXT/JSON con enlaces de manifiestos de Media Hub.",
+  "Hide profiles": "Ocultar perfiles",
+  "Hides the profiles row on Home.": "Oculta la fila de perfiles en Inicio.",
 };
