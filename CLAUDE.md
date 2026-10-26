@@ -343,6 +343,8 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 
 ## 13. Status & open items (as of 2026-10-24)
 
+- **cdx, 2026-10-26: Phone picture-in-picture** on `codex/phone-picture-in-picture` (source only, not in test APK+451). Android 8+ phones/tablets enter PiP from playing fullscreen video via Home; Android12+ auto-entry, older versions onUserLeaveHint. PhonePictureInPicture native bridge and route-aware Flutter wrapper hide overlays while retaining the video pane; playback pause/covered routes disarm entry, stopped Activity pauses video. TV hardware excluded natively and in Dart. Native Kotlin compilation and Flutter tests required; real-phone PiP rendering not yet verified. No vendored-player changes.
+
 - **cdx, 2026-10-26: Test APK +451** (owner requested): Hide profiles and Media Hub resume/size branches merged into main locally. Adds stable hashed file identity plus resume/size diagnostics for the reported 47GB-to-7GB episode case, whose exact cause remains unconfirmed from LOG-T8WJEC (+449). Test by selecting the desired file once, exiting and resuming the same episode from Media Hub, pressing OK for size, then sending a fresh log. Legacy records cannot reconstruct missing file identity when both old link and description change. No GitHub publication or Discord announcement requested.
 
 - **cdx, 2026-10-26: Hide profiles** under Settings > Interface > Tabs on `codex/hide-home-profiles` (not released). Off by default, stored per viewer with Home settings; removes only Home profile cards, keeps clock/Windows Back and safe D-pad focus including empty Home. Home profile-copy includes the setting. See HANDOFF.md for verification.

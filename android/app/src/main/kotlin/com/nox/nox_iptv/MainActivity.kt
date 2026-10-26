@@ -73,6 +73,23 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    private val phonePip by lazy { PhonePictureInPicture(this) }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        phonePip.onUserLeaveHint()
+    }
+
+    override fun onPictureInPictureModeChanged(active: Boolean, config: Configuration) {
+        super.onPictureInPictureModeChanged(active, config)
+        phonePip.onModeChanged(active)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        phonePip.onStop()
+    }
+
     override fun onDestroy() {
         localImportStore.close()
         super.onDestroy()
@@ -83,6 +100,8 @@ class MainActivity : FlutterActivity() {
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.nox.nox_iptv/storage_import")
             .setMethodCallHandler(localImportStore::handle)
+
+        phonePip.connect(flutterEngine.dartExecutor.binaryMessenger)
 
         // Settings > Backup & restore — see BackupStore.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, BACKUP_CHANNEL)
