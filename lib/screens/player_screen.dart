@@ -26,6 +26,7 @@ import 'search_screen.dart';
 import '../l10n/l10n.dart';
 import '../widgets/media_file_info_overlay.dart';
 import '../widgets/gold_tag.dart';
+import '../widgets/phone_picture_in_picture.dart';
 
 /// Fullscreen playback screen. Pushed when a channel is tapped on a phone,
 /// or when the mini-player bar is tapped to expand back into fullscreen —
@@ -565,7 +566,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => PhonePictureInPicture(
+        controller: context.watch<PlaybackService>().controller,
+        isTelevision: context.watch<AppPreferences>().isTelevision,
+        builder: _buildPlayer,
+      );
+
+  Widget _buildPlayer(BuildContext context, bool inPip) {
     final playback = context.watch<PlaybackService>();
     final controller = playback.controller;
     final prefs = context.watch<AppPreferences>();
@@ -707,90 +714,94 @@ class _PlayerScreenState extends State<PlayerScreen> {
                             switchButtonFocusNode: _switchButtonFocus,
                           ),
                         ),
-
-                        // Top bar: back, current/next EPG line (live only), search,
-                        // fullscreen toggle. Positioned has to be the outermost
-                        // widget of this Stack entry — burying it under
-                        // ExcludeFocus/AnimatedOpacity (as an earlier draft of
-                        // this did) breaks Stack's "nearest RenderObjectWidget
-                        // ancestor" resolution for Positioned's parent data.
-                        Positioned(
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          // Hidden = not tappable either (an invisible back
-                          // button used to still catch taps up there).
-                          child: IgnorePointer(
-                            ignoring: !_topVisible,
-                            child: ExcludeFocus(
-                              excluding: !_topVisible,
-                              child: AnimatedOpacity(
-                                opacity: _topVisible ? 1 : 0,
-                                duration: const Duration(milliseconds: 200),
-                                child: FocusTraversalGroup(
-                                  child: FocusScope(
-                                    node: _topScope,
-                                    child: Container(
-                                      color: Colors.black54,
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 4, vertical: 4),
-                                      child: SafeArea(
-                                        bottom: false,
-                                        child: Row(
-                                          children: [
-                                            _TopBarIconButton(
-                                              icon: Icons.arrow_back,
-                                              tooltip: tr('Back'),
-                                              onPressed: () =>
-                                                  Navigator.of(context).pop(),
-                                            ),
-                                            Expanded(
-                                              child: _searchScope == 'TV'
-                                                  ? EpgGuide(
-                                                      // epgId (rawId, or a
-                                                      // manual override), not
-                                                      // the composite `id` —
-                                                      // see PlaylistManager
-                                                      // .knownChannelIdsFor's
-                                                      // doc comment.
-                                                      channelId: channel.epgId)
-                                                  : Text(
-                                                      channel.name,
-                                                      maxLines: 1,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                      style: const TextStyle(
-                                                          color: Colors.white),
-                                                    ),
-                                            ),
-                                            _TopBarIconButton(
-                                              icon: Icons.search,
-                                              tooltip: tr('Search'),
-                                              onPressed: () =>
-                                                  Navigator.of(context).push(
-                                                MaterialPageRoute(
-                                                  builder: (_) => SearchScreen(
-                                                      initialScope:
-                                                          _searchScope),
+                        if (!inPip) ...[
+                          // Top bar: back, current/next EPG line (live only), search,
+                          // fullscreen toggle. Positioned has to be the outermost
+                          // widget of this Stack entry — burying it under
+                          // ExcludeFocus/AnimatedOpacity (as an earlier draft of
+                          // this did) breaks Stack's "nearest RenderObjectWidget
+                          // ancestor" resolution for Positioned's parent data.
+                          Positioned(
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            // Hidden = not tappable either (an invisible back
+                            // button used to still catch taps up there).
+                            child: IgnorePointer(
+                              ignoring: !_topVisible,
+                              child: ExcludeFocus(
+                                excluding: !_topVisible,
+                                child: AnimatedOpacity(
+                                  opacity: _topVisible ? 1 : 0,
+                                  duration: const Duration(milliseconds: 200),
+                                  child: FocusTraversalGroup(
+                                    child: FocusScope(
+                                      node: _topScope,
+                                      child: Container(
+                                        color: Colors.black54,
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 4, vertical: 4),
+                                        child: SafeArea(
+                                          bottom: false,
+                                          child: Row(
+                                            children: [
+                                              _TopBarIconButton(
+                                                icon: Icons.arrow_back,
+                                                tooltip: tr('Back'),
+                                                onPressed: () =>
+                                                    Navigator.of(context).pop(),
+                                              ),
+                                              Expanded(
+                                                child: _searchScope == 'TV'
+                                                    ? EpgGuide(
+                                                        // epgId (rawId, or a
+                                                        // manual override), not
+                                                        // the composite `id` —
+                                                        // see PlaylistManager
+                                                        // .knownChannelIdsFor's
+                                                        // doc comment.
+                                                        channelId:
+                                                            channel.epgId)
+                                                    : Text(
+                                                        channel.name,
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                        style: const TextStyle(
+                                                            color:
+                                                                Colors.white),
+                                                      ),
+                                              ),
+                                              _TopBarIconButton(
+                                                icon: Icons.search,
+                                                tooltip: tr('Search'),
+                                                onPressed: () =>
+                                                    Navigator.of(context).push(
+                                                  MaterialPageRoute(
+                                                    builder: (_) =>
+                                                        SearchScreen(
+                                                            initialScope:
+                                                                _searchScope),
+                                                  ),
                                                 ),
                                               ),
-                                            ),
-                                            if (_touch)
+                                              if (_touch)
+                                                _TopBarIconButton(
+                                                  icon: Icons.screen_rotation,
+                                                  tooltip: tr('Rotate'),
+                                                  onPressed: _toggleRotation,
+                                                ),
                                               _TopBarIconButton(
-                                                icon: Icons.screen_rotation,
-                                                tooltip: tr('Rotate'),
-                                                onPressed: _toggleRotation,
+                                                icon: prefs.videoFill
+                                                    ? Icons.fullscreen_exit
+                                                    : Icons.fullscreen,
+                                                tooltip: prefs.videoFill
+                                                    ? tr('Fit to screen')
+                                                    : tr('Fill screen'),
+                                                onPressed: _toggleImmersive,
                                               ),
-                                            _TopBarIconButton(
-                                              icon: prefs.videoFill
-                                                  ? Icons.fullscreen_exit
-                                                  : Icons.fullscreen,
-                                              tooltip: prefs.videoFill
-                                                  ? tr('Fit to screen')
-                                                  : tr('Fill screen'),
-                                              onPressed: _toggleImmersive,
-                                            ),
-                                          ],
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -799,173 +810,175 @@ class _PlayerScreenState extends State<PlayerScreen> {
                               ),
                             ),
                           ),
-                        ),
 
-                        if (channel.mediaFileInfo case final info?)
-                          MediaFileInfoOverlay(
-                            key: ValueKey('file-info-${channel.id}'),
-                            top: _touch ? 72 : 16,
-                            info: info,
-                            requests: _fileInfoRequests,
-                          ),
-                        // CH+/CH- and OK channel information stay at the top.
-                        Positioned(
-                          top: 24,
-                          left: 0,
-                          right: 0,
-                          child: IgnorePointer(
-                            child: AnimatedOpacity(
-                              opacity: _zapInfoVisible ? 1 : 0,
-                              duration: const Duration(milliseconds: 200),
-                              child:
-                                  Center(child: _ZapInfoCard(channel: channel)),
+                          if (channel.mediaFileInfo case final info?)
+                            MediaFileInfoOverlay(
+                              key: ValueKey('file-info-${channel.id}'),
+                              top: _touch ? 72 : 16,
+                              info: info,
+                              requests: _fileInfoRequests,
                             ),
-                          ),
-                        ),
-
-                        // One bottom layout keeps captions above the actual panel
-                        // height, including on phones and with larger text. Only
-                        // build the Data pool while visible (it polls the player).
-                        if (controller != null)
+                          // CH+/CH- and OK channel information stay at the top.
                           Positioned(
+                            top: 24,
                             left: 0,
                             right: 0,
-                            bottom: 48,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IgnorePointer(
-                                  child:
-                                      SubtitleOverlay(controller: controller),
-                                ),
-                                if (_dataPoolVisible)
-                                  Padding(
-                                    padding:
-                                        const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                                    child: ConstrainedBox(
-                                      constraints: BoxConstraints(
-                                        maxHeight:
-                                            MediaQuery.sizeOf(context).height *
-                                                0.45,
-                                      ),
-                                      child: SingleChildScrollView(
-                                        child: DataPoolCard(
-                                          controller: controller,
-                                          since: playback.playingSince,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-
-                        // Bottom bar: title, seek bar, play/pause.
-                        if (controller != null)
-                          Positioned(
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            child: ExcludeFocus(
-                              excluding: !_bottomVisible,
+                            child: IgnorePointer(
                               child: AnimatedOpacity(
-                                opacity: _bottomVisible ? 1 : 0,
+                                opacity: _zapInfoVisible ? 1 : 0,
                                 duration: const Duration(milliseconds: 200),
-                                child: FocusTraversalGroup(
-                                  child: FocusScope(
-                                    node: _bottomScope,
-                                    child: PlayerControls(
-                                      controller: controller,
-                                      title: channel.name,
-                                      // epgId (rawId, or a manual override), not the composite `id` —
-                                      // see PlaylistManager
-                                      // .knownChannelIdsFor's doc comment.
-                                      channelId: channel.epgId,
-                                      isLive: channel.isLive,
-                                      isFavorite: channel.isFavorite,
-                                      onToggleFavorite: () =>
-                                          playlist.toggleFavorite(channel),
-                                      onPrevious: playback.previousUpChannel !=
-                                              null
-                                          ? () => playback
-                                              .play(playback.previousUpChannel!)
-                                          : null,
-                                      onNext: playback.nextUpChannel != null
-                                          ? () => playback
-                                              .play(playback.nextUpChannel!)
-                                          : null,
-                                      onActivity: _resetHideTimer,
-                                      linkedChannel: linkedChannel,
-                                      channel: channel,
-                                      showMore: _moreVisible,
-                                      onToggleMore: () => setState(
-                                          () => _moreVisible = !_moreVisible),
-                                      playFocusNode: _playFocus,
-                                      onOpenMultiview:
-                                          channel.isLive && !prefs.hideMultiview
-                                              ? () => _openMultiview(channel)
-                                              : null,
+                                child: Center(
+                                    child: _ZapInfoCard(channel: channel)),
+                              ),
+                            ),
+                          ),
+
+                          // One bottom layout keeps captions above the actual panel
+                          // height, including on phones and with larger text. Only
+                          // build the Data pool while visible (it polls the player).
+                          if (controller != null)
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              bottom: 48,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IgnorePointer(
+                                    child:
+                                        SubtitleOverlay(controller: controller),
+                                  ),
+                                  if (_dataPoolVisible)
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                          16, 8, 16, 0),
+                                      child: ConstrainedBox(
+                                        constraints: BoxConstraints(
+                                          maxHeight: MediaQuery.sizeOf(context)
+                                                  .height *
+                                              0.45,
+                                        ),
+                                        child: SingleChildScrollView(
+                                          child: DataPoolCard(
+                                            controller: controller,
+                                            since: playback.playingSince,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+
+                          // Bottom bar: title, seek bar, play/pause.
+                          if (controller != null)
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              child: ExcludeFocus(
+                                excluding: !_bottomVisible,
+                                child: AnimatedOpacity(
+                                  opacity: _bottomVisible ? 1 : 0,
+                                  duration: const Duration(milliseconds: 200),
+                                  child: FocusTraversalGroup(
+                                    child: FocusScope(
+                                      node: _bottomScope,
+                                      child: PlayerControls(
+                                        controller: controller,
+                                        title: channel.name,
+                                        // epgId (rawId, or a manual override), not the composite `id` —
+                                        // see PlaylistManager
+                                        // .knownChannelIdsFor's doc comment;
+                                        // Channel.isLiveId also documents
+                                        // that it expects rawId, not id.
+                                        channelId: channel.epgId,
+                                        isLive: channel.isLive,
+                                        isFavorite: channel.isFavorite,
+                                        onToggleFavorite: () =>
+                                            playlist.toggleFavorite(channel),
+                                        onPrevious:
+                                            playback.previousUpChannel != null
+                                                ? () => playback.play(
+                                                    playback.previousUpChannel!)
+                                                : null,
+                                        onNext: playback.nextUpChannel != null
+                                            ? () => playback
+                                                .play(playback.nextUpChannel!)
+                                            : null,
+                                        onActivity: _resetHideTimer,
+                                        linkedChannel: linkedChannel,
+                                        channel: channel,
+                                        showMore: _moreVisible,
+                                        onToggleMore: () => setState(
+                                            () => _moreVisible = !_moreVisible),
+                                        playFocusNode: _playFocus,
+                                        onOpenMultiview: channel.isLive &&
+                                                !prefs.hideMultiview
+                                            ? () => _openMultiview(channel)
+                                            : null,
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
 
-                        if (controller != null)
-                          _UpNextBubble(
-                            controller: controller,
-                            nextChannel: playback.nextUpChannel,
-                            onPlayNow: () {
-                              final next = playback.nextUpChannel;
-                              if (next != null) playback.play(next);
-                            },
-                            onDismiss: playback.dismissAutoAdvance,
-                          ),
+                          if (controller != null)
+                            _UpNextBubble(
+                              controller: controller,
+                              nextChannel: playback.nextUpChannel,
+                              onPlayNow: () {
+                                final next = playback.nextUpChannel;
+                                if (next != null) playback.play(next);
+                              },
+                              onDismiss: playback.dismissAutoAdvance,
+                            ),
 
-                        // Touch: a tab on the left edge while the bars show
-                        // opens the side panel (a remote uses Left).
-                        if (_touch && channel.isLive)
+                          // Touch: a tab on the left edge while the bars show
+                          // opens the side panel (a remote uses Left).
+                          if (_touch && channel.isLive)
+                            Positioned(
+                              left: 0,
+                              top: 0,
+                              bottom: 0,
+                              child: IgnorePointer(
+                                ignoring: !_topVisible || _panelOpen,
+                                child: AnimatedOpacity(
+                                  opacity: _topVisible && !_panelOpen ? 1 : 0,
+                                  duration: const Duration(milliseconds: 200),
+                                  child: SafeArea(
+                                    right: false,
+                                    child: Center(
+                                      child:
+                                          PlayerSidePanelTab(onTap: _openPanel),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                          // Always Positioned (see the Stack comment above).
+                          // Narrower than 400 on a portrait phone.
                           Positioned(
                             left: 0,
                             top: 0,
                             bottom: 0,
-                            child: IgnorePointer(
-                              ignoring: !_topVisible || _panelOpen,
-                              child: AnimatedOpacity(
-                                opacity: _topVisible && !_panelOpen ? 1 : 0,
-                                duration: const Duration(milliseconds: 200),
-                                child: SafeArea(
-                                  right: false,
-                                  child: Center(
-                                    child:
-                                        PlayerSidePanelTab(onTap: _openPanel),
-                                  ),
-                                ),
-                              ),
-                            ),
+                            width: _panelOpen
+                                ? math.min(PlayerSidePanel.width,
+                                    MediaQuery.sizeOf(context).width * 0.88)
+                                : 0,
+                            child: _panelOpen
+                                ? GestureDetector(
+                                    // Taps on the panel's empty space mustn't
+                                    // reach the video's tap-to-close.
+                                    onTap: () {},
+                                    child: PlayerSidePanel(
+                                        current: channel, onClose: _closePanel),
+                                  )
+                                : const SizedBox.shrink(),
                           ),
-
-                        // Always Positioned (see the Stack comment above).
-                        // Narrower than 400 on a portrait phone.
-                        Positioned(
-                          left: 0,
-                          top: 0,
-                          bottom: 0,
-                          width: _panelOpen
-                              ? math.min(PlayerSidePanel.width,
-                                  MediaQuery.sizeOf(context).width * 0.88)
-                              : 0,
-                          child: _panelOpen
-                              ? GestureDetector(
-                                  // Taps on the panel's empty space mustn't
-                                  // reach the video's tap-to-close.
-                                  onTap: () {},
-                                  child: PlayerSidePanel(
-                                      current: channel, onClose: _closePanel),
-                                )
-                              : const SizedBox.shrink(),
-                        ),
+                        ],
                       ],
                     ),
                   ),
