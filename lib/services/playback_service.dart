@@ -14,6 +14,7 @@ import '../models/playlist_profile.dart';
 import '../utils/constants.dart';
 import '../widgets/native_video_hole.dart';
 import 'playlist_manager.dart';
+import 'm3u_parser.dart';
 import 'real_4k_channels.dart';
 import 'storage_service.dart';
 import 'audio_track_preferences.dart';
@@ -227,8 +228,17 @@ class PlaybackService extends ChangeNotifier {
       return;
     }
     try {
+      // Older M3U history snapshots predate the explicit movie type too.
+      // Only M3U profiles use group-title routing; a real Xtream live group
+      // named "Movies 24/7" must remain live.
+      final m3uIds = _playlistManager.profiles
+          .where((p) => !p.isXtream)
+          .map((p) => p.id)
+          .toSet();
       _recentlyPlayed = (jsonDecode(raw) as List)
           .map((e) => Channel.fromJson(e as Map<String, dynamic>))
+          .map((c) =>
+              m3uIds.contains(c.playlistId) ? M3uParser.withCatalogType(c) : c)
           .toList();
     } catch (_) {
       _recentlyPlayed = [];
@@ -257,7 +267,7 @@ class PlaybackService extends ChangeNotifier {
     final seen = <String>{};
     final result = <Channel>[];
     for (final c in _recentlyPlayed) {
-      if (!Channel.isLiveId(c.rawId) || !seen.add(c.id)) continue;
+      if (!c.isLive || !seen.add(c.id)) continue;
       result.add(c);
       if (result.length >= limit) break;
     }
@@ -286,7 +296,7 @@ class PlaybackService extends ChangeNotifier {
   /// true drops the live channels (the "History" popup); false drops the
   /// movies/episodes (Continue Watching) plus their saved positions.
   Future<void> clearRecentlyPlayed({required bool live}) async {
-    _recentlyPlayed.removeWhere((c) => Channel.isLiveId(c.rawId) == live);
+    _recentlyPlayed.removeWhere((c) => c.isLive == live);
     await _storage.writeCacheFile(
       _recentlyPlayedCacheKeyForViewer,
       jsonEncode(_recentlyPlayed.map((c) => c.toJson()).toList()),
@@ -461,7 +471,7 @@ class PlaybackService extends ChangeNotifier {
     // silently reintroducing the exact "stuck paused" bug described
     // above (a live channel getting treated as if it had a saved VOD
     // resume position).
-    final isLive = Channel.isLiveId(channel.rawId);
+    final isLive = channel.isLive;
     final savedPositionMs = isLive || channel.transientPlayback
         ? 0
         : _storage.getLastPosition(channel.id);
@@ -573,7 +583,7 @@ class PlaybackService extends ChangeNotifier {
           ch != null &&
           !ch.transientPlayback &&
           c.value.isInitialized &&
-          !Channel.isLiveId(ch.rawId) &&
+          !ch.isLive &&
           // A "being downloaded" clip: no resume point, and no auto-advance
           // (its last 30 s are all of it).
           !ArchiveReadyWatch.instance.isClip(ch.id, c.value.duration)) {
@@ -662,8 +672,8 @@ class PlaybackService extends ChangeNotifier {
         !c.value.isInitialized ||
         c.value.hasError ||
         previous == null ||
-        !Channel.isLiveId(previous.rawId) ||
-        !Channel.isLiveId(channel.rawId) ||
+        !previous.isLive ||
+        !channel.isLive ||
         previous.subtitleUrl != null ||
         channel.subtitleUrl != null) {
       return false;
@@ -742,7 +752,7 @@ class PlaybackService extends ChangeNotifier {
       if (raw == null || !raw.contains('[RESTART_LOOP')) return;
       c.removeListener(listener);
       if (controller != c || currentChannel?.id != channel.id) return;
-      final live = Channel.isLiveId(channel.rawId);
+      final live = channel.isLive;
       debugPrint('PlaybackService: ${live ? 'live' : 'vod'} $raw');
       final now = DateTime.now();
       final last = _restartLoopReloads[channel.id];
@@ -786,7 +796,7 @@ class PlaybackService extends ChangeNotifier {
     final channel = currentChannel;
     if (channel == null ||
         controller == null ||
-        !Channel.isLiveId(channel.rawId) ||
+        !channel.isLive ||
         _reloadingCurrentChannel) {
       return;
     }
@@ -847,7 +857,7 @@ class PlaybackService extends ChangeNotifier {
   ///   4K HDR HEVC suddenly handle it, and cycling servers for half a
   ///   minute before admitting that is strictly worse than saying so.
   Future<bool> _retryOnBackupServers(Channel channel, Object failure) async {
-    if (!Channel.isLiveId(channel.rawId)) return false;
+    if (!channel.isLive) return false;
     if (isDecoderPlaybackError(failure.toString())) return false;
 
     PlaylistProfile? profile;
@@ -989,7 +999,7 @@ class PlaybackService extends ChangeNotifier {
       return null;
     }
     final sniff = await sniffStream(channel.url);
-    final what = Channel.isLiveId(channel.rawId)
+    final what = channel.isLive
         ? 'live'
         : channel.playlistId == ArchiveService.playlistId
             ? 'media hub'
@@ -1026,7 +1036,7 @@ class PlaybackService extends ChangeNotifier {
         !ch.transientPlayback &&
         old != null &&
         old.value.isInitialized &&
-        !Channel.isLiveId(ch.rawId) &&
+        !ch.isLive &&
         // A Media Hub source's "being downloaded" clip: no resume point
         // and no Trakt/Simkl "watched" for it.
         !ArchiveReadyWatch.instance.ended(ch.id, old.value.duration)) {

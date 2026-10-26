@@ -260,11 +260,9 @@ class VideoPlayerPane extends StatelessWidget {
                         controller: controller,
                         title: channel.name,
                         // rawId, not the composite `id` — see
-                        // PlaylistManager.knownChannelIdsFor's doc comment;
-                        // Channel.isLiveId also documents that it expects
-                        // rawId, not id.
+                        // PlaylistManager.knownChannelIdsFor's doc comment.
                         channelId: channel.epgId,
-                        isLive: Channel.isLiveId(channel.rawId),
+                        isLive: channel.isLive,
                       ),
                     ),
                 ],
@@ -455,7 +453,7 @@ class PlayerControls extends StatelessWidget {
   /// already did. `video_player_hdr` has no live/VOD signal of its own to
   /// check instead (its `VideoPlayerHdrValue` has no `isLive` field) — so
   /// this comes from the caller, which already knows the channel's
-  /// id-based classification (`Channel.isLiveId`), never from the video
+  /// catalog classification (`Channel.isLive`), never from the video
   /// duration. When true, the seek bar/skip buttons/elapsed-duration text
   /// are replaced by the current EPG programme's remaining time instead
   /// (see [_LiveRemainingLabel]) — actually meaningful for a live channel,
@@ -766,7 +764,7 @@ Future<void> showRecallPicker(BuildContext context, Channel current) async {
   final seen = <String>{current.id};
   final history = <Channel>[];
   for (final c in playback.recentlyPlayed) {
-    if (!Channel.isLiveId(c.rawId)) continue;
+    if (!c.isLive) continue;
     if (!seen.add(c.id)) continue;
     history.add(c);
     if (history.length >= 4) break;

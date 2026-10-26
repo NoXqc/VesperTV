@@ -193,6 +193,12 @@ context-less sink above. Texture players (Multiview, Compatibility video) never 
 `RecorderScheduler.kt` in `android/app/.../nox_iptv/`), so a plugin re-sync doesn't touch it.
 
 ## 10. Hard-won rules (don't re-learn these)
+- **M3U playback type (cdx, 2026-10-26):** use `channel.isLive`, not
+  `Channel.isLiveId(channel.rawId)`, whenever the Channel exists. M3U Movies/TV Shows
+  use group-title classification but ordinary tvg-id/ch_N identifiers: those IDs alone
+  look live. `onDemand` stores catalog type without renaming IDs; parser, legacy M3U
+  cache restore and recent-history restore apply the same group rule. Xtream live groups
+  are never reclassified by their names. Never infer VOD from controller duration.
 - **Cold-start splash is deliberately slow (~20-25s with a big second playlist).** Entering the UI
   early lets remote input crash weak boxes. Do not cap/shorten it (`_bootstrap` in main.dart).
   The time is the catalog pre-load + `_waitForCategoriesToSettle`, not a timer (floor 2.6 s).

@@ -103,7 +103,7 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
     final seen = <String>{widget.current.id};
     final out = <Channel>[];
     for (final c in context.read<PlaybackService>().recentlyPlayed) {
-      if (!Channel.isLiveId(c.rawId) || !seen.add(c.id)) continue;
+      if (!c.isLive || !seen.add(c.id)) continue;
       out.add(c);
       if (out.length >= 15) break;
     }

@@ -179,7 +179,7 @@ class SportsChannelLibrary {
   SportsChannelLibrary(Iterable<Channel> visible, {this.store})
       : channels = {
           for (final c in visible)
-            if (Channel.isLiveId(c.rawId)) c.id: c,
+            if (c.isLive) c.id: c,
         }.values.toList();
   final List<Channel> channels;
   final SportsChannelLists? store;

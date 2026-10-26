@@ -35,6 +35,7 @@ class Channel {
     this.providerBackdropUrl,
     this.transientPlayback = false,
     this.mediaFileInfo,
+    this.onDemand = false,
   });
 
   /// Stable identifier: the M3U `tvg-id` when present (used to match EPG
@@ -55,6 +56,14 @@ class Channel {
   /// Watching" `xt_vod_`/`xt_ep_` prefix filters, and
   /// `PlaylistManager.getVodDescription`'s raw-stream-id extraction.
   final String rawId;
+
+  /// Explicit M3U catalog type. IDs stay unchanged for favourites, EPG and
+  /// history; an ordinary tvg-id alone cannot distinguish a movie from TV.
+  final bool onDemand;
+
+  /// Playback controls and lifecycle must agree about M3U movies too.
+  /// Never infer this from duration: live HLS can expose a DVR window.
+  bool get isLive => !onDemand && isLiveId(rawId);
 
   /// Which playlist this channel came from — the same id every group,
   /// hidden-groups entry, and cache-file name for this playlist share
@@ -249,10 +258,12 @@ class Channel {
           String? rawId,
           String? epgKey,
           String? url,
-          MediaFileInfo? mediaFileInfo}) =>
+          MediaFileInfo? mediaFileInfo,
+          bool? onDemand}) =>
       Channel(
         id: id ?? this.id,
         rawId: rawId ?? this.rawId,
+        onDemand: onDemand ?? this.onDemand,
         epgKey: epgKey ?? this.epgKey,
         playlistId: playlistId,
         name: name,
@@ -280,6 +291,7 @@ class Channel {
   Map<String, dynamic> toJson() => {
         'id': id,
         'rawId': rawId,
+        if (onDemand) 'onDemand': true,
         if (epgKey != null) 'epgKey': epgKey,
         'playlistId': playlistId,
         'name': name,
@@ -312,6 +324,7 @@ class Channel {
         id: json['id'] as String,
         rawId: json['rawId'] as String? ?? json['id'] as String,
         epgKey: json['epgKey'] as String?,
+        onDemand: json['onDemand'] as bool? ?? false,
         playlistId: json['playlistId'] as String? ?? 'migrated_default',
         name: json['name'] as String,
         group: json['group'] as String,
@@ -336,20 +349,9 @@ class Channel {
         providerBackdropUrl: json['providerBackdropUrl'] as String?,
       );
 
-  /// Best-effort "is this a live channel, not VOD/an episode" signal from
-  /// just a raw id — the same convention `PlayerScreen._searchScope`
-  /// already used in one place; centralized here so every caller that
-  /// needs to tell live apart from VOD (without trusting the video
-  /// controller's own `duration`, which some live HLS streams misreport as
-  /// their current DVR sliding-window length instead of zero/unknown —
-  /// see `PlayerControls.isLive`'s doc comment) shares one answer instead
-  /// of each guessing separately. Xtream ids are prefixed at creation time
-  /// (`xt_vod_...`/`xt_ep_...` — see XtreamApiService); M3U-mode channels
-  /// carry no such distinction at all, a pre-existing, separate
-  /// limitation — this only returns a confident answer for Xtream ids.
-  /// Takes a raw id (`Channel.rawId`, not `Channel.id`) — the playlist
-  /// prefix on `id` would otherwise mask these provider-native prefixes.
-  /// Archive tab titles (`arc_vod_`/`arc_ep_`, see ArchiveService) are VOD too.
+  /// Legacy raw-ID classification for Xtream, Media Hub and recordings.
+  /// Use [isLive] when a Channel is available: M3U movie IDs have no prefix.
+  /// Takes rawId, never the playlist-prefixed composite id.
   static bool isLiveId(String rawId) => !(rawId.startsWith('xt_vod_') ||
       rawId.startsWith('xt_ep_') ||
       isArchiveId(rawId) ||

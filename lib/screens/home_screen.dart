@@ -271,7 +271,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final seenSeries = <String>{};
     for (var i = 0; i < played.length; i++) {
       final c = played[i];
-      if (Channel.isLiveId(c.rawId) ||
+      if (c.isLive ||
           c.playlistId == ArchiveService.playlistId ||
           storage.getLastPosition(c.id) <= 0 ||
           storage.isFullyWatched(c.id)) {
@@ -379,7 +379,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final seen = <String>{};
     final live = [
       for (final c in context.read<PlaybackService>().recentlyPlayed)
-        if (Channel.isLiveId(c.rawId) && seen.add(c.id)) c,
+        if (c.isLive && seen.add(c.id)) c,
     ];
     return _HomeRow(HomeRowKind.recentChannels, _CardShape.wide,
         [for (final c in live.take(20)) _channelItem(c, epg, 'rc')]);

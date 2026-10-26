@@ -1153,9 +1153,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   Future<void> _parkLiveChannel({bool keepNativeSurface = false}) async {
     final playback = context.read<PlaybackService>();
     final channel = playback.currentChannel;
-    if (channel == null ||
-        playback.isFullscreenActive ||
-        !Channel.isLiveId(channel.rawId)) {
+    if (channel == null || playback.isFullscreenActive || !channel.isLive) {
       return;
     }
     // Movies/TV Shows replace the preview within this route, unlike
@@ -2695,8 +2693,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     final showTimelineGuide = !isBrowseTab && prefs.guideViewMode == 'timeline';
     final playbackState = context.watch<PlaybackService>();
     final playing = playbackState.currentChannel;
-    final liveChannel =
-        playing != null && Channel.isLiveId(playing.rawId) ? playing : null;
+    final liveChannel = playing != null && playing.isLive ? playing : null;
     // Only the phone layout has that preview (it sets its own state).
     if (!_compact) _syncPreviewHint(false);
     _fullVideo = _tab == 'TV' &&
@@ -4435,11 +4432,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     // live right now" — confusing on a tab that has nothing to do with
     // movies at all.
     final rawChannel = playback.currentChannel;
-    // rawChannel.rawId, not rawChannel.id — Channel.isLiveId expects the
-    // raw, unprefixed id.
-    final channel = rawChannel != null && Channel.isLiveId(rawChannel.rawId)
-        ? rawChannel
-        : null;
+    // Includes the explicit type of M3U movie/episode entries.
+    final channel = rawChannel != null && rawChannel.isLive ? rawChannel : null;
 
     // Opt-in alternate view (Settings > Theme > "Guide view") — see
     // _TimelineGuide's own doc comment. Checked after the two branches

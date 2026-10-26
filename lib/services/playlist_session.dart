@@ -401,7 +401,7 @@ class PlaylistSession {
     if (path == null) return false;
     try {
       final loaded =
-          Channel.withUniqueIds(await compute(_readChannelsFile, path));
+          Channel.withUniqueIds(await compute(_readM3uChannelsFile, path));
       for (final channel in loaded) {
         channel.isFavorite = favoriteIds().contains(channel.id);
         channel.epgIdOverride = epgIdOverrides[channel.rawId];
@@ -500,12 +500,7 @@ class PlaylistSession {
   /// style group names land in the Series tab rather than Movies. Xtream
   /// mode doesn't need this — it gets live/VOD/series as separate API
   /// categories directly.
-  String _classifyGroup(String title) {
-    final lower = title.toLowerCase();
-    if (lower.contains('series') || lower.contains('show')) return 'series';
-    if (lower.contains('vod') || lower.contains('movie')) return 'vod';
-    return 'tv';
-  }
+  String _classifyGroup(String title) => M3uParser.groupCategory(title);
 
   // --- Xtream mode ----------------------------------------------------------
 
@@ -1631,6 +1626,9 @@ _XtreamCategoriesDecoded _decodeXtreamCategoriesBatch(
 /// Isolate entry point: reads a cached channel list straight from disk, so
 /// the file read and its UTF-8 decode happen off the main thread as well as
 /// the JSON parse. See StorageService.cacheFilePath for why that matters.
+List<Channel> _readM3uChannelsFile(String path) =>
+    _readChannelsFile(path).map(M3uParser.withCatalogType).toList();
+
 List<Channel> _readChannelsFile(String path) =>
     _decodeLiveChannelsBatch(File(path).readAsStringSync());
 

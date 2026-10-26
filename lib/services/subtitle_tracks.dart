@@ -289,7 +289,7 @@ class SubtitleTracks {
     if (raw.startsWith('xt_ep_')) {
       return '${channel.playlistId}::${channel.group}';
     }
-    return Channel.isLiveId(raw) ? null : 'title:${channel.id}';
+    return channel.isLive ? null : 'title:${channel.id}';
   }
 
   static Map<String, dynamic> _seriesChoices(StorageService storage) {

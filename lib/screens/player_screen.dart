@@ -391,7 +391,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   void _zapChannel(int step) {
     if (_panelOpen) return;
     final current = _playback.currentChannel ?? widget.channel;
-    if (!Channel.isLiveId(current.rawId)) return;
+    if (!current.isLive) return;
     // A playlist can list the same channel twice (same id, e.g. a tvg-id
     // used as the id): find the exact entry playing, and step past any
     // copy with the same id — play() no-ops on it, which used to leave
@@ -442,7 +442,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (_panelOpen) return;
     final current = _playback.currentChannel ?? widget.channel;
     if (current.mediaFileInfo != null) _fileInfoRequests.value++;
-    final live = Channel.isLiveId(current.rawId);
+    final live = current.isLive;
     final dataPool = context.read<AppPreferences>().dataPool;
     if (!live && !dataPool) return;
     _zapInfoTimer?.cancel();
@@ -541,7 +541,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     // notifyListeners(), the exact same "not safe mid-teardown" case that
     // callback already exists for.
     final ch = _playback.currentChannel;
-    final shouldStopVod = ch != null && !Channel.isLiveId(ch.rawId);
+    final shouldStopVod = ch != null && !ch.isLive;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (shouldStopVod) unawaited(_playback.stop());
       _playback.setFullscreenActive(false);
@@ -633,7 +633,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     // Back is the only way out now; Left opens the side
                     // panel on a live channel (a no-op on movies/episodes).
                     const SingleActivator(LogicalKeyboardKey.arrowLeft): () {
-                      if (Channel.isLiveId(channel.rawId)) _openPanel();
+                      if (channel.isLive) _openPanel();
                     },
                     // Right never had any established purpose here — it simply had
                     // no handler at all, so with no bar focused (nothing else on
@@ -672,9 +672,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     onHorizontalDragEnd: _touch
                         ? (d) {
                             final v = d.primaryVelocity ?? 0;
-                            if (v > 300 &&
-                                !_panelOpen &&
-                                Channel.isLiveId(channel.rawId)) {
+                            if (v > 300 && !_panelOpen && channel.isLive) {
                               _openPanel();
                             } else if (v < -300 && _panelOpen) {
                               _closePanel();
@@ -881,11 +879,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                       title: channel.name,
                                       // epgId (rawId, or a manual override), not the composite `id` —
                                       // see PlaylistManager
-                                      // .knownChannelIdsFor's doc comment;
-                                      // Channel.isLiveId also documents
-                                      // that it expects rawId, not id.
+                                      // .knownChannelIdsFor's doc comment.
                                       channelId: channel.epgId,
-                                      isLive: Channel.isLiveId(channel.rawId),
+                                      isLive: channel.isLive,
                                       isFavorite: channel.isFavorite,
                                       onToggleFavorite: () =>
                                           playlist.toggleFavorite(channel),
@@ -906,8 +902,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                           () => _moreVisible = !_moreVisible),
                                       playFocusNode: _playFocus,
                                       onOpenMultiview:
-                                          Channel.isLiveId(channel.rawId) &&
-                                                  !prefs.hideMultiview
+                                          channel.isLive && !prefs.hideMultiview
                                               ? () => _openMultiview(channel)
                                               : null,
                                     ),
@@ -930,7 +925,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
                         // Touch: a tab on the left edge while the bars show
                         // opens the side panel (a remote uses Left).
-                        if (_touch && Channel.isLiveId(channel.rawId))
+                        if (_touch && channel.isLive)
                           Positioned(
                             left: 0,
                             top: 0,

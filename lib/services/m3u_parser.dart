@@ -12,6 +12,19 @@ import '../l10n/l10n.dart';
 /// `group-title`), the `#EXTGRP:` fallback tag, and an optional external
 /// subtitle track via `#EXTVLCOPT:sub-file=`.
 class M3uParser {
+  /// The same group classification used by the Movies/TV Shows catalogs.
+  /// Series takes precedence over movie/VOD in combined group names.
+  static String groupCategory(String title) {
+    final lower = title.toLowerCase();
+    if (lower.contains('series') || lower.contains('show')) return 'series';
+    if (lower.contains('vod') || lower.contains('movie')) return 'vod';
+    return 'tv';
+  }
+
+  /// Also upgrades caches written before M3U playback type was stored.
+  static Channel withCatalogType(Channel channel) =>
+      channel.copyWith(onDemand: groupCategory(channel.group) != 'tv');
+
   static final RegExp _attrPattern = RegExp(r'([a-zA-Z0-9_-]+)="([^"]*)"');
 
   /// Streams the response line-by-line rather than buffering the whole body
@@ -117,6 +130,7 @@ class _ParseState {
             id: '$playlistId::$rawId',
             rawId: rawId,
             playlistId: playlistId,
+            onDemand: M3uParser.groupCategory(groupTitle ?? '') != 'tv',
             name: _pendingName!,
             group: (groupTitle != null && groupTitle.isNotEmpty)
                 ? groupTitle

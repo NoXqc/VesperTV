@@ -156,7 +156,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   /// size whenever it changes, channel switches included.
   StreamSubscription<int?>? _heightSubscription;
 
-  bool get _isLive => Channel.isLiveId(_currentChannel.rawId);
+  bool get _isLive => _currentChannel.isLive;
   List<Channel> get _queue => widget.queue ?? const [];
   int get _currentIndex => _queue.indexWhere((c) => c.id == _currentChannel.id);
   Channel? get _previousEpisode =>

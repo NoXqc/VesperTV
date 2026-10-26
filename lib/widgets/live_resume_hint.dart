@@ -152,7 +152,7 @@ class _LiveResumeHintState extends State<LiveResumeHint> {
         // rawId, not the composite `id` — Channel.isLiveId expects the
         // raw, unprefixed id. With `id` here this always read false,
         // silently disabling this whole bubble for every live channel.
-        !Channel.isLiveId(channel.rawId)) {
+        !channel.isLive) {
       return false;
     }
     if (_playback.currentChannel == null) {
