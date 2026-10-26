@@ -685,6 +685,8 @@ class ArchiveStream {
       this.ytId,
       this.name,
       this.title,
+      this.fileName,
+      this.videoHash,
       this.subtitleUrl,
       this.sizeBytes});
 
@@ -709,6 +711,12 @@ class ArchiveStream {
     return ArchiveStream(
         url: video == null ? uri.toString() : '',
         ytId: video,
+        fileName: row['behaviorHints'] is Map
+            ? ArchiveMeta._str(row['behaviorHints']['filename'])
+            : null,
+        videoHash: row['behaviorHints'] is Map
+            ? ArchiveMeta._str(row['behaviorHints']['videoHash'])
+            : null,
         sizeBytes: (row['behaviorHints'] is Map
             ? num.tryParse('${row['behaviorHints']['videoSize']}')?.toInt()
             : null),
@@ -722,7 +730,12 @@ class ArchiveStream {
   }
 
   Map<String, dynamic> toJson() => {
-        if (sizeBytes != null) 'behaviorHints': {'videoSize': sizeBytes},
+        if (sizeBytes != null || fileName != null || videoHash != null)
+          'behaviorHints': {
+            if (sizeBytes != null) 'videoSize': sizeBytes,
+            if (fileName != null) 'filename': fileName,
+            if (videoHash != null) 'videoHash': videoHash,
+          },
         if (ytId != null) 'ytId': ytId,
         if (url.isNotEmpty) 'url': url,
         if (name != null) 'name': name,
@@ -745,6 +758,8 @@ class ArchiveStream {
 
   final String url;
   final int? sizeBytes;
+  final String? fileName;
+  final String? videoHash;
 
   /// The schema's `name`: usually the source plus quality ("My Source 4K").
   final String? name;

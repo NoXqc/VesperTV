@@ -30,6 +30,7 @@ class _MediaFileInfoOverlayState extends State<MediaFileInfoOverlay> {
   }
 
   void _show() {
+    debugPrint('MediaFileInfo: sizeBytes=${widget.info.sizeBytes ?? 0}');
     _timer?.cancel();
     setState(() => _visible = true);
     _timer = Timer(const Duration(seconds: 5), () {
