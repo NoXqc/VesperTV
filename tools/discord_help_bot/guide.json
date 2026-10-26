@@ -315,8 +315,8 @@
     "id": "2bc2a22e3814bc89",
     "category": "Sports Trak",
     "title": "Remind me",
-    "answer": "Choose Remind me for a popup 15 minutes before and at game time, above any screen or stream while VesperTV is open. Choose Remind me for every game to enable automatic reminders for that team, or Stop team reminders to disable them. Hold again to Cancel reminder for one game. A faded team logo appears behind the popup text. Reminders belong to the current viewer on this device.",
-    "controls": "Hold OK on an upcoming My Teams game",
+    "answer": "Choose Remind me for a popup 15 minutes before and at game time, above any screen or stream while VesperTV is open. You do not need to follow either team. For teams in My Teams, choose Remind me for every game to enable automatic reminders for that team, or Stop team reminders to disable them. Hold again to Cancel reminder for one game. A faded team logo appears behind the popup text. Reminders belong to the current viewer on this device.",
+    "controls": "Hold OK on any upcoming Sports Trak game",
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },
   {

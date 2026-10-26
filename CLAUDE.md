@@ -1358,3 +1358,10 @@ shows score increases for followed teams at top-left without touching playback/f
 and stacks below reminders on phones. Hide scores suppresses alerts immediately.
 Not instant push: 30s polling plus existing feed cache. First observation after launch,
 profile change or backgrounding is silent. See `dev-notes/sports-tab.md` for details.
+
+### Codex 2026-10-26: reminders on every upcoming Sports Trak card (unreleased)
+
+`codex/game-card-reminders` removes the game-menu My Teams restriction. The existing
+reminder widget/scheduler already supports manual reminders without following teams.
+Live score popups are Settings > Interface > Goals alert (off by default, My Teams).
+Separate completed decoder HDR work remains on codex/decoder-hdr-reporting b0b0889.
