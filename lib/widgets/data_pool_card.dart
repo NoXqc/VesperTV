@@ -1,3 +1,4 @@
+import '../utils/refined_finish.dart';
 import 'dart:async';
 
 import 'dart:io';
@@ -312,11 +313,14 @@ class _DataPoolCardState extends State<DataPoolCard> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-      decoration: BoxDecoration(
-        // Same see-through card as the OK info card.
-        color: Colors.black.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(12),
-      ),
+      decoration: RefinedFinish.decorate(
+          context,
+          BoxDecoration(
+            // Same see-through card as the OK info card.
+            color: Colors.black.withValues(alpha: 0.45),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          focused: false),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,

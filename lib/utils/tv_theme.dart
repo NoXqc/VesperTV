@@ -1,3 +1,4 @@
+import 'refined_finish.dart';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -229,48 +230,51 @@ Widget withTvThemeIfNeeded(BuildContext context, WidgetBuilder builder) {
   // without hand-editing every one of those call sites individually.
   final scheme = buildPaletteColorScheme(palette, Brightness.dark);
   return Theme(
-    data: ThemeData(
-      colorScheme: scheme,
-      useMaterial3: true,
-      // Stock Material widgets (ListTile, SwitchListTile, SegmentedButton,
-      // plain InkWell) default to a barely-visible focus overlay — fine at
-      // arm's length with a mouse, not from a couch with a D-pad. Reported
-      // directly: "sometimes bright, sometimes a kind of light selector...
-      // you don't know where your selector is." A solid, opaque focus
-      // color (rather than the default low-alpha tint) fixes every one of
-      // those widgets at once, without rebuilding each of them by hand —
-      // the same "fix once centrally" approach as `_SelectableRow`
-      // elsewhere, just via the theme instead of a bespoke widget.
-      // `ThemeData.focusColor`'s default (`Colors.black12`-ish) is used
-      // as-is by consuming widgets, not further blended — so this needs
-      // to already be a sensible overlay alpha itself, not the solid
-      // palette color, or it'd paint over the label text entirely.
-      focusColor: scheme.primary.withValues(alpha: 0.45),
-      // Still reported as "not obvious enough" even with the focusColor
-      // boost above — that overlay is a translucent tint blended *under*
-      // a button's own label/border, which stays subtle regardless of
-      // alpha. These react to `WidgetState.focused` directly instead,
-      // for a solid fill + thick bright border matching `_SelectableRow`'s
-      // treatment elsewhere in the app — the actual "obvious highlight"
-      // the Live TV list already has.
-      outlinedButtonTheme:
-          OutlinedButtonThemeData(style: _tvButtonStyle(scheme)),
-      filledButtonTheme: FilledButtonThemeData(style: _tvButtonStyle(scheme)),
-      textButtonTheme: TextButtonThemeData(style: _tvButtonStyle(scheme)),
-      // Plain `IconButton`s (player bar: Recall, Favorite, Reload,
-      // Pause/skip) had no theme of their own, so they fell back to
-      // Flutter's stock `IconButton` focus treatment — the same weak
-      // translucent `focusColor` overlay already fixed for every other
-      // button type above, for the exact same reported reason. Reusing
-      // `_tvButtonStyle` directly keeps this consistent with the rest of
-      // the app rather than inventing a second "obvious focus" look.
-      // `isIcon: true` — its content is a glyph, not a label, so it gets
-      // the dedicated icon/symbol accent (`scheme.tertiary`) instead of
-      // `scheme.primary` — see `buildPaletteColorScheme`'s own doc
-      // comment for why (Habs: white contour/text, blue icons).
-      iconButtonTheme:
-          IconButtonThemeData(style: _tvButtonStyle(scheme, isIcon: true)),
-    ),
+    data: RefinedFinish.apply(
+        ThemeData(
+          colorScheme: scheme,
+          useMaterial3: true,
+          // Stock Material widgets (ListTile, SwitchListTile, SegmentedButton,
+          // plain InkWell) default to a barely-visible focus overlay — fine at
+          // arm's length with a mouse, not from a couch with a D-pad. Reported
+          // directly: "sometimes bright, sometimes a kind of light selector...
+          // you don't know where your selector is." A solid, opaque focus
+          // color (rather than the default low-alpha tint) fixes every one of
+          // those widgets at once, without rebuilding each of them by hand —
+          // the same "fix once centrally" approach as `_SelectableRow`
+          // elsewhere, just via the theme instead of a bespoke widget.
+          // `ThemeData.focusColor`'s default (`Colors.black12`-ish) is used
+          // as-is by consuming widgets, not further blended — so this needs
+          // to already be a sensible overlay alpha itself, not the solid
+          // palette color, or it'd paint over the label text entirely.
+          focusColor: scheme.primary.withValues(alpha: 0.45),
+          // Still reported as "not obvious enough" even with the focusColor
+          // boost above — that overlay is a translucent tint blended *under*
+          // a button's own label/border, which stays subtle regardless of
+          // alpha. These react to `WidgetState.focused` directly instead,
+          // for a solid fill + thick bright border matching `_SelectableRow`'s
+          // treatment elsewhere in the app — the actual "obvious highlight"
+          // the Live TV list already has.
+          outlinedButtonTheme:
+              OutlinedButtonThemeData(style: _tvButtonStyle(scheme)),
+          filledButtonTheme:
+              FilledButtonThemeData(style: _tvButtonStyle(scheme)),
+          textButtonTheme: TextButtonThemeData(style: _tvButtonStyle(scheme)),
+          // Plain `IconButton`s (player bar: Recall, Favorite, Reload,
+          // Pause/skip) had no theme of their own, so they fell back to
+          // Flutter's stock `IconButton` focus treatment — the same weak
+          // translucent `focusColor` overlay already fixed for every other
+          // button type above, for the exact same reported reason. Reusing
+          // `_tvButtonStyle` directly keeps this consistent with the rest of
+          // the app rather than inventing a second "obvious focus" look.
+          // `isIcon: true` — its content is a glyph, not a label, so it gets
+          // the dedicated icon/symbol accent (`scheme.tertiary`) instead of
+          // `scheme.primary` — see `buildPaletteColorScheme`'s own doc
+          // comment for why (Habs: white contour/text, blue icons).
+          iconButtonTheme:
+              IconButtonThemeData(style: _tvButtonStyle(scheme, isIcon: true)),
+        ),
+        prefs.refinedFinish),
     child: Builder(builder: builder),
   );
 }

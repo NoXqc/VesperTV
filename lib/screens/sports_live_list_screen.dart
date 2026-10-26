@@ -1,3 +1,4 @@
+import '../utils/refined_finish.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
@@ -774,15 +775,18 @@ class _LiveRowState extends State<_LiveRow> {
             duration: const Duration(milliseconds: 120),
             margin: const EdgeInsets.symmetric(vertical: 3),
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: _focused ? null : Colors.white.withValues(alpha: 0.06),
-              gradient: _focused ? sportsFocusSheen(scheme) : null,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: _focused ? scheme.primary : Colors.transparent,
-                width: _focused ? 2.5 : 1,
-              ),
-            ),
+            decoration: RefinedFinish.decorate(
+                context,
+                BoxDecoration(
+                  color: _focused ? null : Colors.white.withValues(alpha: 0.06),
+                  gradient: _focused ? sportsFocusSheen(scheme) : null,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _focused ? scheme.primary : Colors.transparent,
+                    width: _focused ? 2.5 : 1,
+                  ),
+                ),
+                focused: _focused),
             child: body,
           ),
         ));

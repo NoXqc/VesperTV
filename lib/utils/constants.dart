@@ -347,6 +347,7 @@ class AppConstants {
 
   /// Per viewer; Main retains its original unsuffixed key.
   static const String keyPaletteId = 'nox_palette_id';
+  static const String keyRefinedFinish = 'vesper_refined_finish';
   static const String keyViewerPalettesMigrated =
       'vesper_viewer_palettes_migrated';
 

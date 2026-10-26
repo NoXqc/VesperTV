@@ -1,3 +1,4 @@
+import '../utils/refined_finish.dart';
 import 'package:flutter/material.dart';
 
 /// A semi-transparent, rounded card grouping a related set of settings
@@ -29,11 +30,14 @@ class SettingsPanel extends StatelessWidget {
       // zero padding here so it can sit flush against the panel edges)
       // would otherwise square off past these rounded corners.
       clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
-      ),
+      decoration: RefinedFinish.decorate(
+          context,
+          BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.07),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+          ),
+          focused: false),
       child: Padding(
         padding: padding,
         child: Column(

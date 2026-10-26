@@ -1,3 +1,4 @@
+import '../utils/refined_finish.dart';
 import 'package:flutter/material.dart';
 
 import '../utils/tv_theme.dart';
@@ -44,35 +45,39 @@ class _TvSwitchListTileState extends State<TvSwitchListTile> {
       // conditionally wrapped — MinimalGlassFocus's own doc comment below
       // has the full story on why changing a focus widget's ancestor
       // shape between builds corrupts its FocusNode on real hardware.
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: _focused ? Border.all(color: scheme.primary, width: 2) : null,
-        // A flat `black87` fill here photographed as more "filled" than
-        // the real diagonal sheen `_SelectableRow`/`_GroupRow` use for the
-        // exact same focus state — see their doc comment.
-        // `SwitchListTile.tileColor` can't paint a gradient, so this
-        // Container paints it instead and `tileColor` below stays
-        // transparent to let it show through.
-        gradient: _focused
-            ? LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.black,
-                  Color.lerp(Colors.black, scheme.primaryContainer, 0.4)!,
-                  Colors.black,
-                ],
-                stops: const [0.0, 0.5, 1.0],
-              )
-            : null,
-        boxShadow: _focused
-            ? [
-                BoxShadow(
-                    color: scheme.primary.withValues(alpha: 0.4),
-                    blurRadius: 12)
-              ]
-            : const [],
-      ),
+      decoration: RefinedFinish.decorate(
+          context,
+          BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border:
+                _focused ? Border.all(color: scheme.primary, width: 2) : null,
+            // A flat `black87` fill here photographed as more "filled" than
+            // the real diagonal sheen `_SelectableRow`/`_GroupRow` use for the
+            // exact same focus state — see their doc comment.
+            // `SwitchListTile.tileColor` can't paint a gradient, so this
+            // Container paints it instead and `tileColor` below stays
+            // transparent to let it show through.
+            gradient: _focused
+                ? LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.black,
+                      Color.lerp(Colors.black, scheme.primaryContainer, 0.4)!,
+                      Colors.black,
+                    ],
+                    stops: const [0.0, 0.5, 1.0],
+                  )
+                : null,
+            boxShadow: _focused
+                ? [
+                    BoxShadow(
+                        color: scheme.primary.withValues(alpha: 0.4),
+                        blurRadius: 12)
+                  ]
+                : const [],
+          ),
+          focused: _focused),
       // MinimalGlassFocus's own blur special-case is retired now that
       // every palette uses the gradient-sheen above instead — see
       // ModeButton's identical comment for why the wrapper itself stays.

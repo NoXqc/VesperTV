@@ -1988,4 +1988,7 @@ const Map<String, String> kEs = {
   "{team} scored!": "¡{team} ha marcado!",
   "{first} {firstScore} – {secondScore} {second}":
       "{first} {firstScore} – {secondScore} {second}",
+  "Refined finish": "Acabado refinado",
+  "Subtle glass-like surfaces and highlights. Keeps your layout and theme colour.":
+      "Superficies y reflejos sutiles de cristal. Conserva la distribución y el color del tema.",
 };

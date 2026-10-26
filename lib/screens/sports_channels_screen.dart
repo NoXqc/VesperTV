@@ -1,3 +1,4 @@
+import '../utils/refined_finish.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui' show ImageFilter;
@@ -1413,18 +1414,22 @@ class _NetworkCardState extends State<_NetworkCard> {
               width: _NetworkCard.width,
               height: _NetworkCard.height,
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
-              decoration: BoxDecoration(
-                gradient: _focused ? sportsFocusSheen(scheme) : null,
-                color: _focused ? null : Colors.white.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                    color: _focused
-                        ? scheme.primary
-                        : widget.playing
-                            ? scheme.primary.withValues(alpha: 0.5)
-                            : Colors.white10,
-                    width: _focused ? 3 : 1),
-              ),
+              decoration: RefinedFinish.decorate(
+                  context,
+                  BoxDecoration(
+                    gradient: _focused ? sportsFocusSheen(scheme) : null,
+                    color:
+                        _focused ? null : Colors.white.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: _focused
+                            ? scheme.primary
+                            : widget.playing
+                                ? scheme.primary.withValues(alpha: 0.5)
+                                : Colors.white10,
+                        width: _focused ? 3 : 1),
+                  ),
+                  focused: _focused),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

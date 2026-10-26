@@ -1992,4 +1992,7 @@ const Map<String, String> kFr = {
   "{team} scored!": "{team} a marqué !",
   "{first} {firstScore} – {secondScore} {second}":
       "{first} {firstScore} – {secondScore} {second}",
+  "Refined finish": "Finition raffinée",
+  "Subtle glass-like surfaces and highlights. Keeps your layout and theme colour.":
+      "Surfaces et reflets subtils façon verre. Conserve la disposition et la couleur du thème.",
 };

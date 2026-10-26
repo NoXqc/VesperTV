@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -210,8 +211,13 @@ void main() {
   testWidgets(
       'switch applies viewer theme immediately without changing device settings',
       (tester) async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMessageHandler(
+            'dev.flutter.pigeon.wakelock_plus_platform_interface.WakelockPlusApi.toggle',
+            (_) async => const StandardMessageCodec().encodeMessage([null]));
     SharedPreferences.setMockInitialValues({
       ...seed(),
+      AppConstants.keyRefinedFinish: true,
       AppConstants.keyPaletteId: 'habs',
       scoped('alice'): 'red_blue',
       scoped('bob'): 'purple_magenta'
@@ -253,6 +259,7 @@ void main() {
     expect(await viewers.switchTo(page, 'alice'), isTrue);
     await tester.pumpAndSettle();
     expect(prefs.palette.id, 'red_blue');
+    expect(prefs.refinedFinish, isFalse);
     expect(Theme.of(page).colorScheme.primary, isNot(mainColour));
     expect(events, ['stop:main', 'reload:alice', 'theme:alice']);
     prefs.setPalette(
@@ -264,6 +271,7 @@ void main() {
     expect(await viewers.switchTo(page, 'main'), isTrue);
     await tester.pumpAndSettle();
     expect(prefs.palette.id, 'habs');
+    expect(prefs.refinedFinish, isTrue);
     expect(Theme.of(page).colorScheme.primary, mainColour);
     expect(await viewers.switchTo(page, 'alice'), isTrue);
     await tester.pumpAndSettle();

@@ -1,3 +1,4 @@
+import '../utils/refined_finish.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -190,7 +191,7 @@ class _ArchiveSourceDrawerState extends State<_ArchiveSourceDrawer> {
     final scheme = Theme.of(context).colorScheme;
     return Material(
       key: const ValueKey('media-hub-source-drawer'),
-      color: const Color(0xF011131A),
+      color: RefinedFinish.surface(context, const Color(0xF011131A)),
       child: SafeArea(
         child: Focus(
           focusNode: _focus,
@@ -247,17 +248,22 @@ class _ArchiveSourceDrawerState extends State<_ArchiveSourceDrawer> {
                               child: Container(
                                 margin: const EdgeInsets.symmetric(vertical: 5),
                                 padding: EdgeInsets.all(_compact ? 8 : 12),
-                                decoration: BoxDecoration(
-                                  color: index == _index
-                                      ? scheme.primary.withValues(alpha: 0.2)
-                                      : Colors.white.withValues(alpha: 0.04),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
+                                decoration: RefinedFinish.decorate(
+                                    context,
+                                    BoxDecoration(
                                       color: index == _index
                                           ? scheme.primary
-                                          : Colors.white24,
-                                      width: index == _index ? 2 : 1),
-                                ),
+                                              .withValues(alpha: 0.2)
+                                          : Colors.white
+                                              .withValues(alpha: 0.04),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                          color: index == _index
+                                              ? scheme.primary
+                                              : Colors.white24,
+                                          width: index == _index ? 2 : 1),
+                                    ),
+                                    focused: index == _index),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [

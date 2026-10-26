@@ -1992,4 +1992,7 @@ const Map<String, String> kIt = {
   "{team} scored!": "{team} ha segnato!",
   "{first} {firstScore} – {secondScore} {second}":
       "{first} {firstScore} – {secondScore} {second}",
+  "Refined finish": "Finitura raffinata",
+  "Subtle glass-like surfaces and highlights. Keeps your layout and theme colour.":
+      "Superfici e riflessi delicati effetto vetro. Mantiene la disposizione e il colore del tema.",
 };

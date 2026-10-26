@@ -1,3 +1,4 @@
+import '../utils/refined_finish.dart';
 import 'package:flutter/material.dart';
 
 import '../utils/tv_theme.dart';
@@ -64,32 +65,35 @@ class _ModeButtonState extends State<ModeButton> {
       // the full story on why changing a focus widget's ancestor shape
       // between builds corrupts its FocusNode on real hardware; the same
       // rule applies here, one level up.
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        // A flat `black87` fill here photographed as more "filled" than
-        // the real diagonal sheen `_SelectableRow`/`_GroupRow` use for the
-        // exact same focus state — see their doc comment. `Material.color`
-        // stays transparent below to let this show through.
-        gradient: _focused
-            ? LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.black,
-                  Color.lerp(Colors.black, scheme.primaryContainer, 0.4)!,
-                  Colors.black,
-                ],
-                stops: const [0.0, 0.5, 1.0],
-              )
-            : null,
-        boxShadow: _focused
-            ? [
-                BoxShadow(
-                    color: scheme.primary.withValues(alpha: 0.45),
-                    blurRadius: 14)
-              ]
-            : const [],
-      ),
+      decoration: RefinedFinish.decorate(
+          context,
+          BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            // A flat `black87` fill here photographed as more "filled" than
+            // the real diagonal sheen `_SelectableRow`/`_GroupRow` use for the
+            // exact same focus state — see their doc comment. `Material.color`
+            // stays transparent below to let this show through.
+            gradient: _focused
+                ? LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.black,
+                      Color.lerp(Colors.black, scheme.primaryContainer, 0.4)!,
+                      Colors.black,
+                    ],
+                    stops: const [0.0, 0.5, 1.0],
+                  )
+                : null,
+            boxShadow: _focused
+                ? [
+                    BoxShadow(
+                        color: scheme.primary.withValues(alpha: 0.45),
+                        blurRadius: 14)
+                  ]
+                : const [],
+          ),
+          focused: _focused),
       // MinimalGlassFocus's own blur special-case is retired now that
       // every palette uses the gradient-sheen above instead (`active`
       // stays false) — the wrapper itself stays, unchanged, since

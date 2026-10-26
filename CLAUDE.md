@@ -1358,3 +1358,12 @@ shows score increases for followed teams at top-left without touching playback/f
 and stacks below reminders on phones. Hide scores suppresses alerts immediately.
 Not instant push: 30s polling plus existing feed cache. First observation after launch,
 profile change or backgrounding is silent. See `dev-notes/sports-tab.md` for details.
+
+### Codex 2026-10-26: Refined finish (unreleased branch)
+
+`codex/refined-finish` adds Settings > Interface > Theme > Refined finish, off by
+ default and per viewer. Shared paint-only dark surfaces/highlights/quieter glow;
+ no layouts, palette colours, focus structure or video configuration changes.
+ RefinedFinish ThemeExtension must survive root/TV theme boundaries. Do not
+ re-enable MinimalGlassFocus blur or add live-video filtering for this setting.
+ See `dev-notes/refined-finish.md`; actual device performance/appearance needs QA.

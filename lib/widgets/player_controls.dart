@@ -1,3 +1,4 @@
+import '../utils/refined_finish.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -232,10 +233,12 @@ class VideoPlayerPane extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 28, vertical: 22),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.62),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
+                        decoration: RefinedFinish.decorate(
+                            context,
+                            BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.62),
+                              borderRadius: BorderRadius.circular(16),
+                            )),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -540,7 +543,7 @@ class PlayerControls extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.black54,
+      color: RefinedFinish.surface(context, Colors.black54),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: ValueListenableBuilder<VideoPlayerHdrValue>(
         valueListenable: controller,
@@ -794,10 +797,12 @@ class _RecallPickerSheet extends StatelessWidget {
     return SafeArea(
       child: Container(
         margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.62),
-          borderRadius: const BorderRadius.all(Radius.circular(12)),
-        ),
+        decoration: RefinedFinish.decorate(
+            context,
+            BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.62),
+              borderRadius: const BorderRadius.all(Radius.circular(12)),
+            )),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1674,10 +1679,12 @@ class _LabeledIconButtonState extends State<_LabeledIconButton> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 constraints: const BoxConstraints(maxWidth: 220),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.7),
-                  borderRadius: BorderRadius.circular(6),
-                ),
+                decoration: RefinedFinish.decorate(
+                    context,
+                    BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(6),
+                    )),
                 child: Text(
                   widget.label,
                   maxLines: 2,
@@ -1971,31 +1978,36 @@ class _SkipButtonState extends State<_SkipButton> {
         onTapCancel: _endHold,
         child: Container(
           padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: _focused ? null : Colors.transparent,
-            gradient: _focused
-                ? LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Colors.black,
-                      Color.lerp(Colors.black, scheme.primaryContainer, 0.4)!,
-                      Colors.black,
-                    ],
-                    stops: const [0.0, 0.5, 1.0],
-                  )
-                : null,
-            border:
-                _focused ? Border.all(color: scheme.primary, width: 2) : null,
-            boxShadow: _focused
-                ? [
-                    BoxShadow(
-                        color: scheme.primary.withValues(alpha: 0.45),
-                        blurRadius: 12)
-                  ]
-                : const [],
-          ),
+          decoration: RefinedFinish.decorate(
+              context,
+              BoxDecoration(
+                shape: BoxShape.circle,
+                color: _focused ? null : Colors.transparent,
+                gradient: _focused
+                    ? LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.black,
+                          Color.lerp(
+                              Colors.black, scheme.primaryContainer, 0.4)!,
+                          Colors.black,
+                        ],
+                        stops: const [0.0, 0.5, 1.0],
+                      )
+                    : null,
+                border: _focused
+                    ? Border.all(color: scheme.primary, width: 2)
+                    : null,
+                boxShadow: _focused
+                    ? [
+                        BoxShadow(
+                            color: scheme.primary.withValues(alpha: 0.45),
+                            blurRadius: 12)
+                      ]
+                    : const [],
+              ),
+              focused: _focused),
           // `scheme.tertiary` — a dedicated icon/symbol-glyph accent,
           // separate from the border/gradient accent (`scheme.primary`)
           // — see `buildPaletteColorScheme`'s own doc comment for why

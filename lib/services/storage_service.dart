@@ -578,6 +578,11 @@ class StorageService {
   /// stored id doesn't match a known palette — no migration attempted from
   /// the old single-seed-color storage, a fresh sensible default is simpler
   /// than trying to map an arbitrary old color onto the closest palette.
+  bool getRefinedFinish() =>
+      _prefs.getBool(_vk(AppConstants.keyRefinedFinish)) ?? false;
+  Future<void> setRefinedFinish(bool value) =>
+      _prefs.setBool(_vk(AppConstants.keyRefinedFinish), value);
+
   String getPaletteId() =>
       _prefs.getString(_vk(AppConstants.keyPaletteId)) ??
       AppConstants.cyberpunkPalettes.first.id;

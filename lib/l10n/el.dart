@@ -2601,4 +2601,7 @@ const Map<String, String> kEl = {
   "{team} scored!": "Η ομάδα {team} σκόραρε!",
   "{first} {firstScore} – {secondScore} {second}":
       "{first} {firstScore} – {secondScore} {second}",
+  "Refined finish": "Εκλεπτυσμένο φινίρισμα",
+  "Subtle glass-like surfaces and highlights. Keeps your layout and theme colour.":
+      "Διακριτικές γυάλινες επιφάνειες και αντανακλάσεις. Διατηρεί τη διάταξη και το χρώμα θέματος.",
 };

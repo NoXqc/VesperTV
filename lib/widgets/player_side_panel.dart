@@ -1,3 +1,4 @@
+import '../utils/refined_finish.dart';
 import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -339,7 +340,8 @@ class _PlayerSidePanelState extends State<PlayerSidePanel> {
       focusNode: _focus,
       onKeyEvent: _onKey,
       child: Material(
-        color: Colors.black.withValues(alpha: 0.62),
+        color: RefinedFinish.surface(
+            context, Colors.black.withValues(alpha: 0.62)),
         child: SafeArea(
           right: false,
           child: Column(
@@ -617,12 +619,15 @@ class PlayerSidePanelTab extends StatelessWidget {
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.fromLTRB(8, 18, 10, 18),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.62),
-            borderRadius:
-                const BorderRadius.horizontal(right: Radius.circular(24)),
-            border: Border.all(color: Colors.white24),
-          ),
+          decoration: RefinedFinish.decorate(
+              context,
+              BoxDecoration(
+                color: RefinedFinish.surface(
+                    context, Colors.black.withValues(alpha: 0.62)),
+                borderRadius:
+                    const BorderRadius.horizontal(right: Radius.circular(24)),
+                border: Border.all(color: Colors.white24),
+              )),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

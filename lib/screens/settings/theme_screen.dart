@@ -43,6 +43,14 @@ class ThemeScreen extends StatelessWidget {
                     value: prefs.showClock,
                     onChanged: prefs.setShowClock,
                   ),
+                  const SizedBox(height: 8),
+                  TvSwitchListTile(
+                    title: Text(tr('Refined finish')),
+                    subtitle: Text(tr(
+                        'Subtle glass-like surfaces and highlights. Keeps your layout and theme colour.')),
+                    value: prefs.refinedFinish,
+                    onChanged: prefs.setRefinedFinish,
+                  ),
                   const SizedBox(height: 16),
                   SectionLabel(tr('Theme color')),
                   const SizedBox(height: 8),
