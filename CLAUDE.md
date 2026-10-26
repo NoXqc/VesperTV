@@ -1382,3 +1382,11 @@ See `dev-notes/decoder-hdr-reporting.md`; a real Shield retest is still required
 reminder widget/scheduler already supports manual reminders without following teams.
 Live score popups are Settings > Interface > Goals alert (off by default, My Teams).
 Separate completed decoder HDR work remains on codex/decoder-hdr-reporting b0b0889.
+
+### Codex 2026-10-26: combined Formuler test +456
+
+Owner requested installation after Refined finish. codex/formuler-test-456 combines
+Refined finish d5874ff, decoder HDR reporting b0b0889 and all-game reminders173d08d.
+Version1.0.41+456; analyze17,598Flutter tests and62targeted native tests passed.
+This is a local test package only; main/published1.0.41+455 remain unchanged.
+Exact package/signature/installation results are in root HANDOFF.md.
