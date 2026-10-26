@@ -1967,4 +1967,13 @@ const Map<String, String> kEs = {
   "Default stream selection for movies and episodes":
       "Selección de transmisión predeterminada para películas y episodios",
   "Boxing": "Boxeo",
+  "Stream sources": "Fuentes de reproducción",
+  "Up/Down: browse · OK: switch · Back: close":
+      "Arriba/Abajo: explorar · OK: cambiar · Atrás: cerrar",
+  "Could not load stream sources.":
+      "No se pudieron cargar las fuentes de reproducción.",
+  "Could not switch stream. Try another source.":
+      "No se pudo cambiar de fuente. Prueba otra.",
+  "Current stream": "Fuente actual",
+  "Size unknown": "Tamaño desconocido",
 };

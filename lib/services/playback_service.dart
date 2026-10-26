@@ -426,7 +426,14 @@ class PlaybackService extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    if (currentChannel?.id == channel.id && controller != null) return;
+    // A Media Hub source switch keeps the title ID (and its resume point)
+    // but supplies a different file URL. Only the identical file is a no-op.
+    if (currentChannel?.id == channel.id &&
+        controller != null &&
+        (!Channel.isArchiveId(channel.rawId) ||
+            currentChannel?.url == channel.url)) {
+      return;
+    }
 
     // A recording uses this playlist's only connection: ask first (the
     // app shows the Stop recording / Cancel popup, see main.dart).

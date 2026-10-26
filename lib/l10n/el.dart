@@ -2581,4 +2581,12 @@ const Map<String, String> kEl = {
   "Default stream selection for movies and episodes":
       "Προεπιλεγμένη επιλογή ροής για ταινίες και επεισόδια",
   "Boxing": "Πυγμαχία",
+  "Stream sources": "Πηγές ροής",
+  "Up/Down: browse · OK: switch · Back: close":
+      "Πάνω/Κάτω: περιήγηση · OK: αλλαγή · Πίσω: κλείσιμο",
+  "Could not load stream sources.": "Δεν ήταν δυνατή η φόρτωση των πηγών ροής.",
+  "Could not switch stream. Try another source.":
+      "Δεν ήταν δυνατή η αλλαγή ροής. Δοκιμάστε άλλη πηγή.",
+  "Current stream": "Τρέχουσα ροή",
+  "Size unknown": "Άγνωστο μέγεθος",
 };

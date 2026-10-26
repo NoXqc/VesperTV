@@ -1971,4 +1971,13 @@ const Map<String, String> kIt = {
   "Default stream selection for movies and episodes":
       "Selezione predefinita del flusso per film ed episodi",
   "Boxing": "Pugilato",
+  "Stream sources": "Sorgenti dello streaming",
+  "Up/Down: browse · OK: switch · Back: close":
+      "Su/Giù: sfoglia · OK: cambia · Indietro: chiudi",
+  "Could not load stream sources.":
+      "Impossibile caricare le sorgenti dello streaming.",
+  "Could not switch stream. Try another source.":
+      "Impossibile cambiare streaming. Prova un’altra sorgente.",
+  "Current stream": "Streaming attuale",
+  "Size unknown": "Dimensione sconosciuta",
 };

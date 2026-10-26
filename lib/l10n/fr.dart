@@ -1971,4 +1971,13 @@ const Map<String, String> kFr = {
   "Default stream selection for movies and episodes":
       "Sélection du flux par défaut pour les films et épisodes",
   "Boxing": "Boxe",
+  "Stream sources": "Sources du flux",
+  "Up/Down: browse · OK: switch · Back: close":
+      "Haut/Bas : parcourir · OK : changer · Retour : fermer",
+  "Could not load stream sources.":
+      "Impossible de charger les sources du flux.",
+  "Could not switch stream. Try another source.":
+      "Impossible de changer de flux. Essayez une autre source.",
+  "Current stream": "Flux actuel",
+  "Size unknown": "Taille inconnue",
 };
