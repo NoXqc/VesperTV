@@ -197,6 +197,16 @@ Future<void> playArchiveTitle(
       .copyWith(mediaFileInfo: archiveMediaFileInfo(picked));
   _track(tracked, meta, episode);
   final channel = tracked.copyWith(url: restored.url ?? await _playUrl(picked));
+  resumeSource.traceChoice(restored, picked,
+      resolvedUrl: channel.url,
+      via: restored.picked != null
+          ? 'resume'
+          : storage.getArchiveAutoLargest() &&
+                  identical(largestArchiveStream(options), picked)
+              ? 'largest'
+              : options.length == 1
+                  ? 'single'
+                  : 'picker');
   try {
     await resumeSource.remember(picked);
   } catch (_) {/* Playback still works if preferences cannot be written. */}
@@ -226,7 +236,16 @@ Future<void> playArchiveTitle(
         .channelFor(source, meta, o.stream, episode: video)
         .copyWith(mediaFileInfo: archiveMediaFileInfo(o));
     _track(ch, meta, video);
-    return ch.copyWith(url: restoredNext.url ?? await _playUrl(o));
+    final nextChannel = ch.copyWith(url: restoredNext.url ?? await _playUrl(o));
+    nextResume.traceChoice(restoredNext, o,
+        resolvedUrl: nextChannel.url,
+        via: restoredNext.picked != null
+            ? 'resume'
+            : storage.getArchiveAutoLargest() &&
+                    identical(largestArchiveStream(restoredNext.options), o)
+                ? 'largest'
+                : 'nextEpisode');
+    return nextChannel;
   }
 
   final hasQueue = queue != null && queue.isNotEmpty;

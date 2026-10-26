@@ -3,15 +3,31 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 
 import 'archive_service.dart';
+import 'archive_stream_size.dart';
 import 'storage_service.dart';
 
+enum ArchiveResumeReason {
+  notResuming,
+  noChoice,
+  invalidChoice,
+  missingSource,
+  unmatched,
+  unavailable,
+  exactUrl,
+  fileIdentity,
+  description,
+}
+
 class ArchiveResumeChoice {
-  const ArchiveResumeChoice(this.options, {this.picked, this.url});
+  const ArchiveResumeChoice(this.options,
+      {this.picked, this.url, this.reason = ArchiveResumeReason.noChoice});
   final List<ArchiveStreamOption> options;
   final ArchiveStreamOption? picked;
   final String? url;
+  final ArchiveResumeReason reason;
 }
 
 /// A movie's selected stream, scoped like its progress to the active viewer.
@@ -31,6 +47,19 @@ class ArchiveResumeSource {
       sha256.convert(utf8.encode(value)).toString();
   static String _description(ArchiveStreamOption option) =>
       jsonEncode([option.stream.name, option.stream.title]);
+  static String? _fileIdentity(ArchiveStreamOption option) {
+    final videoHash = option.stream.videoHash?.trim().toLowerCase();
+    if (videoHash != null && videoHash.isNotEmpty) {
+      return _hash('video:$videoHash');
+    }
+    final filename = option.stream.fileName?.trim();
+    return filename == null || filename.isEmpty
+        ? null
+        : _hash('file:$filename');
+  }
+
+  static String _fileKind(ArchiveStreamOption option) =>
+      (option.stream.videoHash ?? '').trim().isNotEmpty ? 'hash' : 'filename';
 
   Future<void> remember(ArchiveStreamOption option) async {
     if (!isCurrent || option.stream.ytId != null) return;
@@ -39,6 +68,11 @@ class ArchiveResumeSource {
         jsonEncode({
           'source': _hash(option.source.manifestUrl),
           'url': _hash(option.stream.url),
+          if (_fileIdentity(option) case final file?) 'file': file,
+          if (_fileIdentity(option) != null) 'fileKind': _fileKind(option),
+          if (archiveStreamBytes(option) > 0)
+            'bytes': archiveStreamBytes(option),
+          if ((option.stream.sizeBytes ?? 0) > 0) 'bytesExact': true,
           if ((option.stream.name ?? '').isNotEmpty ||
               (option.stream.title ?? '').isNotEmpty)
             'description': _hash(_description(option)),
@@ -47,30 +81,65 @@ class ArchiveResumeSource {
   }
 
   Future<ArchiveResumeChoice> restore(List<ArchiveStreamOption> options) async {
-    final fallback = ArchiveResumeChoice(options);
+    ArchiveResumeChoice fallback(ArchiveResumeReason reason) =>
+        ArchiveResumeChoice(options, reason: reason);
     if (!isCurrent ||
         storage.getLastPosition(channelId) <= 0 ||
         storage.isFullyWatched(channelId)) {
-      return fallback;
+      return fallback(ArchiveResumeReason.notResuming);
     }
     Map saved;
     try {
       final raw = jsonDecode(
           storage.getArchiveResumeSource(channelId, viewerId: viewerId) ??
               'null');
-      if (raw is! Map) return fallback;
+      if (raw == null) return fallback(ArchiveResumeReason.noChoice);
+      if (raw is! Map) return fallback(ArchiveResumeReason.invalidChoice);
       saved = raw;
     } catch (_) {
-      return fallback;
+      return fallback(ArchiveResumeReason.invalidChoice);
     }
     final sameSource = options
         .where((o) =>
             o.stream.ytId == null &&
             _hash(o.source.manifestUrl) == saved['source'])
         .toList();
+    if (sameSource.isEmpty) return fallback(ArchiveResumeReason.missingSource);
+    // Filenames/hashes survive rotating signed links and changing seed counts.
+    // A known size conflict must never turn a selected 47 GB file into a 7 GB
+    // file simply because a provider reused its URL or generic description.
+    bool compatible(ArchiveStreamOption option) {
+      final file = _fileIdentity(option);
+      if (saved['file'] != null &&
+          file != null &&
+          saved['fileKind'] == _fileKind(option) &&
+          saved['file'] != file) {
+        return false;
+      }
+      // Labelled sizes can be rounded. Reject an otherwise exact URL on size
+      // only when both sides supply structured byte counts.
+      final bytes = option.stream.sizeBytes ?? 0;
+      return saved['bytesExact'] != true ||
+          saved['bytes'] is! num ||
+          saved['bytes'] <= 0 ||
+          bytes <= 0 ||
+          saved['bytes'] == bytes;
+    }
+
+    final candidates = sameSource.where(compatible).toList();
     final exact =
-        sameSource.where((o) => _hash(o.stream.url) == saved['url']).toList();
-    final described = sameSource
+        candidates.where((o) => _hash(o.stream.url) == saved['url']).toList();
+    final files = candidates.where((o) {
+      if (saved['file'] == null || _fileIdentity(o) != saved['file']) {
+        return false;
+      }
+      final bytes = archiveStreamBytes(o);
+      return _fileKind(o) == 'hash' ||
+          saved['bytes'] is! num ||
+          bytes <= 0 ||
+          saved['bytes'] == bytes;
+    }).toList();
+    final described = candidates
         .where((o) =>
             saved['description'] != null &&
             _hash(_description(o)) == saved['description'])
@@ -78,17 +147,40 @@ class ArchiveResumeSource {
     // A quality/name shared by several files is not an exact selection.
     final picked = exact.length == 1
         ? exact.single
-        : described.length == 1
-            ? described.single
-            : null;
-    if (picked == null) return fallback;
+        : files.length == 1
+            ? files.single
+            : described.length == 1
+                ? described.single
+                : null;
+    if (picked == null) return fallback(ArchiveResumeReason.unmatched);
     final url = await _probe(picked.stream.url);
-    if (!isCurrent) return fallback;
+    if (!isCurrent) return fallback(ArchiveResumeReason.notResuming);
     if (url == null) {
       return ArchiveResumeChoice(
-          options.where((o) => !identical(o, picked)).toList());
+          options.where((o) => !identical(o, picked)).toList(),
+          reason: ArchiveResumeReason.unavailable);
     }
-    return ArchiveResumeChoice(options, picked: picked, url: url);
+    return ArchiveResumeChoice(options,
+        picked: picked,
+        url: url,
+        reason: exact.length == 1
+            ? ArchiveResumeReason.exactUrl
+            : files.length == 1
+                ? ArchiveResumeReason.fileIdentity
+                : ArchiveResumeReason.description);
+  }
+
+  /// Enough to distinguish resume/fallback from a display error in Send log;
+  /// never log URLs, filenames, provider names, viewer IDs or access tokens.
+  void traceChoice(ArchiveResumeChoice result, ArchiveStreamOption selected,
+      {required String resolvedUrl, required String via}) {
+    debugPrint('ArchiveResume: title=${_hash(channelId).substring(0, 12)} '
+        'state=${result.reason.name} via=$via choices=${result.options.length} '
+        'file=${(_fileIdentity(selected) ?? _hash(selected.stream.url)).substring(0, 12)} '
+        'play=${_hash(resolvedUrl).substring(0, 12)} '
+        'sizeBytes=${archiveStreamBytes(selected)} '
+        'hintBytes=${selected.stream.sizeBytes ?? 0} '
+        'labelBytes=${archiveStreamLabelBytes(selected)}');
   }
 }
 

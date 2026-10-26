@@ -5,9 +5,15 @@ import '../models/media_file_info.dart';
 int archiveStreamBytes(ArchiveStreamOption option) {
   final stream = option.stream;
   if (stream.sizeBytes case final bytes? when bytes > 0) return bytes;
+  return archiveStreamLabelBytes(option);
+}
+
+/// Kept separately for diagnostics when structured and displayed sizes disagree.
+int archiveStreamLabelBytes(ArchiveStreamOption option) {
+  final stream = option.stream;
   final match = RegExp(r'(\d+(?:[.,]\d+)?)\s*(TiB|GiB|MiB|KiB|TB|GB|MB|KB)\b',
           caseSensitive: false)
-      .firstMatch(stream.title ?? '');
+      .firstMatch('${stream.title ?? ''} ${stream.name ?? ''}');
   if (match == null) return 0;
   final number = double.tryParse(match[1]!.replaceAll(',', '.')) ?? 0;
   final unit = match[2]!.toUpperCase();

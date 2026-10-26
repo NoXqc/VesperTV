@@ -343,6 +343,8 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 
 ## 13. Status & open items (as of 2026-10-24)
 
+- **cdx, 2026-10-26: Media Hub resume/size investigation** on `codex/mediahub-resume-file` (not released). Size parsing now includes stream names; preserve supplied filename/videoHash for hashed resume identity when links/descriptions change, reject structured byte conflicts, retain legacy matching. Safe `ArchiveResume` and `MediaFileInfo` byte diagnostics distinguish selection/fallback from popup metadata. User-specific 47GB->7GB cause needs reproduction log; do not claim confirmed. Separate drawer remains on `codex/mediahub-stream-drawer`.
+
 - **Prepared release: VesperTV 1.0.40 (beta), +449 (2026-10-25).** Owner requested
   the current integrated tree and Live now grid, APK + Windows, GitHub publication with
   (beta) in title and Downloader pointing to it. Publish as latest (not GitHub prerelease,
