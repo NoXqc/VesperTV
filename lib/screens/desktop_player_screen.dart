@@ -12,6 +12,7 @@ import '../services/archive_playback_sources.dart';
 import '../widgets/archive_source_drawer.dart';
 import '../services/app_preferences.dart';
 import '../services/desktop_mini_player.dart';
+import '../services/desktop_vod_progress.dart';
 import '../services/epg_service.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
@@ -39,13 +40,9 @@ import '../widgets/gold_tag.dart';
 /// deliberately does NOT attempt it. It's a self-contained player: its own
 /// `Player`, its own controls (favorite, reload, recall, skip ±10s,
 /// previous/next episode), no shared state with `PlaybackService` at all.
-/// Two consequences of that worth knowing: opening this screen does not
-/// feed Continue Watching/resume position (both
-/// `PlaybackService` features), and Recall's history
-/// ([_DesktopLiveHistory]) is its own in-memory, session-only list rather
-/// than `PlaybackService.recentlyPlayed` — it never calls
-/// `PlaybackService.play()`. Live channels are still written to that list
-/// via `PlaybackService.recordWatched`, for the TV home's History group.
+/// VOD progress is saved separately through DesktopVodProgress using the same
+/// storage/history as Android. Recall's [_DesktopLiveHistory] remains a local
+/// live-channel list. This screen never calls PlaybackService.play().
 ///
 /// Leaving a *live* channel via the back button doesn't stop it — same
 /// "keeps playing in the background" idea as `PlaybackService` already
@@ -190,6 +187,12 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   /// size whenever it changes, channel switches included.
   StreamSubscription<int?>? _heightSubscription;
 
+  late final DesktopVodProgress _progress;
+  late final PlaybackService _history;
+  Timer? _progressTimer;
+  bool _progressReady = false;
+  int _openGeneration = 0;
+
   bool get _isLive => _currentChannel.isLive;
   List<Channel> get _queue => widget.queue ?? const [];
   int get _currentIndex => _queue.indexWhere((c) => c.id == _currentChannel.id);
@@ -204,6 +207,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   void initState() {
     super.initState();
     _currentChannel = widget.channel;
+    _progress = DesktopVodProgress(context.read<StorageService>());
+    _history = context.read<PlaybackService>();
     if (widget.existingPlayer != null && widget.existingController != null) {
       _player = widget.existingPlayer!;
       _videoController = widget.existingController!;
@@ -234,7 +239,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       final storage = context.read<StorageService>();
       unawaited(_player.setVolume(
           storage.getDesktopMuted() ? 0 : storage.getDesktopVolume()));
-      _player.open(Media(_currentChannel.url));
+      unawaited(_openMedia(_currentChannel));
       _applySeriesSubtitles();
     }
     if (_isLive) _DesktopLiveHistory.record(_currentChannel);
@@ -258,6 +263,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       // Continue Watching is unaffected).
       context.read<PlaybackService>().recordWatched(_currentChannel);
     }
+    _progressTimer =
+        Timer.periodic(const Duration(seconds: 5), (_) => _saveProgress());
     _heightSubscription = _player.stream.height.listen((height) {
       if (!_isLive || height == null) return;
       Real4kChannels.record(
@@ -274,8 +281,58 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     }
   }
 
-  /// Trakt/Simkl: where [_currentChannel] stopped (this player keeps no
-  /// resume positions, so it reports straight from mpv's state).
+  /// Open at the saved time without briefly playing the beginning first.
+  /// Explicit start is used when switching source files within one title.
+  Future<void> _openMedia(Channel channel,
+      {Duration? start, bool play = true}) async {
+    final generation = ++_openGeneration;
+    _progressReady = false;
+    bool current() =>
+        mounted &&
+        generation == _openGeneration &&
+        _currentChannel.id == channel.id;
+    try {
+      final resume = start ?? _progress.resumePosition(channel);
+      await _player.open(Media(channel.url, start: resume), play: play);
+      if (!current()) return;
+      if (resume == null) {
+        // Trakt/Simkl may only know a fraction until the stream opens.
+        final duration = _player.state.duration > Duration.zero
+            ? _player.state.duration
+            : await _player.stream.duration
+                .firstWhere((d) => d > Duration.zero)
+                .timeout(const Duration(seconds: 30));
+        if (!current() || !_progress.accepts(channel)) return;
+        final target = _progress.resumePosition(channel, duration: duration);
+        if (target != null) await _player.seek(target);
+        if (!current() || !_progress.accepts(channel)) return;
+        await _progress.storage.clearResumeFraction(channel.id);
+      }
+      if (!current() || (!channel.isLive && !_progress.accepts(channel))) {
+        return;
+      }
+      // Restart and explicit source-switch positions supersede a tracker fraction.
+      if (_progress.isFraction(channel)) {
+        await _progress.storage.clearResumeFraction(channel.id);
+      }
+      if (!current()) return;
+      _progressReady = true;
+      if (_progress.accepts(channel)) {
+        unawaited(_history.recordWatched(channel));
+      }
+    } catch (e) {
+      // Transport URLs can contain credentials; log only the failure type.
+      debugPrint('Desktop playback open failed: ${e.runtimeType}');
+    }
+  }
+
+  void _saveProgress() {
+    if (!_progressReady) return;
+    unawaited(_progress.save(
+        _currentChannel, _player.state.position, _player.state.duration));
+  }
+
+  /// Trakt/Simkl: report mpv's exact position independently of saved progress.
   void _reportStopped() {
     if (_currentChannel.transientPlayback) return;
     final state = _player.state;
@@ -290,7 +347,12 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   @override
   void dispose() {
     _fileInfoRequests.dispose();
-    if (!_handedOffToMiniPlayer) _reportStopped();
+    _progressTimer?.cancel();
+    ++_openGeneration;
+    if (!_handedOffToMiniPlayer) {
+      _saveProgress();
+      _reportStopped();
+    }
     _completedSubscription?.cancel();
     _heightSubscription?.cancel();
     _rootFocus.dispose();
@@ -330,10 +392,11 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       }
       channel = resolved;
     }
+    _saveProgress();
+    _progressReady = false;
     _reportStopped();
     setState(() => _currentChannel = channel);
-    await _player.open(Media(channel.url), play: play);
-    if (start != null) await _player.seek(start);
+    await _openMedia(channel, start: start, play: play);
     if (!mounted) return;
     unawaited(WatchTracker.instance.started(channel.id));
     _applySeriesSubtitles();

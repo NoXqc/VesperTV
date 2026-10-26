@@ -150,8 +150,8 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     if (restart) await storage.setLastPosition(channel.id, 0);
     if (!mounted) return;
     // See TvHomeScreen._selectChannel's matching comment — Windows has no
-    // PlaybackService-compatible player at all, so this bypasses it (and
-    // Continue Watching/resume) entirely via a standalone screen.
+    // PlaybackService-compatible player, so its standalone screen handles
+    // the media_kit controller and VOD resume.
     if (Platform.isWindows) {
       // Abandons any minimized live channel first, so it can't keep
       // playing audio in the background behind this unrelated movie.
