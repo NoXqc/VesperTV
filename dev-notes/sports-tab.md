@@ -461,3 +461,12 @@ info version rejected — keep the VS layout). Fire Stick check pending.
   start-day lookup through the final update. Temporary feed errors preserve baselines.
 - Widget fixtures must create GameReminders inside testWidgets, not an outer async
   setUp: its initial Future chain otherwise crosses the fake clock and stalls pumps.
+
+## Reminders on all upcoming cards (Codex, 2026-10-26; unreleased)
+
+The Sports Trak game menu no longer gates GameReminderMenuTile on My Teams
+membership. Its existing canSet/isSet checks offer Remind me on any upcoming
+eligible game, or Cancel reminder on a saved game, including unmatched games.
+Main rows, Later today grids and My Teams share this menu. Live/final/past or
+cancelled games remain ineligible. Team-wide automatic reminders still use followed
+teams. Scheduler, timing, persistence and reminder popup are unchanged.

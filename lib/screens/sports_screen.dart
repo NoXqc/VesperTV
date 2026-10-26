@@ -992,8 +992,6 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         matching: gameMatches == null && _matching,
         hideScores: _hideScores,
         hasPick: _picks.channelIdFor(game) != null,
-        offerReminder: _follows.involves(game) ||
-            context.read<GameReminders>().isSet(game),
         offerPlayHere: watch != null || !_isPreviewing(game),
         playFullScreen: watch != null,
         recording: RecordingService.supported
@@ -3024,7 +3022,6 @@ class _GameDialog extends StatelessWidget {
     this.autoTeam,
     required this.offerPlayHere,
     this.playFullScreen = false,
-    this.offerReminder = false,
   });
 
   final SportsGame game;
@@ -3032,7 +3029,6 @@ class _GameDialog extends StatelessWidget {
   final bool matching;
   final bool hideScores;
   final bool hasPick;
-  final bool offerReminder;
 
   /// First entry "Play here" (the hero mini player): some remotes have no
   /// Play/Pause key (user report, 2026-10-18), so hold OK > OK starts it.
@@ -3179,11 +3175,9 @@ class _GameDialog extends StatelessWidget {
                 child: ListView(
                   shrinkWrap: true,
                   children: [
-                    if (offerReminder)
-                      GameReminderMenuTile(
-                          game: game,
-                          onTap: () =>
-                              Navigator.pop(context, _ReminderAction())),
+                    GameReminderMenuTile(
+                        game: game,
+                        onTap: () => Navigator.pop(context, _ReminderAction())),
                     TvMenuTile(
                         icon: Icons.playlist_add,
                         title: tr('Add sources'),

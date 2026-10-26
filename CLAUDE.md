@@ -1375,3 +1375,10 @@ and adds decoder-output fallback via existing FrameRateProbe callbacks. StatsBri
 retains both input and output evidence; Data pool labels stream/decoder and shows
 known disagreement separately. No codec/display/surface configuration changes.
 See `dev-notes/decoder-hdr-reporting.md`; a real Shield retest is still required.
+
+### Codex 2026-10-26: reminders on every upcoming Sports Trak card (unreleased)
+
+`codex/game-card-reminders` removes the game-menu My Teams restriction. The existing
+reminder widget/scheduler already supports manual reminders without following teams.
+Live score popups are Settings > Interface > Goals alert (off by default, My Teams).
+Separate completed decoder HDR work remains on codex/decoder-hdr-reporting b0b0889.
