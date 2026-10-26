@@ -1951,4 +1951,13 @@ const Map<String, String> kFr = {
       "{items} éléments de liste et {sources} sources Media Hub importés. {existing} sources existaient déjà ; {failed} étaient injoignables.",
   "Could not import this file. Choose an M3U channel playlist or a TXT/JSON file containing Media Hub manifest links.":
       "Importation impossible. Choisissez une liste de chaînes M3U ou un fichier TXT/JSON contenant des liens de manifestes Media Hub.",
+  "Stream sources": "Sources du flux",
+  "Up/Down: browse · OK: switch · Back: close":
+      "Haut/Bas : parcourir · OK : changer · Retour : fermer",
+  "Could not load stream sources.":
+      "Impossible de charger les sources du flux.",
+  "Could not switch stream. Try another source.":
+      "Impossible de changer de flux. Essayez une autre source.",
+  "Current stream": "Flux actuel",
+  "Size unknown": "Taille inconnue",
 };

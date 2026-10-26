@@ -343,6 +343,8 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 
 ## 13. Status & open items (as of 2026-10-24)
 
+- **cdx, 2026-10-25: Media Hub source drawer** prepared on `codex/mediahub-stream-drawer` (not released): Right with player controls unfocused opens alternative stream files, provider/format labels and sizes; OK changes source at the current position. Shared drawer/session feeds Android and Windows; choices remain scoped to title/episode/viewer. See HANDOFF.md for verification and commit.
+
 - **Prepared release: VesperTV 1.0.40 (beta), +449 (2026-10-25).** Owner requested
   the current integrated tree and Live now grid, APK + Windows, GitHub publication with
   (beta) in title and Downloader pointing to it. Publish as latest (not GitHub prerelease,

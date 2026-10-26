@@ -8,6 +8,8 @@ import 'package:provider/provider.dart';
 import 'package:video_player_hdr/video_player_hdr.dart';
 
 import '../models/channel.dart';
+import '../services/archive_playback_sources.dart';
+import '../widgets/archive_source_drawer.dart';
 import '../models/epg_program.dart';
 import '../services/app_preferences.dart';
 import '../services/epg_service.dart';
@@ -57,9 +59,10 @@ import '../widgets/media_file_info_overlay.dart';
 /// Both bars auto-hide after inactivity so they can't permanently trap the
 /// D-pad the way the seek bar used to.
 class PlayerScreen extends StatefulWidget {
-  const PlayerScreen({super.key, required this.channel});
+  const PlayerScreen({super.key, required this.channel, this.sources});
 
   final Channel channel;
+  final ArchivePlaybackSources? sources;
 
   @override
   State<PlayerScreen> createState() => _PlayerScreenState();
@@ -118,6 +121,49 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (!_panelOpen) return;
     setState(() => _panelOpen = false);
     _rootFocus.requestFocus();
+  }
+
+  bool _sourceDrawerOpen = false;
+
+  Future<void> _openSources() async {
+    final sources = widget.sources;
+    final channel = _playback.currentChannel;
+    if (sources == null || channel == null || _sourceDrawerOpen) return;
+    _sourceDrawerOpen = true;
+    _hideTimer?.cancel();
+    setState(() {
+      _topVisible = false;
+      _bottomVisible = false;
+      _moreVisible = false;
+    });
+    try {
+      final selection = await showArchiveSourceDrawer(context,
+          sources: sources, channelId: channel.id);
+      if (!mounted ||
+          selection == null ||
+          _playback.currentChannel?.id != channel.id) {
+        return;
+      }
+      await sources.remember(channel.id, selection.option);
+      if (!mounted || _playback.currentChannel?.id != channel.id) return;
+      final wasPlaying = _playback.controller?.value.isPlaying ?? true;
+      // Same title/episode ID, new URL: teardown saves its exact position
+      // before the replacement controller reads the normal resume point.
+      await _playback.play(selection.channel);
+      final replacement = _playback.controller;
+      await _playback.initFuture;
+      if (!wasPlaying && mounted && _playback.controller == replacement) {
+        await replacement?.pause();
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('Could not switch stream. Try another source.'))));
+      }
+    } finally {
+      _sourceDrawerOpen = false;
+      if (mounted) _rootFocus.requestFocus();
+    }
   }
 
   /// Refreshed on every build (see [build]) and read from [_toggleImmersive]
@@ -647,9 +693,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     // dispatching timed out... Waited 5004ms for KeyEvent", CPU at
                     // 186%), not a clean exception: the video kept playing (it's
                     // driven independently of the Dart UI thread) while the UI
-                    // froze solid until Android force-killed the app. A no-op here,
-                    // same as Left/Up/Down always being consumed, is enough.
-                    const SingleActivator(LogicalKeyboardKey.arrowRight): () {},
+                    // froze solid until Android force-killed the app. Consume
+                    // it even when no Media Hub sources exist;
+                    // Media Hub playback uses it to open its source drawer.
+                    const SingleActivator(LogicalKeyboardKey.arrowRight):
+                        _openSources,
                     // No repeats: the OK held to open this player must not
                     // pop the card on arrival.
                     const SingleActivator(LogicalKeyboardKey.select,

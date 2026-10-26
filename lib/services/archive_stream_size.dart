@@ -7,7 +7,7 @@ int archiveStreamBytes(ArchiveStreamOption option) {
   if (stream.sizeBytes case final bytes? when bytes > 0) return bytes;
   final match = RegExp(r'(\d+(?:[.,]\d+)?)\s*(TiB|GiB|MiB|KiB|TB|GB|MB|KB)\b',
           caseSensitive: false)
-      .firstMatch(stream.title ?? '');
+      .firstMatch('${stream.title ?? ''} ${stream.name ?? ''}');
   if (match == null) return 0;
   final number = double.tryParse(match[1]!.replaceAll(',', '.')) ?? 0;
   final unit = match[2]!.toUpperCase();

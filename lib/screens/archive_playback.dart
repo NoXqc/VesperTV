@@ -10,6 +10,7 @@ import '../models/channel.dart';
 import '../models/series_details.dart';
 import '../models/xtream_series.dart';
 import '../services/archive_service.dart';
+import '../services/archive_playback_sources.dart';
 import '../services/archive_resume_source.dart';
 import '../services/archive_stream_size.dart';
 import '../services/storage_service.dart';
@@ -206,6 +207,8 @@ Future<void> playArchiveTitle(
   // Extras' "Recently watched" row (the show, for an episode).
   unawaited(service.recordWatched(source, meta));
 
+  final selectedStreams = <String, ArchiveStreamOption>{channel.id: picked};
+
   Future<Channel?> resolve(Channel placeholder) async {
     final video = videosById[placeholder.id];
     if (video == null || !resumeSource.isCurrent) return null;
@@ -222,12 +225,44 @@ Future<void> playArchiveTitle(
     await nextResume.remember(o);
     if (o.stream.ytId != null) return null;
     picked = o; // the episode after follows this one
+    selectedStreams[placeholder.id] = o;
     final ch = service
         .channelFor(source, meta, o.stream, episode: video)
         .copyWith(mediaFileInfo: archiveMediaFileInfo(o));
     _track(ch, meta, video);
     return ch.copyWith(url: restoredNext.url ?? await _playUrl(o));
   }
+
+  bool belongs(String id) => id == channel.id || videosById.containsKey(id);
+  ArchiveVideo? videoFor(String id) => videosById[id] ?? episode;
+  final sources = ArchivePlaybackSources(
+    load: (id) async {
+      if (!belongs(id) || !resumeSource.isCurrent) return const [];
+      final streams =
+          await service.streams(source, meta, episode: videoFor(id));
+      return resumeSource.isCurrent ? streams : const [];
+    },
+    current: (id) => selectedStreams[id],
+    select: (id, option) async {
+      if (!belongs(id) || !resumeSource.isCurrent) return null;
+      final url = await _playUrl(option);
+      if (!resumeSource.isCurrent) return null;
+      return service
+          .channelFor(source, meta, option.stream, episode: videoFor(id))
+          .copyWith(url: url, mediaFileInfo: archiveMediaFileInfo(option));
+    },
+    remember: (id, option) async {
+      if (!belongs(id) || !resumeSource.isCurrent) return;
+      selectedStreams[id] = option;
+      picked = option; // subsequent episodes follow this source/quality
+      final tracked = service.channelFor(source, meta, option.stream,
+          episode: videoFor(id));
+      _track(tracked, meta, videoFor(id));
+      try {
+        await ArchiveResumeSource(storage, id).remember(option);
+      } catch (_) {/* A preference failure must not prevent playback. */}
+    },
+  );
 
   final hasQueue = queue != null && queue.isNotEmpty;
   // Same split as MovieDetailScreen._play: Windows has its own player.
@@ -236,6 +271,7 @@ Future<void> playArchiveTitle(
     await Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => DesktopPlayerScreen(
               channel: channel,
+              sources: sources,
               queue: hasQueue ? queue : null,
               resolveQueued: hasQueue ? resolve : null,
             )));
@@ -246,8 +282,8 @@ Future<void> playArchiveTitle(
     // TvHomeScreen._selectChannel).
     await playback.play(channel);
     if (!context.mounted) return;
-    await Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => PlayerScreen(channel: channel)));
+    await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => PlayerScreen(channel: channel, sources: sources)));
   }
 }
 

@@ -1952,4 +1952,13 @@ const Map<String, String> kIt = {
       "Importati {items} elementi delle playlist e {sources} fonti Media Hub. {existing} fonti erano già presenti; {failed} non erano raggiungibili.",
   "Could not import this file. Choose an M3U channel playlist or a TXT/JSON file containing Media Hub manifest links.":
       "Impossibile importare questo file. Scegli una lista di canali M3U o un file TXT/JSON con collegamenti ai manifest di Media Hub.",
+  "Stream sources": "Sorgenti dello streaming",
+  "Up/Down: browse · OK: switch · Back: close":
+      "Su/Giù: sfoglia · OK: cambia · Indietro: chiudi",
+  "Could not load stream sources.":
+      "Impossibile caricare le sorgenti dello streaming.",
+  "Could not switch stream. Try another source.":
+      "Impossibile cambiare streaming. Prova un’altra sorgente.",
+  "Current stream": "Streaming attuale",
+  "Size unknown": "Dimensione sconosciuta",
 };

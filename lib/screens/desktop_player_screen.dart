@@ -8,6 +8,8 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:provider/provider.dart';
 
 import '../models/channel.dart';
+import '../services/archive_playback_sources.dart';
+import '../widgets/archive_source_drawer.dart';
 import '../services/app_preferences.dart';
 import '../services/desktop_mini_player.dart';
 import '../services/epg_service.dart';
@@ -56,12 +58,14 @@ class DesktopPlayerScreen extends StatefulWidget {
     super.key,
     required this.channel,
     this.queue,
+    this.sources,
     this.resolveQueued,
     this.existingPlayer,
     this.existingController,
   });
 
   final Channel channel;
+  final ArchivePlaybackSources? sources;
 
   /// Every episode of the series this channel belongs to, in order — only
   /// meaningful (and only ever passed) for a TV show episode, same concept
@@ -128,6 +132,36 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     if (!_panelOpen) return;
     setState(() => _panelOpen = false);
     _rootFocus.requestFocus();
+  }
+
+  bool _sourceDrawerOpen = false;
+
+  Future<void> _openSources() async {
+    final sources = widget.sources;
+    if (sources == null || _sourceDrawerOpen) return;
+    final channelId = _currentChannel.id;
+    _sourceDrawerOpen = true;
+    setState(() => _controlsVisible = false);
+    try {
+      final selection = await showArchiveSourceDrawer(context,
+          sources: sources, channelId: channelId);
+      if (!mounted || selection == null || _currentChannel.id != channelId) {
+        return;
+      }
+      final position = _player.state.position;
+      final playing = _player.state.playing;
+      await sources.remember(channelId, selection.option);
+      if (!mounted || _currentChannel.id != channelId) return;
+      await _switchTo(selection.channel, start: position, play: playing);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('Could not switch stream. Try another source.'))));
+      }
+    } finally {
+      _sourceDrawerOpen = false;
+      if (mounted) _rootFocus.requestFocus();
+    }
   }
 
   /// False when this screen is reusing a session handed off by
@@ -275,7 +309,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     Navigator.of(context).pop();
   }
 
-  Future<void> _switchTo(Channel channel) async {
+  Future<void> _switchTo(Channel channel,
+      {Duration? start, bool play = true}) async {
     if (channel.url.isEmpty) {
       final resolve = widget.resolveQueued;
       Channel? resolved;
@@ -296,7 +331,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     }
     _reportStopped();
     setState(() => _currentChannel = channel);
-    await _player.open(Media(channel.url));
+    await _player.open(Media(channel.url), play: play);
+    if (start != null) await _player.seek(start);
     if (!mounted) return;
     unawaited(WatchTracker.instance.started(channel.id));
     _applySeriesSubtitles();
@@ -575,6 +611,13 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                   LogicalKeyboardKey.numpadEnter
                 ].contains(event.logicalKey)) {
               _fileInfoRequests.value++;
+              return KeyEventResult.handled;
+            }
+            if (event is KeyDownEvent &&
+                event.logicalKey == LogicalKeyboardKey.arrowRight &&
+                _rootFocus.hasPrimaryFocus &&
+                widget.sources != null) {
+              _openSources();
               return KeyEventResult.handled;
             }
             // M = mute / unmute, like most desktop players.

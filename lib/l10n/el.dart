@@ -2561,4 +2561,12 @@ const Map<String, String> kEl = {
       "Εισήχθησαν {items} στοιχεία λιστών και {sources} πηγές Media Hub. {existing} πηγές υπήρχαν ήδη· δεν ήταν δυνατή η σύνδεση με {failed}.",
   "Could not import this file. Choose an M3U channel playlist or a TXT/JSON file containing Media Hub manifest links.":
       "Δεν ήταν δυνατή η εισαγωγή. Επιλέξτε λίστα καναλιών M3U ή αρχείο TXT/JSON με συνδέσμους manifest του Media Hub.",
+  "Stream sources": "Πηγές ροής",
+  "Up/Down: browse · OK: switch · Back: close":
+      "Πάνω/Κάτω: περιήγηση · OK: αλλαγή · Πίσω: κλείσιμο",
+  "Could not load stream sources.": "Δεν ήταν δυνατή η φόρτωση των πηγών ροής.",
+  "Could not switch stream. Try another source.":
+      "Δεν ήταν δυνατή η αλλαγή ροής. Δοκιμάστε άλλη πηγή.",
+  "Current stream": "Τρέχουσα ροή",
+  "Size unknown": "Άγνωστο μέγεθος",
 };
