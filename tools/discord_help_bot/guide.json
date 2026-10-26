@@ -107,7 +107,7 @@
     "id": "6d16610d9ad9e6d3",
     "category": "Full screen",
     "title": "Info card",
-    "answer": "What's on now and next. With Settings › Interface › Data pool on, a second card shows resolution, fps, codecs and bitrate.",
+    "answer": "What's on now and next, with a gold tag naming the channel's playlist. With Settings › Playback › Data pool on, a second card shows resolution, fps, codecs and bitrate.",
     "controls": "OK LIVE",
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },
@@ -115,7 +115,7 @@
     "id": "7dd60da1eb923f65",
     "category": "Full screen",
     "title": "Data pool",
-    "answer": "With Settings › Interface › Data pool on, OK opens the stream details card: resolution, frame rate, codecs, measured bitrate, buffer and playback state.",
+    "answer": "With Settings › Playback › Data pool on, OK opens the stream details card: resolution, frame rate, codecs, measured bitrate, buffer and playback state.",
     "controls": "OK MOVIE / EPISODE · ANDROID",
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },
@@ -160,6 +160,14 @@
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },
   {
+    "id": "7292204b66bcb258",
+    "category": "Home",
+    "title": "Hide profiles on Home",
+    "answer": "Turn this on to remove the profiles row from Home. It is off by default and applies to the active profile. You can still manage profiles in Settings.",
+    "controls": "Settings > Interface > Tabs > Hide profiles",
+    "url": "https://vespertv.app/remote.html#Home"
+  },
+  {
     "id": "c7703c69dc0eef12",
     "category": "Movies & Shows",
     "title": "Favourite on / off",
@@ -182,6 +190,14 @@
     "answer": "The whole group as a grid, with sorting (and TMDB release-date sorting if you added a TMDB key).",
     "controls": "Hold OK on a group",
     "url": "https://vespertv.app/remote.html#Movies%20%26%20Shows"
+  },
+  {
+    "id": "6c879cf177f26ff8",
+    "category": "Media Hub",
+    "title": "Stream sources",
+    "answer": "Slide out the other files for this movie or episode, including provider, advertised format and size when available. Up/Down browses, OK switches at the current position and saves the selected source for resume; Left or Back closes.",
+    "controls": "Right during playback, controls unfocused",
+    "url": "https://vespertv.app/remote.html#Media%20Hub"
   },
   {
     "id": "b39e8c0bc4e5d4f3",

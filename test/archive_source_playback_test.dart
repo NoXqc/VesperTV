@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nox_iptv/models/channel.dart';
 import 'package:nox_iptv/services/playback_service.dart';
@@ -7,6 +8,11 @@ import 'native_live_zap_test.dart' show ZapStorage, ZapPlaylist, ZapController;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  // dispose releases the screen wake lock even when no switch was confirmed.
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMessageHandler(
+          'dev.flutter.pigeon.wakelock_plus_platform_interface.WakelockPlusApi.toggle',
+          (_) async => const StandardMessageCodec().encodeMessage([null]));
 
   test('Media Hub replacement file bypasses the same-title playback guard',
       () async {

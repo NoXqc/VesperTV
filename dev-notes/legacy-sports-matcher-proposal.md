@@ -1,3 +1,5 @@
+> Historical Sports Trak matching proposal, merged for reference on 2026-10-26. This is not the current task list; consult CLAUDE.md and current matcher code.
+
 # Proposal: improve Sports Trak channel matching
 
 **Status:** Proposed, based on the measured audit at `9adbc7f`.
