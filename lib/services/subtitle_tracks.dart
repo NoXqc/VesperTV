@@ -102,6 +102,13 @@ String languageName(String? code) {
   return parts.length > 1 ? '$base (${parts.sublist(1).join('-')})' : base;
 }
 
+/// Treat ISO-639 aliases and region variants as the same base language.
+bool sameTrackLanguage(String? a, String? b) {
+  final left = languageName(a?.toLowerCase()).split(' (').first;
+  final right = languageName(b?.toLowerCase()).split(' (').first;
+  return left.isNotEmpty && left == right;
+}
+
 /// One subtitle track inside the playing file (MKV/MP4 text tracks).
 class SubtitleTrack {
   const SubtitleTrack({
@@ -271,12 +278,19 @@ class SubtitleTracks {
 
   // ------------------------------------------------- per-series memory
 
-  /// Subtitles turned on during an episode stay on for the rest of that
-  /// series; movies are picked each time (owner, 2026-10-18). Off forgets.
-  static String? seriesKeyOf(Channel channel) =>
-      channel.rawId.startsWith('xt_ep_')
-          ? '${channel.playlistId}::${channel.group}'
-          : null;
+  /// Choices follow a series across episodes and a movie across resumes.
+  /// Explicit Off overrides the viewer's preferred subtitle language.
+  static String? seriesKeyOf(Channel channel) {
+    final raw = channel.rawId;
+    if (raw.startsWith('arc_ep_')) {
+      final source = RegExp(r'^arc_ep_([^_]+)_').firstMatch(raw)?.group(1);
+      return '${channel.playlistId}::$source::${channel.group}';
+    }
+    if (raw.startsWith('xt_ep_')) {
+      return '${channel.playlistId}::${channel.group}';
+    }
+    return Channel.isLiveId(raw) ? null : 'title:${channel.id}';
+  }
 
   static Map<String, dynamic> _seriesChoices(StorageService storage) {
     try {
@@ -294,34 +308,51 @@ class SubtitleTracks {
   static Map<String, dynamic>? seriesChoiceFor(
       StorageService storage, Channel channel) {
     final key = seriesKeyOf(channel);
-    final choice = key == null ? null : _seriesChoices(storage)[key];
-    return choice is Map ? Map<String, dynamic>.from(choice) : null;
+    if (key == null) return null;
+    final choice = _seriesChoices(storage)[key];
+    if (choice is Map) return Map<String, dynamic>.from(choice);
+    final language = storage.getPreferredSubtitleLanguage();
+    return language == 'off'
+        ? {'kind': 'off'}
+        : {'kind': 'embedded', 'lang': language};
   }
 
   /// [kind] 'embedded' (a track of the file, matched by [lang] + [label])
-  /// or 'online' (the first add-on match in [lang]); null = forget.
+  /// or 'online' (the first add-on match in [lang]); null = explicitly Off.
   static Future<void> rememberForSeries(
       StorageService storage, Channel? channel,
-      {String? kind, String? lang, String? label}) async {
+      {String? kind, String? lang, String? label, bool forced = false}) async {
     final key = channel == null ? null : seriesKeyOf(channel);
     if (key == null) return;
     final all = _seriesChoices(storage);
-    if (kind == null) {
-      if (all.remove(key) == null) return;
-    } else {
-      all[key] = {'kind': kind, 'lang': lang, 'label': label};
-    }
+    all[key] = {
+      'kind': kind ?? 'off',
+      'lang': lang,
+      'label': label,
+      'forced': forced
+    };
     await storage.setSeriesSubtitlesJson(jsonEncode(all));
   }
 
   /// Reapplies the series' remembered subtitles on a new episode's player.
   /// Gives up quietly when the episode has no matching track/subtitle.
   static Future<void> applyForSeries(StorageService storage, Channel channel,
-      VideoPlayerHdrController controller) async {
-    final key = seriesKeyOf(channel);
-    if (key == null) return;
-    final choice = _seriesChoices(storage)[key];
-    if (choice is! Map) return;
+      VideoPlayerHdrController controller,
+      {bool Function()? isCurrent}) async {
+    final choice = seriesChoiceFor(storage, channel);
+    if (choice == null) return;
+    final viewer = storage.getActiveViewerId();
+    final initial = jsonEncode(choice);
+    bool current() =>
+        (isCurrent?.call() ?? true) &&
+        storage.getActiveViewerId() == viewer &&
+        jsonEncode(seriesChoiceFor(storage, channel)) == initial;
+    if (!current()) return;
+    if (choice['kind'] == 'off') {
+      await clearExternal(controller);
+      if (current()) await select(playerIdOf(controller), null);
+      return;
+    }
     final lang = choice['lang'] as String?;
     final id = playerIdOf(controller);
     if (choice['kind'] == 'online') {
@@ -332,6 +363,7 @@ class SubtitleTracks {
           .firstOrNull;
       if (match == null) return;
       final text = await AddonService.download(match);
+      if (!current()) return;
       await useExternal(controller, text);
       externalLabel[id] =
           languageName(lang).isEmpty ? lang : languageName(lang);
@@ -345,9 +377,16 @@ class SubtitleTracks {
       } catch (_) {
         return; // player gone
       }
+      if (!current()) return;
       if (tracks.isNotEmpty) {
         final label = choice['label'] as String?;
-        final sameLang = tracks.where((t) => t.language == lang);
+        final sameLang = tracks.where((t) =>
+            (sameTrackLanguage(t.language, lang) ||
+                ((lang == null || lang.isEmpty || lang == 'und') &&
+                    label != null &&
+                    label.isNotEmpty &&
+                    t.label == label)) &&
+            t.forced == (choice['forced'] == true));
         final pick = sameLang.where((t) => t.label == label).firstOrNull ??
             sameLang.firstOrNull;
         if (pick != null) await select(id, pick);

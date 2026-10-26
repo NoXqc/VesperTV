@@ -313,8 +313,10 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   /// memory as Android's, see DesktopSubtitles.applyForSeries).
   void _applySeriesSubtitles() {
     if (_isLive) return;
+    final channel = _currentChannel;
     unawaited(DesktopSubtitles.applyForSeries(
-            context.read<StorageService>(), _currentChannel, _player)
+            context.read<StorageService>(), channel, _player,
+            isCurrent: () => mounted && _currentChannel == channel)
         .catchError((Object _) {}));
   }
 

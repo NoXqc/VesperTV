@@ -293,9 +293,22 @@ class StorageService {
   /// Languages picked from online subtitles (add-on codes like "fre"),
   /// most recent first — the player's Subtitles list offers them directly.
   String? getSeriesSubtitlesJson() =>
-      _prefs.getString(AppConstants.keySeriesSubtitles);
+      _prefs.getString(_vk(AppConstants.keySeriesSubtitles));
   Future<void> setSeriesSubtitlesJson(String json) =>
-      _prefs.setString(AppConstants.keySeriesSubtitles, json);
+      _prefs.setString(_vk(AppConstants.keySeriesSubtitles), json);
+
+  String getPreferredAudioLanguage() =>
+      _prefs.getString(_vk(AppConstants.keyPreferredAudioLanguage)) ?? '';
+  Future<void> setPreferredAudioLanguage(String value) =>
+      _prefs.setString(_vk(AppConstants.keyPreferredAudioLanguage), value);
+  String getPreferredSubtitleLanguage() =>
+      _prefs.getString(_vk(AppConstants.keyPreferredSubtitleLanguage)) ?? 'off';
+  Future<void> setPreferredSubtitleLanguage(String value) =>
+      _prefs.setString(_vk(AppConstants.keyPreferredSubtitleLanguage), value);
+  String? getAudioTrackChoicesJson() =>
+      _prefs.getString(_vk(AppConstants.keyAudioTrackChoices));
+  Future<void> setAudioTrackChoicesJson(String value) =>
+      _prefs.setString(_vk(AppConstants.keyAudioTrackChoices), value);
 
   List<String> getOnlineSubtitleLangs() =>
       _prefs.getStringList(AppConstants.keyOnlineSubtitleLangs) ?? const [];

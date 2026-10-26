@@ -16,6 +16,7 @@ import '../widgets/native_video_hole.dart';
 import 'playlist_manager.dart';
 import 'real_4k_channels.dart';
 import 'storage_service.dart';
+import 'audio_track_preferences.dart';
 import 'archive_ready_watch.dart';
 import 'display_match.dart';
 import 'archive_service.dart';
@@ -505,6 +506,8 @@ class PlaybackService extends ChangeNotifier {
       // Switched channel meanwhile: this controller is already disposed.
       if (controller != newController) return;
       await newController.play();
+      unawaited(AudioTrackPreferences.apply(_storage, channel, newController,
+          isCurrent: () => controller == newController));
       // Fire TV/Android TV boxes otherwise sleep the screen mid-stream on
       // idle-input timeout, exactly like they would for any non-video app —
       // there was nothing here telling the OS playback is active.
@@ -811,6 +814,8 @@ class PlaybackService extends ChangeNotifier {
       controller = newController;
       _watchRestartLoop(newController, channel);
       await newController.play();
+      unawaited(AudioTrackPreferences.apply(_storage, channel, newController,
+          isCurrent: () => controller == newController));
       unawaited(previous?.dispose());
       reconnectStatus = null;
       error = null;
@@ -901,6 +906,9 @@ class PlaybackService extends ChangeNotifier {
         controller = retryController;
         _watchRestartLoop(retryController, channel);
         await retryController.play();
+        unawaited(AudioTrackPreferences.apply(
+            _storage, channel, retryController,
+            isCurrent: () => controller == retryController));
         unawaited(previous?.dispose());
         reconnectStatus = null;
         error = null;

@@ -97,14 +97,26 @@ class _SubtitleOverlayState extends State<SubtitleOverlay> {
     }
   }
 
-  /// A new episode's player: the subtitles picked earlier in this series
-  /// come back on (SubtitleTracks.applyForSeries). Movies never do.
+  /// Apply once the file header and the native player ID exist.
   void _applySeriesChoice() {
-    final channel = context.read<PlaybackService>().currentChannel;
+    final playback = context.read<PlaybackService>();
+    final channel = playback.currentChannel;
+    final controller = widget.controller;
     if (channel == null) return;
-    unawaited(SubtitleTracks.applyForSeries(
-            context.read<StorageService>(), channel, widget.controller)
-        .catchError((_) {}));
+    final storage = context.read<StorageService>();
+    final viewer = storage.getActiveViewerId();
+    bool current() =>
+        mounted &&
+        widget.controller == controller &&
+        playback.controller == controller &&
+        storage.getActiveViewerId() == viewer;
+    unawaited(() async {
+      await playback.initFuture;
+      if (!current()) return;
+      await SubtitleTracks.applyForSeries(storage, channel, controller,
+          isCurrent: current);
+    }()
+        .catchError((Object _) {}));
   }
 
   @override

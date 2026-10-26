@@ -1950,4 +1950,9 @@ const Map<String, String> kEs = {
       "No se pudo importar este archivo. Elige una lista de canales M3U o un archivo TXT/JSON con enlaces de manifiestos de Media Hub.",
   "Hide profiles": "Ocultar perfiles",
   "Hides the profiles row on Home.": "Oculta la fila de perfiles en Inicio.",
+  "Preferred audio language": "Idioma de audio preferido",
+  "Preferred subtitle language": "Idioma de subtítulos preferido",
+  "Source default": "Predeterminado de la fuente",
+  "Movies and episodes use these languages when available. Your manual track choices take priority when resuming.":
+      "Las películas y los episodios usan estos idiomas cuando están disponibles. Tus selecciones manuales de pistas tienen prioridad al reanudar.",
 };

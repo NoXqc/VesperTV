@@ -8,6 +8,7 @@ import '../../services/device_defaults.dart';
 import '../../services/playback_service.dart';
 import '../../services/recording_service.dart';
 import '../../services/storage_service.dart';
+import '../../services/subtitle_tracks.dart';
 import '../../utils/constants.dart';
 import '../../utils/tv_theme.dart';
 import '../../widgets/native_video_hole.dart';
@@ -136,6 +137,65 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
       ),
     );
     if (picked != null) await _setLanguage(picked);
+  }
+
+  static const _trackLanguages = [
+    'en',
+    'fr',
+    'es',
+    'it',
+    'el',
+    'de',
+    'pt',
+    'nl',
+    'ar',
+    'ru',
+    'ja',
+    'ko',
+    'zh',
+    'hi',
+    'tr',
+    'pl',
+    'sv',
+    'da',
+    'no',
+    'fi',
+  ];
+
+  Future<void> _pickTrackLanguage({required bool audio}) async {
+    final viewer = _storage.getActiveViewerId();
+    final current = audio
+        ? _storage.getPreferredAudioLanguage()
+        : _storage.getPreferredSubtitleLanguage();
+    final picked = await showDialog<String>(
+      context: context,
+      builder: (dialog) => SimpleDialog(
+        title: Text(tr(audio
+            ? 'Preferred audio language'
+            : 'Preferred subtitle language')),
+        children: [
+          for (final code in [audio ? '' : 'off', ..._trackLanguages])
+            TvMenuTile(
+              autofocus: code == current,
+              title: code.isEmpty
+                  ? tr('Source default')
+                  : code == 'off'
+                      ? tr('Off')
+                      : languageName(code),
+              onTap: () => Navigator.of(dialog).pop(code),
+            ),
+        ],
+      ),
+    );
+    if (picked == null || !mounted || _storage.getActiveViewerId() != viewer) {
+      return;
+    }
+    if (audio) {
+      await _storage.setPreferredAudioLanguage(picked);
+    } else {
+      await _storage.setPreferredSubtitleLanguage(picked);
+    }
+    if (mounted) setState(() {});
   }
 
   /// Back to home first: main.dart remounts home on a language change, but
@@ -394,6 +454,30 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                     _section(
                         'audio', Icons.surround_sound_outlined, tr('Audio'),
                         children: [
+                          TvMenuTile(
+                            title: tr('Preferred audio language'),
+                            subtitle:
+                                _storage.getPreferredAudioLanguage().isEmpty
+                                    ? tr('Source default')
+                                    : languageName(
+                                        _storage.getPreferredAudioLanguage()),
+                            onTap: () => _pickTrackLanguage(audio: true),
+                          ),
+                          TvMenuTile(
+                            title: tr('Preferred subtitle language'),
+                            subtitle: _storage.getPreferredSubtitleLanguage() ==
+                                    'off'
+                                ? tr('Off')
+                                : languageName(
+                                    _storage.getPreferredSubtitleLanguage()),
+                            onTap: () => _pickTrackLanguage(audio: false),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Text(
+                                tr('Movies and episodes use these languages when available. Your manual track choices take priority when resuming.'),
+                                style: const TextStyle(color: Colors.white70)),
+                          ),
                           TvSwitchListTile(
                             title:
                                 Text(tr('Surround passthrough (Dolby Atmos)')),

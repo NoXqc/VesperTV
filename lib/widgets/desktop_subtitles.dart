@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart' as mk;
@@ -69,9 +70,21 @@ class DesktopSubtitles {
   /// for a track of the file, first add-on match for online). Quiet when
   /// nothing matches.
   static Future<void> applyForSeries(
-      StorageService storage, Channel channel, mk.Player player) async {
+      StorageService storage, Channel channel, mk.Player player,
+      {bool Function()? isCurrent}) async {
     final choice = SubtitleTracks.seriesChoiceFor(storage, channel);
     if (choice == null) return;
+    final viewer = storage.getActiveViewerId();
+    final initial = jsonEncode(choice);
+    bool current() =>
+        (isCurrent?.call() ?? true) &&
+        storage.getActiveViewerId() == viewer &&
+        jsonEncode(SubtitleTracks.seriesChoiceFor(storage, channel)) == initial;
+    if (!current()) return;
+    if (choice['kind'] == 'off') {
+      await player.setSubtitleTrack(mk.SubtitleTrack.no());
+      return;
+    }
     final lang = choice['lang'] as String?;
     if (choice['kind'] == 'online') {
       final addons = AddonService(storage);
@@ -80,15 +93,18 @@ class DesktopSubtitles {
           .where((s) => s.lang == lang)
           .firstOrNull;
       if (match == null) return;
-      await useOnline(player, await AddonService.download(match), lang);
+      final text = await AddonService.download(match);
+      if (current()) await useOnline(player, text, lang);
       return;
     }
     // A track of the file: the list exists once the file's header is read.
     for (var i = 0; i < 6; i++) {
+      if (!current()) return;
       final tracks = embedded(player);
       if (tracks.isNotEmpty) {
         final label = choice['label'] as String?;
-        final sameLang = tracks.where((t) => t.language == lang);
+        final sameLang =
+            tracks.where((t) => sameTrackLanguage(t.language, lang));
         final pick = sameLang.where((t) => t.title == label).firstOrNull ??
             sameLang.firstOrNull;
         if (pick != null) await player.setSubtitleTrack(pick);
@@ -259,7 +275,7 @@ class _DesktopSubtitleButtonState extends State<DesktopSubtitleButton> {
     if (chosen is ({String lang})) return _applyOnlineLang(chosen.lang);
     final track = chosen is mk.SubtitleTrack ? chosen : null;
     // An episode: the choice carries on to the rest of the series; Off
-    // forgets it.
+    // is remembered.
     unawaited(SubtitleTracks.rememberForSeries(
         context.read<StorageService>(), widget.channel,
         kind: track == null ? null : 'embedded',

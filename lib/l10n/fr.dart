@@ -1954,4 +1954,9 @@ const Map<String, String> kFr = {
   "Hide profiles": "Masquer les profils",
   "Hides the profiles row on Home.":
       "Masque la rangée des profils sur l’accueil.",
+  "Preferred audio language": "Langue audio préférée",
+  "Preferred subtitle language": "Langue de sous-titres préférée",
+  "Source default": "Par défaut de la source",
+  "Movies and episodes use these languages when available. Your manual track choices take priority when resuming.":
+      "Les films et épisodes utilisent ces langues si elles sont disponibles. Vos choix manuels de pistes sont prioritaires à la reprise.",
 };

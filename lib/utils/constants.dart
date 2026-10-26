@@ -71,6 +71,9 @@ class AppConstants {
   static const String keyOnlineSubtitleLangs = 'vesper_online_sub_langs';
   // Subtitle choice per series (SubtitleTracks.rememberForSeries), JSON.
   static const String keySeriesSubtitles = 'vesper_series_subs';
+  static const String keyPreferredAudioLanguage = 'vesper_audio_language';
+  static const String keyPreferredSubtitleLanguage = 'vesper_subtitle_language';
+  static const String keyAudioTrackChoices = 'vesper_audio_choices';
   static const String keyWhatsNewTmdbLastRefreshed =
       'nox_whats_new_tmdb_last_refreshed';
 

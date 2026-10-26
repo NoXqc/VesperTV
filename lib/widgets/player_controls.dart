@@ -13,6 +13,7 @@ import '../services/playlist_manager.dart';
 import '../services/addon_service.dart';
 import '../services/storage_service.dart';
 import '../services/subtitle_tracks.dart';
+import '../services/audio_track_preferences.dart';
 import '../utils/video_quality.dart';
 import 'epg_guide.dart';
 import 'native_video_hole.dart';
@@ -1213,7 +1214,18 @@ class _AudioTrackButtonState extends State<_AudioTrackButton> {
       ),
     );
     if (chosen != null && mounted) {
-      await widget.controller.selectAudioTrack(chosen.id);
+      final storage = context.read<StorageService>();
+      final playback = context.read<PlaybackService>();
+      final channel = playback.currentChannel;
+      final controller = widget.controller;
+      final viewer = storage.getActiveViewerId();
+      await controller.selectAudioTrack(chosen.id);
+      if (channel != null &&
+          storage.getActiveViewerId() == viewer &&
+          playback.controller == controller &&
+          playback.currentChannel == channel) {
+        await AudioTrackPreferences.remember(storage, channel, chosen);
+      }
     }
   }
 
@@ -1430,7 +1442,8 @@ class _SubtitleButtonState extends State<_SubtitleButton> {
         context.read<StorageService>(), _channel,
         kind: track == null ? null : 'embedded',
         lang: track?.language,
-        label: track?.label));
+        label: track?.label,
+        forced: track?.forced ?? false));
     try {
       await SubtitleTracks.clearExternal(widget.controller);
       await SubtitleTracks.select(id, track);

@@ -1954,4 +1954,9 @@ const Map<String, String> kIt = {
       "Impossibile importare questo file. Scegli una lista di canali M3U o un file TXT/JSON con collegamenti ai manifest di Media Hub.",
   "Hide profiles": "Nascondi profili",
   "Hides the profiles row on Home.": "Nasconde la riga dei profili nella Home.",
+  "Preferred audio language": "Lingua audio preferita",
+  "Preferred subtitle language": "Lingua dei sottotitoli preferita",
+  "Source default": "Predefinita della sorgente",
+  "Movies and episodes use these languages when available. Your manual track choices take priority when resuming.":
+      "Film ed episodi usano queste lingue quando disponibili. Le tracce scelte manualmente hanno la priorità alla ripresa.",
 };

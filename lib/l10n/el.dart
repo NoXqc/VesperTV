@@ -2564,4 +2564,9 @@ const Map<String, String> kEl = {
   "Hide profiles": "Απόκρυψη προφίλ",
   "Hides the profiles row on Home.":
       "Αποκρύπτει τη σειρά προφίλ στην αρχική σελίδα.",
+  "Preferred audio language": "Προτιμώμενη γλώσσα ήχου",
+  "Preferred subtitle language": "Προτιμώμενη γλώσσα υποτίτλων",
+  "Source default": "Προεπιλογή πηγής",
+  "Movies and episodes use these languages when available. Your manual track choices take priority when resuming.":
+      "Οι ταινίες και τα επεισόδια χρησιμοποιούν αυτές τις γλώσσες όταν είναι διαθέσιμες. Οι χειροκίνητες επιλογές κομματιών έχουν προτεραιότητα στη συνέχιση.",
 };
