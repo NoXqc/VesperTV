@@ -25,6 +25,7 @@ import 'multiview_screen.dart';
 import 'search_screen.dart';
 import '../l10n/l10n.dart';
 import '../widgets/media_file_info_overlay.dart';
+import '../widgets/gold_tag.dart';
 
 /// Fullscreen playback screen. Pushed when a channel is tapped on a phone,
 /// or when the mini-player bar is tapped to expand back into fullscreen —
@@ -1230,6 +1231,10 @@ class _ZapInfoCard extends StatelessWidget {
     final now = DateTime.now();
     final time = TimeFormat.hm;
     final logo = channel.logoUrl;
+    final playlistName = context
+        .watch<PlaylistManager>()
+        .playlistNameFor(channel.playlistId)
+        .trim();
     return Container(
       constraints: const BoxConstraints(maxWidth: 760),
       margin: const EdgeInsets.symmetric(horizontal: 24),
@@ -1259,13 +1264,23 @@ class _ZapInfoCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(channel.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(color: Colors.white)),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(channel.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(color: Colors.white)),
+                    ),
+                    if (playlistName.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Flexible(child: GoldTag(label: playlistName)),
+                    ],
+                  ],
+                ),
                 if (program == null)
                   Text(tr('No program data available'),
                       style: const TextStyle(color: Colors.white70))

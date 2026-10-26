@@ -22,6 +22,7 @@ import '../widgets/media_file_info_overlay.dart';
 import '../widgets/player_side_panel.dart';
 import '../widgets/desktop_subtitles.dart';
 import '../widgets/player_bar_title.dart';
+import '../widgets/gold_tag.dart';
 
 /// A deliberately standalone, Windows-only playback screen — see
 /// `pubspec.yaml`'s media_kit comment for why this exists at all:
@@ -515,12 +516,30 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
             Row(
               children: [
                 Expanded(
-                  child: PlayerBarTitle(
-                    title: _currentChannel.name,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      PlayerBarTitle(
+                        title: _currentChannel.name,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600),
+                      ),
+                      if (_isLive &&
+                          playlist
+                              .playlistNameFor(_currentChannel.playlistId)
+                              .trim()
+                              .isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: GoldTag(
+                              label: playlist
+                                  .playlistNameFor(_currentChannel.playlistId)
+                                  .trim()),
+                        ),
+                    ],
                   ),
                 ),
                 ConstrainedBox(
