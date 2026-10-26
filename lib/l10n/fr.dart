@@ -1951,4 +1951,7 @@ const Map<String, String> kFr = {
       "{items} éléments de liste et {sources} sources Media Hub importés. {existing} sources existaient déjà ; {failed} étaient injoignables.",
   "Could not import this file. Choose an M3U channel playlist or a TXT/JSON file containing Media Hub manifest links.":
       "Importation impossible. Choisissez une liste de chaînes M3U ou un fichier TXT/JSON contenant des liens de manifestes Media Hub.",
+  "Hide profiles": "Masquer les profils",
+  "Hides the profiles row on Home.":
+      "Masque la rangée des profils sur l’accueil.",
 };

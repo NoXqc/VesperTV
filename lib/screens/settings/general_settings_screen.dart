@@ -291,6 +291,13 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                       ]),
                   _section('tabs', Icons.tab_outlined, tr('Tabs'), children: [
                     TvSwitchListTile(
+                      title: Text(tr('Hide profiles')),
+                      subtitle: Text(tr('Hides the profiles row on Home.')),
+                      value: context.watch<AppPreferences>().hideProfiles,
+                      onChanged: (v) =>
+                          context.read<AppPreferences>().setHideProfiles(v),
+                    ),
+                    TvSwitchListTile(
                       title: Text(tr('Hide Movies')),
                       subtitle: Text(tr(
                           'Removes the Movies tab and movie search results.')),

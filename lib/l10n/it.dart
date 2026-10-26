@@ -1952,4 +1952,6 @@ const Map<String, String> kIt = {
       "Importati {items} elementi delle playlist e {sources} fonti Media Hub. {existing} fonti erano già presenti; {failed} non erano raggiungibili.",
   "Could not import this file. Choose an M3U channel playlist or a TXT/JSON file containing Media Hub manifest links.":
       "Impossibile importare questo file. Scegli una lista di canali M3U o un file TXT/JSON con collegamenti ai manifest di Media Hub.",
+  "Hide profiles": "Nascondi profili",
+  "Hides the profiles row on Home.": "Nasconde la riga dei profili nella Home.",
 };

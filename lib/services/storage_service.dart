@@ -487,6 +487,12 @@ class StorageService {
   Future<void> setShowResumePill(bool value) =>
       _prefs.setBool(AppConstants.keyShowResumePill, value);
 
+  /// Hide only the active viewer's Home profiles strip.
+  bool getHideProfiles() =>
+      _prefs.getBool(_vk(AppConstants.keyHideProfiles)) ?? false;
+  Future<void> setHideProfiles(bool value) =>
+      _prefs.setBool(_vk(AppConstants.keyHideProfiles), value);
+
   /// Home page rows for the active viewer (see `HomeRows`).
   List<String>? getHomeRows() =>
       _prefs.getStringList(_vk(AppConstants.keyHomeRows));
