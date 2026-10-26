@@ -24,7 +24,9 @@ Future<ArchiveSourceSelection?> showArchiveSourceDrawer(BuildContext context,
       pageBuilder: (_, __, ___) => Align(
         alignment: Alignment.centerRight,
         child: SizedBox(
-          width: math.min(500, MediaQuery.sizeOf(context).width * 0.9),
+          width: MediaQuery.sizeOf(context).width >= 800
+              ? math.min(320, MediaQuery.sizeOf(context).width * 0.30)
+              : math.min(500, MediaQuery.sizeOf(context).width * 0.9),
           height: double.infinity,
           child: _ArchiveSourceDrawer(sources: sources, channelId: channelId),
         ),
@@ -41,7 +43,18 @@ class _ArchiveSourceDrawer extends StatefulWidget {
 }
 
 class _ArchiveSourceDrawerState extends State<_ArchiveSourceDrawer> {
-  static const _rowHeight = 186.0;
+  double get _rowHeight => _compact
+      ? 124 * math.max(1, MediaQuery.textScalerOf(context).scale(14) / 14)
+      : 186;
+  bool get _compact => MediaQuery.sizeOf(context).width >= 800;
+  bool _closing = false;
+
+  void _dismiss([ArchiveSourceSelection? selection]) {
+    if (_closing || ModalRoute.of(context)?.isCurrent != true) return;
+    _closing = true;
+    Navigator.of(context).pop(selection);
+  }
+
   final _focus = FocusNode(debugLabel: 'media-hub-source-drawer');
   final _scroll = ScrollController();
   List<ArchiveStreamOption> _options = const [];
@@ -112,10 +125,10 @@ class _ArchiveSourceDrawerState extends State<_ArchiveSourceDrawer> {
   }
 
   Future<void> _select(int index) async {
-    if (_selecting || _loading || index >= _options.length) return;
+    if (_closing || _selecting || _loading || index >= _options.length) return;
     final option = _options[index];
     if (_isCurrent(option)) {
-      Navigator.of(context).pop();
+      _dismiss();
       return;
     }
     setState(() {
@@ -125,9 +138,11 @@ class _ArchiveSourceDrawerState extends State<_ArchiveSourceDrawer> {
     });
     try {
       final channel = await widget.sources.select(widget.channelId, option);
-      if (!mounted) return;
+      if (!mounted || _closing || ModalRoute.of(context)?.isCurrent != true) {
+        return;
+      }
       if (channel == null) throw StateError('Selection no longer current');
-      Navigator.of(context).pop(ArchiveSourceSelection(channel, option));
+      _dismiss(ArchiveSourceSelection(channel, option));
     } catch (_) {
       if (mounted) {
         setState(() {
@@ -144,7 +159,7 @@ class _ArchiveSourceDrawerState extends State<_ArchiveSourceDrawer> {
     if (key == LogicalKeyboardKey.arrowLeft ||
         key == LogicalKeyboardKey.escape ||
         key == LogicalKeyboardKey.goBack) {
-      Navigator.of(context).pop();
+      if (event is KeyDownEvent) _dismiss();
     } else if (!_loading && !_selecting && _options.isNotEmpty) {
       if (key == LogicalKeyboardKey.arrowDown ||
           key == LogicalKeyboardKey.arrowUp) {
@@ -174,6 +189,7 @@ class _ArchiveSourceDrawerState extends State<_ArchiveSourceDrawer> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Material(
+      key: const ValueKey('media-hub-source-drawer'),
       color: const Color(0xF011131A),
       child: SafeArea(
         child: Focus(
@@ -186,13 +202,14 @@ class _ArchiveSourceDrawerState extends State<_ArchiveSourceDrawer> {
               child: Row(children: [
                 Expanded(
                   child: Text(tr('Stream sources'),
-                      style: const TextStyle(
-                          fontSize: 22, fontWeight: FontWeight.bold)),
+                      style: TextStyle(
+                          fontSize: _compact ? 18 : 22,
+                          fontWeight: FontWeight.bold)),
                 ),
                 ExcludeFocus(
                   child: IconButton(
                       tooltip: tr('Close'),
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: _dismiss,
                       icon: const Icon(Icons.close)),
                 ),
               ]),
@@ -200,7 +217,8 @@ class _ArchiveSourceDrawerState extends State<_ArchiveSourceDrawer> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
               child: Text(tr('Up/Down: browse · OK: switch · Back: close'),
-                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                  style: TextStyle(
+                      color: Colors.white70, fontSize: _compact ? 10 : 12)),
             ),
             if (_selecting) const LinearProgressIndicator(),
             if (_error != null)
@@ -228,7 +246,7 @@ class _ArchiveSourceDrawerState extends State<_ArchiveSourceDrawer> {
                               onTap: () => _select(index),
                               child: Container(
                                 margin: const EdgeInsets.symmetric(vertical: 5),
-                                padding: const EdgeInsets.all(12),
+                                padding: EdgeInsets.all(_compact ? 8 : 12),
                                 decoration: BoxDecoration(
                                   color: index == _index
                                       ? scheme.primary.withValues(alpha: 0.2)
@@ -253,10 +271,10 @@ class _ArchiveSourceDrawerState extends State<_ArchiveSourceDrawer> {
                                         ),
                                       Expanded(
                                           child: Text(info.source,
-                                              maxLines: 2,
+                                              maxLines: _compact ? 1 : 2,
                                               overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                  fontSize: 16,
+                                              style: TextStyle(
+                                                  fontSize: _compact ? 14 : 16,
                                                   fontWeight:
                                                       FontWeight.bold))),
                                     ]),
@@ -264,28 +282,32 @@ class _ArchiveSourceDrawerState extends State<_ArchiveSourceDrawer> {
                                       Text(tr('Current stream'),
                                           style: TextStyle(
                                               color: scheme.primary,
-                                              fontSize: 11)),
-                                    const SizedBox(height: 6),
+                                              fontSize: _compact ? 10 : 11)),
+                                    SizedBox(height: _compact ? 4 : 6),
                                     if (formats.isNotEmpty)
                                       Text(formats.join(' · '),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(fontSize: 13)),
+                                          style: TextStyle(
+                                              fontSize: _compact ? 11 : 13)),
                                     const SizedBox(height: 4),
                                     Expanded(
                                       child: Text(
                                           archiveStreamLabel(
                                               option.stream.title ?? ''),
-                                          maxLines: 3,
+                                          maxLines: _compact ? 1 : 3,
                                           overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                               color: Colors.white70,
-                                              fontSize: 12)),
+                                              fontSize: _compact ? 11 : 12)),
                                     ),
-                                    Text(info.formattedSize == null
-                                        ? tr('Size unknown')
-                                        : tr('File size: {size}',
-                                            {'size': info.formattedSize!})),
+                                    Text(
+                                        info.formattedSize == null
+                                            ? tr('Size unknown')
+                                            : tr('File size: {size}',
+                                                {'size': info.formattedSize!}),
+                                        style: TextStyle(
+                                            fontSize: _compact ? 12 : 14)),
                                   ],
                                 ),
                               ),

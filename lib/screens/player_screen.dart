@@ -10,6 +10,7 @@ import 'package:video_player_hdr/video_player_hdr.dart';
 import '../models/channel.dart';
 import '../services/archive_playback_sources.dart';
 import '../widgets/archive_source_drawer.dart';
+import '../utils/playback_modal_back_guard.dart';
 import '../models/epg_program.dart';
 import '../services/app_preferences.dart';
 import '../services/epg_service.dart';
@@ -125,13 +126,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _rootFocus.requestFocus();
   }
 
-  bool _sourceDrawerOpen = false;
+  late final _sourceBackGuard = PlaybackModalBackGuard(onChanged: () {
+    if (mounted) setState(() {});
+  });
+  bool get _sourceDrawerOpen => _sourceBackGuard.isOpen;
 
   Future<void> _openSources() async {
     final sources = widget.sources;
     final channel = _playback.currentChannel;
     if (sources == null || channel == null || _sourceDrawerOpen) return;
-    _sourceDrawerOpen = true;
+    _sourceBackGuard.opened();
     _hideTimer?.cancel();
     setState(() {
       _topVisible = false;
@@ -163,8 +167,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
             content: Text(tr('Could not switch stream. Try another source.'))));
       }
     } finally {
-      _sourceDrawerOpen = false;
-      if (mounted) _rootFocus.requestFocus();
+      if (mounted) {
+        _sourceBackGuard.closed();
+        _rootFocus.requestFocus();
+      }
     }
   }
 
@@ -566,6 +572,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   void dispose() {
+    _sourceBackGuard.dispose();
     // Deferred a frame for the same reason `initState` defers the
     // opposite call — this runs mid-build for the frame that's tearing
     // down this route, not a safe time for another widget's `setState`
@@ -653,9 +660,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
         context,
         (context) => PopScope(
             // Back with the side panel open just closes the panel.
-            canPop: !_panelOpen,
+            canPop: !_panelOpen && !_sourceBackGuard.blocksBack,
             onPopInvokedWithResult: (didPop, _) {
-              if (!didPop) _closePanel();
+              if (!didPop && !_sourceBackGuard.blocksBack) _closePanel();
             },
             child: Scaffold(
               backgroundColor: Colors.black,

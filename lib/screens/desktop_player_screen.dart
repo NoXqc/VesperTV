@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import '../models/channel.dart';
 import '../services/archive_playback_sources.dart';
 import '../widgets/archive_source_drawer.dart';
+import '../utils/playback_modal_back_guard.dart';
 import '../services/app_preferences.dart';
 import '../services/desktop_mini_player.dart';
 import '../services/desktop_vod_progress.dart';
@@ -132,13 +133,16 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     _rootFocus.requestFocus();
   }
 
-  bool _sourceDrawerOpen = false;
+  late final _sourceBackGuard = PlaybackModalBackGuard(onChanged: () {
+    if (mounted) setState(() {});
+  });
+  bool get _sourceDrawerOpen => _sourceBackGuard.isOpen;
 
   Future<void> _openSources() async {
     final sources = widget.sources;
     if (sources == null || _sourceDrawerOpen) return;
     final channelId = _currentChannel.id;
-    _sourceDrawerOpen = true;
+    _sourceBackGuard.opened();
     setState(() => _controlsVisible = false);
     try {
       final selection = await showArchiveSourceDrawer(context,
@@ -157,8 +161,10 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
             content: Text(tr('Could not switch stream. Try another source.'))));
       }
     } finally {
-      _sourceDrawerOpen = false;
-      if (mounted) _rootFocus.requestFocus();
+      if (mounted) {
+        _sourceBackGuard.closed();
+        _rootFocus.requestFocus();
+      }
     }
   }
 
@@ -346,6 +352,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
 
   @override
   void dispose() {
+    _sourceBackGuard.dispose();
     _fileInfoRequests.dispose();
     _progressTimer?.cancel();
     ++_openGeneration;
@@ -364,6 +371,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   /// see the class doc comment. A movie or episode just pops normally;
   /// [dispose] tears its `Player` down the same way it always has.
   void _handleBack() {
+    if (_sourceBackGuard.blocksBack) return;
     if (_isLive) {
       DesktopMiniPlayer.instance
           .minimize(_currentChannel, _player, _videoController);
@@ -676,9 +684,9 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     final size = MediaQuery.sizeOf(context);
     return PopScope(
       // Back with the side panel open closes it first.
-      canPop: !_panelOpen,
+      canPop: !_panelOpen && !_sourceBackGuard.blocksBack,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _closePanel();
+        if (!didPop && !_sourceBackGuard.blocksBack) _closePanel();
       },
       child: Scaffold(
         backgroundColor: Colors.black,
