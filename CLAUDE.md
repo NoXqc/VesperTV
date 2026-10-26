@@ -348,6 +348,14 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **cdx, 2026-10-26: Release 1.0.41 (beta), +455 authorised.** Includes all completed
+  Codex work through Goals alert plus previously integrated Claude profiles/trailers/zap freeze.
+  All worktrees audited: Claude's dirty zap-freeze source is already present (native file identical;
+  guide patch reverse-applies). Old native-surface-prepare is superseded; network-cards-only notes
+  are historical; tunneling-test remains deliberately excluded per dev-notes/merge-all-20261025.md.
+  Android + Windows, latest release with beta in title; retain previous releases. Exact final
+  build/publication checks in HANDOFF.md. See dev-notes/release-1.0.41.md for user-facing changes.
+
 
 - **cdx, 2026-10-26: Compact source drawer / Back correction (+454).** On wide screens drawer width is30% capped320logicalpx (was500), compact124px rows scaled for larger text; provider/current marker, advertised formats, description summary and file size retained. Portrait layout remains full. Both Android and Windows player routes block Back while drawer opens/closes and for700ms after dismissal; Left/Back close once, late source selection cannot pop the player. Shared PlaybackModalBackGuard. Owner confirmed Windows Resume works on+452.
 
@@ -1342,7 +1350,7 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 - Keep CLAUDE.md lean: put details in `dev-notes/`, put in-progress state in `HANDOFF.md`, and
   record only lessons that prevent a repeat mistake.
 
-### Codex 2026-10-26: My Teams Goals alert (branch, unreleased)
+### Codex 2026-10-26: My Teams Goals alert (included in 1.0.41)
 
 `codex/my-teams-goals-alert` adds an off-by-default, per-viewer Interface toggle.
 Root `GoalsAlertOverlay` polls the existing scoreboard cache while foregrounded,

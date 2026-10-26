@@ -443,7 +443,7 @@ info version rejected — keep the VS layout). Fire Stick check pending.
   64px foreground crest plus a 28% background watermark (was 14%), rounded accent
   border, My Teams header and time badge. No new strings or scheduler changes.
 
-## My Teams Goals alert (Codex, 2026-10-26; unreleased)
+## My Teams Goals alert (Codex, 2026-10-26; 1.0.41)
 
 - Settings > Interface > Goals alert is off by default, per viewer, and copied with
   Sports preferences. Applies to every followed team in supported team leagues.
