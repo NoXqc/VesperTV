@@ -1988,4 +1988,9 @@ const Map<String, String> kEs = {
   "{team} scored!": "¡{team} ha marcado!",
   "{first} {firstScore} – {secondScore} {second}":
       "{first} {firstScore} – {secondScore} {second}",
+  "Video HDR": "HDR del vídeo",
+  "Decoder HDR": "HDR decodificado",
+  "Unknown / not reported": "Desconocido / no indicado",
+  "{format} (stream)": "{format} (flujo)",
+  "{format} (decoder)": "{format} (decodificador)",
 };

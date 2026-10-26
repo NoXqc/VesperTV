@@ -1992,4 +1992,9 @@ const Map<String, String> kIt = {
   "{team} scored!": "{team} ha segnato!",
   "{first} {firstScore} – {secondScore} {second}":
       "{first} {firstScore} – {secondScore} {second}",
+  "Video HDR": "HDR video",
+  "Decoder HDR": "HDR decodificato",
+  "Unknown / not reported": "Sconosciuto / non indicato",
+  "{format} (stream)": "{format} (flusso)",
+  "{format} (decoder)": "{format} (decoder)",
 };

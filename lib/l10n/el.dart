@@ -2601,4 +2601,9 @@ const Map<String, String> kEl = {
   "{team} scored!": "Η ομάδα {team} σκόραρε!",
   "{first} {firstScore} – {secondScore} {second}":
       "{first} {firstScore} – {secondScore} {second}",
+  "Video HDR": "HDR βίντεο",
+  "Decoder HDR": "HDR αποκωδικοποιητή",
+  "Unknown / not reported": "Άγνωστο / δεν αναφέρεται",
+  "{format} (stream)": "{format} (ροή)",
+  "{format} (decoder)": "{format} (αποκωδικοποιητής)",
 };

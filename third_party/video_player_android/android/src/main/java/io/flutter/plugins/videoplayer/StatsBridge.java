@@ -4,6 +4,7 @@
 package io.flutter.plugins.videoplayer;
 
 import android.os.SystemClock;
+import android.media.MediaFormat;
 import android.util.LongSparseArray;
 import androidx.annotation.NonNull;
 import androidx.annotation.OptIn;
@@ -60,8 +61,8 @@ final class StatsBridge implements MethodChannel.MethodCallHandler {
     // The playing video format: Data pool's "Stream HDR" row and Match frame rate (Dart
     // DisplayMatch) read it. frameRate is -1 when the stream doesn't declare one (live TS).
     @Nullable Format format = player.getExoPlayer().getVideoFormat();
+    addHdrStats(m, format, player.frameRateProbe);
     if (format != null) {
-      m.put("hdr", hdrKind(format));
       // Dolby Vision only: the profile (dvhe.08.06 -> 8) and the base layer a
       // non-DV device falls back to ("hdr10", "hlg" or "" when not signalled).
       int dvProfile = dvProfile(format);
@@ -100,7 +101,42 @@ final class StatsBridge implements MethodChannel.MethodCallHandler {
     return "";
   }
 
-  /** "dolby_vision", "hdr10", "hlg" or "sdr" (an unknown transfer counts as SDR). */
+  /** Keep stream metadata distinct from decoder output; either can be unavailable. */
+  static void addHdrStats(Map<String, Object> stats, @Nullable Format format, FrameRateProbe probe) {
+    String stream = format == null ? "unknown" : hdrKind(format);
+    String decoder = format == null ? "unknown" : probe.decoderHdrKind(format);
+    String kind = !"unknown".equals(stream) ? stream : decoder;
+    stats.put("streamHdr", stream);
+    stats.put("decoderHdr", decoder);
+    stats.put("hdr", kind);
+    stats.put("hdrSource", !"unknown".equals(stream) ? "stream"
+        : !"unknown".equals(decoder) ? "decoder" : "unknown");
+  }
+
+  /** Only explicit transfer information establishes SDR. Missing is not SDR. */
+  private static String transferKind(int transfer) {
+    if (transfer == C.COLOR_TRANSFER_ST2084) return "hdr10";
+    if (transfer == C.COLOR_TRANSFER_HLG) return "hlg";
+    if (transfer == C.COLOR_TRANSFER_SDR) return "sdr";
+    return "unknown";
+  }
+
+  static String decoderHdrKind(@Nullable MediaFormat format) {
+    if (format == null) return "unknown";
+    try {
+      if (MimeTypes.VIDEO_DOLBY_VISION.equals(format.getString(MediaFormat.KEY_MIME))) {
+        return "dolby_vision";
+      }
+      if (format.containsKey(MediaFormat.KEY_COLOR_TRANSFER)) {
+        return transferKind(format.getInteger(MediaFormat.KEY_COLOR_TRANSFER));
+      }
+    } catch (RuntimeException ignored) {
+      // Some device codecs omit these optional keys or return a value of the wrong type.
+    }
+    return "unknown";
+  }
+
+  /** Stream/container metadata, not the TV's active HDMI mode. */
   static String hdrKind(@NonNull Format format) {
     String codecs = format.codecs == null ? "" : format.codecs;
     if (MimeTypes.VIDEO_DOLBY_VISION.equals(format.sampleMimeType)
@@ -112,9 +148,8 @@ final class StatsBridge implements MethodChannel.MethodCallHandler {
     }
     @Nullable ColorInfo color = format.colorInfo;
     if (color != null) {
-      if (color.colorTransfer == C.COLOR_TRANSFER_ST2084) return "hdr10";
-      if (color.colorTransfer == C.COLOR_TRANSFER_HLG) return "hlg";
+      return transferKind(color.colorTransfer);
     }
-    return "sdr";
+    return "unknown";
   }
 }

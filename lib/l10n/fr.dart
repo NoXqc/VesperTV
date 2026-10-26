@@ -1992,4 +1992,9 @@ const Map<String, String> kFr = {
   "{team} scored!": "{team} a marqué !",
   "{first} {firstScore} – {secondScore} {second}":
       "{first} {firstScore} – {secondScore} {second}",
+  "Video HDR": "HDR vidéo",
+  "Decoder HDR": "HDR décodé",
+  "Unknown / not reported": "Inconnu / non indiqué",
+  "{format} (stream)": "{format} (flux)",
+  "{format} (decoder)": "{format} (décodeur)",
 };

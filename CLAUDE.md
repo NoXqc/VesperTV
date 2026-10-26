@@ -1358,3 +1358,11 @@ shows score increases for followed teams at top-left without touching playback/f
 and stacks below reminders on phones. Hide scores suppresses alerts immediately.
 Not instant push: 30s polling plus existing feed cache. First observation after launch,
 profile change or backgrounding is silent. See `dev-notes/sports-tab.md` for details.
+
+### Codex 2026-10-26: decoder HDR reporting (unreleased branch)
+
+`codex/decoder-hdr-reporting` corrects unknown colour metadata being labelled SDR
+and adds decoder-output fallback via existing FrameRateProbe callbacks. StatsBridge
+retains both input and output evidence; Data pool labels stream/decoder and shows
+known disagreement separately. No codec/display/surface configuration changes.
+See `dev-notes/decoder-hdr-reporting.md`; a real Shield retest is still required.
