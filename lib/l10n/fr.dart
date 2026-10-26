@@ -1984,4 +1984,12 @@ const Map<String, String> kFr = {
   "Source URL": "URL de la source",
   "Copy URL": "Copier l’URL",
   "URL copied": "URL copiée",
+  "Goals alert": "Alerte de buts",
+  "Score alerts for My Teams on any screen":
+      "Alertes de score de Mes équipes sur tous les écrans",
+  "Show a top-left popup when a team in My Teams scores. Alerts follow the score feed and pause when scores are hidden.":
+      "Afficher une notification en haut à gauche lorsqu’une équipe de Mes équipes marque. Les alertes suivent les mises à jour du score et s’arrêtent quand les scores sont masqués.",
+  "{team} scored!": "{team} a marqué !",
+  "{first} {firstScore} – {secondScore} {second}":
+      "{first} {firstScore} – {secondScore} {second}",
 };

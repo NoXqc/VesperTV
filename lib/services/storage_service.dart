@@ -555,8 +555,13 @@ class StorageService {
   Future<void> setSportsChannelPicks(String json) =>
       _prefs.setString(_vk(AppConstants.keySportsChannelPicks), json);
 
-  /// My Teams, in follow order, as `leagueId|teamId` (parsed by
-  /// `FollowedTeam.parse`).
+  /// Opt-in, per viewer; never persisted with transient score snapshots.
+  bool getGoalsAlert() =>
+      _prefs.getBool(_vk(AppConstants.keyGoalsAlert)) ?? false;
+  Future<void> setGoalsAlert(bool value) =>
+      _prefs.setBool(_vk(AppConstants.keyGoalsAlert), value);
+
+  /// My Teams, in follow order, as `leagueId|teamId`.
   List<String> getSportsFollowedTeams() =>
       _prefs.getStringList(_vk(AppConstants.keySportsFollowedTeams)) ??
       const [];

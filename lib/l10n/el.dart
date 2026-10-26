@@ -2593,4 +2593,12 @@ const Map<String, String> kEl = {
   "Source URL": "URL πηγής",
   "Copy URL": "Αντιγραφή URL",
   "URL copied": "Το URL αντιγράφηκε",
+  "Goals alert": "Ειδοποίηση γκολ",
+  "Score alerts for My Teams on any screen":
+      "Ειδοποιήσεις σκορ για τις Ομάδες μου σε κάθε οθόνη",
+  "Show a top-left popup when a team in My Teams scores. Alerts follow the score feed and pause when scores are hidden.":
+      "Εμφάνιση ειδοποίησης πάνω αριστερά όταν σκοράρει ομάδα στις Ομάδες μου. Οι ειδοποιήσεις ακολουθούν τις ενημερώσεις σκορ και παύουν όταν τα σκορ είναι κρυφά.",
+  "{team} scored!": "Η ομάδα {team} σκόραρε!",
+  "{first} {firstScore} – {secondScore} {second}":
+      "{first} {firstScore} – {secondScore} {second}",
 };

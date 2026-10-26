@@ -16,6 +16,7 @@ const profileCopyKeys = <ProfileCopy, Set<String>>{
     AppConstants.keyArchiveHistory
   },
   ProfileCopy.sports: {
+    AppConstants.keyGoalsAlert,
     AppConstants.keySportsLeagues,
     AppConstants.keySportsAddedLeagues,
     AppConstants.keySportsFavoriteLeague,

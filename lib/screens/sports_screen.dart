@@ -721,7 +721,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   Future<void> _toggleScores() async {
     setState(() => _hideScores = !_hideScores);
-    await _storage.setSportsHideScores(_hideScores);
+    await context.read<AppPreferences>().setSportsHideScores(_hideScores);
   }
 
   /// Shown leagues from storage: base leagues plus bank leagues the user

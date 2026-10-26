@@ -269,6 +269,18 @@ class AppPreferences extends ChangeNotifier {
       .reduce((a, b) => (a.$1 - scale).abs() <= (b.$1 - scale).abs() ? a : b)
       .$2;
 
+  bool get sportsHideScores => _storage.getSportsHideScores();
+  Future<void> setSportsHideScores(bool value) async {
+    await _storage.setSportsHideScores(value);
+    notifyListeners();
+  }
+
+  bool get goalsAlert => _storage.getGoalsAlert();
+  void setGoalsAlert(bool value) {
+    _storage.setGoalsAlert(value);
+    notifyListeners();
+  }
+
   /// Fast startup: see [AppConstants.keyFastStartup]. Read once by the
   /// splash, so a change applies from the next launch.
   bool get fastStartup => _storage.getFastStartup();

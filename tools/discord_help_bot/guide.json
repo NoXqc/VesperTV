@@ -320,6 +320,14 @@
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },
   {
+    "id": "daf3986dfef318b3",
+    "category": "Sports Trak",
+    "title": "Score alerts for My Teams",
+    "answer": "Off by default. Enable it for a top-left popup when any followed team scores, above any screen or stream while VesperTV is open. The card shows the team and league logos and the current score. Game reminders stay top-right; on a phone the cards stack. Alerts follow the sports feed's update speed, pause with Hide scores or when the app is in the background, and do not replay old scores on launch or profile changes.",
+    "controls": "Settings → Interface → Goals alert",
+    "url": "https://vespertv.app/remote.html#Sports%20Trak"
+  },
+  {
     "id": "4df9d3183d28ad0e",
     "category": "Sports Trak",
     "title": "Unfollow",

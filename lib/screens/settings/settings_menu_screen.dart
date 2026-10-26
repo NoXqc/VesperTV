@@ -177,6 +177,8 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
                 tr('Clock, accent color, layout'), (_) => const ThemeScreen()),
             _general('tabs', Icons.tab_outlined, tr('Tabs'),
                 tr('Hide Movies, TV Shows, Media Hub, Recordings or Multiview')),
+            _general('goals', Icons.sports_score, tr('Goals alert'),
+                tr('Score alerts for My Teams on any screen')),
             _general('favourites', Icons.star_outline, tr('Favourites'),
                 tr('One list for every playlist, or one per playlist')),
           ],

@@ -1984,4 +1984,12 @@ const Map<String, String> kIt = {
   "Source URL": "URL della fonte",
   "Copy URL": "Copia URL",
   "URL copied": "URL copiato",
+  "Goals alert": "Avviso gol",
+  "Score alerts for My Teams on any screen":
+      "Avvisi di punteggio per Le mie squadre su ogni schermata",
+  "Show a top-left popup when a team in My Teams scores. Alerts follow the score feed and pause when scores are hidden.":
+      "Mostra un avviso in alto a sinistra quando segna una squadra in Le mie squadre. Gli avvisi seguono gli aggiornamenti del punteggio e si interrompono quando i punteggi sono nascosti.",
+  "{team} scored!": "{team} ha segnato!",
+  "{first} {firstScore} – {secondScore} {second}":
+      "{first} {firstScore} – {secondScore} {second}",
 };

@@ -337,6 +337,7 @@ class AppConstants {
   static const String keySportsAddedLeagues = 'vesper_sports_added_leagues';
   static const String keySportsHideScores = 'vesper_sports_hide_scores';
   static const String keySportsChannelPicks = 'vesper_sports_channel_picks';
+  static const String keyGoalsAlert = 'vesper_goals_alert';
   static const String keySportsFollowedTeams = 'vesper_sports_followed_teams';
   static const String keyGameReminders = 'vesper_game_reminders';
 

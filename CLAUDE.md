@@ -1341,3 +1341,12 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   the needed line range. Use the `dev-notes/` files on demand, not all at once.
 - Keep CLAUDE.md lean: put details in `dev-notes/`, put in-progress state in `HANDOFF.md`, and
   record only lessons that prevent a repeat mistake.
+
+### Codex 2026-10-26: My Teams Goals alert (branch, unreleased)
+
+`codex/my-teams-goals-alert` adds an off-by-default, per-viewer Interface toggle.
+Root `GoalsAlertOverlay` polls the existing scoreboard cache while foregrounded,
+shows score increases for followed teams at top-left without touching playback/focus,
+and stacks below reminders on phones. Hide scores suppresses alerts immediately.
+Not instant push: 30s polling plus existing feed cache. First observation after launch,
+profile change or backgrounding is silent. See `dev-notes/sports-tab.md` for details.

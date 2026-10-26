@@ -442,3 +442,22 @@ info version rejected — keep the VS layout). Fire Stick check pending.
 - Unreleased reminder card restyle (`codex/reminder-card-style`, owner feedback):
   64px foreground crest plus a 28% background watermark (was 14%), rounded accent
   border, My Teams header and time badge. No new strings or scheduler changes.
+
+## My Teams Goals alert (Codex, 2026-10-26; unreleased)
+
+- Settings > Interface > Goals alert is off by default, per viewer, and copied with
+  Sports preferences. Applies to every followed team in supported team leagues.
+- `GoalsAlerts` compares valid numeric scores from the existing cached SportsService
+  day loader (two concurrent league fetches maximum). First observation is a silent
+  baseline; profile changes, opt-out and app backgrounding reset it. Corrections
+  downwards, cancelled games and already-final score edits do not notify.
+- `GoalsAlertOverlay` sits above the root navigator without taking focus or changing
+  playback: compact top-left card, league/team logos, faded team watermark, 8 seconds.
+  Existing reminders stay top-right; narrow screens stack below the measured reminder.
+- Checks every 30 seconds while foregrounded; the shared feed cache still applies
+  (ESPN live about 50s; SportsDB about 120s). These are feed updates, not instant push.
+  Hide scores suppresses the popup immediately. No OS/background notification service.
+- Pending fetches from previous viewers are discarded. Overnight live games keep their
+  start-day lookup through the final update. Temporary feed errors preserve baselines.
+- Widget fixtures must create GameReminders inside testWidgets, not an outer async
+  setUp: its initial Future chain otherwise crosses the fake clock and stalls pumps.

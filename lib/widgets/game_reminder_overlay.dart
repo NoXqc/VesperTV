@@ -11,12 +11,17 @@ import '../services/viewer_profile_service.dart';
 /// Never requests focus or changes the currently playing stream.
 class GameReminderOverlay extends StatefulWidget {
   const GameReminderOverlay({super.key});
+
+  /// Occupied top edge for stacking score alerts on narrow screens only.
+  static final occupiedHeight = ValueNotifier<double>(0);
+  static Object? _heightOwner;
   @override
   State<GameReminderOverlay> createState() => _GameReminderOverlayState();
 }
 
 class _GameReminderOverlayState extends State<GameReminderOverlay>
     with WidgetsBindingObserver {
+  final _cardKey = GlobalKey();
   GameReminders? _reminders;
   final _queue = <GameReminderNotice>[];
   GameReminderNotice? _notice;
@@ -110,6 +115,12 @@ class _GameReminderOverlayState extends State<GameReminderOverlay>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (identical(GameReminderOverlay._heightOwner, this)) {
+        GameReminderOverlay._heightOwner = null;
+        GameReminderOverlay.occupiedHeight.value = 0;
+      }
+    });
     _alarm?.cancel();
     _hide?.cancel();
     _scheduleRefresh?.cancel();
@@ -120,6 +131,19 @@ class _GameReminderOverlayState extends State<GameReminderOverlay>
 
   @override
   Widget build(BuildContext context) {
+    final narrow = MediaQuery.sizeOf(context).width < 800;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final box = _cardKey.currentContext?.findRenderObject();
+      final height =
+          narrow && _notice != null && box is RenderBox && box.hasSize
+              ? box.size.height + 20
+              : 0.0;
+      GameReminderOverlay._heightOwner = this;
+      if (GameReminderOverlay.occupiedHeight.value != height) {
+        GameReminderOverlay.occupiedHeight.value = height;
+      }
+    });
     final notice = _notice;
     if (notice == null || _reminders?.viewerId != _viewer) {
       return const SizedBox.shrink();
@@ -133,6 +157,7 @@ class _GameReminderOverlayState extends State<GameReminderOverlay>
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: ConstrainedBox(
+            key: _cardKey,
             constraints: const BoxConstraints(maxWidth: 420),
             child: Material(
               color: const Color(0xFA15171C),

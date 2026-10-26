@@ -350,6 +350,18 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                             ),
                           ),
                       ]),
+                  _section('goals', Icons.sports_score, tr('Goals alert'),
+                      children: [
+                        TvSwitchListTile(
+                          title: Text(tr('Goals alert')),
+                          subtitle: Text(tr(
+                              'Show a top-left popup when a team in My Teams scores. Alerts follow the score feed and pause when scores are hidden.')),
+                          value: context.watch<AppPreferences>().goalsAlert,
+                          onChanged: (value) => context
+                              .read<AppPreferences>()
+                              .setGoalsAlert(value),
+                        ),
+                      ]),
                   _section('tabs', Icons.tab_outlined, tr('Tabs'), children: [
                     TvSwitchListTile(
                       title: Text(tr('Hide profiles')),

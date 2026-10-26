@@ -1980,4 +1980,12 @@ const Map<String, String> kEs = {
   "Source URL": "URL de la fuente",
   "Copy URL": "Copiar URL",
   "URL copied": "URL copiada",
+  "Goals alert": "Alerta de goles",
+  "Score alerts for My Teams on any screen":
+      "Alertas de marcador de Mis equipos en cualquier pantalla",
+  "Show a top-left popup when a team in My Teams scores. Alerts follow the score feed and pause when scores are hidden.":
+      "Muestra un aviso arriba a la izquierda cuando marca un equipo de Mis equipos. Las alertas siguen las actualizaciones del marcador y se pausan si los marcadores están ocultos.",
+  "{team} scored!": "¡{team} ha marcado!",
+  "{first} {firstScore} – {secondScore} {second}":
+      "{first} {firstScore} – {secondScore} {second}",
 };
