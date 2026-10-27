@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
+import '../models/catchup.dart';
 import '../models/channel.dart';
 import '../l10n/l10n.dart';
 
@@ -26,6 +27,57 @@ class M3uParser {
       channel.copyWith(onDemand: groupCategory(channel.group) != 'tv');
 
   static final RegExp _attrPattern = RegExp(r'([a-zA-Z0-9_-]+)="([^"]*)"');
+
+  static final RegExp _xcUrlPattern =
+      RegExp(r'^https?://[^/]+/(live/)?[^/]+/[^/]+/\d+(\.(ts|m3u8))?$');
+
+  /// Catch-up of one entry from its `#EXTINF` attributes, falling back to
+  /// the `#EXTM3U` header's (Kodi IPTV Simple conventions): `catchup` /
+  /// `catchup-type`, `catchup-days` / `tvg-rec` / `timeshift`,
+  /// `catchup-source`. A type without days means 7; days without a type
+  /// mean `xc` for an Xtream-style URL, `default` with a source, else
+  /// `shift`. Days are clamped to 0..30. On-demand entries get none.
+  static ({int days, CatchupKind? kind, String? source}) catchupOf(
+      Map<String, String> attrs, Map<String, String> header,
+      {required String url, required bool onDemand}) {
+    const none = (days: 0, kind: null, source: null);
+    if (onDemand) return none;
+    String? pick(List<String> keys) {
+      for (final map in [attrs, header]) {
+        for (final k in keys) {
+          final v = map[k]?.trim();
+          if (v != null && v.isNotEmpty) return v;
+        }
+      }
+      return null;
+    }
+
+    final type = pick(const ['catchup', 'catchup-type'])?.toLowerCase();
+    final source = pick(const ['catchup-source']);
+    final rawDays = pick(const ['catchup-days', 'tvg-rec', 'timeshift']);
+    var days = rawDays == null ? null : int.tryParse(rawDays);
+    if (type == null && (days == null || days <= 0)) return none;
+    CatchupKind? kind = switch (type) {
+      null => null,
+      'default' => CatchupKind.defaultKind,
+      'append' => CatchupKind.append,
+      'shift' => CatchupKind.shift,
+      'flussonic' || 'flussonic-hls' || 'fs' => CatchupKind.flussonic,
+      'flussonic-ts' || 'fs-ts' => CatchupKind.flussonicTs,
+      'xc' => CatchupKind.xc,
+      _ => null,
+    };
+    if (type != null && kind == null) return none;
+    kind ??= _xcUrlPattern.hasMatch(url.trim())
+        ? CatchupKind.xc
+        : source != null
+            ? CatchupKind.defaultKind
+            : CatchupKind.shift;
+    days ??= 7;
+    days = days.clamp(0, 30);
+    if (days == 0) return none;
+    return (days: days, kind: kind, source: source);
+  }
 
   /// Streams the response line-by-line rather than buffering the whole body
   /// into one String — Xtream `get.php` playlists with tens of thousands of
@@ -91,6 +143,7 @@ class _ParseState {
   final String playlistId;
   final List<Channel> channels = [];
   Map<String, String> _attrs = {};
+  Map<String, String> _headerAttrs = const {};
   String? _pendingName;
   String? _pendingSubtitleUrl;
   int _autoId = 0;
@@ -99,7 +152,13 @@ class _ParseState {
     final line = rawLine.trim();
     if (line.isEmpty) return;
 
-    if (line.startsWith('#EXTINF')) {
+    if (line.startsWith('#EXTM3U')) {
+      // Header-level attributes (catch-up defaults for every entry).
+      _headerAttrs = {
+        for (final match in M3uParser._attrPattern.allMatches(line))
+          match.group(1)!.toLowerCase(): match.group(2)!
+      };
+    } else if (line.startsWith('#EXTINF')) {
       _attrs = {};
       for (final match in M3uParser._attrPattern.allMatches(line)) {
         _attrs[match.group(1)!.toLowerCase()] = match.group(2)!;
@@ -125,12 +184,15 @@ class _ParseState {
         final rawId =
             (tvgId != null && tvgId.isNotEmpty) ? tvgId : 'ch_$_autoId';
         final groupTitle = _attrs['group-title'];
+        final onDemand = M3uParser.groupCategory(groupTitle ?? '') != 'tv';
+        final catchup = M3uParser.catchupOf(_attrs, _headerAttrs,
+            url: line, onDemand: onDemand);
         channels.add(
           Channel(
             id: '$playlistId::$rawId',
             rawId: rawId,
             playlistId: playlistId,
-            onDemand: M3uParser.groupCategory(groupTitle ?? '') != 'tv',
+            onDemand: onDemand,
             name: _pendingName!,
             group: (groupTitle != null && groupTitle.isNotEmpty)
                 ? groupTitle
@@ -138,6 +200,9 @@ class _ParseState {
             url: line,
             logoUrl: _attrs['tvg-logo'],
             subtitleUrl: _pendingSubtitleUrl,
+            catchupDays: catchup.days,
+            catchupKind: catchup.kind,
+            catchupSource: catchup.source,
           ),
         );
       }

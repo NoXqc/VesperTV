@@ -1,3 +1,4 @@
+import 'catchup.dart';
 import 'media_file_info.dart';
 
 /// A manual cross-playlist link — see
@@ -36,6 +37,10 @@ class Channel {
     this.transientPlayback = false,
     this.mediaFileInfo,
     this.onDemand = false,
+    this.catchupDays = 0,
+    this.catchupKind,
+    this.catchupSource,
+    this.streamId,
   });
 
   /// Stable identifier: the M3U `tvg-id` when present (used to match EPG
@@ -64,6 +69,22 @@ class Channel {
   /// Playback controls and lifecycle must agree about M3U movies too.
   /// Never infer this from duration: live HLS can expose a DVR window.
   bool get isLive => !onDemand && isLiveId(rawId);
+
+  /// Days of past programmes the provider keeps for this live channel
+  /// (Xtream `tv_archive_duration`, M3U `catchup-days`/`tvg-rec`). 0 = none.
+  final int catchupDays;
+
+  /// How past programmes are requested; null = no catch-up.
+  final CatchupKind? catchupKind;
+
+  /// M3U `catchup-source` template (placeholders like `{utc}`), if any.
+  final String? catchupSource;
+
+  /// The provider's own stream id (Xtream `stream_id`). Live channels with
+  /// an EPG id don't carry it in [rawId]; catch-up links need it.
+  final String? streamId;
+
+  bool get hasCatchup => isLive && catchupDays > 0 && catchupKind != null;
 
   /// Which playlist this channel came from — the same id every group,
   /// hidden-groups entry, and cache-file name for this playlist share
@@ -259,7 +280,8 @@ class Channel {
           String? epgKey,
           String? url,
           MediaFileInfo? mediaFileInfo,
-          bool? onDemand}) =>
+          bool? onDemand,
+          int? catchupDays}) =>
       Channel(
         id: id ?? this.id,
         rawId: rawId ?? this.rawId,
@@ -286,6 +308,10 @@ class Channel {
         providerBackdropUrl: providerBackdropUrl,
         transientPlayback: transientPlayback,
         mediaFileInfo: mediaFileInfo ?? this.mediaFileInfo,
+        catchupDays: catchupDays ?? this.catchupDays,
+        catchupKind: catchupKind,
+        catchupSource: catchupSource,
+        streamId: streamId,
       );
 
   Map<String, dynamic> toJson() => {
@@ -311,6 +337,10 @@ class Channel {
         'backdropUrl': backdropUrl,
         'providerPosterUrl': providerPosterUrl,
         'providerBackdropUrl': providerBackdropUrl,
+        if (catchupDays > 0) 'catchupDays': catchupDays,
+        if (catchupKind != null) 'catchupKind': catchupKind!.name,
+        if (catchupSource != null) 'catchupSource': catchupSource,
+        if (streamId != null) 'streamId': streamId,
       };
 
   /// `playlistId` defaults to `'migrated_default'` and `rawId` to [id]
@@ -347,13 +377,22 @@ class Channel {
         backdropUrl: json['backdropUrl'] as String?,
         providerPosterUrl: json['providerPosterUrl'] as String?,
         providerBackdropUrl: json['providerBackdropUrl'] as String?,
+        catchupDays: json['catchupDays'] as int? ?? 0,
+        catchupKind: _catchupKindByName[json['catchupKind']],
+        catchupSource: json['catchupSource'] as String?,
+        streamId: json['streamId'] as String?,
       );
+
+  static final Map<String, CatchupKind> _catchupKindByName = {
+    for (final k in CatchupKind.values) k.name: k
+  };
 
   /// Legacy raw-ID classification for Xtream, Media Hub and recordings.
   /// Use [isLive] when a Channel is available: M3U movie IDs have no prefix.
   /// Takes rawId, never the playlist-prefixed composite id.
   static bool isLiveId(String rawId) => !(rawId.startsWith('xt_vod_') ||
       rawId.startsWith('xt_ep_') ||
+      isCatchupId(rawId) ||
       isArchiveId(rawId) ||
       isRecordingId(rawId));
 
@@ -366,4 +405,9 @@ class Channel {
   /// seekable, no playlist profile backs it.
   static const recordingPrefix = 'rec_';
   static bool isRecordingId(String rawId) => rawId.startsWith(recordingPrefix);
+
+  /// A past programme played from a live channel's catch-up
+  /// (`PlaybackService.playCatchup`): finite, seekable, never live.
+  static const catchupPrefix = 'cu_';
+  static bool isCatchupId(String rawId) => rawId.startsWith(catchupPrefix);
 }

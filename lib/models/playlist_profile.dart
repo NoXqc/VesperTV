@@ -26,6 +26,7 @@ class PlaylistProfile {
     required this.createdAt,
     this.expiresAt,
     this.maxConnections,
+    this.serverTimeOffsetMinutes,
     List<String>? backupServers,
     this.lastWorkingServer,
   }) : backupServers = backupServers ?? <String>[];
@@ -128,6 +129,11 @@ class PlaylistProfile {
   /// error, no matter how healthy the device or network is.
   int? maxConnections;
 
+  /// The Xtream server clock's offset from UTC in minutes
+  /// (`XtreamApiService.serverTimeOffset`), kept so catch-up links can be
+  /// built before the next login. Null = unknown (M3U, or never reported).
+  int? serverTimeOffsetMinutes;
+
   /// Alternate server URLs for this same account, tried in order when
   /// [xtreamServer] itself can't be reached (see
   /// `PlaylistSession.connectWithFallback`). Same username/password —
@@ -224,6 +230,7 @@ class PlaylistProfile {
         createdAt: createdAt,
         expiresAt: expiresAt ?? this.expiresAt,
         maxConnections: maxConnections ?? this.maxConnections,
+        serverTimeOffsetMinutes: serverTimeOffsetMinutes,
         backupServers: backupServers ?? List<String>.from(this.backupServers),
         lastWorkingServer: lastWorkingServer ?? this.lastWorkingServer,
       );
@@ -249,6 +256,8 @@ class PlaylistProfile {
         'createdAt': createdAt.toIso8601String(),
         'expiresAt': expiresAt?.toIso8601String(),
         'maxConnections': maxConnections,
+        if (serverTimeOffsetMinutes != null)
+          'serverTimeOffsetMinutes': serverTimeOffsetMinutes,
         'backupServers': backupServers,
         'lastWorkingServer': lastWorkingServer,
       };
@@ -278,6 +287,7 @@ class PlaylistProfile {
             ? null
             : DateTime.tryParse(json['expiresAt'] as String),
         maxConnections: json['maxConnections'] as int?,
+        serverTimeOffsetMinutes: json['serverTimeOffsetMinutes'] as int?,
         backupServers: (json['backupServers'] as List?)
                 ?.map((e) => e.toString())
                 .where((s) => s.isNotEmpty)

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../models/catchup.dart';
 import '../models/channel.dart';
 import '../models/series_details.dart';
 import '../models/xtream_category.dart';
@@ -53,6 +54,14 @@ class XtreamApiService {
   /// field is missing, unparseable, or "0" (some panels use that for a
   /// lifetime/reseller-unlimited account with no real expiry to report).
   DateTime? expiryDate;
+
+  /// How far the provider's clock (`server_info.time_now`, the time zone
+  /// Xtream catch-up links are written in) is ahead of UTC, rounded to
+  /// 15 minutes. Null = the login answer didn't say. Set by [authenticate].
+  Duration? serverTimeOffset;
+
+  /// `server_info.timezone` as the provider reports it (log only).
+  String? serverTimeZone;
 
   static String _normalizeServer(String server) {
     var s = server.trim();
@@ -126,6 +135,38 @@ class XtreamApiService {
     expiryDate = (rawExpDate != null && rawExpDate > 0)
         ? DateTime.fromMillisecondsSinceEpoch(rawExpDate * 1000)
         : null;
+    final serverInfo = decoded['server_info'];
+    if (serverInfo is Map) {
+      serverTimeZone = serverInfo['timezone']?.toString();
+      serverTimeOffset = serverTimeOffsetFrom(serverInfo);
+      if (serverTimeOffset != null) {
+        debugPrint('Catchup: server tz=$serverTimeZone '
+            'offset=${formatServerOffset(serverTimeOffset!)}');
+      }
+    }
+  }
+
+  /// `time_now` (provider-local wall clock) minus `timestamp_now` (UTC
+  /// epoch seconds), rounded to the nearest 15 minutes. Null when either is
+  /// missing or unreadable.
+  static Duration? serverTimeOffsetFrom(Map serverInfo) {
+    final local = DateTime.tryParse(
+        '${serverInfo['time_now'] ?? ''}'.trim().replaceFirst(' ', 'T'));
+    final epoch = int.tryParse('${serverInfo['timestamp_now'] ?? ''}'.trim());
+    if (local == null || epoch == null) return null;
+    final asUtc = DateTime.utc(local.year, local.month, local.day, local.hour,
+        local.minute, local.second);
+    final diff = asUtc.difference(
+        DateTime.fromMillisecondsSinceEpoch(epoch * 1000, isUtc: true));
+    final quarters = (diff.inSeconds / 900).round();
+    return Duration(minutes: quarters * 15);
+  }
+
+  static String formatServerOffset(Duration d) {
+    final sign = d.isNegative ? '-' : '+';
+    final m = d.inMinutes.abs();
+    return '$sign${(m ~/ 60).toString().padLeft(2, '0')}:'
+        '${(m % 60).toString().padLeft(2, '0')}';
   }
 
   List<XtreamCategory> _toCategories(List<Map<String, dynamic>> raw) => raw
@@ -454,6 +495,16 @@ class _LiveStreamsArgs {
   final String playlistId;
 }
 
+/// Catch-up days of one `get_live_streams` entry: `tv_archive_duration`
+/// when `tv_archive` is 1 (either may come as an int or a string), clamped
+/// to 0..30; anything unreadable is 0.
+int xtreamCatchupDays(Map item) {
+  if (int.tryParse('${item['tv_archive'] ?? ''}'.trim()) != 1) return 0;
+  final days = int.tryParse('${item['tv_archive_duration'] ?? ''}'.trim());
+  if (days == null) return 0;
+  return days.clamp(0, 30);
+}
+
 List<Channel> _buildLiveChannels(_LiveStreamsArgs args) {
   return args.raw.map((item) {
     final streamId = item['stream_id'];
@@ -462,6 +513,7 @@ List<Channel> _buildLiveChannels(_LiveStreamsArgs args) {
         ? epgChannelId
         : 'xt_live_$streamId';
     final categoryId = item['category_id']?.toString() ?? '';
+    final days = xtreamCatchupDays(item);
     return Channel(
       id: '${args.playlistId}::$rawId',
       rawId: rawId,
@@ -480,6 +532,9 @@ List<Channel> _buildLiveChannels(_LiveStreamsArgs args) {
       // as a fresh stream open by the relay — which *does* get retried.
       url: '${args.server}/live/${args.username}/${args.password}/$streamId.ts',
       logoUrl: item['stream_icon']?.toString(),
+      streamId: streamId?.toString(),
+      catchupDays: days,
+      catchupKind: days > 0 ? CatchupKind.xc : null,
     );
   }).toList();
 }

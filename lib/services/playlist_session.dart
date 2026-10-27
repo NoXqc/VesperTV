@@ -756,6 +756,18 @@ class PlaylistSession {
             .toList();
         await storage.setPlaylists(updated);
       }
+      // Catch-up links are written in the server's clock; kept so they
+      // work before the next login. Never cleared by a login that didn't
+      // report it.
+      final offset = api.serverTimeOffset?.inMinutes;
+      if (offset != null && offset != profile.serverTimeOffsetMinutes) {
+        profile.serverTimeOffsetMinutes = offset;
+        final updated = storage
+            .getPlaylists()
+            .map((p) => p.id == profile.id ? profile : p)
+            .toList();
+        await storage.setPlaylists(updated);
+      }
 
       liveCategories = await api.getLiveCategories();
       final liveCategoryNames = {for (final c in liveCategories) c.id: c.name};
