@@ -2073,4 +2073,10 @@ const Map<String, String> kFr = {
   "Starts in 1 hour": "Commence dans 1 heure",
   "Starts in 1 day": "Commence dans 1 jour",
   "Starts in 1 week": "Commence dans 1 semaine",
+  "Schedule": "Calendrier",
+  "Every game of the season, cups included": "Tous les matchs de la saison, coupes comprises",
+  "Could not load the schedule.": "Impossible de charger le calendrier.",
+  "OK: stats, watch or game menu · Hold OK: game menu · CH+/CH-: month": "OK : stats, regarder ou menu du match · Maintenir OK : menu du match · CH+/CH- : mois",
+  "No game this day.": "Aucun match ce jour-là.",
+  "Next game": "Prochain match",
 };

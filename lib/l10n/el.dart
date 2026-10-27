@@ -2687,4 +2687,10 @@ const Map<String, String> kEl = {
   "Starts in 1 hour": "Ξεκινά σε 1 ώρα",
   "Starts in 1 day": "Ξεκινά σε 1 ημέρα",
   "Starts in 1 week": "Ξεκινά σε 1 εβδομάδα",
+  "Schedule": "Πρόγραμμα",
+  "Every game of the season, cups included": "Όλοι οι αγώνες της σεζόν, μαζί με τα κύπελλα",
+  "Could not load the schedule.": "Δεν ήταν δυνατή η φόρτωση του προγράμματος.",
+  "OK: stats, watch or game menu · Hold OK: game menu · CH+/CH-: month": "OK: στατιστικά, παρακολούθηση ή μενού αγώνα · Κράτημα OK: μενού αγώνα · CH+/CH-: μήνας",
+  "No game this day.": "Κανένας αγώνας αυτή την ημέρα.",
+  "Next game": "Επόμενος αγώνας",
 };

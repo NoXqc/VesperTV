@@ -792,6 +792,10 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         leagues: _leagues,
         initialLeague: sportsLeagueById(_leagueFilter ?? '') ?? _leagues.first,
         follows: _follows,
+        hideScores: _hideScores,
+        matchGames: _matchGames,
+        onActivate: _activateGame,
+        onMenu: _openGame,
       ),
     ));
   }

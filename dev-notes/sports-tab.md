@@ -501,3 +501,13 @@ rescheduling preserves the selected lead and recomputes its deadline. Missed adv
 notices remain silent outside the existing1minute grace window. Popups say the chosen
 lead; startup/background behavior is unchanged (VesperTV must be open). Automatic
 team reminders still default to15minutes; a game-specific override becomes manual.
+
+## Team Schedule (Claude, 2026-10-27)
+Hold OK on a team in Standings or My Teams -> Schedule / Follow-Unfollow. Month calendar
+(`sports_schedule_screen.dart`): opponent logo + time/result per day, cup logo in the corner when the
+game's competition isn't the team's league, details of the selected day beside it (below on phones).
+OK: finished = `SportsGameDetailsDialog`, live = the Sports screen's `onActivate`, upcoming = its game
+menu (`onMenu`; without one, reminder toggle). Data `SportsService.teamSeason` (10 min cache): soccer
+uses `soccer/all/teams/{id}/schedule` (verified live 2026-10-27, Arsenal: Carabao Cup, UCL, Community
+Shield, friendlies); other sports / CFL / TheSportsDB = `teamSchedule`. Channel matches are computed for
+the next 14 days only. Tests: `test/sports_schedule_test.dart`.

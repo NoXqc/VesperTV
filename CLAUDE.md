@@ -362,6 +362,15 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-10-27 (main, unbuilt): Team Schedule + Media Hub fixes.** Hold OK on a team in
+  Standings / My Teams = menu Schedule / Follow-Unfollow (`showSportsTeamMenu`). Schedule =
+  `screens/sports_schedule_screen.dart`, month calendar (one focus node, own arrows, CH+/CH- month),
+  data `SportsService.teamSeason`: soccer reads ESPN `soccer/all/teams/{id}/schedule` (+`fixture=true`)
+  so cups come along; `_eventLeague` gives each event its competition (bank entry, else built from the
+  event's `league.slug`/`alternateId` logo). My Teams unchanged (league path). Media Hub: the Refresh
+  button re-reads every add-on manifest (`refresh(manifests: true)`; a stream-only AIOStreams that gained
+  TMDB catalogs never upgraded); own-catalog `tmdb:` titles retry with the details' `imdb_id` and ask
+  stream-only add-ons too (`_imdbVideoId`); shared Cinemeta search rows/hero chip name every add-on.
 - **cdx 2026-10-27 — broader title search:** `codex/broader-title-search`
   shares Unicode/accent/separator matching across global M3U/live, Xtream's full
   SQLite cache (schema9, bounded backfill) and Media Hub. Hub preserves provider

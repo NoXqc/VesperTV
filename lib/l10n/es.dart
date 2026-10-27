@@ -2070,4 +2070,10 @@ const Map<String, String> kEs = {
   "Starts in 1 hour": "Comienza en 1 hora",
   "Starts in 1 day": "Comienza en 1 día",
   "Starts in 1 week": "Comienza en 1 semana",
+  "Schedule": "Calendario",
+  "Every game of the season, cups included": "Todos los partidos de la temporada, copas incluidas",
+  "Could not load the schedule.": "No se pudo cargar el calendario.",
+  "OK: stats, watch or game menu · Hold OK: game menu · CH+/CH-: month": "OK: estadísticas, ver o menú del partido · Mantén OK: menú del partido · CH+/CH-: mes",
+  "No game this day.": "No hay partido este día.",
+  "Next game": "Próximo partido",
 };

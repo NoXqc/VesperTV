@@ -16,6 +16,7 @@ import '../utils/tv_theme.dart';
 import '../widgets/hold_to_activate.dart';
 import '../widgets/settings_scaffold.dart';
 import '../widgets/sports_widgets.dart';
+import 'sports_schedule_screen.dart';
 import 'sports_standings_screen.dart';
 import '../l10n/l10n.dart';
 
@@ -29,8 +30,8 @@ typedef SportsGameAction = Future<void> Function(
 /// a mini table around it, and its games for the next two weeks (OK =
 /// watch, hold OK = pick the channel, same as the game cards).
 ///
-/// Teams are followed from Standings (hold OK on a row); "+ Add team" opens
-/// it. Hold OK on a team here = unfollow.
+/// Teams are followed from Standings (OK on a row); "+ Add team" opens
+/// it. Hold OK on a team here = Schedule (its season calendar) / Unfollow.
 ///
 /// D-pad: two columns with explicit Up/Down/Left/Right (CLAUDE.md §10).
 class SportsMyTeamsScreen extends StatefulWidget {
@@ -274,11 +275,16 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
         initialLeague: widget.leagues.first,
         follows: widget.follows,
         addingTeam: true,
+        hideScores: widget.hideScores,
+        matchGames: widget.matchGames,
+        onActivate: widget.onActivate,
+        onMenu: widget.onMenu,
       ),
     ));
   }
 
-  Future<void> _unfollow(FollowedTeam t) async {
+  /// Hold OK on a team: its Schedule, or Unfollow.
+  Future<void> _teamMenu(FollowedTeam t) async {
     final schedule = _schedules[t.key];
     final team = schedule?.team ??
         SportsTeam(
@@ -286,9 +292,30 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
             name: tr('this team'),
             shortName: '',
             abbreviation: '');
-    final confirmed =
-        await showSportsFollowDialog(context, team: team, followed: true);
-    if (!confirmed || !mounted) return;
+    final action =
+        await showSportsTeamMenu(context, team: team, followed: true);
+    if (!mounted || action == null) return;
+    if (action == SportsTeamAction.schedule) {
+      final league = sportsLeagueById(t.leagueId);
+      if (league == null) return;
+      await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => SportsScheduleScreen(
+          league: league,
+          teamId: t.teamId,
+          team: schedule?.team,
+          hideScores: widget.hideScores,
+          matchGames: widget.matchGames,
+          onActivate: widget.onActivate,
+          onMenu: widget.onMenu,
+        ),
+      ));
+      if (mounted) _focusTeam(_selected);
+      return;
+    }
+    await _unfollow(t);
+  }
+
+  Future<void> _unfollow(FollowedTeam t) async {
     await context.read<GameReminders>().setTeam(t, false);
     await widget.follows.unfollow(t.leagueId, t.teamId);
     if (!mounted) return;
@@ -461,7 +488,7 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
         return HoldToActivate(
           key: ValueKey(t.key),
           onTap: () => _moveHorizontal(1),
-          onHold: () => _unfollow(t),
+          onHold: () => _teamMenu(t),
           child: _TeamRow(
             focusNode: _teamNode(t.key),
             selected: i == _selected,

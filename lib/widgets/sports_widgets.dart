@@ -62,6 +62,65 @@ Future<bool> showSportsFollowDialog(BuildContext context,
   return confirmed ?? false;
 }
 
+/// Hold OK on a team (Standings, My Teams): its season Schedule, or
+/// Follow / Unfollow. Null = cancelled.
+enum SportsTeamAction { schedule, follow }
+
+Future<SportsTeamAction?> showSportsTeamMenu(BuildContext context,
+    {required SportsTeam team, required bool followed, bool canFollow = true}) {
+  return showDialog<SportsTeamAction>(
+    context: context,
+    builder: (context) => SwallowHeldActivate(
+      child: AlertDialog(
+        backgroundColor: const Color(0xFF15151A),
+        title: Row(
+          children: [
+            SportsLogo(
+                url: team.logoUrl,
+                size: 40,
+                fallback: team.abbreviation,
+                color: team.color),
+            const SizedBox(width: 12),
+            Flexible(child: Text(team.name)),
+          ],
+        ),
+        content: SizedBox(
+          width: 440,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TvMenuTile(
+                autofocus: true,
+                icon: Icons.calendar_month,
+                title: tr('Schedule'),
+                subtitle: tr('Every game of the season, cups included'),
+                onTap: () =>
+                    Navigator.of(context).pop(SportsTeamAction.schedule),
+              ),
+              if (canFollow)
+                TvMenuTile(
+                  icon: followed ? Icons.star_border : Icons.star,
+                  title: followed ? tr('Unfollow') : tr('Follow'),
+                  subtitle: followed
+                      ? tr('Remove from My Teams')
+                      : tr('Add to My Teams — their games show first in {tab}',
+                          {'tab': AppConstants.sportsTabName}),
+                  onTap: () =>
+                      Navigator.of(context).pop(SportsTeamAction.follow),
+                ),
+              TvMenuTile(
+                icon: Icons.close,
+                title: tr('Cancel'),
+                onTap: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 Color? sportsTeamColor(String? hex) {
   if (hex == null || hex.length != 6) return null;
   final v = int.tryParse(hex, radix: 16);

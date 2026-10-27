@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../models/sports.dart';
 import '../services/app_preferences.dart';
+import '../services/sports_channel_matcher.dart';
 import '../services/sports_follows.dart';
 import '../services/sports_service.dart';
 import '../utils/tv_theme.dart';
@@ -13,6 +14,8 @@ import '../widgets/hold_to_activate.dart';
 import '../widgets/settings_scaffold.dart';
 import '../widgets/sports_widgets.dart';
 import '../l10n/l10n.dart';
+import 'sports_my_teams_screen.dart' show SportsGameAction;
+import 'sports_schedule_screen.dart';
 
 /// Conference / league tables for the user's Sports leagues.
 ///
@@ -21,7 +24,8 @@ import '../l10n/l10n.dart';
 /// (CLAUDE.md §10); inside the table Left/Right flip between groups so a
 /// remote user never has to climb back up to compare conferences.
 ///
-/// OK or hold OK on a team row = Follow / Unfollow (My Teams).
+/// OK on a team row = Follow / Unfollow (My Teams); hold OK = a menu with
+/// its Schedule (season calendar) and Follow / Unfollow.
 class SportsStandingsScreen extends StatefulWidget {
   const SportsStandingsScreen({
     super.key,
@@ -29,11 +33,22 @@ class SportsStandingsScreen extends StatefulWidget {
     required this.initialLeague,
     required this.follows,
     this.addingTeam = false,
+    this.hideScores = false,
+    this.matchGames,
+    this.onActivate,
+    this.onMenu,
   });
 
   final List<SportsLeague> leagues;
   final SportsLeague initialLeague;
   final SportsFollows follows;
+
+  /// Passed on to the Schedule screen (the Sports screen's game actions).
+  final bool hideScores;
+  final Future<Map<String, List<ChannelMatch>>> Function(List<SportsGame>)?
+      matchGames;
+  final SportsGameAction? onActivate;
+  final SportsGameAction? onMenu;
 
   /// Opened from My Teams' "+ Add team": the follow hint is spelled out
   /// above the table instead of the quiet footer.
@@ -317,6 +332,36 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
     if (mounted) setState(() {});
   }
 
+  /// Hold OK on a team row: its Schedule, or Follow / Unfollow.
+  Future<void> _teamMenu(SportsTeam team) async {
+    final league = _league;
+    final followed = widget.follows.isFollowed(league.id, team.id);
+    final action = await showSportsTeamMenu(context,
+        team: team, followed: followed, canFollow: _canFollow);
+    if (!mounted || action == null) return;
+    if (action == SportsTeamAction.follow) {
+      if (followed) {
+        await widget.follows.unfollow(league.id, team.id);
+      } else {
+        await widget.follows.follow(league.id, team.id);
+      }
+      if (mounted) setState(() {});
+      return;
+    }
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => SportsScheduleScreen(
+        league: league,
+        teamId: team.id,
+        team: team,
+        hideScores: widget.hideScores,
+        matchGames: widget.matchGames,
+        onActivate: widget.onActivate,
+        onMenu: widget.onMenu,
+      ),
+    ));
+    if (mounted) _focusRow(_row);
+  }
+
   // ---------------------------------------------------------------- build
 
   @override
@@ -533,7 +578,7 @@ class _SportsStandingsScreenState extends State<SportsStandingsScreen> {
                             return HoldToActivate(
                               key: ValueKey(i),
                               onTap: () => _toggleFollow(team),
-                              onHold: () => _toggleFollow(team),
+                              onHold: () => _teamMenu(team),
                               child: _StandingRow(
                                 focusNode: _rowNode(i),
                                 row: group.rows[i],

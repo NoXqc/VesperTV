@@ -271,6 +271,44 @@ class SportsService {
     }
   }
 
+  final Map<String, (SportsTeamSchedule, DateTime)> _seasonCache = {};
+
+  /// [teamId]'s whole season in every competition (the Schedule calendar).
+  /// Soccer reads ESPN's `soccer/all` team schedule, so cups (FA Cup,
+  /// Carabao Cup, Champions League…) come with the league games, each
+  /// [SportsGame.league] being its own competition. Other sports and the
+  /// non-ESPN sources are [teamSchedule].
+  Future<SportsTeamSchedule?> teamSeason(
+      SportsLeague league, String teamId) async {
+    if (!league.soccer || league.isCfl || league.sportsDbId != null) {
+      return teamSchedule(league, teamId);
+    }
+    final key = '${league.id}|$teamId';
+    final cached = _seasonCache[key];
+    if (cached != null &&
+        DateTime.now().difference(cached.$2) < const Duration(minutes: 10)) {
+      return cached.$1;
+    }
+    final base = '$_base/soccer/all/teams/$teamId/schedule';
+    try {
+      final responses = await Future.wait([
+        for (final url in [base, '$base?fixture=true'])
+          _client.get(Uri.parse(url)).timeout(const Duration(seconds: 15)),
+      ]);
+      for (final r in responses) {
+        if (r.statusCode != 200) throw Exception('HTTP ${r.statusCode}');
+      }
+      final schedule = await compute(
+          parseEspnTeamSchedule, ([for (final r in responses) r.body], league));
+      if (schedule == null) throw Exception('no team in response');
+      _seasonCache[key] = (schedule, DateTime.now());
+      return schedule;
+    } catch (e) {
+      debugPrint('SportsService: ${league.id} team $teamId season failed: $e');
+      return _seasonCache[key]?.$1 ?? await teamSchedule(league, teamId);
+    }
+  }
+
   /// [teamSchedule] for a TheSportsDB league: the free key gives only the
   /// last and the next game; the table line when the team is in its top 5.
   Future<SportsTeamSchedule?> _downloadDbSchedule(
@@ -998,7 +1036,8 @@ SportsTeamSchedule? parseEspnTeamSchedule((List<String>, SportsLeague) args) {
     teamJson ??= (json['team'] as Map?)?.cast<String, dynamic>();
     for (final e in (json['events'] as List?) ?? const []) {
       try {
-        final game = _parseEvent(e as Map<String, dynamic>, league);
+        final event = e as Map<String, dynamic>;
+        final game = _parseEvent(event, _eventLeague(event, league));
         if (game != null) byId[game.id] = game;
       } catch (_) {
         // One malformed event shouldn't drop the season.
@@ -1049,6 +1088,32 @@ SportsTeamSchedule? parseEspnTeamSchedule((List<String>, SportsLeague) args) {
     team: team,
     games: games,
     standingSummary: t['standingSummary']?.toString(),
+  );
+}
+
+/// The competition of a soccer team-schedule event: `soccer/all` mixes the
+/// league with cups, each event naming its own (`league.slug`). A known
+/// league/cup keeps its entry (logo, channel terms, game details path);
+/// another one gets a plain entry from the event.
+SportsLeague _eventLeague(Map<String, dynamic> e, SportsLeague league) {
+  final l = e['league'];
+  if (!league.soccer || l is! Map) return league;
+  final slug = l['slug']?.toString();
+  if (slug == null || slug.isEmpty || slug == league.id) return league;
+  final known = sportsLeagueById(slug);
+  if (known != null) return known;
+  final name = (l['name'] ?? l['abbreviation'] ?? slug).toString();
+  final logoId = l['alternateId']?.toString();
+  return SportsLeague(
+    id: slug,
+    espnPath: 'soccer/$slug',
+    name: name,
+    shortName: (l['abbreviation'] ?? name).toString(),
+    logoUrl: logoId == null
+        ? league.logoUrl
+        : 'https://a.espncdn.com/i/leaguelogos/soccer/500/$logoId.png',
+    soccer: true,
+    hasStandings: false,
   );
 }
 

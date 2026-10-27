@@ -2074,4 +2074,10 @@ const Map<String, String> kIt = {
   "Starts in 1 hour": "Inizia tra 1 ora",
   "Starts in 1 day": "Inizia tra 1 giorno",
   "Starts in 1 week": "Inizia tra 1 settimana",
+  "Schedule": "Calendario",
+  "Every game of the season, cups included": "Tutte le partite della stagione, coppe comprese",
+  "Could not load the schedule.": "Impossibile caricare il calendario.",
+  "OK: stats, watch or game menu · Hold OK: game menu · CH+/CH-: month": "OK: statistiche, guarda o menu partita · Tieni premuto OK: menu partita · CH+/CH-: mese",
+  "No game this day.": "Nessuna partita in questo giorno.",
+  "Next game": "Prossima partita",
 };
