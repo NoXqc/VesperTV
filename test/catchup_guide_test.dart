@@ -287,6 +287,29 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('hold on Catch-up hides a playlist from the group only',
+      (tester) async {
+    await pumpHome(tester);
+    await key(tester, LogicalKeyboardKey.arrowRight);
+    await tester.tap(find.text('Catch-up'));
+    await tester.pumpAndSettle();
+    expect(find.text('Catchup channel'), findsWidgets);
+    await tester.longPress(find.text('Catch-up'));
+    await tester.pumpAndSettle();
+    expect(find.text('Catch-up playlists'), findsOneWidget);
+    expect(find.text('1 channels'), findsOneWidget);
+    await tester.tap(find.text('1 channels'));
+    await tester.pumpAndSettle();
+    expect(find.text('Catchup channel'), findsNothing);
+    // Shown again the same way.
+    await tester.longPress(find.text('Catch-up'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Hidden here · 1 channels'));
+    await tester.pumpAndSettle();
+    expect(find.text('Catchup channel'), findsWidgets);
+    await tester.pump(const Duration(seconds: 3));
+  });
+
   testWidgets('Hide Catch-up group removes the row', (tester) async {
     await pumpHome(tester, hideCatchupGroup: true);
     await key(tester, LogicalKeyboardKey.arrowRight);

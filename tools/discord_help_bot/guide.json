@@ -88,6 +88,14 @@
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
   {
+    "id": "c4521d562ce2fca7",
+    "category": "Live TV",
+    "title": "Catch-up playlists",
+    "answer": "The Catch-up group lists every channel your provider marks with catch-up. OK or → on a playlist hides or shows its channels in this group only (for a provider that marks channels it doesn't really keep). Settings > Interface > Tabs can hide the whole group.",
+    "controls": "Hold OK on Catch-up",
+    "url": "https://vespertv.app/remote.html#Live%20TV"
+  },
+  {
     "id": "50a1931feaf2c8cf",
     "category": "Live TV",
     "title": "Jump to a playlist, or hide its groups here",

@@ -2000,6 +2000,8 @@ const Map<String, String> kEs = {
   "Hide Catch-up group": "Ocultar el grupo Diferido",
   "Removes the TV tab's Catch-up row (every channel you can replay).": "Quita la fila Diferido de la pestaña TV (todos los canales que se pueden volver a ver).",
   "No channels with catch-up.": "Ningún canal con diferido.",
+  "Catch-up playlists": "Listas con diferido",
+  "Hidden here · {n} channels": "Oculta aquí · {n} canales",
   'Catch-up': 'Diferido',
   'Previous programme': 'Programa anterior',
   'Next programme': 'Programa siguiente',

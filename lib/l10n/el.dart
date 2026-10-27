@@ -2616,6 +2616,8 @@ const Map<String, String> kEl = {
   "Hide Catch-up group": "Απόκρυψη ομάδας Catch-up",
   "Removes the TV tab's Catch-up row (every channel you can replay).": "Αφαιρεί τη γραμμή Catch-up από την καρτέλα TV (όλα τα κανάλια με επανάληψη).",
   "No channels with catch-up.": "Κανένα κανάλι με catch-up.",
+  "Catch-up playlists": "Λίστες catch-up",
+  "Hidden here · {n} channels": "Κρυφή εδώ · {n} κανάλια",
   'Catch-up': 'Catch-up',
   'Previous programme': 'Προηγούμενη εκπομπή',
   'Next programme': 'Επόμενη εκπομπή',

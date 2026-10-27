@@ -2004,6 +2004,8 @@ const Map<String, String> kIt = {
   "Hide Catch-up group": "Nascondi il gruppo Replay",
   "Removes the TV tab's Catch-up row (every channel you can replay).": "Toglie la riga Replay dalla scheda TV (tutti i canali da rivedere).",
   "No channels with catch-up.": "Nessun canale con replay.",
+  "Catch-up playlists": "Playlist con replay",
+  "Hidden here · {n} channels": "Nascosta qui · {n} canali",
   'Catch-up': 'Replay',
   'Previous programme': 'Programma precedente',
   'Next programme': 'Programma successivo',

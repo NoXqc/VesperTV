@@ -1329,6 +1329,83 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// Android only — Windows has no catch-up playback yet.
   static const _catchupGroupSentinel = '__catchup__';
 
+  final _catchupRowFocusNode = FocusNode(debugLabel: 'catchup-row');
+
+  /// The Catch-up group's playlists hidden by the viewer (hold OK on the
+  /// row): providers that flag channels with an archive they don't really
+  /// keep. Stored like the Playlists row's per-tab choice.
+  static const _catchupHiddenCategory = 'catchup';
+
+  List<Channel> _catchupChannels(PlaylistManager playlist) {
+    final hidden = context
+        .read<StorageService>()
+        .getHiddenPlaylistGroups(_catchupHiddenCategory);
+    final all = playlist.catchupLiveChannels();
+    return hidden.isEmpty
+        ? all
+        : all.where((c) => !hidden.contains(c.playlistId)).toList();
+  }
+
+  /// Hold OK on the Catch-up row: each playlist with catch-up channels,
+  /// OK / Right hides or shows it in this group only (the guide keeps its
+  /// catch-up).
+  Future<void> _showCatchupPlaylists() async {
+    final playlist = context.read<PlaylistManager>();
+    final storage = context.read<StorageService>();
+    final hidden = storage.getHiddenPlaylistGroups(_catchupHiddenCategory);
+    final counts = <String, int>{};
+    for (final c in playlist.catchupLiveChannels()) {
+      counts[c.playlistId] = (counts[c.playlistId] ?? 0) + 1;
+    }
+    if (counts.isEmpty) return;
+    String nameOf(String id) {
+      final name = playlist.playlistNameFor(id);
+      return name.isEmpty ? tr('Playlist') : name;
+    }
+
+    final picked = await showRollDownMenu<String>(
+      context,
+      anchor: rollDownAnchorOf(_catchupRowFocusNode.context),
+      centered: false,
+      width: 340,
+      title: tr('Catch-up playlists'),
+      items: [
+        for (final id in counts.keys)
+          RollDownMenuItem(
+            value: id,
+            icon: hidden.contains(id)
+                ? Icons.visibility_off_outlined
+                : Icons.playlist_play,
+            label: nameOf(id),
+            subtitle: hidden.contains(id)
+                ? tr('Hidden here · {n} channels', {'n': counts[id]})
+                : tr('{n} channels', {'n': counts[id]}),
+            dimmed: hidden.contains(id),
+            action: RollDownMenuAction(
+                value: id,
+                icon: hidden.contains(id)
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined,
+                label: hidden.contains(id) ? tr('Show') : tr('Hide')),
+          ),
+      ],
+    );
+    if (!mounted) return;
+    if (picked != null) {
+      final hiding = !hidden.contains(picked);
+      await storage.setHiddenPlaylistGroups(_catchupHiddenCategory,
+          hiding ? {...hidden, picked} : ({...hidden}..remove(picked)));
+      if (!mounted) return;
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr(
+              hiding ? '{name} hidden in {tab}' : '{name} shown in {tab}',
+              {'name': nameOf(picked), 'tab': tr('Catch-up')})),
+          duration: const Duration(seconds: 2)));
+    }
+    _catchupRowFocusNode.requestFocus();
+  }
+
   bool get _showCatchupGroup =>
       defaultTargetPlatform != TargetPlatform.windows &&
       !context.read<AppPreferences>().hideCatchupGroup;
@@ -1921,6 +1998,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     _browseScrollController.dispose();
     _liveListController.dispose();
     _liveListFocused.dispose();
+    _catchupRowFocusNode.dispose();
     _currentChannelFocusNode.dispose();
     _movingChannelFocusNode.dispose();
     _firstLiveChannelFocusNode.dispose();
@@ -2094,7 +2172,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// same list instead of risking the two falling out of sync.
   List<Channel> _currentLiveChannels(PlaylistManager playlist) {
     if (_effectiveLiveGroup(playlist) == _catchupGroupSentinel) {
-      return playlist.catchupLiveChannels();
+      return _catchupChannels(playlist);
     }
     if (_effectiveLiveGroup(playlist) != _favoritesGroupSentinel) {
       return playlist.visibleChannels(
@@ -4050,14 +4128,21 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                 onLongPress: _confirmClearChannelHistory,
               ),
             ),
+            // Hold Select = which playlists this group shows.
             if (_showCatchupGroup)
-              _SelectableRow(
-                icon: Icons.replay,
-                label: tr('Catch-up'),
-                selected: effectiveGroup == _catchupGroupSentinel,
-                collapsed: collapsed,
-                fontSize: _groupFontSize,
+              HoldToActivate(
                 onTap: () => _onGroupSelected(_catchupGroupSentinel),
+                onHold: _showCatchupPlaylists,
+                child: _SelectableRow(
+                  icon: Icons.replay,
+                  label: tr('Catch-up'),
+                  selected: effectiveGroup == _catchupGroupSentinel,
+                  collapsed: collapsed,
+                  fontSize: _groupFontSize,
+                  focusNode: _catchupRowFocusNode,
+                  onTap: () => _onGroupSelected(_catchupGroupSentinel),
+                  onLongPress: _showCatchupPlaylists,
+                ),
               ),
             // The viewer's own groups (any playlist's channels): above every
             // playlist's groups, never hidden with one.
