@@ -225,6 +225,29 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('swiping past the left edge loads the past; back again to now',
+      (tester) async {
+    await pumpHome(tester);
+    expect(find.text('Now'), findsNothing);
+    // A swipe to the window's start, then on past it.
+    for (var i = 0; i < 3; i++) {
+      await tester.drag(find.textContaining('cu.ca #').hitTestable().first,
+          const Offset(900, 0));
+      await tester.pumpAndSettle();
+    }
+    expect(find.text('Now'), findsOneWidget,
+        reason: 'the swipe loaded an older window');
+    // Swiping back toward now past the window's end loads the later one,
+    // and reaching the usual window drops the Now chip.
+    for (var i = 0; i < 12 && find.text('Now').evaluate().isNotEmpty; i++) {
+      await tester.drag(find.textContaining('cu.ca #').hitTestable().first,
+          const Offset(-900, 0));
+      await tester.pumpAndSettle();
+    }
+    expect(find.text('Now'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('a row without catch-up keeps the old edge (no past window)',
       (tester) async {
     await pumpHome(tester);

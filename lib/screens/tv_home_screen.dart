@@ -1016,6 +1016,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   DateTime? _guideAnchor;
   int? _guideInitialRow;
   DateTime? _guideInitialCursor;
+  double? _guideInitialScrollTop;
 
   /// The Timeline guide's own filter toggle button
   /// (`_TimelineFilterButton`, rendered above its channel column).
@@ -4669,18 +4670,21 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
           anchor: _guideAnchor,
           initialRow: _guideInitialRow,
           initialCursor: _guideInitialCursor,
+          initialScrollTop: _guideInitialScrollTop,
           // Moving into / out of the past remounts the guide on a new
           // window; the D-pad cursor carries over.
-          onShiftWindow: (anchor, row, cursor) {
+          onShiftWindow: (anchor, row, cursor, {scrollTop}) {
             setState(() {
               _guideAnchor = anchor;
               _guideInitialRow = row;
               _guideInitialCursor = cursor;
+              _guideInitialScrollTop = scrollTop;
               _timelineGuideKey = GlobalKey();
             });
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _guideInitialRow = null;
               _guideInitialCursor = null;
+              _guideInitialScrollTop = null;
             });
           },
           onOpenCatchup: (channel, at) {
@@ -7645,6 +7649,7 @@ class _TimelineGuide extends StatefulWidget {
       this.initialRow,
       this.initialCursor,
       this.onShiftWindow,
+      this.initialScrollTop,
       this.onOpenCatchup,
       this.holdFocus,
       this.translucent = false});
@@ -7669,9 +7674,15 @@ class _TimelineGuide extends StatefulWidget {
 
   /// Left past the window's start on a catch-up row (or Right past its end
   /// while in the past, or Back to now): remount on [anchor] (null = now)
-  /// with the cursor on [row] at [cursor] (null = now).
-  final void Function(DateTime? anchor, int row, DateTime? cursor)?
-      onShiftWindow;
+  /// with the cursor on [row] at [cursor] (null = now). A swipe past the
+  /// edge passes row -1 (nothing to focus), [cursor] = the time at the
+  /// view's left edge and [scrollTop] = the vertical scroll, so the new
+  /// window opens exactly where the old one was.
+  final void Function(DateTime? anchor, int row, DateTime? cursor,
+      {double? scrollTop})? onShiftWindow;
+
+  /// See [onShiftWindow]'s scrollTop.
+  final double? initialScrollTop;
 
   /// OK on a programme that has ended and is still in the channel's
   /// catch-up, or on an hour of catch-up the guide has no listing for.
@@ -7829,7 +7840,9 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
     }
     final cursor = widget.initialCursor;
     _cursorSlot = cursor == null ? null : _floorToSlot(cursor);
-    _focusedRowIndex = widget.initialRow;
+    final initialRow = widget.initialRow;
+    _focusedRowIndex =
+        initialRow != null && initialRow >= 0 ? initialRow : null;
     _totalWidth =
         _windowEnd.difference(_windowStart).inMinutes * _pixelsPerMinute;
     _gridHScroll.addListener(_mirrorRuler);
@@ -7856,11 +7869,20 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
         }
         return;
       }
-      _gridHScroll.jumpTo(_xFor(_cursorSlot ?? _floorToSlot(DateTime.now()))
+      final swiped = widget.initialRow == -1 && widget.initialCursor != null;
+      _gridHScroll.jumpTo(_xFor(swiped
+              ? widget.initialCursor!
+              : _cursorSlot ?? _floorToSlot(DateTime.now()))
           .clamp(0.0, _gridHScroll.position.maxScrollExtent));
+      final top = widget.initialScrollTop;
+      if (top != null && _gridVScroll.hasClients) {
+        _gridVScroll
+            .jumpTo(top.clamp(0.0, _gridVScroll.position.maxScrollExtent));
+      }
+      if (swiped) _cursorSlot = null;
       // After a window shift: the same row, at the cursor's column.
       final row = widget.initialRow;
-      if (row != null && row < widget.channels.length) {
+      if (row != null && row >= 0 && row < widget.channels.length) {
         _focusedRowIndex = row;
         _ensureRowVisible(row);
         _focusRowAt(row, _timeForSlot(_cursorSlot), 5);
@@ -7903,6 +7925,46 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
               DateTime.now().subtract(Duration(days: channel.catchupDays)))
           .add(_slot)
       : null;
+
+  bool _swipeShifted = false;
+
+  /// Touch / mouse drag past the grid's left edge loads the window before
+  /// (catch-up rows only — the D-pad does the same with Left), past its
+  /// right edge while in the past the window after. The view stays where
+  /// it was; dragging on just carries on into the new hours.
+  bool _onGridOverscroll(OverscrollNotification n) {
+    final shift = widget.onShiftWindow;
+    if (_swipeShifted ||
+        shift == null ||
+        n.dragDetails == null ||
+        n.metrics.axis != Axis.horizontal ||
+        !_gridHScroll.hasClients) {
+      return false;
+    }
+    final left = _windowStart.add(
+        Duration(seconds: (n.metrics.pixels / _pixelsPerMinute * 60).round()));
+    final top = _gridVScroll.hasClients ? _gridVScroll.offset : null;
+    if (n.overscroll < 0) {
+      DateTime? oldest;
+      for (final c in widget.channels) {
+        final floor = _catchupFloor(c);
+        if (floor != null && (oldest == null || floor.isBefore(oldest))) {
+          oldest = floor;
+        }
+      }
+      if (oldest == null || !_windowStart.isAfter(oldest)) return false;
+      _swipeShifted = true;
+      shift(_windowStart, -1, left, scrollTop: top);
+      return true;
+    }
+    if (n.overscroll > 0 && widget.anchor != null) {
+      final usual = !left.isBefore(DateTime.now().subtract(_windowBefore));
+      _swipeShifted = true;
+      shift(usual ? null : _windowEnd, -1, left, scrollTop: top);
+      return true;
+    }
+    return false;
+  }
 
   /// Back in the guide: back to now when it looks at another time. True
   /// when it did something (the caller then stops there).
@@ -8490,56 +8552,59 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
               Expanded(
                 child: FocusScope(
                   node: _gridFocusScope,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    controller: _gridHScroll,
-                    child: SizedBox(
-                      width: _totalWidth,
-                      height: widget.channels.length * _rowHeight,
-                      child: Stack(
-                        children: [
-                          ListView.builder(
-                            controller: _gridVScroll,
-                            itemCount: widget.channels.length,
-                            itemExtent: _rowHeight,
-                            itemBuilder: (context, i) => _TimelineRow(
-                              rowIndex: i,
-                              channel: widget.channels[i],
-                              programs: widget.epg
-                                  .getPrograms(widget.channels[i].epgId),
-                              windowStart: _windowStart,
-                              windowEnd: _windowEnd,
-                              pixelsPerMinute: _pixelsPerMinute,
-                              onOpen: () => widget.onOpen(widget.channels[i]),
-                              onOpenCatchup: widget.onOpenCatchup == null
-                                  ? null
-                                  : (at) => widget.onOpenCatchup!(
-                                      widget.channels[i], at),
-                              onShowOptions: () =>
-                                  widget.onShowOptions(widget.channels[i]),
-                              ensureRowVisible: _ensureRowVisible,
-                              onFocusChanged: widget.onFocusChanged,
-                              onFocusTracked: _trackFocus,
-                              onFocusedBlockGone: _onFocusedBlockGone,
-                              onRegisterBlock: _registerBlock,
-                              onUnregisterBlock: _unregisterBlock,
-                              hScroll: _gridHScroll,
-                              epgLoading: epgLoading,
-                              translucent: widget.translucent,
-                            ),
-                          ),
-                          Positioned(
-                            left: nowX,
-                            top: 0,
-                            bottom: 0,
-                            child: const IgnorePointer(
-                              child: SizedBox(
-                                width: 2,
-                                child: ColoredBox(color: Colors.redAccent),
+                  child: NotificationListener<OverscrollNotification>(
+                    onNotification: _onGridOverscroll,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      controller: _gridHScroll,
+                      child: SizedBox(
+                        width: _totalWidth,
+                        height: widget.channels.length * _rowHeight,
+                        child: Stack(
+                          children: [
+                            ListView.builder(
+                              controller: _gridVScroll,
+                              itemCount: widget.channels.length,
+                              itemExtent: _rowHeight,
+                              itemBuilder: (context, i) => _TimelineRow(
+                                rowIndex: i,
+                                channel: widget.channels[i],
+                                programs: widget.epg
+                                    .getPrograms(widget.channels[i].epgId),
+                                windowStart: _windowStart,
+                                windowEnd: _windowEnd,
+                                pixelsPerMinute: _pixelsPerMinute,
+                                onOpen: () => widget.onOpen(widget.channels[i]),
+                                onOpenCatchup: widget.onOpenCatchup == null
+                                    ? null
+                                    : (at) => widget.onOpenCatchup!(
+                                        widget.channels[i], at),
+                                onShowOptions: () =>
+                                    widget.onShowOptions(widget.channels[i]),
+                                ensureRowVisible: _ensureRowVisible,
+                                onFocusChanged: widget.onFocusChanged,
+                                onFocusTracked: _trackFocus,
+                                onFocusedBlockGone: _onFocusedBlockGone,
+                                onRegisterBlock: _registerBlock,
+                                onUnregisterBlock: _unregisterBlock,
+                                hScroll: _gridHScroll,
+                                epgLoading: epgLoading,
+                                translucent: widget.translucent,
                               ),
                             ),
-                          ),
-                        ],
+                            Positioned(
+                              left: nowX,
+                              top: 0,
+                              bottom: 0,
+                              child: const IgnorePointer(
+                                child: SizedBox(
+                                  width: 2,
+                                  child: ColoredBox(color: Colors.redAccent),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
