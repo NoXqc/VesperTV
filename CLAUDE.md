@@ -353,13 +353,24 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   four dictionaries. Existing picker/profile persistence/refined/translucent paths
   unchanged. Added Aqua to the existing finish geometry/focus test matrix.
 
-- **Claude, 2026-10-27: Catch-up (Android), test +459** on `claude/catchup`. Plan, provider
-  probe (Blcktv: HLS VOD archive, guide ~12 h back, archive 2 days) and task split in
-  `dev-notes/catchup-plan.md`. A `cu_` transient channel per request (never live).
-  `PlaybackService.playCatchup` / `backToLive` / `togglePlayPause` (pause = timeshift). Native
-  `setFiniteMode` (no live recovery for finite archive streams). Guide: Left into the past
-  remounts on an anchored window; Back = back to now. `_playGen` fixes overlapping plays that
-  leaked a player + its connection. Windows (C4) still plays live.
+- **Claude, 2026-10-27: Catch-up (Android) done, owner-tested (+461 Formuler, +462 Fire Stick
+  with Codex's Aqua)** on `claude/catchup`; local `main` fast-forwarded to it, not pushed. Plan,
+  Blcktv probe and task split: `dev-notes/catchup-plan.md`.
+  - **Playback:**
+    - Each catch-up request plays a transient `cu_` channel (never live, own id); its live channel
+      is `PlaybackService.liveChannel`. Use liveChannel for anything matching groups/rows/history.
+    - `playCatchup` / `backToLive` / `togglePlayPause` (pause > 90 s = timeshift).
+    - Native `setFiniteMode`: no live recovery for finite archive streams.
+    - `_playGen`: overlapping plays used to leak a player and its connection.
+  - **Guide:**
+    - Left into the past remounts on an anchored window (`onShiftWindow`); Back = back to now.
+    - `_guideHoldFocus` keeps focus through block rebuilds and remounts. Without it the focus
+      recovery opened the columns, and fast presses flicked to the search button.
+  - **EPG:**
+    - Catch-up ids keep up to 7 days of past.
+    - The catch-up list is re-read lazily (live lists load after launch).
+    - A refresh awaits `ensureLiveChannelsLoaded`.
+  - **Left to do:** Windows (C4) and the docs/remote page (C5, Codex). See HANDOFF.md.
 - **cdx, 2026-10-27: C2 catch-up URL builder** (`codex/catchup-url`, from dd16643):
   standalone CatchupKind plus catchupUrl/catchupPhpUrl/catchupUrlForLog; no Channel
   dependency or callers. Fixed server-offset minute URLs, UTC templates and

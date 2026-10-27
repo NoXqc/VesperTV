@@ -76,15 +76,15 @@ Plus `streamId` for Xtream live channels (not recoverable today when `epg_channe
 | # | Task | Owner | Depends on |
 |---|------|-------|------------|
 | 0 | Provider probe + decide URL/time rules | Claude | done (§6) |
-| C1 | Data fields: Channel, Xtream, M3U, server time offset | Claude | 0 |
-| C2 | `CatchupUrlBuilder` pure Dart + tests | **Codex** (now) | 0, runs beside C1 |
-| C3 | EPG past retention for catch-up channels | Claude | C1 |
-| 3 | `CatchupSession` in PlaybackService + native recovery mode | Claude | C1, C2 |
-| 4 | Timeline guide: past window, styling, OK/hold, Back-to-now | Claude | 3, C3 |
-| 5 | Player bar catch-up mode + pause-live timeshift + Live ⏩ | Claude | 3 |
+| C1 | Data fields: Channel, Xtream, M3U, server time offset | Claude | **done** `02a0778` |
+| C2 | `CatchupUrlBuilder` pure Dart + tests | **Codex** | **done** `381e445` |
+| C3 | EPG past retention for catch-up channels | Claude | **done** `5be757b`, `941355a` |
+| 3 | `CatchupSession` in PlaybackService + native recovery mode | Claude | **done** `0887bcc`, `40f0549` |
+| 4 | Timeline guide: past window, styling, OK/hold, Back-to-now | Claude | **done** `e073b1e`, `66c07cf` |
+| 5 | Player bar catch-up mode + pause-live timeshift + Live ⏩ | Claude | **done** `67eb860` |
 | C4 | Windows port (desktop player + mini player) | Claude (Codex if time is short) | 3-5 merged |
 | C5 | Strings (ES/IT/EL), remote tips page, README/site line | **Codex** (later) | 4-5 |
-| 6 | Device test pass (Formuler + Fire Stick), release | Claude + owner | all |
+| 6 | Device test pass (Formuler + Fire Stick), release | Claude + owner | Formuler OK (+461); Fire Stick +462 pending |
 
 Owner, 2026-10-27: Codex has limited usage, so **Codex does only C2 now and C5 at the end**.
 Claude does the rest. The C1/C3 specs stay below as Claude's checklist.
