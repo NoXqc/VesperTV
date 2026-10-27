@@ -2017,4 +2017,13 @@ const Map<String, String> kEs = {
   "{format} (stream)": "{format} (flujo)",
   "{format} (decoder)": "{format} (decodificador)",
   "File size": "Tamaño del archivo",
+
+  // Match-specific score alerts.
+  "Set goals alert for this match":
+      "Activar alertas de goles para este partido",
+  "Remove goals alert for this match":
+      "Quitar alertas de goles para este partido",
+  "Notify me when either team scores (while VesperTV is open). Hide scores pauses alerts.":
+      "Avisarme cuando marque cualquiera de los equipos (mientras VesperTV esté abierto). Ocultar los resultados pausa las alertas.",
+  "Could not save score alert.": "No se pudo guardar la alerta de marcador.",
 };

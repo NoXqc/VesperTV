@@ -22,6 +22,7 @@ class _GoalsAlertOverlayState extends State<GoalsAlertOverlay>
   GoalsAlerts? _service;
   String? _viewer;
   bool _enabled = false;
+  bool _teamAlerts = false;
   bool _active = true;
   int _epoch = 0;
   Timer? _poll;
@@ -40,14 +41,18 @@ class _GoalsAlertOverlayState extends State<GoalsAlertOverlay>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final service = context.read<GoalsAlerts>();
+    final service = context.watch<GoalsAlerts>();
     final viewer = context.watch<ViewerProfileService>().active.id;
-    final prefs = context.watch<AppPreferences>();
-    final enabled = prefs.goalsAlert && !prefs.sportsHideScores;
-    if (_service != service || _viewer != viewer || _enabled != enabled) {
+    final teamAlerts = context.watch<AppPreferences>().goalsAlert;
+    final enabled = service.enabled;
+    if (_service != service ||
+        _viewer != viewer ||
+        _enabled != enabled ||
+        _teamAlerts != teamAlerts) {
       _service = service;
       _viewer = viewer;
       _enabled = enabled;
+      _teamAlerts = teamAlerts;
       _clear();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _refresh();

@@ -1,6 +1,7 @@
 import '../utils/refined_finish.dart';
 import '../services/game_reminders.dart';
 import '../widgets/game_reminder_menu_tile.dart';
+import '../widgets/game_score_alert_menu_tile.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -3175,6 +3176,7 @@ class _GameDialog extends StatelessWidget {
                 child: ListView(
                   shrinkWrap: true,
                   children: [
+                    GameScoreAlertMenuTile(game: game),
                     GameReminderMenuTile(
                         game: game,
                         onTap: () => Navigator.pop(context, _ReminderAction())),

@@ -2633,4 +2633,14 @@ const Map<String, String> kEl = {
   "{format} (stream)": "{format} (ροή)",
   "{format} (decoder)": "{format} (αποκωδικοποιητής)",
   "File size": "Μέγεθος αρχείου",
+
+  // Match-specific score alerts.
+  "Set goals alert for this match":
+      "Ενεργοποίηση ειδοποιήσεων γκολ για αυτόν τον αγώνα",
+  "Remove goals alert for this match":
+      "Κατάργηση ειδοποιήσεων γκολ για αυτόν τον αγώνα",
+  "Notify me when either team scores (while VesperTV is open). Hide scores pauses alerts.":
+      "Ειδοποίηση όταν σκοράρει οποιαδήποτε ομάδα (όσο το VesperTV είναι ανοιχτό). Η απόκρυψη σκορ αναστέλλει τις ειδοποιήσεις.",
+  "Could not save score alert.":
+      "Δεν ήταν δυνατή η αποθήκευση της ειδοποίησης σκορ.",
 };

@@ -470,3 +470,20 @@ eligible game, or Cancel reminder on a saved game, including unmatched games.
 Main rows, Later today grids and My Teams share this menu. Live/final/past or
 cancelled games remain ineligible. Team-wide automatic reminders still use followed
 teams. Scheduler, timing, persistence and reminder popup are unchanged.
+
+## Match-specific score alerts (Codex, 2026-10-27; unreleased)
+
+Hold an upcoming/live team-game card and choose **Set goals alert for this match**;
+the same shared Sports Trak menu offers **Remove goals alert for this match** afterward.
+Both sides are tracked, including teams outside My Teams. The saved match opt-in is
+independent of the Interface My Teams toggle, per viewer, on this device only, and
+excluded from backup/transfer. Saved entries expire 48 hours after scheduled start
+and are pruned on the next subscription save (at most64 valid subscriptions).
+
+The existing top-left card/league and scoring-team logos are reused over every
+screen/stream. First observation/reopen/resume is silent; Hide scores suspends all
+alerts. Shared league/day queries retain the existing two-worker limit and cached
+30-second polling; updates may combine multiple scores between feed refreshes.
+Following a team and selecting its match produces one notice per scoring side.
+Cancellation, profile changes and stale in-flight responses cannot leak notices.
+No new endpoint, background service, decoder changes or playback/focus changes.
