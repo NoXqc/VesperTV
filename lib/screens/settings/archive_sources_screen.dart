@@ -11,11 +11,11 @@ import '../../services/app_preferences.dart';
 import '../../services/archive_service.dart';
 import '../../services/phone_pairing_service.dart';
 import '../../services/storage_service.dart';
+import '../../utils/refined_finish.dart';
 import '../../widgets/hold_to_activate.dart';
 import '../../widgets/phone_pair_panel.dart';
 import '../../widgets/section_label.dart';
 import '../../widgets/settings_scaffold.dart';
-import '../../widgets/tv_switch_list_tile.dart';
 import '../../widgets/tv_text_field_gate.dart';
 import 'media_server_screen.dart';
 import 'stremio_import_screen.dart';
@@ -24,7 +24,7 @@ import 'trackers_screen.dart';
 /// Settings > Archive sources: the servers the Archive tab browses. Any
 /// source following the catalog/stream add-on schema works (see
 /// [ArchiveApiService]); adding one checks its manifest first. Hold OK on
-/// a source to remove it. Same layout as Settings > Add-ons.
+/// a source's enable control to remove it. Shared by Settings and the Hub rail.
 class ArchiveSourcesScreen extends StatefulWidget {
   const ArchiveSourcesScreen({super.key});
 
@@ -34,9 +34,92 @@ class ArchiveSourcesScreen extends StatefulWidget {
 
 class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
   final _link = TextEditingController();
-  final _linkFocus = FocusNode();
-  final _addFocus = FocusNode();
+  final _linkFocus = FocusNode(debugLabel: 'source-link');
+  final _addFocus = FocusNode(debugLabel: 'source-add');
+  final _backFocus = FocusNode(debugLabel: 'source-back');
+  final _nodes = <String, FocusNode>{};
+  // A band is a visible grid row; each cell contains its vertical controls.
+  // All cells stay mounted so off-screen D-pad targets always have a context.
+  final _bands = <List<List<FocusNode>>>[];
   bool _adding = false;
+
+  FocusNode _node(String id) =>
+      _nodes.putIfAbsent(id, () => FocusNode(debugLabel: id));
+
+  void _reveal(FocusNode node) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !node.hasFocus || node.context == null) return;
+      final viewport =
+          Scrollable.maybeOf(node.context!)?.context.findRenderObject();
+      final above = viewport is RenderBox &&
+          node.rect.top < viewport.localToGlobal(Offset.zero).dy;
+      Scrollable.ensureVisible(node.context!,
+          duration: Duration.zero,
+          alignmentPolicy: above
+              ? ScrollPositionAlignmentPolicy.keepVisibleAtStart
+              : ScrollPositionAlignmentPolicy.keepVisibleAtEnd);
+    });
+  }
+
+  void _focus(FocusNode node) {
+    node.requestFocus();
+    _reveal(node);
+  }
+
+  void _move(TraversalDirection direction) {
+    if (!(ModalRoute.of(context)?.isCurrent ?? true)) return;
+    if (_linkFocus.hasFocus) {
+      if (direction == TraversalDirection.down ||
+          direction == TraversalDirection.right) {
+        _focus(_addFocus);
+      } else if (direction == TraversalDirection.up) {
+        _focus(_backFocus);
+      }
+      return;
+    }
+    final current = FocusManager.instance.primaryFocus;
+    for (var row = 0; row < _bands.length; row++) {
+      final band = _bands[row];
+      for (var column = 0; column < band.length; column++) {
+        final controls = band[column];
+        final action = controls.indexWhere((n) => n == current || n.hasFocus);
+        if (action < 0) continue;
+        final horizontal = direction == TraversalDirection.left ||
+            direction == TraversalDirection.right;
+        final forward = direction == TraversalDirection.down ||
+            direction == TraversalDirection.right;
+        final step = forward ? 1 : -1;
+        if (horizontal) {
+          final next = column + step;
+          if (next >= 0 && next < band.length) {
+            final cell = band[next];
+            _focus(cell[action.clamp(0, cell.length - 1)]);
+          }
+        } else if (action + step >= 0 && action + step < controls.length) {
+          _focus(controls[action + step]);
+        } else if (row + step >= 0 && row + step < _bands.length) {
+          final nextBand = _bands[row + step];
+          // Preserve the visual column, including between header buttons and
+          // source cards, and clamp partial last rows to their last card.
+          final x = current!.rect.center.dx;
+          final nextCell = nextBand.reduce((a, b) =>
+              (a.first.rect.center.dx - x).abs() <=
+                      (b.first.rect.center.dx - x).abs()
+                  ? a
+                  : b);
+          _focus(forward ? nextCell.first : nextCell.last);
+        } else if (!forward) {
+          _focus(_backFocus);
+        }
+        return;
+      }
+    }
+    // Down/Right from the app-bar Back button enters the page again.
+    if (direction == TraversalDirection.down ||
+        direction == TraversalDirection.right) {
+      _focus(_linkFocus);
+    }
+  }
 
   @override
   void initState() {
@@ -57,21 +140,33 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
     _link.dispose();
     _linkFocus.dispose();
     _addFocus.dispose();
+    _backFocus.dispose();
+    for (final node in _nodes.values) {
+      node.dispose();
+    }
     super.dispose();
   }
 
   /// Up/Down out of the link field (EditableText keeps the arrow keys —
   /// same fix as AddonsScreen._escapeLinkField).
   bool _escapeLinkField(KeyEvent event) {
-    if (event is! KeyDownEvent) return false;
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) return false;
     if (!(ModalRoute.of(context)?.isCurrent ?? true)) return false;
     if (!_linkFocus.hasFocus) return false;
+    if (!context.read<AppPreferences>().isTelevision ||
+        MediaQuery.viewInsetsOf(context).bottom > 0) {
+      return false;
+    }
     if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-      _addFocus.requestFocus();
+      _focus(_addFocus);
       return true;
     }
     if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-      _linkFocus.previousFocus();
+      _focus(_backFocus);
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+      _focus(_addFocus);
       return true;
     }
     return false;
@@ -132,10 +227,23 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
         ],
       )),
     );
-    if (ok == true) await service.removeSource(source);
+    if (ok != true) return;
+    final sources = service.sources;
+    final index = sources.indexWhere((s) => s.key == source.key);
+    final remaining = sources.where((s) => s.key != source.key).toList();
+    await service.removeSource(source);
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _focus(remaining.isEmpty
+          ? _linkFocus
+          : _node(
+              'source-${remaining[index.clamp(0, remaining.length - 1)].key}-enabled'));
+    });
   }
 
   Future<void> _add() async {
+    if (_adding) return;
     final url = _link.text.trim();
     if (url.isEmpty) return;
     // Several links pasted at once (from Nuvio, a notes file…): all of them.
@@ -231,6 +339,7 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
     if (ok != true) return;
     await service.clearAll();
     if (!mounted) return;
+    _focus(_linkFocus);
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(tr('Media Hub cleared.'))));
   }
@@ -246,8 +355,7 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
   }
 
   String _summary(ArchiveSource s) {
-    // Custom-type catalogs (wireType set) are browsed under Movies —
-    // counted on their own.
+    if (s.streamOnly) return tr('Catalogs from Cinemeta');
     final movies = s.catalogs
         .where((c) => c.type == ArchiveType.movie && c.wireType == null)
         .length;
@@ -255,179 +363,471 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
         .where((c) => c.type == ArchiveType.series && c.wireType == null)
         .length;
     final other = s.catalogs.where((c) => c.wireType != null).length;
-    final parts = [
+    return [
       if (movies > 0) tr('{n} movie catalogs', {'n': movies}),
       if (shows > 0) tr('{n} TV show catalogs', {'n': shows}),
       if (other > 0) tr('{n} other catalogs', {'n': other}),
-      if (s.listOnly) tr('Plays through your other sources'),
-    ];
-    return '${parts.join(' · ')}  ·  ${tr('Hold OK to remove')}';
+    ].join(' · ');
+  }
+
+  List<FocusNode> _sourceNodes(ArchiveSource source) => [
+        _node('source-${source.key}-enabled'),
+        if (source.tracker == null) _node('source-${source.key}-url'),
+        if (source.server == null && source.tracker == null)
+          _node('source-${source.key}-other'),
+      ];
+
+  Widget _sourceCard(ArchiveSource source, ArchiveService service) {
+    final nodes = _sourceNodes(source);
+    final catalogOnly = source.listOnly || source.tracker != null;
+    final role = source.server != null
+        ? tr('Media server')
+        : source.tracker != null
+            ? tr('Tracker lists')
+            : source.listOnly
+                ? tr('Catalogs only')
+                : source.streamOnly
+                    ? tr('Streams only')
+                    : tr('Catalogs + streams');
+    return _SourceCard(
+      key: ValueKey('source-card-${source.key}'),
+      nodes: nodes,
+      icon: source.server != null
+          ? Icons.dns_outlined
+          : catalogOnly
+              ? Icons.video_library_outlined
+              : Icons.play_circle_outline,
+      name: source.name,
+      role: role,
+      summary: _summary(source),
+      description: catalogOnly
+          ? tr('Plays through your other sources')
+          : tr('Provides video playback'),
+      footer: source.server == null && source.tracker == null
+          ? tr('Refresh Media Hub after changing Other.')
+          : null,
+      children: [
+        HoldToActivate(
+          onTap: () => service.setEnabled(source, !source.enabled),
+          onHold: () => _remove(source),
+          child: _SourceControl(
+            node: nodes.first,
+            label: tr('Enabled'),
+            value: source.enabled,
+            onTap: () => service.setEnabled(source, !source.enabled),
+            onFocus: () => _reveal(nodes.first),
+          ),
+        ),
+        if (source.tracker == null)
+          _SourceControl(
+            node: nodes[1],
+            label: tr('View source URL'),
+            icon: Icons.link,
+            onTap: () => _viewSourceUrl(source),
+            onFocus: () => _reveal(nodes[1]),
+          ),
+        if (source.server == null && source.tracker == null)
+          _SourceControl(
+            node: nodes.last,
+            label: tr('Show under Other'),
+            value: source.underOther,
+            onTap: () => service.setUnderOther(source, !source.underOther),
+            onFocus: () => _reveal(nodes.last),
+          ),
+      ],
+    );
+  }
+
+  /// Eager rows keep every focus target attached, unlike a lazy GridView.
+  /// IntrinsicHeight matches each row's card heights without clipping large text.
+  Widget _grid(
+      List<Widget> cards, List<List<FocusNode>> controls, int columns) {
+    final rows = <Widget>[];
+    for (var start = 0; start < cards.length; start += columns) {
+      final end = (start + columns).clamp(0, cards.length);
+      _bands.add(controls.sublist(start, end));
+      rows.add(Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = start; i < start + columns; i++) ...[
+                if (i > start) const SizedBox(width: 16),
+                Expanded(child: i < end ? cards[i] : const SizedBox.shrink()),
+              ],
+            ],
+          ),
+        ),
+      ));
+    }
+    return Column(children: rows);
   }
 
   @override
   Widget build(BuildContext context) {
     final service = context.watch<ArchiveService>();
     final sources = service.sources;
-    return SettingsScaffold(
-      title: tr('Media Hub sources'),
-      // Not a lazy ListView: with many sources (each with its Show under
-      // Other switch) the Add field below was never built, so the remote's
-      // Down couldn't reach it (user with 11 add-ons).
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(tr(
-                'The Media Hub tab shows films and series from sources you add here. Any source that follows the catalog/stream add-on format works; a source that only offers streams by IMDb id gets its posters and episodes from Cinemeta. Only direct video links are played; torrent links are ignored.')),
-            const SizedBox(height: 16),
-            SectionLabel(tr('Your sources')),
-            TvSwitchListTile(
-              title: Text(tr('Show Cinemeta catalog')),
-              subtitle: Text(tr(
-                  'Show the default Popular, New and Featured rows and Cinemeta search results. Turn off to browse only your own catalogs. Posters and episode details may still use Cinemeta.')),
-              value: service.showCinemetaCatalog,
-              onChanged: service.setShowCinemetaCatalog,
+    final playback =
+        sources.where((s) => !s.listOnly && s.tracker == null).toList();
+    final catalogs =
+        sources.where((s) => s.listOnly || s.tracker != null).toList();
+    final cinemetaNode = _node('source-cinemeta');
+    final scheme = Theme.of(context).colorScheme;
+    return CallbackShortcuts(
+      bindings: {
+        for (final entry in {
+          LogicalKeyboardKey.arrowUp: TraversalDirection.up,
+          LogicalKeyboardKey.arrowDown: TraversalDirection.down,
+          LogicalKeyboardKey.arrowLeft: TraversalDirection.left,
+          LogicalKeyboardKey.arrowRight: TraversalDirection.right,
+        }.entries)
+          SingleActivator(entry.key): () => _move(entry.value),
+        const SingleActivator(LogicalKeyboardKey.escape): () =>
+            Navigator.of(context).maybePop(),
+      },
+      child: SettingsScaffold(
+        backFocusNode: _backFocus,
+        title: tr('Media Hub sources'),
+        body: LayoutBuilder(builder: (context, constraints) {
+          final width = constraints.maxWidth - 40;
+          final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+          final columns =
+              ((width + 16) / (330 * scale + 16)).floor().clamp(1, 3);
+          final connectorColumns =
+              ((width + 16) / (210 * scale + 16)).floor().clamp(1, 5);
+          _bands.clear();
+          _bands.add([
+            [_linkFocus]
+          ]);
+          final connectors = <(FocusNode, IconData, String, VoidCallback)>[
+            (_addFocus, Icons.add, tr('Add'), _add),
+            (
+              _node('source-phone'),
+              Icons.qr_code_2,
+              tr('From phone'),
+              _fromPhone
             ),
-            const SizedBox(height: 4),
-            if (sources.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text(tr('No sources yet.'),
-                    style: const TextStyle(color: Colors.white60)),
-              ),
-            for (final s in sources) ...[
-              HoldToActivate(
-                onTap: () => service.setEnabled(s, !s.enabled),
-                onHold: () => _remove(s),
-                child: TvSwitchListTile(
-                  title: Text(s.name),
-                  subtitle: !s.underOther
-                      ? Text(_summary(s),
-                          maxLines: 2, overflow: TextOverflow.ellipsis)
-                      : Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(_summary(s),
-                                maxLines: 2, overflow: TextOverflow.ellipsis),
-                            const SizedBox(height: 2),
-                            // Not in the normal rows, search or Recently
-                            // watched (ArchiveService.otherGenre) — without
-                            // this, the source looks like it added nothing.
-                            Text(
-                              tr('Use the Other filter in Media Hub > Movies / TV Shows > Genre to see this source.'),
-                              style: TextStyle(
-                                  color: Theme.of(context).colorScheme.primary),
-                            ),
-                          ],
-                        ),
-                  value: s.enabled,
-                  onChanged: (v) => service.setEnabled(s, v),
-                ),
-              ),
-              // Main rows or Other only, either way: the automatic choice
-              // (ArchiveSource.autoOther) is just the starting position.
-              if (s.tracker == null)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    onPressed: () => _viewSourceUrl(s),
-                    icon: const Icon(Icons.link),
-                    label: Text(tr('View source URL')),
+            (
+              _node('source-import'),
+              Icons.move_down,
+              tr('Import from Stremio'),
+              () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => const StremioImportScreen()))
+            ),
+            (
+              _node('source-server'),
+              Icons.dns_outlined,
+              tr('Connect Jellyfin / Emby'),
+              () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const MediaServerScreen()))
+            ),
+            (
+              _node('source-trackers'),
+              Icons.playlist_add_check,
+              tr('Trakt & Simkl'),
+              () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const TrackersScreen()))
+            ),
+          ];
+          return SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SectionLabel(tr('Add a source')),
+                const SizedBox(height: 8),
+                TvTextFieldGate(
+                  focusNode: _linkFocus,
+                  builder: (context, readOnly) => TextField(
+                    controller: _link,
+                    focusNode: _linkFocus,
+                    readOnly: readOnly,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) {
+                      _focus(_addFocus);
+                      _add();
+                    },
+                    decoration: InputDecoration(
+                      labelText: tr('Source link (ends with manifest.json)'),
+                      helperText: tr('Several links at once work too.'),
+                      border: const OutlineInputBorder(),
+                    ),
                   ),
                 ),
-              if (s.server == null && s.tracker == null)
-                Padding(
-                  padding: const EdgeInsets.only(left: 24),
-                  child: TvSwitchListTile(
-                    title: Text(tr('Show under Other')),
-                    subtitle: Text(tr(
-                        'On: this source only appears behind the Other genre filter (Movies and TV Shows). Off: in the main rows. Press Refresh in Media Hub after changing this.')),
-                    value: s.underOther,
-                    onChanged: (v) => service.setUnderOther(s, v),
+                const SizedBox(height: 12),
+                _grid([
+                  for (final (node, icon, label, action) in connectors)
+                    OutlinedButton.icon(
+                      focusNode: node,
+                      onFocusChange: (focused) {
+                        if (focused) _reveal(node);
+                      },
+                      // Keep Add attached and focusable during a request.
+                      onPressed: action,
+                      icon: node == _addFocus && _adding
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2))
+                          : Icon(icon, size: 20),
+                      label: Text(label, textAlign: TextAlign.center),
+                      style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 14)),
+                    ),
+                ], [
+                  for (final c in connectors) [c.$1]
+                ], connectorColumns),
+                const SizedBox(height: 8),
+                SectionLabel(tr('Playback sources')),
+                Text(tr('These sources provide the video when you press Play.'),
+                    style: TextStyle(color: scheme.onSurfaceVariant)),
+                const SizedBox(height: 12),
+                if (playback.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Text(tr('No playback sources yet.')),
                   ),
+                _grid([
+                  for (final source in playback) _sourceCard(source, service),
+                ], [
+                  for (final source in playback) _sourceNodes(source)
+                ], columns),
+                SectionLabel(tr('Catalogs & lists')),
+                Text(
+                    tr('Discover titles here; playback comes from your sources above.'),
+                    style: TextStyle(color: scheme.onSurfaceVariant)),
+                const SizedBox(height: 12),
+                _grid([
+                  _SourceCard(
+                    key: const ValueKey('source-card-cinemeta'),
+                    nodes: [cinemetaNode],
+                    icon: Icons.auto_awesome_outlined,
+                    name: ArchiveCatalogProvider.name,
+                    role: tr('Catalogs only'),
+                    summary: tr('Popular · New · Featured'),
+                    description: tr('Catalogs for stream-only sources'),
+                    footer: tr(
+                        'Posters and episode details may still use Cinemeta when this is off.'),
+                    children: [
+                      _SourceControl(
+                        node: cinemetaNode,
+                        label: tr('Show Cinemeta catalog'),
+                        value: service.showCinemetaCatalog,
+                        onTap: () => service.setShowCinemetaCatalog(
+                            !service.showCinemetaCatalog),
+                        onFocus: () => _reveal(cinemetaNode),
+                      ),
+                    ],
+                  ),
+                  for (final source in catalogs) _sourceCard(source, service),
+                ], [
+                  [cinemetaNode],
+                  for (final source in catalogs) _sourceNodes(source),
+                ], columns),
+                Text(tr('Hold OK on Enabled to remove a source.'),
+                    style: TextStyle(color: scheme.onSurfaceVariant)),
+                const SizedBox(height: 12),
+                Text(
+                    tr('Show under Other keeps a source behind the Other genre filter in Movies and TV Shows.'),
+                    style: TextStyle(color: scheme.onSurfaceVariant)),
+                if (sources.isNotEmpty) ...[
+                  const Divider(height: 32),
+                  _grid([
+                    OutlinedButton.icon(
+                      focusNode: _node('source-clear'),
+                      onFocusChange: (focused) {
+                        if (focused) _reveal(_node('source-clear'));
+                      },
+                      onPressed: _clearAll,
+                      icon: const Icon(Icons.delete_sweep_outlined),
+                      label: Text(tr('Clear Media Hub')),
+                    ),
+                  ], [
+                    [_node('source-clear')]
+                  ], columns),
+                ],
+                const SizedBox(height: 8),
+                Text(
+                  tr('VesperTV ships no sources. The titles you open are requested from the source you added; nothing else is shared.'),
+                  style:
+                      TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
                 ),
-            ],
-            const Divider(height: 32),
-            SectionLabel(tr('Add a source')),
-            const SizedBox(height: 8),
-            TvTextFieldGate(
-              focusNode: _linkFocus,
-              builder: (context, readOnly) => TextField(
-                controller: _link,
-                focusNode: _linkFocus,
-                readOnly: readOnly,
-                textInputAction: TextInputAction.done,
-                // The keyboard's Done lands on Add (Fire OS also sends it
-                // for Back): the remote is never left with nothing focused.
-                onSubmitted: (_) {
-                  _addFocus.requestFocus();
-                  _add();
-                },
-                decoration: InputDecoration(
-                  labelText: tr('Source link (ends with manifest.json)'),
-                  helperText: tr('Several links at once work too.'),
-                  border: const OutlineInputBorder(),
-                ),
-              ),
+              ],
             ),
-            const SizedBox(height: 12),
-            Wrap(spacing: 12, runSpacing: 8, children: [
-              OutlinedButton(
-                focusNode: _addFocus,
-                onPressed: _adding ? null : _add,
-                child: _adding
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2))
-                    : Text(tr('Add')),
-              ),
-              OutlinedButton.icon(
-                onPressed: _fromPhone,
-                icon: const Icon(Icons.qr_code_2),
-                label: Text(tr('From phone')),
-              ),
-              OutlinedButton.icon(
-                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => const StremioImportScreen())),
-                icon: const Icon(Icons.move_down),
-                label: Text(tr('Import from Stremio')),
-              ),
-              OutlinedButton.icon(
-                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => const MediaServerScreen())),
-                icon: const Icon(Icons.dns_outlined),
-                label: Text(tr('Connect Jellyfin / Emby')),
-              ),
-              OutlinedButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const TrackersScreen())),
-                icon: const Icon(Icons.playlist_add_check),
-                label: Text(tr('Trakt & Simkl')),
-              ),
-            ]),
-            if (sources.isNotEmpty) ...[
-              const Divider(height: 32),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: OutlinedButton.icon(
-                  onPressed: _clearAll,
-                  icon: const Icon(Icons.delete_sweep_outlined),
-                  label: Text(tr('Clear Media Hub')),
-                ),
-              ),
-            ],
-            const SizedBox(height: 16),
-            Text(
-              tr('VesperTV ships no sources. The titles you open are requested from the source you added; nothing else is shared.'),
-              style: const TextStyle(fontSize: 12, color: Colors.white60),
-            ),
-          ],
-        ),
+          );
+        }),
       ),
     );
   }
+}
+
+class _SourceCard extends StatelessWidget {
+  const _SourceCard({
+    super.key,
+    required this.nodes,
+    required this.icon,
+    required this.name,
+    required this.role,
+    required this.summary,
+    required this.description,
+    required this.children,
+    this.footer,
+  });
+
+  final List<FocusNode> nodes;
+  final IconData icon;
+  final String name;
+  final String role;
+  final String summary;
+  final String description;
+  final String? footer;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+        listenable: Listenable.merge(nodes),
+        builder: (context, _) {
+          final scheme = Theme.of(context).colorScheme;
+          final focused = nodes.any((n) => n.hasFocus);
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: RefinedFinish.decorate(
+                context,
+                BoxDecoration(
+                  color: const Color(0xFF14171C),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                      color: focused ? scheme.primary : Colors.white24,
+                      width: 2),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      scheme.primary.withValues(alpha: focused ? 0.16 : 0.06),
+                      const Color(0xFF101215),
+                    ],
+                  ),
+                ),
+                focused: focused),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(children: [
+                  Icon(icon, size: 28, color: scheme.primary),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.w700)),
+                  ),
+                ]),
+                const SizedBox(height: 10),
+                Text(role,
+                    style: TextStyle(
+                        color: scheme.primary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700)),
+                const SizedBox(height: 6),
+                Text(summary, style: const TextStyle(fontSize: 13)),
+                const SizedBox(height: 4),
+                Text(description,
+                    style: TextStyle(
+                        fontSize: 13, color: scheme.onSurfaceVariant)),
+                const SizedBox(height: 12),
+                ...children,
+                if (footer != null) ...[
+                  const SizedBox(height: 8),
+                  Text(footer!,
+                      style: TextStyle(
+                          fontSize: 11, color: scheme.onSurfaceVariant)),
+                ],
+                const Spacer(),
+              ],
+            ),
+          );
+        },
+      );
+}
+
+/// Exactly one focus stop per control. The switch is visual; the whole row
+/// toggles it, including OK and pointer input, without a nested switch stop.
+class _SourceControl extends StatelessWidget {
+  const _SourceControl({
+    required this.node,
+    required this.label,
+    required this.onTap,
+    required this.onFocus,
+    this.icon,
+    this.value,
+  });
+
+  final FocusNode node;
+  final String label;
+  final VoidCallback onTap;
+  final VoidCallback onFocus;
+  final IconData? icon;
+  final bool? value;
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+        listenable: node,
+        builder: (context, _) {
+          final scheme = Theme.of(context).colorScheme;
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Material(
+              color: node.hasFocus
+                  ? scheme.primary.withValues(alpha: 0.18)
+                  : Colors.white.withValues(alpha: 0.035),
+              borderRadius: BorderRadius.circular(9),
+              child: Semantics(
+                toggled: value,
+                child: InkWell(
+                  key: ValueKey(node.debugLabel!),
+                  focusNode: node,
+                  onTap: onTap,
+                  onFocusChange: (focused) {
+                    if (focused) onFocus();
+                  },
+                  borderRadius: BorderRadius.circular(9),
+                  child: Container(
+                    constraints: const BoxConstraints(minHeight: 48),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(9),
+                      border: Border.all(
+                          color: node.hasFocus
+                              ? scheme.primary
+                              : Colors.transparent,
+                          width: 2),
+                    ),
+                    child: Row(children: [
+                      if (icon != null) ...[
+                        Icon(icon, size: 20, color: scheme.primary),
+                        const SizedBox(width: 8),
+                      ],
+                      Expanded(child: Text(label)),
+                      if (value != null)
+                        ExcludeFocus(
+                          child: ExcludeSemantics(
+                            child: IgnorePointer(
+                              child: Switch(
+                                  value: value!, onChanged: (_) => onTap()),
+                            ),
+                          ),
+                        ),
+                    ]),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      );
 }
 
 /// The QR page behind "From my phone"; pops with the link the phone sent.

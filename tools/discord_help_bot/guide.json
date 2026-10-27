@@ -264,6 +264,14 @@
     "url": "https://vespertv.app/remote.html#Movies%20%26%20Shows"
   },
   {
+    "id": "e0d0f205e4e4645b",
+    "category": "Media Hub",
+    "title": "Manage source cards",
+    "answer": "Open from Settings › Media Hub › Media Hub sources, or Sources in the Media Hub tab. Add a source, From phone, Stremio import, Jellyfin / Emby and Trakt / Simkl are at the top. Playback sources provide video; Catalogs & lists, including Cinemeta, provide titles that play through those sources. Left/Right moves between cards; Up/Down moves through their controls and grid rows, scrolling as needed. OK on Enabled switches a source on or off; hold OK there to remove it. View source URL reveals the saved link and offers Copy URL. Show under Other puts an add-on behind the Other genre filter; refresh Media Hub after changing it.",
+    "controls": "Media Hub sources → ↑ / ↓ / ← / →",
+    "url": "https://vespertv.app/remote.html#Media%20Hub"
+  },
+  {
     "id": "6c879cf177f26ff8",
     "category": "Media Hub",
     "title": "Stream sources",
@@ -499,7 +507,7 @@
     "id": "6740b481c4f18114",
     "category": "Settings",
     "title": "On / off, or remove",
-    "answer": "Settings › Media Hub › Add-ons and Media Hub sources.",
+    "answer": "Settings › Media Hub › Add-ons. In Media Hub sources, use the Enabled control inside a source card.",
     "controls": "OK / Hold OK on an add-on",
     "url": "https://vespertv.app/remote.html#Settings"
   },

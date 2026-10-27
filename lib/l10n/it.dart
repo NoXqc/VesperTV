@@ -6,6 +6,33 @@
 /// the code; Italian plurals don't work that way (canale/canali), so those
 /// strings are phrased to avoid it.
 const Map<String, String> kIt = {
+  // Media Hub source cards.
+  "Enabled": "Attiva",
+  "Catalogs from Cinemeta": "Cataloghi da Cinemeta",
+  "Media server": "Server multimediale",
+  "Tracker lists": "Liste di monitoraggio",
+  "Catalogs only": "Solo cataloghi",
+  "Streams only": "Solo flussi",
+  "Catalogs + streams": "Cataloghi + flussi",
+  "Provides video playback": "Fornisce la riproduzione video",
+  "Refresh Media Hub after changing Other.":
+      "Aggiorna Media Hub dopo aver modificato Altro.",
+  "Playback sources": "Sorgenti di riproduzione",
+  "These sources provide the video when you press Play.":
+      "Queste sorgenti forniscono il video quando premi Riproduci.",
+  "No playback sources yet.": "Nessuna sorgente di riproduzione.",
+  "Catalogs & lists": "Cataloghi e liste",
+  "Discover titles here; playback comes from your sources above.":
+      "Scopri i titoli qui; la riproduzione usa le sorgenti qui sopra.",
+  "Popular · New · Featured": "Popolari · Novità · In evidenza",
+  "Catalogs for stream-only sources":
+      "Cataloghi per sorgenti che offrono solo flussi",
+  "Posters and episode details may still use Cinemeta when this is off.":
+      "Locandine e dettagli degli episodi possono usare Cinemeta anche quando questa opzione è disattivata.",
+  "Hold OK on Enabled to remove a source.":
+      "Tieni premuto OK su Attiva per rimuovere una sorgente.",
+  "Show under Other keeps a source behind the Other genre filter in Movies and TV Shows.":
+      "Mostra in Altro colloca una sorgente nel filtro di genere Altro in Film e Serie TV.",
 
   "Remove from history": "Rimuovi dalla cronologia",
   "Automatically play the largest file": "Riproduci automaticamente il file più grande",

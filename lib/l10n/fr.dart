@@ -5,6 +5,33 @@
 /// Keep every `{placeholder}` exactly as in the key. `{s}` is the plural "s"
 /// the code fills in ("chaîne{s}").
 const Map<String, String> kFr = {
+  // Media Hub source cards.
+  "Enabled": "Activée",
+  "Catalogs from Cinemeta": "Catalogues de Cinemeta",
+  "Media server": "Serveur multimédia",
+  "Tracker lists": "Listes de suivi",
+  "Catalogs only": "Catalogues seulement",
+  "Streams only": "Flux seulement",
+  "Catalogs + streams": "Catalogues + flux",
+  "Provides video playback": "Fournit la lecture vidéo",
+  "Refresh Media Hub after changing Other.":
+      "Actualisez Media Hub après avoir modifié Autres.",
+  "Playback sources": "Sources de lecture",
+  "These sources provide the video when you press Play.":
+      "Ces sources fournissent la vidéo quand vous appuyez sur Lire.",
+  "No playback sources yet.": "Aucune source de lecture pour le moment.",
+  "Catalogs & lists": "Catalogues et listes",
+  "Discover titles here; playback comes from your sources above.":
+      "Découvrez des titres ici; la lecture utilise vos sources ci-dessus.",
+  "Popular · New · Featured": "Populaires · Nouveautés · En vedette",
+  "Catalogs for stream-only sources":
+      "Catalogues pour les sources de flux seulement",
+  "Posters and episode details may still use Cinemeta when this is off.":
+      "Les affiches et détails des épisodes peuvent utiliser Cinemeta même si cette option est désactivée.",
+  "Hold OK on Enabled to remove a source.":
+      "Maintenez OK sur Activée pour retirer une source.",
+  "Show under Other keeps a source behind the Other genre filter in Movies and TV Shows.":
+      "Afficher dans Autres place une source derrière le filtre de genre Autres dans Films et Séries.",
 
   "Remove from history": "Retirer de l’historique",
   "Automatically play the largest file": "Lire automatiquement le plus gros fichier",

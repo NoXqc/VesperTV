@@ -6,6 +6,33 @@
 /// "s" filled in by the code; Spanish plurals don't always work that way
 /// (canal/canales), so those strings are phrased to avoid it.
 const Map<String, String> kEs = {
+  // Media Hub source cards.
+  "Enabled": "Activada",
+  "Catalogs from Cinemeta": "Catálogos de Cinemeta",
+  "Media server": "Servidor multimedia",
+  "Tracker lists": "Listas de seguimiento",
+  "Catalogs only": "Solo catálogos",
+  "Streams only": "Solo flujos",
+  "Catalogs + streams": "Catálogos + flujos",
+  "Provides video playback": "Proporciona reproducción de vídeo",
+  "Refresh Media Hub after changing Other.":
+      "Actualiza Media Hub tras cambiar Otros.",
+  "Playback sources": "Fuentes de reproducción",
+  "These sources provide the video when you press Play.":
+      "Estas fuentes proporcionan el vídeo al pulsar Reproducir.",
+  "No playback sources yet.": "Aún no hay fuentes de reproducción.",
+  "Catalogs & lists": "Catálogos y listas",
+  "Discover titles here; playback comes from your sources above.":
+      "Descubre títulos aquí; la reproducción usa tus fuentes de arriba.",
+  "Popular · New · Featured": "Populares · Novedades · Destacados",
+  "Catalogs for stream-only sources":
+      "Catálogos para fuentes que solo ofrecen flujos",
+  "Posters and episode details may still use Cinemeta when this is off.":
+      "Los carteles y detalles de episodios pueden seguir usando Cinemeta con esta opción desactivada.",
+  "Hold OK on Enabled to remove a source.":
+      "Mantén OK en Activada para eliminar una fuente.",
+  "Show under Other keeps a source behind the Other genre filter in Movies and TV Shows.":
+      "Mostrar en Otros coloca una fuente en el filtro de género Otros de Películas y Series.",
 
   "Remove from history": "Eliminar del historial",
   "Automatically play the largest file": "Reproducir automáticamente el archivo más grande",

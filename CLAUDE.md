@@ -348,6 +348,13 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **cdx 2026-10-27 — Media Hub source cards:** `codex/mediahub-source-grid`
+  redesigns the shared Settings/Hub Sources page with add/connectors at the top,
+  playback-source and catalog/list grids, role labels and per-card controls.
+  Explicit responsive D-pad rows, stable toggle/dialog focus and immediate scroll;
+  no player/storage changes. See `dev-notes/mediahub-source-grid.md`; real-box
+  acceptance and package installation pending. Verification: root HANDOFF.md.
+
 - **cdx 2026-10-27 — release 1.0.43 (beta), +472:** owner requested release and
   Discord announcement after Claude merged all branches. Timeline is the fresh-install
   guide default; saved choices remain. Includes +464–471 cast/source-size/guide fixes,

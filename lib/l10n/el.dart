@@ -6,6 +6,33 @@
 /// English-style plural "s" filled in by the code; Greek plurals don't
 /// work that way, so those strings are phrased without it.
 const Map<String, String> kEl = {
+  // Media Hub source cards.
+  "Enabled": "Ενεργή",
+  "Catalogs from Cinemeta": "Κατάλογοι από το Cinemeta",
+  "Media server": "Διακομιστής πολυμέσων",
+  "Tracker lists": "Λίστες παρακολούθησης",
+  "Catalogs only": "Μόνο κατάλογοι",
+  "Streams only": "Μόνο ροές",
+  "Catalogs + streams": "Κατάλογοι + ροές",
+  "Provides video playback": "Παρέχει αναπαραγωγή βίντεο",
+  "Refresh Media Hub after changing Other.":
+      "Ανανεώστε το Media Hub αφού αλλάξετε το Άλλα.",
+  "Playback sources": "Πηγές αναπαραγωγής",
+  "These sources provide the video when you press Play.":
+      "Αυτές οι πηγές παρέχουν το βίντεο όταν πατάτε Αναπαραγωγή.",
+  "No playback sources yet.": "Δεν υπάρχουν ακόμη πηγές αναπαραγωγής.",
+  "Catalogs & lists": "Κατάλογοι και λίστες",
+  "Discover titles here; playback comes from your sources above.":
+      "Ανακαλύψτε τίτλους εδώ· η αναπαραγωγή γίνεται από τις παραπάνω πηγές σας.",
+  "Popular · New · Featured": "Δημοφιλή · Νέα · Προτεινόμενα",
+  "Catalogs for stream-only sources":
+      "Κατάλογοι για πηγές που προσφέρουν μόνο ροές",
+  "Posters and episode details may still use Cinemeta when this is off.":
+      "Οι αφίσες και οι λεπτομέρειες επεισοδίων μπορεί να χρησιμοποιούν το Cinemeta ακόμη κι όταν αυτό είναι ανενεργό.",
+  "Hold OK on Enabled to remove a source.":
+      "Κρατήστε πατημένο το OK στο Ενεργή για να αφαιρέσετε μια πηγή.",
+  "Show under Other keeps a source behind the Other genre filter in Movies and TV Shows.":
+      "Η Εμφάνιση στα Άλλα τοποθετεί μια πηγή στο φίλτρο είδους Άλλα στις Ταινίες και Σειρές.",
 
   "Remove from history": "Αφαίρεση από το ιστορικό",
   "Automatically play the largest file": "Αυτόματη αναπαραγωγή του μεγαλύτερου αρχείου",

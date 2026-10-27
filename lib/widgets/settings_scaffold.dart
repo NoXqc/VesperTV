@@ -26,11 +26,13 @@ class SettingsScaffold extends StatelessWidget {
       {super.key,
       required this.title,
       required this.body,
+      this.backFocusNode,
       this.actions,
       this.bottom});
 
   final String title;
   final Widget body;
+  final FocusNode? backFocusNode;
   final List<Widget>? actions;
 
   /// For screens that need a TabBar in the app bar (Group Management) —
@@ -58,6 +60,7 @@ class SettingsScaffold extends StatelessWidget {
               builder: (context) => ModalRoute.of(context)?.canPop ?? false
                   ? Center(
                       child: TvAppBarButton.icon(
+                        focusNode: backFocusNode,
                         icon: Icons.arrow_back,
                         tooltip: tr('Back'),
                         onTap: () => Navigator.of(context).pop(),
