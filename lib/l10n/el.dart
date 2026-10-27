@@ -2481,6 +2481,7 @@ const Map<String, String> kEl = {
   "racing": "Μηχανοκίνητος αθλητισμός",
 
   "Trailer": "Τρέιλερ",
+  "Cast": "Ηθοποιοί",
   "Unable to open trailer": "Δεν ήταν δυνατό το άνοιγμα του τρέιλερ",
   "Next episode airs {date}": "Το επόμενο επεισόδιο προβάλλεται στις {date}",
   "Next episode: {code} · {date}": "Επόμενο επεισόδιο: {code} · {date}",

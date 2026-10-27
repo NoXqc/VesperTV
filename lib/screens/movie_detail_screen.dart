@@ -23,6 +23,7 @@ import '../services/watch_tracker.dart';
 import '../utils/display_title.dart';
 import '../utils/image_urls.dart';
 import '../utils/tv_theme.dart';
+import '../widgets/cast_bubbles.dart';
 import '../widgets/detail_header.dart';
 import '../widgets/hold_to_activate.dart';
 import 'desktop_player_screen.dart';
@@ -72,6 +73,8 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   final _playNode = FocusNode(debugLabel: 'movie-play');
   final _restartNode = FocusNode(debugLabel: 'movie-restart');
   final _favNode = FocusNode(debugLabel: 'movie-fav');
+  final _castNode = FocusNode(debugLabel: 'movie-cast');
+  bool _showCast = false;
   final _pageScroll = ScrollController();
   final List<Timer> _refreshTimers = [];
 
@@ -120,7 +123,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     for (final t in _refreshTimers) {
       t.cancel();
     }
-    for (final n in [_backNode, _playNode, _restartNode, _favNode]) {
+    for (final n in [_backNode, _playNode, _restartNode, _favNode, _castNode]) {
       n.dispose();
     }
     _pageScroll.dispose();
@@ -278,6 +281,8 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     return parts.isEmpty ? null : parts.join('   ·   ');
   }
 
+  List<String> get _castNames => CastBubbles.parseNames(_details?.cast);
+
   static String _formatMinutes(int minutes) {
     if (minutes >= 60) {
       return tr('{h} h {m} min', {
@@ -321,9 +326,19 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                         .clamp(1.0, 2.2);
                 return DefaultTextStyle.merge(
                   style: const TextStyle(color: Colors.white),
-                  child: narrow
-                      ? _buildNarrow(c, current)
-                      : _buildWide(c, s, current),
+                  child: Stack(fit: StackFit.expand, children: [
+                    narrow
+                        ? _buildNarrow(c, current)
+                        : _buildWide(c, s, current),
+                    CastBubbles(
+                      names: _castNames,
+                      visible: _showCast,
+                      area: narrow
+                          ? CastBubbles.narrowArea
+                          : CastBubbles.wideArea,
+                      scale: s,
+                    ),
+                  ]),
                 );
               }),
             ),
@@ -508,6 +523,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       _trailerNode,
       if (resume) _restartNode,
       _favNode,
+      if (_castNames.isNotEmpty) _castNode,
     ];
     void move(int delta) {
       final active = nodes.where((node) => node.context != null).toList();
@@ -561,6 +577,16 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           onPressed: () => _toggleFavorite(current),
           onFocused: _revealTop,
         ),
+        if (_castNames.isNotEmpty)
+          DetailPillButton(
+            focusNode: _castNode,
+            icon: Icons.groups_rounded,
+            label: tr('Cast'),
+            selected: _showCast,
+            scale: s,
+            onPressed: () => setState(() => _showCast = !_showCast),
+            onFocused: _revealTop,
+          ),
       ],
     );
 

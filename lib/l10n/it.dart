@@ -1872,6 +1872,7 @@ const Map<String, String> kIt = {
   "racing": "Automobilismo",
 
   "Trailer": "Trailer",
+  "Cast": "Cast",
   "Unable to open trailer": "Impossibile aprire il trailer",
   "Next episode airs {date}": "Il prossimo episodio va in onda il {date}",
   "Next episode: {code} · {date}": "Prossimo episodio: {code} · {date}",

@@ -11,6 +11,7 @@ import 'package:nox_iptv/widgets/detail_trailer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player_platform_interface/video_player_platform_interface.dart';
 import 'package:nox_iptv/widgets/detail_header.dart';
+import 'package:nox_iptv/widgets/cast_bubbles.dart';
 
 const _request = TrailerRequest(title: 'Film', series: false);
 final _url = Uri.parse('https://www.youtube.com/watch?v=AbCdEfGhI12');
@@ -374,6 +375,46 @@ void main() {
     await tester.pumpAndSettle();
     expect(h.documents, hasLength(1));
     expect(h.scripts, isEmpty);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('Cast bubbles float over a playing trailer without reloading it',
+      (tester) async {
+    var showCast = false;
+    late StateSetter setPage;
+    final h = _Harness()
+      ..child = StatefulBuilder(builder: (context, setState) {
+        setPage = setState;
+        return Stack(children: [
+          const Text('Details'),
+          CastBubbles(
+              names: const ['Tim Robbins'],
+              visible: showCast,
+              area: CastBubbles.wideArea),
+        ]);
+      });
+    await tester.pumpWidget(h.page());
+    await tester.pumpAndSettle();
+    h.event!({'type': 'playing'});
+    await tester.pumpAndSettle();
+    expect(h.lookups, 1);
+
+    setPage(() => showCast = true);
+    for (var i = 0; i < 12; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.text('Tim Robbins'), findsOneWidget);
+    setPage(() => showCast = false);
+    for (var i = 0; i < 8; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.text('Tim Robbins'), findsNothing);
+
+    expect(h.lookups, 1);
+    expect(h.documents, hasLength(1));
+    expect(h.scripts, isEmpty); // never paused or restarted
+    expect(find.byKey(const ValueKey('preview')), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     await tester.pumpAndSettle();
   });

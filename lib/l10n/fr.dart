@@ -1871,6 +1871,7 @@ const Map<String, String> kFr = {
   "racing": "Course automobile",
 
   "Trailer": "Bande-annonce",
+  "Cast": "Distribution",
   "Unable to open trailer": "Impossible d’ouvrir la bande-annonce",
   "Next episode airs {date}": "Le prochain épisode sera diffusé le {date}",
   "Next episode: {code} · {date}": "Prochain épisode : {code} · {date}",

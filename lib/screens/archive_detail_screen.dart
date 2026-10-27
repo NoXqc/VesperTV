@@ -13,6 +13,7 @@ import '../models/archive_models.dart';
 import '../services/archive_service.dart';
 import '../services/storage_service.dart';
 import '../services/tracker_sync.dart';
+import '../widgets/cast_bubbles.dart';
 import '../widgets/detail_header.dart';
 import 'archive_playback.dart';
 
@@ -49,6 +50,8 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
   final _trailerNode = FocusNode(debugLabel: 'trailer');
   final _playNode = FocusNode(debugLabel: 'archive-play');
   final _restartNode = FocusNode(debugLabel: 'archive-restart');
+  final _castNode = FocusNode(debugLabel: 'archive-cast');
+  bool _showCast = false;
 
   ArchiveMeta? _full;
   bool _starting = false;
@@ -84,6 +87,7 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
     _trailerNode.dispose();
     _playNode.dispose();
     _restartNode.dispose();
+    _castNode.dispose();
     super.dispose();
   }
 
@@ -167,10 +171,31 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
                           DetailPoster(url: meta.posterUrl!, width: 150),
                           const SizedBox(width: 24),
                         ],
-                        Expanded(child: _buildInfo(meta)),
+                        // Wide: the right part stays clear for the cast
+                        // bubbles (same split as MovieDetailScreen).
+                        Expanded(
+                          child: narrow
+                              ? _buildInfo(meta)
+                              : Align(
+                                  alignment: Alignment.topLeft,
+                                  child: ConstrainedBox(
+                                    constraints: BoxConstraints(
+                                        maxWidth: size.width * 0.6 -
+                                            (meta.posterUrl != null ? 174 : 0)),
+                                    child: _buildInfo(meta),
+                                  ),
+                                ),
+                        ),
                       ],
                     ),
                   ],
+                ),
+              ),
+              Positioned.fill(
+                child: CastBubbles(
+                  names: CastBubbles.namesFrom(meta.cast),
+                  visible: _showCast,
+                  area: narrow ? CastBubbles.narrowArea : CastBubbles.wideArea,
                 ),
               ),
             ],
@@ -248,6 +273,15 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
               label: tr('Restart'),
               scale: 1,
               onPressed: () => _play(restart: true),
+            ),
+          if (meta.cast.isNotEmpty)
+            DetailPillButton(
+              focusNode: _castNode,
+              icon: Icons.groups_rounded,
+              label: tr('Cast'),
+              selected: _showCast,
+              scale: 1,
+              onPressed: () => setState(() => _showCast = !_showCast),
             ),
         ]),
       ],

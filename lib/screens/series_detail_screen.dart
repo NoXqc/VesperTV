@@ -27,6 +27,7 @@ import '../services/watch_tracker.dart';
 import '../utils/display_title.dart';
 import '../utils/image_urls.dart';
 import '../utils/tv_theme.dart';
+import '../widgets/cast_bubbles.dart';
 import '../widgets/detail_header.dart';
 import '../widgets/hd_network_image.dart';
 import '../widgets/hold_to_activate.dart';
@@ -124,6 +125,8 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   final _playNode = FocusNode(debugLabel: 'series-play');
   final _restartNode = FocusNode(debugLabel: 'series-restart');
   final _favNode = FocusNode(debugLabel: 'series-fav');
+  final _castNode = FocusNode(debugLabel: 'series-cast');
+  bool _showCast = false;
   final Map<int, FocusNode> _seasonNodes = {};
   final Map<int, FocusNode> _episodeNodes = {};
   final _episodeScroll = ScrollController();
@@ -240,6 +243,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
       _playNode,
       _restartNode,
       _favNode,
+      _castNode,
       ..._seasonNodes.values,
       ..._episodeNodes.values,
     ]) {
@@ -628,6 +632,8 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     return null;
   }
 
+  List<String> get _castNames => CastBubbles.parseNames(_details?.cast);
+
   static String _formatMinutes(int minutes) {
     if (minutes >= 60) {
       return tr('{h} h {m} min', {
@@ -755,7 +761,24 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                 _rowPadding = 24 * s;
                 return DefaultTextStyle.merge(
                   style: const TextStyle(color: Colors.white),
-                  child: narrow ? _buildNarrow(c) : _buildWide(c, s),
+                  child: Stack(fit: StackFit.expand, children: [
+                    narrow ? _buildNarrow(c) : _buildWide(c, s),
+                    // Fixed over the header art: hidden while the page is
+                    // scrolled down to the episodes, so it never covers them.
+                    AnimatedBuilder(
+                      animation: _pageScroll,
+                      builder: (context, _) => CastBubbles(
+                        names: _castNames,
+                        visible: _showCast &&
+                            (!_pageScroll.hasClients ||
+                                _pageScroll.offset < 24),
+                        area: narrow
+                            ? CastBubbles.narrowArea
+                            : const Rect.fromLTRB(0.62, 0.08, 0.97, 0.5),
+                        scale: s,
+                      ),
+                    ),
+                  ]),
                 );
               }),
             ),
@@ -925,6 +948,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
       _trailerNode,
       if (next != null && next.resume) _restartNode,
       if (widget.showFavorite) _favNode,
+      if (_castNames.isNotEmpty) _castNode,
     ];
     void move(int delta) {
       final active = nodes.where((node) => node.context != null).toList();
@@ -982,6 +1006,16 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
           selected: favorited,
           scale: s,
           onPressed: _toggleFavorite,
+          onFocused: _revealTop,
+        ),
+      if (_castNames.isNotEmpty)
+        DetailPillButton(
+          focusNode: _castNode,
+          icon: Icons.groups_rounded,
+          label: tr('Cast'),
+          selected: _showCast,
+          scale: s,
+          onPressed: () => setState(() => _showCast = !_showCast),
           onFocused: _revealTop,
         ),
     ];
