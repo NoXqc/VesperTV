@@ -278,6 +278,10 @@ All `tr()` strings added in 3-5 → `es/it/el` (Claude writes EN + FR). `docs/re
 
 Then regenerate `tools/discord_help_bot/guide.json`. README + `docs/index.html` features line.
 
+2026-10-27 cdx: docs and bot index prepared on `codex/catchup-help` (66 entries),
+including guide/player navigation, pause/timeshift and Android/provider limits.
+Strings were already translated. Website/bot deployment status is in root HANDOFF.md.
+
 ---
 
 ## 5. Claude phases — design notes

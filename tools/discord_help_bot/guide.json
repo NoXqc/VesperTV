@@ -1,5 +1,29 @@
 [
   {
+    "id": "a6ea5dde2f3fec75",
+    "category": "Live TV",
+    "title": "Watch catch-up TV",
+    "answer": "On a channel where your provider offers catch-up, open the Timeline guide and press Left to browse earlier programmes. Available replays have a gold ↺ mark. OK on a past programme starts the preview; OK again on that programme opens it full screen. Older hours without programme names appear as Catch-up HH:MM blocks and can also be played. How far back you can watch depends on your provider's retention window.",
+    "controls": "Android · Timeline · ← into the past · OK twice",
+    "url": "https://vespertv.app/remote.html#Live%20TV"
+  },
+  {
+    "id": "ce227ba058e30ed4",
+    "category": "Live TV",
+    "title": "Back to now in the guide",
+    "answer": "When browsing a different time in the Timeline guide, Back returns the guide to now; the gold Now button does the same. This only moves the guide: a replay keeps playing. Fast-forward does not return to live from the guide. To change playback back to live, open the replay full screen and use its gold LIVE button or the remote's Fast-forward key. Back from full screen returns to the guide while the replay continues.",
+    "controls": "In the guide: Back or the gold Now button",
+    "url": "https://vespertv.app/remote.html#Live%20TV"
+  },
+  {
+    "id": "d8a2383cf606e0bb",
+    "category": "Live TV",
+    "title": "Catch-up not working",
+    "answer": "If replay channels or past programmes are missing after updating, run Update Content and update your playlists, then Update EPG Now once. Catch-up is available on Android TV, Fire TV and Android phones; Windows support is not available yet. Your provider must offer catch-up for that channel. The provider decides how many days are available; guide data may cover fewer hours, with older hours shown as Catch-up HH:MM blocks. Refreshing cannot add replay support to a channel your provider does not support.",
+    "controls": "Update Content → update playlists · Settings → Playlists & guide → EPG → Update EPG Now",
+    "url": "https://vespertv.app/remote.html#Live%20TV"
+  },
+  {
     "id": "26de316e520e20fd",
     "category": "Live TV",
     "title": "Preview, then full screen",
@@ -94,6 +118,38 @@
     "answer": "Turn off Show the \"Hold > to resume\" reminder. This hides the pill while a channel plays in the background. On Android, holding Right still resumes the last channel.",
     "controls": "Settings → Interface → Resume reminder",
     "url": "https://vespertv.app/remote.html#Live%20TV"
+  },
+  {
+    "id": "d6f95affba667bd5",
+    "category": "Full screen",
+    "title": "Back to live",
+    "answer": "While a catch-up replay plays full screen, select the gold LIVE button to return to the channel live. The remote's dedicated Fast-forward key does the same in full screen. It is not a guide shortcut: Back or Now in the guide only moves the guide to the current time and leaves the replay playing.",
+    "controls": "Android replay · gold LIVE button or remote ⏩ Fast-forward",
+    "url": "https://vespertv.app/remote.html#Full%20screen"
+  },
+  {
+    "id": "ed29c73e2f2e8244",
+    "category": "Full screen",
+    "title": "Watch a programme from the start",
+    "answer": "To restart a programme on a catch-up-capable channel, open the player bar and choose Watch from the start, or press the remote's dedicated Rewind key in full screen. On live TV this starts the programme on now from its beginning. During a replay it restarts the programme at your current playback time. Your provider must offer that part of the programme.",
+    "controls": "Android · player bar: Watch from the start · remote ⏪ Rewind",
+    "url": "https://vespertv.app/remote.html#Full%20screen"
+  },
+  {
+    "id": "bcaeb49b92f5b885",
+    "category": "Full screen",
+    "title": "Pause live TV and resume",
+    "answer": "You can pause live TV on a channel that supports catch-up, then press Play to resume from where you paused. Short pauses use the existing buffer; after more than 90 seconds VesperTV uses the provider's catch-up feed (timeshift). Availability still depends on the provider's replay window. Use the gold LIVE button in full screen when you want to return to live.",
+    "controls": "Android catch-up channel · remote ⏯ or player Play/Pause",
+    "url": "https://vespertv.app/remote.html#Full%20screen"
+  },
+  {
+    "id": "b3acbc189f93ebd4",
+    "category": "Full screen",
+    "title": "Seek and change replay programmes",
+    "answer": "The catch-up player shows a CATCH-UP tag, programme progress and how far behind live you are. Use the time bar to seek within the programme, or the previous / next programme buttons when listings are available. Next returns to live if there is no later programme to replay. At a programme's end playback continues automatically until it catches up to live.",
+    "controls": "Android replay · player bar: previous / restart / next · ↑ to the time bar",
+    "url": "https://vespertv.app/remote.html#Full%20screen"
   },
   {
     "id": "e6de9b283101b4b8",

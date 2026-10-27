@@ -359,6 +359,11 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   the stats-only native exception; no additional requests or decoder/surface changes.
   See `dev-notes/iptv-file-size.md` and root HANDOFF.md for checks.
 
+- **Codex 2026-10-27 — catch-up help:** `codex/catchup-help` adds Android catch-up
+  controls and provider limits to the remote guide, site FAQ/features and README.
+  Bot index has 66 entries; plain catchup/catch-up/catch up questions are supported.
+  Guide Back/Now is distinguished from full-screen LIVE/Fast-forward. Deploy status:
+  root HANDOFF.md. No app/player changes; Windows catch-up remains pending.
 - **Released 1.0.42 (beta), +463, 2026-10-27** (latest; tag on `1651df1`, Discord announced).
   Includes catch-up (Android), Refined finish + translucent columns, Aqua, reminders on all game
   cards, decoder HDR reporting and audio track labels. The notes ask users to run Update Content +
