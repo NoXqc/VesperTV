@@ -24,7 +24,7 @@ python -m unittest discover -s tools/discord_help_bot -p test_update_auto.py
 ```
 
 Commit `guide.json` with the website change and redeploy the bot when answers
-change. The index currently contains 67 guide entries. Links use the website's
+change. The index currently contains 68 guide entries. Links use the website's
 existing category fragments; publishing the website is a separate step.
 
 Catch-up topics cover the Timeline guide, returning the guide to now versus

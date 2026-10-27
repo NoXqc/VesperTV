@@ -76,7 +76,7 @@ class UpdateTests(unittest.TestCase):
                 patch('time.sleep'), \
                 patch('urllib.request.urlopen') as health, \
                 contextlib.redirect_stdout(io.StringIO()) as output:
-            health.return_value.__enter__.return_value = io.StringIO('{"ok":true,"answers":66}')
+            health.return_value.__enter__.return_value = io.StringIO(json.dumps({'ok': True, 'answers': len(json.loads(self.new['guide.json']))}))
             exec(compile(self.remote, 'remote', 'exec'), {})
         return output.getvalue()
 
@@ -118,7 +118,7 @@ class UpdateTests(unittest.TestCase):
         self.new['guide.json'] = Path(__file__).with_name('guide.json').read_bytes()
         guide = json.loads(self.new['guide.json'])
         self.assertTrue(any(entry['answer'] == '' for entry in guide))
-        self.assertIn('66 answers', self.execute())
+        self.assertIn(str(len(guide)) + ' answers', self.execute())
         for name in self.names:
             self.assert_files(name, self.new)
 

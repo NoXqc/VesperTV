@@ -387,8 +387,16 @@
     "id": "2bc2a22e3814bc89",
     "category": "Sports Trak",
     "title": "Remind me",
-    "answer": "Choose Remind me for a popup 15 minutes before and at game time, above any screen or stream while VesperTV is open. You do not need to follow either team. For teams in My Teams, choose Remind me for every game to enable automatic reminders for that team, or Stop team reminders to disable them. Hold again to Cancel reminder for one game. A faded team logo appears behind the popup text. Reminders belong to the current viewer on this device.",
+    "answer": "Choose Remind me to open the timing menu: 15 minutes, 1 hour, 1 day or 1 week before, plus a reminder at game time. You can also choose At game time only. Passed advance times are unavailable. Popups appear above any screen or stream while VesperTV is open. You do not need to follow either team. For teams in My Teams, choose Remind me for every game to enable automatic reminders for that team, or Stop team reminders to disable them. Hold again to Cancel reminder for one game, or choose Reminder timing to change its advance time. Automatic team reminders keep the 15-minute default unless you override an individual game. A faded team logo appears behind the popup text. Reminders belong to the current viewer on this device.",
     "controls": "Hold OK on any upcoming Sports Trak game",
+    "url": "https://vespertv.app/remote.html#Sports%20Trak"
+  },
+  {
+    "id": "c249bece8e471315",
+    "category": "Sports Trak",
+    "title": "Score alerts for one match",
+    "answer": "Choose Set goals alert for this match to get the existing top-left score popup when either team scores, even if neither team is in My Teams. Remove goals alert for this match stops it. This per-game choice works independently of the My Teams Goals alert switch. Hide scores still pauses all score alerts. Choices belong to this profile and device; alerts follow the sports feed while VesperTV is open.",
+    "controls": "Hold OK on an upcoming or live team game",
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },
   {
@@ -435,7 +443,7 @@
     "id": "01b3be2f69ff07db",
     "category": "Multiview",
     "title": "Header",
-    "answer": "The layout switch (2 screens, 4 screens, or 1 + 3: one big screen with three small ones) and Multiview's other buttons. ↓ goes back to the screens.",
+    "answer": "The layout switch and Multiview's other buttons. Android in landscape offers 2 screens, 4 screens, or 1 + 3: one big screen with three small ones. Windows keeps the 2- and 4-screen layouts. ↓ goes back to the screens.",
     "controls": "↑ from the top row",
     "url": "https://vespertv.app/remote.html#Multiview"
   },

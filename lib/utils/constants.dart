@@ -34,7 +34,7 @@ class AppConstants {
   /// Fresh-install default for [AppPreferences.guideViewMode] — 'live'
   /// (the original single-channel now/next view) or 'timeline' (the
   /// cable-guide grid). Always overridable in Settings > Theme.
-  static const String defaultGuideViewMode = 'live';
+  static const String defaultGuideViewMode = 'timeline';
 
   // SharedPreferences keys.
   //

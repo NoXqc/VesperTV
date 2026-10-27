@@ -348,6 +348,13 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **cdx 2026-10-27 — release 1.0.43 (beta), +472:** owner requested release and
+  Discord announcement after Claude merged all branches. Timeline is the fresh-install
+  guide default; saved choices remain. Includes +464–471 cast/source-size/guide fixes,
+  Android 1+3 Multiview, per-match score alerts and configurable reminder timing.
+  APK + Windows built; analyze16,740Flutter/15Node/6deployment tests pass.
+  Publication/download/announcement results: root HANDOFF.md.
+
 - **cdx 2026-10-27 — match score alerts:** `codex/match-score-alerts` adds the game
   hold-menu Set/Remove goals alert for this match, using the existing top-left popup.
   Both teams, independent of My Teams opt-in; per-viewer/device persistence, Hide
@@ -374,7 +381,7 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   Bot index has 66 entries; plain catchup/catch-up/catch up questions are supported.
   Guide Back/Now is distinguished from full-screen LIVE/Fast-forward. Deploy status:
   root HANDOFF.md. No app/player changes; Windows catch-up remains pending.
-- **Released 1.0.42 (beta), +463, 2026-10-27** (latest; tag on `1651df1`, Discord announced).
+- **Released 1.0.42 (beta), +463, 2026-10-27** (previous release; tag on `1651df1`, Discord announced).
   Includes catch-up (Android), Refined finish + translucent columns, Aqua, reminders on all game
   cards, decoder HDR reporting and audio track labels. The notes ask users to run Update Content +
   Update EPG Now once. Next build must be > 463.
