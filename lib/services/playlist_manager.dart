@@ -1362,6 +1362,30 @@ class PlaylistManager extends ChangeNotifier {
         .toSet();
   }
 
+  /// Normalized EPG id -> days of past programmes to keep, for every
+  /// visible live channel with catch-up in an enabled playlist (the same
+  /// visibility rule as [knownChannelIdsFor]). Capped at
+  /// [AppConstants.catchupEpgMaxDays]; the longest wins when channels
+  /// share an id. Feeds `EpgService.catchupDaysProvider`.
+  Map<String, int> catchupDaysByEpgId() {
+    final out = <String, int>{};
+    for (final session in _sessions) {
+      if (!session.profile.enabled) continue;
+      for (final c
+          in (session.isXtream ? session.liveChannels : session.channels)) {
+        if (!c.hasCatchup ||
+            session.hiddenGroups.contains(c.group) ||
+            session.hiddenChannels.contains(c.rawId)) {
+          continue;
+        }
+        final days = c.catchupDays.clamp(1, AppConstants.catchupEpgMaxDays);
+        final id = normalizeEpgId(c.epgId);
+        if ((out[id] ?? 0) < days) out[id] = days;
+      }
+    }
+    return out;
+  }
+
   /// Ensures every enabled Xtream playlist's live channel list is loaded —
   /// see `PlaylistSession.ensureLiveChannelsLoaded`'s doc comment for why
   /// this is lazy per playlist. Safe to call unconditionally on every

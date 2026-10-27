@@ -511,12 +511,17 @@ class AppConstants {
   static const String cacheFileEpgPrograms = 'epg_programs';
 
   /// Rolling window `EpgDatabase` keeps. Past: the Timeline guide shows 1 h
-  /// back, so 2 h covers it; a future catch-up feature widens just this
-  /// (no schema change). Future: anything *starting* within 36 h — with the
+  /// back, so 2 h covers it; channels with catch-up keep their own longer
+  /// past ([catchupEpgMaxDays], `EpgService.catchupDaysProvider`). Future: anything *starting* within 36 h — with the
   /// 12 h default refresh that leaves ~24 h of guide if refreshes fail or
   /// the box stays off.
   static const Duration epgPastRetention = Duration(hours: 2);
   static const Duration epgFutureWindow = Duration(hours: 36);
+
+  /// Most days of past programmes kept for a catch-up channel, whatever
+  /// the provider's archive length (DB size; providers' guides rarely
+  /// reach back more than a day anyway — Blcktv's reaches 12 h).
+  static const int catchupEpgMaxDays = 7;
 
   /// EPG auto-refresh. Was 15-120 min — each refresh is ~45 s of heavy
   /// work on a Formuler (measured), so every 30 min cost a quarter of the

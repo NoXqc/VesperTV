@@ -81,10 +81,11 @@ List<EpgProgram> _untangle(List<EpgRow> rows) {
 ///   rows arrive.
 /// - [hasPrograms] reads [_withData].
 class EpgService extends ChangeNotifier {
-  EpgService(this._storage);
+  EpgService(this._storage, {@visibleForTesting EpgDatabase? database})
+      : _db = database ?? EpgDatabase();
 
   final StorageService _storage;
-  final EpgDatabase _db = EpgDatabase();
+  final EpgDatabase _db;
 
   /// How far ahead [_soon] reaches — comfortably past "next" for any
   /// channel, and reloaded every [_soonReloadEvery] so it never runs dry.
@@ -96,6 +97,30 @@ class EpgService extends ChangeNotifier {
   static const _fullCacheLimit = 400;
 
   static const _minFirstRefreshDelay = Duration(seconds: 30);
+
+  /// Normalized EPG id -> days of past programmes to keep, for channels
+  /// with catch-up (`PlaylistManager.catchupDaysByEpgId`). Every other
+  /// channel keeps [AppConstants.epgPastRetention]. Read again on every
+  /// refresh and cache reload, so a playlist update is picked up.
+  Map<String, int> Function()? catchupDaysProvider;
+  Map<String, int> _catchupDays = const {};
+
+  void _readCatchupDays() {
+    try {
+      _catchupDays = catchupDaysProvider?.call() ?? const {};
+    } catch (e) {
+      debugPrint('EpgService: catch-up channels unavailable: $e');
+    }
+  }
+
+  /// Oldest programme end kept for [normalizedId] (ms since epoch).
+  int _minStopMsFor(String normalizedId, DateTime now) {
+    final days = _catchupDays[normalizedId];
+    return now
+        .subtract(
+            days == null ? AppConstants.epgPastRetention : Duration(days: days))
+        .millisecondsSinceEpoch;
+  }
 
   Map<String, List<EpgProgram>> _soon = {};
   final Map<String, List<EpgProgram>> _full = {};
@@ -170,7 +195,8 @@ class EpgService extends ChangeNotifier {
     try {
       await _db.open();
       await _reloadCaches();
-      unawaited(Future<void>.delayed(const Duration(seconds: 25), _db.logStats));
+      unawaited(
+          Future<void>.delayed(const Duration(seconds: 25), _db.logStats));
     } catch (e) {
       debugPrint('EpgService.init: $e');
     }
@@ -184,6 +210,7 @@ class EpgService extends ChangeNotifier {
   /// Reloads [_soon]/[_withData] from the database and drops [_full], so
   /// every guide row re-queries on its next build.
   Future<void> _reloadCaches() async {
+    _readCatchupDays();
     final now = DateTime.now();
     final soon = await _db.programmesBetween(
         now.millisecondsSinceEpoch, now.add(_soonAhead).millisecondsSinceEpoch);
@@ -254,15 +281,19 @@ class EpgService extends ChangeNotifier {
     try {
       await init();
       var anySucceeded = false;
+      _readCatchupDays();
       for (final source in sources) {
         final count = await _refreshOne(source.url,
             knownChannelIds: source.knownChannelIds);
         if (count != null) anySucceeded = true;
       }
       if (anySucceeded) {
-        await _db.deleteEndedBefore(DateTime.now()
-            .subtract(AppConstants.epgPastRetention)
-            .millisecondsSinceEpoch);
+        final now = DateTime.now();
+        await _db.deleteEndedBefore(
+            now.subtract(AppConstants.epgPastRetention).millisecondsSinceEpoch,
+            keep: {
+              for (final id in _catchupDays.keys) id: _minStopMsFor(id, now)
+            });
         lastUpdated = DateTime.now();
         await _storage.setEpgLastUpdated(lastUpdated!);
       }
@@ -423,6 +454,7 @@ class EpgService extends ChangeNotifier {
     final now = DateTime.now();
     final minStopMs =
         now.subtract(AppConstants.epgPastRetention).millisecondsSinceEpoch;
+    final catchupDays = _catchupDays;
     final maxStartMs =
         now.add(AppConstants.epgFutureWindow).millisecondsSinceEpoch;
 
@@ -461,7 +493,12 @@ class EpgService extends ChangeNotifier {
         }
         final startMs = start.millisecondsSinceEpoch;
         final stopMs = stop.millisecondsSinceEpoch;
-        if (stopMs <= minStopMs || startMs >= maxStartMs) return;
+        if (startMs >= maxStartMs) return;
+        if (stopMs <= minStopMs &&
+            (catchupDays[channelId] == null ||
+                stopMs <= _minStopMsFor(channelId, now))) {
+          return;
+        }
         pending.add((
           channelId: channelId,
           startMs: startMs,
@@ -669,6 +706,15 @@ class EpgService extends ChangeNotifier {
     }
   }
 
+  /// [getPrograms] limited to programmes overlapping [from]..[to] — the
+  /// catch-up guide's view of the past. Same lazy loading.
+  List<EpgProgram> programsBetween(
+          String channelId, DateTime from, DateTime to) =>
+      [
+        for (final p in getPrograms(channelId))
+          if (p.stop.isAfter(from) && p.start.isBefore(to)) p
+      ];
+
   /// Whether [channelId] has any programme that hasn't ended — without
   /// loading its rows.
   bool hasPrograms(String channelId) =>
@@ -684,7 +730,9 @@ class EpgService extends ChangeNotifier {
     final id = normalizeEpgId(channelId);
     final full = _full[id];
     if (full != null) return full;
-    if (!_withData.contains(id)) return _soon[id] ?? const [];
+    if (!_withData.contains(id) && !_catchupDays.containsKey(id)) {
+      return _soon[id] ?? const [];
+    }
     if (!_inFlightLoads.contains(id)) {
       _pendingLoads.add(id);
       if (!_loadScheduled) {
@@ -703,15 +751,25 @@ class EpgService extends ChangeNotifier {
     _inFlightLoads.addAll(ids);
     final epoch = _cacheEpoch;
     try {
-      final rows = await _db.programmesFor(
-          ids,
-          DateTime.now()
-              .subtract(AppConstants.epgPastRetention)
-              .millisecondsSinceEpoch);
+      final now = DateTime.now();
+      var since = now.subtract(AppConstants.epgPastRetention);
+      for (final id in ids) {
+        final days = _catchupDays[id];
+        if (days == null) continue;
+        final own = now.subtract(Duration(days: days));
+        if (own.isBefore(since)) since = own;
+      }
+      final rows = await _db.programmesFor(ids, since.millisecondsSinceEpoch);
       if (epoch != _cacheEpoch) return;
       if (_full.length + ids.length > _fullCacheLimit) _full.clear();
       for (final id in ids) {
-        _full[id] = _untangle(rows[id] ?? const []);
+        // One query for the batch reaches the oldest catch-up horizon;
+        // channels without catch-up still only show their usual past.
+        final minStop = _minStopMsFor(id, now);
+        _full[id] = _untangle([
+          for (final r in rows[id] ?? const <EpgRow>[])
+            if (r.stopMs > minStop) r
+        ]);
       }
       // Not notifyListeners(): TvHomeScreen watches this whole service, and
       // rebuilding all of it for every guide row scrolled into view would

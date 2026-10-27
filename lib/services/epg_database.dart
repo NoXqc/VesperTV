@@ -53,12 +53,16 @@ class EpgDatabase {
         version: 2,
         // The sports index is built lazily, outside cold-start guide loading.
         onUpgrade: (db, oldVersion, newVersion) async {},
-        onCreate: (db, version) async {
-          // (channel_id, start) is the natural key and also exactly the
-          // lookup every read does — WITHOUT ROWID stores rows in that
-          // order, so "programmes for these channels" is an index range
-          // scan with no extra table lookup.
-          await db.execute('''
+        onCreate: (db, version) => createSchema(db),
+      );
+
+  @visibleForTesting
+  static Future<void> createSchema(Database db) async {
+    // (channel_id, start) is the natural key and also exactly the
+    // lookup every read does — WITHOUT ROWID stores rows in that
+    // order, so "programmes for these channels" is an index range
+    // scan with no extra table lookup.
+    await db.execute('''
             CREATE TABLE programme (
               channel_id TEXT NOT NULL,
               start INTEGER NOT NULL,
@@ -70,12 +74,10 @@ class EpgDatabase {
               PRIMARY KEY (channel_id, start)
             ) WITHOUT ROWID
           ''');
-          await db
-              .execute('CREATE INDEX idx_programme_stop ON programme(stop)');
-          await db.execute(
-              'CREATE INDEX idx_programme_source ON programme(source_url, gen)');
-        },
-      );
+    await db.execute('CREATE INDEX idx_programme_stop ON programme(stop)');
+    await db.execute(
+        'CREATE INDEX idx_programme_source ON programme(source_url, gen)');
+  }
 
   Future<void> open() async => _database;
 
@@ -326,10 +328,34 @@ class EpgDatabase {
   }
 
   /// Rolling-window trim: drops programmes that ended before [minStopMs].
-  Future<void> deleteEndedBefore(int minStopMs) async {
+  /// Deletes programmes that ended before [minStopMs], except channels in
+  /// [keep] (normalized id -> their own oldest kept end), which only lose
+  /// rows older than that — catch-up channels keep days of past.
+  Future<void> deleteEndedBefore(int minStopMs,
+      {Map<String, int> keep = const {}}) async {
     final db = await _database;
     _invalidateSports();
-    await db.delete('programme', where: 'stop < ?', whereArgs: [minStopMs]);
+    if (keep.isEmpty) {
+      await db.delete('programme', where: 'stop < ?', whereArgs: [minStopMs]);
+      return;
+    }
+    await db.transaction((txn) async {
+      await txn.execute('CREATE TEMP TABLE IF NOT EXISTS catchup_keep '
+          '(channel_id TEXT PRIMARY KEY, min_stop INTEGER) WITHOUT ROWID');
+      await txn.delete('catchup_keep');
+      final batch = txn.batch();
+      for (final e in keep.entries) {
+        batch
+            .insert('catchup_keep', {'channel_id': e.key, 'min_stop': e.value});
+      }
+      await batch.commit(noResult: true);
+      await txn.rawDelete(
+          'DELETE FROM programme WHERE stop < ? AND '
+          'stop < COALESCE((SELECT min_stop FROM catchup_keep k '
+          'WHERE k.channel_id = programme.channel_id), ?)',
+          [minStopMs, minStopMs]);
+      await txn.delete('catchup_keep');
+    });
   }
 
   Future<void> clearAll() async {
