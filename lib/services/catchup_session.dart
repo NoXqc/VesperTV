@@ -147,6 +147,39 @@ class CatchupSession {
     );
   }
 
+  /// [url] for Send log: no host, account or token — only the path's
+  /// shape, e.g. `/timeshift/*/*/140/2026-10-27:15-00/*.m3u8`. The span,
+  /// timeshift dates and keywords stay; every other part is `*`.
+  static String linkShape(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return '?';
+    final segs = uri.pathSegments;
+    // Only the span right after `timeshift/<user>/<pass>/` stays a number:
+    // an account can be all digits too.
+    final ts = segs.indexOf('timeshift');
+    final span = ts < 0 ? -1 : ts + 3;
+    final parts = [
+      for (var i = 0; i < segs.length; i++) _shapeOf(segs[i], i == span),
+    ];
+    final query = uri.queryParameters.keys.toList()..sort();
+    return '${uri.scheme}://*/${parts.join('/')}'
+        '${query.isEmpty ? '' : '?${query.join('&')}'}';
+  }
+
+  static String _shapeOf(String seg, bool span) {
+    if (span && RegExp(r'^\d+$').hasMatch(seg)) return seg;
+    final dot = seg.lastIndexOf('.');
+    final stem = dot > 0 ? seg.substring(0, dot) : seg;
+    final ext = dot > 0 ? seg.substring(dot) : '';
+    if (RegExp(r'^\d{4}-\d{2}-\d{2}:\d{2}-\d{2}$').hasMatch(stem) ||
+        const {'timeshift', 'streaming', 'timeshift.php', 'live'}
+            .contains(seg) ||
+        RegExp(r'^(index|video|mono|timeshift_abs)[-\d]*$').hasMatch(stem)) {
+      return seg;
+    }
+    return '*$ext';
+  }
+
   static String? _originOf(String url) {
     final uri = Uri.tryParse(url);
     if (uri == null || !uri.hasScheme || uri.host.isEmpty) return null;

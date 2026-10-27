@@ -741,8 +741,12 @@ class PlaybackService extends ChangeNotifier {
         startOffset: from.difference(start));
     // Asking again from the same minute (a retry) is still a real switch.
     if (currentChannel?.id == ch.id) currentChannel = null;
+    final profile = _profileFor(live.playlistId);
     debugPrint('Catchup: ${live.name} from ${start.toIso8601String()} '
-        '+${from.difference(start).inSeconds}s, ${span.inMinutes} min');
+        '+${from.difference(start).inSeconds}s, ${span.inMinutes} min · '
+        '${live.catchupKind?.name} ${CatchupSession.linkShape(url)} · '
+        'server offset ${profile?.serverTimeOffsetMinutes ?? '-'} min · '
+        'archive ${live.catchupDays} d');
     // Recall / Last channels return to the live channel.
     unawaited(_recordRecentlyPlayed(live));
     await play(ch);

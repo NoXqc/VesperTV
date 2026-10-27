@@ -313,6 +313,21 @@ void main() {
     expect(players.length, opened);
   });
 
+  test('Send log shows the link shape, never the server or account', () {
+    expect(
+        CatchupSession.linkShape(
+            'http://host.example:8080/timeshift/1234/5678/140/2026-10-27:15-00/987654.m3u8'),
+        'http://*/timeshift/*/*/140/2026-10-27:15-00/*.m3u8');
+    expect(
+        CatchupSession.linkShape(
+            'http://h.example/streaming/timeshift.php?username=u&password=p&stream=1'),
+        'http://*/streaming/timeshift.php?password&stream&username');
+    expect(
+        CatchupSession.linkShape(
+            'https://f.example/secretname/index-1761577200-3600.m3u8?token=abc'),
+        'https://*/*/index-1761577200-3600.m3u8?token');
+  });
+
   cuTest('Back to now while a request is still opening wins', (tester) async {
     unawaited(playback.playCatchup(live, DateTime.utc(2026, 10, 27, 18, 30)));
     await playback.backToLive();
