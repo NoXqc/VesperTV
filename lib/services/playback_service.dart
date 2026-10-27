@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:video_player_hdr/video_player_hdr.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
+import '../models/catchup.dart';
 import '../models/channel.dart';
 import '../models/playlist_profile.dart';
 import '../utils/constants.dart';
@@ -102,6 +103,15 @@ class PlaybackService extends ChangeNotifier {
   /// the older one gives up at its next await.
   int _playGen = 0;
   final _catchupErrors = <DateTime>[];
+
+  /// Playlists whose Xtream panel only serves `.ts` timeshift links (the
+  /// `.m3u8` form answered 404 — user report, 2026-10-27). Learned once per
+  /// launch; every later request on that playlist asks for `.ts` at once.
+  final _catchupTsOnly = <String>{};
+
+  @visibleForTesting
+  void debugLearnCatchupTsOnly(String playlistId) =>
+      _catchupTsOnly.add(playlistId);
 
   /// The live channel behind what's playing — the catch-up's live channel
   /// while catch-up plays.
@@ -711,7 +721,10 @@ class PlaybackService extends ChangeNotifier {
     final start = CatchupSession.floorToMinute(from);
     final span = CatchupSession.spanFrom(start, now);
     final url = CatchupSession.linkFor(live, _profileFor(live.playlistId),
-        start: start, span: span, now: now);
+        start: start,
+        span: span,
+        now: now,
+        ext: _catchupTsOnly.contains(live.playlistId) ? 'ts' : 'm3u8');
     if (url == null) {
       debugPrint('Catchup: no link for ${live.name} (${live.catchupKind})');
       error = tr('Catch-up is not available for this channel.');
@@ -835,6 +848,17 @@ class PlaybackService extends ChangeNotifier {
     debugPrint('Catchup: error at ${position.inSeconds}s '
         '(HTTP ${status ?? '-'}): ${raw.split('\n').first}');
     if (status == 400 || status == 404 || status == 410) {
+      // Some panels route only `.ts` timeshift links: ask once more that way
+      // (dev-notes/catchup-plan.md), and keep using it on this playlist.
+      final live = s.live;
+      if (live.catchupKind == CatchupKind.xc &&
+          !_catchupTsOnly.contains(live.playlistId) &&
+          Uri.tryParse(s.channel.url)?.path.endsWith('.m3u8') == true) {
+        _catchupTsOnly.add(live.playlistId);
+        debugPrint('Catchup: .m3u8 refused (HTTP $status), retrying as .ts');
+        unawaited(playCatchup(live, s.playhead(s.startOffset), retry: true));
+        return;
+      }
       error = tr('This programme is not available in catch-up.');
       notifyListeners();
       return;

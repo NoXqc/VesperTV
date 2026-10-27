@@ -263,6 +263,7 @@ void main() {
       (tester) async {
     await playback.playCatchup(live, DateTime.utc(2026, 10, 27, 18, 30));
     await settle(tester);
+    playback.debugLearnCatchupTsOnly(live.playlistId); // past the .ts retry
     players.last.failWith('Source error [HTTP 404 Not Found]');
     await settle(tester);
     expect(playback.error, 'This programme is not available in catch-up.');
@@ -284,6 +285,32 @@ void main() {
         .failWith('Source error [ERROR_CODE_IO_NETWORK_CONNECTION_FAILED]');
     await settle(tester);
     expect(playback.error, contains('NETWORK_CONNECTION_FAILED'));
+  });
+
+  cuTest('a panel that refuses .m3u8 timeshift is asked for .ts, then always',
+      (tester) async {
+    await playback.playCatchup(live, DateTime.utc(2026, 10, 27, 18, 30));
+    await settle(tester);
+    expect(players.last.url, endsWith('/11.m3u8'));
+    players.last.failWith('Source error [HTTP 404 Not Found]');
+    await settle(tester);
+    expect(playback.error, isNull);
+    expect(players.last.url,
+        'http://host/timeshift/u/pw/91/2026-10-27:18-30/11.ts');
+    expect(playback.catchup!.requestStart, DateTime.utc(2026, 10, 27, 18, 30));
+    expect(players.where((p) => !p.disposed), [players.last]);
+
+    // Learned: the next request goes straight to .ts.
+    await playback.playCatchup(live, DateTime.utc(2026, 10, 27, 19));
+    await settle(tester);
+    expect(players.last.url, endsWith('/2026-10-27:19-00/11.ts'));
+
+    // A .ts link that is really gone still shows the message (no loop).
+    final opened = players.length;
+    players.last.failWith('Source error [HTTP 404 Not Found]');
+    await settle(tester);
+    expect(playback.error, 'This programme is not available in catch-up.');
+    expect(players.length, opened);
   });
 
   cuTest('Back to now while a request is still opening wins', (tester) async {
