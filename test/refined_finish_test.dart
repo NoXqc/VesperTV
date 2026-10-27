@@ -1,4 +1,7 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -137,12 +140,14 @@ void main() {
       final bounds = tester.getRect(find.byKey(tileKey));
       final panelBounds = tester.getRect(find.byKey(panelKey));
       expect(focus.hasFocus, isTrue);
+      expect(find.byType(BackdropFilter), findsNothing);
       prefs.setRefinedFinish(true);
       await tester.pumpAndSettle();
       expect(tester.state(find.byKey(tileKey)), same(tileState));
       expect(tester.getRect(find.byKey(tileKey)), bounds);
       expect(tester.getRect(find.byKey(panelKey)), panelBounds);
       expect(focus.hasFocus, isTrue);
+      expect(find.byType(BackdropFilter), findsOneWidget);
       final context = tester.element(find.byKey(tileKey));
       final original = BoxDecoration(
           borderRadius: BorderRadius.circular(8),
@@ -161,6 +166,7 @@ void main() {
       prefs.setRefinedFinish(false);
       await tester.pumpAndSettle();
       expect(RefinedFinish.decorate(context, original), same(original));
+      expect(find.byType(BackdropFilter), findsNothing);
       expect(tester.state(find.byKey(tileKey)), same(tileState));
       expect(focus.hasFocus, isTrue);
       expect(tester.takeException(), isNull);
@@ -170,4 +176,71 @@ void main() {
       expect(storage.getRefinedFinish(), isFalse);
     });
   }
+  testWidgets('artwork remains intact and idle guide cells stay unchanged',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      theme: RefinedFinish.apply(ThemeData.dark(), true),
+      home: const Scaffold(body: SizedBox()),
+    ));
+    final context = tester.element(find.byType(SizedBox).last);
+    const image = DecorationImage(image: AssetImage('assets/icon/icon.png'));
+    final original =
+        BoxDecoration(image: image, borderRadius: BorderRadius.circular(10));
+    final painted = RefinedFinish.decorate(context, original, artwork: true);
+    expect(painted.image, same(image));
+    expect(painted.gradient, isNull);
+    expect(painted.borderRadius, original.borderRadius);
+    expect(painted.padding, original.padding);
+    final rim = RefinedFinish.artworkRim(context, BorderRadius.circular(10));
+    expect(rim.image, isNull);
+    expect(rim.gradient, isNull);
+    expect(rim.padding, EdgeInsets.zero);
+    expect(RefinedFinish.decorate(context, original, focusOnly: true),
+        same(original));
+  });
+
+  testWidgets('glass has visible reflections without changing panel bounds',
+      (tester) async {
+    final capture = GlobalKey();
+    Future<int> sample(bool enabled) async {
+      await tester.pumpWidget(MaterialApp(
+        theme: RefinedFinish.apply(ThemeData.dark(), enabled),
+        home: Scaffold(body: Builder(builder: (context) {
+          return RepaintBoundary(
+            key: capture,
+            child: SizedBox(
+                width: 220,
+                height: 120,
+                child: ColoredBox(
+                    color: Colors.black,
+                    child: Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: DecoratedBox(
+                            decoration: RefinedFinish.decorate(
+                                context,
+                                BoxDecoration(
+                                    color: Colors.black,
+                                    borderRadius:
+                                        BorderRadius.circular(8))))))),
+          );
+        })),
+      ));
+      await tester.pumpAndSettle();
+      expect(tester.getSize(find.byKey(capture)), const Size(220, 120));
+      final boundary =
+          capture.currentContext!.findRenderObject() as RenderRepaintBoundary;
+      return (await tester.runAsync(() async {
+        final image = await boundary.toImage();
+        final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+        final topRed = data!.getUint8((12 * image.width + 110) * 4);
+        final lowerRed = data.getUint8((90 * image.width + 110) * 4);
+        image.dispose();
+        return topRed - lowerRed;
+      }))!;
+    }
+
+    expect(await sample(false), 0);
+    expect(await sample(true), greaterThan(25));
+    expect(tester.takeException(), isNull);
+  });
 }

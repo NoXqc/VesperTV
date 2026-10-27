@@ -1296,6 +1296,9 @@ class _HomeCardState extends State<_HomeCard> {
         duration: const Duration(milliseconds: 160),
         width: widget.width,
         height: widget.height,
+        foregroundDecoration: RefinedFinish.artworkRim(
+            context, BorderRadius.circular(10),
+            focused: _focused),
         decoration: RefinedFinish.decorate(
             context,
             BoxDecoration(

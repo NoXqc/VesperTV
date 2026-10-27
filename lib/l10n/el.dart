@@ -2604,8 +2604,8 @@ const Map<String, String> kEl = {
   "{first} {firstScore} – {secondScore} {second}":
       "{first} {firstScore} – {secondScore} {second}",
   "Refined finish": "Εκλεπτυσμένο φινίρισμα",
-  "Subtle glass-like surfaces and highlights. Keeps your layout and theme colour.":
-      "Διακριτικές γυάλινες επιφάνειες και αντανακλάσεις. Διατηρεί τη διάταξη και το χρώμα θέματος.",
+  "Glossy surfaces, reflections and blur. Uses more graphics resources.":
+      "Γυαλιστερές επιφάνειες, αντανακλάσεις και θόλωση. Χρησιμοποιεί περισσότερους πόρους γραφικών.",
   "Video HDR": "HDR βίντεο",
   "Decoder HDR": "HDR αποκωδικοποιητή",
   "Unknown / not reported": "Άγνωστο / δεν αναφέρεται",

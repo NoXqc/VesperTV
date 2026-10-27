@@ -136,11 +136,10 @@ class _TvMenuTileState extends State<TvMenuTile> {
                 : const [],
           ),
           focused: _focused),
-      // MinimalGlassFocus's own blur special-case is retired now that
-      // every palette uses the gradient-sheen above instead — see
-      // ModeButton's identical comment for why the wrapper itself stays.
+      // The stable wrapper adds focus blur only for the opt-in glass finish.
+      // Its interactive child keeps the same slot when the finish changes.
       child: MinimalGlassFocus(
-        active: false,
+        active: RefinedFinish.of(context) && _focused,
         borderRadius: 8,
         child: ListTile(
           focusNode: widget.focusNode,

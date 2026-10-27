@@ -47,7 +47,7 @@ class ThemeScreen extends StatelessWidget {
                   TvSwitchListTile(
                     title: Text(tr('Refined finish')),
                     subtitle: Text(tr(
-                        'Subtle glass-like surfaces and highlights. Keeps your layout and theme colour.')),
+                        'Glossy surfaces, reflections and blur. Uses more graphics resources.')),
                     value: prefs.refinedFinish,
                     onChanged: prefs.setRefinedFinish,
                   ),

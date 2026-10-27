@@ -1994,8 +1994,8 @@ const Map<String, String> kFr = {
   "{first} {firstScore} – {secondScore} {second}":
       "{first} {firstScore} – {secondScore} {second}",
   "Refined finish": "Finition raffinée",
-  "Subtle glass-like surfaces and highlights. Keeps your layout and theme colour.":
-      "Surfaces et reflets subtils façon verre. Conserve la disposition et la couleur du thème.",
+  "Glossy surfaces, reflections and blur. Uses more graphics resources.":
+      "Surfaces brillantes, reflets et flou. Utilise davantage de ressources graphiques.",
   "Video HDR": "HDR vidéo",
   "Decoder HDR": "HDR décodé",
   "Unknown / not reported": "Inconnu / non indiqué",

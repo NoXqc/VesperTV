@@ -1990,8 +1990,8 @@ const Map<String, String> kEs = {
   "{first} {firstScore} – {secondScore} {second}":
       "{first} {firstScore} – {secondScore} {second}",
   "Refined finish": "Acabado refinado",
-  "Subtle glass-like surfaces and highlights. Keeps your layout and theme colour.":
-      "Superficies y reflejos sutiles de cristal. Conserva la distribución y el color del tema.",
+  "Glossy surfaces, reflections and blur. Uses more graphics resources.":
+      "Superficies brillantes, reflejos y desenfoque. Usa más recursos gráficos.",
   "Video HDR": "HDR del vídeo",
   "Decoder HDR": "HDR decodificado",
   "Unknown / not reported": "Desconocido / no indicado",

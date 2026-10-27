@@ -204,6 +204,9 @@ class _PosterCardState extends State<PosterCard> {
                 Container(
                   width: widget.cardWidth,
                   height: widget.cardPosterHeight,
+                  foregroundDecoration: RefinedFinish.artworkRim(
+                      context, BorderRadius.circular(10),
+                      focused: _focused),
                   decoration: RefinedFinish.decorate(
                       context,
                       BoxDecoration(

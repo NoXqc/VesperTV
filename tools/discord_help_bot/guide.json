@@ -83,7 +83,7 @@
     "id": "0f8b43d614ca6159",
     "category": "Live TV",
     "title": "Refine the existing appearance",
-    "answer": "Off by default and independent for each profile. Adds subtle glass-like shading and highlights to existing menus, cards and overlays. Keeps the same layout, theme colours, text sizes and remote navigation. Turn it off to restore the original finish.",
+    "answer": "Off by default and independent for each profile. Adds glossy panels, brighter reflections, bevelled edges and blur around focused controls. Uses more graphics resources. Keeps the same layout, theme colours, text sizes and remote navigation. Turn it off to restore the original finish.",
     "controls": "Settings → Interface → Theme → Refined finish",
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },

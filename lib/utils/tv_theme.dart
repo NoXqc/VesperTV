@@ -134,16 +134,9 @@ ColorScheme buildPaletteColorScheme(
   );
 }
 
-/// Real frosted glass — `BackdropFilter` blur + a translucent fill + a
-/// crisp bright contour — for the Minimalist palette's focus highlight.
-/// A flat translucent tint alone (no blur) was reported directly as
-/// reading "gray" rather than glass; this is deliberately heavier than
-/// anything else in this app's UI (which otherwise avoids blur/gradient
-/// paint effects for cost reasons on weak GPUs — see `_SelectableRow`'s
-/// own doc comment on `Ink`). That tradeoff is safe here specifically
-/// because a D-pad has exactly one cursor: at most one of these is ever
-/// composited on screen at a time, unlike a decoration applied to every
-/// row in a scrolling list.
+/// Bounded real blur for a focused control when Refined finish is enabled.
+/// This stable wrapper keeps its focusable child at the same slot in both modes.
+/// It filters Flutter-painted content only, not the separate native video plane.
 class MinimalGlassFocus extends StatelessWidget {
   const MinimalGlassFocus(
       {super.key,
@@ -182,7 +175,7 @@ class MinimalGlassFocus extends StatelessWidget {
                     filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.16),
+                        color: Colors.white.withValues(alpha: 0.025),
                         borderRadius: BorderRadius.circular(borderRadius),
                         border: Border.all(
                             color: Colors.white.withValues(alpha: 0.8),

@@ -10,18 +10,18 @@ Implementation
   palette is unchanged. Generic backup/transfer retains independent values.
 - RefinedFinish ThemeExtension is installed at root MaterialApp and existing
   withTvThemeIfNeeded/TvHomeScreen ThemeData boundaries. Theme updates preserve
-  widget/FocusNode slots; no additional layers, wrappers, blur or animations.
+  widget/FocusNode slots; the existing stable wrappers now enable bounded focus blur only when on.
 - RefinedFinish.decorate returns the exact original BoxDecoration while off.
-  While on it preserves border/radius/padding/image geometry, uses a quiet dark
-  three-stop highlight, and reduces existing focused glow. Artwork only receives
-  the shadow adjustment; never wash or blur posters/logos. EPG focus decorations
+  While on it preserves border/radius/padding/image geometry, uses a brighter four-stop
+  reflection, painted inner/outer bevels and deeper accent/drop shadows. Artwork
+  receives shadows and a foreground rim; never wash or blur posters/logos. EPG focus decorations
   change only for the focused cell; no extra per-cell gradients while idle.
 - Low-alpha white/accent fills are first composited over dark before raising
   panel opacity, preventing a white panel with unreadable white labels. Bright
-  video scrims use at least82% opacity, preserving readable text. No HDMI/native
+  video scrims use at least78% opacity, preserving readable text. No HDMI/native
   video capture/filter/configuration changes. Frame timing still needs device QA.
 - Dialog/bottom-sheet/popup backgrounds and existing Material overlays use dark
-  surface shading; themed buttons get a restrained focused tint. Existing shapes,
+  surface shading; themed buttons get a stronger focused tint. Existing shapes,
   dimensions, positions, focus/selected borders, labels and semantics remain.
 
 Coverage
@@ -38,8 +38,15 @@ Verification
   component geometry/state/focus for Dark Gold/Habs/Minimal/Neon Green.
 - Existing profile_theme_test now checks finish reload on the real profile switch;
   adds the previously missing Wakelock platform mock for PlaybackService.dispose.
-- Full analyze/test results in root HANDOFF.md; no release/build/install requested.
-- Pending separate branches: game-card-reminders173d08d, decoder-hdr-reportingb0b0889.
+- Full analyze/test/build/install results in root HANDOFF.md.
+- Owner requested stronger visible polish and accepted more graphics cost on
+  2026-10-26. codex/refined-glass-finish replaces the initial subtle finish.
+- Focused menu/switch/mode/app-bar/group controls use the existing clipped sigma14
+  BackdropFilter; no blur for idle guide cells or every poster. Settings uses a
+  dark, opaque palette-lit backdrop. The native video plane is never sampled.
+- Render test checks actual reflection contrast; focus checks verify one active
+  blur, stable state/bounds, restored original decoration when off, and intact
+  artwork. Actual Theme-screen captures are Logs/refined-glass-{off,on}.png.
 
 Primary references: Flutter BackdropFilter/performance docs were checked during
-investigation. This implementation deliberately uses paint only rather than blur.
+investigation. The revised finish uses paint plus bounded focus blur; weak devices can disable it.

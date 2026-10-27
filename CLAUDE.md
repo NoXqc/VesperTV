@@ -1380,12 +1380,15 @@ profile change or backgrounding is silent. See `dev-notes/sports-tab.md` for det
 
 ### Codex 2026-10-26: Refined finish (unreleased branch)
 
-`codex/refined-finish` adds Settings > Interface > Theme > Refined finish, off by
- default and per viewer. Shared paint-only dark surfaces/highlights/quieter glow;
- no layouts, palette colours, focus structure or video configuration changes.
- RefinedFinish ThemeExtension must survive root/TV theme boundaries. Do not
- re-enable MinimalGlassFocus blur or add live-video filtering for this setting.
- See `dev-notes/refined-finish.md`; actual device performance/appearance needs QA.
+`codex/refined-finish` initially added Settings > Interface > Theme > Refined finish,
+ off by default and per viewer. Owner requested a much stronger finish and explicitly
+ accepted extra graphics cost (2026-10-26): `codex/refined-glass-finish` adds glossy
+ reflections, painted bevels, deeper shadows, artwork edge rims and bounded blur in
+ existing focused-control wrappers. Keep child/FocusNode slots and all geometry stable.
+ The off state remains original. Never filter/reconfigure the native video surface.
+ See `dev-notes/refined-finish.md`; real-device performance/appearance needs QA.
+ Test package 1.0.41+458 includes ae5cb7f audio labels; analyze16 and600Flutter
+ tests passed, guide59entries/12Node tests passed. Install result: root HANDOFF.md.
 
 ### Codex 2026-10-26: decoder HDR reporting (unreleased branch)
 
