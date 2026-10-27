@@ -1988,4 +1988,8 @@ const Map<String, String> kEs = {
   "{team} scored!": "¡{team} ha marcado!",
   "{first} {firstScore} – {secondScore} {second}":
       "{first} {firstScore} – {secondScore} {second}",
+  'Catch-up is not available for this channel.':
+      'La reproducción en diferido no está disponible para este canal.',
+  'This programme is not available in catch-up.':
+      'Este programa no está disponible en diferido.',
 };

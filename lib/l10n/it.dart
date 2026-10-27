@@ -1992,4 +1992,8 @@ const Map<String, String> kIt = {
   "{team} scored!": "{team} ha segnato!",
   "{first} {firstScore} – {secondScore} {second}":
       "{first} {firstScore} – {secondScore} {second}",
+  'Catch-up is not available for this channel.':
+      'La TV on demand non è disponibile per questo canale.',
+  'This programme is not available in catch-up.':
+      'Questo programma non è disponibile in replay.',
 };

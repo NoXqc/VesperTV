@@ -2601,4 +2601,8 @@ const Map<String, String> kEl = {
   "{team} scored!": "Η ομάδα {team} σκόραρε!",
   "{first} {firstScore} – {secondScore} {second}":
       "{first} {firstScore} – {secondScore} {second}",
+  'Catch-up is not available for this channel.':
+      'Το catch-up δεν είναι διαθέσιμο για αυτό το κανάλι.',
+  'This programme is not available in catch-up.':
+      'Αυτή η εκπομπή δεν είναι διαθέσιμη σε catch-up.',
 };

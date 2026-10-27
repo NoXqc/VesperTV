@@ -1992,4 +1992,8 @@ const Map<String, String> kFr = {
   "{team} scored!": "{team} a marqué !",
   "{first} {firstScore} – {secondScore} {second}":
       "{first} {firstScore} – {secondScore} {second}",
+  'Catch-up is not available for this channel.':
+      'Le rattrapage n’est pas disponible pour cette chaîne.',
+  'This programme is not available in catch-up.':
+      'Cette émission n’est pas disponible en rattrapage.',
 };

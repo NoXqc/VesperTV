@@ -18,6 +18,7 @@ import 'm3u_parser.dart';
 import 'real_4k_channels.dart';
 import 'storage_service.dart';
 import 'audio_track_preferences.dart';
+import 'catchup_session.dart';
 import 'archive_ready_watch.dart';
 import 'display_match.dart';
 import 'archive_service.dart';
@@ -83,6 +84,36 @@ class PlaybackService extends ChangeNotifier {
   final PlaylistManager _playlistManager;
 
   Channel? currentChannel;
+
+  /// Set while a past programme plays from a live channel's catch-up
+  /// ([playCatchup]); [currentChannel] is then its transient `cu_` channel
+  /// and [CatchupSession.live] the channel Back to now returns to.
+  CatchupSession? catchup;
+  CatchupSession? _pendingCatchup;
+
+  /// Bumped by every catch-up / Back to now request: a late continuation
+  /// or retry from an older one sees the change and does nothing.
+  int _catchupGen = 0;
+
+  /// Bumped by every [_playChannel] past its same-channel guard (and by
+  /// [stop]). Two plays overlapping across their awaits (Back to now while
+  /// a catch-up request opens, a fast zap) used to both create a player:
+  /// the older one leaked with its provider connection still open. Now
+  /// the older one gives up at its next await.
+  int _playGen = 0;
+  final _catchupErrors = <DateTime>[];
+
+  /// The live channel behind what's playing — the catch-up's live channel
+  /// while catch-up plays.
+  Channel? get liveChannel => catchup?.live ?? currentChannel;
+
+  @visibleForTesting
+  DateTime Function() clock = DateTime.now;
+
+  @visibleForTesting
+  VideoPlayerHdrController Function(String url,
+          {Future<ClosedCaptionFile>? closedCaptionFile}) createController =
+      streamController;
 
   /// The live list the user last picked a channel from (TvHomeScreen's
   /// Live list / Timeline guide, Favourites included) — what the player's
@@ -435,23 +466,34 @@ class PlaybackService extends ChangeNotifier {
       return;
     }
 
+    final gen = ++_playGen;
     // A recording uses this playlist's only connection: ask first (the
     // app shows the Stop recording / Cancel popup, see main.dart).
     final confirm = confirmOpen;
     if (confirm != null && !await confirm(channel)) return;
+    if (gen != _playGen) return;
     // The channel being recorded plays from the recorder's local tap, so
     // both share one provider connection.
     final openUrl = await openUrlFor?.call(channel) ?? channel.url;
+    if (gen != _playGen) return;
 
     if (await _reuseNativeLive(channel, openUrl)) return;
+    if (gen != _playGen) return;
 
     // Before the teardown: it reads currentChannel for the old title's
     // resume save, so only the flag changes here.
     switching = true;
     await _teardown();
+    if (gen != _playGen) return;
     if (NativeVideoSurface.active && !textureVideo) {
       await NativeVideoSurface.prepareNewPlayer();
+      if (gen != _playGen) return;
     }
+    final pending = _pendingCatchup;
+    _pendingCatchup = null;
+    catchup =
+        pending != null && pending.channel.id == channel.id ? pending : null;
+    final session = catchup;
     currentChannel = channel;
     error = null;
     reconnectStatus = null;
@@ -482,7 +524,7 @@ class PlaybackService extends ChangeNotifier {
     final savedPositionMs = isLive || channel.transientPlayback
         ? 0
         : _storage.getLastPosition(channel.id);
-    final newController = streamController(
+    final newController = createController(
       openUrl,
       closedCaptionFile: channel.subtitleUrl != null
           ? _loadCaptions(channel.subtitleUrl!)
@@ -522,6 +564,14 @@ class PlaybackService extends ChangeNotifier {
       }
       // Switched channel meanwhile: this controller is already disposed.
       if (controller != newController) return;
+      if (session != null) {
+        await CatchupSession.markFinite(newController);
+        if (session.startOffset > Duration.zero) {
+          await newController.seekTo(session.startOffset);
+        }
+        if (controller != newController) return;
+        _watchCatchupEnd(newController, session);
+      }
       await newController.play();
       unawaited(AudioTrackPreferences.apply(_storage, channel, newController,
           isCurrent: () => controller == newController));
@@ -539,7 +589,8 @@ class PlaybackService extends ChangeNotifier {
           newController,
           () =>
               controller == newController && currentChannel?.id == channel.id));
-      await _storage.setLastChannelId(channel.id);
+      // Catch-up: the live channel is what a restart resumes.
+      await _storage.setLastChannelId(session?.live.id ?? channel.id);
       // Live streams report zero/unknown duration — that's fine, it just
       // means StorageService.getWatchedFraction has nothing to compute a
       // percentage from for those, which is the correct outcome (a live
@@ -550,6 +601,10 @@ class PlaybackService extends ChangeNotifier {
       }
       notifyListeners();
     }).catchError((e) async {
+      if (session != null) {
+        if (catchup == session) _onCatchupError(session, newController, e);
+        return;
+      }
       // A `.ts` that was really HLS: once more as HLS, through [play]
       // (clearing currentChannel lets it past its same-channel guard).
       if ((await learnHlsHost(channel.url, e) ||
@@ -580,6 +635,7 @@ class PlaybackService extends ChangeNotifier {
       notifyListeners();
     });
 
+    _positionSaveTimer?.cancel();
     _positionSaveTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       final c = controller;
       final ch = currentChannel;
@@ -629,6 +685,127 @@ class PlaybackService extends ChangeNotifier {
       Real4kChannels.record(
           channel.id, size.width.round(), size.height.round());
     }
+  }
+
+  /// Plays [live]'s catch-up from [at] (anywhere in its archive; older is
+  /// clamped to the oldest the provider keeps). Within
+  /// [CatchupSession.liveEdge] of now it plays the live channel instead.
+  Future<void> playCatchup(Channel live, DateTime at,
+      {bool retry = false}) async {
+    final gen = ++_catchupGen;
+    final now = clock();
+    if (!live.hasCatchup || now.difference(at) < CatchupSession.liveEdge) {
+      return _playLive(live);
+    }
+    final oldest = CatchupSession.oldest(live, now);
+    final from = at.isBefore(oldest) ? oldest : at;
+    final start = CatchupSession.floorToMinute(from);
+    final span = CatchupSession.spanFrom(start, now);
+    final url = CatchupSession.linkFor(live, _profileFor(live.playlistId),
+        start: start, span: span, now: now);
+    if (url == null) {
+      debugPrint('Catchup: no link for ${live.name} (${live.catchupKind})');
+      error = tr('Catch-up is not available for this channel.');
+      notifyListeners();
+      return;
+    }
+    if (gen != _catchupGen) return;
+    final ch = CatchupSession.channelFor(live, start, url);
+    if (!retry) _catchupErrors.clear();
+    _pendingCatchup = CatchupSession(
+        live: live,
+        requestStart: start,
+        channel: ch,
+        startOffset: from.difference(start));
+    // Asking again from the same minute (a retry) is still a real switch.
+    if (currentChannel?.id == ch.id) currentChannel = null;
+    debugPrint('Catchup: ${live.name} from ${start.toIso8601String()} '
+        '+${from.difference(start).inSeconds}s, ${span.inMinutes} min');
+    // Recall / Last channels return to the live channel.
+    unawaited(_recordRecentlyPlayed(live));
+    await play(ch);
+  }
+
+  /// Back to now: leaves catch-up for its live channel. The catch-up
+  /// player is released first (play -> _teardown awaits its dispose), so a
+  /// one-connection account never holds two streams.
+  Future<void> backToLive() async {
+    final s = catchup ?? _pendingCatchup;
+    _catchupGen++;
+    if (s == null) return;
+    await _playLive(s.live);
+  }
+
+  Future<void> _playLive(Channel live) async {
+    _pendingCatchup = null;
+    debugPrint('Catchup: back to live ${live.name}');
+    await play(live);
+  }
+
+  PlaylistProfile? _profileFor(String playlistId) {
+    for (final p in _playlistManager.profiles) {
+      if (p.id == playlistId) return p;
+    }
+    return null;
+  }
+
+  /// A request's stream ended (the provider sends a span, or only what has
+  /// aired): carry on from where it stopped, or go live once caught up.
+  void _watchCatchupEnd(VideoPlayerHdrController c, CatchupSession s) {
+    late final VoidCallback listener;
+    listener = () {
+      if (controller != c || catchup != s) {
+        c.removeListener(listener);
+        return;
+      }
+      final v = c.value;
+      if (v.hasError) {
+        c.removeListener(listener);
+        _onCatchupError(s, c, v.errorDescription ?? 'playback error');
+      } else if (v.isCompleted) {
+        c.removeListener(listener);
+        unawaited(_continueCatchup(s, v.position));
+      }
+    };
+    c.addListener(listener);
+  }
+
+  Future<void> _continueCatchup(CatchupSession s, Duration position) async {
+    final t = s.playhead(position);
+    // An empty request means the provider has nothing newer: caught up.
+    if (position - s.startOffset < CatchupSession.minUsefulPlay ||
+        clock().difference(t) < CatchupSession.liveEdge) {
+      _catchupGen++;
+      return _playLive(s.live);
+    }
+    await playCatchup(s.live, t);
+  }
+
+  /// A catch-up error the native player didn't recover in place. A link the
+  /// provider doesn't have (404/410/400) shows a plain message; anything
+  /// else asks again from the playhead, at most 3 times a minute.
+  void _onCatchupError(CatchupSession s, VideoPlayerHdrController c, Object e) {
+    final raw = e.toString();
+    final status = httpStatusFromPlaybackError(raw);
+    final position = c.value.isInitialized ? c.value.position : Duration.zero;
+    debugPrint('Catchup: error at ${position.inSeconds}s '
+        '(HTTP ${status ?? '-'}): ${raw.split('\n').first}');
+    if (status == 400 || status == 404 || status == 410) {
+      error = tr('This programme is not available in catch-up.');
+      notifyListeners();
+      return;
+    }
+    final now = clock();
+    _catchupErrors
+        .removeWhere((t) => now.difference(t) > const Duration(seconds: 60));
+    if (_catchupErrors.length >= 3) {
+      error = raw;
+      notifyListeners();
+      return;
+    }
+    _catchupErrors.add(now);
+    final at = s.playhead(position < s.startOffset ? s.startOffset : position);
+    unawaited(playCatchup(s.live, at, retry: true));
   }
 
   /// True while a manual [reloadCurrentChannel] is in flight — guards
@@ -969,6 +1146,10 @@ class PlaybackService extends ChangeNotifier {
 
   Future<void> stop() async {
     _nativeZapGeneration++;
+    _playGen++;
+    _catchupGen++;
+    catchup = null;
+    _pendingCatchup = null;
     _cancelNativeSwitchHolds();
     await _teardown();
     // Nothing plays any more: the TV goes back to its own mode. A channel
