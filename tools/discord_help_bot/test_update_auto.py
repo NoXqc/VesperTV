@@ -40,6 +40,7 @@ class UpdateTests(unittest.TestCase):
             for filename, content in self.old.items():
                 (directory / filename).write_bytes(content)
             self.remote = self.remote.replace('/opt/' + name, directory.as_posix())
+        self.real_run = subprocess.run
         self.calls = []
         self.fail_check = False
         self.ready = True
@@ -55,6 +56,9 @@ class UpdateTests(unittest.TestCase):
             if self.fail_check:
                 self.fail_check = False
                 raise subprocess.CalledProcessError(1, args)
+            directory = self.paths[args[2]].as_posix() + '/'
+            command = [str(arg).replace('/app/', directory) for arg in args[3:]]
+            self.real_run(command, check=True, text=True, capture_output=True)
         elif args[:2] == ('docker', 'logs'):
             if self.ready:
                 output = ('VesperTV automatic help connected; one channel enabled.\n'
@@ -109,6 +113,14 @@ class UpdateTests(unittest.TestCase):
             self.execute()
         for name in self.names:
             self.assert_files(name, self.old)
+
+    def test_actual_guide_allows_tips_with_instructions_in_controls_only(self):
+        self.new['guide.json'] = Path(__file__).with_name('guide.json').read_bytes()
+        guide = json.loads(self.new['guide.json'])
+        self.assertTrue(any(entry['answer'] == '' for entry in guide))
+        self.assertIn('66 answers', self.execute())
+        for name in self.names:
+            self.assert_files(name, self.new)
 
     def test_unexpected_file_is_rejected_before_commands_or_writes(self):
         with self.assertRaisesRegex(SystemExit, 'Unexpected files'):
