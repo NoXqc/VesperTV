@@ -352,8 +352,9 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   redesigns the shared Settings/Hub Sources page with add/connectors at the top,
   playback-source and catalog/list grids, role labels and per-card controls.
   Explicit responsive D-pad rows, stable toggle/dialog focus and immediate scroll;
-  no player/storage changes. See `dev-notes/mediahub-source-grid.md`; real-box
-  acceptance and package installation pending. Verification: root HANDOFF.md.
+  no player/storage changes. Owner-requested local test 1.0.43+473 is production-
+  signed and installed on the Formuler (analyze16,750 tests); real-box acceptance
+  pending. See `dev-notes/mediahub-source-grid.md` and root HANDOFF.md. No publication.
 
 - **cdx 2026-10-27 — release 1.0.43 (beta), +472:** owner requested release and
   Discord announcement after Claude merged all branches. Timeline is the fresh-install

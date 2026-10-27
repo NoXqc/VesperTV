@@ -37,6 +37,8 @@ French/Greek text, and equal-height cards. Optional MEDIAHUB_GRID_PREVIEW=1 writ
 a fixture screenshot to ignored Logs/; optional MEDIAHUB_PREVIEW_FONT and
 MEDIAHUB_PREVIEW_ICONS paths supply real fonts for local visual review.
 
-Real TV remote acceptance remains pending. No player changes or package/version
-changes are part of this branch. Updated remote guide and generated help index
-are local until separately published/deployed.
+Real TV remote acceptance remains pending. Owner requested a follow-up local
+test build: production-signed 1.0.43+473 installed on the Formuler over +471.
+Analyze16 and all750 Flutter tests passed; installed version and APK hash verified.
+No player changes. Updated remote guide and generated help index remain local
+until separately published/deployed. Artifact details are in root HANDOFF.md.
