@@ -2014,4 +2014,20 @@ const Map<String, String> kEs = {
   "{format} (stream)": "{format} (flujo)",
   "{format} (decoder)": "{format} (decodificador)",
   "File size": "Tamaño del archivo",
+
+  // Game reminder timing.
+  "1 hour before": "1 hora antes",
+  "1 day before": "1 día antes",
+  "1 week before": "1 semana antes",
+  "At game time only": "Solo al comenzar el partido",
+  "15 minutes before": "15 minutos antes",
+  "Reminder timing": "Horario del recordatorio",
+  "Advance reminders also notify at game time. VesperTV must be open.":
+      "Los recordatorios anticipados también avisan al comenzar el partido. VesperTV debe estar abierto.",
+  "This reminder time has passed": "La hora de este recordatorio ya pasó",
+  "Choose when to be reminded (while VesperTV is open)":
+      "Elige cuándo recibir el aviso (mientras VesperTV esté abierto)",
+  "Starts in 1 hour": "Comienza en 1 hora",
+  "Starts in 1 day": "Comienza en 1 día",
+  "Starts in 1 week": "Comienza en 1 semana",
 };

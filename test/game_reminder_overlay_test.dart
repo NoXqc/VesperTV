@@ -12,6 +12,7 @@ import 'package:nox_iptv/services/storage_service.dart';
 import 'package:nox_iptv/services/viewer_profile_service.dart';
 import 'package:nox_iptv/widgets/game_reminder_menu_tile.dart';
 import 'package:nox_iptv/widgets/game_reminder_overlay.dart';
+import 'package:nox_iptv/widgets/game_reminder_timing_menu.dart';
 
 import 'game_reminders_test.dart' show reminderGame;
 
@@ -251,6 +252,133 @@ void main() {
     await tester.pump();
     expect(find.text('Starts in 15 minutes'), findsNothing);
     expect(find.text('Stream'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
+  for (final choice in [
+    (60, 'Starts in 1 hour'),
+    (1440, 'Starts in 1 day'),
+    (10080, 'Starts in 1 week')
+  ]) {
+    testWidgets('custom popup says ${choice.$2} and retains the existing card',
+        (tester) async {
+      reminders = GameReminders(storage, now: () => time);
+      final game = reminderGame(time.add(Duration(minutes: choice.$1 + 60)));
+      await reminders.setReminder(game, leadMinutes: choice.$1);
+      await mount(tester);
+      time = game.start.subtract(Duration(minutes: choice.$1));
+      await tester.pump(const Duration(hours: 1));
+      await tester.pump();
+      expect(find.text(choice.$2), findsOneWidget);
+      expect(find.textContaining('Canadiens'), findsWidgets);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
+
+  testWidgets(
+      'timing menu offers all choices, returns selection and Back cancels',
+      (tester) async {
+    reminders = GameReminders(storage, now: () => time);
+    final game = reminderGame(time.add(const Duration(days: 8)));
+    int? picked;
+    await mount(tester,
+        page: Builder(
+            builder: (context) => TextButton(
+                onPressed: () async {
+                  picked = await showGameReminderTimingMenu(
+                      context, game, reminders);
+                },
+                child: const Text('Choose timing'))));
+    await tester.tap(find.text('Choose timing'));
+    await tester.pumpAndSettle();
+    for (final label in [
+      '15 minutes before',
+      '1 hour before',
+      '1 day before',
+      '1 week before',
+      'At game time only'
+    ]) {
+      expect(find.text(label), findsOneWidget);
+    }
+    await tester.ensureVisible(find.text('1 week before'));
+    await tester.tap(find.text('1 week before'));
+    await tester.pumpAndSettle();
+    expect(picked, 10080);
+    picked = null;
+    await tester.tap(find.text('Choose timing'));
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(picked, isNull);
+    expect(find.text('Choose timing'), findsOneWidget);
+    expect(reminders.isSet(game), isFalse);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('phone timing menu disables elapsed choices and fits large text',
+      (tester) async {
+    reminders = GameReminders(storage, now: () => time);
+    final game = reminderGame(time.add(const Duration(minutes: 10)));
+    tester.view.physicalSize = const Size(360, 640);
+    tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    int? picked;
+    await mount(tester,
+        page: Builder(
+            builder: (context) => TextButton(
+                onPressed: () async {
+                  picked = await showGameReminderTimingMenu(
+                      context, game, reminders);
+                },
+                child: const Text('Choose timing'))));
+    await tester.tap(find.text('Choose timing'));
+    await tester.pumpAndSettle();
+    final menuContext = tester.element(find.byType(Dialog));
+    final rect = tester.getRect(find.byType(Dialog));
+    expect(rect.width, lessThanOrEqualTo(360));
+    expect(tester.takeException(), isNull);
+    await tester.ensureVisible(find.text('15 minutes before'));
+    await tester.tap(find.text('15 minutes before'));
+    await tester.pump();
+    expect(picked, isNull);
+    expect(find.byType(Dialog), findsOneWidget);
+    expect(MediaQuery.sizeOf(menuContext).width, 360);
+    await tester.ensureVisible(find.text('At game time only'));
+    expect(Focus.of(tester.element(find.text('At game time only'))).hasFocus,
+        isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    expect(picked, 0);
+    await tester.pumpWidget(const SizedBox());
+  });
+  testWidgets('held remote OK cannot accidentally choose a reminder time',
+      (tester) async {
+    reminders = GameReminders(storage, now: () => time);
+    final game = reminderGame(time.add(const Duration(days: 8)));
+    int? picked;
+    await mount(tester,
+        page: Builder(
+            builder: (context) => TextButton(
+                autofocus: true,
+                onPressed: () async {
+                  picked = await showGameReminderTimingMenu(
+                      context, game, reminders);
+                },
+                child: const Text('Choose timing'))));
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    expect(find.byType(Dialog), findsOneWidget);
+    await tester.sendKeyRepeatEvent(LogicalKeyboardKey.select);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    expect(picked, isNull);
+    expect(find.byType(Dialog), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    expect(picked, 15);
     await tester.pumpWidget(const SizedBox());
   });
 }

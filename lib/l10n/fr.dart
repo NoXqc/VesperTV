@@ -2018,4 +2018,20 @@ const Map<String, String> kFr = {
   "{format} (stream)": "{format} (flux)",
   "{format} (decoder)": "{format} (décodeur)",
   "File size": "Taille du fichier",
+
+  // Game reminder timing.
+  "1 hour before": "1 heure avant",
+  "1 day before": "1 jour avant",
+  "1 week before": "1 semaine avant",
+  "At game time only": "Uniquement au début du match",
+  "15 minutes before": "15 minutes avant",
+  "Reminder timing": "Horaire du rappel",
+  "Advance reminders also notify at game time. VesperTV must be open.":
+      "Les rappels anticipés préviennent aussi au début du match. VesperTV doit être ouvert.",
+  "This reminder time has passed": "L’heure de ce rappel est déjà passée",
+  "Choose when to be reminded (while VesperTV is open)":
+      "Choisissez quand recevoir le rappel (pendant que VesperTV est ouvert)",
+  "Starts in 1 hour": "Commence dans 1 heure",
+  "Starts in 1 day": "Commence dans 1 jour",
+  "Starts in 1 week": "Commence dans 1 semaine",
 };
