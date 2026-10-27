@@ -13,6 +13,7 @@ import 'package:nox_iptv/services/playlist_manager.dart';
 import 'package:nox_iptv/services/storage_service.dart';
 import 'package:nox_iptv/services/viewer_profile_service.dart';
 import 'package:nox_iptv/utils/constants.dart';
+import 'package:nox_iptv/utils/refined_finish.dart';
 import 'package:provider/provider.dart';
 import 'package:nox_iptv/services/archive_service.dart';
 import 'package:nox_iptv/utils/route_observer.dart';
@@ -85,7 +86,9 @@ void main() {
             (_) async => const StandardMessageCodec().encodeMessage([null]));
   });
   Future<void> pumpHome(WidgetTester tester, Size size,
-      {bool television = false, bool movies = false}) async {
+      {bool television = false,
+      bool movies = false,
+      bool refined = false}) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -99,6 +102,7 @@ void main() {
     prefs.isTelevision = television;
     prefs.guideViewMode = 'timeline';
     prefs.guideFullVideo = true;
+    prefs.setRefinedFinish(refined);
     final playlist =
         movies ? MovieGuidePlaylist(storage) : GuidePlaylist(storage);
     final playback = PlaybackService(storage, playlist);
@@ -133,6 +137,69 @@ void main() {
       await tester.pump();
     });
   }
+
+  testWidgets(
+      'refined TV tabs and groups follow full-video translucency in place',
+      (tester) async {
+    await pumpHome(tester, const Size(1280, 720),
+        television: true, refined: true);
+    final tabs = find
+        .byWidgetPredicate((w) => w.runtimeType.toString() == '_SelectableRow')
+        .first;
+    final groups = find
+        .byWidgetPredicate((w) => w.runtimeType.toString() == '_GroupRow')
+        .first;
+    final tabState = tester.state(tabs);
+    final groupState = tester.state(groups);
+    final context = tester.element(find.byType(TvHomeScreen));
+    final prefs = context.read<AppPreferences>();
+    final focus = FocusManager.instance.primaryFocus;
+
+    void verify(Finder row, bool translucent) {
+      final decoration = tester
+          .widgetList<Container>(
+              find.descendant(of: row, matching: find.byType(Container)))
+          .map((w) => w.decoration)
+          .whereType<BoxDecoration>()
+          .firstWhere((d) => d.gradient != null);
+      expect(decoration.borderRadius, BorderRadius.circular(8));
+      final stops = (decoration.gradient! as LinearGradient).colors;
+      if (translucent) {
+        expect(stops.every((c) => c.a <= 0.33), isTrue);
+      } else {
+        expect(stops.every((c) => c.a >= 0.78), isTrue);
+      }
+      expect(RefinedFinishBackdrop.of(tester.element(row)), translucent);
+    }
+
+    verify(tabs, true);
+    verify(groups, true);
+    prefs.setRefinedFinish(false);
+    await tester.pumpAndSettle();
+    expect(tester.state(tabs), same(tabState));
+    expect(tester.state(groups), same(groupState));
+    expect(FocusManager.instance.primaryFocus, same(focus));
+    prefs.setRefinedFinish(true);
+    await tester.pumpAndSettle();
+    verify(tabs, true);
+    verify(groups, true);
+    expect(tester.state(tabs), same(tabState));
+    expect(tester.state(groups), same(groupState));
+    expect(FocusManager.instance.primaryFocus, same(focus));
+    prefs.setGuideFullVideo(false);
+    await tester.pumpAndSettle();
+    verify(tabs, false);
+    verify(groups, false);
+    prefs.setGuideFullVideo(true);
+    await tester.pumpAndSettle();
+    verify(tabs, true);
+    verify(groups, true);
+    // Both focused chrome and idle rows keep the same see-through finish.
+    Focus.of(tester.element(find.text('Test group'))).requestFocus();
+    await tester.pumpAndSettle();
+    verify(groups, true);
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
   testWidgets(
       'picking an unbuilt movie group materializes and focuses its poster',

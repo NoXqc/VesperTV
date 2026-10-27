@@ -1,3 +1,4 @@
+import '../utils/refined_finish.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -160,7 +161,7 @@ class _GameReminderOverlayState extends State<GameReminderOverlay>
             key: _cardKey,
             constraints: const BoxConstraints(maxWidth: 420),
             child: Material(
-              color: const Color(0xFA15171C),
+              color: RefinedFinish.surface(context, const Color(0xFA15171C)),
               elevation: 12,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(18),

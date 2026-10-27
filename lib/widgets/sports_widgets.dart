@@ -1,3 +1,4 @@
+import '../utils/refined_finish.dart';
 import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -223,30 +224,33 @@ class _SportsChipState extends State<SportsChip> {
             duration: const Duration(milliseconds: 120),
             padding: EdgeInsets.symmetric(
                 horizontal: widget.compact ? 14 : 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: _focused
-                  ? null
-                  : (widget.selected
-                      ? Colors.transparent
-                      : Colors.white.withValues(alpha: 0.07)),
-              gradient: _focused ? sportsFocusSheen(scheme) : null,
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(
-                color: _focused
-                    ? scheme.primary
-                    : (widget.selected
-                        ? scheme.primary.withValues(alpha: 0.4)
-                        : Colors.transparent),
-                width: _focused ? 2.5 : 1,
-              ),
-              boxShadow: _focused
-                  ? [
-                      BoxShadow(
-                          color: scheme.primary.withValues(alpha: 0.35),
-                          blurRadius: 10)
-                    ]
-                  : const [],
-            ),
+            decoration: RefinedFinish.decorate(
+                context,
+                BoxDecoration(
+                  color: _focused
+                      ? null
+                      : (widget.selected
+                          ? Colors.transparent
+                          : Colors.white.withValues(alpha: 0.07)),
+                  gradient: _focused ? sportsFocusSheen(scheme) : null,
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: _focused
+                        ? scheme.primary
+                        : (widget.selected
+                            ? scheme.primary.withValues(alpha: 0.4)
+                            : Colors.transparent),
+                    width: _focused ? 2.5 : 1,
+                  ),
+                  boxShadow: _focused
+                      ? [
+                          BoxShadow(
+                              color: scheme.primary.withValues(alpha: 0.35),
+                              blurRadius: 10)
+                        ]
+                      : const [],
+                ),
+                focused: _focused),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -343,29 +347,33 @@ class _RedZonePillState extends State<RedZonePill>
                   child: Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFE8231B), Color(0xFF8E0606)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(
-                        color: _focused
-                            ? scheme.primary
-                            : Colors.white.withValues(alpha: 0.35 + 0.3 * t),
-                        width: _focused ? 2.5 : 1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: (_focused ? scheme.primary : _red)
-                              .withValues(alpha: 0.35 + 0.35 * t),
-                          blurRadius: 8 + 10 * t,
-                          spreadRadius: 1 * t,
-                          offset: Offset(0, 2 + 2 * t),
+                    decoration: RefinedFinish.decorate(
+                        context,
+                        BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFE8231B), Color(0xFF8E0606)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(
+                            color: _focused
+                                ? scheme.primary
+                                : Colors.white
+                                    .withValues(alpha: 0.35 + 0.3 * t),
+                            width: _focused ? 2.5 : 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: (_focused ? scheme.primary : _red)
+                                  .withValues(alpha: 0.35 + 0.35 * t),
+                              blurRadius: 8 + 10 * t,
+                              spreadRadius: 1 * t,
+                              offset: Offset(0, 2 + 2 * t),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                        focused: _focused),
                     child: child,
                   ),
                 );

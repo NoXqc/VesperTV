@@ -1,3 +1,4 @@
+import '../utils/refined_finish.dart';
 import '../services/game_reminders.dart';
 import '../widgets/game_reminder_menu_tile.dart';
 import 'dart:async';
@@ -991,8 +992,6 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         matching: gameMatches == null && _matching,
         hideScores: _hideScores,
         hasPick: _picks.channelIdFor(game) != null,
-        offerReminder: _follows.involves(game) ||
-            context.read<GameReminders>().isSet(game),
         offerPlayHere: watch != null || !_isPreviewing(game),
         playFullScreen: watch != null,
         recording: RecordingService.supported
@@ -2819,32 +2818,37 @@ class _GameCardState extends State<_GameCard> {
                   width: _GameCard.width,
                   height: _GameCard.height,
                   padding: const EdgeInsets.fromLTRB(12, 9, 12, 8),
-                  decoration: BoxDecoration(
-                    // Watching: a light gold tint + thin frame (the
-                    // "WATCHING" pill is the main cue; a thick frame read
-                    // like the focused card, owner 2026-10-17).
-                    color: _focused
-                        ? null
-                        : widget.previewing
-                            ? scheme.primary.withValues(alpha: 0.14)
-                            : Colors.white.withValues(alpha: 0.07),
-                    gradient: _focused ? sportsFocusSheen(scheme) : null,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
+                  decoration: RefinedFinish.decorate(
+                      context,
+                      BoxDecoration(
+                        // Watching: a light gold tint + thin frame (the
+                        // "WATCHING" pill is the main cue; a thick frame read
+                        // like the focused card, owner 2026-10-17).
                         color: _focused
-                            ? scheme.primary
+                            ? null
                             : widget.previewing
-                                ? scheme.primary.withValues(alpha: 0.6)
-                                : Colors.white10,
-                        width: _focused ? 2.5 : (widget.previewing ? 1.5 : 1)),
-                    boxShadow: _focused
-                        ? [
-                            BoxShadow(
-                                color: scheme.primary.withValues(alpha: 0.35),
-                                blurRadius: 16)
-                          ]
-                        : null,
-                  ),
+                                ? scheme.primary.withValues(alpha: 0.14)
+                                : Colors.white.withValues(alpha: 0.07),
+                        gradient: _focused ? sportsFocusSheen(scheme) : null,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                            color: _focused
+                                ? scheme.primary
+                                : widget.previewing
+                                    ? scheme.primary.withValues(alpha: 0.6)
+                                    : Colors.white10,
+                            width:
+                                _focused ? 2.5 : (widget.previewing ? 1.5 : 1)),
+                        boxShadow: _focused
+                            ? [
+                                BoxShadow(
+                                    color:
+                                        scheme.primary.withValues(alpha: 0.35),
+                                    blurRadius: 16)
+                              ]
+                            : null,
+                      ),
+                      focused: _focused),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -3018,7 +3022,6 @@ class _GameDialog extends StatelessWidget {
     this.autoTeam,
     required this.offerPlayHere,
     this.playFullScreen = false,
-    this.offerReminder = false,
   });
 
   final SportsGame game;
@@ -3026,7 +3029,6 @@ class _GameDialog extends StatelessWidget {
   final bool matching;
   final bool hideScores;
   final bool hasPick;
-  final bool offerReminder;
 
   /// First entry "Play here" (the hero mini player): some remotes have no
   /// Play/Pause key (user report, 2026-10-18), so hold OK > OK starts it.
@@ -3173,11 +3175,9 @@ class _GameDialog extends StatelessWidget {
                 child: ListView(
                   shrinkWrap: true,
                   children: [
-                    if (offerReminder)
-                      GameReminderMenuTile(
-                          game: game,
-                          onTap: () =>
-                              Navigator.pop(context, _ReminderAction())),
+                    GameReminderMenuTile(
+                        game: game,
+                        onTap: () => Navigator.pop(context, _ReminderAction())),
                     TvMenuTile(
                         icon: Icons.playlist_add,
                         title: tr('Add sources'),

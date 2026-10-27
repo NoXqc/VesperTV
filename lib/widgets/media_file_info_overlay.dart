@@ -1,3 +1,4 @@
+import '../utils/refined_finish.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -76,12 +77,15 @@ class _MediaFileInfoOverlayState extends State<MediaFileInfoOverlay> {
                           math.min(240, MediaQuery.sizeOf(context).width - 48)),
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.78),
-                    borderRadius: BorderRadius.circular(9),
-                    border:
-                        Border.all(color: Colors.white.withValues(alpha: 0.18)),
-                  ),
+                  decoration: RefinedFinish.decorate(
+                      context,
+                      BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.78),
+                        borderRadius: BorderRadius.circular(9),
+                        border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.18)),
+                      ),
+                      focused: false),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,

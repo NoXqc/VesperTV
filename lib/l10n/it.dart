@@ -252,6 +252,7 @@ const Map<String, String> kIt = {
   'No {language} subtitles online for this title.':
       "Nessun sottotitolo in {language} online per questo titolo.",
   'Track {id}': "Traccia {id}",
+  'Audio {n}': "Audio {n}",
   'Audio Track': "Traccia audio",
   'Audio track': "Traccia audio",
 
@@ -2004,4 +2005,12 @@ const Map<String, String> kIt = {
   'Back to live': 'Torna alla diretta',
   'Catch-up {time}': 'Replay {time}',
   'Now': 'Adesso',
+  "Refined finish": "Finitura raffinata",
+  "Glossy surfaces, reflections and blur. Uses more graphics resources.":
+      "Superfici lucide, riflessi e sfocatura. Usa più risorse grafiche.",
+  "Video HDR": "HDR video",
+  "Decoder HDR": "HDR decodificato",
+  "Unknown / not reported": "Sconosciuto / non indicato",
+  "{format} (stream)": "{format} (flusso)",
+  "{format} (decoder)": "{format} (decoder)",
 };

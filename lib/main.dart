@@ -1,3 +1,4 @@
+import 'utils/refined_finish.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -974,12 +975,14 @@ class _NoxIptvAppState extends State<NoxIptvApp>
           // all do this too), confirmed directly: "keep it always dark and
           // remove the toggle". No `darkTheme`/`themeMode` at all, so
           // there's nothing for a system-level light-mode change to flip.
-          theme: ThemeData(
-            brightness: Brightness.dark,
-            colorScheme:
-                buildPaletteColorScheme(prefs.palette, Brightness.dark),
-            useMaterial3: true,
-          ),
+          theme: RefinedFinish.apply(
+              ThemeData(
+                brightness: Brightness.dark,
+                colorScheme:
+                    buildPaletteColorScheme(prefs.palette, Brightness.dark),
+                useMaterial3: true,
+              ),
+              prefs.refinedFinish),
           routes: {Navigator.defaultRouteName: _buildTvRoot},
         );
       },

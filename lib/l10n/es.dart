@@ -253,6 +253,7 @@ const Map<String, String> kEs = {
   'No {language} subtitles online for this title.':
       "No hay subtítulos en {language} en línea para este título.",
   'Track {id}': "Pista {id}",
+  'Audio {n}': "Audio {n}",
   'Audio Track': "Pista de audio",
   'Audio track': "Pista de audio",
 
@@ -2000,4 +2001,12 @@ const Map<String, String> kEs = {
   'Back to live': 'Volver al directo',
   'Catch-up {time}': 'Diferido {time}',
   'Now': 'Ahora',
+  "Refined finish": "Acabado refinado",
+  "Glossy surfaces, reflections and blur. Uses more graphics resources.":
+      "Superficies brillantes, reflejos y desenfoque. Usa más recursos gráficos.",
+  "Video HDR": "HDR del vídeo",
+  "Decoder HDR": "HDR decodificado",
+  "Unknown / not reported": "Desconocido / no indicado",
+  "{format} (stream)": "{format} (flujo)",
+  "{format} (decoder)": "{format} (decodificador)",
 };

@@ -252,6 +252,7 @@ const Map<String, String> kFr = {
   'No {language} subtitles online for this title.':
       "Aucun sous-titre en {language} en ligne pour ce titre.",
   'Track {id}': "Piste {id}",
+  'Audio {n}': "Audio {n}",
   'Audio Track': "Piste audio",
   'Audio track': "Piste audio",
 
@@ -2004,4 +2005,12 @@ const Map<String, String> kFr = {
   'Back to live': 'Retour au direct',
   'Catch-up {time}': 'Rattrapage {time}',
   'Now': 'Maintenant',
+  "Refined finish": "Finition raffinée",
+  "Glossy surfaces, reflections and blur. Uses more graphics resources.":
+      "Surfaces brillantes, reflets et flou. Utilise davantage de ressources graphiques.",
+  "Video HDR": "HDR vidéo",
+  "Decoder HDR": "HDR décodé",
+  "Unknown / not reported": "Inconnu / non indiqué",
+  "{format} (stream)": "{format} (flux)",
+  "{format} (decoder)": "{format} (décodeur)",
 };

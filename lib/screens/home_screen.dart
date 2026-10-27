@@ -1,3 +1,4 @@
+import '../utils/refined_finish.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -1295,21 +1296,28 @@ class _HomeCardState extends State<_HomeCard> {
         duration: const Duration(milliseconds: 160),
         width: widget.width,
         height: widget.height,
-        decoration: BoxDecoration(
-          color: const Color(0xFF16161A),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-              color: _focused ? scheme.primary : Colors.white10,
-              width: _focused ? 3 : 1),
-          boxShadow: _focused
-              ? [
-                  BoxShadow(
-                      color: scheme.primary.withValues(alpha: 0.35),
-                      blurRadius: 18,
-                      spreadRadius: 1)
-                ]
-              : const [],
-        ),
+        foregroundDecoration: RefinedFinish.artworkRim(
+            context, BorderRadius.circular(10),
+            focused: _focused),
+        decoration: RefinedFinish.decorate(
+            context,
+            BoxDecoration(
+              color: const Color(0xFF16161A),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                  color: _focused ? scheme.primary : Colors.white10,
+                  width: _focused ? 3 : 1),
+              boxShadow: _focused
+                  ? [
+                      BoxShadow(
+                          color: scheme.primary.withValues(alpha: 0.35),
+                          blurRadius: 18,
+                          spreadRadius: 1)
+                    ]
+                  : const [],
+            ),
+            focused: _focused,
+            artwork: true),
         clipBehavior: Clip.antiAlias,
         child: Stack(fit: StackFit.expand, children: [
           art,

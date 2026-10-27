@@ -1,3 +1,4 @@
+import '../utils/refined_finish.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -203,31 +204,38 @@ class _PosterCardState extends State<PosterCard> {
                 Container(
                   width: widget.cardWidth,
                   height: widget.cardPosterHeight,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade900,
-                    borderRadius: BorderRadius.circular(10),
-                    border: _focused
-                        ? Border.all(color: scheme.primary, width: 3)
-                        : null,
-                    // Was two layered shadows (primary + secondary at
-                    // different blur/spread) for a duo-tone glow — on this
-                    // hardware (Impeller already disabled elsewhere for GPU
-                    // weakness) that showed up as part of a real flicker
-                    // during scrolling. One shadow in a blended color keeps
-                    // the "not just one flat accent" feel at half the
-                    // compositing cost.
-                    boxShadow: _focused
-                        ? [
-                            BoxShadow(
-                              color: Color.lerp(
-                                      scheme.primary, scheme.secondary, 0.5)!
-                                  .withValues(alpha: 0.6),
-                              blurRadius: 18,
-                              spreadRadius: 1,
-                            ),
-                          ]
-                        : null,
-                  ),
+                  foregroundDecoration: RefinedFinish.artworkRim(
+                      context, BorderRadius.circular(10),
+                      focused: _focused),
+                  decoration: RefinedFinish.decorate(
+                      context,
+                      BoxDecoration(
+                        color: Colors.grey.shade900,
+                        borderRadius: BorderRadius.circular(10),
+                        border: _focused
+                            ? Border.all(color: scheme.primary, width: 3)
+                            : null,
+                        // Was two layered shadows (primary + secondary at
+                        // different blur/spread) for a duo-tone glow — on this
+                        // hardware (Impeller already disabled elsewhere for GPU
+                        // weakness) that showed up as part of a real flicker
+                        // during scrolling. One shadow in a blended color keeps
+                        // the "not just one flat accent" feel at half the
+                        // compositing cost.
+                        boxShadow: _focused
+                            ? [
+                                BoxShadow(
+                                  color: Color.lerp(scheme.primary,
+                                          scheme.secondary, 0.5)!
+                                      .withValues(alpha: 0.6),
+                                  blurRadius: 18,
+                                  spreadRadius: 1,
+                                ),
+                              ]
+                            : null,
+                      ),
+                      focused: _focused,
+                      artwork: true),
                   clipBehavior: Clip.antiAlias,
                   child: Stack(
                     children: [

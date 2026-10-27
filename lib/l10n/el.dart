@@ -305,6 +305,8 @@ const Map<String, String> kEl = {
       "Δεν υπάρχουν υπότιτλοι {language} online για αυτόν τον τίτλο.",
   "Track {id}":
       "Κομμάτι {id}",
+  "Audio {n}":
+      "Ήχος {n}",
   "Audio Track":
       "Κομμάτι ήχου",
   "Audio track":
@@ -2613,4 +2615,12 @@ const Map<String, String> kEl = {
   'Back to live': 'Επιστροφή στο ζωντανό',
   'Catch-up {time}': 'Catch-up {time}',
   'Now': 'Τώρα',
+  "Refined finish": "Εκλεπτυσμένο φινίρισμα",
+  "Glossy surfaces, reflections and blur. Uses more graphics resources.":
+      "Γυαλιστερές επιφάνειες, αντανακλάσεις και θόλωση. Χρησιμοποιεί περισσότερους πόρους γραφικών.",
+  "Video HDR": "HDR βίντεο",
+  "Decoder HDR": "HDR αποκωδικοποιητή",
+  "Unknown / not reported": "Άγνωστο / δεν αναφέρεται",
+  "{format} (stream)": "{format} (ροή)",
+  "{format} (decoder)": "{format} (αποκωδικοποιητής)",
 };

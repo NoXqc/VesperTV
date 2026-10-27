@@ -1,3 +1,4 @@
+import '../utils/refined_finish.dart';
 import 'package:flutter/material.dart';
 
 import 'tv_app_bar_button.dart';
@@ -90,15 +91,29 @@ class _SettingsGradientBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Flat OLED black for every palette now, not just Minimalist/Dark
-    // Gold — confirmed directly: "the only detail you forgot is to change
-    // other palettes background to OLED black." Everything painted on top
-    // of this (panels, focus fills) already goes translucent/"glass" or
-    // uses the palette at full saturation (the gradient-sheen focus
-    // treatment's own `scheme.primary`) instead of relying on this
-    // background for any color, so a flat black backdrop is correct for
-    // every palette, the same way it was always correct for Minimalist
-    // and Dark/Gold specifically.
-    return const ColoredBox(color: Colors.black);
+    // Keep the original black backdrop when off. The opt-in finish adds
+    // palette light using opaque stops, keeping the page readable.
+    if (!RefinedFinish.of(context)) {
+      return const ColoredBox(color: Colors.black);
+    }
+    final scheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+        decoration: BoxDecoration(
+            color: Colors.black,
+            gradient: RadialGradient(
+                center: const Alignment(-0.75, -0.8),
+                radius: 1.65,
+                colors: [
+                  Color.alphaBlend(
+                      scheme.primary.withValues(alpha: 0.14), Colors.black),
+                  Color.alphaBlend(
+                      scheme.secondary.withValues(alpha: 0.035), Colors.black),
+                  Colors.black
+                ],
+                stops: const [
+                  0,
+                  0.5,
+                  1
+                ])));
   }
 }

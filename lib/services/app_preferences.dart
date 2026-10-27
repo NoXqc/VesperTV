@@ -290,7 +290,16 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool refinedFinish = false;
+
+  void setRefinedFinish(bool value) {
+    refinedFinish = value;
+    _storage.setRefinedFinish(value);
+    notifyListeners();
+  }
+
   Future<void> init() async {
+    refinedFinish = _storage.getRefinedFinish();
     showClock = _storage.getShowClock();
     palette = _paletteById(_storage.getPaletteId());
     layoutMode = _storage.getLayoutMode();
@@ -336,8 +345,10 @@ class AppPreferences extends ChangeNotifier {
   /// settings (layout, video compatibility, clock, etc.) stay as they are.
   void reloadPaletteForViewer() {
     final next = _paletteById(_storage.getPaletteId());
-    if (palette.id == next.id) return;
+    final finish = _storage.getRefinedFinish();
+    if (palette.id == next.id && refinedFinish == finish) return;
     palette = next;
+    refinedFinish = finish;
     notifyListeners();
   }
 

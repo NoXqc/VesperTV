@@ -48,7 +48,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
 3. Use Bash (Git Bash) or PowerShell. In Git Bash, **prefix adb commands that take `/sdcard`-style
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
-4. `flutter analyze` must report the baseline **17** info-level issues (no errors). Don't add new ones.
+4. `flutter analyze` must report the baseline **16** info-level issues (no errors). Don't add new ones.
 5. Check the current state of releases: `gh release list` (latest should be `1.0.39` unless noted
    in §13).
 
@@ -103,7 +103,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   texture tests (all with the same unstubbed track return):
   mocked getCurrentTracks() returns null (real ExoPlayer returns Tracks). Owner instructed
   publish/announce; Flutter analyze 17 and all 515 Flutter tests passed. Native suite is NOT green.
-- `flutter analyze` — baseline **17** info issues, none errors. `flutter test` — `test/device_transfer_test.dart` (real LAN sockets).
+- `flutter analyze` — baseline **16** info issues, none errors. `flutter test` — `test/device_transfer_test.dart` (real LAN sockets).
 - Android: `flutter build apk --release` → `build/app/outputs/flutter-apk/app-release.apk` (~68 MB).
 - Windows: **kill the running app first** (`Get-Process VesperTV | Stop-Process -Force`) or the link
   step fails with `LNK1104: cannot open VesperTV.exe`. Then `flutter build windows --release`
@@ -353,6 +353,31 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   dependency or callers. Fixed server-offset minute URLs, UTC templates and
   credential-free diagnostics. See `test/catchup_url_test.dart` and root HANDOFF.md.
 
+- **cdx, 2026-10-27: Refined translucent columns** (`codex/refined-translucent`,
+  from installed glass test458): full-video guide scrims now scope see-through
+  refined fills for tabs/groups/guide while retaining rounded bevels/reflections.
+  Ordinary settings/panels keep the solid finish; no focus/video/config changes.
+  See `dev-notes/refined-finish.md` and root HANDOFF.md for checks.
+
+- **Claude, 2026-10-26: Live audio tracks (+457 on the Formuler; labels after it, not installed).**
+  `_AudioTrackButton`/`_SubtitleButton` are keyed by controller + channel id: the full-screen bar
+  stays mounted across zaps (and native live zap keeps the controller), so the track lists were
+  read once per player screen and later channels never showed their tracks. They now re-read 5x
+  over 15 s (not stopping at 2+, the old stream's tracks linger right after a native zap). Picker
+  labels: name, else language (placeholders `mis`/`mul`/`und`/`zxx`/`qaa` skipped), else
+  "Audio n", plus codec + layout (`DataPoolCard.codecName`/`channelsName`). Send log line
+  `AudioTracks: <channel> n=… m3u8=… ts=… [lang|label|codec|ch]` once per stream (temporary
+  diagnostic; keep until the CBC case below is closed). Owner: TSN2 shows 4 tracks (MIS/MUL).
+  **CBC Montreal (Samiam23, "commentary", TiviMate switches it):** a raw PMT probe of the stream on
+  Trex (2 copies, .ts + .m3u8) and Blcktv showed ONE AAC `eng` track (audio_type normal) on
+  2026-10-26 ~21:30 ET; our log agreed (n=1). Likely a programme-time described-video track. Next:
+  when Sam sees it, TiviMate screenshot + our Send log + a re-probe at the same moment. Unrelated
+  fact verified in media3 1.9.2 source: HLS TS segments key tracks by stream type
+  (`TsExtractor` MODE_HLS), so a second same-codec audio PID inside HLS segments is dropped;
+  plain .ts (our Xtream default) keys by PID and keeps all of them.
+  Analyze baseline is now **16** (the rewritten label code removed one info). Also cleaned
+  `C:\Users\aarse`: all 13 worktrees + 21 old build/snapshot folders + 199 loose
+  `VesperTV-*` logs deleted (every branch verified merged; unmerged branches kept, no folders).
 - **cdx, 2026-10-26: Release 1.0.41 (beta), +455 authorised.** Includes all completed
   Codex work through Goals alert plus previously integrated Claude profiles/trailers/zap freeze.
   All worktrees audited: Claude's dirty zap-freeze source is already present (native file identical;
@@ -1363,3 +1388,38 @@ shows score increases for followed teams at top-left without touching playback/f
 and stacks below reminders on phones. Hide scores suppresses alerts immediately.
 Not instant push: 30s polling plus existing feed cache. First observation after launch,
 profile change or backgrounding is silent. See `dev-notes/sports-tab.md` for details.
+
+### Codex 2026-10-26: Refined finish (unreleased branch)
+
+`codex/refined-finish` initially added Settings > Interface > Theme > Refined finish,
+ off by default and per viewer. Owner requested a much stronger finish and explicitly
+ accepted extra graphics cost (2026-10-26): `codex/refined-glass-finish` adds glossy
+ reflections, painted bevels, deeper shadows, artwork edge rims and bounded blur in
+ existing focused-control wrappers. Keep child/FocusNode slots and all geometry stable.
+ The off state remains original. Never filter/reconfigure the native video surface.
+ See `dev-notes/refined-finish.md`; real-device performance/appearance needs QA.
+ Test package 1.0.41+458 includes ae5cb7f audio labels; analyze16 and600Flutter
+ tests passed, guide59entries/12Node tests passed. Install result: root HANDOFF.md.
+
+### Codex 2026-10-26: decoder HDR reporting (unreleased branch)
+
+`codex/decoder-hdr-reporting` corrects unknown colour metadata being labelled SDR
+and adds decoder-output fallback via existing FrameRateProbe callbacks. StatsBridge
+retains both input and output evidence; Data pool labels stream/decoder and shows
+known disagreement separately. No codec/display/surface configuration changes.
+See `dev-notes/decoder-hdr-reporting.md`; a real Shield retest is still required.
+
+### Codex 2026-10-26: reminders on every upcoming Sports Trak card (unreleased)
+
+`codex/game-card-reminders` removes the game-menu My Teams restriction. The existing
+reminder widget/scheduler already supports manual reminders without following teams.
+Live score popups are Settings > Interface > Goals alert (off by default, My Teams).
+Separate completed decoder HDR work remains on codex/decoder-hdr-reporting b0b0889.
+
+### Codex 2026-10-26: combined Formuler test +456
+
+Owner requested installation after Refined finish. codex/formuler-test-456 combines
+Refined finish d5874ff, decoder HDR reporting b0b0889 and all-game reminders173d08d.
+Version1.0.41+456; analyze17,598Flutter tests and62targeted native tests passed.
+This is a local test package only; main/published1.0.41+455 remain unchanged.
+Exact package/signature/installation results are in root HANDOFF.md.

@@ -1,3 +1,4 @@
+import '../utils/refined_finish.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -451,10 +452,12 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       builder: (sheetContext) => SafeArea(
         child: Container(
           margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.85),
-            borderRadius: BorderRadius.circular(12),
-          ),
+          decoration: RefinedFinish.decorate(
+              context,
+              BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.85),
+                borderRadius: BorderRadius.circular(12),
+              )),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,

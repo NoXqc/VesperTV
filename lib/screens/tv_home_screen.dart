@@ -1,3 +1,4 @@
+import '../utils/refined_finish.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
@@ -2800,7 +2801,9 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     _fullArt = isBrowseTab && _showWhatsNew && !_compact;
 
     return Theme(
-      data: ThemeData(colorScheme: darkScheme, useMaterial3: true),
+      data: RefinedFinish.apply(
+          ThemeData(colorScheme: darkScheme, useMaterial3: true),
+          prefs.refinedFinish),
       // Back walks out one column at a time — content -> groups -> tabs —
       // and only exits the app from the tabs column (it used to exit
       // straight from anywhere, including deep inside the guide).
@@ -3152,7 +3155,10 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
             color: (_fullVideo || _fullArt)
                 ? Colors.black.withValues(alpha: alpha)
                 : Colors.transparent),
-        child: child,
+        child: RefinedFinishBackdrop(
+          translucent: _fullVideo,
+          child: child,
+        ),
       );
 
   Widget _tabsScope({required bool collapsed}) => FocusTraversalGroup(
@@ -5734,45 +5740,47 @@ class _SelectableRowState extends State<_SelectableRow> {
         // below has the full story on why changing a focus widget's
         // ancestor shape between builds corrupts its FocusNode on real
         // hardware; the same rule applies one level up, here.
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          // A flat `Colors.black87` fill here photographed as a much
-          // bigger gold wash than it read live (the glow below bleeding
-          // into a near-opaque black in a phone camera's auto-exposure) —
-          // reported directly as still looking "filled". A real diagonal
-          // sheen (dark -> accent-tinted -> dark), using this palette's own
-          // `scheme.primary`, is what the owner actually asked for
-          // ("shiny/mirror"); this paints it, and Material's own `color`
-          // below turns transparent to let it show through only when
-          // focused. Every palette uses this now, including Minimalist —
-          // see this method's own history for why its previous distinct
-          // frosted-glass treatment was retired in favor of the same look
-          // everything else gets.
-          gradient: _focused
-              ? LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.black,
-                    Color.lerp(Colors.black, scheme.primaryContainer, 0.4)!,
-                    Colors.black,
-                  ],
-                  stops: const [0.0, 0.5, 1.0],
-                )
-              : null,
-          boxShadow: _focused
-              ? [
-                  BoxShadow(
-                      color: scheme.primary.withValues(alpha: 0.35),
-                      blurRadius: 10)
-                ]
-              : const [],
-        ),
-        // MinimalGlassFocus's own blur special-case is retired now that
-        // every palette uses the gradient-sheen above instead — see
-        // ModeButton's identical comment for why the wrapper itself stays.
+        decoration: RefinedFinish.decorate(
+            context,
+            BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              // A flat `Colors.black87` fill here photographed as a much
+              // bigger gold wash than it read live (the glow below bleeding
+              // into a near-opaque black in a phone camera's auto-exposure) —
+              // reported directly as still looking "filled". A real diagonal
+              // sheen (dark -> accent-tinted -> dark), using this palette's own
+              // `scheme.primary`, is what the owner actually asked for
+              // ("shiny/mirror"); this paints it, and Material's own `color`
+              // below turns transparent to let it show through only when
+              // focused. Every palette uses this now, including Minimalist —
+              // see this method's own history for why its previous distinct
+              // frosted-glass treatment was retired in favor of the same look
+              // everything else gets.
+              gradient: _focused
+                  ? LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.black,
+                        Color.lerp(Colors.black, scheme.primaryContainer, 0.4)!,
+                        Colors.black,
+                      ],
+                      stops: const [0.0, 0.5, 1.0],
+                    )
+                  : null,
+              boxShadow: _focused
+                  ? [
+                      BoxShadow(
+                          color: scheme.primary.withValues(alpha: 0.35),
+                          blurRadius: 10)
+                    ]
+                  : const [],
+            ),
+            focused: _focused),
+        // The stable wrapper adds focus blur only for the opt-in glass finish.
+        // Its interactive child keeps the same slot when the finish changes.
         child: MinimalGlassFocus(
-          active: false,
+          active: RefinedFinish.of(context) && _focused,
           borderRadius: 8,
           child: Material(
             color: _focused ? Colors.transparent : unfocusedColor,
@@ -6154,38 +6162,39 @@ class _GroupRowState extends State<_GroupRow> {
               // comment just below has the full story on why changing a
               // focus widget's ancestor shape between builds corrupts its
               // FocusNode on real hardware.
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                // Same diagonal sheen as `_SelectableRow` — see its doc
-                // comment for the full story (every palette, including
-                // Minimalist, gets this now).
-                gradient: _focused
-                    ? LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Colors.black,
-                          Color.lerp(
-                              Colors.black, scheme.primaryContainer, 0.4)!,
-                          Colors.black,
-                        ],
-                        stops: const [0.0, 0.5, 1.0],
-                      )
-                    : null,
-                boxShadow: _focused
-                    ? [
-                        BoxShadow(
-                            color: scheme.primary.withValues(alpha: 0.35),
-                            blurRadius: 10)
-                      ]
-                    : const [],
-              ),
-              // MinimalGlassFocus's own blur special-case is retired now
-              // that every palette uses the gradient-sheen above instead —
-              // see ModeButton's identical comment for why the wrapper
-              // itself stays.
+              decoration: RefinedFinish.decorate(
+                  context,
+                  BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    // Same diagonal sheen as `_SelectableRow` — see its doc
+                    // comment for the full story (every palette, including
+                    // Minimalist, gets this now).
+                    gradient: _focused
+                        ? LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Colors.black,
+                              Color.lerp(
+                                  Colors.black, scheme.primaryContainer, 0.4)!,
+                              Colors.black,
+                            ],
+                            stops: const [0.0, 0.5, 1.0],
+                          )
+                        : null,
+                    boxShadow: _focused
+                        ? [
+                            BoxShadow(
+                                color: scheme.primary.withValues(alpha: 0.35),
+                                blurRadius: 10)
+                          ]
+                        : const [],
+                  ),
+                  focused: _focused),
+              // The stable wrapper adds focus blur only for the opt-in glass finish.
+              // Its interactive child keeps the same slot when the finish changes.
               child: MinimalGlassFocus(
-                active: false,
+                active: RefinedFinish.of(context) && _focused,
                 borderRadius: 8,
                 child: Material(
                   color: backgroundColor,
@@ -8595,25 +8604,31 @@ class _TimelineFilterButtonState extends State<_TimelineFilterButton> {
               },
               borderRadius: BorderRadius.circular(6),
               child: Container(
-                decoration: BoxDecoration(
-                  color: _focused ? null : Colors.white.withValues(alpha: 0.06),
-                  gradient: _focused
-                      ? LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Colors.black,
-                            Color.lerp(
-                                Colors.black, scheme.primaryContainer, 0.4)!,
-                            Colors.black,
-                          ],
-                          stops: const [0.0, 0.5, 1.0],
-                        )
-                      : null,
-                  border: Border.all(
-                      color: _focused ? scheme.primary : Colors.white24),
-                  borderRadius: BorderRadius.circular(6),
-                ),
+                decoration: RefinedFinish.decorate(
+                    context,
+                    BoxDecoration(
+                      color: _focused
+                          ? null
+                          : Colors.white.withValues(alpha: 0.06),
+                      gradient: _focused
+                          ? LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Colors.black,
+                                Color.lerp(Colors.black,
+                                    scheme.primaryContainer, 0.4)!,
+                                Colors.black,
+                              ],
+                              stops: const [0.0, 0.5, 1.0],
+                            )
+                          : null,
+                      border: Border.all(
+                          color: _focused ? scheme.primary : Colors.white24),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    focused: _focused,
+                    focusOnly: true),
                 alignment: Alignment.center,
                 // `scheme.tertiary` — a dedicated icon/symbol-glyph
                 // accent, separate from the border/gradient accent
@@ -9409,46 +9424,50 @@ class _ProgramBlockState extends State<_ProgramBlock> {
             },
             child: Container(
               clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                color: _focused
-                    ? null
-                    : widget.isNow
-                        ? (widget.translucent
-                            ? Colors.black.withValues(alpha: 0.45)
-                            : Colors.black87)
-                        : Colors.white.withValues(alpha: 0.06),
-                // Same real diagonal sheen as `_SelectableRow`'s own focus
-                // fix — see its doc comment for why a flat `black87` fill
-                // photographed as more "filled" than it read live.
-                gradient: _focused
-                    ? LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Colors.black,
-                          Color.lerp(Colors.black, gradientAccent, 0.4)!,
-                          Colors.black,
-                        ],
-                        stops: const [0.0, 0.5, 1.0],
-                      )
-                    : null,
-                border: Border.all(
-                  color: _focused
-                      ? accent
-                      : widget.isNow
-                          ? accent.withValues(alpha: 0.85)
-                          : Colors.white24,
-                  width: _focused ? 2 : (widget.isNow ? 1.5 : 1),
-                ),
-                borderRadius: BorderRadius.circular(6),
-                boxShadow: _focused
-                    ? [
-                        BoxShadow(
-                            color: accent.withValues(alpha: 0.5),
-                            blurRadius: 10)
-                      ]
-                    : const [],
-              ),
+              decoration: RefinedFinish.decorate(
+                  context,
+                  BoxDecoration(
+                    color: _focused
+                        ? null
+                        : widget.isNow
+                            ? (widget.translucent
+                                ? Colors.black.withValues(alpha: 0.45)
+                                : Colors.black87)
+                            : Colors.white.withValues(alpha: 0.06),
+                    // Same real diagonal sheen as `_SelectableRow`'s own focus
+                    // fix — see its doc comment for why a flat `black87` fill
+                    // photographed as more "filled" than it read live.
+                    gradient: _focused
+                        ? LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Colors.black,
+                              Color.lerp(Colors.black, gradientAccent, 0.4)!,
+                              Colors.black,
+                            ],
+                            stops: const [0.0, 0.5, 1.0],
+                          )
+                        : null,
+                    border: Border.all(
+                      color: _focused
+                          ? accent
+                          : widget.isNow
+                              ? accent.withValues(alpha: 0.85)
+                              : Colors.white24,
+                      width: _focused ? 2 : (widget.isNow ? 1.5 : 1),
+                    ),
+                    borderRadius: BorderRadius.circular(6),
+                    boxShadow: _focused
+                        ? [
+                            BoxShadow(
+                                color: accent.withValues(alpha: 0.5),
+                                blurRadius: 10)
+                          ]
+                        : const [],
+                  ),
+                  focused: _focused,
+                  focusOnly: true),
               alignment: Alignment.centerLeft,
               // A block wider than the viewport (a long "now playing"
               // programme, or one that started before the guide's visible
