@@ -348,6 +348,13 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-10-27: Catch-up (Android), test +459** on `claude/catchup`. Plan, provider
+  probe (Blcktv: HLS VOD archive, guide ~12 h back, archive 2 days) and task split in
+  `dev-notes/catchup-plan.md`. A `cu_` transient channel per request (never live).
+  `PlaybackService.playCatchup` / `backToLive` / `togglePlayPause` (pause = timeshift). Native
+  `setFiniteMode` (no live recovery for finite archive streams). Guide: Left into the past
+  remounts on an anchored window; Back = back to now. `_playGen` fixes overlapping plays that
+  leaked a player + its connection. Windows (C4) still plays live.
 - **cdx, 2026-10-27: C2 catch-up URL builder** (`codex/catchup-url`, from dd16643):
   standalone CatchupKind plus catchupUrl/catchupPhpUrl/catchupUrlForLog; no Channel
   dependency or callers. Fixed server-offset minute URLs, UTC templates and
