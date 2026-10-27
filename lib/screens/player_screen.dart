@@ -521,7 +521,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (_panelOpen) return;
     final current = _playback.currentChannel ?? widget.channel;
     if (current.mediaFileInfo != null) _fileInfoRequests.value++;
-    final live = current.isLive;
+    // Catch-up gets the same card, for the programme at the playhead.
+    final live = current.isLive || _playback.catchup != null;
     final dataPool = context.read<AppPreferences>().dataPool;
     if (!live && !dataPool) return;
     _zapInfoTimer?.cancel();
@@ -665,6 +666,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
     // popped/re-pushed — everything below reflects whatever's *actually*
     // playing, not just the episode this screen was originally opened for.
     final channel = playback.currentChannel ?? widget.channel;
+    // Catch-up: the guide line and the OK card follow the playhead.
+    final session = playback.catchup;
+    final catchupAt = session == null || controller == null
+        ? null
+        : session.playhead(controller.value.position);
     // See PlayerControls.linkedChannel's doc comment. Resolved fresh on
     // every build (not cached) — a link the user just set in Settings, or
     // a channel that's disappeared from a refreshed catalog, should show
@@ -849,7 +855,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                                         // .knownChannelIdsFor's
                                                         // doc comment.
                                                         channelId:
-                                                            channel.epgId)
+                                                            channel.epgId,
+                                                        at: catchupAt)
                                                     : Text(
                                                         channel.name,
                                                         maxLines: 1,
@@ -916,7 +923,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                 opacity: _zapInfoVisible ? 1 : 0,
                                 duration: const Duration(milliseconds: 200),
                                 child: Center(
-                                    child: _ZapInfoCard(channel: channel)),
+                                    child: _ZapInfoCard(
+                                        channel: channel, at: catchupAt)),
                               ),
                             ),
                           ),
@@ -1315,16 +1323,22 @@ class _TopBarIconButtonState extends State<_TopBarIconButton> {
 /// progress) and two lines of its description — same content as the
 /// Timeline guide's full-video corner card.
 class _ZapInfoCard extends StatelessWidget {
-  const _ZapInfoCard({required this.channel});
+  const _ZapInfoCard({required this.channel, this.at});
 
   final Channel channel;
+
+  /// Catch-up playhead: the programme then, its progress at that time.
+  final DateTime? at;
 
   @override
   Widget build(BuildContext context) {
     final epg = context.watch<EpgService>();
     // epgId (rawId or a manual override), not the composite id.
-    final EpgProgram? program = epg.getCurrentProgram(channel.epgId);
-    final now = DateTime.now();
+    final when = at;
+    final EpgProgram? program = when == null
+        ? epg.getCurrentProgram(channel.epgId)
+        : CatchupSession.programmeAt(epg.getPrograms(channel.epgId), when);
+    final now = when ?? DateTime.now();
     final time = TimeFormat.hm;
     final logo = channel.logoUrl;
     final playlistName = context

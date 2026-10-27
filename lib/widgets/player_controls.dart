@@ -616,7 +616,9 @@ class PlayerControls extends StatelessWidget {
                                         margin:
                                             const EdgeInsets.only(right: 6)),
                                     Expanded(
-                                        child: PlayerBarTitle(title: title)),
+                                        child: PlayerBarTitle(
+                                            title: _catchupTitle(
+                                                context, catchup, position))),
                                   ]),
                           ),
                           // Capped so FittedBox has a width to scale down to.
@@ -830,6 +832,16 @@ class PlayerControls extends StatelessWidget {
         },
       ),
     );
+  }
+
+  /// "Programme · Channel" at the catch-up playhead (the channel alone
+  /// when the guide has no listing then).
+  String _catchupTitle(
+      BuildContext context, CatchupSession s, Duration position) {
+    final on = CatchupSession.programmeAt(
+        context.read<EpgService>().getPrograms(s.live.epgId),
+        s.playhead(position));
+    return on == null ? title : '${on.title} · $title';
   }
 
   /// The catch-up's programmes and its playhead, read at press time.

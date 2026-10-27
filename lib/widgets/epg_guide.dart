@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../utils/time_format.dart';
+import '../services/catchup_session.dart';
 import '../services/epg_service.dart';
 import '../l10n/l10n.dart';
 
@@ -10,16 +11,25 @@ import '../l10n/l10n.dart';
 /// Renders as a compact single-line subtitle inside channel list rows when
 /// [compact] is true, or as a fuller bar above the video player otherwise.
 class EpgGuide extends StatelessWidget {
-  const EpgGuide({super.key, required this.channelId, this.compact = false});
+  const EpgGuide(
+      {super.key, required this.channelId, this.compact = false, this.at});
 
   final String channelId;
+
+  /// Catch-up: what was on at this time instead of now.
+  final DateTime? at;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final epg = context.watch<EpgService>();
-    final current = epg.getCurrentProgram(channelId);
-    final next = epg.getNextProgram(channelId);
+    final when = at;
+    final current = when == null
+        ? epg.getCurrentProgram(channelId)
+        : CatchupSession.programmeAt(epg.getPrograms(channelId), when);
+    final next = when == null
+        ? epg.getNextProgram(channelId)
+        : CatchupSession.programmeAfter(epg.getPrograms(channelId), when);
     final timeFormat = TimeFormat.hm;
 
     if (current == null && next == null) {

@@ -61,12 +61,23 @@ class _Playlist extends PlaylistManager {
 class _Epg extends EpgService {
   _Epg(super.storage);
   final Map<String, List<EpgProgram>> _rows = {};
+  int shift = 0;
+
+  /// Moves every programme by [minutes]: each block is rebuilt with a new
+  /// key, like rows arriving from the database replacing placeholders.
+  void reshuffle(int minutes) {
+    shift += minutes;
+    _rows.clear();
+    guideRowsLoaded.value++;
+  }
+
   @override
   List<EpgProgram> getPrograms(String channelId) =>
       _rows.putIfAbsent(channelId, () {
         final now = DateTime.now();
         final base = DateTime(now.year, now.month, now.day, now.hour)
-            .subtract(const Duration(hours: 30));
+            .subtract(const Duration(hours: 30))
+            .add(Duration(minutes: shift));
         return [
           for (var i = 0; i < 72; i++)
             EpgProgram(
@@ -105,6 +116,7 @@ class _FakePlayer extends VideoPlayerHdrController {
 
 void main() {
   late PlaybackService playback;
+  late _Epg epgRef;
   final opened = <String>[];
 
   setUp(() {
@@ -118,7 +130,7 @@ void main() {
         const MethodChannel('vespertv/stats'), (_) async => null);
   });
 
-  Future<void> pumpHome(WidgetTester tester) async {
+  Future<void> pumpHome(WidgetTester tester, {bool fullVideo = false}) async {
     tester.view.physicalSize = const Size(1280, 720);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -129,7 +141,7 @@ void main() {
     await prefs.init();
     prefs.isTelevision = true;
     prefs.guideViewMode = 'timeline';
-    prefs.guideFullVideo = false;
+    prefs.guideFullVideo = fullVideo;
     final playlist = _Playlist(storage);
     playback = PlaybackService(storage, playlist)
       ..createController = (url, {closedCaptionFile}) {
@@ -137,6 +149,7 @@ void main() {
         return _FakePlayer(url);
       };
     final epg = _Epg(storage);
+    epgRef = epg;
     final viewers = ViewerProfileService(storage, playlist, playback);
     await tester.pumpWidget(MultiProvider(
         providers: [
@@ -235,6 +248,89 @@ void main() {
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(focusedScope(), isNot('timeline-grid'));
+  });
+
+  testWidgets('fast Left/Right never drops focus out of the grid (no flick)',
+      (tester) async {
+    await pumpHome(tester, fullVideo: true);
+    await intoGuide(tester);
+    // The search button was focused once (Up from the top row): it is then
+    // in the guide column's focus history, where a lost focus falls back.
+    await key(tester, LogicalKeyboardKey.arrowUp);
+    expect(FocusManager.instance.primaryFocus?.debugLabel,
+        'timeline-filter-button');
+    await key(tester, LogicalKeyboardKey.arrowDown);
+    expect(focusedScope(), 'timeline-grid');
+    final seen = <String>{};
+    for (final k in [
+      ...List.filled(14, LogicalKeyboardKey.arrowLeft),
+      ...List.filled(14, LogicalKeyboardKey.arrowRight),
+    ]) {
+      await tester.sendKeyEvent(k);
+      // Fast presses: a frame or two between them, not a settle.
+      await tester.pump(const Duration(milliseconds: 16));
+      final primary = FocusManager.instance.primaryFocus;
+      seen.add(primary?.debugLabel ??
+          FocusScope.of(primary!.context!).debugLabel ??
+          '?');
+      expect(primary?.debugLabel, isNot('timeline-filter-button'));
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    await tester.pumpAndSettle();
+    expect(focusedScope(), 'timeline-grid');
+    expect(find.text('Now'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a focused block rebuilt away keeps focus in the guide',
+      (tester) async {
+    await pumpHome(tester, fullVideo: true);
+    await intoGuide(tester);
+    await key(tester, LogicalKeyboardKey.arrowLeft, times: 4);
+    expect(focusedScope(), 'timeline-grid');
+    epgRef.reshuffle(7);
+    await tester.pumpAndSettle();
+    expect(focusedScope(), 'timeline-grid');
+    expect(FocusManager.instance.primaryFocus?.debugLabel,
+        isNot(startsWith('tv-tab')));
+  });
+
+  testWidgets('hold menu Back to live returns the guide to now',
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
+      (tester) async {
+    await pumpHome(tester);
+    await intoGuide(tester);
+    await key(tester, LogicalKeyboardKey.arrowLeft, times: 6);
+    await key(tester, LogicalKeyboardKey.enter);
+    await tester.pump(const Duration(seconds: 1));
+    expect(playback.catchup, isNotNull);
+    expect(find.text('Now'), findsOneWidget);
+    final focused = FocusManager.instance.primaryFocus!.context!;
+    await tester.longPress(find.byWidget(focused.widget).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Back to live'));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
+    expect(playback.catchup, isNull);
+    expect(find.text('Now'), findsNothing);
+    await playback.stop();
+    await tester.pump(const Duration(seconds: 20));
+  });
+
+  testWidgets('first catch-up OK keeps focus in the guide (full video)',
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
+      (tester) async {
+    await pumpHome(tester, fullVideo: true);
+    await intoGuide(tester);
+    await key(tester, LogicalKeyboardKey.arrowLeft, times: 4);
+    expect(focusedScope(), 'timeline-grid');
+    await key(tester, LogicalKeyboardKey.enter);
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+    expect(playback.catchup, isNotNull);
+    expect(focusedScope(), 'timeline-grid');
+    await playback.stop();
+    await tester.pump(const Duration(seconds: 20));
   });
 
   testWidgets('OK on a past programme plays its catch-up; Back to now',

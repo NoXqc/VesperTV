@@ -683,8 +683,21 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     // Catch-up: the programme on now from its start, and the way back to
     // live when this channel's catch-up is playing.
     final playbackNow = context.read<PlaybackService>();
-    final onAir = channel.hasCatchup
-        ? context.read<EpgService>().getCurrentProgram(channel.epgId)
+    // The programme held in the Timeline guide (past ones replay from their
+    // start), else the one on now; never a future one.
+    final held =
+        _guideFocusedChannel?.id == channel.id ? _guideFocusedProgram : null;
+    final nowTime = DateTime.now();
+    final candidate = held ??
+        (channel.hasCatchup
+            ? context.read<EpgService>().getCurrentProgram(channel.epgId)
+            : null);
+    final onAir = channel.hasCatchup &&
+            candidate != null &&
+            candidate.start.isBefore(nowTime) &&
+            !candidate.start
+                .isBefore(nowTime.subtract(Duration(days: channel.catchupDays)))
+        ? candidate
         : null;
     final inCatchup = playbackNow.catchup?.live.id == channel.id;
     // What "until the show ends" means right now, shown under that row.
@@ -783,6 +796,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     switch (choice) {
       case 'live':
         await playbackNow.backToLive();
+        if (mounted) _timelineGuideKey.currentState?.backToNow();
       case 'startOver':
         if (onAir != null) await _previewOrOpenCatchup(channel, onAir.start);
       case 'record':
@@ -1015,6 +1029,14 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// nodes plus a fresh `autofocus: true` on the field itself (same
   /// pattern `SearchScreen`'s own `TextField` already uses successfully on
   /// this exact device) sidesteps the whole problem instead of fighting it.
+  /// Holds the remote's focus while the Timeline guide swaps blocks or
+  /// remounts (catch-up window shifts): without it focus fell back to the
+  /// search button above the channels (a visible flick on fast Left/Right)
+  /// or, with nothing left, the focus recovery sent it to the tab rail and
+  /// the side columns opened (owner, +459). Out of traversal.
+  final FocusNode _guideHoldFocus =
+      FocusNode(debugLabel: 'timeline-hold', skipTraversal: true);
+
   final FocusNode _timelineFilterButtonFocusNode =
       FocusNode(debugLabel: 'timeline-filter-button');
   final FocusNode _timelineFilterFieldFocusNode =
@@ -1889,6 +1911,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     _playlistsRowFocusNode.dispose();
     _groupsScroll.dispose();
     _timelineFilterButtonFocusNode.dispose();
+    _guideHoldFocus.dispose();
     _timelineFilterFieldFocusNode.dispose();
     _timelineFilterController.dispose();
     _timelineKeyboardScope.dispose();
@@ -4633,71 +4656,75 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                   ],
                 );
 
-      final guide = _TimelineGuide(
-        key: _timelineGuideKey,
-        channels: _filteredLiveChannelsForGuide(playlist),
-        epg: epg,
-        anchor: _guideAnchor,
-        initialRow: _guideInitialRow,
-        initialCursor: _guideInitialCursor,
-        // Moving into / out of the past remounts the guide on a new
-        // window; the D-pad cursor carries over.
-        onShiftWindow: (anchor, row, cursor) {
-          setState(() {
-            _guideAnchor = anchor;
-            _guideInitialRow = row;
-            _guideInitialCursor = cursor;
-            _timelineGuideKey = GlobalKey();
-          });
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _guideInitialRow = null;
-            _guideInitialCursor = null;
-          });
-        },
-        onOpenCatchup: (channel, at) {
-          if (_movingChannel != null) {
-            _endChannelMove();
-            return;
-          }
-          if (_timelineFilterActive) _closeTimelineFilter();
-          _previewOrOpenCatchup(channel, at);
-        },
-        // Closes the filter (if it's open) before actually opening the
-        // channel — reported directly: picking a channel while filtering,
-        // going fullscreen, then backing out left the filter keyboard
-        // stuck open, since nothing on that whole round trip ever touched
-        // _timelineFilterActive on its own.
-        onOpen: (channel) {
-          if (_movingChannel != null) {
-            _endChannelMove();
-            return;
-          }
-          if (_timelineFilterActive) _closeTimelineFilter();
-          _previewOrOpenChannel(channel);
-        },
-        movingChannelId: _movingChannel?.id,
-        playlistTags: !_mixFavorites,
-        onFocusChanged: _onGuideFocusChanged,
-        onShowOptions: _showChannelOptions,
-        onWindowStale: () => setState(() => _timelineGuideKey = GlobalKey()),
-        translucent: _fullVideo,
-        filterFocusNode: _timelineFilterButtonFocusNode,
-        onFilterToggle: _openTimelineFilter,
-        // While filtering, focus belongs to whichever input is actually
-        // showing (the virtual keyboard's first key on TV, the TextField
-        // elsewhere); otherwise to the button. Only the button is actually
-        // mounted above the guide when not filtering, so requesting focus
-        // on the field/keyboard here while inactive would land nowhere —
-        // neither widget exists yet in that state.
-        onReachedTop: () {
-          if (!_timelineFilterActive) {
-            _timelineFilterButtonFocusNode.requestFocus();
-          } else if (context.read<AppPreferences>().isTelevision) {
-            _timelineKeyboardNodes.first.first.requestFocus();
-          } else {
-            _timelineFilterFieldFocusNode.requestFocus();
-          }
-        },
+      final guide = Focus(
+        focusNode: _guideHoldFocus,
+        child: _TimelineGuide(
+          key: _timelineGuideKey,
+          holdFocus: _guideHoldFocus,
+          channels: _filteredLiveChannelsForGuide(playlist),
+          epg: epg,
+          anchor: _guideAnchor,
+          initialRow: _guideInitialRow,
+          initialCursor: _guideInitialCursor,
+          // Moving into / out of the past remounts the guide on a new
+          // window; the D-pad cursor carries over.
+          onShiftWindow: (anchor, row, cursor) {
+            setState(() {
+              _guideAnchor = anchor;
+              _guideInitialRow = row;
+              _guideInitialCursor = cursor;
+              _timelineGuideKey = GlobalKey();
+            });
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _guideInitialRow = null;
+              _guideInitialCursor = null;
+            });
+          },
+          onOpenCatchup: (channel, at) {
+            if (_movingChannel != null) {
+              _endChannelMove();
+              return;
+            }
+            if (_timelineFilterActive) _closeTimelineFilter();
+            _previewOrOpenCatchup(channel, at);
+          },
+          // Closes the filter (if it's open) before actually opening the
+          // channel — reported directly: picking a channel while filtering,
+          // going fullscreen, then backing out left the filter keyboard
+          // stuck open, since nothing on that whole round trip ever touched
+          // _timelineFilterActive on its own.
+          onOpen: (channel) {
+            if (_movingChannel != null) {
+              _endChannelMove();
+              return;
+            }
+            if (_timelineFilterActive) _closeTimelineFilter();
+            _previewOrOpenChannel(channel);
+          },
+          movingChannelId: _movingChannel?.id,
+          playlistTags: !_mixFavorites,
+          onFocusChanged: _onGuideFocusChanged,
+          onShowOptions: _showChannelOptions,
+          onWindowStale: () => setState(() => _timelineGuideKey = GlobalKey()),
+          translucent: _fullVideo,
+          filterFocusNode: _timelineFilterButtonFocusNode,
+          onFilterToggle: _openTimelineFilter,
+          // While filtering, focus belongs to whichever input is actually
+          // showing (the virtual keyboard's first key on TV, the TextField
+          // elsewhere); otherwise to the button. Only the button is actually
+          // mounted above the guide when not filtering, so requesting focus
+          // on the field/keyboard here while inactive would land nowhere —
+          // neither widget exists yet in that state.
+          onReachedTop: () {
+            if (!_timelineFilterActive) {
+              _timelineFilterButtonFocusNode.requestFocus();
+            } else if (context.read<AppPreferences>().isTelevision) {
+              _timelineKeyboardNodes.first.first.requestFocus();
+            } else {
+              _timelineFilterFieldFocusNode.requestFocus();
+            }
+          },
+        ),
       );
 
       // Expanded Timeline replaces the preview spacer with more guide rows.
@@ -7616,7 +7643,11 @@ class _TimelineGuide extends StatefulWidget {
       this.initialCursor,
       this.onShiftWindow,
       this.onOpenCatchup,
+      this.holdFocus,
       this.translucent = false});
+
+  /// See `_TvHomeScreenState._guideHoldFocus`.
+  final FocusNode? holdFocus;
 
   /// Full-video mode (`_TvHomeScreenState._fullVideo`): lighter "now"
   /// blocks so the video shows through the grid.
@@ -7795,6 +7826,7 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
     }
     final cursor = widget.initialCursor;
     _cursorSlot = cursor == null ? null : _floorToSlot(cursor);
+    _focusedRowIndex = widget.initialRow;
     _totalWidth =
         _windowEnd.difference(_windowStart).inMinutes * _pixelsPerMinute;
     _gridHScroll.addListener(_mirrorRuler);
@@ -7835,6 +7867,19 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
     WidgetsBinding.instance.addPostFrameCallback((_) => jumpToNow(5));
   }
 
+  /// The focused block was rebuilt away (its programme list changed under
+  /// it, or the guide is remounting): park focus on the holder, then put
+  /// it back on that row at the cursor's column.
+  void _onFocusedBlockGone(int row) {
+    widget.holdFocus?.requestFocus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || row >= widget.channels.length) return;
+      final primary = FocusManager.instance.primaryFocus;
+      if (primary != null && primary != widget.holdFocus) return;
+      _focusRowAt(row, _timeForSlot(_cursorSlot), 4);
+    });
+  }
+
   /// Focuses [row]'s block at [time] once that row is built (a few frames
   /// at most).
   void _focusRowAt(int row, DateTime time, int triesLeft) {
@@ -7861,6 +7906,7 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   bool backToNow() {
     final row = _focusedRowIndex ?? 0;
     if (widget.anchor != null) {
+      if (_gridFocusScope.hasFocus) widget.holdFocus?.requestFocus();
       widget.onShiftWindow?.call(null, row, null);
       return widget.onShiftWindow != null;
     }
@@ -8129,6 +8175,7 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
       // Into the past on a catch-up row: a window further back.
       final floor = _catchupFloor(widget.channels[rowIndex]);
       if (shift != null && floor != null && !target.isBefore(floor)) {
+        widget.holdFocus?.requestFocus();
         shift(target, rowIndex, target);
         return true;
       }
@@ -8140,6 +8187,7 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
       if (shift != null && widget.anchor != null) {
         final usual =
             !target.isBefore(_floorToSlot(now.subtract(_windowBefore)));
+        widget.holdFocus?.requestFocus();
         shift(usual ? null : target, rowIndex,
             target == _floorToSlot(now) ? null : target);
         return true;
@@ -8302,6 +8350,14 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   void restoreFocusToChannel(String channelId, {DateTime? at}) {
     final rowIndex = widget.channels.indexWhere((c) => c.id == channelId);
     if (rowIndex < 0) return;
+    final live = at == null ||
+        DateTime.now().difference(at) <= const Duration(minutes: 2);
+    // Back to live from catch-up (LIVE, Fast-forward): the guide follows.
+    if (live && widget.anchor != null) {
+      widget.holdFocus?.requestFocus();
+      widget.onShiftWindow?.call(null, rowIndex, null);
+      return;
+    }
     // Back from a catch-up programme: its row at the playhead (another
     // window when that is outside this one).
     if (at != null &&
@@ -8459,6 +8515,7 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
                               ensureRowVisible: _ensureRowVisible,
                               onFocusChanged: widget.onFocusChanged,
                               onFocusTracked: _trackFocus,
+                              onFocusedBlockGone: _onFocusedBlockGone,
                               onRegisterBlock: _registerBlock,
                               onUnregisterBlock: _unregisterBlock,
                               hScroll: _gridHScroll,
@@ -8977,10 +9034,15 @@ class _TimelineRow extends StatelessWidget {
     required this.hScroll,
     required this.epgLoading,
     this.onOpenCatchup,
+    this.onFocusedBlockGone,
     this.translucent = false,
   });
 
   final bool translucent;
+
+  /// A focused block of this row was disposed (see
+  /// [_TimelineGuideState._onFocusedBlockGone]).
+  final void Function(int rowIndex)? onFocusedBlockGone;
 
   /// See [_TimelineGuide.onOpenCatchup].
   final void Function(DateTime at)? onOpenCatchup;
@@ -9082,6 +9144,7 @@ class _TimelineRow extends StatelessWidget {
             onRegister: (node) =>
                 onRegisterBlock(rowIndex, windowStart, windowEnd, node),
             onUnregister: (node) => onUnregisterBlock(rowIndex, node),
+            onFocusedDispose: () => onFocusedBlockGone?.call(rowIndex),
             onFocusGained: () {
               ensureRowVisible?.call(rowIndex);
               onFocusChanged?.call(channel, null);
@@ -9132,6 +9195,7 @@ class _TimelineRow extends StatelessWidget {
                 onRegister: (node) => onRegisterBlock(
                     rowIndex, program.start, program.stop, node),
                 onUnregister: (node) => onUnregisterBlock(rowIndex, node),
+                onFocusedDispose: () => onFocusedBlockGone?.call(rowIndex),
                 onFocusGained: () {
                   ensureRowVisible?.call(rowIndex);
                   onFocusChanged?.call(channel, program);
@@ -9198,6 +9262,7 @@ class _TimelineRow extends StatelessWidget {
         hScroll: hScroll,
         onRegister: (node) => onRegisterBlock(rowIndex, g.start, g.end, node),
         onUnregister: (node) => onUnregisterBlock(rowIndex, node),
+        onFocusedDispose: () => onFocusedBlockGone?.call(rowIndex),
         onFocusGained: () {
           ensureRowVisible?.call(rowIndex);
           onFocusChanged?.call(channel, null);
@@ -9230,6 +9295,7 @@ class _TimelineRow extends StatelessWidget {
         hScroll: hScroll,
         onRegister: (node) => onRegisterBlock(rowIndex, from, windowEnd, node),
         onUnregister: (node) => onUnregisterBlock(rowIndex, node),
+        onFocusedDispose: () => onFocusedBlockGone?.call(rowIndex),
         onFocusGained: () {
           ensureRowVisible?.call(rowIndex);
           onFocusChanged?.call(channel, null);
@@ -9276,7 +9342,11 @@ class _ProgramBlock extends StatefulWidget {
       this.onUnregister,
       this.ended = false,
       this.replayable = false,
+      this.onFocusedDispose,
       this.translucent = false});
+
+  /// Disposed while focused (see [_TimelineRow.onFocusedBlockGone]).
+  final VoidCallback? onFocusedDispose;
 
   final bool translucent;
 
@@ -9345,6 +9415,9 @@ class _ProgramBlockState extends State<_ProgramBlock> {
   @override
   void dispose() {
     widget.onUnregister?.call(_node);
+    // _focused, not _node.hasFocus: the Focus widget below may already
+    // have detached the node (focus moves on in a microtask).
+    if (_focused) widget.onFocusedDispose?.call();
     _node.dispose();
     super.dispose();
   }
@@ -9512,7 +9585,9 @@ class _ProgramBlockState extends State<_ProgramBlock> {
                   );
                   return Padding(
                     padding: EdgeInsets.fromLTRB(6 + inset, 2, 6, 2),
-                    child: widget.replayable
+                    // The mark only where it fits beside some title (a
+                    // few-minute block at the window's edge is narrow).
+                    child: widget.replayable && widget.blockWidth - inset >= 56
                         ? Row(children: [
                             const Padding(
                               padding: EdgeInsets.only(right: 4),
