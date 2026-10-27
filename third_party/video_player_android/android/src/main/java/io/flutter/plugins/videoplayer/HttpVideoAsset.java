@@ -5,6 +5,9 @@
 package io.flutter.plugins.videoplayer;
 
 import android.content.Context;
+import android.net.Uri;
+import androidx.media3.common.C;
+import androidx.media3.common.util.Util;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
@@ -28,7 +31,7 @@ final class HttpVideoAsset extends VideoAsset {
   @NonNull private final Map<String, String> httpHeaders;
   @Nullable private final String userAgent;
   // VesperTV patch: Data pool measured bitrate, see StatsBridge.
-  private final StreamStats stats = new StreamStats();
+  private final StreamStats stats;
 
   @Nullable
   @Override
@@ -36,6 +39,7 @@ final class HttpVideoAsset extends VideoAsset {
     return stats;
   }
 
+  @OptIn(markerClass = UnstableApi.class)
   HttpVideoAsset(
       @Nullable String assetUrl,
       @NonNull StreamingFormat streamingFormat,
@@ -45,6 +49,11 @@ final class HttpVideoAsset extends VideoAsset {
     this.streamingFormat = streamingFormat;
     this.httpHeaders = httpHeaders;
     this.userAgent = userAgent;
+    // Only a progressive file has one resource whose Content-Length is its size.
+    // Never expose an HLS/DASH manifest, segment, subtitle or encryption key size.
+    Uri fileUri = assetUrl == null ? null : Uri.parse(assetUrl);
+    stats = new StreamStats(streamingFormat == StreamingFormat.UNKNOWN && fileUri != null
+        && Util.inferContentType(fileUri) == C.CONTENT_TYPE_OTHER ? fileUri : null);
   }
 
   @NonNull

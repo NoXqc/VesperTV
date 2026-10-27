@@ -2014,4 +2014,5 @@ const Map<String, String> kFr = {
   "Unknown / not reported": "Inconnu / non indiqué",
   "{format} (stream)": "{format} (flux)",
   "{format} (decoder)": "{format} (décodeur)",
+  "File size": "Taille du fichier",
 };

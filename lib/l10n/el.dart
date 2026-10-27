@@ -2624,4 +2624,5 @@ const Map<String, String> kEl = {
   "Unknown / not reported": "Άγνωστο / δεν αναφέρεται",
   "{format} (stream)": "{format} (ροή)",
   "{format} (decoder)": "{format} (αποκωδικοποιητής)",
+  "File size": "Μέγεθος αρχείου",
 };

@@ -57,7 +57,11 @@ final class StatsBridge implements MethodChannel.MethodCallHandler {
     Map<String, Object> m = new HashMap<>();
     m.put("nowMs", SystemClock.elapsedRealtime());
     @Nullable StreamStats stats = player.streamStats;
-    if (stats != null) m.put("bytes", stats.bytes.get());
+    if (stats != null) {
+      m.put("bytes", stats.bytes.get());
+      long fileSize = stats.fileSizeBytes.get();
+      if (fileSize > 0) m.put("fileSizeBytes", fileSize);
+    }
     @Nullable DecoderCounters video = player.getExoPlayer().getVideoDecoderCounters();
     if (video != null) {
       video.ensureUpdated();

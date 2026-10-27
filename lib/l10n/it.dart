@@ -2014,4 +2014,5 @@ const Map<String, String> kIt = {
   "Unknown / not reported": "Sconosciuto / non indicato",
   "{format} (stream)": "{format} (flusso)",
   "{format} (decoder)": "{format} (decoder)",
+  "File size": "Dimensione del file",
 };

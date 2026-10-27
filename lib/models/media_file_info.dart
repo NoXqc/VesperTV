@@ -4,8 +4,10 @@ class MediaFileInfo {
   final String source;
   final int? sizeBytes;
 
-  String? get formattedSize {
-    final bytes = sizeBytes;
+  String? get formattedSize => formatSize(sizeBytes);
+
+  /// Shared decimal units for source metadata and the playing file's headers.
+  static String? formatSize(int? bytes) {
     if (bytes == null || bytes <= 0) return null;
     var value = bytes.toDouble();
     const units = ['B', 'KB', 'MB', 'GB', 'TB'];

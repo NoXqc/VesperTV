@@ -1,13 +1,13 @@
 import '../utils/refined_finish.dart';
 import 'dart:async';
 
-import 'dart:io';
-
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/services.dart';
 import 'package:video_player_hdr/video_player_hdr.dart';
 
 import '../l10n/l10n.dart';
+import '../models/media_file_info.dart';
 import '../utils/video_hdr_report.dart';
 import '../services/subtitle_tracks.dart';
 
@@ -25,7 +25,16 @@ import '../services/subtitle_tracks.dart';
 /// averages them since it opened. The server address is left out on
 /// purpose: users post photos of the screen.
 class DataPoolCard extends StatefulWidget {
-  const DataPoolCard({super.key, required this.controller, this.since});
+  const DataPoolCard(
+      {super.key,
+      required this.controller,
+      this.since,
+      this.showFileSize = false,
+      this.fileSizeBytes});
+
+  /// Only on-demand movies/episodes, never live TV, catch-up or trailers.
+  final bool showFileSize;
+  final int? fileSizeBytes;
 
   final VideoPlayerHdrController controller;
 
@@ -112,7 +121,7 @@ class _DataPoolCardState extends State<DataPoolCard> {
       // Not every stream reports tracks: the rows say "not reported".
     }
     Map<Object?, Object?>? sample;
-    if (Platform.isAndroid) {
+    if (defaultTargetPlatform == TargetPlatform.android) {
       try {
         sample = await _stats.invokeMapMethod<Object?, Object?>(
             'getStats', {'playerId': SubtitleTracks.playerIdOf(c)});
@@ -285,6 +294,11 @@ class _DataPoolCardState extends State<DataPoolCard> {
     };
     final size = value.size;
     final buffered = _buffered;
+    final reportedBytes = _last?['fileSizeBytes'];
+    final fileSize = MediaFileInfo.formatSize(
+        reportedBytes is int && reportedBytes > 0
+            ? reportedBytes
+            : widget.fileSizeBytes);
     final https = c.dataSource.toLowerCase().startsWith('https');
     return Container(
       width: double.infinity,
@@ -369,6 +383,9 @@ class _DataPoolCardState extends State<DataPoolCard> {
                         languages.isEmpty
                             ? '${_audioTracks.length}'
                             : '${_audioTracks.length} · ${languages.join(', ')}'),
+                  if (widget.showFileSize)
+                    _row(tr('File size'),
+                        fileSize ?? tr('File size unavailable')),
                   _row(tr('Stream'),
                       '${_container(c)} · ${https ? 'HTTPS' : 'HTTP'}'),
                   _row(
