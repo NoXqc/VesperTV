@@ -56,15 +56,21 @@ class RefinedFinish extends ThemeExtension<RefinedFinish> {
   static BoxDecoration decorate(BuildContext context, BoxDecoration original,
       {bool focused = false, bool artwork = false, bool focusOnly = false}) {
     if (!of(context) || (focusOnly && !focused)) return original;
+    final translucent = RefinedFinishBackdrop.of(context);
     final shadows = <BoxShadow>[
       if (focused)
         BoxShadow(
-            color:
-                Theme.of(context).colorScheme.primary.withValues(alpha: 0.42),
+            color: Theme.of(context)
+                .colorScheme
+                .primary
+                .withValues(alpha: translucent ? 0.12 : 0.42),
             blurRadius: 19,
             spreadRadius: 1),
       BoxShadow(
-          color: Colors.black.withValues(alpha: focused ? 0.65 : 0.4),
+          color: Colors.black.withValues(
+              alpha: translucent
+                  ? (focused ? 0.08 : 0.05)
+                  : (focused ? 0.65 : 0.4)),
           blurRadius: focused ? 18 : 11,
           offset: Offset(0, focused ? 7 : 4)),
     ];
@@ -78,16 +84,26 @@ class RefinedFinish extends ThemeExtension<RefinedFinish> {
             .primaryContainer
             .withValues(alpha: focused ? 0.19 : 0.025),
         base);
+    // Preserve the bevel/reflection colours without laying an opaque panel
+    // over the live picture. The column already supplies a readable dark scrim.
+    Color reflection(Color color, double alpha) =>
+        translucent ? color.withValues(alpha: alpha) : color;
     final painted = original.copyWith(
       gradient: LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          Color.alphaBlend(
-              Colors.white.withValues(alpha: focused ? 0.25 : 0.15), tint),
-          Color.alphaBlend(Colors.white.withValues(alpha: 0.055), tint),
-          tint,
-          Color.alphaBlend(Colors.black.withValues(alpha: 0.18), base),
+          reflection(
+              Color.alphaBlend(
+                  Colors.white.withValues(alpha: focused ? 0.25 : 0.15), tint),
+              focused ? 0.32 : 0.18),
+          reflection(
+              Color.alphaBlend(Colors.white.withValues(alpha: 0.055), tint),
+              focused ? 0.24 : 0.10),
+          reflection(tint, focused ? 0.22 : 0.08),
+          reflection(
+              Color.alphaBlend(Colors.black.withValues(alpha: 0.18), base),
+              focused ? 0.28 : 0.12),
         ],
         stops: const [0, 0.09, 0.30, 1],
       ),
@@ -113,7 +129,10 @@ class RefinedFinish extends ThemeExtension<RefinedFinish> {
     // appearance first; raising their alpha directly would create a white panel.
     final resolved = Color.alphaBlend(original, const Color(0xFF14171C));
     final tinted = Color.alphaBlend(const Color(0x267C8CA4), resolved);
-    return tinted.withValues(alpha: math.max(original.a, 0.78));
+    return tinted.withValues(
+        alpha: RefinedFinishBackdrop.of(context)
+            ? math.min(original.a, 0.20)
+            : math.max(original.a, 0.78));
   }
 
   @override
@@ -123,6 +142,24 @@ class RefinedFinish extends ThemeExtension<RefinedFinish> {
   @override
   RefinedFinish lerp(covariant RefinedFinish? other, double t) =>
       t < 0.5 || other == null ? this : other;
+}
+
+/// Local finish for controls over full-screen live video. Always keep this
+/// scope mounted; changing its flag must not reparent focusable descendants.
+class RefinedFinishBackdrop extends InheritedWidget {
+  const RefinedFinishBackdrop(
+      {super.key, required this.translucent, required super.child});
+  final bool translucent;
+
+  static bool of(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<RefinedFinishBackdrop>()
+          ?.translucent ??
+      false;
+
+  @override
+  bool updateShouldNotify(RefinedFinishBackdrop oldWidget) =>
+      translucent != oldWidget.translucent;
 }
 
 /// A BoxDecoration with a painted bevel, not a layout-affecting extra border.

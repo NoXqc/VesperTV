@@ -50,3 +50,12 @@ Verification
 
 Primary references: Flutter BackdropFilter/performance docs were checked during
 investigation. The revised finish uses paint plus bounded focus blur; weak devices can disable it.
+
+Translucent guide correction (Codex, 2026-10-27)
+- Full-screen video behind the guide now scopes RefinedFinishBackdrop around the
+  existing tab/group/guide scrims. Refined chrome uses see-through reflection
+  stops and lighter shadows there, retaining rounded geometry and edge bevels.
+- Without this scope the .78 opacity floor stays in place for ordinary panels.
+  The off state remains original. No setting, native-video or focus dispatch change.
+- Render tests compare two background colours through focused/idle chrome; real
+  TV-root tests exercise tabs/groups, both toggles, rounded corners and focus.

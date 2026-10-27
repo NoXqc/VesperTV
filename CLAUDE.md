@@ -348,6 +348,12 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **cdx, 2026-10-27: Refined translucent columns** (`codex/refined-translucent`,
+  from installed glass test458): full-video guide scrims now scope see-through
+  refined fills for tabs/groups/guide while retaining rounded bevels/reflections.
+  Ordinary settings/panels keep the solid finish; no focus/video/config changes.
+  See `dev-notes/refined-finish.md` and root HANDOFF.md for checks.
+
 - **Claude, 2026-10-26: Live audio tracks (+457 on the Formuler; labels after it, not installed).**
   `_AudioTrackButton`/`_SubtitleButton` are keyed by controller + channel id: the full-screen bar
   stays mounted across zaps (and native live zap keeps the controller), so the track lists were

@@ -243,4 +243,63 @@ void main() {
     expect(await sample(true), greaterThan(25));
     expect(tester.takeException(), isNull);
   });
+  for (final focused in [false, true]) {
+    testWidgets('full-video finish reveals backdrop pixels, focused=$focused',
+        (tester) async {
+      final capture = GlobalKey();
+      Future<List<int>> sample(bool translucent, Color backdrop) async {
+        await tester.pumpWidget(MaterialApp(
+          theme: RefinedFinish.apply(ThemeData.dark(), true),
+          home: Scaffold(
+            body: RepaintBoundary(
+              key: capture,
+              child: SizedBox(
+                width: 200,
+                height: 100,
+                child: ColoredBox(
+                  color: backdrop,
+                  child: RefinedFinishBackdrop(
+                    translucent: translucent,
+                    child: Builder(
+                      builder: (context) => DecoratedBox(
+                        decoration: RefinedFinish.decorate(
+                            context,
+                            BoxDecoration(
+                                color: Colors.black,
+                                borderRadius: BorderRadius.circular(8),
+                                border:
+                                    Border.all(color: Colors.amber, width: 2)),
+                            focused: focused),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ));
+        await tester.pumpAndSettle();
+        final boundary =
+            capture.currentContext!.findRenderObject() as RenderRepaintBoundary;
+        return (await tester.runAsync(() async {
+          final image = await boundary.toImage();
+          final data =
+              await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+          final offset = (50 * image.width + 100) * 4;
+          final rgb = [for (var i = 0; i < 3; i++) data!.getUint8(offset + i)];
+          image.dispose();
+          return rgb;
+        }))!;
+      }
+
+      final solidRed = await sample(false, Colors.red);
+      final solidBlue = await sample(false, Colors.blue);
+      expect(solidRed, solidBlue);
+      final glassRed = await sample(true, Colors.red);
+      final glassBlue = await sample(true, Colors.blue);
+      expect(glassRed[0] - glassBlue[0], greaterThan(90));
+      expect(glassBlue[2] - glassRed[2], greaterThan(90));
+      expect(tester.takeException(), isNull);
+    });
+  }
 }

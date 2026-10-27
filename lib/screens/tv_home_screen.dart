@@ -3073,7 +3073,10 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
             color: (_fullVideo || _fullArt)
                 ? Colors.black.withValues(alpha: alpha)
                 : Colors.transparent),
-        child: child,
+        child: RefinedFinishBackdrop(
+          translucent: _fullVideo,
+          child: child,
+        ),
       );
 
   Widget _tabsScope({required bool collapsed}) => FocusTraversalGroup(
