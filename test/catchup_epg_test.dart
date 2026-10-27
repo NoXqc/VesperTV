@@ -97,6 +97,47 @@ void main() {
     s.dispose();
   });
 
+  test('channels with catch-up known only after launch get their past',
+      () async {
+    EpgService.catchupRecheckEvery = Duration.zero;
+    addTearDown(
+        () => EpgService.catchupRecheckEvery = const Duration(seconds: 20));
+    final s = await refreshed();
+    // Launch: the live lists are not loaded yet.
+    var known = <String, int>{};
+    s.catchupDaysProvider = () => known;
+    s.getPrograms('cu.us');
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect([for (final p in s.getPrograms('cu.us')) p.title],
+        ['CU.us 90m', 'CU.us now']);
+    // They load: the next lookup re-reads and reloads with the past.
+    known = {'cu.us': 3};
+    final before = s.guideRowsLoaded.value;
+    s.getPrograms('cu.us');
+    for (var i = 0; i < 50 && s.guideRowsLoaded.value == before; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
+    expect([for (final p in s.getPrograms('cu.us')) p.title],
+        ['CU.us 2d', 'CU.us 10h', 'CU.us 90m', 'CU.us now']);
+    s.dispose();
+  });
+
+  test('a refresh waits for the live lists before keeping past rows', () async {
+    SharedPreferences.setMockInitialValues({});
+    final storage = StorageService();
+    await storage.init();
+    var known = <String, int>{};
+    final service = EpgService(storage, database: epgDb)
+      ..catchupDaysProvider = (() => known)
+      ..beforeRefresh = () async => known = {'cu.us': 3};
+    await http.runWithClient(
+        () => service.refresh('http://epg/x.xml', knownChannelIds: const {}),
+        () => MockClient((_) async => http.Response(feed(), 200)));
+    final rows = await epgDb.programmesFor(['cu.us'], 0);
+    expect(rows['cu.us']!.first.title, 'CU.us 2d');
+    service.dispose();
+  });
+
   test('prune keeps catch-up rows to their own horizon', () async {
     final ms = now.millisecondsSinceEpoch;
     const hour = 3600000;

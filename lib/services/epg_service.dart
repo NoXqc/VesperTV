@@ -104,13 +104,40 @@ class EpgService extends ChangeNotifier {
   /// refresh and cache reload, so a playlist update is picked up.
   Map<String, int> Function()? catchupDaysProvider;
   Map<String, int> _catchupDays = const {};
+  DateTime? _catchupDaysReadAt;
 
-  void _readCatchupDays() {
+  /// Awaited before a refresh parses anything: the live channel lists
+  /// (PlaylistManager.ensureLiveChannelsLoaded). At launch they load after
+  /// this service, so the catch-up list read too early was empty: rows kept
+  /// only 2 h of past, and a refresh then dropped the catch-up past
+  /// (owner, +460: only Update EPG brought it back).
+  Future<void> Function()? beforeRefresh;
+
+  /// Re-reads the catch-up list; true when it changed.
+  bool _readCatchupDays() {
     try {
-      _catchupDays = catchupDaysProvider?.call() ?? const {};
+      final next = catchupDaysProvider?.call() ?? const <String, int>{};
+      _catchupDaysReadAt = DateTime.now();
+      if (mapEquals(next, _catchupDays)) return false;
+      _catchupDays = next;
+      return true;
     } catch (e) {
       debugPrint('EpgService: catch-up channels unavailable: $e');
+      return false;
     }
+  }
+
+  @visibleForTesting
+  static Duration catchupRecheckEvery = const Duration(seconds: 20);
+
+  /// [_readCatchupDays] at most every 20 s, for row loads: channels that
+  /// load after launch then get their catch-up past without a refresh.
+  bool _readCatchupDaysIfStale() {
+    final at = _catchupDaysReadAt;
+    if (at != null && DateTime.now().difference(at) < catchupRecheckEvery) {
+      return false;
+    }
+    return _readCatchupDays();
   }
 
   /// Oldest programme end kept for [normalizedId] (ms since epoch).
@@ -281,6 +308,11 @@ class EpgService extends ChangeNotifier {
     try {
       await init();
       var anySucceeded = false;
+      try {
+        await beforeRefresh?.call();
+      } catch (e) {
+        debugPrint('EpgService: channels not ready for refresh: $e');
+      }
       _readCatchupDays();
       for (final source in sources) {
         final count = await _refreshOne(source.url,
@@ -727,6 +759,12 @@ class EpgService extends ChangeNotifier {
   /// the full rows arrive. Safe to call from `build`: the load and its
   /// notification always happen after the current frame.
   List<EpgProgram> getPrograms(String channelId) {
+    // Catch-up channels known now (live lists load after launch): rows in
+    // memory were cut at 2 h of past, so they all load again.
+    if (_readCatchupDaysIfStale()) {
+      _full.clear();
+      debugPrint('EpgService: catch-up channels: ${_catchupDays.length}');
+    }
     final id = normalizeEpgId(channelId);
     final full = _full[id];
     if (full != null) return full;

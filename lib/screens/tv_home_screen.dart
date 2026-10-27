@@ -1395,7 +1395,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     final channels = _currentLiveChannels(playlist);
     if (channels.isEmpty) return;
     final playback = context.read<PlaybackService>();
-    final firstIsPlaying = playback.currentChannel?.id == channels.first.id;
+    final firstIsPlaying = playback.liveChannel?.id == channels.first.id;
     (firstIsPlaying ? _currentChannelFocusNode : _firstLiveChannelFocusNode)
         .requestFocus();
   }
@@ -1997,7 +1997,8 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         // of the real groups that fallback searches, so resetting it
         // always loses the selection outright. Keep it selected here
         // specifically when it's still true to what's actually playing.
-        final playing = context.read<PlaybackService>().currentChannel;
+        // liveChannel: a catch-up programme counts as its live channel.
+        final playing = context.read<PlaybackService>().liveChannel;
         final stayOnFavorites = _selectedGroup == _favoritesGroupSentinel &&
             playing != null &&
             context
@@ -2162,7 +2163,9 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     // the question, and fell straight through to `groups.first.title`
     // regardless of the fix below — confirmed directly: still opened the
     // first real group, not Favourites, even after that fix landed.
-    final playing = playback.currentChannel ?? playback.pendingResumeChannel;
+    // liveChannel: a catch-up programme counts as its live channel (it
+    // has its own id, in no group: Favourites jumped to the real group).
+    final playing = playback.liveChannel ?? playback.pendingResumeChannel;
     if (playing != null) {
       // A favorited channel lands on the pinned "Favourites" entry, not
       // its own real provider group — same priority already established
@@ -2194,7 +2197,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// row is what's in view and focused.
   Future<void> _restoreLiveFocus() async {
     final playback = context.read<PlaybackService>();
-    final channel = playback.currentChannel;
+    final channel = playback.liveChannel;
     // Every early return below used to just do nothing — fine in theory
     // (there's nothing *specific* to scroll/focus), but it left Flutter's
     // own implicit pop-focus-restoration to fend for itself with no
@@ -4991,7 +4994,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   }
 
   Widget _buildLiveRow(PlaybackService playback, Channel channel, int i) {
-    final isSelected = playback.currentChannel?.id == channel.id;
+    final isSelected = playback.liveChannel?.id == channel.id;
     final isMoving = _movingChannel?.id == channel.id;
     // The trailing star used to be independently D-pad-focusable (a
     // plain IconButton) — reported directly: moving down the list
@@ -7967,7 +7970,9 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
     }
     _focusedRowIndex = null;
     _focusedProgram = null;
-    _cursorSlot = null;
+    // A past (catch-up) window keeps its time; "now" is outside it.
+    final anchor = widget.anchor;
+    _cursorSlot = anchor == null ? null : _floorToSlot(anchor);
     if (!hadRowFocus) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) focusEntry();

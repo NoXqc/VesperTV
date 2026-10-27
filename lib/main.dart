@@ -414,7 +414,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
 
       _playlistManager = PlaylistManager(_storage, _catalogDb);
       _epgService = EpgService(_storage)
-        ..catchupDaysProvider = _playlistManager.catchupDaysByEpgId;
+        ..catchupDaysProvider = _playlistManager.catchupDaysByEpgId
+        ..beforeRefresh = _playlistManager.ensureLiveChannelsLoaded;
       // Started during the splash, not after it: it only opens the EPG
       // database and preloads now/next for every channel (a few thousand
       // rows, SQLite on its own thread), so it doesn't compete with the
