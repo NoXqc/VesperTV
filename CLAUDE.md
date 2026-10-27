@@ -193,6 +193,12 @@ context-less sink above. Texture players (Multiview, Compatibility video) never 
 `RecorderScheduler.kt` in `android/app/.../nox_iptv/`), so a plugin re-sync doesn't touch it.
 
 ## 10. Hard-won rules (don't re-learn these)
+- **Release-safe focus keys (cdx, 2026-10-27):** `FocusNode.debugLabel` is always
+  null in release builds. Never derive widget keys, IDs or behavior from it.
+  Media Hub +473 used `ValueKey(node.debugLabel!)`: controls became ErrorWidgets
+  and D-pad could not enter cards, despite passing debug widget tests. +474 uses
+  explicit stable control IDs; regressions clear diagnostic labels before rebuild
+  and enter the grid through the wrapped TV connector row.
 - **M3U playback type (cdx, 2026-10-26):** use `channel.isLive`, not
   `Channel.isLiveId(channel.rawId)`, whenever the Channel exists. M3U Movies/TV Shows
   use group-title classification but ordinary tvg-id/ch_N identifiers: those IDs alone
@@ -352,9 +358,11 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   redesigns the shared Settings/Hub Sources page with add/connectors at the top,
   playback-source and catalog/list grids, role labels and per-card controls.
   Explicit responsive D-pad rows, stable toggle/dialog focus and immediate scroll;
-  no player/storage changes. Owner-requested local test 1.0.43+473 is production-
-  signed and installed on the Formuler (analyze16,750 tests); real-box acceptance
-  pending. See `dev-notes/mediahub-source-grid.md` and root HANDOFF.md. No publication.
+  no player/storage changes. Initial +473 failed in release because control keys
+  used diagnostic labels (see section10); corrected production-signed +474 is
+  installed on Formuler (analyze16,754 tests), with dark palette glass and whole-
+  card reveal. Real-box acceptance pending. See `dev-notes/mediahub-source-grid.md`
+  and root HANDOFF.md. No publication.
 
 - **cdx 2026-10-27 — release 1.0.43 (beta), +472:** owner requested release and
   Discord announcement after Claude merged all branches. Timeline is the fresh-install

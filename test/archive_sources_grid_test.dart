@@ -56,6 +56,8 @@ Future<ArchiveService> _open(WidgetTester tester, List<ArchiveSource> sources,
     {Size size = const Size(1280, 720),
     bool tv = true,
     double textScale = 1,
+    NavigationMode navigationMode = NavigationMode.traditional,
+    String paletteName = 'Dark / Gold',
     bool refined = false}) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -77,7 +79,7 @@ Future<ArchiveService> _open(WidgetTester tester, List<ArchiveSource> sources,
     ..isTelevision = tv
     ..layoutMode = tv ? 'tv' : 'auto'
     ..palette = AppConstants.cyberpunkPalettes
-        .firstWhere((p) => p.label == 'Dark / Gold');
+        .firstWhere((p) => p.label == paletteName);
   addTearDown(preferences.dispose);
   await tester.pumpWidget(MultiProvider(
     providers: [
@@ -86,15 +88,15 @@ Future<ArchiveService> _open(WidgetTester tester, List<ArchiveSource> sources,
       Provider<StorageService>.value(value: storage),
     ],
     child: MaterialApp(
-      theme: ThemeData.dark().copyWith(
-          colorScheme: buildPaletteColorScheme(
-              AppConstants.cyberpunkPalettes
-                  .firstWhere((p) => p.label == 'Dark / Gold'),
-              Brightness.dark),
-          extensions: [RefinedFinish(enabled: refined)]),
+      theme: RefinedFinish.apply(
+          ThemeData.dark().copyWith(
+              colorScheme: buildPaletteColorScheme(
+                  preferences.palette, Brightness.dark)),
+          refined),
       builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context)
-              .copyWith(textScaler: TextScaler.linear(textScale)),
+          data: MediaQuery.of(context).copyWith(
+              textScaler: TextScaler.linear(textScale),
+              navigationMode: navigationMode),
           child: child!),
       home: const Scaffold(body: Text('Entry point')),
     ),
@@ -140,6 +142,111 @@ void main() {
       await loader.load();
     }
   });
+  testWidgets('TV wrapped connectors enter the off-screen source grid',
+      (tester) async {
+    final sources = [for (var i = 0; i < 13; i++) _source(i)];
+    await _open(tester, sources,
+        size: const Size(960, 540),
+        navigationMode: NavigationMode.directional,
+        refined: true);
+    await _key(tester, LogicalKeyboardKey.arrowDown);
+    expect(_focused, 'source-add');
+    await _key(tester, LogicalKeyboardKey.arrowDown);
+    expect(_focused, 'source-trackers');
+    await _key(tester, LogicalKeyboardKey.arrowDown);
+    expect(_focused, _control(sources.first, 'enabled'));
+    _visible(tester, _focused!);
+    final card = tester
+        .getRect(find.byKey(ValueKey('source-card-${sources.first.key}')));
+    expect(card.top, greaterThanOrEqualTo(kToolbarHeight));
+    expect(card.bottom, lessThanOrEqualTo(540));
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+  testWidgets(
+      'release-style absent diagnostic labels still build and navigate every card control',
+      (tester) async {
+    final sources = [for (var i = 0; i < 13; i++) _source(i)];
+    final service = await _open(tester, sources,
+        size: const Size(960, 540),
+        navigationMode: NavigationMode.directional,
+        refined: true);
+    final first = tester
+        .widget<InkWell>(
+            find.byKey(ValueKey(_control(sources.first, 'enabled'))))
+        .focusNode!;
+    final url = tester
+        .widget<InkWell>(find.byKey(ValueKey(_control(sources.first, 'url'))))
+        .focusNode!;
+    final other = tester
+        .widget<InkWell>(find.byKey(ValueKey(_control(sources.first, 'other'))))
+        .focusNode!;
+    for (final focus in tester.allWidgets.whereType<Focus>()) {
+      focus.focusNode?.debugLabel = null;
+    }
+    expect([first.debugLabel, url.debugLabel, other.debugLabel],
+        everyElement(isNull));
+    await service.setEnabled(
+        sources.last, false); // Rebuild with no diagnostic keys.
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await _key(tester, LogicalKeyboardKey.arrowDown); // Add
+    await _key(tester, LogicalKeyboardKey.arrowDown); // Trakt / Simkl
+    await _key(tester, LogicalKeyboardKey.arrowDown); // First card
+    expect(FocusManager.instance.primaryFocus, same(first));
+    _visible(tester, _control(sources.first, 'enabled'));
+    await _key(tester, LogicalKeyboardKey.arrowDown);
+    expect(FocusManager.instance.primaryFocus, same(url));
+    await _key(tester, LogicalKeyboardKey.arrowDown);
+    expect(FocusManager.instance.primaryFocus, same(other));
+    await _key(tester, LogicalKeyboardKey.select);
+    expect(service.sources.first.underOther, isTrue);
+    expect(FocusManager.instance.primaryFocus, same(other));
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+  for (final polished in [false, true]) {
+    testWidgets(
+        'Neon Green TV cards retain dark palette shading, finish $polished',
+        (tester) async {
+      final source = _source(0);
+      await _open(tester, [source, _source(1)],
+          size: const Size(960, 540),
+          navigationMode: NavigationMode.directional,
+          paletteName: 'Neon Green',
+          refined: polished);
+      await _key(tester, LogicalKeyboardKey.arrowDown);
+      await _key(tester, LogicalKeyboardKey.arrowDown);
+      await _key(tester, LogicalKeyboardKey.arrowDown);
+      expect(_focused, _control(source, 'enabled'));
+      _visible(tester, _focused!);
+      final card =
+          tester.getRect(find.byKey(ValueKey('source-card-${source.key}')));
+      await tester.runAsync(() async {
+        final boundary = tester.renderObject<RenderRepaintBoundary>(
+            find.byKey(const ValueKey('preview')));
+        final image = await boundary.toImage();
+        final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+        final offset =
+            ((card.top + 10).round() * image.width + card.center.dx.round()) *
+                4;
+        final red = data!.getUint8(offset);
+        final green = data.getUint8(offset + 1);
+        final blue = data.getUint8(offset + 2);
+        expect(green, greaterThan(red * 1.3));
+        expect(green, greaterThan(blue * 1.3));
+        expect((red + green + blue) / 3, lessThan(65));
+        if (Platform.environment['MEDIAHUB_GRID_PREVIEW'] == '1') {
+          final png = await image.toByteData(format: ui.ImageByteFormat.png);
+          File('Logs/mediahub-source-grid-green-${polished ? 'on' : 'off'}.png')
+              .writeAsBytesSync(png!.buffer.asUint8List());
+        }
+        image.dispose();
+      });
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
   testWidgets('top connectors, card columns, partial rows and scrolling',
       (tester) async {
     final sources = [for (var i = 0; i < 8; i++) _source(i)];

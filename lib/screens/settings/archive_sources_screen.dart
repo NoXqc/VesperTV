@@ -51,9 +51,26 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
       if (!mounted || !node.hasFocus || node.context == null) return;
       final viewport =
           Scrollable.maybeOf(node.context!)?.context.findRenderObject();
-      final above = viewport is RenderBox &&
-          node.rect.top < viewport.localToGlobal(Offset.zero).dy;
-      Scrollable.ensureVisible(node.context!,
+      var target = node.context!;
+      // Entering a card should reveal its header and all controls together.
+      // Oversized accessibility cards still reveal only the focused control.
+      if (viewport is RenderBox) {
+        node.context!.visitAncestorElements((element) {
+          if (element.widget is! _SourceCard) return true;
+          final box = element.findRenderObject();
+          if (box is RenderBox && box.size.height <= viewport.size.height) {
+            target = element;
+          }
+          return false;
+        });
+      }
+      final targetBox = target.findRenderObject();
+      final top = targetBox is RenderBox
+          ? targetBox.localToGlobal(Offset.zero).dy
+          : node.rect.top;
+      final above =
+          viewport is RenderBox && top < viewport.localToGlobal(Offset.zero).dy;
+      Scrollable.ensureVisible(target,
           duration: Duration.zero,
           alignmentPolicy: above
               ? ScrollPositionAlignmentPolicy.keepVisibleAtStart
@@ -379,6 +396,7 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
 
   Widget _sourceCard(ArchiveSource source, ArchiveService service) {
     final nodes = _sourceNodes(source);
+    final controlId = 'source-${source.key}';
     final catalogOnly = source.listOnly || source.tracker != null;
     final role = source.server != null
         ? tr('Media server')
@@ -411,6 +429,7 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
           onTap: () => service.setEnabled(source, !source.enabled),
           onHold: () => _remove(source),
           child: _SourceControl(
+            id: '$controlId-enabled',
             node: nodes.first,
             label: tr('Enabled'),
             value: source.enabled,
@@ -420,6 +439,7 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
         ),
         if (source.tracker == null)
           _SourceControl(
+            id: '$controlId-url',
             node: nodes[1],
             label: tr('View source URL'),
             icon: Icons.link,
@@ -428,6 +448,7 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
           ),
         if (source.server == null && source.tracker == null)
           _SourceControl(
+            id: '$controlId-other',
             node: nodes.last,
             label: tr('Show under Other'),
             value: source.underOther,
@@ -611,6 +632,7 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
                         'Posters and episode details may still use Cinemeta when this is off.'),
                     children: [
                       _SourceControl(
+                        id: 'source-cinemeta',
                         node: cinemetaNode,
                         label: tr('Show Cinemeta catalog'),
                         value: service.showCinemetaCatalog,
@@ -690,32 +712,77 @@ class _SourceCard extends StatelessWidget {
         builder: (context, _) {
           final scheme = Theme.of(context).colorScheme;
           final focused = nodes.any((n) => n.hasFocus);
+          final polished = RefinedFinish.of(context);
+          final radius = BorderRadius.circular(16);
+          final ink = Color.alphaBlend(
+              scheme.primary.withValues(
+                  alpha: focused
+                      ? 0.20
+                      : polished
+                          ? 0.10
+                          : 0.045),
+              const Color(0xFF060909));
           return Container(
             padding: const EdgeInsets.all(16),
-            decoration: RefinedFinish.decorate(
-                context,
-                BoxDecoration(
-                  color: const Color(0xFF14171C),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                      color: focused ? scheme.primary : Colors.white24,
-                      width: 2),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      scheme.primary.withValues(alpha: focused ? 0.16 : 0.06),
-                      const Color(0xFF101215),
-                    ],
-                  ),
-                ),
-                focused: focused),
+            decoration: BoxDecoration(
+              color: const Color(0xFF060909),
+              borderRadius: radius,
+              border: Border.all(
+                  color: scheme.primary.withValues(
+                      alpha: focused
+                          ? 1
+                          : polished
+                              ? 0.40
+                              : 0.20),
+                  width: 2),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color.alphaBlend(
+                      scheme.primary.withValues(alpha: polished ? 0.16 : 0.03),
+                      ink),
+                  ink,
+                  const Color(0xFF050707),
+                  Color.alphaBlend(
+                      scheme.secondary
+                          .withValues(alpha: polished ? 0.07 : 0.02),
+                      const Color(0xFF080A0C)),
+                ],
+                stops: const [0, 0.22, 0.68, 1],
+              ),
+              boxShadow: [
+                if (focused)
+                  BoxShadow(
+                      color: scheme.primary.withValues(alpha: 0.24),
+                      blurRadius: 18),
+                if (polished)
+                  const BoxShadow(
+                      color: Colors.black87,
+                      blurRadius: 16,
+                      offset: Offset(0, 7)),
+              ],
+            ),
+            // Preserve this palette-tinted dark glass instead of replacing it
+            // with the shared neutral grey fill; reuse the same painted bevel.
+            foregroundDecoration:
+                RefinedFinish.artworkRim(context, radius, focused: focused),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Row(children: [
-                  Icon(icon, size: 28, color: scheme.primary),
-                  const SizedBox(width: 10),
+                  Container(
+                    padding: const EdgeInsets.all(9),
+                    decoration: BoxDecoration(
+                      color: scheme.primary
+                          .withValues(alpha: polished ? 0.14 : 0.07),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: scheme.primary.withValues(alpha: 0.30)),
+                    ),
+                    child: Icon(icon, size: 26, color: scheme.primary),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(name,
                         maxLines: 2,
@@ -725,11 +792,23 @@ class _SourceCard extends StatelessWidget {
                   ),
                 ]),
                 const SizedBox(height: 10),
-                Text(role,
-                    style: TextStyle(
-                        color: scheme.primary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700)),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    decoration: BoxDecoration(
+                        color: scheme.primary.withValues(alpha: 0.09),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                            color: scheme.primary.withValues(alpha: 0.24))),
+                    child: Text(role,
+                        style: TextStyle(
+                            color: scheme.primary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700)),
+                  ),
+                ),
                 const SizedBox(height: 6),
                 Text(summary, style: const TextStyle(fontSize: 13)),
                 const SizedBox(height: 4),
@@ -756,6 +835,7 @@ class _SourceCard extends StatelessWidget {
 /// toggles it, including OK and pointer input, without a nested switch stop.
 class _SourceControl extends StatelessWidget {
   const _SourceControl({
+    required this.id,
     required this.node,
     required this.label,
     required this.onTap,
@@ -765,6 +845,7 @@ class _SourceControl extends StatelessWidget {
   });
 
   final FocusNode node;
+  final String id;
   final String label;
   final VoidCallback onTap;
   final VoidCallback onFocus;
@@ -779,15 +860,16 @@ class _SourceControl extends StatelessWidget {
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 2),
             child: Material(
-              color: node.hasFocus
-                  ? scheme.primary.withValues(alpha: 0.18)
-                  : Colors.white.withValues(alpha: 0.035),
+              type: MaterialType.transparency,
               borderRadius: BorderRadius.circular(9),
               child: Semantics(
                 toggled: value,
                 child: InkWell(
-                  key: ValueKey(node.debugLabel!),
+                  // FocusNode.debugLabel is always null in a release APK.
+                  key: ValueKey(id),
                   focusNode: node,
+                  focusColor: Colors.transparent,
+                  hoverColor: scheme.primary.withValues(alpha: 0.06),
                   onTap: onTap,
                   onFocusChange: (focused) {
                     if (focused) onFocus();
@@ -798,6 +880,10 @@ class _SourceControl extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
+                      color: Color.alphaBlend(
+                          scheme.primary
+                              .withValues(alpha: node.hasFocus ? 0.18 : 0.035),
+                          const Color(0xFF050707)),
                       borderRadius: BorderRadius.circular(9),
                       border: Border.all(
                           color: node.hasFocus
@@ -816,7 +902,12 @@ class _SourceControl extends StatelessWidget {
                           child: ExcludeSemantics(
                             child: IgnorePointer(
                               child: Switch(
-                                  value: value!, onChanged: (_) => onTap()),
+                                  value: value!,
+                                  activeTrackColor: scheme.primary,
+                                  activeThumbColor: scheme.onPrimary,
+                                  inactiveTrackColor:
+                                      Colors.white.withValues(alpha: 0.12),
+                                  onChanged: (_) => onTap()),
                             ),
                           ),
                         ),

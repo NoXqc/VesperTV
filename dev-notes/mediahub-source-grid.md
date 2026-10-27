@@ -42,3 +42,33 @@ test build: production-signed 1.0.43+473 installed on the Formuler over +471.
 Analyze16 and all750 Flutter tests passed; installed version and APK hash verified.
 No player changes. Updated remote guide and generated help index remain local
 until separately published/deployed. Artifact details are in root HANDOFF.md.
+
+
+## Formuler correction after +473
+
+The owner could not enter the grid. Root cause: `_SourceControl` built its InkWell
+key from `FocusNode.debugLabel!`, which Flutter sets only inside assertions. In a
+release APK this is null, so every control failed to build (white ErrorWidgets in
+the photo) and there were no focusable targets below the connectors. The row
+navigation itself was not the cause. Each control now receives a separate stable
+ID; diagnostic labels are never used for runtime behavior.
+
+Regression tests strip all existing diagnostic labels, rebuild the cards, then
+navigate into the grid, between controls, and toggle Other. A second test starts
+at the link field with four connectors on the first row and Trakt/Simkl below,
+matching the 960x540 TV layout. Entering a normal-height card now reveals its
+whole header and controls; oversized accessibility cards reveal the active row.
+
+Grey cards came from RefinedFinish.decorate replacing the original palette
+fill with neutral grey glass. These source cards now keep their own near-black
+palette gradient, icon inset and role badge. Refined finish adds stronger colour
+lighting, depth and the existing painted bevel; plain mode stays dark. Controls
+use explicit dark fills and accent focus borders. No shared theme changes.
+Actual rendered Neon Green pixels are checked with finish both off and on; tests
+use the real RefinedFinish.apply theme path. Package/checks: root HANDOFF.md.
+
+
+Correction packaged as production-signed 1.0.43+474 and installed over +473 on
+Formuler at the owner's request. Analyze16, all754 Flutter tests; package version,
+signature, ZIP integrity and installed hash verified. UI was not driven over adb;
+the owner's physical-remote acceptance is still pending. No publication.
