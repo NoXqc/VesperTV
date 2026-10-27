@@ -54,6 +54,8 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
 
   private final Handler mainHandler = new Handler(Looper.getMainLooper());
   private boolean isDisposed = false;
+  @Nullable private OnDemandLoadControl onDemandLoadControl;
+  @NonNull private final VodPlaybackTrace vodTrace;
 
   /** A closure-compatible signature since {@link java.util.function.Supplier} is API level 24. */
   public interface ExoPlayerProvider {
@@ -87,10 +89,25 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
     this.videoPlayerEvents = events;
     this.surfaceProducer = surfaceProducer;
     exoPlayer = exoPlayerProvider.get();
+    vodTrace = new VodPlaybackTrace(exoPlayer);
     nativePassthrough = AudioPassthrough.isEnabled();
     nativeSurfaceHolder = options.nativeSurfaceHolder;
     exoPlayer.addAnalyticsListener(
         new AnalyticsListener() {
+          @Override public void onPlaybackStateChanged(EventTime time, int state) {
+            vodTrace.onPlaybackStateChanged(time, state);
+          }
+          @Override public void onPlayWhenReadyChanged(EventTime time, boolean ready, int reason) {
+            vodTrace.onPlayWhenReadyChanged(time, ready, reason);
+          }
+          @Override public void onAudioUnderrun(EventTime time, int bytes, long bufferMs, long elapsedMs) {
+            vodTrace.onAudioUnderrun(time, bytes, bufferMs, elapsedMs);
+          }
+          @Override public void onPositionDiscontinuity(EventTime time,
+              androidx.media3.common.Player.PositionInfo before,
+              androidx.media3.common.Player.PositionInfo after, int reason) {
+            vodTrace.onPositionDiscontinuity(time, before, after, reason);
+          }
           @Override
           public void onVideoDecoderInitialized(
               @NonNull EventTime eventTime, @NonNull String decoderName,
@@ -132,6 +149,7 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
 
   /** A live zap keeps the same ExoPlayer and output; no detach/release/placeholder. */
   void replaceNativeStream(@NonNull Context context, @NonNull VideoAsset asset) {
+    setOnDemandBuffering(false);
     if (exoPlayerEventListener != null) exoPlayerEventListener.resetForNewSource();
     if (trackSelector != null) {
       trackSelector.setParameters(trackSelector.buildUponParameters()
@@ -219,7 +237,18 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
 
   @Override
   public void seekTo(long position) {
+    vodTrace.seekRequested(position);
     exoPlayer.seekTo(position);
+  }
+
+  /** Factory-only wiring; one policy instance per main player. */
+  protected void setOnDemandLoadControl(OnDemandLoadControl control) {
+    onDemandLoadControl = control;
+  }
+
+  void setOnDemandBuffering(boolean on) {
+    if (onDemandLoadControl != null) onDemandLoadControl.setOnDemand(on);
+    vodTrace.setEnabled(on);
   }
 
   @NonNull
@@ -524,6 +553,7 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
 
   public void dispose() {
     isDisposed = true;
+    vodTrace.dispose();
     mainHandler.removeCallbacksAndMessages(null);
     if (disposeHandler != null) {
       disposeHandler.onDispose();

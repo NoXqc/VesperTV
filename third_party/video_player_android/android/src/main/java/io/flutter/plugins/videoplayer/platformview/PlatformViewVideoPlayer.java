@@ -17,6 +17,7 @@ import androidx.media3.exoplayer.audio.AudioSink;
 import androidx.media3.exoplayer.audio.DefaultAudioSink;
 import io.flutter.plugins.videoplayer.AudioPassthrough;
 import io.flutter.plugins.videoplayer.ExoPlayerEventListener;
+import io.flutter.plugins.videoplayer.OnDemandLoadControl;
 import io.flutter.plugins.videoplayer.VideoAsset;
 import io.flutter.plugins.videoplayer.VideoPlayer;
 import io.flutter.plugins.videoplayer.VideoPlayerCallbacks;
@@ -56,7 +57,8 @@ public class PlatformViewVideoPlayer extends VideoPlayer {
       @NonNull VideoPlayerCallbacks events,
       @NonNull VideoAsset asset,
       @NonNull VideoPlayerOptions options) {
-    return new PlatformViewVideoPlayer(
+    final OnDemandLoadControl[] policy = new OnDemandLoadControl[1];
+    PlatformViewVideoPlayer player = new PlatformViewVideoPlayer(
         events,
         asset.getMediaItem(),
         options,
@@ -89,7 +91,8 @@ public class PlatformViewVideoPlayer extends VideoPlayer {
               loadControlBuilder.setBackBuffer(backBufferInt, /* retainBackBufferFromKeyframe= */ true);
             }
           }
-          builder.setLoadControl(loadControlBuilder.build());
+          policy[0] = new OnDemandLoadControl(loadControlBuilder.build());
+          builder.setLoadControl(policy[0]);
           androidx.media3.exoplayer.trackselection.DefaultTrackSelector trackSelector =
               new androidx.media3.exoplayer.trackselection.DefaultTrackSelector(context);
           // Root cause of the multiview/mini-player audio bleed-through
@@ -185,6 +188,8 @@ public class PlatformViewVideoPlayer extends VideoPlayer {
               .setRenderersFactory(renderersFactory);
           return builder.build();
         });
+    player.setOnDemandLoadControl(policy[0]);
+    return player;
   }
 
   @NonNull

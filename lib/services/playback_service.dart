@@ -24,6 +24,7 @@ import 'archive_ready_watch.dart';
 import 'display_match.dart';
 import 'archive_service.dart';
 import 'watch_tracker.dart';
+import 'vod_buffering.dart';
 import '../l10n/l10n.dart';
 
 /// Owns the single, app-wide [VideoPlayerHdrController] for whatever channel
@@ -557,6 +558,9 @@ class PlaybackService extends ChangeNotifier {
     initFuture = newController
         .initialize(viewType: _viewTypeFor(newController))
         .then((_) async {
+      if (controller != newController) return;
+      await VodBuffering.configure(newController, channel);
+      if (controller != newController) return;
       if (savedPositionMs > 0) {
         var seekMs = savedPositionMs;
         // A Trakt/Simkl resume point saved as a fraction (length unknown
@@ -1157,6 +1161,7 @@ class PlaybackService extends ChangeNotifier {
             retryController.initialize(viewType: _viewTypeFor(retryController));
         initFuture = future;
         await future;
+        await VodBuffering.configure(retryController, channel);
         // Initialising took real time, and the viewer may have moved on
         // during it — handing them a channel they've already left would
         // be worse than the failure this is recovering from. Dispose the

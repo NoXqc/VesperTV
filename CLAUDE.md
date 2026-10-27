@@ -185,6 +185,14 @@ error screen. User video: guide preview flashing after Back from full screen unt
 Added in 1.0.34: **`BufferBudget.java`** — on devices under 2.5 GB RAM (or `isLowRamDevice`),
 `setTargetBufferBytes` 64 MB in `PlatformViewVideoPlayer` and 32 MB in `TextureVideoPlayer` (the
 time limits alone let a 4K remux fill ~140 MB of Java heap; the Fire Stick ran out of memory).
+Test +476 (cdx, 2026-10-27): **`OnDemandLoadControl.java`** wraps the main
+player's existing load control. Dart explicitly enables it for non-transient
+movies/episodes (`VodBuffering`, `Channel.isLive`); post-seek reserve5s,
+depletion/rebuffer reserve10s, unchanged byte-budget escape/min/max/back buffer.
+Live and texture policies are unchanged. **`VodPlaybackTrace.java`** adds bounded
+credential-free state/buffer/audio-underrun telemetry for5min after configure/seek.
+The owner's +475 stutter recovered without a restart; buffer starvation versus
+audio stalls remains unconfirmed. See `dev-notes/vod-seek-buffering.md`.
 Unreleased: **`AudioPassthrough.java`** (MethodChannel `vespertv/audio`, `setPassthrough`) — opt-in
 HDMI passthrough: `PlatformViewVideoPlayer.buildAudioSink` gives `DefaultAudioSink.Builder(context)`
 when on (AC3/E-AC3 Atmos/DTS to the receiver, app volume no longer applies); otherwise the
@@ -354,6 +362,14 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **cdx 2026-10-27 — post-seek stutter candidate:** `codex/vod-seek-buffering`
+  adds explicit shared IPTV/Media Hub VOD buffering reserves and bounded native
+  diagnostics after comparing LOG-EW8Q8X with recovered LOG-QHP444. No decoder,
+  audio-track selection or live timing changes. Production-signed test +476 is
+  installed on Formuler (version/hash verified); actual seek improvement pending
+  owner testing. Analyze16,760Flutter/87targeted native tests passed.
+  See `dev-notes/vod-seek-buffering.md` and HANDOFF.md.
+
 - **cdx 2026-10-27 — Media Hub source cards:** `codex/mediahub-source-grid`
   redesigns the shared Settings/Hub Sources page with add/connectors at the top,
   playback-source and catalog/list grids, role labels and per-card controls.
