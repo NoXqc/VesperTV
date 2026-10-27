@@ -17,6 +17,7 @@ import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../services/storage_service.dart';
 import '../utils/tv_theme.dart';
+import '../utils/title_search.dart';
 import '../widgets/poster_card.dart';
 import '../widgets/settings_scaffold.dart';
 import '../widgets/tv_text_field_gate.dart';
@@ -618,6 +619,7 @@ class _SearchScreenState extends State<SearchScreen> {
   /// being looked for.
   List<_ResultRow> _buildRows(PlaylistManager playlist, String q) {
     final rows = <_ResultRow>[];
+    final search = TitleSearch(q);
     // With two or more playlists on, every card names its playlist.
     final enabled = playlist.profiles.where((p) => p.enabled).toList();
     _sourceNames =
@@ -629,7 +631,7 @@ class _SearchScreenState extends State<SearchScreen> {
     // channel without ever un-hiding its group.
     final channelMatches = playlist
         .visibleChannels(category: 'tv')
-        .where((c) => c.name.toLowerCase().contains(q))
+        .where((c) => search.matches(c.name))
         .toList();
     if (channelMatches.isNotEmpty) {
       rows.add(_buildChannelRow(rows.length, tr('Live TV'), channelMatches));
@@ -641,7 +643,7 @@ class _SearchScreenState extends State<SearchScreen> {
         ? _dbVodResults
         : playlist
             .visibleChannels(category: 'vod')
-            .where((c) => c.name.toLowerCase().contains(q))
+            .where((c) => search.matches(c.name))
             .toList();
     if (!prefs.hideMovies && vodMatches != null && vodMatches.isNotEmpty) {
       rows.add(_buildChannelRow(rows.length, tr('Movies'), vodMatches,
@@ -658,7 +660,7 @@ class _SearchScreenState extends State<SearchScreen> {
     } else {
       final seriesMatches = playlist
           .visibleChannels(category: 'series')
-          .where((c) => c.name.toLowerCase().contains(q))
+          .where((c) => search.matches(c.name))
           .toList();
       if (seriesMatches.isNotEmpty) {
         rows.add(_buildChannelRow(rows.length, tr('TV Shows'), seriesMatches,

@@ -120,10 +120,13 @@ class ArchiveApiService {
     final catalogs = <ArchiveCatalog>[];
     for (final c in (j['catalogs'] as List? ?? const [])) {
       if (c is! Map) continue;
-      final needsExtra = (c['extra'] as List? ?? const [])
-          .any((e) => e is Map && e['isRequired'] == true);
-      final legacyRequired = (c['extraRequired'] as List? ?? const []);
-      if (needsExtra || legacyRequired.isNotEmpty) continue;
+      final required = {
+        for (final e in (c['extra'] as List? ?? const []))
+          if (e is Map && e['isRequired'] == true) e['name'],
+        ...(c['extraRequired'] as List? ?? const []),
+      };
+      // Search-only catalogs are valid search endpoints, not browse rows.
+      if (required.any((name) => name != 'search')) continue;
       final cat = ArchiveCatalog.fromJson(Map<String, dynamic>.from(c));
       if (cat != null) catalogs.add(cat);
     }

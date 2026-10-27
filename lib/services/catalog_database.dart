@@ -5,6 +5,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../models/channel.dart';
 import '../models/xtream_series.dart';
+import '../utils/title_search.dart';
 
 /// Local database of VOD/series catalog items, keyed by category — the
 /// on-disk replacement for what used to be one JSON file per category.
@@ -28,6 +29,8 @@ import '../models/xtream_series.dart';
 /// below is scoped by `(category_name, playlist_id)` together, not name
 /// alone.
 class CatalogDatabase {
+  CatalogDatabase({String? databasePath}) : _databasePath = databasePath;
+  final String? _databasePath;
   Database? _db;
 
   /// Live favorite lookups, set once by `PlaylistManager` at construction —
@@ -50,8 +53,9 @@ class CatalogDatabase {
   Future<Database> get _database async {
     final existing = _db;
     if (existing != null) return existing;
-    final dir = await getApplicationDocumentsDirectory();
-    final path = p.join(dir.path, 'nox_catalog.db');
+    final path = _databasePath ??
+        p.join(
+            (await getApplicationDocumentsDirectory()).path, 'nox_catalog.db');
     try {
       _db = await _open(path);
     } catch (e) {
@@ -70,7 +74,7 @@ class CatalogDatabase {
   Future<Database> _open(String path) async {
     final db = await openDatabase(
       path,
-      version: 8,
+      version: 9,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE vod_channels (
@@ -78,6 +82,7 @@ class CatalogDatabase {
             playlist_id TEXT NOT NULL,
             category_name TEXT NOT NULL,
             name TEXT NOT NULL,
+            search_name TEXT NOT NULL DEFAULT '',
             url TEXT NOT NULL,
             logo_url TEXT,
             subtitle_url TEXT,
@@ -107,6 +112,7 @@ class CatalogDatabase {
             playlist_id TEXT NOT NULL,
             category_name TEXT NOT NULL,
             name TEXT NOT NULL,
+            search_name TEXT NOT NULL DEFAULT '',
             cover_url TEXT,
             is_favorite INTEGER NOT NULL DEFAULT 0,
             rating TEXT,
@@ -239,6 +245,29 @@ class CatalogDatabase {
           await _addColumnIfMissing(
               db, 'series_items', 'provider_backdrop_url', 'TEXT');
         }
+        if (oldVersion < 9) {
+          // Preserve the full cache and backfill in bounded batches, never
+          // deserialize a provider's entire catalog into memory at startup.
+          for (final table in ['vod_channels', 'series_items']) {
+            await _addColumnIfMissing(
+                db, table, 'search_name', "TEXT NOT NULL DEFAULT ''");
+            var after = 0;
+            while (true) {
+              final rows = await db.rawQuery(
+                  'SELECT rowid AS cursor_id, id, name FROM $table WHERE rowid > ? ORDER BY rowid LIMIT 500',
+                  [after]);
+              if (rows.isEmpty) break;
+              final batch = db.batch();
+              for (final row in rows) {
+                batch.update(table,
+                    {'search_name': TitleSearch.key(row['name'] as String)},
+                    where: 'id = ?', whereArgs: [row['id']]);
+              }
+              await batch.commit(noResult: true);
+              after = rows.last['cursor_id'] as int;
+            }
+          }
+        }
       },
     );
     return db;
@@ -260,6 +289,7 @@ class CatalogDatabase {
         'playlist_id': c.playlistId,
         'category_name': categoryName,
         'name': c.name,
+        'search_name': TitleSearch.key(c.name),
         'url': c.url,
         'logo_url': c.logoUrl,
         'subtitle_url': c.subtitleUrl,
@@ -321,6 +351,7 @@ class CatalogDatabase {
         'playlist_id': s.playlistId,
         'category_name': categoryName,
         'name': s.name,
+        'search_name': TitleSearch.key(s.name),
         'cover_url': s.coverUrl,
         'is_favorite': s.isFavorite ? 1 : 0,
         'rating': s.rating,
@@ -420,23 +451,24 @@ class CatalogDatabase {
   /// Filtered in SQL, not by pulling every row into Dart and scanning
   /// there — this catalog can be 100k+ items, and `LIKE` lets SQLite do
   /// that scan natively instead of marshaling the whole table across the
-  /// platform channel on every keystroke. `LIKE` is case-insensitive for
-  /// plain ASCII letters (not for accented characters — sqflite doesn't
-  /// bundle ICU — a known, minor gap versus the old Dart-side
-  /// `toLowerCase()` scan, accepted for the much better scalability).
+  /// platform channel on every keystroke. Stored `search_name` keys share
+  /// TitleSearch's Unicode/case/accent and separator folding. Every query
+  /// word must appear; user punctuation cannot become SQL wildcards.
   ///
   /// [playlistIds] restricts results to those playlists — the caller
   /// passes only the currently-*enabled* ones, so a disabled playlist's
   /// stale cached rows don't leak into search results.
   Future<List<Channel>> searchVod(String query, List<String> playlistIds,
       {int limit = 200}) async {
-    if (playlistIds.isEmpty) return [];
+    final search = TitleSearch(query);
+    if (playlistIds.isEmpty || search.isEmpty) return [];
     final db = await _database;
     final placeholders = List.filled(playlistIds.length, '?').join(', ');
     final rows = await db.query(
       'vod_channels',
-      where: 'name LIKE ? AND playlist_id IN ($placeholders)',
-      whereArgs: ['%$query%', ...playlistIds],
+      where:
+          '${search.terms.map((_) => 'search_name LIKE ?').join(' AND ')} AND playlist_id IN ($placeholders)',
+      whereArgs: [...search.terms.map((term) => '%$term%'), ...playlistIds],
       limit: limit,
     );
     return rows.map(_rowToChannel).toList();
@@ -530,13 +562,15 @@ class CatalogDatabase {
   Future<List<XtreamSeries>> searchSeries(
       String query, List<String> playlistIds,
       {int limit = 200}) async {
-    if (playlistIds.isEmpty) return [];
+    final search = TitleSearch(query);
+    if (playlistIds.isEmpty || search.isEmpty) return [];
     final db = await _database;
     final placeholders = List.filled(playlistIds.length, '?').join(', ');
     final rows = await db.query(
       'series_items',
-      where: 'name LIKE ? AND playlist_id IN ($placeholders)',
-      whereArgs: ['%$query%', ...playlistIds],
+      where:
+          '${search.terms.map((_) => 'search_name LIKE ?').join(' AND ')} AND playlist_id IN ($placeholders)',
+      whereArgs: [...search.terms.map((term) => '%$term%'), ...playlistIds],
       limit: limit,
     );
     return rows.map(_rowToSeries).toList();
@@ -714,5 +748,10 @@ class CatalogDatabase {
     final db = await _database;
     await db.delete('vod_channels');
     await db.delete('series_items');
+  }
+
+  Future<void> close() async {
+    await _db?.close();
+    _db = null;
   }
 }

@@ -362,6 +362,14 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **cdx 2026-10-27 — broader title search:** `codex/broader-title-search`
+  shares Unicode/accent/separator matching across global M3U/live, Xtream's full
+  SQLite cache (schema9, bounded backfill) and Media Hub. Hub preserves provider
+  aliases, merges bounded spelling queries and supports search-only catalogs;
+  old saved manifests upgrade without re-adding. Production-signed test+477 is
+  installed on Formuler (version/hash verified); analyze16,774Flutter tests pass.
+  Device search acceptance pending. See `dev-notes/broader-title-search.md`.
+
 - **cdx 2026-10-27 — post-seek stutter candidate:** `codex/vod-seek-buffering`
   adds explicit shared IPTV/Media Hub VOD buffering reserves and bounded native
   diagnostics after comparing LOG-EW8Q8X with recovered LOG-QHP444. No decoder,

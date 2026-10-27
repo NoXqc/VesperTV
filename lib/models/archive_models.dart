@@ -38,8 +38,9 @@ enum ArchiveType {
 
 /// One catalog a source's manifest lists, e.g. `{type: movie, id: pd_noir,
 /// name: Film Noir}`. Only catalogs that need no `extra` argument (search
-/// or genre are optional or absent) are kept — those are the ones that can
-/// be shown as a plain row. An optional genre is the Extras genre filter.
+/// or genre are optional or absent) can be shown as plain rows. Catalogs
+/// requiring only search are kept for searching, with [searchOnly] true.
+/// An optional genre is the Extras genre filter.
 class ArchiveCatalog {
   const ArchiveCatalog({
     required this.type,
@@ -47,6 +48,7 @@ class ArchiveCatalog {
     required this.name,
     this.extra = const {},
     this.searchable = false,
+    this.searchOnly = false,
     this.genres = const [],
     this.wireType,
   });
@@ -66,8 +68,11 @@ class ArchiveCatalog {
   /// the provider's "New" row (its `year` catalog requires a year).
   final Map<String, String> extra;
 
-  /// The catalog takes the schema's optional `search` extra.
+  /// The catalog accepts the schema's `search` extra.
   final bool searchable;
+
+  /// Requires a search term; never request it as an unfiltered browse row.
+  final bool searchOnly;
 
   /// The values its optional `genre` extra offers (the manifest's
   /// `options`), minus pure years: what the Extras genre filter can ask
@@ -85,6 +90,7 @@ class ArchiveCatalog {
               name: name,
               extra: {...extra, 'genre': genre},
               searchable: searchable,
+              searchOnly: searchOnly,
               genres: genres,
               wireType: wireType,
             );
@@ -102,6 +108,7 @@ class ArchiveCatalog {
         'name': name,
         if (extra.isNotEmpty) 'fixedExtra': extra,
         if (searchable) 'searchable': true,
+        if (searchOnly) 'searchOnly': true,
         if (genres.isNotEmpty) 'genres': genres,
       };
 
@@ -130,6 +137,10 @@ class ArchiveCatalog {
       searchable: j['searchable'] == true ||
           extras.any((e) => e is Map && e['name'] == 'search') ||
           (j['extraSupported'] as List? ?? const []).contains('search'),
+      searchOnly: j['searchOnly'] == true ||
+          extras.any((e) =>
+              e is Map && e['name'] == 'search' && e['isRequired'] == true) ||
+          (j['extraRequired'] as List? ?? const []).contains('search'),
       genres: [
         for (final g in {for (final o in genreOptions) '$o'.trim()})
           if (g.isNotEmpty && !RegExp(r'^\d+$').hasMatch(g)) g,
@@ -335,6 +346,7 @@ class ArchiveSource {
     this.otherChoice,
     this.listOnly = false,
     this.imdbResources = const {},
+    this.searchCatalogsChecked = true,
   });
 
   final String manifestUrl;
@@ -342,6 +354,9 @@ class ArchiveSource {
   final String description;
   final String? logoUrl;
   final List<ArchiveCatalog> catalogs;
+
+  /// Older saved manifests omitted search-only catalogs; recheck them once.
+  final bool searchCatalogsChecked;
 
   /// Set for a stream-only source: where its [catalogs] and metas are
   /// fetched from ([ArchiveCatalogProvider.baseUrl]). Null when the source
@@ -439,6 +454,7 @@ class ArchiveSource {
         otherChoice: otherChoice ?? this.otherChoice,
         listOnly: listOnly,
         imdbResources: imdbResources,
+        searchCatalogsChecked: searchCatalogsChecked,
       );
 
   Map<String, dynamic> toJson() => {
@@ -454,6 +470,7 @@ class ArchiveSource {
         if (otherChoice != null) 'other': otherChoice,
         if (listOnly) 'listOnly': true,
         if (imdbResources.isNotEmpty) 'imdbResources': imdbResources,
+        'searchCatalogsChecked': searchCatalogsChecked,
       };
 
   factory ArchiveSource.fromJson(Map<String, dynamic> j) {
@@ -483,6 +500,7 @@ class ArchiveSource {
       tracker: TrackerLogin.fromJson(j['tracker']),
       otherChoice: j['other'] is bool ? j['other'] as bool : null,
       listOnly: j['listOnly'] == true,
+      searchCatalogsChecked: j['searchCatalogsChecked'] == true,
       imdbResources: {
         for (final entry in (j['imdbResources'] is Map
             ? (j['imdbResources'] as Map).entries

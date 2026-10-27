@@ -98,14 +98,17 @@ void main() {
         'https://example.org/pd/manifest.json');
   });
 
-  test('manifest keeps only browsable catalogs', () async {
+  test('manifest keeps browse catalogs and search-only endpoints', () async {
     final s = await api.fetchManifest('https://example.org/pd');
     expect(s.name, 'Public Domain Classics');
     expect(s.baseUrl, base);
-    expect(s.catalogs.map((c) => c.id), ['noir', 'serials']);
+    expect(s.catalogs.map((c) => c.id), ['noir', 'serials', 'search']);
+    expect(s.catalogs.last.searchOnly, isTrue);
+    expect(s.catalogs.last.searchable, isTrue);
     // Round-trips through the stored JSON.
     final back = ArchiveSource.fromJson(s.toJson());
-    expect(back.catalogs.length, 2);
+    expect(back.catalogs.length, 3);
+    expect(back.catalogs.last.searchOnly, isTrue);
     expect(back.key, s.key);
   });
 

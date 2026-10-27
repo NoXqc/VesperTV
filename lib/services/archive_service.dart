@@ -7,6 +7,7 @@ import 'package:flutter/scheduler.dart';
 
 import '../models/archive_models.dart';
 import '../models/channel.dart';
+import '../utils/title_search.dart';
 import 'archive_api_service.dart';
 import 'archive_cache.dart';
 import 'media_server_api.dart';
@@ -263,29 +264,50 @@ class ArchiveService extends ChangeNotifier {
           !s.catalogs.any((c) => c.wireType != null)) {
         continue;
       }
-      try {
-        final fresh = await _api
-            .fetchManifest(s.manifestUrl)
-            .timeout(const Duration(seconds: 10));
-        // Settings may have changed while the network request was pending.
-        // Never resurrect a removed source or overwrite its current choices.
-        final current = sources;
-        final index = current.indexWhere((p) => p.manifestUrl == s.manifestUrl);
-        if (index < 0) continue;
-        final saved = current[index];
-        current[index] = fresh.copyWith(
-            enabled: saved.enabled, otherChoice: saved.otherChoice);
-        if (jsonEncode(current[index].toJson()) != jsonEncode(saved.toJson())) {
-          await _saveSources(current);
-        }
-        debugPrint('ArchiveManifest: source=${s.key} '
-            'catalogs=${fresh.catalogs.length} '
-            'custom=${fresh.catalogs.where((c) => c.wireType != null).length} '
-            'genres=${fresh.catalogs.expand((c) => c.genres).toSet().length} checked');
-      } catch (e) {
-        debugPrint('ArchiveManifest: source=${s.key} '
-            'failed=${e.runtimeType}; keeping saved catalogs');
+      await _refreshManifest(s);
+    }
+  }
+
+  Future<void> _refreshManifest(ArchiveSource s) async {
+    try {
+      final fresh = await _api
+          .fetchManifest(s.manifestUrl)
+          .timeout(const Duration(seconds: 10));
+      // Settings may have changed while the network request was pending.
+      // Never resurrect a removed source or overwrite its current choices.
+      final current = sources;
+      final index = current.indexWhere((p) => p.manifestUrl == s.manifestUrl);
+      if (index < 0) return;
+      final saved = current[index];
+      current[index] = fresh.copyWith(
+          enabled: saved.enabled, otherChoice: saved.otherChoice);
+      if (jsonEncode(current[index].toJson()) != jsonEncode(saved.toJson())) {
+        await _saveSources(current);
       }
+      debugPrint('ArchiveManifest: source=${s.key} '
+          'catalogs=${fresh.catalogs.length} '
+          'custom=${fresh.catalogs.where((c) => c.wireType != null).length} '
+          'genres=${fresh.catalogs.expand((c) => c.genres).toSet().length} checked');
+    } catch (e) {
+      debugPrint('ArchiveManifest: source=${s.key} '
+          'failed=${e.runtimeType}; keeping saved catalogs');
+    }
+  }
+
+  final Map<String, Future<void>> _searchManifestChecks = {};
+
+  /// Upgrade old saved manifests without requiring removal/re-addition.
+  /// Both global search types share the request; failed sources keep working.
+  Future<void> _upgradeSearchCatalogs(bool other) async {
+    for (final s in enabledSources) {
+      if (s.searchCatalogsChecked ||
+          s.server != null ||
+          s.tracker != null ||
+          s.underOther != other ||
+          !_showCatalogs(s)) {
+        continue;
+      }
+      await _searchManifestChecks.putIfAbsent(s.key, () => _refreshManifest(s));
     }
   }
 
@@ -389,7 +411,9 @@ class ArchiveService extends ChangeNotifier {
   /// [otherGenre] filter is picked, and then alone — search follows the
   /// same split.
   List<(ArchiveSource, ArchiveCatalog)> _catalogs(ArchiveType type,
-      {bool filtered = true, bool? underOther}) {
+      {bool filtered = true,
+      bool? underOther,
+      bool includeSearchOnly = false}) {
     final other = underOther ?? _genre[type] == otherGenre;
     final genre = filtered && !other ? _genre[type] : null;
     final shown = <String>{};
@@ -397,7 +421,9 @@ class ArchiveService extends ChangeNotifier {
       for (final s in enabledSources)
         if (_showCatalogs(s))
           for (final base in s.catalogs)
-            if (base.type == type && s.underOther == other)
+            if (base.type == type &&
+                s.underOther == other &&
+                (includeSearchOnly || !base.searchOnly))
               if (genre == null ? base : base.withGenre(genre) case final c?)
                 if (!s.streamOnly ||
                     shown.add('${s.catalogBaseUrl}|${c.wire}|${c.slug}'))
@@ -429,7 +455,7 @@ class ArchiveService extends ChangeNotifier {
         if (c.type != type) continue;
         if (s.underOther) {
           other = true;
-        } else {
+        } else if (!c.searchOnly) {
           regular.addAll(c.genres);
         }
       }
@@ -470,13 +496,10 @@ class ArchiveService extends ChangeNotifier {
   /// Searches every searchable catalog of [type] (the provider's Popular
   /// for stream-only sources). The results become the first rows.
   ///
-  /// Partial words work: the server's matches and the titles already
-  /// loaded in this source's rows are both kept only when a word of the
-  /// title starts with the query, titles that start with it first (see
-  /// [rankSearch]) — "li" finds "Lioness", then "The Lincoln Lawyer". A
-  /// source without a searchable catalog is searched in its loaded rows
-  /// only. One results row per source (stream-only sources sharing the
-  /// provider count as one).
+  /// Punctuation/spacing, accents and partial words share [TitleSearch]
+  /// matching. Provider aliases are retained; non-searchable sources use
+  /// their loaded/cached rows. One results row per source (stream-only
+  /// sources sharing the provider count as one).
   Future<void> search(ArchiveType type, String query) async {
     final q = query.trim();
     if (q.isEmpty) return clearSearch(type);
@@ -501,9 +524,13 @@ class ArchiveService extends ChangeNotifier {
   /// stays behind its filter). Null [underOther] = the tab's current split.
   Future<List<ArchiveRow>> searchRows(ArchiveType type, String q,
       {bool? underOther}) async {
+    final search = TitleSearch(q);
+    if (search.isEmpty) return const [];
+    await _upgradeSearchCatalogs(underOther ?? _genre[type] == otherGenre);
     final out = <ArchiveRow>[];
     final groups = <String, List<(ArchiveSource, ArchiveCatalog)>>{};
-    for (final sc in _catalogs(type, filtered: false, underOther: underOther)) {
+    for (final sc in _catalogs(type,
+        filtered: false, underOther: underOther, includeSearchOnly: true)) {
       final s = sc.$1;
       groups
           .putIfAbsent(
@@ -512,18 +539,47 @@ class ArchiveService extends ChangeNotifier {
     }
     for (final group in groups.values) {
       final found = <ArchiveMeta>[];
+      final providerMatches = <ArchiveMeta>[];
       for (final (s, c) in group) {
         if (!c.searchable) continue;
-        try {
-          found.addAll(await _page(s, c, search: q));
-        } catch (e) {
-          debugPrint('ArchiveService: search ${s.name}/${c.id} failed: $e');
+        final variants = search.remoteQueries(q);
+        final replies = await Future.wait([
+          for (final variant in variants)
+            (() async {
+              try {
+                final items = await _page(s, c, search: variant.text);
+                return variant.broad
+                    ? items.where((m) => search.matches(m.name)).toList()
+                    : items;
+              } catch (e) {
+                debugPrint(
+                    'ArchiveService: search source=${s.key} failed=${e.runtimeType}');
+                return <ArchiveMeta>[];
+              }
+            })(),
+        ]);
+        for (var i = 0; i < replies.length; i++) {
+          found.addAll(replies[i]);
+          if (!variants[i].broad) providerMatches.addAll(replies[i]);
         }
       }
       for (final (s, c) in group) {
-        found.addAll(_items[_rowKey(s, c)] ?? const []);
+        if (c.searchOnly) continue;
+        final key = _rowKey(s, c);
+        if (!_items.containsKey(key)) {
+          try {
+            _items[key] = await _cache.read(s.key, c);
+          } catch (e) {
+            debugPrint('ArchiveService: search cache failed=${e.runtimeType}');
+          }
+        }
+        found.addAll(_items[key] ?? const []);
       }
       final items = rankSearch(q, found);
+      // Providers may match original/translated titles or aliases that aren't
+      // in the displayed name. Preserve those after the direct title matches.
+      final seen = {for (final item in items) item.id};
+      items.addAll(providerMatches.where((m) => seen.add(m.id)));
       if (items.isEmpty) continue;
       final (s, c) =
           group.firstWhere((sc) => sc.$2.searchable, orElse: () => group.first);
@@ -536,7 +592,8 @@ class ArchiveService extends ChangeNotifier {
     if (_search.remove(type) != null) _notify();
   }
 
-  bool canSearch(ArchiveType type) => _catalogs(type).isNotEmpty;
+  bool canSearch(ArchiveType type) =>
+      _catalogs(type, includeSearchOnly: true).isNotEmpty;
 
   // ---- recent searches ----------------------------------------------------
 
@@ -704,39 +761,22 @@ class ArchiveService extends ChangeNotifier {
     );
   }
 
-  /// Lower case, accents off, anything else than letters/digits = space.
-  static String _fold(String s) {
-    const from = 'àáâãäåçèéêëìíîïñòóôõöùúûüýÿœæ';
-    const to = 'aaaaaaceeeeiiiinooooouuuuyyoa';
-    final b = StringBuffer();
-    for (final ch in s.toLowerCase().split('')) {
-      final i = from.indexOf(ch);
-      b.write(i >= 0 ? to[i] : ch);
-    }
-    return b.toString().replaceAll(RegExp(r'[^a-z0-9]+'), ' ').trim();
-  }
-
-  /// [items] where [query] appears at the start of a word of the title
-  /// ("lincoln law" finds "The Lincoln Lawyer"), deduplicated:
-  /// titles starting with the query first, then the rest, each keeping the
-  /// order they came in (server relevance, then row order).
+  /// Direct title matches, ignoring separators/accents and allowing all
+  /// query words in any order. Title prefixes first, then substrings, then
+  /// separate word matches, retaining source relevance within each rank.
   static List<ArchiveMeta> rankSearch(
       String query, Iterable<ArchiveMeta> items) {
-    final q = _fold(query);
-    if (q.isEmpty) return const [];
-    final starts = <ArchiveMeta>[];
-    final words = <ArchiveMeta>[];
+    final search = TitleSearch(query);
+    if (search.isEmpty) return [];
+    final ranked = <int, List<ArchiveMeta>>{};
     final seen = <String>{};
     for (final m in items) {
-      if (!seen.add(m.id)) continue;
-      final name = _fold(m.name);
-      if (name.startsWith(q)) {
-        starts.add(m);
-      } else if (' $name'.contains(' $q')) {
-        words.add(m);
+      final rank = search.rank(m.name);
+      if (rank != null && seen.add(m.id)) {
+        ranked.putIfAbsent(rank, () => []).add(m);
       }
     }
-    return [...starts, ...words];
+    return [for (var rank = 0; rank <= 3; rank++) ...?ranked[rank]];
   }
 
   /// Rows of [type] from every enabled source, in source then manifest

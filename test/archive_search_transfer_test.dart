@@ -27,9 +27,11 @@ void main() {
       'Line of Fire',
       'The Lincoln Lawyer',
       'Friday Night Lights',
+      'Élite', // broader substring matching, after word-prefix matches
     ]);
     // Accents and case don't matter; several words match in place.
-    expect(ArchiveService.rankSearch('ELI', found).map((m) => m.id), ['5']);
+    expect(
+        ArchiveService.rankSearch('ELI', found).map((m) => m.id), ['5', '1']);
     expect(ArchiveService.rankSearch('lincoln law', found).map((m) => m.id),
         ['1']);
     expect(ArchiveService.rankSearch('  ', found), isEmpty);
