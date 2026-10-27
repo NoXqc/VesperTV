@@ -2011,4 +2011,5 @@ const Map<String, String> kEs = {
   "Unknown / not reported": "Desconocido / no indicado",
   "{format} (stream)": "{format} (flujo)",
   "{format} (decoder)": "{format} (decodificador)",
+  "File size": "Tamaño del archivo",
 };

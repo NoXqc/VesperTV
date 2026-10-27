@@ -353,6 +353,11 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   independent of cursor focus. Matches refreshed links by unique same-provider file
   identity; ambiguous/missing matches retain the known playing entry. No probes,
   saved-choice changes, new strings or playback restart on selecting Current.
+- **cdx, 2026-10-27: IPTV file size** (`codex/iptv-file-size`): Data pool shows
+  file totals from existing progressive-player HTTP headers, with Media Hub metadata
+  fallback; never a manifest/chunk size or downloaded-byte estimate. Owner authorised
+  the stats-only native exception; no additional requests or decoder/surface changes.
+  See `dev-notes/iptv-file-size.md` and root HANDOFF.md for checks.
 
 - **Released 1.0.42 (beta), +463, 2026-10-27** (latest; tag on `1651df1`, Discord announced).
   Includes catch-up (Android), Refined finish + translucent columns, Aqua, reminders on all game

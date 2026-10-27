@@ -958,6 +958,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                           child: DataPoolCard(
                                             controller: controller,
                                             since: playback.playingSince,
+                                            showFileSize: !channel.isLive &&
+                                                !channel.transientPlayback,
+                                            fileSizeBytes: channel
+                                                .mediaFileInfo?.sizeBytes,
                                           ),
                                         ),
                                       ),
