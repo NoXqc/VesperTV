@@ -223,6 +223,11 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
   }
 
   @NonNull
+  /** Catch-up playback: see ExoPlayerEventListener.setFiniteMode. */
+  void setFiniteMode(boolean on) {
+    if (exoPlayerEventListener != null) exoPlayerEventListener.setFiniteMode(on);
+  }
+
   public ExoPlayer getExoPlayer() {
     return exoPlayer;
   }

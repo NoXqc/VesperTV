@@ -37,7 +37,8 @@ final class StatsBridge implements MethodChannel.MethodCallHandler {
 
   @Override
   public void onMethodCall(@NonNull MethodCall call, @NonNull MethodChannel.Result result) {
-    if (!"getStats".equals(call.method)) {
+    boolean finite = "setFiniteMode".equals(call.method);
+    if (!finite && !"getStats".equals(call.method)) {
       result.notImplemented();
       return;
     }
@@ -45,6 +46,11 @@ final class StatsBridge implements MethodChannel.MethodCallHandler {
     VideoPlayer player = idArg == null ? null : players.get(idArg.longValue());
     if (player == null) {
       result.error("no_player", "No player " + idArg, null);
+      return;
+    }
+    if (finite) {
+      player.setFiniteMode(Boolean.TRUE.equals(call.argument("on")));
+      result.success(null);
       return;
     }
     Map<String, Object> m = new HashMap<>();

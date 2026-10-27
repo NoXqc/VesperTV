@@ -4,10 +4,17 @@
 
 package io.flutter.plugins.videoplayer;
 
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import android.os.Looper;
+import androidx.media3.common.C;
 import androidx.media3.common.Format;
+import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.media3.common.VideoSize;
 import androidx.media3.exoplayer.ExoPlayer;
@@ -19,6 +26,7 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 import org.robolectric.RobolectricTestRunner;
+import org.robolectric.Shadows;
 
 /**
  * Unit tests for {@link TextureExoPlayerEventListener}.
@@ -180,5 +188,56 @@ public class TextureExoPlayerEventListenerTest {
 
     eventListener.onPlaybackStateChanged(Player.STATE_READY);
     verify(mockCallbacks).onInitialized(1, 400, 10L, 0);
+  }
+
+  // Catch-up (finite mode): a finished programme reports ENDED instead of the
+  // live reconnect that would replay it forever on texture players.
+  @Test
+  public void finiteModeEndedIsReportedNotReconnected() {
+    TextureExoPlayerEventListener eventListener =
+        new TextureExoPlayerEventListener(mockExoPlayer, mockCallbacks, true);
+    eventListener.setFiniteMode(true);
+    when(mockExoPlayer.getDuration()).thenReturn(C.TIME_UNSET);
+
+    eventListener.onPlaybackStateChanged(Player.STATE_ENDED);
+
+    verify(mockCallbacks).onPlaybackStateChanged(PlatformPlaybackState.ENDED);
+    verify(mockExoPlayer, never()).prepare();
+  }
+
+  // A network error in a seekable catch-up programme resumes where it
+  // failed, not at the start (seekToDefaultPosition).
+  @Test
+  public void finiteModeErrorResumesAtPosition() {
+    TextureExoPlayerEventListener eventListener =
+        new TextureExoPlayerEventListener(mockExoPlayer, mockCallbacks, true);
+    eventListener.setFiniteMode(true);
+    when(mockExoPlayer.getCurrentPosition()).thenReturn(754_000L);
+    when(mockExoPlayer.isCurrentMediaItemSeekable()).thenReturn(true);
+
+    eventListener.onPlayerError(
+        new PlaybackException("net", null, PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED));
+    Shadows.shadowOf(Looper.getMainLooper()).idle();
+    Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(5));
+
+    verify(mockExoPlayer).seekTo(754_000L);
+    verify(mockExoPlayer, never()).seekToDefaultPosition();
+    verify(mockExoPlayer).prepare();
+  }
+
+  // Not seekable (or out of retries): Dart gets the error and re-requests.
+  @Test
+  public void finiteModeUnseekableErrorGoesToDart() {
+    TextureExoPlayerEventListener eventListener =
+        new TextureExoPlayerEventListener(mockExoPlayer, mockCallbacks, true);
+    eventListener.setFiniteMode(true);
+    when(mockExoPlayer.isCurrentMediaItemSeekable()).thenReturn(false);
+
+    eventListener.onPlayerError(
+        new PlaybackException("net", null, PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED));
+    Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(5));
+
+    verify(mockCallbacks).onError(eq("VideoError"), anyString(), isNull());
+    verify(mockExoPlayer, never()).prepare();
   }
 }

@@ -76,6 +76,25 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
     restartReasons.clear();
   }
   private boolean isWaitingForValidDuration = false;
+
+  // Catch-up (a finite programme from the provider's archive, set from Dart
+  // over vespertv/stats setFiniteMode). Every live recovery is wrong for it:
+  // seekToDefaultPosition restarts the programme from 0, and reconnecting on
+  // ENDED replays it forever (texture players). In finite mode a network
+  // error resumes at the position it failed at when the source is seekable,
+  // and ENDED / other errors go to Dart, which continues the programme.
+  private boolean finiteMode = false;
+  private long resumeAtMs = C.TIME_UNSET;
+
+  public void setFiniteMode(boolean on) {
+    finiteMode = on;
+    resumeAtMs = C.TIME_UNSET;
+    mainHandler.removeCallbacks(frozenVideoCheck);
+    if (!on && recoverFrozenVideo()) {
+      mainHandler.postDelayed(frozenVideoCheck, FROZEN_CHECK_INTERVAL_MS);
+    }
+  }
+
   private final Handler mainHandler = new Handler(Looper.getMainLooper());
   private final Runnable initializationFallback =
       () -> {
@@ -236,7 +255,11 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
     this.events = events;
     this.recover =
         () -> {
-          exoPlayer.seekToDefaultPosition();
+          if (finiteMode && resumeAtMs != C.TIME_UNSET) {
+            exoPlayer.seekTo(resumeAtMs);
+          } else {
+            exoPlayer.seekToDefaultPosition();
+          }
           exoPlayer.prepare();
         };
     if (recoverFrozenVideo()) {
@@ -260,6 +283,9 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
             frames = counters.renderedOutputBufferCount;
           }
           long[] now = {frames, exoPlayer.getCurrentPosition()};
+          if (finiteMode) {
+            return;
+          }
           if (olderSample != null
               && exoPlayer.isPlaying()
               && frames >= 0
@@ -374,7 +400,8 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
         maybeSendInitialized();
         break;
       case Player.STATE_ENDED:
-        if (reconnectWhenLiveEnds()
+        if (!finiteMode
+            && reconnectWhenLiveEnds()
             && (exoPlayer.isCurrentMediaItemLive() || exoPlayer.getDuration() == C.TIME_UNSET)
             && allowRetry()) {
           if (restartLooping("LIVE_STREAM_ENDED")) {
@@ -404,6 +431,17 @@ public abstract class ExoPlayerEventListener implements Player.Listener {
 
   @Override
   public void onPlayerError(@NonNull final PlaybackException error) {
+    if (finiteMode) {
+      long at = exoPlayer.getCurrentPosition();
+      if (!isGoneError(error) && exoPlayer.isCurrentMediaItemSeekable() && allowRetry()) {
+        Log.w(TAG, "catch-up: resuming at " + at + " ms after " + error.getErrorCodeName());
+        resumeAtMs = at;
+        scheduleRecovery();
+      } else {
+        events.onError("VideoError", "Video player had error " + error + describeCause(error), null);
+      }
+      return;
+    }
     if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) {
       if (restartLooping(error.getErrorCodeName())) {
         return;
