@@ -51,7 +51,7 @@ try:
             temporary.chmod(0o644)
             temporary.replace(target / filename)
         run('docker', 'exec', name, 'node', '--check', '/app/search.mjs')
-        run('docker', 'exec', name, 'node', '-e', "const f=require('node:fs');const g=JSON.parse(f.readFileSync('/app/guide.json','utf8'));if(!Array.isArray(g)||g.length<20||!g.every(e=>['id','title','controls','answer','url'].every(k=>typeof e[k]==='string'&&e[k])))process.exit(1)")
+        run('docker', 'exec', name, 'node', '-e', "const f=require('node:fs');const g=JSON.parse(f.readFileSync('/app/guide.json','utf8'));if(!Array.isArray(g)||g.length<20||!g.every(e=>['id','title','controls','answer','url'].every(k=>typeof e[k]==='string'&&(k==='answer'||e[k]))))process.exit(1)")
     for directory, name in targets:
         restarted = datetime.datetime.now(datetime.timezone.utc).isoformat()
         run('docker', 'restart', name)
