@@ -98,7 +98,11 @@ class _MultiviewCell {
 /// option, with the connection rule explained in [_showTips]. All 4 cells
 /// stay allocated; switching to 2 disposes cells 2-3 to free their
 /// connections and decoders rather than just hiding them.
-enum _MultiviewLayout { dual, quad }
+/// [main] ("1 + 3"): one big screen (cell 0) on the left, cells 1-3
+/// stacked on the right — each a third of the height at half the big
+/// one's width, so all four stay 16:9 on a 16:9 TV (owner request,
+/// 2026-10-27).
+enum _MultiviewLayout { dual, quad, main }
 
 class _MultiviewScreenState extends State<MultiviewScreen> {
   static const _cellCount = 4;
@@ -147,12 +151,12 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
   }
 
   /// Up from a top-row screen opens the header (nothing is above it now).
-  KeyEventResult _onGridKey(FocusNode node, KeyEvent e, bool quad) {
+  KeyEventResult _onGridKey(FocusNode node, KeyEvent e, int topRow) {
     if (e is! KeyDownEvent || e.logicalKey != LogicalKeyboardKey.arrowUp) {
       return KeyEventResult.ignored;
     }
     final i = _cells.indexWhere((c) => c.focusNode.hasFocus);
-    if (i < 0 || i >= (quad ? 2 : 1)) return KeyEventResult.ignored;
+    if (i < 0 || i >= topRow) return KeyEventResult.ignored;
     _revealHeader(focus: true);
     return KeyEventResult.handled;
   }
@@ -176,10 +180,13 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     }
   }
 
+  /// 2 screens -> 4 -> 1 + 3 -> 2 (remembered).
   void _toggleLayout() {
-    final next = _layout == _MultiviewLayout.quad
-        ? _MultiviewLayout.dual
-        : _MultiviewLayout.quad;
+    final next = switch (_layout) {
+      _MultiviewLayout.dual => _MultiviewLayout.quad,
+      _MultiviewLayout.quad => _MultiviewLayout.main,
+      _MultiviewLayout.main => _MultiviewLayout.dual,
+    };
     if (next == _MultiviewLayout.dual) {
       for (var i = 2; i < _cellCount; i++) {
         final cell = _cells[i];
@@ -194,9 +201,30 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
       }
     }
     setState(() => _layout = next);
-    unawaited(context
-        .read<StorageService>()
-        .setMultiviewQuad(next == _MultiviewLayout.quad));
+    final storage = context.read<StorageService>();
+    unawaited(storage.setMultiviewQuad(next == _MultiviewLayout.quad));
+    unawaited(storage.setMultiviewMain(next == _MultiviewLayout.main));
+  }
+
+  /// 1 + 3: swaps a small screen with the big one (streams, sound and all;
+  /// nothing reconnects).
+  void _moveToMain(int index) {
+    if (index == 0) return;
+    final a = _cells[0], b = _cells[index];
+    final channel = a.channel, controller = a.controller;
+    a
+      ..channel = b.channel
+      ..controller = b.controller;
+    b
+      ..channel = channel
+      ..controller = controller;
+    if (_activeCell == index) {
+      _activeCell = 0;
+    } else if (_activeCell == 0) {
+      _activeCell = index;
+    }
+    setState(() {});
+    a.focusNode.requestFocus();
   }
 
   /// Shown on entering Multiview until the user ticks "Don't show this
@@ -270,7 +298,10 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     unawaited(WakelockPlus.enable());
     _headerScope.addListener(_onHeaderFocus);
     _hideHeaderSoon(const Duration(seconds: 4));
-    if (context.read<StorageService>().getMultiviewQuad()) {
+    final storage = context.read<StorageService>();
+    if (storage.getMultiviewMain()) {
+      _layout = _MultiviewLayout.main;
+    } else if (storage.getMultiviewQuad()) {
       _layout = _MultiviewLayout.quad;
     }
     final initial = widget.initialChannel;
@@ -451,6 +482,15 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
                   style: const TextStyle(color: Colors.white)),
               onTap: () => Navigator.of(sheetContext).pop('fullscreen'),
             ),
+            if (_layout == _MultiviewLayout.main &&
+                !_portraitDual &&
+                index != 0)
+              ListTile(
+                leading: const Icon(Icons.open_in_full, color: Colors.white),
+                title: Text(tr('Move to the big screen'),
+                    style: const TextStyle(color: Colors.white)),
+                onTap: () => Navigator.of(sheetContext).pop('main'),
+              ),
             ListTile(
               leading: const Icon(Icons.refresh, color: Colors.white),
               title: Text(tr('Reload'),
@@ -476,6 +516,8 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     switch (action) {
       case 'fullscreen':
         await _openFullscreen(index);
+      case 'main':
+        _moveToMain(index);
       case 'reload':
         await _reload(index);
       case 'swap':
@@ -538,9 +580,14 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
           .addPostFrameCallback((_) => _setPortraitDual(portrait));
     }
     final quad = _layout == _MultiviewLayout.quad && !portrait;
-    // Quad: a 2 px seam between the tiles, nearly edge to edge.
+    final main = _layout == _MultiviewLayout.main && !portrait;
+    // Quad / 1 + 3: a 2 px seam between the tiles, nearly edge to edge.
+    // In 1 + 3 the small tiles fill their slot; the big one keeps the
+    // video's shape (centred, bars above and below).
     Widget cell(int i) => Padding(
-        padding: EdgeInsets.all(quad ? 1 : 3), child: _buildCell(i, quad));
+        padding: EdgeInsets.all(quad || main ? 1 : 3),
+        child: _buildCell(i, quad || (main && i != 0),
+            widthBoost: main && i == 0 ? 1.0 : 1.15));
     final header = Container(
       padding: const EdgeInsets.fromLTRB(4, 4, 12, 16),
       decoration: BoxDecoration(
@@ -587,9 +634,20 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
               TextButton.icon(
                 focusNode: _headerFirst,
                 onPressed: _toggleLayout,
-                icon: Icon(quad ? Icons.grid_view : Icons.view_agenda,
-                    color: Colors.white, size: 18),
-                label: Text(quad ? tr('4 screens') : tr('2 screens'),
+                icon: Icon(
+                    quad
+                        ? Icons.grid_view
+                        : main
+                            ? Icons.view_quilt
+                            : Icons.view_agenda,
+                    color: Colors.white,
+                    size: 18),
+                label: Text(
+                    quad
+                        ? tr('4 screens')
+                        : main
+                            ? tr('1 + 3 screens')
+                            : tr('2 screens'),
                     style: const TextStyle(color: Colors.white)),
               ),
             const Spacer(),
@@ -623,40 +681,53 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
             // the remote looked stuck (Fire Stick, 2026-10-20).
             canRequestFocus: false,
             skipTraversal: true,
-            onKeyEvent: (node, e) => _onGridKey(node, e, quad),
+            onKeyEvent: (node, e) => _onGridKey(node, e, quad || main ? 2 : 1),
             child: Padding(
-              padding: EdgeInsets.all(quad ? 2 : 6),
-              child: quad
-                  ? Column(
+              padding: EdgeInsets.all(quad || main ? 2 : 6),
+              child: main
+                  ? Row(
                       children: [
+                        Expanded(flex: 2, child: cell(0)),
                         Expanded(
-                            child: Row(children: [
-                          Expanded(child: cell(0)),
-                          Expanded(child: cell(1)),
-                        ])),
-                        Expanded(
-                            child: Row(children: [
-                          Expanded(child: cell(2)),
-                          Expanded(child: cell(3)),
-                        ])),
+                          child: Column(children: [
+                            Expanded(child: cell(1)),
+                            Expanded(child: cell(2)),
+                            Expanded(child: cell(3)),
+                          ]),
+                        ),
                       ],
                     )
-                  // 2 screens are stacked (Column), not side-by-side —
-                  // requested directly: left/right halves squeeze each cell
-                  // into a tall near-square, distorting widescreen video.
-                  // Flex 13:7 when only one cell has a channel gives the
-                  // occupied row 65% of the height (1.3x an even split,
-                  // requested as "bigger by 30%"); both filled = even split.
-                  : Column(
-                      children: [
-                        Expanded(
-                            flex: _cells[0].channel != null ? 13 : 7,
-                            child: cell(0)),
-                        Expanded(
-                            flex: _cells[1].channel != null ? 13 : 7,
-                            child: cell(1)),
-                      ],
-                    ),
+                  : quad
+                      ? Column(
+                          children: [
+                            Expanded(
+                                child: Row(children: [
+                              Expanded(child: cell(0)),
+                              Expanded(child: cell(1)),
+                            ])),
+                            Expanded(
+                                child: Row(children: [
+                              Expanded(child: cell(2)),
+                              Expanded(child: cell(3)),
+                            ])),
+                          ],
+                        )
+                      // 2 screens are stacked (Column), not side-by-side —
+                      // requested directly: left/right halves squeeze each cell
+                      // into a tall near-square, distorting widescreen video.
+                      // Flex 13:7 when only one cell has a channel gives the
+                      // occupied row 65% of the height (1.3x an even split,
+                      // requested as "bigger by 30%"); both filled = even split.
+                      : Column(
+                          children: [
+                            Expanded(
+                                flex: _cells[0].channel != null ? 13 : 7,
+                                child: cell(0)),
+                            Expanded(
+                                flex: _cells[1].channel != null ? 13 : 7,
+                                child: cell(1)),
+                          ],
+                        ),
             ),
           ),
         ),
@@ -727,7 +798,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     );
   }
 
-  Widget _buildCell(int index, bool quad) {
+  Widget _buildCell(int index, bool fill, {double widthBoost = 1.15}) {
     final cell = _cells[index];
     final active = index == _activeCell && cell.channel != null;
     void onTap() =>
@@ -749,8 +820,8 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
         // Quad: each tile fills its whole quarter (owner, 2026-10-19: on a
         // wide phone the 16:9-ish tiles left black bars at the sides; on a
         // TV the quarters are close to 16:9 anyway).
-        widthBoost: 1.15,
-        fill: quad,
+        widthBoost: widthBoost,
+        fill: fill,
         alignment: Alignment.center,
       ),
     );

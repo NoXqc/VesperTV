@@ -238,6 +238,7 @@ class AppConstants {
   static const String keyShowClock = 'nox_show_clock';
   static const String keyMultiviewHideTips = 'vesper_multiview_hide_tips';
   static const String keyMultiviewQuad = 'vesper_multiview_quad';
+  static const String keyMultiviewMain = 'vesper_multiview_main';
   static const String keyResumeLastChannelAtStartup =
       'vesper_resume_last_channel_at_startup';
 

@@ -108,6 +108,8 @@ const Map<String, String> kIt = {
   'Full screen': "Schermo intero",
   'Windowed': "In finestra",
   '4 screens': "4 schermi",
+  '1 + 3 screens': "1 + 3 schermi",
+  'Move to the big screen': "Sposta sullo schermo grande",
   '2 screens': "2 schermi",
   '= audio — Select to switch, hold Select for options':
       "= audio — OK per cambiare, tieni premuto OK per le opzioni",

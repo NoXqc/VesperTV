@@ -132,6 +132,10 @@ const Map<String, String> kEl = {
       "Σε παράθυρο",
   "4 screens":
       "4 οθόνες",
+  "1 + 3 screens":
+      "1 + 3 οθόνες",
+  "Move to the big screen":
+      "Στη μεγάλη οθόνη",
   "2 screens":
       "2 οθόνες",
   "= audio — Select to switch, hold Select for options":

@@ -574,6 +574,13 @@ class StorageService {
   Future<void> setMultiviewQuad(bool value) =>
       _prefs.setBool(AppConstants.keyMultiviewQuad, value);
 
+  /// Multiview's "1 + 3" layout (one big screen, three small); wins over
+  /// [getMultiviewQuad] when on.
+  bool getMultiviewMain() =>
+      _prefs.getBool(AppConstants.keyMultiviewMain) ?? false;
+  Future<void> setMultiviewMain(bool value) =>
+      _prefs.setBool(AppConstants.keyMultiviewMain, value);
+
   /// Falls back to the first entry (Minimalist) when unset or when the
   /// stored id doesn't match a known palette — no migration attempted from
   /// the old single-seed-color storage, a fresh sensible default is simpler

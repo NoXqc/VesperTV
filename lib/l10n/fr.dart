@@ -107,6 +107,8 @@ const Map<String, String> kFr = {
   'Full screen': "Plein écran",
   'Windowed': "Fenêtré",
   '4 screens': "4 écrans",
+  '1 + 3 screens': "1 + 3 écrans",
+  'Move to the big screen': "Mettre sur le grand écran",
   '2 screens': "2 écrans",
   '= audio — Select to switch, hold Select for options':
       "= audio — OK pour changer, maintenir OK pour les options",
