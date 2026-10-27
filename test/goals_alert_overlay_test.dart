@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
+import 'package:nox_iptv/models/sports.dart';
 import 'package:nox_iptv/services/catalog_database.dart';
 import 'package:nox_iptv/services/game_reminders.dart';
 import 'package:nox_iptv/services/goals_alerts.dart';
@@ -14,6 +15,7 @@ import 'package:nox_iptv/services/viewer_profile_service.dart';
 import 'package:nox_iptv/screens/settings/general_settings_screen.dart';
 import 'package:nox_iptv/widgets/game_reminder_overlay.dart';
 import 'package:nox_iptv/widgets/goals_alert_overlay.dart';
+import 'package:nox_iptv/widgets/game_score_alert_menu_tile.dart';
 import 'game_reminders_test.dart' show reminderGame;
 import 'game_reminder_overlay_test.dart' show ReminderViewers;
 import 'goals_alerts_test.dart' show scoreGame;
@@ -75,7 +77,7 @@ void main() {
     await tester.pumpWidget(MultiProvider(
         providers: [
           Provider<StorageService>.value(value: storage),
-          Provider<GoalsAlerts>.value(value: goals),
+          ChangeNotifierProvider<GoalsAlerts>.value(value: goals),
           ChangeNotifierProvider<AppPreferences>.value(value: prefs),
           ChangeNotifierProvider<ViewerProfileService>.value(value: viewers),
           ChangeNotifierProvider<GameReminders>.value(value: reminders),
@@ -241,6 +243,69 @@ void main() {
     final reopened = StorageService();
     await reopened.init();
     expect(reopened.getGoalsAlert(), isTrue);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+  });
+  testWidgets(
+      'game menu enables both-side alerts with My Teams off and can cancel',
+      (tester) async {
+    await setup();
+    await storage.setGoalsAlert(false);
+    await storage.setSportsFollowedTeams([]);
+    await mount(tester,
+        page: Scaffold(body: GameScoreAlertMenuTile(game: scoreGame(time))));
+    expect(find.text('Set goals alert for this match'), findsOneWidget);
+    final before = calls;
+    await tester.tap(find.text('Set goals alert for this match'));
+    await tester.pump();
+    await tester.pump();
+    await tester.pump();
+    expect(goals.isSet(scoreGame(time)), isTrue);
+    expect(storage.getGoalsAlert(), isFalse);
+    expect(find.text('Remove goals alert for this match'), findsOneWidget);
+    expect(calls, greaterThan(before));
+    score = '1';
+    await tick(tester, 30);
+    expect(find.text('Canadiens scored!'), findsOneWidget);
+    expect(find.byKey(const ValueKey('goal-team-logo')), findsOneWidget);
+    await tester.tap(find.text('Remove goals alert for this match'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.byKey(const ValueKey('goal-alert')), findsNothing);
+    expect(goals.isSet(scoreGame(time)), isFalse);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+  });
+
+  testWidgets(
+      'selected match popup retains playback focus and clears on profile change',
+      (tester) async {
+    await setup();
+    await storage.setGoalsAlert(false);
+    await storage.setSportsFollowedTeams([]);
+    await goals.setGame(scoreGame(time), true);
+    await mount(tester);
+    expect(focus.hasFocus, isTrue);
+    score = '1';
+    await tick(tester, 30);
+    expect(find.text('Canadiens scored!'), findsOneWidget);
+    expect(focus.hasFocus, isTrue);
+    await viewers.change('other');
+    await tester.pump();
+    await tester.pump();
+    expect(find.byKey(const ValueKey('goal-alert')), findsNothing);
+    expect(goals.isSet(scoreGame(time)), isFalse);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+  });
+
+  testWidgets('ended games hide the new opt-in action', (tester) async {
+    await setup();
+    await mount(tester,
+        page: Scaffold(
+            body: GameScoreAlertMenuTile(
+                game: scoreGame(time, state: GameState.post))));
+    expect(find.text('Set goals alert for this match'), findsNothing);
     await tester.pumpWidget(const SizedBox());
     await tester.pump();
   });

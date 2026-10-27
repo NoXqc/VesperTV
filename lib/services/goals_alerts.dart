@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'dart:math' as math;
+
+import 'package:flutter/foundation.dart';
 
 import '../models/sports.dart';
 import 'sports_service.dart';
@@ -17,17 +20,29 @@ class GoalAlertNotice {
 }
 
 class _ScoreSample {
-  _ScoreSample(this.score, this.state, this.at, this.owner, this.start);
+  _ScoreSample(
+      this.score, this.state, this.at, this.owner, this.start, this.gameKey);
   final int score;
   final GameState state;
   final DateTime at;
   final String owner;
   final DateTime start;
+  final String gameKey;
 }
 
-/// Foreground, opt-in scoring changes for all My Teams. Reuses the existing
+class _MatchScoreWatch {
+  const _MatchScoreWatch(this.league, this.id, this.start);
+  final SportsLeague league;
+  final String id;
+  final DateTime start;
+  String get key => '${league.id}:$id';
+  Map<String, String> toJson() =>
+      {'league': league.id, 'id': id, 'start': start.toUtc().toIso8601String()};
+}
+
+/// Foreground, opt-in scoring changes for My Teams and selected matches. Reuses the existing
 /// cached scoreboard client; no new endpoint or per-team network request.
-class GoalsAlerts {
+class GoalsAlerts extends ChangeNotifier {
   GoalsAlerts(this.storage,
       {DateTime Function()? now,
       Future<List<SportsGame>> Function(List<SportsLeague>, DateTime)?
@@ -47,8 +62,82 @@ class GoalsAlerts {
       r'postpon|cancel|abandon|suspend|forfeit|\btbd\b',
       caseSensitive: false);
 
-  bool get enabled => storage.getGoalsAlert() && !storage.getSportsHideScores();
-  Set<String> get _followed => storage.getSportsFollowedTeams().toSet();
+  bool get enabled =>
+      !storage.getSportsHideScores() &&
+      (storage.getGoalsAlert() || _matches().isNotEmpty);
+  Set<String> get _followed => storage.getGoalsAlert()
+      ? storage.getSportsFollowedTeams().toSet()
+      : <String>{};
+
+  static String gameKey(SportsGame game) => '${game.league.id}:${game.id}';
+
+  Map<String, _MatchScoreWatch> _matches({String? viewerId}) {
+    final result = <String, _MatchScoreWatch>{};
+    try {
+      final raw =
+          jsonDecode(storage.getMatchScoreAlerts(viewerId: viewerId) ?? '[]');
+      if (raw is! List) return result;
+      for (final item in raw.take(64)) {
+        if (item is! Map ||
+            item['league'] is! String ||
+            item['id'] is! String ||
+            item['start'] is! String) {
+          continue;
+        }
+        final league = sportsLeagueById(item['league'] as String);
+        final id = item['id'] as String;
+        final start = DateTime.tryParse(item['start'] as String);
+        if (league == null ||
+            league.kind != SportsKind.team ||
+            id.isEmpty ||
+            id.length > 128 ||
+            start == null ||
+            !now().isBefore(start.add(const Duration(days: 2)))) {
+          continue;
+        }
+        final watch = _MatchScoreWatch(league, id, start);
+        result[watch.key] = watch;
+      }
+    } catch (_) {/* Ignore malformed/expired device-local subscriptions. */}
+    return result;
+  }
+
+  bool isSet(SportsGame game) => _matches().containsKey(gameKey(game));
+
+  bool canSet(SportsGame game) =>
+      game.league.kind == SportsKind.team &&
+      !game.isEventOnly &&
+      game.id.isNotEmpty &&
+      game.id.length <= 128 &&
+      game.state != GameState.post &&
+      !_notPlaying.hasMatch(game.statusText) &&
+      now().isBefore(game.start.add(const Duration(days: 2)));
+
+  Future<void> setGame(SportsGame game, bool value) async {
+    if (_disposed || (value && !canSet(game))) return;
+    final viewer = storage.getActiveViewerId();
+    final matches = _matches(viewerId: viewer);
+    final key = gameKey(game);
+    if (value) {
+      if (matches.length >= 64 && !matches.containsKey(key)) {
+        throw StateError('Too many match score subscriptions');
+      }
+      matches[key] = _MatchScoreWatch(game.league, game.id, game.start);
+    } else {
+      matches.remove(key);
+    }
+    await storage.setMatchScoreAlerts(
+        jsonEncode(matches.values.map((watch) => watch.toJson()).toList()),
+        viewerId: viewer);
+    if (_disposed) return;
+    // Discard a response begun under the old subscription, without resetting
+    // unrelated games. A new subscription starts with a silent baseline.
+    _epoch++;
+    if (viewer == storage.getActiveViewerId()) {
+      _scores.removeWhere((_, sample) => sample.gameKey == key);
+    }
+    notifyListeners();
+  }
 
   void reset() {
     _epoch++;
@@ -56,9 +145,11 @@ class GoalsAlerts {
     _scores.clear();
   }
 
+  @override
   void dispose() {
     _disposed = true;
     reset();
+    super.dispose();
   }
 
   bool isCurrent(GoalAlertNotice notice) =>
@@ -66,7 +157,8 @@ class GoalsAlerts {
       enabled &&
       _viewer == notice.viewerId &&
       storage.getActiveViewerId() == notice.viewerId &&
-      _followed.contains('${notice.game.league.id}|${notice.team.id}') &&
+      (_followed.contains('${notice.game.league.id}|${notice.team.id}') ||
+          isSet(notice.game)) &&
       now().difference(notice.observedAt) <= const Duration(seconds: 90);
 
   Future<List<GoalAlertNotice>> poll() async {
@@ -81,8 +173,9 @@ class GoalsAlerts {
       _viewer = viewer;
     }
     final followed = _followed;
+    final matches = _matches();
     _scores.removeWhere((_, s) =>
-        !followed.contains(s.owner) ||
+        (!followed.contains(s.owner) && !matches.containsKey(s.gameKey)) ||
         now().difference(s.at) > const Duration(hours: 6));
     final leagues = <String, SportsLeague>{};
     for (final raw in followed) {
@@ -91,6 +184,9 @@ class GoalsAlerts {
       if (league != null && league.kind == SportsKind.team) {
         leagues[league.id] = league;
       }
+    }
+    for (final watch in matches.values) {
+      leagues[watch.league.id] = watch.league;
     }
     if (leagues.isEmpty || _busyEpoch == _epoch) return const [];
     final epoch = _epoch;
@@ -107,6 +203,17 @@ class GoalsAlerts {
           final dates = <DateTime>{today};
           // Keep an overnight live game's start day through its final update;
           // the normal day helper otherwise carries over live games only.
+          // A saved match can cross midnight even before the first poll after
+          // reopening the app. Fetch its original day as well as today's feed.
+          for (final watch in matches.values) {
+            if (watch.league.id != league.id) continue;
+            final start = watch.start.toLocal();
+            final day = DateTime(start.year, start.month, start.day);
+            if (day.isBefore(today) &&
+                today.difference(day) <= const Duration(days: 2)) {
+              dates.add(day);
+            }
+          }
           for (final sample in _scores.values) {
             if (sample.state != GameState.live ||
                 !sample.owner.startsWith('${league.id}|')) {
@@ -140,6 +247,7 @@ class GoalsAlerts {
       }
       final at = now();
       final owners = _followed;
+      final selected = _matches();
       final seen = <String>{};
       final notices = <GoalAlertNotice>[];
       for (final game in all) {
@@ -154,11 +262,14 @@ class GoalsAlerts {
         if (home == null || away == null || home < 0 || away < 0) continue;
         for (final team in [game.home, game.away]) {
           final owner = '${game.league.id}|${team.id}';
-          if (!owners.contains(owner)) continue;
+          if (!owners.contains(owner) && !selected.containsKey(gameKey(game))) {
+            continue;
+          }
           final key = '${game.league.id}:${game.id}|${team.id}';
           final score = team.id == game.home.id ? home : away;
           final previous = _scores[key];
-          _scores[key] = _ScoreSample(score, game.state, at, owner, game.start);
+          _scores[key] = _ScoreSample(
+              score, game.state, at, owner, game.start, gameKey(game));
           final eligible = game.state == GameState.live ||
               (game.state == GameState.post &&
                   previous?.state == GameState.live &&

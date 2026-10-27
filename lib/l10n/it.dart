@@ -2018,4 +2018,12 @@ const Map<String, String> kIt = {
   "{format} (stream)": "{format} (flusso)",
   "{format} (decoder)": "{format} (decoder)",
   "File size": "Dimensione del file",
+
+  // Match-specific score alerts.
+  "Set goals alert for this match": "Attiva gli avvisi gol per questa partita",
+  "Remove goals alert for this match":
+      "Rimuovi gli avvisi gol per questa partita",
+  "Notify me when either team scores (while VesperTV is open). Hide scores pauses alerts.":
+      "Avvisami quando segna una delle squadre (mentre VesperTV è aperto). Nascondere i punteggi sospende gli avvisi.",
+  "Could not save score alert.": "Impossibile salvare l’avviso del punteggio.",
 };

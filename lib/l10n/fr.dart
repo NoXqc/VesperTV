@@ -2018,4 +2018,12 @@ const Map<String, String> kFr = {
   "{format} (stream)": "{format} (flux)",
   "{format} (decoder)": "{format} (décodeur)",
   "File size": "Taille du fichier",
+
+  // Match-specific score alerts.
+  "Set goals alert for this match": "Activer les alertes de buts pour ce match",
+  "Remove goals alert for this match":
+      "Supprimer les alertes de buts pour ce match",
+  "Notify me when either team scores (while VesperTV is open). Hide scores pauses alerts.":
+      "Me prévenir quand une des deux équipes marque (pendant que VesperTV est ouvert). Masquer les scores suspend les alertes.",
+  "Could not save score alert.": "Impossible d’enregistrer l’alerte de score.",
 };

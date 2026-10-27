@@ -899,7 +899,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       providers: [
         Provider<StorageService>.value(value: _storage),
         ChangeNotifierProvider<GameReminders>.value(value: _gameReminders!),
-        Provider<GoalsAlerts>.value(value: _goalsAlerts!),
+        ChangeNotifierProvider<GoalsAlerts>.value(value: _goalsAlerts!),
         Provider<CatalogDatabase>.value(value: _catalogDb),
         ChangeNotifierProvider<AppPreferences>.value(value: _preferences),
         ChangeNotifierProvider<PlaylistManager>.value(value: _playlistManager),

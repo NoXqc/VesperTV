@@ -810,6 +810,13 @@ class StorageService {
   Future<void> setGameReminders(String json, {String? viewerId}) => _prefs
       .setString(_vk(AppConstants.keyGameReminders, viewerId: viewerId), json);
 
+  /// Match score subscriptions belong to this viewer and device, like reminders.
+  String? getMatchScoreAlerts({String? viewerId}) => _prefs
+      .getString(_vk(AppConstants.keyMatchScoreAlerts, viewerId: viewerId));
+  Future<void> setMatchScoreAlerts(String json, {String? viewerId}) =>
+      _prefs.setString(
+          _vk(AppConstants.keyMatchScoreAlerts, viewerId: viewerId), json);
+
   String? getSportsChannelLists({String? viewerId}) => _prefs
       .getString(_vk(AppConstants.keySportsChannelLists, viewerId: viewerId));
   Future<void> setSportsChannelLists(String json, {String? viewerId}) =>
@@ -1034,6 +1041,7 @@ class StorageService {
   static const _transferSkipPrefixes = [
     AppConstants.keyLastFullSyncAt,
     AppConstants.keyGameReminders,
+    AppConstants.keyMatchScoreAlerts,
   ];
 
   static bool _transferable(String key) =>
