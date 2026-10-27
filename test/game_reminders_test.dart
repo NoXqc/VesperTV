@@ -368,4 +368,108 @@ void main() {
     expect(service.poll(), isEmpty);
     service.dispose();
   });
+  for (final lead in [15, 60, 1440, 10080]) {
+    test('$lead-minute choice persists and sends advance plus kickoff once',
+        () async {
+      game = reminderGame(time.add(Duration(minutes: lead + 60)));
+      await reminders.setReminder(game, leadMinutes: lead);
+      expect(reminders.leadMinutesFor(game), lead);
+      expect(
+          reminders.nextDeadline, game.start.subtract(Duration(minutes: lead)));
+      final reopened = GameReminders(storage, now: () => time);
+      expect(reopened.leadMinutesFor(game), lead);
+      reopened.dispose();
+      time = reminders.nextDeadline!;
+      final advance = reminders.poll().single;
+      expect(advance.atStart, isFalse);
+      expect(advance.reminder.leadMinutes, lead);
+      expect(advance.validAt(time), isTrue);
+      expect(reminders.poll(), isEmpty);
+      await drain();
+      final restored = GameReminders(storage, now: () => time);
+      expect(restored.poll(), isEmpty);
+      expect(restored.nextDeadline, game.start);
+      time = game.start;
+      expect(restored.poll().single.atStart, isTrue);
+      expect(restored.poll(), isEmpty);
+      await drain();
+      restored.dispose();
+    });
+  }
+
+  test('kickoff-only schedules exactly one notification', () async {
+    await reminders.setReminder(game, leadMinutes: 0);
+    expect(reminders.nextDeadline, game.start);
+    time = game.start.subtract(const Duration(minutes: 15));
+    expect(reminders.poll(), isEmpty);
+    time = game.start;
+    expect(reminders.poll().single.atStart, isTrue);
+    expect(reminders.poll(), isEmpty);
+    await drain();
+  });
+
+  test('legacy and malformed timing values safely retain the old default', () {
+    final old =
+        GameReminder(key: 'old', home: 'A', away: 'B', start: game.start)
+            .toJson()
+          ..remove('leadMinutes');
+    expect(GameReminder.parse(old)!.leadMinutes, 15);
+    for (final value in ['60', -1, 999, 15.0, null]) {
+      expect(
+          GameReminder.parse({...old, 'leadMinutes': value})!.leadMinutes, 15);
+    }
+  });
+
+  test('editing timing invalidates queued notice and skips elapsed deadlines',
+      () async {
+    await reminders.toggle(game);
+    time = game.start.subtract(const Duration(minutes: 15));
+    final old = reminders.poll().single;
+    await reminders.setReminder(game, leadMinutes: 60);
+    expect(reminders.isCurrent(old.reminder), isFalse);
+    expect(reminders.poll(), isEmpty);
+    expect(reminders.nextDeadline, game.start);
+    await reminders.setReminder(game, leadMinutes: 60);
+    expect(reminders.poll(), isEmpty);
+    await drain();
+  });
+
+  test('rescheduled match preserves chosen time and replaces old deadline',
+      () async {
+    game = reminderGame(time.add(const Duration(days: 8)));
+    await reminders.setReminder(game, leadMinutes: 10080);
+    final moved = reminderGame(game.start.add(const Duration(days: 1)));
+    reminders.reconcile([moved]);
+    expect(reminders.leadMinutesFor(moved), 10080);
+    expect(
+        reminders.nextDeadline, moved.start.subtract(const Duration(days: 7)));
+    await drain();
+  });
+
+  test(
+      'timing override for one automatic team game survives stopping team reminders',
+      () async {
+    await storage.setSportsFollowedTeams(['nhl|mtl']);
+    await reminders
+        .setTeam(const FollowedTeam('nhl', 'mtl'), true, games: [game]);
+    await reminders.setReminder(game, leadMinutes: 60);
+    await reminders.setTeam(const FollowedTeam('nhl', 'mtl'), false);
+    expect(reminders.isSet(game), isTrue);
+    expect(reminders.leadMinutesFor(game), 60);
+  });
+
+  test(
+      'custom timing remains per viewer; invalid selections leave state intact',
+      () async {
+    await reminders.setReminder(game, leadMinutes: 60);
+    await expectLater(
+        reminders.setReminder(game, leadMinutes: 7), throwsArgumentError);
+    expect(reminders.leadMinutesFor(game), 60);
+    await storage.setActiveViewerId('kids');
+    reminders.loadViewer();
+    expect(reminders.isSet(game), isFalse);
+    await storage.setActiveViewerId('main');
+    reminders.loadViewer();
+    expect(reminders.leadMinutesFor(game), 60);
+  });
 }

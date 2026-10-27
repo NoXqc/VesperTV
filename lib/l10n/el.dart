@@ -2645,4 +2645,19 @@ const Map<String, String> kEl = {
       "Ειδοποίηση όταν σκοράρει οποιαδήποτε ομάδα (όσο το VesperTV είναι ανοιχτό). Η απόκρυψη σκορ αναστέλλει τις ειδοποιήσεις.",
   "Could not save score alert.":
       "Δεν ήταν δυνατή η αποθήκευση της ειδοποίησης σκορ.",
+  // Game reminder timing.
+  "1 hour before": "1 ώρα πριν",
+  "1 day before": "1 ημέρα πριν",
+  "1 week before": "1 εβδομάδα πριν",
+  "At game time only": "Μόνο στην έναρξη του αγώνα",
+  "15 minutes before": "15 λεπτά πριν",
+  "Reminder timing": "Χρόνος υπενθύμισης",
+  "Advance reminders also notify at game time. VesperTV must be open.":
+      "Οι πρόωρες υπενθυμίσεις ειδοποιούν και στην έναρξη του αγώνα. Το VesperTV πρέπει να είναι ανοιχτό.",
+  "This reminder time has passed": "Η ώρα αυτής της υπενθύμισης έχει περάσει",
+  "Choose when to be reminded (while VesperTV is open)":
+      "Επιλέξτε πότε θα ειδοποιηθείτε (όσο το VesperTV είναι ανοιχτό)",
+  "Starts in 1 hour": "Ξεκινά σε 1 ώρα",
+  "Starts in 1 day": "Ξεκινά σε 1 ημέρα",
+  "Starts in 1 week": "Ξεκινά σε 1 εβδομάδα",
 };

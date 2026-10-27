@@ -487,3 +487,17 @@ alerts. Shared league/day queries retain the existing two-worker limit and cache
 Following a team and selecting its match produces one notice per scoring side.
 Cancellation, profile changes and stale in-flight responses cannot leak notices.
 No new endpoint, background service, decoder changes or playback/focus changes.
+
+## Game reminder timing (Codex, 2026-10-27; unreleased)
+
+The shared game-card menu's Remind me action opens a compact right-side timing
+menu: 15 minutes (default),1hour,1day or1week before, or game-time-only.
+Every advance choice retains the kickoff reminder. Saved games keep Cancel reminder
+and gain Reminder timing to edit the lead time. Passed advance deadlines are disabled.
+
+GameReminder.leadMinutes persists per game/viewer/device. Existing saved reminders
+without it keep15minutes. Editing invalidates queued notices for the old timing;
+rescheduling preserves the selected lead and recomputes its deadline. Missed advance
+notices remain silent outside the existing1minute grace window. Popups say the chosen
+lead; startup/background behavior is unchanged (VesperTV must be open). Automatic
+team reminders still default to15minutes; a game-specific override becomes manual.

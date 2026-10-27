@@ -5,12 +5,14 @@ import '../l10n/l10n.dart';
 import '../models/sports.dart';
 import '../services/game_reminders.dart';
 import 'tv_menu_tile.dart';
+import 'game_reminder_timing_menu.dart';
 
 class GameReminderMenuTile extends StatelessWidget {
   const GameReminderMenuTile(
-      {super.key, required this.game, required this.onTap});
+      {super.key, required this.game, required this.onTap, this.onEdit});
   final SportsGame game;
   final VoidCallback onTap;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -23,10 +25,17 @@ class GameReminderMenuTile extends StatelessWidget {
               ? Icons.notifications_off_outlined
               : Icons.notifications_active_outlined,
           title: enabled ? tr('Cancel reminder') : tr('Remind me'),
-          subtitle:
-              tr('15 minutes before and at game time (while VesperTV is open)'),
+          subtitle: enabled
+              ? gameReminderLeadLabel(reminders.leadMinutesFor(game))
+              : tr('Choose when to be reminded (while VesperTV is open)'),
           onTap: onTap,
         ),
+      if (enabled && onEdit != null && reminders.canSet(game))
+        TvMenuTile(
+            icon: Icons.schedule,
+            title: tr('Reminder timing'),
+            subtitle: gameReminderLeadLabel(reminders.leadMinutesFor(game)),
+            onTap: onEdit!),
       for (final followed in reminders.followedTeams)
         if (followed.leagueId == game.league.id &&
             (followed.teamId == game.home.id ||

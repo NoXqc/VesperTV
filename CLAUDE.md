@@ -352,6 +352,10 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   hold-menu Set/Remove goals alert for this match, using the existing top-left popup.
   Both teams, independent of My Teams opt-in; per-viewer/device persistence, Hide
   scores respected, duplicates suppressed. Existing cached polling/baselines reused.
+- **cdx 2026-10-27 — reminder timing:** `codex/reminder-timing` adds a right-side
+  game reminder picker (15min/1h/1day/1week + kickoff, or kickoff only). Existing
+  reminders migrate to15min; per-game timing survives rescheduling and can be edited.
+  Passed choices disabled, stale notices discarded; team defaults remain15min.
   See dev-notes/sports-tab.md and root HANDOFF.md for verification/integration state.
 
 - **cdx, 2026-10-27: Playing source marker** (`codex/current-source-tag`): shared

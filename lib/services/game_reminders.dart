@@ -15,6 +15,7 @@ class GameReminder {
       required this.start,
       this.logoUrl,
       this.manual = true,
+      this.leadMinutes = 15,
       Set<String>? teams,
       this.earlySent = false,
       this.startSent = false})
@@ -26,16 +27,19 @@ class GameReminder {
   final DateTime start;
   String? logoUrl;
   final bool manual;
+  final int leadMinutes;
+  static const supportedLeadMinutes = [15, 60, 1440, 10080, 0];
   final Set<String> teams;
   bool earlySent;
   bool startSent;
 
-  DateTime get early => start.subtract(const Duration(minutes: 15));
+  DateTime get early => start.subtract(Duration(minutes: leadMinutes));
   DateTime get expires => start.add(const Duration(minutes: 2));
 
   Map<String, Object> toJson() => {
         'logo': logoUrl ?? '',
         'manual': manual,
+        'leadMinutes': leadMinutes,
         'teams': teams.toList(),
         'key': key,
         'home': home,
@@ -62,6 +66,10 @@ class GameReminder {
         start: start,
         logoUrl: raw['logo'] is String ? raw['logo'] as String : null,
         manual: raw['manual'] != false,
+        leadMinutes: raw['leadMinutes'] is int &&
+                supportedLeadMinutes.contains(raw['leadMinutes'])
+            ? raw['leadMinutes'] as int
+            : 15,
         teams: (raw['teams'] is List ? raw['teams'] as List : [])
             .whereType<String>()
             .toSet(),
@@ -209,7 +217,10 @@ class GameReminders extends ChangeNotifier {
   static String gameKey(SportsGame game) => '${game.league.id}:${game.id}';
   bool containsKey(String key) => _entries.containsKey(key);
   bool isCurrent(GameReminder entry) =>
-      _entries[entry.key]?.start == entry.start;
+      _entries[entry.key]?.start == entry.start &&
+      _entries[entry.key]?.leadMinutes == entry.leadMinutes;
+  int leadMinutesFor(SportsGame game) =>
+      _entries[gameKey(game)]?.leadMinutes ?? 15;
   bool isSet(SportsGame game) => containsKey(gameKey(game));
   bool canSet(SportsGame game) =>
       game.state == GameState.pre &&
@@ -311,6 +322,50 @@ class GameReminders extends ChangeNotifier {
     return old == null;
   }
 
+  /// Set or edit one game's advance time; a start-time notice is always kept.
+  Future<void> setReminder(SportsGame game, {required int leadMinutes}) async {
+    loadViewer();
+    if (!canSet(game) ||
+        !GameReminder.supportedLeadMinutes.contains(leadMinutes)) {
+      throw ArgumentError('Invalid game reminder timing');
+    }
+    final viewer = viewerId;
+    final key = gameKey(game);
+    final old = _entries[key];
+    final wasSkipped = _skipped.remove(key);
+    final unchanged =
+        old?.start == game.start.toUtc() && old?.leadMinutes == leadMinutes;
+    _entries[key] = GameReminder(
+      key: key,
+      home: game.home.shortName,
+      away: game.away.shortName,
+      start: game.start.toUtc(),
+      logoUrl: _logo(game),
+      leadMinutes: leadMinutes,
+      teams: {...?old?.teams, ..._owners(game)},
+      earlySent: leadMinutes == 0 ||
+          (unchanged
+              ? old!.earlySent
+              : !now().isBefore(
+                  game.start.subtract(Duration(minutes: leadMinutes)))),
+      startSent: old?.start == game.start.toUtc() && old!.startSent,
+    );
+    try {
+      await _save();
+    } catch (_) {
+      if (viewerId == viewer) {
+        if (old == null) {
+          _entries.remove(key);
+        } else {
+          _entries[key] = old;
+        }
+        if (wasSkipped) _skipped.add(key);
+      }
+      rethrow;
+    }
+    if (!_disposed && viewerId == viewer) notifyListeners();
+  }
+
   /// Fresh schedules already obtained by My Teams update known reminders.
   /// Automatic team schedules also refresh while the app is foregrounded.
   void reconcile(Iterable<SportsGame> games, {bool persist = true}) {
@@ -361,8 +416,10 @@ class GameReminders extends ChangeNotifier {
             logoUrl: _logo(game),
             manual: old.manual,
             teams: old.teams,
-            earlySent: !now()
-                .isBefore(game.start.subtract(const Duration(minutes: 15))));
+            leadMinutes: old.leadMinutes,
+            earlySent: old.leadMinutes == 0 ||
+                !now().isBefore(
+                    game.start.subtract(Duration(minutes: old.leadMinutes))));
         changed = true;
       }
     }
@@ -383,7 +440,9 @@ class GameReminders extends ChangeNotifier {
         changed = true;
         continue;
       }
-      if (!entry.earlySent && !time.isBefore(entry.early)) {
+      if (entry.leadMinutes > 0 &&
+          !entry.earlySent &&
+          !time.isBefore(entry.early)) {
         entry.earlySent = true;
         changed = true;
         final notice = GameReminderNotice(entry, atStart: false);
@@ -402,7 +461,7 @@ class GameReminders extends ChangeNotifier {
   DateTime? get nextDeadline {
     DateTime? next;
     for (final entry in _entries.values) {
-      final date = !entry.earlySent
+      final date = entry.leadMinutes > 0 && !entry.earlySent
           ? entry.early
           : !entry.startSent
               ? entry.start

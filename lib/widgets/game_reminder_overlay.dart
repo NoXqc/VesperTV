@@ -271,7 +271,12 @@ class _GameReminderOverlayState extends State<GameReminderOverlay>
                             child: Text(
                                 notice.atStart
                                     ? tr('Is about to start')
-                                    : tr('Starts in 15 minutes'),
+                                    : switch (notice.reminder.leadMinutes) {
+                                        60 => tr('Starts in 1 hour'),
+                                        1440 => tr('Starts in 1 day'),
+                                        10080 => tr('Starts in 1 week'),
+                                        _ => tr('Starts in 15 minutes'),
+                                      },
                                 style: TextStyle(
                                     color: accent,
                                     fontSize: 12,

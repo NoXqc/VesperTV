@@ -2,6 +2,7 @@ import '../utils/refined_finish.dart';
 import '../services/game_reminders.dart';
 import '../widgets/game_reminder_menu_tile.dart';
 import '../widgets/game_score_alert_menu_tile.dart';
+import '../widgets/game_reminder_timing_menu.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -1016,14 +1017,23 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         await play(channel, game);
       case _PickAction():
         await _pickChannel(game, play);
-      case _ReminderAction():
+      case _ReminderAction(:final edit):
         final reminders = context.read<GameReminders>();
         if (!reminders.isSet(game) && !reminders.canSet(game)) {
           _toast(tr('This game has already started.'));
           return;
         }
         try {
-          final enabled = await reminders.toggle(game);
+          final bool enabled;
+          if (reminders.isSet(game) && !edit) {
+            enabled = await reminders.toggle(game);
+          } else {
+            final lead =
+                await showGameReminderTimingMenu(context, game, reminders);
+            if (lead == null || !mounted) return;
+            await reminders.setReminder(game, leadMinutes: lead);
+            enabled = true;
+          }
           if (mounted) {
             _toast(enabled ? tr('Reminder set') : tr('Reminder cancelled'));
           }
@@ -2988,7 +2998,10 @@ class _WatchAction extends _GameAction {
 
 class _PickAction extends _GameAction {}
 
-class _ReminderAction extends _GameAction {}
+class _ReminderAction extends _GameAction {
+  _ReminderAction({this.edit = false});
+  final bool edit;
+}
 
 class _AddSourcesAction extends _GameAction {}
 
@@ -3179,6 +3192,8 @@ class _GameDialog extends StatelessWidget {
                     GameScoreAlertMenuTile(game: game),
                     GameReminderMenuTile(
                         game: game,
+                        onEdit: () =>
+                            Navigator.pop(context, _ReminderAction(edit: true)),
                         onTap: () => Navigator.pop(context, _ReminderAction())),
                     TvMenuTile(
                         icon: Icons.playlist_add,

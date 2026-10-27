@@ -2031,4 +2031,20 @@ const Map<String, String> kIt = {
   "Notify me when either team scores (while VesperTV is open). Hide scores pauses alerts.":
       "Avvisami quando segna una delle squadre (mentre VesperTV è aperto). Nascondere i punteggi sospende gli avvisi.",
   "Could not save score alert.": "Impossibile salvare l’avviso del punteggio.",
+  // Game reminder timing.
+  "1 hour before": "1 ora prima",
+  "1 day before": "1 giorno prima",
+  "1 week before": "1 settimana prima",
+  "At game time only": "Solo all’inizio della partita",
+  "15 minutes before": "15 minuti prima",
+  "Reminder timing": "Orario del promemoria",
+  "Advance reminders also notify at game time. VesperTV must be open.":
+      "I promemoria anticipati avvisano anche all’inizio della partita. VesperTV deve essere aperto.",
+  "This reminder time has passed":
+      "L’orario di questo promemoria è già passato",
+  "Choose when to be reminded (while VesperTV is open)":
+      "Scegli quando ricevere il promemoria (mentre VesperTV è aperto)",
+  "Starts in 1 hour": "Inizia tra 1 ora",
+  "Starts in 1 day": "Inizia tra 1 giorno",
+  "Starts in 1 week": "Inizia tra 1 settimana",
 };
