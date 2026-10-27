@@ -196,9 +196,13 @@ tests `test/catchup_data_test.dart`.
 **Done when:** analyze 16, all tests pass, no UI changes.
 
 ### C2 — `CatchupUrlBuilder` (pure Dart)
-**File:** `lib/services/catchup_url.dart`; tests `test/catchup_url_test.dart`.
-`String? catchupUrl(Channel ch, {required DateTime start, required Duration span, required DateTime now, Duration? serverOffset, String? xtreamServer, String? user, String? pass})`
-returns null when the channel can't be built.
+**Files:** `lib/models/catchup.dart` (**C2 creates it**: only the `CatchupKind` enum from C1 §1,
+plus a doc comment; C1 imports it), `lib/services/catchup_url.dart`, tests
+`test/catchup_url_test.dart`.
+**No dependency on `Channel`** (C1 is being written in parallel). Plain arguments only:
+`String? catchupUrl({required CatchupKind kind, required String liveUrl, String? catchupSource, String? streamId, required DateTime start, required Duration span, required DateTime now, Duration? serverOffset, String? xtreamServer, String? user, String? pass, String ext = 'm3u8'})`
+returns null when it can't be built (e.g. xc without a stream id, or without credentials and a
+liveUrl that doesn't parse as `/u/p/id`).
 - **xc** (Xtream playlist, or an M3U xc URL `scheme://host[:port]/u/p/id[.ext]`):
   - Extra named argument `String ext = 'm3u8'` (only `m3u8` or `ts`).
   - URL: `{server}/timeshift/{u}/{p}/{minutes}/{YYYY-MM-DD:HH-MM}/{streamId}.{ext}`.
