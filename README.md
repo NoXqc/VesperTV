@@ -60,6 +60,9 @@ Grab the latest release from the [Releases](../../releases) page or
 ## Features
 
 - M3U and Xtream Codes playlist support, with an XMLTV EPG guide
+- **Catch-up TV on Android**: replay earlier programmes from the Timeline guide,
+  watch from the start, pause/resume live TV and jump back to live — on channels
+  where your provider offers catch-up. [Controls and setup](https://vespertv.app/remote.html#Live%20TV)
 - Live TV, Movies, and TV Shows (series/episodes) catalogs
 - **Media Hub**: films and series from REST add-ons you add, and from your own
   Jellyfin / Emby server (sign in with address, user name and password)

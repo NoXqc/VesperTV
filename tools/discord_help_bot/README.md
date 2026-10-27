@@ -20,11 +20,27 @@ repository root:
 python tools/discord_help_bot/build_guide.py
 python tools/discord_help_bot/build_guide.py --check
 node --test tools/discord_help_bot/*.test.mjs
+python -m unittest discover -s tools/discord_help_bot -p test_update_auto.py
 ```
 
 Commit `guide.json` with the website change and redeploy the bot when answers
-change. The index currently contains 55 guide entries. Links use the website's
+change. The index currently contains 66 guide entries. Links use the website's
 existing category fragments; publishing the website is a separate step.
+
+Catch-up topics cover the Timeline guide, returning the guide to now versus
+returning playback to live, restarting a programme, pause/timeshift, seeking and
+provider/platform limits. Plain questions such as “How do I watch catch up?” or
+“Can I pause live TV?” use the same answers as `/howto`. Catchup, catch-up and
+catch up spellings are equivalent. These instructions describe Android; Windows
+catch-up is not shipped yet.
+
+For the existing automatic bot, `update-auto.py --ssh OWNER_DESTINATION` previews
+the update. After the owner's approval, add `--apply`: it backs up and replaces
+only `guide.json` and `search.mjs`, checks their syntax and the guide count, then
+restarts the automatic-help container and verifies its connection/channel access.
+Add `--include-slash` to update the existing `/howto` container too; its health
+check must report the new answer count. Failure restores the previous files.
+No dependencies or credentials change. Publish the matching website separately. See `AGENTS.md` before VPS work.
 
 ## Discord setup (one time)
 

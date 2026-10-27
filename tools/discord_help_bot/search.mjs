@@ -1,9 +1,10 @@
 // Curated search only: no model, paid API, account data, or generated advice.
-const STOP = new Set('a an and are can could do does for from how i in is it me my of on please the this to use we what where with you your'.split(' '));
+const STOP = new Set('a an and are can could do does for from get go how i in is it me my of on please the this to use we what where with you your'.split(' '));
 const ALIASES = new Map(Object.entries({
   favourites: 'favorite', favourite: 'favorite', favorites: 'favorite',
   reminders: 'reminder', remindee: 'reminder', pill: 'reminder',
   channels: 'channel', groups: 'group', subtitles: 'subtitle',
+  program: 'programme', programs: 'programme', programmes: 'programme', restart: 'start', access: 'watch',
   shows: 'show', movies: 'movie', episodes: 'episode',
   disable: 'hide', disabled: 'hide', remove: 'hide',
   recording: 'record', recordings: 'record',
@@ -12,7 +13,8 @@ const ALIASES = new Map(Object.entries({
 
 function words(value) {
   return String(value).normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase().replace(/turn\s+off/g, 'hide')
+    .toLowerCase().replace(/\bcatch[\s\u2010-\u2015-]*up\b/g, 'catchup')
+    .replace(/turn\s+off/g, 'hide')
     .replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/)
     .filter(word => word && !STOP.has(word)).map(word => ALIASES.get(word) ?? word);
 }

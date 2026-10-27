@@ -39,6 +39,19 @@ test('reply bursts and repeated questions are bounded without storing question h
   assert.equal(replies.length, 3);
 });
 
+test('plain catch-up topics and can-I questions are answered without the slash command', async () => {
+  const { responder, message, replies, advance } = fixture();
+  for (const content of ['how do I watch catch up', 'Can I pause live TV?', 'catchup', 'How do I get back to live?']) {
+    assert.equal(await responder(message({ content })), true, content);
+    const reply = replies.at(-1);
+    assert.ok(!reply.content.includes('could not find a clear answer'), content);
+    assert.match(reply.content, /Guide: <https:\/\/vespertv.app\/remote.html#/);
+    assert.deepEqual(reply.allowedMentions, { parse: [], repliedUser: false });
+    advance(30000);
+  }
+  assert.equal(replies.length, 4);
+});
+
 test('unanswered questions get a guide fallback, without invented instructions', async () => {
   const { responder, message, replies } = fixture();
   assert.equal(await responder(message({ content: 'How do I refund my subscription invoice?' })), true);
