@@ -418,12 +418,6 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
       name: source.name,
       role: role,
       summary: _summary(source),
-      description: catalogOnly
-          ? tr('Plays through your other sources')
-          : tr('Provides video playback'),
-      footer: source.server == null && source.tracker == null
-          ? tr('Refresh Media Hub after changing Other.')
-          : null,
       children: [
         HoldToActivate(
           onTap: () => service.setEnabled(source, !source.enabled),
@@ -514,7 +508,7 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
           final width = constraints.maxWidth - 40;
           final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
           final columns =
-              ((width + 16) / (330 * scale + 16)).floor().clamp(1, 3);
+              ((width + 16) / (260 * scale + 16)).floor().clamp(1, 4);
           final connectorColumns =
               ((width + 16) / (210 * scale + 16)).floor().clamp(1, 5);
           _bands.clear();
@@ -627,9 +621,6 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
                     name: ArchiveCatalogProvider.name,
                     role: tr('Catalogs only'),
                     summary: tr('Popular · New · Featured'),
-                    description: tr('Catalogs for stream-only sources'),
-                    footer: tr(
-                        'Posters and episode details may still use Cinemeta when this is off.'),
                     children: [
                       _SourceControl(
                         id: 'source-cinemeta',
@@ -647,11 +638,17 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
                   [cinemetaNode],
                   for (final source in catalogs) _sourceNodes(source),
                 ], columns),
+                Text(tr('Posters and episode details may still use Cinemeta when this is off.'),
+                    style: TextStyle(
+                        fontSize: 11, color: scheme.onSurfaceVariant)),
+                const SizedBox(height: 8),
                 Text(tr('Hold OK on Enabled to remove a source.'),
                     style: TextStyle(color: scheme.onSurfaceVariant)),
                 const SizedBox(height: 12),
                 Text(
                     tr('Show under Other keeps a source behind the Other genre filter in Movies and TV Shows.'),
+                    style: TextStyle(color: scheme.onSurfaceVariant)),
+                Text(tr('Refresh Media Hub after changing Other.'),
                     style: TextStyle(color: scheme.onSurfaceVariant)),
                 if (sources.isNotEmpty) ...[
                   const Divider(height: 32),
@@ -692,9 +689,7 @@ class _SourceCard extends StatelessWidget {
     required this.name,
     required this.role,
     required this.summary,
-    required this.description,
     required this.children,
-    this.footer,
   });
 
   final List<FocusNode> nodes;
@@ -702,8 +697,6 @@ class _SourceCard extends StatelessWidget {
   final String name;
   final String role;
   final String summary;
-  final String description;
-  final String? footer;
   final List<Widget> children;
 
   @override
@@ -723,7 +716,7 @@ class _SourceCard extends StatelessWidget {
                           : 0.045),
               const Color(0xFF060909));
           return Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: const Color(0xFF060909),
               borderRadius: radius,
@@ -772,31 +765,31 @@ class _SourceCard extends StatelessWidget {
               children: [
                 Row(children: [
                   Container(
-                    padding: const EdgeInsets.all(9),
+                    padding: const EdgeInsets.all(5),
                     decoration: BoxDecoration(
                       color: scheme.primary
                           .withValues(alpha: polished ? 0.14 : 0.07),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(9),
                       border: Border.all(
                           color: scheme.primary.withValues(alpha: 0.30)),
                     ),
-                    child: Icon(icon, size: 26, color: scheme.primary),
+                    child: Icon(icon, size: 18, color: scheme.primary),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 7),
                   Expanded(
                     child: Text(name,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.w700)),
+                            fontSize: 14, fontWeight: FontWeight.w700)),
                   ),
                 ]),
-                const SizedBox(height: 10),
+                const SizedBox(height: 5),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                         color: scheme.primary.withValues(alpha: 0.09),
                         borderRadius: BorderRadius.circular(20),
@@ -805,24 +798,18 @@ class _SourceCard extends StatelessWidget {
                     child: Text(role,
                         style: TextStyle(
                             color: scheme.primary,
-                            fontSize: 12,
+                            fontSize: 10,
                             fontWeight: FontWeight.w700)),
                   ),
                 ),
-                const SizedBox(height: 6),
-                Text(summary, style: const TextStyle(fontSize: 13)),
                 const SizedBox(height: 4),
-                Text(description,
+                Text(summary,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        fontSize: 13, color: scheme.onSurfaceVariant)),
-                const SizedBox(height: 12),
+                        fontSize: 11, color: scheme.onSurfaceVariant)),
+                const SizedBox(height: 5),
                 ...children,
-                if (footer != null) ...[
-                  const SizedBox(height: 8),
-                  Text(footer!,
-                      style: TextStyle(
-                          fontSize: 11, color: scheme.onSurfaceVariant)),
-                ],
                 const Spacer(),
               ],
             ),
@@ -857,8 +844,10 @@ class _SourceControl extends StatelessWidget {
         listenable: node,
         builder: (context, _) {
           final scheme = Theme.of(context).colorScheme;
+          final compact = context.read<AppPreferences>().isTelevision ||
+              MediaQuery.sizeOf(context).width >= 700;
           return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 2),
+            padding: const EdgeInsets.symmetric(vertical: 1),
             child: Material(
               type: MaterialType.transparency,
               borderRadius: BorderRadius.circular(9),
@@ -876,9 +865,9 @@ class _SourceControl extends StatelessWidget {
                   },
                   borderRadius: BorderRadius.circular(9),
                   child: Container(
-                    constraints: const BoxConstraints(minHeight: 48),
+                    constraints: BoxConstraints(minHeight: compact ? 28 : 44),
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
                     decoration: BoxDecoration(
                       color: Color.alphaBlend(
                           scheme.primary
@@ -893,21 +882,31 @@ class _SourceControl extends StatelessWidget {
                     ),
                     child: Row(children: [
                       if (icon != null) ...[
-                        Icon(icon, size: 20, color: scheme.primary),
-                        const SizedBox(width: 8),
+                        Icon(icon, size: 15, color: scheme.primary),
+                        const SizedBox(width: 5),
                       ],
-                      Expanded(child: Text(label)),
+                      Expanded(
+                          child: Text(label,
+                              style: const TextStyle(fontSize: 12))),
                       if (value != null)
                         ExcludeFocus(
                           child: ExcludeSemantics(
                             child: IgnorePointer(
-                              child: Switch(
-                                  value: value!,
-                                  activeTrackColor: scheme.primary,
-                                  activeThumbColor: scheme.onPrimary,
-                                  inactiveTrackColor:
-                                      Colors.white.withValues(alpha: 0.12),
-                                  onChanged: (_) => onTap()),
+                              child: SizedBox(
+                                width: compact ? 32 : 46,
+                                height: compact ? 20 : 30,
+                                child: FittedBox(
+                                  child: Switch(
+                                      materialTapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                      value: value!,
+                                      activeTrackColor: scheme.primary,
+                                      activeThumbColor: scheme.onPrimary,
+                                      inactiveTrackColor:
+                                          Colors.white.withValues(alpha: 0.12),
+                                      onChanged: (_) => onTap()),
+                                ),
+                              ),
                             ),
                           ),
                         ),

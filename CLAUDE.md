@@ -358,10 +358,11 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   redesigns the shared Settings/Hub Sources page with add/connectors at the top,
   playback-source and catalog/list grids, role labels and per-card controls.
   Explicit responsive D-pad rows, stable toggle/dialog focus and immediate scroll;
-  no player/storage changes. Initial +473 failed in release because control keys
-  used diagnostic labels (see section10); corrected production-signed +474 is
-  installed on Formuler (analyze16,754 tests), with dark palette glass and whole-
-  card reveal. Real-box acceptance pending. See `dev-notes/mediahub-source-grid.md`
+  no player/storage changes. +473 release diagnostic-key failure was fixed in
+  +474 (see section10); owner confirmed improved navigation, requested smaller
+  cards. Production-signed +475 is installed on Formuler: roughly one-third card
+  area,3 columns at960px/4 at1280px, same direct controls/dark glass. Analyze16,
+  755 tests; compact-size acceptance pending. See `dev-notes/mediahub-source-grid.md`
   and root HANDOFF.md. No publication.
 
 - **cdx 2026-10-27 — release 1.0.43 (beta), +472:** owner requested release and

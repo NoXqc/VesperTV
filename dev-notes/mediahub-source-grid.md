@@ -13,7 +13,7 @@ connector actions now precede the source grid.
   source URL (except trackers), and Show under Other (add-ons only).
   Existing URL reveal/copy behavior and service/storage paths are unchanged.
 
-The grid uses eager, equal-height rows (one to three columns, responsive to
+The grid uses eager, equal-height rows (one to four columns, responsive to
 width/text scale). Source counts are small; keeping controls mounted avoids the
 old off-screen Add/focus failure. No catalog posters or source logos are fetched.
 
@@ -72,3 +72,27 @@ Correction packaged as production-signed 1.0.43+474 and installed over +473 on
 Formuler at the owner's request. Analyze16, all754 Flutter tests; package version,
 signature, ZIP integrity and installed hash verified. UI was not driven over adb;
 the owner's physical-remote acceptance is still pending. No publication.
+
+
+## Compact cards after +474 owner feedback
+
+The owner confirmed navigation is much better, but the cards fill most of the
+screen. Compact layout lowers the minimum width from330 to260 logical pixels:
+three columns at960px and four at1280px with normal text. Padding drops16 to10,
+headers/icons/role badges are smaller, and TV/wide control rows use compact
+switches. Phones retain44px minimum control targets. Counts stay visible in up
+to two lines. Repeated playback explanations and refresh guidance live outside
+the cards; Enabled, URL and Other remain separate direct focus stops in the same
+order, with the release-safe IDs and immediate whole-card reveal unchanged.
+
+A real-font960px preview measures296x194 per card, about one-third of the prior
+450x382 area. Automated size coverage requires three cards across and under40%
+of that prior area, then navigates through full and partial rows. Existing
+navigation expectations now cover four-column wide layouts and resize to three
+columns/phone. Font scaling still reduces column count to preserve readability.
+Build/installation and validation: root HANDOFF.md.
+
+
+Compact test1.0.43+475 is production-signed and installed over+474 on Formuler.
+Analyze16/all755 Flutter tests passed. Signature, version, ZIP integrity and
+installed APK hash verified. No UI driving, publication or Windows build.

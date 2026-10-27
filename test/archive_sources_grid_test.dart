@@ -164,6 +164,42 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
   testWidgets(
+      'TV cards use under forty percent of the previous area and show three across',
+      (tester) async {
+    final sources = [for (var i = 0; i < 7; i++) _source(i)];
+    await _open(tester, sources,
+        size: const Size(960, 540),
+        refined: true,
+        navigationMode: NavigationMode.directional);
+    final cards = [
+      for (final s in sources)
+        tester.getRect(find.byKey(ValueKey('source-card-${s.key}')))
+    ];
+    expect(cards[0].top, cards[2].top);
+    expect(cards[3].top, greaterThan(cards[0].top));
+    expect(cards[0].width, lessThanOrEqualTo(300));
+    expect(cards[0].height, lessThanOrEqualTo(210));
+    expect(cards[0].width * cards[0].height, lessThan(450 * 382 * 0.4));
+    await _key(tester, LogicalKeyboardKey.arrowDown);
+    await _key(tester, LogicalKeyboardKey.arrowDown);
+    await _key(tester, LogicalKeyboardKey.arrowDown);
+    await _key(tester, LogicalKeyboardKey.arrowRight);
+    await _key(tester, LogicalKeyboardKey.arrowRight);
+    expect(_focused, _control(sources[2], 'enabled'));
+    for (var i = 0; i < 3; i++) {
+      await _key(tester, LogicalKeyboardKey.arrowDown);
+    }
+    expect(_focused, _control(sources[5], 'enabled'));
+    _visible(tester, _focused!);
+    for (var i = 0; i < 3; i++) {
+      await _key(tester, LogicalKeyboardKey.arrowDown);
+    }
+    expect(_focused, _control(sources[6], 'enabled'));
+    _visible(tester, _focused!);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+  testWidgets(
       'release-style absent diagnostic labels still build and navigate every card control',
       (tester) async {
     final sources = [for (var i = 0; i < 13; i++) _source(i)];
@@ -210,7 +246,7 @@ void main() {
         'Neon Green TV cards retain dark palette shading, finish $polished',
         (tester) async {
       final source = _source(0);
-      await _open(tester, [source, _source(1)],
+      await _open(tester, [source, for (var i = 1; i < 6; i++) _source(i)],
           size: const Size(960, 540),
           navigationMode: NavigationMode.directional,
           paletteName: 'Neon Green',
@@ -238,6 +274,8 @@ void main() {
         expect((red + green + blue) / 3, lessThan(65));
         if (Platform.environment['MEDIAHUB_GRID_PREVIEW'] == '1') {
           final png = await image.toByteData(format: ui.ImageByteFormat.png);
+          File('Logs/mediahub-source-grid-card-metrics.json').writeAsStringSync(
+              jsonEncode({'width': card.width, 'height': card.height}));
           File('Logs/mediahub-source-grid-green-${polished ? 'on' : 'off'}.png')
               .writeAsBytesSync(png!.buffer.asUint8List());
         }
@@ -249,7 +287,7 @@ void main() {
   }
   testWidgets('top connectors, card columns, partial rows and scrolling',
       (tester) async {
-    final sources = [for (var i = 0; i < 8; i++) _source(i)];
+    final sources = [for (var i = 0; i < 10; i++) _source(i)];
     await _open(tester, sources);
     expect(_focused, 'source-link');
     final field = tester.widget<TextField>(find.byType(TextField));
@@ -261,29 +299,29 @@ void main() {
       expect(_focused, 'source-$expected');
     }
     await _key(tester, LogicalKeyboardKey.arrowDown);
-    expect(_focused, _control(sources[2], 'enabled'));
+    expect(_focused, _control(sources[3], 'enabled'));
     await _key(tester, LogicalKeyboardKey.arrowRight);
-    expect(_focused, _control(sources[2], 'enabled'));
+    expect(_focused, _control(sources[3], 'enabled'));
     for (final expected in ['url', 'other']) {
       await _key(tester, LogicalKeyboardKey.arrowDown);
-      expect(_focused, _control(sources[2], expected));
+      expect(_focused, _control(sources[3], expected));
     }
     await _key(tester, LogicalKeyboardKey.arrowLeft);
-    expect(_focused, _control(sources[1], 'other'));
+    expect(_focused, _control(sources[2], 'other'));
     await _key(tester, LogicalKeyboardKey.arrowRight);
     await _key(tester, LogicalKeyboardKey.arrowDown);
-    expect(_focused, _control(sources[5], 'enabled'));
+    expect(_focused, _control(sources[7], 'enabled'));
     for (var i = 0; i < 3; i++) {
       await _key(tester, LogicalKeyboardKey.arrowDown);
     }
-    expect(_focused, _control(sources[7], 'enabled'));
+    expect(_focused, _control(sources[9], 'enabled'));
     _visible(tester, _focused!);
     await _key(tester, LogicalKeyboardKey.arrowRight);
-    expect(_focused, _control(sources[7], 'enabled'));
+    expect(_focused, _control(sources[9], 'enabled'));
     await _key(tester, LogicalKeyboardKey.arrowLeft);
-    expect(_focused, _control(sources[6], 'enabled'));
+    expect(_focused, _control(sources[8], 'enabled'));
     await _key(tester, LogicalKeyboardKey.arrowUp);
-    expect(_focused, _control(sources[3], 'other'));
+    expect(_focused, _control(sources[4], 'other'));
     _visible(tester, _focused!);
     for (var i = 0; i < 20; i++) {
       await _key(tester, LogicalKeyboardKey.arrowUp);
@@ -340,26 +378,26 @@ void main() {
     expect(find.text('Tracker lists'), findsOneWidget);
     expect(find.byKey(ValueKey(_control(tracker, 'url'))), findsNothing);
     expect(find.byKey(ValueKey(_control(tracker, 'other'))), findsNothing);
-    await _focusControl(tester, _control(sources[1], 'url'));
+    await _focusControl(tester, _control(sources[2], 'url'));
     tester.view.physicalSize = const Size(960, 540);
     await tester.pumpAndSettle();
-    expect(_focused, _control(sources[1], 'url'));
+    expect(_focused, _control(sources[2], 'url'));
     await _key(tester, LogicalKeyboardKey.arrowRight);
-    expect(_focused, _control(sources[1], 'url'));
+    expect(_focused, _control(sources[2], 'url'));
     await _key(tester, LogicalKeyboardKey.arrowDown);
     await _key(tester, LogicalKeyboardKey.arrowDown);
-    expect(_focused, _control(sources[3], 'enabled'));
+    expect(_focused, _control(sources[5], 'enabled'));
     tester.view.physicalSize = const Size(390, 844);
     await tester.pumpAndSettle();
-    expect(_focused, _control(sources[3], 'enabled'));
+    expect(_focused, _control(sources[5], 'enabled'));
     await _key(tester, LogicalKeyboardKey.arrowLeft);
-    expect(_focused, _control(sources[3], 'enabled'));
+    expect(_focused, _control(sources[5], 'enabled'));
     await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowDown);
     await tester.pumpAndSettle();
     await tester.sendKeyRepeatEvent(LogicalKeyboardKey.arrowDown);
     await tester.pumpAndSettle();
     await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowDown);
-    expect(_focused, _control(sources[3], 'other'));
+    expect(_focused, _control(sources[5], 'other'));
     _visible(tester, _focused!);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
