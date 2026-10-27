@@ -1997,6 +1997,9 @@ const Map<String, String> kEs = {
       'La reproducción en diferido no está disponible para este canal.',
   'This programme is not available in catch-up.':
       'Este programa no está disponible en diferido.',
+  "Hide Catch-up group": "Ocultar el grupo Diferido",
+  "Removes the TV tab's Catch-up row (every channel you can replay).": "Quita la fila Diferido de la pestaña TV (todos los canales que se pueden volver a ver).",
+  "No channels with catch-up.": "Ningún canal con diferido.",
   'Catch-up': 'Diferido',
   'Previous programme': 'Programa anterior',
   'Next programme': 'Programa siguiente',

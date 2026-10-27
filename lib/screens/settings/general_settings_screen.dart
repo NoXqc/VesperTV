@@ -401,6 +401,16 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                         onChanged: (v) =>
                             context.read<AppPreferences>().setHideRecordings(v),
                       ),
+                    if (!Platform.isWindows)
+                      TvSwitchListTile(
+                        title: Text(tr('Hide Catch-up group')),
+                        subtitle: Text(tr(
+                            'Removes the TV tab\'s Catch-up row (every channel you can replay).')),
+                        value: context.watch<AppPreferences>().hideCatchupGroup,
+                        onChanged: (v) => context
+                            .read<AppPreferences>()
+                            .setHideCatchupGroup(v),
+                      ),
                     TvSwitchListTile(
                       title: Text(tr('Hide Multiview')),
                       subtitle: Text(tr(

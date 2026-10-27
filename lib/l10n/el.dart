@@ -2613,6 +2613,9 @@ const Map<String, String> kEl = {
       'Το catch-up δεν είναι διαθέσιμο για αυτό το κανάλι.',
   'This programme is not available in catch-up.':
       'Αυτή η εκπομπή δεν είναι διαθέσιμη σε catch-up.',
+  "Hide Catch-up group": "Απόκρυψη ομάδας Catch-up",
+  "Removes the TV tab's Catch-up row (every channel you can replay).": "Αφαιρεί τη γραμμή Catch-up από την καρτέλα TV (όλα τα κανάλια με επανάληψη).",
+  "No channels with catch-up.": "Κανένα κανάλι με catch-up.",
   'Catch-up': 'Catch-up',
   'Previous programme': 'Προηγούμενη εκπομπή',
   'Next programme': 'Επόμενη εκπομπή',

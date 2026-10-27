@@ -1319,6 +1319,15 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// the tab (the separate "Favorites" tab still exists too).
   static const _favoritesGroupSentinel = '__favorites__';
 
+  /// Pinned under History: every visible live channel with catch-up,
+  /// across enabled playlists (Settings > Interface > Tabs can hide it).
+  /// Android only — Windows has no catch-up playback yet.
+  static const _catchupGroupSentinel = '__catchup__';
+
+  bool get _showCatchupGroup =>
+      defaultTargetPlatform != TargetPlatform.windows &&
+      !context.read<AppPreferences>().hideCatchupGroup;
+
   /// [playlistId] is required for a real group selection (from a
   /// `_GroupRow`, which always has its own `M3uGroup.playlistId` on
   /// hand), null for the sentinels ("All", "Favourites") — Favorites-tab
@@ -1337,6 +1346,13 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       _guideFocusedProgram = null;
     });
     if (group == null) return;
+    if (group == _catchupGroupSentinel) {
+      // Xtream live lists load lazily per playlist (after launch).
+      unawaited(context.read<PlaylistManager>().ensureLiveChannelsLoaded());
+      _resetLiveListFocus();
+      _collapseAfterTouchPick();
+      return;
+    }
     if (group == _favoritesGroupSentinel) {
       // Only reachable from the Live TV tab's own pinned "Favourites" row
       // (see _buildGroupsColumn) — same explicit reset every real live
@@ -2006,7 +2022,11 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                 .read<PlaylistManager>()
                 .favoriteLiveChannels
                 .any((c) => c.id == playing.id);
-        if (!stayOnFavorites) {
+        // The same for the Catch-up row.
+        final stayOnCatchup = _selectedGroup == _catchupGroupSentinel &&
+            _showCatchupGroup &&
+            (playing?.hasCatchup ?? false);
+        if (!stayOnFavorites && !stayOnCatchup) {
           setState(() => _selectedGroup = null);
         }
       }
@@ -2067,6 +2087,12 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// [_restoreLiveFocus] can find the playing channel's index in the exact
   /// same list instead of risking the two falling out of sync.
   List<Channel> _currentLiveChannels(PlaylistManager playlist) {
+    if (_effectiveLiveGroup(playlist) == _catchupGroupSentinel) {
+      return playlist
+          .visibleChannels(category: 'tv')
+          .where((c) => c.hasCatchup)
+          .toList();
+    }
     if (_effectiveLiveGroup(playlist) != _favoritesGroupSentinel) {
       return playlist.visibleChannels(
           groupTitle: _effectiveLiveGroup(playlist), category: 'tv');
@@ -2151,7 +2177,11 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// read through this instead of the raw field so the highlighted row
   /// always matches the list actually being shown.
   String? _effectiveLiveGroup(PlaylistManager playlist) {
-    if (_selectedGroup != null) return _selectedGroup;
+    // A Catch-up row hidden (Settings) while selected: as if none was.
+    if (_selectedGroup != null &&
+        (_selectedGroup != _catchupGroupSentinel || _showCatchupGroup)) {
+      return _selectedGroup;
+    }
     final groups = _withoutHiddenPlaylists(
         playlist.tvGroups.where((g) => !g.isHidden), 'tv');
     if (groups.isEmpty) return null;
@@ -3275,6 +3305,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
               _tab == 'TV' ? _effectiveLiveGroup(playlist) : _selectedGroup) {
               null => tr(_tab == 'TV' ? 'TV' : 'All'),
               _favoritesGroupSentinel => tr('Favourites'),
+              _catchupGroupSentinel => tr('Catch-up'),
               final group => group,
             },
     };
@@ -3966,7 +3997,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     }
     final playlistsRow = _playlistsRow(allGroups, groups, playlist,
         collapsed: collapsed,
-        rowsAbove: 3,
+        rowsAbove: _showCatchupGroup ? 4 : 3,
         currentPlaylistId: currentPlaylistId);
 
     return Column(
@@ -4015,7 +4046,17 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                 onTap: _showHistoryPopup,
                 onLongPress: _confirmClearChannelHistory,
               ),
-            ), // The viewer's own groups (any playlist's channels): above every
+            ),
+            if (_showCatchupGroup)
+              _SelectableRow(
+                icon: Icons.replay,
+                label: tr('Catch-up'),
+                selected: effectiveGroup == _catchupGroupSentinel,
+                collapsed: collapsed,
+                fontSize: _groupFontSize,
+                onTap: () => _onGroupSelected(_catchupGroupSentinel),
+              ),
+            // The viewer's own groups (any playlist's channels): above every
             // playlist's groups, never hidden with one.
             for (final title
                 in sort.sorted(playlist.userGroups, (title) => title))
@@ -4951,7 +4992,9 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
           _selectedGroup == _favoritesGroupSentinel
               ? tr(
                   'No favorite channels yet — press Down while watching one to add it.')
-              : tr('No channels found.'),
+              : _selectedGroup == _catchupGroupSentinel
+                  ? tr('No channels with catch-up.')
+                  : tr('No channels found.'),
           textAlign: TextAlign.center,
         ),
       );

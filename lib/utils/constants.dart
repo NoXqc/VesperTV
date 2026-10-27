@@ -256,6 +256,7 @@ class AppConstants {
   static const String keyHideShows = 'vesper_hide_shows';
   static const String keyHideArchive = 'vesper_hide_archive';
   static const String keyHideRecordings = 'vesper_hide_recordings';
+  static const String keyHideCatchupGroup = 'vesper_hide_catchup_group';
   static const String keyHideMultiview = 'vesper_hide_multiview';
 
   /// Favourites (TV, Movies, TV Shows) as one list across playlists,

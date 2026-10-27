@@ -130,11 +130,15 @@ void main() {
         const MethodChannel('vespertv/stats'), (_) async => null);
   });
 
-  Future<void> pumpHome(WidgetTester tester, {bool fullVideo = false}) async {
+  Future<void> pumpHome(WidgetTester tester,
+      {bool fullVideo = false, bool hideCatchupGroup = false}) async {
     tester.view.physicalSize = const Size(1280, 720);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    SharedPreferences.setMockInitialValues({AppConstants.keyShowClock: false});
+    SharedPreferences.setMockInitialValues({
+      AppConstants.keyShowClock: false,
+      AppConstants.keyHideCatchupGroup: hideCatchupGroup,
+    });
     final storage = StorageService();
     await storage.init();
     final prefs = AppPreferences(storage);
@@ -246,6 +250,26 @@ void main() {
     }
     expect(find.text('Now'), findsNothing);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the Catch-up group lists only channels with catch-up',
+      (tester) async {
+    await pumpHome(tester);
+    expect(find.text('Plain channel'), findsWidgets);
+    await key(tester, LogicalKeyboardKey.arrowRight); // groups column opens
+    await tester.tap(find.text('Catch-up'));
+    await tester.pumpAndSettle();
+    expect(find.text('Catchup channel'), findsWidgets);
+    expect(find.text('Plain channel'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Hide Catch-up group removes the row', (tester) async {
+    await pumpHome(tester, hideCatchupGroup: true);
+    await key(tester, LogicalKeyboardKey.arrowRight);
+    expect(find.text('History'), findsOneWidget);
+    expect(find.text('Catch-up'), findsNothing);
+    expect(find.text('Plain channel'), findsWidgets);
   });
 
   testWidgets('a row without catch-up keeps the old edge (no past window)',

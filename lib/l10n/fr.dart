@@ -2001,6 +2001,9 @@ const Map<String, String> kFr = {
       'Le rattrapage n’est pas disponible pour cette chaîne.',
   'This programme is not available in catch-up.':
       'Cette émission n’est pas disponible en rattrapage.',
+  "Hide Catch-up group": "Masquer le groupe Rattrapage",
+  "Removes the TV tab's Catch-up row (every channel you can replay).": "Retire la ligne Rattrapage de l'onglet TV (toutes les chaînes à revoir).",
+  "No channels with catch-up.": "Aucune chaîne avec rattrapage.",
   'Catch-up': 'Rattrapage',
   'Previous programme': 'Émission précédente',
   'Next programme': 'Émission suivante',

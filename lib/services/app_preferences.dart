@@ -48,6 +48,9 @@ class AppPreferences extends ChangeNotifier {
   /// The Recordings row hidden.
   late bool hideRecordings;
 
+  /// The TV tab's Catch-up row (every channel with catch-up).
+  late bool hideCatchupGroup;
+
   /// The Multiview row and the player's "Open in Multiview" hidden.
   late bool hideMultiview;
 
@@ -310,6 +313,7 @@ class AppPreferences extends ChangeNotifier {
     hideShows = _storage.getHideShows();
     hideArchive = _storage.getHideArchive();
     hideRecordings = _storage.getHideRecordings();
+    hideCatchupGroup = _storage.getHideCatchupGroup();
     hideMultiview = _storage.getHideMultiview();
     videoFill = _storage.getVideoFill();
     mixFavoritePlaylists = _storage.getMixFavoritePlaylists();
@@ -445,6 +449,12 @@ class AppPreferences extends ChangeNotifier {
   void setHideRecordings(bool value) {
     hideRecordings = value;
     _storage.setHideRecordings(value);
+    notifyListeners();
+  }
+
+  void setHideCatchupGroup(bool value) {
+    hideCatchupGroup = value;
+    _storage.setHideCatchupGroup(value);
     notifyListeners();
   }
 

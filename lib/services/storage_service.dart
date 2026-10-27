@@ -488,6 +488,10 @@ class StorageService {
       _prefs.getBool(AppConstants.keyHideRecordings) ?? false;
   Future<void> setHideRecordings(bool value) =>
       _prefs.setBool(AppConstants.keyHideRecordings, value);
+  bool getHideCatchupGroup() =>
+      _prefs.getBool(AppConstants.keyHideCatchupGroup) ?? false;
+  Future<void> setHideCatchupGroup(bool value) =>
+      _prefs.setBool(AppConstants.keyHideCatchupGroup, value);
   bool getHideMultiview() =>
       _prefs.getBool(AppConstants.keyHideMultiview) ?? false;
   Future<void> setHideMultiview(bool value) =>

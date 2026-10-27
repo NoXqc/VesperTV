@@ -2001,6 +2001,9 @@ const Map<String, String> kIt = {
       'La TV on demand non è disponibile per questo canale.',
   'This programme is not available in catch-up.':
       'Questo programma non è disponibile in replay.',
+  "Hide Catch-up group": "Nascondi il gruppo Replay",
+  "Removes the TV tab's Catch-up row (every channel you can replay).": "Toglie la riga Replay dalla scheda TV (tutti i canali da rivedere).",
+  "No channels with catch-up.": "Nessun canale con replay.",
   'Catch-up': 'Replay',
   'Previous programme': 'Programma precedente',
   'Next programme': 'Programma successivo',
