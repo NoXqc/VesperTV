@@ -56,6 +56,31 @@ BoxDecoration detailFocusDecoration(
   );
 }
 
+/// The closest of [nodes] on the next wrapped button row below (`down`) or
+/// above the focused one, or null when it is already on the last / first
+/// row. The detail pages' action rows are a `Wrap` with explicit D-pad
+/// handling, so Up/Down must pick the row themselves.
+FocusNode? detailNodeInRow(List<FocusNode> nodes, {required bool down}) {
+  final current = nodes.where((n) => n.hasFocus).firstOrNull;
+  if (current == null || current.context == null) return null;
+  final from = current.rect;
+  FocusNode? best;
+  var bestDy = double.infinity, bestDx = double.infinity;
+  for (final n in nodes) {
+    if (n == current || n.context == null) continue;
+    final r = n.rect;
+    final dy = down ? r.center.dy - from.bottom : from.top - r.center.dy;
+    if (dy <= 0) continue; // same row or the wrong way
+    final dx = (r.center.dx - from.center.dx).abs();
+    if (dy < bestDy - 1 || (dy <= bestDy + 1 && dx < bestDx)) {
+      best = n;
+      bestDy = dy;
+      bestDx = dx;
+    }
+  }
+  return best;
+}
+
 class DetailPillButton extends StatefulWidget {
   const DetailPillButton({
     super.key,

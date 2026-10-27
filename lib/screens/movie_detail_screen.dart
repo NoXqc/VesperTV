@@ -616,7 +616,10 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     if (narrow) return content;
     return CallbackShortcuts(
       bindings: _arrows(
-        up: _backNode.requestFocus,
+        // The buttons can wrap onto a second row (Favorites, Cast).
+        up: () =>
+            (detailNodeInRow(nodes, down: false) ?? _backNode).requestFocus(),
+        down: () => detailNodeInRow(nodes, down: true)?.requestFocus(),
         left: () => move(-1),
         right: () => move(1),
       ),

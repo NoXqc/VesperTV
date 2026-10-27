@@ -1028,9 +1028,17 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     if (narrow) return row;
     return CallbackShortcuts(
       bindings: _arrows(
-        up: _backNode.requestFocus,
-        down:
-            _loaded && _allEpisodes.isNotEmpty ? _focusSeasonsOrEpisodes : null,
+        // The buttons can wrap onto a second row (Favorites, Cast).
+        up: () =>
+            (detailNodeInRow(nodes, down: false) ?? _backNode).requestFocus(),
+        down: () {
+          final below = detailNodeInRow(nodes, down: true);
+          if (below != null) {
+            below.requestFocus();
+          } else if (_loaded && _allEpisodes.isNotEmpty) {
+            _focusSeasonsOrEpisodes();
+          }
+        },
         left: () => move(-1),
         right: () => move(1),
       ),
