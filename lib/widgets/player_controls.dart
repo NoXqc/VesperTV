@@ -16,6 +16,7 @@ import '../services/storage_service.dart';
 import '../services/subtitle_tracks.dart';
 import '../services/audio_track_preferences.dart';
 import '../utils/video_quality.dart';
+import 'data_pool_card.dart';
 import 'epg_guide.dart';
 import 'native_video_hole.dart';
 import 'rec_cue.dart';
@@ -696,8 +697,22 @@ class PlayerControls extends StatelessWidget {
                                                 .reloadCurrentChannel();
                                           },
                                         ),
-                                      _AudioTrackButton(controller: controller),
-                                      _SubtitleButton(controller: controller),
+                                      // Keyed by stream: the bar stays mounted
+                                      // across zaps (and a native live zap
+                                      // keeps the controller), so without a
+                                      // new key the track lists were read
+                                      // once per player screen and a later
+                                      // channel's audio tracks never showed
+                                      // (CBC Montreal described-video track,
+                                      // owner 2026-10-26).
+                                      _AudioTrackButton(
+                                          key: ValueKey(Object.hash('audio',
+                                              controller, channel?.id)),
+                                          controller: controller),
+                                      _SubtitleButton(
+                                          key: ValueKey(Object.hash(
+                                              'subs', controller, channel?.id)),
+                                          controller: controller),
                                       if (linkedChannel != null)
                                         _LinkedChannelButton(
                                             linkedChannel: linkedChannel!),
@@ -1106,7 +1121,7 @@ class _AudioChannelBadgeState extends State<_AudioChannelBadge> {
 /// Hidden entirely for a stream with only one (or zero known) tracks —
 /// showing a picker with a single, unchangeable option is just noise.
 class _AudioTrackButton extends StatefulWidget {
-  const _AudioTrackButton({required this.controller});
+  const _AudioTrackButton({super.key, required this.controller});
 
   final VideoPlayerHdrController controller;
 
@@ -1136,7 +1151,16 @@ class _AudioTrackButtonState extends State<_AudioTrackButton> {
     try {
       final tracks = await widget.controller.getAudioTracks();
       if (mounted) setState(() => _tracks = tracks);
-      if (tracks.length >= 2) return;
+      // Once per stream, for Send log: what the player actually exposes
+      // (a channel whose audio menu never appears, CBC Montreal 2026-10-26).
+      if (_tries == 5 && mounted) {
+        final channel = context.read<PlaybackService>().currentChannel;
+        final url = channel?.url.toLowerCase() ?? '';
+        debugPrint('AudioTracks: ${channel?.name} n=${tracks.length} '
+            'm3u8=${url.contains('.m3u8')} ts=${url.contains('.ts')} '
+            '${tracks.map((t) => '[${t.language}|${t.label}|${t.codec}|'
+                '${t.channelCount}ch${t.isSelected ? '*' : ''}]').join(' ')}');
+      }
     } catch (_) {
       // Not every stream/platform combination actually has track info
       // available even when the capability check passes — leave the
@@ -1145,18 +1169,32 @@ class _AudioTrackButtonState extends State<_AudioTrackButton> {
     }
     // Loaded once only, the list could be read before the file's header
     // was (controls shown early): a multi-language movie then never got
-    // the button. Retry a few times (user report, 2026-10-18).
+    // the button. Re-read a few times (user report, 2026-10-18) — even
+    // after 2+ tracks: right after a native live zap the old stream's
+    // tracks are still the player's current ones.
     if (!mounted || ++_tries > 5) return;
     _retry = Timer(const Duration(seconds: 3), _loadTracks);
   }
 
-  String _trackLabel(VideoAudioTrack track) {
-    final label = track.label;
-    if (label != null && label.isNotEmpty) return label;
-    final language = track.language;
-    if (language != null && language.isNotEmpty && language != 'und')
-      return language.toUpperCase();
-    return tr('Track {id}', {'id': track.id});
+  /// Placeholder codes broadcasters put on tracks: "MIS"/"MUL" as names
+  /// told nobody anything (TSN2's four tracks, owner photo 2026-10-26).
+  static const _noLanguage = {'und', 'mis', 'mul', 'zxx', 'qaa'};
+
+  /// Track name, else its language, else "Audio n" — then codec and
+  /// channel layout, which is what tells two same-language tracks apart.
+  String _trackLabel(VideoAudioTrack track, int index) {
+    final label = track.label?.trim() ?? '';
+    final language = track.language?.toLowerCase() ?? '';
+    final name = label.isNotEmpty
+        ? label
+        : language.isNotEmpty && !_noLanguage.contains(language)
+            ? languageName(language)
+            : '';
+    return [
+      name.isNotEmpty ? name : tr('Audio {n}', {'n': index + 1}),
+      DataPoolCard.codecName(track.codec),
+      DataPoolCard.channelsName(track.channelCount),
+    ].whereType<String>().where((s) => s.isNotEmpty).join(' · ');
   }
 
   Future<void> _openPicker() async {
@@ -1198,7 +1236,7 @@ class _AudioTrackButtonState extends State<_AudioTrackButton> {
                 ),
                 // TvMenuTile: the app's gold focus look (a plain ListTile
                 // showed Material's pastel fill on TV, owner 2026-10-18).
-                for (final track in tracks)
+                for (final (i, track) in tracks.indexed)
                   TvMenuTile(
                     autofocus: track.isSelected,
                     leading: Icon(
@@ -1207,7 +1245,7 @@ class _AudioTrackButtonState extends State<_AudioTrackButton> {
                           : Icons.circle_outlined,
                       color: track.isSelected ? Colors.amber : Colors.white54,
                     ),
-                    title: _trackLabel(track),
+                    title: _trackLabel(track, i),
                     onTap: () => Navigator.of(sheetContext).pop(track),
                   ),
               ],
@@ -1249,7 +1287,7 @@ class _AudioTrackButtonState extends State<_AudioTrackButton> {
 /// as [_AudioTrackButton]: hidden when the file has none. The text is drawn
 /// by PlayerScreen's subtitle overlay (see SubtitleTracks).
 class _SubtitleButton extends StatefulWidget {
-  const _SubtitleButton({required this.controller});
+  const _SubtitleButton({super.key, required this.controller});
 
   final VideoPlayerHdrController controller;
 
@@ -1293,7 +1331,6 @@ class _SubtitleButtonState extends State<_SubtitleButton> {
       final tracks = await SubtitleTracks.list(_playerId);
       if (!mounted) return;
       setState(() => _tracks = tracks);
-      if (tracks.isNotEmpty) return;
     } catch (_) {
       // No player yet: stay hidden.
     }

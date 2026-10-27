@@ -253,6 +253,7 @@ const Map<String, String> kEs = {
   'No {language} subtitles online for this title.':
       "No hay subtítulos en {language} en línea para este título.",
   'Track {id}': "Pista {id}",
+  'Audio {n}': "Audio {n}",
   'Audio Track': "Pista de audio",
   'Audio track': "Pista de audio",
 

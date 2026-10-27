@@ -252,6 +252,7 @@ const Map<String, String> kIt = {
   'No {language} subtitles online for this title.':
       "Nessun sottotitolo in {language} online per questo titolo.",
   'Track {id}': "Traccia {id}",
+  'Audio {n}': "Audio {n}",
   'Audio Track': "Traccia audio",
   'Audio track': "Traccia audio",
 

@@ -34,6 +34,10 @@ class DataPoolCard extends StatefulWidget {
   /// from this.
   final DateTime? since;
 
+  /// Same short names as the card, for the player's audio track picker.
+  static String? codecName(String? raw) => _DataPoolCardState._codec(raw);
+  static String? channelsName(int? n) => _DataPoolCardState._channels(n);
+
   @override
   State<DataPoolCard> createState() => _DataPoolCardState();
 }

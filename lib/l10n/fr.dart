@@ -252,6 +252,7 @@ const Map<String, String> kFr = {
   'No {language} subtitles online for this title.':
       "Aucun sous-titre en {language} en ligne pour ce titre.",
   'Track {id}': "Piste {id}",
+  'Audio {n}': "Audio {n}",
   'Audio Track': "Piste audio",
   'Audio track': "Piste audio",
 

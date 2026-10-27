@@ -48,7 +48,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
 3. Use Bash (Git Bash) or PowerShell. In Git Bash, **prefix adb commands that take `/sdcard`-style
    paths with `MSYS_NO_PATHCONV=1`** (it mangles them). Big multi-line heredocs sometimes break the
    Bash tool — write a script file with the Write tool and run that instead.
-4. `flutter analyze` must report the baseline **17** info-level issues (no errors). Don't add new ones.
+4. `flutter analyze` must report the baseline **16** info-level issues (no errors). Don't add new ones.
 5. Check the current state of releases: `gh release list` (latest should be `1.0.39` unless noted
    in §13).
 
@@ -103,7 +103,7 @@ outward-facing** (deleting releases, force-pushes, posting). Only commit/release
   texture tests (all with the same unstubbed track return):
   mocked getCurrentTracks() returns null (real ExoPlayer returns Tracks). Owner instructed
   publish/announce; Flutter analyze 17 and all 515 Flutter tests passed. Native suite is NOT green.
-- `flutter analyze` — baseline **17** info issues, none errors. `flutter test` — `test/device_transfer_test.dart` (real LAN sockets).
+- `flutter analyze` — baseline **16** info issues, none errors. `flutter test` — `test/device_transfer_test.dart` (real LAN sockets).
 - Android: `flutter build apk --release` → `build/app/outputs/flutter-apk/app-release.apk` (~68 MB).
 - Windows: **kill the running app first** (`Get-Process VesperTV | Stop-Process -Force`) or the link
   step fails with `LNK1104: cannot open VesperTV.exe`. Then `flutter build windows --release`
@@ -348,6 +348,25 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-10-26: Live audio tracks (+457 on the Formuler; labels after it, not installed).**
+  `_AudioTrackButton`/`_SubtitleButton` are keyed by controller + channel id: the full-screen bar
+  stays mounted across zaps (and native live zap keeps the controller), so the track lists were
+  read once per player screen and later channels never showed their tracks. They now re-read 5x
+  over 15 s (not stopping at 2+, the old stream's tracks linger right after a native zap). Picker
+  labels: name, else language (placeholders `mis`/`mul`/`und`/`zxx`/`qaa` skipped), else
+  "Audio n", plus codec + layout (`DataPoolCard.codecName`/`channelsName`). Send log line
+  `AudioTracks: <channel> n=… m3u8=… ts=… [lang|label|codec|ch]` once per stream (temporary
+  diagnostic; keep until the CBC case below is closed). Owner: TSN2 shows 4 tracks (MIS/MUL).
+  **CBC Montreal (Samiam23, "commentary", TiviMate switches it):** a raw PMT probe of the stream on
+  Trex (2 copies, .ts + .m3u8) and Blcktv showed ONE AAC `eng` track (audio_type normal) on
+  2026-10-26 ~21:30 ET; our log agreed (n=1). Likely a programme-time described-video track. Next:
+  when Sam sees it, TiviMate screenshot + our Send log + a re-probe at the same moment. Unrelated
+  fact verified in media3 1.9.2 source: HLS TS segments key tracks by stream type
+  (`TsExtractor` MODE_HLS), so a second same-codec audio PID inside HLS segments is dropped;
+  plain .ts (our Xtream default) keys by PID and keeps all of them.
+  Analyze baseline is now **16** (the rewritten label code removed one info). Also cleaned
+  `C:\Users\aarse`: all 13 worktrees + 21 old build/snapshot folders + 199 loose
+  `VesperTV-*` logs deleted (every branch verified merged; unmerged branches kept, no folders).
 - **cdx, 2026-10-26: Release 1.0.41 (beta), +455 authorised.** Includes all completed
   Codex work through Goals alert plus previously integrated Claude profiles/trailers/zap freeze.
   All worktrees audited: Claude's dirty zap-freeze source is already present (native file identical;

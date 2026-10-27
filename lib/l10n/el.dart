@@ -305,6 +305,8 @@ const Map<String, String> kEl = {
       "Δεν υπάρχουν υπότιτλοι {language} online για αυτόν τον τίτλο.",
   "Track {id}":
       "Κομμάτι {id}",
+  "Audio {n}":
+      "Ήχος {n}",
   "Audio Track":
       "Κομμάτι ήχου",
   "Audio track":
