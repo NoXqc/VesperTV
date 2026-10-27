@@ -1276,6 +1276,13 @@ class PlaylistManager extends ChangeNotifier {
         : all;
   }
 
+  /// Every visible live channel with catch-up, playlist by playlist in the
+  /// TV tab's priority order — the TV tab's Catch-up group.
+  List<Channel> catchupLiveChannels() => _enabledSessionsSortedFor('tv')
+      .expand(
+          (s) => s.visibleChannels(category: 'tv').where((c) => c.hasCatchup))
+      .toList();
+
   /// Live channels hidden by the viewer, across enabled playlists — see
   /// [SportsChannelMatcher.whyNoMatch]. None for a restricted viewer: what
   /// a kid profile can't see isn't named to it either.

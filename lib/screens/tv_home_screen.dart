@@ -980,6 +980,11 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// position.
   final ScrollController _liveListController = ScrollController();
 
+  /// The Live list's highlighted channel (null = focus is elsewhere): its
+  /// description card follows it. A notifier, not setState — this whole
+  /// screen rebuilding on every D-pad step was too slow on weak boxes.
+  final _liveListFocused = ValueNotifier<Channel?>(null);
+
   /// Whichever row currently matches [PlaybackService.currentChannel] —
   /// only one row can match at a time, so a single shared node is enough
   /// (see [_restoreLiveFocus]).
@@ -1915,6 +1920,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     _leftEdgeHintOverlay?.remove();
     _browseScrollController.dispose();
     _liveListController.dispose();
+    _liveListFocused.dispose();
     _currentChannelFocusNode.dispose();
     _movingChannelFocusNode.dispose();
     _firstLiveChannelFocusNode.dispose();
@@ -2088,10 +2094,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// same list instead of risking the two falling out of sync.
   List<Channel> _currentLiveChannels(PlaylistManager playlist) {
     if (_effectiveLiveGroup(playlist) == _catchupGroupSentinel) {
-      return playlist
-          .visibleChannels(category: 'tv')
-          .where((c) => c.hasCatchup)
-          .toList();
+      return playlist.catchupLiveChannels();
     }
     if (_effectiveLiveGroup(playlist) != _favoritesGroupSentinel) {
       return playlist.visibleChannels(
@@ -4920,14 +4923,35 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
             width: 380,
             child: Container(
               color: Colors.black.withValues(alpha: 0.62),
-              child: Column(
-                children: [
-                  Expanded(child: _buildLiveList(playlist)),
-                  if (channel != null)
-                    SizedBox(
-                        height: 170,
-                        child: _ProgramDetails(channel: channel, epg: epg)),
-                ],
+              // The video is behind the list: Refined finish rows stay
+              // see-through, as in the full-video Timeline guide.
+              child: RefinedFinishBackdrop(
+                translucent: true,
+                child: _buildLiveList(playlist),
+              ),
+            ),
+          ),
+          // The description sits right of the list, over the video, and
+          // follows the highlighted channel (the playing one otherwise).
+          Positioned(
+            right: 12,
+            bottom: 12,
+            width: 440,
+            height: 190,
+            child: IgnorePointer(
+              child: ValueListenableBuilder<Channel?>(
+                valueListenable: _liveListFocused,
+                builder: (context, focused, _) {
+                  final shown = focused ?? channel;
+                  if (shown == null) return const SizedBox.shrink();
+                  return DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.62),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: _ProgramDetails(channel: shown, epg: epg),
+                  );
+                },
               ),
             ),
           ),
@@ -5056,7 +5080,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     // key, which is the case that actually matters on real hardware.
     // Hold opens the channel menu (favourite, hide, Move Up / Down) — the
     // same one the Timeline guide's hold opens.
-    return HoldToActivate(
+    final row = HoldToActivate(
       onTap: () =>
           isMoving ? _endChannelMove() : _previewOrOpenChannel(channel),
       onHold: () => isMoving ? _endChannelMove() : _showChannelOptions(channel),
@@ -5118,6 +5142,19 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
           ),
         ),
       ),
+    );
+    // Listen-only (CLAUDE.md §10): the description card follows focus.
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onFocusChange: (has) {
+        if (has) {
+          _liveListFocused.value = channel;
+        } else if (_liveListFocused.value?.id == channel.id) {
+          _liveListFocused.value = null;
+        }
+      },
+      child: row,
     );
   }
 

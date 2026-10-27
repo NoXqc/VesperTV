@@ -55,6 +55,9 @@ class _Playlist extends PlaylistManager {
       [_cu, _plain];
   @override
   bool isPlaylistEnabled(String playlistId) => true;
+  @override
+  List<Channel> catchupLiveChannels() =>
+      [_cu, _plain].where((c) => c.hasCatchup).toList();
 }
 
 /// Half-hour programmes from 30 h ago to 6 h ahead, for both channels.
@@ -131,7 +134,9 @@ void main() {
   });
 
   Future<void> pumpHome(WidgetTester tester,
-      {bool fullVideo = false, bool hideCatchupGroup = false}) async {
+      {bool fullVideo = false,
+      bool hideCatchupGroup = false,
+      String viewMode = 'timeline'}) async {
     tester.view.physicalSize = const Size(1280, 720);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -144,7 +149,7 @@ void main() {
     final prefs = AppPreferences(storage);
     await prefs.init();
     prefs.isTelevision = true;
-    prefs.guideViewMode = 'timeline';
+    prefs.guideViewMode = viewMode;
     prefs.guideFullVideo = fullVideo;
     final playlist = _Playlist(storage);
     playback = PlaybackService(storage, playlist)
@@ -261,6 +266,24 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Catchup channel'), findsWidgets);
     expect(find.text('Plain channel'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Live list: the description card follows the highlighted row',
+      (tester) async {
+    await pumpHome(tester, viewMode: 'live');
+    Future<void> focusRow(String name) async {
+      Focus.of(tester.element(find.text(name).first)).requestFocus();
+      await tester.pumpAndSettle();
+    }
+
+    await focusRow('Catchup channel');
+    // Row text + card title.
+    expect(find.text('Catchup channel'), findsNWidgets(2));
+    expect(find.text('Plain channel'), findsOneWidget);
+    await focusRow('Plain channel');
+    expect(find.text('Plain channel'), findsNWidgets(2));
+    expect(find.text('Catchup channel'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
