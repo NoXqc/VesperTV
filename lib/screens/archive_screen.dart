@@ -73,7 +73,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
 
   int _focusedRow = 0;
   ArchiveMeta? _focused;
-  ArchiveSource? _focusedSource;
+  String? _focusedLabel;
   late final VoidCallback _releaseResumeHint;
 
   @override
@@ -192,7 +192,9 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
   /// rows say so: "Popular · Horror".
   String _rowTitle(ArchiveService service, ArchiveRow row) {
     if (row.isSearch) {
-      return tr('Results for "{query}"', {'query': row.searchQuery});
+      // Several search rows: name the source(s) each one comes from.
+      return '${tr('Results for "{query}"', {'query': row.searchQuery})}'
+          ' · ${row.labelAt(0)}';
     }
     if (row.isHistory) return tr('Recently watched');
     if (row.isFavorites) return tr('Favourites');
@@ -270,7 +272,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
     setState(() {
       _focusedRow = 0;
       _focused = null;
-      _focusedSource = null;
+      _focusedLabel = null;
     });
     if (_scroll.hasClients) _scroll.jumpTo(0);
     await service.setGenre(type, genre);
@@ -322,7 +324,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
       _type = type;
       _focusedRow = 0;
       _focused = null;
-      _focusedSource = null;
+      _focusedLabel = null;
     });
     if (_scroll.hasClients) _scroll.jumpTo(0);
   }
@@ -536,7 +538,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                 icon: Icons.refresh,
                 label: service.refreshing ? tr('Updating…') : tr('Refresh'),
                 small: true,
-                onTap: () => service.refresh(force: true),
+                onTap: () => service.refresh(force: true, manifests: true),
               ),
               _RailTile(
                 icon: Icons.extension_outlined,
@@ -591,7 +593,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => service.refresh(force: true),
+            onPressed: () => service.refresh(force: true, manifests: true),
           ),
           IconButton(
             icon: const Icon(Icons.extension_outlined),
@@ -880,7 +882,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                 ? tr('None of your sources has movies.')
                 : tr('None of your sources has TV shows.')),
         action: tr('Refresh'),
-        onAction: () => service.refresh(force: true),
+        onAction: () => service.refresh(force: true, manifests: true),
         focusNode: _emptyActionNode,
         onUp: _focusBar,
       );
@@ -918,9 +920,8 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                               DetailMetaChip(scale: 1, label: focused.runtime!),
                             for (final g in focused.genres.take(3))
                               DetailMetaChip(scale: 1, label: g),
-                            if (_focusedSource != null)
-                              DetailMetaChip(
-                                  scale: 1, label: _focusedSource!.name),
+                            if (_focusedLabel != null)
+                              DetailMetaChip(scale: 1, label: _focusedLabel!),
                           ]),
                           const SizedBox(height: 8),
                           if (focused.description != null)
@@ -1026,7 +1027,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                       setState(() {
                         _focusedRow = r;
                         _focused = meta;
-                        _focusedSource = row.sourceAt(i);
+                        _focusedLabel = row.labelAt(i);
                       });
                     },
                   ),

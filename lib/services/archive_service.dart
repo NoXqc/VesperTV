@@ -24,6 +24,7 @@ class ArchiveRow {
     this.searchQuery,
     this.itemSources,
     this.isFavorites = false,
+    this.sourceLabel,
   });
 
   final ArchiveSource source;
@@ -38,6 +39,15 @@ class ArchiveRow {
 
   /// The Favourites row (also carries [itemSources]).
   final bool isFavorites;
+
+  /// Who the row's titles come from, when that isn't just [source]: a
+  /// search row shared by stream-only add-ons on the same provider names
+  /// every one of them ("Torrentio TB · NoxAIO").
+  final String? sourceLabel;
+
+  /// The source name shown for item [i] (hero chip, search row header).
+  String labelAt(int i) =>
+      itemSources != null ? sourceAt(i).name : sourceLabel ?? source.name;
 
   ArchiveSource sourceAt(int i) => itemSources?[i] ?? source;
 
@@ -253,15 +263,17 @@ class ArchiveService extends ChangeNotifier {
 
   /// Custom sources can replace their catalog ids without changing the
   /// manifest link. Re-read their definitions on open and explicit Refresh,
-  /// keeping the saved definition if the source cannot answer.
-  Future<void> _recheckCustomSources() async {
+  /// keeping the saved definition if the source cannot answer. With [all]
+  /// (explicit Refresh) every add-on is re-read: a stream-only add-on can
+  /// gain catalogs of its own (an AIOStreams config adding TMDB) and was
+  /// never updated before (owner, 2026-10-27).
+  Future<void> _recheckCustomSources({bool all = false}) async {
     for (final s in sources) {
-      if (!s.enabled ||
-          s.streamOnly ||
-          s.server != null ||
-          s.tracker != null ||
-          s.catalogs.isEmpty ||
-          !s.catalogs.any((c) => c.wireType != null)) {
+      if (!s.enabled || s.server != null || s.tracker != null) continue;
+      if (!all &&
+          (s.streamOnly ||
+              s.catalogs.isEmpty ||
+              !s.catalogs.any((c) => c.wireType != null))) {
         continue;
       }
       await _refreshManifest(s);
@@ -583,7 +595,19 @@ class ArchiveService extends ChangeNotifier {
       if (items.isEmpty) continue;
       final (s, c) =
           group.firstWhere((sc) => sc.$2.searchable, orElse: () => group.first);
-      out.add(ArchiveRow(source: s, catalog: c, items: items, searchQuery: q));
+      // Stream-only add-ons on one provider list only the first one's
+      // catalogs; every one of them plays these results.
+      final names = [
+        if (s.streamOnly)
+          for (final o in enabledSources)
+            if (o.streamOnly && o.catalogBaseUrl == s.catalogBaseUrl) o.name
+      ];
+      out.add(ArchiveRow(
+          source: s,
+          catalog: c,
+          items: items,
+          searchQuery: q,
+          sourceLabel: names.length > 1 ? names.join(' · ') : null));
     }
     return out;
   }
@@ -851,8 +875,9 @@ class ArchiveService extends ChangeNotifier {
   }
 
   /// Refetches catalogs older than [_staleAfter] (all of them with
-  /// [force]). A failing source keeps its cached rows.
-  Future<void> refresh({bool force = false}) async {
+  /// [force]). A failing source keeps its cached rows. [manifests] (the
+  /// Refresh button) re-reads every add-on's manifest first.
+  Future<void> refresh({bool force = false, bool manifests = false}) async {
     if (_refreshing) {
       // A genre picked mid-refresh adds rows the running pass won't reach.
       _refreshAgain = true;
@@ -863,7 +888,7 @@ class ArchiveService extends ChangeNotifier {
     lastError = null;
     _notify();
     try {
-      if (force) await _recheckCustomSources();
+      if (force) await _recheckCustomSources(all: manifests);
       for (final type in ArchiveType.values) {
         for (final (s, c) in _catalogs(type)) {
           final key = _rowKey(s, c);
@@ -967,28 +992,71 @@ class ArchiveService extends ChangeNotifier {
     Object? error;
     final titleKey =
         sha1.convert(utf8.encode(videoId)).toString().substring(0, 12);
-    for (final s in _streamSources(source)) {
+    final imdbId = _imdbVideoId(source, meta, episode);
+    Future<int> ask(ArchiveSource s, String id) async {
       try {
         final streams = s.server != null
-            ? _servers.streams(s, videoId)
-            : await _api.fetchStreams(s.baseUrl, meta.type, videoId,
+            ? _servers.streams(s, id)
+            : await _api.fetchStreams(s.baseUrl, meta.type, id,
                 wire: meta.wire);
         debugPrint('ArchiveStreams: source=${s.key} title=$titleKey '
-            'type=${meta.wire} playable=${streams.length}');
+            'type=${meta.wire}${id == videoId ? '' : ' imdb'} '
+            'playable=${streams.length}');
         for (final st in streams) {
           if (urls.add(st.identity)) {
             out.add(ArchiveStreamOption(source: s, stream: st));
           }
         }
+        return streams.length;
       } catch (e) {
         error ??= e;
         debugPrint('ArchiveStreams: source=${s.key} title=$titleKey '
-            'type=${meta.wire} failed=${e.runtimeType}'
+            'type=${meta.wire}${id == videoId ? '' : ' imdb'} '
+            'failed=${e.runtimeType}'
             '${e is ArchiveApiException && e.statusCode != null ? ' http=${e.statusCode}' : ''}');
+        return 0;
       }
     }
-    if (out.isEmpty && error != null) throw error;
+
+    for (final s in _streamSources(source)) {
+      // Own ids (tmdb:…) the add-on can't resolve: retry with the IMDb id.
+      if (await ask(s, videoId) == 0 && imdbId != null && s == source) {
+        await ask(s, imdbId);
+      }
+    }
+    // A title known by its IMDb id: the stream-only add-ons (same ids as
+    // the provider's rows) have streams for it too.
+    if (imdbId != null) {
+      for (final s in enabledSources) {
+        if (s.streamOnly && s.manifestUrl != source.manifestUrl) {
+          await ask(s, imdbId);
+        }
+      }
+    }
+    if (out.isEmpty && error != null) throw error!;
     return out;
+  }
+
+  /// [meta]'s (or [episode]'s) IMDb video id when an add-on's own catalog
+  /// uses other ids (a TMDB catalog's `tmdb:557`, whose details carry
+  /// `imdb_id`); null when the id already is one, or for media servers,
+  /// trackers, list-only and custom-type sources.
+  static String? _imdbVideoId(
+      ArchiveSource source, ArchiveMeta meta, ArchiveVideo? episode) {
+    final imdb = meta.imdb;
+    if (imdb == null ||
+        meta.wireType != null ||
+        source.streamOnly ||
+        source.listOnly ||
+        source.server != null ||
+        source.tracker != null) {
+      return null;
+    }
+    final id = episode?.id ?? meta.id;
+    if (id.startsWith('tt')) return null;
+    if (episode == null) return imdb;
+    if (episode.season <= 0 && episode.episode <= 0) return null;
+    return '$imdb:${episode.season}:${episode.episode}';
   }
 
   /// The [Channel] that plays [stream] for [meta] or its [episode]. Its id
