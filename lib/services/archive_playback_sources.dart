@@ -1,5 +1,6 @@
 import '../models/channel.dart';
 import 'archive_service.dart';
+import 'archive_stream_size.dart';
 
 /// A title's available streams, scoped to its playback route and active viewer.
 /// Channel IDs identify episodes, so opening the drawer after Next never offers
@@ -60,3 +61,57 @@ String archiveStreamLabel(String text) => text
     .replaceAll(RegExp(r'https?://\S+', caseSensitive: false), '')
     .replaceAll(RegExp(r'\s+'), ' ')
     .trim();
+
+/// Locate the playing source after an add-on refreshes its signed links.
+/// Never infer a current row from a shared quality label or another provider.
+/// -1 means there is no unique match; the drawer can retain the known selection.
+int archiveCurrentStreamIndex(
+    List<ArchiveStreamOption> options, ArchiveStreamOption? current) {
+  if (current == null || current.stream.ytId != null) return -1;
+  String hash(ArchiveStreamOption o) =>
+      (o.stream.videoHash ?? '').trim().toLowerCase();
+  String filename(ArchiveStreamOption o) => (o.stream.fileName ?? '').trim();
+  final currentHash = hash(current);
+  final currentFile = filename(current);
+  final currentBytes = archiveStreamBytes(current);
+  final candidates = <int>[];
+  for (var i = 0; i < options.length; i++) {
+    final candidate = options[i];
+    if (candidate.stream.ytId != null ||
+        candidate.source.manifestUrl != current.source.manifestUrl) {
+      continue;
+    }
+    final bytes = archiveStreamBytes(candidate);
+    if (currentBytes > 0 && bytes > 0 && currentBytes != bytes) continue;
+    final candidateHash = hash(candidate);
+    if (currentHash.isNotEmpty &&
+        candidateHash.isNotEmpty &&
+        currentHash != candidateHash) {
+      continue;
+    }
+    if ((currentHash.isEmpty || candidateHash.isEmpty) &&
+        currentFile.isNotEmpty &&
+        filename(candidate).isNotEmpty &&
+        currentFile != filename(candidate)) {
+      continue;
+    }
+    candidates.add(i);
+  }
+  final checks = <bool Function(ArchiveStreamOption)>[
+    (o) =>
+        current.stream.url.isNotEmpty &&
+        o.stream.identity == current.stream.identity,
+    (o) => currentHash.isNotEmpty && hash(o) == currentHash,
+    (o) => currentFile.isNotEmpty && filename(o) == currentFile,
+    (o) =>
+        ((current.stream.name ?? '').isNotEmpty ||
+            (current.stream.title ?? '').isNotEmpty) &&
+        o.stream.name == current.stream.name &&
+        o.stream.title == current.stream.title,
+  ];
+  for (final check in checks) {
+    final matched = candidates.where((i) => check(options[i])).toList();
+    if (matched.isNotEmpty) return matched.length == 1 ? matched.single : -1;
+  }
+  return -1;
+}

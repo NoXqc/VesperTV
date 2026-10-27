@@ -8,6 +8,7 @@ import '../l10n/l10n.dart';
 import '../services/archive_playback_sources.dart';
 import '../services/archive_service.dart';
 import '../services/archive_stream_size.dart';
+import 'gold_tag.dart';
 
 Future<ArchiveSourceSelection?> showArchiveSourceDrawer(BuildContext context,
         {required ArchivePlaybackSources sources, required String channelId}) =>
@@ -63,6 +64,7 @@ class _ArchiveSourceDrawerState extends State<_ArchiveSourceDrawer> {
   bool _selecting = false;
   String? _error;
   int _index = 0;
+  int _currentIndex = -1;
 
   @override
   void initState() {
@@ -73,32 +75,23 @@ class _ArchiveSourceDrawerState extends State<_ArchiveSourceDrawer> {
     });
   }
 
-  bool _isCurrent(ArchiveStreamOption option) {
-    final current = widget.sources.current(widget.channelId);
-    if (current == null ||
-        current.source.manifestUrl != option.source.manifestUrl) {
-      return false;
-    }
-    if (current.stream.identity == option.stream.identity) return true;
-    // A provider can refresh a signed URL between opening playback and this
-    // drawer. Match metadata only when it identifies one file unambiguously.
-    bool sameDescription(ArchiveStreamOption candidate) =>
-        candidate.source.manifestUrl == current.source.manifestUrl &&
-        candidate.stream.name == current.stream.name &&
-        candidate.stream.title == current.stream.title;
-    return ((current.stream.name ?? '').isNotEmpty ||
-            (current.stream.title ?? '').isNotEmpty) &&
-        sameDescription(option) &&
-        _options.where(sameDescription).length == 1;
-  }
-
   Future<void> _load() async {
     try {
       final options = await widget.sources.load(widget.channelId);
       if (!mounted) return;
+      var playable = options.where((o) => o.stream.ytId == null).toList();
+      final playing = widget.sources.current(widget.channelId);
+      var currentIndex = archiveCurrentStreamIndex(playable, playing);
+      if (currentIndex < 0 && playing != null && playing.stream.ytId == null) {
+        // Retain the known playing selection rather than labelling an ambiguous
+        // refreshed alternative as current. No URL is probed or exposed.
+        playable = [playing, ...playable];
+        currentIndex = 0;
+      }
       setState(() {
-        _options = options.where((o) => o.stream.ytId == null).toList();
-        _index = math.max(0, _options.indexWhere(_isCurrent));
+        _options = playable;
+        _currentIndex = currentIndex;
+        _index = math.max(0, _currentIndex);
         _loading = false;
       });
       WidgetsBinding.instance.addPostFrameCallback((_) => _reveal());
@@ -128,7 +121,7 @@ class _ArchiveSourceDrawerState extends State<_ArchiveSourceDrawer> {
   Future<void> _select(int index) async {
     if (_closing || _selecting || _loading || index >= _options.length) return;
     final option = _options[index];
-    if (_isCurrent(option)) {
+    if (index == _currentIndex) {
       _dismiss();
       return;
     }
@@ -242,7 +235,7 @@ class _ArchiveSourceDrawerState extends State<_ArchiveSourceDrawer> {
                             final option = _options[index];
                             final info = archiveMediaFileInfo(option);
                             final formats = archiveStreamFormats(option);
-                            final current = _isCurrent(option);
+                            final current = index == _currentIndex;
                             return GestureDetector(
                               onTap: () => _select(index),
                               child: Container(
@@ -260,21 +253,20 @@ class _ArchiveSourceDrawerState extends State<_ArchiveSourceDrawer> {
                                       border: Border.all(
                                           color: index == _index
                                               ? scheme.primary
-                                              : Colors.white24,
-                                          width: index == _index ? 2 : 1),
+                                              : current
+                                                  ? Colors.amber
+                                                  : Colors.white24,
+                                          width: index == _index
+                                              ? 2
+                                              : current
+                                                  ? 1.2
+                                                  : 1),
                                     ),
                                     focused: index == _index),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Row(children: [
-                                      if (current)
-                                        Padding(
-                                          padding:
-                                              const EdgeInsets.only(right: 6),
-                                          child: Icon(Icons.check_circle,
-                                              color: scheme.primary, size: 20),
-                                        ),
                                       Expanded(
                                           child: Text(info.source,
                                               maxLines: _compact ? 1 : 2,
@@ -283,12 +275,13 @@ class _ArchiveSourceDrawerState extends State<_ArchiveSourceDrawer> {
                                                   fontSize: _compact ? 14 : 16,
                                                   fontWeight:
                                                       FontWeight.bold))),
+                                      if (current)
+                                        GoldTag(
+                                            label: tr('Current stream'),
+                                            compact: true,
+                                            margin:
+                                                const EdgeInsets.only(left: 6)),
                                     ]),
-                                    if (current)
-                                      Text(tr('Current stream'),
-                                          style: TextStyle(
-                                              color: scheme.primary,
-                                              fontSize: _compact ? 10 : 11)),
                                     SizedBox(height: _compact ? 4 : 6),
                                     if (formats.isNotEmpty)
                                       Text(formats.join(' · '),

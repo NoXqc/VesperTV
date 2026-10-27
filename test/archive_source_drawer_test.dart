@@ -8,6 +8,7 @@ import 'package:nox_iptv/models/channel.dart';
 import 'package:nox_iptv/services/archive_playback_sources.dart';
 import 'package:nox_iptv/services/archive_service.dart';
 import 'package:nox_iptv/widgets/archive_source_drawer.dart';
+import 'package:nox_iptv/widgets/gold_tag.dart';
 
 const _source = ArchiveSource(
     manifestUrl: 'https://example.com/manifest.json', name: 'Torrentio');
@@ -80,6 +81,19 @@ void main() {
     expect(find.text('4K · Dolby Vision · HDR10+ · HEVC'), findsOneWidget);
     expect(find.textContaining('secret=hidden'), findsNothing);
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(find.byType(GoldTag), findsOneWidget);
+    expect(find.text('Current stream'), findsOneWidget);
+    final currentRow = tester
+        .widgetList<Container>(find.ancestor(
+            of: find.byType(GoldTag), matching: find.byType(Container)))
+        .firstWhere((w) =>
+            w.decoration is BoxDecoration &&
+            (w.decoration! as BoxDecoration).borderRadius ==
+                BorderRadius.circular(12));
+    final border = (currentRow.decoration! as BoxDecoration).border! as Border;
+    expect(border.top.color, Colors.amber);
+    expect(border.top.width, 1.2);
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(selections, 1);
@@ -115,6 +129,120 @@ void main() {
     await tester.pump();
     expect(find.text('Stream sources'), findsNothing);
     expect(selections, 0);
+    expect(tester.takeException(), isNull);
+  });
+  ArchiveStreamOption file(String url,
+          {String? hash,
+          String? filename,
+          int bytes = 39700000000,
+          String title = 'Movie 39.7 GB',
+          ArchiveSource source = _source}) =>
+      ArchiveStreamOption(
+          source: source,
+          stream: ArchiveStream(
+              url: url,
+              name: '4K WEB-DL',
+              title: title,
+              sizeBytes: bytes,
+              fileName: filename,
+              videoHash: hash));
+
+  test(
+      'current source matches a unique stable hash after URL/description refresh',
+      () {
+    final playing =
+        file('https://example.com/old', hash: 'AbCd', title: 'Old seed count');
+    final refreshed = file('https://example.com/fresh',
+        hash: 'abcd', title: 'New seed count');
+    final other = file('https://example.com/other', hash: 'different');
+    expect(archiveCurrentStreamIndex([other, refreshed], playing), 1);
+  });
+  test('current source matches a unique stable filename after URL refresh', () {
+    final playing = file('https://example.com/old', filename: 'movie.mkv');
+    final refreshed = file('https://example.com/fresh',
+        filename: 'movie.mkv', title: 'Fresh labels');
+    expect(archiveCurrentStreamIndex([refreshed], playing), 0);
+  });
+  test('current source never crosses providers or known file/size conflicts',
+      () {
+    final playing =
+        file('https://example.com/same', filename: 'large.mkv', hash: 'a');
+    const otherSource = ArchiveSource(
+        manifestUrl: 'https://other.example/manifest.json', name: 'Other');
+    for (final candidate in [
+      file('https://example.com/same', source: otherSource),
+      file('https://example.com/same', bytes: 7000000000),
+      file('https://example.com/same', hash: 'b'),
+      file('https://example.com/same', filename: 'different.mkv'),
+    ]) {
+      expect(archiveCurrentStreamIndex([candidate], playing), -1);
+    }
+  });
+  test(
+      'duplicate labels and ambiguous stable identities never guess a current source',
+      () {
+    final first = file('https://example.com/one');
+    final second = file('https://example.com/two');
+    expect(
+        archiveCurrentStreamIndex(
+            [first, second], file('https://example.com/old')),
+        -1);
+    expect(archiveCurrentStreamIndex([first], null), -1);
+    expect(
+        archiveCurrentStreamIndex([
+          file('https://example.com/one', hash: 'a'),
+          file('https://example.com/two', hash: 'a')
+        ], file('https://example.com/old', hash: 'a')),
+        -1);
+  });
+
+  testWidgets(
+      'an unmatched playing source stays visible with exactly one Current tag',
+      (tester) async {
+    final playing = file('https://example.com/old');
+    final first = file('https://example.com/fresh-one');
+    final second = file('https://example.com/fresh-two');
+    ArchiveStreamOption? chosen;
+    final sources = ArchivePlaybackSources(
+        load: (_) async => [first, second],
+        current: (_) => playing,
+        select: (id, option) async {
+          chosen = option;
+          return Channel(
+              id: id,
+              rawId: id,
+              playlistId: '',
+              name: 'Movie',
+              group: '',
+              url: option.stream.url);
+        },
+        remember: (_, __) async {});
+    await tester.pumpWidget(MaterialApp(
+        home: Builder(
+            builder: (context) => Scaffold(
+                body: TextButton(
+                    onPressed: () => showArchiveSourceDrawer(context,
+                        sources: sources, channelId: 'movie'),
+                    child: const Text('Open'))))));
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    expect(find.byType(GoldTag), findsOneWidget);
+    expect(find.text('Current stream'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(chosen, isNull); // Current closes the drawer without restarting.
+    expect(find.text('Stream sources'), findsNothing);
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    expect(find.byType(GoldTag), findsOneWidget);
+    // The retained current row is first; moving down selects the first fresh
+    // option, never confuses it with the currently playing source.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(find.byType(GoldTag), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(chosen, same(first));
     expect(tester.takeException(), isNull);
   });
 }
