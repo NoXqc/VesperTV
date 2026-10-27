@@ -362,7 +362,7 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   +474 (see section10); owner confirmed improved navigation, requested smaller
   cards. Production-signed +475 is installed on Formuler: roughly one-third card
   area,3 columns at960px/4 at1280px, same direct controls/dark glass. Analyze16,
-  755 tests; compact-size acceptance pending. See `dev-notes/mediahub-source-grid.md`
+  755 tests; owner accepted compact size on Formuler (2026-10-27). See `dev-notes/mediahub-source-grid.md`
   and root HANDOFF.md. No publication.
 
 - **cdx 2026-10-27 — release 1.0.43 (beta), +472:** owner requested release and

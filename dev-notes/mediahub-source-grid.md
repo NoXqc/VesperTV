@@ -96,3 +96,5 @@ Build/installation and validation: root HANDOFF.md.
 Compact test1.0.43+475 is production-signed and installed over+474 on Formuler.
 Analyze16/all755 Flutter tests passed. Signature, version, ZIP integrity and
 installed APK hash verified. No UI driving, publication or Windows build.
+
+Owner accepted the compact size on Formuler +475 (2026-10-27): "Perfect size".
