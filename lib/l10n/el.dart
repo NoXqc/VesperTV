@@ -2610,4 +2610,7 @@ const Map<String, String> kEl = {
   'Next programme': 'Επόμενη εκπομπή',
   'Watch from the start': 'Παρακολούθηση από την αρχή',
   '{time} behind live': '{time} πίσω από το ζωντανό',
+  'Back to live': 'Επιστροφή στο ζωντανό',
+  'Catch-up {time}': 'Catch-up {time}',
+  'Now': 'Τώρα',
 };

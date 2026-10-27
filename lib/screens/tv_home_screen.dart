@@ -679,6 +679,13 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     final recording = RecordingService.supported
         ? RecordingService.instance.recordingOf(channel)
         : null;
+    // Catch-up: the programme on now from its start, and the way back to
+    // live when this channel's catch-up is playing.
+    final playbackNow = context.read<PlaybackService>();
+    final onAir = channel.hasCatchup
+        ? context.read<EpgService>().getCurrentProgram(channel.epgId)
+        : null;
+    final inCatchup = playbackNow.catchup?.live.id == channel.id;
     // What "until the show ends" means right now, shown under that row.
     final onNow = RecordingService.supported
         ? context.read<EpgService>().getCurrentProgram(channel.epgId)
@@ -710,6 +717,16 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       builder: (context) => SimpleDialog(
         title: Text(channel.name, maxLines: 1, overflow: TextOverflow.ellipsis),
         children: [
+          if (inCatchup)
+            TvDialogOption(
+              onPressed: () => Navigator.of(context).pop('live'),
+              child: Text(tr('Back to live')),
+            ),
+          if (onAir != null)
+            TvDialogOption(
+              onPressed: () => Navigator.of(context).pop('startOver'),
+              child: twoLines(tr('Watch from the start'), onAir.title),
+            ),
           TvDialogOption(
             autofocus: true,
             onPressed: () => Navigator.of(context).pop('favorite'),
@@ -763,6 +780,10 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
 
     if (!mounted) return;
     switch (choice) {
+      case 'live':
+        await playbackNow.backToLive();
+      case 'startOver':
+        if (onAir != null) await _previewOrOpenCatchup(channel, onAir.start);
       case 'record':
         await _recordChannel(channel, recording);
       case 'recordChannel':
@@ -973,6 +994,13 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// call is asking for. See `_TimelineGuideState._windowStart`'s doc
   /// comment for why that's ever needed at all.
   GlobalKey<_TimelineGuideState> _timelineGuideKey = GlobalKey();
+
+  /// The Timeline guide's window when it looks at the past through
+  /// catch-up (null = the usual now-centred window), and where its D-pad
+  /// cursor lands after the remount that moves it.
+  DateTime? _guideAnchor;
+  int? _guideInitialRow;
+  DateTime? _guideInitialCursor;
 
   /// The Timeline guide's own filter toggle button
   /// (`_TimelineFilterButton`, rendered above its channel column).
@@ -1679,6 +1707,13 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       _closeTimelineFilter(toGuide: true);
       return;
     }
+    // Back in the Timeline guide while it looks at another time (the past
+    // through catch-up, or later slots): first back to now; the next Back
+    // walks to the groups as before.
+    if (_focusDepth == 2 &&
+        (_timelineGuideKey.currentState?.backToNow() ?? false)) {
+      return;
+    }
     final previousDepth = (_focusDepth - 1).clamp(0, 2);
     _moveColumnFocus(-1, 2);
     // Touch navigation changes the visible page even when the target column
@@ -1959,9 +1994,16 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       // to go back to guide... doesn't bring us back to the current
       // channel but where we last were before."
       if (context.read<AppPreferences>().guideViewMode == 'timeline') {
-        final channel = context.read<PlaybackService>().currentChannel;
+        final playback = context.read<PlaybackService>();
+        // Catch-up: its live channel's row, at the playhead.
+        final channel = playback.liveChannel;
+        final session = playback.catchup;
+        final controller = playback.controller;
         if (channel != null) {
-          _timelineGuideKey.currentState?.restoreFocusToChannel(channel.id);
+          _timelineGuideKey.currentState?.restoreFocusToChannel(channel.id,
+              at: session == null || controller == null
+                  ? null
+                  : session.playhead(controller.value.position));
         } else {
           _col0Scope.requestFocus();
         }
@@ -2230,7 +2272,39 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// needs none, and a double click/press still reads as two presses.
   /// Other entry points (History dialog, Continue Watching) keep
   /// [_selectChannel]'s straight-to-fullscreen behaviour.
+  /// The catch-up programme last opened from the guide (live channel id +
+  /// requested time): a second OK on it goes full screen, like live.
+  ({String id, DateTime at})? _catchupPreview;
+
+  /// OK on a past programme (or Watch from the start): plays [channel]'s
+  /// catch-up from [at] in the preview; OK again on the same one = full
+  /// screen. Windows has no catch-up player yet: plays the channel live.
+  Future<void> _previewOrOpenCatchup(Channel channel, DateTime at) async {
+    // The target platform (not dart:io), so Android tests on a Windows PC
+    // take this path too.
+    if (defaultTargetPlatform == TargetPlatform.windows ||
+        !channel.hasCatchup) {
+      return _previewOrOpenChannel(channel);
+    }
+    final playback = context.read<PlaybackService>();
+    playback.zapList = _currentLiveChannels(context.read<PlaylistManager>());
+    final last = _catchupPreview;
+    if (last != null &&
+        last.id == channel.id &&
+        last.at == at &&
+        playback.catchup?.live.id == channel.id) {
+      final playing = playback.currentChannel;
+      if (playing == null) return;
+      Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => PlayerScreen(channel: playing)));
+      return;
+    }
+    _catchupPreview = (id: channel.id, at: at);
+    await playback.playCatchup(channel, at);
+  }
+
   Future<void> _previewOrOpenChannel(Channel channel) async {
+    _catchupPreview = null;
     if (Platform.isWindows) {
       final mini = DesktopMiniPlayer.instance;
       if (mini.channel.value?.id == channel.id) {
@@ -4557,6 +4631,31 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
         key: _timelineGuideKey,
         channels: _filteredLiveChannelsForGuide(playlist),
         epg: epg,
+        anchor: _guideAnchor,
+        initialRow: _guideInitialRow,
+        initialCursor: _guideInitialCursor,
+        // Moving into / out of the past remounts the guide on a new
+        // window; the D-pad cursor carries over.
+        onShiftWindow: (anchor, row, cursor) {
+          setState(() {
+            _guideAnchor = anchor;
+            _guideInitialRow = row;
+            _guideInitialCursor = cursor;
+            _timelineGuideKey = GlobalKey();
+          });
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _guideInitialRow = null;
+            _guideInitialCursor = null;
+          });
+        },
+        onOpenCatchup: (channel, at) {
+          if (_movingChannel != null) {
+            _endChannelMove();
+            return;
+          }
+          if (_timelineFilterActive) _closeTimelineFilter();
+          _previewOrOpenCatchup(channel, at);
+        },
         // Closes the filter (if it's open) before actually opening the
         // channel — reported directly: picking a channel while filtering,
         // going fullscreen, then backing out left the filter keyboard
@@ -7503,11 +7602,37 @@ class _TimelineGuide extends StatefulWidget {
       required this.onFilterToggle,
       this.onReachedTop,
       this.onWindowStale,
+      this.anchor,
+      this.initialRow,
+      this.initialCursor,
+      this.onShiftWindow,
+      this.onOpenCatchup,
       this.translucent = false});
 
   /// Full-video mode (`_TvHomeScreenState._fullVideo`): lighter "now"
   /// blocks so the video shows through the grid.
   final bool translucent;
+
+  /// Catch-up: the time this window is centred on when it shows the past
+  /// (null = the usual window, an hour back to five ahead). The window is
+  /// fixed per State (see [_TimelineGuideState._windowStart]), so moving
+  /// it means [onShiftWindow] -> a remount; a wider window instead would
+  /// build every row's blocks for days (they're not lazy within a row).
+  final DateTime? anchor;
+
+  /// After such a remount: the row and time column to focus.
+  final int? initialRow;
+  final DateTime? initialCursor;
+
+  /// Left past the window's start on a catch-up row (or Right past its end
+  /// while in the past, or Back to now): remount on [anchor] (null = now)
+  /// with the cursor on [row] at [cursor] (null = now).
+  final void Function(DateTime? anchor, int row, DateTime? cursor)?
+      onShiftWindow;
+
+  /// OK on a programme that has ended and is still in the channel's
+  /// catch-up, or on an hour of catch-up the guide has no listing for.
+  final void Function(Channel channel, DateTime at)? onOpenCatchup;
 
   final List<Channel> channels;
   final EpgService epg;
@@ -7611,6 +7736,9 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   late final DateTime _windowStart;
   late final DateTime _windowEnd;
   late final double _totalWidth;
+
+  /// Half the width of a catch-up (past) window around its anchor.
+  static const Duration _pastHalfWindow = Duration(hours: 3);
   bool _staleReported = false;
 
   // Two independent controller pairs (ruler mirrors the grid horizontally,
@@ -7645,8 +7773,19 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   void initState() {
     super.initState();
     final now = DateTime.now();
-    _windowStart = now.subtract(_windowBefore);
-    _windowEnd = now.add(_windowAfter);
+    final anchor = widget.anchor;
+    if (anchor == null) {
+      _windowStart = now.subtract(_windowBefore);
+      _windowEnd = now.add(_windowAfter);
+    } else {
+      final centre = _floorToSlot(anchor);
+      _windowStart = centre.subtract(_pastHalfWindow);
+      final end = centre.add(_pastHalfWindow);
+      final latest = now.add(_windowAfter);
+      _windowEnd = end.isAfter(latest) ? latest : end;
+    }
+    final cursor = widget.initialCursor;
+    _cursorSlot = cursor == null ? null : _floorToSlot(cursor);
     _totalWidth =
         _windowEnd.difference(_windowStart).inMinutes * _pixelsPerMinute;
     _gridHScroll.addListener(_mirrorRuler);
@@ -7673,11 +7812,60 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
         }
         return;
       }
-      _gridHScroll.jumpTo(_xFor(_floorToSlot(DateTime.now()))
+      _gridHScroll.jumpTo(_xFor(_cursorSlot ?? _floorToSlot(DateTime.now()))
           .clamp(0.0, _gridHScroll.position.maxScrollExtent));
+      // After a window shift: the same row, at the cursor's column.
+      final row = widget.initialRow;
+      if (row != null && row < widget.channels.length) {
+        _focusedRowIndex = row;
+        _ensureRowVisible(row);
+        _focusRowAt(row, _timeForSlot(_cursorSlot), 5);
+      }
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) => jumpToNow(5));
+  }
+
+  /// Focuses [row]'s block at [time] once that row is built (a few frames
+  /// at most).
+  void _focusRowAt(int row, DateTime time, int triesLeft) {
+    if (!mounted) return;
+    final blocks = _rowBlocks[row];
+    final best = blocks == null ? null : _bestBlockFor(blocks, time);
+    if (best != null) {
+      _focusBlock(best.node);
+    } else if (triesLeft > 0) {
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _focusRowAt(row, time, triesLeft - 1));
+    }
+  }
+
+  /// The oldest half-hour [channel]'s catch-up reaches, or null without.
+  DateTime? _catchupFloor(Channel channel) => channel.hasCatchup
+      ? _floorToSlot(
+              DateTime.now().subtract(Duration(days: channel.catchupDays)))
+          .add(_slot)
+      : null;
+
+  /// Back in the guide: back to now when it looks at another time. True
+  /// when it did something (the caller then stops there).
+  bool backToNow() {
+    final row = _focusedRowIndex ?? 0;
+    if (widget.anchor != null) {
+      widget.onShiftWindow?.call(null, row, null);
+      return widget.onShiftWindow != null;
+    }
+    final now = DateTime.now();
+    final slot = _cursorSlot;
+    if (slot == null || slot == _floorToSlot(now)) return false;
+    _cursorSlot = null;
+    if (_gridHScroll.hasClients) {
+      _gridHScroll.jumpTo(_xFor(_floorToSlot(now))
+          .clamp(0.0, _gridHScroll.position.maxScrollExtent));
+    }
+    if (_gridFocusScope.hasFocus) _focusRowAt(row, now, 3);
+    setState(() {});
+    return true;
   }
 
   @override
@@ -7761,7 +7949,8 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   /// guard every 30s tick between here and that remount actually landing
   /// would call it again for nothing.
   void _checkWindowStale() {
-    if (_staleReported) return;
+    // A past (catch-up) window doesn't follow the clock; Back to now does.
+    if (_staleReported || widget.anchor != null) return;
     if (!DateTime.now()
         .isBefore(_windowEnd.subtract(const Duration(hours: 1)))) {
       _staleReported = true;
@@ -7895,8 +8084,11 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
 
   static const Duration _slot = Duration(minutes: 30);
 
-  DateTime _floorToSlot(DateTime t) =>
-      DateTime(t.year, t.month, t.day, t.hour, t.minute - t.minute % 30);
+  // Local time: catch-up hands over UTC playheads.
+  DateTime _floorToSlot(DateTime time) {
+    final t = time.toLocal();
+    return DateTime(t.year, t.month, t.day, t.hour, t.minute - t.minute % 30);
+  }
 
   /// The moment to look for blocks at, for [slot] (null = live/"now").
   DateTime _timeForSlot(DateTime? slot) {
@@ -7923,8 +8115,26 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
                 ? _windowStart
                 : program.start));
     final target = current.add(_slot * dir);
-    if (target.isBefore(_floorToSlot(_windowStart)) ||
-        !target.isBefore(_windowEnd)) {
+    final shift = widget.onShiftWindow;
+    if (target.isBefore(_floorToSlot(_windowStart))) {
+      // Into the past on a catch-up row: a window further back.
+      final floor = _catchupFloor(widget.channels[rowIndex]);
+      if (shift != null && floor != null && !target.isBefore(floor)) {
+        shift(target, rowIndex, target);
+        return true;
+      }
+      return false;
+    }
+    if (!target.isBefore(_windowEnd)) {
+      // Forward out of a past window: the next one, or the usual window
+      // once that reaches back to the target.
+      if (shift != null && widget.anchor != null) {
+        final usual =
+            !target.isBefore(_floorToSlot(now.subtract(_windowBefore)));
+        shift(usual ? null : target, rowIndex,
+            target == _floorToSlot(now) ? null : target);
+        return true;
+      }
       return false;
     }
     final live = target == _floorToSlot(now);
@@ -8080,9 +8290,27 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   /// just restored whatever was focused before Select was pressed, not
   /// the channel actually playing. Reported directly as "brings us back
   /// to where we last were, not the current channel."
-  void restoreFocusToChannel(String channelId) {
+  void restoreFocusToChannel(String channelId, {DateTime? at}) {
     final rowIndex = widget.channels.indexWhere((c) => c.id == channelId);
     if (rowIndex < 0) return;
+    // Back from a catch-up programme: its row at the playhead (another
+    // window when that is outside this one).
+    if (at != null &&
+        DateTime.now().difference(at) > const Duration(minutes: 2)) {
+      if (at.isBefore(_windowStart) || !at.isBefore(_windowEnd)) {
+        widget.onShiftWindow?.call(at, rowIndex, at);
+        return;
+      }
+      _ensureRowVisible(rowIndex);
+      _cursorSlot = _floorToSlot(at);
+      if (_gridHScroll.hasClients) {
+        _gridHScroll.jumpTo(_xFor(_cursorSlot!)
+            .clamp(0.0, _gridHScroll.position.maxScrollExtent));
+      }
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _focusRowAt(rowIndex, at, 3));
+      return;
+    }
     _ensureRowVisible(rowIndex);
     // Always deferred, not tried synchronously first — unlike
     // moveVertical's single-row step, this jump can be arbitrarily far
@@ -8132,19 +8360,36 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
               ),
               const VerticalDivider(width: 1),
               Expanded(
-                child: ClipRect(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    controller: _rulerHScroll,
-                    physics: const NeverScrollableScrollPhysics(),
-                    child: SizedBox(
-                      width: _totalWidth,
-                      child: _TimeRuler(
-                          windowStart: _windowStart,
-                          windowEnd: _windowEnd,
-                          pixelsPerMinute: _pixelsPerMinute),
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: ClipRect(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          controller: _rulerHScroll,
+                          physics: const NeverScrollableScrollPhysics(),
+                          child: SizedBox(
+                            width: _totalWidth,
+                            child: _TimeRuler(
+                                windowStart: _windowStart,
+                                windowEnd: _windowEnd,
+                                pixelsPerMinute: _pixelsPerMinute),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                    // In the past: a way back to now for touch / mouse
+                    // (the remote has Back). Out of D-pad traversal.
+                    if (widget.anchor != null)
+                      Positioned(
+                        right: 4,
+                        top: 2,
+                        bottom: 2,
+                        child: ExcludeFocus(
+                          child: _GuideNowChip(onPressed: () => backToNow()),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ],
@@ -8196,6 +8441,10 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
                               windowEnd: _windowEnd,
                               pixelsPerMinute: _pixelsPerMinute,
                               onOpen: () => widget.onOpen(widget.channels[i]),
+                              onOpenCatchup: widget.onOpenCatchup == null
+                                  ? null
+                                  : (at) => widget.onOpenCatchup!(
+                                      widget.channels[i], at),
                               onShowOptions: () =>
                                   widget.onShowOptions(widget.channels[i]),
                               ensureRowVisible: _ensureRowVisible,
@@ -8712,10 +8961,14 @@ class _TimelineRow extends StatelessWidget {
     required this.onUnregisterBlock,
     required this.hScroll,
     required this.epgLoading,
+    this.onOpenCatchup,
     this.translucent = false,
   });
 
   final bool translucent;
+
+  /// See [_TimelineGuide.onOpenCatchup].
+  final void Function(DateTime at)? onOpenCatchup;
   final int rowIndex;
   final Channel channel;
   final List<EpgProgram> programs;
@@ -8763,6 +9016,29 @@ class _TimelineRow extends StatelessWidget {
         .where((p) => seenSlots.add(
             '${p.start.millisecondsSinceEpoch}-${p.stop.millisecondsSinceEpoch}'))
         .toList();
+    // Catch-up: ended programmes still in the archive replay on OK, and
+    // the archive's hours the guide has no listing for (the provider's
+    // guide often reaches back less far than its catch-up) get an hour
+    // block each.
+    final catchupFrom = onOpenCatchup != null && channel.hasCatchup
+        ? now.subtract(Duration(days: channel.catchupDays))
+        : null;
+    bool replayable(EpgProgram p) =>
+        catchupFrom != null &&
+        !p.stop.isAfter(now) &&
+        !p.start.isBefore(catchupFrom);
+    final gaps = catchupFrom == null
+        ? const <({DateTime start, DateTime end})>[]
+        : _catchupGaps(visible, catchupFrom, now);
+    if (visible.isEmpty && gaps.isNotEmpty) {
+      return SizedBox(
+        height: _TimelineGuideState._rowHeight,
+        child: Stack(children: [
+          for (final g in gaps) _gapBlock(g),
+          _liveRestBlock(gaps.last.end),
+        ]),
+      );
+    }
     if (visible.isEmpty) {
       // A row with nothing to show used to render a totally empty Stack
       // — no focusable child at all, so the D-pad had nowhere to land on
@@ -8828,8 +9104,12 @@ class _TimelineRow extends StatelessWidget {
               child: _ProgramBlock(
                 program: program,
                 isNow: program.isNowPlaying(now),
+                ended: !program.stop.isAfter(now),
+                replayable: replayable(program),
                 translucent: translucent,
-                onOpen: onOpen,
+                onOpen: replayable(program)
+                    ? () => onOpenCatchup!(program.start)
+                    : onOpen,
                 onShowOptions: onShowOptions,
                 blockLeft: leftFor(program),
                 blockWidth: widthFor(program),
@@ -8844,10 +9124,126 @@ class _TimelineRow extends StatelessWidget {
                 },
               ),
             ),
+          for (final g in gaps) _gapBlock(g),
         ],
       ),
     );
   }
+
+  double _leftOf(DateTime t) => t.isBefore(windowStart)
+      ? 0.0
+      : t.difference(windowStart).inMinutes * pixelsPerMinute;
+
+  /// Whole-hour stretches of catch-up inside the window, from [from] to
+  /// [now], that no listed programme overlaps.
+  List<({DateTime start, DateTime end})> _catchupGaps(
+      List<EpgProgram> listed, DateTime from, DateTime now) {
+    final out = <({DateTime start, DateTime end})>[];
+    final first = from.isAfter(windowStart) ? from : windowStart;
+    final firstLocal = first.toLocal();
+    var h = DateTime(
+        firstLocal.year, firstLocal.month, firstLocal.day, firstLocal.hour);
+    final last = now.isBefore(windowEnd) ? now : windowEnd;
+    while (h.isBefore(last)) {
+      var start = h.isBefore(first) ? first : h;
+      var end = h.add(const Duration(hours: 1));
+      if (end.isAfter(last)) end = last;
+      final covered =
+          listed.any((p) => p.start.isBefore(end) && p.stop.isAfter(start));
+      if (!covered && end.difference(start) >= const Duration(minutes: 5)) {
+        out.add((start: start, end: end));
+      }
+      h = h.add(const Duration(hours: 1));
+    }
+    return out;
+  }
+
+  /// An hour of catch-up with no listing: "Catch-up 14:00", OK plays it.
+  Widget _gapBlock(({DateTime start, DateTime end}) g) {
+    final left = _leftOf(g.start);
+    final width = g.end.difference(g.start).inMinutes * pixelsPerMinute;
+    return Positioned(
+      key: ValueKey('gap-${g.start.millisecondsSinceEpoch}'),
+      left: left,
+      width: width,
+      top: 4,
+      bottom: 4,
+      child: _ProgramBlock(
+        program: null,
+        placeholderLabel: tr('Catch-up {time}',
+            {'time': TimeFormat.hm.format(g.start.toLocal())}),
+        isNow: false,
+        ended: true,
+        replayable: true,
+        translucent: translucent,
+        onOpen: () => onOpenCatchup!(g.start),
+        onShowOptions: onShowOptions,
+        blockLeft: left,
+        blockWidth: width,
+        hScroll: hScroll,
+        onRegister: (node) => onRegisterBlock(rowIndex, g.start, g.end, node),
+        onUnregister: (node) => onUnregisterBlock(rowIndex, node),
+        onFocusGained: () {
+          ensureRowVisible?.call(rowIndex);
+          onFocusChanged?.call(channel, null);
+          onFocusTracked?.call(rowIndex, null);
+        },
+      ),
+    );
+  }
+
+  /// A catch-up row with no listing at all: from [from] to the window's
+  /// end, the live channel (OK plays it, like the plain placeholder).
+  Widget _liveRestBlock(DateTime from) {
+    final left = _leftOf(from);
+    final width = windowEnd.difference(from).inMinutes * pixelsPerMinute;
+    return Positioned(
+      key: const ValueKey('live-rest'),
+      left: left,
+      width: width,
+      top: 4,
+      bottom: 4,
+      child: _ProgramBlock(
+        program: null,
+        placeholderLabel: tr('No program data available'),
+        isNow: false,
+        translucent: translucent,
+        onOpen: onOpen,
+        onShowOptions: onShowOptions,
+        blockLeft: left,
+        blockWidth: width,
+        hScroll: hScroll,
+        onRegister: (node) => onRegisterBlock(rowIndex, from, windowEnd, node),
+        onUnregister: (node) => onUnregisterBlock(rowIndex, node),
+        onFocusGained: () {
+          ensureRowVisible?.call(rowIndex);
+          onFocusChanged?.call(channel, null);
+          onFocusTracked?.call(rowIndex, null);
+        },
+      ),
+    );
+  }
+}
+
+/// "Now" on the guide's ruler while it shows the past (touch / mouse).
+class _GuideNowChip extends StatelessWidget {
+  const _GuideNowChip({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.amber,
+          backgroundColor: Colors.black87,
+          side: const BorderSide(color: Colors.amber),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          visualDensity: VisualDensity.compact,
+        ),
+        icon: const Icon(Icons.fast_forward, size: 16),
+        label: Text(tr('Now')),
+        onPressed: onPressed,
+      );
 }
 
 class _ProgramBlock extends StatefulWidget {
@@ -8863,9 +9259,16 @@ class _ProgramBlock extends StatefulWidget {
       this.placeholderLabel,
       this.onRegister,
       this.onUnregister,
+      this.ended = false,
+      this.replayable = false,
       this.translucent = false});
 
   final bool translucent;
+
+  /// Already over: drawn dimmer. [replayable] (in the channel's catch-up)
+  /// adds a gold replay mark and OK plays it from its start.
+  final bool ended;
+  final bool replayable;
 
   /// Null for a row with no EPG data at all — [placeholderLabel] is shown
   /// instead of a title, but this block is still focusable and selectable
@@ -9067,29 +9470,39 @@ class _ProgramBlockState extends State<_ProgramBlock> {
                       (widget.blockWidth - 40.0).clamp(0.0, double.infinity);
                   final inset =
                       (scrollX - widget.blockLeft).clamp(0.0, maxInset);
+                  final title = Text(
+                    widget.program?.title ?? widget.placeholderLabel ?? '',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        color: _focused
+                            ? accent
+                            : widget.program == null
+                                ? Colors.white54
+                                : widget.ended
+                                    ? Colors.white60
+                                    : Colors.white,
+                        fontSize: 12,
+                        fontStyle: widget.program == null
+                            ? FontStyle.italic
+                            : FontStyle.normal,
+                        // Readable over the video in full-video mode.
+                        shadows: widget.translucent
+                            ? const [Shadow(color: Colors.black, blurRadius: 4)]
+                            : null),
+                  );
                   return Padding(
                     padding: EdgeInsets.fromLTRB(6 + inset, 2, 6, 2),
-                    child: Text(
-                      widget.program?.title ?? widget.placeholderLabel ?? '',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          color: _focused
-                              ? accent
-                              : widget.program == null
-                                  ? Colors.white54
-                                  : Colors.white,
-                          fontSize: 12,
-                          fontStyle: widget.program == null
-                              ? FontStyle.italic
-                              : FontStyle.normal,
-                          // Readable over the video in full-video mode.
-                          shadows: widget.translucent
-                              ? const [
-                                  Shadow(color: Colors.black, blurRadius: 4)
-                                ]
-                              : null),
-                    ),
+                    child: widget.replayable
+                        ? Row(children: [
+                            const Padding(
+                              padding: EdgeInsets.only(right: 4),
+                              child: Icon(Icons.history,
+                                  size: 13, color: Colors.amber),
+                            ),
+                            Expanded(child: title),
+                          ])
+                        : title,
                   );
                 },
               ),

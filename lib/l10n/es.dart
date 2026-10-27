@@ -1997,4 +1997,7 @@ const Map<String, String> kEs = {
   'Next programme': 'Programa siguiente',
   'Watch from the start': 'Ver desde el principio',
   '{time} behind live': '{time} por detrás del directo',
+  'Back to live': 'Volver al directo',
+  'Catch-up {time}': 'Diferido {time}',
+  'Now': 'Ahora',
 };

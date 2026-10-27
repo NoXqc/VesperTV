@@ -2001,4 +2001,7 @@ const Map<String, String> kFr = {
   'Next programme': 'Émission suivante',
   'Watch from the start': 'Regarder depuis le début',
   '{time} behind live': '{time} de retard sur le direct',
+  'Back to live': 'Retour au direct',
+  'Catch-up {time}': 'Rattrapage {time}',
+  'Now': 'Maintenant',
 };

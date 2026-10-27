@@ -2001,4 +2001,7 @@ const Map<String, String> kIt = {
   'Next programme': 'Programma successivo',
   'Watch from the start': "Guarda dall'inizio",
   '{time} behind live': '{time} indietro rispetto alla diretta',
+  'Back to live': 'Torna alla diretta',
+  'Catch-up {time}': 'Replay {time}',
+  'Now': 'Adesso',
 };
