@@ -348,6 +348,11 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **cdx, 2026-10-27: C2 catch-up URL builder** (`codex/catchup-url`, from dd16643):
+  standalone CatchupKind plus catchupUrl/catchupPhpUrl/catchupUrlForLog; no Channel
+  dependency or callers. Fixed server-offset minute URLs, UTC templates and
+  credential-free diagnostics. See `test/catchup_url_test.dart` and root HANDOFF.md.
+
 - **cdx, 2026-10-26: Release 1.0.41 (beta), +455 authorised.** Includes all completed
   Codex work through Goals alert plus previously integrated Claude profiles/trailers/zap freeze.
   All worktrees audited: Claude's dirty zap-freeze source is already present (native file identical;
