@@ -1030,6 +1030,7 @@ const Map<String, String> kFr = {
   'Rosé': "Rosé",
   'Neon Purple': "Violet néon",
   'Neon Green': "Vert néon",
+  'Aqua': "Aqua",
   'Habs': "Habs",
   'Dark / Gold': "Noir / Or",
 

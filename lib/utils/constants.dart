@@ -453,6 +453,13 @@ class AppConstants {
       secondary: Color(0xFF00B86B),
       vivid: true,
     ),
+    CyberpunkPalette(
+      id: 'aqua',
+      label: 'Aqua',
+      primary: Color(0xFF22D3EE),
+      secondary: Color(0xFF14B8A6),
+      vivid: true,
+    ),
     // Replaced the old Green / Orange palette (id 'green_orange', still
     // mapped to this one — see AppPreferences._paletteById). Bleu-blanc-
     // rouge: the red is the Canadiens' own C8102E; the blue is lifted well

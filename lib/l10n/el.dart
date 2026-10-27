@@ -1396,6 +1396,7 @@ const Map<String, String> kEl = {
       "Νέον μωβ",
   "Neon Green":
       "Νέον πράσινο",
+  "Aqua": "Ακουαμαρίνα",
   "Habs":
       "Habs",
   "Dark / Gold":
