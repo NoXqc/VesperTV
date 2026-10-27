@@ -99,7 +99,13 @@ void main() {
     prefs.dispose();
   });
 
-  for (final paletteId in ['dark_gold', 'habs', 'minimal', 'neon_green']) {
+  for (final paletteId in [
+    'dark_gold',
+    'habs',
+    'minimal',
+    'neon_green',
+    'aqua'
+  ]) {
     testWidgets('paint preserves geometry and focus for $paletteId',
         (tester) async {
       final (storage, prefs) = await preferences();

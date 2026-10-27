@@ -1028,6 +1028,7 @@ const Map<String, String> kIt = {
   'Rosé': "Rosé",
   'Neon Purple': "Viola neon",
   'Neon Green': "Verde neon",
+  'Aqua': "Acquamarina",
   'Habs': "Habs",
   'Dark / Gold': "Nero / Oro",
 

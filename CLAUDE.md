@@ -348,6 +348,11 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **cdx, 2026-10-27: Aqua palette** (`codex/aqua-theme`, from committed test459):
+  cyan/teal vivid pair in the existing palette registry, localised label in all
+  four dictionaries. Existing picker/profile persistence/refined/translucent paths
+  unchanged. Added Aqua to the existing finish geometry/focus test matrix.
+
 - **Claude, 2026-10-27: Catch-up (Android), test +459** on `claude/catchup`. Plan, provider
   probe (Blcktv: HLS VOD archive, guide ~12 h back, archive 2 days) and task split in
   `dev-notes/catchup-plan.md`. A `cu_` transient channel per request (never live).

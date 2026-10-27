@@ -1027,6 +1027,7 @@ const Map<String, String> kEs = {
   'Rosé': "Rosé",
   'Neon Purple': "Morado neón",
   'Neon Green': "Verde neón",
+  'Aqua': "Aguamarina",
   'Habs': "Habs",
   'Dark / Gold': "Negro / Oro",
 
