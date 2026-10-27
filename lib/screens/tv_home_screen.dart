@@ -1154,7 +1154,11 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   Future<void> _parkLiveChannel({bool keepNativeSurface = false}) async {
     final playback = context.read<PlaybackService>();
     final channel = playback.currentChannel;
-    if (channel == null || playback.isFullscreenActive || !channel.isLive) {
+    // Catch-up parks like live; the pill then offers its live channel.
+    final resumeTo = playback.catchup?.live ?? channel;
+    if (channel == null ||
+        playback.isFullscreenActive ||
+        (!channel.isLive && playback.catchup == null)) {
       return;
     }
     // Movies/TV Shows replace the preview within this route, unlike
@@ -1165,7 +1169,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     if (keepNativeSurface && playback.usesNativeSurface) return;
     await playback.stop();
     // stop() clears the pending channel, so set it after.
-    playback.setPendingResumeChannel(channel);
+    playback.setPendingResumeChannel(resumeTo);
   }
 
   /// Left inside the poster grid should still move card-to-card normally.
@@ -2703,7 +2707,11 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     final showTimelineGuide = !isBrowseTab && prefs.guideViewMode == 'timeline';
     final playbackState = context.watch<PlaybackService>();
     final playing = playbackState.currentChannel;
-    final liveChannel = playing != null && playing.isLive ? playing : null;
+    // A catch-up programme shows where live does (it is that channel).
+    final liveChannel =
+        playing != null && (playing.isLive || playbackState.catchup != null)
+            ? playing
+            : null;
     // Only the phone layout has that preview (it sets its own state).
     if (!_compact) _syncPreviewHint(false);
     _fullVideo = _tab == 'TV' &&
@@ -4443,7 +4451,10 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     // movies at all.
     final rawChannel = playback.currentChannel;
     // Includes the explicit type of M3U movie/episode entries.
-    final channel = rawChannel != null && rawChannel.isLive ? rawChannel : null;
+    final channel =
+        rawChannel != null && (rawChannel.isLive || playback.catchup != null)
+            ? rawChannel
+            : null;
 
     // Opt-in alternate view (Settings > Theme > "Guide view") — see
     // _TimelineGuide's own doc comment. Checked after the two branches

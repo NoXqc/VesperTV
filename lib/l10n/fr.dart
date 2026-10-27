@@ -1996,4 +1996,9 @@ const Map<String, String> kFr = {
       'Le rattrapage n’est pas disponible pour cette chaîne.',
   'This programme is not available in catch-up.':
       'Cette émission n’est pas disponible en rattrapage.',
+  'Catch-up': 'Rattrapage',
+  'Previous programme': 'Émission précédente',
+  'Next programme': 'Émission suivante',
+  'Watch from the start': 'Regarder depuis le début',
+  '{time} behind live': '{time} de retard sur le direct',
 };

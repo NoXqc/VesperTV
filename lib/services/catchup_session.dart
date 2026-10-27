@@ -4,6 +4,7 @@ import 'package:video_player_hdr/video_player_hdr.dart';
 
 import '../models/catchup.dart';
 import '../models/channel.dart';
+import '../models/epg_program.dart';
 import '../models/playlist_profile.dart';
 import 'catchup_url.dart';
 import 'subtitle_tracks.dart';
@@ -47,6 +48,35 @@ class CatchupSession {
   static const minUsefulPlay = Duration(seconds: 5);
 
   DateTime playhead(Duration position) => requestStart.add(position);
+
+  /// The programme on at [t] in [programmes] (sorted by start), if any.
+  static EpgProgram? programmeAt(List<EpgProgram> programmes, DateTime t) {
+    for (final p in programmes) {
+      if (!t.isBefore(p.start) && t.isBefore(p.stop)) return p;
+    }
+    return null;
+  }
+
+  /// The programme before / after the one on at [t].
+  static EpgProgram? programmeBefore(List<EpgProgram> programmes, DateTime t) {
+    EpgProgram? best;
+    final current = programmeAt(programmes, t);
+    final limit = current?.start ?? t;
+    for (final p in programmes) {
+      if (!p.start.isBefore(limit)) break;
+      best = p;
+    }
+    return best;
+  }
+
+  static EpgProgram? programmeAfter(List<EpgProgram> programmes, DateTime t) {
+    final current = programmeAt(programmes, t);
+    final limit = current?.stop ?? t;
+    for (final p in programmes) {
+      if (!p.start.isBefore(limit)) return p;
+    }
+    return null;
+  }
 
   static DateTime floorToMinute(DateTime t) {
     final u = t.toUtc();

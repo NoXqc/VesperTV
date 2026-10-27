@@ -2605,4 +2605,9 @@ const Map<String, String> kEl = {
       'Το catch-up δεν είναι διαθέσιμο για αυτό το κανάλι.',
   'This programme is not available in catch-up.':
       'Αυτή η εκπομπή δεν είναι διαθέσιμη σε catch-up.',
+  'Catch-up': 'Catch-up',
+  'Previous programme': 'Προηγούμενη εκπομπή',
+  'Next programme': 'Επόμενη εκπομπή',
+  'Watch from the start': 'Παρακολούθηση από την αρχή',
+  '{time} behind live': '{time} πίσω από το ζωντανό',
 };

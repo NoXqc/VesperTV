@@ -1992,4 +1992,9 @@ const Map<String, String> kEs = {
       'La reproducción en diferido no está disponible para este canal.',
   'This programme is not available in catch-up.':
       'Este programa no está disponible en diferido.',
+  'Catch-up': 'Diferido',
+  'Previous programme': 'Programa anterior',
+  'Next programme': 'Programa siguiente',
+  'Watch from the start': 'Ver desde el principio',
+  '{time} behind live': '{time} por detrás del directo',
 };

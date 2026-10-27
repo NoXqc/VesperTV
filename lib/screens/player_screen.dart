@@ -14,6 +14,7 @@ import '../utils/playback_modal_back_guard.dart';
 import '../models/epg_program.dart';
 import '../services/app_preferences.dart';
 import '../services/epg_service.dart';
+import '../services/catchup_session.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../utils/time_format.dart';
@@ -428,10 +429,34 @@ class _PlayerScreenState extends State<PlayerScreen> {
   /// remote with no such key simply never sends this event — the on-screen
   /// button (and D-pad navigation to it) keeps working exactly as before.
   void _handlePlayPause() {
-    final controller = _playback.controller;
-    if (controller == null) return;
+    if (_playback.controller == null) return;
     _resetHideTimer();
-    controller.value.isPlaying ? controller.pause() : controller.play();
+    // Through the service: pausing a live channel with catch-up is a
+    // timeshift (Play resumes from the pause).
+    _playback.togglePlayPause();
+  }
+
+  /// Fast-forward: Back to live from catch-up. Rewind: the programme on
+  /// at the playhead from its start (catch-up), or the programme on now
+  /// from its start (a live channel with catch-up).
+  void _handleFastForward() {
+    if (_playback.catchup == null) return;
+    _resetHideTimer();
+    _playback.backToLive();
+  }
+
+  void _handleRewind() {
+    final session = _playback.catchup;
+    final live = _playback.liveChannel;
+    final controller = _playback.controller;
+    if (live == null || !live.hasCatchup || controller == null) return;
+    _resetHideTimer();
+    final at = session == null
+        ? DateTime.now()
+        : session.playhead(controller.value.position);
+    final on = CatchupSession.programmeAt(
+        context.read<EpgService>().getPrograms(live.epgId), at);
+    if (on != null) _playback.playCatchup(live, on.start);
   }
 
   /// A remote's CH+/CH- (or Page Up/Down) keys: CH- = next channel (the
@@ -443,7 +468,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
   /// channel's name + now/next show.
   void _zapChannel(int step) {
     if (_panelOpen) return;
-    final current = _playback.currentChannel ?? widget.channel;
+    // From catch-up, zapping steps from its live channel (and leaves it).
+    final current = _playback.liveChannel ?? widget.channel;
     if (!current.isLive) return;
     // A playlist can list the same channel twice (same id, e.g. a tvg-id
     // used as the id): find the exact entry playing, and step past any
@@ -595,7 +621,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
     // notifyListeners(), the exact same "not safe mid-teardown" case that
     // callback already exists for.
     final ch = _playback.currentChannel;
-    final shouldStopVod = ch != null && !ch.isLive;
+    // Catch-up keeps playing behind the guide, like live.
+    final shouldStopVod = ch != null && !ch.isLive && _playback.catchup == null;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (shouldStopVod) unawaited(_playback.stop());
       _playback.setFullscreenActive(false);
@@ -681,6 +708,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       _handlePlayPause,
                   const SingleActivator(LogicalKeyboardKey.mediaPause):
                       _handlePlayPause,
+                  const SingleActivator(LogicalKeyboardKey.mediaFastForward):
+                      _handleFastForward,
+                  const SingleActivator(LogicalKeyboardKey.mediaRewind):
+                      _handleRewind,
                   const SingleActivator(LogicalKeyboardKey.channelUp): () =>
                       _zapChannel(-1),
                   const SingleActivator(LogicalKeyboardKey.channelDown): () =>
@@ -693,7 +724,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     // Back is the only way out now; Left opens the side
                     // panel on a live channel (a no-op on movies/episodes).
                     const SingleActivator(LogicalKeyboardKey.arrowLeft): () {
-                      if (channel.isLive) _openPanel();
+                      if (channel.isLive || playback.catchup != null) {
+                        _openPanel();
+                      }
                     },
                     // Right never had any established purpose here — it simply had
                     // no handler at all, so with no bar focused (nothing else on

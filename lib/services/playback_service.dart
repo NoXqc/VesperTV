@@ -107,6 +107,14 @@ class PlaybackService extends ChangeNotifier {
   /// while catch-up plays.
   Channel? get liveChannel => catchup?.live ?? currentChannel;
 
+  /// When a live channel with catch-up was paused (pause = timeshift).
+  DateTime? get livePausedAt => _livePausedAt;
+  DateTime? _livePausedAt;
+
+  /// Paused longer than this, Play resumes from the pause through catch-up;
+  /// shorter, the live player's own buffer carries on from the pause.
+  static const timeshiftAfter = CatchupSession.liveEdge;
+
   @visibleForTesting
   DateTime Function() clock = DateTime.now;
 
@@ -489,6 +497,7 @@ class PlaybackService extends ChangeNotifier {
       await NativeVideoSurface.prepareNewPlayer();
       if (gen != _playGen) return;
     }
+    _livePausedAt = null;
     final pending = _pendingCatchup;
     _pendingCatchup = null;
     catchup =
@@ -739,7 +748,42 @@ class PlaybackService extends ChangeNotifier {
   Future<void> _playLive(Channel live) async {
     _pendingCatchup = null;
     debugPrint('Catchup: back to live ${live.name}');
+    final c = controller;
+    // Already on it (a short pause): just carry on.
+    if (currentChannel?.id == live.id && c != null) {
+      _livePausedAt = null;
+      await c.play();
+      notifyListeners();
+      return;
+    }
     await play(live);
+  }
+
+  /// Play/Pause from the remote or the bar. Pausing a live channel with
+  /// catch-up remembers when; Play after [timeshiftAfter] resumes from
+  /// that moment through catch-up (owner, 2026-10-27: pause = timeshift),
+  /// sooner the live player's buffer simply carries on.
+  Future<void> togglePlayPause() async {
+    final c = controller;
+    final ch = currentChannel;
+    if (c == null) return;
+    if (c.value.isPlaying) {
+      if (ch != null && ch.hasCatchup) _livePausedAt = clock();
+      await c.pause();
+      notifyListeners();
+      return;
+    }
+    final pausedAt = _livePausedAt;
+    _livePausedAt = null;
+    if (ch != null &&
+        ch.hasCatchup &&
+        pausedAt != null &&
+        clock().difference(pausedAt) > timeshiftAfter) {
+      await playCatchup(ch, pausedAt);
+      return;
+    }
+    await c.play();
+    notifyListeners();
   }
 
   PlaylistProfile? _profileFor(String playlistId) {

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:video_player_hdr/video_player_hdr.dart';
 
 import '../models/channel.dart';
+import '../models/epg_program.dart';
 import '../services/app_preferences.dart';
 import '../services/epg_service.dart';
 import '../services/playback_service.dart';
@@ -14,8 +15,11 @@ import '../services/addon_service.dart';
 import '../services/storage_service.dart';
 import '../services/subtitle_tracks.dart';
 import '../services/audio_track_preferences.dart';
+import '../services/catchup_session.dart';
+import '../utils/time_format.dart';
 import '../utils/video_quality.dart';
 import 'epg_guide.dart';
+import 'gold_tag.dart';
 import 'native_video_hole.dart';
 import 'rec_cue.dart';
 import 'player_bar_title.dart';
@@ -549,6 +553,23 @@ class PlayerControls extends StatelessWidget {
           final duration = value.duration;
           // See [isLive]'s doc comment — never inferred from duration.
           final showSeek = !isLive && duration.inMilliseconds > 0;
+          // Not every host provides the service (widget tests).
+          PlaybackService? playback;
+          try {
+            playback = context.watch<PlaybackService>();
+          } on ProviderNotFoundException {
+            playback = null;
+          }
+          // A past programme from the live channel's catch-up: programme
+          // jumps, Start and Back to live join the transport.
+          final session = playback?.catchup;
+          final catchup = session != null &&
+                  channel != null &&
+                  session.channel.id == channel!.id
+              ? session
+              : null;
+          final ownsPlayer =
+              playback != null && playback.controller == controller;
           return Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -583,7 +604,16 @@ class PlayerControls extends StatelessWidget {
                   builder: (context, box) => Row(
                         children: [
                           Expanded(
-                            child: PlayerBarTitle(title: title),
+                            child: catchup == null
+                                ? PlayerBarTitle(title: title)
+                                : Row(children: [
+                                    GoldTag(
+                                        label: tr('Catch-up').toUpperCase(),
+                                        margin:
+                                            const EdgeInsets.only(right: 6)),
+                                    Expanded(
+                                        child: PlayerBarTitle(title: title)),
+                                  ]),
                           ),
                           // Capped so FittedBox has a width to scale down to.
                           ConstrainedBox(
@@ -623,6 +653,9 @@ class PlayerControls extends StatelessWidget {
                                         tooltip: tr('Previous episode'),
                                         onPressed: onPrevious,
                                       ),
+                                    if (catchup != null)
+                                      ..._catchupLeading(
+                                          context, playback!, catchup),
                                     // Skip/fast-seek only makes sense for VOD.
                                     if (showSeek)
                                       _SkipButton(
@@ -643,9 +676,13 @@ class PlayerControls extends StatelessWidget {
                                               ? Icons.pause
                                               : Icons.play_arrow,
                                           color: Colors.white),
-                                      onPressed: () => value.isPlaying
-                                          ? controller.pause()
-                                          : controller.play(),
+                                      // The service's toggle: pausing a live
+                                      // channel with catch-up is a timeshift.
+                                      onPressed: () => ownsPlayer
+                                          ? playback!.togglePlayPause()
+                                          : value.isPlaying
+                                              ? controller.pause()
+                                              : controller.play(),
                                     ),
                                     if (showSeek)
                                       _SkipButton(
@@ -665,6 +702,9 @@ class PlayerControls extends StatelessWidget {
                                         tooltip: tr('Next episode'),
                                         onPressed: onNext,
                                       ),
+                                    if (catchup != null)
+                                      ..._catchupTrailing(
+                                          context, playback!, catchup),
                                     if (onToggleMore != null) ...[
                                       if (isLive && channel != null)
                                         _LabeledIconButton(
@@ -674,6 +714,26 @@ class PlayerControls extends StatelessWidget {
                                           onPressed: () {
                                             onActivity?.call();
                                             showRecallPicker(context, channel!);
+                                          },
+                                        ),
+                                      // Start over: the programme on now, from
+                                      // its start (catch-up channels only).
+                                      if (isLive &&
+                                          channel != null &&
+                                          channel!.hasCatchup)
+                                        _LabeledIconButton(
+                                          icon: Icons.restart_alt,
+                                          label: tr('Watch from the start'),
+                                          onPressed: () {
+                                            onActivity?.call();
+                                            final now = context
+                                                .read<EpgService>()
+                                                .getCurrentProgram(
+                                                    channel!.epgId);
+                                            if (now != null) {
+                                              playback?.playCatchup(
+                                                  channel!, now.start);
+                                            }
                                           },
                                         ),
                                       // Manual recovery for a channel that's silently
@@ -723,7 +783,12 @@ class PlayerControls extends StatelessWidget {
                                 const SizedBox(width: 4),
                                 _AudioChannelBadge(controller: controller),
                                 const SizedBox(width: 8),
-                                if (showSeek)
+                                if (catchup != null)
+                                  Flexible(
+                                    child: _CatchupClock(
+                                        session: catchup, position: position),
+                                  )
+                                else if (showSeek)
                                   Flexible(
                                     child: Text(
                                       '${_formatDuration(position)} / ${_formatDuration(duration)}',
@@ -746,6 +811,116 @@ class PlayerControls extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+
+  /// The catch-up's programmes and its playhead, read at press time.
+  ({List<EpgProgram> list, DateTime at}) _catchupPlace(
+      BuildContext context, CatchupSession s) {
+    final list = context.read<EpgService>().getPrograms(s.live.epgId);
+    return (list: list, at: s.playhead(controller.value.position));
+  }
+
+  List<Widget> _catchupLeading(
+          BuildContext context, PlaybackService playback, CatchupSession s) =>
+      [
+        IconButton(
+          icon: const Icon(Icons.skip_previous, color: Colors.white),
+          tooltip: tr('Previous programme'),
+          onPressed: () {
+            onActivity?.call();
+            final place = _catchupPlace(context, s);
+            final before = CatchupSession.programmeBefore(place.list, place.at);
+            if (before != null) playback.playCatchup(s.live, before.start);
+          },
+        ),
+        IconButton(
+          icon: const Icon(Icons.restart_alt, color: Colors.white),
+          tooltip: tr('Watch from the start'),
+          onPressed: () {
+            onActivity?.call();
+            final place = _catchupPlace(context, s);
+            final on = CatchupSession.programmeAt(place.list, place.at);
+            if (on != null) playback.playCatchup(s.live, on.start);
+          },
+        ),
+      ];
+
+  List<Widget> _catchupTrailing(
+          BuildContext context, PlaybackService playback, CatchupSession s) =>
+      [
+        IconButton(
+          icon: const Icon(Icons.skip_next, color: Colors.white),
+          tooltip: tr('Next programme'),
+          onPressed: () {
+            onActivity?.call();
+            final place = _catchupPlace(context, s);
+            final after = CatchupSession.programmeAfter(place.list, place.at);
+            // No later programme known: that's now, so live.
+            if (after == null) {
+              playback.backToLive();
+            } else {
+              playback.playCatchup(s.live, after.start);
+            }
+          },
+        ),
+        _BackToLiveButton(onPressed: () {
+          onActivity?.call();
+          playback.backToLive();
+        }),
+      ];
+}
+
+/// Catch-up's gold Back to live: the way out of the past, always visible.
+class _BackToLiveButton extends StatelessWidget {
+  const _BackToLiveButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.amber,
+            side: const BorderSide(color: Colors.amber, width: 1.4),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            visualDensity: VisualDensity.compact,
+          ).copyWith(
+            backgroundColor: WidgetStateProperty.resolveWith((states) =>
+                states.contains(WidgetState.focused)
+                    ? Colors.amber.withValues(alpha: 0.28)
+                    : null),
+          ),
+          icon: const Icon(Icons.fast_forward, size: 18),
+          label: Text(tr('LIVE'),
+              style: const TextStyle(fontWeight: FontWeight.bold)),
+          onPressed: onPressed,
+        ),
+      );
+}
+
+/// Where catch-up is: the playhead's clock time and how far behind live.
+class _CatchupClock extends StatelessWidget {
+  const _CatchupClock({required this.session, required this.position});
+
+  final CatchupSession session;
+  final Duration position;
+
+  @override
+  Widget build(BuildContext context) {
+    context.select<AppPreferences, bool>((p) => p.use24h);
+    final at = session.playhead(position);
+    final behind = DateTime.now().difference(at);
+    final h = behind.inHours;
+    final m = behind.inMinutes % 60;
+    final lag = h > 0 ? '$h:${m.toString().padLeft(2, '0')}' : '$m min';
+    return Text(
+      '${TimeFormat.hm.format(at.toLocal())} · '
+      '${tr('{time} behind live', {'time': lag})}',
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: const TextStyle(color: Colors.white70, fontSize: 12),
     );
   }
 }

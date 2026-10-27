@@ -1996,4 +1996,9 @@ const Map<String, String> kIt = {
       'La TV on demand non è disponibile per questo canale.',
   'This programme is not available in catch-up.':
       'Questo programma non è disponibile in replay.',
+  'Catch-up': 'Replay',
+  'Previous programme': 'Programma precedente',
+  'Next programme': 'Programma successivo',
+  'Watch from the start': "Guarda dall'inizio",
+  '{time} behind live': '{time} indietro rispetto alla diretta',
 };

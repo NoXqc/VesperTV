@@ -1,12 +1,17 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nox_iptv/models/catchup.dart';
 import 'package:nox_iptv/models/channel.dart';
+import 'package:nox_iptv/services/app_preferences.dart';
 import 'package:nox_iptv/services/catchup_session.dart';
+import 'package:nox_iptv/services/epg_service.dart';
 import 'package:nox_iptv/services/playback_service.dart';
 import 'package:nox_iptv/services/storage_service.dart';
+import 'package:nox_iptv/widgets/player_controls.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player_hdr/video_player_hdr.dart';
 
@@ -57,6 +62,12 @@ class FakePlayer extends VideoPlayerHdrController {
   int get textureId => 7;
 
   @override
+  bool isVideoTrackSupportAvailable() => false;
+
+  @override
+  bool isAudioTrackSupportAvailable() => false;
+
+  @override
   Future<void> dispose() async {
     log.add('dispose $url');
     disposed = true;
@@ -94,6 +105,7 @@ void main() {
       url: 'http://host:80/live/u/pw/12.ts');
 
   late PlaybackService playback;
+  late StorageService storageRef;
   late CuPlaylist playlist;
   late List<String> log;
   late List<FakePlayer> players;
@@ -103,6 +115,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final storage = CuStorage();
     await storage.init();
+    storageRef = storage;
     playlist = CuPlaylist(storage);
     log = [];
     players = [];
@@ -216,8 +229,7 @@ void main() {
     expect(players.first.disposed, isTrue);
   });
 
-  cuTest('end of a request at the live edge goes back to now',
-      (tester) async {
+  cuTest('end of a request at the live edge goes back to now', (tester) async {
     await playback.playCatchup(live, DateTime.utc(2026, 10, 27, 19, 50));
     await settle(tester);
     // Played 10 min 10 s; now is 20:10:40 -> playhead 20:00:10 is 10 min
@@ -236,8 +248,7 @@ void main() {
     expect(playback.currentChannel!.id, live.id);
   });
 
-  cuTest('an empty request is treated as caught up (no loop)',
-      (tester) async {
+  cuTest('an empty request is treated as caught up (no loop)', (tester) async {
     await playback.playCatchup(live, DateTime.utc(2026, 10, 27, 18, 30));
     await settle(tester);
     final opened = players.length;
@@ -275,8 +286,7 @@ void main() {
     expect(playback.error, contains('NETWORK_CONNECTION_FAILED'));
   });
 
-  cuTest('Back to now while a request is still opening wins',
-      (tester) async {
+  cuTest('Back to now while a request is still opening wins', (tester) async {
     unawaited(playback.playCatchup(live, DateTime.utc(2026, 10, 27, 18, 30)));
     await playback.backToLive();
     await settle(tester);
@@ -298,6 +308,93 @@ void main() {
     expect(playback.catchup, isNull);
     expect(playback.currentChannel, isNull);
     expect(players.length, 1);
+  });
+
+  cuTest('pause on a catch-up channel resumes from the pause', (tester) async {
+    await playback.play(live);
+    await settle(tester);
+    final livePlayer = players.last;
+    await playback.togglePlayPause();
+    expect(livePlayer.value.isPlaying, isFalse);
+    expect(playback.livePausedAt, now);
+    // A short pause: the live player's own buffer carries on.
+    clockNow = now.add(const Duration(seconds: 40));
+    await playback.togglePlayPause();
+    await settle(tester);
+    expect(players.last, same(livePlayer));
+    expect(livePlayer.value.isPlaying, isTrue);
+    expect(playback.catchup, isNull);
+    // A long one: catch-up from the moment it was paused.
+    await playback.togglePlayPause();
+    final pausedAt = clockNow;
+    clockNow = clockNow.add(const Duration(minutes: 7));
+    await playback.togglePlayPause();
+    await settle(tester);
+    final s = playback.catchup!;
+    expect(s.live.id, live.id);
+    expect(s.playhead(s.startOffset), pausedAt);
+    expect(livePlayer.disposed, isTrue);
+    // ...and Back to now from there.
+    await playback.backToLive();
+    await settle(tester);
+    expect(playback.currentChannel!.id, live.id);
+    expect(playback.livePausedAt, isNull);
+  });
+
+  cuTest('pausing a channel without catch-up stays a plain pause',
+      (tester) async {
+    await playback.play(plain);
+    await settle(tester);
+    await playback.togglePlayPause();
+    clockNow = now.add(const Duration(minutes: 7));
+    await playback.togglePlayPause();
+    await settle(tester);
+    expect(playback.catchup, isNull);
+    expect(players.length, 1);
+    expect(players.single.value.isPlaying, isTrue);
+  });
+
+  cuTest('the player bar: CATCH-UP tag, behind-live clock, LIVE goes live',
+      (tester) async {
+    await playback.playCatchup(live, DateTime.utc(2026, 10, 27, 18, 30));
+    await settle(tester);
+    final prefs = AppPreferences(storageRef);
+    final epg = EpgService(storageRef);
+    Widget bar() => MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: prefs),
+            ChangeNotifierProvider.value(value: playback),
+            ChangeNotifierProvider.value(value: epg),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: Consumer<PlaybackService>(
+                builder: (context, p, _) => PlayerControls(
+                  controller: p.controller!,
+                  title: p.currentChannel!.name,
+                  channelId: p.currentChannel!.epgId,
+                  isLive: p.currentChannel!.isLive,
+                  channel: p.currentChannel,
+                ),
+              ),
+            ),
+          ),
+        );
+    await tester.pumpWidget(bar());
+    await tester.pump();
+    expect(find.text('CATCH-UP'), findsOneWidget);
+    expect(find.textContaining('behind live'), findsOneWidget);
+    expect(find.byTooltip('Previous programme'), findsOneWidget);
+    expect(find.byTooltip('Next programme'), findsOneWidget);
+    await tester.tap(find.text('LIVE'));
+    await settle(tester);
+    expect(playback.catchup, isNull);
+    expect(playback.currentChannel!.id, live.id);
+    await tester.pump();
+    expect(find.text('CATCH-UP'), findsNothing);
+    expect(find.text('LIVE'), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+    epg.dispose();
   });
 
   test('the cu_ channel keeps the live EPG id and stays out of history', () {
