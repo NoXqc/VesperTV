@@ -362,6 +362,15 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **cdx, 2026-10-28 — release preparation 1.0.44 (beta), +492**
+  (`codex/release-1-0-44`): owner requested publication and Discord announcement
+  after accepted +491. Matching Android/Windows packages, Sports Mode explicitly
+  labelled a beta feature in release notes and remote guide. Includes every main
+  change since public +472; excluded branches unchanged. Analyze baseline16,
+  all852 Flutter tests and15 guide tests pass; both signed Android package and
+  full Windows ZIP built/version-checked (492). Exact artifacts/publication in
+  HANDOFF.md; notes in dev-notes/release-1.0.44.md.
+
 - **2026-10-28 — merged to local `main` (not pushed), ready for Codex to release: +491.**
   Contains +484 programme reminders/recording, +485 compact live info, +486 Red/Blue
   palettes, +487 Codex **Sports Mode** (opt-in sports-first home, per viewer) and Claude's
