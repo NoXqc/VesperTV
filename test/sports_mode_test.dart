@@ -27,6 +27,7 @@ import 'package:nox_iptv/services/playlist_manager.dart';
 import 'package:nox_iptv/services/sports_service.dart';
 import 'package:nox_iptv/services/storage_service.dart';
 import 'package:nox_iptv/services/viewer_profile_service.dart';
+import 'package:nox_iptv/models/m3u_group.dart';
 import 'package:nox_iptv/utils/constants.dart';
 import 'package:nox_iptv/utils/refined_finish.dart';
 import 'package:nox_iptv/utils/route_observer.dart';
@@ -40,10 +41,17 @@ class _Storage extends StorageService {
 
 class _Playlist extends PlaylistManager {
   _Playlist(StorageService storage) : super(storage, CatalogDatabase());
+
+  /// Live TV panel fixture: one provider group with these channels.
+  List<Channel> live = const [];
+  @override
+  List<M3uGroup> get tvGroups => live.isEmpty
+      ? const []
+      : [M3uGroup(title: 'Sports', playlistId: 'p1', channels: live)];
   @override
   List<Channel> visibleChannels(
           {String? playlistId, String? groupTitle, required String category}) =>
-      [];
+      groupTitle == 'Sports' ? live : [];
 }
 
 class _Epg extends EpgService {
@@ -316,14 +324,107 @@ void main() {
     await disposePage(tester);
   });
 
-  testWidgets('Live TV Back returns to sports instead of asking to exit',
-      (tester) async {
-    await open(tester, games: []);
+  Future<void> openLivePanel(WidgetTester tester,
+      {List<SportsGame>? games = const [], double scale = 1}) async {
+    playlist.live = [
+      for (var i = 0; i < 40; i++)
+        Channel(
+            id: 'p1::c$i',
+            rawId: 'c$i',
+            playlistId: 'p1',
+            name: 'Channel $i',
+            group: 'Sports',
+            url: 'http://example.invalid/$i.ts'),
+    ];
+    addTearDown(() => playlist.live = const []);
+    await open(tester, games: games, scale: scale);
     for (var i = 0; i < 5; i++) {
       await press(tester, LogicalKeyboardKey.arrowDown);
     }
     expect(getFocus(), 'sports-chip-mode:tv');
     await press(tester, LogicalKeyboardKey.select);
+  }
+
+  testWidgets('Live TV opens groups and guide inside Sports Mode; Back x3',
+      (tester) async {
+    await openLivePanel(tester);
+    expect(find.byType(TvHomeScreen), findsNothing);
+    expect(getFocus(), 'sports-live-groups');
+    expect(find.byKey(const ValueKey('sports-live-guide')), findsNothing);
+    // Open full Live TV, Favourites, then the provider group (the last row).
+    for (var i = 0; i < 3; i++) {
+      await press(tester, LogicalKeyboardKey.arrowDown);
+    }
+    await press(tester, LogicalKeyboardKey.select);
+    expect(getFocus(), 'sports-live-guide');
+    expect(find.text('Channel 0'), findsOneWidget);
+    // Lazy, fixed-extent rows: the last channel is not built yet.
+    expect(find.text('Channel 39'), findsNothing);
+    for (var i = 0; i < 39; i++) {
+      await tester.sendKeyRepeatEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
+    }
+    await tester.pump();
+    expect(find.text('Channel 39'), findsOneWidget);
+    // Left = groups, the guide stays; Right = back into it.
+    await press(tester, LogicalKeyboardKey.arrowLeft);
+    expect(getFocus(), 'sports-live-groups');
+    expect(find.byKey(const ValueKey('sports-live-guide')), findsOneWidget);
+    await press(tester, LogicalKeyboardKey.arrowRight);
+    expect(getFocus(), 'sports-live-guide');
+    // Back: guide closes, then groups close, then the page (no exit prompt).
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    expect(find.byKey(const ValueKey('sports-live-guide')), findsNothing);
+    expect(getFocus(), 'sports-live-groups');
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    await tester.pump();
+    expect(find.byKey(const ValueKey('sports-live-panel')), findsNothing);
+    expect(getFocus(), isNot('sports-chip-mode:tv'));
+    expect(find.text('Stay'), findsNothing);
+    expect(tester.takeException(), isNull);
+    await disposePage(tester);
+  });
+
+  testWidgets('Live TV panel beside game rows fits with large text',
+      (tester) async {
+    await openLivePanel(tester, games: null, scale: 1.3);
+    await press(tester, LogicalKeyboardKey.arrowDown);
+    await press(tester, LogicalKeyboardKey.select);
+    expect(getFocus(), 'sports-live-guide');
+    expect(tester.takeException(), isNull);
+    await disposePage(tester);
+  });
+
+  testWidgets('Live TV panel: Left = rail, Back there closes the panel',
+      (tester) async {
+    await openLivePanel(tester);
+    await press(tester, LogicalKeyboardKey.arrowLeft);
+    expect(getFocus(), 'sports-chip-mode:tv');
+    expect(find.byKey(const ValueKey('sports-live-panel')), findsOneWidget);
+    await press(tester, LogicalKeyboardKey.arrowRight);
+    expect(getFocus(), 'sports-live-groups');
+    await press(tester, LogicalKeyboardKey.arrowLeft);
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    await tester.pump();
+    expect(find.byKey(const ValueKey('sports-live-panel')), findsNothing);
+    expect(getFocus(), 'sports-chip-mode:tv');
+    expect(find.text('Stay'), findsNothing);
+    expect(tester.takeException(), isNull);
+    await disposePage(tester);
+  });
+
+  testWidgets('Open full Live TV returns to sports instead of asking to exit',
+      (tester) async {
+    await openLivePanel(tester);
+    // The panel reopens on the last group: go up to its first row.
+    for (var i = 0; i < 3; i++) {
+      await press(tester, LogicalKeyboardKey.arrowUp);
+    }
+    await press(tester, LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
     expect(find.byType(TvHomeScreen).hitTestable(), findsOneWidget);
     for (var i = 0;
         i < 3 && find.byType(TvHomeScreen).hitTestable().evaluate().isNotEmpty;
@@ -336,6 +437,48 @@ void main() {
     expect(getFocus(), 'sports-chip-mode:tv');
     if (!Platform.isWindows) expect(playback.stops, greaterThan(0));
     expect(tester.takeException(), isNull);
+    await disposePage(tester);
+  });
+
+  testWidgets('Home, Search and Multiview sit behind the rail Menu',
+      (tester) async {
+    await open(tester, games: []);
+    final first = getFocus();
+    expect(first, startsWith('sports-chip-league:'));
+    await press(tester, LogicalKeyboardKey.arrowUp);
+    await press(tester, LogicalKeyboardKey.arrowUp);
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'sports-mode-menu');
+    await press(tester, LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    for (final label in ['Home', 'Search', 'Multiview']) {
+      expect(find.text(label), findsWidgets);
+    }
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    await press(tester, LogicalKeyboardKey.arrowDown);
+    expect(getFocus(), first);
+    expect(tester.takeException(), isNull);
+    await disposePage(tester);
+  });
+
+  testWidgets('phone: Back opens the Menu with every destination',
+      (tester) async {
+    await open(tester, games: [], size: const Size(390, 844));
+    await press(tester, LogicalKeyboardKey.arrowRight);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    for (final label in ['Home', 'Search', 'Live TV', 'Movies', 'Settings']) {
+      expect(find.text(label), findsWidgets);
+    }
+    expect(find.text('Stay'), findsNothing);
+    await tester.binding.handlePopRoute(); // closes the menu
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute(); // then asks to exit
+    await tester.pumpAndSettle();
+    expect(find.text('Stay'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.text('Stay'));
+    await tester.pumpAndSettle();
     await disposePage(tester);
   });
 

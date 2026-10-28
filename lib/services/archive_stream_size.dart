@@ -56,3 +56,23 @@ ArchiveStreamOption? largestArchiveStream(List<ArchiveStreamOption> options) {
   }
   return best;
 }
+
+/// True when a cached debrid link served a provider's error clip instead of
+/// the file: Comet answers a failed TorBox lookup with a 0.4 MB video that
+/// reads "Unexpected provider response" (owner, 2026-10-28; 32 of 60
+/// Shawshank links at that moment, the rest played). Deliberately strict:
+/// the stream must say it's cached (⚡ / `+]`) and nothing uncached, the
+/// listing must name a file of 500 MB or more, and the reply must be 5 MB
+/// or less. An uncached `[TB download]` link's "being downloaded" clip is
+/// the Ready watch's business (`ArchiveReadyWatch`), never this.
+bool archiveProviderFailed(
+    ArchiveStreamOption option, String finalUrl, int? servedBytes) {
+  if (servedBytes == null || servedBytes > 5 * 1000 * 1000) return false;
+  if (archiveStreamBytes(option) < 500 * 1000 * 1000) return false;
+  final label = '${option.stream.name ?? ''} ${option.stream.title ?? ''}';
+  final cached = label.contains('⚡') || label.contains('+]');
+  final uncached = label.toLowerCase().contains('download') ||
+      label.contains('⏳') ||
+      finalUrl.toLowerCase().contains('download');
+  return cached && !uncached;
+}

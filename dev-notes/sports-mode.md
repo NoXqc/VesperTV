@@ -98,3 +98,25 @@ Owner: bigger player, days out of the way, a Left-arrow menu like Live TV.
   row = full screen (`_feedFullScreen`); hints say "→". Feed selection redraws
   from `_feedNode` (ListenableBuilder). Card rows get 8 px side padding in
   Sports Mode so the focused card's 1.05 zoom isn't clipped at the left.
+
+## Live TV panel (Claude, test +495, 2026-10-28)
+
+Owner: browse channels without leaving Sports Mode. TV layout only (touch/
+narrow/short keep pushing TvHomeScreen). `widgets/sports_mode_live_panel.dart`;
+TvHomeScreen untouched.
+- Rail Live TV opens `SportsModeLivePanel` in the shell's `live` slot: a groups
+  column (230) that pushes the page right, and on OK/Right a see-through guide
+  (440, black .78) floating over the page. Rows: "Open full Live TV" (the TV
+  home via `_openModePage`), Favourites, own groups, playlist groups (hidden
+  playlists + live group sort honoured).
+- One focus node per column with its own index (`sports-live-groups` /
+  `sports-live-guide`), fixed-extent lazy lists, `jumpTo`; CH+/-/PgUp/PgDn
+  move 8. Last group/channel remembered for the session (statics).
+- OK on a channel: `_playLive` sets `zapList`, `_play(channel)` (ends the
+  hero's game preview: one stream), full screen; Back returns to the guide and
+  stops the stream (no surface on the sports home).
+- Back: guide -> groups -> closed with focus on the page (rail stays hidden);
+  Back from the rail closes the panel. `_liveOpen` blocks the PopScope pop.
+- Not in v1: channel hold menus, History, Catch-up, Timeline. Windows untested.
+  No test with a playing game preview + panel (needs a matched channel).
+Owner on +495: "Open full Live TV is a very nice touch".

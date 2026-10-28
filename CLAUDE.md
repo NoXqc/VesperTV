@@ -362,6 +362,12 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-10-28 — Sports Mode Live TV panel, test +495** (`claude/sports-mode-rail`,
+  committed with the +493 Sports Menu/provider-failure work): rail Live TV opens groups + a
+  see-through guide inside Sports Mode; OK = full screen, Back returns to the guide, Back x3
+  closes. "Open full Live TV" row = TV home. Installed on the Formuler (version 495 verified);
+  owner approved, asked Codex to merge and release. Analyze 16, 860 tests pass.
+  Details: `dev-notes/sports-mode.md` (Live TV panel). Next build must be > 495.
 - **cdx, 2026-10-28 — release preparation 1.0.44 (beta), +492**
   (`codex/release-1-0-44`): owner requested publication and Discord announcement
   after accepted +491. Matching Android/Windows packages, Sports Mode explicitly

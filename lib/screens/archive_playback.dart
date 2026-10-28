@@ -116,9 +116,21 @@ ArchiveStreamOption preferredArchiveStream(
 /// then goes straight to the CDN). A media server's link is direct already.
 /// [_track] keeps the original link: `ArchiveReadyWatch` must re-ask the
 /// add-on, not the "being downloaded" clip it redirected to.
-Future<String> _playUrl(ArchiveStreamOption o) => o.source.server != null
-    ? Future.value(o.stream.url)
-    : resolveRedirects(o.stream.url);
+Future<String> _playUrl(ArchiveStreamOption o) async => (await _resolve(o)).url;
+
+Future<ResolvedLink> _resolve(ArchiveStreamOption o) => o.source.server != null
+    ? Future.value(ResolvedLink(o.stream.url))
+    : resolveLink(o.stream.url);
+
+/// [archiveProviderFailed]: the link answered with the provider's error
+/// clip. Said plainly instead of playing a clip that looks like our error.
+void _providerFailed(BuildContext context) {
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    content:
+        Text(tr('This link failed at the provider. Choose another stream.')),
+    backgroundColor: Colors.red.shade900,
+  ));
+}
 
 /// Lets the players report this title to Trakt/Simkl (by IMDb id; titles
 /// without one aren't reported). See `WatchTracker`. Also lets them tell a
@@ -188,28 +200,47 @@ Future<void> playArchiveTitle(
   if (picked == null || !context.mounted || !resumeSource.isCurrent) {
     return;
   }
-  if (picked.stream.ytId case final video?) {
+  String? resolvedUrl = restored.url;
+  // A link that failed at the provider: say so and offer the others.
+  while (resolvedUrl == null && picked!.stream.ytId == null) {
+    final link = await _resolve(picked);
+    if (!context.mounted || !resumeSource.isCurrent) return;
+    if (!archiveProviderFailed(picked, link.url, link.totalBytes)) {
+      resolvedUrl = link.url;
+      break;
+    }
+    _providerFailed(context);
+    final failed = picked;
+    options = options.where((o) => !identical(o, failed)).toList();
+    if (options.isEmpty) return;
+    picked = await pickArchiveStream(context, options);
+    if (picked == null || !context.mounted || !resumeSource.isCurrent) {
+      return;
+    }
+  }
+  final first = picked!;
+  if (first.stream.ytId case final video?) {
     await playYouTubeVideo(context, video, meta.name,
-        mediaFileInfo: archiveMediaFileInfo(picked));
+        mediaFileInfo: archiveMediaFileInfo(first));
     return;
   }
   final tracked = service
-      .channelFor(source, meta, picked.stream, episode: episode)
-      .copyWith(mediaFileInfo: archiveMediaFileInfo(picked));
+      .channelFor(source, meta, first.stream, episode: episode)
+      .copyWith(mediaFileInfo: archiveMediaFileInfo(first));
   _track(tracked, meta, episode);
-  final channel = tracked.copyWith(url: restored.url ?? await _playUrl(picked));
-  resumeSource.traceChoice(restored, picked,
+  final channel = tracked.copyWith(url: resolvedUrl);
+  resumeSource.traceChoice(restored, first,
       resolvedUrl: channel.url,
       via: restored.picked != null
           ? 'resume'
           : storage.getArchiveAutoLargest() &&
-                  identical(largestArchiveStream(options), picked)
+                  identical(largestArchiveStream(options), first)
               ? 'largest'
               : options.length == 1
                   ? 'single'
                   : 'picker');
   try {
-    await resumeSource.remember(picked);
+    await resumeSource.remember(first);
   } catch (_) {/* Playback still works if preferences cannot be written. */}
   if (!context.mounted || !resumeSource.isCurrent) {
     return;
@@ -217,7 +248,7 @@ Future<void> playArchiveTitle(
   // Extras' "Recently watched" row (the show, for an episode).
   unawaited(service.recordWatched(source, meta));
 
-  final selectedStreams = <String, ArchiveStreamOption>{channel.id: picked};
+  final selectedStreams = <String, ArchiveStreamOption>{channel.id: first};
 
   Future<Channel?> resolve(Channel placeholder) async {
     final video = videosById[placeholder.id];

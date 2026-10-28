@@ -16,10 +16,24 @@ import 'package:flutter/foundation.dart';
 /// Never throws: on any failure (timeout, refused, an error status) the
 /// original [url] comes back and the player deals with it as before.
 Future<String> resolveRedirects(String url,
+        {int maxHops = 8,
+        Duration timeout = const Duration(seconds: 8)}) async =>
+    (await resolveLink(url, maxHops: maxHops, timeout: timeout)).url;
+
+/// [resolveRedirects]'s result plus what the final server said about the
+/// file: [totalBytes] from `Content-Range` (`bytes 0-0/N`) or, without a
+/// range reply, `Content-Length`. Null when unknown or on any failure.
+class ResolvedLink {
+  const ResolvedLink(this.url, {this.totalBytes});
+  final String url;
+  final int? totalBytes;
+}
+
+Future<ResolvedLink> resolveLink(String url,
     {int maxHops = 8, Duration timeout = const Duration(seconds: 8)}) async {
   var uri = Uri.tryParse(url);
   if (uri == null || !(uri.scheme == 'http' || uri.scheme == 'https')) {
-    return url;
+    return ResolvedLink(url);
   }
   final client = HttpClient()..connectionTimeout = timeout;
   try {
@@ -35,12 +49,19 @@ Future<String> resolveRedirects(String url,
         uri = uri.resolve(location);
         continue;
       }
-      return res.statusCode < 400 ? uri.toString() : url;
+      if (res.statusCode >= 400) return ResolvedLink(url);
+      final range = res.headers.value(HttpHeaders.contentRangeHeader);
+      final total = res.statusCode == 206
+          ? int.tryParse(range?.split('/').last.trim() ?? '')
+          : res.statusCode == 200 && res.contentLength >= 0
+              ? res.contentLength
+              : null;
+      return ResolvedLink(uri.toString(), totalBytes: total);
     }
-    return url;
+    return ResolvedLink(url);
   } catch (e) {
     debugPrint('resolveRedirects: $e');
-    return url;
+    return ResolvedLink(url);
   } finally {
     client.close(force: true);
   }

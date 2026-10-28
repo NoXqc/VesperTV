@@ -54,4 +54,11 @@ void main() {
   test('non-web links are left alone', () async {
     expect(await resolveRedirects('/storage/rec.ts'), '/storage/rec.ts');
   });
+
+  test('reports the size the final server serves', () async {
+    final link = await resolveLink('$base/resolve');
+    expect(link.url, '$base/cdn/file.mkv');
+    expect(link.totalBytes, 1000000);
+    expect((await resolveLink('$base/missing')).totalBytes, isNull);
+  });
 }

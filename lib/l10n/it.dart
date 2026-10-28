@@ -6,6 +6,7 @@
 /// the code; Italian plurals don't work that way (canale/canali), so those
 /// strings are phrased to avoid it.
 const Map<String, String> kIt = {
+  "Open full Live TV": "Apri TV in diretta completa",
   "Sports Mode": "Modalità Sport",
   "Make Sports Trak your home, with your top five leagues at the side.": "Usa Sports Trak come pagina iniziale, con i tuoi primi cinque campionati a lato.",
   "Could not change Sports Mode. Try again.": "Impossibile cambiare la modalità Sport. Riprova.",
@@ -1348,6 +1349,9 @@ const Map<String, String> kIt = {
   "Add a source": "Aggiungi una fonte",
   "Couldn't load the catalog: {error}": "Impossibile caricare il catalogo: {error}",
   "Couldn't reach that link.": "Impossibile raggiungere quel link.",
+  "This link failed at the provider. Choose another stream.":
+      "Questo link non ha funzionato presso il provider. Scegli un altro stream.",
+  "Menu": "Menu",
   "No playable stream for this title.": "Nessuno stream riproducibile per questo titolo.",
   "No sources yet.": "Ancora nessuna fonte.",
   "None of your sources has TV shows.": "Nessuna delle tue fonti ha serie TV.",

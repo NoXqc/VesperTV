@@ -6,6 +6,7 @@
 /// "s" filled in by the code; Spanish plurals don't always work that way
 /// (canal/canales), so those strings are phrased to avoid it.
 const Map<String, String> kEs = {
+  "Open full Live TV": "Abrir TV en vivo completa",
   "Sports Mode": "Modo Deportes",
   "Make Sports Trak your home, with your top five leagues at the side.": "Usa Sports Trak como inicio, con tus cinco primeras ligas en el lateral.",
   "Could not change Sports Mode. Try again.": "No se pudo cambiar el modo Deportes. Inténtalo de nuevo.",
@@ -1344,6 +1345,9 @@ const Map<String, String> kEs = {
   "Add a source": "Añadir una fuente",
   "Couldn't load the catalog: {error}": "No se pudo cargar el catálogo: {error}",
   "Couldn't reach that link.": "No se pudo acceder a ese enlace.",
+  "This link failed at the provider. Choose another stream.":
+      "Este enlace falló en el proveedor. Elige otro stream.",
+  "Menu": "Menú",
   "No playable stream for this title.": "No hay ningún stream reproducible para este título.",
   "No sources yet.": "Todavía no hay fuentes.",
   "None of your sources has TV shows.": "Ninguna de tus fuentes tiene series.",

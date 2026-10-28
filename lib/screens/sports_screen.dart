@@ -1,10 +1,14 @@
 import '../utils/refined_finish.dart';
+import '../widgets/sports_mode_live_panel.dart';
 import '../widgets/sports_mode_shell.dart';
 import '../widgets/sports_mode_toggle.dart';
 import '../services/viewer_profile_service.dart';
 import 'archive_screen.dart';
 import 'tv_home_screen.dart';
 import 'search_screen.dart';
+import 'home_screen.dart';
+import 'multiview_screen.dart';
+import 'desktop_multiview_screen.dart';
 import 'recordings_screen.dart';
 import 'settings/settings_menu_screen.dart';
 import 'settings/profiles_screen.dart';
@@ -95,6 +99,11 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   final _modeShell = GlobalKey<SportsModeShellState>();
   final Map<int, String> _lastModeControls = {};
   bool _modeRailFocused = false;
+
+  // Sports Mode's own Live TV (owner, 2026-10-28): groups + see-through guide
+  // beside the sports page instead of leaving it for the TV home.
+  final _livePanel = GlobalKey<SportsModeLivePanelState>();
+  bool _liveOpen = false;
 
   // Sports Mode while a game plays (TV): the left column is a feed of the
   // day's games beside the big video ("watching"); Down past its end shows
@@ -1452,19 +1461,22 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       // Networks handles Back itself (back to Games, never out of Sports
       // Trak: leaving from there moved its preview to the main player).
       canPop: !_channelsMode &&
+          !_liveOpen &&
           _movingLeague == null &&
           preview == null &&
           (!mode || (!widget.home && _modeRailFocused)),
       onPopInvokedWithResult: (didPop, _) {
         if (didPop || _channelsMode) return;
-        if (_movingLeague != null) {
+        if (_liveOpen) {
+          _liveBack();
+        } else if (_movingLeague != null) {
           _endLeagueMove();
         } else if (pick != null) {
           setState(() => _heroPick = null);
         } else if (preview != null) {
           unawaited(_setPreview(null, null));
         } else if (mode && !_modeRailFocused) {
-          _modeShell.currentState?.focusRail();
+          _modeShell.currentState?.backToMenu();
         } else if (mode && widget.home) {
           unawaited(_confirmModeExit());
         }
@@ -1649,7 +1661,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     return KeyEventResult.ignored;
   }
 
-  Future<void> _openModePage(Widget page, {bool settings = false}) async {
+  Future<void> _openModePage(Widget page,
+      {bool settings = false, bool stopPlayback = false}) async {
     if (settings) {
       final unlocked =
           await context.read<ViewerProfileService>().requireUnlock(context);
@@ -1659,6 +1672,16 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     // Back path does. Preserve rail focus when the destination is closed.
     await _setPreview(null, null);
     if (!mounted) return;
+    // Multiview runs its own players: no other stream may keep playing
+    // underneath (same as the Live TV column's Multiview row).
+    if (stopPlayback) {
+      if (Platform.isWindows) {
+        DesktopMiniPlayer.instance.clear();
+      } else {
+        await context.read<PlaybackService>().stop();
+      }
+      if (!mounted) return;
+    }
     await Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
     if (!mounted) return;
     // A closed destination has no video surface on the sports home. Release
@@ -1669,6 +1692,52 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       await context.read<PlaybackService>().stop();
     }
     if (mounted) _modeShell.currentState?.focusRail();
+  }
+
+  void _openLive() {
+    if (_liveOpen) {
+      _livePanel.currentState?.focusLast();
+      return;
+    }
+    setState(() => _liveOpen = true);
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _livePanel.currentState?.focusGroups());
+  }
+
+  /// Back with the Live TV panel open: guide -> groups -> closed, then the
+  /// page again (the rail stays hidden: all three collapsed). From the rail
+  /// it closes the panel at once.
+  void _liveBack() {
+    final panel = _livePanel.currentState;
+    if (!_modeRailFocused && panel != null && panel.back()) return;
+    setState(() => _liveOpen = false);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_modeRailFocused) {
+        _modeShell.currentState?.focusRail();
+      } else {
+        _focusZone(_zone, _sections);
+      }
+    });
+  }
+
+  /// OK on a guide channel: full screen (the hero's game preview ends: one
+  /// stream), Back returns to the panel as it was. CH+/- walk the guide.
+  Future<void> _playLive(Channel channel, List<Channel> list) async {
+    if (!Platform.isWindows) {
+      context.read<PlaybackService>().zapList = list;
+    }
+    await _play(channel);
+    if (!mounted) return;
+    // Nothing shows the channel on the sports home: release its connection.
+    if (_previewChannel == null) {
+      if (Platform.isWindows) {
+        DesktopMiniPlayer.instance.clear();
+      } else {
+        await context.read<PlaybackService>().stop();
+      }
+    }
+    if (mounted && _liveOpen) _livePanel.currentState?.focusLast();
   }
 
   Future<void> _confirmModeExit() async {
@@ -1987,14 +2056,15 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final scrollPage =
         _touch || _narrow || MediaQuery.sizeOf(context).height < 500;
     SportsModeRailEntry app(String id, String label, IconData icon, Widget page,
-            {bool settings = false}) =>
+            {bool settings = false, bool stopPlayback = false}) =>
         SportsModeRailEntry(
           id: id,
           label: label,
           icon: icon,
           focusNode: _chipNode('mode:$id'),
           enabled: _movingLeague == null,
-          onTap: () => _openModePage(page, settings: settings),
+          onTap: () => _openModePage(page,
+              settings: settings, stopPlayback: stopPlayback),
         );
     return SportsModeShell(
       key: _modeShell,
@@ -2003,8 +2073,23 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       collapse: !scrollPage,
       moving: _movingLeague != null,
       onMove: _moveLeague,
+      topCount: prefs.hideMultiview ? 2 : 3,
       leagueCount: _leagues.take(5).length,
       entries: [
+        // The top of the Live TV tabs column, so Sports Mode keeps every
+        // destination in its own rail (owner, 2026-10-28).
+        app('home', tr('Home'), Icons.home_outlined, const HomeScreen()),
+        app('search', tr('Search'), Icons.search,
+            const SearchScreen(initialScope: 'TV')),
+        if (!prefs.hideMultiview)
+          app(
+              'multiview',
+              tr('Multiview'),
+              Icons.grid_view,
+              Platform.isWindows
+                  ? const DesktopMultiviewScreen()
+                  : const MultiviewScreen(),
+              stopPlayback: true),
         for (final league in _leagues.take(5))
           SportsModeRailEntry(
             id: 'league:${league.id}',
@@ -2017,7 +2102,18 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
             onTap: () => _tapLeague(league.id),
             onHold: () => _startLeagueMove(league.id),
           ),
-        app('tv', tr('Live TV'), Icons.live_tv, const TvHomeScreen()),
+        // TV: the Live TV panel inside Sports Mode; touch/narrow layouts
+        // keep the TV home (the panel needs the side-by-side room).
+        scrollPage
+            ? app('tv', tr('Live TV'), Icons.live_tv, const TvHomeScreen())
+            : SportsModeRailEntry(
+                id: 'tv',
+                label: tr('Live TV'),
+                icon: Icons.live_tv,
+                focusNode: _chipNode('mode:tv'),
+                enabled: _movingLeague == null,
+                selected: _liveOpen,
+                onTap: _openLive),
         if (!prefs.hideMovies)
           app('movies', tr('Movies'), Icons.movie_outlined,
               const TvHomeScreen(initialTab: 'Movies')),
@@ -2027,8 +2123,6 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         if (!prefs.hideArchive)
           app('hub', tr('Media Hub'), Icons.explore_outlined,
               const ArchiveScreen()),
-        app('search', tr('Search'), Icons.search,
-            const SearchScreen(initialScope: 'TV')),
         if (!Platform.isWindows && !prefs.hideRecordings)
           app('recordings', tr('Recordings'), Icons.fiber_manual_record,
               const RecordingsScreen()),
@@ -2047,7 +2141,16 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
             selected: true,
             onTap: _openSportsModeSettings),
       ],
-      onEnterContent: () => _focusZone(_zone, sections),
+      onEnterContent: () => _liveOpen
+          ? _livePanel.currentState?.focusLast()
+          : _focusZone(_zone, sections),
+      live: _liveOpen && !scrollPage
+          ? SportsModeLivePanel(
+              key: _livePanel,
+              onPlay: _playLive,
+              onLeft: () => _modeShell.currentState?.focusRail(),
+              onOpenFull: () => _openModePage(const TvHomeScreen()))
+          : null,
       onRailFocusChanged: (value) {
         if (mounted && value != _modeRailFocused) {
           setState(() => _modeRailFocused = value);

@@ -3,7 +3,10 @@ import 'package:flutter/services.dart';
 
 import '../utils/constants.dart';
 import '../utils/refined_finish.dart';
+import '../l10n/l10n.dart';
 import 'hold_to_activate.dart';
+import 'roll_down_menu.dart';
+import 'sports_mode_live_panel.dart';
 import 'sports_widgets.dart';
 
 class SportsModeRailEntry {
@@ -37,6 +40,7 @@ class SportsModeShell extends StatefulWidget {
   const SportsModeShell({
     super.key,
     required this.entries,
+    this.topCount = 0,
     required this.leagueCount,
     required this.bar,
     required this.content,
@@ -45,8 +49,13 @@ class SportsModeShell extends StatefulWidget {
     this.moving = false,
     this.onMove,
     this.collapse = false,
+    this.live,
   });
   final List<SportsModeRailEntry> entries;
+
+  /// Entries before the leagues (Home, Search, Multiview: the top of the Live
+  /// TV tabs column, owner 2026-10-28), then [leagueCount] leagues.
+  final int topCount;
   final int leagueCount;
   final Widget bar;
   final Widget content;
@@ -59,6 +68,11 @@ class SportsModeShell extends StatefulWidget {
   /// control/card), like the Live TV columns; the content gets its width.
   final bool collapse;
 
+  /// Sports Mode's Live TV panel (groups + see-through guide), drawn at the
+  /// content's left: its groups column pushes the content right
+  /// ([SportsModeLivePanel.groupsWidth]), the guide floats over it.
+  final Widget? live;
+
   @override
   State<SportsModeShell> createState() => SportsModeShellState();
 }
@@ -68,14 +82,80 @@ class SportsModeShellState extends State<SportsModeShell> {
   String? _lastRail;
   bool _railFocused = false;
 
+  /// Home / Search / Multiview (the top of the Live TV tabs column) sit
+  /// behind one Menu row (owner, 2026-10-28). Narrow layouts (phones,
+  /// portrait tablets) show the rail as a top strip of that Menu + the
+  /// leagues, so their menu holds every other entry too: they couldn't
+  /// find their way out of Sports Mode.
+  bool _horizontal = false;
+  final _menuNode = FocusNode(debugLabel: 'sports-mode-menu');
+
+  late final _menuEntry = SportsModeRailEntry(
+      id: 'menu',
+      label: tr('Menu'),
+      icon: Icons.menu,
+      focusNode: _menuNode,
+      onTap: openMenu);
+
+  Iterable<SportsModeRailEntry> get _leagues =>
+      widget.entries.skip(widget.topCount).take(widget.leagueCount);
+
+  Iterable<SportsModeRailEntry> get _rest =>
+      widget.entries.skip(widget.topCount + widget.leagueCount);
+
+  /// What the rail shows and the arrows walk through.
+  List<SportsModeRailEntry> get _shown => [
+        if (widget.topCount > 0 || _horizontal) _menuEntry,
+        ..._leagues,
+        if (!_horizontal) ..._rest,
+      ];
+
+  List<SportsModeRailEntry> get _menuEntries => [
+        ...widget.entries.take(widget.topCount),
+        if (_horizontal) ..._rest,
+      ];
+
+  /// Where the leagues start in [_shown] (dividers before and after).
+  int get _firstLeague => _shown.indexOf(_menuEntry) + 1;
+
+  Future<void> openMenu() async {
+    _menuNode.requestFocus();
+    final box = _menuNode.context?.findRenderObject() as RenderBox?;
+    final anchor = box != null && box.hasSize
+        ? box.localToGlobal(Offset.zero) & box.size
+        : null;
+    final items = _menuEntries.where((e) => e.enabled).toList();
+    final id = await showRollDownMenu<String>(context,
+        anchor: anchor,
+        centered: false,
+        title: tr('Menu'),
+        items: [
+          for (final e in items)
+            RollDownMenuItem(
+                value: e.id,
+                icon: e.icon ?? Icons.circle_outlined,
+                label: e.label,
+                selected: e.selected),
+        ]);
+    if (!mounted || id == null) return;
+    items.where((e) => e.id == id).firstOrNull?.onTap();
+  }
+
+  /// Back from the content: the rail, or on a narrow layout its menu (the
+  /// strip is always visible there, so focusing it alone showed nothing).
+  void backToMenu() => _horizontal ? openMenu() : focusRail();
+
   void focusRail() {
-    final enabled = widget.entries.where((e) => e.enabled).toList();
+    final enabled = _shown.where((e) => e.enabled).toList();
     if (enabled.isEmpty) return;
     final entry = enabled.where((e) => e.id == _lastRail).firstOrNull ??
         widget.entries
+            .skip(widget.topCount)
             .take(widget.leagueCount)
             .where((e) => e.selected && e.enabled)
             .firstOrNull ??
+        // A league, not the Menu at the top.
+        _leagues.where((e) => e.enabled).firstOrNull ??
         enabled.first;
     entry.focusNode.requestFocus();
     _reveal(entry.focusNode);
@@ -117,7 +197,7 @@ class SportsModeShellState extends State<SportsModeShell> {
             ? -1
             : 0;
     if (delta == 0) return KeyEventResult.ignored;
-    final entries = widget.entries.where((e) => e.enabled).toList();
+    final entries = _shown.where((e) => e.enabled).toList();
     final index = entries.indexWhere((e) => e.focusNode.hasFocus);
     if (index >= 0) {
       final target = (index + delta).clamp(0, entries.length - 1);
@@ -130,6 +210,7 @@ class SportsModeShellState extends State<SportsModeShell> {
   @override
   void dispose() {
     _rail.dispose();
+    _menuNode.dispose();
     super.dispose();
   }
 
@@ -233,9 +314,7 @@ class SportsModeShellState extends State<SportsModeShell> {
               scrollDirection: narrow ? Axis.horizontal : Axis.vertical,
               padding: const EdgeInsets.all(8),
               child: narrow
-                  ? Row(children: [
-                      for (final e in widget.entries) _tile(e, true)
-                    ])
+                  ? Row(children: [for (final e in _shown) _tile(e, true)])
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -245,9 +324,9 @@ class SportsModeShellState extends State<SportsModeShell> {
                                   style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.w800))),
-                          for (final (index, entry)
-                              in widget.entries.indexed) ...[
-                            if (index == widget.leagueCount)
+                          for (final (index, entry) in _shown.indexed) ...[
+                            if ((index == _firstLeague && index > 0) ||
+                                index == _firstLeague + widget.leagueCount)
                               const Divider(color: Colors.white24),
                             _tile(entry, false),
                           ],
@@ -261,8 +340,8 @@ class SportsModeShellState extends State<SportsModeShell> {
   Widget build(BuildContext context) =>
       LayoutBuilder(builder: (context, constraints) {
         final narrow = constraints.maxWidth < 800;
-        final main = Expanded(
-            child: Column(children: [
+        _horizontal = narrow;
+        final page = Column(children: [
           Container(
             key: const ValueKey('sports-mode-floating-bar'),
             margin: const EdgeInsets.fromLTRB(8, 8, 8, 6),
@@ -277,7 +356,16 @@ class SportsModeShellState extends State<SportsModeShell> {
             child: widget.bar,
           ),
           Expanded(child: widget.content),
-        ]));
+        ]);
+        final live = narrow ? null : widget.live;
+        final main = Expanded(
+            child: live == null
+                ? page
+                : Stack(children: [
+                    Positioned.fill(
+                        left: SportsModeLivePanel.groupsWidth, child: page),
+                    Positioned(left: 0, top: 0, bottom: 0, child: live),
+                  ]));
         return SafeArea(
             child: narrow
                 ? Column(children: [

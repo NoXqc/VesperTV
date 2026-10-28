@@ -5,6 +5,7 @@
 /// Keep every `{placeholder}` exactly as in the key. `{s}` is the plural "s"
 /// the code fills in ("chaîne{s}").
 const Map<String, String> kFr = {
+  "Open full Live TV": "Ouvrir Télé en direct complète",
   "Sports Mode": "Mode Sports",
   "Make Sports Trak your home, with your top five leagues at the side.": "Faites de Sports Trak votre accueil, avec vos cinq premières ligues sur le côté.",
   "Could not change Sports Mode. Try again.": "Impossible de changer le mode Sports. Réessayez.",
@@ -1347,6 +1348,9 @@ const Map<String, String> kFr = {
   "Add a source": "Ajouter une source",
   "Couldn't load the catalog: {error}": "Impossible de charger le catalogue : {error}",
   "Couldn't reach that link.": "Impossible de joindre ce lien.",
+  "This link failed at the provider. Choose another stream.":
+      "Ce lien a échoué chez le fournisseur. Choisissez un autre flux.",
+  "Menu": "Menu",
   "No playable stream for this title.": "Aucun flux lisible pour ce titre.",
   "No sources yet.": "Aucune source pour l'instant.",
   "None of your sources has TV shows.": "Aucune de vos sources n'a de séries.",
