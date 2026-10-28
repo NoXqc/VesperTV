@@ -11,16 +11,13 @@ import '../models/channel.dart';
 import '../services/archive_playback_sources.dart';
 import '../widgets/archive_source_drawer.dart';
 import '../utils/playback_modal_back_guard.dart';
-import '../models/epg_program.dart';
 import '../services/app_preferences.dart';
-import '../services/epg_service.dart';
-import '../services/catchup_session.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
-import '../utils/time_format.dart';
 import '../utils/constants.dart';
 import '../utils/tv_theme.dart';
 import '../widgets/channel_schedule_panel.dart';
+import '../widgets/live_channel_info_card.dart';
 import '../widgets/data_pool_card.dart';
 import '../widgets/epg_guide.dart';
 import '../widgets/player_controls.dart';
@@ -30,7 +27,6 @@ import 'multiview_screen.dart';
 import 'search_screen.dart';
 import '../l10n/l10n.dart';
 import '../widgets/media_file_info_overlay.dart';
-import '../widgets/gold_tag.dart';
 import '../widgets/phone_picture_in_picture.dart';
 
 /// Fullscreen playback screen. Pushed when a channel is tapped on a phone,
@@ -93,7 +89,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   /// Request counter for the independent Media Hub selected-file cue.
   final _fileInfoRequests = ValueNotifier<int>(0);
 
-  /// CH+/CH- info card ([_ZapInfoCard]) — separate from the top bar so a
+  /// CH+/CH- info card ([LiveChannelInfoCard]) — separate from the top bar so a
   /// zap shows what's on without moving focus or the bars.
   bool _zapInfoVisible = false;
   Timer? _zapInfoTimer;
@@ -128,7 +124,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _rootFocus.requestFocus();
   }
 
-  /// "Channel schedule" chip above the info card: Up from the card
+  /// "Channel schedule" control inside the info card: Up from the card
   /// focuses it, OK opens [ChannelSchedulePanel] (owner, 2026-10-28).
   final FocusNode _scheduleChipFocus =
       FocusNode(debugLabel: 'player-schedule-chip');
@@ -1102,36 +1098,28 @@ class _PlayerScreenState extends State<PlayerScreen> {
                               info: info,
                               requests: _fileInfoRequests,
                             ),
-                          // CH+/CH- and OK channel information stay at the
-                          // top, the "Channel schedule" chip above it.
+                          // The schedule control stays inside the compact info card.
                           Positioned(
-                            top: 8,
+                            top: MediaQuery.paddingOf(context).top + 48,
                             left: 0,
                             right: 0,
                             child: AnimatedOpacity(
                               opacity: _zapInfoVisible ? 1 : 0,
                               duration: const Duration(milliseconds: 200),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IgnorePointer(
-                                    ignoring: !_zapInfoVisible,
-                                    child: ExcludeFocus(
-                                      excluding: !_zapInfoVisible,
-                                      child: _ScheduleChip(
-                                        focusNode: _scheduleChipFocus,
-                                        onKeyEvent: _onScheduleChipKey,
-                                        onTap: _openSchedule,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  IgnorePointer(
-                                    child: Center(
-                                        child: _ZapInfoCard(
-                                            channel: channel, at: catchupAt)),
-                                  ),
-                                ],
+                              child: IgnorePointer(
+                                ignoring: !_zapInfoVisible,
+                                child: ExcludeFocus(
+                                  excluding: !_zapInfoVisible,
+                                  child: Center(
+                                      child: LiveChannelInfoCard(
+                                    channel: channel,
+                                    at: catchupAt,
+                                    touch: _touch,
+                                    scheduleFocus: _scheduleChipFocus,
+                                    onScheduleKey: _onScheduleChipKey,
+                                    onSchedule: _openSchedule,
+                                  )),
+                                ),
                               ),
                             ),
                           ),
@@ -1612,181 +1600,6 @@ class _SkipCue extends StatelessWidget {
                   color: Colors.white,
                   fontSize: 18,
                   fontWeight: FontWeight.w600)),
-        ],
-      ),
-    );
-  }
-}
-
-/// The "Channel schedule" chip above [_ZapInfoCard]: Up focuses it, OK
-/// (or a tap) opens [ChannelSchedulePanel].
-class _ScheduleChip extends StatelessWidget {
-  const _ScheduleChip(
-      {required this.focusNode, required this.onKeyEvent, required this.onTap});
-
-  final FocusNode focusNode;
-  final FocusOnKeyEventCallback onKeyEvent;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final accent = Theme.of(context).colorScheme.primary;
-    return Focus(
-      focusNode: focusNode,
-      onKeyEvent: onKeyEvent,
-      child: Builder(builder: (context) {
-        final focused = Focus.of(context).hasFocus;
-        return GestureDetector(
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(
-              color: focused
-                  ? Color.lerp(Colors.black, accent, 0.3)
-                  : Colors.black.withValues(alpha: 0.45),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                  color: focused ? accent : Colors.white24,
-                  width: focused ? 2 : 1),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.event_note,
-                    size: 16, color: focused ? accent : Colors.white70),
-                const SizedBox(width: 6),
-                Text(tr('Channel schedule'),
-                    style: TextStyle(
-                        color: focused ? Colors.white : Colors.white70,
-                        fontSize: 13,
-                        fontWeight:
-                            focused ? FontWeight.w600 : FontWeight.normal)),
-                if (!focused) ...[
-                  const SizedBox(width: 6),
-                  const Icon(Icons.keyboard_arrow_up,
-                      size: 16, color: Colors.white54),
-                ],
-              ],
-            ),
-          ),
-        );
-      }),
-    );
-  }
-}
-
-/// CH+/CH- card: channel logo + name, the programme on now (time +
-/// progress) and two lines of its description — same content as the
-/// Timeline guide's full-video corner card.
-class _ZapInfoCard extends StatelessWidget {
-  const _ZapInfoCard({required this.channel, this.at});
-
-  final Channel channel;
-
-  /// Catch-up playhead: the programme then, its progress at that time.
-  final DateTime? at;
-
-  @override
-  Widget build(BuildContext context) {
-    final epg = context.watch<EpgService>();
-    // epgId (rawId or a manual override), not the composite id.
-    final when = at;
-    final EpgProgram? program = when == null
-        ? epg.getCurrentProgram(channel.epgId)
-        : CatchupSession.programmeAt(epg.getPrograms(channel.epgId), when);
-    final now = when ?? DateTime.now();
-    final time = TimeFormat.hm;
-    final logo = channel.logoUrl;
-    final playlistName = context
-        .watch<PlaylistManager>()
-        .playlistNameFor(channel.playlistId)
-        .trim();
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 760),
-      margin: const EdgeInsets.symmetric(horizontal: 24),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      decoration: BoxDecoration(
-        // Lighter than the bars: the picture should show through (owner).
-        color: Colors.black.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 56,
-            height: 56,
-            child: (logo != null && logo.isNotEmpty)
-                ? CachedNetworkImage(
-                    imageUrl: logo,
-                    fit: BoxFit.contain,
-                    errorWidget: (_, __, ___) =>
-                        const Icon(Icons.tv, color: Colors.white54))
-                : const Icon(Icons.tv, color: Colors.white54),
-          ),
-          const SizedBox(width: 14),
-          Flexible(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(channel.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
-                              ?.copyWith(color: Colors.white)),
-                    ),
-                    if (playlistName.isNotEmpty) ...[
-                      const SizedBox(width: 8),
-                      Flexible(child: GoldTag(label: playlistName)),
-                    ],
-                  ],
-                ),
-                if (program == null)
-                  Text(tr('No program data available'),
-                      style: const TextStyle(color: Colors.white70))
-                else ...[
-                  Text(program.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white)),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Text(
-                          '${time.format(program.start)} - ${time.format(program.stop)}',
-                          style: const TextStyle(
-                              color: Colors.white70, fontSize: 12)),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: LinearProgressIndicator(
-                            value: program.stop.isAfter(program.start)
-                                ? (now.difference(program.start).inSeconds /
-                                        program.stop
-                                            .difference(program.start)
-                                            .inSeconds)
-                                    .clamp(0.0, 1.0)
-                                : 0.0),
-                      ),
-                    ],
-                  ),
-                  if (program.description != null) ...[
-                    const SizedBox(height: 4),
-                    Text(program.description!,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            color: Colors.white70, fontSize: 12)),
-                  ],
-                ],
-              ],
-            ),
-          ),
         ],
       ),
     );

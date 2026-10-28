@@ -362,6 +362,14 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **cdx, 2026-10-28 — compact live info** (`codex/compact-live-info`):
+  Channel schedule is inside the live/catch-up info card header. Narrower card,
+  smaller logo/padding, one-line description, lower placement; same Up/OK/Down/Back
+  handlers/node. Narrow/large-text screens keep the action inside on its own row.
+  Test +485 includes +484 reminders/recording; analyze baseline 16 and 831 tests
+  pass. Signed APK installed on Formuler (version/hash verified); owner acceptance
+  pending. Exact checks/artifact details in HANDOFF.md.
+
 - **cdx, 2026-10-28 — programme schedule actions** (`codex/programme-reminders-recording`):
   upcoming Channel schedule shows Remind me / Record, with cancellation and stable
   remote focus. Viewer/device-local reminders notify5min before and at start while

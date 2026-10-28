@@ -73,3 +73,22 @@ OK → Remind me and/or Record. Reopen to cancel. Check Recordings > Scheduled,
 then let a nearby programme start and confirm the popup and recording state/file.
 Also verify same-channel playback through the recorder and a later explicit stop.
 Device acceptance remains pending until the owner performs these actions.
+
+## Compact information card follow-up (+485)
+
+Owner photo showed the separate Channel schedule chip making the large info
+overlay taller. `LiveChannelInfoCard` now contains that action in its header,
+with a 620px maximum width (previously 760), 40px logo (56), 12/10px padding (16/12),
+compact text, and a one-line description. The player positions the combined card
+48px below the safe top edge. Narrow or larger-text layouts keep the same action
+inside the card on its own row; touch targets remain 44px. Time/progress stack
+when necessary, avoiding narrow/large-text overflow.
+
+The same player-owned focus node and key callbacks are passed into the card;
+visibility still excludes focus/pointer events. No schedule-opening, reminder,
+recording, guide lookup, catch-up, Data pool, timers or native-player behavior
+changes. Existing channel/playlist labels and programme time/progress remain.
+Tests verify control containment/compact TV geometry, stable focused geometry
+and guide updates even without debug labels, missing guide/touch, catch-up
+playhead data, FR/EL large text, and actual PlayerScreen OK/Up/OK/Down/Back flow.
+Exact +485 checks/build/signature/install results are recorded in HANDOFF.md.
