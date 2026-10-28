@@ -2098,4 +2098,8 @@ const Map<String, String> kFr = {
       "Rattrapage  ·  OK pour regarder depuis le début",
   "Upcoming":
       "À venir",
+  "Show group counts":
+      "Afficher le nombre par groupe",
+  "How many channels, movies or shows each group holds, beside its name.":
+      "Le nombre de chaînes, films ou séries de chaque groupe, à côté de son nom.",
 };

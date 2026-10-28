@@ -2099,4 +2099,8 @@ const Map<String, String> kIt = {
       "Catch-up  ·  OK per guardare dall'inizio",
   "Upcoming":
       "In arrivo",
+  "Show group counts":
+      "Mostra il numero per gruppo",
+  "How many channels, movies or shows each group holds, beside its name.":
+      "Quanti canali, film o serie contiene ogni gruppo, accanto al nome.",
 };

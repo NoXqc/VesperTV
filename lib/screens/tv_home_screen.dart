@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart' show NumberFormat;
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
@@ -4057,6 +4058,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       {required bool collapsed}) {
     final allGroups = playlist.tvGroups.where((g) => !g.isHidden).toList();
     final sort = context.watch<AppPreferences>().liveGroupSort;
+    final showCounts = context.watch<AppPreferences>().showGroupCounts;
     final visible = _withoutHiddenPlaylists(allGroups, 'tv');
     final groups = [
       for (final id in visible.map((g) => g.playlistId).toSet())
@@ -4152,6 +4154,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                 key: ValueKey(_groupKey(_myGroupsId, title)),
                 icon: Icons.folder_special_outlined,
                 label: title,
+                count: showCounts ? playlist.liveGroupCount(null, title) : null,
                 selected: effectiveGroup == title,
                 collapsed: collapsed,
                 fontSize: _groupFontSize,
@@ -4177,6 +4180,9 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
                 key: ValueKey(_groupKey(group.playlistId, group.title)),
                 icon: Icons.grid_view_rounded,
                 label: group.title,
+                count: showCounts
+                    ? playlist.liveGroupCount(group.playlistId, group.title)
+                    : null,
                 selected: effectiveGroup == group.title,
                 collapsed: collapsed,
                 fontSize: _groupFontSize,
@@ -4230,6 +4236,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       {required bool collapsed}) {
     final groups = _browseRailGroups(playlist);
     final allGroups = _browseRailGroups(playlist, includeHiddenPlaylists: true);
+    final showCounts = context.watch<AppPreferences>().showGroupCounts;
 
     // Keyed by tab — reported directly, live: simply *scrolling* down the
     // groups column (never tapping/selecting a group at all) in Movies,
@@ -4312,6 +4319,10 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
             key: ValueKey(_groupKey(group.playlistId, group.title)),
             icon: Icons.grid_view_rounded,
             label: group.title,
+            count: showCounts
+                ? playlist.browseGroupCount(_tab == 'Movies' ? 'vod' : 'series',
+                    group.playlistId, group.title)
+                : null,
             selected: false,
             collapsed: collapsed,
             fontSize: _groupFontSize,
@@ -6166,6 +6177,7 @@ class _GroupRow extends StatefulWidget {
     required this.collapsed,
     required this.onTap,
     required this.onLongPress,
+    this.count,
     this.isFavorited = false,
     this.isPendingHide = false,
     this.fontSize,
@@ -6178,6 +6190,10 @@ class _GroupRow extends StatefulWidget {
 
   final IconData icon;
   final String label;
+
+  /// Channels/movies/shows in the group, shown after its name (Settings >
+  /// Interface > Tabs > Show group counts); null = no count.
+  final int? count;
   final bool selected;
   final bool collapsed;
   final VoidCallback onTap;
@@ -6432,6 +6448,19 @@ class _GroupRowState extends State<_GroupRow> {
                                   ),
                                 ),
                               ),
+                              if (widget.count case final n?
+                                  when !widget.moving) ...[
+                                const SizedBox(width: 8),
+                                Text(
+                                  NumberFormat.decimalPattern().format(n),
+                                  style: TextStyle(
+                                    color: highlighted
+                                        ? foregroundColor
+                                        : Colors.white54,
+                                    fontSize: (widget.fontSize ?? 14) * 0.85,
+                                  ),
+                                ),
+                              ],
                               // Mouse/touch equivalents of the remote's
                               // Up/Down/Select while moving — not
                               // focusable, so they never steal the row's

@@ -63,6 +63,8 @@ class PlaylistManager extends ChangeNotifier {
   /// notifies mid-frame is deferred to the end of that frame instead.
   @override
   void notifyListeners() {
+    // Anything changed (channels loaded, hidden, moved): count again.
+    _liveCounts = null;
     if (SchedulerBinding.instance.schedulerPhase ==
         SchedulerPhase.persistentCallbacks) {
       if (_deferredNotifyPending) return;
@@ -1794,6 +1796,81 @@ class PlaylistManager extends ChangeNotifier {
   Future<void> _saveMyGroups() async {
     await _storage.setMyGroups(_myGroups.toJson());
     notifyListeners();
+  }
+
+  // --- Group counts (Settings > Interface > Tabs > Show group counts) ----
+
+  static String _countKey(String? playlistId, String title) =>
+      '${playlistId ?? ''}\u0000$title';
+
+  /// Live channels per group as listed, one pass over every enabled
+  /// playlist; cleared on every [notifyListeners].
+  Map<String, int>? _liveCounts;
+
+  /// Channels the TV tab lists in [playlistId]'s group [title] (hidden
+  /// channels left out); null [playlistId] = the viewer's own group.
+  int liveGroupCount(String? playlistId, String title) {
+    final counts = _liveCounts ??= () {
+      final out = <String, int>{};
+      for (final s in _enabledSessionsSortedFor('tv')) {
+        for (final c in s.visibleChannels(category: 'tv')) {
+          final own = _myGroups.groupOf(c.id);
+          final key = own != null
+              ? _countKey(null, own)
+              : _countKey(s.profile.id, c.group);
+          out[key] = (out[key] ?? 0) + 1;
+        }
+      }
+      return out;
+    }();
+    return counts[_countKey(playlistId, title)] ?? 0;
+  }
+
+  Map<String, int> _vodCounts = const {};
+  Map<String, int> _seriesCounts = const {};
+  int _catalogCountsGen = -1;
+  bool _catalogCountsLoading = false;
+  DateTime _catalogCountsAt = DateTime.fromMillisecondsSinceEpoch(0);
+
+  /// Movies ([category] `vod`) or shows (`series`) in [playlistId]'s
+  /// category [title]: the catalog's real total (rows stop at 300), else
+  /// the loaded items (M3U). Null while the first count is loading.
+  int? browseGroupCount(String category, String playlistId, String title) {
+    _refreshCatalogCounts();
+    final saved = (category == 'vod'
+        ? _vodCounts
+        : _seriesCounts)[_countKey(playlistId, title)];
+    if (saved != null && saved > 0) return saved;
+    if (_catalogCountsGen < 0) return null;
+    final loaded = category == 'vod'
+        ? visibleChannels(
+                playlistId: playlistId, groupTitle: title, category: 'vod')
+            .length
+        : visibleSeries(playlistId: playlistId, categoryName: title).length;
+    return loaded > 0 ? loaded : null;
+  }
+
+  /// Re-reads the catalog's counts after writes, at most every 3 s (a sync
+  /// writes category after category).
+  void _refreshCatalogCounts() {
+    final gen = _catalogDb.writeGeneration;
+    if (_catalogCountsLoading || gen == _catalogCountsGen) return;
+    final wait = const Duration(seconds: 3) -
+        DateTime.now().difference(_catalogCountsAt);
+    _catalogCountsLoading = true;
+    Future.delayed(wait.isNegative ? Duration.zero : wait, () async {
+      final gen = _catalogDb.writeGeneration;
+      try {
+        _vodCounts = await _catalogDb.categoryCounts('vod_channels');
+        _seriesCounts = await _catalogDb.categoryCounts('series_items');
+      } catch (e) {
+        debugPrint('PlaylistManager: group counts failed: $e');
+      }
+      _catalogCountsGen = gen;
+      _catalogCountsAt = DateTime.now();
+      _catalogCountsLoading = false;
+      notifyListeners();
+    });
   }
 
   /// The viewer's own live groups, in display order (top of the TV tab's

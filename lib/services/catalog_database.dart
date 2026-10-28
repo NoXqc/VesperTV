@@ -393,8 +393,27 @@ class CatalogDatabase {
   /// leave stale rows behind for items the provider removed. Scoped by
   /// `(category_name, playlist_id)` together — deleting by category name
   /// alone would also wipe a different playlist's same-named category.
+  /// Bumped by every catalog write, so cached [categoryCounts] know to
+  /// re-read.
+  int writeGeneration = 0;
+
+  /// Items per category of every playlist, keyed `playlistId` + `\u0000` +
+  /// category name — [table] is `vod_channels` or `series_items`. One
+  /// grouped query (group counts in the Movies/TV Shows groups column).
+  Future<Map<String, int>> categoryCounts(String table) async {
+    assert(table == 'vod_channels' || table == 'series_items');
+    final db = await _database;
+    final rows = await db.rawQuery(
+        'SELECT playlist_id, category_name, COUNT(*) AS cnt FROM $table GROUP BY playlist_id, category_name');
+    return {
+      for (final r in rows)
+        '${r['playlist_id']}\u0000${r['category_name']}': r['cnt'] as int? ?? 0
+    };
+  }
+
   Future<void> upsertVodCategory(
       String playlistId, String categoryName, List<Channel> items) async {
+    writeGeneration++;
     final db = await _database;
     final batch = db.batch();
     batch.delete('vod_channels',
@@ -534,6 +553,7 @@ class CatalogDatabase {
 
   Future<void> upsertSeriesCategory(
       String playlistId, String categoryName, List<XtreamSeries> items) async {
+    writeGeneration++;
     final db = await _database;
     final batch = db.batch();
     batch.delete('series_items',
@@ -737,6 +757,7 @@ class CatalogDatabase {
   /// is removed entirely (`PlaylistManager.removePlaylist`), so its cached
   /// catalog doesn't linger for a disabled/deleted playlist.
   Future<void> clearForPlaylist(String playlistId) async {
+    writeGeneration++;
     final db = await _database;
     await db.delete('vod_channels',
         where: 'playlist_id = ?', whereArgs: [playlistId]);

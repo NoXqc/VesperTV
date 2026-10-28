@@ -69,6 +69,10 @@ class AppPreferences extends ChangeNotifier {
   /// instead of one block per playlist (Settings > General > Favourites).
   late bool mixFavoritePlaylists;
 
+  /// Settings > Interface > Tabs > Show group counts: how many channels,
+  /// movies or shows each group holds, beside its name (off by default).
+  late bool showGroupCounts;
+
   /// OK on a live channel also opens the Data pool card (stream details,
   /// `widgets/data_pool_card.dart`). Settings > General, off by default.
   late bool dataPool;
@@ -317,6 +321,7 @@ class AppPreferences extends ChangeNotifier {
     hideMultiview = _storage.getHideMultiview();
     videoFill = _storage.getVideoFill();
     mixFavoritePlaylists = _storage.getMixFavoritePlaylists();
+    showGroupCounts = _storage.getShowGroupCounts();
     dataPool = _storage.getDataPool();
     TimeFormat.use24h = _storage.getTime24h();
   }
@@ -437,6 +442,12 @@ class AppPreferences extends ChangeNotifier {
   void setMixFavoritePlaylists(bool value) {
     mixFavoritePlaylists = value;
     _storage.setMixFavoritePlaylists(value);
+    notifyListeners();
+  }
+
+  void setShowGroupCounts(bool value) {
+    showGroupCounts = value;
+    _storage.setShowGroupCounts(value);
     notifyListeners();
   }
 

@@ -348,6 +348,14 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                           context.read<AppPreferences>().setHideProfiles(v),
                     ),
                     TvSwitchListTile(
+                      title: Text(tr('Show group counts')),
+                      subtitle: Text(tr(
+                          'How many channels, movies or shows each group holds, beside its name.')),
+                      value: context.watch<AppPreferences>().showGroupCounts,
+                      onChanged: (v) =>
+                          context.read<AppPreferences>().setShowGroupCounts(v),
+                    ),
+                    TvSwitchListTile(
                       title: Text(tr('Hide Movies')),
                       subtitle: Text(tr(
                           'Removes the Movies tab and movie search results.')),

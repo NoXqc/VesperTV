@@ -2712,4 +2712,8 @@ const Map<String, String> kEl = {
       "Catch-up  ·  OK για προβολή από την αρχή",
   "Upcoming":
       "Προσεχώς",
+  "Show group counts":
+      "Εμφάνιση πλήθους ανά ομάδα",
+  "How many channels, movies or shows each group holds, beside its name.":
+      "Πόσα κανάλια, ταινίες ή σειρές έχει κάθε ομάδα, δίπλα στο όνομά της.",
 };

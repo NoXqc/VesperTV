@@ -2095,4 +2095,8 @@ const Map<String, String> kEs = {
       "Catch-up  ·  OK para verlo desde el principio",
   "Upcoming":
       "Próximamente",
+  "Show group counts":
+      "Mostrar el número por grupo",
+  "How many channels, movies or shows each group holds, beside its name.":
+      "Cuántos canales, películas o series tiene cada grupo, junto a su nombre.",
 };

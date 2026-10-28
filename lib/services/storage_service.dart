@@ -488,6 +488,11 @@ class StorageService {
       _prefs.getBool(AppConstants.keyMixFavoritePlaylists) ?? false;
   Future<void> setMixFavoritePlaylists(bool value) =>
       _prefs.setBool(AppConstants.keyMixFavoritePlaylists, value);
+
+  bool getShowGroupCounts() =>
+      _prefs.getBool(AppConstants.keyShowGroupCounts) ?? false;
+  Future<void> setShowGroupCounts(bool value) =>
+      _prefs.setBool(AppConstants.keyShowGroupCounts, value);
   bool getHideArchive() => _prefs.getBool(AppConstants.keyHideArchive) ?? false;
   Future<void> setHideArchive(bool value) =>
       _prefs.setBool(AppConstants.keyHideArchive, value);

@@ -262,6 +262,7 @@ class AppConstants {
   /// Favourites (TV, Movies, TV Shows) as one list across playlists,
   /// A-Z, instead of one block per playlist.
   static const String keyMixFavoritePlaylists = 'vesper_mix_favorite_playlists';
+  static const String keyShowGroupCounts = 'vesper_show_group_counts';
 
   /// Settings > Backup & restore: weekly automatic backup on/off (off by
   /// default) and the last one's time (ms since epoch; never backed up).
