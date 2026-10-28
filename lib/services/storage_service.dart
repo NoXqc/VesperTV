@@ -413,6 +413,11 @@ class StorageService {
   Future<void> setArchiveReadyWatch(String json) =>
       _prefs.setString(AppConstants.keyArchiveReadyWatch, json);
 
+  bool getLaunchWithProfiles() =>
+      _prefs.getBool(AppConstants.keyLaunchWithProfiles) ?? false;
+  Future<void> setLaunchWithProfiles(bool value) =>
+      _prefs.setBool(AppConstants.keyLaunchWithProfiles, value);
+
   bool getFastStartup() => _prefs.getBool(AppConstants.keyFastStartup) ?? false;
   Future<void> setFastStartup(bool value) =>
       _prefs.setBool(AppConstants.keyFastStartup, value);
@@ -1049,6 +1054,7 @@ class StorageService {
     AppConstants.keyStartSection,
     AppConstants.keyStartSectionPending,
     AppConstants.keyFastStartup,
+    AppConstants.keyLaunchWithProfiles,
     AppConstants.keyPlaylistEnabled,
     AppConstants.keyPinFailCount,
     AppConstants.keyPinLockedUntil,

@@ -6,6 +6,16 @@
 /// the code; Italian plurals don't work that way (canale/canali), so those
 /// strings are phrased to avoid it.
 const Map<String, String> kIt = {
+  // Startup profile selector.
+  "Launch with profiles selector": "Avvia con il selettore dei profili",
+  "Choose a profile after the splash, before the app opens. Applies from the next start.":
+      "Scegli un profilo dopo la schermata iniziale, prima di aprire l’app. Si applica dal prossimo avvio.",
+  "Who is watching?": "Chi sta guardando?",
+  "Choose your profile to get started.": "Scegli il tuo profilo per iniziare.",
+  "Welcome, {name}": "Benvenuto, {name}",
+  "Could not switch profile. Please try again.":
+      "Impossibile cambiare profilo. Riprova.",
+
   "Sports Mode": "Modalità Sport",
   "Make Sports Trak your home, with your top five leagues at the side.": "Usa Sports Trak come pagina iniziale, con i tuoi primi cinque campionati a lato.",
   "Could not change Sports Mode. Try again.": "Impossibile cambiare la modalità Sport. Riprova.",

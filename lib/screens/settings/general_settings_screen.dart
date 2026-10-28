@@ -276,6 +276,17 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                       ]),
                   _section('startup', Icons.power_settings_new, tr('Startup'),
                       children: [
+                        TvSwitchListTile(
+                          title: Text(tr('Launch with profiles selector')),
+                          subtitle: Text(tr(
+                              'Choose a profile after the splash, before the app opens. Applies from the next start.')),
+                          value: context
+                              .watch<AppPreferences>()
+                              .launchWithProfiles,
+                          onChanged: (value) => context
+                              .read<AppPreferences>()
+                              .setLaunchWithProfiles(value),
+                        ),
                         _StartSectionPicker(),
                         // At most one of the two is on; both off = nothing
                         // plays.

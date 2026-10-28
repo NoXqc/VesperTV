@@ -362,6 +362,15 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **cdx, 2026-10-28 — startup profile selector** (`codex/startup-profile-selector`):
+  Settings > General > Startup > Launch with profiles selector (off by default,
+  device-only). After the existing splash, a bounded frosted panel lists all
+  viewers with photos and explicit remote arrows. Existing switchTo/PIN gate
+  applies before the short selection animation; only then are startup routes
+  and automatic playback created for the chosen viewer. No Home flash or
+  previous-viewer playback. See `dev-notes/startup-profile-selector.md`;
+  physical-device appearance/startup acceptance pending. No version/build bump.
+
 - **cdx, 2026-10-28 — release preparation 1.0.44 (beta), +492**
   (`codex/release-1-0-44`): owner requested publication and Discord announcement
   after accepted +491. Matching Android/Windows packages, Sports Mode explicitly

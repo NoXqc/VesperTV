@@ -314,6 +314,10 @@ class AppConstants {
   /// 2026-10-21) — the UI opens without waiting for Movies/TV Shows to
   /// pre-load. Device-only: the slow splash protects weak boxes (§10).
   static const String keyFastStartup = 'vesper_fast_startup';
+
+  /// Device-wide opt-in: choose a viewer after the splash, before startup routes
+  /// or automatic playback. Backups retain it; transfers keep the target choice.
+  static const String keyLaunchWithProfiles = 'vesper_launch_with_profiles';
   static const String keyDataPool = 'vesper_data_pool';
   // Settings > Playback > Catch-up: carry on past the programme (off =
   // stop at its end).

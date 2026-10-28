@@ -6,6 +6,17 @@
 /// English-style plural "s" filled in by the code; Greek plurals don't
 /// work that way, so those strings are phrased without it.
 const Map<String, String> kEl = {
+  // Startup profile selector.
+  "Launch with profiles selector": "Εκκίνηση με επιλογή προφίλ",
+  "Choose a profile after the splash, before the app opens. Applies from the next start.":
+      "Επιλέξτε προφίλ μετά την οθόνη εκκίνησης, πριν ανοίξει η εφαρμογή. Ισχύει από την επόμενη εκκίνηση.",
+  "Who is watching?": "Ποιος παρακολουθεί;",
+  "Choose your profile to get started.":
+      "Επιλέξτε το προφίλ σας για να ξεκινήσετε.",
+  "Welcome, {name}": "Καλώς ήρθες, {name}",
+  "Could not switch profile. Please try again.":
+      "Δεν ήταν δυνατή η αλλαγή προφίλ. Δοκιμάστε ξανά.",
+
   "Sports Mode": "Λειτουργία αθλητικών",
   "Make Sports Trak your home, with your top five leagues at the side.": "Ορίστε το Sports Trak ως αρχική οθόνη, με τις πέντε πρώτες λίγκες σας στο πλάι.",
   "Could not change Sports Mode. Try again.": "Δεν ήταν δυνατή η αλλαγή της λειτουργίας αθλητικών. Δοκιμάστε ξανά.",
