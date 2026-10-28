@@ -1627,6 +1627,12 @@ class _SubtitleButtonState extends State<_SubtitleButton> {
     final chosen = await _sheet<Object>(
       tr('Subtitles'),
       (sheet) => [
+        _option(sheet,
+            selected: false,
+            icon: Icons.translate,
+            title: tr('Preferred subtitle language'),
+            subtitle: _preferredName(),
+            result: 'preferred'),
         _option(sheet, selected: !anySelected, title: tr('Off'), result: 'off'),
         if (external != null)
           _option(sheet,
@@ -1657,12 +1663,6 @@ class _SubtitleButtonState extends State<_SubtitleButton> {
               title: tr('Search online subtitles'),
               subtitle: tr('From your add-ons (Settings > Add-ons)'),
               result: 'online'),
-        _option(sheet,
-            selected: false,
-            icon: Icons.translate,
-            title: tr('Preferred subtitle language'),
-            subtitle: _preferredName(),
-            result: 'preferred'),
         _option(sheet,
             selected: false,
             icon: Icons.format_size,
