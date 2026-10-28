@@ -362,6 +362,17 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **2026-10-28 — merged to local `main` (not pushed), ready for Codex to release: +491.**
+  Contains +484 programme reminders/recording, +485 compact live info, +486 Red/Blue
+  palettes, +487 Codex **Sports Mode** (opt-in sports-first home, per viewer) and Claude's
+  +488..+491 Sports Mode layout: TV rail hidden until Left (`SportsModeShell.collapse`,
+  `Offstage` keeps nodes focusable), day strip -> `day:menu` roll-down chip, and while a
+  game plays a **feed** of the day's games beside a big video (`_buildFeed`, one focus node;
+  OK watch, Right full screen, hold OK stats, Down past end = card rows under a small hero,
+  Up back). Owner-tested on the Formuler +491 ("we have a winner"); Windows not rebuilt, no
+  widget test for the feed (needs a matched playing channel). Details:
+  `dev-notes/sports-mode.md`. Next build must be > 491. Excluded branches unchanged
+  (native-surface-prepare, network-cards, tunneling-test).
 - **cdx, 2026-10-28 — Sports Mode** (`codex/sports-mode`): opt-in per-viewer
   sports home, five ordered leagues in the left rail and remaining leagues/All/
   Edit leagues in a floating bar. Shared SportsScreen engine, day/tools and
