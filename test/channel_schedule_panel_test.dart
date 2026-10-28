@@ -6,6 +6,9 @@ import 'package:nox_iptv/models/channel.dart';
 import 'package:nox_iptv/models/epg_program.dart';
 import 'package:nox_iptv/services/epg_service.dart';
 import 'package:nox_iptv/services/storage_service.dart';
+import 'package:nox_iptv/services/programme_reminders.dart';
+import 'package:nox_iptv/services/playlist_manager.dart';
+import 'package:nox_iptv/services/catalog_database.dart';
 import 'package:nox_iptv/widgets/channel_schedule_panel.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -49,26 +52,39 @@ class _Epg extends EpgService {
 
 void main() {
   late _Epg epg;
+  late StorageService storage;
+  late ProgrammeReminders reminders;
+  late PlaylistManager playlists;
   final caught = <DateTime>[];
   var closed = 0;
   var live = 0;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    final storage = StorageService();
+    storage = StorageService();
     await storage.init();
     epg = _Epg(storage);
+    playlists = PlaylistManager(storage, CatalogDatabase());
     caught.clear();
     closed = 0;
     live = 0;
   });
+  tearDown(() {
+    reminders.dispose();
+    playlists.dispose();
+  });
 
   Future<void> pump(WidgetTester tester, {DateTime? at}) async {
+    reminders = ProgrammeReminders(storage);
     tester.view.physicalSize = const Size(1920, 1080);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(ChangeNotifierProvider<EpgService>.value(
-      value: epg,
+    await tester.pumpWidget(MultiProvider(
+      providers: [
+        ChangeNotifierProvider<EpgService>.value(value: epg),
+        ChangeNotifierProvider<ProgrammeReminders>.value(value: reminders),
+        ChangeNotifierProvider<PlaylistManager>.value(value: playlists),
+      ],
       child: MaterialApp(
         home: Scaffold(
           body: ChannelSchedulePanel(
@@ -110,7 +126,8 @@ void main() {
     expect(closed, 1);
   });
 
-  testWidgets('OK on the programme playing only closes; upcoming does nothing',
+  testWidgets(
+      'OK on the playing programme closes; upcoming opens actions and Back restores the row',
       (tester) async {
     await pump(tester);
     await press(tester, LogicalKeyboardKey.select);
@@ -122,7 +139,13 @@ void main() {
     await press(tester, LogicalKeyboardKey.select);
     expect(closed, 1);
     expect(caught, isEmpty);
-    expect(find.text('Upcoming'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.text('Remind me'), findsOneWidget);
+    await press(tester, LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.text('Remind me'), findsNothing);
+    expect(find.text('Upcoming  ·  OK to remind or record'), findsOneWidget);
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'channel-schedule');
   });
 
   testWidgets('from catch-up: opens on the playhead, OK on now = back to live',
@@ -152,5 +175,23 @@ void main() {
     expect(find.text('About show $i'), findsNothing);
     expect(caught, isEmpty);
     expect(live, 0);
+  });
+
+  testWidgets('opening OK repeats/key-up never arm a reminder; fresh OK does',
+      (tester) async {
+    await pump(tester);
+    final next = epg.rows[onNow() + 1];
+    await press(tester, LogicalKeyboardKey.arrowDown);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    await tester.sendKeyRepeatEvent(LogicalKeyboardKey.select);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    expect(reminders.isSet(_cu, next), isFalse);
+    expect(find.text('Remind me'), findsOneWidget);
+    await press(tester, LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    expect(reminders.isSet(_cu, next), isTrue);
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'channel-schedule');
   });
 }

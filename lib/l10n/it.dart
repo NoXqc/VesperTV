@@ -2105,4 +2105,21 @@ const Map<String, String> kIt = {
       "Quanti canali, film o serie contiene ogni gruppo, accanto al nome.",
   "{m} min back":
       "{m} min indietro",
+
+  // Upcoming TV programmes
+  "Starts in 5 minutes": "Inizia tra 5 minuti",
+  "5 minutes before and at programme time (while VesperTV is open)":
+      "5 minuti prima e all’inizio del programma (con VesperTV aperto)",
+  "Overlaps {title}. Your playlist has no free recording connection.":
+      "Si sovrappone a {title}. La playlist non ha connessioni libere per registrare.",
+  "Records the programme start to end. Manage it in Recordings.":
+      "Registra il programma dall’inizio alla fine. Gestiscilo in Registrazioni.",
+  "Could not schedule recording. Check recording storage and try again.":
+      "Impossibile programmare la registrazione. Controlla lo spazio di archiviazione e riprova.",
+  "▲ ▼ programmes  ·  OK for options  ·  Back to close":
+      "▲ ▼ programmi  ·  OK per le opzioni  ·  Indietro per chiudere",
+  "Upcoming  ·  OK to remind or record":
+      "In programma  ·  OK per promemoria o registrazione",
+  "Recording scheduled. Android may delay the start without exact alarm access.":
+      "Registrazione programmata. Android può ritardare l’inizio senza accesso alle sveglie esatte.",
 };

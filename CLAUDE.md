@@ -362,6 +362,16 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **cdx, 2026-10-28 — programme schedule actions** (`codex/programme-reminders-recording`):
+  upcoming Channel schedule shows Remind me / Record, with cancellation and stable
+  remote focus. Viewer/device-local reminders notify5min before and at start while
+  open; exact EPG-window recordings use the existing Android alarm/boot scheduler
+  and Recordings tab. Storage/overlap checks and guarded same-channel tap handoff.
+  Production-signed+484 (all +483 features) installed over+482 on Formuler,
+  version/hash verified; analyze16,825Flutter/15help tests pass. Device acceptance
+  pending; exact artifact state in HANDOFF.md.
+  See `dev-notes/programme-schedule-actions.md`. No publication/native-player edits.
+
 - **Claude, 2026-10-27 (main, unbuilt): Team Schedule + Media Hub fixes.** Hold OK on a team in
   Standings / My Teams = menu Schedule / Follow-Unfollow (`showSportsTeamMenu`). Schedule =
   `screens/sports_schedule_screen.dart`, month calendar (one focus node, own arrows, CH+/CH- month),

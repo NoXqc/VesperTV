@@ -43,6 +43,8 @@ import 'widgets/recording_conflict_dialog.dart';
 import 'services/playlist_manager.dart';
 import 'services/storage_service.dart';
 import 'services/game_reminders.dart';
+import 'services/programme_reminders.dart';
+import 'widgets/programme_reminder_overlay.dart';
 import 'services/goals_alerts.dart';
 import 'widgets/game_reminder_overlay.dart';
 import 'widgets/goals_alert_overlay.dart';
@@ -196,6 +198,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   bool _ready = false;
   final _startupRoutes = StartupRoutes();
   GameReminders? _gameReminders;
+  ProgrammeReminders? _programmeReminders;
   GoalsAlerts? _goalsAlerts;
 
   /// True while [PlaylistManager.runFullCatalogSync] is blocking the
@@ -301,6 +304,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     _splashController.dispose();
     _startupRoutes.dispose();
     _gameReminders?.dispose();
+    _programmeReminders?.dispose();
+    RecordingService.instance.prepareProgramme = null;
     _goalsAlerts?.dispose();
     if (Platform.isWindows) windowManager.removeListener(this);
     super.dispose();
@@ -335,6 +340,29 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   Future<String?> _recordingTapUrl(Channel channel) async {
     final rec = RecordingService.instance.recordingOf(channel);
     return rec == null ? null : RecordingService.instance.teeUrl(rec);
+  }
+
+  Future<void> _prepareProgrammeRecording(RecordingEntry entry) async {
+    if (!mounted ||
+        WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+      return;
+    }
+    final channel = _playbackService.currentChannel;
+    if (channel == null ||
+        channel.id != entry.channelId ||
+        channel.transientPlayback) {
+      return;
+    }
+    final viewer = _storage.getActiveViewerId();
+    await _playbackService.handOverScheduledRecording(channel, () async {
+      await RecordingService.instance.waitStarted(entry);
+      await RecordingService.instance.refreshStatus();
+    },
+        canResume: () =>
+            mounted &&
+            _storage.getActiveViewerId() == viewer &&
+            WidgetsBinding.instance.lifecycleState ==
+                AppLifecycleState.resumed);
   }
 
   Future<void> _refreshAutoRecordings() async {
@@ -373,6 +401,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       _storage = StorageService();
       await _storage.init();
       _gameReminders = GameReminders(_storage);
+      _programmeReminders = ProgrammeReminders(_storage);
       _goalsAlerts = GoalsAlerts(_storage);
       LiveResumeHint.pillEnabled.value = _storage.getShowResumePill();
 
@@ -428,6 +457,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       if (RecordingService.supported) {
         PlaybackService.confirmOpen = _confirmOverRecording;
         PlaybackService.openUrlFor = _recordingTapUrl;
+        RecordingService.instance.prepareProgramme = _prepareProgrammeRecording;
       }
       _parentalPin = ParentalPin(_storage);
       _archiveService = ArchiveService(_storage);
@@ -900,6 +930,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       providers: [
         Provider<StorageService>.value(value: _storage),
         ChangeNotifierProvider<GameReminders>.value(value: _gameReminders!),
+        ChangeNotifierProvider<ProgrammeReminders>.value(
+            value: _programmeReminders!),
         ChangeNotifierProvider<GoalsAlerts>.value(value: _goalsAlerts!),
         Provider<CatalogDatabase>.value(value: _catalogDb),
         ChangeNotifierProvider<AppPreferences>.value(value: _preferences),
@@ -969,6 +1001,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
               if (Platform.isWindows)
                 DesktopLiveResumeHint(navigatorKey: _navigatorKey),
               const GameReminderOverlay(),
+              const ProgrammeReminderOverlay(),
               const GoalsAlertOverlay(),
             ],
           ),

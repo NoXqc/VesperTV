@@ -2718,4 +2718,21 @@ const Map<String, String> kEl = {
       "Πόσα κανάλια, ταινίες ή σειρές έχει κάθε ομάδα, δίπλα στο όνομά της.",
   "{m} min back":
       "{m} λεπτά πίσω",
+
+  // Upcoming TV programmes
+  "Starts in 5 minutes": "Ξεκινά σε 5 λεπτά",
+  "5 minutes before and at programme time (while VesperTV is open)":
+      "5 λεπτά πριν και στην έναρξη της εκπομπής (με το VesperTV ανοιχτό)",
+  "Overlaps {title}. Your playlist has no free recording connection.":
+      "Συμπίπτει με το {title}. Η λίστα σας δεν έχει ελεύθερη σύνδεση εγγραφής.",
+  "Records the programme start to end. Manage it in Recordings.":
+      "Εγγράφει την εκπομπή από την αρχή ως το τέλος. Διαχείριση στις Εγγραφές.",
+  "Could not schedule recording. Check recording storage and try again.":
+      "Δεν ήταν δυνατός ο προγραμματισμός εγγραφής. Ελέγξτε τον αποθηκευτικό χώρο και δοκιμάστε ξανά.",
+  "▲ ▼ programmes  ·  OK for options  ·  Back to close":
+      "▲ ▼ εκπομπές  ·  OK για επιλογές  ·  Πίσω για κλείσιμο",
+  "Upcoming  ·  OK to remind or record":
+      "Προσεχώς  ·  OK για υπενθύμιση ή εγγραφή",
+  "Recording scheduled. Android may delay the start without exact alarm access.":
+      "Η εγγραφή προγραμματίστηκε. Το Android μπορεί να καθυστερήσει την έναρξη χωρίς άδεια ακριβών ειδοποιήσεων.",
 };

@@ -2101,4 +2101,21 @@ const Map<String, String> kEs = {
       "Cuántos canales, películas o series tiene cada grupo, junto a su nombre.",
   "{m} min back":
       "{m} min atrás",
+
+  // Upcoming TV programmes
+  "Starts in 5 minutes": "Empieza en 5 minutos",
+  "5 minutes before and at programme time (while VesperTV is open)":
+      "5 minutos antes y al comenzar el programa (con VesperTV abierto)",
+  "Overlaps {title}. Your playlist has no free recording connection.":
+      "Se solapa con {title}. Tu lista no tiene conexiones libres para grabar.",
+  "Records the programme start to end. Manage it in Recordings.":
+      "Graba el programa de principio a fin. Gestiona la grabación en Grabaciones.",
+  "Could not schedule recording. Check recording storage and try again.":
+      "No se pudo programar la grabación. Comprueba el almacenamiento e inténtalo de nuevo.",
+  "▲ ▼ programmes  ·  OK for options  ·  Back to close":
+      "▲ ▼ programas  ·  OK para opciones  ·  Atrás para cerrar",
+  "Upcoming  ·  OK to remind or record":
+      "Próximamente  ·  OK para recordar o grabar",
+  "Recording scheduled. Android may delay the start without exact alarm access.":
+      "Grabación programada. Android puede retrasar el inicio sin permiso para alarmas exactas.",
 };

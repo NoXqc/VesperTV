@@ -7,11 +7,13 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/channel.dart';
+import '../models/epg_program.dart';
 import '../models/playlist_profile.dart';
 import '../models/sports.dart';
 import 'playback_service.dart';
 import 'sports_channel_matcher.dart';
 import 'sports_service.dart';
+import 'programme_reminders.dart' show programmeKey;
 
 /// Sports Trak recording (Android). The list of recordings, the one
 /// auto-recorded team and the settings live in `recordings.json` in app
@@ -22,8 +24,25 @@ import 'sports_service.dart';
 /// app is closed. Dart re-sends the whole upcoming schedule on every change
 /// ([_push]).
 class RecordingService extends ChangeNotifier {
-  RecordingService._();
+  RecordingService._(
+      {bool? platformSupported,
+      Future<Directory> Function()? supportDirectory,
+      DateTime Function()? now})
+      : _platformSupported = platformSupported,
+        _supportDirectory = supportDirectory ?? getApplicationSupportDirectory,
+        _now = now ?? DateTime.now;
   static final instance = RecordingService._();
+
+  @visibleForTesting
+  RecordingService.forTesting(Directory directory, {DateTime Function()? now})
+      : this._(
+            platformSupported: true,
+            supportDirectory: () async => directory,
+            now: now);
+  final bool? _platformSupported;
+  final Future<Directory> Function() _supportDirectory;
+  final DateTime Function() _now;
+  bool get available => _platformSupported ?? supported;
 
   static const _channel = MethodChannel('vespertv/recorder');
 
@@ -32,9 +51,20 @@ class RecordingService extends ChangeNotifier {
   final List<RecordingEntry> _items = [];
   AutoTeam? _autoTeam;
   RecordingSettings settings = const RecordingSettings();
+  bool exactSchedule = true;
   File? _file;
   bool _ready = false;
   Timer? _poll;
+  Timer? _programmeTimer;
+  bool _disposed = false;
+  final Set<String> _preparedProgrammes = {};
+  Future<void> Function(RecordingEntry)? _prepareProgramme;
+  set prepareProgramme(Future<void> Function(RecordingEntry)? callback) {
+    _prepareProgramme = callback;
+    _armProgrammeStart();
+  }
+
+  Future<void> _saveWrites = Future.value();
 
   /// Newest first.
   List<RecordingEntry> get items =>
@@ -42,10 +72,10 @@ class RecordingService extends ChangeNotifier {
   AutoTeam? get autoTeam => _autoTeam;
 
   Future<void> init() async {
-    if (_ready || !supported) return;
+    if (_ready || !available) return;
     _ready = true;
     try {
-      final dir = await getApplicationSupportDirectory();
+      final dir = await _supportDirectory();
       _file = File('${dir.path}/recordings.json');
       if (await _file!.exists()) {
         final m =
@@ -65,9 +95,12 @@ class RecordingService extends ChangeNotifier {
       debugPrint('RecordingService: load failed: $e');
     }
     await refreshStatus();
+    _armProgrammeStart();
     // While anything is recording, keep sizes/states fresh for the tab.
     _poll = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (_items.any((r) => r.state == RecState.recording)) {
+      if (_items.any((r) =>
+          r.state == RecState.recording ||
+          (r.state == RecState.scheduled && !r.startAt.isAfter(_now())))) {
         unawaited(refreshStatus());
       }
     });
@@ -75,24 +108,71 @@ class RecordingService extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
+    _programmeTimer?.cancel();
     _poll?.cancel();
     super.dispose();
   }
 
+  /// Give an open player's same-channel connection to the recorder just
+  /// before the native alarm. Android still owns the alarm when the app is closed.
+  void _armProgrammeStart() {
+    _programmeTimer?.cancel();
+    final prepare = _prepareProgramme;
+    if (_disposed || prepare == null) return;
+    final upcoming = _items
+        .where((r) =>
+            r.programmeKey.isNotEmpty &&
+            r.state == RecState.scheduled &&
+            !_preparedProgrammes.contains(r.id) &&
+            r.startAt.isAfter(_now().subtract(const Duration(seconds: 2))))
+        .toList()
+      ..sort((a, b) => a.startAt.compareTo(b.startAt));
+    if (upcoming.isEmpty) return;
+    final entry = upcoming.first;
+    final delay =
+        entry.startAt.subtract(const Duration(seconds: 2)).difference(_now());
+    _programmeTimer = Timer(delay.isNegative ? Duration.zero : delay, () async {
+      if (_disposed ||
+          !_items.contains(entry) ||
+          entry.state != RecState.scheduled) {
+        return;
+      }
+      _preparedProgrammes.add(entry.id);
+      try {
+        await prepare(entry);
+      } catch (e) {
+        debugPrint(
+            'RecordingService: programme handoff failed: ${e.runtimeType}');
+      } finally {
+        _armProgrammeStart();
+      }
+    });
+  }
+
   Future<void> _save() async {
-    final f = _file;
-    if (f == null) return;
+    if (_file == null) return;
     try {
-      final tmp = File('${f.path}.tmp');
-      await tmp.writeAsString(jsonEncode({
-        'items': [for (final r in _items) r.toJson()],
-        if (_autoTeam != null) 'autoTeam': _autoTeam!.toJson(),
-        'settings': settings.toJson(),
-      }));
-      await tmp.rename(f.path);
+      await _saveChecked();
     } catch (e) {
-      debugPrint('RecordingService: save failed: $e');
+      debugPrint('RecordingService: save failed: ${e.runtimeType}');
     }
+  }
+
+  Future<void> _saveChecked() {
+    final f = _file;
+    if (f == null) throw StateError('Recording storage unavailable');
+    final data = jsonEncode({
+      'items': [for (final r in _items) r.toJson()],
+      if (_autoTeam != null) 'autoTeam': _autoTeam!.toJson(),
+      'settings': settings.toJson(),
+    });
+    _saveWrites = _saveWrites.catchError((Object _) {}).then((_) async {
+      final tmp = File('${f.path}.tmp');
+      await tmp.writeAsString(data);
+      await tmp.rename(f.path);
+    });
+    return _saveWrites;
   }
 
   // ------------------------------------------------------------ storage
@@ -231,6 +311,129 @@ class RecordingService extends ChangeNotifier {
 
   static String _two(int n) => n.toString().padLeft(2, '0');
 
+  RecordingEntry? entryForProgramme(
+          Channel channel, EpgProgram programme) =>
+      _items
+          .where((r) =>
+              r.programmeKey == programmeKey(channel, programme) &&
+              (r.state == RecState.scheduled ||
+                  r.state == RecState.recording ||
+                  r.state == RecState.waiting))
+          .firstOrNull;
+
+  /// Exact XMLTV start/stop, not the Sports overtime margins. Uses the same
+  /// native persisted alarm/boot scheduler and device storage limits.
+  Future<RecordingEntry> recordProgramme(Channel channel, EpgProgram programme,
+      {int maxConnections = 1}) async {
+    if (!available) throw UnsupportedError('Recording requires Android');
+    await init();
+    final existing = entryForProgramme(channel, programme);
+    if (existing != null) return existing;
+    if (!channel.isLive ||
+        channel.transientPlayback ||
+        !programme.start.isAfter(_now()) ||
+        !programme.stop.isAfter(programme.start) ||
+        !['http', 'https'].contains(Uri.tryParse(channel.url)?.scheme)) {
+      throw StateError('Invalid upcoming programme');
+    }
+    final vol = await currentVolume();
+    final duplicate = entryForProgramme(channel, programme);
+    if (duplicate != null) return duplicate;
+    if (programmeConflict(channel, programme, maxConnections) != null) {
+      throw StateError('Recording connection conflict');
+    }
+    if (vol == null ||
+        vol.free < settings.minFreeBytes + (256 << 20) ||
+        usedBytes >= settings.capGb * 1024 * 1024 * 1024 ||
+        _file == null) {
+      throw StateError('Recording storage unavailable');
+    }
+    final id =
+        '${_now().microsecondsSinceEpoch.toRadixString(36)}_${_items.length}';
+    final entry = RecordingEntry(
+        id: id,
+        title: programme.title,
+        league: channel.name,
+        gameKey: '',
+        leagueId: '',
+        gameStart: programme.start.toLocal(),
+        startAt: programme.start.toLocal(),
+        endAt: programme.stop.toLocal(),
+        channelId: channel.id,
+        channelName: channel.name,
+        playlistId: channel.playlistId,
+        url: channel.url,
+        path:
+            '${vol.path}/${_fileName(programme.title, programme.start.toLocal(), id)}',
+        program: programme.title,
+        channelLogo: channel.logoUrl,
+        programmeKey: programmeKey(channel, programme));
+    _items.add(entry);
+    try {
+      // Unlike older immediate-record paths, don't claim success if persistence
+      // or native scheduling fails. Restore the old native schedule on failure.
+      await _saveChecked();
+      await _push(strict: true);
+    } catch (_) {
+      _items.remove(entry);
+      await _save();
+      await _push();
+      rethrow;
+    }
+    notifyListeners();
+    return entry;
+  }
+
+  /// Maximum overlapping recordings, scoped to one provider account.
+  RecordingEntry? programmeConflict(
+      Channel channel, EpgProgram programme, int maxConnections) {
+    final overlaps = _items
+        .where((r) =>
+            r.playlistId == channel.playlistId &&
+            (r.state == RecState.scheduled ||
+                r.state == RecState.recording ||
+                r.state == RecState.waiting) &&
+            r.startAt.isBefore(programme.stop) &&
+            r.endAt.isAfter(programme.start))
+        .toList();
+    final points = [
+      programme.start,
+      ...overlaps.map((r) => r.startAt).where((t) => t.isAfter(programme.start))
+    ];
+    for (final at in points) {
+      final active =
+          overlaps.where((r) => !r.startAt.isAfter(at) && r.endAt.isAfter(at));
+      if (active.length >= (maxConnections < 1 ? 1 : maxConnections)) {
+        return active.first;
+      }
+    }
+    return null;
+  }
+
+  Future<void> cancelProgramme(RecordingEntry entry) async {
+    if (entry.programmeKey.isEmpty) {
+      throw StateError('Not a programme recording');
+    }
+    await refreshStatus();
+    if (entry.state == RecState.recording) {
+      await stop(entry);
+      return;
+    }
+    _items.remove(entry);
+    try {
+      await _saveChecked();
+      await _push(strict: true);
+    } catch (_) {
+      _items.add(entry);
+      await _save();
+      await _push();
+      rethrow;
+    }
+    // It may have started while its menu was open. Stop that exact ID too.
+    await _channel.invokeMethod<void>('stop', {'id': entry.id});
+    notifyListeners();
+  }
+
   /// Records [channel] now until [until] (the guide program's end; 2 h
   /// without a guide), or until stopped when [untilStopped] (4 h at most,
   /// a forgotten one shouldn't fill the disk). [program] = what's on, for
@@ -359,9 +562,9 @@ class RecordingService extends ChangeNotifier {
   /// Sends every upcoming recording to the native scheduler (which starts
   /// those already due). Returns false when Android only allowed inexact
   /// alarms.
-  Future<bool> _push() async {
-    if (!supported) return true;
-    final now = DateTime.now();
+  Future<bool> _push({bool strict = false}) async {
+    if (!available) return true;
+    final now = _now();
     final cap = settings.capGb * 1024 * 1024 * 1024;
     final room = cap - usedBytes;
     final due = [
@@ -384,25 +587,28 @@ class RecordingService extends ChangeNotifier {
     debugPrint('RecordingService: ${due.length} recording(s) sent to the '
         'scheduler');
     try {
-      return await _channel
+      exactSchedule = await _channel
               .invokeMethod<bool>('schedule', {'items': jsonEncode(due)}) ??
           true;
+      _armProgrammeStart();
+      return exactSchedule;
     } catch (e) {
       debugPrint('RecordingService: schedule failed: $e');
+      if (strict) rethrow;
       return true;
     }
   }
 
   /// Reads each recording's `.status` and the native running list.
   Future<void> refreshStatus() async {
-    if (!supported) return;
+    if (!available) return;
     Set<String> running = const {};
     try {
       final list = await _channel.invokeListMethod<Map>('active') ?? const [];
       running = {for (final m in list) m['id'] as String};
     } catch (_) {}
     var changed = false;
-    final now = DateTime.now();
+    final now = _now();
     for (final r in _items) {
       if (r.state == RecState.cancelled) continue;
       final before = (r.state, r.bytes);
@@ -680,6 +886,7 @@ class RecordingEntry {
     this.color2,
     this.program = '',
     this.channelLogo,
+    this.programmeKey = '',
   });
 
   final String id;
@@ -715,6 +922,7 @@ class RecordingEntry {
   /// Channel recording: the guide programme on air when it started.
   final String program;
   final String? channelLogo;
+  final String programmeKey;
 
   /// A plain channel recording (no game behind it).
   bool get isChannel => gameKey.isEmpty;
@@ -749,6 +957,7 @@ class RecordingEntry {
         if (color2 != null) 'color2': color2,
         'program': program,
         if (channelLogo != null) 'channelLogo': channelLogo,
+        if (programmeKey.isNotEmpty) 'programmeKey': programmeKey,
       };
 
   factory RecordingEntry.fromJson(Map<String, dynamic> m) {
@@ -782,6 +991,7 @@ class RecordingEntry {
       color2: m['color2'] as String?,
       program: m['program'] as String? ?? '',
       channelLogo: m['channelLogo'] as String?,
+      programmeKey: m['programmeKey'] as String? ?? '',
     );
   }
 }

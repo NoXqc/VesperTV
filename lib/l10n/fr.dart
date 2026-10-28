@@ -2104,4 +2104,21 @@ const Map<String, String> kFr = {
       "Le nombre de chaînes, films ou séries de chaque groupe, à côté de son nom.",
   "{m} min back":
       "{m} min en arrière",
+
+  // Upcoming TV programmes
+  "Starts in 5 minutes": "Commence dans 5 minutes",
+  "5 minutes before and at programme time (while VesperTV is open)":
+      "5 minutes avant et au début de l’émission (lorsque VesperTV est ouvert)",
+  "Overlaps {title}. Your playlist has no free recording connection.":
+      "Chevauche {title}. Votre playlist n’a plus de connexion libre pour enregistrer.",
+  "Records the programme start to end. Manage it in Recordings.":
+      "Enregistre l’émission du début à la fin. Gérez-la dans Enregistrements.",
+  "Could not schedule recording. Check recording storage and try again.":
+      "Impossible de programmer l’enregistrement. Vérifiez le stockage et réessayez.",
+  "▲ ▼ programmes  ·  OK for options  ·  Back to close":
+      "▲ ▼ émissions  ·  OK pour les options  ·  Retour pour fermer",
+  "Upcoming  ·  OK to remind or record":
+      "À venir  ·  OK pour un rappel ou un enregistrement",
+  "Recording scheduled. Android may delay the start without exact alarm access.":
+      "Enregistrement programmé. Android peut retarder le début sans autorisation d’alarme exacte.",
 };

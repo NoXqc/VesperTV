@@ -1265,6 +1265,27 @@ class PlaybackService extends ChangeNotifier {
     return '$base${uri.path}$query';
   }
 
+  /// Same-channel scheduled recording: release the provider before its alarm,
+  /// then rejoin through openUrlFor's local recording tap. A later user action
+  /// or viewer/background change must win over this delayed continuation.
+  Future<void> handOverScheduledRecording(
+      Channel channel, Future<void> Function() waitForRecorder,
+      {required bool Function() canResume}) async {
+    if (currentChannel?.id != channel.id ||
+        !channel.isLive ||
+        catchup != null) {
+      return;
+    }
+    final generation = _playGen + 1; // stop() owns exactly one increment.
+    await stop();
+    if (generation != _playGen) return;
+    await waitForRecorder();
+    if (generation != _playGen || currentChannel != null || !canResume()) {
+      return;
+    }
+    await play(channel);
+  }
+
   Future<void> stop() async {
     _nativeZapGeneration++;
     _playGen++;

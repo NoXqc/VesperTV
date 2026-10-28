@@ -9,9 +9,13 @@ import '../models/channel.dart';
 import '../models/epg_program.dart';
 import '../services/catchup_session.dart';
 import '../services/epg_service.dart';
+import '../services/programme_reminders.dart';
+import '../services/recording_service.dart';
+import '../services/playlist_manager.dart';
 import '../utils/refined_finish.dart';
 import '../utils/time_format.dart';
 import 'player_side_panel.dart';
+import 'programme_actions.dart';
 
 /// The playing channel's schedule in the fullscreen live player (OK, Up to
 /// "Channel schedule", OK; owner + a user's TiviMate picture, 2026-10-28):
@@ -31,6 +35,7 @@ class ChannelSchedulePanel extends StatefulWidget {
     required this.onCatchup,
     required this.onLive,
     this.at,
+    this.recordings,
   });
 
   /// The live channel (catch-up's own live channel while it plays).
@@ -38,6 +43,7 @@ class ChannelSchedulePanel extends StatefulWidget {
 
   /// Catch-up playhead; null = live.
   final DateTime? at;
+  final RecordingService? recordings;
   final VoidCallback onClose;
 
   /// Plays [Channel]'s catch-up from a programme's start.
@@ -62,6 +68,7 @@ class _ChannelSchedulePanelState extends State<ChannelSchedulePanel> {
   /// Row count when the selection was last centred: rows arriving later
   /// re-centre it, a plain move only keeps it on screen.
   int _centredFor = -1;
+  bool _menuOpen = false;
 
   @override
   void initState() {
@@ -122,6 +129,10 @@ class _ChannelSchedulePanelState extends State<ChannelSchedulePanel> {
     if (i < 0) return;
     final p = list[i];
     final now = DateTime.now();
+    if (p.start.isAfter(now)) {
+      _actions(p);
+      return;
+    }
     final t = _playhead;
     final playing = !p.start.isAfter(t) && p.stop.isAfter(t);
     final onNow = !p.start.isAfter(now) && p.stop.isAfter(now);
@@ -136,7 +147,32 @@ class _ChannelSchedulePanelState extends State<ChannelSchedulePanel> {
     }
   }
 
+  Future<void> _actions(EpgProgram programme) async {
+    if (_menuOpen) return;
+    _menuOpen = true;
+    final recordings = widget.recordings ?? RecordingService.instance;
+    final profile = context
+        .read<PlaylistManager>()
+        .profiles
+        .where((p) => p.id == widget.channel.playlistId)
+        .firstOrNull;
+    try {
+      await recordings.init();
+      if (!mounted) return;
+      await showProgrammeActions(context,
+          channel: widget.channel,
+          programme: programme,
+          reminders: context.read<ProgrammeReminders>(),
+          recordings: recordings,
+          maxConnections: profile?.maxConnections ?? 1);
+    } finally {
+      _menuOpen = false;
+      if (mounted) _focus.requestFocus();
+    }
+  }
+
   KeyEventResult _onKey(List<EpgProgram> list, KeyEvent event) {
+    if (_menuOpen) return KeyEventResult.handled;
     final key = event.logicalKey;
     final select = key == LogicalKeyboardKey.select ||
         key == LogicalKeyboardKey.enter ||
@@ -318,7 +354,7 @@ class _ChannelSchedulePanelState extends State<ChannelSchedulePanel> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
               child: Text(
-                  tr('▲ ▼ programmes  ·  OK to watch  ·  Back to close'),
+                  tr('▲ ▼ programmes  ·  OK for options  ·  Back to close'),
                   style: const TextStyle(color: Colors.white54, fontSize: 11)),
             ),
           ],
@@ -419,7 +455,7 @@ class _Details extends StatelessWidget {
             : replayable
                 ? tr('Catch-up  ·  OK to watch from the start')
                 : p.start.isAfter(now)
-                    ? tr('Upcoming')
+                    ? tr('Upcoming  ·  OK to remind or record')
                     : null;
     final progress = playing && p.stop.isAfter(p.start)
         ? (playhead.difference(p.start).inSeconds /

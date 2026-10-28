@@ -347,6 +347,7 @@ class AppConstants {
   static const String keyMatchScoreAlerts = 'vesper_match_score_alerts';
   static const String keySportsFollowedTeams = 'vesper_sports_followed_teams';
   static const String keyGameReminders = 'vesper_game_reminders';
+  static const String keyProgrammeReminders = 'vesper_programme_reminders';
 
   /// Per viewer: the favourite league (League manager, hold OK): Sports Trak
   /// opens on it and its games lead the player side panel's Live now.
