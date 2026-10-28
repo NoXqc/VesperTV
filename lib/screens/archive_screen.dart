@@ -669,12 +669,12 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
 
   /// The floating bar's buttons, in order (for explicit Left/Right).
   List<FocusNode> _barNodes(ArchiveService service, List<ArchiveRow> rows) => [
+        if (_showNewest(service)) _barNewestNode,
         if (service.canSearch(_type)) _barSearchNode,
         if (service.searchQuery(_type) != null) _barClearNode,
         if (service.genre(_type) == ArchiveService.otherGenre) _barBackNode,
         for (final r in _barRows(rows)) _barRowNode(rows[r].key),
         if (service.genres(_type).isNotEmpty) _barGenreNode,
-        if (_showNewest(service)) _barNewestNode,
       ];
 
   /// The Newest button: only when a source has a release-year catalog, and
@@ -785,8 +785,23 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Search leads the bar (owner, 2026-10-20), then the
-                    // row jumps and Genre.
+                    // Newest leads the bar (owner, 2026-10-28), then
+                    // Search, the row jumps and Genre.
+                    if (_showNewest(service)) ...[
+                      _BarButton(
+                        focusNode: _barNewestNode,
+                        icon: Icons.new_releases_outlined,
+                        label: tr('Newest'),
+                        active: service.newest(_type),
+                        onTap: () => _toggleNewest(service),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 24,
+                        margin: const EdgeInsets.symmetric(horizontal: 6),
+                        color: Colors.white24,
+                      ),
+                    ],
                     if (canSearch)
                       _BarButton(
                         focusNode: _barSearchNode,
@@ -867,14 +882,6 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                             : _genreName(genre),
                         active: genre != null,
                         onTap: () => _pickGenre(service),
-                      ),
-                    if (_showNewest(service))
-                      _BarButton(
-                        focusNode: _barNewestNode,
-                        icon: Icons.new_releases_outlined,
-                        label: tr('Newest'),
-                        active: service.newest(_type),
-                        onTap: () => _toggleNewest(service),
                       ),
                   ],
                 ),
