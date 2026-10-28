@@ -2099,4 +2099,6 @@ const Map<String, String> kEs = {
       "Mostrar el número por grupo",
   "How many channels, movies or shows each group holds, beside its name.":
       "Cuántos canales, películas o series tiene cada grupo, junto a su nombre.",
+  "{m} min back":
+      "{m} min atrás",
 };

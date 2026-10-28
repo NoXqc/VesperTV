@@ -2716,4 +2716,6 @@ const Map<String, String> kEl = {
       "Εμφάνιση πλήθους ανά ομάδα",
   "How many channels, movies or shows each group holds, beside its name.":
       "Πόσα κανάλια, ταινίες ή σειρές έχει κάθε ομάδα, δίπλα στο όνομά της.",
+  "{m} min back":
+      "{m} λεπτά πίσω",
 };

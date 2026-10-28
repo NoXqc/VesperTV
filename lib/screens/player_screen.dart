@@ -534,27 +534,98 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _playback.togglePlayPause();
   }
 
-  /// Fast-forward: Back to live from catch-up. Rewind: the programme on
-  /// at the playhead from its start (catch-up), or the programme on now
-  /// from its start (a live channel with catch-up).
-  void _handleFastForward() {
-    if (_playback.catchup == null) return;
+  /// The remote's Fast-forward / Rewind skip like the bar's +10 / -10
+  /// (owner, 2026-10-28): on a movie, episode or catch-up each press (or
+  /// key repeat while held) moves a target that grows 10 s → 30 s → 1 → 2
+  /// → 5 min, one seek lands 700 ms after the last press ([_ScrubBar]'s
+  /// rule: each seek re-buffers). Fast-forward to a catch-up's end = live.
+  /// On a live channel with catch-up, Rewind goes back in minutes (a
+  /// timeshift through catch-up); Fast-forward does nothing there.
+  void _handleFastForward() => _skipKey(1);
+
+  void _handleRewind() => _skipKey(-1);
+
+  /// Seekable target ([_skipLive] false) or minutes back from now (true).
+  Duration? _skipTarget;
+  bool _skipLive = false;
+  int _skipSteps = 0;
+  Timer? _skipCommit;
+
+  static int _skipStepSeconds(int steps) => steps < 3
+      ? 10
+      : steps < 6
+          ? 30
+          : steps < 10
+              ? 60
+              : steps < 15
+                  ? 120
+                  : 300;
+
+  /// Live rewind: past catch-up's 90 s live edge from the first press.
+  static int _liveStepMinutes(int steps) => steps == 0
+      ? 2
+      : steps < 4
+          ? 1
+          : steps < 8
+              ? 5
+              : 15;
+
+  void _skipKey(int sign) {
+    if (_panelOpen || _scheduleOpen) return;
+    final controller = _playback.controller;
+    if (controller == null) return;
+    final channel = _playback.currentChannel ?? widget.channel;
+    final duration = controller.value.duration;
+    final seekable = !channel.isLive && duration > Duration.zero;
+    if (seekable) {
+      if (_skipLive) _skipTarget = null;
+      _skipLive = false;
+      final from = _skipTarget ?? controller.value.position;
+      final next =
+          from + Duration(seconds: sign * _skipStepSeconds(_skipSteps++));
+      _skipTarget = next < Duration.zero
+          ? Duration.zero
+          : next > duration
+              ? duration
+              : next;
+    } else {
+      final live = _playback.liveChannel ?? channel;
+      if (sign > 0 || !live.isLive || !live.hasCatchup) return;
+      if (!_skipLive) _skipTarget = null;
+      _skipLive = true;
+      final back = (_skipTarget ?? Duration.zero) +
+          Duration(minutes: _liveStepMinutes(_skipSteps++));
+      final most = Duration(days: live.catchupDays);
+      _skipTarget = back > most ? most : back;
+    }
     _resetHideTimer();
-    _playback.backToLive();
+    setState(() {});
+    _skipCommit?.cancel();
+    _skipCommit = Timer(const Duration(milliseconds: 700), _commitSkip);
   }
 
-  void _handleRewind() {
-    final session = _playback.catchup;
-    final live = _playback.liveChannel;
+  void _commitSkip() {
+    _skipCommit?.cancel();
+    final target = _skipTarget;
+    final live = _skipLive;
+    _skipTarget = null;
+    _skipSteps = 0;
+    if (mounted) setState(() {});
     final controller = _playback.controller;
-    if (live == null || !live.hasCatchup || controller == null) return;
-    _resetHideTimer();
-    final at = session == null
-        ? DateTime.now()
-        : session.playhead(controller.value.position);
-    final on = CatchupSession.programmeAt(
-        context.read<EpgService>().getPrograms(live.epgId), at);
-    if (on != null) _playback.playCatchup(live, on.start);
+    if (target == null || controller == null) return;
+    if (live) {
+      final channel = _playback.liveChannel ?? widget.channel;
+      _playback.playCatchup(channel, DateTime.now().subtract(target),
+          toProgrammeEnd: false);
+      return;
+    }
+    // Fast-forward to the end of a catch-up: that's now, so live.
+    if (_playback.catchup != null &&
+        controller.value.duration - target < const Duration(seconds: 5)) {
+      _playback.backToLive();
+      return;
+    }
+    controller.seekTo(target);
   }
 
   /// A remote's CH+/CH- (or Page Up/Down) keys: CH- = next channel (the
@@ -731,6 +802,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _hideTimer?.cancel();
     _zapInfoTimer?.cancel();
     _dataPoolTimer?.cancel();
+    _skipCommit?.cancel();
     _fileInfoRequests.dispose();
     _topScope.removeListener(_onBarFocusChange);
     _bottomScope.removeListener(_onBarFocusChange);
@@ -1160,6 +1232,26 @@ class _PlayerScreenState extends State<PlayerScreen> {
                               ),
                             ),
 
+                          // Fast-forward / Rewind target until it lands.
+                          if (_skipTarget case final target?
+                              when controller != null)
+                            Positioned(
+                              top: 0,
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                              child: IgnorePointer(
+                                child: Center(
+                                  child: _SkipCue(
+                                    target: target,
+                                    live: _skipLive,
+                                    position: controller.value.position,
+                                    duration: controller.value.duration,
+                                  ),
+                                ),
+                              ),
+                            ),
+
                           if (controller != null)
                             _UpNextBubble(
                               controller: controller,
@@ -1472,6 +1564,57 @@ class _TopBarIconButtonState extends State<_TopBarIconButton> {
     return widget.tooltip != null
         ? Tooltip(message: widget.tooltip!, child: button)
         : button;
+  }
+}
+
+/// Where the remote's Fast-forward / Rewind will land: the target time
+/// and the jump (movies, episodes, catch-up), or how far back from now
+/// (live rewind).
+class _SkipCue extends StatelessWidget {
+  const _SkipCue(
+      {required this.target,
+      required this.live,
+      required this.position,
+      required this.duration});
+
+  final Duration target;
+  final bool live;
+  final Duration position;
+  final Duration duration;
+
+  static String _clock(Duration d) {
+    final h = d.inHours, m = d.inMinutes % 60, s = d.inSeconds % 60;
+    String two(int v) => v.toString().padLeft(2, '0');
+    return h > 0 ? '$h:${two(m)}:${two(s)}' : '$m:${two(s)}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final forward = !live && target >= position;
+    final text = live
+        ? tr('{m} min back', {'m': target.inMinutes})
+        : '${_clock(target)} / ${_clock(duration)}   '
+            '(${forward ? '+' : '−'}${_clock((target - position).abs())})';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(forward ? Icons.fast_forward : Icons.fast_rewind,
+              color: Theme.of(context).colorScheme.primary, size: 28),
+          const SizedBox(width: 10),
+          Text(text,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
   }
 }
 

@@ -11,7 +11,7 @@
     "id": "ce227ba058e30ed4",
     "category": "Live TV",
     "title": "Back to now in the guide",
-    "answer": "When browsing a different time in the Timeline guide, Back returns the guide to now; the gold Now button does the same. This only moves the guide: a replay keeps playing. Fast-forward does not return to live from the guide. To change playback back to live, open the replay full screen and use its gold LIVE button or the remote's Fast-forward key. Back from full screen returns to the guide while the replay continues.",
+    "answer": "When browsing a different time in the Timeline guide, Back returns the guide to now; the gold Now button does the same. This only moves the guide: a replay keeps playing. Fast-forward does not return to live from the guide. To change playback back to live, open the replay full screen and use its gold LIVE button, or Fast-forward to the end of the replay. Back from full screen returns to the guide while the replay continues.",
     "controls": "In the guide: Back or the gold Now button",
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
@@ -131,16 +131,24 @@
     "id": "d6f95affba667bd5",
     "category": "Full screen",
     "title": "Back to live",
-    "answer": "While a catch-up replay plays full screen, select the gold LIVE button to return to the channel live. The remote's dedicated Fast-forward key does the same in full screen. It is not a guide shortcut: Back or Now in the guide only moves the guide to the current time and leaves the replay playing.",
-    "controls": "Android replay · gold LIVE button or remote ⏩ Fast-forward",
+    "answer": "While a catch-up replay plays full screen, select the gold LIVE button to return to the channel live. Fast-forwarding to the end of the replay also returns to live. It is not a guide shortcut: Back or Now in the guide only moves the guide to the current time and leaves the replay playing.",
+    "controls": "Android replay · gold LIVE button",
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },
   {
     "id": "ed29c73e2f2e8244",
     "category": "Full screen",
     "title": "Watch a programme from the start",
-    "answer": "To restart a programme on a catch-up-capable channel, open the player bar and choose Watch from the start, or press the remote's dedicated Rewind key in full screen. On live TV this starts the programme on now from its beginning. During a replay it restarts the programme at your current playback time. Your provider must offer that part of the programme.",
-    "controls": "Android · player bar: Watch from the start · remote ⏪ Rewind",
+    "answer": "To restart a programme on a catch-up-capable channel, open the player bar and choose Watch from the start, or open the Channel schedule and pick it. Your provider must offer that part of the programme.",
+    "controls": "Android · player bar: Watch from the start",
+    "url": "https://vespertv.app/remote.html#Full%20screen"
+  },
+  {
+    "id": "8cbb5cdcb9ad93b1",
+    "category": "Full screen",
+    "title": "Skip back and forward",
+    "answer": "In full screen, on a movie, an episode or a catch-up replay, each press skips 10 seconds like the -10 / +10 buttons; keep pressing or hold to skip further (up to 5 minutes a step). The video jumps once you stop. On a live channel with catch-up, Rewind goes back in minutes from now.",
+    "controls": "Android · remote ⏪ Rewind / ⏩ Fast-forward",
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },
   {

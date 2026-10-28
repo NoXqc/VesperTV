@@ -46,7 +46,7 @@ test('catch-up spellings and ordinary navigation questions resolve to documented
 test('catch-up replies distinguish guide navigation, playback and provider/platform limits', () => {
   assert.match(guideReply(entries, 'back to now in the guide').content, /This only moves the guide: a replay keeps playing/);
   assert.match(guideReply(entries, 'fast forward in the guide').content, /Fast-forward does not return to live from the guide/);
-  assert.match(guideReply(entries, 'back to live').content, /dedicated Fast-forward key does the same in full screen/);
+  assert.match(guideReply(entries, 'back to live').content, /Fast-forwarding to the end of the replay also returns to live/);
   assert.match(guideReply(entries, 'catchup on Windows').content, /Windows support is not available yet/);
   assert.match(guideReply(entries, 'catchup not working').content, /provider must offer catch-up/);
   assert.match(guideReply(entries, 'can I pause live tv').content, /after more than 90 seconds/);

@@ -2102,4 +2102,6 @@ const Map<String, String> kFr = {
       "Afficher le nombre par groupe",
   "How many channels, movies or shows each group holds, beside its name.":
       "Le nombre de chaînes, films ou séries de chaque groupe, à côté de son nom.",
+  "{m} min back":
+      "{m} min en arrière",
 };

@@ -2103,4 +2103,6 @@ const Map<String, String> kIt = {
       "Mostra il numero per gruppo",
   "How many channels, movies or shows each group holds, beside its name.":
       "Quanti canali, film o serie contiene ogni gruppo, accanto al nome.",
+  "{m} min back":
+      "{m} min indietro",
 };
