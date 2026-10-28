@@ -529,6 +529,139 @@ const _months = {
   'dec': 12,
 };
 
+/// Team codes that providers and ESPN spell differently ("WAS" vs ESPN's
+/// "WSH"). Each group is one team per league; leagues share the groups
+/// because a game's two codes are always checked together.
+const List<List<String>> _abbrGroups = [
+  ['WSH', 'WAS'],
+  ['GS', 'GSW'],
+  ['NO', 'NOP', 'NOR', 'NOS'],
+  ['NY', 'NYK'],
+  ['SA', 'SAS'],
+  ['UTAH', 'UTA'],
+  ['PHX', 'PHO'],
+  ['BKN', 'BRK'],
+  ['JAX', 'JAC'],
+  ['LV', 'LVR'],
+  ['VGK', 'VEG'],
+  ['NE', 'NWE'],
+  ['GB', 'GNB'],
+  ['SF', 'SFO', 'SFG'],
+  ['TB', 'TAM', 'TBL', 'TBR'],
+  ['KC', 'KCC', 'KCR'],
+  ['LA', 'LAK'],
+  ['NJ', 'NJD'],
+  ['SJ', 'SJS'],
+  ['MTL', 'MON'],
+  ['CGY', 'CAL'],
+  ['NSH', 'NAS'],
+  ['CBJ', 'CLB'],
+  ['CHW', 'CWS'],
+  ['SD', 'SDP'],
+  ['ARI', 'AZ'],
+];
+
+final Map<String, String> _abbrCanonical = {
+  for (final group in _abbrGroups)
+    for (final code in group) code: group.first,
+};
+
+String _canonicalAbbr(String code) => _abbrCanonical[code] ?? code;
+
+/// A channel named after one game in team codes: "B01: 7pm CHA @ DET",
+/// "FB01 : 8:15 DAL @ PHI". [minutes] is the 12-hour clock time written in
+/// the name (minutes past 12), [zone] its US zone tag (et/ct/mt/pt) if any.
+typedef _AbbrEvent = ({
+  int index,
+  String first,
+  String second,
+  bool at,
+  int minutes,
+  String? zone,
+  Set<String> sports,
+});
+
+/// Words in a provider group that name a sport (ESPN path's first part).
+/// "Football" alone may be soccer outside North America.
+const Map<String, List<String>> _groupSports = {
+  'basketball': ['basketball'],
+  'nba': ['basketball'],
+  'wnba': ['basketball'],
+  'ncaab': ['basketball'],
+  'hockey': ['hockey'],
+  'nhl': ['hockey'],
+  'ahl': ['hockey'],
+  'echl': ['hockey'],
+  'baseball': ['baseball'],
+  'mlb': ['baseball'],
+  'nfl': ['football'],
+  'ncaaf': ['football'],
+  'cfl': ['football'],
+  'football': ['football', 'soccer'],
+  'soccer': ['soccer'],
+  'mls': ['soccer'],
+  'futbol': ['soccer'],
+};
+
+/// The sports a channel's group names ("Baseball Playoffs" -> baseball);
+/// empty when it names none.
+Set<String> _sportsOfGroup(String group) => {
+      for (final w in sportsNormalize(group).trim().split(' '))
+        ...?_groupSports[w],
+    };
+
+final _abbrPair = RegExp(
+    r'(?<![A-Za-z])([A-Z]{2,4})\s*(@|vs\.?|VS\.?|v|V|at|AT)\s*([A-Z]{2,4})(?![A-Za-z])');
+final _clock = RegExp(
+    r'(?<![\d:])(\d{1,2})(?::(\d{2}))?\s*(am|pm|a|p)?(?![\w:])',
+    caseSensitive: false);
+final _zoneTag = RegExp(r'\b(E|C|M|P)(?:S|D)?T\b');
+
+/// [name] as an abbreviated event channel, or null. Needs both codes and a
+/// clock time ("7pm", "7:30pm", "8:15"); a bare "01" is a channel number.
+_AbbrEvent? _parseAbbrEvent(int index, String name, String group) {
+  if (!name.contains('@') && !name.contains(RegExp(r'\b(vs|VS|v|V|at|AT)\b'))) {
+    return null;
+  }
+  final pair = _abbrPair.firstMatch(name);
+  if (pair == null) return null;
+  int? minutes;
+  for (final m in _clock.allMatches(name)) {
+    if (m.group(2) == null && m.group(3) == null) continue;
+    final h = int.parse(m.group(1)!);
+    final min = int.parse(m.group(2) ?? '0');
+    if (h > 23 || min > 59) continue;
+    minutes = (h % 12) * 60 + min;
+    break;
+  }
+  if (minutes == null) return null;
+  final sep = pair.group(2)!.toLowerCase();
+  return (
+    index: index,
+    first: _canonicalAbbr(pair.group(1)!),
+    second: _canonicalAbbr(pair.group(3)!),
+    at: sep == '@' || sep == 'at',
+    minutes: minutes,
+    zone: _zoneTag.firstMatch(name)?.group(1)?.toLowerCase(),
+    sports: _sportsOfGroup(group),
+  );
+}
+
+/// US Eastern offset from UTC at [utc] (DST: second Sunday of March to the
+/// first Sunday of November, 2 a.m. local). Event channel times are Eastern.
+Duration _easternOffset(DateTime utc) {
+  DateTime nthSunday(int month, int n) {
+    final first = DateTime.utc(utc.year, month, 1);
+    final toSunday = (DateTime.sunday - first.weekday) % 7;
+    return first.add(Duration(days: toSunday + 7 * (n - 1)));
+  }
+
+  final start = nthSunday(3, 2).add(const Duration(hours: 7));
+  final end = nthSunday(11, 1).add(const Duration(hours: 6));
+  final dst = !utc.isBefore(start) && utc.isBefore(end);
+  return Duration(hours: dst ? -4 : -5);
+}
+
 /// App language -> the channel-name country tag that viewer watches. Only
 /// Greek so far: French/Spanish/Italian viewers of this app mostly watch
 /// North American feeds, which rank first by default.
@@ -568,6 +701,7 @@ class SportsChannelMatcher {
   Map<String, List<int>> _byCanonical = {};
   Map<String, List<int>> _byEpgId = {};
   Map<String, int> _byId = {};
+  List<_AbbrEvent> _abbrEvents = const [];
   int? _preparedFor;
 
   /// Channels the viewer hid (groups or one by one), never suggested — only
@@ -630,6 +764,7 @@ class SportsChannelMatcher {
     final byCanonical = <String, List<int>>{};
     final byEpgId = <String, List<int>>{};
     final byId = <String, int>{};
+    final abbrEvents = <_AbbrEvent>[];
     channels = List.of(channels);
     hidden = List.of(hidden);
     final names = List<String>.filled(channels.length, '');
@@ -647,8 +782,10 @@ class SportsChannelMatcher {
       final canon = canonicalChannelKey(c.name);
       if (canon.isNotEmpty) (byCanonical[canon] ??= <int>[]).add(i);
       (byEpgId[normalizeEpgId(c.epgId)] ??= <int>[]).add(i);
+      if (_parseAbbrEvent(i, c.name, c.group) case final e?) abbrEvents.add(e);
     }
     _channels = channels;
+    _abbrEvents = abbrEvents;
     _names = names;
     _tokenIndex = tokenIndex;
     _byCanonical = byCanonical;
@@ -893,6 +1030,7 @@ class SportsChannelMatcher {
       .._byCanonical = _byCanonical
       .._byEpgId = _byEpgId
       .._byId = _byId
+      .._abbrEvents = _abbrEvents
       .._hidden = _hidden
       .._hiddenNames = _hiddenNames
       .._hiddenByEpgId = _hiddenByEpgId
@@ -1037,6 +1175,49 @@ class SportsChannelMatcher {
               add(i, MatchReason.teamChannel, 65 + bias, t.shortName);
             }
           }
+        }
+      }
+
+      // 2c. Event channels in team codes, without a guide ("B01: 7pm CHA @
+      // DET", "FB01 : 8:15 DAL @ PHI", user report 2026-10-28). Codes are
+      // short and shared across sports (DAL, PHI), so both codes AND the
+      // written time must fit: away @ home (either order for "vs"), the
+      // start in Eastern time (or the zone the name gives, or the device's).
+      // A group naming a sport ("Basketball", "Baseball Playoffs") must be
+      // this game's: an NHL and an NBA DET @ TOR can share a 7pm start.
+      if (g.league.kind == SportsKind.team &&
+          _abbrEvents.isNotEmpty &&
+          g.home.abbreviation.isNotEmpty &&
+          g.away.abbreviation.isNotEmpty) {
+        final home = _canonicalAbbr(g.home.abbreviation.toUpperCase());
+        final away = _canonicalAbbr(g.away.abbreviation.toUpperCase());
+        int clock(DateTime t) => (t.hour % 12) * 60 + t.minute;
+        final eastern = g.start.add(_easternOffset(g.start));
+        final local = clock(g.start.toLocal());
+        final sport = g.league.espnPath.split('/').first;
+        for (final e in _abbrEvents) {
+          if (e.sports.isNotEmpty && !e.sports.contains(sport)) continue;
+          final fits = e.at
+              ? e.first == away && e.second == home
+              : (e.first == away && e.second == home) ||
+                  (e.first == home && e.second == away);
+          if (!fits) continue;
+          final zoneShift = switch (e.zone) {
+            'c' => 1,
+            'm' => 2,
+            'p' => 3,
+            _ => 0,
+          };
+          final written = clock(eastern.subtract(Duration(hours: zoneShift)));
+          bool near(int a) {
+            final d = (a - e.minutes).abs() % 720;
+            return math.min(d, 720 - d) <= 10;
+          }
+
+          if (!near(written) && !near(local)) continue;
+          final date = _dateInName(_names[e.index]);
+          if (date != null && !_dateFits(date, g.start)) continue;
+          add(e.index, MatchReason.name, 95 + _regionBias(e.index, g.league));
         }
       }
 
