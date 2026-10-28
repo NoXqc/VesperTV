@@ -1651,6 +1651,12 @@ class _SubtitleButtonState extends State<_SubtitleButton> {
               result: 'online'),
         _option(sheet,
             selected: false,
+            icon: Icons.translate,
+            title: tr('Preferred subtitle language'),
+            subtitle: _preferredName(),
+            result: 'preferred'),
+        _option(sheet,
+            selected: false,
             icon: Icons.format_size,
             title: tr('Subtitle size'),
             subtitle: tr(AppPreferences.subtitleSizeName(
@@ -1660,6 +1666,7 @@ class _SubtitleButtonState extends State<_SubtitleButton> {
     );
     if (chosen == null || chosen == 'keep' || !mounted) return;
     if (chosen == 'size') return _pickSize();
+    if (chosen == 'preferred') return _pickPreferred();
     if (chosen == 'online') return _searchOnline();
     if (chosen is ({String lang})) return _applyOnlineLang(chosen.lang);
     final track = chosen is SubtitleTrack ? chosen : null;
@@ -1676,6 +1683,52 @@ class _SubtitleButtonState extends State<_SubtitleButton> {
       await SubtitleTracks.select(id, track);
     } catch (_) {
       // The stream changed underneath: nothing to select any more.
+    }
+  }
+
+  String _preferredName() {
+    final code = context.read<StorageService>().getPreferredSubtitleLanguage();
+    return code == 'off' ? tr('Off') : languageName(code);
+  }
+
+  /// The viewer's preferred subtitle language (also Settings > Playback >
+  /// Audio), set from the player: saved, and applied to this title now
+  /// (its own remembered choice dropped). Not in the file = an add-on's.
+  Future<void> _pickPreferred() async {
+    final storage = context.read<StorageService>();
+    final current = storage.getPreferredSubtitleLanguage();
+    final picked = await _sheet<String>(
+      tr('Preferred subtitle language'),
+      (sheet) => [
+        for (final code in ['off', ...trackLanguages])
+          _option(sheet,
+              selected: code == current,
+              title: code == 'off' ? tr('Off') : languageName(code),
+              result: code),
+      ],
+    );
+    final channel = _channel;
+    if (picked == null || channel == null || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final language = {'language': languageName(picked)};
+    await storage.setPreferredSubtitleLanguage(picked);
+    await SubtitleTracks.forgetForSeries(storage, channel);
+    if (!mounted) return;
+    if (picked != 'off') {
+      messenger.showSnackBar(SnackBar(
+          duration: const Duration(seconds: 2),
+          content: Text(tr('Looking for {language} subtitles…', language))));
+    }
+    final applied = await SubtitleTracks.applyForSeries(
+        storage, channel, widget.controller,
+        isCurrent: () =>
+            mounted &&
+            context.read<PlaybackService>().controller == widget.controller);
+    if (!mounted) return;
+    if (!applied && picked != 'off') {
+      messenger.showSnackBar(SnackBar(
+          content:
+              Text(tr('No {language} subtitles for this title.', language))));
     }
   }
 

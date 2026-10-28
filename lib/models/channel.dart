@@ -41,6 +41,7 @@ class Channel {
     this.catchupKind,
     this.catchupSource,
     this.streamId,
+    this.imdbId,
   });
 
   /// Stable identifier: the M3U `tvg-id` when present (used to match EPG
@@ -83,6 +84,10 @@ class Channel {
   /// The provider's own stream id (Xtream `stream_id`). Live channels with
   /// an EPG id don't carry it in [rawId]; catch-up links need it.
   final String? streamId;
+
+  /// A Media Hub title's IMDb id (`tt…`, the series' id for an episode):
+  /// what subtitle add-ons are asked with (AddonService).
+  final String? imdbId;
 
   bool get hasCatchup => isLive && catchupDays > 0 && catchupKind != null;
 
@@ -312,6 +317,7 @@ class Channel {
         catchupKind: catchupKind,
         catchupSource: catchupSource,
         streamId: streamId,
+        imdbId: imdbId,
       );
 
   Map<String, dynamic> toJson() => {
@@ -341,6 +347,7 @@ class Channel {
         if (catchupKind != null) 'catchupKind': catchupKind!.name,
         if (catchupSource != null) 'catchupSource': catchupSource,
         if (streamId != null) 'streamId': streamId,
+        if (imdbId != null) 'imdbId': imdbId,
       };
 
   /// `playlistId` defaults to `'migrated_default'` and `rawId` to [id]
@@ -381,6 +388,7 @@ class Channel {
         catchupKind: _catchupKindByName[json['catchupKind']],
         catchupSource: json['catchupSource'] as String?,
         streamId: json['streamId'] as String?,
+        imdbId: json['imdbId'] as String?,
       );
 
   static final Map<String, CatchupKind> _catchupKindByName = {

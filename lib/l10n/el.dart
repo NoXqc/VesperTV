@@ -332,6 +332,8 @@ const Map<String, String> kEl = {
       "Εδώ λειτουργούν μόνο πρόσθετα υποτίτλων. Όταν ένα είναι ενεργό, του στέλνεται ο τίτλος και το επεισόδιο που βλέπετε για να βρει υπότιτλους· τίποτα άλλο δεν κοινοποιείται.",
   "Looking for {language} subtitles…":
       "Αναζήτηση υποτίτλων {language}…",
+  "No {language} subtitles for this title.":
+      "Δεν υπάρχουν υπότιτλοι {language} για αυτόν τον τίτλο.",
   "No {language} subtitles online for this title.":
       "Δεν υπάρχουν υπότιτλοι {language} online για αυτόν τον τίτλο.",
   "Track {id}":

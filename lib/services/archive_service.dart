@@ -1178,6 +1178,7 @@ class ArchiveService extends ChangeNotifier {
       backdropUrl: meta.backgroundUrl,
       seriesName: episode == null ? null : meta.name,
       seriesCoverUrl: episode == null ? null : meta.posterUrl,
+      imdbId: meta.wireType == null ? meta.imdb : null,
     );
   }
 

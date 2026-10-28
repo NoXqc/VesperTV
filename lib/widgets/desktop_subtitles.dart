@@ -69,37 +69,38 @@ class DesktopSubtitles {
   /// episode gets the series' remembered subtitles (same language + label
   /// for a track of the file, first add-on match for online). Quiet when
   /// nothing matches.
-  static Future<void> applyForSeries(
+  static Future<bool> applyForSeries(
       StorageService storage, Channel channel, mk.Player player,
       {bool Function()? isCurrent}) async {
     final choice = SubtitleTracks.seriesChoiceFor(storage, channel);
-    if (choice == null) return;
+    if (choice == null) return false;
     final viewer = storage.getActiveViewerId();
     final initial = jsonEncode(choice);
     bool current() =>
         (isCurrent?.call() ?? true) &&
         storage.getActiveViewerId() == viewer &&
         jsonEncode(SubtitleTracks.seriesChoiceFor(storage, channel)) == initial;
-    if (!current()) return;
+    if (!current()) return false;
     if (choice['kind'] == 'off') {
       await player.setSubtitleTrack(mk.SubtitleTrack.no());
-      return;
+      return true;
     }
     final lang = choice['lang'] as String?;
     if (choice['kind'] == 'online') {
       final addons = AddonService(storage);
-      if (lang == null || !addons.anyEnabled) return;
+      if (lang == null || !addons.anyEnabled) return false;
       final match = (await addons.search(channel))
           .where((s) => s.lang == lang)
           .firstOrNull;
-      if (match == null) return;
+      if (match == null) return false;
       final text = await AddonService.download(match);
-      if (current()) await useOnline(player, text, lang);
-      return;
+      if (!current()) return false;
+      await useOnline(player, text, lang);
+      return true;
     }
     // A track of the file: the list exists once the file's header is read.
     for (var i = 0; i < 6; i++) {
-      if (!current()) return;
+      if (!current()) return false;
       final tracks = embedded(player);
       if (tracks.isNotEmpty) {
         final label = choice['label'] as String?;
@@ -107,11 +108,22 @@ class DesktopSubtitles {
             tracks.where((t) => sameTrackLanguage(t.language, lang));
         final pick = sameLang.where((t) => t.title == label).firstOrNull ??
             sameLang.firstOrNull;
-        if (pick != null) await player.setSubtitleTrack(pick);
-        return;
+        if (pick != null) {
+          await player.setSubtitleTrack(pick);
+          return true;
+        }
+        break;
       }
       await Future<void>.delayed(const Duration(seconds: 2));
     }
+    // The preferred language isn't in the file: an add-on's, if any.
+    if (choice['preferred'] != true || !current()) return false;
+    final match = await SubtitleTracks.preferredOnline(storage, channel, lang);
+    if (match == null || !current()) return false;
+    final text = await AddonService.download(match);
+    if (!current()) return false;
+    await useOnline(player, text, match.lang);
+    return true;
   }
 }
 
@@ -262,6 +274,12 @@ class _DesktopSubtitleButtonState extends State<DesktopSubtitleButton> {
               result: 'online'),
         _option(sheet,
             selected: false,
+            icon: Icons.translate,
+            title: tr('Preferred subtitle language'),
+            subtitle: _preferredName(),
+            result: 'preferred'),
+        _option(sheet,
+            selected: false,
             icon: Icons.format_size,
             title: tr('Subtitle size'),
             subtitle: tr(AppPreferences.subtitleSizeName(
@@ -271,6 +289,7 @@ class _DesktopSubtitleButtonState extends State<DesktopSubtitleButton> {
     );
     if (chosen == null || chosen == 'keep' || !mounted) return;
     if (chosen == 'size') return _pickSize();
+    if (chosen == 'preferred') return _pickPreferred();
     if (chosen == 'online') return _searchOnline();
     if (chosen is ({String lang})) return _applyOnlineLang(chosen.lang);
     final track = chosen is mk.SubtitleTrack ? chosen : null;
@@ -283,6 +302,51 @@ class _DesktopSubtitleButtonState extends State<DesktopSubtitleButton> {
         label: track?.title));
     await _player.setSubtitleTrack(track ?? mk.SubtitleTrack.no());
     if (mounted) setState(() {});
+  }
+
+  String _preferredName() {
+    final code = context.read<StorageService>().getPreferredSubtitleLanguage();
+    return code == 'off' ? tr('Off') : languageName(code);
+  }
+
+  /// The viewer's preferred subtitle language (also Settings > Playback >
+  /// Audio), set from the player: saved, and applied to this title now
+  /// (its own remembered choice dropped). Not in the file = an add-on's.
+  Future<void> _pickPreferred() async {
+    final storage = context.read<StorageService>();
+    final current = storage.getPreferredSubtitleLanguage();
+    final picked = await _sheet<String>(
+      tr('Preferred subtitle language'),
+      (sheet) => [
+        for (final code in ['off', ...trackLanguages])
+          _option(sheet,
+              selected: code == current,
+              title: code == 'off' ? tr('Off') : languageName(code),
+              result: code),
+      ],
+    );
+    final channel = widget.channel;
+    if (picked == null || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final language = {'language': languageName(picked)};
+    await storage.setPreferredSubtitleLanguage(picked);
+    await SubtitleTracks.forgetForSeries(storage, channel);
+    if (!mounted) return;
+    if (picked != 'off') {
+      messenger.showSnackBar(SnackBar(
+          duration: const Duration(seconds: 2),
+          content: Text(tr('Looking for {language} subtitles…', language))));
+    }
+    final applied = await DesktopSubtitles.applyForSeries(
+        storage, channel, _player,
+        isCurrent: () => mounted);
+    if (!mounted) return;
+    setState(() {});
+    if (!applied && picked != 'off') {
+      messenger.showSnackBar(SnackBar(
+          content:
+              Text(tr('No {language} subtitles for this title.', language))));
+    }
   }
 
   /// Extra small / Small / Normal / Large / Extra large ([AppPreferences.subtitleScale]).

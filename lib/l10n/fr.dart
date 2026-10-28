@@ -278,6 +278,8 @@ const Map<String, String> kFr = {
       "Seuls les modules de sous-titres fonctionnent ici. Quand l'un est activé, le titre et l'épisode que vous regardez lui sont envoyés pour trouver des sous-titres ; rien d'autre n'est partagé.",
   'Looking for {language} subtitles…':
       "Recherche de sous-titres en {language}…",
+  'No {language} subtitles for this title.':
+      "Aucun sous-titre en {language} pour ce titre.",
   'No {language} subtitles online for this title.':
       "Aucun sous-titre en {language} en ligne pour ce titre.",
   'Track {id}': "Piste {id}",

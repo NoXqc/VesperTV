@@ -140,29 +140,6 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
     if (picked != null) await _setLanguage(picked);
   }
 
-  static const _trackLanguages = [
-    'en',
-    'fr',
-    'es',
-    'it',
-    'el',
-    'de',
-    'pt',
-    'nl',
-    'ar',
-    'ru',
-    'ja',
-    'ko',
-    'zh',
-    'hi',
-    'tr',
-    'pl',
-    'sv',
-    'da',
-    'no',
-    'fi',
-  ];
-
   Future<void> _pickTrackLanguage({required bool audio}) async {
     final viewer = _storage.getActiveViewerId();
     final current = audio
@@ -175,7 +152,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
             ? 'Preferred audio language'
             : 'Preferred subtitle language')),
         children: [
-          for (final code in [audio ? '' : 'off', ..._trackLanguages])
+          for (final code in [audio ? '' : 'off', ...trackLanguages])
             TvMenuTile(
               autofocus: code == current,
               title: code.isEmpty

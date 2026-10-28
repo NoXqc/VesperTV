@@ -426,7 +426,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     unawaited(DesktopSubtitles.applyForSeries(
             context.read<StorageService>(), channel, _player,
             isCurrent: () => mounted && _currentChannel == channel)
-        .catchError((Object _) {}));
+        .catchError((Object _) => false));
   }
 
   /// Manual reconnect for a stalled live stream — this screen has none of

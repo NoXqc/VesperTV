@@ -138,15 +138,32 @@ class AddonService {
     );
   }
 
-  /// Whether [channel] is something an add-on can find subtitles for.
-  static bool supports(Channel channel) =>
-      channel.rawId.startsWith('xt_vod_') || channel.rawId.startsWith('xt_ep_');
+  /// Whether [channel] is something an add-on can find subtitles for:
+  /// a provider movie/episode, or a Media Hub title with an IMDb id.
+  static bool supports(Channel channel) {
+    final raw = channel.rawId;
+    if (raw.startsWith('xt_vod_') || raw.startsWith('xt_ep_')) return true;
+    return (raw.startsWith('arc_vod_') || raw.startsWith('arc_ep_')) &&
+        channel.imdbId != null;
+  }
 
   static final _yearRe = RegExp(r'\((\d{4})\)');
   static final _episodeRe = RegExp(r'^S(\d+)E(\d+)');
 
   /// The Stremio id for [channel]: "tt123" (movie) or "tt123:1:2" (episode).
   Future<({String type, String id})?> _stremioId(Channel channel) async {
+    final hub = channel.imdbId;
+    if (hub != null) {
+      // Media Hub: the id is known, no title search. Episodes are named
+      // "S01E02 - Title" (ArchiveService.channelFor).
+      if (!channel.rawId.startsWith('arc_ep_')) return (type: 'movie', id: hub);
+      final m = _episodeRe.firstMatch(channel.name);
+      if (m == null) return null;
+      return (
+        type: 'series',
+        id: '$hub:${int.parse(m.group(1)!)}:${int.parse(m.group(2)!)}'
+      );
+    }
     final isEpisode = channel.rawId.startsWith('xt_ep_');
     final source = isEpisode ? channel.group : channel.name;
     final year = _yearRe.firstMatch(source)?.group(1);

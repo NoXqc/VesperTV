@@ -102,6 +102,12 @@ String languageName(String? code) {
   return parts.length > 1 ? '$base (${parts.sublist(1).join('-')})' : base;
 }
 
+/// The languages offered as a preferred audio/subtitle language.
+const trackLanguages = [
+  'en', 'fr', 'es', 'it', 'el', 'de', 'pt', 'nl', 'ar', 'ru', 'ja', 'ko', //
+  'zh', 'hi', 'tr', 'pl', 'sv', 'da', 'no', 'fi',
+];
+
 /// Treat ISO-639 aliases and region variants as the same base language.
 bool sameTrackLanguage(String? a, String? b) {
   final left = languageName(a?.toLowerCase()).split(' (').first;
@@ -314,7 +320,24 @@ class SubtitleTracks {
     final language = storage.getPreferredSubtitleLanguage();
     return language == 'off'
         ? {'kind': 'off'}
-        : {'kind': 'embedded', 'lang': language};
+        : {'kind': 'embedded', 'lang': language, 'preferred': true};
+  }
+
+  /// The viewer's preferred language from an add-on, for a title whose file
+  /// has no track in it: the first match, or null (no add-on on, nothing
+  /// found, or the stream brings its own subtitle file).
+  static Future<OnlineSubtitle?> preferredOnline(
+      StorageService storage, Channel channel, String? lang) async {
+    final addons = AddonService(storage);
+    if (lang == null ||
+        channel.subtitleUrl != null ||
+        !AddonService.supports(channel) ||
+        !addons.anyEnabled) {
+      return null;
+    }
+    return (await addons.search(channel))
+        .where((s) => sameTrackLanguage(s.lang, lang))
+        .firstOrNull;
   }
 
   /// [kind] 'embedded' (a track of the file, matched by [lang] + [label])
@@ -334,40 +357,52 @@ class SubtitleTracks {
     await storage.setSeriesSubtitlesJson(jsonEncode(all));
   }
 
+  /// Drops [channel]'s remembered choice: the preferred language applies
+  /// again (the player's Preferred subtitle language row).
+  static Future<void> forgetForSeries(
+      StorageService storage, Channel? channel) async {
+    final key = channel == null ? null : seriesKeyOf(channel);
+    if (key == null) return;
+    final all = _seriesChoices(storage);
+    if (all.remove(key) == null) return;
+    await storage.setSeriesSubtitlesJson(jsonEncode(all));
+  }
+
   /// Reapplies the series' remembered subtitles on a new episode's player.
-  /// Gives up quietly when the episode has no matching track/subtitle.
-  static Future<void> applyForSeries(StorageService storage, Channel channel,
+  /// Gives up quietly when the episode has no matching track/subtitle;
+  /// false then.
+  static Future<bool> applyForSeries(StorageService storage, Channel channel,
       VideoPlayerHdrController controller,
       {bool Function()? isCurrent}) async {
     final choice = seriesChoiceFor(storage, channel);
-    if (choice == null) return;
+    if (choice == null) return false;
     final viewer = storage.getActiveViewerId();
     final initial = jsonEncode(choice);
     bool current() =>
         (isCurrent?.call() ?? true) &&
         storage.getActiveViewerId() == viewer &&
         jsonEncode(seriesChoiceFor(storage, channel)) == initial;
-    if (!current()) return;
+    if (!current()) return false;
     if (choice['kind'] == 'off') {
       await clearExternal(controller);
       if (current()) await select(playerIdOf(controller), null);
-      return;
+      return true;
     }
     final lang = choice['lang'] as String?;
     final id = playerIdOf(controller);
     if (choice['kind'] == 'online') {
       final addons = AddonService(storage);
-      if (lang == null || !addons.anyEnabled) return;
+      if (lang == null || !addons.anyEnabled) return false;
       final match = (await addons.search(channel))
           .where((s) => s.lang == lang)
           .firstOrNull;
-      if (match == null) return;
+      if (match == null) return false;
       final text = await AddonService.download(match);
-      if (!current()) return;
+      if (!current()) return false;
       await useExternal(controller, text);
       externalLabel[id] =
           languageName(lang).isEmpty ? lang : languageName(lang);
-      return;
+      return true;
     }
     // Embedded: the track list exists once the file's header is read.
     for (var i = 0; i < 6; i++) {
@@ -375,9 +410,9 @@ class SubtitleTracks {
       try {
         tracks = await list(id);
       } catch (_) {
-        return; // player gone
+        return false; // player gone
       }
-      if (!current()) return;
+      if (!current()) return false;
       if (tracks.isNotEmpty) {
         final label = choice['label'] as String?;
         final sameLang = tracks.where((t) =>
@@ -389,10 +424,24 @@ class SubtitleTracks {
             t.forced == (choice['forced'] == true));
         final pick = sameLang.where((t) => t.label == label).firstOrNull ??
             sameLang.firstOrNull;
-        if (pick != null) await select(id, pick);
-        return;
+        if (pick != null) {
+          await select(id, pick);
+          return true;
+        }
+        break;
       }
       await Future<void>.delayed(const Duration(seconds: 2));
     }
+    // The preferred language isn't in the file: an add-on's, if any.
+    if (choice['preferred'] != true || !current()) return false;
+    final match = await preferredOnline(storage, channel, lang);
+    if (match == null || !current()) return false;
+    final text = await AddonService.download(match);
+    if (!current()) return false;
+    await useExternal(controller, text);
+    externalLabel[id] = languageName(match.lang).isEmpty
+        ? match.lang
+        : languageName(match.lang);
+    return true;
   }
 }

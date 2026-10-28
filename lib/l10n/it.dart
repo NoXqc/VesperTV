@@ -278,6 +278,8 @@ const Map<String, String> kIt = {
       "Qui funzionano solo componenti per sottotitoli. Quando uno è attivo, gli vengono inviati il titolo e l'episodio che guardi per trovare i sottotitoli; non viene condiviso nient'altro.",
   'Looking for {language} subtitles…':
       "Cerco sottotitoli in {language}…",
+  'No {language} subtitles for this title.':
+      "Nessun sottotitolo in {language} per questo titolo.",
   'No {language} subtitles online for this title.':
       "Nessun sottotitolo in {language} online per questo titolo.",
   'Track {id}': "Traccia {id}",

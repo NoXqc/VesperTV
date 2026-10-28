@@ -279,6 +279,8 @@ const Map<String, String> kEs = {
       'Aquí solo funcionan complementos de subtítulos. Cuando uno está activo, se le envían el título y el episodio que ves para buscar subtítulos; no se comparte nada más.',
   'Looking for {language} subtitles…':
       "Buscando subtítulos en {language}…",
+  'No {language} subtitles for this title.':
+      "No hay subtítulos en {language} para este título.",
   'No {language} subtitles online for this title.':
       "No hay subtítulos en {language} en línea para este título.",
   'Track {id}': "Pista {id}",
