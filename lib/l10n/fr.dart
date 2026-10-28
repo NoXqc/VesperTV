@@ -5,6 +5,9 @@
 /// Keep every `{placeholder}` exactly as in the key. `{s}` is the plural "s"
 /// the code fills in ("chaîne{s}").
 const Map<String, String> kFr = {
+  "Sports Mode": "Mode Sports",
+  "Make Sports Trak your home, with your top five leagues at the side.": "Faites de Sports Trak votre accueil, avec vos cinq premières ligues sur le côté.",
+  "Could not change Sports Mode. Try again.": "Impossible de changer le mode Sports. Réessayez.",
   // Media Hub source cards.
   "Enabled": "Activée",
   "Catalogs from Cinemeta": "Catalogues de Cinemeta",

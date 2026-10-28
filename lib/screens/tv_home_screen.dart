@@ -1791,6 +1791,16 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
     }
   }
 
+  /// A Sports Mode destination returns to its home at the navigation edge.
+  void _backToSportsOrExit() {
+    if (context.read<AppPreferences>().sportsMode &&
+        Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else {
+      _confirmExit();
+    }
+  }
+
   /// Shared by system Back and the wide-layout touch arrow.
   void _handleBack() {
     if (ModalRoute.of(context)?.isCurrent != true) return;
@@ -1813,12 +1823,12 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
       } else if (_phonePage == 0) {
         setState(() => _phonePage = 1);
       } else {
-        _confirmExit();
+        _backToSportsOrExit();
       }
       return;
     }
     if (_focusDepth == 0) {
-      _confirmExit();
+      _backToSportsOrExit();
       return;
     }
     // Back while focus is literally inside the Timeline keyboard
@@ -2571,6 +2581,10 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   }
 
   Future<void> _openSports() {
+    if (context.read<AppPreferences>().sportsMode) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+      return Future.value();
+    }
     _returnToTv = true;
     return _pushOverLiveVideo(
         MaterialPageRoute(builder: (_) => const SportsScreen()));

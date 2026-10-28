@@ -70,6 +70,25 @@ void main() {
         ),
       );
 
+  for (final fast in [true, false]) {
+    testWidgets('Sports Mode uses one home route; Fast startup=$fast',
+        (tester) async {
+      await storage.setStartSection('sports');
+      await storage.setStartSectionPending(true);
+      await storage.setFastStartup(fast);
+      await prefs.setSportsMode(true);
+      await tester.pumpWidget(
+          app(rootBuilder: (_) => const Scaffold(body: Text('Sports home'))));
+      expect(find.text('Sports home').hitTestable(), findsOneWidget);
+      expect(find.text('Page sports'), findsNothing);
+      expect(tester.state<NavigatorState>(find.byType(Navigator)).canPop(),
+          isFalse);
+      expect(storage.getStartSection(), 'sports');
+      expect(storage.getStartSectionPending(), isFalse);
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
+
   for (final page in pages) {
     for (final fast in [false, true]) {
       testWidgets('$page visible in first frame; Fast startup=$fast',

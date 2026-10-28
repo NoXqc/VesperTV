@@ -6,6 +6,9 @@
 /// the code; Italian plurals don't work that way (canale/canali), so those
 /// strings are phrased to avoid it.
 const Map<String, String> kIt = {
+  "Sports Mode": "Modalità Sport",
+  "Make Sports Trak your home, with your top five leagues at the side.": "Usa Sports Trak come pagina iniziale, con i tuoi primi cinque campionati a lato.",
+  "Could not change Sports Mode. Try again.": "Impossibile cambiare la modalità Sport. Riprova.",
   // Media Hub source cards.
   "Enabled": "Attiva",
   "Catalogs from Cinemeta": "Cataloghi da Cinemeta",

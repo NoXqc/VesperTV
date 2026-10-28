@@ -362,6 +362,16 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **cdx, 2026-10-28 — Sports Mode** (`codex/sports-mode`): opt-in per-viewer
+  sports home, five ordered leagues in the left rail and remaining leagues/All/
+  Edit leagues in a floating bar. Shared SportsScreen engine, day/tools and
+  My Teams/live/upcoming/final rows; explicit rail/control/row focus and scroll.
+  Toggle in Sports Trak and Interface settings. Single root route on startup,
+  preview stays fixed on TV, Live TV Back returns to sports. Test +487 installed
+  on Formuler (version/hash verified); analyze baseline 16, all851 tests and15
+  guide tests pass. Physical acceptance pending; exact details in HANDOFF.md.
+  See dev-notes/sports-mode.md.
+
 - **cdx, 2026-10-28 — Red / Blue palettes** (`codex/red-blue-palettes`):
   standalone vivid vermilion Red; Habs replaced by vivid royal Blue. Existing
   `habs` / `green_orange` preferences resolve to Blue without rewriting storage.

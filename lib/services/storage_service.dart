@@ -561,6 +561,10 @@ class StorageService {
 
   bool getSportsHideScores() =>
       _prefs.getBool(_vk(AppConstants.keySportsHideScores)) ?? false;
+  bool getSportsMode() =>
+      _prefs.getBool(_vk(AppConstants.keySportsMode)) ?? false;
+  Future<void> setSportsMode(bool value) =>
+      _prefs.setBool(_vk(AppConstants.keySportsMode), value);
   Future<void> setSportsHideScores(bool value) =>
       _prefs.setBool(_vk(AppConstants.keySportsHideScores), value);
 

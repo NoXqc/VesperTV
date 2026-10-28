@@ -336,6 +336,14 @@
     "url": "https://vespertv.app/remote.html#Media%20Hub"
   },
   {
+    "id": "79cd382113010402",
+    "category": "Sports Trak",
+    "title": "Sports Mode",
+    "answer": "Enable it in Sports Trak or Settings → Interface → Sports Mode to make sports your home for this profile. The first five leagues in your saved order sit on the left; the rest, All and Edit leagues stay in a floating top bar. Hold OK on a league and use Left/Right to reorder it, then OK or Back to finish. Up/Down move along the sidebar; Right enters the games or remembered controls. Left from the first card or control returns to the sidebar. Up/Down move between leagues, days, Standings / My Teams / Networks and game rows, scrolling to keep focus visible. Back clears a picked game or stops the preview first; while browsing, Back returns to the sidebar. Back there asks before exiting the sports home. Live TV, Movies, TV Shows, Media Hub, Search and Settings remain available; Back from Live TV's navigation column returns to sports. Turn Sports Mode off to restore the regular home and previous startup choice.",
+    "controls": "OK on Sports Mode",
+    "url": "https://vespertv.app/remote.html#Sports%20Trak"
+  },
+  {
     "id": "2470317a035810ce",
     "category": "Sports Trak",
     "title": "Choose the best quality copy",

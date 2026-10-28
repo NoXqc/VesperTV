@@ -6,6 +6,9 @@
 /// English-style plural "s" filled in by the code; Greek plurals don't
 /// work that way, so those strings are phrased without it.
 const Map<String, String> kEl = {
+  "Sports Mode": "Λειτουργία αθλητικών",
+  "Make Sports Trak your home, with your top five leagues at the side.": "Ορίστε το Sports Trak ως αρχική οθόνη, με τις πέντε πρώτες λίγκες σας στο πλάι.",
+  "Could not change Sports Mode. Try again.": "Δεν ήταν δυνατή η αλλαγή της λειτουργίας αθλητικών. Δοκιμάστε ξανά.",
   // Media Hub source cards.
   "Enabled": "Ενεργή",
   "Catalogs from Cinemeta": "Κατάλογοι από το Cinemeta",

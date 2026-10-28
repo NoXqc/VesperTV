@@ -704,6 +704,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   /// this, resume-last-channel would silently find an empty list and do
   /// nothing on every Xtream launch.
   Future<void> _autoResumeLastChannel() async {
+    // The sports home starts with its dashboard, never an unrelated stream.
+    if (_preferences.sportsMode) return;
     if (_playbackService.isPlayingSomething) return;
     final lastId = _storage.getLastChannelId();
     if (lastId == null) return;
@@ -1025,7 +1027,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   }
 
   Widget _buildTvRoot(BuildContext context) {
-    // TvHomeScreen is the only home: it adapts to phones itself
+    // TvHomeScreen is the regular home; Sports Mode selects the sports root.
+    // The regular layout adapts to phones itself
     // (one column at a time in portrait, bottom tab bar). The old
     // phone HomeScreen was removed (owner, 2026-10-18).
     // `Consumer<ViewerProfileService>` plus a `ValueKey` on the
@@ -1041,13 +1044,16 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     // what tears down `TvHomeScreen`'s own pending-hide timers
     // and resets its focus/selection state via a clean `dispose`
     // instead of needing dozens of fields manually reset.
-    return Consumer<ViewerProfileService>(
-      builder: (context, viewerService, _) {
+    return Consumer2<ViewerProfileService, AppPreferences>(
+      builder: (context, viewerService, prefs, _) {
         // The language is part of the key for the same reason:
         // a language change remounts home so every tr() string
         // is rebuilt (General settings pops back here first).
         final key = ValueKey('${viewerService.active.id}|${L10n.code}');
         final section = _startupRoutes.takeRootSection();
+        if (prefs.sportsMode) {
+          return SportsScreen(key: key, home: true);
+        }
         return TvHomeScreen(
           key: key,
           initialTab: switch (section) {

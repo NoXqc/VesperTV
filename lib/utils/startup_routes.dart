@@ -31,7 +31,12 @@ class StartupRoutes {
   }) {
     final first = !_generated;
     if (first) {
-      section = preferences.effectiveStartSection;
+      // Sports Mode owns the root itself, with no duplicate startup overlay.
+      section =
+          preferences.sportsMode ? 'tv' : preferences.effectiveStartSection;
+      if (preferences.sportsMode && storage.getStartSectionPending()) {
+        unawaited(storage.setStartSectionPending(false));
+      }
       if (!AppPreferences.startSections.any((entry) => entry.$1 == section)) {
         section = 'tv';
       }

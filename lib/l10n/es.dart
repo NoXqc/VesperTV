@@ -6,6 +6,9 @@
 /// "s" filled in by the code; Spanish plurals don't always work that way
 /// (canal/canales), so those strings are phrased to avoid it.
 const Map<String, String> kEs = {
+  "Sports Mode": "Modo Deportes",
+  "Make Sports Trak your home, with your top five leagues at the side.": "Usa Sports Trak como inicio, con tus cinco primeras ligas en el lateral.",
+  "Could not change Sports Mode. Try again.": "No se pudo cambiar el modo Deportes. Inténtalo de nuevo.",
   // Media Hub source cards.
   "Enabled": "Activada",
   "Catalogs from Cinemeta": "Catálogos de Cinemeta",

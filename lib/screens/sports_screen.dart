@@ -1,4 +1,14 @@
 import '../utils/refined_finish.dart';
+import '../widgets/sports_mode_shell.dart';
+import '../widgets/sports_mode_toggle.dart';
+import '../services/viewer_profile_service.dart';
+import 'archive_screen.dart';
+import 'tv_home_screen.dart';
+import 'search_screen.dart';
+import 'recordings_screen.dart';
+import 'settings/settings_menu_screen.dart';
+import 'settings/profiles_screen.dart';
+import 'package:window_manager/window_manager.dart';
 import '../services/game_reminders.dart';
 import '../widgets/game_reminder_menu_tile.dart';
 import '../widgets/game_score_alert_menu_tile.dart';
@@ -62,7 +72,11 @@ import '../l10n/l10n.dart';
 /// zones explicitly (CLAUDE.md §10: default traversal across differently
 /// shaped rows is unreliable); Left/Right is plain traversal inside a row.
 class SportsScreen extends StatefulWidget {
-  const SportsScreen({super.key});
+  const SportsScreen({super.key, this.home = false, this.service});
+  final bool home;
+
+  /// A supplied service lets navigation tests run without live feeds.
+  final SportsService? service;
 
   @override
   State<SportsScreen> createState() => _SportsScreenState();
@@ -77,6 +91,13 @@ class _Section {
 
 class _SportsScreenState extends State<SportsScreen> with RouteAware {
   bool _channelsMode = false;
+  final _modeShell = GlobalKey<SportsModeShellState>();
+  final Map<int, String> _lastModeControls = {};
+  bool _modeRailFocused = false;
+  bool _exitPromptOpen = false;
+  SportsService get _service => widget.service ?? SportsService.instance;
+  bool get _modeActive => context.read<AppPreferences>().sportsMode;
+
   late final StorageService _storage;
   late final SportsChannelMatcher _matcher;
   late SportsChannelPicks _picks;
@@ -144,6 +165,11 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     _gameBeforeNetworks = null;
     _channelBeforeNetworks = null;
     setState(() => _channelsMode = false);
+    if (_modeActive) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _focusModeNode('networks');
+      });
+    }
     final playing = _previewChannel;
     if (game != null && channel != null) {
       if (playing?.id == channel.id) {
@@ -181,6 +207,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   void initState() {
     super.initState();
     _showResumeHint = LiveResumeHint.hideWhileMounted();
+    FocusManager.instance.addListener(_rememberModeControlFocus);
     // Windows: the hero plays through DesktopMiniPlayer, not PlaybackService.
     if (Platform.isWindows) {
       DesktopMiniPlayer.instance.channel.addListener(_onMiniPlayerChanged);
@@ -193,6 +220,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     // Opens on the favourite league (League manager, hold OK), if any.
     _leagueFilter = favoriteSportsLeague(_storage)?.id;
     _hideScores = _storage.getSportsHideScores();
+    if (_modeActive) _ensureInitialFocus();
     unawaited(_load());
     // Live scores tick while the screen is visible; SportsService's own
     // freshness window decides whether a tick actually hits the network.
@@ -223,7 +251,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   @override
   void dispose() {
+    _previewSeq++;
     appRouteObserver.unsubscribe(this);
+    FocusManager.instance.removeListener(_rememberModeControlFocus);
     if (Platform.isWindows) {
       DesktopMiniPlayer.instance.channel.removeListener(_onMiniPlayerChanged);
     }
@@ -258,12 +288,12 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         _error = null;
       });
     }
-    final games = await SportsService.instance.gamesForDay(_shownLeagues, _day);
+    final games = await _service.gamesForDay(_shownLeagues, _day);
     if (!mounted || token != _loadToken) return;
     final filtered = sportsLeagueById(_leagueFilter ?? '');
     DateTime? next;
     if (games.isEmpty && filtered != null) {
-      next = await SportsService.instance.nextGameStart(filtered, _day);
+      next = await _service.nextGameStart(filtered, _day);
       if (!mounted || token != _loadToken) return;
     }
     setState(() {
@@ -271,7 +301,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       _nextGameLooked = games.isEmpty && filtered != null;
       _games = games;
       _loading = false;
-      _error = games.isEmpty ? SportsService.instance.lastError : null;
+      _error = games.isEmpty ? _service.lastError : null;
       final heroKey = _heroGame == null ? null : _gameKey(_heroGame!);
       _heroGame = games.where((g) => _gameKey(g) == heroKey).firstOrNull ??
           _defaultHero(games);
@@ -421,15 +451,20 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   }
 
   List<_Section> get _sections {
+    final mode = _modeActive;
+    final followed =
+        mode ? _games.where(_follows.involves).toList() : <SportsGame>[];
+    final remaining = _games.where((game) => !mode || !_follows.involves(game));
     // My Teams' games first (stable: start order kept within each half),
     // then the rest by league.
     List<SportsGame> followedFirst(Iterable<SportsGame> games) => [
           ...games.where(_follows.involves),
           ..._byLeague(games.where((g) => !_follows.involves(g))),
         ];
-    final live = followedFirst(_games.where((g) => g.state == GameState.live));
-    final pre = followedFirst(_games.where((g) => g.state == GameState.pre));
-    final post = _byLeague(_games.where((g) => g.state == GameState.post));
+    final live =
+        followedFirst(remaining.where((g) => g.state == GameState.live));
+    final pre = followedFirst(remaining.where((g) => g.state == GameState.pre));
+    final post = _byLeague(remaining.where((g) => g.state == GameState.post));
     final laterLabel = switch (_dayOffset) {
       0 => tr('Later today'),
       1 => tr('Tomorrow'),
@@ -437,6 +472,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       _ => tr('Scheduled'),
     };
     return [
+      if (followed.isNotEmpty) _Section('teams', tr('My Teams'), followed),
       if (live.isNotEmpty) _Section('live', tr('Live now'), live),
       if (pre.isNotEmpty) _Section('pre', laterLabel, pre),
       if (post.isNotEmpty) _Section('post', tr('Final'), post),
@@ -459,12 +495,37 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     _initialFocusDone = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      if (_modeActive) {
+        _modeShell.currentState?.focusRail();
+        return;
+      }
       // The league row, not the first game card (owner's request).
       _focusZone(0, _sections);
     });
   }
 
   void _focusZone(int zone, List<_Section> sections) {
+    if (_modeActive && zone < _firstRowZone) {
+      final ids = _modeControlIds(zone);
+      if (ids.isEmpty) return;
+      final remembered = _lastModeControls[zone];
+      final selected = zone == 0
+          ? _leagueChipId
+          : zone == 1
+              ? _dayChipId
+              : ids.first;
+      final id = ids.contains(remembered)
+          ? remembered!
+          : ids.contains(selected)
+              ? selected
+              : ids.first;
+      _focusModeNode(id);
+      _zone = zone;
+      return;
+    }
+    if (zone >= _firstRowZone && sections.isNotEmpty) {
+      zone = zone.clamp(_firstRowZone, _firstRowZone + sections.length - 1);
+    }
     if (zone == 0) {
       // requestFocus alone doesn't scroll the chip row to it.
       final node = _chipNode(_leagueChipId);
@@ -478,6 +539,10 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     } else if (zone == 2) {
       _chipNode(_showStandingsChip ? 'standings' : 'myteams').requestFocus();
     } else if (sections.isEmpty) {
+      if (_modeActive && _chipNode('nextgame').context == null) {
+        _focusZone(0, sections);
+        return;
+      }
       _chipNode('nextgame').requestFocus();
     } else {
       final s = sections[zone - _firstRowZone];
@@ -485,7 +550,11 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       final key = s.games.any((g) => _gameKey(g) == remembered)
           ? remembered!
           : _gameKey(s.games.first);
-      _cardNode(key).requestFocus();
+      if (_modeActive) {
+        _focusModeCard(s, key);
+      } else {
+        _cardNode(key).requestFocus();
+      }
     }
     _zone = zone;
   }
@@ -624,9 +693,10 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     if (_touch) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ctx = _rowKeys[sectionId]?.currentContext;
-      if (ctx != null) {
+      if (ctx != null && ctx.mounted) {
         Scrollable.ensureVisible(ctx,
-            duration: const Duration(milliseconds: 200),
+            duration:
+                _modeActive ? Duration.zero : const Duration(milliseconds: 200),
             curve: Curves.easeOut,
             alignment: 0.05);
       }
@@ -645,7 +715,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     try {
       games = _leagueFilter == null
           ? _games
-          : await SportsService.instance.gamesForDay(_leagues, _day);
+          : await _service.gamesForDay(_leagues, _day);
     } catch (_) {
       games = _games;
     }
@@ -781,7 +851,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     // The chip keeps its node (keyed by league id) and focus; just keep it on
     // screen. Zero duration = jump (CLAUDE.md §10).
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final ctx = _chipNode('league:$id').context;
+      final node = _chipNode('league:$id');
+      if (_modeActive) node.requestFocus();
+      final ctx = node.context;
       if (ctx != null && ctx.mounted) Scrollable.ensureVisible(ctx);
     });
   }
@@ -1263,6 +1335,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
+    final mode = context.watch<AppPreferences>().sportsMode;
     final channelPage = SportsChannelsScreen(
       // What the Games hero plays carries into Networks' hero.
       initialPreview: Platform.isWindows
@@ -1287,7 +1360,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         : _games.where((g) => _gameKey(g) == pickKey).firstOrNull ?? _heroPick;
     final hero = pick ?? preview ?? _heroGame;
     final header = [
-      _buildLeagueBar(),
+      _buildLeagueBar(mode: mode),
       const SizedBox(height: 8),
       _buildDayBar(),
       const SizedBox(height: 6),
@@ -1317,7 +1390,10 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final gamesPage = PopScope(
       // Networks handles Back itself (back to Games, never out of Sports
       // Trak: leaving from there moved its preview to the main player).
-      canPop: !_channelsMode && _movingLeague == null && preview == null,
+      canPop: !_channelsMode &&
+          _movingLeague == null &&
+          preview == null &&
+          (!mode || (!widget.home && _modeRailFocused)),
       onPopInvokedWithResult: (didPop, _) {
         if (didPop || _channelsMode) return;
         if (_movingLeague != null) {
@@ -1326,6 +1402,10 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           setState(() => _heroPick = null);
         } else if (preview != null) {
           unawaited(_setPreview(null, null));
+        } else if (mode && !_modeRailFocused) {
+          _modeShell.currentState?.focusRail();
+        } else if (mode && widget.home) {
+          unawaited(_confirmModeExit());
         }
       },
       child: SportsScreenFrame(
@@ -1373,31 +1453,34 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                           const SingleActivator(LogicalKeyboardKey.mediaPause):
                               _onPlayKey,
                         },
-                  child: _touch
-                      // Phones: the bars and hero left the game rows a
-                      // sliver of the screen, so nothing could be swiped
-                      // (owner, 2026-10-18). The whole page scrolls instead.
-                      ? SingleChildScrollView(
-                          padding: EdgeInsets.fromLTRB(
-                              _narrow ? 12 : 24, 12, _narrow ? 12 : 24, 32),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              ...header,
-                              _buildBody(sections, preview, inPage: true),
-                            ],
-                          ),
-                        )
-                      : Padding(
-                          padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              ...header,
-                              Expanded(child: _buildBody(sections, preview)),
-                            ],
-                          ),
-                        ),
+                  child: mode
+                      ? _buildSportsMode(header, sections, preview)
+                      : _touch
+                          // Phones: the bars and hero left the game rows a
+                          // sliver of the screen, so nothing could be swiped
+                          // (owner, 2026-10-18). The whole page scrolls instead.
+                          ? SingleChildScrollView(
+                              padding: EdgeInsets.fromLTRB(
+                                  _narrow ? 12 : 24, 12, _narrow ? 12 : 24, 32),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  ...header,
+                                  _buildBody(sections, preview, inPage: true),
+                                ],
+                              ),
+                            )
+                          : Padding(
+                              padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  ...header,
+                                  Expanded(
+                                      child: _buildBody(sections, preview)),
+                                ],
+                              ),
+                            ),
                 ),
               ),
             ),
@@ -1409,12 +1492,340 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     // whole-catalogue grouping on every Games rebuild and took the focus
     // (Fire Stick froze on opening Sports Trak, owner 2026-10-22).
     return IndexedStack(index: _channelsMode ? 1 : 0, children: [
-      gamesPage,
+      ExcludeFocus(excluding: _channelsMode, child: gamesPage),
       if (_channelsMode) channelPage else const SizedBox.shrink(),
     ]);
   }
 
-  Widget _buildLeagueBar() {
+  void _openSportsModeSettings() {
+    // A queued preview must not restart after the switch releases the player.
+    _previewSeq++;
+    showDialog<void>(
+        context: context,
+        builder: (_) => AlertDialog(
+              title: Text(tr('Sports Mode')),
+              content: const SizedBox(width: 520, child: SportsModeToggle()),
+            ));
+  }
+
+  List<String> _modeControlIds(int zone) => switch (zone) {
+        0 => [
+            'league:all',
+            for (final l in _leagues.skip(5)) 'league:${l.id}',
+            'league:edit',
+            'league:quality',
+            'league:scores',
+            'league:mode'
+          ],
+        1 => [
+            for (var day = -1; day <= 6; day++) 'day:$day',
+            if (_dayOffset < -1 || _dayOffset > 6) 'day:$_dayOffset'
+          ],
+        2 => [
+            if (_showStandingsChip) 'standings',
+            'myteams',
+            'networks',
+            if (_showRedZone) 'redzone'
+          ],
+        _ => [],
+      };
+
+  void _rememberModeControlFocus() {
+    if (!mounted || !_modeActive) return;
+    for (var zone = 0; zone < _firstRowZone; zone++) {
+      for (final id in _modeControlIds(zone)) {
+        if (_chipNodes[id]?.hasFocus ?? false) {
+          _lastModeControls[zone] = id;
+          _zone = zone;
+          return;
+        }
+      }
+    }
+  }
+
+  void _focusModeNode(String id) {
+    final node = _chipNode(id);
+    node.requestFocus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = node.context;
+      if (mounted && ctx != null && ctx.mounted) {
+        Scrollable.ensureVisible(ctx);
+      }
+    });
+  }
+
+  KeyEventResult _onModeControlKey(FocusNode _, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    final delta = event.logicalKey == LogicalKeyboardKey.arrowLeft
+        ? -1
+        : event.logicalKey == LogicalKeyboardKey.arrowRight
+            ? 1
+            : 0;
+    if (delta == 0 || _movingLeague != null) return KeyEventResult.ignored;
+    final ids = _modeControlIds(_zone);
+    final index = ids.indexWhere((id) => _chipNodes[id]?.hasFocus ?? false);
+    if (index >= 0) {
+      final target = index + delta;
+      if (target < 0) {
+        _modeShell.currentState?.focusRail();
+      } else if (target < ids.length) {
+        _focusModeNode(ids[target]);
+      }
+      return KeyEventResult.handled;
+    }
+    // Row headers and the empty-day action have no horizontal neighbours.
+    if (_chipNodes.values.any((node) => node.hasFocus)) {
+      if (delta < 0) {
+        _modeShell.currentState?.focusRail();
+      } else {
+        _focusZone(_zone, _sections);
+      }
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  Future<void> _openModePage(Widget page, {bool settings = false}) async {
+    if (settings) {
+      final unlocked =
+          await context.read<ViewerProfileService>().requireUnlock(context);
+      if (!unlocked || !mounted) return;
+    }
+    // Share one stream owner with the destination, just as the normal sports
+    // Back path does. Preserve rail focus when the destination is closed.
+    await _setPreview(null, null);
+    if (!mounted) return;
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+    if (!mounted) return;
+    // A closed destination has no video surface on the sports home. Release
+    // its player instead of leaving an unseen stream consuming a connection.
+    if (Platform.isWindows) {
+      DesktopMiniPlayer.instance.clear();
+    } else {
+      await context.read<PlaybackService>().stop();
+    }
+    if (mounted) _modeShell.currentState?.focusRail();
+  }
+
+  Future<void> _confirmModeExit() async {
+    if (_exitPromptOpen) return;
+    _exitPromptOpen = true;
+    final exit = await showDialog<bool>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+              title: Text(
+                  tr('Exit {appName}?', {'appName': AppConstants.appName})),
+              content: Text(tr('Are you sure you want to exit {appName}?',
+                  {'appName': AppConstants.appName})),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.of(dialog).pop(true),
+                    child: Text(tr('Exit'))),
+                TextButton(
+                    autofocus: true,
+                    onPressed: () => Navigator.of(dialog).pop(false),
+                    child: Text(tr('Stay'))),
+              ],
+            ));
+    _exitPromptOpen = false;
+    if (exit == true && mounted) {
+      if (Platform.isWindows) {
+        await windowManager.close();
+      } else {
+        await SystemNavigator.pop();
+      }
+    }
+  }
+
+  Widget _buildSportsMode(
+      List<Widget> header, List<_Section> sections, SportsGame? preview) {
+    final prefs = context.watch<AppPreferences>();
+    SportsModeRailEntry app(String id, String label, IconData icon, Widget page,
+            {bool settings = false}) =>
+        SportsModeRailEntry(
+          id: id,
+          label: label,
+          icon: icon,
+          focusNode: _chipNode('mode:$id'),
+          enabled: _movingLeague == null,
+          onTap: () => _openModePage(page, settings: settings),
+        );
+    return SportsModeShell(
+      key: _modeShell,
+      moving: _movingLeague != null,
+      onMove: _moveLeague,
+      leagueCount: _leagues.take(5).length,
+      entries: [
+        for (final league in _leagues.take(5))
+          SportsModeRailEntry(
+            id: 'league:${league.id}',
+            label: league.shortName,
+            focusNode: _chipNode('league:${league.id}'),
+            logoUrl: league.logoUrl,
+            selected: _leagueFilter == league.id,
+            enabled: _movingLeague == null || _movingLeague == league.id,
+            moving: _movingLeague == league.id,
+            onTap: () => _tapLeague(league.id),
+            onHold: () => _startLeagueMove(league.id),
+          ),
+        app('tv', tr('Live TV'), Icons.live_tv, const TvHomeScreen()),
+        if (!prefs.hideMovies)
+          app('movies', tr('Movies'), Icons.movie_outlined,
+              const TvHomeScreen(initialTab: 'Movies')),
+        if (!prefs.hideShows)
+          app('series', tr('TV Shows'), Icons.video_library_outlined,
+              const TvHomeScreen(initialTab: 'TV Shows')),
+        if (!prefs.hideArchive)
+          app('hub', tr('Media Hub'), Icons.explore_outlined,
+              const ArchiveScreen()),
+        app('search', tr('Search'), Icons.search,
+            const SearchScreen(initialScope: 'TV')),
+        if (!Platform.isWindows && !prefs.hideRecordings)
+          app('recordings', tr('Recordings'), Icons.fiber_manual_record,
+              const RecordingsScreen()),
+        if (!prefs.hideProfiles)
+          app('profiles', tr('Profiles'), Icons.people_outline,
+              const ProfilesScreen()),
+        app('settings', tr('Settings'), Icons.settings_outlined,
+            const SettingsMenuScreen(),
+            settings: true),
+        SportsModeRailEntry(
+            id: 'mode',
+            label: tr('Sports Mode'),
+            icon: Icons.sports,
+            focusNode: _chipNode('mode:toggle'),
+            enabled: _movingLeague == null,
+            selected: true,
+            onTap: _openSportsModeSettings),
+      ],
+      onEnterContent: () => _focusZone(_zone, sections),
+      onRailFocusChanged: (value) {
+        if (mounted && value != _modeRailFocused) {
+          setState(() => _modeRailFocused = value);
+        }
+      },
+      bar: Focus(
+          canRequestFocus: false,
+          onKeyEvent: _onModeControlKey,
+          child: header.first),
+      content: Focus(
+        canRequestFocus: false,
+        onKeyEvent: _onModeControlKey,
+        child: (_touch || _narrow || MediaQuery.sizeOf(context).height < 500)
+            ? SingleChildScrollView(
+                key: const ValueKey('sports-mode-content'),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ...header.skip(1),
+                      _buildBody(sections, preview, inPage: true),
+                    ]),
+              )
+            : Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ...header.skip(1),
+                      Expanded(child: _buildBody(sections, preview)),
+                    ]),
+              ),
+      ),
+    );
+  }
+
+  List<Widget> _leagueControls({bool mode = false}) => [
+        // Hold OK: the day's leagues in a roll-down menu.
+        HoldToActivate(
+          key: const ValueKey('league:all'),
+          onTap: () => _setLeagueFilter(null),
+          onHold: _movingLeague == null ? _openLeagueMenu : null,
+          child: SportsChip(
+            focusNode: _chipNode('league:all'),
+            enabled: _movingLeague == null,
+            label: tr('All'),
+            selected: _leagueFilter == null,
+            onFocus: () => _zone = 0,
+            onTap: () => _setLeagueFilter(null),
+          ),
+        ),
+        for (final l in _leagues.skip(mode ? 5 : 0))
+          HoldToActivate(
+            // Keyed: the list reorders in move mode, and unkeyed chips
+            // swapped focus nodes — focus dropped and stale "focused"
+            // outlines stuck on other chips (owner: three focuses).
+            key: ValueKey('league:${l.id}'),
+            onTap: () => _tapLeague(l.id),
+            onHold: () => _startLeagueMove(l.id),
+            child: SportsChip(
+              focusNode: _chipNode('league:${l.id}'),
+              enabled: _movingLeague == null || _movingLeague == l.id,
+              label: l.name,
+              logoUrl: l.logoUrl,
+              selected: _leagueFilter == l.id,
+              moving: _movingLeague == l.id,
+              onFocus: () => _zone = 0,
+              onTap: () => _tapLeague(l.id),
+            ),
+          ),
+        SportsChip(
+          key: const ValueKey('league:edit'),
+          focusNode: _chipNode('league:edit'),
+          enabled: _movingLeague == null,
+          label: tr('Edit leagues'),
+          icon: Icons.tune,
+          selected: false,
+          onFocus: () => _zone = 0,
+          onTap: _editLeagues,
+        ),
+        SportsChip(
+          key: const ValueKey('league:quality'),
+          focusNode: _chipNode('league:quality'),
+          enabled: _movingLeague == null,
+          label: tr('Prefer highest quality'),
+          icon: Icons.high_quality,
+          selected: _storage.getSportsPreferQuality(),
+          onFocus: () => _zone = 0,
+          onTap: () async {
+            await _storage
+                .setSportsPreferQuality(!_storage.getSportsPreferQuality());
+            if (mounted) await _rematch();
+          },
+        ),
+        SportsChip(
+          key: const ValueKey('league:scores'),
+          focusNode: _chipNode('league:scores'),
+          enabled: _movingLeague == null,
+          label: _hideScores ? tr('Scores hidden') : tr('Scores shown'),
+          icon: _hideScores ? Icons.visibility_off : Icons.visibility,
+          selected: false,
+          onFocus: () => _zone = 0,
+          onTap: _toggleScores,
+        ),
+        SportsChip(
+          key: const ValueKey('league:mode'),
+          focusNode: _chipNode('league:mode'),
+          enabled: _movingLeague == null,
+          label: tr('Sports Mode'),
+          icon: Icons.sports,
+          selected: _modeActive,
+          onFocus: () => _zone = 0,
+          onTap: _openSportsModeSettings,
+        ),
+      ];
+
+  Widget _buildLeagueBar({bool mode = false}) {
+    if (mode) {
+      return SizedBox(
+          height: 40,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(children: _leagueControls(mode: true)),
+          ));
+    }
     return SizedBox(
       height: 44,
       child: Row(
@@ -1434,74 +1845,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  // Hold OK: the day's leagues in a roll-down menu.
-                  HoldToActivate(
-                    key: const ValueKey('league:all'),
-                    onTap: () => _setLeagueFilter(null),
-                    onHold: _movingLeague == null ? _openLeagueMenu : null,
-                    child: SportsChip(
-                      focusNode: _chipNode('league:all'),
-                      enabled: _movingLeague == null,
-                      label: tr('All'),
-                      selected: _leagueFilter == null,
-                      onFocus: () => _zone = 0,
-                      onTap: () => _setLeagueFilter(null),
-                    ),
-                  ),
-                  for (final l in _leagues)
-                    HoldToActivate(
-                      // Keyed: the list reorders in move mode, and unkeyed chips
-                      // swapped focus nodes — focus dropped and stale "focused"
-                      // outlines stuck on other chips (owner: three focuses).
-                      key: ValueKey('league:${l.id}'),
-                      onTap: () => _tapLeague(l.id),
-                      onHold: () => _startLeagueMove(l.id),
-                      child: SportsChip(
-                        focusNode: _chipNode('league:${l.id}'),
-                        enabled: _movingLeague == null || _movingLeague == l.id,
-                        label: l.name,
-                        logoUrl: l.logoUrl,
-                        selected: _leagueFilter == l.id,
-                        moving: _movingLeague == l.id,
-                        onFocus: () => _zone = 0,
-                        onTap: () => _tapLeague(l.id),
-                      ),
-                    ),
-                  SportsChip(
-                    key: const ValueKey('league:edit'),
-                    focusNode: _chipNode('league:edit'),
-                    enabled: _movingLeague == null,
-                    label: tr('Edit leagues'),
-                    icon: Icons.tune,
-                    selected: false,
-                    onFocus: () => _zone = 0,
-                    onTap: _editLeagues,
-                  ),
-                  SportsChip(
-                    key: const ValueKey('league:quality'),
-                    focusNode: _chipNode('league:quality'),
-                    enabled: _movingLeague == null,
-                    label: tr('Prefer highest quality'),
-                    icon: Icons.high_quality,
-                    selected: _storage.getSportsPreferQuality(),
-                    onFocus: () => _zone = 0,
-                    onTap: () async {
-                      await _storage.setSportsPreferQuality(
-                          !_storage.getSportsPreferQuality());
-                      if (mounted) await _rematch();
-                    },
-                  ),
-                  SportsChip(
-                    key: const ValueKey('league:scores'),
-                    focusNode: _chipNode('league:scores'),
-                    enabled: _movingLeague == null,
-                    label:
-                        _hideScores ? tr('Scores hidden') : tr('Scores shown'),
-                    icon: _hideScores ? Icons.visibility_off : Icons.visibility,
-                    selected: false,
-                    onFocus: () => _zone = 0,
-                    onTap: _toggleScores,
-                  ),
+                  ..._leagueControls(mode: mode),
                 ],
               ),
             ),
@@ -1532,9 +1876,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
               child: _LiveCount(count: live),
             ),
           Expanded(
-            child: ListView(
+            child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              children: [
+              child: Row(children: [
                 for (var o = -1; o <= 6; o++)
                   SportsChip(
                     focusNode: _chipNode('day:$o'),
@@ -1554,7 +1898,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                     onFocus: () => _zone = 1,
                     onTap: () {},
                   ),
-              ],
+              ]),
             ),
           ),
         ],
@@ -1571,7 +1915,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   Widget _buildStandingsButton() {
     final league = sportsLeagueById(_leagueFilter ?? '');
-    return Center(
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1625,8 +1970,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   Widget _buildBody(List<_Section> sections, SportsGame? preview,
       {bool inPage = false}) {
     if (inPage && (sections.isEmpty || (_loading && _games.isEmpty))) {
-      return SizedBox(
-          height: 280, child: _buildBody(sections, preview, inPage: false));
+      return ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 280),
+          child: _buildBody(sections, preview, inPage: false));
     }
     if (inPage) {
       return Padding(
@@ -1675,12 +2021,55 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         ),
       );
     }
+    if (_modeActive) {
+      return SingleChildScrollView(
+        padding: const EdgeInsets.only(bottom: 24),
+        child: _buildBody(sections, preview, inPage: true),
+      );
+    }
     return ListView(
       padding: const EdgeInsets.only(top: 8, bottom: 32),
       children: [
         for (final s in sections) _buildSection(s, preview),
       ],
     );
+  }
+
+  void _focusModeCard(_Section section, String key) {
+    final index = section.games.indexWhere((game) => _gameKey(game) == key);
+    if (index < 0) return;
+    final node = _cardNode(key);
+    if (node.context == null) {
+      final scroll = _rowScrolls[section.id];
+      if (scroll != null && scroll.hasClients) {
+        final mixed = _leagueFilter == null &&
+            section.games
+                .any((game) => game.league.id != section.games.first.league.id);
+        var offset = index * (_GameCard.width + 12);
+        if (mixed) {
+          for (var i = 0; i <= index; i++) {
+            if (i == 0 ||
+                section.games[i - 1].league.id != section.games[i].league.id) {
+              offset += 64;
+            }
+          }
+        }
+        scroll.jumpTo(offset.clamp(
+            scroll.position.minScrollExtent, scroll.position.maxScrollExtent));
+      }
+    }
+    void focus() {
+      final ctx = node.context;
+      if (!mounted || ctx == null || !ctx.mounted) return;
+      node.requestFocus();
+      Scrollable.ensureVisible(ctx);
+    }
+
+    if (node.context != null) {
+      focus();
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) => focus());
+    }
   }
 
   /// Left/Right along a game row, explicitly (CLAUDE.md §10): the row is a
@@ -1703,7 +2092,14 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     if (i < 0) return KeyEventResult.ignored;
     final target = i + delta;
     // Row ends: stay put rather than leave the row.
-    if (target < 0 || target >= s.games.length) return KeyEventResult.handled;
+    if (target < 0 || target >= s.games.length) {
+      if (target < 0 && _modeActive) _modeShell.currentState?.focusRail();
+      return KeyEventResult.handled;
+    }
+    if (_modeActive) {
+      _focusModeCard(s, _gameKey(s.games[target]));
+      return KeyEventResult.handled;
+    }
     final node = _cardNode(_gameKey(s.games[target]));
     void focus() {
       final ctx = node.context;
@@ -1733,6 +2129,11 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   }
 
   Widget _buildSection(_Section s, SportsGame? preview) {
+    final cardHeight = _GameCard.height *
+        (_modeActive
+            ? (MediaQuery.textScalerOf(context).scale(14) / 14)
+                .clamp(1.0, double.infinity)
+            : 1);
     final rowKey = _rowKeys[s.id] ??= GlobalKey();
     final zoneIndex = _firstRowZone + _sections.indexWhere((x) => x.id == s.id);
     return Padding(
@@ -1743,11 +2144,14 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         children: [
           Row(
             children: [
-              Text(s.label,
-                  style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white)),
+              Flexible(
+                  child: Text(s.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white))),
               const SizedBox(width: 8),
               Text('${s.games.length}',
                   style: const TextStyle(fontSize: 15, color: Colors.white54)),
@@ -1780,10 +2184,10 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           ),
           const SizedBox(height: 8),
           SizedBox(
-            height: _GameCard.height + 18 + _HoldHint.height,
+            height: cardHeight + 18 + _HoldHint.height,
             child: SportsRowArrows(
               controller: _rowScrolls[s.id] ??= ScrollController(),
-              arrowAreaHeight: _GameCard.height,
+              arrowAreaHeight: cardHeight,
               child: Focus(
                 canRequestFocus: false,
                 skipTraversal: true,
@@ -1802,6 +2206,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                         _LeagueDivider(league: g.league),
                       _GameCard(
                         key: ValueKey('card-${_gameKey(g)}'),
+                        cardHeight: cardHeight,
                         focusNode: _cardNode(_gameKey(g)),
                         game: g,
                         match: _matches[_gameKey(g)]?.firstOrNull,
@@ -2512,99 +2917,110 @@ class _Hero extends StatelessWidget {
         statusColor = scheme.primary;
     }
     final ev = game.event;
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        // A fight card's name ("UFC 320: Ankalaev vs. Pereira 2") says more
-        // than "UFC".
-        Text(
-            (game.league.kind == SportsKind.fight ||
-                        game.league.kind == SportsKind.tennis) &&
-                    ev != null
-                ? ev.title
-                : game.league.name.toUpperCase(),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-                fontSize: 12, letterSpacing: 1.2, color: Colors.white54)),
-        const SizedBox(height: 4),
-        if (game.isEventOnly)
-          Text(
-              game.state == GameState.pre
-                  ? _preLabel(game)
-                  : trSports(ev?.session ?? game.league.shortName),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white))
-        else if (showScore)
-          Text('${game.first.score ?? '-'}  -  ${game.second.score ?? '-'}',
-              maxLines: 1,
-              style: TextStyle(
-                  fontSize: small ? 28 : 38,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white))
-        else
-          Text(
-              game.state == GameState.pre
-                  ? _timeLabel(game.start)
-                  : game.joiner,
-              maxLines: 1,
-              style: TextStyle(
-                  fontSize: small ? 24 : 30,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white)),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(
-              child: Text(status,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: statusColor)),
-            ),
-            RecPill(game: game, small: true),
-          ],
-        ),
-        const SizedBox(height: 8),
-        if (channelName != null)
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.live_tv, size: 15, color: scheme.primary),
-                  const SizedBox(width: 5),
-                  Flexible(
-                    child: Text(channelName,
+    return LayoutBuilder(
+        builder: (context, constraints) => FittedBox(
+            fit: BoxFit.scaleDown,
+            child: SizedBox(
+                width: constraints.maxWidth,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // A fight card's name ("UFC 320: Ankalaev vs. Pereira 2") says more
+                    // than "UFC".
+                    Text(
+                        (game.league.kind == SportsKind.fight ||
+                                    game.league.kind == SportsKind.tennis) &&
+                                ev != null
+                            ? ev.title
+                            : game.league.name.toUpperCase(),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 13,
-                            color: scheme.primary,
-                            fontWeight: FontWeight.w600)),
-                  ),
-                ],
-              ),
-            ],
-          )
-        else
-          Text(
-              matching
-                  ? tr('Looking for the channel…')
-                  : SportsChannelMatcher.sharedWhyNoMatch(game)?.short ??
-                      tr('No channel found — OK to pick one'),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12, color: Colors.white54)),
-      ],
-    );
+                        style: const TextStyle(
+                            fontSize: 12,
+                            letterSpacing: 1.2,
+                            color: Colors.white54)),
+                    const SizedBox(height: 4),
+                    if (game.isEventOnly)
+                      Text(
+                          game.state == GameState.pre
+                              ? _preLabel(game)
+                              : trSports(ev?.session ?? game.league.shortName),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white))
+                    else if (showScore)
+                      Text(
+                          '${game.first.score ?? '-'}  -  ${game.second.score ?? '-'}',
+                          maxLines: 1,
+                          style: TextStyle(
+                              fontSize: small ? 28 : 38,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white))
+                    else
+                      Text(
+                          game.state == GameState.pre
+                              ? _timeLabel(game.start)
+                              : game.joiner,
+                          maxLines: 1,
+                          style: TextStyle(
+                              fontSize: small ? 24 : 30,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white)),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(status,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: statusColor)),
+                        ),
+                        RecPill(game: game, small: true),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (channelName != null)
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.live_tv,
+                                  size: 15, color: scheme.primary),
+                              const SizedBox(width: 5),
+                              Flexible(
+                                child: Text(channelName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        color: scheme.primary,
+                                        fontWeight: FontWeight.w600)),
+                              ),
+                            ],
+                          ),
+                        ],
+                      )
+                    else
+                      Text(
+                          matching
+                              ? tr('Looking for the channel…')
+                              : SportsChannelMatcher.sharedWhyNoMatch(game)
+                                      ?.short ??
+                                  tr('No channel found — OK to pick one'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 12, color: Colors.white54)),
+                  ],
+                ))));
   }
 }
 
@@ -2698,6 +3114,7 @@ class _HoldHint extends StatelessWidget {
 class _GameCard extends StatefulWidget {
   const _GameCard({
     super.key,
+    this.cardHeight = height,
     required this.focusNode,
     required this.game,
     required this.match,
@@ -2713,6 +3130,7 @@ class _GameCard extends StatefulWidget {
   static const double width = 268;
   static const double height = 132;
 
+  final double cardHeight;
   final FocusNode focusNode;
   final SportsGame game;
   final ChannelMatch? match;
@@ -2831,7 +3249,7 @@ class _GameCardState extends State<_GameCard> {
                 curve: Curves.easeOut,
                 child: Container(
                   width: _GameCard.width,
-                  height: _GameCard.height,
+                  height: widget.cardHeight,
                   padding: const EdgeInsets.fromLTRB(12, 9, 12, 8),
                   decoration: RefinedFinish.decorate(
                       context,
