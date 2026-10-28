@@ -102,6 +102,13 @@ class _ChannelSchedulePanelState extends State<ChannelSchedulePanel> {
       p.start.isBefore(now) &&
       !p.start.isBefore(CatchupSession.oldest(widget.channel, now));
 
+  /// Rows one Rewind / Fast-forward press moves: a screenful.
+  int get _pageRows {
+    if (!_scroll.hasClients) return 8;
+    final rows = (_scroll.position.viewportDimension / _rowHeight).floor() - 1;
+    return rows < 1 ? 1 : rows;
+  }
+
   void _move(List<EpgProgram> list, int step) {
     final i = _indexOf(list);
     if (i < 0) return;
@@ -139,6 +146,16 @@ class _ChannelSchedulePanelState extends State<ChannelSchedulePanel> {
         key == LogicalKeyboardKey.arrowDown ||
         key == LogicalKeyboardKey.arrowLeft ||
         key == LogicalKeyboardKey.arrowRight;
+    // A remote's Rewind / Fast-forward page through the list (owner).
+    final page = key == LogicalKeyboardKey.mediaRewind
+        ? -1
+        : key == LogicalKeyboardKey.mediaFastForward
+            ? 1
+            : 0;
+    if (page != 0) {
+      if (event is! KeyUpEvent) _move(list, page * _pageRows);
+      return KeyEventResult.handled;
+    }
     if (!select && !arrow && key != LogicalKeyboardKey.escape) {
       // Play/Pause, CH+/CH-… reach the player.
       return KeyEventResult.ignored;

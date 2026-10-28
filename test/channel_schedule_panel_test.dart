@@ -140,4 +140,17 @@ void main() {
     expect(closed, 1);
     expect(caught, isEmpty);
   });
+
+  testWidgets('Rewind / Fast-forward page through the list', (tester) async {
+    await pump(tester);
+    final i = onNow();
+    // A page is more rows than are left: the last show, then a page back.
+    await press(tester, LogicalKeyboardKey.mediaFastForward);
+    expect(find.text('About show 23'), findsOneWidget);
+    await press(tester, LogicalKeyboardKey.mediaRewind);
+    expect(find.text('About show 23'), findsNothing);
+    expect(find.text('About show $i'), findsNothing);
+    expect(caught, isEmpty);
+    expect(live, 0);
+  });
 }
