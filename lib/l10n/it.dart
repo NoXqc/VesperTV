@@ -1060,7 +1060,8 @@ const Map<String, String> kIt = {
   'Neon Purple': "Viola neon",
   'Neon Green': "Verde neon",
   'Aqua': "Acquamarina",
-  'Habs': "Habs",
+  'Red': "Rosso",
+  'Blue': "Blu",
   'Dark / Gold': "Nero / Oro",
 
   // ── TMDB ─────────────────────────────────────────────────────────────

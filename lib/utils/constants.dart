@@ -452,7 +452,7 @@ class AppConstants {
     ),
     // Owner, 2026-10-17: "same as the others, just green". `vivid` keeps the
     // neon (seeding it gave a pale mint). New id, not the retired
-    // 'green_orange' (that one maps to Habs).
+    // 'green_orange' (that one maps to Blue).
     CyberpunkPalette(
       id: 'neon_green',
       label: 'Neon Green',
@@ -468,29 +468,28 @@ class AppConstants {
       secondary: Color(0xFF14B8A6),
       vivid: true,
     ),
-    // Replaced the old Green / Orange palette (id 'green_orange', still
-    // mapped to this one — see AppPreferences._paletteById). Bleu-blanc-
-    // rouge: the red is the Canadiens' own C8102E; the blue is lifted well
-    // above the team's near-navy so it stays readable on this UI's black
-    // backgrounds, and doubles as the icon/symbol accent (see
-    // CyberpunkPalette.secondary's own doc comment). The white is purely
-    // the wordmark/swatch gradient's middle stop now (see
-    // CyberpunkPalette.highlight) — the focus border/gradient/text itself
-    // is `primary` (red), not `highlight`.
+    // Owner, 2026-10-28: standalone Red and Blue, using the same vivid
+    // treatment as Aqua. Legacy Habs/Green-Orange choices resolve to Blue.
     CyberpunkPalette(
-      id: 'habs',
-      label: 'Habs',
-      primary: Color(0xFFC8102E),
-      secondary: Color(0xFF1F4FD8),
-      highlight: Colors.white,
+      id: 'red',
+      label: 'Red',
+      primary: Color(0xFFF45145),
+      secondary: Color(0xFFC52C42),
+      vivid: true,
+    ),
+    CyberpunkPalette(
+      id: 'blue',
+      label: 'Blue',
+      primary: Color(0xFF4C8DFF),
+      secondary: Color(0xFF2563EB),
+      vivid: true,
     ),
     // "Antique Shine" — a hand-built scheme (see CyberpunkPalette.trueBlack),
     // not a seeded one: D4AF37 run through ColorScheme.fromSeed in dark mode
     // muted toward olive/brown, reported directly as looking "yellow-brown"
     // against a background that was a heavy gold-to-black wash rather than
-    // true OLED black. `highlight` is new here — every other palette except
-    // Habs left it null — but unlike Habs it stays out of the interactive
-    // ColorScheme entirely (see CyberpunkPalette.highlight's doc comment):
+    // true OLED black. `highlight` stays out of the interactive ColorScheme
+    // entirely (see CyberpunkPalette.highlight's doc comment):
     // a pale champagne tint painted as a wide solid fill read as a washed
     // "Game Boy" look on real hardware, not gold. It's purely the
     // wordmark's gradient shine; `primary` (the base gold) drives every

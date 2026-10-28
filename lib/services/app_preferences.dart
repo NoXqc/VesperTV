@@ -336,10 +336,9 @@ class AppPreferences extends ChangeNotifier {
   }
 
   CyberpunkPalette _paletteById(String id) {
-    // 'green_orange' was replaced by 'habs' — anyone who had picked it
-    // lands on the replacement rather than silently resetting to the
-    // default palette.
-    final resolved = id == 'green_orange' ? 'habs' : id;
+    // Blue replaces Habs and its older Green / Orange alias. Resolve on
+    // read so existing viewer-scoped keys and backups stay untouched.
+    final resolved = id == 'green_orange' || id == 'habs' ? 'blue' : id;
     return AppConstants.cyberpunkPalettes.firstWhere((p) => p.id == resolved,
         orElse: () => AppConstants.cyberpunkPalettes.first);
   }

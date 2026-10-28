@@ -101,7 +101,8 @@ void main() {
 
   for (final paletteId in [
     'dark_gold',
-    'habs',
+    'blue',
+    'red',
     'minimal',
     'neon_green',
     'aqua'

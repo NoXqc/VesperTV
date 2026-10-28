@@ -1430,8 +1430,8 @@ const Map<String, String> kEl = {
   "Neon Green":
       "Νέον πράσινο",
   "Aqua": "Ακουαμαρίνα",
-  "Habs":
-      "Habs",
+  "Red": "Κόκκινο",
+  "Blue": "Μπλε",
   "Dark / Gold":
       "Σκούρο / Χρυσό",
   "Cleared — TMDB sorting is now off":

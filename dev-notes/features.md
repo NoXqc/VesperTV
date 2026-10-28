@@ -73,10 +73,13 @@ Read before changing guide/Multiview/profiles/palettes/backup-server logic.
 - **Backup servers:** connect tries last-working → main → backups (one pass); live stream *open*
   failures retry other servers. Mid-stream drops do not fail over. Sticks to last-working server.
 - **Palettes:** duo-tone `primary`/`secondary`; optional `highlight` is wordmark/swatch decoration
-  only (Habs uses white). Old id `green_orange` maps to `habs`. `isMinimal` (Platinum) = flat black
-  with translucent-white glass focus; `trueBlack` (Dark / Gold) = hand-built scheme; `vivid`
-  (Neon Green, id `neon_green`) = seeded like Neon Purple but keeps the raw neon as `primary`
-  with black text on it (seeding turned it pale mint).
+  only. `isMinimal` (Platinum) = flat black with translucent-white glass focus;
+  `trueBlack` (Dark / Gold) = hand-built scheme; `vivid` (Neon Green, Aqua, Red, Blue)
+  keeps the raw accent as `primary` with black text on solid accent fills rather
+  than seeding it into a pastel. Red uses vermilion F45145 / crimson C52C42;
+  Blue uses royal blue 4C8DFF / cobalt 2563EB. Blue replaces Habs; old `habs`
+  and `green_orange` ids resolve to `blue` when read, leaving viewer storage and
+  imported backups untouched. Red is separate from the existing Rosé palette.
 - **Viewer profiles** (`ViewerProfile`, `ViewerProfileService`): several viewers sharing one
 - **Profile cards/photos and copying Main:** see `dev-notes/profile-cards-photos.md` for
   the new create/edit flow, LAN-only avatar upload, storage/backup and copy-key table.

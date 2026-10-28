@@ -362,6 +362,14 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **cdx, 2026-10-28 — Red / Blue palettes** (`codex/red-blue-palettes`):
+  standalone vivid vermilion Red; Habs replaced by vivid royal Blue. Existing
+  `habs` / `green_orange` preferences resolve to Blue without rewriting storage.
+  Localised EN/FR/ES/IT/EL labels; same Aqua-style accent treatment and Refined
+  finish behavior. Test +486 installed on Formuler (version/hash verified);
+  analyze baseline 16 and all 832 tests pass. Owner palette acceptance pending;
+  exact checks/artifact details in HANDOFF.md.
+
 - **cdx, 2026-10-28 — compact live info** (`codex/compact-live-info`):
   Channel schedule is inside the live/catch-up info card header. Narrower card,
   smaller logo/padding, one-line description, lower placement; same Up/OK/Down/Back

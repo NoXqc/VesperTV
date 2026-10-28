@@ -1059,7 +1059,8 @@ const Map<String, String> kEs = {
   'Neon Purple': "Morado neón",
   'Neon Green': "Verde neón",
   'Aqua': "Aguamarina",
-  'Habs': "Habs",
+  'Red': "Rojo",
+  'Blue': "Azul",
   'Dark / Gold': "Negro / Oro",
 
   // ── TMDB ─────────────────────────────────────────────────────────────

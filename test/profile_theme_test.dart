@@ -192,7 +192,7 @@ void main() {
   test('legacy alias and invalid palette fallback apply per viewer', () async {
     SharedPreferences.setMockInitialValues({
       ...seed(),
-      AppConstants.keyPaletteId: 'red_blue',
+      AppConstants.keyPaletteId: 'habs',
       scoped('alice'): 'green_orange',
       scoped('bob'): 'unknown'
     });
@@ -201,7 +201,13 @@ void main() {
     await storage.setActiveViewerId('alice');
     final prefs = AppPreferences(storage);
     await prefs.init();
-    expect(prefs.palette.id, 'habs');
+    expect(prefs.palette.id, 'blue');
+    await storage.setActiveViewerId('main');
+    prefs.reloadPaletteForViewer();
+    expect(prefs.palette.id, 'blue');
+    expect(storage.getPaletteId(), 'habs');
+    await storage.setActiveViewerId('alice');
+    expect(storage.getPaletteId(), 'green_orange');
     await storage.setActiveViewerId('bob');
     prefs.reloadPaletteForViewer();
     expect(prefs.palette.id, 'minimal');
@@ -270,7 +276,7 @@ void main() {
     expect(prefs.palette.id, 'purple_magenta');
     expect(await viewers.switchTo(page, 'main'), isTrue);
     await tester.pumpAndSettle();
-    expect(prefs.palette.id, 'habs');
+    expect(prefs.palette.id, 'blue');
     expect(prefs.refinedFinish, isTrue);
     expect(Theme.of(page).colorScheme.primary, mainColour);
     expect(await viewers.switchTo(page, 'alice'), isTrue);

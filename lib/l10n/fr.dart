@@ -1062,7 +1062,8 @@ const Map<String, String> kFr = {
   'Neon Purple': "Violet néon",
   'Neon Green': "Vert néon",
   'Aqua': "Aqua",
-  'Habs': "Habs",
+  'Red': "Rouge",
+  'Blue': "Bleu",
   'Dark / Gold': "Noir / Or",
 
   // ── TMDB ─────────────────────────────────────────────────────────────
