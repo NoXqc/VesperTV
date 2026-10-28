@@ -166,6 +166,55 @@ void main() {
     api.close();
   });
 
+  test(
+      "own-catalog add-on with IMDb streams is asked for other sources' "
+      'titles (Resume from Recently watched)', () async {
+    const own = ArchiveSource(
+      manifestUrl: 'https://aio.example/manifest.json',
+      name: 'NoxAIO',
+      catalogs: [
+        ArchiveCatalog(
+            type: ArchiveType.series, id: 'tmdb.top', name: 'Popular')
+      ],
+      imdbResources: {
+        'stream': ['movie', 'series']
+      },
+    );
+    const noImdb = ArchiveSource(
+      manifestUrl: 'https://custom.example/manifest.json',
+      name: 'Custom',
+      catalogs: [
+        ArchiveCatalog(type: ArchiveType.series, id: 'own', name: 'Own')
+      ],
+    );
+    final storage = await _storage([_torrentio, own, noImdb]);
+    final asked = <String>[];
+    final api = ArchiveApiService(client: MockClient((r) async {
+      asked.add('${r.url.host}${r.url.path}');
+      if (r.url.host == 'aio.example') {
+        return _json({
+          'streams': [
+            {'url': 'https://aio.example/e5.mkv', 'name': 'NoxRemux'}
+          ]
+        });
+      }
+      return _json({'streams': []});
+    }));
+    final service = ArchiveService(storage, api: api, cache: _Cache());
+    const meta = ArchiveMeta(
+        id: 'tt13111078', type: ArchiveType.series, name: 'Lioness');
+    final options = await service.streams(_torrentio, meta,
+        episode: const ArchiveVideo(
+            id: 'tt13111078:3:5', title: 'E5', season: 3, episode: 5));
+    expect(asked, [
+      'torrentio.example/stream/series/tt13111078:3:5.json',
+      'aio.example/stream/series/tt13111078:3:5.json',
+    ]);
+    expect(options.single.source.name, 'NoxAIO');
+    service.dispose();
+    api.close();
+  });
+
   test('a search row shared by stream-only add-ons names all of them',
       () async {
     final storage = await _storage([_torrentio, _aio]);

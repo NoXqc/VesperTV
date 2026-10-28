@@ -1109,18 +1109,32 @@ class ArchiveService extends ChangeNotifier {
       }
     }
 
+    final asked = <String>{};
     for (final s in _streamSources(source)) {
+      asked.add(s.manifestUrl);
       // Own ids (tmdb:…) the add-on can't resolve: retry with the IMDb id.
       if (await ask(s, videoId) == 0 && imdbId != null && s == source) {
         await ask(s, imdbId);
       }
     }
     // A title known by its IMDb id: the stream-only add-ons (same ids as
-    // the provider's rows) have streams for it too.
-    if (imdbId != null) {
+    // the provider's rows) have streams for it too, and so does an add-on
+    // with its own catalogs whose streams take IMDb ids (AIOStreams with
+    // TMDB catalogs: a show resumed from Recently watched or opened from
+    // another source never asked it, "No playable stream", owner
+    // 2026-10-28).
+    final imdbAny = imdbId ??
+        (meta.wireType == null && videoId.startsWith('tt') ? videoId : null);
+    if (imdbAny != null) {
       for (final s in enabledSources) {
-        if (s.streamOnly && s.manifestUrl != source.manifestUrl) {
-          await ask(s, imdbId);
+        if (asked.contains(s.manifestUrl) ||
+            s.server != null ||
+            s.tracker != null) {
+          continue;
+        }
+        if (s.streamOnly || s.supportsImdb('stream', meta.type.wire)) {
+          asked.add(s.manifestUrl);
+          await ask(s, imdbAny);
         }
       }
     }
