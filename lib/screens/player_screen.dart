@@ -20,6 +20,7 @@ import '../services/playlist_manager.dart';
 import '../utils/time_format.dart';
 import '../utils/constants.dart';
 import '../utils/tv_theme.dart';
+import '../widgets/channel_schedule_panel.dart';
 import '../widgets/data_pool_card.dart';
 import '../widgets/epg_guide.dart';
 import '../widgets/player_controls.dart';
@@ -125,6 +126,70 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (!_panelOpen) return;
     setState(() => _panelOpen = false);
     _rootFocus.requestFocus();
+  }
+
+  /// "Channel schedule" chip above the info card: Up from the card
+  /// focuses it, OK opens [ChannelSchedulePanel] (owner, 2026-10-28).
+  final FocusNode _scheduleChipFocus =
+      FocusNode(debugLabel: 'player-schedule-chip');
+
+  /// [ChannelSchedulePanel] showing. Back closes it (PopScope).
+  bool _scheduleOpen = false;
+
+  void _focusScheduleChip() {
+    _zapInfoTimer?.cancel();
+    _scheduleChipFocus.requestFocus();
+  }
+
+  /// Down/Back on the chip: back to the video, the card hides as usual.
+  void _leaveScheduleChip() {
+    _rootFocus.requestFocus();
+    _zapInfoTimer?.cancel();
+    _zapInfoTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) setState(() => _zapInfoVisible = false);
+    });
+  }
+
+  void _openSchedule() {
+    _hideTimer?.cancel();
+    _zapInfoTimer?.cancel();
+    _dataPoolTimer?.cancel();
+    setState(() {
+      _scheduleOpen = true;
+      _zapInfoVisible = false;
+      _dataPoolVisible = false;
+      _topVisible = false;
+      _bottomVisible = false;
+      _moreVisible = false;
+    });
+  }
+
+  void _closeSchedule() {
+    if (!_scheduleOpen) return;
+    setState(() => _scheduleOpen = false);
+    _rootFocus.requestFocus();
+  }
+
+  KeyEventResult _onScheduleChipKey(FocusNode node, KeyEvent event) {
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.select ||
+        key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter) {
+      if (event is KeyDownEvent) _openSchedule();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowDown) {
+      if (event is KeyDownEvent) _leaveScheduleChip();
+      return KeyEventResult.handled;
+    }
+    // Up/Left/Right stay on the chip (the root would open the bars or the
+    // side panel under it).
+    if (key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight) {
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   late final _sourceBackGuard = PlaybackModalBackGuard(onChanged: () {
@@ -261,6 +326,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _topScope.addListener(_onBarFocusChange);
     _bottomScope.addListener(_onBarFocusChange);
     _switchButtonFocus.addListener(_onBarFocusChange);
+    _scheduleChipFocus.addListener(_onBarFocusChange);
     _resetHideTimer();
     // Fill remembered from last time: hide the system bars again (no
     // orientation lock — that only comes with pressing ⛶).
@@ -317,6 +383,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   void _handleUp() {
+    // Info card up: Up reaches its "Channel schedule" chip first.
+    if (_zapInfoVisible &&
+        !_focusInBar &&
+        !_switchButtonFocus.hasFocus &&
+        !_scheduleOpen) {
+      _focusScheduleChip();
+      return;
+    }
     _resetHideTimer();
     if (_switchButtonFocus.hasFocus) {
       if (!_topVisible) {
@@ -415,6 +489,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
       _closePanel();
       return;
     }
+    if (_scheduleOpen) {
+      _closeSchedule();
+      return;
+    }
     if ((_playback.currentChannel ?? widget.channel).mediaFileInfo != null) {
       _fileInfoRequests.value++;
     }
@@ -487,7 +565,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   /// (Fire Stick) never sends them. Reveals the top bar so the new
   /// channel's name + now/next show.
   void _zapChannel(int step) {
-    if (_panelOpen) return;
+    if (_panelOpen || _scheduleOpen) return;
     // From catch-up, zapping steps from its live channel (and leaves it).
     final current = _playback.liveChannel ?? widget.channel;
     if (!current.isLive) return;
@@ -538,7 +616,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   /// card too — and on movies/episodes (provider or Media Hub) the Data
   /// pool card alone (owner, 2026-10-21: a user missed VOD stream specs).
   void _toggleInfoCard() {
-    if (_panelOpen) return;
+    if (_panelOpen || _scheduleOpen) return;
     final current = _playback.currentChannel ?? widget.channel;
     if (current.mediaFileInfo != null) _fileInfoRequests.value++;
     // Catch-up gets the same card, for the programme at the playhead.
@@ -657,6 +735,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _topScope.removeListener(_onBarFocusChange);
     _bottomScope.removeListener(_onBarFocusChange);
     _switchButtonFocus.removeListener(_onBarFocusChange);
+    _scheduleChipFocus.removeListener(_onBarFocusChange);
+    _scheduleChipFocus.dispose();
     _topScope.dispose();
     _bottomScope.dispose();
     _playFocus.dispose();
@@ -715,10 +795,21 @@ class _PlayerScreenState extends State<PlayerScreen> {
     return withTvThemeIfNeeded(
         context,
         (context) => PopScope(
-            // Back with the side panel open just closes the panel.
-            canPop: !_panelOpen && !_sourceBackGuard.blocksBack,
+            // Back with the side panel / schedule open just closes it;
+            // on the schedule chip, it returns to the video.
+            canPop: !_panelOpen &&
+                !_scheduleOpen &&
+                !_scheduleChipFocus.hasFocus &&
+                !_sourceBackGuard.blocksBack,
             onPopInvokedWithResult: (didPop, _) {
-              if (!didPop && !_sourceBackGuard.blocksBack) _closePanel();
+              if (didPop || _sourceBackGuard.blocksBack) return;
+              if (_scheduleOpen) {
+                _closeSchedule();
+              } else if (_scheduleChipFocus.hasFocus) {
+                _leaveScheduleChip();
+              } else {
+                _closePanel();
+              }
             },
             child: Scaffold(
               backgroundColor: Colors.black,
@@ -796,7 +887,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     onHorizontalDragEnd: _touch
                         ? (d) {
                             final v = d.primaryVelocity ?? 0;
-                            if (v > 300 && !_panelOpen && channel.isLive) {
+                            if (v > 300 &&
+                                !_panelOpen &&
+                                !_scheduleOpen &&
+                                channel.isLive) {
                               _openPanel();
                             } else if (v < -300 && _panelOpen) {
                               _closePanel();
@@ -936,18 +1030,36 @@ class _PlayerScreenState extends State<PlayerScreen> {
                               info: info,
                               requests: _fileInfoRequests,
                             ),
-                          // CH+/CH- and OK channel information stay at the top.
+                          // CH+/CH- and OK channel information stay at the
+                          // top, the "Channel schedule" chip above it.
                           Positioned(
-                            top: 24,
+                            top: 8,
                             left: 0,
                             right: 0,
-                            child: IgnorePointer(
-                              child: AnimatedOpacity(
-                                opacity: _zapInfoVisible ? 1 : 0,
-                                duration: const Duration(milliseconds: 200),
-                                child: Center(
-                                    child: _ZapInfoCard(
-                                        channel: channel, at: catchupAt)),
+                            child: AnimatedOpacity(
+                              opacity: _zapInfoVisible ? 1 : 0,
+                              duration: const Duration(milliseconds: 200),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IgnorePointer(
+                                    ignoring: !_zapInfoVisible,
+                                    child: ExcludeFocus(
+                                      excluding: !_zapInfoVisible,
+                                      child: _ScheduleChip(
+                                        focusNode: _scheduleChipFocus,
+                                        onKeyEvent: _onScheduleChipKey,
+                                        onTap: _openSchedule,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  IgnorePointer(
+                                    child: Center(
+                                        child: _ZapInfoCard(
+                                            channel: channel, at: catchupAt)),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -1102,6 +1214,22 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                   )
                                 : const SizedBox.shrink(),
                           ),
+
+                          if (_scheduleOpen)
+                            Positioned.fill(
+                              child: ChannelSchedulePanel(
+                                channel: playback.liveChannel ?? channel,
+                                at: catchupAt,
+                                onClose: _closeSchedule,
+                                onCatchup: (start) => _playback.playCatchup(
+                                    playback.liveChannel ?? channel, start),
+                                onLive: () {
+                                  if (_playback.catchup != null) {
+                                    _playback.backToLive();
+                                  }
+                                },
+                              ),
+                            ),
                         ],
                       ],
                     ),
@@ -1344,6 +1472,63 @@ class _TopBarIconButtonState extends State<_TopBarIconButton> {
     return widget.tooltip != null
         ? Tooltip(message: widget.tooltip!, child: button)
         : button;
+  }
+}
+
+/// The "Channel schedule" chip above [_ZapInfoCard]: Up focuses it, OK
+/// (or a tap) opens [ChannelSchedulePanel].
+class _ScheduleChip extends StatelessWidget {
+  const _ScheduleChip(
+      {required this.focusNode, required this.onKeyEvent, required this.onTap});
+
+  final FocusNode focusNode;
+  final FocusOnKeyEventCallback onKeyEvent;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
+    return Focus(
+      focusNode: focusNode,
+      onKeyEvent: onKeyEvent,
+      child: Builder(builder: (context) {
+        final focused = Focus.of(context).hasFocus;
+        return GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: focused
+                  ? Color.lerp(Colors.black, accent, 0.3)
+                  : Colors.black.withValues(alpha: 0.45),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                  color: focused ? accent : Colors.white24,
+                  width: focused ? 2 : 1),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.event_note,
+                    size: 16, color: focused ? accent : Colors.white70),
+                const SizedBox(width: 6),
+                Text(tr('Channel schedule'),
+                    style: TextStyle(
+                        color: focused ? Colors.white : Colors.white70,
+                        fontSize: 13,
+                        fontWeight:
+                            focused ? FontWeight.w600 : FontWeight.normal)),
+                if (!focused) ...[
+                  const SizedBox(width: 6),
+                  const Icon(Icons.keyboard_arrow_up,
+                      size: 16, color: Colors.white54),
+                ],
+              ],
+            ),
+          ),
+        );
+      }),
+    );
   }
 }
 

@@ -2085,4 +2085,14 @@ const Map<String, String> kEs = {
       "Seguir reproduciendo tras el programa",
   "Off: catch-up pauses when the programme you picked ends, so the next one doesn't start on its own; press Play to carry on. On: it keeps going like the channel did.":
       "Desactivado: el diferido se pausa al terminar el programa elegido, así el siguiente no empieza solo; pulsa Reproducir para continuar. Activado: sigue como lo hizo el canal.",
+  "Channel schedule":
+      "Programación del canal",
+  "▲ ▼ programmes  ·  OK to watch  ·  Back to close":
+      "▲ ▼ programas  ·  OK para ver  ·  Atrás para cerrar",
+  "On now  ·  OK to watch live":
+      "En emisión  ·  OK para ver en directo",
+  "Catch-up  ·  OK to watch from the start":
+      "Catch-up  ·  OK para verlo desde el principio",
+  "Upcoming":
+      "Próximamente",
 };

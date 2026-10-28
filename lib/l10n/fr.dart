@@ -2088,4 +2088,14 @@ const Map<String, String> kFr = {
       "Continuer après le programme",
   "Off: catch-up pauses when the programme you picked ends, so the next one doesn't start on its own; press Play to carry on. On: it keeps going like the channel did.":
       "Désactivé : le rattrapage se met en pause à la fin du programme choisi, le suivant ne démarre pas tout seul ; appuyez sur Lecture pour continuer. Activé : la lecture continue comme sur la chaîne.",
+  "Channel schedule":
+      "Programme de la chaîne",
+  "▲ ▼ programmes  ·  OK to watch  ·  Back to close":
+      "▲ ▼ émissions  ·  OK pour regarder  ·  Retour pour fermer",
+  "On now  ·  OK to watch live":
+      "En cours  ·  OK pour regarder en direct",
+  "Catch-up  ·  OK to watch from the start":
+      "Rattrapage  ·  OK pour regarder depuis le début",
+  "Upcoming":
+      "À venir",
 };

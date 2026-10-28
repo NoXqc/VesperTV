@@ -2089,4 +2089,14 @@ const Map<String, String> kIt = {
       "Continua dopo il programma",
   "Off: catch-up pauses when the programme you picked ends, so the next one doesn't start on its own; press Play to carry on. On: it keeps going like the channel did.":
       "Disattivato: il replay va in pausa alla fine del programma scelto, così il successivo non parte da solo; premi Play per continuare. Attivato: prosegue come ha fatto il canale.",
+  "Channel schedule":
+      "Palinsesto del canale",
+  "▲ ▼ programmes  ·  OK to watch  ·  Back to close":
+      "▲ ▼ programmi  ·  OK per guardare  ·  Indietro per chiudere",
+  "On now  ·  OK to watch live":
+      "In onda  ·  OK per guardare in diretta",
+  "Catch-up  ·  OK to watch from the start":
+      "Catch-up  ·  OK per guardare dall'inizio",
+  "Upcoming":
+      "In arrivo",
 };
