@@ -477,6 +477,13 @@ class StorageService {
   Future<void> setDataPool(bool value) =>
       _prefs.setBool(AppConstants.keyDataPool, value);
 
+  /// Settings > Playback > Catch-up: keep playing past the programme it was
+  /// started on (off by default: it stops at the programme's end).
+  bool getCatchupKeepPlaying() =>
+      _prefs.getBool(AppConstants.keyCatchupKeepPlaying) ?? false;
+  Future<void> setCatchupKeepPlaying(bool value) =>
+      _prefs.setBool(AppConstants.keyCatchupKeepPlaying, value);
+
   bool getMixFavoritePlaylists() =>
       _prefs.getBool(AppConstants.keyMixFavoritePlaylists) ?? false;
   Future<void> setMixFavoritePlaylists(bool value) =>

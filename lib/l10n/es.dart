@@ -2079,4 +2079,10 @@ const Map<String, String> kEs = {
   "No game this day.": "No hay partido este día.",
   "Next game": "Próximo partido",
   "Newest": "Novedades",
+  'What happens when a catch-up programme ends':
+      "Qué pasa cuando termina un programa en diferido",
+  'Keep playing after the programme':
+      "Seguir reproduciendo tras el programa",
+  "Off: catch-up pauses when the programme you picked ends, so the next one doesn't start on its own; press Play to carry on. On: it keeps going like the channel did.":
+      "Desactivado: el diferido se pausa al terminar el programa elegido, así el siguiente no empieza solo; pulsa Reproducir para continuar. Activado: sigue como lo hizo el canal.",
 };

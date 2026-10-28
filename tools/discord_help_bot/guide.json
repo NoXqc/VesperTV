@@ -155,7 +155,7 @@
     "id": "b3acbc189f93ebd4",
     "category": "Full screen",
     "title": "Seek and change replay programmes",
-    "answer": "The catch-up player shows a CATCH-UP tag, programme progress and how far behind live you are. Use the time bar to seek within the programme, or the previous / next programme buttons when listings are available. Next returns to live if there is no later programme to replay. At a programme's end playback continues automatically until it catches up to live.",
+    "answer": "The catch-up player shows a CATCH-UP tag, programme progress and how far behind live you are. Use the time bar to seek within the programme, or the previous / next programme buttons when listings are available. Next returns to live if there is no later programme to replay. At the end of the programme you picked, playback pauses so the next one doesn't start on its own: press Play to carry on, or turn on Settings → Playback → Catch-up → Keep playing after the programme. A paused live channel resuming through catch-up keeps going until it catches up to live.",
     "controls": "Android replay · player bar: previous / restart / next · ↑ to the time bar",
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },

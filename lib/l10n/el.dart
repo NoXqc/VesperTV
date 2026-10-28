@@ -2696,4 +2696,10 @@ const Map<String, String> kEl = {
   "No game this day.": "Κανένας αγώνας αυτή την ημέρα.",
   "Next game": "Επόμενος αγώνας",
   "Newest": "Νέες κυκλοφορίες",
+  'What happens when a catch-up programme ends':
+      "Τι γίνεται όταν τελειώνει ένα πρόγραμμα catch-up",
+  'Keep playing after the programme':
+      "Συνέχεια μετά το πρόγραμμα",
+  "Off: catch-up pauses when the programme you picked ends, so the next one doesn't start on its own; press Play to carry on. On: it keeps going like the channel did.":
+      "Ανενεργό: το catch-up κάνει παύση στο τέλος του προγράμματος που διάλεξες, ώστε το επόμενο να μην ξεκινά μόνο του· πάτα Αναπαραγωγή για συνέχεια. Ενεργό: συνεχίζει όπως το κανάλι.",
 };

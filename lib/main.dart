@@ -423,7 +423,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // Not awaited — the splash never waits on it; the post-splash chain
       // below awaits the same future.
       unawaited(_epgService.init());
-      _playbackService = PlaybackService(_storage, _playlistManager);
+      _playbackService = PlaybackService(_storage, _playlistManager)
+        ..catchupGuide = ((live) => _epgService.getPrograms(live.epgId));
       if (RecordingService.supported) {
         PlaybackService.confirmOpen = _confirmOverRecording;
         PlaybackService.openUrlFor = _recordingTapUrl;

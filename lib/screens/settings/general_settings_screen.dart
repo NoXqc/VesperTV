@@ -543,6 +543,21 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                                 context.read<AppPreferences>().setDataPool(v),
                           ),
                         ]),
+                  if (Platform.isAndroid)
+                    _section(
+                        'catchup', Icons.history_toggle_off, tr('Catch-up'),
+                        children: [
+                          TvSwitchListTile(
+                            title: Text(tr('Keep playing after the programme')),
+                            subtitle: Text(tr(
+                                "Off: catch-up pauses when the programme you picked ends, so the next one doesn't start on its own; press Play to carry on. On: it keeps going like the channel did.")),
+                            value: _storage.getCatchupKeepPlaying(),
+                            onChanged: (v) async {
+                              await _storage.setCatchupKeepPlaying(v);
+                              if (mounted) setState(() {});
+                            },
+                          ),
+                        ]),
                   _section('trailers', Icons.movie_outlined, tr('Trailers'),
                       children: [
                         TvSwitchListTile(

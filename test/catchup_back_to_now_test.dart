@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nox_iptv/models/catchup.dart';
 import 'package:nox_iptv/models/channel.dart';
+import 'package:nox_iptv/models/epg_program.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
 import 'package:nox_iptv/services/catchup_session.dart';
 import 'package:nox_iptv/services/epg_service.dart';
@@ -311,6 +312,81 @@ void main() {
     await settle(tester);
     expect(playback.error, 'This programme is not available in catch-up.');
     expect(players.length, opened);
+  });
+
+  cuTest('a .m3u8 answered with something not a playlist is asked as .ts',
+      (tester) async {
+    await playback.playCatchup(live, DateTime.utc(2026, 10, 27, 18, 30));
+    await settle(tester);
+    players.last.failWith('Source error [ERROR_CODE_PARSING_MANIFEST_MALFORMED]'
+        ' Input does not start with the #EXTM3U header');
+    await settle(tester);
+    expect(playback.error, isNull);
+    expect(players.last.url, endsWith('/2026-10-27:18-30/11.ts'));
+  });
+
+  group('stops at the end of the programme it was started on', () {
+    final show = EpgProgram(
+        channelId: 'cbc.ca',
+        title: 'True Blood',
+        start: DateTime.utc(2026, 10, 27, 18, 30),
+        stop: DateTime.utc(2026, 10, 27, 19, 20));
+    final next = EpgProgram(
+        channelId: 'cbc.ca',
+        title: 'True Blood',
+        start: show.stop,
+        stop: DateTime.utc(2026, 10, 27, 20, 10));
+
+    void playingAt(Duration position) => players.last.value =
+        players.last.value.copyWith(position: position, isPlaying: true);
+
+    cuTest('pauses past its end; Play carries on', (tester) async {
+      playback.catchupGuide = (_) => [show, next];
+      await playback.playCatchup(live, show.start);
+      await settle(tester);
+      expect(playback.catchup!.until, show.stop);
+      // Guide end + less than the grace: still playing.
+      playingAt(const Duration(minutes: 51));
+      await settle(tester);
+      expect(players.last.value.isPlaying, isTrue);
+      playingAt(const Duration(minutes: 52));
+      await settle(tester);
+      expect(players.last.value.isPlaying, isFalse);
+      expect(playback.catchup!.endReached, isTrue);
+      // Play: carries on into the next programme, no second stop.
+      await playback.togglePlayPause();
+      playingAt(const Duration(minutes: 53));
+      await settle(tester);
+      expect(players.last.value.isPlaying, isTrue);
+    });
+
+    cuTest('a request ending at the programme end does not roll on',
+        (tester) async {
+      playback.catchupGuide = (_) => [show, next];
+      await playback.playCatchup(live, show.start);
+      await settle(tester);
+      final opened = players.length;
+      players.last.finishAt(const Duration(minutes: 52));
+      await settle(tester);
+      expect(players.length, opened);
+      expect(playback.catchup, isNotNull);
+    });
+
+    cuTest('Keep playing after the programme: no stop', (tester) async {
+      await storageRef.setCatchupKeepPlaying(true);
+      playback.catchupGuide = (_) => [show, next];
+      await playback.playCatchup(live, show.start);
+      await settle(tester);
+      expect(playback.catchup!.until, isNull);
+    });
+
+    cuTest('a paused live channel resuming through catch-up never stops',
+        (tester) async {
+      playback.catchupGuide = (_) => [show, next];
+      await playback.playCatchup(live, show.start, toProgrammeEnd: false);
+      await settle(tester);
+      expect(playback.catchup!.until, isNull);
+    });
   });
 
   test('Send log shows the link shape, never the server or account', () {

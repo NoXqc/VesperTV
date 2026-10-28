@@ -11,6 +11,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../models/catchup.dart';
 import '../models/channel.dart';
+import '../models/epg_program.dart';
 import '../models/playlist_profile.dart';
 import '../utils/constants.dart';
 import '../widgets/native_video_hole.dart';
@@ -92,6 +93,11 @@ class PlaybackService extends ChangeNotifier {
   /// and [CatchupSession.live] the channel Back to now returns to.
   CatchupSession? catchup;
   CatchupSession? _pendingCatchup;
+
+  /// The guide's programmes for a live channel (set in main.dart from
+  /// EpgService): catch-up stops at the end of the programme it was
+  /// started on unless Settings > Playback > Catch-up says keep playing.
+  List<EpgProgram> Function(Channel live)? catchupGuide;
 
   /// Bumped by every catch-up / Back to now request: a late continuation
   /// or retry from an older one sees the change and does nothing.
@@ -713,8 +719,11 @@ class PlaybackService extends ChangeNotifier {
   /// Plays [live]'s catch-up from [at] (anywhere in its archive; older is
   /// clamped to the oldest the provider keeps). Within
   /// [CatchupSession.liveEdge] of now it plays the live channel instead.
+  /// [toProgrammeEnd]: stop at the end of the programme on at [at] (when
+  /// the setting asks for it); false for a paused live channel resuming
+  /// through catch-up, which carries on like the channel.
   Future<void> playCatchup(Channel live, DateTime at,
-      {bool retry = false}) async {
+      {bool retry = false, bool toProgrammeEnd = true}) async {
     final gen = ++_catchupGen;
     final now = clock();
     if (!live.hasCatchup || now.difference(at) < CatchupSession.liveEdge) {
@@ -738,11 +747,17 @@ class PlaybackService extends ChangeNotifier {
     if (gen != _catchupGen) return;
     final ch = CatchupSession.channelFor(live, start, url);
     if (!retry) _catchupErrors.clear();
+    final guide = catchupGuide;
+    final until =
+        toProgrammeEnd && guide != null && !_storage.getCatchupKeepPlaying()
+            ? CatchupSession.programmeAt(guide(live), from)?.stop
+            : null;
     _pendingCatchup = CatchupSession(
         live: live,
         requestStart: start,
         channel: ch,
-        startOffset: from.difference(start));
+        startOffset: from.difference(start),
+        until: until);
     // Asking again from the same minute (a retry) is still a real switch.
     if (currentChannel?.id == ch.id) currentChannel = null;
     final profile = _profileFor(live.playlistId);
@@ -800,7 +815,7 @@ class PlaybackService extends ChangeNotifier {
         ch.hasCatchup &&
         pausedAt != null &&
         clock().difference(pausedAt) > timeshiftAfter) {
-      await playCatchup(ch, pausedAt);
+      await playCatchup(ch, pausedAt, toProgrammeEnd: false);
       return;
     }
     await c.play();
@@ -827,6 +842,15 @@ class PlaybackService extends ChangeNotifier {
       if (v.hasError) {
         c.removeListener(listener);
         _onCatchupError(s, c, v.errorDescription ?? 'playback error');
+      } else if (!s.endReached &&
+          v.isPlaying &&
+          s.pastEnd(s.playhead(v.position))) {
+        // The programme it was started on is over: stop there (no next
+        // episode rolling in). Play carries on.
+        s.endReached = true;
+        debugPrint('Catchup: programme ended, paused');
+        unawaited(c.pause());
+        notifyListeners();
       } else if (v.isCompleted) {
         c.removeListener(listener);
         unawaited(_continueCatchup(s, v.position));
@@ -837,13 +861,20 @@ class PlaybackService extends ChangeNotifier {
 
   Future<void> _continueCatchup(CatchupSession s, Duration position) async {
     final t = s.playhead(position);
+    // The stream ran out at the programme's end: stay stopped there.
+    if (!s.endReached && s.pastEnd(t)) {
+      s.endReached = true;
+      notifyListeners();
+      return;
+    }
     // An empty request means the provider has nothing newer: caught up.
     if (position - s.startOffset < CatchupSession.minUsefulPlay ||
         clock().difference(t) < CatchupSession.liveEdge) {
       _catchupGen++;
       return _playLive(s.live);
     }
-    await playCatchup(s.live, t);
+    await playCatchup(s.live, t,
+        toProgrammeEnd: s.until != null && !s.endReached);
   }
 
   /// A catch-up error the native player didn't recover in place. A link the
@@ -855,7 +886,11 @@ class PlaybackService extends ChangeNotifier {
     final position = c.value.isInitialized ? c.value.position : Duration.zero;
     debugPrint('Catchup: error at ${position.inSeconds}s '
         '(HTTP ${status ?? '-'}): ${raw.split('\n').first}');
-    if (status == 400 || status == 404 || status == 410) {
+    // MANIFEST_MALFORMED: the panel answered the `.m3u8` link with the video
+    // itself or an error page, not a playlist (Shield user, Reddit
+    // 2026-10-28: raw error after three retries).
+    final notPlaylist = raw.contains('ERROR_CODE_PARSING_MANIFEST_MALFORMED');
+    if (status == 400 || status == 404 || status == 410 || notPlaylist) {
       // Some panels route only `.ts` timeshift links: ask once more that way
       // (dev-notes/catchup-plan.md), and keep using it on this playlist.
       final live = s.live;
@@ -863,8 +898,16 @@ class PlaybackService extends ChangeNotifier {
           !_catchupTsOnly.contains(live.playlistId) &&
           Uri.tryParse(s.channel.url)?.path.endsWith('.m3u8') == true) {
         _catchupTsOnly.add(live.playlistId);
-        debugPrint('Catchup: .m3u8 refused (HTTP $status), retrying as .ts');
-        unawaited(playCatchup(live, s.playhead(s.startOffset), retry: true));
+        debugPrint('Catchup: .m3u8 refused '
+            '(${notPlaylist ? 'not a playlist' : 'HTTP $status'}), '
+            'retrying as .ts');
+        unawaited(playCatchup(live, s.playhead(s.startOffset),
+            retry: true, toProgrammeEnd: s.until != null));
+        return;
+      }
+      if (notPlaylist) {
+        error = raw;
+        notifyListeners();
         return;
       }
       error = tr('This programme is not available in catch-up.');
@@ -881,7 +924,8 @@ class PlaybackService extends ChangeNotifier {
     }
     _catchupErrors.add(now);
     final at = s.playhead(position < s.startOffset ? s.startOffset : position);
-    unawaited(playCatchup(s.live, at, retry: true));
+    unawaited(playCatchup(s.live, at,
+        retry: true, toProgrammeEnd: s.until != null && !s.endReached));
   }
 
   /// True while a manual [reloadCurrentChannel] is in flight — guards

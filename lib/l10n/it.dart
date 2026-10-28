@@ -2083,4 +2083,10 @@ const Map<String, String> kIt = {
   "No game this day.": "Nessuna partita in questo giorno.",
   "Next game": "Prossima partita",
   "Newest": "Novità",
+  'What happens when a catch-up programme ends':
+      "Cosa succede quando finisce un programma in replay",
+  'Keep playing after the programme':
+      "Continua dopo il programma",
+  "Off: catch-up pauses when the programme you picked ends, so the next one doesn't start on its own; press Play to carry on. On: it keeps going like the channel did.":
+      "Disattivato: il replay va in pausa alla fine del programma scelto, così il successivo non parte da solo; premi Play per continuare. Attivato: prosegue come ha fatto il canale.",
 };

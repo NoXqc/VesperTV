@@ -2082,4 +2082,10 @@ const Map<String, String> kFr = {
   "No game this day.": "Aucun match ce jour-là.",
   "Next game": "Prochain match",
   "Newest": "Nouveautés",
+  'What happens when a catch-up programme ends':
+      "Ce qui se passe à la fin d'un programme en rattrapage",
+  'Keep playing after the programme':
+      "Continuer après le programme",
+  "Off: catch-up pauses when the programme you picked ends, so the next one doesn't start on its own; press Play to carry on. On: it keeps going like the channel did.":
+      "Désactivé : le rattrapage se met en pause à la fin du programme choisi, le suivant ne démarre pas tout seul ; appuyez sur Lecture pour continuer. Activé : la lecture continue comme sur la chaîne.",
 };

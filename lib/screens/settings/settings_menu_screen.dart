@@ -206,6 +206,9 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
             if (!Platform.isWindows)
               _general('datapool', Icons.analytics_outlined, tr('Data pool'),
                   tr('Stream details when you press OK while watching')),
+            if (Platform.isAndroid)
+              _general('catchup', Icons.history_toggle_off, tr('Catch-up'),
+                  tr('What happens when a catch-up programme ends')),
             _general('trailers', Icons.movie_outlined, tr('Trailers'),
                 tr('Play trailers automatically on movie and show pages')),
             _general(

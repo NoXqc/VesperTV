@@ -314,6 +314,9 @@ class AppConstants {
   /// pre-load. Device-only: the slow splash protects weak boxes (§10).
   static const String keyFastStartup = 'vesper_fast_startup';
   static const String keyDataPool = 'vesper_data_pool';
+  // Settings > Playback > Catch-up: carry on past the programme (off =
+  // stop at its end).
+  static const String keyCatchupKeepPlaying = 'vesper_catchup_keep_playing';
   // Live channel ids seen playing at real 4K (Real4kChannels), list.
   static const String keyReal4kChannels = 'vesper_real_4k_channels';
   // Media Hub placeholder clips re-asked + titles tagged Ready

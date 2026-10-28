@@ -19,7 +19,8 @@ class CatchupSession {
       {required this.live,
       required this.requestStart,
       required this.channel,
-      this.startOffset = Duration.zero});
+      this.startOffset = Duration.zero,
+      this.until});
 
   /// The live channel being replayed; Back to now plays it.
   final Channel live;
@@ -35,6 +36,24 @@ class CatchupSession {
   /// between whole minutes, so the request starts at the minute before and
   /// the player seeks this far in.
   final Duration startOffset;
+
+  /// The end of the programme this catch-up was started on, when it stops
+  /// there (Settings > Playback > Catch-up); null = carries on like the
+  /// channel did.
+  final DateTime? until;
+
+  /// Set once playback stopped at [until]: Play then carries on past it.
+  bool endReached = false;
+
+  /// How far past a programme's guide end catch-up still plays before it
+  /// stops: guide times are often a minute or two early.
+  static const endGrace = Duration(minutes: 2);
+
+  /// Whether [t] is past this request's stop point.
+  bool pastEnd(DateTime t) {
+    final end = until;
+    return end != null && !t.isBefore(end.add(endGrace));
+  }
 
   /// Closer to now than this, catch-up plays the live channel instead.
   static const liveEdge = Duration(seconds: 90);
