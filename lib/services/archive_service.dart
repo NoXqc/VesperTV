@@ -244,6 +244,7 @@ class ArchiveService extends ChangeNotifier {
     await _storage.setArchiveCinemetaCatalog(on);
     _search.clear();
     _genre.clear();
+    _newest.clear();
     _notify();
     if (on) await refresh();
   }
@@ -427,7 +428,11 @@ class ArchiveService extends ChangeNotifier {
       bool? underOther,
       bool includeSearchOnly = false}) {
     final other = underOther ?? _genre[type] == otherGenre;
-    final genre = filtered && !other ? _genre[type] : null;
+    final newest = filtered && !other && _newest.contains(type);
+    // Newest can't narrow server-side (a year catalog has no second filter):
+    // [rows] applies a picked genre to its items instead.
+    final genre = filtered && !other && !newest ? _genre[type] : null;
+    final year = DateTime.now().year;
     final shown = <String>{};
     return [
       for (final s in enabledSources)
@@ -436,10 +441,95 @@ class ArchiveService extends ChangeNotifier {
             if (base.type == type &&
                 s.underOther == other &&
                 (includeSearchOnly || !base.searchOnly))
-              if (genre == null ? base : base.withGenre(genre) case final c?)
+              if ((newest
+                      ? _newestOf(base, year)
+                      : genre == null
+                          ? base
+                          : base.withGenre(genre))
+                  case final c?)
                 if (!s.streamOnly ||
                     shown.add('${s.catalogBaseUrl}|${c.wire}|${c.slug}'))
                   (s, c),
+    ];
+  }
+
+  // ---- newest filter ------------------------------------------------------
+
+  /// Types with the "Newest" filter on (floating bar), kept for the session.
+  final Set<ArchiveType> _newest = {};
+
+  bool newest(ArchiveType type) => _newest.contains(type);
+
+  /// [base] as this year's releases: the provider's New row as it is, or a
+  /// source's own year catalog (`year` in its id, the year among its genre
+  /// options) narrowed to this year. Null for any other catalog.
+  static ArchiveCatalog? _newestOf(ArchiveCatalog base, int year) {
+    final y = '$year';
+    if (base.id == 'year' && base.extra['genre'] == y) return base;
+    if (base.searchOnly ||
+        base.extra.containsKey('genre') ||
+        !base.id.toLowerCase().contains('year') ||
+        !base.years.contains(y)) {
+      return null;
+    }
+    return ArchiveCatalog(
+        type: base.type,
+        id: base.id,
+        name: 'New',
+        extra: {...base.extra, 'genre': y},
+        genres: base.genres,
+        years: base.years,
+        wireType: base.wireType);
+  }
+
+  /// Whether some source offers a release-year catalog for [type] (the
+  /// Newest button is hidden otherwise).
+  bool canNewest(ArchiveType type) {
+    final year = DateTime.now().year;
+    for (final s in enabledSources) {
+      if (!_showCatalogs(s) || s.underOther) continue;
+      for (final c in s.catalogs) {
+        if (c.type == type && _newestOf(c, year) != null) return true;
+      }
+    }
+    return false;
+  }
+
+  /// Shows only new releases of [type] (the year catalogs, narrowed by the
+  /// picked genre when there is one), or the normal rows again.
+  Future<void> setNewest(ArchiveType type, bool on) async {
+    if (_newest.contains(type) == on) return;
+    if (on) {
+      _newest.add(type);
+    } else {
+      _newest.remove(type);
+    }
+    _notify();
+    if (!on) return;
+    for (final (s, c) in _catalogs(type)) {
+      final key = _rowKey(s, c);
+      if (_items.containsKey(key)) continue;
+      try {
+        _items[key] = await _cache.read(s.key, c);
+      } catch (e) {
+        debugPrint('ArchiveService: cache read failed: ${e.runtimeType}');
+      }
+    }
+    _notify();
+    await refresh();
+  }
+
+  /// [items] of a Newest row narrowed to the picked genre. Items that carry
+  /// no genres can't be judged, so they're left out while a genre is picked.
+  List<ArchiveMeta> _inGenre(ArchiveType type, List<ArchiveMeta> items) {
+    final genre = _genre[type];
+    if (genre == null || genre == otherGenre || !_newest.contains(type)) {
+      return items;
+    }
+    final want = genre.toLowerCase();
+    return [
+      for (final m in items)
+        if (m.genres.any((g) => g.toLowerCase() == want)) m,
     ];
   }
 
@@ -812,8 +902,9 @@ class ArchiveService extends ChangeNotifier {
         if (_favoritesRow(type) case final favorites?) favorites,
         if (_historyRow(type) case final history?) history,
         for (final (s, c) in _catalogs(type))
-          if (_items[_rowKey(s, c)] case final items? when items.isNotEmpty)
-            ArchiveRow(source: s, catalog: c, items: items),
+          if (_items[_rowKey(s, c)] case final raw? when raw.isNotEmpty)
+            if (_inGenre(type, raw) case final items when items.isNotEmpty)
+              ArchiveRow(source: s, catalog: c, items: items),
       ];
 
   final Set<String> _loadingMore = {};

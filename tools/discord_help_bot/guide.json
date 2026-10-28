@@ -283,7 +283,7 @@
     "id": "b39e8c0bc4e5d4f3",
     "category": "Media Hub",
     "title": "Floating bar",
-    "answer": "Search, a button for each row, and Genre. Genre › Other holds add-on catalogs that aren't plain movies or series.",
+    "answer": "Search, a button for each row, Genre and Newest. Genre › Other holds add-on catalogs that aren't plain movies or series. Newest shows only this year's releases (from a source's release-year catalog, such as the New row); pick a genre as well to see the new releases in that genre. Sources whose titles carry no genre information drop out while a genre is picked. After adding a TMDB catalog to an add-on, press Refresh so Newest can use it.",
     "controls": "↑ from the first row",
     "url": "https://vespertv.app/remote.html#Media%20Hub"
   },

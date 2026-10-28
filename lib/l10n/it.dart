@@ -2080,4 +2080,5 @@ const Map<String, String> kIt = {
   "OK: stats, watch or game menu · Hold OK: game menu · CH+/CH-: month": "OK: statistiche, guarda o menu partita · Tieni premuto OK: menu partita · CH+/CH-: mese",
   "No game this day.": "Nessuna partita in questo giorno.",
   "Next game": "Prossima partita",
+  "Newest": "Novità",
 };

@@ -2076,4 +2076,5 @@ const Map<String, String> kEs = {
   "OK: stats, watch or game menu · Hold OK: game menu · CH+/CH-: month": "OK: estadísticas, ver o menú del partido · Mantén OK: menú del partido · CH+/CH-: mes",
   "No game this day.": "No hay partido este día.",
   "Next game": "Próximo partido",
+  "Newest": "Novedades",
 };

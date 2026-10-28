@@ -2693,4 +2693,5 @@ const Map<String, String> kEl = {
   "OK: stats, watch or game menu · Hold OK: game menu · CH+/CH-: month": "OK: στατιστικά, παρακολούθηση ή μενού αγώνα · Κράτημα OK: μενού αγώνα · CH+/CH-: μήνας",
   "No game this day.": "Κανένας αγώνας αυτή την ημέρα.",
   "Next game": "Επόμενος αγώνας",
+  "Newest": "Νέες κυκλοφορίες",
 };

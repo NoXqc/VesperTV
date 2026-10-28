@@ -2079,4 +2079,5 @@ const Map<String, String> kFr = {
   "OK: stats, watch or game menu · Hold OK: game menu · CH+/CH-: month": "OK : stats, regarder ou menu du match · Maintenir OK : menu du match · CH+/CH- : mois",
   "No game this day.": "Aucun match ce jour-là.",
   "Next game": "Prochain match",
+  "Newest": "Nouveautés",
 };

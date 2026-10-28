@@ -57,6 +57,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
   final _barSearchNode = FocusNode(debugLabel: 'archive-bar-search');
   final _barClearNode = FocusNode(debugLabel: 'archive-bar-clear');
   final _barGenreNode = FocusNode(debugLabel: 'archive-bar-genre');
+  final _barNewestNode = FocusNode(debugLabel: 'archive-bar-newest');
   final _barBackNode = FocusNode(debugLabel: 'archive-bar-back');
 
   /// The floating bar's row jumps ("Popular", "New"...), by row key.
@@ -113,6 +114,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
     _barSearchNode.dispose();
     _barClearNode.dispose();
     _barGenreNode.dispose();
+    _barNewestNode.dispose();
     _barBackNode.dispose();
     for (final n in _barRowNodes.values) {
       n.dispose();
@@ -672,7 +674,26 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
         if (service.genre(_type) == ArchiveService.otherGenre) _barBackNode,
         for (final r in _barRows(rows)) _barRowNode(rows[r].key),
         if (service.genres(_type).isNotEmpty) _barGenreNode,
+        if (_showNewest(service)) _barNewestNode,
       ];
+
+  /// The Newest button: only when a source has a release-year catalog, and
+  /// not under Other (custom catalogs have none).
+  bool _showNewest(ArchiveService service) =>
+      service.genre(_type) != ArchiveService.otherGenre &&
+      service.canNewest(_type);
+
+  /// Newest on/off: new releases only (narrowed by the genre, if any).
+  Future<void> _toggleNewest(ArchiveService service) async {
+    final type = _type;
+    setState(() {
+      _focusedRow = 0;
+      _focused = null;
+      _focusedLabel = null;
+    });
+    if (_scroll.hasClients) _scroll.jumpTo(0);
+    await service.setNewest(type, !service.newest(type));
+  }
 
   /// Up into the bar lands on the current row's jump button (else the
   /// first button).
@@ -846,6 +867,14 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                             : _genreName(genre),
                         active: genre != null,
                         onTap: () => _pickGenre(service),
+                      ),
+                    if (_showNewest(service))
+                      _BarButton(
+                        focusNode: _barNewestNode,
+                        icon: Icons.new_releases_outlined,
+                        label: tr('Newest'),
+                        active: service.newest(_type),
+                        onTap: () => _toggleNewest(service),
                       ),
                   ],
                 ),

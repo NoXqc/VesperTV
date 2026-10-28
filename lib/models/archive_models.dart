@@ -50,6 +50,7 @@ class ArchiveCatalog {
     this.searchable = false,
     this.searchOnly = false,
     this.genres = const [],
+    this.years = const [],
     this.wireType,
   });
 
@@ -79,6 +80,11 @@ class ArchiveCatalog {
   /// this catalog for. Empty = the row can't be filtered.
   final List<String> genres;
 
+  /// Numeric `genre` options (a year catalog: "2026", "2025"…), kept apart
+  /// from [genres] so they don't show in the genre picker. The Newest
+  /// filter uses them.
+  final List<String> years;
+
   /// This catalog narrowed to [genre] (sent as the `genre` extra), or null
   /// when it doesn't offer that genre or already fixes its own.
   ArchiveCatalog? withGenre(String genre) =>
@@ -92,6 +98,7 @@ class ArchiveCatalog {
               searchable: searchable,
               searchOnly: searchOnly,
               genres: genres,
+              years: years,
               wireType: wireType,
             );
 
@@ -110,6 +117,7 @@ class ArchiveCatalog {
         if (searchable) 'searchable': true,
         if (searchOnly) 'searchOnly': true,
         if (genres.isNotEmpty) 'genres': genres,
+        if (years.isNotEmpty) 'years': years,
       };
 
   /// Reads both a manifest entry (`extra: [{name: search}, …]`) and the
@@ -144,6 +152,13 @@ class ArchiveCatalog {
       genres: [
         for (final g in {for (final o in genreOptions) '$o'.trim()})
           if (g.isNotEmpty && !RegExp(r'^\d+$').hasMatch(g)) g,
+      ],
+      years: [
+        for (final g in {
+          ...genreOptions.map((o) => '$o'.trim()),
+          ...(j['years'] as List? ?? const []).map((o) => '$o'.trim()),
+        })
+          if (RegExp(r'^\d{4}$').hasMatch(g)) g,
       ],
       wireType: wire == type.wire ? null : wire,
     );
