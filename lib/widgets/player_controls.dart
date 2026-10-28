@@ -442,7 +442,13 @@ class PlayerControls extends StatelessWidget {
     this.onToggleMore,
     this.onOpenMultiview,
     this.playFocusNode,
+    this.insetForSystemBars = false,
   });
+
+  /// The full-screen player's bar: kept clear of the system navigation bar
+  /// and cutouts (it sat under a phone's 3-button bar, Pixel 10 Pro XL), and
+  /// laid out on two lines on a portrait phone.
+  final bool insetForSystemBars;
 
   final VideoPlayerHdrController controller;
   final String title;
@@ -547,9 +553,13 @@ class PlayerControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final inset = insetForSystemBars
+        ? MediaQuery.viewPaddingOf(context)
+        : EdgeInsets.zero;
     return Container(
       color: RefinedFinish.surface(context, Colors.black54),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: EdgeInsets.fromLTRB(
+          12 + inset.left, 6, 12 + inset.right, 6 + inset.bottom),
       child: ValueListenableBuilder<VideoPlayerHdrValue>(
         valueListenable: controller,
         builder: (context, value, _) {
@@ -604,229 +614,227 @@ class PlayerControls extends StatelessWidget {
               // One row (owner, 2026-10-18: slimmer): title left, buttons
               // centred, badges + time right — the two sides share the
               // leftover width equally so the buttons stay centred.
-              LayoutBuilder(
-                  builder: (context, box) => Row(
+              // Portrait phone (full-screen player only): title and time on
+              // one line, the buttons on their own full-width line below —
+              // squeezed into 60% of a portrait width they were tiny
+              // (owner + Discord, 2026-10-28).
+              LayoutBuilder(builder: (context, box) {
+                final twoLines = insetForSystemBars && box.maxWidth < 600;
+                final titleCell = Expanded(
+                  child: catchup == null
+                      ? PlayerBarTitle(title: title)
+                      : Row(children: [
+                          GoldTag(
+                              label: tr('Catch-up').toUpperCase(),
+                              margin: const EdgeInsets.only(right: 6)),
+                          Expanded(
+                              child: PlayerBarTitle(
+                                  title: _catchupTitle(
+                                      context, catchup, position))),
+                        ]),
+                );
+                final buttons = ConstrainedBox(
+                  constraints: BoxConstraints(
+                      maxWidth: twoLines ? box.maxWidth : box.maxWidth * 0.6),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Theme(
+                      data: Theme.of(context)
+                          .copyWith(visualDensity: VisualDensity.compact),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Expanded(
-                            child: catchup == null
-                                ? PlayerBarTitle(title: title)
-                                : Row(children: [
-                                    GoldTag(
-                                        label: tr('Catch-up').toUpperCase(),
-                                        margin:
-                                            const EdgeInsets.only(right: 6)),
-                                    Expanded(
-                                        child: PlayerBarTitle(
-                                            title: _catchupTitle(
-                                                context, catchup, position))),
-                                  ]),
-                          ),
-                          // Capped so FittedBox has a width to scale down to.
-                          ConstrainedBox(
-                            constraints:
-                                BoxConstraints(maxWidth: box.maxWidth * 0.6),
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Theme(
-                                data: Theme.of(context).copyWith(
-                                    visualDensity: VisualDensity.compact),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (onToggleFavorite != null)
-                                      IconButton(
-                                        icon: Icon(
-                                          isFavorite == true
-                                              ? Icons.star
-                                              : Icons.star_border,
-                                          color: isFavorite == true
-                                              ? Colors.amber
-                                              : Colors.white,
-                                        ),
-                                        tooltip: isFavorite == true
-                                            ? tr('Remove from favorites')
-                                            : tr('Add to favorites'),
-                                        onPressed: onToggleFavorite,
-                                      ),
-                                    // Episode nav — distinct icon shape (skip_previous/next,
-                                    // not replay_10/forward_10) so it doesn't read as "seek
-                                    // within this episode" the way the buttons either side
-                                    // of play/pause already do.
-                                    if (onPrevious != null)
-                                      IconButton(
-                                        icon: const Icon(Icons.skip_previous,
-                                            color: Colors.white),
-                                        tooltip: tr('Previous episode'),
-                                        onPressed: onPrevious,
-                                      ),
-                                    if (catchup != null)
-                                      ..._catchupLeading(
-                                          context, playback!, catchup),
-                                    // Skip/fast-seek only makes sense for VOD.
-                                    if (showSeek)
-                                      _SkipButton(
-                                        icon: Icons.replay_10,
-                                        onSeek: (amount) {
-                                          onActivity?.call();
-                                          final target = position - amount;
-                                          controller.seekTo(
-                                              target < Duration.zero
-                                                  ? Duration.zero
-                                                  : target);
-                                        },
-                                      ),
-                                    IconButton(
-                                      focusNode: playFocusNode,
-                                      icon: Icon(
-                                          value.isPlaying
-                                              ? Icons.pause
-                                              : Icons.play_arrow,
-                                          color: Colors.white),
-                                      // The service's toggle: pausing a live
-                                      // channel with catch-up is a timeshift.
-                                      onPressed: () => ownsPlayer
-                                          ? playback!.togglePlayPause()
-                                          : value.isPlaying
-                                              ? controller.pause()
-                                              : controller.play(),
-                                    ),
-                                    if (showSeek)
-                                      _SkipButton(
-                                        icon: Icons.forward_10,
-                                        onSeek: (amount) {
-                                          onActivity?.call();
-                                          final target = position + amount;
-                                          controller.seekTo(target > duration
-                                              ? duration
-                                              : target);
-                                        },
-                                      ),
-                                    if (onNext != null)
-                                      IconButton(
-                                        icon: const Icon(Icons.skip_next,
-                                            color: Colors.white),
-                                        tooltip: tr('Next episode'),
-                                        onPressed: onNext,
-                                      ),
-                                    if (catchup != null)
-                                      ..._catchupTrailing(
-                                          context, playback!, catchup),
-                                    if (onToggleMore != null) ...[
-                                      if (isLive && channel != null)
-                                        _LabeledIconButton(
-                                          icon: Icons.history,
-                                          label: tr(
-                                              'Recall — go back to a recent channel'),
-                                          onPressed: () {
-                                            onActivity?.call();
-                                            showRecallPicker(context, channel!);
-                                          },
-                                        ),
-                                      // Start over: the programme on now, from
-                                      // its start (catch-up channels only).
-                                      if (isLive &&
-                                          channel != null &&
-                                          channel!.hasCatchup)
-                                        _LabeledIconButton(
-                                          icon: Icons.restart_alt,
-                                          label: tr('Watch from the start'),
-                                          onPressed: () {
-                                            onActivity?.call();
-                                            final now = context
-                                                .read<EpgService>()
-                                                .getCurrentProgram(
-                                                    channel!.epgId);
-                                            if (now != null) {
-                                              playback?.playCatchup(
-                                                  channel!, now.start);
-                                            }
-                                          },
-                                        ),
-                                      // Manual recovery for a channel that's silently
-                                      // stalled (frozen frame, no spinner, no error) — see
-                                      // PlaybackService.reloadCurrentChannel's doc comment
-                                      // for why this is a manual button rather than an
-                                      // automatic watchdog. Live only, same gating as Recall
-                                      // above.
-                                      if (isLive && channel != null)
-                                        _LabeledIconButton(
-                                          icon: Icons.refresh,
-                                          label: tr('Reload channel'),
-                                          onPressed: () {
-                                            onActivity?.call();
-                                            context
-                                                .read<PlaybackService>()
-                                                .reloadCurrentChannel();
-                                          },
-                                        ),
-                                      // Keyed by stream: the bar stays mounted
-                                      // across zaps (and a native live zap
-                                      // keeps the controller), so without a
-                                      // new key the track lists were read
-                                      // once per player screen and a later
-                                      // channel's audio tracks never showed
-                                      // (CBC Montreal described-video track,
-                                      // owner 2026-10-26).
-                                      _AudioTrackButton(
-                                          key: ValueKey(Object.hash('audio',
-                                              controller, channel?.id)),
-                                          controller: controller),
-                                      _SubtitleButton(
-                                          key: ValueKey(Object.hash(
-                                              'subs', controller, channel?.id)),
-                                          controller: controller),
-                                      if (linkedChannel != null)
-                                        _LinkedChannelButton(
-                                            linkedChannel: linkedChannel!),
-                                      if (isLive && onOpenMultiview != null)
-                                        _LabeledIconButton(
-                                          icon: Icons.grid_view,
-                                          label: tr('Open in Multiview'),
-                                          onPressed: () {
-                                            onActivity?.call();
-                                            onOpenMultiview!();
-                                          },
-                                        ),
-                                    ],
-                                  ],
-                                ),
+                          if (onToggleFavorite != null)
+                            IconButton(
+                              icon: Icon(
+                                isFavorite == true
+                                    ? Icons.star
+                                    : Icons.star_border,
+                                color: isFavorite == true
+                                    ? Colors.amber
+                                    : Colors.white,
                               ),
+                              tooltip: isFavorite == true
+                                  ? tr('Remove from favorites')
+                                  : tr('Add to favorites'),
+                              onPressed: onToggleFavorite,
                             ),
-                          ),
-                          Expanded(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                if (channel != null && isLive)
-                                  RecPill(channel: channel),
-                                _QualityBadge(controller: controller),
-                                const SizedBox(width: 4),
-                                _AudioChannelBadge(controller: controller),
-                                const SizedBox(width: 8),
-                                if (catchup != null)
-                                  Flexible(
-                                    child: _CatchupClock(
-                                        session: catchup, position: position),
-                                  )
-                                else if (showSeek)
-                                  Flexible(
-                                    child: Text(
-                                      '${_formatDuration(position)} / ${_formatDuration(duration)}',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                          color: Colors.white70, fontSize: 12),
-                                    ),
-                                  )
-                                else if (isLive)
-                                  Flexible(
-                                      child: _LiveRemainingLabel(
-                                          channelId: channelId)),
-                              ],
+                          // Episode nav — distinct icon shape (skip_previous/next,
+                          // not replay_10/forward_10) so it doesn't read as "seek
+                          // within this episode" the way the buttons either side
+                          // of play/pause already do.
+                          if (onPrevious != null)
+                            IconButton(
+                              icon: const Icon(Icons.skip_previous,
+                                  color: Colors.white),
+                              tooltip: tr('Previous episode'),
+                              onPressed: onPrevious,
                             ),
+                          if (catchup != null)
+                            ..._catchupLeading(context, playback!, catchup),
+                          // Skip/fast-seek only makes sense for VOD.
+                          if (showSeek)
+                            _SkipButton(
+                              icon: Icons.replay_10,
+                              onSeek: (amount) {
+                                onActivity?.call();
+                                final target = position - amount;
+                                controller.seekTo(target < Duration.zero
+                                    ? Duration.zero
+                                    : target);
+                              },
+                            ),
+                          IconButton(
+                            focusNode: playFocusNode,
+                            icon: Icon(
+                                value.isPlaying
+                                    ? Icons.pause
+                                    : Icons.play_arrow,
+                                color: Colors.white),
+                            // The service's toggle: pausing a live
+                            // channel with catch-up is a timeshift.
+                            onPressed: () => ownsPlayer
+                                ? playback!.togglePlayPause()
+                                : value.isPlaying
+                                    ? controller.pause()
+                                    : controller.play(),
                           ),
+                          if (showSeek)
+                            _SkipButton(
+                              icon: Icons.forward_10,
+                              onSeek: (amount) {
+                                onActivity?.call();
+                                final target = position + amount;
+                                controller.seekTo(
+                                    target > duration ? duration : target);
+                              },
+                            ),
+                          if (onNext != null)
+                            IconButton(
+                              icon: const Icon(Icons.skip_next,
+                                  color: Colors.white),
+                              tooltip: tr('Next episode'),
+                              onPressed: onNext,
+                            ),
+                          if (catchup != null)
+                            ..._catchupTrailing(context, playback!, catchup),
+                          if (onToggleMore != null) ...[
+                            if (isLive && channel != null)
+                              _LabeledIconButton(
+                                icon: Icons.history,
+                                label:
+                                    tr('Recall — go back to a recent channel'),
+                                onPressed: () {
+                                  onActivity?.call();
+                                  showRecallPicker(context, channel!);
+                                },
+                              ),
+                            // Start over: the programme on now, from
+                            // its start (catch-up channels only).
+                            if (isLive &&
+                                channel != null &&
+                                channel!.hasCatchup)
+                              _LabeledIconButton(
+                                icon: Icons.restart_alt,
+                                label: tr('Watch from the start'),
+                                onPressed: () {
+                                  onActivity?.call();
+                                  final now = context
+                                      .read<EpgService>()
+                                      .getCurrentProgram(channel!.epgId);
+                                  if (now != null) {
+                                    playback?.playCatchup(channel!, now.start);
+                                  }
+                                },
+                              ),
+                            // Manual recovery for a channel that's silently
+                            // stalled (frozen frame, no spinner, no error) — see
+                            // PlaybackService.reloadCurrentChannel's doc comment
+                            // for why this is a manual button rather than an
+                            // automatic watchdog. Live only, same gating as Recall
+                            // above.
+                            if (isLive && channel != null)
+                              _LabeledIconButton(
+                                icon: Icons.refresh,
+                                label: tr('Reload channel'),
+                                onPressed: () {
+                                  onActivity?.call();
+                                  context
+                                      .read<PlaybackService>()
+                                      .reloadCurrentChannel();
+                                },
+                              ),
+                            // Keyed by stream: the bar stays mounted
+                            // across zaps (and a native live zap
+                            // keeps the controller), so without a
+                            // new key the track lists were read
+                            // once per player screen and a later
+                            // channel's audio tracks never showed
+                            // (CBC Montreal described-video track,
+                            // owner 2026-10-26).
+                            _AudioTrackButton(
+                                key: ValueKey(Object.hash(
+                                    'audio', controller, channel?.id)),
+                                controller: controller),
+                            _SubtitleButton(
+                                key: ValueKey(Object.hash(
+                                    'subs', controller, channel?.id)),
+                                controller: controller),
+                            if (linkedChannel != null)
+                              _LinkedChannelButton(
+                                  linkedChannel: linkedChannel!),
+                            if (isLive && onOpenMultiview != null)
+                              _LabeledIconButton(
+                                icon: Icons.grid_view,
+                                label: tr('Open in Multiview'),
+                                onPressed: () {
+                                  onActivity?.call();
+                                  onOpenMultiview!();
+                                },
+                              ),
+                          ],
                         ],
-                      )),
+                      ),
+                    ),
+                  ),
+                );
+                final side = Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (channel != null && isLive) RecPill(channel: channel),
+                      _QualityBadge(controller: controller),
+                      const SizedBox(width: 4),
+                      _AudioChannelBadge(controller: controller),
+                      const SizedBox(width: 8),
+                      if (catchup != null)
+                        Flexible(
+                          child: _CatchupClock(
+                              session: catchup, position: position),
+                        )
+                      else if (showSeek)
+                        Flexible(
+                          child: Text(
+                            '${_formatDuration(position)} / ${_formatDuration(duration)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 12),
+                          ),
+                        )
+                      else if (isLive)
+                        Flexible(
+                            child: _LiveRemainingLabel(channelId: channelId)),
+                    ],
+                  ),
+                );
+                if (!twoLines) return Row(children: [titleCell, buttons, side]);
+                return Column(mainAxisSize: MainAxisSize.min, children: [
+                  Row(children: [titleCell, side]),
+                  const SizedBox(height: 2),
+                  buttons,
+                ]);
+              }),
             ],
           );
         },

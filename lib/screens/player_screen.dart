@@ -190,6 +190,25 @@ class _PlayerScreenState extends State<PlayerScreen> {
   /// The rotate button forced an orientation (released on leaving).
   bool _rotated = false;
 
+  /// Touch devices: the orientation the system bars were last set for —
+  /// hidden in landscape (they sat over the video and the player bar,
+  /// Pixel 10 Pro XL, Discord 2026-10-28), shown in portrait unless Fill.
+  Orientation? _barsFor;
+  bool _barsHidden = false;
+
+  void _syncSystemBars(Orientation orientation) {
+    if (_barsFor == orientation) return;
+    _barsFor = orientation;
+    final hide = _immersive || orientation == Orientation.landscape;
+    if (hide == _barsHidden) return;
+    _barsHidden = hide;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      SystemChrome.setEnabledSystemUIMode(
+          hide ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge);
+    });
+  }
+
   final FocusScopeNode _topScope = FocusScopeNode(debugLabel: 'player-top');
   final FocusNode _playFocus = FocusNode(debugLabel: 'player-play');
   final FocusScopeNode _bottomScope =
@@ -248,6 +267,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (context.read<AppPreferences>().videoFill &&
         !context.read<AppPreferences>().isTelevision) {
       _immersive = true;
+      _barsHidden = true;
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     }
   }
@@ -560,6 +580,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
     prefs.setVideoFill(next);
     _resetHideTimer();
     setState(() => _immersive = next);
+    _barsHidden = next;
+    _barsFor = null;
     if (next) {
       if (!_isTvLayout) {
         await SystemChrome.setPreferredOrientations([
@@ -642,7 +664,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _rootFocus.dispose();
     // Defensive: never leave the whole app stuck in landscape/immersive
     // mode if this screen is popped while _immersive was still on.
-    if (_immersive || _rotated) _restoreChrome();
+    if (_immersive || _rotated || _barsHidden) _restoreChrome();
     super.dispose();
   }
 
@@ -683,6 +705,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     // && a linkedChannel to offer), same caching pattern as [_isTvLayout].
     _hasSwitchButton = playback.error != null && linkedChannel != null;
     _touch = !prefs.isTelevision;
+    if (_touch && !inPip) _syncSystemBars(MediaQuery.orientationOf(context));
     _isTvLayout = prefs.layoutMode == 'tv' ||
         (prefs.layoutMode == 'auto' &&
             (prefs.isTelevision ||
@@ -985,6 +1008,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                     child: FocusScope(
                                       node: _bottomScope,
                                       child: PlayerControls(
+                                        insetForSystemBars: true,
                                         controller: controller,
                                         title: channel.name,
                                         // epgId (rawId, or a manual override), not the composite `id` —
