@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -148,6 +149,21 @@ void main() {
       await tester.pump();
     });
   }
+
+  testWidgets('popup appears over dialogs and menus too', (tester) async {
+    await setup();
+    await mount(tester);
+    unawaited(showDialog<void>(
+        context: navigator.currentContext!,
+        builder: (_) => const AlertDialog(content: Text('Open dialog'))));
+    await tester.pumpAndSettle();
+    score = '1';
+    await tick(tester, 30);
+    expect(find.text('Open dialog'), findsOneWidget);
+    expect(find.text('Canadiens scored!'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+  });
 
   testWidgets(
       'popup appears over another route; opt-out and profile switch remove it',
