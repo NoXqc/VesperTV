@@ -44,6 +44,7 @@ class SportsModeShell extends StatefulWidget {
     required this.onRailFocusChanged,
     this.moving = false,
     this.onMove,
+    this.collapse = false,
   });
   final List<SportsModeRailEntry> entries;
   final int leagueCount;
@@ -54,6 +55,10 @@ class SportsModeShell extends StatefulWidget {
   final bool moving;
   final ValueChanged<int>? onMove;
 
+  /// The rail shows only while it has focus (Left from the content's first
+  /// control/card), like the Live TV columns; the content gets its width.
+  final bool collapse;
+
   @override
   State<SportsModeShell> createState() => SportsModeShellState();
 }
@@ -61,6 +66,7 @@ class SportsModeShell extends StatefulWidget {
 class SportsModeShellState extends State<SportsModeShell> {
   final _rail = FocusScopeNode(debugLabel: 'sports-mode-rail');
   String? _lastRail;
+  bool _railFocused = false;
 
   void focusRail() {
     final enabled = widget.entries.where((e) => e.enabled).toList();
@@ -211,7 +217,10 @@ class SportsModeShellState extends State<SportsModeShell> {
 
   Widget _buildRail(bool narrow) => FocusScope(
         node: _rail,
-        onFocusChange: widget.onRailFocusChanged,
+        onFocusChange: (focused) {
+          if (focused != _railFocused) setState(() => _railFocused = focused);
+          widget.onRailFocusChanged(focused);
+        },
         child: Focus(
           canRequestFocus: false,
           onKeyEvent: _onKey,
@@ -278,11 +287,28 @@ class SportsModeShellState extends State<SportsModeShell> {
                 : Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                        SizedBox(
-                            width: 180,
-                            child: Padding(
-                                padding: const EdgeInsets.fromLTRB(8, 8, 0, 8),
-                                child: _buildRail(false))),
+                        // Kept mounted while hidden: its nodes must take focus.
+                        Offstage(
+                          offstage: widget.collapse && !_railFocused,
+                          child: SizedBox(
+                              width: 180,
+                              child: Padding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(8, 8, 0, 8),
+                                  child: _buildRail(false))),
+                        ),
+                        if (widget.collapse && !_railFocused)
+                          // Says Left opens a menu; a click opens it too.
+                          GestureDetector(
+                            key: const ValueKey('sports-mode-rail-tab'),
+                            behavior: HitTestBehavior.opaque,
+                            onTap: focusRail,
+                            child: const SizedBox(
+                                width: 18,
+                                child: Center(
+                                    child: Icon(Icons.chevron_right,
+                                        size: 20, color: Colors.white38))),
+                          ),
                         main,
                       ]));
       });

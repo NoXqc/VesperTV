@@ -352,23 +352,25 @@ void main() {
         findsNothing);
     await press(tester, LogicalKeyboardKey.arrowRight);
     expect(getFocus(), 'sports-card-nhl:game100');
-    await press(tester, LogicalKeyboardKey.arrowUp); // tools
+    // The rail hides while the content has focus; a tab marks the edge.
+    expect(find.byKey(const ValueKey('sports-mode-rail')), findsNothing);
+    expect(find.byKey(const ValueKey('sports-mode-rail-tab')), findsOneWidget);
+    await press(tester, LogicalKeyboardKey.arrowUp); // tools, day menu first
+    expect(getFocus(), 'sports-chip-day:menu');
+    await press(tester, LogicalKeyboardKey.arrowRight);
     expect(getFocus(), 'sports-chip-standings');
     await press(tester, LogicalKeyboardKey.arrowRight);
     expect(getFocus(), 'sports-chip-myteams');
-    await press(tester, LogicalKeyboardKey.arrowUp);
-    expect(getFocus(), 'sports-chip-day:0');
-    await press(tester, LogicalKeyboardKey.arrowRight);
-    expect(getFocus(), 'sports-chip-day:1');
-    await press(tester, LogicalKeyboardKey.arrowUp);
+    await press(tester, LogicalKeyboardKey.arrowUp); // no day strip
     expect(getFocus(), 'sports-chip-league:all');
     await press(tester, LogicalKeyboardKey.arrowRight);
     expect(getFocus(), 'sports-chip-league:uefa.champions');
     await press(tester, LogicalKeyboardKey.arrowDown);
-    expect(getFocus(), 'sports-chip-day:1');
+    expect(getFocus(), 'sports-chip-myteams');
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(getFocus(), 'sports-chip-league:nhl');
+    expect(find.byKey(const ValueKey('sports-mode-rail')), findsOneWidget);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(find.text('Stay'), findsOneWidget);
@@ -418,9 +420,10 @@ void main() {
     gate.complete();
     await tester.pumpAndSettle();
     await press(tester, LogicalKeyboardKey.arrowDown);
+    expect(getFocus(), 'sports-chip-day:menu');
     await press(tester, LogicalKeyboardKey.arrowDown);
-    expect(getFocus(), 'sports-chip-standings');
-    await press(tester, LogicalKeyboardKey.arrowDown);
+    expect(getFocus(), 'sports-chip-day:menu');
+    await press(tester, LogicalKeyboardKey.arrowRight);
     expect(getFocus(), 'sports-chip-standings');
     expect(tester.takeException(), isNull);
     await disposePage(tester);
@@ -461,7 +464,34 @@ void main() {
     await tester.tap(find.byType(Switch));
     await tester.pumpAndSettle();
     expect(prefs.sportsMode, isTrue);
-    expect(find.byKey(const ValueKey('sports-mode-rail')), findsOneWidget);
+    expect(find.byKey(const ValueKey('sports-mode-rail'), skipOffstage: false),
+        findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await disposePage(tester);
+  });
+
+  testWidgets('day menu replaces the day strip and changes the day',
+      (tester) async {
+    await open(tester, games: []);
+    await press(tester, LogicalKeyboardKey.arrowRight); // league:all
+    await press(tester, LogicalKeyboardKey.arrowDown);
+    expect(getFocus(), 'sports-chip-day:menu');
+    expect(find.text('Yesterday'), findsNothing);
+    await press(tester, LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    expect(find.text('Yesterday'), findsOneWidget);
+    await press(tester, LogicalKeyboardKey.arrowDown); // Today -> Tomorrow
+    await press(tester, LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    expect(find.text('Yesterday'), findsNothing);
+    expect(
+        tester
+            .widget<SportsChip>(find.byWidgetPredicate((w) =>
+                w is SportsChip &&
+                w.focusNode.debugLabel == 'sports-chip-day:menu'))
+            .label,
+        'Tomorrow');
+    expect(getFocus(), 'sports-chip-day:menu');
     expect(tester.takeException(), isNull);
     await disposePage(tester);
   });
@@ -484,8 +514,8 @@ void main() {
       L10n.code = locale;
       await open(tester, games: [], size: const Size(390, 844), scale: 1.4);
       await press(tester, LogicalKeyboardKey.arrowRight);
-      await press(tester, LogicalKeyboardKey.arrowDown);
-      await press(tester, LogicalKeyboardKey.arrowDown);
+      await press(tester, LogicalKeyboardKey.arrowDown); // day menu
+      await press(tester, LogicalKeyboardKey.arrowRight);
       await press(tester, LogicalKeyboardKey.arrowRight);
       expect(getFocus(), 'sports-chip-myteams');
       expect(tester.takeException(), isNull);

@@ -531,6 +531,12 @@ const Map<String, String> kEl = {
       "Χθες",
   "Today":
       "Σήμερα",
+  "Day":
+      "Ημέρα",
+  'OK: watch  ·  →: full screen  ·  Hold OK: stats  ·  ▼ all games':
+      "OK: παρακολούθηση  ·  →: πλήρης οθόνη  ·  Κράτημα OK: στατιστικά  ·  ▼ όλοι οι αγώνες",
+  '→ on a game: full screen  ·  ▶❚❚ or Back: stop':
+      "→ σε αγώνα: πλήρης οθόνη  ·  ▶❚❚ ή Πίσω: διακοπή",
   "Standings":
       "Βαθμολογίες",
   "{name} standings":

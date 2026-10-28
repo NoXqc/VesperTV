@@ -14,6 +14,7 @@ import '../widgets/game_reminder_menu_tile.dart';
 import '../widgets/game_score_alert_menu_tile.dart';
 import '../widgets/game_reminder_timing_menu.dart';
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -94,6 +95,22 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   final _modeShell = GlobalKey<SportsModeShellState>();
   final Map<int, String> _lastModeControls = {};
   bool _modeRailFocused = false;
+
+  // Sports Mode while a game plays (TV): the left column is a feed of the
+  // day's games beside the big video ("watching"); Down past its end shows
+  // the card rows under a small hero ("browsing"), Up from them comes back
+  // (owner, 2026-10-28). One focus node, rows drawn selected (no per-row
+  // nodes, like PlayerSidePanel).
+  final _feedNode = FocusNode(debugLabel: 'sports-mode-feed');
+  final _feedScroll = ScrollController();
+  int _feedIndex = 0;
+  bool _modeBrowsing = false;
+  bool _feedVisible = false;
+  bool _feedFocused = false;
+  bool _feedSelectDown = false;
+  bool _feedHoldFired = false;
+  final Stopwatch _feedHeld = Stopwatch();
+  static const double _feedRowHeight = 58;
   bool _exitPromptOpen = false;
   SportsService get _service => widget.service ?? SportsService.instance;
   bool get _modeActive => context.read<AppPreferences>().sportsMode;
@@ -268,6 +285,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     for (final c in _rowScrolls.values) {
       c.dispose();
     }
+    _feedNode.dispose();
+    _feedScroll.dispose();
     super.dispose();
   }
 
@@ -505,6 +524,10 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   }
 
   void _focusZone(int zone, List<_Section> sections) {
+    if (_modeActive && _feedVisible && zone >= _firstRowZone) {
+      _focusFeed();
+      return;
+    }
     if (_modeActive && zone < _firstRowZone) {
       final ids = _modeControlIds(zone);
       if (ids.isEmpty) return;
@@ -583,7 +606,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       if (id == null) continue;
       final zone = _firstRowZone + i;
       if (_chipNodes[id]?.hasFocus ?? false) {
-        _focusZone(delta < 0 ? zone - 1 : zone, sections);
+        if (!_backToFeed(delta, zone)) {
+          _focusZone(delta < 0 ? zone - 1 : zone, sections);
+        }
         return true;
       }
       if (delta > 0 || _zone != zone) continue;
@@ -674,8 +699,14 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   void _moveZone(int delta) {
     final sections = _sections;
+    if (_modeActive && _feedVisible && delta > 0 && _zone == 2) {
+      _focusFeed();
+      return;
+    }
     if (_headerChipStep(delta, sections)) return;
-    final target = _zone + delta;
+    if (_backToFeed(delta, _zone)) return;
+    var target = _zone + delta;
+    if (_modeActive && target == 1) target += delta;
     final rows = sections.isEmpty && _nextGame != null ? 1 : sections.length;
     if (target < 0 || target >= _firstRowZone + rows) return;
     _focusZone(target, sections);
@@ -779,7 +810,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final offset = (day.difference(today).inHours / 24).round();
     _setDay(offset);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _chipNode('day:$offset').requestFocus();
+      if (mounted) {
+        _chipNode(_modeActive ? 'day:menu' : 'day:$offset').requestFocus();
+      }
     });
   }
 
@@ -993,11 +1026,25 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final stopId = _previewChannel?.id;
     final playback = context.read<PlaybackService>();
     final storage = context.read<StorageService>();
+    final feedHadFocus = _feedFocused;
     setState(() {
       _previewGame = game;
       _previewChannel = channel;
       _heroPick = null;
+      _modeBrowsing = false;
     });
+    if (_modeActive) {
+      // The cards / feed holding the focus are swapped out: follow them.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !(ModalRoute.of(context)?.isCurrent ?? false)) return;
+        if (game != null && _feedVisible) {
+          _focusFeed(game: game);
+        } else if (game == null && feedHadFocus) {
+          _feedFocused = false;
+          _focusZone(_firstRowZone, _sections);
+        }
+      });
+    }
     return _previewChain = _previewChain.then((_) async {
       if (seq != _previewSeq) return;
       if (Platform.isWindows) {
@@ -1310,6 +1357,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                 existingPlayer: session?.$1,
                 existingController: session?.$2,
               )));
+      _refocusAfterFeed();
       return;
     }
     if (game != null || keepPreview) {
@@ -1329,6 +1377,17 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     if (!mounted) return;
     await Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => PlayerScreen(channel: channel)));
+    _refocusAfterFeed();
+  }
+
+  /// Back from full screen on another channel ends the preview, and with
+  /// it the feed that had the focus.
+  void _refocusAfterFeed() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_modeActive || _feedVisible || !_feedFocused) return;
+      _feedFocused = false;
+      _focusZone(_firstRowZone, _sections);
+    });
   }
 
   // ---------------------------------------------------------------- build
@@ -1359,16 +1418,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         ? null
         : _games.where((g) => _gameKey(g) == pickKey).firstOrNull ?? _heroPick;
     final hero = pick ?? preview ?? _heroGame;
-    final header = [
-      _buildLeagueBar(mode: mode),
-      const SizedBox(height: 8),
-      _buildDayBar(),
-      const SizedBox(height: 6),
-      _buildStandingsButton(),
-      const SizedBox(height: 4),
-      if (hero != null)
-        _Hero(
-          game: hero,
+    Widget heroWidget({double? playingHeight, _HeroPart? part}) => _Hero(
+          game: hero!,
           matches: _matches[_gameKey(hero)],
           matching: _matching,
           hideScores: _hideScores,
@@ -1376,6 +1427,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           showingOther: pick != null,
           touch: _touch,
           narrow: _narrow,
+          playingHeight: playingHeight,
+          part: part,
           // Tap/click the playing video = full screen on the same stream
           // (owner, 2026-10-18); a remote keeps OK.
           onVideoTap: (_touch || Platform.isWindows) &&
@@ -1383,7 +1436,15 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                   _previewChannel != null
               ? () => _play(_previewChannel!, game: _previewGame)
               : null,
-        ),
+        );
+    final header = [
+      _buildLeagueBar(mode: mode),
+      const SizedBox(height: 8),
+      _buildDayBar(),
+      const SizedBox(height: 6),
+      _buildStandingsButton(),
+      const SizedBox(height: 4),
+      if (hero != null) heroWidget(),
     ];
     // Back while moving a league chip = "done", not leave Sports; Back while
     // the hero plays stops it first.
@@ -1454,7 +1515,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                               _onPlayKey,
                         },
                   child: mode
-                      ? _buildSportsMode(header, sections, preview)
+                      ? _buildSportsMode(header.first,
+                          hero == null ? null : heroWidget, sections, preview)
                       : _touch
                           // Phones: the bars and hero left the game rows a
                           // sliver of the screen, so nothing could be swiped
@@ -1517,11 +1579,11 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
             'league:scores',
             'league:mode'
           ],
-        1 => [
-            for (var day = -1; day <= 6; day++) 'day:$day',
-            if (_dayOffset < -1 || _dayOffset > 6) 'day:$_dayOffset'
-          ],
+        // Sports Mode has no day strip (owner, 2026-10-28: room for a bigger
+        // video): the day is one menu chip leading the tools row.
+        1 => [],
         2 => [
+            'day:menu',
             if (_showStandingsChip) 'standings',
             'myteams',
             'networks',
@@ -1639,9 +1701,291 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     }
   }
 
+  bool get _previewOn => _livePreview(context.read<PlaybackService>()) != null;
+
+  /// Up from the top card row while browsing: back to the feed + big video.
+  bool _backToFeed(int delta, int zone) {
+    if (!_modeActive ||
+        !_modeBrowsing ||
+        delta > 0 ||
+        zone != _firstRowZone ||
+        !_previewOn) {
+      return false;
+    }
+    setState(() => _modeBrowsing = false);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focusFeed(last: true);
+    });
+    return true;
+  }
+
+  List<SportsGame> get _feedGames => [for (final s in _sections) ...s.games];
+
+  void _focusFeed({SportsGame? game, bool last = false}) {
+    final games = _feedGames;
+    if (game != null) {
+      final i = games.indexWhere((g) => _gameKey(g) == _gameKey(game));
+      if (i >= 0) _feedIndex = i;
+    } else if (last) {
+      _feedIndex = games.length - 1;
+    }
+    _selectFeed(_feedIndex.clamp(0, games.isEmpty ? 0 : games.length - 1));
+    _feedNode.requestFocus();
+  }
+
+  /// Position of game [index] in the feed's list, section headers included.
+  int _feedItemOf(int index) {
+    var item = 0;
+    var seen = 0;
+    for (final s in _sections) {
+      item++; // its header
+      if (index < seen + s.games.length) return item + index - seen;
+      item += s.games.length;
+      seen += s.games.length;
+    }
+    return item;
+  }
+
+  void _selectFeed(int index) {
+    setState(() => _feedIndex = index);
+    // Keep the row on screen - jumpTo, never animateTo (CLAUDE.md 10).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_feedScroll.hasClients) return;
+      final pos = _feedScroll.position;
+      final item = _feedItemOf(index);
+      // A section's header comes along with its first row.
+      final top = (item - 1) * _feedRowHeight;
+      final bottom = (item + 1) * _feedRowHeight;
+      if (top < pos.pixels) {
+        _feedScroll.jumpTo(top.clamp(0.0, pos.maxScrollExtent));
+      } else if (bottom > pos.pixels + pos.viewportDimension) {
+        _feedScroll.jumpTo(
+            (bottom - pos.viewportDimension).clamp(0.0, pos.maxScrollExtent));
+      }
+    });
+  }
+
+  /// OK on a feed row: the game plays in the big video (OK on the playing
+  /// one = full screen); no channel yet = its menu.
+  Future<void> _watchFeedGame(SportsGame game) async {
+    if (_isPreviewing(game)) return _play(_previewChannel!, game: game);
+    final best = _matches[_gameKey(game)]?.firstOrNull;
+    if (best == null) return _openGame(game);
+    await _setPreview(game, best.channel);
+  }
+
+  /// Hold OK on a feed row: its stats, as from the player's side panel.
+  Future<void> _feedStats(SportsGame game) async {
+    final channel = await showDialog<Channel>(
+      context: context,
+      builder: (_) => SwallowHeldActivate(
+        child: SportsGameDetailsDialog(
+          game: game,
+          matches: _matches[_gameKey(game)] ?? const [],
+          hideScores: _hideScores,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (channel != null) {
+      await _setPreview(game, channel);
+    } else {
+      _feedNode.requestFocus();
+    }
+  }
+
+  KeyEventResult _onFeedKey(FocusNode _, KeyEvent event) {
+    final games = _feedGames;
+    final key = event.logicalKey;
+    final selected =
+        games.isEmpty ? null : games[_feedIndex.clamp(0, games.length - 1)];
+    if (key == LogicalKeyboardKey.select ||
+        key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter ||
+        key == LogicalKeyboardKey.gameButtonA) {
+      // Tap = watch (on key-up), hold = stats; a hold needs the remote's
+      // own repeats, as in HoldToActivate / PlayerSidePanel.
+      if (event is KeyDownEvent) {
+        _feedSelectDown = true;
+        _feedHoldFired = false;
+        _feedHeld
+          ..reset()
+          ..start();
+      } else if (event is KeyRepeatEvent) {
+        if (_feedSelectDown &&
+            !_feedHoldFired &&
+            _feedHeld.elapsed >= const Duration(milliseconds: 550)) {
+          _feedHoldFired = true;
+          if (selected != null) unawaited(_feedStats(selected));
+        }
+      } else if (event is KeyUpEvent) {
+        final tap = _feedSelectDown && !_feedHoldFired;
+        _feedSelectDown = false;
+        _feedHeld.stop();
+        if (tap && selected != null) unawaited(_watchFeedGame(selected));
+      }
+      return KeyEventResult.handled;
+    }
+    if (event is KeyUpEvent) return KeyEventResult.ignored;
+    if (key == LogicalKeyboardKey.mediaPlayPause ||
+        key == LogicalKeyboardKey.mediaPlay ||
+        key == LogicalKeyboardKey.mediaPause) {
+      if (event is KeyDownEvent && selected != null) {
+        if (_isPreviewing(selected)) {
+          unawaited(_setPreview(null, null));
+        } else {
+          unawaited(_watchFeedGame(selected));
+        }
+      }
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowUp) {
+      if (_feedIndex > 0) {
+        _selectFeed(_feedIndex - 1);
+      } else {
+        _focusZone(2, _sections);
+      }
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowDown) {
+      if (_feedIndex < games.length - 1) {
+        _selectFeed(_feedIndex + 1);
+      } else if (games.isNotEmpty) {
+        _browseCards();
+      }
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowLeft) {
+      _modeShell.currentState?.focusRail();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowRight) {
+      if (event is KeyDownEvent && selected != null) {
+        unawaited(_feedFullScreen(selected));
+      }
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  /// Right on a feed row: that game full screen (the playing stream when
+  /// it's the one in the video).
+  Future<void> _feedFullScreen(SportsGame game) async {
+    if (_isPreviewing(game)) return _play(_previewChannel!, game: game);
+    final best = _matches[_gameKey(game)]?.firstOrNull;
+    if (best == null) return _openGame(game);
+    await _play(best.channel, game: game);
+  }
+
+  /// Down past the feed: the card rows under a small hero.
+  void _browseCards() {
+    setState(() => _modeBrowsing = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focusZone(_firstRowZone, _sections);
+    });
+  }
+
+  Widget _buildFeed(List<_Section> sections) {
+    final scheme = Theme.of(context).colorScheme;
+    final items = <Object>[
+      for (final s in sections) ...[s, ...s.games]
+    ];
+    var gameIndex = -1;
+    final indexOf = <int, int>{};
+    for (final (i, item) in items.indexed) {
+      if (item is SportsGame) indexOf[i] = ++gameIndex;
+    }
+    return Focus(
+      focusNode: _feedNode,
+      onKeyEvent: _onFeedKey,
+      onFocusChange: (focused) {
+        _feedFocused = focused;
+        if (mounted) setState(() {});
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: items.isEmpty
+                ? Center(
+                    child: Text(tr('No games on this day for your leagues'),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.white70)))
+                : ListView.builder(
+                    key: const ValueKey('sports-mode-feed'),
+                    controller: _feedScroll,
+                    itemCount: items.length,
+                    itemExtent: _feedRowHeight,
+                    itemBuilder: (context, i) {
+                      final item = items[i];
+                      if (item is _Section) {
+                        return Align(
+                          alignment: Alignment.bottomLeft,
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(4, 0, 4, 6),
+                            child: Text('${item.label}  ${item.games.length}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white)),
+                          ),
+                        );
+                      }
+                      final game = item as SportsGame;
+                      final index = indexOf[i]!;
+                      return ListenableBuilder(
+                          listenable: _feedNode,
+                          builder: (context, _) => _FeedRow(
+                                key: ValueKey('feed-${_gameKey(game)}'),
+                                game: game,
+                                channel: _isPreviewing(game)
+                                    ? _previewChannel
+                                    : _matches[_gameKey(game)]
+                                        ?.firstOrNull
+                                        ?.channel,
+                                selected:
+                                    index == _feedIndex && _feedNode.hasFocus,
+                                watching: _isPreviewing(game),
+                                starred: _follows.involves(game),
+                                hideScores: _hideScores,
+                                accent: scheme.primary,
+                                onTap: () {
+                                  _feedIndex = index;
+                                  _feedNode.requestFocus();
+                                  unawaited(_watchFeedGame(game));
+                                },
+                                onLongPress: () {
+                                  _feedIndex = index;
+                                  unawaited(_feedStats(game));
+                                },
+                              ));
+                    },
+                  ),
+          ),
+          GestureDetector(
+            onTap: items.isEmpty ? null : _browseCards,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(4, 6, 4, 4),
+              child: _KeyHintText(
+                  tr('OK: watch  ·  →: full screen  ·  Hold OK: stats  ·  ▼ all games'),
+                  style: const TextStyle(fontSize: 12, color: Colors.white54)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSportsMode(
-      List<Widget> header, List<_Section> sections, SportsGame? preview) {
+      Widget leagueBar,
+      Widget Function({double? playingHeight, _HeroPart? part})? hero,
+      List<_Section> sections,
+      SportsGame? preview) {
     final prefs = context.watch<AppPreferences>();
+    final scrollPage =
+        _touch || _narrow || MediaQuery.sizeOf(context).height < 500;
     SportsModeRailEntry app(String id, String label, IconData icon, Widget page,
             {bool settings = false}) =>
         SportsModeRailEntry(
@@ -1654,6 +1998,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         );
     return SportsModeShell(
       key: _modeShell,
+      // TV: the rail hides while the content has focus and Left brings it
+      // back, like the Live TV columns (owner, 2026-10-28: bigger video).
+      collapse: !scrollPage,
       moving: _movingLeague != null,
       onMove: _moveLeague,
       leagueCount: _leagues.take(5).length,
@@ -1709,29 +2056,73 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       bar: Focus(
           canRequestFocus: false,
           onKeyEvent: _onModeControlKey,
-          child: header.first),
+          child: leagueBar),
       content: Focus(
         canRequestFocus: false,
         onKeyEvent: _onModeControlKey,
-        child: (_touch || _narrow || MediaQuery.sizeOf(context).height < 500)
+        child: scrollPage
             ? SingleChildScrollView(
                 key: const ValueKey('sports-mode-content'),
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      ...header.skip(1),
+                      const SizedBox(height: 4),
+                      _buildModeTools(),
+                      const SizedBox(height: 6),
+                      if (hero != null) hero(),
                       _buildBody(sections, preview, inPage: true),
                     ]),
               )
             : Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ...header.skip(1),
-                      Expanded(child: _buildBody(sections, preview)),
-                    ]),
+                child: LayoutBuilder(builder: (context, constraints) {
+                  const tools = 50.0;
+                  _feedVisible =
+                      hero != null && preview != null && !_modeBrowsing;
+                  if (!_feedVisible) {
+                    return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 4),
+                          _buildModeTools(),
+                          const SizedBox(height: 6),
+                          if (hero != null) hero(),
+                          Expanded(child: _buildBody(sections, preview)),
+                        ]);
+                  }
+                  // Playing: a big video on the right, the game and its rows
+                  // in a column on its left (owner, 2026-10-28: the cards
+                  // were cut off under a wider hero). The left column keeps
+                  // room for one card; the video takes the rest, below its
+                  // frame (8) and hint line (24).
+                  final videoHeight = math
+                      .min(
+                          (constraints.maxWidth - _GameCard.width - 56) *
+                              9 /
+                              16,
+                          constraints.maxHeight - tools - 32)
+                      .clamp(_Hero.height - 8, 600.0);
+                  return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 4),
+                        _buildModeTools(),
+                        const SizedBox(height: 6),
+                        Expanded(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: _buildFeed(sections)),
+                              const SizedBox(width: 16),
+                              hero!(
+                                  part: _HeroPart.video,
+                                  playingHeight: videoHeight + 8),
+                            ],
+                          ),
+                        ),
+                      ]);
+                }),
               ),
       ),
     );
@@ -1855,15 +2246,73 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     );
   }
 
+  String _dayLabel(int offset) {
+    if (offset == -1) return tr('Yesterday');
+    if (offset == 0) return tr('Today');
+    if (offset == 1) return tr('Tomorrow');
+    final n = DateTime.now();
+    return DateFormat(offset < -1 || offset > 6 ? 'EEE d MMM' : 'EEE d')
+        .format(DateTime(n.year, n.month, n.day + offset));
+  }
+
+  /// Sports Mode's day chip: the day strip's days in a roll-down menu.
+  Future<void> _openDayMenu() async {
+    final node = _chipNode('day:menu');
+    final picked = await showRollDownMenu<int>(
+      context,
+      anchor: rollDownAnchorOf(node.context),
+      centered: false,
+      width: 260,
+      title: tr('Day'),
+      items: [
+        for (final o in [
+          for (var o = -1; o <= 6; o++) o,
+          if (_dayOffset < -1 || _dayOffset > 6) _dayOffset,
+        ])
+          RollDownMenuItem(
+            value: o,
+            icon: o == 0 ? Icons.today : Icons.event,
+            label: _dayLabel(o),
+            selected: o == _dayOffset,
+          ),
+      ],
+    );
+    if (!mounted) return;
+    if (picked != null) _setDay(picked);
+    node.requestFocus();
+  }
+
+  /// Sports Mode's one tools row: live count, day menu, Standings / My
+  /// Teams / Networks / RedZone (zone 2).
+  Widget _buildModeTools() {
+    final live = _games.where((g) => g.state == GameState.live).length;
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_dayOffset == 0)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: _LiveCount(count: live),
+            ),
+          SportsChip(
+            focusNode: _chipNode('day:menu'),
+            label: _dayLabel(_dayOffset),
+            icon: Icons.calendar_month,
+            selected: false,
+            compact: true,
+            onFocus: () => _zone = 2,
+            onTap: _openDayMenu,
+          ),
+          ..._toolChips(),
+        ],
+      ),
+    );
+  }
+
   Widget _buildDayBar() {
-    String label(int offset) {
-      if (offset == -1) return tr('Yesterday');
-      if (offset == 0) return tr('Today');
-      if (offset == 1) return tr('Tomorrow');
-      final n = DateTime.now();
-      return DateFormat('EEE d')
-          .format(DateTime(n.year, n.month, n.day + offset));
-    }
+    String label(int offset) => _dayLabel(offset);
 
     final live = _games.where((g) => g.state == GameState.live).length;
     return SizedBox(
@@ -1914,55 +2363,56 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       sportsLeagueById(_leagueFilter ?? '')?.hasStandings ?? true;
 
   Widget _buildStandingsButton() {
-    final league = sportsLeagueById(_leagueFilter ?? '');
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (_showStandingsChip)
-            SportsChip(
-              focusNode: _chipNode('standings'),
-              label: league == null
-                  ? tr('Standings')
-                  : league.kind == SportsKind.racing
-                      ? tr('{name} championship', {'name': league.name})
-                      : tr('{name} standings', {'name': league.name}),
-              icon: Icons.leaderboard,
-              selected: false,
-              compact: true,
-              onFocus: () => _zone = 2,
-              onTap: _openStandings,
-            ),
-          SportsChip(
-            focusNode: _chipNode('myteams'),
-            label: tr('My Teams'),
-            icon: Icons.star,
-            selected: false,
-            compact: true,
-            onFocus: () => _zone = 2,
-            onTap: _openMyTeams,
-          ),
-          // Sports networks (TSN, ESPN…) as cards (SportsChannelsScreen).
-          SportsChip(
-            focusNode: _chipNode('networks'),
-            label: tr('Networks'),
-            icon: Icons.live_tv,
-            selected: false,
-            compact: true,
-            onFocus: () => _zone = 2,
-            onTap: _openNetworks,
-          ),
-          if (_showRedZone)
-            RedZonePill(
-              focusNode: _chipNode('redzone'),
-              onFocus: () => _zone = 2,
-              onTap: () => _play(_redZone!),
-              onHold: _chooseRedZone,
-            ),
-        ],
-      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: _toolChips()),
     );
+  }
+
+  List<Widget> _toolChips() {
+    final league = sportsLeagueById(_leagueFilter ?? '');
+    return [
+      if (_showStandingsChip)
+        SportsChip(
+          focusNode: _chipNode('standings'),
+          label: league == null
+              ? tr('Standings')
+              : league.kind == SportsKind.racing
+                  ? tr('{name} championship', {'name': league.name})
+                  : tr('{name} standings', {'name': league.name}),
+          icon: Icons.leaderboard,
+          selected: false,
+          compact: true,
+          onFocus: () => _zone = 2,
+          onTap: _openStandings,
+        ),
+      SportsChip(
+        focusNode: _chipNode('myteams'),
+        label: tr('My Teams'),
+        icon: Icons.star,
+        selected: false,
+        compact: true,
+        onFocus: () => _zone = 2,
+        onTap: _openMyTeams,
+      ),
+      // Sports networks (TSN, ESPN…) as cards (SportsChannelsScreen).
+      SportsChip(
+        focusNode: _chipNode('networks'),
+        label: tr('Networks'),
+        icon: Icons.live_tv,
+        selected: false,
+        compact: true,
+        onFocus: () => _zone = 2,
+        onTap: _openNetworks,
+      ),
+      if (_showRedZone)
+        RedZonePill(
+          focusNode: _chipNode('redzone'),
+          onFocus: () => _zone = 2,
+          onTap: () => _play(_redZone!),
+          onHold: _chooseRedZone,
+        ),
+    ];
   }
 
   /// [inPage]: inside the phone's page scroll — a plain column (an Expanded
@@ -2196,6 +2646,11 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                   controller: _rowScrolls[s.id],
                   scrollDirection: Axis.horizontal,
                   clipBehavior: Clip.none,
+                  // Room for the focused card's 1.05 zoom: the page's scroll
+                  // view clipped its left edge in Sports Mode (owner photo).
+                  padding: _modeActive
+                      ? const EdgeInsets.symmetric(horizontal: 8)
+                      : null,
                   children: [
                     for (final (k, g) in s.games.indexed) ...[
                       // A league divider where the league changes (and
@@ -2621,6 +3076,157 @@ class _LiveCount extends StatelessWidget {
 }
 
 /// Big summary of the focused game above the rows.
+/// One game in Sports Mode's feed beside the big video: the fullscreen
+/// player's side-panel row (logos, scores, league / status / channel).
+class _FeedRow extends StatelessWidget {
+  const _FeedRow({
+    super.key,
+    required this.game,
+    required this.channel,
+    required this.selected,
+    required this.watching,
+    required this.starred,
+    required this.hideScores,
+    required this.accent,
+    required this.onTap,
+    required this.onLongPress,
+  });
+
+  final SportsGame game;
+  final Channel? channel;
+  final bool selected;
+  final bool watching;
+  final bool starred;
+  final bool hideScores;
+  final Color accent;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+
+  @override
+  Widget build(BuildContext context) {
+    final g = game;
+    final status = switch (g.state) {
+      GameState.pre => TimeFormat.hm.format(g.start.toLocal()),
+      _ => trSports(g.statusText),
+    };
+    final showScore = !hideScores && g.state != GameState.pre && !g.isEventOnly;
+    final scoreStyle = TextStyle(color: accent, fontWeight: FontWeight.w800);
+    final sub = [
+      g.league.shortName,
+      status,
+      if (channel != null) channel!.name,
+    ].join('  ·  ');
+    Widget team(SportsTeam t) => SizedBox(
+          width: 32,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SportsLogo(
+                  url: t.logoUrl,
+                  size: 26,
+                  fallback: t.abbreviation,
+                  color: t.color),
+              if (showScore)
+                Text(t.score ?? '',
+                    maxLines: 1,
+                    style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white70)),
+            ],
+          ),
+        );
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: InkWell(
+        canRequestFocus: false,
+        onTap: onTap,
+        onLongPress: onLongPress,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+            color: selected
+                ? Color.lerp(Colors.black, accent, 0.25)
+                : watching
+                    ? accent.withValues(alpha: .10)
+                    : Colors.transparent,
+            border: Border.all(
+                color: selected
+                    ? accent
+                    : watching
+                        ? accent.withValues(alpha: .5)
+                        : Colors.transparent,
+                width: 2),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              if (g.isEventOnly)
+                SportsLogo(
+                    url: g.league.logoUrl,
+                    size: 30,
+                    fallback: g.league.shortName)
+              else ...[
+                team(g.first),
+                const SizedBox(width: 2),
+                team(g.second),
+              ],
+              const SizedBox(width: 8),
+              if (watching)
+                Icon(Icons.play_arrow, color: accent, size: 16)
+              else if (g.state == GameState.live)
+                const Icon(Icons.circle, color: Colors.redAccent, size: 8),
+              if (watching || g.state == GameState.live)
+                const SizedBox(width: 6),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text.rich(
+                        g.isEventOnly
+                            ? TextSpan(text: g.title)
+                            : TextSpan(children: [
+                                if (starred) const TextSpan(text: '★ '),
+                                TextSpan(text: '${g.first.abbreviation} '),
+                                if (showScore) ...[
+                                  TextSpan(
+                                      text: g.first.score ?? '',
+                                      style: scoreStyle),
+                                  const TextSpan(text: '  -  '),
+                                  TextSpan(
+                                      text: g.second.score ?? '',
+                                      style: scoreStyle),
+                                ] else
+                                  TextSpan(text: tr(g.joiner)),
+                                TextSpan(text: ' ${g.second.abbreviation}'),
+                              ]),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600)),
+                    Text(sub,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            color: Colors.white60, fontSize: 12)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Sports Mode's split playing hero: the game (left column, above the rows)
+/// or the video with its hint (right).
+enum _HeroPart { info, video }
+
 class _Hero extends StatelessWidget {
   const _Hero({
     required this.game,
@@ -2632,7 +3238,16 @@ class _Hero extends StatelessWidget {
     this.touch = false,
     this.narrow = false,
     this.onVideoTap,
+    this.playingHeight,
+    this.part,
   });
+
+  /// Playing only: build just this part of the hero (null = both).
+  final _HeroPart? part;
+
+  /// Sports Mode on a TV: the playing hero's height (bigger video), sized
+  /// by the screen to the room the rows leave; null = [height].
+  final double? playingHeight;
 
   /// Touch/mouse: the playing video goes full screen when tapped.
   final VoidCallback? onVideoTap;
@@ -2703,7 +3318,8 @@ class _Hero extends StatelessWidget {
     // The channel named under the score: the picked game's own match, not
     // the stream still playing.
     final channel = showingOther ? null : playingChannel;
-    const videoHeight = height - 8;
+    final heroHeight = playingHeight ?? height;
+    final videoHeight = heroHeight - 8;
     // The normal VS layout, smaller, beside the video (owner: the stacked
     // version wasn't nice).
     final info = game.isEventOnly
@@ -2771,6 +3387,27 @@ class _Hero extends StatelessWidget {
         textAlign: TextAlign.center,
         style: const TextStyle(fontSize: 12, color: Colors.white54));
 
+    if (part == _HeroPart.video) {
+      final videoHint = touch || Platform.isWindows || showingOther
+          ? hint
+          : _KeyHintText(tr('→ on a game: full screen  ·  ▶❚❚ or Back: stop'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 12, color: Colors.white54));
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          video(videoHeight * 16 / 9, videoHeight),
+          const SizedBox(height: 6),
+          SizedBox(width: videoHeight * 16 / 9 + 8, child: videoHint),
+        ],
+      );
+    }
+    if (part == _HeroPart.info) {
+      return game.isEventOnly
+          ? SizedBox(
+              height: 130, child: _center(context, false, channel: channel))
+          : _narrowInfo(context, showScore, channel: channel);
+    }
     if (narrow) {
       // Portrait phone: no room beside the video, so the game sits under it.
       return Column(
@@ -2791,7 +3428,7 @@ class _Hero extends StatelessWidget {
     }
 
     return SizedBox(
-      height: height,
+      height: heroHeight,
       child: Row(
         children: [
           video(videoHeight * 16 / 9, videoHeight),

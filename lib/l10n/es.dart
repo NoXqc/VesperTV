@@ -402,6 +402,11 @@ const Map<String, String> kEs = {
   'Scores shown': "Marcadores visibles",
   'Yesterday': "Ayer",
   'Today': "Hoy",
+  'Day': "Día",
+  'OK: watch  ·  →: full screen  ·  Hold OK: stats  ·  ▼ all games':
+      "OK: ver  ·  →: pantalla completa  ·  Mantener OK: estadísticas  ·  ▼ todos los partidos",
+  '→ on a game: full screen  ·  ▶❚❚ or Back: stop':
+      "→ en un partido: pantalla completa  ·  ▶❚❚ o Atrás: detener",
   'Standings': "Clasificación",
   '{name} standings': "Clasificación {name}",
   '{name} championship': "Campeonato de {name}",

@@ -65,3 +65,36 @@ Exact final analyze/test/build/install results belong in root HANDOFF.md.
 Owner should check both switches, cold startup, held arrows, league reorder,
 preview/full-screen/Back, Standings/My Teams/Networks and returning from app links
 on the Formuler. These physical checks are not replaced by widget tests.
+
+## Bigger video + hidden rail (Claude, test +488, 2026-10-28)
+
+Owner: bigger player, days out of the way, a Left-arrow menu like Live TV.
+- TV (not touch/narrow/short): the rail is `Offstage` (still mounted, nodes
+  focusable) unless it has focus; Left from the first control/card opens it,
+  Right/any content focus closes it. A `‹`-style edge tab (`sports-mode-rail-tab`)
+  marks it and opens it on click. Pushes the content, never overlays the video.
+- No day strip in Sports Mode: zone 1 is empty and skipped by `_moveZone`; the
+  day is the `day:menu` chip leading the tools row (zone 2, roll-down of
+  Yesterday..+6 days). Normal Sports Trak keeps its strip.
+- Playing hero height = content height minus tools row and one card row
+  (`_Hero.playingHeight`, 168..420); at 960x540 the video is ~236x420 (was 160x284).
+- +489 (owner photo: cards cut off under the wide hero): while a game plays,
+  TV Sports Mode splits below the tools row: left column = the game
+  (`_HeroPart.info`, the phone VS layout) above the rows, right = the video
+  (`_HeroPart.video`) + its hint. Video height = min((width - card - 56)*9/16,
+  height - tools - 32); ~312 px high at 960x540. Not playing = old layout.
+- +490 (owner: cards slid behind the video; wanted the side panel's live
+  feed): "watching" = left column is `_buildFeed` (all day sections flattened,
+  headers + `_FeedRow`s, one focus node `_feedNode`, rows drawn selected),
+  right = big video. Feed: Up/Down rows, Up at top = tools, Down past the end =
+  "browsing" (`_modeBrowsing`: small 168 hero + full-width card rows), Up from
+  the top card row (or its See all chip) = back to the feed; OK = watch in the
+  video (OK on the playing one = full screen), hold OK = SportsGameDetailsDialog,
+  Play/Pause toggles, Left = rail. Starting a preview resets to watching and
+  moves focus to the feed; stopping from the feed refocuses the rows.
+  No widget test covers watching/browsing (needs a matched, playing channel).
+- +491: `_focusZone` sends any row zone to the feed while it shows (Right
+  from the rail was stuck: it targeted an unmounted card). Right on a feed
+  row = full screen (`_feedFullScreen`); hints say "→". Feed selection redraws
+  from `_feedNode` (ListenableBuilder). Card rows get 8 px side padding in
+  Sports Mode so the focused card's 1.05 zoom isn't clipped at the left.
