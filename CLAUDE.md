@@ -367,6 +367,15 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-10-29 — Android release 1.0.47+520 (latest):** Codex's Media Hub experience
+  (all 6 Nuvio-plan priorities, dev-notes/media-hub-experience.md + Claude follow-ups: Windows
+  headers/subtitles, 41 translations, movie page scroll-to-top), live player Right = last channel,
+  TV boxes ignore audio-focus loss (`streamController` mixWithOthers on TV), main player
+  reconnects a live stream the server closed (`PlatformViewExoPlayerEventListener
+  .reconnectWhenLiveEnds`; Xiaomi MIBOX4 freeze, LOG-RY6KT6/FF6ZV5: provider drops every ~60 s,
+  now a hiccup), cache-folder recreate. APK only; Windows stays 1.0.45 (same exception as 1.0.46).
+  Debrid torrent resolution parked on `claude/debrid-resolve` (owner: not doing it).
+  Notes: dev-notes/releases/1.0.47.md. Next build must be > 520.
 - **Codex, 2026-10-29 — Android release1.0.46+514:** includes local main through
   0f296e5 (owner-tested +513), all league/preview/stats fixes and Multiview Swap.
   Remote tips and79-entry help index now cover Guide/EPG, the Sports Mode Live TV
