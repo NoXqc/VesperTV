@@ -112,3 +112,11 @@ Main implementation: `archive_discovery_service.dart`,
 Suggested device check: open Media Hub, start a title with multiple sources,
 choose an early result, open Sources during playback, resume a series from Home,
 hide/restore/reorder a row, and browse a collection and an actor's credits.
+
+## Claude follow-up (2026-10-29, test +517)
+
+- Windows parity: add-on request headers now reach media_kit (`Media(httpHeaders:)`
+  in `DesktopPlayerScreen` open/reload and `DesktopMiniPlayer`); the Windows
+  subtitle menu offers stream-supplied subtitles even with no subtitle add-on
+  (same rule as Android `player_controls`). Windows still not built or run.
+- The 41 new UI strings had no entries in fr/es/it/el: added (machine-authored).

@@ -63,10 +63,13 @@ class DesktopMiniPlayer {
     _completedSub = player.stream.completed.listen((completed) {
       final current = channel.value;
       if (completed && current != null && _player == player) {
-        player.open(Media(current.url));
+        player.open(Media(current.url,
+            httpHeaders:
+                current.httpHeaders.isEmpty ? null : current.httpHeaders));
       }
     });
-    player.open(Media(ch.url));
+    player.open(Media(ch.url,
+        httpHeaders: ch.httpHeaders.isEmpty ? null : ch.httpHeaders));
     channel.value = ch;
   }
 

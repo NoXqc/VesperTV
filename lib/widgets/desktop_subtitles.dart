@@ -148,7 +148,8 @@ class _DesktopSubtitleButtonState extends State<DesktopSubtitleButton> {
   AddonService get _addons => AddonService(context.read<StorageService>());
 
   bool get _canSearchOnline =>
-      AddonService.supports(widget.channel) && _addons.anyEnabled;
+      widget.channel.subtitles.isNotEmpty ||
+      (AddonService.supports(widget.channel) && _addons.anyEnabled);
 
   @override
   void initState() {

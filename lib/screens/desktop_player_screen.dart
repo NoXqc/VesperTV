@@ -300,7 +300,9 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
         _currentChannel.id == channel.id;
     try {
       final resume = start ?? _progress.resumePosition(channel);
-      await _player.open(Media(channel.url, start: resume), play: play);
+      await _player.open(
+          Media(channel.url, start: resume, httpHeaders: _headersOf(channel)),
+          play: play);
       if (!current()) return;
       if (resume == null) {
         // Trakt/Simkl may only know a fraction until the stream opens.
@@ -432,7 +434,12 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   /// Manual reconnect for a stalled live stream — this screen has none of
   /// `PlaybackService`'s automatic backup-server retry, so a simple
   /// re-open is the only recovery available.
-  void _reload() => _player.open(Media(_currentChannel.url));
+  void _reload() => _player.open(
+      Media(_currentChannel.url, httpHeaders: _headersOf(_currentChannel)));
+
+  /// Headers a Media Hub add-on asked for (null keeps media_kit's cache).
+  static Map<String, String>? _headersOf(Channel channel) =>
+      channel.httpHeaders.isEmpty ? null : channel.httpHeaders;
 
   void _skip(Duration amount) {
     final current = _player.state.position;
