@@ -183,6 +183,8 @@ const Map<String, String> kEl = {
       "4 οθόνες",
   "1 + 3 screens":
       "1 + 3 οθόνες",
+  "OK again: full screen":
+      "OK ξανά: πλήρης οθόνη",
   "Move to the big screen":
       "Στη μεγάλη οθόνη",
   "Swap mode":

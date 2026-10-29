@@ -950,7 +950,9 @@ void main() {
   });
 
   Future<void> openLivePanel(WidgetTester tester,
-      {List<SportsGame>? games = const [], double scale = 1}) async {
+      {List<SportsGame>? games = const [],
+      double scale = 1,
+      NavigatorObserver? observer}) async {
     playlist.live = [
       for (var i = 0; i < 40; i++)
         Channel(
@@ -962,7 +964,7 @@ void main() {
             url: 'http://example.invalid/$i.ts'),
     ];
     addTearDown(() => playlist.live = const []);
-    await open(tester, games: games, scale: scale);
+    await open(tester, games: games, scale: scale, observer: observer);
     for (var i = 0; i < 5; i++) {
       await press(tester, LogicalKeyboardKey.arrowDown);
     }
@@ -994,6 +996,27 @@ void main() {
     expect(getFocus(), 'sports-live-guide');
     expect(playback.stops, stops);
     expect(playback.plays, hasLength(1));
+    expect(tester.takeException(), isNull);
+    await disposePage(tester);
+  });
+
+  testWidgets('Live TV guide: OK previews right of it, OK again full screen',
+      (tester) async {
+    final routes = _PlayerRoutes();
+    await openLivePanel(tester, observer: routes);
+    for (var i = 0; i < 3; i++) {
+      await press(tester, LogicalKeyboardKey.arrowDown);
+    }
+    await press(tester, LogicalKeyboardKey.select); // the group's guide
+    expect(getFocus(), 'sports-live-guide');
+    await press(tester, LogicalKeyboardKey.select);
+    expect(playback.plays.map((c) => c.id), ['p1::c0']);
+    expect(routes.channels, isEmpty);
+    expect(find.byKey(const ValueKey('sports-live-preview')), findsOneWidget);
+    expect(getFocus(), 'sports-live-guide');
+    await press(tester, LogicalKeyboardKey.select);
+    expect(routes.channels.map((c) => c.id), ['p1::c0']);
+    expect(playback.plays, hasLength(1)); // same session, no reconnect
     expect(tester.takeException(), isNull);
     await disposePage(tester);
   });

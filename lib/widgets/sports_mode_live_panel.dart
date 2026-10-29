@@ -29,9 +29,17 @@ class SportsModeLivePanel extends StatefulWidget {
     required this.onPlay,
     required this.onLeft,
     required this.onOpenFull,
+    this.preview,
   });
 
-  /// OK on a channel: full screen, [list] being the guide's channels (CH+/-).
+  /// The channel previewing from this guide (its video), shown right of
+  /// the guide like the TV guide's preview box; null = none.
+  final Widget? preview;
+
+  static const previewMaxWidth = 520.0;
+
+  /// OK on a channel: preview (again: full screen), [list] being the
+  /// guide's channels (CH+/-).
   final Future<void> Function(Channel channel, List<Channel> list) onPlay;
 
   /// Left from the groups column (the rail).
@@ -346,8 +354,47 @@ class SportsModeLivePanelState extends State<SportsModeLivePanel> {
             child: _buildGroupsColumn()),
         if (guideOpen)
           SizedBox(width: SportsModeLivePanel.guideWidth, child: _buildGuide()),
+        if (guideOpen && widget.preview != null) ..._buildPreview(),
       ],
     );
+  }
+
+  /// Right of the guide, in the room the page leaves (none on a narrow one).
+  List<Widget> _buildPreview() {
+    final room = MediaQuery.sizeOf(context).width -
+        SportsModeLivePanel.groupsWidth -
+        SportsModeLivePanel.guideWidth -
+        40;
+    if (room < 200) return const [];
+    final width = room.clamp(200.0, SportsModeLivePanel.previewMaxWidth);
+    final scheme = Theme.of(context).colorScheme;
+    return [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+        child: SizedBox(
+          width: width,
+          child: Column(
+            key: const ValueKey('sports-live-preview'),
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  border: Border.all(color: scheme.primary, width: 2),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: AspectRatio(aspectRatio: 16 / 9, child: widget.preview),
+              ),
+              const SizedBox(height: 6),
+              Text(tr('OK again: full screen'),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 12, color: Colors.white54)),
+            ],
+          ),
+        ),
+      ),
+    ];
   }
 
   Widget _frame(

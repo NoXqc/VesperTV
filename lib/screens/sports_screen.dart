@@ -1824,6 +1824,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   void _liveBack() {
     final panel = _livePanel.currentState;
     if (!_modeRailFocused && panel != null && panel.back()) return;
+    _stopPanelPreview();
     setState(() => _liveOpen = false);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -1835,23 +1836,51 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     });
   }
 
-  /// OK on a guide channel: full screen (the hero's game preview ends: one
-  /// stream), Back returns to the panel as it was. CH+/- walk the guide.
+  /// The channel previewing from the Live TV panel (no game, so the hero
+  /// stays as it is), while it really plays.
+  Channel? _panelPreview(PlaybackService playback) {
+    final channel = _previewChannel;
+    if (_previewGame != null || channel == null) return null;
+    return _playingNow(playback)?.id == channel.id ? channel : null;
+  }
+
+  /// The panel's preview video (the hero only draws video for a game).
+  Widget? _panelPreviewVideo(PlaybackService playback) {
+    final channel = _panelPreview(playback);
+    if (channel == null) return null;
+    final mini = _desktopSports ? DesktopMiniPlayer.instance.controller : null;
+    return mini != null
+        ? Video(controller: mini, controls: NoVideoControls)
+        : VideoPlayerPane(
+            key: ValueKey(channel.id), showEpgBar: false, showControls: false);
+  }
+
+  /// OK on a guide channel previews it right of the guide, like the TV
+  /// guide (owner, 2026-10-29; one stream: a game's preview ends). OK again
+  /// on it: full screen on the same session; Back returns to the panel with
+  /// it still playing (the channel full screen ended on, after CH+/-).
   Future<void> _playLive(Channel channel, List<Channel> list) async {
     if (!_desktopSports) {
       context.read<PlaybackService>().zapList = list;
     }
-    await _play(channel);
+    if (_previewGame != null || _previewChannel?.id != channel.id) {
+      await _setPreview(null, channel);
+      return;
+    }
+    await _play(channel, keepPreview: true);
     if (!mounted) return;
-    // Nothing shows the channel on the sports home: release its connection.
-    if (_previewChannel == null) {
-      if (_desktopSports) {
-        DesktopMiniPlayer.instance.clear();
-      } else {
-        await context.read<PlaybackService>().stop();
-      }
+    final now = _playingNow(context.read<PlaybackService>());
+    if (_previewGame == null && now != null && now.id != _previewChannel?.id) {
+      setState(() => _previewChannel = now);
     }
     if (mounted && _liveOpen) _livePanel.currentState?.focusLast();
+  }
+
+  /// Closing the panel ends its preview (nothing on the page shows it).
+  void _stopPanelPreview() {
+    if (_previewGame == null && _previewChannel != null) {
+      unawaited(_setPreview(null, null));
+    }
   }
 
   Future<void> _confirmModeExit() async {
@@ -2265,6 +2294,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           ? SportsModeLivePanel(
               key: _livePanel,
               onPlay: _playLive,
+              preview: _panelPreviewVideo(context.watch<PlaybackService>()),
               onLeft: () => _modeShell.currentState?.focusRail(),
               onOpenFull: () => _openModePage(const TvHomeScreen()))
           : null,

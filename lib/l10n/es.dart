@@ -157,6 +157,7 @@ const Map<String, String> kEs = {
   'Windowed': "En ventana",
   '4 screens': "4 pantallas",
   '1 + 3 screens': "1 + 3 pantallas",
+  'OK again: full screen': "OK otra vez: pantalla completa",
   'Move to the big screen': "Pasar a la pantalla grande",
   'Swap mode': "Modo intercambio",
   'SWAP': "INTERCAMBIO",
