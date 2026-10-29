@@ -282,8 +282,13 @@ class _ArchiveDiscoveryPanelState extends State<ArchiveDiscoveryPanel> {
           onFocusGained: () => _reveal(row, i)));
   void _reveal(String row, int i) {
     _indices[row] = i;
-    // Page only, vertically and instantly: the row's own scroll is [_focus]'s.
-    final card = node(row, i).context?.findRenderObject();
+    _keepVisible(node(row, i));
+  }
+
+  /// Scrolls the page (vertically, instantly) only as far as it takes to
+  /// show [focus]; a horizontal row's own scroll is [_focus]'s.
+  void _keepVisible(FocusNode focus) {
+    final card = focus.context?.findRenderObject();
     final page = Scrollable.maybeOf(context)?.position;
     if (card == null || page == null) return;
     for (final policy in [
@@ -327,12 +332,10 @@ class _ArchiveDiscoveryPanelState extends State<ArchiveDiscoveryPanel> {
                       : _failed
                           ? tr('Retry recommendations')
                           : tr('Explore more')),
+                  // Minimal scroll: pinning it 20% from the top scrolled the
+                  // page down when coming Up from a row (owner photo).
                   onFocusChange: (has) {
-                    if (has) {
-                      if (widget.entryNode.context case final ctx?) {
-                        Scrollable.ensureVisible(ctx, alignment: .2);
-                      }
-                    }
+                    if (has) _keepVisible(widget.entryNode);
                   },
                   onPressed: () {
                     if (_failed) {
