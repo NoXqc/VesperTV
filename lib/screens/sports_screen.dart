@@ -720,8 +720,10 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       _focusFeed();
       return;
     }
-    if (_headerChipStep(delta, sections)) return;
+    // Up from the first card row while browsing: straight back to the big
+    // player (before its See all chip, owner 2026-10-29).
     if (_backToFeed(delta, _zone)) return;
+    if (_headerChipStep(delta, sections)) return;
     var target = _zone + delta;
     if (_modeActive && target == 1) target += delta;
     final rows = sections.isEmpty && _nextGame != null ? 1 : sections.length;
@@ -1061,18 +1063,16 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final playback = context.read<PlaybackService>();
     final storage = context.read<StorageService>();
     final feedHadFocus = _feedFocused;
-    // Sports Mode keeps the view on screen: from the feed, the feed; from
-    // the cards (or before anything plays), the cards under the small hero.
-    final stayOnCards = _modeActive && game != null && !_feedVisible;
+    // Sports Mode: the first game opens the big player beside the feed;
+    // once Down has moved to the cards (small player), a game picked there
+    // keeps playing in the small player (owner, 2026-10-29).
+    final stayOnCards = _modeActive && game != null && _modeBrowsing;
     _previewFeedFocusSeq =
         _modeActive && game != null && !stayOnCards ? seq : null;
     setState(() {
       _previewGame = game;
       _previewChannel = channel;
       _heroPick = null;
-      // Owner, 2026-10-29: OK in the card view plays in its small hero
-      // instead of jumping to the feed layout (Up from the top row still
-      // opens the feed while a game plays).
       _modeBrowsing = stayOnCards;
     });
     if (_modeActive && game == null && feedHadFocus) {
