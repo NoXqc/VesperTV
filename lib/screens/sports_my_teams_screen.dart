@@ -10,6 +10,8 @@ import '../models/sports.dart';
 import '../services/sports_channel_matcher.dart';
 import '../services/sports_follows.dart';
 import '../services/sports_service.dart';
+import '../services/storage_service.dart';
+import '../services/playlist_manager.dart';
 import '../utils/time_format.dart';
 import '../utils/route_observer.dart';
 import '../utils/tv_theme.dart';
@@ -18,6 +20,7 @@ import '../widgets/settings_scaffold.dart';
 import '../widgets/sports_widgets.dart';
 import 'sports_schedule_screen.dart';
 import 'sports_standings_screen.dart';
+import 'sports_channels_screen.dart';
 import '../l10n/l10n.dart';
 
 /// Signature of the Sports screen's game actions, so My Teams plays and
@@ -43,6 +46,7 @@ class SportsMyTeamsScreen extends StatefulWidget {
     required this.matchGames,
     required this.onActivate,
     required this.onMenu,
+    this.service,
   });
 
   /// The user's Sports leagues (for "+ Add team" → Standings).
@@ -53,6 +57,7 @@ class SportsMyTeamsScreen extends StatefulWidget {
       matchGames;
   final SportsGameAction onActivate;
   final SportsGameAction onMenu;
+  final SportsService? service;
 
   @override
   State<SportsMyTeamsScreen> createState() => _SportsMyTeamsScreenState();
@@ -69,6 +74,7 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
   final Map<String, SportsStandings?> _standings = {};
   final Map<String, Map<String, List<ChannelMatch>>> _matches = {};
   final Set<String> _matching = {};
+  final Map<String, int> _matchRequests = {};
 
   int _selected = 0;
   int _zone = 0; // 0 teams, 1 games
@@ -156,8 +162,8 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
       setState(() => _loadingTeams.add(t.key));
     }
     final results = await Future.wait([
-      SportsService.instance.teamSchedule(league, t.teamId),
-      SportsService.instance.standings(league),
+      (widget.service ?? SportsService.instance).teamSchedule(league, t.teamId),
+      (widget.service ?? SportsService.instance).standings(league),
     ]);
     if (!mounted) return;
     setState(() {
@@ -179,12 +185,14 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
 
   /// Channel matches for [t]'s next two weeks. Rerun after every load
   /// (scores change the game objects; picks may have changed).
-  Future<void> _matchTeam(FollowedTeam t) async {
+  Future<void> _matchTeam(FollowedTeam t, {bool force = false}) async {
     final games = _schedules[t.key]?.upcoming() ?? const <SportsGame>[];
-    if (games.isEmpty || _matching.contains(t.key)) return;
+    if (games.isEmpty || (!force && _matching.contains(t.key))) return;
+    final request = (_matchRequests[t.key] ?? 0) + 1;
+    _matchRequests[t.key] = request;
     setState(() => _matching.add(t.key));
     final matches = await widget.matchGames(games);
-    if (!mounted) return;
+    if (!mounted || _matchRequests[t.key] != request) return;
     setState(() {
       _matching.remove(t.key);
       _matches[t.key] = matches;
@@ -283,7 +291,7 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
     ));
   }
 
-  /// Hold OK on a team: its Schedule, or Unfollow.
+  /// Hold OK on a team: Schedule, preferred channel, or Unfollow.
   Future<void> _teamMenu(FollowedTeam t) async {
     final schedule = _schedules[t.key];
     final team = schedule?.team ??
@@ -292,9 +300,29 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
             name: tr('this team'),
             shortName: '',
             abbreviation: '');
-    final action =
-        await showSportsTeamMenu(context, team: team, followed: true);
-    if (!mounted || action == null) return;
+    final storage = context.read<StorageService>();
+    final viewer = storage.viewerGeneration;
+    final picks = SportsChannelPicks.load(storage);
+    final preferred = picks.preferredChannel(t.leagueId, t.teamId);
+    final channel = context
+        .read<PlaylistManager>()
+        .visibleChannels(category: 'tv')
+        .where((c) => c.id == preferred)
+        .firstOrNull;
+    final action = await showSportsTeamMenu(context,
+        team: team,
+        followed: true,
+        canPickChannel: true,
+        preferredChannelName: channel?.name ??
+            (preferred == null ? null : tr('Saved channel is unavailable')));
+    if (!mounted || storage.viewerGeneration != viewer || action == null) {
+      return;
+    }
+    if (action == SportsTeamAction.preferredChannel) {
+      await _preferredChannel(t, team);
+      if (mounted) _focusTeam(_selected);
+      return;
+    }
     if (action == SportsTeamAction.schedule) {
       final league = sportsLeagueById(t.leagueId);
       if (league == null) return;
@@ -313,6 +341,39 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
       return;
     }
     await _unfollow(t);
+  }
+
+  Future<void> _preferredChannel(FollowedTeam team, SportsTeam details) async {
+    final storage = context.read<StorageService>();
+    final viewer = storage.viewerGeneration;
+    final playlist = context.read<PlaylistManager>();
+    await playlist.ensureLiveChannelsLoaded();
+    if (!mounted || storage.viewerGeneration != viewer) return;
+    final picks = SportsChannelPicks.load(storage);
+    final preferred = picks.preferredChannel(team.leagueId, team.teamId);
+    final result = await Navigator.of(context).push<Set<String>>(
+        MaterialPageRoute(
+            builder: (_) => SportsChannelPicker(
+                title:
+                    tr('Preferred channel for {team}', {'team': details.name}),
+                channels: playlist.visibleChannels(category: 'tv'),
+                selected: {if (preferred != null) preferred},
+                multiple: false,
+                allowAutomatic: true)));
+    if (!mounted || storage.viewerGeneration != viewer || result == null) {
+      return;
+    }
+    final selected = result.firstOrNull;
+    if (selected != null &&
+        !playlist
+            .visibleChannels(category: 'tv')
+            .any((c) => c.id == selected)) {
+      return;
+    }
+    await picks.setPreferredChannel(team.leagueId, team.teamId, selected);
+    if (!mounted || storage.viewerGeneration != viewer) return;
+    setState(() => _matches.remove(team.key));
+    await _matchTeam(team, force: true);
   }
 
   Future<void> _unfollow(FollowedTeam t) async {
@@ -391,7 +452,7 @@ class _SportsMyTeamsScreenState extends State<SportsMyTeamsScreen>
                             Expanded(
                               child: Text(
                                   tr(
-                                      'Hold OK on a team to unfollow · on a game to pick the channel'),
+                                      'Hold OK on a team for schedule, preferred channel or unfollow · on a game to pick the channel'),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(

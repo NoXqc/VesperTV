@@ -31,6 +31,8 @@ class SportsChannelPicker extends StatefulWidget {
       this.selected = const {},
       this.multiple = true,
       this.groupFirst = false,
+      this.title,
+      this.allowAutomatic = false,
       this.allowRules = false,
       this.initialRules = const {},
       this.onSaveRules});
@@ -38,6 +40,8 @@ class SportsChannelPicker extends StatefulWidget {
   final Set<String> selected;
   final bool multiple;
   final bool groupFirst;
+  final String? title;
+  final bool allowAutomatic;
   final bool allowRules;
   final Map<String, List<String>> initialRules;
   final ValueChanged<Map<String, List<String>>>? onSaveRules;
@@ -117,24 +121,26 @@ class _SportsChannelPickerState extends State<SportsChannelPicker> {
     };
     final playlist = context.read<PlaylistManager>();
     return Scaffold(
-      appBar: AppBar(title: Text(tr('Pick channels myself')), actions: [
-        TextButton(
-            onPressed: () {
-              widget.onSaveRules?.call(_updated
-                  ? {
-                      ..._filters,
-                      if (_group != null) 'Group': [_group!],
-                      if (_query.trim().isNotEmpty) 'Query': [_query],
-                      if (_filters.isEmpty &&
-                          _group == null &&
-                          _query.trim().isEmpty)
-                        'All': ['true']
-                    }
-                  : {});
-              Navigator.pop(context, _selected);
-            },
-            child: Text(tr('Save'))),
-      ]),
+      appBar: AppBar(
+          title: Text(widget.title ?? tr('Pick channels myself')),
+          actions: [
+            TextButton(
+                onPressed: () {
+                  widget.onSaveRules?.call(_updated
+                      ? {
+                          ..._filters,
+                          if (_group != null) 'Group': [_group!],
+                          if (_query.trim().isNotEmpty) 'Query': [_query],
+                          if (_filters.isEmpty &&
+                              _group == null &&
+                              _query.trim().isEmpty)
+                            'All': ['true']
+                        }
+                      : {});
+                  Navigator.pop(context, _selected);
+                },
+                child: Text(tr('Save'))),
+          ]),
       body: Column(children: [
         Padding(
             padding: const EdgeInsets.all(12),
@@ -164,6 +170,10 @@ class _SportsChannelPickerState extends State<SportsChannelPicker> {
                   ],
                   onChanged: (v) => setState(() => _group = v)),
               Wrap(spacing: 12, children: [
+                if (widget.allowAutomatic)
+                  TextButton(
+                      onPressed: () => Navigator.pop(context, <String>{}),
+                      child: Text(tr('Automatic channel'))),
                 TextButton(
                     onPressed: () => _filter(library),
                     child: Text(tr('Filters'))),

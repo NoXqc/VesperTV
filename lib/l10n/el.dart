@@ -2859,4 +2859,12 @@ const Map<String, String> kEl = {
   "Customize title page": "Προσαρμογή σελίδας τίτλου",
   "Choose the order of rows below title details. Saved for this viewer.":
       "Επιλέξτε τη σειρά των γραμμών κάτω από τις λεπτομέρειες του τίτλου. Αποθηκεύεται για αυτό το προφίλ.",
+
+  // My Teams preferred channel.
+  "Set preferred channel": "Ορισμός προτιμώμενου καναλιού",
+  "Automatic channel": "Αυτόματο κανάλι",
+  "Preferred channel for {team}": "Προτιμώμενο κανάλι για {team}",
+  "Saved channel is unavailable": "Το αποθηκευμένο κανάλι δεν είναι διαθέσιμο",
+  "Hold OK on a team for schedule, preferred channel or unfollow · on a game to pick the channel":
+      "Κρατήστε OK σε ομάδα για πρόγραμμα, προτιμώμενο κανάλι ή διακοπή παρακολούθησης · σε αγώνα για επιλογή καναλιού",
 };

@@ -4,6 +4,20 @@ Roadmap item from CLAUDE.md §13. **v1 is built and committed (test build 1.0.3+
 right below; the rest of this file is the design and the tests behind it.
 
 ## v1 as built
+
+### My Teams preferred channel (Codex, 2026-10-29)
+
+Hold a followed team > Set preferred channel opens the existing single-channel
+picker over the viewer's visible live channels, with search and playlist groups.
+It works with no upcoming games. Automatic channel clears this team's preference
+in its followed league. Existing per-match picks still override the default.
+Storage reuses SportsChannelPicks.teams (league id + team id, composite channel
+id), so profile isolation and Backup/Transfer already apply. Hidden/unavailable
+channels stay outside matching. The team menu identifies an unavailable saved
+channel and can replace/reset it. Completing or cancelling the picker restores
+the team's focus; changed defaults force a rematch and invalidate older results.
+See test/my_teams_preferred_channel_test.dart for storage/matcher/remote checks.
+
 - Entry: a **Sports** row in the TV tabs column (under Multiview) opens `SportsScreen` full-screen
   (`lib/screens/sports_screen.dart`). Phone layout has no entry yet.
 - Data: `SportsService` (ESPN scoreboard, key-less, one call per league per ESPN date; fetches the day

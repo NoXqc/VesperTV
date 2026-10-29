@@ -496,10 +496,10 @@
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },
   {
-    "id": "db28dfd6eab69fe4",
+    "id": "da8ed58316e0bb41",
     "category": "Sports Trak",
-    "title": "Schedule, Follow or Unfollow",
-    "answer": "Schedule opens the team's season as a month calendar: each game day shows the opponent's logo and the time or result. Football (soccer) includes the cups (FA Cup, Carabao Cup, Champions League…), marked with the cup's logo. Arrows move a day or a week, CH+/CH- change month. OK shows the stats of a finished game, watches a live one or opens the game menu of an upcoming one (reminder, record, channel); hold OK opens the game menu.",
+    "title": "Schedule, Follow, Unfollow or preferred channel",
+    "answer": "In My Teams, Set preferred channel opens your visible live channels, with search and playlist groups. Choose one to use it by default for that team in this league, even when no upcoming game is listed. Automatic channel removes the team preference. An explicitly chosen channel for one match still wins. Hidden or unavailable channels are not played. Choices belong to this viewer. Schedule opens the team's season as a month calendar: each game day shows the opponent's logo and the time or result. Football (soccer) includes the cups (FA Cup, Carabao Cup, Champions League…), marked with the cup's logo. Arrows move a day or a week, CH+/CH- change month. OK shows the stats of a finished game, watches a live one or opens the game menu of an upcoming one (reminder, record, channel); hold OK opens the game menu.",
     "controls": "Hold OK on a team in Standings or My Teams",
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },

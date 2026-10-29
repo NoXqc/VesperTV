@@ -178,6 +178,24 @@ class SportsChannelPicks {
     return _save();
   }
 
+  String? preferredChannel(String leagueId, String teamId) =>
+      teams['$leagueId:$teamId'];
+
+  /// The My Teams editor does not require a current/upcoming game. A
+  /// separately chosen channel for one match continues to override this
+  /// team default. Reload first so other open pickers cannot be overwritten.
+  Future<void> setPreferredChannel(
+      String leagueId, String teamId, String? channelId) {
+    _reload();
+    final key = '$leagueId:$teamId';
+    if (channelId == null) {
+      teams.remove(key);
+    } else {
+      teams[key] = channelId;
+    }
+    return _save();
+  }
+
   /// The NFL RedZone pill's chosen channel (hold the pill). Stored with the
   /// team picks under a key no league/team id can produce; null = automatic.
   static const _redZoneKey = 'redzone';

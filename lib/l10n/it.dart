@@ -2242,4 +2242,12 @@ const Map<String, String> kIt = {
   "Customize title page": "Personalizza la pagina del titolo",
   "Choose the order of rows below title details. Saved for this viewer.":
       "Scegli l’ordine delle righe sotto i dettagli del titolo. Salvato per questo profilo.",
+
+  // My Teams preferred channel.
+  "Set preferred channel": "Scegli canale preferito",
+  "Automatic channel": "Canale automatico",
+  "Preferred channel for {team}": "Canale preferito per {team}",
+  "Saved channel is unavailable": "Il canale salvato non è disponibile",
+  "Hold OK on a team for schedule, preferred channel or unfollow · on a game to pick the channel":
+      "Tieni premuto OK su una squadra: calendario, canale preferito o smetti di seguire · su una partita: scegli canale",
 };

@@ -2242,4 +2242,12 @@ const Map<String, String> kFr = {
   "Customize title page": "Personnaliser la fiche",
   "Choose the order of rows below title details. Saved for this viewer.":
       "Choisissez l’ordre des rangées sous les détails du titre. Enregistré pour ce profil.",
+
+  // My Teams preferred channel.
+  "Set preferred channel": "Choisir la chaîne préférée",
+  "Automatic channel": "Chaîne automatique",
+  "Preferred channel for {team}": "Chaîne préférée pour {team}",
+  "Saved channel is unavailable": "La chaîne enregistrée est indisponible",
+  "Hold OK on a team for schedule, preferred channel or unfollow · on a game to pick the channel":
+      "Maintenir OK sur une équipe : calendrier, chaîne préférée ou ne plus suivre · sur un match : choisir la chaîne",
 };

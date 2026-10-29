@@ -2239,4 +2239,12 @@ const Map<String, String> kEs = {
   "Customize title page": "Personalizar la página del título",
   "Choose the order of rows below title details. Saved for this viewer.":
       "Elige el orden de las filas bajo los detalles del título. Se guarda para este perfil.",
+
+  // My Teams preferred channel.
+  "Set preferred channel": "Elegir canal preferido",
+  "Automatic channel": "Canal automático",
+  "Preferred channel for {team}": "Canal preferido para {team}",
+  "Saved channel is unavailable": "El canal guardado no está disponible",
+  "Hold OK on a team for schedule, preferred channel or unfollow · on a game to pick the channel":
+      "Mantén OK en un equipo: calendario, canal preferido o dejar de seguir · en un partido: elegir canal",
 };

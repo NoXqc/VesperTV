@@ -63,11 +63,15 @@ Future<bool> showSportsFollowDialog(BuildContext context,
 }
 
 /// Hold OK on a team (Standings, My Teams): its season Schedule, or
-/// Follow / Unfollow. Null = cancelled.
-enum SportsTeamAction { schedule, follow }
+/// Follow / Unfollow; My Teams also offers a preferred channel. Null = cancelled.
+enum SportsTeamAction { schedule, follow, preferredChannel }
 
 Future<SportsTeamAction?> showSportsTeamMenu(BuildContext context,
-    {required SportsTeam team, required bool followed, bool canFollow = true}) {
+    {required SportsTeam team,
+    required bool followed,
+    bool canFollow = true,
+    bool canPickChannel = false,
+    String? preferredChannelName}) {
   return showDialog<SportsTeamAction>(
     context: context,
     builder: (context) => SwallowHeldActivate(
@@ -86,7 +90,8 @@ Future<SportsTeamAction?> showSportsTeamMenu(BuildContext context,
         ),
         content: SizedBox(
           width: 440,
-          child: Column(
+          child: SingleChildScrollView(
+              child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TvMenuTile(
@@ -108,13 +113,21 @@ Future<SportsTeamAction?> showSportsTeamMenu(BuildContext context,
                   onTap: () =>
                       Navigator.of(context).pop(SportsTeamAction.follow),
                 ),
+              if (canPickChannel)
+                TvMenuTile(
+                  icon: Icons.live_tv,
+                  title: tr('Set preferred channel'),
+                  subtitle: preferredChannelName ?? tr('Automatic channel'),
+                  onTap: () => Navigator.of(context)
+                      .pop(SportsTeamAction.preferredChannel),
+                ),
               TvMenuTile(
                 icon: Icons.close,
                 title: tr('Cancel'),
                 onTap: () => Navigator.of(context).pop(),
               ),
             ],
-          ),
+          )),
         ),
       ),
     ),
