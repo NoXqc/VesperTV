@@ -558,51 +558,63 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     final action = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: const Color(0xFF1A1A1A),
+      // Six rows didn't fit the default sheet height on a TV (Remove was cut
+      // off, owner photo 2026-10-29): taller allowed, compact rows, scrolls
+      // (D-pad focus scrolls the row into view).
+      isScrollControlled: true,
+      constraints:
+          BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.9),
       builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.fullscreen, color: Colors.white),
-              title: Text(tr('Full screen'),
-                  style: const TextStyle(color: Colors.white)),
-              onTap: () => Navigator.of(sheetContext).pop('fullscreen'),
+        child: SingleChildScrollView(
+          child: ListTileTheme(
+            dense: true,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.fullscreen, color: Colors.white),
+                  title: Text(tr('Full screen'),
+                      style: const TextStyle(color: Colors.white)),
+                  onTap: () => Navigator.of(sheetContext).pop('fullscreen'),
+                ),
+                if (_layout == _MultiviewLayout.main &&
+                    !_portraitDual &&
+                    index != 0)
+                  ListTile(
+                    leading:
+                        const Icon(Icons.open_in_full, color: Colors.white),
+                    title: Text(tr('Move to the big screen'),
+                        style: const TextStyle(color: Colors.white)),
+                    onTap: () => Navigator.of(sheetContext).pop('main'),
+                  ),
+                if (_canSwap && !_swapMode)
+                  ListTile(
+                    leading: const Icon(Icons.swap_vert, color: Colors.white),
+                    title: Text(tr('Swap mode'),
+                        style: const TextStyle(color: Colors.white)),
+                    onTap: () => Navigator.of(sheetContext).pop('swapMode'),
+                  ),
+                ListTile(
+                  leading: const Icon(Icons.refresh, color: Colors.white),
+                  title: Text(tr('Reload'),
+                      style: const TextStyle(color: Colors.white)),
+                  onTap: () => Navigator.of(sheetContext).pop('reload'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.swap_horiz, color: Colors.white),
+                  title: Text(tr('Change channel'),
+                      style: const TextStyle(color: Colors.white)),
+                  onTap: () => Navigator.of(sheetContext).pop('swap'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.close, color: Colors.white),
+                  title: Text(tr('Remove'),
+                      style: const TextStyle(color: Colors.white)),
+                  onTap: () => Navigator.of(sheetContext).pop('remove'),
+                ),
+              ],
             ),
-            if (_layout == _MultiviewLayout.main &&
-                !_portraitDual &&
-                index != 0)
-              ListTile(
-                leading: const Icon(Icons.open_in_full, color: Colors.white),
-                title: Text(tr('Move to the big screen'),
-                    style: const TextStyle(color: Colors.white)),
-                onTap: () => Navigator.of(sheetContext).pop('main'),
-              ),
-            if (_canSwap && !_swapMode)
-              ListTile(
-                leading: const Icon(Icons.swap_vert, color: Colors.white),
-                title: Text(tr('Swap mode'),
-                    style: const TextStyle(color: Colors.white)),
-                onTap: () => Navigator.of(sheetContext).pop('swapMode'),
-              ),
-            ListTile(
-              leading: const Icon(Icons.refresh, color: Colors.white),
-              title: Text(tr('Reload'),
-                  style: const TextStyle(color: Colors.white)),
-              onTap: () => Navigator.of(sheetContext).pop('reload'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.swap_horiz, color: Colors.white),
-              title: Text(tr('Change channel'),
-                  style: const TextStyle(color: Colors.white)),
-              onTap: () => Navigator.of(sheetContext).pop('swap'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.close, color: Colors.white),
-              title: Text(tr('Remove'),
-                  style: const TextStyle(color: Colors.white)),
-              onTap: () => Navigator.of(sheetContext).pop('remove'),
-            ),
-          ],
+          ),
         ),
       ),
     );
