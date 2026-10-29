@@ -178,6 +178,12 @@ const Map<String, String> kEl = {
       "1 + 3 οθόνες",
   "Move to the big screen":
       "Στη μεγάλη οθόνη",
+  "Swap mode":
+      "Λειτουργία εναλλαγής",
+  "SWAP":
+      "ΕΝΑΛΛΑΓΗ",
+  "Arrows swap · OK or Back to finish":
+      "Βέλη: εναλλαγή · OK ή Πίσω: τέλος",
   "2 screens":
       "2 οθόνες",
   "= audio — Select to switch, hold Select for options":

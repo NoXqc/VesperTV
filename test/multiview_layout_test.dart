@@ -63,4 +63,13 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 5));
   });
+
+  test('Swap mode rotates playing screens through the big one', () {
+    // Big = slot 0; Down brings the next screen up, the old big one last.
+    expect(swapRotation([0, 1, 2, 3], 1), [1, 2, 3, 0]);
+    expect(swapRotation([0, 1, 2, 3], -1), [3, 0, 1, 2]);
+    // Empty slots (here 2) are skipped.
+    expect(swapRotation([0, 1, 3], 1), [1, 3, 0]);
+    expect(swapRotation([0, 3], -1), [3, 0]);
+  });
 }

@@ -151,6 +151,9 @@ const Map<String, String> kFr = {
   '4 screens': "4 écrans",
   '1 + 3 screens': "1 + 3 écrans",
   'Move to the big screen': "Mettre sur le grand écran",
+  'Swap mode': "Mode échange",
+  'SWAP': "ÉCHANGE",
+  'Arrows swap · OK or Back to finish': "Flèches : échanger · OK ou Retour : terminer",
   '2 screens': "2 écrans",
   '= audio — Select to switch, hold Select for options':
       "= audio — OK pour changer, maintenir OK pour les options",

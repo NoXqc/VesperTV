@@ -151,6 +151,9 @@ const Map<String, String> kEs = {
   '4 screens': "4 pantallas",
   '1 + 3 screens': "1 + 3 pantallas",
   'Move to the big screen': "Pasar a la pantalla grande",
+  'Swap mode': "Modo intercambio",
+  'SWAP': "INTERCAMBIO",
+  'Arrows swap · OK or Back to finish': "Flechas: intercambiar · OK o Atrás: terminar",
   '2 screens': "2 pantallas",
   '= audio — Select to switch, hold Select for options':
       "= audio — OK para cambiar, mantén OK para opciones",
