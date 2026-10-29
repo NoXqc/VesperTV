@@ -4,9 +4,11 @@
 
 package io.flutter.plugins.videoplayer;
 
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import androidx.media3.common.C;
 import androidx.media3.common.Format;
 import androidx.media3.common.Player;
 import androidx.media3.exoplayer.ExoPlayer;
@@ -136,5 +138,35 @@ public final class PlatformViewExoPlayerEventListenerTest {
 
     eventListener.onPlaybackStateChanged(Player.STATE_READY);
     verify(mockCallbacks).onInitialized(Format.NO_VALUE, 400, 10L, 0);
+  }
+
+  // A live stream the server closes cleanly is reconnected, not left frozen in ENDED
+  // (Xiaomi MIBOX4, LOG-RY6KT6).
+  @Test
+  public void liveStreamEndedReconnectsInPlace() {
+    PlatformViewExoPlayerEventListener eventListener =
+        new PlatformViewExoPlayerEventListener(mockExoPlayer, mockCallbacks);
+    when(mockExoPlayer.isCurrentMediaItemLive()).thenReturn(false);
+    when(mockExoPlayer.getDuration()).thenReturn(C.TIME_UNSET);
+
+    eventListener.onPlaybackStateChanged(Player.STATE_ENDED);
+
+    verify(mockCallbacks).onPlaybackStateChanged(PlatformPlaybackState.BUFFERING);
+    verify(mockExoPlayer).seekToDefaultPosition();
+    verify(mockExoPlayer).prepare();
+  }
+
+  // A movie file (known duration) that ends is reported as ended.
+  @Test
+  public void fileEndedIsReportedNotReconnected() {
+    PlatformViewExoPlayerEventListener eventListener =
+        new PlatformViewExoPlayerEventListener(mockExoPlayer, mockCallbacks);
+    when(mockExoPlayer.isCurrentMediaItemLive()).thenReturn(false);
+    when(mockExoPlayer.getDuration()).thenReturn(5_400_000L);
+
+    eventListener.onPlaybackStateChanged(Player.STATE_ENDED);
+
+    verify(mockCallbacks).onPlaybackStateChanged(PlatformPlaybackState.ENDED);
+    verify(mockExoPlayer, never()).prepare();
   }
 }
