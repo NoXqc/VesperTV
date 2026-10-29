@@ -1515,7 +1515,10 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       onFullScreen: (channel) => _play(channel, keepPreview: true),
     );
     final sections = _sections;
-    final preview = _livePreview(context.watch<PlaybackService>());
+    final playback = context.watch<PlaybackService>();
+    final preview = _livePreview(playback);
+    // Sports Mode: a Live TV guide channel plays in the same big player.
+    final channelOnly = _modeActive && _panelPreview(playback) != null;
     // Focus can show another matchup beside the same video. Re-read its
     // information from the latest scoreboard without changing the stream.
     final pickKey = _heroPick == null ? null : _gameKey(_heroPick!);
@@ -1531,7 +1534,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           matches: _matches[_gameKey(hero)],
           matching: _matching,
           hideScores: _hideScores,
-          playing: preview != null,
+          playing: preview != null || channelOnly,
           showingOther: pick != null,
           touch: _touch,
           narrow: _narrow,
@@ -1563,6 +1566,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           !_liveOpen &&
           _movingLeague == null &&
           preview == null &&
+          !channelOnly &&
           (!mode || (!widget.home && _modeRailFocused)),
       onPopInvokedWithResult: (didPop, _) {
         if (didPop || _channelsMode) return;
@@ -1572,7 +1576,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           _endLeagueMove();
         } else if (pick != null) {
           setState(() => _heroPick = null);
-        } else if (preview != null) {
+        } else if (preview != null || channelOnly) {
           unawaited(_setPreview(null, null));
         } else if (mode && !_modeRailFocused) {
           _modeShell.currentState?.backToMenu();
@@ -1627,7 +1631,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                         },
                   child: mode
                       ? _buildSportsMode(header.first,
-                          hero == null ? null : heroWidget, sections, preview)
+                          hero == null ? null : heroWidget, sections, preview,
+                          channelOnly: channelOnly)
                       : _touch
                           // Phones: the bars and hero left the game rows a
                           // sliver of the screen, so nothing could be swiped
@@ -1824,7 +1829,6 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   void _liveBack() {
     final panel = _livePanel.currentState;
     if (!_modeRailFocused && panel != null && panel.back()) return;
-    _stopPanelPreview();
     setState(() => _liveOpen = false);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -1844,21 +1848,12 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     return _playingNow(playback)?.id == channel.id ? channel : null;
   }
 
-  /// The panel's preview video (the hero only draws video for a game).
-  Widget? _panelPreviewVideo(PlaybackService playback) {
-    final channel = _panelPreview(playback);
-    if (channel == null) return null;
-    final mini = _desktopSports ? DesktopMiniPlayer.instance.controller : null;
-    return mini != null
-        ? Video(controller: mini, controls: NoVideoControls)
-        : VideoPlayerPane(
-            key: ValueKey(channel.id), showEpgBar: false, showControls: false);
-  }
-
-  /// OK on a guide channel previews it right of the guide, like the TV
-  /// guide (owner, 2026-10-29; one stream: a game's preview ends). OK again
-  /// on it: full screen on the same session; Back returns to the panel with
-  /// it still playing (the channel full screen ended on, after CH+/-).
+  /// OK on a guide channel plays it in the Sports Mode player itself (the
+  /// big video beside the feed, same spot as a game; owner, 2026-10-29),
+  /// like the TV guide's preview; one stream, so a game's preview ends. OK
+  /// again on it: full screen on the same session; Back returns with it
+  /// still playing (the channel full screen ended on, after CH+/-). It
+  /// stays when the guide/panel close; Back on the page stops it.
   Future<void> _playLive(Channel channel, List<Channel> list) async {
     if (!_desktopSports) {
       context.read<PlaybackService>().zapList = list;
@@ -1874,13 +1869,6 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       setState(() => _previewChannel = now);
     }
     if (mounted && _liveOpen) _livePanel.currentState?.focusLast();
-  }
-
-  /// Closing the panel ends its preview (nothing on the page shows it).
-  void _stopPanelPreview() {
-    if (_previewGame == null && _previewChannel != null) {
-      unawaited(_setPreview(null, null));
-    }
   }
 
   Future<void> _confirmModeExit() async {
@@ -2193,7 +2181,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       Widget leagueBar,
       Widget Function({double? playingHeight, _HeroPart? part})? hero,
       List<_Section> sections,
-      SportsGame? preview) {
+      SportsGame? preview,
+      {bool channelOnly = false}) {
     final prefs = context.watch<AppPreferences>();
     final scrollPage =
         _touch || _narrow || MediaQuery.sizeOf(context).height < 500;
@@ -2294,7 +2283,6 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           ? SportsModeLivePanel(
               key: _livePanel,
               onPlay: _playLive,
-              preview: _panelPreviewVideo(context.watch<PlaybackService>()),
               onLeft: () => _modeShell.currentState?.focusRail(),
               onOpenFull: () => _openModePage(const TvHomeScreen()))
           : null,
@@ -2328,8 +2316,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: LayoutBuilder(builder: (context, constraints) {
                   const tools = 50.0;
-                  _feedVisible =
-                      hero != null && preview != null && !_modeBrowsing;
+                  _feedVisible = hero != null &&
+                      (preview != null || channelOnly) &&
+                      !_modeBrowsing;
                   if (_feedVisible && _previewFeedFocusSeq == _previewSeq) {
                     final seq = _previewSeq;
                     _previewFeedFocusSeq = null;
@@ -2344,6 +2333,37 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                       }
                       _focusFeed(game: preview);
                     });
+                  }
+                  // A guide channel on a day without games (no hero to
+                  // lend its player): the same player at the same spot.
+                  if (channelOnly && hero == null) {
+                    final height = math
+                        .min(
+                            (constraints.maxWidth - _GameCard.width - 56) *
+                                9 /
+                                16,
+                            constraints.maxHeight - tools - 32)
+                        .clamp(_Hero.height - 8, 600.0);
+                    return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 4),
+                          _buildModeTools(),
+                          const SizedBox(height: 6),
+                          Expanded(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(child: _buildBody(sections, preview)),
+                                const SizedBox(width: 16),
+                                _HeroVideo(
+                                    key: const ValueKey('sports-mode-player'),
+                                    width: height * 16 / 9,
+                                    height: height),
+                              ],
+                            ),
+                          ),
+                        ]);
                   }
                   if (!_feedVisible) {
                     return Column(
@@ -3494,6 +3514,52 @@ class _FeedRow extends StatelessWidget {
 /// or the video with its hint (right).
 enum _HeroPart { info, video }
 
+/// The Sports Mode / hero player's video frame. Shared by the game hero and
+/// a Live TV guide channel on a day without games, so a stream always sits
+/// in the same player.
+class _HeroVideo extends StatelessWidget {
+  const _HeroVideo(
+      {super.key, required this.width, required this.height, this.onTap});
+
+  final double width;
+  final double height;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final playingChannel = _desktopSports
+        ? DesktopMiniPlayer.instance.channel.value
+        : context.read<PlaybackService>().currentChannel;
+    final miniController =
+        _desktopSports ? DesktopMiniPlayer.instance.controller : null;
+    return VideoTapLayer(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            color: Colors.black,
+            border: Border.all(color: scheme.primary, width: 2),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: SizedBox(
+            width: width,
+            height: height,
+            child: playingChannel == null
+                ? const SizedBox()
+                : miniController != null
+                    // Windows: media_kit renders the mini player's texture.
+                    ? Video(
+                        controller: miniController, controls: NoVideoControls)
+                    : VideoPlayerPane(
+                        key: ValueKey(playingChannel.id),
+                        showEpgBar: false,
+                        showControls: false),
+          ),
+        ));
+  }
+}
+
 class _Hero extends StatelessWidget {
   const _Hero({
     required this.game,
@@ -3592,12 +3658,9 @@ class _Hero extends StatelessWidget {
   ///   and rounded clips on a platform view cost weak boxes a lot) — the
   ///   gold frame is a border around it.
   Widget _buildPlaying(BuildContext context, bool showScore) {
-    final scheme = Theme.of(context).colorScheme;
     final playingChannel = _desktopSports
         ? DesktopMiniPlayer.instance.channel.value
         : context.read<PlaybackService>().currentChannel;
-    final miniController =
-        _desktopSports ? DesktopMiniPlayer.instance.controller : null;
     // The channel named under the score: the picked game's own match, not
     // the stream still playing.
     final channel = showingOther ? null : playingChannel;
@@ -3635,30 +3698,8 @@ class _Hero extends StatelessWidget {
             ],
           );
 
-    Widget video(double w, double h) => VideoTapLayer(
-        onTap: onVideoTap,
-        child: Container(
-          padding: const EdgeInsets.all(2),
-          decoration: BoxDecoration(
-            color: Colors.black,
-            border: Border.all(color: scheme.primary, width: 2),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: SizedBox(
-            width: w,
-            height: h,
-            child: playingChannel == null
-                ? const SizedBox()
-                : miniController != null
-                    // Windows: media_kit renders the mini player's texture.
-                    ? Video(
-                        controller: miniController, controls: NoVideoControls)
-                    : VideoPlayerPane(
-                        key: ValueKey(playingChannel.id),
-                        showEpgBar: false,
-                        showControls: false),
-          ),
-        ));
+    Widget video(double w, double h) =>
+        _HeroVideo(width: w, height: h, onTap: onVideoTap);
     final hint = _KeyHintText(
         showingOther
             ? touch

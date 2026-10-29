@@ -157,7 +157,6 @@ const Map<String, String> kIt = {
   'Windowed': "In finestra",
   '4 screens': "4 schermi",
   '1 + 3 screens': "1 + 3 schermi",
-  'OK again: full screen': "OK di nuovo: schermo intero",
   'Move to the big screen': "Sposta sullo schermo grande",
   'Swap mode': "Modalità scambio",
   'SWAP': "SCAMBIO",

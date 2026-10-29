@@ -1000,7 +1000,8 @@ void main() {
     await disposePage(tester);
   });
 
-  testWidgets('Live TV guide: OK previews right of it, OK again full screen',
+  testWidgets(
+      'Live TV guide: OK plays in the Sports Mode player, again full screen',
       (tester) async {
     final routes = _PlayerRoutes();
     await openLivePanel(tester, observer: routes);
@@ -1012,11 +1013,57 @@ void main() {
     await press(tester, LogicalKeyboardKey.select);
     expect(playback.plays.map((c) => c.id), ['p1::c0']);
     expect(routes.channels, isEmpty);
-    expect(find.byKey(const ValueKey('sports-live-preview')), findsOneWidget);
+    // The Sports Mode player (no games today: the same player alone).
+    expect(find.byKey(const ValueKey('sports-mode-player')), findsOneWidget);
     expect(getFocus(), 'sports-live-guide');
     await press(tester, LogicalKeyboardKey.select);
     expect(routes.channels.map((c) => c.id), ['p1::c0']);
     expect(playback.plays, hasLength(1)); // same session, no reconnect
+    final stops = playback.stops;
+    // Back: guide, then the panel close; the stream stays in its player.
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    await tester.pump();
+    expect(find.byKey(const ValueKey('sports-live-panel')), findsNothing);
+    expect(find.byKey(const ValueKey('sports-mode-player')), findsOneWidget);
+    expect(playback.stops, stops);
+    // Back on the page stops it, like a game.
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(playback.stops, greaterThan(stops));
+    expect(find.byKey(const ValueKey('sports-mode-player')), findsNothing);
+    expect(tester.takeException(), isNull);
+    await disposePage(tester);
+  });
+
+  testWidgets('a guide channel takes the big game player beside the feed',
+      (tester) async {
+    final games = await matchedGames();
+    await open(tester, games: games);
+    await press(tester, LogicalKeyboardKey.arrowRight);
+    await press(tester, LogicalKeyboardKey.select); // game: big player
+    expect(find.byKey(const ValueKey('sports-mode-feed')), findsOneWidget);
+    final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+    expect(
+        GuideKey.handle(
+            const KeyDownEvent(
+                physicalKey: PhysicalKeyboardKey(0x110000016a),
+                logicalKey: LogicalKeyboardKey(0x11000000e4),
+                timeStamp: Duration.zero),
+            navigator: navigator),
+        isTrue);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(getFocus(), 'sports-live-guide');
+    await press(tester, LogicalKeyboardKey.arrowDown);
+    await press(tester, LogicalKeyboardKey.select); // the other channel
+    expect(playback.plays.map((c) => c.id), ['p1::0', 'p1::1']);
+    // Still the feed layout's big player, now with the guide channel.
+    expect(find.byKey(const ValueKey('sports-mode-feed')), findsOneWidget);
+    expect(getFocus(), 'sports-live-guide');
     expect(tester.takeException(), isNull);
     await disposePage(tester);
   });

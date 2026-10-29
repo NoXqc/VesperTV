@@ -157,7 +157,6 @@ const Map<String, String> kFr = {
   'Windowed': "Fenêtré",
   '4 screens': "4 écrans",
   '1 + 3 screens': "1 + 3 écrans",
-  'OK again: full screen': "OK à nouveau : plein écran",
   'Move to the big screen': "Mettre sur le grand écran",
   'Swap mode': "Mode échange",
   'SWAP': "ÉCHANGE",
