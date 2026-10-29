@@ -367,6 +367,20 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-10-29 — merged to local `main` for release, test +503 (Formuler):**
+  - **Multiview 1 + 3 Swap mode** (Android): hold OK > Swap mode or the header button;
+    arrows rotate the playing screens through the big one (controllers move, nothing
+    reconnects), sound only from the big screen, blinking SWAP pill in the black band
+    under it + gold flash per swap; OK/Back ends. Hold menu = taller scrollable sheet.
+  - **Sports Mode player flow** (owner-worded): first game = big player beside the feed;
+    Down to the cards = small player; OK on a card there plays in the small player
+    (`_setPreview` keeps `_modeBrowsing`); Up from the first row = big player again
+    (`_backToFeed` before the See all chip step).
+  - **Back with Launch with profiles selector on** (`services/profile_gate.dart`): Back
+    at the TV / Sports Mode root stops playback and returns to Who's watching
+    (`main.dart _returnToProfiles`); Back there = Exit prompt (Stay focused). Off = unchanged.
+  - Includes Codex's `codex/sports-league-fixes` (1e0dd53, tests 500/501). Analyze 16,
+    906 tests pass. Owner approved +503 and asked Codex to release/announce.
 - **cdx, 2026-10-29 — Sports Mode league navigation** (`codex/sports-league-fixes`,
   unreleased): vertical sidebar move uses Up/Down; horizontal rows use Left/Right.
   Rail visibility and Back state survive focused-league reparenting across the
