@@ -1,3 +1,4 @@
+import '../services/archive_stream_session.dart';
 import '../utils/refined_finish.dart';
 import 'dart:math' as math;
 
@@ -61,6 +62,7 @@ class _ArchiveSourceDrawerState extends State<_ArchiveSourceDrawer> {
   final _scroll = ScrollController();
   List<ArchiveStreamOption> _options = const [];
   bool _loading = true;
+  ArchiveStreamSession? _session;
   bool _selecting = false;
   String? _error;
   int _index = 0;
@@ -77,24 +79,15 @@ class _ArchiveSourceDrawerState extends State<_ArchiveSourceDrawer> {
 
   Future<void> _load() async {
     try {
-      final options = await widget.sources.load(widget.channelId);
-      if (!mounted) return;
-      var playable = options.where((o) => o.stream.ytId == null).toList();
-      final playing = widget.sources.current(widget.channelId);
-      var currentIndex = archiveCurrentStreamIndex(playable, playing);
-      if (currentIndex < 0 && playing != null && playing.stream.ytId == null) {
-        // Retain the known playing selection rather than labelling an ambiguous
-        // refreshed alternative as current. No URL is probed or exposed.
-        playable = [playing, ...playable];
-        currentIndex = 0;
+      final session = widget.sources.search?.call(widget.channelId);
+      if (session != null) {
+        _session = session;
+        session.addListener(_updateSession);
+        _updateSession();
+        return;
       }
-      setState(() {
-        _options = playable;
-        _currentIndex = currentIndex;
-        _index = math.max(0, _currentIndex);
-        _loading = false;
-      });
-      WidgetsBinding.instance.addPostFrameCallback((_) => _reveal());
+      final options = await widget.sources.load(widget.channelId);
+      if (mounted) _applyOptions(options);
     } catch (_) {
       if (mounted) {
         setState(() {
@@ -103,6 +96,43 @@ class _ArchiveSourceDrawerState extends State<_ArchiveSourceDrawer> {
         });
       }
     }
+  }
+
+  void _updateSession() {
+    if (mounted && !_closing && _session != null) {
+      _applyOptions(_session!.options);
+    }
+  }
+
+  void _applyOptions(List<ArchiveStreamOption> options) {
+    final previous = _index < _options.length ? _options[_index] : null;
+    String identity(ArchiveStreamOption o) =>
+        '${o.source.key}|${o.stream.identity}';
+    final incoming = {
+      for (final o in options)
+        if (o.stream.ytId == null) identity(o): o
+    };
+    final playable = <ArchiveStreamOption>[
+      for (final old in _options)
+        if (incoming.remove(identity(old)) case final fresh?) fresh,
+      ...incoming.values,
+    ];
+    final playing = widget.sources.current(widget.channelId);
+    var currentIndex = archiveCurrentStreamIndex(playable, playing);
+    if (currentIndex < 0 && playing != null && playing.stream.ytId == null) {
+      playable.insert(0, playing);
+      currentIndex = 0;
+    }
+    final previousIndex = previous == null
+        ? -1
+        : playable.indexWhere((o) => identity(o) == identity(previous));
+    setState(() {
+      _options = playable;
+      _currentIndex = currentIndex;
+      _index = previousIndex >= 0 ? previousIndex : math.max(0, currentIndex);
+      _loading = playable.isEmpty && (_session?.loading ?? false);
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _reveal());
   }
 
   void _reveal() {
@@ -174,6 +204,7 @@ class _ArchiveSourceDrawerState extends State<_ArchiveSourceDrawer> {
 
   @override
   void dispose() {
+    _session?.removeListener(_updateSession);
     _focus.dispose();
     _scroll.dispose();
     super.dispose();
@@ -214,7 +245,8 @@ class _ArchiveSourceDrawerState extends State<_ArchiveSourceDrawer> {
                   style: TextStyle(
                       color: Colors.white70, fontSize: _compact ? 10 : 12)),
             ),
-            if (_selecting) const LinearProgressIndicator(),
+            if (_selecting || _session?.loading == true)
+              const LinearProgressIndicator(),
             if (_error != null)
               Padding(
                   padding: const EdgeInsets.all(12),

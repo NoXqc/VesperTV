@@ -1,3 +1,4 @@
+import 'media_subtitle.dart';
 import 'catchup.dart';
 import 'media_file_info.dart';
 
@@ -20,6 +21,8 @@ class Channel {
     required this.url,
     this.logoUrl,
     this.subtitleUrl,
+    this.subtitles = const [],
+    this.httpHeaders = const {},
     this.isFavorite = false,
     this.rating,
     this.addedAt,
@@ -122,6 +125,10 @@ class Channel {
   }
   final String? logoUrl;
   final String? subtitleUrl;
+
+  /// Per-file add-on data; never persisted in channel history.
+  final List<MediaSubtitle> subtitles;
+  final Map<String, String> httpHeaders;
   bool isFavorite;
 
   /// Provider-supplied rating (e.g. Xtream's `rating` field on VOD items).
@@ -284,6 +291,7 @@ class Channel {
           String? rawId,
           String? epgKey,
           String? url,
+          Map<String, String>? httpHeaders,
           MediaFileInfo? mediaFileInfo,
           bool? onDemand,
           int? catchupDays}) =>
@@ -298,6 +306,8 @@ class Channel {
         url: url ?? this.url,
         logoUrl: logoUrl,
         subtitleUrl: subtitleUrl,
+        subtitles: subtitles,
+        httpHeaders: httpHeaders ?? this.httpHeaders,
         isFavorite: isFavorite ?? this.isFavorite,
         rating: rating,
         addedAt: addedAt,

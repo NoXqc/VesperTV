@@ -123,7 +123,7 @@ void main() {
     clockNow = now;
     playback = PlaybackService(storage, playlist)
       ..clock = (() => clockNow)
-      ..createController = (url, {closedCaptionFile}) {
+      ..createController = (url, {closedCaptionFile, httpHeaders = const {}}) {
         log.add('open $url');
         final p = FakePlayer(url, log);
         players.add(p);

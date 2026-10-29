@@ -1,3 +1,4 @@
+import '../widgets/archive_discovery_panel.dart';
 import '../widgets/detail_trailer.dart';
 import '../services/app_preferences.dart';
 import '../widgets/trailer_button.dart';
@@ -50,6 +51,7 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
   final _trailerNode = FocusNode(debugLabel: 'trailer');
   final _playNode = FocusNode(debugLabel: 'archive-play');
   final _restartNode = FocusNode(debugLabel: 'archive-restart');
+  final _discoveryNode = FocusNode(debugLabel: 'archive-discovery');
   final _castNode = FocusNode(debugLabel: 'archive-cast');
   bool _showCast = false;
 
@@ -61,6 +63,9 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
   @override
   void initState() {
     super.initState();
+    context
+        .read<ArchiveService>()
+        .registerIdentity(widget.source, widget.preview);
     _loadMeta();
     _syncTrackers();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -88,6 +93,7 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
     _playNode.dispose();
     _restartNode.dispose();
     _castNode.dispose();
+    _discoveryNode.dispose();
     super.dispose();
   }
 
@@ -101,7 +107,10 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
     } catch (_) {
       full = null; // the preview is enough for a movie
     }
-    if (mounted && full != null) setState(() => _full = full);
+    if (mounted && full != null) {
+      context.read<ArchiveService>().registerIdentity(widget.source, full);
+      setState(() => _full = full);
+    }
   }
 
   Future<void> _play({bool restart = false}) async {
@@ -188,6 +197,11 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
                         ),
                       ],
                     ),
+                    ArchiveDiscoveryPanel(
+                        source: widget.source,
+                        meta: meta,
+                        entryNode: _discoveryNode,
+                        onReturn: () => _playNode.requestFocus()),
                   ],
                 ),
               ),

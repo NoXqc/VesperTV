@@ -1,3 +1,5 @@
+import 'dart:async';
+import '../models/archive_library.dart';
 import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
@@ -9,7 +11,9 @@ import '../l10n/l10n.dart';
 import '../models/archive_models.dart';
 import '../services/archive_ready_watch.dart';
 import '../services/archive_service.dart';
+import '../services/archive_stream_session.dart';
 import '../widgets/detail_header.dart';
+import '../widgets/archive_row_settings.dart';
 import '../widgets/hold_to_activate.dart';
 import '../widgets/live_resume_hint.dart';
 import '../widgets/poster_card.dart';
@@ -58,6 +62,8 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
   final _barClearNode = FocusNode(debugLabel: 'archive-bar-clear');
   final _barGenreNode = FocusNode(debugLabel: 'archive-bar-genre');
   final _barNewestNode = FocusNode(debugLabel: 'archive-bar-newest');
+  final _barSourceNode = FocusNode(debugLabel: 'archive-search-source');
+  final _barManageNode = FocusNode(debugLabel: 'archive-bar-manage');
   final _barBackNode = FocusNode(debugLabel: 'archive-bar-back');
 
   /// The floating bar's row jumps ("Popular", "New"...), by row key.
@@ -72,6 +78,8 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
   final Map<String, GlobalKey> _rowKeys = {};
   final Map<String, ScrollController> _rowScrolls = {};
 
+  Timer? _progressRefresh;
+  String? _focusedRowKey;
   int _focusedRow = 0;
   ArchiveMeta? _focused;
   String? _focusedLabel;
@@ -110,12 +118,15 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
     _contentScope.removeListener(_onContentFocus);
     _barScope.removeListener(_onContentFocus);
     _releaseResumeHint();
+    _progressRefresh?.cancel();
     _barScope.dispose();
     _barSearchNode.dispose();
     _barClearNode.dispose();
     _barGenreNode.dispose();
     _barNewestNode.dispose();
     _barBackNode.dispose();
+    _barManageNode.dispose();
+    _barSourceNode.dispose();
     for (final n in _barRowNodes.values) {
       n.dispose();
     }
@@ -198,6 +209,8 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
       return '${tr('Results for "{query}"', {'query': row.searchQuery})}'
           ' · ${row.labelAt(0)}';
     }
+    if (row.customTitle != null) return row.customTitle!;
+    if (row.continuations != null) return tr(row.title);
     if (row.isHistory) return tr('Recently watched');
     if (row.isFavorites) return tr('Favourites');
     final title = row.source.streamOnly || row.source.tracker != null
@@ -273,6 +286,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
     final type = _type;
     setState(() {
       _focusedRow = 0;
+      _focusedRowKey = null;
       _focused = null;
       _focusedLabel = null;
     });
@@ -302,6 +316,9 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
     if (_scroll.hasClients) _scroll.jumpTo(0);
     await service.search(type, query);
     if (!mounted || type != _type) return;
+    if (!_barSearchNode.hasFocus || ModalRoute.of(context)?.isCurrent != true) {
+      return;
+    }
     final rows = service.rows(type);
     if (rows.isNotEmpty && rows.first.isSearch) {
       _lastIndex[rows.first.key] = 0;
@@ -312,6 +329,32 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
           content:
               Text(tr('No results for "{query}"', {'query': query.trim()}))));
     }
+  }
+
+  Future<void> _chooseSearchSource(ArchiveService service) async {
+    final picked = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AnimatedBuilder(
+            animation: service,
+            builder: (_, child) =>
+                SimpleDialog(title: Text(tr('Search sources')), children: [
+                  SimpleDialogOption(
+                      onPressed: () => Navigator.pop(ctx, ''),
+                      child: Text(tr('All sources'))),
+                  for (final entry in service.searchStates(_type).entries)
+                    SimpleDialogOption(
+                        onPressed: () => Navigator.pop(ctx, entry.key),
+                        child: Text(
+                            '${service.searchSourceNames(_type)[entry.key] ?? ''} · ${switch (entry.value) {
+                          ArchiveSourceStatus.loading => tr('Loading'),
+                          ArchiveSourceStatus.ready => tr('Results'),
+                          ArchiveSourceStatus.empty => tr('No results'),
+                          ArchiveSourceStatus.failed => tr('Unavailable'),
+                        }}'))
+                ])));
+    if (!mounted || picked == null) return;
+    service.selectSearchSource(_type, picked.isEmpty ? null : picked);
+    _focusBarNode(_barSourceNode);
   }
 
   void _clearSearch(ArchiveService service) {
@@ -325,6 +368,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
     setState(() {
       _type = type;
       _focusedRow = 0;
+      _focusedRowKey = null;
       _focused = null;
       _focusedLabel = null;
     });
@@ -389,13 +433,28 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
 
   /// Shows open the regular series page (episode cards, Play SxEy);
   /// movies the Archive movie page.
-  void _open(ArchiveSource source, ArchiveMeta meta) {
+  void _refreshHistoryProgress() {
+    if (!mounted) return;
+    setState(() {});
+    _progressRefresh?.cancel();
+    _progressRefresh = Timer(const Duration(milliseconds: 600), () {
+      if (mounted) setState(() {});
+    });
+  }
+
+  Future<void> _openContinuation(ArchiveContinueItem item) async {
+    await openArchiveContinuation(context, item);
+    _refreshHistoryProgress();
+  }
+
+  Future<void> _open(ArchiveSource source, ArchiveMeta meta) async {
     if (meta.type == ArchiveType.series) {
-      openArchiveSeries(context, source, meta);
-      return;
+      await openArchiveSeries(context, source, meta);
+    } else {
+      await Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => ArchiveDetailScreen(source: source, preview: meta)));
     }
-    Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => ArchiveDetailScreen(source: source, preview: meta)));
+    _refreshHistoryProgress();
   }
 
   void _openSources() {
@@ -413,6 +472,8 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
   Widget build(BuildContext context) {
     final service = context.watch<ArchiveService>();
     final rows = service.rows(_type);
+    final keptRow = rows.indexWhere((row) => row.key == _focusedRowKey);
+    if (keptRow >= 0 && _contentScope.hasFocus) _focusedRow = keptRow;
     final narrow = MediaQuery.sizeOf(context).width < 700;
     final scheme = Theme.of(context).colorScheme;
 
@@ -636,9 +697,49 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
             label: tr('Expand catalog')),
         RollDownMenuItem(
             value: 'row', icon: Icons.south, label: tr('Go to row')),
+        RollDownMenuItem(
+            value: 'customize', icon: Icons.tune, label: tr('Customize rows')),
+        RollDownMenuItem(
+            value: 'rename',
+            icon: Icons.edit_outlined,
+            label: tr('Rename row')),
+        if (row.continuations == null) ...[
+          RollDownMenuItem(
+              value: 'up', icon: Icons.arrow_upward, label: tr('Move up')),
+          RollDownMenuItem(
+              value: 'down',
+              icon: Icons.arrow_downward,
+              label: tr('Move down')),
+          RollDownMenuItem(
+              value: 'pin',
+              icon: Icons.push_pin_outlined,
+              label: tr('Pin row')),
+        ],
+        RollDownMenuItem(
+            value: 'hide', icon: Icons.visibility_off, label: tr('Hide row')),
       ],
     );
     if (!mounted) return;
+    final service = context.read<ArchiveService>();
+    if (['customize', 'rename', 'up', 'down', 'pin', 'hide'].contains(choice)) {
+      switch (choice) {
+        case 'customize':
+          await showArchiveRowSettings(context, _type);
+        case 'rename':
+          await renameArchiveRow(context, row);
+        case 'up':
+          await service.moveRow(_type, row.key, -1);
+        case 'down':
+          await service.moveRow(_type, row.key, 1);
+        case 'pin':
+          await service.setRowFlag(
+              row.key, 'pinned', !service.rowPinned(row.key));
+        case 'hide':
+          await service.setRowFlag(row.key, 'hidden', true);
+      }
+      if (mounted) _focusBarNode(_barManageNode);
+      return;
+    }
     switch (choice) {
       case 'expand':
         await Navigator.of(context).push(MaterialPageRoute(
@@ -660,6 +761,8 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
   /// A row's jump label: its own title, without the " · Genre" suffix
   /// (the Genre button shows that).
   String _barRowLabel(ArchiveRow row) {
+    if (row.customTitle != null) return row.customTitle!;
+    if (row.continuations != null) return tr(row.title);
     if (row.isHistory) return tr('Recently watched');
     if (row.isFavorites) return tr('Favourites');
     return row.source.streamOnly || row.source.tracker != null
@@ -671,10 +774,14 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
   List<FocusNode> _barNodes(ArchiveService service, List<ArchiveRow> rows) => [
         if (_showNewest(service)) _barNewestNode,
         if (service.canSearch(_type)) _barSearchNode,
-        if (service.searchQuery(_type) != null) _barClearNode,
+        if (service.searchQuery(_type) != null) ...[
+          _barSourceNode,
+          _barClearNode
+        ],
         if (service.genre(_type) == ArchiveService.otherGenre) _barBackNode,
         for (final r in _barRows(rows)) _barRowNode(rows[r].key),
         if (service.genres(_type).isNotEmpty) _barGenreNode,
+        _barManageNode,
       ];
 
   /// The Newest button: only when a source has a release-year catalog, and
@@ -688,6 +795,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
     final type = _type;
     setState(() {
       _focusedRow = 0;
+      _focusedRowKey = null;
       _focused = null;
       _focusedLabel = null;
     });
@@ -817,6 +925,14 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                       ),
                     if (query != null)
                       _BarButton(
+                          focusNode: _barSourceNode,
+                          icon: Icons.filter_list,
+                          label: service.searching
+                              ? tr('Sources · searching…')
+                              : tr('Sources'),
+                          onTap: () => _chooseSearchSource(service)),
+                    if (query != null)
+                      _BarButton(
                         focusNode: _barClearNode,
                         icon: Icons.close,
                         tooltip: tr('Clear search'),
@@ -883,6 +999,15 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                         active: genre != null,
                         onTap: () => _pickGenre(service),
                       ),
+                    _BarButton(
+                        focusNode: _barManageNode,
+                        icon: Icons.tune,
+                        label: tr('Customize'),
+                        onTap: () async {
+                          await showArchiveRowSettings(context, _type);
+                          if (mounted) _focusBarNode(_barManageNode);
+                        }),
+                    const SizedBox(width: 8),
                   ],
                 ),
               ),
@@ -1044,17 +1169,44 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                     focusNode: _node(row.key, i),
                     title: meta.name,
                     imageUrl: meta.posterUrl,
-                    rating: meta.year,
+                    rating: row.continuations != null
+                        ? (row.continuations![i].episodeLabel.isNotEmpty
+                            ? row.continuations![i].episodeLabel
+                            : meta.year)
+                        : meta.year,
+                    progressFraction: row.continuations?[i].progress,
+                    sourceLabel: row.continuations != null
+                        ? (row.upcoming
+                            ? tr('Airs {date}', {
+                                'date':
+                                    (row.continuations![i].episode?.released ??
+                                            '')
+                                        .split('T')
+                                        .first
+                              })
+                            : row.continuations![i].resume
+                                ? tr('Resume')
+                                : meta.type == ArchiveType.movie
+                                    ? tr('Play')
+                                    : row.continuations![i].episode == null
+                                        ? tr('Continue series')
+                                        : tr('Next episode'))
+                        : null,
                     tapToPreview:
                         Theme.of(context).platform == TargetPlatform.android &&
                             MediaQuery.sizeOf(context).width < 700,
-                    onTap: () => _open(row.sourceAt(i), meta),
+                    onTap: () => row.continuations != null
+                        ? _openContinuation(row.continuations![i])
+                        : _open(row.sourceAt(i), meta),
                     isFavorite: context
                         .read<ArchiveService>()
                         .isFavorite(row.sourceAt(i), meta),
                     onToggleFavorite: () =>
                         holdArchiveTitle(context, row, row.sourceAt(i), meta),
                     onFocusGained: () {
+                      service.prioritizeRow(row);
+                      service.retainSearchFocus(row);
+                      _focusedRowKey = row.key;
                       _lastIndex[row.key] = i;
                       if (i >= row.items.length - 12) {
                         context.read<ArchiveService>().loadMore(row);

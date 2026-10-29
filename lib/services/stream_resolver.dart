@@ -1,3 +1,4 @@
+import 'stream_headers.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -24,44 +25,55 @@ Future<String> resolveRedirects(String url,
 /// file: [totalBytes] from `Content-Range` (`bytes 0-0/N`) or, without a
 /// range reply, `Content-Length`. Null when unknown or on any failure.
 class ResolvedLink {
-  const ResolvedLink(this.url, {this.totalBytes});
+  const ResolvedLink(this.url, {this.totalBytes, this.headers = const {}});
+  final Map<String, String> headers;
   final String url;
   final int? totalBytes;
 }
 
 Future<ResolvedLink> resolveLink(String url,
-    {int maxHops = 8, Duration timeout = const Duration(seconds: 8)}) async {
+    {int maxHops = 8,
+    Duration timeout = const Duration(seconds: 8),
+    Map<String, String> headers = const {}}) async {
   var uri = Uri.tryParse(url);
   if (uri == null || !(uri.scheme == 'http' || uri.scheme == 'https')) {
-    return ResolvedLink(url);
+    return ResolvedLink(url, headers: headers);
   }
+  var requestHeaders = streamRequestHeaders(headers);
   final client = HttpClient()..connectionTimeout = timeout;
   try {
     for (var hop = 0; hop < maxHops; hop++) {
       final req = await client.getUrl(uri!).timeout(timeout);
       req.followRedirects = false;
+      requestHeaders.forEach((k, v) => req.headers.set(k, v));
       // Headers only: a one-byte range, and the body is never read.
       req.headers.set(HttpHeaders.rangeHeader, 'bytes=0-0');
       final res = await req.close().timeout(timeout);
       final location = res.headers.value(HttpHeaders.locationHeader);
       unawaited(res.listen(null).cancel());
       if (res.isRedirect && location != null) {
-        uri = uri.resolve(location);
+        final next = uri.resolve(location);
+        if (!['http', 'https'].contains(next.scheme)) {
+          return ResolvedLink(url, headers: headers);
+        }
+        requestHeaders = redirectedStreamHeaders(requestHeaders, uri, next);
+        uri = next;
         continue;
       }
-      if (res.statusCode >= 400) return ResolvedLink(url);
+      if (res.statusCode >= 400) return ResolvedLink(url, headers: headers);
       final range = res.headers.value(HttpHeaders.contentRangeHeader);
       final total = res.statusCode == 206
           ? int.tryParse(range?.split('/').last.trim() ?? '')
           : res.statusCode == 200 && res.contentLength >= 0
               ? res.contentLength
               : null;
-      return ResolvedLink(uri.toString(), totalBytes: total);
+      return ResolvedLink(uri.toString(),
+          totalBytes: total, headers: requestHeaders);
     }
-    return ResolvedLink(url);
+    return ResolvedLink(url, headers: headers);
   } catch (e) {
-    debugPrint('resolveRedirects: $e');
-    return ResolvedLink(url);
+    debugPrint('resolveRedirects: ${e.runtimeType}');
+    return ResolvedLink(url, headers: headers);
   } finally {
     client.close(force: true);
   }

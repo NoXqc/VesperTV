@@ -1,3 +1,4 @@
+import '../models/archive_library.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -194,7 +195,9 @@ class _SearchScreenState extends State<SearchScreen> {
     });
   }
 
+  int _hubSearchGeneration = 0;
   void _clearHub() {
+    _hubSearchGeneration++;
     _hubMovies = const [];
     _hubShows = const [];
     _hubSearching = false;
@@ -204,14 +207,61 @@ class _SearchScreenState extends State<SearchScreen> {
     if (context.read<AppPreferences>().hideArchive) return;
     final service = context.read<ArchiveService>();
     if (service.enabledSources.isEmpty) return;
-    setState(() => _hubSearching = true);
+    final generation = ++_hubSearchGeneration;
+    setState(() {
+      _hubSearching = true;
+      _hubMovies = [];
+      _hubShows = [];
+    });
+    final viewer = context.read<StorageService>().viewerGeneration;
+    bool current() =>
+        mounted &&
+        _query.trim() == query &&
+        generation == _hubSearchGeneration &&
+        context.read<StorageService>().viewerGeneration == viewer;
+    List<(ArchiveSource, ArchiveMeta)> flatten(List<ArchiveRow> rows) {
+      final seen = <String>{};
+      return [
+        for (final row in rows)
+          for (final meta in row.items)
+            if (seen.add(archiveTitleIdentity(row.source, meta)))
+              (row.source, meta)
+      ];
+    }
+
+    List<(ArchiveSource, ArchiveMeta)> merge(
+        List<(ArchiveSource, ArchiveMeta)> previous,
+        List<(ArchiveSource, ArchiveMeta)> incoming) {
+      final byId = {
+        for (final item in previous)
+          archiveTitleIdentity(item.$1, item.$2): item
+      };
+      for (final item in incoming) {
+        final id = archiveTitleIdentity(item.$1, item.$2);
+        if (byId[id] == null ||
+            byId[id]!.$1.manifestUrl == item.$1.manifestUrl) {
+          byId[id] = item;
+        }
+      }
+      return byId.values.toList();
+    }
+
     Future<List<(ArchiveSource, ArchiveMeta)>> find(ArchiveType type) async {
       final seen = <String>{};
       return [
-        for (final row
-            in await service.searchRows(type, query, underOther: false))
+        for (final row in await service.searchRows(type, query,
+            underOther: false, isCurrent: current, onRows: (rows) {
+          if (!current()) return;
+          setState(() {
+            if (type == ArchiveType.movie) {
+              _hubMovies = merge(_hubMovies, flatten(rows));
+            } else {
+              _hubShows = merge(_hubShows, flatten(rows));
+            }
+          });
+        }))
           for (final m in row.items)
-            if (seen.add(m.id)) (row.source, m),
+            if (seen.add(archiveTitleIdentity(row.source, m))) (row.source, m),
       ];
     }
 
@@ -220,17 +270,17 @@ class _SearchScreenState extends State<SearchScreen> {
       (movies, shows) =
           await (find(ArchiveType.movie), find(ArchiveType.series)).wait;
     } catch (e) {
-      debugPrint('SearchScreen: Media Hub search failed: $e');
-      if (mounted && _query.trim() == query) {
+      debugPrint('SearchScreen: Media Hub search failed=${e.runtimeType}');
+      if (current()) {
         setState(() => _hubSearching = false);
       }
       return;
     }
     // Typing moved on meanwhile: a stale answer must not show.
-    if (!mounted || _query.trim() != query) return;
+    if (!current()) return;
     setState(() {
-      _hubMovies = movies;
-      _hubShows = shows;
+      _hubMovies = merge(_hubMovies, movies);
+      _hubShows = merge(_hubShows, shows);
       _hubSearching = false;
     });
   }

@@ -10,8 +10,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  const source = ArchiveSource(
-      manifestUrl: 'https://a.example/manifest.json', name: 'A');
+  const source =
+      ArchiveSource(manifestUrl: 'https://a.example/manifest.json', name: 'A');
   const movie = ArchiveMeta(id: 'tt1', type: ArchiveType.movie, name: 'M');
   const show = ArchiveMeta(id: 'tt2', type: ArchiveType.series, name: 'S');
 
@@ -30,7 +30,9 @@ void main() {
     expect(await s.toggleFavorite(source, show), isTrue);
     await s.recordWatched(source, movie);
 
-    final movies = s.rows(ArchiveType.movie);
+    final allMovies = s.rows(ArchiveType.movie);
+    expect(allMovies.first.continuations, isNotNull);
+    final movies = allMovies.where((r) => r.continuations == null).toList();
     expect(movies.first.isFavorites, isTrue);
     expect(movies.first.isHistory, isFalse);
     expect(movies.first.items.single.id, 'tt1');

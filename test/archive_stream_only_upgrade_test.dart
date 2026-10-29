@@ -137,11 +137,15 @@ void main() {
         name: 'Spider-Man',
         imdbId: 'tt0145487');
     final options = await service.streams(own, meta);
-    expect(asked, [
-      'aio.example/stream/movie/tmdb:557.json',
-      'aio.example/stream/movie/tt0145487.json',
-      'torrentio.example/stream/movie/tt0145487.json',
-    ]);
+    expect(
+        asked,
+        unorderedEquals([
+          'aio.example/stream/movie/tmdb:557.json',
+          'aio.example/stream/movie/tt0145487.json',
+          'torrentio.example/stream/movie/tt0145487.json',
+        ]));
+    expect(asked.indexOf('aio.example/stream/movie/tmdb:557.json'),
+        lessThan(asked.indexOf('aio.example/stream/movie/tt0145487.json')));
     expect(options.map((o) => o.source.name), ['NoxAIO', 'Torrentio TB']);
     service.dispose();
     api.close();

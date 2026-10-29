@@ -93,6 +93,7 @@ class StorageService {
   /// .switchTo` updates this (via [setActiveViewerId]) and the persisted
   /// value together, in that order, before anything else reads a
   /// per-viewer key again, so there's never a window where the two disagree.
+  int viewerGeneration = 0;
   String _activeViewerId = AppConstants.mainViewerId;
 
   Future<void> init() async {
@@ -283,6 +284,12 @@ class StorageService {
   Future<void> setArchiveHistoryJson(String? json) => json == null
       ? _prefs.remove(_vk(AppConstants.keyArchiveHistory))
       : _prefs.setString(_vk(AppConstants.keyArchiveHistory), json);
+
+  /// Profile-scoped Media Hub presentation and playback preferences.
+  String? getArchiveOptionsJson(String section) =>
+      _prefs.getString(_vk('vesper_archive_$section'));
+  Future<void> setArchiveOptionsJson(String section, String json) =>
+      _prefs.setString(_vk('vesper_archive_$section'), json);
 
   String? getArchiveRecentSearchesJson() =>
       _prefs.getString(_vk(AppConstants.keyArchiveRecentSearches));
@@ -935,19 +942,100 @@ class StorageService {
   /// still starts with [AppConstants.keyLastPositionPrefix]/
   /// [keyLastDurationPrefix] and [clearCache]'s existing `startsWith` sweep
   /// below keeps catching all of them, not just Main's.
+  final Map<String, Map<String, String>> _archiveAliases = {};
+  Map<String, String> _aliasesFor(String viewer) =>
+      _archiveAliases.putIfAbsent(viewer, () {
+        try {
+          return Map<String, String>.from(jsonDecode(_prefs.getString(
+                  _vk('vesper_archive_identities', viewerId: viewer)) ??
+              '{}') as Map);
+        } catch (_) {
+          return <String, String>{};
+        }
+      });
+  String _progressId(String id, {String? viewer}) {
+    if (!id.startsWith('archive::')) return id;
+    final aliases = _aliasesFor(viewer ?? _activeViewerId);
+    final seen = <String>{};
+    var current = id;
+    while (
+        aliases.containsKey(current) && seen.add(current) && seen.length < 8) {
+      current = aliases[current]!;
+    }
+    return current;
+  }
+
+  String archiveMappedIdentity(String id) => _progressId(id);
+
+  /// Install the alias synchronously so the next build reads the migrated value.
+  /// Existing canonical progress wins; every asynchronous write keeps its viewer.
+  Future<void> registerArchiveIdentity(String legacy, String canonical) =>
+      registerArchiveIdentities({legacy: canonical});
+
+  Future<void> registerArchiveIdentities(Map<String, String> identities) async {
+    final viewer = _activeViewerId;
+    final aliases = _aliasesFor(viewer);
+    final writes = <Future<bool>>[];
+    var changed = false;
+    String key(String prefix, String id) => _vk('$prefix$id', viewerId: viewer);
+    for (final entry in identities.entries) {
+      final legacy = entry.key, canonical = entry.value;
+      if (aliases[legacy] == canonical || legacy == canonical) continue;
+      final previous = _progressId(legacy, viewer: viewer);
+      final position =
+          _prefs.getInt(key(AppConstants.keyLastPositionPrefix, previous));
+      final duration =
+          _prefs.getInt(key(AppConstants.keyLastDurationPrefix, previous));
+      final fraction = _prefs
+          .getBool(key(AppConstants.keyLastPositionPrefix, 'frac:$previous'));
+      aliases[legacy] = canonical;
+      changed = true;
+      if (position != null &&
+          !_prefs.containsKey(
+              key(AppConstants.keyLastPositionPrefix, canonical))) {
+        writes.add(_prefs.setInt(
+            key(AppConstants.keyLastPositionPrefix, canonical), position));
+        if (duration != null) {
+          writes.add(_prefs.setInt(
+              key(AppConstants.keyLastDurationPrefix, canonical), duration));
+        }
+        if (fraction == true) {
+          writes.add(_prefs.setBool(
+              key(AppConstants.keyLastPositionPrefix, 'frac:$canonical'),
+              true));
+        }
+      }
+      final resumeKey =
+          _vk('vesper_archive_resume_source_$canonical', viewerId: viewer);
+      final choice = _prefs.getString(
+          _vk('vesper_archive_resume_source_$previous', viewerId: viewer));
+      if (choice != null && !_prefs.containsKey(resumeKey)) {
+        writes.add(_prefs.setString(resumeKey, choice));
+      }
+    }
+    if (changed) {
+      writes.add(_prefs.setString(
+          _vk('vesper_archive_identities', viewerId: viewer),
+          jsonEncode(aliases)));
+    }
+    await Future.wait(writes);
+  }
+
   String _positionKey(String channelId) =>
-      _vk('${AppConstants.keyLastPositionPrefix}$channelId');
+      _vk('${AppConstants.keyLastPositionPrefix}${_progressId(channelId)}');
   String _durationKey(String channelId) =>
-      _vk('${AppConstants.keyLastDurationPrefix}$channelId');
+      _vk('${AppConstants.keyLastDurationPrefix}${_progressId(channelId)}');
 
   /// Fingerprints only: never persist expiring add-on/CDN links here.
   String? getArchiveResumeSource(String channelId, {String? viewerId}) =>
-      _prefs.getString(
-          _vk('vesper_archive_resume_source_$channelId', viewerId: viewerId));
+      _prefs.getString(_vk(
+          'vesper_archive_resume_source_${_progressId(channelId, viewer: viewerId)}',
+          viewerId: viewerId));
   Future<void> setArchiveResumeSource(String channelId, String json,
           {String? viewerId}) =>
       _prefs.setString(
-          _vk('vesper_archive_resume_source_$channelId', viewerId: viewerId),
+          _vk('vesper_archive_resume_source_${_progressId(channelId, viewer: viewerId)}',
+              viewerId: viewerId),
           json);
 
   int getLastPosition(String channelId) =>
@@ -965,8 +1053,8 @@ class StorageService {
   /// once the duration is known ([PlaybackService.play]). Its key starts
   /// with the position prefix, so clearing history sweeps it too.
   static const resumeFractionScale = 1000000;
-  String _fractionKey(String channelId) =>
-      _vk('${AppConstants.keyLastPositionPrefix}frac:$channelId');
+  String _fractionKey(String channelId) => _vk(
+      '${AppConstants.keyLastPositionPrefix}frac:${_progressId(channelId)}');
 
   Future<void> setResumeFraction(String channelId, double fraction) async {
     await _prefs.setBool(_fractionKey(channelId), true);
@@ -1210,7 +1298,7 @@ class StorageService {
   static bool _isArchiveKey(String key) =>
       key == AppConstants.keyArchiveCinemetaCatalog ||
       key == AppConstants.keyArchiveSources ||
-      key.startsWith('vesper_archive_auto_largest') ||
+      key.startsWith('vesper_archive_') ||
       key.startsWith(AppConstants.keyArchiveHistory) ||
       key.startsWith(AppConstants.keyArchiveFavorites) ||
       key.startsWith(AppConstants.keyArchiveRecentSearches) ||
@@ -1293,6 +1381,7 @@ class StorageService {
   String getActiveViewerId() => _activeViewerId;
 
   Future<void> setActiveViewerId(String id) async {
+    viewerGeneration++;
     _activeViewerId = id;
     await _prefs.setString(AppConstants.keyActiveViewerId, id);
   }

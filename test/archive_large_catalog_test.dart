@@ -47,7 +47,8 @@ class _Catalogs extends ArchiveService {
   @override
   Future<void> open() async {}
   @override
-  List<ArchiveRow> rows(ArchiveType type) => entries;
+  List<ArchiveRow> rows(ArchiveType type, {bool includeHidden = false}) =>
+      entries;
   @override
   List<String> genres(ArchiveType type) => [ArchiveService.otherGenre];
   @override

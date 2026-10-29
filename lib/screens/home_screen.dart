@@ -27,7 +27,6 @@ import '../utils/time_format.dart';
 import '../widgets/hd_network_image.dart';
 import '../widgets/hold_to_activate.dart';
 import '../widgets/tv_dialog_option.dart';
-import 'archive_detail_screen.dart';
 import 'archive_playback.dart';
 import 'desktop_player_screen.dart';
 import 'movie_detail_screen.dart';
@@ -128,12 +127,24 @@ class _HomeScreenState extends State<HomeScreen> {
   final _addProfileNode = FocusNode(debugLabel: 'home add profile');
   final _emptyFocus = FocusNode(debugLabel: 'home empty');
   bool _profilesHidden = false;
+  Timer? _hubProgressRefresh;
 
   @override
   void initState() {
     super.initState();
     _rowsConfig = HomeRows.load(context.read<StorageService>());
     unawaited(_load(focusFirst: true));
+    if (_rowsConfig.visible.contains(HomeRowKind.continueWatching)) {
+      unawaited(
+          context.read<ArchiveService>().refreshHistoryDetails(onProgress: () {
+        if (!mounted) return;
+        final rows = <HomeRowKind, _HomeRow?>{
+          for (final row in _rows) row.kind: row
+        };
+        rows[HomeRowKind.continueWatching] = _continueRow();
+        _apply(_loadId, rows, focusFirst: false, done: !_loading);
+      }));
+    }
   }
 
   @override
@@ -153,6 +164,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _hubProgressRefresh?.cancel();
     _pageScroll.dispose();
     for (final c in _rowScrolls.values) {
       c.dispose();
@@ -322,37 +334,29 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Media Hub (add-ons / debrid / Jellyfin): its own history, placed
     // where its last play sits among the playlists' plays.
-    for (final (:source, :meta) in hub.recentlyWatched()) {
-      final movie = meta.type == ArchiveType.movie;
-      if (movie) {
-        final id = ArchiveService.channelId(source, meta.id, episode: false);
-        if (storage.isFullyWatched(id)) continue;
-      }
+    for (final entry in [
+      ...hub.continueWatching(ArchiveType.movie),
+      ...hub.continueWatching(ArchiveType.series)
+    ]) {
+      final source = entry.source, meta = entry.meta;
       final vod = 'arc_vod_${source.key}_${meta.id}';
       final ep = 'arc_ep_${source.key}_${meta.id}';
       var at =
           played.indexWhere((c) => c.rawId == vod || c.rawId.startsWith(ep));
       if (at < 0) at = played.length;
-      final progress = movie
-          ? storage.getWatchedFraction(
-              ArchiveService.channelId(source, meta.id, episode: false))
-          : null;
       items.add((
         at: at,
         item: _HomeItem(
           key: 'hub:${source.key}:${meta.id}',
           removeFromHistory: () => hub.removeFromHistory(source, meta),
           title: meta.name,
-          subtitle: source.name,
+          subtitle:
+              entry.episodeLabel.isNotEmpty ? entry.episodeLabel : source.name,
           imageUrl: meta.backgroundUrl ?? meta.posterUrl,
           backdropUrl: meta.backgroundUrl,
           description: meta.description,
-          progress: progress,
-          open: (ctx) => movie
-              ? Navigator.of(ctx).push(MaterialPageRoute(
-                  builder: (_) =>
-                      ArchiveDetailScreen(source: source, preview: meta)))
-              : openArchiveSeries(ctx, source, meta),
+          progress: entry.progress,
+          open: (ctx) => openArchiveContinuation(ctx, entry),
         )
       ));
     }
@@ -483,7 +487,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _open(_HomeItem item) async {
     await item.open(context);
     // Back on Home: what was watched moves to the front of its rows.
-    if (mounted) unawaited(_load());
+    if (mounted) {
+      unawaited(_load());
+      _hubProgressRefresh?.cancel();
+      _hubProgressRefresh = Timer(const Duration(milliseconds: 600), () {
+        if (mounted) unawaited(_load());
+      });
+    }
   }
 
   // --------------------------------------------------------------- focus --

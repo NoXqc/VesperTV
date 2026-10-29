@@ -1,3 +1,4 @@
+import 'stream_headers.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -36,13 +37,17 @@ class ArchiveResumeSource {
   ArchiveResumeSource(this.storage, this.channelId,
       {Future<String?> Function(String)? probe})
       : viewerId = storage.getActiveViewerId(),
-        _probe = probe ?? probeArchiveResumeUrl;
+        _viewerGeneration = storage.viewerGeneration,
+        _probe = probe;
 
   final StorageService storage;
   final String channelId;
   final String viewerId;
-  final Future<String?> Function(String) _probe;
-  bool get isCurrent => storage.getActiveViewerId() == viewerId;
+  final int _viewerGeneration;
+  final Future<String?> Function(String)? _probe;
+  bool get isCurrent =>
+      storage.getActiveViewerId() == viewerId &&
+      storage.viewerGeneration == _viewerGeneration;
   static String _hash(String value) =>
       sha256.convert(utf8.encode(value)).toString();
   static String _description(ArchiveStreamOption option) =>
@@ -153,7 +158,9 @@ class ArchiveResumeSource {
                 ? described.single
                 : null;
     if (picked == null) return fallback(ArchiveResumeReason.unmatched);
-    final url = await _probe(picked.stream.url);
+    final url = await (_probe?.call(picked.stream.url) ??
+        probeArchiveResumeUrl(picked.stream.url,
+            headers: picked.stream.requestHeaders));
     if (!isCurrent) return fallback(ArchiveResumeReason.notResuming);
     if (url == null) {
       return ArchiveResumeChoice(
@@ -187,24 +194,30 @@ class ArchiveResumeSource {
 /// Resolve fresh redirects and confirm the saved selection is reachable.
 /// A range request avoids downloading the movie or buffering its body.
 Future<String?> probeArchiveResumeUrl(String url,
-    {Duration timeout = const Duration(seconds: 8)}) async {
+    {Duration timeout = const Duration(seconds: 8),
+    Map<String, String> headers = const {}}) async {
   var uri = Uri.tryParse(url);
   if (uri == null ||
       !['http', 'https'].contains(uri.scheme) ||
       uri.host.isEmpty) {
     return null;
   }
+  var requestHeaders = streamRequestHeaders(headers);
   final client = HttpClient()..connectionTimeout = timeout;
   try {
     for (var hop = 0; hop < 8; hop++) {
       final request = await client.getUrl(uri!).timeout(timeout);
       request.followRedirects = false;
+      requestHeaders.forEach((k, v) => request.headers.set(k, v));
       request.headers.set(HttpHeaders.rangeHeader, 'bytes=0-0');
       final response = await request.close().timeout(timeout);
       final location = response.headers.value(HttpHeaders.locationHeader);
       unawaited(response.listen(null).cancel());
       if (response.isRedirect && location != null) {
-        uri = uri.resolve(location);
+        final next = uri.resolve(location);
+        if (!['http', 'https'].contains(next.scheme)) return null;
+        requestHeaders = redirectedStreamHeaders(requestHeaders, uri, next);
+        uri = next;
         continue;
       }
       return response.statusCode >= 200 && response.statusCode < 300

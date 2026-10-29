@@ -153,7 +153,7 @@ void main() {
     prefs.guideFullVideo = fullVideo;
     final playlist = _Playlist(storage);
     playback = PlaybackService(storage, playlist)
-      ..createController = (url, {closedCaptionFile}) {
+      ..createController = (url, {closedCaptionFile, httpHeaders = const {}}) {
         opened.add(url);
         return _FakePlayer(url);
       };

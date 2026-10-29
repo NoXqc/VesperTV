@@ -331,8 +331,8 @@ class SubtitleTracks {
     final addons = AddonService(storage);
     if (lang == null ||
         channel.subtitleUrl != null ||
-        !AddonService.supports(channel) ||
-        !addons.anyEnabled) {
+        (channel.subtitles.isEmpty &&
+            (!AddonService.supports(channel) || !addons.anyEnabled))) {
       return null;
     }
     return (await addons.search(channel))
