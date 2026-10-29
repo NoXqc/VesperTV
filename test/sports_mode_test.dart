@@ -1029,12 +1029,22 @@ void main() {
     expect(find.byKey(const ValueKey('sports-live-panel')), findsNothing);
     expect(find.byKey(const ValueKey('sports-mode-player')), findsOneWidget);
     expect(playback.stops, stops);
-    // Back on the page stops it, like a game.
+    // Back on the page opens the rail, still playing; Back there stops it.
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byKey(const ValueKey('sports-mode-rail')), findsOneWidget);
+    expect(playback.stops, stops);
     await tester.binding.handlePopRoute();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(playback.stops, greaterThan(stops));
     expect(find.byKey(const ValueKey('sports-mode-player')), findsNothing);
+    // Back again quits (the exit prompt; Who's watching when that's on).
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Stay'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await disposePage(tester);
   });

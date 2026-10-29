@@ -1576,10 +1576,15 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           _endLeagueMove();
         } else if (pick != null) {
           setState(() => _heroPick = null);
-        } else if (preview != null || channelOnly) {
+        } else if (!mode && preview != null) {
           unawaited(_setPreview(null, null));
         } else if (mode && !_modeRailFocused) {
+          // Sports Mode (owner, 2026-10-29): Back opens the rail and the
+          // player keeps playing; Back on the rail stops it; Back again
+          // quits (Who's watching / exit prompt).
           _modeShell.currentState?.backToMenu();
+        } else if (mode && (preview != null || channelOnly)) {
+          unawaited(_setPreview(null, null));
         } else if (mode && widget.home) {
           unawaited(_confirmModeExit());
         }
@@ -3721,7 +3726,8 @@ class _Hero extends StatelessWidget {
     if (part == _HeroPart.video) {
       final videoHint = touch || _desktopSports || showingOther
           ? hint
-          : _KeyHintText(tr('→ on a game: full screen  ·  ▶❚❚ or Back: stop'),
+          // Sports Mode: Back opens the rail, the player keeps playing.
+          : _KeyHintText(tr('→ on a game: full screen  ·  ▶❚❚: stop'),
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 12, color: Colors.white54));
       return Column(

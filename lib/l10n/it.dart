@@ -424,8 +424,8 @@ const Map<String, String> kIt = {
   'Day': "Giorno",
   'OK: watch  ·  →: full screen  ·  Hold OK: stats  ·  ▼ all games':
       "OK: guarda  ·  →: schermo intero  ·  Tieni premuto OK: statistiche  ·  ▼ tutte le partite",
-  '→ on a game: full screen  ·  ▶❚❚ or Back: stop':
-      "→ su una partita: schermo intero  ·  ▶❚❚ o Indietro: ferma",
+  '→ on a game: full screen  ·  ▶❚❚: stop':
+      "→ su una partita: schermo intero  ·  ▶❚❚: ferma",
   'Standings': "Classifica",
   '{name} standings': "Classifica {name}",
   '{name} championship': "Campionato {name}",

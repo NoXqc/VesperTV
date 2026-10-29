@@ -427,8 +427,8 @@ const Map<String, String> kFr = {
   'Day': "Jour",
   'OK: watch  ·  →: full screen  ·  Hold OK: stats  ·  ▼ all games':
       "OK : regarder  ·  → : plein écran  ·  Maintenir OK : stats  ·  ▼ tous les matchs",
-  '→ on a game: full screen  ·  ▶❚❚ or Back: stop':
-      "→ sur un match : plein écran  ·  ▶❚❚ ou Retour : arrêter",
+  '→ on a game: full screen  ·  ▶❚❚: stop':
+      "→ sur un match : plein écran  ·  ▶❚❚ : arrêter",
   'Standings': "Classement",
   '{name} standings': "Classement {name}",
   '{name} championship': "Championnat {name}",
