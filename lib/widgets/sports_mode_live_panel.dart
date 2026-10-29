@@ -114,6 +114,27 @@ class SportsModeLivePanelState extends State<SportsModeLivePanel> {
     _keepVisible(_groupsScroll, _groupIndex, _groupExtent);
   }
 
+  /// The remote's Guide button: the guide on the playing channel's group
+  /// (else the last group, else the first channel group), focus on the
+  /// playing channel.
+  void openGuide() {
+    if (_groups.isEmpty) return;
+    final playing = context.read<PlaybackService>().liveChannel;
+    var index = playing == null
+        ? -1
+        : _groups.indexWhere(
+            (g) => g.key == '${playing.playlistId}::${playing.group}');
+    if (index < 0 && _lastGroupKey != null) {
+      index = _groups.indexWhere((g) => g.key == _lastGroupKey);
+    }
+    if (index < 0) index = _groups.indexWhere((g) => g.key != _fullKey);
+    if (index < 0) return;
+    if (_groupsScroll.hasClients) {
+      _keepVisible(_groupsScroll, index, _groupExtent);
+    }
+    _openGroup(index);
+  }
+
   /// Back to the guide (after full screen), else the groups.
   void focusLast() => guideOpen ? _focusGuide() : focusGroups();
 

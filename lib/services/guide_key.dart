@@ -25,6 +25,9 @@ class GuideKey {
   /// soon as it registers.
   static bool _pending = false;
 
+  /// The next TV home to mount opens its guide (an opener pushing one).
+  static void openGuideOnNextHome() => _pending = true;
+
   static void register(GuideTarget target) {
     _targets.add(target);
     if (_pending) {
@@ -73,7 +76,6 @@ class GuideKey {
     final open = _opener;
     if (open == null) return false;
     navigator.popUntil((r) => r.isFirst);
-    _pending = true;
     open();
     return true;
   }

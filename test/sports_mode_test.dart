@@ -16,6 +16,7 @@ import 'package:nox_iptv/models/channel.dart';
 import 'package:nox_iptv/models/epg_program.dart';
 import 'package:nox_iptv/models/sports.dart';
 import 'package:nox_iptv/screens/sports_screen.dart';
+import 'package:nox_iptv/services/guide_key.dart';
 import 'package:nox_iptv/screens/player_screen.dart';
 import 'package:nox_iptv/screens/sports_live_list_screen.dart';
 import 'package:nox_iptv/screens/sports_my_teams_screen.dart';
@@ -968,6 +969,34 @@ void main() {
     expect(getFocus(), 'sports-chip-mode:tv');
     await press(tester, LogicalKeyboardKey.select);
   }
+
+  testWidgets('remote Guide opens the Live TV panel; the game keeps playing',
+      (tester) async {
+    final games = await matchedGames();
+    await open(tester, games: games);
+    await press(tester, LogicalKeyboardKey.arrowRight);
+    await press(tester, LogicalKeyboardKey.select); // game in the big player
+    expect(playback.plays.map((c) => c.id), ['p1::0']);
+    final stops = playback.stops;
+    final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+    expect(
+        GuideKey.handle(
+            const KeyDownEvent(
+                physicalKey: PhysicalKeyboardKey(0x110000016a),
+                logicalKey: LogicalKeyboardKey(0x11000000e4),
+                timeStamp: Duration.zero),
+            navigator: navigator),
+        isTrue);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byType(TvHomeScreen), findsNothing);
+    expect(find.byKey(const ValueKey('sports-live-panel')), findsOneWidget);
+    expect(getFocus(), 'sports-live-guide');
+    expect(playback.stops, stops);
+    expect(playback.plays, hasLength(1));
+    expect(tester.takeException(), isNull);
+    await disposePage(tester);
+  });
 
   testWidgets('Live TV opens groups and guide inside Sports Mode; Back x3',
       (tester) async {

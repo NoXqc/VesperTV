@@ -112,6 +112,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   final _livePanel = GlobalKey<SportsModeLivePanelState>();
   bool _liveOpen = false;
 
+  /// The rail's Live TV is the in-page panel (TV layout), not the TV home.
+  bool _livePanelLayout = false;
+
   // Sports Mode while a game plays (TV): the left column is a feed of the
   // day's games beside the big video ("watching"); Down past its end shows
   // the card rows under a small hero ("browsing"), Up from them comes back
@@ -245,10 +248,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     FocusManager.instance.addListener(_rememberModeControlFocus);
     // Sports Mode root: the remote's Guide button opens Live TV on its
     // guide, through the rail's own page path ([GuideKey]).
-    if (widget.home) {
-      GuideKey.registerOpener(
-          this, () => unawaited(_openModePage(const TvHomeScreen())));
-    }
+    if (widget.home) GuideKey.registerOpener(this, _openGuide);
     // Windows: the hero plays through DesktopMiniPlayer, not PlaybackService.
     if (_desktopSports) {
       DesktopMiniPlayer.instance.channel.addListener(_onMiniPlayerChanged);
@@ -1793,6 +1793,21 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     if (mounted) _modeShell.currentState?.focusRail();
   }
 
+  /// The remote's Guide button on the Sports Mode root ([GuideKey]): the
+  /// rail's Live TV panel on the playing channel's group, the game in the
+  /// small player keeps playing (owner, 2026-10-29: the TV home stopped
+  /// it). Touch/narrow layouts have no panel: the TV home, as the rail does.
+  void _openGuide() {
+    if (!_livePanelLayout) {
+      GuideKey.openGuideOnNextHome();
+      unawaited(_openModePage(const TvHomeScreen()));
+      return;
+    }
+    if (!_liveOpen) setState(() => _liveOpen = true);
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _livePanel.currentState?.openGuide());
+  }
+
   void _openLive() {
     if (_liveOpen) {
       _livePanel.currentState?.focusLast();
@@ -2154,6 +2169,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final scrollPage =
         _touch || _narrow || MediaQuery.sizeOf(context).height < 500;
     if (scrollPage) _feedVisible = false;
+    _livePanelLayout = !scrollPage;
     SportsModeRailEntry app(String id, String label, IconData icon, Widget page,
             {bool settings = false, bool stopPlayback = false}) =>
         SportsModeRailEntry(

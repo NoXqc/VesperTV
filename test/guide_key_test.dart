@@ -77,10 +77,11 @@ void main() {
     final owner = Object();
     await tester.pumpWidget(
         MaterialApp(navigatorKey: navKey, home: const Text('sports')));
-    GuideKey.registerOpener(
-        owner,
-        () => navKey.currentState!
-            .push(MaterialPageRoute<void>(builder: (_) => const _Home())));
+    GuideKey.registerOpener(owner, () {
+      GuideKey.openGuideOnNextHome();
+      navKey.currentState!
+          .push(MaterialPageRoute<void>(builder: (_) => const _Home()));
+    });
     addTearDown(() => GuideKey.unregisterOpener(owner));
     await pressGuide(tester);
     await tester.pumpAndSettle();
