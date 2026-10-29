@@ -6,6 +6,17 @@
 /// "s" filled in by the code; Spanish plurals don't always work that way
 /// (canal/canales), so those strings are phrased to avoid it.
 const Map<String, String> kEs = {
+  // Media Hub custom posters.
+  "Add {imdb_id} or {tmdb_id} where the title goes.": "Añade {imdb_id} o {tmdb_id} donde va el título.",
+  "Custom posters": "Pósters personalizados",
+  "Custom posters off: Media Hub shows the sources' posters.": "Pósters personalizados desactivados: Media Hub muestra los pósters de las fuentes.",
+  "Example: {url}": "Ejemplo: {url}",
+  "Media Hub posters from a poster service": "Pósters de Media Hub desde un servicio de pósters",
+  "Poster address": "Dirección de los pósters",
+  "Saved. Media Hub posters now come from this address.": "Guardado. Los pósters de Media Hub ahora vienen de esta dirección.",
+  "Show Media Hub posters from a poster service of your choice, for example one that adds ratings. Paste its poster address with {imdb_id} (or {tmdb_id}) where the title goes; include your own key if the service needs one.": "Muestra los pósters de Media Hub desde el servicio que elijas, por ejemplo uno que añade puntuaciones. Pega su dirección de póster con {imdb_id} (o {tmdb_id}) donde va el título; incluye tu propia clave si el servicio la pide.",
+  "Turn off": "Desactivar",
+  "When a title has no matching ID, its normal poster is shown. Leave empty to turn it off.": "Si un título no tiene el identificador necesario, se muestra su póster normal. Déjalo vacío para desactivarlo.",
   // Media Hub experience (progressive sources, rows, discovery).
   "Add your TMDB key for collections and cast credits": "Añade tu clave de TMDB para colecciones y reparto",
   "Airs {date}": "Se emite {date}",

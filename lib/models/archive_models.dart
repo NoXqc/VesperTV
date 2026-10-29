@@ -7,6 +7,7 @@
 library;
 
 import 'media_subtitle.dart';
+import '../services/archive_posters.dart';
 import '../services/stream_headers.dart';
 
 import 'trailer.dart';
@@ -540,7 +541,7 @@ class ArchiveMeta {
     required this.id,
     required this.type,
     required this.name,
-    this.posterUrl,
+    String? posterUrl,
     this.backgroundUrl,
     this.year,
     this.description,
@@ -554,7 +555,7 @@ class ArchiveMeta {
     this.imdbId,
     this.trailers = const [],
     this.trailerStreams = const [],
-  });
+  }) : originalPosterUrl = posterUrl;
 
   final String id;
   final ArchiveType type;
@@ -579,7 +580,19 @@ class ArchiveMeta {
 
   /// The type sent in `/meta/` and `/stream/` requests.
   String get wire => wireType ?? type.wire;
-  final String? posterUrl;
+
+  /// The source's own poster; [posterUrl] is what to show.
+  final String? originalPosterUrl;
+
+  /// The poster to show: the user's custom poster service when one is set
+  /// and this title has the ids it needs ([ArchivePosters]), else the
+  /// source's own.
+  String? get posterUrl =>
+      ArchivePosters.apply(
+          imdb: imdb,
+          tmdb: RegExp(r'^tmdb:(\d+)').firstMatch(id)?.group(1),
+          type: type.wire) ??
+      originalPosterUrl;
   final String? backgroundUrl;
 
   /// `releaseInfo` as sources send it: "1931", or "1959-1964" for a series.
@@ -666,7 +679,7 @@ class ArchiveMeta {
         if (director.isNotEmpty) 'director': director,
         if (rating != null) 'imdbRating': rating,
         if (imdbId != null) 'imdb_id': imdbId,
-        if (posterUrl != null) 'poster': posterUrl,
+        if (originalPosterUrl != null) 'poster': originalPosterUrl,
         if (backgroundUrl != null) 'background': backgroundUrl,
         if (year != null) 'releaseInfo': year,
         if (description != null) 'description': description,

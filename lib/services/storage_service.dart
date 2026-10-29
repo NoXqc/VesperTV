@@ -249,6 +249,12 @@ class StorageService {
   Future<void> setTmdbApiKey(String key) =>
       _prefs.setString(AppConstants.keyTmdbApiKey, key);
 
+  /// Settings > Media Hub > Custom posters — see `ArchivePosters`.
+  String getArchivePosterPattern() =>
+      _prefs.getString(AppConstants.keyArchivePosterPattern) ?? '';
+  Future<void> setArchivePosterPattern(String pattern) =>
+      _prefs.setString(AppConstants.keyArchivePosterPattern, pattern);
+
   /// Settings > Media Hub > Debrid accounts — see `DebridApi`.
   String? getRealDebridToken() =>
       _prefs.getString(AppConstants.keyRealDebridToken);

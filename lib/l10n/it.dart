@@ -6,6 +6,17 @@
 /// the code; Italian plurals don't work that way (canale/canali), so those
 /// strings are phrased to avoid it.
 const Map<String, String> kIt = {
+  // Media Hub custom posters.
+  "Add {imdb_id} or {tmdb_id} where the title goes.": "Aggiungi {imdb_id} o {tmdb_id} dove va il titolo.",
+  "Custom posters": "Locandine personalizzate",
+  "Custom posters off: Media Hub shows the sources' posters.": "Locandine personalizzate disattivate: Media Hub mostra le locandine delle fonti.",
+  "Example: {url}": "Esempio: {url}",
+  "Media Hub posters from a poster service": "Locandine di Media Hub da un servizio di locandine",
+  "Poster address": "Indirizzo delle locandine",
+  "Saved. Media Hub posters now come from this address.": "Salvato. Le locandine di Media Hub ora arrivano da questo indirizzo.",
+  "Show Media Hub posters from a poster service of your choice, for example one that adds ratings. Paste its poster address with {imdb_id} (or {tmdb_id}) where the title goes; include your own key if the service needs one.": "Mostra le locandine di Media Hub dal servizio che preferisci, per esempio uno che aggiunge i voti. Incolla il suo indirizzo delle locandine con {imdb_id} (o {tmdb_id}) dove va il titolo; includi la tua chiave se il servizio la richiede.",
+  "Turn off": "Disattiva",
+  "When a title has no matching ID, its normal poster is shown. Leave empty to turn it off.": "Se un titolo non ha l'identificativo richiesto, viene mostrata la sua locandina normale. Lascia vuoto per disattivare.",
   // Media Hub experience (progressive sources, rows, discovery).
   "Add your TMDB key for collections and cast credits": "Aggiungi la tua chiave TMDB per collezioni e cast",
   "Airs {date}": "In onda {date}",

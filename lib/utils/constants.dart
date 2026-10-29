@@ -50,6 +50,8 @@ class AppConstants {
   static const String keyEpgUrl = 'nox_epg_url';
   static const String keyRefreshInterval = 'nox_refresh_interval_minutes';
   static const String keyTmdbApiKey = 'nox_tmdb_api_key';
+  // Media Hub custom poster URL pattern (ArchivePosters), device-only.
+  static const String keyArchivePosterPattern = 'vesper_archive_poster_pattern';
   // Stremio-style subtitle add-ons (AddonService), JSON list.
   static const String keyAddons = 'vesper_addons';
   // Archive tab sources (Stremio-schema catalogs + streams), JSON list.

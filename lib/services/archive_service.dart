@@ -96,6 +96,10 @@ class ArchiveStreamOption {
 /// contacted until the user adds one. Only direct http(s) streams are
 /// used; torrent/debrid entries are ignored on purpose.
 class ArchiveService extends ChangeNotifier {
+  /// Settings > Media Hub > Custom posters changed: rows rebuild with the
+  /// new poster addresses (`ArchiveMeta.posterUrl`).
+  void postersChanged() => notifyListeners();
+
   ArchiveService(this._storage,
       {ArchiveApiService? api,
       ArchiveCache? cache,

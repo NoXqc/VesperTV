@@ -266,7 +266,7 @@ class MediaServerApi {
       id: meta.id,
       type: meta.type,
       name: meta.name,
-      posterUrl: meta.posterUrl,
+      posterUrl: meta.originalPosterUrl,
       backgroundUrl: meta.backgroundUrl,
       year: meta.year,
       description: meta.description,

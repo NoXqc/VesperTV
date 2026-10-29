@@ -441,7 +441,7 @@ Future<void> openArchiveSeries(
               name: preview.name,
               categoryId: ArchiveService.playlistId,
               coverUrl: preview.posterUrl,
-              posterUrl: preview.posterUrl,
+              posterUrl: preview.originalPosterUrl,
               backdropUrl: preview.backgroundUrl,
             ),
             loadEpisodes: load,

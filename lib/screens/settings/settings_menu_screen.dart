@@ -20,6 +20,7 @@ import 'send_log_screen.dart';
 import 'transfer_screen.dart';
 import 'theme_screen.dart';
 import 'addons_screen.dart';
+import 'archive_posters_screen.dart';
 import 'archive_sources_screen.dart';
 import 'trackers_screen.dart';
 import 'tmdb_settings_screen.dart';
@@ -162,6 +163,11 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
                 tr('TMDB (Release Dates)'),
                 tr('Optional key for sorting by real release date'),
                 (_) => const TmdbSettingsScreen()),
+            _Entry(
+                Icons.image_outlined,
+                tr('Custom posters'),
+                tr('Media Hub posters from a poster service'),
+                (_) => const ArchivePostersScreen()),
             _Entry(
                 Icons.cloud_done_outlined,
                 tr('Debrid accounts'),

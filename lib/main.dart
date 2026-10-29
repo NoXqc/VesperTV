@@ -27,6 +27,7 @@ import 'screens/welcome_add_playlist_screen.dart';
 import 'screens/startup_profile_screen.dart';
 import 'services/app_log.dart';
 import 'services/app_preferences.dart';
+import 'services/archive_posters.dart';
 import 'services/catalog_database.dart';
 import 'services/device_defaults.dart';
 import 'services/device_memory_service.dart';
@@ -442,6 +443,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       _programmeReminders = ProgrammeReminders(_storage);
       _goalsAlerts = GoalsAlerts(_storage);
       LiveResumeHint.pillEnabled.value = _storage.getShowResumePill();
+      ArchivePosters.pattern = _storage.getArchivePosterPattern();
 
       Real4kChannels.init(_storage);
       ArchiveReadyWatch.instance.init(_storage);

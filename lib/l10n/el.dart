@@ -6,6 +6,17 @@
 /// English-style plural "s" filled in by the code; Greek plurals don't
 /// work that way, so those strings are phrased without it.
 const Map<String, String> kEl = {
+  // Media Hub custom posters.
+  "Add {imdb_id} or {tmdb_id} where the title goes.": "Προσθέστε {imdb_id} ή {tmdb_id} στη θέση του τίτλου.",
+  "Custom posters": "Προσαρμοσμένες αφίσες",
+  "Custom posters off: Media Hub shows the sources' posters.": "Οι προσαρμοσμένες αφίσες απενεργοποιήθηκαν: το Media Hub δείχνει τις αφίσες των πηγών.",
+  "Example: {url}": "Παράδειγμα: {url}",
+  "Media Hub posters from a poster service": "Αφίσες Media Hub από υπηρεσία αφισών",
+  "Poster address": "Διεύθυνση αφισών",
+  "Saved. Media Hub posters now come from this address.": "Αποθηκεύτηκε. Οι αφίσες του Media Hub προέρχονται πλέον από αυτή τη διεύθυνση.",
+  "Show Media Hub posters from a poster service of your choice, for example one that adds ratings. Paste its poster address with {imdb_id} (or {tmdb_id}) where the title goes; include your own key if the service needs one.": "Εμφανίστε τις αφίσες του Media Hub από υπηρεσία της επιλογής σας, π.χ. μία που προσθέτει βαθμολογίες. Επικολλήστε τη διεύθυνση αφίσας με {imdb_id} (ή {tmdb_id}) στη θέση του τίτλου· προσθέστε το δικό σας κλειδί αν το ζητά η υπηρεσία.",
+  "Turn off": "Απενεργοποίηση",
+  "When a title has no matching ID, its normal poster is shown. Leave empty to turn it off.": "Αν ένας τίτλος δεν έχει το αντίστοιχο αναγνωριστικό, εμφανίζεται η κανονική του αφίσα. Αφήστε κενό για απενεργοποίηση.",
   // Media Hub experience (progressive sources, rows, discovery).
   "Add your TMDB key for collections and cast credits": "Προσθέστε το κλειδί TMDB για συλλογές και ηθοποιούς",
   "Airs {date}": "Προβολή {date}",

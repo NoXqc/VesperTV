@@ -5,6 +5,17 @@
 /// Keep every `{placeholder}` exactly as in the key. `{s}` is the plural "s"
 /// the code fills in ("chaîne{s}").
 const Map<String, String> kFr = {
+  // Media Hub custom posters.
+  "Add {imdb_id} or {tmdb_id} where the title goes.": "Ajoutez {imdb_id} ou {tmdb_id} à l'endroit du titre.",
+  "Custom posters": "Affiches personnalisées",
+  "Custom posters off: Media Hub shows the sources' posters.": "Affiches personnalisées désactivées : le Media Hub montre les affiches des sources.",
+  "Example: {url}": "Exemple : {url}",
+  "Media Hub posters from a poster service": "Affiches du Media Hub d'un service d'affiches",
+  "Poster address": "Adresse des affiches",
+  "Saved. Media Hub posters now come from this address.": "Enregistré. Les affiches du Media Hub viennent maintenant de cette adresse.",
+  "Show Media Hub posters from a poster service of your choice, for example one that adds ratings. Paste its poster address with {imdb_id} (or {tmdb_id}) where the title goes; include your own key if the service needs one.": "Affichez les affiches du Media Hub depuis le service de votre choix, par exemple un service qui ajoute les cotes. Collez son adresse d'affiche avec {imdb_id} (ou {tmdb_id}) à l'endroit du titre; incluez votre propre clé si le service en demande une.",
+  "Turn off": "Désactiver",
+  "When a title has no matching ID, its normal poster is shown. Leave empty to turn it off.": "Si un titre n'a pas l'identifiant voulu, son affiche habituelle est montrée. Laissez vide pour désactiver.",
   // Media Hub experience (progressive sources, rows, discovery).
   "Add your TMDB key for collections and cast credits": "Ajoutez votre clé TMDB pour les collections et la distribution",
   "Airs {date}": "Diffusion {date}",
