@@ -6,6 +6,9 @@
 /// Settings > Archive sources (see `ArchiveService`).
 library;
 
+import 'media_subtitle.dart';
+import '../services/stream_headers.dart';
+
 import 'trailer.dart';
 
 import 'dart:convert';
@@ -647,7 +650,7 @@ class ArchiveMeta {
   }
 
   /// What the cache stores: the preview fields only (no episode list).
-  Map<String, dynamic> toJson() => {
+  Map<String, dynamic> toJson({bool includeVideos = false}) => {
         'id': id,
         'type': wire,
         'name': name,
@@ -658,6 +661,10 @@ class ArchiveMeta {
               if (stream.ytId == null || !trailers.contains(stream.ytId))
                 stream.toJson(),
           ],
+        if (includeVideos) 'videos': [for (final v in videos) v.toJson()],
+        if (cast.isNotEmpty) 'cast': cast,
+        if (director.isNotEmpty) 'director': director,
+        if (rating != null) 'imdbRating': rating,
         if (imdbId != null) 'imdb_id': imdbId,
         if (posterUrl != null) 'poster': posterUrl,
         if (backgroundUrl != null) 'background': backgroundUrl,
@@ -691,6 +698,16 @@ class ArchiveVideo {
   /// Air date as sent (usually ISO 8601).
   final String? released;
 
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'season': season,
+        'episode': episode,
+        if (released != null) 'released': released,
+        if (thumbnailUrl != null) 'thumbnail': thumbnailUrl,
+        if (overview != null) 'overview': overview
+      };
+
   static ArchiveVideo? fromJson(Map<String, dynamic> j) {
     final id = j['id']?.toString();
     if (id == null || id.isEmpty) return null;
@@ -721,10 +738,31 @@ class ArchiveStream {
       this.fileName,
       this.videoHash,
       this.subtitleUrl,
+      this.subtitles = const [],
+      this.requestHeaders = const {},
+      this.bingeGroup,
       this.sizeBytes});
 
   final String? ytId;
-  String get identity => ytId == null ? url : 'yt:$ytId';
+  static final Expando<String> _identities = Expando();
+  String get identity => _identities[this] ??= _streamIdentity();
+  String _streamIdentity() {
+    if (ytId != null) return 'yt:$ytId';
+    final headers = {
+      for (final entry in requestHeaders.entries)
+        entry.key.toLowerCase(): entry.value
+    };
+    final keys = headers.keys.toList()..sort();
+    // Stable file-row keys must not put signed URLs or header credentials in
+    // widget diagnostics. Different authorization still identifies a new link.
+    return sha256
+        .convert(utf8.encode(jsonEncode([
+          url,
+          {for (final key in keys) key: headers[key]}
+        ])))
+        .toString();
+  }
+
   Uri? get playbackUri => ytId != null
       ? (TrailerLinks.videoId(ytId) == null
           ? null
@@ -747,6 +785,19 @@ class ArchiveStream {
         fileName: row['behaviorHints'] is Map
             ? ArchiveMeta._str(row['behaviorHints']['filename'])
             : null,
+        bingeGroup: row['behaviorHints'] is Map
+            ? ArchiveMeta._str(row['behaviorHints']['bingeGroup'])
+            : null,
+        requestHeaders: streamRequestHeaders(row['behaviorHints'] is Map &&
+                row['behaviorHints']['proxyHeaders'] is Map
+            ? row['behaviorHints']['proxyHeaders']['request']
+            : null),
+        subtitles: [
+          for (final item
+              in row['subtitles'] is List ? row['subtitles'] : const [])
+            if (item is Map)
+              if (MediaSubtitle.fromJson(item) case final subtitle?) subtitle,
+        ],
         videoHash: row['behaviorHints'] is Map
             ? ArchiveMeta._str(row['behaviorHints']['videoHash'])
             : null,
@@ -763,12 +814,21 @@ class ArchiveStream {
   }
 
   Map<String, dynamic> toJson() => {
-        if (sizeBytes != null || fileName != null || videoHash != null)
+        if (sizeBytes != null ||
+            fileName != null ||
+            videoHash != null ||
+            bingeGroup != null ||
+            requestHeaders.isNotEmpty)
           'behaviorHints': {
             if (sizeBytes != null) 'videoSize': sizeBytes,
             if (fileName != null) 'filename': fileName,
             if (videoHash != null) 'videoHash': videoHash,
+            if (bingeGroup != null) 'bingeGroup': bingeGroup,
+            if (requestHeaders.isNotEmpty)
+              'proxyHeaders': {'request': requestHeaders},
           },
+        if (subtitles.isNotEmpty)
+          'subtitles': [for (final s in subtitles) s.toJson()],
         if (ytId != null) 'ytId': ytId,
         if (url.isNotEmpty) 'url': url,
         if (name != null) 'name': name,
@@ -811,4 +871,7 @@ class ArchiveStream {
 
   /// First subtitle the stream carries, if any (`subtitles[0].url`).
   final String? subtitleUrl;
+  final List<MediaSubtitle> subtitles;
+  final Map<String, String> requestHeaders;
+  final String? bingeGroup;
 }

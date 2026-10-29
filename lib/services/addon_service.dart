@@ -220,12 +220,20 @@ class AddonService {
   /// Every enabled add-on's subtitles for [channel], the app language
   /// first, then English, then the rest by language.
   Future<List<OnlineSubtitle>> search(Channel channel) async {
-    if (!supports(channel)) return const [];
+    final supplied = [
+      for (final s in channel.subtitles)
+        OnlineSubtitle(
+            url: s.url,
+            lang: s.language,
+            addonName: tr('Current stream'),
+            fileName: s.name)
+    ];
+    if (!supports(channel)) return supplied;
     final enabled = addons.where((a) => a.enabled).toList();
-    if (enabled.isEmpty) return const [];
+    if (enabled.isEmpty) return supplied;
     final target = await _stremioId(channel);
-    if (target == null) return const [];
-    final results = <OnlineSubtitle>[];
+    if (target == null) return supplied;
+    final results = <OnlineSubtitle>[...supplied];
     await Future.wait(enabled.map((a) async {
       try {
         final r = await http

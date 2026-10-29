@@ -1,3 +1,4 @@
+import 'archive_stream_session.dart';
 import '../models/channel.dart';
 import 'archive_service.dart';
 import 'archive_stream_size.dart';
@@ -11,9 +12,11 @@ class ArchivePlaybackSources {
     required this.current,
     required this.select,
     required this.remember,
+    this.search,
   });
 
   final Future<List<ArchiveStreamOption>> Function(String channelId) load;
+  final ArchiveStreamSession? Function(String channelId)? search;
   final ArchiveStreamOption? Function(String channelId) current;
   final Future<Channel?> Function(String channelId, ArchiveStreamOption option)
       select;

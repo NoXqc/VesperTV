@@ -1,15 +1,16 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../models/archive_models.dart';
+import '../models/archive_library.dart';
 import '../models/channel.dart';
 import '../utils/title_search.dart';
 import 'archive_api_service.dart';
 import 'archive_cache.dart';
+import 'archive_stream_session.dart';
 import 'media_server_api.dart';
 import 'storage_service.dart';
 import 'tracker_api.dart';
@@ -25,6 +26,9 @@ class ArchiveRow {
     this.itemSources,
     this.isFavorites = false,
     this.sourceLabel,
+    this.continuations,
+    this.upcoming = false,
+    this.customTitle,
   });
 
   final ArchiveSource source;
@@ -44,6 +48,9 @@ class ArchiveRow {
   /// search row shared by stream-only add-ons on the same provider names
   /// every one of them ("Torrentio TB · NoxAIO").
   final String? sourceLabel;
+  final List<ArchiveContinueItem>? continuations;
+  final bool upcoming;
+  final String? customTitle;
 
   /// The source name shown for item [i] (hero chip, search row header).
   String labelAt(int i) =>
@@ -52,20 +59,24 @@ class ArchiveRow {
   ArchiveSource sourceAt(int i) => itemSources?[i] ?? source;
 
   bool get isSearch => searchQuery != null;
-  bool get isHistory => itemSources != null && !isFavorites;
+  bool get isHistory =>
+      itemSources != null && !isFavorites && continuations == null;
 
-  String get key => isFavorites
-      ? 'favorites|${catalog.type.wire}'
-      : isHistory
-          ? 'history|${catalog.type.wire}'
-          : isSearch
-              ? 'search|${ArchiveService._rowKey(source, catalog)}'
-              : ArchiveService._rowKey(source, catalog);
+  String get key => continuations != null
+      ? '${upcoming ? 'upcoming' : 'continue'}|${catalog.type.wire}'
+      : isFavorites
+          ? 'favorites|${catalog.type.wire}'
+          : isHistory
+              ? 'history|${catalog.type.wire}'
+              : isSearch
+                  ? 'search|${ArchiveService._rowKey(source, catalog)}'
+                  : ArchiveService._rowKey(source, catalog);
 
   /// The row header: the catalog's own name, or the source name when the
   /// catalog has none. Provider row names ("Popular") and search rows are
   /// translated by the screen.
-  String get title => catalog.name.isEmpty ? source.name : catalog.name;
+  String get title =>
+      customTitle ?? (catalog.name.isEmpty ? source.name : catalog.name);
 }
 
 /// One stream offered for a title, with the source that offered it.
@@ -93,7 +104,9 @@ class ArchiveService extends ChangeNotifier {
       : _api = api ?? ArchiveApiService(diagnostics: debugPrint),
         _cache = cache ?? ArchiveCache(),
         _servers = servers ?? MediaServerApi(),
-        _trackers = trackers ?? TrackerApi();
+        _trackers = trackers ?? TrackerApi() {
+    _viewerState = _storage.viewerGeneration;
+  }
 
   final StorageService _storage;
   final ArchiveApiService _api;
@@ -216,7 +229,23 @@ class ArchiveService extends ChangeNotifier {
 
   // ---- sources ------------------------------------------------------------
 
+  int _viewerState = -1;
+  void _ensureViewerState() {
+    if (_viewerState == _storage.viewerGeneration) return;
+    _viewerState = _storage.viewerGeneration;
+    _search.clear();
+    _searchingTypes.clear();
+    _searchGeneration.clear();
+    _focusedSearchRows.clear();
+    _searchStates.clear();
+    _searchNames.clear();
+    _selectedSearchSource.clear();
+    _genre.clear();
+    _newest.clear();
+  }
+
   List<ArchiveSource> get sources {
+    _ensureViewerState();
     final raw = _storage.getArchiveSourcesJson();
     if (raw == null) return const [];
     try {
@@ -312,16 +341,23 @@ class ArchiveService extends ChangeNotifier {
   /// Upgrade old saved manifests without requiring removal/re-addition.
   /// Both global search types share the request; failed sources keep working.
   Future<void> _upgradeSearchCatalogs(bool other) async {
-    for (final s in enabledSources) {
-      if (s.searchCatalogsChecked ||
-          s.server != null ||
-          s.tracker != null ||
-          s.underOther != other ||
-          !_showCatalogs(s)) {
-        continue;
+    final pending = enabledSources
+        .where((s) =>
+            !s.searchCatalogsChecked &&
+            s.server == null &&
+            s.tracker == null &&
+            s.underOther == other &&
+            _showCatalogs(s))
+        .toList();
+    Future<void> worker() async {
+      while (pending.isNotEmpty && !_disposed) {
+        final source = pending.removeAt(0);
+        await _searchManifestChecks.putIfAbsent(
+            source.key, () => _refreshManifest(source));
       }
-      await _searchManifestChecks.putIfAbsent(s.key, () => _refreshManifest(s));
     }
+
+    await Future.wait([worker(), worker(), worker()]);
   }
 
   /// Checks [link]'s manifest without adding it (same errors as
@@ -591,45 +627,109 @@ class ArchiveService extends ChangeNotifier {
 
   /// The current search per type: its query and result rows.
   final Map<ArchiveType, (String, List<ArchiveRow>)> _search = {};
-  bool _searching = false;
-  bool get searching => _searching;
-  String? searchQuery(ArchiveType type) => _search[type]?.$1;
-
-  /// Searches every searchable catalog of [type] (the provider's Popular
-  /// for stream-only sources). The results become the first rows.
-  ///
-  /// Punctuation/spacing, accents and partial words share [TitleSearch]
-  /// matching. Provider aliases are retained; non-searchable sources use
-  /// their loaded/cached rows. One results row per source (stream-only
-  /// sources sharing the provider count as one).
-  Future<void> search(ArchiveType type, String query) async {
-    final q = query.trim();
-    if (q.isEmpty) return clearSearch(type);
-    unawaited(_rememberSearch(type, q));
-    _searching = true;
-    _search[type] = (q, const []);
-    _notify();
-    var out = const <ArchiveRow>[];
-    try {
-      out = await searchRows(type, q);
-    } finally {
-      // A newer search (or a clear) replaced this one: drop these results.
-      if (_search[type]?.$1 == q) _search[type] = (q, out);
-      _searching = false;
-      _notify();
+  final Map<ArchiveType, int> _searchGeneration = {};
+  final Map<ArchiveType, Set<String>> _focusedSearchRows = {};
+  void retainSearchFocus(ArchiveRow row) {
+    if (row.isSearch) {
+      (_focusedSearchRows[row.catalog.type] ??= {}).add(row.key);
     }
   }
 
-  /// The search itself, one row per source (stream-only sources sharing a
-  /// provider = one row), without touching this tab's search state — the
-  /// app's global Search uses it too ([underOther] false there: Other
-  /// stays behind its filter). Null [underOther] = the tab's current split.
+  final Set<ArchiveType> _searchingTypes = {};
+  final Map<ArchiveType, Map<String, ArchiveSourceStatus>> _searchStates = {};
+  final Map<ArchiveType, Map<String, String>> _searchNames = {};
+  final Map<ArchiveType, String> _selectedSearchSource = {};
+  bool get searching => _searchingTypes.isNotEmpty;
+  String? searchQuery(ArchiveType type) => _search[type]?.$1;
+  Map<String, ArchiveSourceStatus> searchStates(ArchiveType type) =>
+      _searchStates[type] ?? const {};
+  Map<String, String> searchSourceNames(ArchiveType type) =>
+      _searchNames[type] ?? const {};
+  String? selectedSearchSource(ArchiveType type) => _selectedSearchSource[type];
+  void selectSearchSource(ArchiveType type, String? key) {
+    key == null
+        ? _selectedSearchSource.remove(type)
+        : _selectedSearchSource[type] = key;
+    _notify();
+  }
+
+  Future<void> search(ArchiveType type, String query) async {
+    _ensureViewerState();
+    final q = query.trim();
+    if (q.isEmpty) return clearSearch(type);
+    final viewer = _storage.viewerGeneration;
+    final generation = (_searchGeneration[type] ?? 0) + 1;
+    _searchGeneration[type] = generation;
+    _focusedSearchRows.remove(type);
+    bool current() =>
+        !_disposed &&
+        viewer == _storage.viewerGeneration &&
+        _searchGeneration[type] == generation;
+    unawaited(_rememberSearch(type, q));
+    _searchingTypes.add(type);
+    _search[type] = (q, const []);
+    _searchStates[type] = {};
+    _searchNames[type] = {};
+    _selectedSearchSource.remove(type);
+    _notify();
+    try {
+      await searchRows(type, q, isCurrent: current,
+          onStatus: (key, name, status) {
+        if (!current()) return;
+        _searchStates[type]![key] = status;
+        _searchNames[type]![key] = name;
+        _notify();
+      }, onRows: (incoming) {
+        if (!current()) return;
+        // Append newly responding sources; later replies cannot move a row
+        // already being browsed to another position in the result list.
+        final existing = {for (final row in _search[type]!.$2) row.key: row};
+        for (final row in incoming) {
+          final previous = existing[row.key];
+          if (previous == null ||
+              !(_focusedSearchRows[type]?.contains(row.key) ?? false)) {
+            existing[row.key] = row;
+            continue;
+          }
+          final updated = {for (final meta in row.items) meta.id: meta};
+          final stable = <ArchiveMeta>[
+            for (final meta in previous.items) updated.remove(meta.id) ?? meta,
+            ...updated.values,
+          ];
+          existing[row.key] = ArchiveRow(
+              source: row.source,
+              catalog: row.catalog,
+              items: stable,
+              searchQuery: row.searchQuery,
+              sourceLabel: row.sourceLabel);
+        }
+        _search[type] = (q, existing.values.toList());
+        _notify();
+      });
+    } finally {
+      if (current()) {
+        _searchingTypes.remove(type);
+        _notify();
+      }
+    }
+  }
+
+  /// Incremental provider results, with bounded work and stale-request guards.
+  /// The returned list remains in configured source order for non-UI callers.
   Future<List<ArchiveRow>> searchRows(ArchiveType type, String q,
-      {bool? underOther}) async {
+      {bool? underOther,
+      void Function(List<ArchiveRow>)? onRows,
+      void Function(String, String, ArchiveSourceStatus)? onStatus,
+      bool Function()? isCurrent}) async {
     final search = TitleSearch(q);
-    if (search.isEmpty) return const [];
+    final viewer = _storage.viewerGeneration;
+    bool current() =>
+        !_disposed &&
+        viewer == _storage.viewerGeneration &&
+        (isCurrent?.call() ?? true);
+    if (search.isEmpty || !current()) return const [];
     await _upgradeSearchCatalogs(underOther ?? _genre[type] == otherGenre);
-    final out = <ArchiveRow>[];
+    if (!current()) return const [];
     final groups = <String, List<(ArchiveSource, ArchiveCatalog)>>{};
     for (final sc in _catalogs(type,
         filtered: false, underOther: underOther, includeSearchOnly: true)) {
@@ -639,70 +739,117 @@ class ArchiveService extends ChangeNotifier {
               s.streamOnly ? s.catalogBaseUrl : s.manifestUrl, () => [])
           .add(sc);
     }
-    for (final group in groups.values) {
-      final found = <ArchiveMeta>[];
-      final providerMatches = <ArchiveMeta>[];
+    final results = <String, ArchiveRow>{};
+    final entries = groups.entries.toList();
+    for (final entry in entries) {
+      final source = entry.value.first.$1;
+      onStatus?.call(source.key, source.name, ArchiveSourceStatus.loading);
+    }
+    Future<void> find(
+        MapEntry<String, List<(ArchiveSource, ArchiveCatalog)>> entry) async {
+      final group = entry.value;
+      final found = <ArchiveMeta>[], providerMatches = <ArchiveMeta>[];
+      var failed = false, succeeded = false;
+      final (source, catalog) =
+          group.firstWhere((sc) => sc.$2.searchable, orElse: () => group.first);
+      final names = [
+        if (source.streamOnly)
+          for (final s in enabledSources)
+            if (s.streamOnly && s.catalogBaseUrl == source.catalogBaseUrl)
+              s.name
+      ];
+      void publish() {
+        if (!current()) return;
+        final items = rankSearch(q, found);
+        final seen = {for (final m in items) m.id};
+        items.addAll(providerMatches.where((m) => seen.add(m.id)));
+        if (items.isNotEmpty) {
+          results[entry.key] = ArchiveRow(
+              source: source,
+              catalog: catalog,
+              items: items,
+              searchQuery: q,
+              sourceLabel: names.length > 1 ? names.join(' · ') : null);
+          onRows?.call([
+            for (final key in groups.keys)
+              if (results[key] case final row?) row
+          ]);
+        }
+      }
+
+      // Make cached matches useful before the first network response.
       for (final (s, c) in group) {
+        if (!current()) return;
+        if (!c.searchOnly) {
+          final key = _rowKey(s, c);
+          try {
+            _items[key] ??= await _cache.read(s.key, c);
+          } catch (_) {}
+          found.addAll(_items[key] ?? const []);
+        }
+      }
+      publish();
+      for (final (s, c) in group) {
+        if (!current()) return;
         if (!c.searchable) continue;
         final variants = search.remoteQueries(q);
         final replies = await Future.wait([
           for (final variant in variants)
             (() async {
+              if (!current()) return <ArchiveMeta>[];
               try {
                 final items = await _page(s, c, search: variant.text);
+                succeeded = true;
                 return variant.broad
                     ? items.where((m) => search.matches(m.name)).toList()
                     : items;
-              } catch (e) {
-                debugPrint(
-                    'ArchiveService: search source=${s.key} failed=${e.runtimeType}');
+              } catch (_) {
+                failed = true;
                 return <ArchiveMeta>[];
               }
-            })(),
+            })()
         ]);
+        if (!current()) return;
         for (var i = 0; i < replies.length; i++) {
           found.addAll(replies[i]);
           if (!variants[i].broad) providerMatches.addAll(replies[i]);
         }
+        publish();
       }
-      for (final (s, c) in group) {
-        if (c.searchOnly) continue;
-        final key = _rowKey(s, c);
-        if (!_items.containsKey(key)) {
-          try {
-            _items[key] = await _cache.read(s.key, c);
-          } catch (e) {
-            debugPrint('ArchiveService: search cache failed=${e.runtimeType}');
-          }
-        }
-        found.addAll(_items[key] ?? const []);
+      if (current()) {
+        onStatus?.call(
+            source.key,
+            names.length > 1 ? names.join(' · ') : source.name,
+            results.containsKey(entry.key)
+                ? ArchiveSourceStatus.ready
+                : failed && !succeeded
+                    ? ArchiveSourceStatus.failed
+                    : ArchiveSourceStatus.empty);
       }
-      final items = rankSearch(q, found);
-      // Providers may match original/translated titles or aliases that aren't
-      // in the displayed name. Preserve those after the direct title matches.
-      final seen = {for (final item in items) item.id};
-      items.addAll(providerMatches.where((m) => seen.add(m.id)));
-      if (items.isEmpty) continue;
-      final (s, c) =
-          group.firstWhere((sc) => sc.$2.searchable, orElse: () => group.first);
-      // Stream-only add-ons on one provider list only the first one's
-      // catalogs; every one of them plays these results.
-      final names = [
-        if (s.streamOnly)
-          for (final o in enabledSources)
-            if (o.streamOnly && o.catalogBaseUrl == s.catalogBaseUrl) o.name
-      ];
-      out.add(ArchiveRow(
-          source: s,
-          catalog: c,
-          items: items,
-          searchQuery: q,
-          sourceLabel: names.length > 1 ? names.join(' · ') : null));
     }
-    return out;
+
+    Future<void> worker() async {
+      while (entries.isNotEmpty && current()) {
+        await find(entries.removeAt(0));
+      }
+    }
+
+    await Future.wait([worker(), worker(), worker()]);
+    return current()
+        ? [
+            for (final key in groups.keys)
+              if (results[key] case final row?) row
+          ]
+        : const [];
   }
 
   void clearSearch(ArchiveType type) {
+    _focusedSearchRows.remove(type);
+    _searchGeneration[type] = (_searchGeneration[type] ?? 0) + 1;
+    _searchingTypes.remove(type);
+    _searchStates.remove(type);
+    _searchNames.remove(type);
+    _selectedSearchSource.remove(type);
     if (_search.remove(type) != null) _notify();
   }
 
@@ -754,9 +901,26 @@ class ArchiveService extends ChangeNotifier {
   List<Map<String, dynamic>> _favoriteEntries() =>
       _decodeEntries(_storage.getArchiveFavoritesJson());
 
-  static bool _sameTitle(
-          Map<String, dynamic> e, ArchiveSource source, ArchiveMeta meta) =>
-      e['src'] == source.manifestUrl && (e['meta'] as Map?)?['id'] == meta.id;
+  String _titleIdentity(ArchiveSource source, ArchiveMeta meta) =>
+      _storage.archiveMappedIdentity(
+          'archive::arc_title_identity_${archiveTitleIdentity(source, meta)}');
+
+  bool _sameTitle(
+      Map<String, dynamic> e, ArchiveSource source, ArchiveMeta meta) {
+    final raw = e['meta'];
+    final old = raw is Map
+        ? ArchiveMeta.fromJson(Map<String, dynamic>.from(raw))
+        : null;
+    if (old == null) return false;
+    final oldSource = ArchiveSource(manifestUrl: '${e['src']}', name: '');
+    if (e['src'] == source.manifestUrl &&
+        old.id == meta.id &&
+        old.wire == meta.wire) {
+      return true;
+    }
+    if (source.server != null && meta.imdb == null) return false;
+    return _titleIdentity(oldSource, old) == _titleIdentity(source, meta);
+  }
 
   bool isFavorite(ArchiveSource source, ArchiveMeta meta) =>
       _favoriteEntries().any((e) => _sameTitle(e, source, meta));
@@ -764,6 +928,7 @@ class ArchiveService extends ChangeNotifier {
   /// Hold OK on a title: into Favourites (front of the row), or out again.
   /// Returns true when it is now a favourite.
   Future<bool> toggleFavorite(ArchiveSource source, ArchiveMeta meta) async {
+    registerIdentity(source, meta);
     final entries = _favoriteEntries();
     final had = entries.any((e) => _sameTitle(e, source, meta));
     final next = had
@@ -783,8 +948,24 @@ class ArchiveService extends ChangeNotifier {
   /// Titles kept in the history (both categories together).
   static const _historyMax = 40;
 
-  List<Map<String, dynamic>> _historyEntries() =>
-      _decodeEntries(_storage.getArchiveHistoryJson());
+  String? _historyRaw;
+  List<Map<String, dynamic>> _decodedHistory = [];
+  final Expando<ArchiveMeta> _historyMetas = Expando();
+  List<Map<String, dynamic>> _historyEntries() {
+    final raw = _storage.getArchiveHistoryJson();
+    if (raw != _historyRaw) {
+      _historyRaw = raw;
+      _decodedHistory = _decodeEntries(raw);
+    }
+    return List.of(_decodedHistory);
+  }
+
+  ArchiveMeta? _historyMeta(Map entry) {
+    final raw = entry['meta'];
+    if (raw is! Map) return null;
+    return _historyMetas[raw] ??=
+        ArchiveMeta.fromJson(Map<String, dynamic>.from(raw));
+  }
 
   static List<Map<String, dynamic>> _decodeEntries(String? raw) {
     try {
@@ -800,24 +981,208 @@ class ArchiveService extends ChangeNotifier {
 
   /// Called when a title (a movie, or a show's episode) starts playing: it
   /// moves to the front of its category's "Recently watched" row.
-  Future<void> recordWatched(ArchiveSource source, ArchiveMeta meta) async {
+  Future<void> recordWatched(ArchiveSource source, ArchiveMeta meta,
+      {ArchiveVideo? episode}) async {
+    registerIdentity(source, meta, episode: episode);
     final entries = [
-      {'src': source.manifestUrl, 'meta': meta.toJson()},
-      ..._historyEntries().where((e) => !(e['src'] == source.manifestUrl &&
-          (e['meta'] as Map?)?['id'] == meta.id)),
+      {
+        'src': source.manifestUrl,
+        'meta': meta.toJson(includeVideos: true),
+        'detailAt': DateTime.now().toIso8601String(),
+        if (episode != null) 'lastVideo': episode.toJson()
+      },
+      ..._historyEntries().where((e) => !_sameTitle(e, source, meta)),
     ].take(_historyMax).toList();
     await _storage.setArchiveHistoryJson(jsonEncode(entries));
     _notify();
   }
 
   Future<void> removeFromHistory(ArchiveSource source, ArchiveMeta meta) async {
-    final entries = _historyEntries()
-        .where((e) => !(e['src'] == source.manifestUrl &&
-            (e['meta'] as Map?)?['id'] == meta.id))
-        .toList();
+    final entries =
+        _historyEntries().where((e) => !_sameTitle(e, source, meta)).toList();
     await _storage
         .setArchiveHistoryJson(entries.isEmpty ? null : jsonEncode(entries));
     _notify();
+  }
+
+  final Expando<Set<String>> _registeredMetas = Expando();
+  void registerIdentity(ArchiveSource source, ArchiveMeta meta,
+      {ArchiveVideo? episode}) {
+    final identity = archiveTitleIdentity(source, meta);
+    if (!identity.startsWith('${meta.type.wire}:')) return;
+    final scope =
+        '${_storage.viewerGeneration}|${source.key}|${episode?.id ?? ''}';
+    final registered = _registeredMetas[meta] ??= <String>{};
+    if (!registered.add(scope)) return;
+    final tmdb = meta.wireType == null &&
+            source.server == null &&
+            meta.imdb != null &&
+            RegExp(r'^tmdb:\d+$').hasMatch(meta.id)
+        ? '${meta.type.wire}:${meta.id}'
+        : null;
+    final aliases = <String, String>{
+      if (tmdb != null)
+        '$playlistId::arc_title_identity_$tmdb':
+            '$playlistId::arc_title_identity_$identity',
+    };
+    void alias(String id, bool episode, String suffix) {
+      final canonical =
+          '$playlistId::arc_${episode ? 'ep' : 'vod'}_identity_$identity$suffix';
+      if (tmdb != null) {
+        aliases['$playlistId::arc_${episode ? 'ep' : 'vod'}_identity_$tmdb$suffix'] =
+            canonical;
+      }
+      aliases[channelId(source, id, episode: episode)] = canonical;
+    }
+
+    if (meta.type == ArchiveType.movie) {
+      alias(meta.id, false, '');
+    } else {
+      for (final v in [...meta.videos, if (episode != null) episode]) {
+        alias(v.id, true, ':${v.season}:${v.episode}');
+      }
+    }
+    unawaited(
+        _storage.registerArchiveIdentities(aliases).catchError((Object error) {
+      registered.remove(scope);
+      debugPrint('ArchiveIdentity: failed=${error.runtimeType}');
+    }));
+  }
+
+  List<ArchiveContinueItem> continueWatching(ArchiveType type,
+      {bool upcoming = false, DateTime? now}) {
+    final byUrl = {for (final s in enabledSources) s.manifestUrl: s};
+    final seen = <String>{};
+    final result = <ArchiveContinueItem>[];
+    for (final entry in _historyEntries()) {
+      final source = byUrl[entry['src']];
+      final raw = entry['meta'];
+      if (source == null || source.underOther || raw is! Map) continue;
+      final meta = _historyMeta(entry);
+      if (meta == null ||
+          meta.type != type ||
+          !seen.add(_titleIdentity(source, meta))) {
+        continue;
+      }
+      registerIdentity(source, meta);
+      if (type == ArchiveType.movie) {
+        final id = channelId(source, meta.id, episode: false);
+        if (!upcoming && !_storage.isFullyWatched(id)) {
+          result.add(ArchiveContinueItem(
+              source: source,
+              meta: meta,
+              resume: _storage.getLastPosition(id) > 0,
+              progress: _storage.getWatchedFraction(id)));
+        }
+        continue;
+      }
+      final videos =
+          meta.videos.where((v) => v.season > 0 && v.episode > 0).toList();
+      if (videos.isEmpty) {
+        if (!upcoming) {
+          result.add(ArchiveContinueItem(source: source, meta: meta));
+        }
+        continue;
+      }
+      int position(ArchiveVideo v) =>
+          _storage.getLastPosition(channelId(source, v.id, episode: true));
+      bool finished(ArchiveVideo v) =>
+          _storage.isFullyWatched(channelId(source, v.id, episode: true));
+      final last = entry['lastVideo'] is Map
+          ? ArchiveVideo.fromJson(Map<String, dynamic>.from(entry['lastVideo']))
+          : null;
+      ArchiveVideo? chosen;
+      if (last != null) {
+        chosen =
+            videos.where((v) => v.id == last.id && !finished(v)).firstOrNull;
+      }
+      chosen ??=
+          videos.where((v) => position(v) > 0 && !finished(v)).lastOrNull;
+      final lastFinished = videos.lastIndexWhere(finished);
+      chosen ??=
+          videos.skip(lastFinished + 1).where((v) => !finished(v)).firstOrNull;
+      if (chosen == null) continue;
+      final date = DateTime.tryParse(chosen.released ?? '');
+      final future = date != null && date.isAfter(now ?? DateTime.now());
+      if (future != upcoming) continue;
+      final id = channelId(source, chosen.id, episode: true);
+      result.add(ArchiveContinueItem(
+          source: source,
+          meta: meta,
+          episode: chosen,
+          resume: position(chosen) > 0,
+          progress: _storage.getWatchedFraction(id),
+          upcoming: future));
+    }
+    return result;
+  }
+
+  final Set<String> _historyHydrated = {};
+  Future<void> refreshHistoryDetails({VoidCallback? onProgress}) async {
+    final generation = _storage.viewerGeneration;
+    final byUrl = {for (final s in enabledSources) s.manifestUrl: s};
+    final pending = _historyEntries()
+        .where((e) =>
+            e['meta'] is Map &&
+            e['meta']['type'] == 'series' &&
+            byUrl.containsKey(e['src']))
+        .toList();
+    Future<void> worker() async {
+      while (pending.isNotEmpty &&
+          generation == _storage.viewerGeneration &&
+          !_disposed) {
+        final entry = pending.removeAt(0);
+        final source = byUrl[entry['src']]!;
+        final preview =
+            ArchiveMeta.fromJson(Map<String, dynamic>.from(entry['meta']));
+        if (preview == null) continue;
+        final key = '$generation|${source.key}|${preview.id}';
+        if (!_historyHydrated.add(key)) continue;
+        final at = DateTime.tryParse('${entry['detailAt'] ?? ''}');
+        if (preview.videos.isNotEmpty &&
+            at != null &&
+            DateTime.now().difference(at) < const Duration(hours: 12)) {
+          continue;
+        }
+        try {
+          final full = await meta(source, preview);
+          if (generation != _storage.viewerGeneration || _disposed) return;
+          if (full == null || full.videos.isEmpty) continue;
+          final current = _historyEntries();
+          final index =
+              current.indexWhere((e) => _sameTitle(e, source, preview));
+          if (index < 0 || current[index]['src'] != source.manifestUrl) {
+            continue;
+          }
+          current[index] = {
+            ...current[index],
+            'meta': full.toJson(includeVideos: true),
+            'detailAt': DateTime.now().toIso8601String()
+          };
+          registerIdentity(source, full);
+          await _storage.setArchiveHistoryJson(jsonEncode(current));
+          _notify();
+          onProgress?.call();
+        } catch (_) {/* Existing local progress stays usable offline. */}
+      }
+    }
+
+    await Future.wait([worker(), worker()]);
+  }
+
+  ArchiveRow? _continueRow(ArchiveType type, {bool upcoming = false}) {
+    final items = continueWatching(type, upcoming: upcoming);
+    if (items.isEmpty) return null;
+    return ArchiveRow(
+        source: items.first.source,
+        catalog: ArchiveCatalog(
+            type: type,
+            id: upcoming ? 'upcoming' : 'continue',
+            name: upcoming ? 'Upcoming episodes' : 'Continue watching'),
+        items: [for (final item in items) item.meta],
+        itemSources: [for (final item in items) item.source],
+        continuations: items,
+        upcoming: upcoming);
   }
 
   /// Every played title (movies and shows), newest first, whose source is
@@ -854,12 +1219,17 @@ class ArchiveService extends ChangeNotifier {
     final byUrl = {for (final s in enabledSources) s.manifestUrl: s};
     final items = <ArchiveMeta>[];
     final sources = <ArchiveSource>[];
+    final seen = <String>{};
     for (final e in entries) {
       final source = byUrl[e['src']];
       final m = e['meta'];
       if (source == null || m is! Map) continue;
       final meta = ArchiveMeta.fromJson(Map<String, dynamic>.from(m));
-      if (meta == null || meta.type != type) continue;
+      if (meta == null ||
+          meta.type != type ||
+          !seen.add(_titleIdentity(source, meta))) {
+        continue;
+      }
       // An Other source's titles only under the Other filter, like its rows.
       if (source.underOther != (_genre[type] == otherGenre)) continue;
       items.add(meta);
@@ -897,15 +1267,108 @@ class ArchiveService extends ChangeNotifier {
   /// order. Rows not loaded yet (or empty) are left out, and so is a
   /// provider row an earlier stream-only source already shows (Play still
   /// asks every stream-only source — see [resolve]).
-  List<ArchiveRow> rows(ArchiveType type) => [
-        ...?_search[type]?.$2,
-        if (_favoritesRow(type) case final favorites?) favorites,
-        if (_historyRow(type) case final history?) history,
-        for (final (s, c) in _catalogs(type))
-          if (_items[_rowKey(s, c)] case final raw? when raw.isNotEmpty)
-            if (_inGenre(type, raw) case final items when items.isNotEmpty)
-              ArchiveRow(source: s, catalog: c, items: items),
-      ];
+  Map<String, dynamic> get rowPreferences {
+    try {
+      return Map<String, dynamic>.from(
+          jsonDecode(_storage.getArchiveOptionsJson('rows') ?? '{}') as Map);
+    } catch (_) {
+      return {};
+    }
+  }
+
+  bool rowHidden(String key) =>
+      (rowPreferences['hidden'] as List? ?? const []).contains(key);
+  bool rowPinned(String key) =>
+      (rowPreferences['pinned'] as List? ?? const []).contains(key);
+  Future<void> setRowFlag(String key, String flag, bool value) async {
+    final prefs = rowPreferences;
+    final values = Set<String>.from(prefs[flag] as List? ?? const []);
+    value ? values.add(key) : values.remove(key);
+    prefs[flag] = values.toList();
+    await _storage.setArchiveOptionsJson('rows', jsonEncode(prefs));
+    _notify();
+  }
+
+  Future<void> renameRow(String key, String title) async {
+    final prefs = rowPreferences;
+    final titles =
+        Map<String, dynamic>.from(prefs['titles'] as Map? ?? const {});
+    title.trim().isEmpty ? titles.remove(key) : titles[key] = title.trim();
+    prefs['titles'] = titles;
+    await _storage.setArchiveOptionsJson('rows', jsonEncode(prefs));
+    _notify();
+  }
+
+  Future<void> moveRow(ArchiveType type, String key, int direction) async {
+    final all = rows(type, includeHidden: true)
+        .where((r) => !r.isSearch && r.continuations == null)
+        .map((r) => r.key)
+        .toList();
+    final index = all.indexOf(key), target = all.indexOf(key) + direction;
+    if (index < 0 || target < 0 || target >= all.length) return;
+    all.insert(target, all.removeAt(index));
+    final prefs = rowPreferences;
+    final previous = List<String>.from(prefs['order'] as List? ?? const []);
+    prefs['order'] = [...all, ...previous.where((k) => !all.contains(k))];
+    await _storage.setArchiveOptionsJson('rows', jsonEncode(prefs));
+    _notify();
+  }
+
+  List<ArchiveRow> rows(ArchiveType type, {bool includeHidden = false}) {
+    _ensureViewerState();
+    final prefs = rowPreferences;
+    final titles = prefs['titles'] as Map? ?? const {};
+    final hidden = prefs['hidden'] as List? ?? const [];
+    final pinned = prefs['pinned'] as List? ?? const [];
+    final order = prefs['order'] as List? ?? const [];
+    final rawRows = <ArchiveRow>[
+      for (final row in _search[type]?.$2 ?? const <ArchiveRow>[])
+        if (_selectedSearchSource[type] == null ||
+            row.source.key == _selectedSearchSource[type])
+          row,
+      if (_continueRow(type) case final resume?) resume,
+      if (_continueRow(type, upcoming: true) case final upcoming?) upcoming,
+      if (_favoritesRow(type) case final favorites?) favorites,
+      if (_historyRow(type) case final history?) history,
+      for (final (s, c) in _catalogs(type))
+        if (_items[_rowKey(s, c)] case final raw? when raw.isNotEmpty)
+          if (_inGenre(type, raw) case final items when items.isNotEmpty)
+            ArchiveRow(source: s, catalog: c, items: items),
+    ];
+    final indexed = {
+      for (var i = 0; i < rawRows.length; i++) rawRows[i].key: i
+    };
+    int group(ArchiveRow r) => r.isSearch
+        ? 0
+        : r.continuations != null
+            ? 1
+            : pinned.contains(r.key)
+                ? 2
+                : 3;
+    int rank(ArchiveRow r) => order.contains(r.key)
+        ? order.indexOf(r.key)
+        : order.length + indexed[r.key]!;
+    rawRows.sort((a, b) {
+      final g = group(a).compareTo(group(b));
+      return g != 0 ? g : rank(a).compareTo(rank(b));
+    });
+    return [
+      for (final row in rawRows)
+        if (includeHidden || !hidden.contains(row.key))
+          ArchiveRow(
+              source: row.source,
+              catalog: row.catalog,
+              items: row.items,
+              searchQuery: row.searchQuery,
+              itemSources: row.itemSources,
+              isFavorites: row.isFavorites,
+              sourceLabel: row.sourceLabel,
+              continuations: row.continuations,
+              upcoming: row.upcoming,
+              customTitle:
+                  titles[row.key] is String ? titles[row.key] : row.customTitle)
+    ];
+  }
 
   final Set<String> _loadingMore = {};
   final Set<String> _exhausted = {};
@@ -948,6 +1411,7 @@ class ArchiveService extends ChangeNotifier {
   /// Call when the Archive tab opens: draws the cached rows at once, then
   /// refreshes stale catalogs behind them.
   Future<void> open() async {
+    unawaited(refreshHistoryDetails());
     if (!_loadedFromCache) {
       _loadedFromCache = true;
       await _recheckCustomSources();
@@ -968,23 +1432,46 @@ class ArchiveService extends ChangeNotifier {
   /// Refetches catalogs older than [_staleAfter] (all of them with
   /// [force]). A failing source keeps its cached rows. [manifests] (the
   /// Refresh button) re-reads every add-on's manifest first.
+  final List<String> _visibleRows = [];
+  void prioritizeRow(ArchiveRow row) {
+    _visibleRows.remove(row.key);
+    _visibleRows.insert(0, row.key);
+    if (_visibleRows.length > 4) _visibleRows.removeLast();
+  }
+
+  int _refreshGeneration = 0;
   Future<void> refresh({bool force = false, bool manifests = false}) async {
     if (_refreshing) {
-      // A genre picked mid-refresh adds rows the running pass won't reach.
       _refreshAgain = true;
       _forceRefreshAgain |= force;
       return;
     }
     _refreshing = true;
+    final viewer = _storage.viewerGeneration;
+    final generation = ++_refreshGeneration;
+    bool current() =>
+        !_disposed &&
+        viewer == _storage.viewerGeneration &&
+        generation == _refreshGeneration;
     lastError = null;
     _notify();
     try {
       if (force) await _recheckCustomSources(all: manifests);
-      for (final type in ArchiveType.values) {
-        for (final (s, c) in _catalogs(type)) {
-          final key = _rowKey(s, c);
+      final config = _storage.getArchiveSourcesJson();
+      final pending = [
+        for (final type in ArchiveType.values) ..._catalogs(type)
+      ];
+      Future<void> worker() async {
+        while (pending.isNotEmpty &&
+            current() &&
+            config == _storage.getArchiveSourcesJson()) {
+          final priority = pending
+              .indexWhere((sc) => _visibleRows.contains(_rowKey(sc.$1, sc.$2)));
+          final (source, catalog) =
+              pending.removeAt(priority < 0 ? 0 : priority);
+          final key = _rowKey(source, catalog);
           if (!force) {
-            final at = await _cache.fetchedAt(s.key, c);
+            final at = await _cache.fetchedAt(source.key, catalog);
             if (at != null &&
                 DateTime.now().difference(at) < _staleAfter &&
                 (_items[key]?.isNotEmpty ?? false)) {
@@ -994,28 +1481,36 @@ class ArchiveService extends ChangeNotifier {
           try {
             final items = <ArchiveMeta>[];
             final seen = <String>{};
-            for (var page = 0; page < _pagesPerCatalog; page++) {
-              final batch = await _page(s, c, skip: items.length);
+            for (var page = 0; page < _pagesPerCatalog && current(); page++) {
+              final batch = await _page(source, catalog, skip: items.length);
               final fresh = batch.where((m) => seen.add(m.id)).toList();
               if (fresh.isEmpty) break;
               items.addAll(fresh);
-              if (batch.length < 50) break; // a short page = the last one
+              if (batch.length < 50) break;
+            }
+            if (!current() || config != _storage.getArchiveSourcesJson()) {
+              return;
             }
             _items[key] = items;
             _exhausted.remove(key);
-            await _cache.write(s.key, c, items);
+            await _cache.write(source.key, catalog, items);
             _notify();
-          } catch (e) {
-            lastError = '${s.name}: $e';
-            debugPrint('ArchiveService: ${s.name}/${c.slug} failed: $e');
+          } catch (error) {
+            if (current()) {
+              lastError = '${source.name}: catalog unavailable';
+              debugPrint(
+                  'ArchiveRow: source=${source.key} failed=${error.runtimeType}');
+            }
           }
         }
       }
+
+      await Future.wait([worker(), worker(), worker()]);
     } finally {
       _refreshing = false;
       _notify();
     }
-    if (_refreshAgain) {
+    if (_refreshAgain && !_disposed) {
       _refreshAgain = false;
       final forceAgain = _forceRefreshAgain;
       _forceRefreshAgain = false;
@@ -1035,16 +1530,82 @@ class ArchiveService extends ChangeNotifier {
           {required bool episode}) =>
       '$playlistId::${_rawId(source, videoId, episode: episode)}';
 
-  Future<ArchiveMeta?> meta(ArchiveSource source, ArchiveMeta preview) =>
-      // A tracker's or list-only source's titles are IMDb ids: the
-      // provider has their metas.
-      source.tracker != null || source.listOnly
-          ? _api.fetchMeta(
+  Future<ArchiveMeta?> meta(ArchiveSource source, ArchiveMeta preview) async {
+    final viewer = _storage.viewerGeneration;
+    ArchiveMeta? full;
+    try {
+      full = source.tracker != null || source.listOnly
+          ? await _api.fetchMeta(
               ArchiveCatalogProvider.baseUrl, preview.type, preview.id)
           : source.server != null
-              ? _servers.fetchMeta(source, preview)
-              : _api.fetchMeta(source.catalogBaseUrl, preview.type, preview.id,
+              ? await _servers.fetchMeta(source, preview)
+              : await _api.fetchMeta(
+                  source.catalogBaseUrl, preview.type, preview.id,
                   wire: preview.wire);
+    } catch (_) {
+      if (source.server != null ||
+          preview.wireType != null ||
+          preview.imdb == null) {
+        rethrow;
+      }
+    }
+    if (full == null &&
+        source.server == null &&
+        preview.wireType == null &&
+        preview.imdb != null) {
+      full = await _api.fetchMeta(
+          ArchiveCatalogProvider.baseUrl, preview.type, preview.imdb!);
+    }
+    if (_storage.viewerGeneration != viewer || _disposed) return null;
+    if (full != null) {
+      if (preview.wireType == null && full.imdb != null) {
+        final mappedPreview = ArchiveMeta.fromJson(
+            {...preview.toJson(includeVideos: true), 'imdb_id': full.imdb});
+        if (mappedPreview != null) registerIdentity(source, mappedPreview);
+      }
+      registerIdentity(source, full);
+    }
+    return full;
+  }
+
+  /// Check the selected recommendation against server libraries, including
+  /// titles beyond the already-loaded catalog pages. No background library scan.
+  Future<({ArchiveSource source, ArchiveMeta meta})?> findServerTitle(
+      ArchiveMeta target) async {
+    final viewer = _storage.viewerGeneration;
+    final pending = [
+      for (final source in enabledSources)
+        if (source.server != null && !source.underOther)
+          for (final catalog in source.catalogs)
+            if (catalog.type == target.type) (source, catalog)
+    ];
+    final matches = <({ArchiveSource source, ArchiveMeta meta})>[];
+    Future<void> worker() async {
+      while (pending.isNotEmpty &&
+          viewer == _storage.viewerGeneration &&
+          !_disposed) {
+        final (source, catalog) = pending.removeAt(0);
+        try {
+          final items = await _page(source, catalog, search: target.name);
+          if (viewer != _storage.viewerGeneration || _disposed) return;
+          final exact = items
+              .where((m) => target.imdb != null && m.imdb == target.imdb)
+              .firstOrNull;
+          final named = items
+              .where((m) =>
+                  TitleSearch.key(m.name) == TitleSearch.key(target.name) &&
+                  target.year != null &&
+                  m.year == target.year)
+              .toList();
+          final found = exact ?? (named.length == 1 ? named.single : null);
+          if (found != null) matches.add((source: source, meta: found));
+        } catch (_) {/* A disconnected server leaves other sources usable. */}
+      }
+    }
+
+    await Future.wait([worker(), worker(), worker()]);
+    return viewer == _storage.viewerGeneration ? matches.firstOrNull : null;
+  }
 
   /// The sources asked for a title's streams: [source] itself, then — for
   /// a title from the public provider — every other enabled stream-only
@@ -1072,80 +1633,143 @@ class ArchiveService extends ChangeNotifier {
   /// the title's id (`tt…`, or `tt…:{season}:{episode}` for a provider
   /// episode); a failing source is skipped, and its error rethrown only
   /// when no source answered with anything.
-  Future<List<ArchiveStreamOption>> streams(
-    ArchiveSource source,
-    ArchiveMeta meta, {
-    ArchiveVideo? episode,
-  }) async {
+  final Map<String, ArchiveStreamSession> _streamSessions = {};
+  bool _disposed = false;
+
+  String _streamConfiguration() => jsonEncode([
+        for (final source in enabledSources)
+          if (source.tracker == null && !source.listOnly)
+            [
+              source.manifestUrl,
+              source.name,
+              source.streamOnly,
+              source.catalogBaseUrl,
+              source.imdbResources,
+              source.server?.toJson()
+            ],
+      ]);
+
+  /// Bounded parallel metadata requests, scoped to the viewer and configuration.
+  ArchiveStreamSession searchStreams(ArchiveSource source, ArchiveMeta meta,
+      {ArchiveVideo? episode, bool force = false}) {
+    final viewer = _storage.viewerGeneration;
+    final config = _streamConfiguration();
     final videoId = episode?.id ?? meta.id;
-    final out = <ArchiveStreamOption>[];
-    final urls = <String>{};
-    Object? error;
-    final titleKey =
-        sha1.convert(utf8.encode(videoId)).toString().substring(0, 12);
+    final key = '$viewer|${source.key}|${meta.wire}|$videoId|$config';
+    for (final entry in _streamSessions.entries.toList()) {
+      final session = entry.value;
+      if (!session.active ||
+          (session.completedAt != null &&
+              DateTime.now().difference(session.completedAt!) >
+                  const Duration(minutes: 2))) {
+        _streamSessions.remove(entry.key);
+        session.dispose();
+      }
+    }
+    final cached = _streamSessions[key];
+    if (!force && cached != null) return cached;
+    if (cached != null) {
+      _streamSessions.remove(key);
+      cached.dispose();
+    }
+    final session = ArchiveStreamSession(
+        isCurrent: () =>
+            !_disposed &&
+            _storage.viewerGeneration == viewer &&
+            _streamConfiguration() == config);
+    _streamSessions[key] = session;
+    while (_streamSessions.length > 12) {
+      final oldest = _streamSessions.keys.first;
+      _streamSessions.remove(oldest)?.dispose();
+    }
     final imdbId = _imdbVideoId(source, meta, episode);
-    Future<int> ask(ArchiveSource s, String id) async {
+    final targets = <String, (ArchiveSource, String)>{
+      for (final s in _streamSources(source)) s.key: (s, videoId),
+    };
+    final imdb = meta.wireType == null ? meta.imdb : null;
+    if (imdb != null) {
+      final id =
+          episode == null ? imdb : '$imdb:${episode.season}:${episode.episode}';
+      for (final s in enabledSources) {
+        if (!targets.containsKey(s.key) &&
+            s.server == null &&
+            s.tracker == null &&
+            !s.listOnly &&
+            (s.streamOnly || s.supportsImdb('stream', meta.type.wire))) {
+          targets[s.key] = (s, id);
+        }
+      }
+    }
+    for (final entry in targets.entries) {
+      session.addSource(entry.key, entry.value.$1.name);
+    }
+    Future<void> ask(String key) async {
+      if (!session.active) return;
+      final (s, id) = targets[key]!;
       try {
-        final streams = s.server != null
+        Future<List<ArchiveStream>> fetch(String id) async => s.server != null
             ? _servers.streams(s, id)
             : await _api.fetchStreams(s.baseUrl, meta.type, id,
                 wire: meta.wire);
-        debugPrint('ArchiveStreams: source=${s.key} title=$titleKey '
-            'type=${meta.wire}${id == videoId ? '' : ' imdb'} '
-            'playable=${streams.length}');
-        for (final st in streams) {
-          if (urls.add(st.identity)) {
-            out.add(ArchiveStreamOption(source: s, stream: st));
-          }
+        var streams = await fetch(id);
+        if (streams.isEmpty &&
+            imdbId != null &&
+            s.manifestUrl == source.manifestUrl &&
+            id != imdbId) {
+          streams = await fetch(imdbId);
         }
-        return streams.length;
+        session.finish(key, [
+          for (final stream in streams)
+            ArchiveStreamOption(source: s, stream: stream)
+        ]);
       } catch (e) {
-        error ??= e;
-        debugPrint('ArchiveStreams: source=${s.key} title=$titleKey '
-            'type=${meta.wire}${id == videoId ? '' : ' imdb'} '
-            'failed=${e.runtimeType}'
-            '${e is ArchiveApiException && e.statusCode != null ? ' http=${e.statusCode}' : ''}');
-        return 0;
+        debugPrint('ArchiveStreams: source=${s.key} failed=${e.runtimeType}');
+        session.finish(key, const [], failed: true);
       }
     }
 
-    final asked = <String>{};
-    for (final s in _streamSources(source)) {
-      asked.add(s.manifestUrl);
-      // Own ids (tmdb:…) the add-on can't resolve: retry with the IMDb id.
-      if (await ask(s, videoId) == 0 && imdbId != null && s == source) {
-        await ask(s, imdbId);
+    final pending = targets.keys.toList();
+    var running = 0;
+    Future<void> worker() async {
+      running++;
+      try {
+        while (pending.isNotEmpty && session.active) {
+          await ask(pending.removeAt(0));
+        }
+      } finally {
+        running--;
       }
     }
-    // A title known by its IMDb id: the stream-only add-ons (same ids as
-    // the provider's rows) have streams for it too, and so does an add-on
-    // with its own catalogs whose streams take IMDb ids (AIOStreams with
-    // TMDB catalogs: a show resumed from Recently watched or opened from
-    // another source never asked it, "No playable stream", owner
-    // 2026-10-28).
-    final imdbAny = imdbId ??
-        (meta.wireType == null && videoId.startsWith('tt') ? videoId : null);
-    if (imdbAny != null) {
-      for (final s in enabledSources) {
-        if (asked.contains(s.manifestUrl) ||
-            s.server != null ||
-            s.tracker != null) {
-          continue;
-        }
-        if (s.streamOnly || s.supportsImdb('stream', meta.type.wire)) {
-          asked.add(s.manifestUrl);
-          await ask(s, imdbAny);
-        }
+
+    session.retrySource = (key) async {
+      if (!session.active ||
+          !targets.containsKey(key) ||
+          session.statuses[key] == ArchiveSourceStatus.loading) {
+        return;
+      }
+      session.startRetry(key);
+      pending.add(key);
+      if (running < 3) unawaited(worker());
+      await session.done;
+    };
+    if (pending.isEmpty) {
+      session.finishEmpty();
+    } else {
+      for (var i = 0; i < 3 && pending.isNotEmpty; i++) {
+        unawaited(worker());
       }
     }
-    if (out.isEmpty && error != null) throw error!;
-    return out;
+    return session;
   }
 
-  /// [meta]'s (or [episode]'s) IMDb video id when an add-on's own catalog
-  /// uses other ids (a TMDB catalog's `tmdb:557`, whose details carry
-  /// `imdb_id`); null when the id already is one, or for media servers,
-  /// trackers, list-only and custom-type sources.
+  Future<List<ArchiveStreamOption>> streams(
+      ArchiveSource source, ArchiveMeta meta,
+      {ArchiveVideo? episode}) async {
+    final session = searchStreams(source, meta, episode: episode);
+    await session.done;
+    return session.active ? session.options : const [];
+  }
+
   static String? _imdbVideoId(
       ArchiveSource source, ArchiveMeta meta, ArchiveVideo? episode) {
     final imdb = meta.imdb;
@@ -1173,6 +1797,7 @@ class ArchiveService extends ChangeNotifier {
     ArchiveStream stream, {
     ArchiveVideo? episode,
   }) {
+    registerIdentity(source, meta, episode: episode);
     final videoId = episode?.id ?? meta.id;
     final rawId = _rawId(source, videoId, episode: episode != null);
     return Channel(
@@ -1187,7 +1812,9 @@ class ArchiveService extends ChangeNotifier {
       group: meta.name,
       url: stream.url,
       logoUrl: episode?.thumbnailUrl ?? meta.posterUrl,
-      subtitleUrl: stream.subtitleUrl,
+      subtitleUrl: stream.subtitles.isEmpty ? stream.subtitleUrl : null,
+      subtitles: stream.subtitles,
+      httpHeaders: stream.requestHeaders,
       posterUrl: meta.posterUrl,
       backdropUrl: meta.backgroundUrl,
       seriesName: episode == null ? null : meta.name,
@@ -1198,10 +1825,23 @@ class ArchiveService extends ChangeNotifier {
 
   /// notifyListeners, deferred out of a build phase (see CLAUDE.md:
   /// never notify mid-build).
+  @override
+  void dispose() {
+    _disposed = true;
+    for (final session in _streamSessions.values) {
+      session.dispose();
+    }
+    _streamSessions.clear();
+    super.dispose();
+  }
+
   void _notify() {
+    if (_disposed) return;
     final phase = SchedulerBinding.instance.schedulerPhase;
     if (phase == SchedulerPhase.persistentCallbacks) {
-      SchedulerBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (!_disposed) notifyListeners();
+      });
     } else {
       notifyListeners();
     }

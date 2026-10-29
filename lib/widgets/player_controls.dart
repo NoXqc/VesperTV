@@ -1504,7 +1504,9 @@ class _SubtitleButtonState extends State<_SubtitleButton> {
   /// Movies/episodes can get subtitles from an add-on (Settings > Add-ons).
   bool get _canSearchOnline {
     final c = _channel;
-    return c != null && AddonService.supports(c) && _addons.anyEnabled;
+    return c != null &&
+        (c.subtitles.isNotEmpty ||
+            (AddonService.supports(c) && _addons.anyEnabled));
   }
 
   @override

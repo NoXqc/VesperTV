@@ -223,7 +223,9 @@ void main() {
     final service = ArchiveService(storage, api: api);
     final streams = await service.streams(source,
         const ArchiveMeta(id: 'tt123', type: ArchiveType.movie, name: 'Film'));
-    expect(streams.map((s) => s.stream.identity),
+    expect(
+        streams.map((s) =>
+            s.stream.ytId == null ? s.stream.url : 'yt:${s.stream.ytId}'),
         ['yt:$id', 'yt:OtherFilm12', 'https://cdn.example/video.mp4']);
     service.dispose();
   });

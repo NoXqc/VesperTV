@@ -7,6 +7,7 @@ import 'package:nox_iptv/models/archive_models.dart';
 import 'package:nox_iptv/models/channel.dart';
 import 'package:nox_iptv/services/archive_playback_sources.dart';
 import 'package:nox_iptv/services/archive_service.dart';
+import 'package:nox_iptv/services/archive_stream_session.dart';
 import 'package:nox_iptv/widgets/archive_source_drawer.dart';
 import 'package:nox_iptv/widgets/gold_tag.dart';
 
@@ -25,6 +26,58 @@ const _second = ArchiveStreamOption(
         url: 'https://example.com/two', name: 'Other 1080p', title: 'x264'));
 
 void main() {
+  testWidgets(
+      'drawer exposes early results and preserves the highlighted file after late arrivals',
+      (tester) async {
+    const lateSource = ArchiveSource(
+        manifestUrl: 'https://late.example/manifest.json',
+        name: 'Late provider');
+    final session = ArchiveStreamSession(isCurrent: () => true);
+    session.addSource(lateSource.key, lateSource.name);
+    session.addSource(_source.key, _source.name);
+    session.finish(_source.key, [_first, _second]);
+    ArchiveSourceSelection? chosen;
+    final sources = ArchivePlaybackSources(
+      load: (_) async => throw StateError('Should reuse the metadata session'),
+      search: (_) => session,
+      current: (_) => _first,
+      select: (id, option) async => Channel(
+          id: id,
+          rawId: id,
+          playlistId: 'archive',
+          name: 'Movie',
+          url: option.stream.url,
+          group: ''),
+      remember: (_, __) async {},
+    );
+    await tester.pumpWidget(MaterialApp(
+        home: Builder(
+            builder: (ctx) => Scaffold(
+                body: TextButton(
+                    onPressed: () async {
+                      chosen = await showArchiveSourceDrawer(ctx,
+                          sources: sources, channelId: 'title');
+                    },
+                    child: const Text('Sources'))))));
+    await tester.tap(find.text('Sources'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Other 1080p'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    session.finish(lateSource.key, [
+      const ArchiveStreamOption(
+          source: lateSource,
+          stream: ArchiveStream(
+              url: 'https://late.example/file', name: 'Late result'))
+    ]);
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    expect(chosen!.option, _second);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    session.dispose();
+  });
   test('format labels use advertised metadata and never a signed URL', () {
     expect(
         archiveStreamFormats(_first), ['4K', 'Dolby Vision', 'HDR10+', 'HEVC']);

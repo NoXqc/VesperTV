@@ -65,6 +65,7 @@ class SeriesDetailScreen extends StatefulWidget {
     this.showFavorite = true,
     this.imdbId,
     this.sourceLabel,
+    this.discoveryBuilder,
   });
 
   /// The show's IMDb id when known (Media Hub shows): with
@@ -75,6 +76,8 @@ class SeriesDetailScreen extends StatefulWidget {
   /// The Media Hub source the show came from, as the last chip — same as
   /// the movie page (`ArchiveDetailScreen`); a user missed it on shows.
   final String? sourceLabel;
+  final Widget Function(FocusNode entryNode, VoidCallback returnToEpisodes)?
+      discoveryBuilder;
 
   final XtreamSeries series;
 
@@ -108,6 +111,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   /// detail strip shows it, and Down/Up returns to it.
   final Map<int, int> _highlight = {};
 
+  final _discoveryNode = FocusNode(debugLabel: 'series-discovery');
   final _backNode = FocusNode(debugLabel: 'series-back');
   final _backgroundTrailer = GlobalKey<DetailTrailerState>();
   TrailerRequest get _trailerRequest => TrailerRequest(
@@ -240,6 +244,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     }
     for (final n in [
       _backNode,
+      _discoveryNode,
       _playNode,
       _restartNode,
       _favNode,
@@ -834,6 +839,16 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
               ),
               SizedBox(height: 12 * s),
               ..._buildEpisodeSection(s, pad),
+              if (widget.discoveryBuilder != null)
+                Padding(
+                    padding: EdgeInsets.symmetric(horizontal: pad),
+                    child: widget.discoveryBuilder!(_discoveryNode, () {
+                      if (_loaded && _allEpisodes.isNotEmpty) {
+                        _focusEpisode(_highlight[_season] ?? 0);
+                      } else {
+                        _playNode.requestFocus();
+                      }
+                    })),
             ],
           ),
         ),
@@ -1037,6 +1052,8 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
             below.requestFocus();
           } else if (_loaded && _allEpisodes.isNotEmpty) {
             _focusSeasonsOrEpisodes();
+          } else if (widget.discoveryBuilder != null) {
+            _discoveryNode.requestFocus();
           }
         },
         left: () => move(-1),
@@ -1096,6 +1113,9 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
             up: () => _seasons.isNotEmpty
                 ? _seasonNode(season).requestFocus()
                 : _playNode.requestFocus(),
+            down: widget.discoveryBuilder == null
+                ? null
+                : () => _discoveryNode.requestFocus(),
             left: () => _focusEpisode((_highlight[season] ?? 0) - 1),
             right: () => _focusEpisode((_highlight[season] ?? 0) + 1),
           ),
@@ -1312,6 +1332,12 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
               onLongPress: () => _toggleWatched(episodes[i]),
             ),
           ),
+          if (widget.discoveryBuilder != null)
+            SliverToBoxAdapter(
+                child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: widget.discoveryBuilder!(
+                        _discoveryNode, () => _playNode.requestFocus()))),
           SliverToBoxAdapter(
             child: SizedBox(height: 24 + MediaQuery.of(context).padding.bottom),
           ),

@@ -1,3 +1,4 @@
+import '../widgets/archive_discovery_panel.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -6,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../l10n/l10n.dart';
 import '../models/archive_models.dart';
+import '../models/archive_library.dart';
 import '../models/channel.dart';
 import '../models/series_details.dart';
 import '../models/xtream_series.dart';
@@ -20,7 +22,10 @@ import '../services/tracker_api.dart';
 import '../services/archive_ready_watch.dart';
 import '../services/stream_resolver.dart';
 import '../services/watch_tracker.dart';
-import '../widgets/tv_menu_tile.dart';
+import '../widgets/archive_stream_picker.dart';
+import '../services/archive_stream_session.dart';
+import '../services/archive_playback_preferences.dart';
+import '../services/stream_headers.dart';
 import '../widgets/roll_down_menu.dart';
 import 'desktop_player_screen.dart';
 import 'player_screen.dart';
@@ -42,57 +47,18 @@ import 'youtube_playback.dart';
 /// `name` (source, quality) over its `title` (file, size, language). Null
 /// when dismissed with Back.
 Future<ArchiveStreamOption?> pickArchiveStream(
-    BuildContext context, List<ArchiveStreamOption> options) {
-  final manySources =
-      options.map((o) => o.source.manifestUrl).toSet().length > 1;
-  return showModalBottomSheet<ArchiveStreamOption>(
-    context: context,
-    backgroundColor: const Color(0xFF1A1A1A),
-    isScrollControlled: true,
-    constraints: BoxConstraints(
-        maxHeight: MediaQuery.sizeOf(context).height * 0.8, maxWidth: 760),
-    builder: (sheetContext) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-            child: Text(tr('Choose a stream'),
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-          ),
-          Flexible(
-            child: ListView.builder(
-              shrinkWrap: true,
-              padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
-              itemCount: options.length,
-              itemBuilder: (_, i) {
-                final o = options[i];
-                final name = o.stream.name ??
-                    o.stream.title?.split('\n').first ??
-                    tr('Stream {n}', {'n': i + 1});
-                final details = [
-                  if (o.stream.name != null && o.stream.title != null)
-                    o.stream.title!,
-                  if (manySources) o.source.name,
-                ].join('\n');
-                return TvMenuTile(
-                  autofocus: i == 0,
-                  icon: Icons.play_circle_outline,
-                  title: name,
-                  titleMaxLines: 2,
-                  subtitle: details.isEmpty ? null : details,
-                  onTap: () => Navigator.of(sheetContext).pop(o),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
+        BuildContext context, List<ArchiveStreamOption> options,
+        {ArchiveStreamSession? session,
+        Future<ArchiveStreamOption?> Function(List<ArchiveStreamOption>)?
+            autoSelect}) =>
+    showModalBottomSheet<ArchiveStreamOption>(
+        context: context,
+        backgroundColor: const Color(0xFF1A1A1A),
+        isScrollControlled: true,
+        constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * 0.8, maxWidth: 900),
+        builder: (_) => ArchiveStreamPicker(
+            options: options, session: session, autoSelect: autoSelect));
 
 /// The option of [options] closest to [previous]: same source and same
 /// stream name, else the same source's first, else the first of all.
@@ -102,6 +68,12 @@ ArchiveStreamOption preferredArchiveStream(
   final sameSource = options
       .where((o) => o.source.manifestUrl == previous.source.manifestUrl)
       .toList();
+  final group = previous.stream.bingeGroup;
+  if (group != null && group.isNotEmpty) {
+    for (final o in sameSource) {
+      if (o.stream.bingeGroup == group) return o;
+    }
+  }
   final name = previous.stream.name;
   if (name != null) {
     for (final o in sameSource) {
@@ -116,11 +88,9 @@ ArchiveStreamOption preferredArchiveStream(
 /// then goes straight to the CDN). A media server's link is direct already.
 /// [_track] keeps the original link: `ArchiveReadyWatch` must re-ask the
 /// add-on, not the "being downloaded" clip it redirected to.
-Future<String> _playUrl(ArchiveStreamOption o) async => (await _resolve(o)).url;
-
 Future<ResolvedLink> _resolve(ArchiveStreamOption o) => o.source.server != null
     ? Future.value(ResolvedLink(o.stream.url))
-    : resolveLink(o.stream.url);
+    : resolveLink(o.stream.url, headers: o.stream.requestHeaders);
 
 /// [archiveProviderFailed]: the link answered with the provider's error
 /// clip. Said plainly instead of playing a clip that looks like our error.
@@ -148,13 +118,6 @@ void _track(Channel channel, ArchiveMeta meta, ArchiveVideo? episode) {
               season: episode.season, episode: episode.episode));
 }
 
-void _noStream(BuildContext context) {
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-    content: Text(tr('No playable stream for this title.')),
-    backgroundColor: Colors.red.shade900,
-  ));
-}
-
 /// Looks up [meta]'s (or its [episode]'s) streams, lets the user pick when
 /// there are several, and plays it. With [queue] (every episode, in order,
 /// as placeholders) and [videosById] (their [ArchiveVideo]s by channel id)
@@ -175,45 +138,48 @@ Future<void> playArchiveTitle(
       service
           .channelFor(source, meta, const ArchiveStream(), episode: episode)
           .id);
-  List<ArchiveStreamOption> options;
-  try {
-    options = await service.streams(source, meta, episode: episode);
-  } catch (_) {
-    options = const [];
-  }
-  if (!context.mounted) return;
-  if (options.isEmpty) return _noStream(context);
-  final restored = await resumeSource.restore(options);
-  if (!context.mounted || !resumeSource.isCurrent) {
-    return;
-  }
-  options = restored.options;
-  if (options.isEmpty) return _noStream(context);
-  // Resume the exact prior choice; absent/unavailable choices use the picker.
-  var picked = restored.picked ??
-      (storage.getArchiveAutoLargest()
-          ? largestArchiveStream(options)
-          : null) ??
-      (options.length == 1
-          ? options.single
-          : await pickArchiveStream(context, options));
-  if (picked == null || !context.mounted || !resumeSource.isCurrent) {
-    return;
-  }
-  String? resolvedUrl = restored.url;
+  final session = service.searchStreams(source, meta, episode: episode);
+  ArchiveResumeChoice? savedChoice;
+  var picked = await pickArchiveStream(context, session.options,
+      session: session, autoSelect: (options) async {
+    if (!resumeSource.isCurrent) return null;
+    savedChoice = await resumeSource.restore(options);
+    if (!resumeSource.isCurrent) return null;
+    final usable = savedChoice!.options;
+    for (final option in options) {
+      if (!usable.contains(option)) session.exclude(option);
+    }
+    final prefs = ArchivePlaybackPreferences.read(storage);
+    return savedChoice!.picked ??
+        (prefs.autoPlay ? prefs.ranked(usable).firstOrNull : null) ??
+        (storage.getArchiveAutoLargest()
+            ? largestArchiveStream(prefs.ranked(usable))
+            : null) ??
+        (usable.length == 1 && prefs.ranked(usable).isNotEmpty
+            ? usable.single
+            : null);
+  });
+  if (picked == null || !context.mounted || !resumeSource.isCurrent) return;
+  var options = session.options;
+  final restored = savedChoice ??
+      ArchiveResumeChoice(options, reason: ArchiveResumeReason.notResuming);
+  String? resolvedUrl =
+      identical(restored.picked, picked) ? restored.url : null;
+  Map<String, String>? resolvedHeaders;
   // A link that failed at the provider: say so and offer the others.
   while (resolvedUrl == null && picked!.stream.ytId == null) {
     final link = await _resolve(picked);
     if (!context.mounted || !resumeSource.isCurrent) return;
     if (!archiveProviderFailed(picked, link.url, link.totalBytes)) {
       resolvedUrl = link.url;
+      resolvedHeaders = link.headers;
       break;
     }
     _providerFailed(context);
-    final failed = picked;
-    options = options.where((o) => !identical(o, failed)).toList();
-    if (options.isEmpty) return;
-    picked = await pickArchiveStream(context, options);
+    session.exclude(picked);
+    options = session.options;
+    if (options.isEmpty && !session.loading) return;
+    picked = await pickArchiveStream(context, options, session: session);
     if (picked == null || !context.mounted || !resumeSource.isCurrent) {
       return;
     }
@@ -228,7 +194,13 @@ Future<void> playArchiveTitle(
       .channelFor(source, meta, first.stream, episode: episode)
       .copyWith(mediaFileInfo: archiveMediaFileInfo(first));
   _track(tracked, meta, episode);
-  final channel = tracked.copyWith(url: resolvedUrl);
+  final channel = tracked.copyWith(
+      url: resolvedUrl,
+      httpHeaders: resolvedHeaders ??
+          redirectedStreamHeaders(
+              first.stream.requestHeaders,
+              Uri.parse(first.stream.url),
+              Uri.parse(resolvedUrl ?? first.stream.url)));
   resumeSource.traceChoice(restored, first,
       resolvedUrl: channel.url,
       via: restored.picked != null
@@ -246,7 +218,7 @@ Future<void> playArchiveTitle(
     return;
   }
   // Extras' "Recently watched" row (the show, for an episode).
-  unawaited(service.recordWatched(source, meta));
+  unawaited(service.recordWatched(source, meta, episode: episode));
 
   final selectedStreams = <String, ArchiveStreamOption>{channel.id: first};
 
@@ -258,11 +230,30 @@ Future<void> playArchiveTitle(
     final nextResume = ArchiveResumeSource(storage, placeholder.id);
     final restoredNext = await nextResume.restore(next);
     if (!nextResume.isCurrent || restoredNext.options.isEmpty) return null;
-    final o = restoredNext.picked ??
-        (storage.getArchiveAutoLargest()
-            ? largestArchiveStream(restoredNext.options)
-            : null) ??
-        preferredArchiveStream(restoredNext.options, picked);
+    final prefs = ArchivePlaybackPreferences.read(storage);
+    final acceptable = prefs.ranked(restoredNext.options);
+    ArchiveStreamOption? o = restoredNext.picked;
+    if (o == null && acceptable.isNotEmpty) {
+      final group = picked?.stream.bingeGroup;
+      if (group != null && group.isNotEmpty) {
+        o = acceptable
+            .where((v) =>
+                v.source.key == picked!.source.key &&
+                v.stream.bingeGroup == group)
+            .firstOrNull;
+        if (o == null && context.mounted) {
+          o = await pickArchiveStream(context, restoredNext.options);
+        }
+      } else {
+        o = storage.getArchiveAutoLargest()
+            ? largestArchiveStream(acceptable)
+            : preferredArchiveStream(acceptable, picked);
+      }
+    }
+    if (o == null && context.mounted) {
+      o = await pickArchiveStream(context, restoredNext.options);
+    }
+    if (o == null || !nextResume.isCurrent) return null;
     await nextResume.remember(o);
     if (o.stream.ytId != null) return null;
     picked = o; // the episode after follows this one
@@ -271,7 +262,14 @@ Future<void> playArchiveTitle(
         .channelFor(source, meta, o.stream, episode: video)
         .copyWith(mediaFileInfo: archiveMediaFileInfo(o));
     _track(ch, meta, video);
-    final nextChannel = ch.copyWith(url: restoredNext.url ?? await _playUrl(o));
+    final nextLink = restoredNext.url == null ? await _resolve(o) : null;
+    final nextUrl = restoredNext.url ?? nextLink!.url;
+    final nextChannel = ch.copyWith(
+        url: nextUrl,
+        httpHeaders: nextLink?.headers ??
+            redirectedStreamHeaders(o.stream.requestHeaders,
+                Uri.parse(o.stream.url), Uri.parse(nextUrl)));
+    unawaited(service.recordWatched(source, meta, episode: video));
     nextResume.traceChoice(restoredNext, o,
         resolvedUrl: nextChannel.url,
         via: restoredNext.picked != null
@@ -286,6 +284,9 @@ Future<void> playArchiveTitle(
   bool belongs(String id) => id == channel.id || videosById.containsKey(id);
   ArchiveVideo? videoFor(String id) => videosById[id] ?? episode;
   final sources = ArchivePlaybackSources(
+    search: (id) => belongs(id) && resumeSource.isCurrent
+        ? service.searchStreams(source, meta, episode: videoFor(id))
+        : null,
     load: (id) async {
       if (!belongs(id) || !resumeSource.isCurrent) return const [];
       final streams =
@@ -295,11 +296,15 @@ Future<void> playArchiveTitle(
     current: (id) => selectedStreams[id],
     select: (id, option) async {
       if (!belongs(id) || !resumeSource.isCurrent) return null;
-      final url = await _playUrl(option);
+      final link = await _resolve(option);
+      final url = link.url;
       if (!resumeSource.isCurrent) return null;
       return service
           .channelFor(source, meta, option.stream, episode: videoFor(id))
-          .copyWith(url: url, mediaFileInfo: archiveMediaFileInfo(option));
+          .copyWith(
+              url: url,
+              mediaFileInfo: archiveMediaFileInfo(option),
+              httpHeaders: link.headers);
     },
     remember: (id, option) async {
       if (!belongs(id) || !resumeSource.isCurrent) return;
@@ -335,6 +340,33 @@ Future<void> playArchiveTitle(
     await Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => PlayerScreen(channel: channel, sources: sources)));
   }
+}
+
+Future<void> openArchiveContinuation(
+    BuildContext context, ArchiveContinueItem item) async {
+  if (item.upcoming ||
+      (item.meta.type == ArchiveType.series && item.episode == null)) {
+    await openArchiveSeries(context, item.source, item.meta);
+    return;
+  }
+  final service = context.read<ArchiveService>();
+  final videos = <String, ArchiveVideo>{};
+  final queue = <Channel>[];
+  for (final video in item.meta.videos) {
+    final date = DateTime.tryParse(video.released ?? '');
+    if (date != null && date.isAfter(DateTime.now())) continue;
+    final channel = service.channelFor(
+        item.source, item.meta, const ArchiveStream(),
+        episode: video);
+    queue.add(channel);
+    videos[channel.id] = video;
+  }
+  await playArchiveTitle(context,
+      source: item.source,
+      meta: item.meta,
+      episode: item.episode,
+      queue: queue,
+      videosById: videos);
 }
 
 /// Opens an Archive show on the regular [SeriesDetailScreen]: the meta
@@ -393,7 +425,11 @@ Future<void> openArchiveSeries(
         source: source,
         meta: meta,
         episode: video,
-        queue: all,
+        queue: all.where((channel) {
+          final date =
+              DateTime.tryParse(videosById[channel.id]?.released ?? '');
+          return date == null || !date.isAfter(DateTime.now());
+        }).toList(),
         videosById: videosById);
   }
 
@@ -413,6 +449,11 @@ Future<void> openArchiveSeries(
             showFavorite: false,
             imdbId: preview.imdb,
             sourceLabel: source.name,
+            discoveryBuilder: (entry, back) => ArchiveDiscoveryPanel(
+                source: source,
+                meta: preview,
+                entryNode: entry,
+                onReturn: back),
           )));
 }
 
@@ -421,7 +462,7 @@ Future<void> openArchiveSeries(
 Future<void> holdArchiveTitle(BuildContext context, ArchiveRow row,
     ArchiveSource source, ArchiveMeta meta) async {
   final service = context.read<ArchiveService>();
-  if (row.isHistory) {
+  if (row.isHistory || row.continuations != null) {
     final confirmed = await showRollDownMenu<bool>(context,
         anchor: Rect.fromLTWH(MediaQuery.sizeOf(context).width / 2,
             MediaQuery.sizeOf(context).height * .3, 0, 0),

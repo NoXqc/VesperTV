@@ -137,8 +137,8 @@ class PlaybackService extends ChangeNotifier {
 
   @visibleForTesting
   VideoPlayerHdrController Function(String url,
-          {Future<ClosedCaptionFile>? closedCaptionFile}) createController =
-      streamController;
+      {Future<ClosedCaptionFile>? closedCaptionFile,
+      Map<String, String> httpHeaders}) createController = streamController;
 
   /// The live list the user last picked a channel from (TvHomeScreen's
   /// Live list / Timeline guide, Favourites included) — what the player's
@@ -552,6 +552,7 @@ class PlaybackService extends ChangeNotifier {
         : _storage.getLastPosition(channel.id);
     final newController = createController(
       openUrl,
+      httpHeaders: channel.httpHeaders,
       closedCaptionFile: channel.subtitleUrl != null
           ? _loadCaptions(channel.subtitleUrl!)
           : null,
@@ -1109,8 +1110,9 @@ class PlaybackService extends ChangeNotifier {
     error = null;
     notifyListeners();
 
-    final newController =
-        streamController(await openUrlFor?.call(channel) ?? channel.url);
+    final newController = streamController(
+        await openUrlFor?.call(channel) ?? channel.url,
+        httpHeaders: channel.httpHeaders);
     try {
       final future =
           newController.initialize(viewType: _viewTypeFor(newController));
@@ -1199,7 +1201,8 @@ class PlaybackService extends ChangeNotifier {
       if (currentChannel?.id != channel.id) return false;
 
       final retryUrl = _swapOrigin(channel.url, server);
-      final retryController = streamController(retryUrl);
+      final retryController =
+          streamController(retryUrl, httpHeaders: channel.httpHeaders);
       try {
         final future =
             retryController.initialize(viewType: _viewTypeFor(retryController));
@@ -1524,6 +1527,7 @@ VideoPlayerHdrController streamController(
   String url, {
   Future<ClosedCaptionFile>? closedCaptionFile,
   VideoPlayerOptions? videoPlayerOptions,
+  Map<String, String> httpHeaders = const {},
 }) {
   // A recording (RecordingService.channelFor): a local .ts file.
   if (url.startsWith('/')) {
@@ -1546,6 +1550,7 @@ VideoPlayerHdrController streamController(
   return VideoPlayerHdrController.networkUrl(
     uri,
     formatHint: hls ? VideoFormat.hls : null,
+    httpHeaders: httpHeaders,
     closedCaptionFile: closedCaptionFile,
     videoPlayerOptions: videoPlayerOptions,
   );
