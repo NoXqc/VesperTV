@@ -184,6 +184,14 @@
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },
   {
+    "id": "ce2c552402228422",
+    "category": "Full screen",
+    "title": "Last channel",
+    "answer": "Jumps back to the channel you watched before this one. Press → again to flip between the two. On movies and Media Hub titles, → still opens Stream sources.",
+    "controls": "→ LIVE",
+    "url": "https://vespertv.app/remote.html#Full%20screen"
+  },
+  {
     "id": "77219e28e277a3ad",
     "category": "Full screen",
     "title": "Pull stats",

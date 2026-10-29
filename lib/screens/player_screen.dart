@@ -665,6 +665,22 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
     final target = next;
     if (target == null) return;
+    _zapTo(target);
+  }
+
+  /// Right on a live channel: back to the channel watched before this one
+  /// (the side panel's Last channels list), so Right again flips back.
+  void _lastChannel() {
+    if (_panelOpen || _scheduleOpen) return;
+    final current = _playback.liveChannel ?? widget.channel;
+    if (!current.isLive) return;
+    final target = _playback.recentlyPlayed
+        .where((c) => c.isLive && c.id != current.id)
+        .firstOrNull;
+    if (target != null) _zapTo(target);
+  }
+
+  void _zapTo(Channel target) {
     // Info overlay stays up while the new stream connects, then for 3 s
     // once it's started (owner's call) — counted from the start, not the
     // key press, so a slow stream doesn't eat the whole window.
@@ -932,8 +948,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     // froze solid until Android force-killed the app. Consume
                     // it even when no Media Hub sources exist;
                     // Media Hub playback uses it to open its source drawer.
-                    const SingleActivator(LogicalKeyboardKey.arrowRight):
-                        _openSources,
+                    // Live: Right = last channel (owner, 2026-10-29).
+                    const SingleActivator(LogicalKeyboardKey.arrowRight): () {
+                      if (channel.isLive || playback.catchup != null) {
+                        _lastChannel();
+                      } else {
+                        _openSources();
+                      }
+                    },
                     // No repeats: the OK held to open this player must not
                     // pop the card on arrival.
                     const SingleActivator(LogicalKeyboardKey.select,
