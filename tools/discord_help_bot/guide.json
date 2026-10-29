@@ -248,6 +248,14 @@
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },
   {
+    "id": "f861065e9dad214f",
+    "category": "Home",
+    "title": "Choose a profile at startup",
+    "answer": "Turn this on, then fully close and reopen VesperTV. After the splash, use the arrows and OK, or tap a profile, to open the app in that profile. The last-used profile starts focused. Photos appear when set; leaving a restricted profile still needs the PIN. The switch is off by default and applies to this device.",
+    "controls": "Settings > General > Startup > Launch with profiles selector",
+    "url": "https://vespertv.app/remote.html#Home"
+  },
+  {
     "id": "7292204b66bcb258",
     "category": "Home",
     "title": "Hide profiles on Home",
@@ -339,7 +347,7 @@
     "id": "c3c55479d877f7c1",
     "category": "Sports Trak",
     "title": "Sports Mode (beta)",
-    "answer": "Enable it in Sports Trak or Settings → Interface → Sports Mode to make sports your home for this profile. Your first five leagues sit in a sidebar: Left from the feed, first control or first card opens it; Right returns to content. Remaining leagues, All and Edit leagues stay in the floating top bar. Hold OK on a league and use Left/Right to reorder it, then OK or Back to finish. Today opens the day picker. While a game plays, a list of the day's games sits beside the big video: Up/Down selects a game, OK watches it, Right opens full screen, and hold OK opens stats. Down past the list opens the card rows; Up from the top row returns to the list. Standings, My Teams and Networks remain available. Other app sections stay in the sidebar; Back from Live TV's navigation column returns to sports. Turn Sports Mode off to restore the regular home and previous startup choice.",
+    "answer": "Enable it in Sports Trak or Settings → Interface → Sports Mode to make sports your home for this profile. Your first five leagues sit in a sidebar: Left from the feed, first control or first card opens it; Right returns to content. Remaining leagues, All and Edit leagues stay in the floating top bar. Hold OK on a league and use Left/Right to reorder it, then OK or Back to finish. Today opens the day picker. While a game plays, a list of the day's games sits beside the big video: Up/Down selects a game, OK watches it, Right opens full screen, and hold OK opens stats. Down past the list opens the card rows; Up from the top row returns to the list. Standings, My Teams and Networks remain available. Menu gathers Home, Search, Multiview and the other app shortcuts; narrow layouts keep Menu and leagues in a top strip, and Back from content opens Menu. On TV layouts, Live TV opens groups and a translucent channel list inside Sports Mode. OK or Right enters a group; OK on a channel watches full screen. Back returns to the list, then groups, then sports. CH+/CH- or Page Up/Page Down move eight rows. Open full Live TV opens the regular TV screen; narrow and touch layouts open that screen directly. Turn Sports Mode off to restore the regular home and previous startup choice.",
     "controls": "OK on Sports Mode",
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },

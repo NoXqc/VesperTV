@@ -38,3 +38,11 @@ portrait-phone and short landscape sizes with large text on Android/Windows.
 TV/phone widget renders visually inspected (local build/ PNGs).
 Full analyzer/test results and commit are in the root HANDOFF.md.
 Not built/installed or checked on a physical box/phone/Windows app.
+
+## Release integration (2026-10-28)
+
+Owner tested selector +494 on Formuler and approved. The real selector branch
+was merged with claude/sports-mode-rail 863da01 (Live TV panel/Menu/provider-failure)
+for 1.0.45+496. The temporary test494 snapshot was stashed rather than merged.
+Full combined checks: analyze16,872Flutter tests,15guide and6deployment-script tests.
+Package/publication results are recorded in root HANDOFF.md.

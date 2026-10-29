@@ -362,6 +362,15 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **cdx, 2026-10-28 — release preparation 1.0.45 (beta), +496:** owner asked
+  to follow the merge/release handoff. Real branches claude/sports-mode-rail
+  (863da01, Menu/Live TV/provider-failure) and codex/startup-profile-selector
+  (bbb9733, owner-approved +494) merged; test494 snapshot stashed, excluded
+  experiments unchanged. Matching Android/Windows release packages; guide and
+  help index updated. Exact validation/publication state: root HANDOFF.md;
+  user-facing notes: dev-notes/release-1.0.45.md. Analyze16, all872 Flutter
+  tests,15 guide tests and6 deployment-script tests pass.
+
 - **Claude, 2026-10-28 — Sports Mode Live TV panel, test +495** (`claude/sports-mode-rail`,
   committed with the +493 Sports Menu/provider-failure work): rail Live TV opens groups + a
   see-through guide inside Sports Mode; OK = full screen, Back returns to the guide, Back x3
@@ -375,7 +384,7 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   applies before the short selection animation; only then are startup routes
   and automatic playback created for the chosen viewer. No Home flash or
   previous-viewer playback. See `dev-notes/startup-profile-selector.md`;
-  physical-device appearance/startup acceptance pending. No version/build bump.
+  owner tested +494 on Formuler and approved; included in release +496.
 
 - **cdx, 2026-10-28 — release preparation 1.0.44 (beta), +492**
   (`codex/release-1-0-44`): owner requested publication and Discord announcement
