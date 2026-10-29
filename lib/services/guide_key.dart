@@ -10,9 +10,11 @@ abstract interface class GuideTarget {
   void openGuide();
 }
 
-/// The remote's Guide / EPG button (Android KEYCODE_GUIDE; the Formuler's
-/// EPG key sends KEY_PROGRAM, which Android maps to it) opens the live
-/// guide from anywhere in the app (owner, 2026-10-29). The TV homes
+/// The remote's Guide / EPG button opens the live guide from anywhere in the
+/// app (owner, 2026-10-29). Standard remotes send KEYCODE_GUIDE; the
+/// Formuler's EPG key is Linux KEY_PROGRAM (scan code 362) but its own key
+/// layout turns it into keycode 228 (seen with an on-screen key probe), so
+/// both of those count too. The TV homes
 /// register themselves; the app root installs the key handler.
 class GuideKey {
   GuideKey._();
@@ -50,10 +52,14 @@ class GuideKey {
   }
 
   /// [navigator]: the app's; null while the splash / profile selector shows.
+  static bool isGuide(KeyEvent event) =>
+      event.logicalKey == LogicalKeyboardKey.guide ||
+      // Android keys Flutter has no name for: 0x11 << 32 | code.
+      event.physicalKey.usbHidUsage == 0x110000016a || // scan code 362
+      event.logicalKey.keyId == 0x11000000e4; // Formuler keycode 228
+
   static bool handle(KeyEvent event, {required NavigatorState? navigator}) {
-    if (event is! KeyDownEvent ||
-        event.logicalKey != LogicalKeyboardKey.guide ||
-        navigator == null) {
+    if (event is! KeyDownEvent || !isGuide(event) || navigator == null) {
       return false;
     }
     // The newest mounted home (Sports Mode's Live TV sits above its root).

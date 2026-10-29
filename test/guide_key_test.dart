@@ -87,6 +87,20 @@ void main() {
     expect(find.text('home 1'), findsOneWidget);
   });
 
+  test('the Formuler EPG key counts as Guide (on-screen probe values)', () {
+    const formuler = KeyDownEvent(
+        physicalKey: PhysicalKeyboardKey(0x110000016a),
+        logicalKey: LogicalKeyboardKey(0x11000000e4),
+        timeStamp: Duration.zero);
+    expect(GuideKey.isGuide(formuler), isTrue);
+    expect(GuideKey.isGuide(_guideDown), isTrue);
+    const ok = KeyDownEvent(
+        physicalKey: PhysicalKeyboardKey.select,
+        logicalKey: LogicalKeyboardKey.select,
+        timeStamp: Duration.zero);
+    expect(GuideKey.isGuide(ok), isFalse);
+  });
+
   testWidgets('ignored while the splash / profile selector shows',
       (tester) async {
     expect(GuideKey.handle(_guideDown, navigator: null), isFalse);
