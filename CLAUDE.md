@@ -367,7 +367,16 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
-- **Claude, 2026-10-29 — Android release 1.0.47+520 (latest):** Codex's Media Hub experience
+- **Claude, 2026-10-29 — Android hotfix release 1.0.48+524 (latest):** discovery rows scroll
+  steadily (`archive_discovery_panel.dart`: minimal row jumpTo; page reveals the row's keyed
+  Column, NOT a card — ensureVisible measures against the nearest viewport; Explore more minimal
+  scroll; D-pad test asserts focus on screen + Up never scrolls down). New Settings > Media Hub >
+  **Custom posters** (`ArchivePosters`, `vesper_archive_poster_pattern`, device-only):
+  `{imdb_id}`/`{tmdb_id}`/`{type}` pattern; `ArchiveMeta.posterUrl` is now a getter over
+  `originalPosterUrl` (what toJson saves). APK only, Windows stays 1.0.45. Known flaky test:
+  `sports_schedule_test` "calendar: D-pad selects days" can fail in the full suite
+  (path_provider MissingPluginException after completion), passes alone. Next build > 524.
+- **Claude, 2026-10-29 — Android release 1.0.47+520:** Codex's Media Hub experience
   (all 6 Nuvio-plan priorities, dev-notes/media-hub-experience.md + Claude follow-ups: Windows
   headers/subtitles, 41 translations, movie page scroll-to-top), live player Right = last channel,
   TV boxes ignore audio-focus loss (`streamController` mixWithOthers on TV), main player
