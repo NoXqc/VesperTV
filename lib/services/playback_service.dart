@@ -22,6 +22,7 @@ import 'storage_service.dart';
 import 'audio_track_preferences.dart';
 import 'catchup_session.dart';
 import 'archive_ready_watch.dart';
+import 'device_memory_service.dart';
 import 'display_match.dart';
 import 'archive_service.dart';
 import 'watch_tracker.dart';
@@ -1525,6 +1526,16 @@ VideoPlayerHdrController streamController(
   Future<ClosedCaptionFile>? closedCaptionFile,
   VideoPlayerOptions? videoPlayerOptions,
 }) {
+  // On a TV box another app taking audio focus (launcher previews, voice
+  // assistant, CEC) made ExoPlayer pause silently: a frozen picture with
+  // the buffer full and no error (Xiaomi MIBOX4, LOG-V5ET8S:
+  // onAudioFocusChange(-1)). mixWithOthers = don't handle audio focus.
+  // Phones keep it (pause for a call). The plugin keeps this flag shared,
+  // so phones send false explicitly to undo Multiview's true.
+  if (videoPlayerOptions == null && Platform.isAndroid) {
+    videoPlayerOptions =
+        VideoPlayerOptions(mixWithOthers: DeviceTypeService.television);
+  }
   // A recording (RecordingService.channelFor): a local .ts file.
   if (url.startsWith('/')) {
     return VideoPlayerHdrController.file(File(url),

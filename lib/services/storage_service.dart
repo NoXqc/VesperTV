@@ -133,7 +133,15 @@ class StorageService {
 
   Future<void> writeCacheFile(String name, String content) async {
     final dir = await _ensureCacheDir();
-    await File('${dir.path}/$name.json').writeAsString(content);
+    final file = File('${dir.path}/$name.json');
+    try {
+      await file.writeAsString(content);
+    } on PathNotFoundException {
+      // Android can clear the cache folder while the app runs (MIBOX4,
+      // LOG-V5ET8S: every recently_played write failed until restart).
+      await dir.create(recursive: true);
+      await file.writeAsString(content);
+    }
   }
 
   /// Path of a cache file if it exists, for callers that read *and*

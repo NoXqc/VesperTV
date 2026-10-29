@@ -52,11 +52,16 @@ class DeviceTypeService {
   /// phone.
   static Future<bool> isTelevision() async {
     try {
-      return await _channel.invokeMethod<bool>('isTelevision') ?? false;
+      return television =
+          await _channel.invokeMethod<bool>('isTelevision') ?? false;
     } catch (_) {
       return false;
     }
   }
+
+  /// The last [isTelevision] answer, for synchronous callers (asked at
+  /// startup in main.dart before anything plays).
+  static bool television = false;
 
   /// Android's API level (25 = Android 7.1 / Fire OS 6), 0 when unknown.
   static Future<int> sdkInt() async {
