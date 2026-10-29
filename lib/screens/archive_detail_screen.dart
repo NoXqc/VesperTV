@@ -53,6 +53,7 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
   final _restartNode = FocusNode(debugLabel: 'archive-restart');
   final _discoveryNode = FocusNode(debugLabel: 'archive-discovery');
   final _castNode = FocusNode(debugLabel: 'archive-cast');
+  final _pageScroll = ScrollController();
   bool _showCast = false;
 
   ArchiveMeta? _full;
@@ -94,6 +95,7 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
     _restartNode.dispose();
     _castNode.dispose();
     _discoveryNode.dispose();
+    _pageScroll.dispose();
     super.dispose();
   }
 
@@ -158,6 +160,7 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
               ),
               SafeArea(
                 child: ListView(
+                  controller: _pageScroll,
                   padding: EdgeInsets.fromLTRB(
                       narrow ? 16 : 40, narrow ? 8 : 32, narrow ? 16 : 40, 32),
                   children: [
@@ -173,30 +176,45 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
                           ),
                         ),
                       ),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (meta.posterUrl != null && !narrow) ...[
-                          DetailPoster(url: meta.posterUrl!, width: 150),
-                          const SizedBox(width: 24),
-                        ],
-                        // Wide: the right part stays clear for the cast
-                        // bubbles (same split as MovieDetailScreen).
-                        Expanded(
-                          child: narrow
-                              ? _buildInfo(meta)
-                              : Align(
-                                  alignment: Alignment.topLeft,
-                                  child: ConstrainedBox(
-                                    constraints: BoxConstraints(
-                                        maxWidth: size.width * 0.6 -
-                                            (meta.posterUrl != null ? 174 : 0)),
-                                    child: _buildInfo(meta),
-                                  ),
-                                ),
-                        ),
-                      ],
-                    ),
+                    // Focus back on Play/Trailer (Up from Explore more) shows the
+                    // whole header again: requestFocus alone never scrolled the
+                    // page, so the title and description stayed cut off.
+                    Focus(
+                        canRequestFocus: false,
+                        skipTraversal: true,
+                        onFocusChange: (has) {
+                          if (has &&
+                              _pageScroll.hasClients &&
+                              _pageScroll.offset != 0) {
+                            _pageScroll.jumpTo(0);
+                          }
+                        },
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (meta.posterUrl != null && !narrow) ...[
+                              DetailPoster(url: meta.posterUrl!, width: 150),
+                              const SizedBox(width: 24),
+                            ],
+                            // Wide: the right part stays clear for the cast
+                            // bubbles (same split as MovieDetailScreen).
+                            Expanded(
+                              child: narrow
+                                  ? _buildInfo(meta)
+                                  : Align(
+                                      alignment: Alignment.topLeft,
+                                      child: ConstrainedBox(
+                                        constraints: BoxConstraints(
+                                            maxWidth: size.width * 0.6 -
+                                                (meta.posterUrl != null
+                                                    ? 174
+                                                    : 0)),
+                                        child: _buildInfo(meta),
+                                      ),
+                                    ),
+                            ),
+                          ],
+                        )),
                     ArchiveDiscoveryPanel(
                         source: widget.source,
                         meta: meta,
