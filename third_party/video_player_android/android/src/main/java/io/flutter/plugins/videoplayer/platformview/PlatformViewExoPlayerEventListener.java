@@ -23,6 +23,15 @@ public final class PlatformViewExoPlayerEventListener extends ExoPlayerEventList
     return true;
   }
 
+  // VesperTV: a live .ts the server closes cleanly reached ENDED and sat on its last frame with no
+  // error (Xiaomi MIBOX4, LOG-RY6KT6: AudioTrack drained at end of stream ~50 s in, no player
+  // error). Reconnect in place like Multiview does; finite/catch-up streams and files with a
+  // duration are excluded by the base class, and the restart-loop cap above bounds it.
+  @Override
+  protected boolean reconnectWhenLiveEnds() {
+    return true;
+  }
+
   @OptIn(markerClass = UnstableApi.class)
   @Override
   protected void sendInitialized() {
