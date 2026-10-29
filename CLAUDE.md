@@ -1644,3 +1644,18 @@ through5853b55 (swap, slower/lower pill, scrollable hold menu). Version1.0.45+50
 analyze16 baseline infos,902Flutter tests passed. Release certificate verified;
 installed in place on Formuler Z11 Pro MAX and launched. No public release/push.
 Next installed build must exceed500. Artifact and final commit: root HANDOFF.md.
+
+### Codex 2026-10-29: Formuler follow-up +501
+
+Owner reported +500 preview jumping into the rail and getting stuck, and asked
+for injuries between the team stats. sports_screen now hands focus to the feed
+when that feed mounts after playback opens, not only on the first OK frame;
+Right from the rail goes to an active feed and full-screen Back restores it.
+Pregame stats reserve left team / centered injuries / right team slots.
+Regression reproduces the delayed-start jump before the fix;54targeted and904
+full Flutter tests pass, analyze16. See dev-notes/sports-mode.md / root HANDOFF.
+
+Signed +501 installed on Formuler. Actual-device D-pad check passed: first OK
+keeps the feed focused/rail collapsed, Left then Down/Right exits the rail,
+second OK opens full screen and Back restores the playing feed. Injuries
+alignment checked on screen. Next installed build must exceed501.

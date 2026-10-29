@@ -165,3 +165,31 @@ APK was verified against the existing signing certificate and installed in place
 on Formuler Z11 Pro MAX; package reports code500 and MainActivity launched.
 Physical acceptance of the new sports behavior remains with the owner. Exact
 artifact/hash/commit details are in root HANDOFF.md. This is a local test build.
+
+## Formuler follow-up +501: preview focus and pregame alignment
+
+- Owner reported first OK opening the rail, then Right failing to return.
+  Reproduced the initial jump with a delayed PlaybackService.play fixture: the
+  old first-frame callback ran before the stream existed, so it missed the
+  subsequently mounted feed and card removal restored focus to a league.
+- Preview requests now carry a focus generation. The playing feed's actual
+  mount schedules the transfer to that game, guarded against stale requests
+  and other routes. Stop still returns to cards; full-screen Back refocuses
+  the feed. Right from the rail explicitly enters an active feed regardless
+  of the previously remembered header/card zone. Narrow layouts clear the
+  cached feed-visible flag.
+- Regression covers delayed first OK, second OK/full-screen return, all five
+  rail leagues, a remembered header zone, rail collapse and feed element reuse.
+  The delayed-start assertion fails on +500 and passes with the fix.
+- Pregame stats use team one / injuries / team two slots. Left/right alignment
+  follows the teams above; the center is reserved even if data is missing.
+  Narrow stacked layouts skip empty slots.
+- Local validation:54targeted sports tests and904full Flutter tests pass;
+  analyze16 existing infos. Build/install/commit details: root HANDOFF.md.
+
++501 device check: release certificate/package/version verified and installed
+in place on Formuler Z11 Pro MAX. Checked the real MTL/DAL card: first OK opened
+the preview with feed focus and collapsed rail; Left opened the rail, Down then
+Right returned to the feed and collapsed it; second OK went full screen and
+Back restored the same playing feed. Pregame injuries centered between each
+team's aligned standings. Evidence PNGs are ignored build/sports-501-device-*.png.

@@ -140,6 +140,7 @@ class _SportsMatchupStatsState extends State<SportsMatchupStats>
     final result = <(String, String)>[];
     if (game.state == GameState.pre) {
       for (final team in [game.first, game.second]) {
+        var standing = ('', '');
         for (final table in summary?.tables ?? <SportsSummaryTable>[]) {
           final row = table.rows.where((r) => r.$1 == team.id).firstOrNull;
           if (row == null) continue;
@@ -150,22 +151,24 @@ class _SportsMatchupStatsState extends State<SportsMatchupStats>
             }
           }
           if (values.isNotEmpty) {
-            result.add((
+            standing = (
               team.shortName,
               '${table.title} · ${values.take(3).join(' · ')}'
-            ));
+            );
             break;
           }
         }
+        result.add(standing);
       }
       final injuries = <String>[
         for (final team in [game.first, game.second])
           if (summary?.injuries[team.id]?.firstOrNull case final injury?)
             '${injury.name} · ${trSports(injury.status)}',
       ];
-      if (injuries.isNotEmpty) {
-        result.add((tr('Injuries'), injuries.join(' / ')));
-      }
+      // Keep a slot beneath each team even when one feed detail is missing.
+      result.insert(1,
+          injuries.isEmpty ? ('', '') : (tr('Injuries'), injuries.join(' / ')));
+      if (result.every((item) => item.$1.isEmpty)) return [];
     } else {
       final goal = summary?.goals.lastOrNull;
       if (goal != null) {
@@ -223,17 +226,24 @@ class _SportsMatchupStatsState extends State<SportsMatchupStats>
   Widget build(BuildContext context) {
     final details = _details();
     final accent = Theme.of(context).colorScheme.primary;
-    Widget entry((String, String) item) => Column(
+    Widget entry((String, String) item, {TextAlign align = TextAlign.start}) =>
+        Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: align == TextAlign.end
+              ? CrossAxisAlignment.end
+              : align == TextAlign.center
+                  ? CrossAxisAlignment.center
+                  : CrossAxisAlignment.start,
           children: [
             Text(item.$1,
+                textAlign: align,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                     fontSize: 10, color: accent, fontWeight: FontWeight.w700)),
             if (item.$2.isNotEmpty)
               Text(item.$2,
+                  textAlign: align,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -259,7 +269,7 @@ class _SportsMatchupStatsState extends State<SportsMatchupStats>
               : details;
           if (bounds.maxWidth < 500 && !widget.compact) {
             return Column(mainAxisSize: MainAxisSize.min, children: [
-              for (final cell in cells)
+              for (final cell in cells.where((item) => item.$1.isNotEmpty))
                 Padding(
                     padding: const EdgeInsets.symmetric(vertical: 2),
                     child:
@@ -270,11 +280,23 @@ class _SportsMatchupStatsState extends State<SportsMatchupStats>
             Padding(
                 padding: const EdgeInsets.only(right: 8, top: 3),
                 child: Icon(Icons.insights, size: 16, color: accent)),
-            for (final cell in bounds.maxWidth < 500 ? cells.take(1) : cells)
+            for (final (i, cell) in (bounds.maxWidth < 500
+                    ? cells.where((item) => item.$1.isNotEmpty).take(1)
+                    : cells)
+                .indexed)
               Expanded(
                   child: Padding(
                       padding: const EdgeInsets.only(right: 8),
-                      child: entry(cell))),
+                      child: entry(cell,
+                          align: widget.game.state == GameState.pre &&
+                                  bounds.maxWidth >= 500 &&
+                                  cells.length == 3
+                              ? [
+                                  TextAlign.start,
+                                  TextAlign.center,
+                                  TextAlign.end
+                                ][i]
+                              : TextAlign.start))),
           ]);
         }),
       ),

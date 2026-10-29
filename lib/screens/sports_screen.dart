@@ -217,6 +217,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   Completer<void>? _previewOpened;
   bool _fullScreenPending = false;
   int _previewSeq = 0;
+  int? _previewFeedFocusSeq;
 
   /// The "Hold > to resume" pill covered the cards and Standings' table;
   /// hidden for as long as Sports (and anything pushed over it) is open.
@@ -1059,22 +1060,22 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final playback = context.read<PlaybackService>();
     final storage = context.read<StorageService>();
     final feedHadFocus = _feedFocused;
+    _previewFeedFocusSeq = _modeActive && game != null ? seq : null;
     setState(() {
       _previewGame = game;
       _previewChannel = channel;
       _heroPick = null;
       _modeBrowsing = false;
     });
-    if (_modeActive) {
-      // The cards / feed holding the focus are swapped out: follow them.
+    if (_modeActive && game == null && feedHadFocus) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || !(ModalRoute.of(context)?.isCurrent ?? false)) return;
-        if (game != null && _feedVisible) {
-          _focusFeed(game: game);
-        } else if (game == null && feedHadFocus) {
-          _feedFocused = false;
-          _focusZone(_firstRowZone, _sections);
+        if (!mounted ||
+            seq != _previewSeq ||
+            !(ModalRoute.of(context)?.isCurrent ?? false)) {
+          return;
         }
+        _feedFocused = false;
+        _focusZone(_firstRowZone, _sections);
       });
     }
     final opened = Completer<void>();
@@ -1464,11 +1465,20 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     }
   }
 
-  /// Back from full screen on another channel ends the preview, and with
-  /// it the feed that had the focus.
+  /// Back from full screen returns focus to the mounted game feed, or to
+  /// the cards when a channel change has ended that feed's preview.
   void _refocusAfterFeed() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_modeActive || _feedVisible || !_feedFocused) return;
+      if (!mounted ||
+          !_modeActive ||
+          !(ModalRoute.of(context)?.isCurrent ?? false)) {
+        return;
+      }
+      if (_feedVisible) {
+        _focusFeed();
+        return;
+      }
+      if (!_feedFocused) return;
       _feedFocused = false;
       _focusZone(_firstRowZone, _sections);
     });
@@ -1866,6 +1876,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   List<SportsGame> get _feedGames => [for (final s in _sections) ...s.games];
 
   void _focusFeed({SportsGame? game, bool last = false}) {
+    _zone = _firstRowZone;
     final games = _feedGames;
     if (game != null) {
       final i = games.indexWhere((g) => _gameKey(g) == _gameKey(game));
@@ -2127,6 +2138,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final prefs = context.watch<AppPreferences>();
     final scrollPage =
         _touch || _narrow || MediaQuery.sizeOf(context).height < 500;
+    if (scrollPage) _feedVisible = false;
     SportsModeRailEntry app(String id, String label, IconData icon, Widget page,
             {bool settings = false, bool stopPlayback = false}) =>
         SportsModeRailEntry(
@@ -2215,7 +2227,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       ],
       onEnterContent: () => _liveOpen
           ? _livePanel.currentState?.focusLast()
-          : _focusZone(_zone, sections),
+          : _feedVisible
+              ? _focusFeed()
+              : _focusZone(_zone, sections),
       live: _liveOpen && !scrollPage
           ? SportsModeLivePanel(
               key: _livePanel,
@@ -2255,6 +2269,21 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                   const tools = 50.0;
                   _feedVisible =
                       hero != null && preview != null && !_modeBrowsing;
+                  if (_feedVisible && _previewFeedFocusSeq == _previewSeq) {
+                    final seq = _previewSeq;
+                    _previewFeedFocusSeq = null;
+                    // Playback can open several frames after OK. Transfer
+                    // focus only once the replacement feed is mounted.
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (!mounted ||
+                          seq != _previewSeq ||
+                          !_feedVisible ||
+                          !(ModalRoute.of(context)?.isCurrent ?? false)) {
+                        return;
+                      }
+                      _focusFeed(game: preview);
+                    });
+                  }
                   if (!_feedVisible) {
                     return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,

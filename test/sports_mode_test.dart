@@ -322,6 +322,10 @@ void main() {
       await press(tester, LogicalKeyboardKey.select);
       expect(routes.channels.map((c) => c.id), ['p1::0']);
       expect(playback.plays, hasLength(1));
+      if (mode) {
+        expect(getFocus(), 'sports-mode-feed');
+        expect(find.byKey(const ValueKey('sports-mode-rail')), findsNothing);
+      }
       expect(tester.takeException(), isNull);
       await disposePage(tester);
     });
@@ -344,6 +348,71 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     expect(routes.channels.map((c) => c.id), ['p1::0']);
     expect(playback.plays, hasLength(1));
+    expect(getFocus(), 'sports-mode-feed');
+    expect(find.byKey(const ValueKey('sports-mode-rail')), findsNothing);
+    expect(tester.takeException(), isNull);
+    await disposePage(tester);
+  });
+
+  testWidgets('delayed preview keeps focus on the game with the rail collapsed',
+      (tester) async {
+    final games = await matchedGames();
+    final routes = _PlayerRoutes();
+    playback.opening = Completer<void>();
+    await open(tester, games: games, observer: routes);
+    await press(tester, LogicalKeyboardKey.arrowRight);
+    expect(getFocus(), 'sports-card-nhl:game100');
+    await press(tester, LogicalKeyboardKey.select);
+    await tester.pump(const Duration(seconds: 1));
+    playback.opening!.complete();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(getFocus(), 'sports-mode-feed');
+    expect(find.byKey(const ValueKey('sports-mode-rail')), findsNothing);
+    expect(find.byKey(const ValueKey('sports-mode-rail-tab')), findsOneWidget);
+    expect(playback.plays, hasLength(1));
+    // A second OK reaches that same game, not a league in the sidebar.
+    await press(tester, LogicalKeyboardKey.select);
+    expect(routes.channels.map((c) => c.id), ['p1::0']);
+    expect(playback.plays, hasLength(1));
+    expect(tester.takeException(), isNull);
+    await disposePage(tester);
+  });
+
+  testWidgets('Right leaves the league rail after a delayed preview opens',
+      (tester) async {
+    final games = await matchedGames();
+    playback.opening = Completer<void>();
+    await open(tester, games: games);
+    await press(tester, LogicalKeyboardKey.arrowRight);
+    await press(tester, LogicalKeyboardKey.select);
+    await tester.pump(const Duration(seconds: 1));
+    playback.opening!.complete();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    // Exercise every rail league: returning should always reach the feed.
+    for (var i = 0; i < 5; i++) {
+      if (getFocus() == 'sports-mode-feed') {
+        await press(tester, LogicalKeyboardKey.arrowLeft);
+      }
+      await press(tester, LogicalKeyboardKey.arrowDown);
+      final feedElement =
+          tester.element(find.byKey(const ValueKey('sports-mode-feed')));
+      await press(tester, LogicalKeyboardKey.arrowRight);
+      expect(getFocus(), 'sports-mode-feed');
+      expect(find.byKey(const ValueKey('sports-mode-rail')), findsNothing);
+      expect(tester.element(find.byKey(const ValueKey('sports-mode-feed'))),
+          same(feedElement));
+    }
+    // A remembered header zone must not send Right to an absent game card.
+    await press(tester, LogicalKeyboardKey.arrowUp);
+    await press(tester, LogicalKeyboardKey.arrowUp);
+    expect(getFocus(), 'sports-chip-league:all');
+    await press(tester, LogicalKeyboardKey.arrowLeft);
+    expect(find.byKey(const ValueKey('sports-mode-rail')), findsOneWidget);
+    await press(tester, LogicalKeyboardKey.arrowRight);
+    expect(getFocus(), 'sports-mode-feed');
+    expect(find.byKey(const ValueKey('sports-mode-rail')), findsNothing);
     expect(tester.takeException(), isNull);
     await disposePage(tester);
   });
