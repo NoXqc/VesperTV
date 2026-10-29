@@ -1752,7 +1752,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     if (index >= 0) {
       final target = index + delta;
       if (target < 0) {
-        _modeShell.currentState?.focusRail();
+        _leftFromContent();
       } else if (target < ids.length) {
         _focusModeNode(ids[target]);
       }
@@ -1761,7 +1761,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     // Row headers and the empty-day action have no horizontal neighbours.
     if (_chipNodes.values.any((node) => node.hasFocus)) {
       if (delta < 0) {
-        _modeShell.currentState?.focusRail();
+        _leftFromContent();
       } else {
         _focusZone(_zone, _sections);
       }
@@ -1816,6 +1816,17 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     if (!_liveOpen) setState(() => _liveOpen = true);
     WidgetsBinding.instance
         .addPostFrameCallback((_) => _livePanel.currentState?.openGuide());
+  }
+
+  /// Left from the page's left edge: the Live TV panel when it's open (its
+  /// guide, else its groups; owner 2026-10-29), else the rail.
+  void _leftFromContent() {
+    final panel = _liveOpen ? _livePanel.currentState : null;
+    if (panel != null) {
+      panel.focusLast();
+    } else {
+      _modeShell.currentState?.focusRail();
+    }
   }
 
   void _openLive() {
@@ -2060,7 +2071,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowLeft) {
-      _modeShell.currentState?.focusRail();
+      _leftFromContent();
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowRight) {
@@ -2837,7 +2848,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final target = i + delta;
     // Row ends: stay put rather than leave the row.
     if (target < 0 || target >= s.games.length) {
-      if (target < 0 && _modeActive) _modeShell.currentState?.focusRail();
+      if (target < 0 && _modeActive) _leftFromContent();
       return KeyEventResult.handled;
     }
     if (_modeActive) {

@@ -1090,6 +1090,17 @@ void main() {
     await disposePage(tester);
   });
 
+  testWidgets('Live TV groups: Left from the page returns to them',
+      (tester) async {
+    await openLivePanel(tester);
+    await press(tester, LogicalKeyboardKey.arrowRight); // into the page
+    expect(getFocus(), isNot(startsWith('sports-live')));
+    await press(tester, LogicalKeyboardKey.arrowLeft);
+    expect(getFocus(), 'sports-live-groups');
+    expect(tester.takeException(), isNull);
+    await disposePage(tester);
+  });
+
   testWidgets('Live TV opens groups and guide inside Sports Mode; Back x3',
       (tester) async {
     await openLivePanel(tester);
