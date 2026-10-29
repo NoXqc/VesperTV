@@ -60,8 +60,9 @@ def build_payload(release: dict) -> dict:
     zip_ = asset_url(release, '.zip')
     android = (f'[Download the APK]({apk})' if apk else f'[Release page]({page})') + \
         f' · Downloader code **{DOWNLOADER_CODE}** · or Settings > Check for Updates'
-    windows = (f'[Download the zip]({zip_})' if zip_ else f'[Release page]({page})') + \
-        ' · unzip, then run `VesperTV.exe`'
+    windows = (f'[Download the zip]({zip_}) · unzip, then run `VesperTV.exe`'
+               if zip_ else 'No Windows update in this release. '
+               '[Existing Windows download](https://vespertv.app/#install)')
     return {
         'username': 'VesperTV',
         'avatar_url': LOGO,

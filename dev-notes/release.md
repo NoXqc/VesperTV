@@ -35,3 +35,14 @@ Only release when the owner asks ("update the latest", "cut it", "fully release"
    `published` event; a brand-new non-pre-release announces itself. Preview the post locally:
    `gh api repos/NoXqc/VesperTV/releases/tags/<ver> > r.json && python .github/scripts/discord_release.py r.json --dry-run`.
    The workflow skips drafts and pre-releases (test builds never get announced).
+
+### Android-only release (owner instruction, 2026-10-29)
+For 1.0.46+514 the owner explicitly deferred Windows work. Do not build or test
+Windows, and do not attach an older Windows zip as if it were the new version:
+Windows' updater would repeatedly offer the old binary under the new tag.
+Keep release1.0.45 and its Windows asset available, pin website Windows links to
+that release, and publish a separate real1.0.46 release with the Android APK only.
+The Windows updater sees no new zip and offers no update. Release notes and the
+announcement must state that Windows stays at1.0.45. Prepare a draft, verify its
+APK against the signed local artifact, then publish; this fires the announcement
+workflow automatically, so do not dispatch a duplicate announcement afterward.

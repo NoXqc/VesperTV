@@ -367,6 +367,14 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Codex, 2026-10-29 — Android release1.0.46+514:** includes local main through
+  0f296e5 (owner-tested +513), all league/preview/stats fixes and Multiview Swap.
+  Remote tips and79-entry help index now cover Guide/EPG, the Sports Mode Live TV
+  panel, Back chain, big/small player flow, Swap mode and profile-root Back.
+  Analyze16 baseline,915Flutter tests and15Node guide tests pass. Owner deferred
+  Windows build/testing: keep release1.0.45 and pin website Windows links there;
+  release1.0.46 has only an APK, so Windows' updater offers no new zip. See
+  dev-notes/releases/1.0.46.md and root HANDOFF.md for publication status.
 - **Claude, 2026-10-29 — merged to local `main` for release, test +503 (Formuler):**
   - **Multiview 1 + 3 Swap mode** (Android): hold OK > Swap mode or the header button;
     arrows rotate the playing screens through the big one (controllers move, nothing

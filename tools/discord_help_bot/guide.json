@@ -1,5 +1,13 @@
 [
   {
+    "id": "5a21da2b5feb15ef",
+    "category": "Live TV",
+    "title": "Guide / EPG button",
+    "answer": "Press the remote's Guide or EPG button from a screen in your profile to open the live guide on the playing channel. It also works from full screen and supports the Formuler EPG button. In Sports Mode it opens the in-page Live TV panel and keeps the current game playing until you choose another channel. On regular TV home it opens the TV tab and guide. The splash and profile selector keep their normal controls.",
+    "controls": "Guide / EPG ANDROID TV",
+    "url": "https://vespertv.app/remote.html#Live%20TV"
+  },
+  {
     "id": "a6ea5dde2f3fec75",
     "category": "Live TV",
     "title": "Watch catch-up TV",
@@ -264,6 +272,14 @@
     "url": "https://vespertv.app/remote.html#Home"
   },
   {
+    "id": "fc418dd9a734ec36",
+    "category": "Home",
+    "title": "Back to Who's watching",
+    "answer": "With Settings > General > Startup > Launch with profiles selector enabled, leaving the TV or Sports Mode root stops playback and returns to Who's watching. In Sports Mode, first use Back to open the sidebar and stop its player. Back on Who's watching asks whether to exit, with Stay selected. With the startup selector off, the existing exit flow stays in place.",
+    "controls": "TV home / Sports Mode root · Back",
+    "url": "https://vespertv.app/remote.html#Home"
+  },
+  {
     "id": "c7703c69dc0eef12",
     "category": "Movies & Shows",
     "title": "Favourite on / off",
@@ -347,8 +363,32 @@
     "id": "c3c55479d877f7c1",
     "category": "Sports Trak",
     "title": "Sports Mode (beta)",
-    "answer": "Enable it in Sports Trak or Settings → Interface → Sports Mode to make sports your home for this profile. Your first five leagues sit in a sidebar: Left from the feed, first control or first card opens it; Right returns to content. Remaining leagues, All and Edit leagues stay in the floating top bar. Hold OK on a league to reorder it: use Up/Down in the sidebar and Left/Right in a horizontal row. Moving past the fifth slot transfers the league between the sidebar and top row; the arrows then follow its new location. OK or Back finishes. Select All with its dropdown arrow to choose any enabled league, including off-screen or quiet ones; All leagues is the first choice. Today opens the day picker. While a game plays, a list of the day's games sits beside the big video: Up/Down selects a game, OK previews it, another OK on that game opens full screen, and hold OK opens stats. Right also opens full screen. Down past the list opens the card rows; Up from the top row returns to the list. Standings, My Teams and Networks remain available. Menu gathers Home, Search, Multiview and the other app shortcuts; narrow layouts keep Menu and leagues in a top strip, and Back from content opens Menu. On TV layouts, Live TV opens groups and a translucent channel list inside Sports Mode. OK or Right enters a group; OK on a channel watches full screen. Back returns to the list, then groups, then sports. CH+/CH- or Page Up/Page Down move eight rows. Open full Live TV opens the regular TV screen; narrow and touch layouts open that screen directly. Turn Sports Mode off to restore the regular home and previous startup choice.",
+    "answer": "Enable it in Sports Trak or Settings → Interface → Sports Mode to make sports your home for this profile. Your first five leagues sit in a sidebar; the rest, All and Edit leagues stay in the floating top bar. Left from the feed or the first card/control opens the sidebar; Right returns to the page. All opens a dropdown of every enabled league. Today opens the day picker. Standings, My Teams and Networks remain available. Menu gathers Home, Search, Multiview and the other app shortcuts. Turn Sports Mode off to restore the regular home and your previous startup choice. See the player, Live TV panel and Back controls below for the TV layout; narrow and touch layouts keep scrolling page controls.",
     "controls": "OK on Sports Mode",
+    "url": "https://vespertv.app/remote.html#Sports%20Trak"
+  },
+  {
+    "id": "f3caa00ead64f000",
+    "category": "Sports Trak",
+    "title": "Sports Mode big and small player",
+    "answer": "On TV, the first game you play opens the big player beside the game feed. Up/Down browses the feed; OK previews a game and OK again on that playing game opens full screen. Right on a feed game also opens full screen; hold OK opens its stats. Down past the feed opens the card rows with a small player. OK on another card there changes the stream and keeps the small player and cards visible. Up from the first card row returns to the big player and feed. Back from full screen returns to the sports page.",
+    "controls": "Sports Mode · ↓ past the feed · ↑ from the first card row",
+    "url": "https://vespertv.app/remote.html#Sports%20Trak"
+  },
+  {
+    "id": "0e98e9952667600a",
+    "category": "Sports Trak",
+    "title": "Sports Mode Live TV panel",
+    "answer": "On TV layouts, Live TV opens groups and a translucent channel guide inside Sports Mode. OK on a group opens its guide. OK on a channel plays it in the Sports Mode player beside the guide; OK again on that channel opens full screen using the same stream. A game keeps playing while you browse, until you choose a channel. Back from full screen returns to the open guide with the channel still playing. With the guide closed, Right from a group moves into the sports page; with the guide open, Right enters that guide. Left from the page's left edge returns to the open panel. Back closes the channel guide, then the groups panel, returning to the sports page. CH+/CH- or Page Up/Page Down move eight rows. Open full Live TV opens the regular TV screen; narrow and touch layouts use that screen directly.",
+    "controls": "Sports Mode · Live TV or Guide / EPG",
+    "url": "https://vespertv.app/remote.html#Sports%20Trak"
+  },
+  {
+    "id": "ccbd8e49bc9e8850",
+    "category": "Sports Trak",
+    "title": "Sports Mode Back chain",
+    "answer": "From the sports page, Back opens the sidebar and keeps the player running. Back on the sidebar stops playback; another Back leaves the sports root. With Launch with profiles selector enabled, it returns to Who's watching; otherwise it asks to exit. If a Live TV panel is open, Back first closes its channel guide, then its groups panel. Back while reordering a league finishes the move. Regular Sports Trak keeps its existing Back behavior.",
+    "controls": "Sports Mode · Back on the page, then on the sidebar",
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },
   {
@@ -363,7 +403,7 @@
     "id": "c0a2109081c7fec8",
     "category": "Sports Trak",
     "title": "Preview, then full screen",
-    "answer": "Focusing a game updates the big matchup and its key stats. Press OK or tap/click once to start its matched channel in the mini player; press again on the same game for full screen using the same stream. With no matched channel, the game menu opens to choose one. Hold keeps the existing menu. Live and finished games show available leaders, latest play/goal and team stats; upcoming games show available standings and injuries. Hide scores also hides result-revealing stats.",
+    "answer": "Focusing a game updates the big matchup and its key stats. Press OK or tap once to preview its matched channel; press again on the same playing game for full screen using the same stream. In the Sports Mode TV layout, the first game opens the big player beside the feed; while browsing card rows, another card plays in the small player. Regular Sports Trak uses its mini player. With no matched channel, the game menu opens to choose one. Hold keeps the existing menu. Live and finished games show available leaders, latest play/goal and team stats; upcoming games show standings on each team's side with injuries in the middle. Hide scores also hides result-revealing stats.",
     "controls": "OK on a game",
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },
@@ -371,7 +411,7 @@
     "id": "7ec4b03904b2548f",
     "category": "Sports Trak",
     "title": "Watch in the hero",
-    "answer": "Starts or stops the game's channel in the mini player. OK on the playing game goes full screen; Back stops it.",
+    "answer": "Starts or stops the game's channel in the sports player. OK on the playing game goes full screen. In regular Sports Trak, Back stops the preview. Sports Mode uses the Back chain below.",
     "controls": "⏯ on a game",
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },
@@ -475,8 +515,16 @@
     "id": "386b965a76a6dd71",
     "category": "Multiview",
     "title": "Screen menu",
-    "answer": "Full screen, Reload, Change channel, Remove. In 1 + 3, a small screen also has Move to the big screen.",
+    "answer": "Full screen, Reload, Change channel and Remove. In Android 1 + 3, a small screen also offers Move to the big screen, and Swap mode is available from the hold menu or header. The menu scrolls when needed.",
     "controls": "Hold OK on a screen",
+    "url": "https://vespertv.app/remote.html#Multiview"
+  },
+  {
+    "id": "05e2c5b295a593a9",
+    "category": "Multiview",
+    "title": "Swap mode",
+    "answer": "In the 1 + 3 layout, start Swap mode to rotate the playing screens through the big screen with the arrows. Streams keep playing without reconnecting, and sound follows the big screen. A blinking SWAP label beneath it and a brief flash mark each change. OK or Back finishes swapping. Windows keeps its existing 2- and 4-screen layouts.",
+    "controls": "Android · 1 + 3 · Hold OK → Swap mode, or the header button",
     "url": "https://vespertv.app/remote.html#Multiview"
   },
   {

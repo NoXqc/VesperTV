@@ -24,8 +24,12 @@ python -m unittest discover -s tools/discord_help_bot -p test_update_auto.py
 ```
 
 Commit `guide.json` with the website change and redeploy the bot when answers
-change. The index currently contains 73 guide entries. Links use the website's
+change. The index currently contains 79 guide entries. Links use the website's
 existing category fragments; publishing the website is a separate step.
+
+The Android1.0.46 guide adds the remote Guide/EPG key (including Formuler), the
+Sports Mode Live TV panel, its Back chain and big/small player controls,
+Multiview Swap mode and Back to Who's watching. Windows remains at1.0.45.
 
 Catch-up topics cover the Timeline guide, returning the guide to now versus
 returning playback to live, restarting a programme, pause/timeshift, seeking and
