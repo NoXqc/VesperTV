@@ -367,6 +367,12 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **cdx, 2026-10-29 — local test APK1.0.49+529** (`codex/test-apk-529`):
+  all four completed changes (Plex, title-page order, My Teams preferred channel,
+  Sports country preferences) built in release mode. Analyze16/965Flutter pass;
+  release certificate and package/version verified. Owner explicitly asked to
+  wait before Formuler installation: **not installed; wait for owner instruction**.
+  Artifact/hash in root HANDOFF.md. No push/release; next new build >529.
 - **cdx, 2026-10-29 — Sports country preferences**
   (`codex/sports-country-preferences`, stacked on prior three features): new
   Settings > Sports Trak > Preferred channel countries, per viewer. Final
