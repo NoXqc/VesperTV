@@ -34,6 +34,7 @@ import 'services/epg_service.dart';
 import 'services/parental_pin.dart';
 import 'services/persistent_image_cache.dart';
 import 'services/playback_service.dart';
+import 'services/profile_gate.dart';
 import 'services/archive_ready_watch.dart';
 import 'services/real_4k_channels.dart';
 import 'services/recording_service.dart';
@@ -207,6 +208,20 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     if (selection != null && !selection.isCompleted) selection.complete();
   }
 
+  /// Back at the root with the startup selector on (see [ProfileGate]):
+  /// the current viewer's playback stops and Who's watching replaces the
+  /// app; picking a viewer rebuilds it on the TV root.
+  Future<void> _returnToProfiles() async {
+    if (!_ready || _profileSelection != null) return;
+    if (Platform.isWindows) {
+      DesktopMiniPlayer.instance.clear();
+    } else {
+      await _playbackService.stop();
+    }
+    if (!mounted) return;
+    setState(() => _profileSelection = Completer<void>());
+  }
+
   final _startupRoutes = StartupRoutes();
   GameReminders? _gameReminders;
   ProgrammeReminders? _programmeReminders;
@@ -316,6 +331,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     _startupRoutes.dispose();
     final selection = _profileSelection;
     if (selection != null && !selection.isCompleted) selection.complete();
+    ProfileGate.unregister();
     _gameReminders?.dispose();
     _programmeReminders?.dispose();
     RecordingService.instance.prepareProgramme = null;
@@ -611,6 +627,9 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       if (_preferences.launchWithProfiles) {
         _profileSelection = Completer<void>();
       }
+      ProfileGate.register(
+          enabled: () => _preferences.launchWithProfiles,
+          show: _returnToProfiles);
       final selection = _profileSelection;
       setState(() => _ready = true);
       // Never mount a previous viewer's home, consume startup routes, or resume

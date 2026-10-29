@@ -37,6 +37,7 @@ import '../services/app_preferences.dart';
 import '../services/desktop_mini_player.dart';
 import '../services/epg_service.dart';
 import '../services/playback_service.dart';
+import '../services/profile_gate.dart';
 import '../services/playlist_manager.dart';
 import '../services/recording_service.dart';
 import '../services/sports_channel_matcher.dart';
@@ -1060,12 +1061,19 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final playback = context.read<PlaybackService>();
     final storage = context.read<StorageService>();
     final feedHadFocus = _feedFocused;
-    _previewFeedFocusSeq = _modeActive && game != null ? seq : null;
+    // Sports Mode keeps the view on screen: from the feed, the feed; from
+    // the cards (or before anything plays), the cards under the small hero.
+    final stayOnCards = _modeActive && game != null && !_feedVisible;
+    _previewFeedFocusSeq =
+        _modeActive && game != null && !stayOnCards ? seq : null;
     setState(() {
       _previewGame = game;
       _previewChannel = channel;
       _heroPick = null;
-      _modeBrowsing = false;
+      // Owner, 2026-10-29: OK in the card view plays in its small hero
+      // instead of jumping to the feed layout (Up from the top row still
+      // opens the feed while a game plays).
+      _modeBrowsing = stayOnCards;
     });
     if (_modeActive && game == null && feedHadFocus) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1133,10 +1141,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       return mounted && seq == _previewSeq;
     }
     final seq = _previewSeq;
-    setState(() {
-      _heroPick = null;
-      _modeBrowsing = false;
-    });
+    // Full screen returns to the view it was opened from.
+    setState(() => _heroPick = null);
     await _previewOpened?.future;
     return mounted && seq == _previewSeq;
   }
@@ -1827,6 +1833,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   Future<void> _confirmModeExit() async {
     if (_exitPromptOpen) return;
+    if (ProfileGate.backToSelector()) return;
     _exitPromptOpen = true;
     final exit = await showDialog<bool>(
         context: context,

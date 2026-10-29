@@ -26,6 +26,7 @@ import '../services/epg_service.dart';
 import '../services/recording_service.dart';
 import 'recordings_screen.dart';
 import '../services/playback_service.dart';
+import '../services/profile_gate.dart';
 import '../services/playlist_manager.dart';
 import '../services/storage_service.dart';
 import '../services/viewer_profile_service.dart';
@@ -2741,6 +2742,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   /// close the app by accident.
   Future<void> _confirmExit() async {
     if (_exitPromptOpen || (_returnBackGuard?.isActive ?? false)) return;
+    if (ProfileGate.backToSelector()) return;
     _exitPromptOpen = true;
     final exit = await showDialog<bool>(
       context: context,

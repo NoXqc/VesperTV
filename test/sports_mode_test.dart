@@ -323,7 +323,10 @@ void main() {
       expect(routes.channels.map((c) => c.id), ['p1::0']);
       expect(playback.plays, hasLength(1));
       if (mode) {
-        expect(getFocus(), 'sports-mode-feed');
+        // Owner, 2026-10-29: OK in the card view keeps the card view (the
+        // game plays in its small hero), no jump to the feed layout.
+        expect(getFocus(), 'sports-card-nhl:game100');
+        expect(find.byKey(const ValueKey('sports-mode-feed')), findsNothing);
         expect(find.byKey(const ValueKey('sports-mode-rail')), findsNothing);
       }
       expect(tester.takeException(), isNull);
@@ -348,7 +351,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     expect(routes.channels.map((c) => c.id), ['p1::0']);
     expect(playback.plays, hasLength(1));
-    expect(getFocus(), 'sports-mode-feed');
+    expect(getFocus(), 'sports-card-nhl:game100');
     expect(find.byKey(const ValueKey('sports-mode-rail')), findsNothing);
     expect(tester.takeException(), isNull);
     await disposePage(tester);
@@ -367,7 +370,8 @@ void main() {
     playback.opening!.complete();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
-    expect(getFocus(), 'sports-mode-feed');
+    expect(getFocus(), 'sports-card-nhl:game100');
+    expect(find.byKey(const ValueKey('sports-mode-feed')), findsNothing);
     expect(find.byKey(const ValueKey('sports-mode-rail')), findsNothing);
     expect(find.byKey(const ValueKey('sports-mode-rail-tab')), findsOneWidget);
     expect(playback.plays, hasLength(1));
@@ -390,6 +394,11 @@ void main() {
     playback.opening!.complete();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
+    // The game plays in the card view; Up past the row's See all chip
+    // opens the feed.
+    await press(tester, LogicalKeyboardKey.arrowUp);
+    await press(tester, LogicalKeyboardKey.arrowUp);
+    expect(getFocus(), 'sports-mode-feed');
     // Exercise every rail league: returning should always reach the feed.
     for (var i = 0; i < 5; i++) {
       if (getFocus() == 'sports-mode-feed') {
@@ -405,6 +414,8 @@ void main() {
           same(feedElement));
     }
     // A remembered header zone must not send Right to an absent game card.
+    // (Entered from below, the feed sits on its last game: one Up per row.)
+    await press(tester, LogicalKeyboardKey.arrowUp);
     await press(tester, LogicalKeyboardKey.arrowUp);
     await press(tester, LogicalKeyboardKey.arrowUp);
     expect(getFocus(), 'sports-chip-league:all');
@@ -424,7 +435,10 @@ void main() {
     await open(tester, games: games, observer: routes);
     await press(tester, LogicalKeyboardKey.arrowRight);
     await press(tester, LogicalKeyboardKey.select);
-    await press(tester, LogicalKeyboardKey.arrowDown);
+    // Card view -> See all chip -> feed, which opens on its last game.
+    await press(tester, LogicalKeyboardKey.arrowUp);
+    await press(tester, LogicalKeyboardKey.arrowUp);
+    expect(getFocus(), 'sports-mode-feed');
     await press(tester, LogicalKeyboardKey.select);
     expect(playback.plays.map((c) => c.id), ['p1::0', 'p1::1']);
     expect(routes.channels, isEmpty);

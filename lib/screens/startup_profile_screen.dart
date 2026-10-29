@@ -1,12 +1,15 @@
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../l10n/l10n.dart';
 import '../models/viewer_profile.dart';
+import '../utils/constants.dart';
 import '../services/viewer_profile_service.dart';
 import '../widgets/profile_card.dart';
 
@@ -95,6 +98,41 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
     }
   }
 
+  /// Back here (at launch, or after Back from the app's root returned to
+  /// this screen) asks to exit; Stay is focused like the app's own prompt.
+  bool _exitPromptOpen = false;
+
+  Future<void> _confirmExit() async {
+    if (_busy || _exitPromptOpen) return;
+    _exitPromptOpen = true;
+    final exit = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(tr('Exit {appName}?', {'appName': AppConstants.appName})),
+        content: Text(tr('Are you sure you want to exit {appName}?',
+            {'appName': AppConstants.appName})),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(tr('Exit')),
+          ),
+          TextButton(
+            autofocus: true,
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(tr('Stay')),
+          ),
+        ],
+      ),
+    );
+    _exitPromptOpen = false;
+    if (exit != true || !mounted) return;
+    if (Platform.isWindows) {
+      await windowManager.close();
+    } else {
+      await SystemNavigator.pop();
+    }
+  }
+
   Widget _profileGrid(
       List<ViewerProfile> profiles, double width, Duration motion) {
     return CallbackShortcuts(
@@ -168,6 +206,9 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
     final selected = profiles.where((p) => p.id == _selected).firstOrNull;
     return PopScope(
       canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _confirmExit();
+      },
       child: Scaffold(
         backgroundColor: const Color(0xFF090D16),
         body: Stack(

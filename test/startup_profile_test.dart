@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nox_iptv/models/viewer_profile.dart';
 import 'package:nox_iptv/screens/settings/general_settings_screen.dart';
 import 'package:nox_iptv/screens/startup_profile_screen.dart';
+import 'package:nox_iptv/services/profile_gate.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
 import 'package:nox_iptv/services/catalog_database.dart';
 import 'package:nox_iptv/services/parental_pin.dart';
@@ -160,7 +161,8 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('last viewer focused, Back cannot skip, same viewer can continue',
+  testWidgets(
+      'last viewer focused, Back asks to exit (Stay), same viewer can continue',
       (tester) async {
     final f = StartupFixture();
     await f.init(active: 'p1');
@@ -168,9 +170,17 @@ void main() {
     await tester.pumpWidget(f.picker());
     await tester.pumpAndSettle();
     expect(profileCard(tester, 'p1').focusNode.hasFocus, isTrue);
+    // Back never skips the selector: it asks to exit, Stay focused.
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(f.launches, 0);
+    expect(find.text('Exit VesperTV?'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.select); // Stay
+    await tester.pumpAndSettle();
+    expect(find.text('Exit VesperTV?'), findsNothing);
+    expect(f.launches, 0);
+    profileCard(tester, 'p1').focusNode.requestFocus();
+    await tester.pump();
     await tester.sendKeyEvent(LogicalKeyboardKey.select);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
@@ -325,4 +335,17 @@ void main() {
         variant: const TargetPlatformVariant(
             {TargetPlatform.android, TargetPlatform.windows}));
   }
+
+  test('Back at the root opens the selector only while it is switched on',
+      () async {
+    var on = false, shown = 0;
+    expect(ProfileGate.backToSelector(), isFalse); // nothing registered
+    ProfileGate.register(enabled: () => on, show: () async => shown++);
+    addTearDown(ProfileGate.unregister);
+    expect(ProfileGate.backToSelector(), isFalse); // off: Exit as before
+    on = true;
+    expect(ProfileGate.backToSelector(), isTrue);
+    await Future<void>.delayed(Duration.zero);
+    expect(shown, 1);
+  });
 }
