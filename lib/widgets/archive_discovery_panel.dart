@@ -108,10 +108,21 @@ class _ArchiveDiscoveryPanelState extends State<ArchiveDiscoveryPanel> {
     if (count == 0) return;
     final i = index.clamp(0, count - 1);
     _indices[row] = i;
+    // Move the row only when the card would be off screen, and only by
+    // what it takes: jumping it to the left edge and then animating it to
+    // 65% across on focus made the row lurch on every press (owner photo).
     final c = _scrolls[row];
     if (c != null && c.hasClients) {
-      c.jumpTo(
-          (i * (PosterCard.width + 20)).clamp(0.0, c.position.maxScrollExtent));
+      const stride = PosterCard.width + 20;
+      final p = c.position;
+      final left = i * stride;
+      final target = left < p.pixels
+          ? left
+          : left + stride > p.pixels + p.viewportDimension
+              ? left + stride - p.viewportDimension
+              : p.pixels;
+      final clamped = target.clamp(0.0, p.maxScrollExtent);
+      if (clamped != p.pixels) c.jumpTo(clamped);
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) node(row, i).requestFocus();
@@ -271,10 +282,15 @@ class _ArchiveDiscoveryPanelState extends State<ArchiveDiscoveryPanel> {
           onFocusGained: () => _reveal(row, i)));
   void _reveal(String row, int i) {
     _indices[row] = i;
-    final ctx = node(row, i).context;
-    if (ctx != null) {
-      Scrollable.ensureVisible(ctx,
-          alignment: .65, duration: const Duration(milliseconds: 180));
+    // Page only, vertically and instantly: the row's own scroll is [_focus]'s.
+    final card = node(row, i).context?.findRenderObject();
+    final page = Scrollable.maybeOf(context)?.position;
+    if (card == null || page == null) return;
+    for (final policy in [
+      ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+      ScrollPositionAlignmentPolicy.keepVisibleAtStart
+    ]) {
+      page.ensureVisible(card, alignmentPolicy: policy);
     }
   }
 
