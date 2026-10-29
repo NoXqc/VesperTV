@@ -6,6 +6,17 @@
 /// the code fills in ("chaîne{s}").
 const Map<String, String> kFr = {
   "Open full Live TV": "Ouvrir Télé en direct complète",
+  // Startup profile selector.
+  "Launch with profiles selector": "Lancer avec le sélecteur de profils",
+  "Choose a profile after the splash, before the app opens. Applies from the next start.":
+      "Choisissez un profil après l’écran de démarrage, avant l’ouverture de l’application. S’applique au prochain démarrage.",
+  "Who is watching?": "Qui regarde?",
+  "Choose your profile to get started.":
+      "Choisissez votre profil pour commencer.",
+  "Welcome, {name}": "Bienvenue, {name}",
+  "Could not switch profile. Please try again.":
+      "Impossible de changer de profil. Veuillez réessayer.",
+
   "Sports Mode": "Mode Sports",
   "Make Sports Trak your home, with your top five leagues at the side.": "Faites de Sports Trak votre accueil, avec vos cinq premières ligues sur le côté.",
   "Could not change Sports Mode. Try again.": "Impossible de changer le mode Sports. Réessayez.",

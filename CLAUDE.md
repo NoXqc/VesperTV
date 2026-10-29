@@ -368,6 +368,15 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   closes. "Open full Live TV" row = TV home. Installed on the Formuler (version 495 verified);
   owner approved, asked Codex to merge and release. Analyze 16, 860 tests pass.
   Details: `dev-notes/sports-mode.md` (Live TV panel). Next build must be > 495.
+- **cdx, 2026-10-28 — startup profile selector** (`codex/startup-profile-selector`):
+  Settings > General > Startup > Launch with profiles selector (off by default,
+  device-only). After the existing splash, a bounded frosted panel lists all
+  viewers with photos and explicit remote arrows. Existing switchTo/PIN gate
+  applies before the short selection animation; only then are startup routes
+  and automatic playback created for the chosen viewer. No Home flash or
+  previous-viewer playback. See `dev-notes/startup-profile-selector.md`;
+  physical-device appearance/startup acceptance pending. No version/build bump.
+
 - **cdx, 2026-10-28 — release preparation 1.0.44 (beta), +492**
   (`codex/release-1-0-44`): owner requested publication and Discord announcement
   after accepted +491. Matching Android/Windows packages, Sports Mode explicitly

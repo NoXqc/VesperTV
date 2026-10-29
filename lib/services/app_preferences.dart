@@ -303,6 +303,14 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Read once after the splash; changing it applies on the next launch.
+  bool get launchWithProfiles => _storage.getLaunchWithProfiles();
+
+  void setLaunchWithProfiles(bool value) {
+    _storage.setLaunchWithProfiles(value);
+    notifyListeners();
+  }
+
   bool refinedFinish = false;
 
   void setRefinedFinish(bool value) {

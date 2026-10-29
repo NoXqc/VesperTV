@@ -7,6 +7,16 @@
 /// (canal/canales), so those strings are phrased to avoid it.
 const Map<String, String> kEs = {
   "Open full Live TV": "Abrir TV en vivo completa",
+  // Startup profile selector.
+  "Launch with profiles selector": "Iniciar con el selector de perfiles",
+  "Choose a profile after the splash, before the app opens. Applies from the next start.":
+      "Elige un perfil después de la pantalla de inicio, antes de abrir la aplicación. Se aplica en el próximo inicio.",
+  "Who is watching?": "¿Quién está viendo?",
+  "Choose your profile to get started.": "Elige tu perfil para empezar.",
+  "Welcome, {name}": "Bienvenido, {name}",
+  "Could not switch profile. Please try again.":
+      "No se pudo cambiar de perfil. Inténtalo de nuevo.",
+
   "Sports Mode": "Modo Deportes",
   "Make Sports Trak your home, with your top five leagues at the side.": "Usa Sports Trak como inicio, con tus cinco primeras ligas en el lateral.",
   "Could not change Sports Mode. Try again.": "No se pudo cambiar el modo Deportes. Inténtalo de nuevo.",

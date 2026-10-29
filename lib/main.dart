@@ -24,6 +24,7 @@ import 'screens/home_screen.dart';
 import 'screens/archive_screen.dart';
 import 'screens/sports_screen.dart';
 import 'screens/welcome_add_playlist_screen.dart';
+import 'screens/startup_profile_screen.dart';
 import 'services/app_log.dart';
 import 'services/app_preferences.dart';
 import 'services/catalog_database.dart';
@@ -196,6 +197,16 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   late final ParentalPin _parentalPin;
   late final ArchiveService _archiveService;
   bool _ready = false;
+  Completer<void>? _profileSelection;
+
+  Future<void> _finishProfileSelection() async {
+    final selection = _profileSelection;
+    setState(() => _profileSelection = null);
+    // The application Navigator must exist before startup playback can push.
+    await WidgetsBinding.instance.endOfFrame;
+    if (selection != null && !selection.isCompleted) selection.complete();
+  }
+
   final _startupRoutes = StartupRoutes();
   GameReminders? _gameReminders;
   ProgrammeReminders? _programmeReminders;
@@ -303,6 +314,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   void dispose() {
     _splashController.dispose();
     _startupRoutes.dispose();
+    final selection = _profileSelection;
+    if (selection != null && !selection.isCompleted) selection.complete();
     _gameReminders?.dispose();
     _programmeReminders?.dispose();
     RecordingService.instance.prepareProgramme = null;
@@ -594,7 +607,16 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       if (elapsed < floor) {
         await Future.delayed(floor - elapsed);
       }
-      if (mounted) setState(() => _ready = true);
+      if (!mounted) return;
+      if (_preferences.launchWithProfiles) {
+        _profileSelection = Completer<void>();
+      }
+      final selection = _profileSelection;
+      setState(() => _ready = true);
+      // Never mount a previous viewer's home, consume startup routes, or resume
+      // playback until the selected viewer and their appearance are applied.
+      if (selection != null) await selection.future;
+      if (!mounted) return;
       if (didSync) {
         // The toast needs the real MaterialApp's ScaffoldMessengerKey,
         // which doesn't exist until the tree above actually builds.
@@ -610,6 +632,9 @@ class _NoxIptvAppState extends State<NoxIptvApp>
               MaterialPageRoute(builder: (_) => const AddPlaylistScreen()));
         });
       }
+      // Profile selection waits for the application's first frame above. Any
+      // callbacks just queued still need a new frame, even on an idle screen.
+      if (selection != null) WidgetsBinding.instance.ensureVisualUpdate();
       // `_epgService.init()` was started during the splash (see above);
       // awaiting it here only makes sure startAutoRefresh sees whether the
       // database has data — which decides if a refresh is due right away.
@@ -967,7 +992,25 @@ class _NoxIptvAppState extends State<NoxIptvApp>
 
     return Consumer<AppPreferences>(
       builder: (context, prefs, _) {
+        if (_profileSelection != null) {
+          return MaterialApp(
+            key: const ValueKey('startup-profile-selector'),
+            title: AppConstants.appName,
+            debugShowCheckedModeBanner: false,
+            locale: L10n.locale,
+            supportedLocales: L10n.supportedLocales,
+            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+            theme: ThemeData(
+              brightness: Brightness.dark,
+              colorScheme:
+                  buildPaletteColorScheme(prefs.palette, Brightness.dark),
+              useMaterial3: true,
+            ),
+            home: StartupProfileScreen(onSelected: _finishProfileSelection),
+          );
+        }
         return MaterialApp(
+          key: const ValueKey('application'),
           title: AppConstants.appName,
           debugShowCheckedModeBanner: false,
           scaffoldMessengerKey: _scaffoldMessengerKey,
