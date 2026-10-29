@@ -1068,6 +1068,18 @@ void main() {
     await disposePage(tester);
   });
 
+  testWidgets('Live TV groups: Right moves into the sports page, OK opens',
+      (tester) async {
+    await openLivePanel(tester);
+    expect(getFocus(), 'sports-live-groups');
+    await press(tester, LogicalKeyboardKey.arrowRight);
+    expect(find.byKey(const ValueKey('sports-live-guide')), findsNothing);
+    expect(find.byKey(const ValueKey('sports-live-panel')), findsOneWidget);
+    expect(getFocus(), isNot(startsWith('sports-live')));
+    expect(tester.takeException(), isNull);
+    await disposePage(tester);
+  });
+
   testWidgets('Live TV opens groups and guide inside Sports Mode; Back x3',
       (tester) async {
     await openLivePanel(tester);

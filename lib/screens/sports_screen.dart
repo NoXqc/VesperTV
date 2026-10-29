@@ -2284,6 +2284,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
               key: _livePanel,
               onPlay: _playLive,
               onLeft: () => _modeShell.currentState?.focusRail(),
+              onRight: () =>
+                  _feedVisible ? _focusFeed() : _focusZone(_zone, sections),
               onOpenFull: () => _openModePage(const TvHomeScreen()))
           : null,
       onRailFocusChanged: (value) {

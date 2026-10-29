@@ -29,7 +29,12 @@ class SportsModeLivePanel extends StatefulWidget {
     required this.onPlay,
     required this.onLeft,
     required this.onOpenFull,
+    this.onRight,
   });
+
+  /// Right from the groups with no guide open: into the sports page (owner,
+  /// 2026-10-29: OK opens a group's guide, Right means "go right").
+  final VoidCallback? onRight;
 
   /// OK on a channel: full screen, [list] being the guide's channels (CH+/-).
   final Future<void> Function(Channel channel, List<Channel> list) onPlay;
@@ -267,16 +272,18 @@ class SportsModeLivePanelState extends State<SportsModeLivePanel> {
       widget.onLeft();
       return KeyEventResult.handled;
     }
-    // A held OK repeats: open once.
-    if ((key == LogicalKeyboardKey.arrowRight || _isActivate(key)) &&
-        event is KeyDownEvent) {
-      if (key == LogicalKeyboardKey.arrowRight &&
-          guideOpen &&
-          _groups.indexWhere((g) => g.key == _openKey) == _groupIndex) {
+    // Right: into the open guide, else into the sports page.
+    if (key == LogicalKeyboardKey.arrowRight && event is KeyDownEvent) {
+      if (guideOpen) {
         _focusGuide();
       } else {
-        _openGroup(_groupIndex);
+        widget.onRight?.call();
       }
+      return KeyEventResult.handled;
+    }
+    // A held OK repeats: open once.
+    if (_isActivate(key) && event is KeyDownEvent) {
+      _openGroup(_groupIndex);
       return KeyEventResult.handled;
     }
     return key == LogicalKeyboardKey.arrowRight
