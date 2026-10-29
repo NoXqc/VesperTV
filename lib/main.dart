@@ -34,6 +34,7 @@ import 'services/epg_service.dart';
 import 'services/parental_pin.dart';
 import 'services/persistent_image_cache.dart';
 import 'services/playback_service.dart';
+import 'services/guide_key.dart';
 import 'services/profile_gate.dart';
 import 'services/archive_ready_watch.dart';
 import 'services/real_4k_channels.dart';
@@ -208,6 +209,12 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     if (selection != null && !selection.isCompleted) selection.complete();
   }
 
+  /// The remote's Guide button, anywhere in the app ([GuideKey]).
+  bool _onGuideKey(KeyEvent event) => GuideKey.handle(event,
+      navigator: _ready && _profileSelection == null
+          ? _navigatorKey.currentState
+          : null);
+
   /// Back at the root with the startup selector on (see [ProfileGate]):
   /// the current viewer's playback stops and Who's watching replaces the
   /// app; picking a viewer rebuilds it on the TV root.
@@ -311,6 +318,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   @override
   void initState() {
     super.initState();
+    HardwareKeyboard.instance.addHandler(_onGuideKey);
     _bootstrap();
     // Windows only — a window can't be minimized while it's *in*
     // `fullScreen` mode at all (confirmed directly: the sidebar's
@@ -332,6 +340,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     final selection = _profileSelection;
     if (selection != null && !selection.isCompleted) selection.complete();
     ProfileGate.unregister();
+    HardwareKeyboard.instance.removeHandler(_onGuideKey);
     _gameReminders?.dispose();
     _programmeReminders?.dispose();
     RecordingService.instance.prepareProgramme = null;

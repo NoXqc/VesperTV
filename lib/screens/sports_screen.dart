@@ -37,6 +37,7 @@ import '../services/app_preferences.dart';
 import '../services/desktop_mini_player.dart';
 import '../services/epg_service.dart';
 import '../services/playback_service.dart';
+import '../services/guide_key.dart';
 import '../services/profile_gate.dart';
 import '../services/playlist_manager.dart';
 import '../services/recording_service.dart';
@@ -242,6 +243,12 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     super.initState();
     _showResumeHint = LiveResumeHint.hideWhileMounted();
     FocusManager.instance.addListener(_rememberModeControlFocus);
+    // Sports Mode root: the remote's Guide button opens Live TV on its
+    // guide, through the rail's own page path ([GuideKey]).
+    if (widget.home) {
+      GuideKey.registerOpener(
+          this, () => unawaited(_openModePage(const TvHomeScreen())));
+    }
     // Windows: the hero plays through DesktopMiniPlayer, not PlaybackService.
     if (_desktopSports) {
       DesktopMiniPlayer.instance.channel.addListener(_onMiniPlayerChanged);
@@ -285,6 +292,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   @override
   void dispose() {
+    GuideKey.unregisterOpener(this);
     _previewSeq++;
     appRouteObserver.unsubscribe(this);
     FocusManager.instance.removeListener(_rememberModeControlFocus);

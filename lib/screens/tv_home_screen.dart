@@ -26,6 +26,7 @@ import '../services/epg_service.dart';
 import '../services/recording_service.dart';
 import 'recordings_screen.dart';
 import '../services/playback_service.dart';
+import '../services/guide_key.dart';
 import '../services/profile_gate.dart';
 import '../services/playlist_manager.dart';
 import '../services/storage_service.dart';
@@ -115,8 +116,28 @@ class TvHomeScreen extends StatefulWidget {
   State<TvHomeScreen> createState() => _TvHomeScreenState();
 }
 
-class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
+class _TvHomeScreenState extends State<TvHomeScreen>
+    with RouteAware
+    implements GuideTarget {
   String _tab = 'TV';
+
+  @override
+  ModalRoute<dynamic>? get guideRoute =>
+      mounted ? ModalRoute.of(context) : null;
+
+  /// The remote's Guide button ([GuideKey]): the TV tab with focus on the
+  /// playing channel in the guide (the tabs column when nothing plays).
+  @override
+  void openGuide() {
+    if (!mounted) return;
+    if (_tab != 'TV') {
+      _onTabChanged('TV');
+      return;
+    }
+    if (_focusDepth >= 2) return;
+    unawaited(_restoreLiveFocus());
+  }
+
   bool _retrying = false;
 
   /// Settings > Theme "Full-screen video behind the guide", in effect right
@@ -1900,6 +1921,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
   @override
   void initState() {
     super.initState();
+    GuideKey.register(this);
     FocusManager.instance.addListener(_scheduleFocusRecovery);
     _returnToTv = widget.startupBrowseCovered || widget.startupSportsCovered;
     _initialTab = widget.initialTab;
@@ -1997,6 +2019,7 @@ class _TvHomeScreenState extends State<TvHomeScreen> with RouteAware {
 
   @override
   void dispose() {
+    GuideKey.unregister(this);
     _returnBackGuard?.cancel();
     appRouteObserver.unsubscribe(this);
     _releasePreviewHint?.call();
