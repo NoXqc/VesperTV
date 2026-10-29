@@ -13,7 +13,6 @@ class TitleSearch {
   bool get isEmpty => compact.isEmpty;
 
   static final _separators = RegExp(r'[^\p{L}\p{N}]+', unicode: true);
-  static final _combining = RegExp(r'[\u0300-\u036f]');
   static const _accents = {
     'a': 'àáâãäåāăą',
     'c': 'çćĉċč',
@@ -51,22 +50,62 @@ class TitleSearch {
     'ß': 'ss',
   };
 
-  static String fold(String text) => text
-      .toLowerCase()
-      .replaceAll(_combining, '')
-      .split('')
-      .map((ch) => _replacements[ch] ?? ch)
-      .join()
-      .replaceAll(_separators, ' ')
-      .trim();
+  /// Folded titles, remembered: Search folds every channel/title name on
+  /// each rebuild, and the same names come back on every keystroke.
+  static final Map<String, String> _folded = {};
+  static final Map<String, String> _joined = {};
+  static const _cacheMax = 60000;
 
-  static String key(String text) => fold(text).replaceAll(' ', '');
+  static String fold(String text) {
+    final hit = _folded[text];
+    if (hit != null) return hit;
+    final out = _fold(text);
+    if (_folded.length >= _cacheMax) _folded.clear();
+    return _folded[text] = out;
+  }
+
+  static String _fold(String text) {
+    final lower = text.toLowerCase();
+    final units = lower.codeUnits;
+    if (units.every((c) => c < 128)) {
+      // ASCII: letters/digits kept, every other run becomes one space.
+      final out = StringBuffer();
+      var gap = false;
+      for (final c in units) {
+        if ((c >= 0x61 && c <= 0x7a) || (c >= 0x30 && c <= 0x39)) {
+          if (gap && out.isNotEmpty) out.write(' ');
+          gap = false;
+          out.writeCharCode(c);
+        } else {
+          gap = true;
+        }
+      }
+      return out.toString();
+    }
+    final out = StringBuffer();
+    for (final c in units) {
+      if (c >= 0x300 && c <= 0x36f) continue;
+      final ch = String.fromCharCode(c);
+      out.write(_replacements[ch] ?? ch);
+    }
+    return out.toString().replaceAll(_separators, ' ').trim();
+  }
+
+  /// Uncached: the catalog database keys every synced title through here.
+  static String key(String text) => _fold(text).replaceAll(' ', '');
+
+  static String _joinedFold(String text) {
+    final hit = _joined[text];
+    if (hit != null) return hit;
+    if (_joined.length >= _cacheMax) _joined.clear();
+    return _joined[text] = fold(text).replaceAll(' ', '');
+  }
 
   /// Lower ranks win; all query words may match in a different order.
   int? rank(String title) {
     if (isEmpty) return null;
     final name = fold(title);
-    final joined = name.replaceAll(' ', '');
+    final joined = _joinedFold(title);
     if (joined.startsWith(compact)) return 0;
     if (' $name'.contains(' $folded')) return 1;
     if (joined.contains(compact)) return 2;

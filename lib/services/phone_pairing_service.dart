@@ -32,14 +32,23 @@ enum PairingKind {
   playlist,
   link,
   mediaServer,
-  photo;
+  photo,
+
+  /// [link] with the phone page worded for an API key (TMDB).
+  apiKey,
+
+  /// [link] for a poster-service pattern (Custom posters, Save not Add).
+  poster;
 
   bool get isWifiOnly => this != playlist;
+
+  /// One pasted value back ([PairingResult.link]).
+  bool get isLink => this == link || this == apiKey || this == poster;
 
   /// The result `mode` this kind accepts (null = 'xtream' or 'm3u').
   String? get mode => switch (this) {
         playlist => null,
-        link => 'link',
+        link || apiKey || poster => 'link',
         mediaServer => 'server',
         photo => 'photo',
       };
@@ -158,6 +167,8 @@ class PhonePairingSession {
         PairingKind.link => 'link',
         PairingKind.mediaServer => 'server',
         PairingKind.photo => 'photo',
+        PairingKind.apiKey => 'key',
+        PairingKind.poster => 'poster',
       };
 
   bool _accepts(PairingResult r) => kind.mode == null

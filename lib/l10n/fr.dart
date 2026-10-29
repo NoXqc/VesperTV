@@ -1442,6 +1442,14 @@ const Map<String, String> kFr = {
   "Hide Movies": "Masquer Films",
   "Hide TV Shows": "Masquer Séries",
   "Hide Recordings": "Masquer les enregistrements",
+  "Typing a key with a remote is painful. Scan this code with your phone camera and paste the key there — it appears here for you to check and save.":
+      "Taper une clé avec une télécommande, c'est pénible. Scannez ce code avec l'appareil photo de votre téléphone et collez-y la clé — elle apparaît ici pour que vous la vérifiiez et l'enregistriez.",
+  "Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and save.":
+      "Taper un long lien avec une télécommande, c'est pénible. Scannez ce code avec l'appareil photo de votre téléphone et collez-y le lien — il apparaît ici pour que vous le vérifiiez et l'enregistriez.",
+  "Paste the key and tap Send to TV.":
+      "Collez la clé et touchez Envoyer à la télé.",
+  "Check it here, then press Save.":
+      "Vérifiez-le ici, puis appuyez sur Enregistrer.",
   "Paste the link and tap Send to TV.": "Collez le lien et touchez Envoyer à la télé.",
   "Removes the Movies tab and movie search results.": "Retire l'onglet Films et les films des résultats de recherche.",
   "Removes the TV Shows tab and show search results.": "Retire l'onglet Séries et les séries des résultats de recherche.",

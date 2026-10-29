@@ -587,12 +587,14 @@ class ArchiveMeta {
   /// The poster to show: the user's custom poster service when one is set
   /// and this title has the ids it needs ([ArchivePosters]), else the
   /// source's own.
-  String? get posterUrl =>
-      ArchivePosters.apply(
-          imdb: imdb,
-          tmdb: RegExp(r'^tmdb:(\d+)').firstMatch(id)?.group(1),
-          type: type.wire) ??
-      originalPosterUrl;
+  String? get posterUrl => ArchivePosters.pattern.isEmpty
+      ? originalPosterUrl
+      : ArchivePosters.apply(
+              imdb: imdb,
+              tmdb: _tmdbId.firstMatch(id)?.group(1),
+              type: type.wire) ??
+          originalPosterUrl;
+  static final _tmdbId = RegExp(r'^tmdb:(\d+)');
   final String? backgroundUrl;
 
   /// `releaseInfo` as sources send it: "1931", or "1959-1964" for a series.

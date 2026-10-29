@@ -5,9 +5,11 @@ import 'package:provider/provider.dart';
 import '../../l10n/l10n.dart';
 import '../../services/archive_posters.dart';
 import '../../services/archive_service.dart';
+import '../../services/phone_pairing_service.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_text_field_gate.dart';
+import 'phone_link_screen.dart';
 
 /// Settings > Media Hub > Custom posters: the [ArchivePosters] URL pattern.
 /// Same field/Save layout as `TmdbSettingsScreen`.
@@ -51,6 +53,16 @@ class _ArchivePostersScreenState extends State<ArchivePostersScreen> {
     if (FocusManager.instance.primaryFocus != _fieldFocus) return false;
     _saveFocus.requestFocus();
     return true;
+  }
+
+  /// "From phone": the address is pasted on the phone and lands in the
+  /// field, Save focused (a long URL with a remote is painful).
+  Future<void> _fromPhone() async {
+    final link = await PhoneLinkScreen.open(context,
+        title: tr('Custom posters'), kind: PairingKind.poster);
+    if (link == null || !mounted) return;
+    _controller.text = link;
+    _saveFocus.requestFocus();
   }
 
   Future<void> _save(String value) async {
@@ -114,6 +126,10 @@ class _ArchivePostersScreenState extends State<ArchivePostersScreen> {
                 focusNode: _saveFocus,
                 onPressed: () => _save(_controller.text),
                 child: Text(tr('Save'))),
+            OutlinedButton.icon(
+                onPressed: _fromPhone,
+                icon: const Icon(Icons.qr_code_2),
+                label: Text(tr('From phone'))),
             if (on.isNotEmpty)
               OutlinedButton(
                   onPressed: () => _save(''), child: Text(tr('Turn off'))),

@@ -1960,6 +1960,14 @@ const Map<String, String> kEl = {
       "Απόκρυψη Σειρών",
   "Hide Recordings":
       "Απόκρυψη εγγραφών",
+  "Typing a key with a remote is painful. Scan this code with your phone camera and paste the key there — it appears here for you to check and save.":
+      "Η πληκτρολόγηση ενός κλειδιού με τηλεχειριστήριο είναι κουραστική. Σαρώστε αυτόν τον κωδικό με την κάμερα του κινητού σας και επικολλήστε το κλειδί εκεί — εμφανίζεται εδώ για έλεγχο και αποθήκευση.",
+  "Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and save.":
+      "Η πληκτρολόγηση ενός μεγάλου συνδέσμου με τηλεχειριστήριο είναι κουραστική. Σαρώστε αυτόν τον κωδικό με την κάμερα του κινητού σας και επικολλήστε τον σύνδεσμο εκεί — εμφανίζεται εδώ για έλεγχο και αποθήκευση.",
+  "Paste the key and tap Send to TV.":
+      "Επικολλήστε το κλειδί και πατήστε Αποστολή στην TV.",
+  "Check it here, then press Save.":
+      "Ελέγξτε το εδώ και πατήστε Αποθήκευση.",
   "Paste the link and tap Send to TV.":
       "Επικολλήστε τον σύνδεσμο και πατήστε Αποστολή στην TV.",
   "Removes the Movies tab and movie search results.":

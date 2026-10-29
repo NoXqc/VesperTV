@@ -145,6 +145,11 @@
   var linkKind = parts[parts.length - 1] === "link";
   var serverKind = parts[parts.length - 1] === "server";
   var photoKind = parts[parts.length - 1] === "photo";
+  // "key" (TMDB API key) and "poster" (Custom posters pattern): the link
+  // box, worded for them; both still send {"mode":"link"}.
+  var keyKind = parts[parts.length - 1] === "key";
+  var posterKind = parts[parts.length - 1] === "poster";
+  if (keyKind || posterKind) linkKind = true;
   if (linkKind || serverKind || photoKind) parts.pop();
   var relay = parts.length === 2 && parts[0].length >= 16 && parts[1].length >= 40;
   if (photoKind) {
@@ -177,6 +182,15 @@
     $("form-view").hidden = true;
     $("link-view").hidden = false;
     document.title = "VesperTV · Send a link";
+    if (keyKind) {
+      $("link-view").querySelector("h1").innerHTML = "Send a key to <span>VesperTV</span>";
+      $("link-view").querySelector(".lead").textContent = "Paste your API key here and it will appear on your TV.";
+      $("link-view").querySelector("label").textContent = "Key";
+      $("link").placeholder = "";
+      $("link").setAttribute("inputmode", "text");
+      document.title = "VesperTV · Send a key";
+    }
+    if (posterKind) $("link").placeholder = "https://…/{imdb_id}…";
   }
   if (serverKind) {
     $("form-view").hidden = true;
@@ -254,7 +268,7 @@
 
   function collectLink() {
     var link = $("link").value.replace(/\s+/g, "");
-    if (!link) return "Paste the link first.";
+    if (!link) return keyKind ? "Paste the key first." : "Paste the link first.";
     return { v: 1, mode: "link", link: link };
   }
 
@@ -279,7 +293,9 @@
       $("server-view").hidden = true;
       $("photo-view").hidden = true;
       if (photoKind) $("done-hint").textContent = "Your photo is on the TV. You can close this page.";
-      if (linkKind) $("done-hint").textContent = "Check it there, then press Add. You can close this page.";
+      if (linkKind) $("done-hint").textContent = keyKind || posterKind
+        ? "Check it there, then press Save. You can close this page."
+        : "Check it there, then press Add. You can close this page.";
       if (serverKind) $("done-hint").textContent = "Check the details there, then press Connect. You can close this page.";
       $("done-view").style.display = "block";
     } catch (err) {

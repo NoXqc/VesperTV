@@ -926,8 +926,52 @@ class ArchiveService extends ChangeNotifier {
     return _titleIdentity(oldSource, old) == _titleIdentity(source, meta);
   }
 
-  bool isFavorite(ArchiveSource source, ArchiveMeta meta) =>
-      _favoriteEntries().any((e) => _sameTitle(e, source, meta));
+  // [isFavorite] runs for every poster on every build (global search with
+  // hundreds of Media Hub results): decoding the saved list per call made
+  // typing in Search crawl, so the decoded list is indexed once per change.
+  String? _favIndexRaw;
+  int _favIndexRevision = -1, _favIndexViewer = -1;
+  Set<String> _favExact = const {}, _favIdentities = const {};
+
+  static String _exactFavKey(String src, ArchiveMeta meta) =>
+      '$src|${meta.id}|${meta.wire}';
+
+  void _ensureFavoriteIndex() {
+    final raw = _storage.getArchiveFavoritesJson();
+    final revision = _storage.archiveIdentityRevision;
+    final viewer = _storage.viewerGeneration;
+    if (raw == _favIndexRaw &&
+        revision == _favIndexRevision &&
+        viewer == _favIndexViewer) {
+      return;
+    }
+    final exact = <String>{}, identities = <String>{};
+    for (final e in _decodeEntries(raw)) {
+      final m = e['meta'];
+      final old =
+          m is Map ? ArchiveMeta.fromJson(Map<String, dynamic>.from(m)) : null;
+      if (old == null) continue;
+      final src = '${e['src']}';
+      exact.add(_exactFavKey(src, old));
+      identities
+          .add(_titleIdentity(ArchiveSource(manifestUrl: src, name: ''), old));
+    }
+    _favIndexRaw = raw;
+    _favIndexRevision = revision;
+    _favIndexViewer = viewer;
+    _favExact = exact;
+    _favIdentities = identities;
+  }
+
+  /// Same answer as `_favoriteEntries().any(_sameTitle)`, from the index.
+  bool isFavorite(ArchiveSource source, ArchiveMeta meta) {
+    _ensureFavoriteIndex();
+    if (_favExact.contains(_exactFavKey(source.manifestUrl, meta))) {
+      return true;
+    }
+    if (source.server != null && meta.imdb == null) return false;
+    return _favIdentities.contains(_titleIdentity(source, meta));
+  }
 
   /// Hold OK on a title: into Favourites (front of the row), or out again.
   /// Returns true when it is now a favourite.

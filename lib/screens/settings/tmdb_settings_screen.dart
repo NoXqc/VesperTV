@@ -5,11 +5,13 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 
+import '../../services/phone_pairing_service.dart';
 import '../../services/playlist_manager.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_text_field_gate.dart';
 import '../../l10n/l10n.dart';
+import 'phone_link_screen.dart';
 
 /// Where a user supplies their own free TMDB (The Movie Database) API
 /// key — see `TmdbEnrichmentService`'s doc comment for why this can't
@@ -112,6 +114,16 @@ class _TmdbSettingsScreenState extends State<TmdbSettingsScreen> {
         SnackBar(content: Text(tr('What\'s New refreshed from TMDB'))));
   }
 
+  /// "From phone": the key is pasted on the phone and lands in the field,
+  /// Save focused (typing a 32-character key with a remote is painful).
+  Future<void> _fromPhone() async {
+    final key = await PhoneLinkScreen.open(context,
+        title: tr('TMDB (Release Dates)'), kind: PairingKind.apiKey);
+    if (key == null || !mounted) return;
+    _controller.text = key;
+    _saveFocus.requestFocus();
+  }
+
   Future<bool> _checkKey(String key) async {
     try {
       final uri =
@@ -183,16 +195,23 @@ class _TmdbSettingsScreenState extends State<TmdbSettingsScreen> {
           // actually changes when focus arrives. OutlinedButton's default
           // is transparent, so the same focused fill reads as the obvious
           // solid highlight every other button in this app already has.
-          OutlinedButton(
-            focusNode: _saveFocus,
-            onPressed: _validating ? null : _save,
-            child: _validating
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                : Text(tr('Save')),
-          ),
+          Wrap(spacing: 12, runSpacing: 12, children: [
+            OutlinedButton(
+              focusNode: _saveFocus,
+              onPressed: _validating ? null : _save,
+              child: _validating
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : Text(tr('Save')),
+            ),
+            OutlinedButton.icon(
+              onPressed: _fromPhone,
+              icon: const Icon(Icons.qr_code_2),
+              label: Text(tr('From phone')),
+            ),
+          ]),
           if (context.watch<StorageService>().getTmdbApiKey()?.isNotEmpty ??
               false) ...[
             const SizedBox(height: 16),

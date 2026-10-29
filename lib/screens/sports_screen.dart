@@ -1488,6 +1488,13 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           !(ModalRoute.of(context)?.isCurrent ?? false)) {
         return;
       }
+      // Full screen from the Live TV guide: back on the guide, not the
+      // feed under it (user report, Shield 1.0.48: the selector sat under
+      // the see-through guide and the arrows scrolled the page).
+      if (_liveOpen) {
+        _livePanel.currentState?.focusLast();
+        return;
+      }
       if (_feedVisible) {
         _focusFeed();
         return;

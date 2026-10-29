@@ -1049,6 +1049,37 @@ void main() {
     await disposePage(tester);
   });
 
+  testWidgets(
+      'Live TV guide keeps focus when a channel starts beside game cards',
+      (tester) async {
+    // User report (Shield, 1.0.48): games today, none previewing; OK on a
+    // guide channel left the selector on the page under the guide.
+    final routes = _PlayerRoutes();
+    await openLivePanel(tester, games: await matchedGames(), observer: routes);
+    for (var i = 0; i < 3; i++) {
+      await press(tester, LogicalKeyboardKey.arrowDown);
+    }
+    await press(tester, LogicalKeyboardKey.select); // the group's guide
+    expect(getFocus(), 'sports-live-guide');
+    await press(tester, LogicalKeyboardKey.select); // plays beside the cards
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(getFocus(), 'sports-live-guide');
+    await press(tester, LogicalKeyboardKey.arrowDown);
+    expect(getFocus(), 'sports-live-guide');
+    await press(tester, LogicalKeyboardKey.select); // another channel
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(getFocus(), 'sports-live-guide');
+    await press(tester, LogicalKeyboardKey.select); // full screen
+    expect(routes.channels, hasLength(1));
+    // The observer closes full screen at once: back beside the guide.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.byKey(const ValueKey('sports-live-guide')), findsOneWidget);
+    expect(getFocus(), 'sports-live-guide');
+    expect(tester.takeException(), isNull);
+    await disposePage(tester);
+  });
+
   testWidgets('a guide channel takes the big game player beside the feed',
       (tester) async {
     final games = await matchedGames();

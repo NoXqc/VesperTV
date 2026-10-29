@@ -1438,6 +1438,14 @@ const Map<String, String> kEs = {
   "Hide Movies": "Ocultar Películas",
   "Hide TV Shows": "Ocultar Series",
   "Hide Recordings": "Ocultar grabaciones",
+  "Typing a key with a remote is painful. Scan this code with your phone camera and paste the key there — it appears here for you to check and save.":
+      "Escribir una clave con un mando es tedioso. Escanea este código con la cámara del teléfono y pega allí la clave: aparecerá aquí para que la revises y la guardes.",
+  "Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and save.":
+      "Escribir un enlace largo con un mando es tedioso. Escanea este código con la cámara del teléfono y pega allí el enlace: aparecerá aquí para que lo revises y lo guardes.",
+  "Paste the key and tap Send to TV.":
+      "Pega la clave y toca Enviar a la TV.",
+  "Check it here, then press Save.":
+      "Revísalo aquí y pulsa Guardar.",
   "Paste the link and tap Send to TV.": "Pega el enlace y toca Enviar a la TV.",
   "Removes the Movies tab and movie search results.": "Quita la pestaña Películas y las películas de la búsqueda.",
   "Removes the TV Shows tab and show search results.": "Quita la pestaña Series y las series de la búsqueda.",

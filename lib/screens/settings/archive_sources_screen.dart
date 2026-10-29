@@ -9,15 +9,14 @@ import '../../services/addon_service.dart';
 import '../../services/archive_api_service.dart';
 import '../../services/app_preferences.dart';
 import '../../services/archive_service.dart';
-import '../../services/phone_pairing_service.dart';
 import '../../services/storage_service.dart';
 import '../../utils/refined_finish.dart';
 import '../../widgets/hold_to_activate.dart';
-import '../../widgets/phone_pair_panel.dart';
 import '../../widgets/section_label.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_text_field_gate.dart';
 import 'media_server_screen.dart';
+import 'phone_link_screen.dart';
 import 'stremio_import_screen.dart';
 import 'trackers_screen.dart';
 
@@ -364,8 +363,8 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
   /// "From my phone": the Add Playlist QR flow, link kind — the phone
   /// pastes the long manifest URL, it lands in the field here to check.
   Future<void> _fromPhone() async {
-    final link = await Navigator.of(context).push<String>(
-        MaterialPageRoute(builder: (_) => const _PhoneLinkScreen()));
+    final link =
+        await PhoneLinkScreen.open(context, title: tr('Media Hub sources'));
     if (link == null || !mounted) return;
     _link.text = link;
     _addFocus.requestFocus();
@@ -918,49 +917,4 @@ class _SourceControl extends StatelessWidget {
           );
         },
       );
-}
-
-/// The QR page behind "From my phone"; pops with the link the phone sent.
-class _PhoneLinkScreen extends StatefulWidget {
-  const _PhoneLinkScreen();
-
-  @override
-  State<_PhoneLinkScreen> createState() => _PhoneLinkScreenState();
-}
-
-class _PhoneLinkScreenState extends State<_PhoneLinkScreen> {
-  final _toggleFocus = FocusNode();
-
-  @override
-  void initState() {
-    super.initState();
-    // The panel's only focusable control; without it the remote has
-    // nothing focused (CLAUDE.md §10).
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _toggleFocus.requestFocus();
-    });
-  }
-
-  @override
-  void dispose() {
-    _toggleFocus.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SettingsScaffold(
-      title: tr('Media Hub sources'),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: PhonePairPanel(
-          kind: PairingKind.link,
-          toggleFocusNode: _toggleFocus,
-          onResult: (r) {
-            if (mounted) Navigator.of(context).pop(r.link);
-          },
-        ),
-      ),
-    );
-  }
 }

@@ -115,6 +115,42 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _hubSearching = false;
   Timer? _hubDebounce;
 
+  /// Media Hub sources answer one by one; their rows are applied at most
+  /// every [_hubPublishGap] so a dozen replies don't each rebuild the page.
+  static const _hubPublishGap = Duration(milliseconds: 350);
+  Timer? _hubPublish;
+  void Function()? _pendingHubUpdate;
+
+  /// A row's results are capped: a big cached catalog matched hundreds of
+  /// titles per keystroke.
+  static const _hubRowMax = 100;
+
+  /// One key + first-card node per row for the screen's lifetime. New ones
+  /// on every build remounted every row (all posters) per rebuild.
+  final Map<String, GlobalKey> _rowKeys = {};
+  final Map<String, FocusNode> _rowNodes = {};
+  GlobalKey _rowKey(String id) => _rowKeys.putIfAbsent(id, GlobalKey.new);
+  FocusNode _rowNode(String id) => _rowNodes.putIfAbsent(id, FocusNode.new);
+
+  /// Local matches of the last query per category, reused while neither the
+  /// query nor the channel list changed (Media Hub replies rebuild the page).
+  final Map<String, (Object, List<Channel>)> _localMatches = {};
+  List<Channel> _matching(
+      PlaylistManager playlist, String category, TitleSearch search) {
+    final all = playlist.visibleChannels(category: category);
+    final signature = (
+      search.folded,
+      all.length,
+      all.isEmpty ? 0 : identityHashCode(all.first),
+      all.isEmpty ? 0 : identityHashCode(all.last),
+    );
+    final cached = _localMatches[category];
+    if (cached != null && cached.$1 == signature) return cached.$2;
+    final found = all.where((c) => search.matches(c.name)).toList();
+    _localMatches[category] = (signature, found);
+    return found;
+  }
+
   /// -1 means the search field/suggestion pills, otherwise an index into
   /// whichever `_ResultRow` list [build] most recently produced — see
   /// [_moveRowFocus].
@@ -137,6 +173,10 @@ class _SearchScreenState extends State<SearchScreen> {
   void dispose() {
     _searchDebounce?.cancel();
     _hubDebounce?.cancel();
+    _hubPublish?.cancel();
+    for (final node in _rowNodes.values) {
+      node.dispose();
+    }
     _controller.dispose();
     _searchFieldFocus.dispose();
     _recentFirstFocus.dispose();
@@ -198,6 +238,9 @@ class _SearchScreenState extends State<SearchScreen> {
   int _hubSearchGeneration = 0;
   void _clearHub() {
     _hubSearchGeneration++;
+    _hubPublish?.cancel();
+    _hubPublish = null;
+    _pendingHubUpdate = null;
     _hubMovies = const [];
     _hubShows = const [];
     _hubSearching = false;
@@ -252,12 +295,21 @@ class _SearchScreenState extends State<SearchScreen> {
         for (final row in await service.searchRows(type, query,
             underOther: false, isCurrent: current, onRows: (rows) {
           if (!current()) return;
-          setState(() {
+          final incoming = flatten(rows);
+          final previous = _pendingHubUpdate;
+          _pendingHubUpdate = () {
+            previous?.call();
             if (type == ArchiveType.movie) {
-              _hubMovies = merge(_hubMovies, flatten(rows));
+              _hubMovies = merge(_hubMovies, incoming);
             } else {
-              _hubShows = merge(_hubShows, flatten(rows));
+              _hubShows = merge(_hubShows, incoming);
             }
+          };
+          _hubPublish ??= Timer(_hubPublishGap, () {
+            _hubPublish = null;
+            final update = _pendingHubUpdate;
+            _pendingHubUpdate = null;
+            if (update != null && current()) setState(update);
           });
         }))
           for (final m in row.items)
@@ -278,7 +330,12 @@ class _SearchScreenState extends State<SearchScreen> {
     }
     // Typing moved on meanwhile: a stale answer must not show.
     if (!current()) return;
+    _hubPublish?.cancel();
+    _hubPublish = null;
+    final pending = _pendingHubUpdate;
+    _pendingHubUpdate = null;
     setState(() {
+      pending?.call();
       _hubMovies = merge(_hubMovies, movies);
       _hubShows = merge(_hubShows, shows);
       _hubSearching = false;
@@ -679,22 +736,15 @@ class _SearchScreenState extends State<SearchScreen> {
     // hidden-group/hidden-channel filtering entirely, which would otherwise
     // let a restricted viewer search their way straight to a hidden
     // channel without ever un-hiding its group.
-    final channelMatches = playlist
-        .visibleChannels(category: 'tv')
-        .where((c) => search.matches(c.name))
-        .toList();
+    final channelMatches = _matching(playlist, 'tv', search);
     if (channelMatches.isNotEmpty) {
       rows.add(_buildChannelRow(rows.length, tr('Live TV'), channelMatches));
     }
     final prefs = context.read<AppPreferences>();
     if (prefs.hideMoviesShows) return rows..addAll(_buildHubRows(rows.length));
 
-    final vodMatches = playlist.isXtream
-        ? _dbVodResults
-        : playlist
-            .visibleChannels(category: 'vod')
-            .where((c) => search.matches(c.name))
-            .toList();
+    final vodMatches =
+        playlist.isXtream ? _dbVodResults : _matching(playlist, 'vod', search);
     if (!prefs.hideMovies && vodMatches != null && vodMatches.isNotEmpty) {
       rows.add(_buildChannelRow(rows.length, tr('Movies'), vodMatches,
           isPoster: true));
@@ -708,10 +758,7 @@ class _SearchScreenState extends State<SearchScreen> {
         rows.add(_buildSeriesRow(rows.length, tr('TV Shows'), seriesMatches));
       }
     } else {
-      final seriesMatches = playlist
-          .visibleChannels(category: 'series')
-          .where((c) => search.matches(c.name))
-          .toList();
+      final seriesMatches = _matching(playlist, 'series', search);
       if (seriesMatches.isNotEmpty) {
         rows.add(_buildChannelRow(rows.length, tr('TV Shows'), seriesMatches,
             isPoster: true));
@@ -726,14 +773,16 @@ class _SearchScreenState extends State<SearchScreen> {
   List<_ResultRow> _buildHubRows(int firstIndex) {
     final rows = <_ResultRow>[];
     final watch = ArchiveReadyWatch.instance;
-    for (final (label, items) in [
-      (tr('Movies'), _hubMovies),
-      (tr('TV Shows'), _hubShows),
+    final hub = context.read<ArchiveService>();
+    for (final (id, label, all) in [
+      ('hub_movies', tr('Movies'), _hubMovies),
+      ('hub_shows', tr('TV Shows'), _hubShows),
     ]) {
-      if (items.isEmpty) continue;
+      if (all.isEmpty) continue;
+      final items = all.length > _hubRowMax ? all.sublist(0, _hubRowMax) : all;
       final rowIndex = firstIndex + rows.length;
-      final rowKey = GlobalKey();
-      final firstFocusNode = FocusNode();
+      final rowKey = _rowKey(id);
+      final firstFocusNode = _rowNode(id);
       rows.add(_ResultRow(
         label,
         rowKey,
@@ -750,9 +799,7 @@ class _SearchScreenState extends State<SearchScreen> {
               rating: items[i].$2.year,
               ready: watch.isReady(items[i].$2.id),
               fetching: watch.fetching.value.contains(items[i].$2.id),
-              isFavorite: context
-                  .read<ArchiveService>()
-                  .isFavorite(items[i].$1, items[i].$2),
+              isFavorite: hub.isFavorite(items[i].$1, items[i].$2),
               onToggleFavorite: () =>
                   _toggleHubFavorite(items[i].$1, items[i].$2),
               onTap: () => _openHubTitle(items[i].$1, items[i].$2),
@@ -778,8 +825,8 @@ class _SearchScreenState extends State<SearchScreen> {
   /// building and scrolling are involved).
   _ResultRow _buildChannelRow(int rowIndex, String label, List<Channel> items,
       {bool isPoster = false}) {
-    final rowKey = GlobalKey();
-    final firstFocusNode = FocusNode();
+    final rowKey = _rowKey('local_$label');
+    final firstFocusNode = _rowNode('local_$label');
     final children = <Widget>[
       for (var i = 0; i < items.length; i++)
         PosterCard(
@@ -807,8 +854,8 @@ class _SearchScreenState extends State<SearchScreen> {
 
   _ResultRow _buildSeriesRow(
       int rowIndex, String label, List<XtreamSeries> items) {
-    final rowKey = GlobalKey();
-    final firstFocusNode = FocusNode();
+    final rowKey = _rowKey('series_$label');
+    final firstFocusNode = _rowNode('series_$label');
     final children = <Widget>[
       for (var i = 0; i < items.length; i++)
         PosterCard(

@@ -949,6 +949,10 @@ class StorageService {
   /// [keyLastDurationPrefix] and [clearCache]'s existing `startsWith` sweep
   /// below keeps catching all of them, not just Main's.
   final Map<String, Map<String, String>> _archiveAliases = {};
+
+  /// Bumped whenever an identity alias is added, so callers can cache
+  /// mapped identities (Media Hub favourites) until it changes.
+  int archiveIdentityRevision = 0;
   Map<String, String> _aliasesFor(String viewer) =>
       _archiveAliases.putIfAbsent(viewer, () {
         try {
@@ -995,6 +999,7 @@ class StorageService {
       final fraction = _prefs
           .getBool(key(AppConstants.keyLastPositionPrefix, 'frac:$previous'));
       aliases[legacy] = canonical;
+      archiveIdentityRevision++;
       changed = true;
       if (position != null &&
           !_prefs.containsKey(

@@ -138,7 +138,9 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
       );
     }
 
-    final isLink = widget.kind == PairingKind.link;
+    final isLink = widget.kind.isLink;
+    final isKey = widget.kind == PairingKind.apiKey;
+    final saves = isKey || widget.kind == PairingKind.poster;
     final isServer = widget.kind == PairingKind.mediaServer;
     final isPhoto = widget.kind == PairingKind.photo;
     final wifiOnly = widget.kind.isWifiOnly;
@@ -150,14 +152,20 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
         Text(
           isPhoto
               ? tr('Scan with your phone to add a photo')
-              : isLink
+              : isKey
                   ? tr(
-                      'Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.')
-                  : isServer
+                      'Typing a key with a remote is painful. Scan this code with your phone camera and paste the key there — it appears here for you to check and save.')
+                  : saves
                       ? tr(
-                          'Typing a server address and password with a remote is painful. Scan this code with your phone camera and sign in there — the details appear here for you to check and connect.')
-                      : tr(
-                          'Typing a long password with a remote is painful. Scan this code with your phone camera and fill in the form there — it appears here for you to check and add.'),
+                          'Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and save.')
+                      : isLink
+                          ? tr(
+                              'Typing a long link with a remote is painful. Scan this code with your phone camera and paste the link there — it appears here for you to check and add.')
+                          : isServer
+                              ? tr(
+                                  'Typing a server address and password with a remote is painful. Scan this code with your phone camera and sign in there — the details appear here for you to check and connect.')
+                              : tr(
+                                  'Typing a long password with a remote is painful. Scan this code with your phone camera and fill in the form there — it appears here for you to check and add.'),
           style: muted,
         ),
         const SizedBox(height: 16),
@@ -185,22 +193,27 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
                               n: 2,
                               text: isPhoto
                                   ? tr('Choose a photo and tap Send to TV.')
-                                  : isLink
-                                      ? tr('Paste the link and tap Send to TV.')
-                                      : tr(
-                                          'Fill in the form and tap Send to TV.')),
+                                  : isKey
+                                      ? tr('Paste the key and tap Send to TV.')
+                                      : isLink
+                                          ? tr(
+                                              'Paste the link and tap Send to TV.')
+                                          : tr(
+                                              'Fill in the form and tap Send to TV.')),
                           _Step(
                               n: 3,
                               text: isPhoto
                                   ? tr('Your photo appears here automatically.')
-                                  : isLink
-                                      ? tr(
-                                          'Check the link here, then press Add.')
-                                      : isServer
+                                  : saves
+                                      ? tr('Check it here, then press Save.')
+                                      : isLink
                                           ? tr(
-                                              'Check the details here, then press Connect.')
-                                          : tr(
-                                              'Check the details here, then press Add Playlist.')),
+                                              'Check the link here, then press Add.')
+                                          : isServer
+                                              ? tr(
+                                                  'Check the details here, then press Connect.')
+                                              : tr(
+                                                  'Check the details here, then press Add Playlist.')),
                           const SizedBox(height: 12),
                           if (!_starting && !_expired)
                             Row(
