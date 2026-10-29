@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -837,6 +838,15 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
             ),
           ),
         ),
+        if (_swapMode && main)
+          Positioned(
+            left: 0,
+            width: size.width * 2 / 3,
+            // Centred in the band under the big (16:9) screen.
+            bottom: math.max(8.0,
+                ((size.height - size.width * 2 / 3 * 9 / 16) / 2 - 36) / 2),
+            child: const Center(child: _SwapModePill()),
+          ),
         // Touch / mouse: a small handle opens the header (no Up key there).
         if (!isTv && !_headerShown)
           Positioned(
@@ -957,8 +967,7 @@ List<int> swapRotation(List<int> slots, int step) {
   return [for (var k = 0; k < n; k++) slots[((k + step) % n + n) % n]];
 }
 
-/// Flashing "SWAP" pill on the big screen while Swap mode is on, plus a
-/// gold flash over the tile on every swap.
+/// Swap mode on the big screen: a gold flash over the tile on every swap.
 class _SwapModeBadge extends StatefulWidget {
   const _SwapModeBadge({required this.swaps});
 
@@ -969,10 +978,7 @@ class _SwapModeBadge extends StatefulWidget {
 }
 
 class _SwapModeBadgeState extends State<_SwapModeBadge>
-    with TickerProviderStateMixin {
-  late final _blink = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 650))
-    ..repeat(reverse: true);
+    with SingleTickerProviderStateMixin {
   late final _flash = AnimationController(
       vsync: this, duration: const Duration(milliseconds: 450));
 
@@ -984,7 +990,6 @@ class _SwapModeBadgeState extends State<_SwapModeBadge>
 
   @override
   void dispose() {
-    _blink.dispose();
     _flash.dispose();
     super.dispose();
   }
@@ -1003,39 +1008,63 @@ class _SwapModeBadgeState extends State<_SwapModeBadge>
                         .withValues(alpha: 0.35 * (1 - _flash.value)))
                 : const SizedBox.shrink(),
           ),
-          Align(
-            alignment: const Alignment(0, 0.85),
-            child: FadeTransition(
-              opacity: Tween(begin: 0.35, end: 1.0).animate(_blink),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.75),
-                  border: Border.all(color: Colors.amber, width: 2),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.swap_vert, color: Colors.amber, size: 20),
-                    const SizedBox(width: 6),
-                    Text(tr('SWAP'),
-                        style: const TextStyle(
-                            color: Colors.amber,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 2)),
-                    const SizedBox(width: 10),
-                    Text(tr('Arrows swap · OK or Back to finish'),
-                        style: const TextStyle(
-                            color: Colors.white70, fontSize: 12)),
-                  ],
-                ),
-              ),
-            ),
-          ),
         ],
+      ),
+    );
+  }
+}
+
+/// Swap mode's blinking "SWAP" pill, in the black band under the big screen
+/// (owner, 2026-10-29: inside the picture it covered the score bar; the
+/// first blink rate was too fast).
+class _SwapModePill extends StatefulWidget {
+  const _SwapModePill();
+
+  @override
+  State<_SwapModePill> createState() => _SwapModePillState();
+}
+
+class _SwapModePillState extends State<_SwapModePill>
+    with SingleTickerProviderStateMixin {
+  late final _blink = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 1300))
+    ..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _blink.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: FadeTransition(
+        opacity: Tween(begin: 0.35, end: 1.0).animate(_blink),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.75),
+            border: Border.all(color: Colors.amber, width: 2),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.swap_vert, color: Colors.amber, size: 20),
+              const SizedBox(width: 6),
+              Text(tr('SWAP'),
+                  style: const TextStyle(
+                      color: Colors.amber,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 2)),
+              const SizedBox(width: 10),
+              Text(tr('Arrows swap · OK or Back to finish'),
+                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
+            ],
+          ),
+        ),
       ),
     );
   }
