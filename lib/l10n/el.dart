@@ -2854,4 +2854,9 @@ const Map<String, String> kEl = {
   "Sign in again": "Σύνδεση ξανά",
   "Scan the QR code or visit {url} and enter this code:":
       "Σαρώστε τον κωδικό QR ή επισκεφτείτε το {url} και εισαγάγετε αυτόν τον κωδικό:",
+
+  // Title page row order.
+  "Customize title page": "Προσαρμογή σελίδας τίτλου",
+  "Choose the order of rows below title details. Saved for this viewer.":
+      "Επιλέξτε τη σειρά των γραμμών κάτω από τις λεπτομέρειες του τίτλου. Αποθηκεύεται για αυτό το προφίλ.",
 };

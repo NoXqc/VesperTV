@@ -2237,4 +2237,9 @@ const Map<String, String> kIt = {
   "Sign in again": "Accedi di nuovo",
   "Scan the QR code or visit {url} and enter this code:":
       "Scansiona il codice QR o visita {url} e inserisci questo codice:",
+
+  // Title page row order.
+  "Customize title page": "Personalizza la pagina del titolo",
+  "Choose the order of rows below title details. Saved for this viewer.":
+      "Scegli l’ordine delle righe sotto i dettagli del titolo. Salvato per questo profilo.",
 };

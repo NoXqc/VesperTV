@@ -2234,4 +2234,9 @@ const Map<String, String> kEs = {
   "Sign in again": "Volver a iniciar sesión",
   "Scan the QR code or visit {url} and enter this code:":
       "Escanea el código QR o visita {url} e introduce este código:",
+
+  // Title page row order.
+  "Customize title page": "Personalizar la página del título",
+  "Choose the order of rows below title details. Saved for this viewer.":
+      "Elige el orden de las filas bajo los detalles del título. Se guarda para este perfil.",
 };

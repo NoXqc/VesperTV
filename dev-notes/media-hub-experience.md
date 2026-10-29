@@ -40,6 +40,14 @@ Main implementation: `archive_stream_session.dart`,
 
 ## Library and row personalization
 
+- Codex 2026-10-29: movie/series title pages add Customize title page beside
+  Explore more. Collection / related / cast rows can be reordered, including
+  Cast and credits first. Order is per viewer (`vesper_archive_detail_rows`),
+  transfers with Hub data, and retains missing rows' positions for other titles.
+  The default stays collection / related / cast. Dialog Save restores Explore
+  more focus; directional traversal follows the visible order. This does not
+  move the series episode section or change TMDB-key requirements.
+
 - Media Hub has Continue watching and Upcoming episodes rows in addition to the
   existing Recently watched/Favourites rows. Cards identify the episode, progress,
   and Resume/Next action; unaired episodes stay outside the playback queue.

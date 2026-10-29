@@ -367,6 +367,10 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **cdx, 2026-10-29 — title-page row order** (`codex/title-page-row-order`,
+  stacked on Plex): Customize title page beside Explore more saves per-viewer
+  collection/related/cast order; actors can be first. Shared Hub movie/series
+  panel, explicit remote navigation, FR/ES/IT/EL. See media-hub-experience.md.
 - **cdx, 2026-10-29 — Plex connector** (`codex/plex-media-server`): shared
   Jellyfin/Emby/Plex connector adds Plex phone/QR sign-in and owned/shared server
   selection. Libraries/search/metadata/episodes/direct versions/subtitles use the

@@ -12,6 +12,8 @@ import '../screens/archive_playback.dart';
 import '../screens/settings/tmdb_settings_screen.dart';
 import 'poster_card.dart';
 import 'hold_to_activate.dart';
+import 'dart:convert';
+import 'archive_detail_layout.dart';
 
 Widget _remoteCard(PosterCard card) =>
     HoldToActivate(onTap: card.onTap, child: card);
@@ -41,6 +43,8 @@ class _ArchiveDiscoveryPanelState extends State<ArchiveDiscoveryPanel> {
   final _scrolls = <String, ScrollController>{};
   final _indices = <String, int>{};
   final _rowKeys = <String, GlobalKey>{};
+  final _customizeNode = FocusNode();
+  late List<String> _order;
   late final int _viewer;
   List<String> _rows = [];
   final _localSources = <ArchiveMeta, ArchiveSource>{};
@@ -51,6 +55,7 @@ class _ArchiveDiscoveryPanelState extends State<ArchiveDiscoveryPanel> {
   void initState() {
     super.initState();
     _viewer = storage.viewerGeneration;
+    _order = ArchiveDetailLayout.load(storage);
     _load();
   }
 
@@ -88,6 +93,7 @@ class _ArchiveDiscoveryPanelState extends State<ArchiveDiscoveryPanel> {
 
   @override
   void dispose() {
+    _customizeNode.dispose();
     _api.dispose();
     for (final n in _nodes.values) {
       n.dispose();
@@ -238,6 +244,8 @@ class _ArchiveDiscoveryPanelState extends State<ArchiveDiscoveryPanel> {
                   style: const TextStyle(
                       fontSize: 18, fontWeight: FontWeight.w600))),
           Focus(
+              canRequestFocus: false,
+              skipTraversal: true,
               onKeyEvent: (_, e) {
                 if (e is! KeyDownEvent && e is! KeyRepeatEvent) {
                   return KeyEventResult.ignored;
@@ -311,48 +319,86 @@ class _ArchiveDiscoveryPanelState extends State<ArchiveDiscoveryPanel> {
   Widget build(BuildContext context) {
     final related = _related;
     _rows = [
-      if (_data.collection.isNotEmpty) 'collection',
-      if (related.isNotEmpty) 'related',
-      if (_data.cast.isNotEmpty) 'cast'
+      for (final id in _order)
+        if (switch (id) {
+          'collection' => _data.collection.isNotEmpty,
+          'related' => related.isNotEmpty,
+          _ => _data.cast.isNotEmpty,
+        })
+          id,
     ];
     return Padding(
         padding: const EdgeInsets.symmetric(vertical: 16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Focus(
-              onKeyEvent: (_, e) {
-                if (e is! KeyDownEvent) return KeyEventResult.ignored;
-                if (e.logicalKey == LogicalKeyboardKey.arrowUp) {
-                  widget.onReturn();
+          Wrap(spacing: 12, runSpacing: 8, children: [
+            Focus(
+                canRequestFocus: false,
+                skipTraversal: true,
+                onKeyEvent: (_, e) {
+                  if (e is! KeyDownEvent) return KeyEventResult.ignored;
+                  if (e.logicalKey == LogicalKeyboardKey.arrowUp) {
+                    widget.onReturn();
+                    return KeyEventResult.handled;
+                  }
+                  if (e.logicalKey == LogicalKeyboardKey.arrowRight) {
+                    _customizeNode.requestFocus();
+                    return KeyEventResult.handled;
+                  }
+                  if (e.logicalKey == LogicalKeyboardKey.arrowDown &&
+                      _rows.isNotEmpty) {
+                    _focus(_rows.first, 0);
+                    return KeyEventResult.handled;
+                  }
+                  return KeyEventResult.ignored;
+                },
+                child: OutlinedButton.icon(
+                    focusNode: widget.entryNode,
+                    icon:
+                        Icon(_failed ? Icons.refresh : Icons.explore_outlined),
+                    label: Text(_loading
+                        ? tr('Loading recommendations…')
+                        : _failed
+                            ? tr('Retry recommendations')
+                            : tr('Explore more')),
+                    // Minimal scroll: pinning it 20% from the top scrolled the
+                    // page down when coming Up from a row (owner photo).
+                    onFocusChange: (has) {
+                      if (has) _keepVisible(widget.entryNode.context);
+                    },
+                    onPressed: () {
+                      if (_failed) {
+                        setState(() => _loading = true);
+                        _load();
+                      } else if (_rows.isNotEmpty) {
+                        _focus(_rows.first, 0);
+                      }
+                    })),
+            Focus(
+                canRequestFocus: false,
+                skipTraversal: true,
+                onKeyEvent: (_, e) {
+                  if (e is! KeyDownEvent) return KeyEventResult.ignored;
+                  if (e.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                    widget.entryNode.requestFocus();
+                  } else if (e.logicalKey == LogicalKeyboardKey.arrowUp) {
+                    widget.onReturn();
+                  } else if (e.logicalKey == LogicalKeyboardKey.arrowDown &&
+                      _rows.isNotEmpty) {
+                    _focus(_rows.first, 0);
+                  } else {
+                    return KeyEventResult.ignored;
+                  }
                   return KeyEventResult.handled;
-                }
-                if (e.logicalKey == LogicalKeyboardKey.arrowDown &&
-                    _rows.isNotEmpty) {
-                  _focus(_rows.first, 0);
-                  return KeyEventResult.handled;
-                }
-                return KeyEventResult.ignored;
-              },
-              child: OutlinedButton.icon(
-                  focusNode: widget.entryNode,
-                  icon: Icon(_failed ? Icons.refresh : Icons.explore_outlined),
-                  label: Text(_loading
-                      ? tr('Loading recommendations…')
-                      : _failed
-                          ? tr('Retry recommendations')
-                          : tr('Explore more')),
-                  // Minimal scroll: pinning it 20% from the top scrolled the
-                  // page down when coming Up from a row (owner photo).
-                  onFocusChange: (has) {
-                    if (has) _keepVisible(widget.entryNode.context);
-                  },
-                  onPressed: () {
-                    if (_failed) {
-                      setState(() => _loading = true);
-                      _load();
-                    } else if (_rows.isNotEmpty) {
-                      _focus(_rows.first, 0);
-                    }
-                  })),
+                },
+                child: OutlinedButton.icon(
+                    focusNode: _customizeNode,
+                    icon: const Icon(Icons.tune),
+                    label: Text(tr('Customize title page')),
+                    onFocusChange: (has) {
+                      if (has) _keepVisible(_customizeNode.context);
+                    },
+                    onPressed: _customize)),
+          ]),
           if (_opening) const LinearProgressIndicator(),
           if (key.isEmpty)
             TextButton.icon(
@@ -368,38 +414,48 @@ class _ArchiveDiscoveryPanelState extends State<ArchiveDiscoveryPanel> {
                     widget.entryNode.requestFocus();
                   }
                 }),
-          if (_data.collection.isNotEmpty)
-            _row(
-                'collection',
-                _data.collectionName ?? tr('Collection'),
-                _data.collection.length,
-                (i) => _titleCard('collection', i, _data.collection[i])),
-          if (related.isNotEmpty)
-            _row(
-                'related',
-                _data.related.isEmpty
-                    ? tr('Explore this genre')
-                    : tr('More like this'),
-                related.length,
-                (i) => _titleCard('related', i, related[i])),
-          if (_data.cast.isNotEmpty)
-            _row('cast', tr('Cast and credits'), _data.cast.length, (i) {
-              final person = _data.cast[i];
-              return _remoteCard(PosterCard(
-                  focusNode: node('cast', i),
-                  title: person.name,
-                  imageUrl: person.image,
-                  sourceLabel: person.role,
-                  onTap: () async {
-                    await _person(person);
-                    if (current) _focus('cast', i);
-                  },
-                  onFocusGained: () => _reveal('cast', i)));
-            }),
+          for (final id in _rows)
+            if (id == 'collection')
+              _row(
+                  'collection',
+                  _data.collectionName ?? tr('Collection'),
+                  _data.collection.length,
+                  (i) => _titleCard('collection', i, _data.collection[i]))
+            else if (id == 'related')
+              _row(
+                  'related',
+                  _data.related.isEmpty
+                      ? tr('Explore this genre')
+                      : tr('More like this'),
+                  related.length,
+                  (i) => _titleCard('related', i, related[i]))
+            else
+              _row('cast', tr('Cast and credits'), _data.cast.length, (i) {
+                final person = _data.cast[i];
+                return _remoteCard(PosterCard(
+                    focusNode: node('cast', i),
+                    title: person.name,
+                    imageUrl: person.image,
+                    sourceLabel: person.role,
+                    onTap: () async {
+                      await _person(person);
+                      if (current) _focus('cast', i);
+                    },
+                    onFocusGained: () => _reveal('cast', i)));
+              }),
           if (key.isNotEmpty)
             const Text('Metadata provided by TMDB.',
                 style: TextStyle(color: Colors.white54, fontSize: 11)),
         ]));
+  }
+
+  Future<void> _customize() async {
+    final order = await showArchiveDetailLayout(context, _order);
+    if (!current || order == null) return;
+    await storage.setArchiveOptionsJson('detail_rows', jsonEncode(order));
+    if (!current) return;
+    setState(() => _order = order);
+    widget.entryNode.requestFocus();
   }
 }
 

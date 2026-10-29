@@ -2237,4 +2237,9 @@ const Map<String, String> kFr = {
   "Sign in again": "Se reconnecter",
   "Scan the QR code or visit {url} and enter this code:":
       "Scannez le code QR ou visitez {url} et saisissez ce code :",
+
+  // Title page row order.
+  "Customize title page": "Personnaliser la fiche",
+  "Choose the order of rows below title details. Saved for this viewer.":
+      "Choisissez l’ordre des rangées sous les détails du titre. Enregistré pour ce profil.",
 };
