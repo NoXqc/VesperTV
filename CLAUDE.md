@@ -201,6 +201,11 @@ context-less sink above. Texture players (Multiview, Compatibility video) never 
 `RecorderScheduler.kt` in `android/app/.../nox_iptv/`), so a plugin re-sync doesn't touch it.
 
 ## 10. Hard-won rules (don't re-learn these)
+- **cdx, 2026-10-29: Moving a focused widget between containers can skip scope
+  focus callbacks.** Sports Mode league reorder crosses between the top row and
+  sidebar using the same FocusNode. Derive sidebar visibility from focused-entry
+  membership and reconcile parent Back/last-entry state after layout; cached
+  scope focus alone left the selected league hidden (or the rail stuck open).
 - **Release-safe focus keys (cdx, 2026-10-27):** `FocusNode.debugLabel` is always
   null in release builds. Never derive widget keys, IDs or behavior from it.
   Media Hub +473 used `ValueKey(node.debugLabel!)`: controls became ErrorWidgets
@@ -362,6 +367,13 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **cdx, 2026-10-29 — Sports Mode league navigation** (`codex/sports-league-fixes`,
+  unreleased): vertical sidebar move uses Up/Down; horizontal rows use Left/Right.
+  Rail visibility and Back state survive focused-league reparenting across the
+  fifth slot. All is a visible one-press dropdown of every enabled league, with
+  All leagues first; normal Sports Trak tap/hold behavior retained. No enable
+  cap reproduced or settings rewritten. Investigation + implementation notes:
+  `dev-notes/sports-league-investigation.md`; device acceptance pending.
 - **cdx, 2026-10-28 — release preparation 1.0.45 (beta), +496:** owner asked
   to follow the merge/release handoff. Real branches claude/sports-mode-rail
   (863da01, Menu/Live TV/provider-failure) and codex/startup-profile-selector
@@ -1613,3 +1625,22 @@ Refined finish d5874ff, decoder HDR reporting b0b0889 and all-game reminders173d
 Version1.0.41+456; analyze17,598Flutter tests and62targeted native tests passed.
 This is a local test package only; main/published1.0.41+455 remain unchanged.
 Exact package/signature/installation results are in root HANDOFF.md.
+
+### Codex 2026-10-29: sports first-press preview and key stats (unreleased)
+
+`codex/sports-league-fixes` also contains the owner's follow-up: focus updates
+matchup information, first OK/tap/click previews a matched game, second opens
+full screen using the same opening/playing session. Hold behavior is retained;
+no match opens the channel menu. The big matchup adds available key stats via
+SportsMatchupStats and the existing gameSummary cache; Hide scores suppresses
+live/final details. New strings have FR/ES/IT/EL. Regular cards grow for large
+text too. See dev-notes/sports-mode.md and root HANDOFF.md for validation.
+
+### Codex 2026-10-29: combined Formuler test +500
+
+Owner requested merge/build/install/commit. codex/sports-league-fixes combines
+all pending league and matchup changes above with claude/multiview-swap-mode
+through5853b55 (swap, slower/lower pill, scrollable hold menu). Version1.0.45+500;
+analyze16 baseline infos,902Flutter tests passed. Release certificate verified;
+installed in place on Formuler Z11 Pro MAX and launched. No public release/push.
+Next installed build must exceed500. Artifact and final commit: root HANDOFF.md.

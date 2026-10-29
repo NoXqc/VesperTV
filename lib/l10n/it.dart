@@ -6,6 +6,13 @@
 /// the code; Italian plurals don't work that way (canale/canali), so those
 /// strings are phrased to avoid it.
 const Map<String, String> kIt = {
+  // Sports matchup information and activation.
+  "Key stats": "Statistiche chiave",
+  "Latest goal": "Ultimo gol",
+  "Last play": "Ultima azione",
+  "Game situation": "Situazione della partita",
+  "OK: watch here  ·  Hold: pick the channel": "OK: guarda qui  ·  Tieni premuto: scegli il canale",
+  "Click: watch here  ·  Hold: pick the channel": "Clic: guarda qui  ·  Tieni premuto: scegli il canale",
   "Open full Live TV": "Apri TV in diretta completa",
   // Startup profile selector.
   "Launch with profiles selector": "Avvia con il selettore dei profili",
@@ -151,6 +158,9 @@ const Map<String, String> kIt = {
   '4 screens': "4 schermi",
   '1 + 3 screens': "1 + 3 schermi",
   'Move to the big screen': "Sposta sullo schermo grande",
+  'Swap mode': "Modalità scambio",
+  'SWAP': "SCAMBIO",
+  'Arrows swap · OK or Back to finish': "Frecce: scambia · OK o Indietro: fine",
   '2 screens': "2 schermi",
   '= audio — Select to switch, hold Select for options':
       "= audio — OK per cambiare, tieni premuto OK per le opzioni",

@@ -5,6 +5,13 @@
 /// Keep every `{placeholder}` exactly as in the key. `{s}` is the plural "s"
 /// the code fills in ("chaîne{s}").
 const Map<String, String> kFr = {
+  // Sports matchup information and activation.
+  "Key stats": "Stats clés",
+  "Latest goal": "Dernier but",
+  "Last play": "Dernière action",
+  "Game situation": "Situation du match",
+  "OK: watch here  ·  Hold: pick the channel": "OK : regarder ici  ·  Maintenir : choisir la chaîne",
+  "Click: watch here  ·  Hold: pick the channel": "Cliquer : regarder ici  ·  Maintenir : choisir la chaîne",
   "Open full Live TV": "Ouvrir Télé en direct complète",
   // Startup profile selector.
   "Launch with profiles selector": "Lancer avec le sélecteur de profils",
@@ -151,6 +158,9 @@ const Map<String, String> kFr = {
   '4 screens': "4 écrans",
   '1 + 3 screens': "1 + 3 écrans",
   'Move to the big screen': "Mettre sur le grand écran",
+  'Swap mode': "Mode échange",
+  'SWAP': "ÉCHANGE",
+  'Arrows swap · OK or Back to finish': "Flèches : échanger · OK ou Retour : terminer",
   '2 screens': "2 écrans",
   '= audio — Select to switch, hold Select for options':
       "= audio — OK pour changer, maintenir OK pour les options",

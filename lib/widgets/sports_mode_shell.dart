@@ -80,7 +80,31 @@ class SportsModeShell extends StatefulWidget {
 class SportsModeShellState extends State<SportsModeShell> {
   final _rail = FocusScopeNode(debugLabel: 'sports-mode-rail');
   String? _lastRail;
+  // Last focus state reported to SportsScreen (its Back handling uses it).
   bool _railFocused = false;
+
+  // Membership, not the previous FocusScope ancestry: a held league can move
+  // between the bar and rail without its FocusNode losing primary focus.
+  bool get _hasRailFocus => _shown.any((e) => e.focusNode.hasFocus);
+
+  @override
+  void didUpdateWidget(SportsModeShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reparenting an already-focused league need not emit a scope callback.
+    // Reconcile after layout, when notifying the parent is safe.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _syncRailFocus();
+    });
+  }
+
+  void _syncRailFocus() {
+    final focused = _hasRailFocus;
+    final entry = _shown.where((e) => e.focusNode.hasFocus).firstOrNull;
+    if (entry != null) _lastRail = entry.id;
+    if (focused == _railFocused) return;
+    setState(() => _railFocused = focused);
+    widget.onRailFocusChanged(focused);
+  }
 
   /// Home / Search / Multiview (the top of the Live TV tabs column) sit
   /// behind one Menu row (owner, 2026-10-28). Narrow layouts (phones,
@@ -176,13 +200,21 @@ class SportsModeShellState extends State<SportsModeShell> {
     }
     final key = event.logicalKey;
     if (widget.moving) {
-      if (key == LogicalKeyboardKey.arrowLeft ||
-          key == LogicalKeyboardKey.arrowRight) {
-        widget.onMove?.call(key == LogicalKeyboardKey.arrowLeft ? -1 : 1);
+      final previous = _horizontal
+          ? LogicalKeyboardKey.arrowLeft
+          : LogicalKeyboardKey.arrowUp;
+      final next = _horizontal
+          ? LogicalKeyboardKey.arrowRight
+          : LogicalKeyboardKey.arrowDown;
+      if (key == previous || key == next) {
+        widget.onMove?.call(key == previous ? -1 : 1);
         return KeyEventResult.handled;
       }
+      // Keep focus on the moving league; only its visible axis reorders it.
       if (key == LogicalKeyboardKey.arrowUp ||
-          key == LogicalKeyboardKey.arrowDown) {
+          key == LogicalKeyboardKey.arrowDown ||
+          key == LogicalKeyboardKey.arrowLeft ||
+          key == LogicalKeyboardKey.arrowRight) {
         return KeyEventResult.handled;
       }
     }
@@ -287,7 +319,9 @@ class SportsModeShellState extends State<SportsModeShell> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(fontSize: 13))),
-                        if (entry.moving) const Icon(Icons.swap_vert, size: 16),
+                        if (entry.moving)
+                          Icon(narrow ? Icons.swap_horiz : Icons.swap_vert,
+                              size: 16),
                       ],
                     )),
               ),
@@ -298,10 +332,7 @@ class SportsModeShellState extends State<SportsModeShell> {
 
   Widget _buildRail(bool narrow) => FocusScope(
         node: _rail,
-        onFocusChange: (focused) {
-          if (focused != _railFocused) setState(() => _railFocused = focused);
-          widget.onRailFocusChanged(focused);
-        },
+        onFocusChange: (_) => _syncRailFocus(),
         child: Focus(
           canRequestFocus: false,
           onKeyEvent: _onKey,
@@ -341,6 +372,7 @@ class SportsModeShellState extends State<SportsModeShell> {
       LayoutBuilder(builder: (context, constraints) {
         final narrow = constraints.maxWidth < 800;
         _horizontal = narrow;
+        final railFocused = _hasRailFocus;
         final page = Column(children: [
           Container(
             key: const ValueKey('sports-mode-floating-bar'),
@@ -377,7 +409,7 @@ class SportsModeShellState extends State<SportsModeShell> {
                     children: [
                         // Kept mounted while hidden: its nodes must take focus.
                         Offstage(
-                          offstage: widget.collapse && !_railFocused,
+                          offstage: widget.collapse && !railFocused,
                           child: SizedBox(
                               width: 180,
                               child: Padding(
@@ -385,7 +417,7 @@ class SportsModeShellState extends State<SportsModeShell> {
                                       const EdgeInsets.fromLTRB(8, 8, 0, 8),
                                   child: _buildRail(false))),
                         ),
-                        if (widget.collapse && !_railFocused)
+                        if (widget.collapse && !railFocused)
                           // Says Left opens a menu; a click opens it too.
                           GestureDetector(
                             key: const ValueKey('sports-mode-rail-tab'),

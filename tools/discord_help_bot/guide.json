@@ -347,7 +347,7 @@
     "id": "c3c55479d877f7c1",
     "category": "Sports Trak",
     "title": "Sports Mode (beta)",
-    "answer": "Enable it in Sports Trak or Settings → Interface → Sports Mode to make sports your home for this profile. Your first five leagues sit in a sidebar: Left from the feed, first control or first card opens it; Right returns to content. Remaining leagues, All and Edit leagues stay in the floating top bar. Hold OK on a league and use Left/Right to reorder it, then OK or Back to finish. Today opens the day picker. While a game plays, a list of the day's games sits beside the big video: Up/Down selects a game, OK watches it, Right opens full screen, and hold OK opens stats. Down past the list opens the card rows; Up from the top row returns to the list. Standings, My Teams and Networks remain available. Menu gathers Home, Search, Multiview and the other app shortcuts; narrow layouts keep Menu and leagues in a top strip, and Back from content opens Menu. On TV layouts, Live TV opens groups and a translucent channel list inside Sports Mode. OK or Right enters a group; OK on a channel watches full screen. Back returns to the list, then groups, then sports. CH+/CH- or Page Up/Page Down move eight rows. Open full Live TV opens the regular TV screen; narrow and touch layouts open that screen directly. Turn Sports Mode off to restore the regular home and previous startup choice.",
+    "answer": "Enable it in Sports Trak or Settings → Interface → Sports Mode to make sports your home for this profile. Your first five leagues sit in a sidebar: Left from the feed, first control or first card opens it; Right returns to content. Remaining leagues, All and Edit leagues stay in the floating top bar. Hold OK on a league to reorder it: use Up/Down in the sidebar and Left/Right in a horizontal row. Moving past the fifth slot transfers the league between the sidebar and top row; the arrows then follow its new location. OK or Back finishes. Select All with its dropdown arrow to choose any enabled league, including off-screen or quiet ones; All leagues is the first choice. Today opens the day picker. While a game plays, a list of the day's games sits beside the big video: Up/Down selects a game, OK previews it, another OK on that game opens full screen, and hold OK opens stats. Right also opens full screen. Down past the list opens the card rows; Up from the top row returns to the list. Standings, My Teams and Networks remain available. Menu gathers Home, Search, Multiview and the other app shortcuts; narrow layouts keep Menu and leagues in a top strip, and Back from content opens Menu. On TV layouts, Live TV opens groups and a translucent channel list inside Sports Mode. OK or Right enters a group; OK on a channel watches full screen. Back returns to the list, then groups, then sports. CH+/CH- or Page Up/Page Down move eight rows. Open full Live TV opens the regular TV screen; narrow and touch layouts open that screen directly. Turn Sports Mode off to restore the regular home and previous startup choice.",
     "controls": "OK on Sports Mode",
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },
@@ -360,10 +360,10 @@
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },
   {
-    "id": "cd2291acb44aed4d",
+    "id": "c0a2109081c7fec8",
     "category": "Sports Trak",
-    "title": "Select it",
-    "answer": "Shows the game's details in the hero at the top.",
+    "title": "Preview, then full screen",
+    "answer": "Focusing a game updates the big matchup and its key stats. Press OK or tap/click once to start its matched channel in the mini player; press again on the same game for full screen using the same stream. With no matched channel, the game menu opens to choose one. Hold keeps the existing menu. Live and finished games show available leaders, latest play/goal and team stats; upcoming games show available standings and injuries. Hide scores also hides result-revealing stats.",
     "controls": "OK on a game",
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },
@@ -371,7 +371,7 @@
     "id": "7ec4b03904b2548f",
     "category": "Sports Trak",
     "title": "Watch in the hero",
-    "answer": "Plays the game's channel in the small player at the top. OK on the playing game goes full screen; Back stops it.",
+    "answer": "Starts or stops the game's channel in the mini player. OK on the playing game goes full screen; Back stops it.",
     "controls": "⏯ on a game",
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },
@@ -387,7 +387,7 @@
     "id": "f023f540e1a838e1",
     "category": "Sports Trak",
     "title": "Reorder leagues",
-    "answer": "Move the chip with ← →, then OK to drop it.",
+    "answer": "In the Sports Mode sidebar, move the league with ↑ ↓. Top-row leagues, narrow horizontal strips and regular Sports Trak use ← →. Moving across the fifth slot transfers a league between the sidebar and top row. OK or Back finishes the move.",
     "controls": "Hold OK on a league chip",
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },
@@ -395,8 +395,8 @@
     "id": "8c352c95e49d8366",
     "category": "Sports Trak",
     "title": "Your leagues",
-    "answer": "A menu of all your leagues with how many games each has on the day shown and how many are live. Pick one to see only that league.",
-    "controls": "Hold OK on All",
+    "answer": "Sports Mode shows a dropdown arrow: press OK or click All to open it. Hold OK also opens the menu in Sports Mode and regular Sports Trak. Every enabled league is listed, including sidebar leagues, off-screen top-row leagues and those with no games, with the day’s game/live counts. Pick a league to filter, or choose All leagues at the top to clear the filter. You do not need to hide another league to select one.",
+    "controls": "OK on All ▾ in Sports Mode · Hold OK on All",
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },
   {

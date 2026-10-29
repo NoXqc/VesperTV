@@ -223,6 +223,7 @@ class SportsChip extends StatefulWidget {
     this.logoUrl,
     this.icon,
     this.compact = false,
+    this.dropdown = false,
     this.moving = false,
     this.enabled = true,
   });
@@ -235,6 +236,9 @@ class SportsChip extends StatefulWidget {
   final String? logoUrl;
   final IconData? icon;
   final bool compact;
+
+  /// A visible affordance for chips whose primary action opens choices.
+  final bool dropdown;
 
   /// "Move" mode (league reorder): arrows either side of the label.
   final bool moving;
@@ -329,6 +333,8 @@ class _SportsChipState extends State<SportsChip> {
                         fontWeight: widget.selected
                             ? FontWeight.w700
                             : FontWeight.w500)),
+                if (widget.dropdown)
+                  Icon(Icons.expand_more, size: 18, color: fg),
                 if (widget.moving)
                   Icon(Icons.chevron_right, size: 20, color: fg),
               ],

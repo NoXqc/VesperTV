@@ -16,6 +16,10 @@ import 'package:nox_iptv/models/channel.dart';
 import 'package:nox_iptv/models/epg_program.dart';
 import 'package:nox_iptv/models/sports.dart';
 import 'package:nox_iptv/screens/sports_screen.dart';
+import 'package:nox_iptv/screens/player_screen.dart';
+import 'package:nox_iptv/screens/sports_live_list_screen.dart';
+import 'package:nox_iptv/screens/sports_my_teams_screen.dart';
+import 'package:nox_iptv/screens/sports_league_manager_screen.dart';
 import 'package:nox_iptv/screens/sports_channels_screen.dart';
 import 'package:nox_iptv/screens/tv_home_screen.dart';
 import 'package:nox_iptv/widgets/sports_widgets.dart';
@@ -25,6 +29,9 @@ import 'package:nox_iptv/services/epg_service.dart';
 import 'package:nox_iptv/services/playback_service.dart';
 import 'package:nox_iptv/services/playlist_manager.dart';
 import 'package:nox_iptv/services/sports_service.dart';
+import 'package:nox_iptv/services/sports_channel_matcher.dart';
+import 'package:nox_iptv/services/goals_alerts.dart';
+import 'package:nox_iptv/services/game_reminders.dart';
 import 'package:nox_iptv/services/storage_service.dart';
 import 'package:nox_iptv/services/viewer_profile_service.dart';
 import 'package:nox_iptv/models/m3u_group.dart';
@@ -51,7 +58,7 @@ class _Playlist extends PlaylistManager {
   @override
   List<Channel> visibleChannels(
           {String? playlistId, String? groupTitle, required String category}) =>
-      groupTitle == 'Sports' ? live : [];
+      groupTitle == null || groupTitle == 'Sports' ? live : [];
 }
 
 class _Epg extends EpgService {
@@ -67,11 +74,35 @@ class _Epg extends EpgService {
 class _Playback extends PlaybackService {
   _Playback(super.storage, super.playlist);
   int stops = 0;
+  final List<Channel> plays = [];
+  Completer<void>? opening;
+  @override
+  Future<void> play(Channel channel) async {
+    plays.add(channel);
+    await opening?.future;
+    currentChannel = channel;
+    notifyListeners();
+  }
+
   @override
   Future<void> stop() async {
     stops++;
     currentChannel = null;
     notifyListeners();
+  }
+}
+
+/// Record the real full-screen destination without mounting its native video
+/// surface in a widget test. The preview and navigation paths still run.
+class _PlayerRoutes extends NavigatorObserver {
+  final List<Channel> channels = [];
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (previousRoute == null || route is! MaterialPageRoute) return;
+    final page = route.builder(navigator!.context);
+    if (page is! PlayerScreen) return;
+    channels.add(page.channel);
+    scheduleMicrotask(() => navigator!.removeRoute(route));
   }
 }
 
@@ -100,17 +131,23 @@ SportsGame _game(int index, GameState state) => SportsGame(
     );
 
 class _Feed extends SportsService {
-  _Feed(this.games, {this.gate})
+  _Feed(this.games, {this.gate, this.summary})
       : super.forTesting(MockClient((_) async => http.Response('{}', 200)));
   final List<SportsGame> games;
+  final List<List<String>> requests = [];
   final Completer<void>? gate;
+  final SportsGameSummary? summary;
   @override
   Future<List<SportsGame>> gamesForDay(
       List<SportsLeague> leagues, DateTime day) async {
+    requests.add([for (final league in leagues) league.id]);
     await gate?.future;
     final now = DateTime.now();
     return day.day == now.day ? games : [];
   }
+
+  @override
+  Future<SportsGameSummary?> gameSummary(SportsGame game) async => summary;
 
   @override
   Future<DateTime?> nextGameStart(SportsLeague league, DateTime day) async =>
@@ -182,6 +219,7 @@ void main() {
       {List<SportsGame>? games,
       Size size = const Size(960, 540),
       double scale = 1,
+      NavigatorObserver? observer,
       _Feed? feed}) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
@@ -193,11 +231,18 @@ void main() {
           ChangeNotifierProvider<PlaylistManager>.value(value: playlist),
           ChangeNotifierProvider<EpgService>(create: (_) => _Epg(storage)),
           ChangeNotifierProvider<PlaybackService>.value(value: playback),
+          ChangeNotifierProvider<GoalsAlerts>(
+              create: (_) => GoalsAlerts(storage)),
+          ChangeNotifierProvider<GameReminders>(
+              create: (_) => GameReminders(storage)),
           ChangeNotifierProvider<ViewerProfileService>(
               create: (_) => ViewerProfileService(storage, playlist, playback)),
         ],
         child: MaterialApp(
-          navigatorObservers: [appRouteObserver],
+          navigatorObservers: [
+            appRouteObserver,
+            if (observer != null) observer
+          ],
           theme: RefinedFinish.apply(
               ThemeData(
                   colorScheme:
@@ -237,6 +282,221 @@ void main() {
     await tester.runAsync(
         () async => Future<void>.delayed(const Duration(milliseconds: 50)));
     await tester.pump(const Duration(seconds: 31));
+  }
+
+  Future<List<SportsGame>> matchedGames() async {
+    final games = [_game(100, GameState.live), _game(101, GameState.live)];
+    playlist.live = [
+      for (var i = 0; i < 2; i++)
+        Channel(
+            id: 'p1::$i',
+            rawId: '$i',
+            playlistId: 'p1',
+            name: 'Test Sports $i',
+            group: 'Sports',
+            url: 'https://test/$i'),
+    ];
+    final picks = SportsChannelPicks.load(storage);
+    for (var i = 0; i < games.length; i++) {
+      await picks.pickForGame(games[i], playlist.live[i].id);
+    }
+    return games;
+  }
+
+  for (final mode in [false, true]) {
+    testWidgets(
+        'first OK previews, next uses same stream full screen (mode=$mode)',
+        (tester) async {
+      await prefs.setSportsMode(mode);
+      final games = await matchedGames();
+      final routes = _PlayerRoutes();
+      await open(tester, games: games, observer: routes);
+      final card = find.byWidgetPredicate((w) =>
+          w is InkWell && w.focusNode?.debugLabel == 'sports-card-nhl:game100');
+      tester.widget<InkWell>(card).focusNode!.requestFocus();
+      await tester.pump();
+      expect(playback.plays, isEmpty); // focus only changes the matchup
+      await press(tester, LogicalKeyboardKey.select);
+      expect(playback.plays.map((c) => c.id), ['p1::0']);
+      expect(routes.channels, isEmpty);
+      await press(tester, LogicalKeyboardKey.select);
+      expect(routes.channels.map((c) => c.id), ['p1::0']);
+      expect(playback.plays, hasLength(1));
+      expect(tester.takeException(), isNull);
+      await disposePage(tester);
+    });
+  }
+
+  testWidgets('quick second and third OK wait for one opening session',
+      (tester) async {
+    final games = await matchedGames();
+    final routes = _PlayerRoutes();
+    playback.opening = Completer<void>();
+    await open(tester, games: games, observer: routes);
+    await press(tester, LogicalKeyboardKey.arrowRight);
+    await press(tester, LogicalKeyboardKey.select);
+    await press(tester, LogicalKeyboardKey.select);
+    await press(tester, LogicalKeyboardKey.select);
+    expect(playback.plays, hasLength(1));
+    expect(routes.channels, isEmpty);
+    playback.opening!.complete();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(routes.channels.map((c) => c.id), ['p1::0']);
+    expect(playback.plays, hasLength(1));
+    expect(tester.takeException(), isNull);
+    await disposePage(tester);
+  });
+
+  testWidgets('another feed game previews before going full screen',
+      (tester) async {
+    final games = await matchedGames();
+    final routes = _PlayerRoutes();
+    await open(tester, games: games, observer: routes);
+    await press(tester, LogicalKeyboardKey.arrowRight);
+    await press(tester, LogicalKeyboardKey.select);
+    await press(tester, LogicalKeyboardKey.arrowDown);
+    await press(tester, LogicalKeyboardKey.select);
+    expect(playback.plays.map((c) => c.id), ['p1::0', 'p1::1']);
+    expect(routes.channels, isEmpty);
+    await press(tester, LogicalKeyboardKey.select);
+    expect(routes.channels.map((c) => c.id), ['p1::1']);
+    expect(playback.plays, hasLength(2));
+    expect(tester.takeException(), isNull);
+    await disposePage(tester);
+  });
+
+  testWidgets('phone first tap previews without a focus-only extra tap',
+      (tester) async {
+    await prefs.setSportsMode(false);
+    prefs.isTelevision = false;
+    final games = await matchedGames();
+    final routes = _PlayerRoutes();
+    await open(tester,
+        games: games, observer: routes, size: const Size(390, 844));
+    var card = find.byWidgetPredicate((w) =>
+        w is InkWell && w.focusNode?.debugLabel == 'sports-card-nhl:game100');
+    await tester.ensureVisible(card);
+    await tester.tap(card);
+    await tester.pump();
+    expect(playback.plays.map((c) => c.id), ['p1::0']);
+    expect(routes.channels, isEmpty);
+    await tester.ensureVisible(card);
+    await tester.tap(card);
+    await tester.pump();
+    expect(routes.channels.map((c) => c.id), ['p1::0']);
+    expect(playback.plays, hasLength(1));
+    expect(tester.takeException(), isNull);
+    await disposePage(tester);
+  });
+
+  testWidgets('holding a matched game keeps the channel menu and does not play',
+      (tester) async {
+    final games = await matchedGames();
+    await open(tester, games: games);
+    final card = find.byWidgetPredicate((w) =>
+        w is InkWell && w.focusNode?.debugLabel == 'sports-card-nhl:game100');
+    await tester.longPress(card);
+    await tester.pumpAndSettle();
+    expect(find.byType(Dialog), findsOneWidget);
+    expect(find.text('On 1 channel'), findsOneWidget);
+    expect(playback.plays, isEmpty);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await disposePage(tester);
+  });
+
+  testWidgets('first OK without a match offers the existing game menu',
+      (tester) async {
+    await open(tester, games: [_game(100, GameState.live)]);
+    await press(tester, LogicalKeyboardKey.arrowRight);
+    await press(tester, LogicalKeyboardKey.select);
+    expect(find.byType(Dialog), findsOneWidget);
+    expect(find.text('Pick a channel'), findsWidgets);
+    expect(playback.plays, isEmpty);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await disposePage(tester);
+  });
+
+  testWidgets('My Teams watch opens a visible player from its own page',
+      (tester) async {
+    final games = await matchedGames();
+    final routes = _PlayerRoutes();
+    await open(tester, games: games, observer: routes);
+    await tester.tap(find.text('My Teams'));
+    await tester.pumpAndSettle();
+    final page =
+        tester.widget<SportsMyTeamsScreen>(find.byType(SportsMyTeamsScreen));
+    unawaited(page.onActivate(games.first,
+        [ChannelMatch(playlist.live.first, MatchReason.pick, 1000)]));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(routes.channels.map((c) => c.id), ['p1::0']);
+    expect(playback.plays, hasLength(1));
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await disposePage(tester);
+  });
+
+  testWidgets('See all live list retains its full-screen watch action',
+      (tester) async {
+    final games = await matchedGames();
+    final routes = _PlayerRoutes();
+    await open(tester, games: games, observer: routes);
+    await tester.tap(find.text('See all'));
+    await tester.pumpAndSettle();
+    final page =
+        tester.widget<SportsLiveListScreen>(find.byType(SportsLiveListScreen));
+    unawaited(page.onWatch(playlist.live.first));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(routes.channels.map((c) => c.id), ['p1::0']);
+    expect(playback.plays, hasLength(1));
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await disposePage(tester);
+  });
+
+  for (final mode in [false, true]) {
+    testWidgets('populated matchup stats fit TV large text (mode=$mode)',
+        (tester) async {
+      await prefs.setSportsMode(mode);
+      final games = await matchedGames();
+      final feed = _Feed(games,
+          summary: const SportsGameSummary(teamStats: [
+            ('Shots on goal', '18', '25'),
+            ('Hits', '16', '21'),
+            ('Power play percentage', '50%', '33%')
+          ]));
+      await open(tester, games: games, feed: feed, scale: 1.3);
+      final card = find.byWidgetPredicate((w) =>
+          w is InkWell && w.focusNode?.debugLabel == 'sports-card-nhl:game100');
+      tester.widget<InkWell>(card).focusNode!.requestFocus();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 351));
+      await tester.pump();
+      expect(find.text('A100 18 · H100 25'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      if (Platform.environment['SPORTS_MODE_PREVIEW'] == '1') {
+        await tester.runAsync(() async {
+          final view =
+              tester.renderObject<RenderRepaintBoundary>(find.byKey(boundary));
+          final image = await view.toImage();
+          final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+          await File('build/sports-matchup-$mode.png')
+              .writeAsBytes(bytes!.buffer.asUint8List());
+          image.dispose();
+        });
+      }
+      await press(tester, LogicalKeyboardKey.select);
+      expect(tester.takeException(), isNull);
+      await disposePage(tester);
+    });
   }
 
   test('Sports Mode is opt-in per viewer and survives reopening', () async {
@@ -292,15 +552,279 @@ void main() {
     await tester.pump();
     await tester.sendKeyUpEvent(LogicalKeyboardKey.select);
     await tester.pump();
-    await press(tester, LogicalKeyboardKey.arrowRight);
+    await press(tester, LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('sports-mode-rail')), findsNothing);
+    expect(find.byKey(const ValueKey('league:eng.1')).hitTestable(),
+        findsOneWidget);
     expect(storage.getSportsLeagues()![5], 'eng.1');
     expect(getFocus(), 'sports-chip-league:eng.1');
     await press(tester, LogicalKeyboardKey.arrowLeft);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('sports-mode-rail')), findsOneWidget);
+    expect(find.byKey(const ValueKey('sports-mode-league:eng.1')).hitTestable(),
+        findsOneWidget);
     expect(storage.getSportsLeagues()![4], 'eng.1');
     expect(getFocus(), 'sports-chip-league:eng.1');
     await press(tester, LogicalKeyboardKey.select);
     await press(tester, LogicalKeyboardKey.arrowUp);
     expect(getFocus(), 'sports-chip-league:mlb');
+    expect(tester.takeException(), isNull);
+    await disposePage(tester);
+  });
+
+  const college = 'basketball.mens-college-basketball';
+  const collegeLabel = "NCAA Men's Basketball";
+
+  Future<void> holdSelect(WidgetTester tester) async {
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.select);
+    await tester.pump(const Duration(milliseconds: 650));
+    await tester.sendKeyRepeatEvent(LogicalKeyboardKey.select);
+    await tester.pump();
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+  }
+
+  SportsChip chip(WidgetTester tester, String label) => tester
+      .widgetList<SportsChip>(find.byType(SportsChip))
+      .firstWhere((widget) => widget.label == label);
+
+  Future<void> manyLeagues() async {
+    await storage.setSportsAddedLeagues([college]);
+    await storage.setSportsLeagues([
+      for (final league in kSportsLeagues) league.id,
+      college,
+    ]);
+  }
+
+  testWidgets(
+      'vertical league reorder follows Up/Down and consumes horizontal keys',
+      (tester) async {
+    await open(tester, games: []);
+    await press(tester, LogicalKeyboardKey.arrowDown);
+    expect(getFocus(), 'sports-chip-league:nfl');
+    await holdSelect(tester);
+    expect(find.byIcon(Icons.swap_vert), findsOneWidget);
+    final before = List<String>.of(storage.getSportsLeagues()!);
+    await press(tester, LogicalKeyboardKey.arrowLeft);
+    await press(tester, LogicalKeyboardKey.arrowRight);
+    expect(storage.getSportsLeagues(), before);
+    expect(getFocus(), 'sports-chip-league:nfl');
+    await press(tester, LogicalKeyboardKey.arrowUp);
+    expect(storage.getSportsLeagues()!.first, 'nfl');
+    await press(tester, LogicalKeyboardKey.arrowDown);
+    expect(storage.getSportsLeagues(), before);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowDown);
+    await tester.sendKeyRepeatEvent(LogicalKeyboardKey.arrowDown);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(storage.getSportsLeagues()![3], 'nfl');
+    expect(getFocus(), 'sports-chip-league:nfl');
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.swap_vert), findsNothing);
+    expect(find.text('Stay'), findsNothing);
+    await disposePage(tester);
+  });
+
+  for (final size in [const Size(390, 844), const Size(700, 600)]) {
+    testWidgets(
+        'horizontal league strip uses Left/Right with matching indicator at $size',
+        (tester) async {
+      await open(tester, games: [], size: size);
+      await holdSelect(tester);
+      expect(find.byIcon(Icons.swap_horiz), findsOneWidget);
+      expect(find.byIcon(Icons.swap_vert), findsNothing);
+      final before = List<String>.of(storage.getSportsLeagues()!);
+      await press(tester, LogicalKeyboardKey.arrowDown);
+      await press(tester, LogicalKeyboardKey.arrowUp);
+      expect(storage.getSportsLeagues(), before);
+      await press(tester, LogicalKeyboardKey.arrowRight);
+      expect(storage.getSportsLeagues()![1], before.first);
+      await press(tester, LogicalKeyboardKey.arrowLeft);
+      expect(storage.getSportsLeagues(), before);
+      await press(tester, LogicalKeyboardKey.select);
+      expect(find.byIcon(Icons.swap_horiz), findsNothing);
+      expect(tester.takeException(), isNull);
+      await disposePage(tester);
+    });
+  }
+
+  testWidgets('reorder adapts its axis when the layout changes orientation',
+      (tester) async {
+    await open(tester, games: []);
+    await press(tester, LogicalKeyboardKey.arrowDown);
+    await holdSelect(tester);
+    tester.view.physicalSize = const Size(390, 844);
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.swap_horiz), findsOneWidget);
+    await press(tester, LogicalKeyboardKey.arrowRight);
+    expect(storage.getSportsLeagues()![2], 'nfl');
+    tester.view.physicalSize = const Size(960, 540);
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.swap_vert), findsOneWidget);
+    expect(find.byKey(const ValueKey('sports-mode-rail')), findsOneWidget);
+    await press(tester, LogicalKeyboardKey.arrowUp);
+    expect(storage.getSportsLeagues()![1], 'nfl');
+    await press(tester, LogicalKeyboardKey.select);
+    expect(tester.takeException(), isNull);
+    await disposePage(tester);
+  });
+
+  testWidgets(
+      'promoted college league stays visible and Back remembers its new rail position',
+      (tester) async {
+    await storage.setSportsAddedLeagues([college]);
+    await storage
+        .setSportsLeagues(['nhl', 'nfl', 'nba', 'eng.1', 'mlb', college]);
+    await open(tester, games: []);
+    await press(tester, LogicalKeyboardKey.arrowRight);
+    expect(getFocus(), 'sports-chip-league:all');
+    await press(tester, LogicalKeyboardKey.arrowRight);
+    expect(getFocus(), 'sports-chip-league:$college');
+    await holdSelect(tester);
+    await press(tester, LogicalKeyboardKey.arrowLeft);
+    await tester.pumpAndSettle();
+    expect(storage.getSportsLeagues()![4], college);
+    expect(storage.getSportsLeagues()![5], 'mlb');
+    expect(find.byKey(const ValueKey('sports-mode-rail')), findsOneWidget);
+    expect(
+        find
+            .byKey(const ValueKey(
+                'sports-mode-league:basketball.mens-college-basketball'))
+            .hitTestable(),
+        findsOneWidget);
+    expect(getFocus(), 'sports-chip-league:$college');
+    // Finish with Back, leave the rail, then return with Back: parent focus
+    // state and the remembered rail entry must match the reparented node.
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('Stay'), findsNothing);
+    await press(tester, LogicalKeyboardKey.arrowRight);
+    expect(find.byKey(const ValueKey('sports-mode-rail')), findsNothing);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(getFocus(), 'sports-chip-league:$college');
+    expect(find.byKey(const ValueKey('sports-mode-rail')), findsOneWidget);
+    expect(find.text('Stay'), findsNothing);
+    expect(storage.getSportsLeagues(), containsAll(['mlb', college]));
+    await disposePage(tester);
+  });
+
+  testWidgets(
+      'Sports Mode All dropdown exposes quiet and offscreen leagues and restores focus',
+      (tester) async {
+    await manyLeagues();
+    await storage.setSportsFavoriteLeague('mlb');
+    final feed = _Feed([]);
+    await open(tester, feed: feed);
+    final target =
+        find.byKey(const ValueKey('league:basketball.mens-college-basketball'));
+    expect(tester.getRect(target).left, greaterThan(960));
+    final all = chip(tester, 'All');
+    expect(
+        find.descendant(
+            of: find.byWidget(all), matching: find.byIcon(Icons.expand_more)),
+        findsOneWidget);
+    all.focusNode.requestFocus();
+    await tester.pumpAndSettle();
+    await press(tester, LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    expect(find.text('Your leagues'), findsOneWidget);
+    expect(find.text('All leagues'), findsOneWidget);
+    expect(find.text('No games'), findsWidgets);
+    final pick = find.text(collegeLabel).last;
+    await tester.ensureVisible(pick);
+    await tester.pumpAndSettle();
+    await tester.tap(pick);
+    await tester.pumpAndSettle();
+    expect(feed.requests.last, [college]);
+    expect(chip(tester, collegeLabel).selected, isTrue);
+    expect(getFocus(), 'sports-chip-league:all');
+    expect(storage.getSportsLeagues(), containsAll(['mlb', college]));
+    // Hold remains an alternate way to open the same menu; cancellation
+    // must not clear the selected league or strand focus in the dialog.
+    await holdSelect(tester);
+    expect(find.text('Your leagues'), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(chip(tester, collegeLabel).selected, isTrue);
+    expect(getFocus(), 'sports-chip-league:all');
+    await press(tester, LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    final clear = find.text('All leagues');
+    await tester.ensureVisible(clear);
+    await tester.pumpAndSettle();
+    await tester.tap(clear);
+    await tester.pumpAndSettle();
+    expect(feed.requests.last, containsAll(['mlb', college]));
+    expect(chip(tester, 'All').selected, isTrue);
+    expect(getFocus(), 'sports-chip-league:all');
+    expect(tester.takeException(), isNull);
+    await disposePage(tester);
+  });
+
+  testWidgets(
+      'league manager can add college without hiding MLB and dropdown can select it',
+      (tester) async {
+    await storage
+        .setSportsLeagues([for (final league in kSportsLeagues) league.id]);
+    await storage.setSportsFavoriteLeague('mlb');
+    final feed = _Feed([]);
+    await open(tester, feed: feed);
+    chip(tester, 'Edit leagues').focusNode.requestFocus();
+    await tester.pumpAndSettle();
+    await press(tester, LogicalKeyboardKey.select);
+    expect(find.byType(SportsLeagueManagerScreen), findsOneWidget);
+    await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('bank:basketball.mens-college-basketball')),
+        400,
+        scrollable: find.byType(Scrollable).last,
+        maxScrolls: 150);
+    await tester.tap(
+        find.byKey(const ValueKey('bank:basketball.mens-college-basketball')));
+    await tester.pumpAndSettle();
+    expect(storage.getSportsLeagues(),
+        containsAll([for (final l in kSportsLeagues) l.id, college]));
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    chip(tester, 'All').focusNode.requestFocus();
+    await tester.pumpAndSettle();
+    await press(tester, LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    final choice = find.text(collegeLabel).last;
+    await tester.ensureVisible(choice);
+    await tester.pumpAndSettle();
+    await tester.tap(choice);
+    await tester.pumpAndSettle();
+    expect(feed.requests.last, [college]);
+    expect(storage.getSportsLeagues(), containsAll(['mlb', college]));
+    await disposePage(tester);
+  });
+
+  testWidgets('regular Sports Trak keeps All tap and horizontal league reorder',
+      (tester) async {
+    await prefs.setSportsMode(false);
+    await storage.setSportsFavoriteLeague('mlb');
+    final feed = _Feed([]);
+    await open(tester, feed: feed);
+    chip(tester, 'All').focusNode.requestFocus();
+    await tester.pumpAndSettle();
+    await press(tester, LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    expect(find.text('Your leagues'), findsNothing);
+    expect(chip(tester, 'All').selected, isTrue);
+    expect(feed.requests.last, containsAll(['mlb', 'nhl']));
+    await holdSelect(tester);
+    expect(find.text('Your leagues'), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    chip(tester, 'NFL').focusNode.requestFocus();
+    await tester.pumpAndSettle();
+    await holdSelect(tester);
+    await press(tester, LogicalKeyboardKey.arrowLeft);
+    expect(storage.getSportsLeagues()!.first, 'nfl');
+    await press(tester, LogicalKeyboardKey.select);
     expect(tester.takeException(), isNull);
     await disposePage(tester);
   });

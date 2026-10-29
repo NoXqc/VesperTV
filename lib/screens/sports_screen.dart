@@ -19,9 +19,9 @@ import '../widgets/game_score_alert_menu_tile.dart';
 import '../widgets/game_reminder_timing_menu.dart';
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -53,6 +53,7 @@ import '../widgets/roll_down_menu.dart';
 import '../widgets/live_resume_hint.dart';
 import '../widgets/player_controls.dart';
 import '../widgets/rec_cue.dart';
+import '../widgets/sports_matchup_stats.dart';
 import '../widgets/settings_scaffold.dart';
 import '../widgets/sports_widgets.dart';
 import '../widgets/tv_menu_tile.dart';
@@ -65,6 +66,10 @@ import 'sports_my_teams_screen.dart';
 import 'sports_league_manager_screen.dart';
 import 'sports_standings_screen.dart';
 import '../l10n/l10n.dart';
+
+// Keep UI and playback routing on the same Flutter target. This also lets
+// Android widget tests on a Windows development PC exercise the TV path.
+bool get _desktopSports => defaultTargetPlatform == TargetPlatform.windows;
 
 /// Sports: today's games across the user's leagues with logos, records,
 /// live scores and the IPTV channel each game is on (see
@@ -162,9 +167,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   SportsGame? _previewGame;
   Channel? _previewChannel;
 
-  /// OK on another card while the hero plays: that game's score/details
-  /// show beside the still-playing video, nothing new plays (owner,
-  /// 2026-10-17). ▶❚❚ then plays it; Back returns to the playing game.
+  /// Focusing another card shows its details beside the still-playing video.
+  /// OK previews it; Back returns to the playing game's information.
   /// Cleared by any [_setPreview].
   SportsGame? _heroPick;
 
@@ -210,6 +214,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   /// Preview starts/stops run one at a time (see [_setPreview]).
   Future<void> _previewChain = Future.value();
+  Completer<void>? _previewOpened;
+  bool _fullScreenPending = false;
   int _previewSeq = 0;
 
   /// The "Hold > to resume" pill covered the cards and Standings' table;
@@ -235,7 +241,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     _showResumeHint = LiveResumeHint.hideWhileMounted();
     FocusManager.instance.addListener(_rememberModeControlFocus);
     // Windows: the hero plays through DesktopMiniPlayer, not PlaybackService.
-    if (Platform.isWindows) {
+    if (_desktopSports) {
       DesktopMiniPlayer.instance.channel.addListener(_onMiniPlayerChanged);
     }
     _storage = context.read<StorageService>();
@@ -280,7 +286,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     _previewSeq++;
     appRouteObserver.unsubscribe(this);
     FocusManager.instance.removeListener(_rememberModeControlFocus);
-    if (Platform.isWindows) {
+    if (_desktopSports) {
       DesktopMiniPlayer.instance.channel.removeListener(_onMiniPlayerChanged);
     }
     _showResumeHint();
@@ -678,13 +684,13 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   Future<void> _openLiveList() async {
     await Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => SportsLiveListScreen(
+      builder: (pageContext) => SportsLiveListScreen(
         leagues: _shownLeagues,
         day: _day,
         follows: _follows,
         hideScores: _hideScores,
         matchGames: _matchGames,
-        onWatch: (channel) => _play(channel),
+        onWatch: (channel) => _play(channel, source: pageContext),
         onMenu: (game, matches, watch) => _openGame(game, matches, watch),
         initialGames: _games,
         initialMatches: _matches,
@@ -723,7 +729,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   /// A phone (touch, no remote): the whole page scrolls (see [build]).
   bool get _touch =>
-      Platform.isAndroid && !context.read<AppPreferences>().isTelevision;
+      defaultTargetPlatform == TargetPlatform.android &&
+      !context.read<AppPreferences>().isTelevision;
 
   /// Portrait phone: the hero stacks and the side padding shrinks.
   bool get _narrow => MediaQuery.sizeOf(context).width < 600;
@@ -745,7 +752,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   // -------------------------------------------------------------- actions
 
-  /// Hold OK on "All": every league in the bar, each with its game / live
+  /// Sports Mode's All dropdown (hold All in regular Sports Trak): every
+  /// enabled league, including sidebar/off-screen ones, with its game / live
   /// counts for the day shown — pick one to
   /// filter to it (owner, 2026-10-22). With a league filter on, only its
   /// games are loaded, so the day is fetched for every league (cached).
@@ -902,13 +910,14 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   Future<void> _openStandings() async {
     await Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => SportsStandingsScreen(
+      builder: (pageContext) => SportsStandingsScreen(
         leagues: _leagues,
         initialLeague: sportsLeagueById(_leagueFilter ?? '') ?? _leagues.first,
         follows: _follows,
         hideScores: _hideScores,
         matchGames: _matchGames,
-        onActivate: _activateGame,
+        onActivate: (game, matches) =>
+            _activateFromPage(pageContext, game, matches),
         onMenu: _openGame,
       ),
     ));
@@ -916,12 +925,13 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   Future<void> _openMyTeams() async {
     await Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => SportsMyTeamsScreen(
+      builder: (pageContext) => SportsMyTeamsScreen(
         leagues: _leagues,
         follows: _follows,
         hideScores: _hideScores,
         matchGames: _matchGames,
-        onActivate: _activateGame,
+        onActivate: (game, matches) =>
+            _activateFromPage(pageContext, game, matches),
         onMenu: _openGame,
       ),
     ));
@@ -938,29 +948,42 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     return _matcher.matchDay(games, _picks);
   }
 
-  /// OK on a card: straight to the stream when a channel is matched (your
-  /// pick ranks first), otherwise the menu so one can be picked. Holding OK
-  /// always opens the menu (other channels / pick / forget) — owner: OK
-  /// popping the menu even with a channel assigned was one press too many.
-  /// [matches] = My Teams' own (its games aren't all on the shown day).
+  /// Focus shows the matchup; a first activation starts its matched stream in
+  /// the hero and another opens that same session full screen. Hold stays menu.
   Future<void> _activateGame(SportsGame game,
       [List<ChannelMatch>? matches]) async {
+    if (_previewRequested(game)) {
+      return _play(_previewChannel!, game: game);
+    }
     final best = (matches ?? _matches[_gameKey(game)])?.firstOrNull;
     if (best == null) return _openGame(game, matches);
-    // OK on the game already playing in the hero: fullscreen on that same
-    // stream (it may be a channel picked from the menu, not the best one).
-    if (_isPreviewing(game)) return _play(_previewChannel!, game: game);
-    // Another game while one plays: show it beside the video, keep playing.
-    if (!_touch && _livePreview(context.read<PlaybackService>()) != null) {
-      setState(() => _heroPick = game);
-      return;
-    }
-    // Otherwise OK only selects: a card shows in the hero, nothing plays
-    // until ▶❚❚ (owner, 2026-10-18: OK went straight to full screen). A
-    // phone has no ▶❚❚, so its second tap (the first one focuses, see
-    // _GameCard) plays the game in the hero; Windows the same (second
-    // click, or Enter on the focused card).
-    if (_touch || Platform.isWindows) await _setPreview(game, best.channel);
+    await _setPreview(game, best.channel);
+  }
+
+  // Schedule pages have no mini-player surface. Keep their watch action
+  // visible by opening the player on that page, reusing an existing preview.
+  Future<void> _activateFromPage(
+      BuildContext page, SportsGame game, List<ChannelMatch>? matches) async {
+    final best = matches?.firstOrNull;
+    if (best == null) return _openGame(game, matches);
+    await _play(best.channel, game: game, source: page);
+  }
+
+  bool _previewRequested(SportsGame game) =>
+      _previewGame != null &&
+      _previewChannel != null &&
+      _gameKey(_previewGame!) == _gameKey(game) &&
+      (_previewOpened?.isCompleted == false || _isPreviewing(game));
+
+  void _focusGame(SportsGame game) {
+    setState(() {
+      _heroGame = game;
+      // Looking at another card changes information, never the playing stream.
+      _heroPick = _livePreview(context.read<PlaybackService>()) != null &&
+              !_isPreviewing(game)
+          ? game
+          : null;
+    });
   }
 
   /// A channel chosen from the game's menu plays in the hero (OK there =
@@ -970,7 +993,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   /// What plays now: Windows' mini player (DesktopPlayerScreen hands a live
   /// channel to it on Back), else PlaybackService.
-  static Channel? _playingNow(PlaybackService playback) => Platform.isWindows
+  static Channel? _playingNow(PlaybackService playback) => _desktopSports
       ? DesktopMiniPlayer.instance.channel.value
       : playback.currentChannel;
 
@@ -1054,37 +1077,67 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         }
       });
     }
+    final opened = Completer<void>();
+    _previewOpened = opened;
     return _previewChain = _previewChain.then((_) async {
-      if (seq != _previewSeq) return;
-      if (Platform.isWindows) {
-        // DesktopMiniPlayer reuses one Player (opening a new stream on it),
-        // so nothing overlaps; it records what DesktopPlayerScreen would.
-        final mini = DesktopMiniPlayer.instance;
-        if (channel == null) {
-          if (stopId != null && mini.channel.value?.id == stopId) mini.clear();
+      try {
+        if (seq != _previewSeq) return;
+        if (_desktopSports) {
+          final mini = DesktopMiniPlayer.instance;
+          if (channel == null) {
+            if (stopId != null && mini.channel.value?.id == stopId) {
+              mini.clear();
+            }
+          } else {
+            mini.play(channel);
+            unawaited(storage.setLastChannelId(channel.id));
+            unawaited(playback.recordWatched(channel));
+          }
           return;
         }
-        mini.play(channel);
-        unawaited(storage.setLastChannelId(channel.id));
-        playback.recordWatched(channel);
-        return;
-      }
-      try {
         if (channel == null) {
-          // Only what the hero itself was playing.
           if (stopId != null && playback.currentChannel?.id == stopId) {
             await playback.stop();
           }
           return;
         }
         await playback.play(channel);
-        if (!waitReady) return;
-        await playback.initFuture
-            ?.timeout(const Duration(seconds: 10), onTimeout: () {});
+        // Full screen may reuse the opening session without waiting for the
+        // separate ready/buffering reserve or issuing another play request.
+        opened.complete();
+        if (waitReady) {
+          await playback.initFuture
+              ?.timeout(const Duration(seconds: 10), onTimeout: () {});
+        }
       } catch (_) {
-        // play() reports its own errors; keep the chain alive.
+        // The playback services report their own errors; keep the chain alive.
+      } finally {
+        if (!opened.isCompleted) opened.complete();
       }
     });
+  }
+
+  Future<bool> _ensurePreviewForFullScreen(
+      Channel channel, SportsGame? game) async {
+    final sameRequest = _previewChannel?.id == channel.id &&
+        (game == null ||
+            _previewGame != null &&
+                _gameKey(_previewGame!) == _gameKey(game)) &&
+        (_previewOpened?.isCompleted == false ||
+            _playingNow(context.read<PlaybackService>())?.id == channel.id);
+    if (!sameRequest) {
+      final pending = _setPreview(game, channel, waitReady: false);
+      final seq = _previewSeq;
+      await pending;
+      return mounted && seq == _previewSeq;
+    }
+    final seq = _previewSeq;
+    setState(() {
+      _heroPick = null;
+      _modeBrowsing = false;
+    });
+    await _previewOpened?.future;
+    return mounted && seq == _previewSeq;
   }
 
   /// [watch]: how a chosen channel plays — the hero by default; the live
@@ -1341,52 +1394,74 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   /// reconnect — the hero's VideoPlayerPane stays under the player the same
   /// way the TV guide's preview box does).
   Future<void> _play(Channel channel,
-      {SportsGame? game, bool keepPreview = false}) async {
-    // Same split as SearchScreen._openChannel: Windows has its own player.
-    // A game takes the hero's session full screen (no reconnect); Back
-    // there hands it back to DesktopMiniPlayer, i.e. the hero again.
-    if (Platform.isWindows) {
-      final mini = DesktopMiniPlayer.instance;
-      (Player, VideoController)? session;
+      {SportsGame? game,
+      bool keepPreview = false,
+      BuildContext? source}) async {
+    if (_fullScreenPending) return;
+    _fullScreenPending = true;
+    final origin = source ?? context;
+    try {
+      // Same split as SearchScreen._openChannel: Windows has its own player.
+      // A game takes the hero's session full screen (no reconnect); Back
+      // there hands it back to DesktopMiniPlayer, i.e. the hero again.
+      if (_desktopSports) {
+        final mini = DesktopMiniPlayer.instance;
+        (Player, VideoController)? session;
+        if (game != null || keepPreview) {
+          if (!await _ensurePreviewForFullScreen(channel, game)) return;
+          if (!mounted ||
+              _previewChannel?.id != channel.id ||
+              !origin.mounted ||
+              (source == null &&
+                  !(ModalRoute.of(origin)?.isCurrent ?? false))) {
+            return;
+          }
+          if (mini.channel.value?.id == channel.id) session = mini.take();
+        } else {
+          _previewSeq++;
+          setState(() {
+            _previewGame = null;
+            _previewChannel = null;
+          });
+          mini.clear();
+        }
+        await Navigator.of(origin).push(MaterialPageRoute(
+            builder: (_) => DesktopPlayerScreen(
+                  channel: channel,
+                  existingPlayer: session?.$1,
+                  existingController: session?.$2,
+                )));
+        _refocusAfterFeed();
+        return;
+      }
       if (game != null || keepPreview) {
-        await _setPreview(game, channel, waitReady: false);
-        if (!mounted) return;
-        if (mini.channel.value?.id == channel.id) session = mini.take();
+        if (!await _ensurePreviewForFullScreen(channel, game)) return;
       } else {
+        // RedZone: not a game; the hero goes back to normal and a preview
+        // still waiting in the chain is skipped.
         _previewSeq++;
         setState(() {
           _previewGame = null;
           _previewChannel = null;
         });
-        mini.clear();
+        await _previewChain;
+        if (!mounted) return;
+        await context.read<PlaybackService>().play(channel);
       }
-      await Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => DesktopPlayerScreen(
-                channel: channel,
-                existingPlayer: session?.$1,
-                existingController: session?.$2,
-              )));
+      if (!mounted ||
+          !origin.mounted ||
+          (source == null && !(ModalRoute.of(origin)?.isCurrent ?? false))) {
+        return;
+      }
+      if ((game != null || keepPreview) && _previewChannel?.id != channel.id) {
+        return;
+      }
+      await Navigator.of(origin).push(
+          MaterialPageRoute(builder: (_) => PlayerScreen(channel: channel)));
       _refocusAfterFeed();
-      return;
+    } finally {
+      _fullScreenPending = false;
     }
-    if (game != null || keepPreview) {
-      await _setPreview(game, channel, waitReady: false);
-    } else {
-      // RedZone: not a game; the hero goes back to normal and a preview
-      // still waiting in the chain is skipped.
-      _previewSeq++;
-      setState(() {
-        _previewGame = null;
-        _previewChannel = null;
-      });
-      await _previewChain;
-      if (!mounted) return;
-      await context.read<PlaybackService>().play(channel);
-    }
-    if (!mounted) return;
-    await Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => PlayerScreen(channel: channel)));
-    _refocusAfterFeed();
   }
 
   /// Back from full screen on another channel ends the preview, and with
@@ -1406,7 +1481,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final mode = context.watch<AppPreferences>().sportsMode;
     final channelPage = SportsChannelsScreen(
       // What the Games hero plays carries into Networks' hero.
-      initialPreview: Platform.isWindows
+      initialPreview: _desktopSports
           ? DesktopMiniPlayer.instance.channel.value
           : (_livePreview(context.read<PlaybackService>()) != null
               ? _previewChannel
@@ -1417,9 +1492,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     );
     final sections = _sections;
     final preview = _livePreview(context.watch<PlaybackService>());
-    // While a game plays in the hero it stays there, whatever is focused —
-    // unless OK picked another card ([_heroPick]): its details beside the
-    // same video. Re-read from the latest scores.
+    // Focus can show another matchup beside the same video. Re-read its
+    // information from the latest scoreboard without changing the stream.
     final pickKey = _heroPick == null ? null : _gameKey(_heroPick!);
     final pick = preview == null ||
             pickKey == null ||
@@ -1429,6 +1503,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final hero = pick ?? preview ?? _heroGame;
     Widget heroWidget({double? playingHeight, _HeroPart? part}) => _Hero(
           game: hero!,
+          service: _service,
           matches: _matches[_gameKey(hero)],
           matching: _matching,
           hideScores: _hideScores,
@@ -1440,7 +1515,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           part: part,
           // Tap/click the playing video = full screen on the same stream
           // (owner, 2026-10-18); a remote keeps OK.
-          onVideoTap: (_touch || Platform.isWindows) &&
+          onVideoTap: (_touch || _desktopSports) &&
                   _previewGame != null &&
                   _previewChannel != null
               ? () => _play(_previewChannel!, game: _previewGame)
@@ -1675,7 +1750,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     // Multiview runs its own players: no other stream may keep playing
     // underneath (same as the Live TV column's Multiview row).
     if (stopPlayback) {
-      if (Platform.isWindows) {
+      if (_desktopSports) {
         DesktopMiniPlayer.instance.clear();
       } else {
         await context.read<PlaybackService>().stop();
@@ -1686,7 +1761,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     if (!mounted) return;
     // A closed destination has no video surface on the sports home. Release
     // its player instead of leaving an unseen stream consuming a connection.
-    if (Platform.isWindows) {
+    if (_desktopSports) {
       DesktopMiniPlayer.instance.clear();
     } else {
       await context.read<PlaybackService>().stop();
@@ -1724,14 +1799,14 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   /// OK on a guide channel: full screen (the hero's game preview ends: one
   /// stream), Back returns to the panel as it was. CH+/- walk the guide.
   Future<void> _playLive(Channel channel, List<Channel> list) async {
-    if (!Platform.isWindows) {
+    if (!_desktopSports) {
       context.read<PlaybackService>().zapList = list;
     }
     await _play(channel);
     if (!mounted) return;
     // Nothing shows the channel on the sports home: release its connection.
     if (_previewChannel == null) {
-      if (Platform.isWindows) {
+      if (_desktopSports) {
         DesktopMiniPlayer.instance.clear();
       } else {
         await context.read<PlaybackService>().stop();
@@ -1762,7 +1837,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
             ));
     _exitPromptOpen = false;
     if (exit == true && mounted) {
-      if (Platform.isWindows) {
+      if (_desktopSports) {
         await windowManager.close();
       } else {
         await SystemNavigator.pop();
@@ -1837,10 +1912,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   /// OK on a feed row: the game plays in the big video (OK on the playing
   /// one = full screen); no channel yet = its menu.
   Future<void> _watchFeedGame(SportsGame game) async {
-    if (_isPreviewing(game)) return _play(_previewChannel!, game: game);
-    final best = _matches[_gameKey(game)]?.firstOrNull;
-    if (best == null) return _openGame(game);
-    await _setPreview(game, best.channel);
+    await _activateGame(game);
   }
 
   /// Hold OK on a feed row: its stats, as from the player's side panel.
@@ -2086,7 +2158,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
               'multiview',
               tr('Multiview'),
               Icons.grid_view,
-              Platform.isWindows
+              _desktopSports
                   ? const DesktopMultiviewScreen()
                   : const MultiviewScreen(),
               stopPlayback: true),
@@ -2123,7 +2195,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         if (!prefs.hideArchive)
           app('hub', tr('Media Hub'), Icons.explore_outlined,
               const ArchiveScreen()),
-        if (!Platform.isWindows && !prefs.hideRecordings)
+        if (!_desktopSports && !prefs.hideRecordings)
           app('recordings', tr('Recordings'), Icons.fiber_manual_record,
               const RecordingsScreen()),
         if (!prefs.hideProfiles)
@@ -2232,18 +2304,20 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   }
 
   List<Widget> _leagueControls({bool mode = false}) => [
-        // Hold OK: the day's leagues in a roll-down menu.
+        // Sports Mode makes the existing menu visible and one press away.
+        // Regular Sports Trak retains short OK = All, hold OK = league menu.
         HoldToActivate(
           key: const ValueKey('league:all'),
-          onTap: () => _setLeagueFilter(null),
+          onTap: mode ? _openLeagueMenu : () => _setLeagueFilter(null),
           onHold: _movingLeague == null ? _openLeagueMenu : null,
           child: SportsChip(
             focusNode: _chipNode('league:all'),
             enabled: _movingLeague == null,
             label: tr('All'),
+            dropdown: mode,
             selected: _leagueFilter == null,
             onFocus: () => _zone = 0,
-            onTap: () => _setLeagueFilter(null),
+            onTap: mode ? _openLeagueMenu : () => _setLeagueFilter(null),
           ),
         ),
         for (final l in _leagues.skip(mode ? 5 : 0))
@@ -2683,10 +2757,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   Widget _buildSection(_Section s, SportsGame? preview) {
     final cardHeight = _GameCard.height *
-        (_modeActive
-            ? (MediaQuery.textScalerOf(context).scale(14) / 14)
-                .clamp(1.0, double.infinity)
-            : 1);
+        (MediaQuery.textScalerOf(context).scale(14) / 14)
+            .clamp(1.0, double.infinity);
     final rowKey = _rowKeys[s.id] ??= GlobalKey();
     final zoneIndex = _firstRowZone + _sections.indexWhere((x) => x.id == s.id);
     return Padding(
@@ -2777,7 +2849,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                           _zone = zoneIndex;
                           _lastCardInRow[s.id] = _gameKey(g);
                           _ensureRowVisible(s.id);
-                          if (_heroGame != g) setState(() => _heroGame = g);
+                          if (_heroGame != g || _heroPick != null) {
+                            _focusGame(g);
+                          }
                         },
                         onTap: () => _activateGame(g),
                         onHold: () => _openGame(g),
@@ -3333,6 +3407,7 @@ enum _HeroPart { info, video }
 class _Hero extends StatelessWidget {
   const _Hero({
     required this.game,
+    required this.service,
     required this.matches,
     required this.matching,
     required this.hideScores,
@@ -3362,6 +3437,7 @@ class _Hero extends StatelessWidget {
   static const double height = 168;
 
   final SportsGame game;
+  final SportsService service;
   final List<ChannelMatch>? matches;
   final bool matching;
   final bool hideScores;
@@ -3385,18 +3461,32 @@ class _Hero extends StatelessWidget {
       return _EventHero(
           game: game, center: _center(context, false), hideScores: hideScores);
     }
-    if (narrow) return _narrowInfo(context, showScore);
+    if (narrow) {
+      return Column(mainAxisSize: MainAxisSize.min, children: [
+        _narrowInfo(context, showScore),
+        _stats(),
+      ]);
+    }
     return SizedBox(
-      height: 168,
-      child: Row(
-        children: [
-          Expanded(child: _side(context, game.first, alignEnd: false)),
+      height: height,
+      child: Column(children: [
+        Expanded(
+            child: Row(children: [
+          Expanded(
+              child:
+                  _side(context, game.first, alignEnd: false, compact: true)),
           SizedBox(width: 230, child: _center(context, showScore)),
-          Expanded(child: _side(context, game.second, alignEnd: true)),
-        ],
-      ),
+          Expanded(
+              child:
+                  _side(context, game.second, alignEnd: true, compact: true)),
+        ])),
+        _stats(compact: true),
+      ]),
     );
   }
+
+  Widget _stats({bool compact = false}) => SportsMatchupStats(
+      game: game, service: service, hideScores: hideScores, compact: compact);
 
   /// The playing hero. Rules from the platform-view bugs (CLAUDE.md §10,
   /// LiveResumeHint, PlayerControls):
@@ -3413,11 +3503,11 @@ class _Hero extends StatelessWidget {
   ///   gold frame is a border around it.
   Widget _buildPlaying(BuildContext context, bool showScore) {
     final scheme = Theme.of(context).colorScheme;
-    final playingChannel = Platform.isWindows
+    final playingChannel = _desktopSports
         ? DesktopMiniPlayer.instance.channel.value
         : context.read<PlaybackService>().currentChannel;
     final miniController =
-        Platform.isWindows ? DesktopMiniPlayer.instance.controller : null;
+        _desktopSports ? DesktopMiniPlayer.instance.controller : null;
     // The channel named under the score: the picked game's own match, not
     // the stream still playing.
     final channel = showingOther ? null : playingChannel;
@@ -3480,18 +3570,23 @@ class _Hero extends StatelessWidget {
           ),
         ));
     final hint = _KeyHintText(
-        touch
-            ? tr('Tap the game again: full screen  ·  Back: stop')
-            : Platform.isWindows && !showingOther
-                ? tr('Click the game again or Enter: full screen  ·  Esc: stop')
-                : showingOther
-                    ? tr('▶❚❚: watch this game  ·  Back: playing game')
+        showingOther
+            ? touch
+                ? tr('Tap: watch here  ·  Hold: pick the channel')
+                : _desktopSports
+                    ? tr('Click: watch here  ·  Hold: pick the channel')
+                    : tr('OK: watch here  ·  Hold: pick the channel')
+            : touch
+                ? tr('Tap the game again: full screen  ·  Back: stop')
+                : _desktopSports
+                    ? tr(
+                        'Click the game again or Enter: full screen  ·  Esc: stop')
                     : tr('OK: full screen  ·  ▶❚❚ or Back: stop'),
         textAlign: TextAlign.center,
         style: const TextStyle(fontSize: 12, color: Colors.white54));
 
     if (part == _HeroPart.video) {
-      final videoHint = touch || Platform.isWindows || showingOther
+      final videoHint = touch || _desktopSports || showingOther
           ? hint
           : _KeyHintText(tr('→ on a game: full screen  ·  ▶❚❚ or Back: stop'),
               textAlign: TextAlign.center,
@@ -3509,7 +3604,10 @@ class _Hero extends StatelessWidget {
       return game.isEventOnly
           ? SizedBox(
               height: 130, child: _center(context, false, channel: channel))
-          : _narrowInfo(context, showScore, channel: channel);
+          : Column(mainAxisSize: MainAxisSize.min, children: [
+              _narrowInfo(context, showScore, channel: channel),
+              _stats(compact: true),
+            ]);
     }
     if (narrow) {
       // Portrait phone: no room beside the video, so the game sits under it.
@@ -3525,6 +3623,7 @@ class _Hero extends StatelessWidget {
                 height: 130, child: _center(context, false, channel: channel))
           else
             _narrowInfo(context, showScore, channel: channel),
+          if (!game.isEventOnly) _stats(),
           hint,
         ],
       );
@@ -3540,6 +3639,7 @@ class _Hero extends StatelessWidget {
             child: Column(
               children: [
                 Expanded(child: info),
+                if (!game.isEventOnly) _stats(compact: true),
                 hint,
                 const SizedBox(height: 4),
               ],
@@ -3802,7 +3902,7 @@ class _KeyHintText extends StatelessWidget {
 }
 
 /// Small hint under the focused game card (owner: the floating pill was too
-/// big). Only the hold is spelled out — OK-to-watch is obvious. Its height is
+/// big). The first-press preview and hold are spelled out. Its height is
 /// always reserved in the row so focus moves don't shift the layout.
 class _HoldHint extends StatelessWidget {
   const _HoldHint({required this.visible});
@@ -3831,15 +3931,12 @@ class _HoldHint extends StatelessWidget {
               children: [
                 Icon(Icons.touch_app, size: 11, color: scheme.primary),
                 const SizedBox(width: 4),
-                // Android: the Play/Pause preview (Windows has none yet).
                 _KeyHintText(
-                    Platform.isWindows
-                        ? tr(
-                            'Click again: watch here  ·  Hold: pick the channel')
+                    _desktopSports
+                        ? tr('Click: watch here  ·  Hold: pick the channel')
                         : !context.read<AppPreferences>().isTelevision
                             ? tr('Tap: watch here  ·  Hold: pick the channel')
-                            : tr(
-                                'Hold OK: pick the channel  ·  ▶❚❚: watch here'),
+                            : tr('OK: watch here  ·  Hold: pick the channel'),
                     style:
                         const TextStyle(fontSize: 10, color: Colors.white70)),
               ],
@@ -3967,17 +4064,11 @@ class _GameCardState extends State<_GameCard> {
             child: InkWell(
               focusNode: widget.focusNode,
               borderRadius: BorderRadius.circular(16),
-              // Same mouse convention as PosterCard: first click focuses (fills
-              // the hero), a click on the focused card opens it. Phones too:
-              // the first tap only shows the game in the hero.
+              // Pointer focus and activation are one action, just like OK on
+              // a remote: first press previews, next press is full screen.
               onTap: () {
-                if ((Platform.isWindows ||
-                        !context.read<AppPreferences>().isTelevision) &&
-                    !widget.focusNode.hasFocus) {
-                  widget.focusNode.requestFocus();
-                } else {
-                  widget.onTap();
-                }
+                widget.focusNode.requestFocus();
+                widget.onTap();
               },
               onFocusChange: (f) {
                 setState(() => _focused = f);

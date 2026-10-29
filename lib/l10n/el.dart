@@ -6,6 +6,13 @@
 /// English-style plural "s" filled in by the code; Greek plurals don't
 /// work that way, so those strings are phrased without it.
 const Map<String, String> kEl = {
+  // Sports matchup information and activation.
+  "Key stats": "Βασικά στατιστικά",
+  "Latest goal": "Τελευταίο γκολ",
+  "Last play": "Τελευταία φάση",
+  "Game situation": "Εξέλιξη αγώνα",
+  "OK: watch here  ·  Hold: pick the channel": "OK: προβολή εδώ  ·  Παρατεταμένα: επιλογή καναλιού",
+  "Click: watch here  ·  Hold: pick the channel": "Κλικ: προβολή εδώ  ·  Παρατεταμένα: επιλογή καναλιού",
   "Open full Live TV": "Άνοιγμα πλήρους Live TV",
   // Startup profile selector.
   "Launch with profiles selector": "Εκκίνηση με επιλογή προφίλ",
@@ -178,6 +185,12 @@ const Map<String, String> kEl = {
       "1 + 3 οθόνες",
   "Move to the big screen":
       "Στη μεγάλη οθόνη",
+  "Swap mode":
+      "Λειτουργία εναλλαγής",
+  "SWAP":
+      "ΕΝΑΛΛΑΓΗ",
+  "Arrows swap · OK or Back to finish":
+      "Βέλη: εναλλαγή · OK ή Πίσω: τέλος",
   "2 screens":
       "2 οθόνες",
   "= audio — Select to switch, hold Select for options":

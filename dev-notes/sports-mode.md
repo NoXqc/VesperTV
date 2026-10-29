@@ -25,8 +25,12 @@ keeping Sports Trak's existing features. Branch `codex/sports-mode`, test +487.
   No alternate data layer, duplicated player or native player changes.
 - First five enabled leagues in saved order form the sidebar. All remaining
   leagues, All, Edit leagues, quality, scores and Sports Mode are floating pills.
-  Hold OK and Left/Right still reorder leagues, including across the fifth slot;
+  Hold OK reorders leagues: Up/Down in the vertical sidebar, Left/Right in
+  the top row or narrow horizontal strip, including across the fifth slot.
   OK/Back finish. No separate pinned-league preference to drift out of sync.
+  All has a visible dropdown arrow; short OK/click and hold OK open all enabled
+  leagues, with All leagues first. Regular Sports Trak keeps tap All to clear
+  its filter and hold All for the menu.
 - Followed-team games have their own My Teams row and are removed from other rows
   to avoid duplicate focus nodes. Other games remain Live now / Later / Final.
 - Day strip, Standings/My Teams/Networks/RedZone, game menus and full-screen entry
@@ -41,6 +45,10 @@ keeping Sports Trak's existing features. Branch `codex/sports-mode`, test +487.
 ## Remote navigation
 
 - Rail: explicit Up/Down, reveal off-screen entries, Right to remembered content.
+  During reorder, arrows follow the rendered axis; the other axis is consumed.
+  Visibility follows focused entry membership, not cached scope focus alone:
+  reparenting a focused node across the fifth slot can skip a scope callback.
+  Parent Back state and the last rail entry are reconciled after layout.
 - Controls: explicit Left/Right within league/day/tool rows. Left at the first
   control returns to the rail; Up/Down follow the existing sports zones.
 - Games: Left/Right handle repeats and build/scroll off-screen cards before focus;
@@ -92,7 +100,7 @@ Owner: bigger player, days out of the way, a Left-arrow menu like Live TV.
   video (OK on the playing one = full screen), hold OK = SportsGameDetailsDialog,
   Play/Pause toggles, Left = rail. Starting a preview resets to watching and
   moves focus to the feed; stopping from the feed refocuses the rows.
-  No widget test covers watching/browsing (needs a matched, playing channel).
+  Matched-channel widget fixtures now cover preview/feed/full-screen handoff and rapid OK presses.
 - +491: `_focusZone` sends any row zone to the feed while it shows (Right
   from the rail was stuck: it targeted an unmounted card). Right on a feed
   row = full screen (`_feedFullScreen`); hints say "→". Feed selection redraws
@@ -120,3 +128,40 @@ TvHomeScreen untouched.
 - Not in v1: channel hold menus, History, Catch-up, Timeline. Windows untested.
   No test with a playing game preview + panel (needs a matched channel).
 Owner on +495: "Open full Live TV is a very nice touch".
+
+## First OK preview and matchup stats (Codex, 2026-10-29)
+
+- Sports Trak and Sports Mode cards now share first OK/tap/click = preview,
+  second on the same game = full screen. Focus updates information only. Hold
+  keeps the existing game menu; the playing Sports Mode feed keeps hold = stats.
+  With no matched channel, activation opens the existing game/channel menu.
+- An opening preview has a per-request completion signal. Full screen reuses it
+  without another play/open, even before buffering finishes. Serial preview
+  changes still protect single-connection accounts; stale/duplicate pushes exit.
+  Android retains PlaybackService; Windows transfers DesktopMiniPlayer's session.
+- SportsMatchupStats displays up to three details below the idle matchup and
+  beside a regular mini player: last goal/play/situation, game leaders and team
+  stats; before the game, standings and injuries. Values come from the existing
+  gameSummary cache and scoreboard, in display order (soccer is home first).
+  No video highlights, invented stats or added focus stops. Hide scores suppresses
+  live/final details and their summary fetches; pregame shows standings/injuries.
+- Selection waits 350 ms before fetching; obsolete responses are ignored. Summary
+  refresh is 30 seconds live / 10 minutes otherwise and pauses under another
+  screen or while backgrounded. Regular Sports Trak cards also grow for large
+  text, including the watching badge, as Sports Mode cards already did.
+- Tests: sports_mode_test covers both modes, pointer/remote activation, same-stream
+  and rapid fullscreen, switching feed games, hold/no-match menus and populated
+  large-text layouts. sports_matchup_stats_test covers side order, pregame/live
+  content, hidden scores, stale requests/debounce, missing data, refresh and pause.
+  Exact final validation and device acceptance belong in root HANDOFF.md.
+
+## Combined Formuler test +500 (2026-10-29)
+
+Owner requested merge, build, install, then commit all Codex's pending work.
+Merged claude/multiview-swap-mode through5853b55 (swap mode, lower/slower SWAP
+pill and scrollable hold menu) with the league fixes, preview flow and key stats.
+Version1.0.45+500: analyze16 baseline infos; all902Flutter tests pass. The release
+APK was verified against the existing signing certificate and installed in place
+on Formuler Z11 Pro MAX; package reports code500 and MainActivity launched.
+Physical acceptance of the new sports behavior remains with the owner. Exact
+artifact/hash/commit details are in root HANDOFF.md. This is a local test build.

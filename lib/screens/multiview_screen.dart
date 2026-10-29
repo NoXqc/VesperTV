@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -152,6 +153,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
 
   /// Up from a top-row screen opens the header (nothing is above it now).
   KeyEventResult _onGridKey(FocusNode node, KeyEvent e, int topRow) {
+    if (_swapMode) return _onSwapKey(e);
     if (e is! KeyDownEvent || e.logicalKey != LogicalKeyboardKey.arrowUp) {
       return KeyEventResult.ignored;
     }
@@ -168,7 +170,10 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
 
   Future<void> _setPortraitDual(bool on) async {
     if (on == _portraitDual || !mounted) return;
-    setState(() => _portraitDual = on);
+    setState(() {
+      _portraitDual = on;
+      if (on) _swapMode = false;
+    });
     if (on && _activeCell >= 2) {
       final i = _cells[0].channel != null ? 0 : 1;
       if (_cells[i].channel != null) await _setActive(i);
@@ -200,7 +205,10 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
         unawaited(_cells[0].controller?.setVolume(1.0));
       }
     }
-    setState(() => _layout = next);
+    setState(() {
+      _layout = next;
+      _swapMode = false;
+    });
     final storage = context.read<StorageService>();
     unawaited(storage.setMultiviewQuad(next == _MultiviewLayout.quad));
     unawaited(storage.setMultiviewMain(next == _MultiviewLayout.main));
@@ -225,6 +233,83 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     }
     setState(() {});
     a.focusNode.requestFocus();
+  }
+
+  /// 1 + 3 Swap mode (TiviMate-style, owner 2026-10-29): the D-pad rotates
+  /// the playing screens through the big one (Down/Right = next, Up/Left =
+  /// previous), the sound always on the big screen. Same controller moves
+  /// as [_moveToMain], so nothing reconnects. OK or Back ends it.
+  bool _swapMode = false;
+
+  /// Bumped on every swap: the big tile flashes once.
+  int _swapCount = 0;
+
+  bool get _canSwap =>
+      _layout == _MultiviewLayout.main &&
+      !_portraitDual &&
+      _cells.where((c) => c.channel != null && c.controller != null).length >=
+          2;
+
+  void _enterSwapMode() {
+    if (!_canSwap) return;
+    // A playing screen on the big one first.
+    if (_cells[0].channel == null || _cells[0].controller == null) {
+      _moveToMain(
+          _cells.indexWhere((c) => c.channel != null && c.controller != null));
+    }
+    setState(() => _swapMode = true);
+    _setSwapAudio();
+    _cells[0].focusNode.requestFocus();
+    _hideHeaderSoon(Duration.zero);
+  }
+
+  void _exitSwapMode() {
+    if (_swapMode) setState(() => _swapMode = false);
+  }
+
+  /// Moves every playing screen [step] places through the big one; empty or
+  /// still-loading slots stay put (a loading [_assign] writes back by index).
+  void _rotateSwap(int step) {
+    final slots = [
+      for (var i = 0; i < _cellCount; i++)
+        if (_cells[i].channel != null && _cells[i].controller != null) i
+    ];
+    if (slots.length < 2) return;
+    final order = swapRotation(slots, step);
+    final moved = [
+      for (final from in order) (_cells[from].channel, _cells[from].controller)
+    ];
+    for (var k = 0; k < slots.length; k++) {
+      _cells[slots[k]]
+        ..channel = moved[k].$1
+        ..controller = moved[k].$2;
+    }
+    setState(() => _swapCount++);
+    if (_swapMode) _setSwapAudio();
+  }
+
+  /// Swap mode: only the big screen plays sound.
+  void _setSwapAudio() {
+    _activeCell = 0;
+    for (var i = 0; i < _cellCount; i++) {
+      unawaited(_cells[i].controller?.setVolume(i == 0 ? 1.0 : 0.0));
+    }
+  }
+
+  KeyEventResult _onSwapKey(KeyEvent e) {
+    if (e is KeyUpEvent) return KeyEventResult.ignored;
+    final key = e.logicalKey;
+    if (key == LogicalKeyboardKey.arrowDown ||
+        key == LogicalKeyboardKey.arrowRight) {
+      _rotateSwap(1);
+    } else if (key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowLeft) {
+      _rotateSwap(-1);
+    } else {
+      return KeyEventResult.ignored;
+    }
+    _cells[0].focusNode.requestFocus();
+    return KeyEventResult.handled;
   }
 
   /// Shown on entering Multiview until the user ticks "Don't show this
@@ -413,6 +498,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     setState(() {
       cell.channel = null;
       cell.controller = null;
+      _swapMode = false;
     });
     unawaited(old?.dispose());
   }
@@ -472,44 +558,63 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     final action = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: const Color(0xFF1A1A1A),
+      // Six rows didn't fit the default sheet height on a TV (Remove was cut
+      // off, owner photo 2026-10-29): taller allowed, compact rows, scrolls
+      // (D-pad focus scrolls the row into view).
+      isScrollControlled: true,
+      constraints:
+          BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.9),
       builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.fullscreen, color: Colors.white),
-              title: Text(tr('Full screen'),
-                  style: const TextStyle(color: Colors.white)),
-              onTap: () => Navigator.of(sheetContext).pop('fullscreen'),
+        child: SingleChildScrollView(
+          child: ListTileTheme(
+            dense: true,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.fullscreen, color: Colors.white),
+                  title: Text(tr('Full screen'),
+                      style: const TextStyle(color: Colors.white)),
+                  onTap: () => Navigator.of(sheetContext).pop('fullscreen'),
+                ),
+                if (_layout == _MultiviewLayout.main &&
+                    !_portraitDual &&
+                    index != 0)
+                  ListTile(
+                    leading:
+                        const Icon(Icons.open_in_full, color: Colors.white),
+                    title: Text(tr('Move to the big screen'),
+                        style: const TextStyle(color: Colors.white)),
+                    onTap: () => Navigator.of(sheetContext).pop('main'),
+                  ),
+                if (_canSwap && !_swapMode)
+                  ListTile(
+                    leading: const Icon(Icons.swap_vert, color: Colors.white),
+                    title: Text(tr('Swap mode'),
+                        style: const TextStyle(color: Colors.white)),
+                    onTap: () => Navigator.of(sheetContext).pop('swapMode'),
+                  ),
+                ListTile(
+                  leading: const Icon(Icons.refresh, color: Colors.white),
+                  title: Text(tr('Reload'),
+                      style: const TextStyle(color: Colors.white)),
+                  onTap: () => Navigator.of(sheetContext).pop('reload'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.swap_horiz, color: Colors.white),
+                  title: Text(tr('Change channel'),
+                      style: const TextStyle(color: Colors.white)),
+                  onTap: () => Navigator.of(sheetContext).pop('swap'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.close, color: Colors.white),
+                  title: Text(tr('Remove'),
+                      style: const TextStyle(color: Colors.white)),
+                  onTap: () => Navigator.of(sheetContext).pop('remove'),
+                ),
+              ],
             ),
-            if (_layout == _MultiviewLayout.main &&
-                !_portraitDual &&
-                index != 0)
-              ListTile(
-                leading: const Icon(Icons.open_in_full, color: Colors.white),
-                title: Text(tr('Move to the big screen'),
-                    style: const TextStyle(color: Colors.white)),
-                onTap: () => Navigator.of(sheetContext).pop('main'),
-              ),
-            ListTile(
-              leading: const Icon(Icons.refresh, color: Colors.white),
-              title: Text(tr('Reload'),
-                  style: const TextStyle(color: Colors.white)),
-              onTap: () => Navigator.of(sheetContext).pop('reload'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.swap_horiz, color: Colors.white),
-              title: Text(tr('Change channel'),
-                  style: const TextStyle(color: Colors.white)),
-              onTap: () => Navigator.of(sheetContext).pop('swap'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.close, color: Colors.white),
-              title: Text(tr('Remove'),
-                  style: const TextStyle(color: Colors.white)),
-              onTap: () => Navigator.of(sheetContext).pop('remove'),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -518,6 +623,8 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
         await _openFullscreen(index);
       case 'main':
         _moveToMain(index);
+      case 'swapMode':
+        _enterSwapMode();
       case 'reload':
         await _reload(index);
       case 'swap':
@@ -564,7 +671,11 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: true,
+      // Back ends Swap mode first.
+      canPop: !_swapMode,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _exitSwapMode();
+      },
       child: Scaffold(
         backgroundColor: Colors.black,
         body: SafeArea(child: _buildBody()),
@@ -650,6 +761,14 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
                             : tr('2 screens'),
                     style: const TextStyle(color: Colors.white)),
               ),
+            if (main && _canSwap)
+              TextButton.icon(
+                onPressed: _enterSwapMode,
+                icon:
+                    const Icon(Icons.swap_vert, color: Colors.white, size: 18),
+                label: Text(tr('Swap mode'),
+                    style: const TextStyle(color: Colors.white)),
+              ),
             const Spacer(),
             const Icon(Icons.volume_up, color: Colors.amber, size: 16),
             const SizedBox(width: 4),
@@ -731,6 +850,15 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
             ),
           ),
         ),
+        if (_swapMode && main)
+          Positioned(
+            left: 0,
+            width: size.width * 2 / 3,
+            // Centred in the band under the big (16:9) screen.
+            bottom: math.max(8.0,
+                ((size.height - size.width * 2 / 3 * 9 / 16) / 2 - 36) / 2),
+            child: const Center(child: _SwapModePill()),
+          ),
         // Touch / mouse: a small handle opens the header (no Up key there).
         if (!isTv && !_headerShown)
           Positioned(
@@ -801,8 +929,21 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
   Widget _buildCell(int index, bool fill, {double widthBoost = 1.15}) {
     final cell = _cells[index];
     final active = index == _activeCell && cell.channel != null;
-    void onTap() =>
-        cell.channel == null ? _openPicker(index) : _setActive(index);
+    void onTap() {
+      if (_swapMode) {
+        // OK on the big one ends Swap mode; a tap on a small one moves it up.
+        if (index == 0) {
+          _exitSwapMode();
+        } else if (cell.channel != null && cell.controller != null) {
+          _moveToMain(index);
+          _setSwapAudio();
+          setState(() => _swapCount++);
+        }
+        return;
+      }
+      cell.channel == null ? _openPicker(index) : _setActive(index);
+    }
+
     return HoldToActivate(
       onTap: onTap,
       onHold: cell.channel == null ? null : () => _showCellActions(index),
@@ -823,6 +964,119 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
         widthBoost: widthBoost,
         fill: fill,
         alignment: Alignment.center,
+        badge:
+            _swapMode && index == 0 ? _SwapModeBadge(swaps: _swapCount) : null,
+      ),
+    );
+  }
+}
+
+/// The order Swap mode moves the playing [slots] (cell indices, big one
+/// first) into: slot k gets the screen from the returned k-th index.
+@visibleForTesting
+List<int> swapRotation(List<int> slots, int step) {
+  final n = slots.length;
+  return [for (var k = 0; k < n; k++) slots[((k + step) % n + n) % n]];
+}
+
+/// Swap mode on the big screen: a gold flash over the tile on every swap.
+class _SwapModeBadge extends StatefulWidget {
+  const _SwapModeBadge({required this.swaps});
+
+  final int swaps;
+
+  @override
+  State<_SwapModeBadge> createState() => _SwapModeBadgeState();
+}
+
+class _SwapModeBadgeState extends State<_SwapModeBadge>
+    with SingleTickerProviderStateMixin {
+  late final _flash = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 450));
+
+  @override
+  void didUpdateWidget(_SwapModeBadge old) {
+    super.didUpdateWidget(old);
+    if (widget.swaps != old.swaps) _flash.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _flash.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          AnimatedBuilder(
+            animation: _flash,
+            builder: (_, __) => _flash.isAnimating
+                ? ColoredBox(
+                    color: Colors.amber
+                        .withValues(alpha: 0.35 * (1 - _flash.value)))
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Swap mode's blinking "SWAP" pill, in the black band under the big screen
+/// (owner, 2026-10-29: inside the picture it covered the score bar; the
+/// first blink rate was too fast).
+class _SwapModePill extends StatefulWidget {
+  const _SwapModePill();
+
+  @override
+  State<_SwapModePill> createState() => _SwapModePillState();
+}
+
+class _SwapModePillState extends State<_SwapModePill>
+    with SingleTickerProviderStateMixin {
+  late final _blink = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 1300))
+    ..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _blink.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: FadeTransition(
+        opacity: Tween(begin: 0.35, end: 1.0).animate(_blink),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.75),
+            border: Border.all(color: Colors.amber, width: 2),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.swap_vert, color: Colors.amber, size: 20),
+              const SizedBox(width: 6),
+              Text(tr('SWAP'),
+                  style: const TextStyle(
+                      color: Colors.amber,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 2)),
+              const SizedBox(width: 10),
+              Text(tr('Arrows swap · OK or Back to finish'),
+                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -839,7 +1093,11 @@ class _MultiviewCellTile extends StatefulWidget {
     required this.widthBoost,
     this.alignment = Alignment.center,
     this.fill = false,
+    this.badge,
   });
+
+  /// Drawn over the video (Swap mode's pill on the big screen).
+  final Widget? badge;
 
   /// Fill the whole slot instead of an aspect-locked frame (quad).
   final bool fill;
@@ -864,6 +1122,10 @@ class _MultiviewCellTile extends StatefulWidget {
 
 class _MultiviewCellTileState extends State<_MultiviewCellTile> {
   bool _focused = false;
+
+  Widget _withBadge(Widget tile) => widget.badge == null
+      ? tile
+      : Stack(fit: StackFit.expand, children: [tile, widget.badge!]);
 
   @override
   Widget build(BuildContext context) {
@@ -918,7 +1180,7 @@ class _MultiviewCellTileState extends State<_MultiviewCellTile> {
             // The name bar fades after a few seconds (it covered the
             // score bug): shown again on a new channel, when the sound
             // moves here, and when focus lands on the tile.
-            child: AutoHideOverlay(
+            child: _withBadge(AutoHideOverlay(
               flashKey: (widget.channel?.id, widget.active, _focused),
               hidden: widget.active ? const MultiviewAudioBadge() : null,
               video: widget.controller != null &&
@@ -996,7 +1258,7 @@ class _MultiviewCellTileState extends State<_MultiviewCellTile> {
                         ),
                       ),
                     ),
-            ),
+            )),
           ),
         ),
       ),
