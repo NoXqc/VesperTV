@@ -2833,4 +2833,25 @@ const Map<String, String> kEl = {
       "Προσεχώς  ·  OK για υπενθύμιση ή εγγραφή",
   "Recording scheduled. Android may delay the start without exact alarm access.":
       "Η εγγραφή προγραμματίστηκε. Το Android μπορεί να καθυστερήσει την έναρξη χωρίς άδεια ακριβών ειδοποιήσεων.",
+
+  // Plex media-server connector.
+  "Connect Jellyfin / Emby / Plex": "Σύνδεση Jellyfin / Emby / Plex",
+  "Connect Plex": "Σύνδεση Plex",
+  "Sign in on your phone and choose a Plex server":
+      "Συνδεθείτε από το τηλέφωνό σας και επιλέξτε διακομιστή Plex",
+  "Sign in with Plex on your phone, then choose a server. Your movie and TV libraries appear in the Media Hub. Files play directly, without transcoding.":
+      "Συνδεθείτε στο Plex από το τηλέφωνό σας και επιλέξτε διακομιστή. Οι βιβλιοθήκες ταινιών και σειρών εμφανίζονται στο Media Hub. Τα αρχεία αναπαράγονται απευθείας, χωρίς μετατροπή.",
+  "Could not connect to Plex. Try again.":
+      "Αδυναμία σύνδεσης στο Plex. Δοκιμάστε ξανά.",
+  "Plex sign-in expired. Try again.": "Η σύνδεση Plex έληξε. Δοκιμάστε ξανά.",
+  "Plex access was denied. Sign in again.":
+      "Η πρόσβαση στο Plex απορρίφθηκε. Συνδεθείτε ξανά.",
+  "Could not reach this Plex server. Check that it is online and accessible from this device.":
+      "Αδυναμία επικοινωνίας με τον διακομιστή Plex. Ελέγξτε ότι είναι συνδεδεμένος και προσβάσιμος από αυτή τη συσκευή.",
+  "Choose a Plex server": "Επιλέξτε διακομιστή Plex",
+  "No Plex servers are available on this account.":
+      "Δεν υπάρχουν διαθέσιμοι διακομιστές Plex σε αυτόν τον λογαριασμό.",
+  "Sign in again": "Σύνδεση ξανά",
+  "Scan the QR code or visit {url} and enter this code:":
+      "Σαρώστε τον κωδικό QR ή επισκεφτείτε το {url} και εισαγάγετε αυτόν τον κωδικό:",
 };

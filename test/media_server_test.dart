@@ -119,7 +119,7 @@ void main() {
         'https://jf.example.org');
   });
 
-  for (final kind in MediaServerKind.values) {
+  for (final kind in [MediaServerKind.jellyfin, MediaServerKind.emby]) {
     group(kind.label, () {
       final log = <String>[];
       final api = MediaServerApi(client: fakeServer(kind, log));
@@ -164,7 +164,7 @@ void main() {
             ['1x1 e1', '1x2 e2']); // sorted, missing episode dropped
 
         final key = kind == MediaServerKind.jellyfin ? 'ApiKey' : 'api_key';
-        expect(api.streams(s, 'e1').single.url,
+        expect((await api.streams(s, 'e1')).single.url,
             '$apiBase/Videos/e1/stream?static=true&$key=tok');
       });
     });

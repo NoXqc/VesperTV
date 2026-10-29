@@ -10,6 +10,8 @@ import '../../services/phone_pairing_service.dart';
 import '../../widgets/phone_pair_panel.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_text_field_gate.dart';
+import '../../widgets/tv_menu_tile.dart';
+import 'plex_connect_screen.dart';
 
 /// Media Hub > Connect Jellyfin / Emby: server address, user name and
 /// password. The server kind (and Emby's `/emby` path) is detected, so
@@ -170,10 +172,23 @@ class _MediaServerScreenState extends State<MediaServerScreen> {
   @override
   Widget build(BuildContext context) {
     return SettingsScaffold(
-      title: tr('Connect Jellyfin / Emby'),
+      title: tr('Connect Jellyfin / Emby / Plex'),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          TvMenuTile(
+            icon: Icons.dns_outlined,
+            title: tr('Connect Plex'),
+            subtitle: tr('Sign in on your phone and choose a Plex server'),
+            onTap: () async {
+              final added = await Navigator.of(context).push<bool>(
+                  MaterialPageRoute(builder: (_) => const PlexConnectScreen()));
+              if (added == true && context.mounted) Navigator.of(context).pop();
+            },
+          ),
+          const SizedBox(height: 16),
+          Text(tr('Connect Jellyfin / Emby')),
+          const SizedBox(height: 12),
           Text(tr(
               'Sign in to your own Jellyfin or Emby server: its movie and TV libraries show up in the Media Hub. Files play as they are stored on the server (no transcoding).')),
           const SizedBox(height: 16),

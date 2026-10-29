@@ -222,7 +222,8 @@ class ArchiveCatalogProvider {
 /// auth headers and often a `/emby` path (see `MediaServerApi`).
 enum MediaServerKind {
   jellyfin('Jellyfin'),
-  emby('Emby');
+  emby('Emby'),
+  plex('Plex');
 
   const MediaServerKind(this.label);
   final String label;
@@ -230,6 +231,7 @@ enum MediaServerKind {
   static MediaServerKind? fromName(String? s) => switch (s) {
         'jellyfin' => MediaServerKind.jellyfin,
         'emby' => MediaServerKind.emby,
+        'plex' => MediaServerKind.plex,
         _ => null,
       };
 }
@@ -452,8 +454,12 @@ class ArchiveSource {
   /// Short stable key for cache rows and channel ids (the manifest URL can
   /// be long; ids only need to be unique per install).
   /// sha1, not `hashCode`: it's persisted (cache rows, resume positions).
-  String get key =>
-      sha1.convert(utf8.encode(manifestUrl)).toString().substring(0, 12);
+  String get key => sha1
+      .convert(utf8.encode(server?.kind == MediaServerKind.plex
+          ? 'plex:${server!.userId}'
+          : manifestUrl))
+      .toString()
+      .substring(0, 12);
 
   ArchiveSource copyWith(
           {bool? enabled,

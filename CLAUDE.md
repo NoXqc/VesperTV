@@ -367,6 +367,12 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **cdx, 2026-10-29 — Plex connector** (`codex/plex-media-server`): shared
+  Jellyfin/Emby/Plex connector adds Plex phone/QR sign-in and owned/shared server
+  selection. Libraries/search/metadata/episodes/direct versions/subtitles use the
+  existing Hub and Android/Windows playback paths. No transcoding or multipart
+  stitching. Analyze16 and945Flutter tests pass; real Plex sign-in/playback pending.
+  See `dev-notes/plex-media-server.md`; no package/publication.
 - **Claude, 2026-10-29 — Android hotfix release 1.0.49+528 (latest):** global search
   speed (Media Hub replies throttled 350 ms + rows capped at 100, cached `TitleSearch.fold`
   with ASCII fast path, memoized local matches, stable row keys/nodes, indexed

@@ -6,20 +6,12 @@ import 'package:http/http.dart' as http;
 
 import '../models/archive_models.dart';
 import 'archive_api_service.dart';
+import 'media_server_errors.dart';
+import 'plex_api.dart';
 
-/// Wrong user name or password (the server answered 401).
-class MediaServerLoginException implements Exception {
-  @override
-  String toString() => 'MediaServerLoginException';
-}
+export 'media_server_errors.dart';
 
-/// Signed in, but the user sees no movie or TV library.
-class MediaServerNoLibraryException implements Exception {
-  @override
-  String toString() => 'MediaServerNoLibraryException';
-}
-
-/// Plain HTTP client for Jellyfin and Emby servers, mapped onto the Media
+/// HTTP client for Jellyfin, Emby and Plex, mapped onto the Media
 /// Hub's models: the user's movie and TV libraries are catalogs, a series'
 /// episodes are its `videos`, and Play is the server's direct (original
 /// file, no transcode) stream URL. No state: the login lives on the
@@ -39,6 +31,10 @@ class MediaServerApi {
   MediaServerApi({http.Client? client}) : _client = client ?? http.Client();
 
   final http.Client _client;
+  late final _plex = PlexApi(_client);
+
+  Future<ArchiveSource> connectPlex(PlexServer server, String deviceId) =>
+      _plex.connect(server, deviceId);
   static const _timeout = Duration(seconds: 20);
   static const _pageSize = 100;
 
@@ -181,6 +177,7 @@ class MediaServerApi {
   /// The user's movie and TV libraries as catalogs (library id = catalog
   /// id). Other kinds (music, photos, books…) are left out.
   Future<List<ArchiveCatalog>> libraries(ArchiveSource s) async {
+    if (s.server!.kind == MediaServerKind.plex) return _plex.libraries(s);
     final j = await _getAuthed(s, '/Users/${s.server!.userId}/Views');
     return [
       for (final v in (j['Items'] as List? ?? const []))
@@ -207,6 +204,9 @@ class MediaServerApi {
     int skip = 0,
     String? search,
   }) async {
+    if (s.server!.kind == MediaServerKind.plex) {
+      return _plex.catalog(s, catalog, skip: skip, search: search);
+    }
     final q = {
       'ParentId': catalog.id,
       'Recursive': 'true',
@@ -236,6 +236,7 @@ class MediaServerApi {
 
   /// The full item; a series also gets its episodes as `videos`.
   Future<ArchiveMeta?> fetchMeta(ArchiveSource s, ArchiveMeta preview) async {
+    if (s.server!.kind == MediaServerKind.plex) return _plex.meta(s, preview);
     final uid = s.server!.userId;
     final item = await _getAuthed(s, '/Users/$uid/Items/${preview.id}');
     final meta = _meta(s, item) ?? preview;
@@ -280,7 +281,8 @@ class MediaServerApi {
   /// The direct stream of a movie or episode item: the original file as
   /// stored on the server (no transcoding), with the token in the URL so
   /// both players can open it as is.
-  List<ArchiveStream> streams(ArchiveSource s, String itemId) {
+  Future<List<ArchiveStream>> streams(ArchiveSource s, String itemId) async {
+    if (s.server!.kind == MediaServerKind.plex) return _plex.streams(s, itemId);
     final login = s.server!;
     final key = login.kind == MediaServerKind.jellyfin ? 'ApiKey' : 'api_key';
     return [

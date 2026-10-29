@@ -532,7 +532,7 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
             (
               _node('source-server'),
               Icons.dns_outlined,
-              tr('Connect Jellyfin / Emby'),
+              tr('Connect Jellyfin / Emby / Plex'),
               () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const MediaServerScreen()))
             ),

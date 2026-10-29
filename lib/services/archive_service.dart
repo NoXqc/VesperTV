@@ -12,6 +12,7 @@ import 'archive_api_service.dart';
 import 'archive_cache.dart';
 import 'archive_stream_session.dart';
 import 'media_server_api.dart';
+import 'plex_api.dart';
 import 'storage_service.dart';
 import 'tracker_api.dart';
 
@@ -412,8 +413,22 @@ class ArchiveService extends ChangeNotifier {
   Future<ArchiveSource> addMediaServer(
       String address, String userName, String password) async {
     final source = await _servers.connect(address, userName, password);
+    return _addServerSource(source);
+  }
+
+  Future<ArchiveSource> addPlexServer(
+      PlexServer server, String deviceId) async {
+    final source = await _servers.connectPlex(server, deviceId);
+    return _addServerSource(source);
+  }
+
+  Future<ArchiveSource> _addServerSource(ArchiveSource source) async {
     final list = sources;
-    final at = list.indexWhere((s) => s.manifestUrl == source.manifestUrl);
+    final at = list.indexWhere((s) => s.key == source.key);
+    if (at >= 0) {
+      source = source.copyWith(
+          enabled: list[at].enabled, otherChoice: list[at].otherChoice);
+    }
     await _saveSources(at < 0
         ? [...list, source]
         : [for (var i = 0; i < list.length; i++) i == at ? source : list[i]]);
@@ -1756,7 +1771,7 @@ class ArchiveService extends ChangeNotifier {
       final (s, id) = targets[key]!;
       try {
         Future<List<ArchiveStream>> fetch(String id) async => s.server != null
-            ? _servers.streams(s, id)
+            ? await _servers.streams(s, id)
             : await _api.fetchStreams(s.baseUrl, meta.type, id,
                 wire: meta.wire);
         var streams = await fetch(id);

@@ -2216,4 +2216,25 @@ const Map<String, String> kIt = {
       "In programma  ·  OK per promemoria o registrazione",
   "Recording scheduled. Android may delay the start without exact alarm access.":
       "Registrazione programmata. Android può ritardare l’inizio senza accesso alle sveglie esatte.",
+
+  // Plex media-server connector.
+  "Connect Jellyfin / Emby / Plex": "Collega Jellyfin / Emby / Plex",
+  "Connect Plex": "Collega Plex",
+  "Sign in on your phone and choose a Plex server":
+      "Accedi dal telefono e scegli un server Plex",
+  "Sign in with Plex on your phone, then choose a server. Your movie and TV libraries appear in the Media Hub. Files play directly, without transcoding.":
+      "Accedi a Plex dal telefono, poi scegli un server. Le librerie di film e serie appaiono nel Media Hub. I file vengono riprodotti direttamente, senza transcodifica.",
+  "Could not connect to Plex. Try again.":
+      "Impossibile connettersi a Plex. Riprova.",
+  "Plex sign-in expired. Try again.": "Accesso a Plex scaduto. Riprova.",
+  "Plex access was denied. Sign in again.":
+      "Accesso a Plex negato. Accedi di nuovo.",
+  "Could not reach this Plex server. Check that it is online and accessible from this device.":
+      "Impossibile raggiungere questo server Plex. Verifica che sia online e accessibile da questo dispositivo.",
+  "Choose a Plex server": "Scegli un server Plex",
+  "No Plex servers are available on this account.":
+      "Nessun server Plex disponibile per questo account.",
+  "Sign in again": "Accedi di nuovo",
+  "Scan the QR code or visit {url} and enter this code:":
+      "Scansiona il codice QR o visita {url} e inserisci questo codice:",
 };

@@ -2212,4 +2212,26 @@ const Map<String, String> kEs = {
       "Próximamente  ·  OK para recordar o grabar",
   "Recording scheduled. Android may delay the start without exact alarm access.":
       "Grabación programada. Android puede retrasar el inicio sin permiso para alarmas exactas.",
+
+  // Plex media-server connector.
+  "Connect Jellyfin / Emby / Plex": "Conectar Jellyfin / Emby / Plex",
+  "Connect Plex": "Conectar Plex",
+  "Sign in on your phone and choose a Plex server":
+      "Inicia sesión en tu teléfono y elige un servidor Plex",
+  "Sign in with Plex on your phone, then choose a server. Your movie and TV libraries appear in the Media Hub. Files play directly, without transcoding.":
+      "Inicia sesión en Plex desde tu teléfono y elige un servidor. Tus bibliotecas de películas y series aparecen en el Media Hub. Los archivos se reproducen directamente, sin transcodificación.",
+  "Could not connect to Plex. Try again.":
+      "No se pudo conectar con Plex. Inténtalo de nuevo.",
+  "Plex sign-in expired. Try again.":
+      "El inicio de sesión de Plex ha caducado. Inténtalo de nuevo.",
+  "Plex access was denied. Sign in again.":
+      "Se denegó el acceso a Plex. Vuelve a iniciar sesión.",
+  "Could not reach this Plex server. Check that it is online and accessible from this device.":
+      "No se pudo acceder a este servidor Plex. Comprueba que esté conectado y sea accesible desde este dispositivo.",
+  "Choose a Plex server": "Elige un servidor Plex",
+  "No Plex servers are available on this account.":
+      "No hay servidores Plex disponibles en esta cuenta.",
+  "Sign in again": "Volver a iniciar sesión",
+  "Scan the QR code or visit {url} and enter this code:":
+      "Escanea el código QR o visita {url} e introduce este código:",
 };
