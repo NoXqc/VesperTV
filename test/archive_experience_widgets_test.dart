@@ -204,15 +204,34 @@ void main() {
                                       type: ArchiveType.movie),
                                   discovery: _Discovery(),
                                   entryNode: entry,
-                                  onReturn: top.requestFocus),
+                                  // Like the real pages: back on Play shows
+                                  // the header again.
+                                  onReturn: () {
+                                    top.requestFocus();
+                                    Scrollable.ensureVisible(top.context!);
+                                  }),
                             ])))))));
     await tester.pumpAndSettle();
     entry.requestFocus();
     await tester.pumpAndSettle();
     await _capture(tester, 'media-hub-discovery');
+    // The page scrolls to whatever has focus, and never down on an Up
+    // (owner, +521/+522: rows didn't come into view; Up to Explore more
+    // scrolled to the cast row).
+    double page() => tester
+        .state<ScrollableState>(find.byType(Scrollable).first)
+        .position
+        .pixels;
     Future<void> key(LogicalKeyboardKey key) async {
+      final before = page();
       await tester.sendKeyEvent(key);
       await tester.pumpAndSettle();
+      final r = FocusManager.instance.primaryFocus!.rect;
+      expect(r.top >= 0 && r.bottom <= 720, isTrue,
+          reason: '${FocusManager.instance.primaryFocus} at $r');
+      if (key == LogicalKeyboardKey.arrowUp) {
+        expect(page(), lessThanOrEqualTo(before));
+      }
     }
 
     await key(LogicalKeyboardKey.arrowDown);

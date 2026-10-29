@@ -40,6 +40,7 @@ class _ArchiveDiscoveryPanelState extends State<ArchiveDiscoveryPanel> {
   final _nodes = <String, FocusNode>{};
   final _scrolls = <String, ScrollController>{};
   final _indices = <String, int>{};
+  final _rowKeys = <String, GlobalKey>{};
   late final int _viewer;
   List<String> _rows = [];
   final _localSources = <ArchiveMeta, ArchiveSource>{};
@@ -227,46 +228,50 @@ class _ArchiveDiscoveryPanelState extends State<ArchiveDiscoveryPanel> {
 
   Widget _row(String id, String title, int count, Widget Function(int) card) {
     final row = _rows.indexOf(id);
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Text(title,
-              style:
-                  const TextStyle(fontSize: 18, fontWeight: FontWeight.w600))),
-      Focus(
-          onKeyEvent: (_, e) {
-            if (e is! KeyDownEvent && e is! KeyRepeatEvent) {
-              return KeyEventResult.ignored;
-            }
-            final i = _indices[id] ?? 0;
-            if (e.logicalKey == LogicalKeyboardKey.arrowLeft) {
-              _focus(id, i - 1);
-            } else if (e.logicalKey == LogicalKeyboardKey.arrowRight) {
-              _focus(id, i + 1);
-            } else if (e.logicalKey == LogicalKeyboardKey.arrowUp) {
-              if (row == 0) {
-                widget.entryNode.requestFocus();
-              } else {
-                _focus(_rows[row - 1], _indices[_rows[row - 1]] ?? 0);
-              }
-            } else if (e.logicalKey == LogicalKeyboardKey.arrowDown) {
-              if (row + 1 < _rows.length) {
-                _focus(_rows[row + 1], _indices[_rows[row + 1]] ?? 0);
-              }
-            } else {
-              return KeyEventResult.ignored;
-            }
-            return KeyEventResult.handled;
-          },
-          child: SizedBox(
-              height: PosterCard.height + 20,
-              child: ListView.builder(
-                  controller: _scrolls.putIfAbsent(id, ScrollController.new),
-                  scrollDirection: Axis.horizontal,
-                  itemExtent: PosterCard.width + 20,
-                  itemCount: count,
-                  itemBuilder: (_, i) => card(i)))),
-    ]);
+    return Column(
+        key: _rowKeys.putIfAbsent(id, GlobalKey.new),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(title,
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.w600))),
+          Focus(
+              onKeyEvent: (_, e) {
+                if (e is! KeyDownEvent && e is! KeyRepeatEvent) {
+                  return KeyEventResult.ignored;
+                }
+                final i = _indices[id] ?? 0;
+                if (e.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                  _focus(id, i - 1);
+                } else if (e.logicalKey == LogicalKeyboardKey.arrowRight) {
+                  _focus(id, i + 1);
+                } else if (e.logicalKey == LogicalKeyboardKey.arrowUp) {
+                  if (row == 0) {
+                    widget.entryNode.requestFocus();
+                  } else {
+                    _focus(_rows[row - 1], _indices[_rows[row - 1]] ?? 0);
+                  }
+                } else if (e.logicalKey == LogicalKeyboardKey.arrowDown) {
+                  if (row + 1 < _rows.length) {
+                    _focus(_rows[row + 1], _indices[_rows[row + 1]] ?? 0);
+                  }
+                } else {
+                  return KeyEventResult.ignored;
+                }
+                return KeyEventResult.handled;
+              },
+              child: SizedBox(
+                  height: PosterCard.height + 20,
+                  child: ListView.builder(
+                      controller:
+                          _scrolls.putIfAbsent(id, ScrollController.new),
+                      scrollDirection: Axis.horizontal,
+                      itemExtent: PosterCard.width + 20,
+                      itemCount: count,
+                      itemBuilder: (_, i) => card(i)))),
+        ]);
   }
 
   Widget _titleCard(String row, int i, ArchiveMeta meta) =>
@@ -282,13 +287,16 @@ class _ArchiveDiscoveryPanelState extends State<ArchiveDiscoveryPanel> {
           onFocusGained: () => _reveal(row, i)));
   void _reveal(String row, int i) {
     _indices[row] = i;
-    _keepVisible(node(row, i));
+    _keepVisible(_rowKeys[row]?.currentContext);
   }
 
   /// Scrolls the page (vertically, instantly) only as far as it takes to
-  /// show [focus]; a horizontal row's own scroll is [_focus]'s.
-  void _keepVisible(FocusNode focus) {
-    final card = focus.context?.findRenderObject();
+  /// show [target]; a horizontal row's own scroll is [_focus]'s.
+  /// [target] must sit directly in the page, not inside a row's own
+  /// scrollable: ScrollPosition.ensureVisible measures against the nearest
+  /// viewport, so a card made the page never move (+521).
+  void _keepVisible(BuildContext? target) {
+    final card = target?.findRenderObject();
     final page = Scrollable.maybeOf(context)?.position;
     if (card == null || page == null) return;
     for (final policy in [
@@ -335,7 +343,7 @@ class _ArchiveDiscoveryPanelState extends State<ArchiveDiscoveryPanel> {
                   // Minimal scroll: pinning it 20% from the top scrolled the
                   // page down when coming Up from a row (owner photo).
                   onFocusChange: (has) {
-                    if (has) _keepVisible(widget.entryNode);
+                    if (has) _keepVisible(widget.entryNode.context);
                   },
                   onPressed: () {
                     if (_failed) {
