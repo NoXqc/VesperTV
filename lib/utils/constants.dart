@@ -341,6 +341,8 @@ class AppConstants {
   /// the user's own game -> channel picks (JSON, see `SportsChannelPicks`).
   static const String keySportsLeagues = 'vesper_sports_leagues';
   static const String keySportsChannelLists = 'vesper_sports_channel_lists';
+  static const String keySportsPreferredCountries =
+      'vesper_sports_preferred_countries';
 
   /// Home page rows, per viewer: ordered row ids, a hidden row as `-id`
   /// (`HomeRows`). Null = never edited (the default order).

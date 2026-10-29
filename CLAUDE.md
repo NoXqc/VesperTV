@@ -367,6 +367,13 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **cdx, 2026-10-29 — Sports country preferences**
+  (`codex/sports-country-preferences`, stacked on prior three features): new
+  Settings > Sports Trak > Preferred channel countries, per viewer. Final
+  ranking only; explicit picks and game evidence precede generic suggestions,
+  other countries remain fallbacks, unset preserves previous ranking. See
+  `dev-notes/sports-country-preferences.md`; no package or publication.
+  Analyze16,965Flutter and15Node tests pass; physical-box/provider QA pending.
 - **cdx, 2026-10-29 — My Teams preferred channel**
   (`codex/my-teams-preferred-channel`, stacked on title-page/Plex): hold team >
   Set preferred channel works without a current game; visible live channels,

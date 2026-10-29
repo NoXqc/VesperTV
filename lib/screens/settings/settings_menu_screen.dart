@@ -28,6 +28,8 @@ import 'debrid_settings_screen.dart';
 import 'remote_tips_screen.dart';
 import '../../l10n/l10n.dart';
 import '../../widgets/sports_mode_toggle.dart';
+import '../../utils/constants.dart';
+import 'sports_country_settings_screen.dart';
 
 /// One destination row of a Settings category.
 class _Entry {
@@ -233,6 +235,19 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
                   tr('The connections tip when opening Multiview')),
             _general('resume', Icons.play_circle_outline, tr('Resume reminder'),
                 tr('The "Hold > to resume" pill')),
+          ],
+        ),
+        _Category(
+          Icons.sports,
+          AppConstants.sportsTabName,
+          tr('Channel preferences and settings for {tab}.',
+              {'tab': AppConstants.sportsTabName}),
+          [
+            _Entry(
+                Icons.flag_outlined,
+                tr('Preferred channel countries'),
+                tr('Prefer local channels while keeping other matches available'),
+                (_) => const SportsCountrySettingsScreen()),
           ],
         ),
         _Category(

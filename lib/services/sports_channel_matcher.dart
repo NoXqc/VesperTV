@@ -10,6 +10,7 @@ import '../utils/channel_name_matching.dart';
 import 'epg_service.dart';
 import 'storage_service.dart';
 import 'real_4k_channels.dart';
+import 'sports_channel_countries.dart';
 import '../l10n/l10n.dart';
 
 /// Why a channel was suggested for a game — shown next to it so the user
@@ -97,10 +98,15 @@ List<ChannelMatch> distinctCopiesFirst(List<ChannelMatch> sorted, int limit) {
 }
 
 class ChannelMatch {
-  const ChannelMatch(this.channel, this.reason, this.score, {this.detail});
+  const ChannelMatch(this.channel, this.reason, this.score,
+      {this.detail, this.gameEvidence = false});
   final Channel channel;
   final MatchReason reason;
   final int score;
+
+  /// Both-team/event-name or time-aligned guide evidence; generic series,
+  /// team-channel and broadcaster fallbacks remain unconfirmed suggestions.
+  final bool gameEvidence;
 
   /// Guide programme title / network name that produced the match.
   final String? detail;
@@ -223,6 +229,35 @@ class SportsChannelPicks {
   }
 
   bool get preferQuality => _storage.getSportsPreferQuality();
+
+  SportsCountryPreferences get countryPreferences =>
+      SportsCountryPreferences.load(_storage);
+
+  List<ChannelMatch> orderMatches(List<ChannelMatch> matches,
+      {SportsCountryPreferences? countries}) {
+    final ordered = preferQuality ? preferSportsSources(matches) : matches;
+    final preferences = countries ?? countryPreferences;
+    if (preferences.selected.isEmpty) return ordered;
+    final indices = {for (final (i, match) in ordered.indexed) match: i};
+    final preferred = {
+      for (final match in ordered) match: preferences.prefers(match.channel)
+    };
+    if (!preferred.values.any((value) => value)) return ordered;
+    int tier(ChannelMatch match) => match.reason == MatchReason.pick
+        ? (match.score >= 1000 ? 0 : 1)
+        : match.gameEvidence
+            ? 2
+            : 3;
+    return [...ordered]..sort((a, b) {
+        final evidence = tier(a).compareTo(tier(b));
+        if (evidence != 0) return evidence;
+        if (tier(a) != 0 && preferred[a] != preferred[b]) {
+          return preferred[a]! ? -1 : 1;
+        }
+        // Retain quality/copy/evidence ordering within each country group.
+        return indices[a]!.compareTo(indices[b]!);
+      });
+  }
 
   void _reload() {
     final latest = SportsChannelPicks.load(_storage);
@@ -1074,6 +1109,7 @@ class SportsChannelMatcher {
       {int limit = 8}) async {
     final out = <String, List<ChannelMatch>>{};
     if (games.isEmpty) return out;
+    final countries = picks.countryPreferences;
 
     // One guide query for the whole day. A title must name every group
     // (both teams), and the loop below checks that — so SQL only needs one
@@ -1142,11 +1178,17 @@ class SportsChannelMatcher {
       // A guide programme naming the game on a channel the viewer hid.
       String? hiddenInGuide;
       final found = <String, ChannelMatch>{};
-      void add(int index, MatchReason reason, int score, [String? detail]) {
+      void add(int index, MatchReason reason, int score,
+          [String? detail, bool gameEvidence = false]) {
         final c = _channels[index];
         final existing = found[c.id];
         if (existing == null || existing.score < score) {
-          found[c.id] = ChannelMatch(c, reason, score, detail: detail);
+          found[c.id] = ChannelMatch(c, reason, score,
+              detail: detail,
+              gameEvidence: gameEvidence || (existing?.gameEvidence ?? false));
+        } else if (gameEvidence && !existing.gameEvidence) {
+          found[c.id] = ChannelMatch(c, existing.reason, existing.score,
+              detail: existing.detail, gameEvidence: true);
         }
       }
 
@@ -1168,7 +1210,7 @@ class SportsChannelMatcher {
         final d = _dateInName(_names[i]);
         if (d != null && !_dateFits(d, g.start)) continue;
         add(i, MatchReason.name,
-            (d != null ? 120 : 100) + _regionBias(i, g.league));
+            (d != null ? 120 : 100) + _regionBias(i, g.league), null, true);
       }
 
       // 2b. A team's own channel: one team's full name plus the league
@@ -1235,7 +1277,8 @@ class SportsChannelMatcher {
           if (!near(written) && !near(local)) continue;
           final date = _dateInName(_names[e.index]);
           if (date != null && !_dateFits(date, g.start)) continue;
-          add(e.index, MatchReason.name, 95 + _regionBias(e.index, g.league));
+          add(e.index, MatchReason.name, 95 + _regionBias(e.index, g.league),
+              null, true);
         }
       }
 
@@ -1270,7 +1313,8 @@ class SportsChannelMatcher {
               (byName ? 80 : 70) -
                   math.min(diff.abs(), 60) ~/ 6 +
                   _regionBias(i, g.league),
-              p.title);
+              p.title,
+              true);
         }
       }
 
@@ -1350,7 +1394,7 @@ class SportsChannelMatcher {
         });
       final key = SportsChannelPicks.eventKey(g);
       out[key] = distinctCopiesFirst(
-          picks.preferQuality ? preferSportsSources(list) : list, limit);
+          picks.orderMatches(list, countries: countries), limit);
       if (list.isNotEmpty) {
         _noMatch.remove(key);
         continue;

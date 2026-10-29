@@ -580,6 +580,13 @@ class StorageService {
       _prefs.getBool(_vk('vesper_sports_prefer_quality')) ?? true;
   Future<void> setSportsPreferQuality(bool value) =>
       _prefs.setBool(_vk('vesper_sports_prefer_quality'), value);
+
+  /// Empty preserves the existing ranking. Per viewer; Backup/Transfer included.
+  List<String> getSportsPreferredCountries() =>
+      _prefs.getStringList(_vk(AppConstants.keySportsPreferredCountries)) ??
+      const [];
+  Future<void> setSportsPreferredCountries(List<String> countries) => _prefs
+      .setStringList(_vk(AppConstants.keySportsPreferredCountries), countries);
   bool getArchiveAutoLargest() =>
       _prefs.getBool(_vk('vesper_archive_auto_largest')) ?? false;
   Future<void> setArchiveAutoLargest(bool value) =>

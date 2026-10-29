@@ -488,6 +488,14 @@
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },
   {
+    "id": "37d7b6bb84088bf0",
+    "category": "Sports Trak",
+    "title": "Prefer channels from your country",
+    "answer": "Select one or more countries with equal priority. Canadian preferences recognize TSN, Sportsnet, RDS and TVA Sports, including untagged channel names. Country tags and your manual Country corrections help identify other feeds. Explicit game/team picks stay first; game-name or guide evidence stays ahead of generic broadcaster suggestions. Among comparable matches, preferred countries come before other countries, with your usual quality preference inside each group. Other countries remain available as fallbacks. No country preference restores the current automatic ranking. Choices belong to this viewer and travel in Backup and Transfer.",
+    "controls": "Settings → Sports Trak → Preferred channel countries",
+    "url": "https://vespertv.app/remote.html#Sports%20Trak"
+  },
+  {
     "id": "daf3986dfef318b3",
     "category": "Sports Trak",
     "title": "Score alerts for My Teams",

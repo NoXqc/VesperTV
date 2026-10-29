@@ -366,6 +366,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final matches = await _matcher.matchDay(_games, _picks);
     if (!mounted || myToken != _loadToken) return;
     final sourceStore = SportsChannelLists(context.read<StorageService>());
+    final countries = _picks.countryPreferences;
     for (final game in _games) {
       final saved = sourceStore.sourcesFor(game, _gameKey(game));
       if (saved.isEmpty) continue;
@@ -377,9 +378,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         for (final m in matches[_gameKey(game)] ?? <ChannelMatch>[])
           if (!saved.contains(m.channel.id)) m,
       ]..sort((a, b) => b.score.compareTo(a.score));
-      if (_picks.preferQuality) {
-        matches[_gameKey(game)] = preferSportsSources(matches[_gameKey(game)]!);
-      }
+      matches[_gameKey(game)] =
+          _picks.orderMatches(matches[_gameKey(game)]!, countries: countries);
     }
     setState(() {
       _redZoneChoices = _findRedZones(live);
@@ -1183,7 +1183,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         if (!saved.contains(m.channel.id)) m,
     ];
     matches.sort((a, b) => b.score.compareTo(a.score));
-    if (_picks.preferQuality) matches = preferSportsSources(matches);
+    matches = _picks.orderMatches(matches);
     final result = await showDialog<_GameAction>(
       context: context,
       // Opened by a hold too: drop the held OK's repeats (see the widget).
