@@ -381,6 +381,17 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
     (`main.dart _returnToProfiles`); Back there = Exit prompt (Stay focused). Off = unchanged.
   - Includes Codex's `codex/sports-league-fixes` (1e0dd53, tests 500/501). Analyze 16,
     906 tests pass. Owner approved +503 and asked Codex to release/announce.
+  - **Remote Guide/EPG key** (`services/guide_key.dart`, +504..+508): opens the live guide
+    from anywhere (TV home: pop to it, TV tab, playing channel). Formuler EPG = Linux
+    KEY_PROGRAM (scan 362) mapped by its locked keylayout to Android keycode 228 (found
+    with an on-screen key probe; its logcat is empty) — `GuideKey.isGuide` accepts
+    KEYCODE_GUIDE, scan 362 and keycode 228. Sports Mode root: the in-page Live TV panel.
+  - **Sports Mode Live TV panel** (+510..+513): OK on a channel plays it in the Sports
+    Mode player itself (channel-only preview: feed layout's big video; no games = shared
+    `_HeroVideo` alone), OK again = full screen on the same session; Right on a group (no
+    guide open) = into the page; Left from the page = back to the open panel. Sports Mode
+    Back: page -> rail (player alive) -> rail Back stops it -> Back quits. Regular Sports
+    Trak (mode off) unchanged. Owner tested through +513; 915 tests, analyze 16.
 - **cdx, 2026-10-29 — Sports Mode league navigation** (`codex/sports-league-fixes`,
   unreleased): vertical sidebar move uses Up/Down; horizontal rows use Left/Right.
   Rail visibility and Back state survive focused-league reparenting across the
