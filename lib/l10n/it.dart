@@ -6,6 +6,11 @@
 /// the code; Italian plurals don't work that way (canale/canali), so those
 /// strings are phrased to avoid it.
 const Map<String, String> kIt = {
+  // Sports Trak quality preference (moved from the league bar).
+  "Prefer higher-quality channels among game matches":
+      "Preferisci i canali di qualità superiore tra quelli della partita",
+  "On by default. Your saved channel choices still come first. Turn this off to keep the usual match order. Saved for this viewer.":
+      "Attivo per impostazione predefinita. I canali scelti e salvati mantengono la priorità. Disattiva per mantenere il normale ordine delle corrispondenze. Salvato per questo profilo.",
   // Android phone player touch lock.
   "Lock touch controls": "Blocca i comandi touch",
   "Unlock touch controls": "Sblocca i comandi touch",

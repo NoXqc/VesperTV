@@ -427,8 +427,8 @@
     "id": "2470317a035810ce",
     "category": "Sports Trak",
     "title": "Choose the best quality copy",
-    "answer": "On by default, per profile. Offers a matched 4K game source first, even from a different broadcaster; your explicit channel pick always wins. Turn it off to use the usual match order.",
-    "controls": "OK on Prefer highest quality",
+    "answer": "On by default, per profile. Offers a matched 4K game source first, even from a different broadcaster; your explicit channel pick always wins. Turn it off to use the usual match order. Returning to Sports Trak applies the choice to the current games.",
+    "controls": "Settings → Sports Trak → Prefer highest quality",
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },
   {
@@ -459,7 +459,7 @@
     "id": "f023f540e1a838e1",
     "category": "Sports Trak",
     "title": "Reorder leagues",
-    "answer": "In the Sports Mode sidebar, move the league with ↑ ↓. Top-row leagues, narrow horizontal strips and regular Sports Trak use ← →. Moving across the fifth slot transfers a league between the sidebar and top row. OK or Back finishes the move.",
+    "answer": "The league strip uses short labels such as AHL, EPL, UCL and F1; Edit leagues keeps the full names. In the Sports Mode sidebar, move the league with ↑ ↓. Top-row leagues, narrow horizontal strips and regular Sports Trak use ← →. Moving across the fifth slot transfers a league between the sidebar and top row. OK or Back finishes the move.",
     "controls": "Hold OK on a league chip",
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },

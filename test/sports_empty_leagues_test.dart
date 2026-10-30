@@ -187,7 +187,9 @@ void main() {
       await tester.pumpAndSettle();
       final entry =
           find.widgetWithText(TvMenuTile, 'Hide leagues with no games');
-      await tester.ensureVisible(entry);
+      // This destination is below the new quality preference on phones.
+      await tester.scrollUntilVisible(entry, 120,
+          scrollable: find.byType(Scrollable).last);
       await tester.tap(entry);
       await tester.pumpAndSettle();
       expect(find.byType(SportsLeagueVisibilitySettingsScreen), findsOneWidget);

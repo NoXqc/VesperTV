@@ -6,6 +6,11 @@
 /// English-style plural "s" filled in by the code; Greek plurals don't
 /// work that way, so those strings are phrased without it.
 const Map<String, String> kEl = {
+  // Sports Trak quality preference (moved from the league bar).
+  "Prefer higher-quality channels among game matches":
+      "Προτίμηση καναλιών υψηλότερης ποιότητας που αντιστοιχούν στον αγώνα",
+  "On by default. Your saved channel choices still come first. Turn this off to keep the usual match order. Saved for this viewer.":
+      "Ενεργό από προεπιλογή. Οι αποθηκευμένες επιλογές καναλιών σας παραμένουν πρώτες. Απενεργοποιήστε το για να διατηρήσετε τη συνήθη σειρά αντιστοίχισης. Αποθηκεύεται για αυτό το προφίλ.",
   // Android phone player touch lock.
   "Lock touch controls": "Κλείδωμα χειριστηρίων αφής",
   "Unlock touch controls": "Ξεκλείδωμα χειριστηρίων αφής",

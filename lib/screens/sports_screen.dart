@@ -1790,7 +1790,6 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
             'league:all',
             for (final l in _navigationLeagues.skip(5)) 'league:${l.id}',
             'league:edit',
-            'league:quality',
             'league:scores',
             'league:mode'
           ],
@@ -2553,7 +2552,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
             child: SportsChip(
               focusNode: _chipNode('league:${l.id}'),
               enabled: _movingLeague == null || _movingLeague == l.id,
-              label: l.name,
+              label: l.shortName,
               logoUrl: l.logoUrl,
               selected: _leagueFilter == l.id,
               moving: _movingLeague == l.id,
@@ -2570,20 +2569,6 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           selected: false,
           onFocus: () => _zone = 0,
           onTap: _editLeagues,
-        ),
-        SportsChip(
-          key: const ValueKey('league:quality'),
-          focusNode: _chipNode('league:quality'),
-          enabled: _movingLeague == null,
-          label: tr('Prefer highest quality'),
-          icon: Icons.high_quality,
-          selected: _storage.getSportsPreferQuality(),
-          onFocus: () => _zone = 0,
-          onTap: () async {
-            await _storage
-                .setSportsPreferQuality(!_storage.getSportsPreferQuality());
-            if (mounted) await _rematch();
-          },
         ),
         SportsChip(
           key: const ValueKey('league:scores'),

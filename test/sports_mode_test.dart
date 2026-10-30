@@ -22,6 +22,7 @@ import 'package:nox_iptv/screens/sports_live_list_screen.dart';
 import 'package:nox_iptv/screens/sports_my_teams_screen.dart';
 import 'package:nox_iptv/screens/sports_league_manager_screen.dart';
 import 'package:nox_iptv/screens/sports_channels_screen.dart';
+import 'package:nox_iptv/screens/settings/sports_quality_settings_screen.dart';
 import 'package:nox_iptv/screens/tv_home_screen.dart';
 import 'package:nox_iptv/widgets/sports_widgets.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
@@ -855,7 +856,7 @@ void main() {
     await tester.tap(pick);
     await tester.pumpAndSettle();
     expect(feed.requests.last, [college]);
-    expect(chip(tester, collegeLabel).selected, isTrue);
+    expect(chip(tester, sportsLeagueById(college)!.shortName).selected, isTrue);
     expect(getFocus(), 'sports-chip-league:all');
     expect(storage.getSportsLeagues(), containsAll(['mlb', college]));
     // Hold remains an alternate way to open the same menu; cancellation
@@ -864,7 +865,7 @@ void main() {
     expect(find.text('Your leagues'), findsOneWidget);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
-    expect(chip(tester, collegeLabel).selected, isTrue);
+    expect(chip(tester, sportsLeagueById(college)!.shortName).selected, isTrue);
     expect(getFocus(), 'sports-chip-league:all');
     await press(tester, LogicalKeyboardKey.select);
     await tester.pumpAndSettle();
@@ -941,6 +942,85 @@ void main() {
     await press(tester, LogicalKeyboardKey.arrowLeft);
     expect(storage.getSportsLeagues()!.first, 'nfl');
     await press(tester, LogicalKeyboardKey.select);
+    expect(tester.takeException(), isNull);
+    await disposePage(tester);
+  });
+
+  for (final mode in [false, true]) {
+    testWidgets(
+        'compact league strip keeps full names in Edit leagues: mode=$mode',
+        (tester) async {
+      await prefs.setSportsMode(mode);
+      await storage.setSportsAddedLeagues(['hockey.ahl', 'racing.f1']);
+      await storage.setSportsLeagues([
+        'nhl',
+        'nfl',
+        'nba',
+        'mlb',
+        'eng.1',
+        'uefa.champions',
+        'hockey.ahl',
+        'racing.f1',
+      ]);
+      await open(tester, games: []);
+      expect(chip(tester, 'AHL').label, 'AHL');
+      expect(chip(tester, 'UCL').label, 'UCL');
+      expect(chip(tester, 'F1').label, 'F1');
+      expect(find.byKey(const ValueKey('league:quality')), findsNothing);
+      expect(find.text('Prefer highest quality'), findsNothing);
+      chip(tester, 'Edit leagues').focusNode.requestFocus();
+      await tester.pumpAndSettle();
+      // Removing the quality chip must not leave a dead remote-focus slot.
+      await press(tester, LogicalKeyboardKey.arrowRight);
+      expect(getFocus(), 'sports-chip-league:scores');
+      chip(tester, 'Edit leagues').focusNode.requestFocus();
+      await tester.pumpAndSettle();
+      await press(tester, LogicalKeyboardKey.select);
+      final ahl = find.byKey(const ValueKey('yours:hockey.ahl'));
+      await tester.scrollUntilVisible(ahl, 300,
+          scrollable: find
+              .descendant(
+                  of: find.byType(SportsLeagueManagerScreen),
+                  matching: find.byType(Scrollable))
+              .first,
+          maxScrolls: 30);
+      expect(
+          find.descendant(
+              of: ahl, matching: find.text('American Hockey League')),
+          findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await disposePage(tester);
+    });
+  }
+
+  testWidgets('returning from quality settings re-ranks existing game matches',
+      (tester) async {
+    final game = _game(0, GameState.pre);
+    playlist.live = [
+      for (final quality in ['HD', '4K'])
+        Channel(
+          id: 'p1::$quality',
+          rawId: quality,
+          playlistId: 'p1',
+          name: 'Home 0 vs Away 0 $quality',
+          group: 'Sports',
+          url: 'https://test/$quality',
+        ),
+    ];
+    await open(tester, games: [game]);
+    await tester.pumpAndSettle();
+    expect(find.text('Home 0 vs Away 0 4K'), findsWidgets);
+    Navigator.of(tester.element(find.byType(SportsScreen))).push(
+        MaterialPageRoute<void>(
+            builder: (_) => const SportsQualitySettingsScreen()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+    expect(storage.getSportsPreferQuality(), isFalse);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('Home 0 vs Away 0 HD'), findsWidgets);
+    expect(find.text('Home 0 vs Away 0 4K'), findsNothing);
     expect(tester.takeException(), isNull);
     await disposePage(tester);
   });

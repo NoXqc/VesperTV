@@ -6,6 +6,11 @@
 /// "s" filled in by the code; Spanish plurals don't always work that way
 /// (canal/canales), so those strings are phrased to avoid it.
 const Map<String, String> kEs = {
+  // Sports Trak quality preference (moved from the league bar).
+  "Prefer higher-quality channels among game matches":
+      "Preferir los canales de mayor calidad que coincidan con el partido",
+  "On by default. Your saved channel choices still come first. Turn this off to keep the usual match order. Saved for this viewer.":
+      "Activado de forma predeterminada. Tus canales guardados siguen teniendo prioridad. Desactívalo para mantener el orden habitual de las coincidencias. Guardado para este perfil.",
   // Android phone player touch lock.
   "Lock touch controls": "Bloquear controles táctiles",
   "Unlock touch controls": "Desbloquear controles táctiles",

@@ -5,6 +5,11 @@
 /// Keep every `{placeholder}` exactly as in the key. `{s}` is the plural "s"
 /// the code fills in ("chaîne{s}").
 const Map<String, String> kFr = {
+  // Sports Trak quality preference (moved from the league bar).
+  "Prefer higher-quality channels among game matches":
+      "Privilégier les chaînes de meilleure qualité parmi les correspondances du match",
+  "On by default. Your saved channel choices still come first. Turn this off to keep the usual match order. Saved for this viewer.":
+      "Activé par défaut. Vos choix de chaînes enregistrés restent prioritaires. Désactivez cette option pour conserver l’ordre habituel des correspondances. Enregistré pour ce profil.",
   // Android phone player touch lock.
   "Lock touch controls": "Verrouiller les commandes tactiles",
   "Unlock touch controls": "Déverrouiller les commandes tactiles",

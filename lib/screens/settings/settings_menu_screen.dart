@@ -33,6 +33,7 @@ import 'sports_country_settings_screen.dart';
 import 'sports_playlist_settings_screen.dart';
 import 'sports_league_visibility_settings_screen.dart';
 import 'sports_odds_settings_screen.dart';
+import 'sports_quality_settings_screen.dart';
 
 /// One destination row of a Settings category.
 class _Entry {
@@ -259,6 +260,11 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
                 tr('Preferred playlist'),
                 tr('Try matching channels from this playlist first'),
                 (_) => const SportsPlaylistSettingsScreen()),
+            _Entry(
+                Icons.high_quality,
+                tr('Prefer highest quality'),
+                tr('Prefer higher-quality channels among game matches'),
+                (_) => const SportsQualitySettingsScreen()),
             _Entry(
                 Icons.filter_list,
                 tr('Hide leagues with no games'),
