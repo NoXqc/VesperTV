@@ -370,10 +370,11 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
 - **cdx, 2026-10-30 — signed test APK1.0.49+530** (`codex/test-apk-530`):
   includes Plex, title-page row order, My Teams preferred channel, country
   preference, preferred playlist and hide-empty-leagues. Analyze16/1005Flutter
-  pass; package/version and release certificate verified. Owner requested VPS
-  download hosting: APK ready locally, upload awaits exact-command approval
-  required by AGENTS.md. No device installation/public release/push. Next
-  newly built APK must exceed530. Artifact/hash and state: root HANDOFF.md.
+  pass; package/version and release certificate verified. Owner approved VPS
+  upload; test APK is live on pair.vespertv.app/dl/ under its versioned filename.
+  Public HTTP200/full-download SHA256 verified. No device installation, server
+  configuration/service change, public release or push. Next newly built APK
+  must exceed530. Exact download URL/hash and state: root HANDOFF.md.
 - **cdx, 2026-10-30 — Hide empty Sports leagues**
   (`codex/hide-empty-sports-leagues`, stacked on preferred playlist): new
   off-by-default, per-viewer Sports Trak setting follows the selected day.
