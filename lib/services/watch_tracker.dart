@@ -40,6 +40,9 @@ class WatchTracker {
 
   bool isTracked(String channelId) => _items.containsKey(channelId);
 
+  /// The registered ids of [channelId] (also what Skip intro looks up).
+  TrackedItem? itemFor(String channelId) => _items[channelId];
+
   /// No ids at all (a provider title without a TMDB id): nothing to report.
   void _drop(String channelId) => _items.remove(channelId);
 

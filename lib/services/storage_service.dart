@@ -510,6 +510,11 @@ class StorageService {
   Future<void> setCatchupKeepPlaying(bool value) =>
       _prefs.setBool(AppConstants.keyCatchupKeepPlaying, value);
 
+  bool getSkipSegments() =>
+      _prefs.getBool(AppConstants.keySkipSegments) ?? true;
+  Future<void> setSkipSegments(bool value) =>
+      _prefs.setBool(AppConstants.keySkipSegments, value);
+
   bool getMixFavoritePlaylists() =>
       _prefs.getBool(AppConstants.keyMixFavoritePlaylists) ?? false;
   Future<void> setMixFavoritePlaylists(bool value) =>

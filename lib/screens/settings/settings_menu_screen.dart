@@ -225,6 +225,9 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
             if (Platform.isAndroid)
               _general('catchup', Icons.history_toggle_off, tr('Catch-up'),
                   tr('What happens when a catch-up programme ends')),
+            if (Platform.isAndroid)
+              _general('skipintro', Icons.skip_next_outlined, tr('Skip intro'),
+                  tr('Skip intros and credits on TV show episodes')),
             _general('trailers', Icons.movie_outlined, tr('Trailers'),
                 tr('Play trailers automatically on movie and show pages')),
             _general(

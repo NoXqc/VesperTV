@@ -24,7 +24,7 @@ python -m unittest discover -s tools/discord_help_bot -p test_update_auto.py
 ```
 
 Commit `guide.json` with the website change and redeploy the bot when answers
-change. The index currently contains 84 guide entries. Links use the website's
+change. The index currently contains 85 guide entries. Links use the website's
 existing category fragments; publishing the website is a separate step.
 
 The Android1.0.46 guide adds the remote Guide/EPG key (including Formuler), the

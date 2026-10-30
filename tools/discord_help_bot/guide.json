@@ -216,6 +216,14 @@
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },
   {
+    "id": "3fa8134b91e5d845",
+    "category": "Full screen",
+    "title": "Skip intro / credits",
+    "answer": "While the white Skip intro, Skip recap or Skip credits button shows, OK skips it. In the credits with another episode queued, it says Next episode and plays it. The button hides after 10 seconds and comes back when you bring up the player bar. Times come from IntroDB; turn it off in Settings › Playback › Skip intro.",
+    "controls": "OK EPISODE · ANDROID",
+    "url": "https://vespertv.app/remote.html#Full%20screen"
+  },
+  {
     "id": "7dd60da1eb923f65",
     "category": "Full screen",
     "title": "Data pool",

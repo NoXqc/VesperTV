@@ -2952,4 +2952,16 @@ const Map<String, String> kEl = {
   "Metadata provided by TMDB.": "Τα μεταδεδομένα παρέχονται από το TMDB.",
   "No matching title found in your playlists.":
       "Δεν βρέθηκε αντίστοιχος τίτλος στις λίστες αναπαραγωγής σας.",
+  "Skip intro":
+      "Παράλειψη εισαγωγής",
+  "Skip recap":
+      "Παράλειψη ανακεφαλαίωσης",
+  "Skip credits":
+      "Παράλειψη τίτλων τέλους",
+  "Skip intro and credits button":
+      "Κουμπί παράλειψης εισαγωγής και τίτλων τέλους",
+  "Skip intros and credits on TV show episodes":
+      "Παράλειψη εισαγωγής και τίτλων τέλους στα επεισόδια",
+  "On TV show episodes, a button skips the intro, the recap and the credits (or plays the next episode). Press OK while it shows. Times come from IntroDB (introdb.app), a free community database: it is asked with the show's IMDb id, season and episode number, nothing else.":
+      "Στα επεισόδια σειρών, ένα κουμπί παραλείπει την εισαγωγή, την ανακεφαλαίωση και τους τίτλους τέλους (ή παίζει το επόμενο επεισόδιο). Πατήστε OK όσο εμφανίζεται. Οι χρόνοι προέρχονται από το IntroDB (introdb.app), μια δωρεάν κοινοτική βάση: του στέλνεται μόνο το IMDb id της σειράς, η σεζόν και ο αριθμός επεισοδίου.",
 };

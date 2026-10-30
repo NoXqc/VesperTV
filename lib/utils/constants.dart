@@ -324,6 +324,9 @@ class AppConstants {
   // Settings > Playback > Catch-up: carry on past the programme (off =
   // stop at its end).
   static const String keyCatchupKeepPlaying = 'vesper_catchup_keep_playing';
+  // Settings > Playback > Skip intro: the IntroDB skip button on episodes
+  // (on by default; services/skip_segments.dart).
+  static const String keySkipSegments = 'vesper_skip_segments';
   // Live channel ids seen playing at real 4K (Real4kChannels), list.
   static const String keyReal4kChannels = 'vesper_real_4k_channels';
   // Media Hub placeholder clips re-asked + titles tagged Ready

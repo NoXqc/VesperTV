@@ -577,6 +577,21 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                             },
                           ),
                         ]),
+                  if (Platform.isAndroid)
+                    _section(
+                        'skipintro', Icons.skip_next_outlined, tr('Skip intro'),
+                        children: [
+                          TvSwitchListTile(
+                            title: Text(tr('Skip intro and credits button')),
+                            subtitle: Text(tr(
+                                'On TV show episodes, a button skips the intro, the recap and the credits (or plays the next episode). Press OK while it shows. Times come from IntroDB (introdb.app), a free community database: it is asked with the show\'s IMDb id, season and episode number, nothing else.')),
+                            value: _storage.getSkipSegments(),
+                            onChanged: (v) async {
+                              await _storage.setSkipSegments(v);
+                              if (mounted) setState(() {});
+                            },
+                          ),
+                        ]),
                   _section('trailers', Icons.movie_outlined, tr('Trailers'),
                       children: [
                         TvSwitchListTile(

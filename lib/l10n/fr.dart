@@ -2335,4 +2335,16 @@ const Map<String, String> kFr = {
   "Metadata provided by TMDB.": "Métadonnées fournies par TMDB.",
   "No matching title found in your playlists.":
       "Aucun titre correspondant trouvé dans vos playlists.",
+  "Skip intro":
+      "Passer l'intro",
+  "Skip recap":
+      "Passer le résumé",
+  "Skip credits":
+      "Passer le générique",
+  "Skip intro and credits button":
+      "Bouton pour passer l'intro et le générique",
+  "Skip intros and credits on TV show episodes":
+      "Passer l'intro et le générique des épisodes",
+  "On TV show episodes, a button skips the intro, the recap and the credits (or plays the next episode). Press OK while it shows. Times come from IntroDB (introdb.app), a free community database: it is asked with the show's IMDb id, season and episode number, nothing else.":
+      "Sur les épisodes de séries, un bouton passe l'intro, le résumé et le générique (ou lance l'épisode suivant). Appuyez sur OK quand il s'affiche. Les temps viennent d'IntroDB (introdb.app), une base communautaire gratuite : on lui envoie seulement l'identifiant IMDb de la série, la saison et le numéro d'épisode.",
 };

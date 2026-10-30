@@ -2333,4 +2333,16 @@ const Map<String, String> kIt = {
   "Metadata provided by TMDB.": "Metadati forniti da TMDB.",
   "No matching title found in your playlists.":
       "Nessun titolo corrispondente trovato nelle tue playlist.",
+  "Skip intro":
+      "Salta l'intro",
+  "Skip recap":
+      "Salta il riassunto",
+  "Skip credits":
+      "Salta i titoli di coda",
+  "Skip intro and credits button":
+      "Pulsante per saltare intro e titoli di coda",
+  "Skip intros and credits on TV show episodes":
+      "Salta intro e titoli di coda negli episodi",
+  "On TV show episodes, a button skips the intro, the recap and the credits (or plays the next episode). Press OK while it shows. Times come from IntroDB (introdb.app), a free community database: it is asked with the show's IMDb id, season and episode number, nothing else.":
+      "Negli episodi delle serie, un pulsante salta l'intro, il riassunto e i titoli di coda (o avvia l'episodio successivo). Premi OK mentre è visibile. I tempi vengono da IntroDB (introdb.app), un database comunitario gratuito: riceve solo l'id IMDb della serie, la stagione e il numero dell'episodio.",
 };

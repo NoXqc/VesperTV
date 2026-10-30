@@ -14,6 +14,8 @@ import '../utils/playback_modal_back_guard.dart';
 import '../services/app_preferences.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
+import '../services/skip_segments.dart';
+import '../services/storage_service.dart';
 import '../utils/constants.dart';
 import '../utils/tv_theme.dart';
 import '../widgets/channel_schedule_panel.dart';
@@ -21,6 +23,7 @@ import '../widgets/live_channel_info_card.dart';
 import '../widgets/data_pool_card.dart';
 import '../widgets/epg_guide.dart';
 import '../widgets/player_controls.dart';
+import '../widgets/skip_segment_button.dart';
 import '../widgets/subtitle_overlay.dart';
 import '../widgets/player_side_panel.dart';
 import 'multiview_screen.dart';
@@ -99,6 +102,25 @@ class _PlayerScreenState extends State<PlayerScreen> {
   /// read than the info card's 4 s); OK again hides both.
   bool _dataPoolVisible = false;
   Timer? _dataPoolTimer;
+
+  /// Skip intro / recap / credits on episodes (IntroDB, Settings >
+  /// Playback > Skip intro). OK skips while its button shows.
+  final _skip = SkipSegmentWatcher();
+
+  void _onOk() {
+    final segment = _skip.visibleWith(_bottomVisible);
+    if (segment != null && !_panelOpen && !_scheduleOpen) {
+      _skipSegment(segment);
+      return;
+    }
+    _toggleInfoCard();
+  }
+
+  void _skipSegment(SkipSegment segment) {
+    final next = _playback.nextUpChannel;
+    _skip.skip(segment,
+        playNext: next == null ? null : () => _playback.play(next));
+  }
 
   /// [PlayerSidePanel] showing (Left on a live channel). Back closes it
   /// instead of leaving the player (see the PopScope in [build]).
@@ -815,6 +837,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _zapInfoTimer?.cancel();
     _dataPoolTimer?.cancel();
     _skipCommit?.cancel();
+    _skip.dispose();
     _fileInfoRequests.dispose();
     _topScope.removeListener(_onBarFocusChange);
     _bottomScope.removeListener(_onBarFocusChange);
@@ -852,6 +875,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
     // popped/re-pushed — everything below reflects whatever's *actually*
     // playing, not just the episode this screen was originally opened for.
     final channel = playback.currentChannel ?? widget.channel;
+    final storage = context.read<StorageService>();
+    _skip.attach(controller, channel.id,
+        enabled: storage.getSkipSegments(),
+        episodeCandidate: !channel.isLive &&
+            !channel.transientPlayback &&
+            playback.catchup == null,
+        tmdbKey: storage.getTmdbApiKey());
     // Catch-up: the guide line and the OK card follow the playhead.
     final session = playback.catchup;
     final catchupAt = session == null || controller == null
@@ -959,11 +989,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     // No repeats: the OK held to open this player must not
                     // pop the card on arrival.
                     const SingleActivator(LogicalKeyboardKey.select,
-                        includeRepeats: false): _toggleInfoCard,
+                        includeRepeats: false): _onOk,
                     const SingleActivator(LogicalKeyboardKey.enter,
-                        includeRepeats: false): _toggleInfoCard,
+                        includeRepeats: false): _onOk,
                     const SingleActivator(LogicalKeyboardKey.numpadEnter,
-                        includeRepeats: false): _toggleInfoCard,
+                        includeRepeats: false): _onOk,
                   },
                 },
                 child: Focus(
@@ -1261,6 +1291,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                 ),
                               ),
                             ),
+
+                          SkipSegmentButton(
+                            watcher: _skip,
+                            controlsVisible: _bottomVisible,
+                            hasNext: playback.nextUpChannel != null,
+                            showOkHint: !_touch && !_focusInBar,
+                            onSkip: _skipSegment,
+                          ),
 
                           if (controller != null)
                             _UpNextBubble(
