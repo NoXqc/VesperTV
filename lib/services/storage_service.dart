@@ -598,6 +598,13 @@ class StorageService {
       _prefs.getBool(_vk(AppConstants.keySportsHideEmptyLeagues)) ?? false;
   Future<void> setSportsHideEmptyLeagues(bool value) =>
       _prefs.setBool(_vk(AppConstants.keySportsHideEmptyLeagues), value);
+
+  /// Betting odds on Sports Trak game cards and stats (off by default, per
+  /// viewer).
+  bool getSportsShowOdds() =>
+      _prefs.getBool(_vk(AppConstants.keySportsShowOdds)) ?? false;
+  Future<void> setSportsShowOdds(bool value) =>
+      _prefs.setBool(_vk(AppConstants.keySportsShowOdds), value);
   Future<void> setSportsPreferredPlaylist(String? playlistId) async {
     final key = _vk(AppConstants.keySportsPreferredPlaylist);
     if (playlistId == null) {

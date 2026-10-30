@@ -1218,7 +1218,67 @@ SportsGame? _parseEvent(Map<String, dynamic> e, SportsLeague league) {
     situation: state == GameState.live
         ? _situationOf(comp['situation'], league)
         : null,
+    odds: state == GameState.post ? null : sportsOddsOf(comp['odds']),
   );
+}
+
+/// ESPN's scoreboard `competitions[0].odds` (the first, highest-priority
+/// sportsbook). Prefers the current ("close") lines of `moneyline` /
+/// `pointSpread` / `total`, else the older flat `homeTeamOdds.moneyLine`.
+/// The bet links in it are never kept.
+SportsOdds? sportsOddsOf(Object? raw) {
+  final o = raw is List && raw.isNotEmpty && raw.first is Map
+      ? raw.first as Map
+      : null;
+  if (o == null) return null;
+  String? text(Object? v) {
+    if (v is num) {
+      if (v == v.roundToDouble()) return v.toInt().toString();
+      return v.toString();
+    }
+    final s = v?.toString().trim();
+    return s == null || s.isEmpty ? null : s;
+  }
+
+  String? american(Object? v) {
+    if (v is num) {
+      final n = v.round();
+      return n > 0 ? '+$n' : '$n';
+    }
+    return text(v);
+  }
+
+  Map? side(String market, String key) {
+    final m = o[market];
+    final s = m is Map ? m[key] : null;
+    final current = s is Map ? (s['close'] ?? s['current'] ?? s['open']) : null;
+    return current is Map ? current : null;
+  }
+
+  Map? team(String key) => o[key] is Map ? o[key] as Map : null;
+  final provider = o['provider'] is Map
+      ? text((o['provider'] as Map)['displayName'] ??
+          (o['provider'] as Map)['name'])
+      : null;
+  final odds = SportsOdds(
+    provider: provider,
+    details: text(o['details']),
+    total: text(o['overUnder']) ??
+        side('total', 'over')?['line']?.toString().replaceFirst('o', ''),
+    homeMoneyline: american(side('moneyline', 'home')?['odds'] ??
+        team('homeTeamOdds')?['moneyLine']),
+    awayMoneyline: american(side('moneyline', 'away')?['odds'] ??
+        team('awayTeamOdds')?['moneyLine']),
+    drawMoneyline: american(
+        side('moneyline', 'draw')?['odds'] ?? team('drawOdds')?['moneyLine']),
+    homeSpread: text(side('pointSpread', 'home')?['line']),
+    awaySpread: text(side('pointSpread', 'away')?['line']),
+    homeSpreadOdds: american(side('pointSpread', 'home')?['odds']),
+    awaySpreadOdds: american(side('pointSpread', 'away')?['odds']),
+    overOdds: american(side('total', 'over')?['odds']),
+    underOdds: american(side('total', 'under')?['odds']),
+  );
+  return odds.isEmpty ? null : odds;
 }
 
 /// ESPN's "rating" leader repeats another line ("29 PTS").

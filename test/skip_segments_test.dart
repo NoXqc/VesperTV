@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -168,7 +169,7 @@ void main() {
                 watcher: watcher,
                 controlsVisible: bar,
                 hasNext: false,
-                showOkHint: true,
+                hint: SkipHint.ok,
                 onSkip: (_) {}),
           ]),
         );
@@ -179,6 +180,48 @@ void main() {
     expect(find.text('Skip intro'), findsNothing);
     await tester.pumpWidget(app(true));
     expect(find.text('Skip intro'), findsOneWidget);
+    watcher.dispose();
+  });
+
+  testWidgets('focused pill: OK skips, Down goes back to the bar',
+      (tester) async {
+    final player = _FakePlayer();
+    final watcher = SkipSegmentWatcher(
+        source: SkipSegments(
+            client: MockClient(
+                (r) async => http.Response(jsonEncode(_reply), 200))));
+    WatchTracker.instance.register(
+        'ep3', const TrackedItem.episode('tt0903747', season: 1, episode: 2));
+    await tester.runAsync(() async {
+      watcher.attach(player, 'ep3',
+          enabled: true, episodeCandidate: true, tmdbKey: null);
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    });
+    player.at(const Duration(seconds: 316));
+    final node = FocusNode();
+    final skipped = <SkipSegment>[];
+    var downs = 0;
+    await tester.pumpWidget(MaterialApp(
+      home: Stack(children: [
+        SkipSegmentButton(
+            watcher: watcher,
+            controlsVisible: true,
+            hasNext: false,
+            hint: SkipHint.up,
+            focusNode: node,
+            onDown: () => downs++,
+            onSkip: skipped.add),
+      ]),
+    ));
+    expect(find.byIcon(Icons.keyboard_arrow_up_rounded), findsOneWidget);
+    node.requestFocus();
+    await tester.pump();
+    expect(find.text('OK'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    expect(downs, 1);
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    expect(skipped.single.kind, SkipKind.intro);
+    node.dispose();
     watcher.dispose();
   });
 }

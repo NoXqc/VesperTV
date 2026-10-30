@@ -16,6 +16,7 @@ import '../services/playback_service.dart';
 import '../services/sports_channel_matcher.dart';
 import '../services/sports_follows.dart';
 import '../services/sports_service.dart';
+import '../services/storage_service.dart';
 import '../utils/route_observer.dart';
 import '../utils/tv_theme.dart';
 import '../widgets/hold_to_activate.dart';
@@ -1011,6 +1012,10 @@ class _SportsGameDetailsDialogState extends State<SportsGameDetailsDialog> {
                           padding: EdgeInsets.only(bottom: 10),
                           child: LinearProgressIndicator(minHeight: 2),
                         ),
+                      if (g.odds != null &&
+                          g.state != GameState.post &&
+                          context.read<StorageService>().getSportsShowOdds())
+                        _OddsTable(game: g, odds: g.odds!),
                       if (!_loading || _summary != null || g.leaders.isNotEmpty)
                         _SummaryBody(
                           game: g,
@@ -1035,6 +1040,99 @@ class _SportsGameDetailsDialogState extends State<SportsGameDetailsDialog> {
       ),
     );
     return dialog;
+  }
+}
+
+/// Settings > Sports Trak > Betting odds: the scoreboard's lines, away
+/// side first like the score header. Display only.
+class _OddsTable extends StatelessWidget {
+  const _OddsTable({required this.game, required this.odds});
+  final SportsGame game;
+  final SportsOdds odds;
+
+  @override
+  Widget build(BuildContext context) {
+    final draw = odds.drawMoneyline != null;
+    String spread(String? line, String? price) =>
+        [if (line != null) line, if (price != null) '($price)'].join(' ');
+    final rows = <(String, String, String?, String)>[
+      if (odds.awayMoneyline != null || odds.homeMoneyline != null)
+        (
+          tr('Moneyline'),
+          odds.awayMoneyline ?? '-',
+          odds.drawMoneyline,
+          odds.homeMoneyline ?? '-'
+        ),
+      if (odds.awaySpread != null || odds.homeSpread != null)
+        (
+          tr('Spread'),
+          spread(odds.awaySpread, odds.awaySpreadOdds),
+          null,
+          spread(odds.homeSpread, odds.homeSpreadOdds)
+        ),
+    ];
+    const head = TextStyle(
+        color: Colors.white54, fontSize: 12, fontWeight: FontWeight.w600);
+    const cell = TextStyle(
+        color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600);
+    Widget row(String label, String away, String? middle, String home,
+            {TextStyle style = cell}) =>
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 3),
+          child: Row(children: [
+            Expanded(flex: 3, child: Text(label, style: head)),
+            Expanded(
+                flex: 3,
+                child: Text(away, textAlign: TextAlign.center, style: style)),
+            if (draw)
+              Expanded(
+                  flex: 2,
+                  child: Text(middle ?? '',
+                      textAlign: TextAlign.center, style: style)),
+            Expanded(
+                flex: 3,
+                child: Text(home, textAlign: TextAlign.center, style: style)),
+          ]),
+        );
+    final total = [
+      if (odds.total != null) 'O/U ${odds.total}',
+      if (odds.overOdds != null) '${tr('Over')} ${odds.overOdds}',
+      if (odds.underOdds != null) '${tr('Under')} ${odds.underOdds}',
+    ].join(' · ');
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+              odds.provider == null
+                  ? tr('Betting odds')
+                  : tr('Betting odds · {book}', {'book': odds.provider!}),
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800)),
+          const SizedBox(height: 6),
+          if (rows.isNotEmpty)
+            row('', game.away.abbreviation, draw ? tr('Draw') : null,
+                game.home.abbreviation,
+                style: head),
+          for (final r in rows) row(r.$1, r.$2, r.$3, r.$4),
+          if (odds.details != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text('${tr('Favourite')}: ${odds.details}', style: cell),
+            ),
+          if (total.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text('${tr('Total')}: $total', style: cell),
+            ),
+          const SizedBox(height: 10),
+          const Divider(height: 1, color: Colors.white12),
+        ],
+      ),
+    );
   }
 }
 

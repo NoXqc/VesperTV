@@ -2345,4 +2345,30 @@ const Map<String, String> kIt = {
       "Salta intro e titoli di coda negli episodi",
   "On TV show episodes, a button skips the intro, the recap and the credits (or plays the next episode). Press OK while it shows. Times come from IntroDB (introdb.app), a free community database: it is asked with the show's IMDb id, season and episode number, nothing else.":
       "Negli episodi delle serie, un pulsante salta l'intro, il riassunto e i titoli di coda (o avvia l'episodio successivo). Premi OK mentre è visibile. I tempi vengono da IntroDB (introdb.app), un database comunitario gratuito: riceve solo l'id IMDb della serie, la stagione e il numero dell'episodio.",
+  "Betting odds":
+      "Quote scommesse",
+  "Show betting odds":
+      "Mostra le quote",
+  "The line and over/under on game cards, more in the game stats":
+      "La linea e il totale (over/under) sulle schede delle partite, di più nelle statistiche",
+  "Show the line and over/under on games":
+      "Mostra la linea e il totale delle partite",
+  "Odds come with the scores (one sportsbook, mostly North American leagues) and show before and during a game. Display only: {app} never takes bets or links to a sportsbook. Saved for this viewer.":
+      "Le quote arrivano con i punteggi (un solo bookmaker, soprattutto leghe nordamericane) e compaiono prima e durante una partita. Solo visualizzazione: {app} non accetta scommesse e non rimanda a nessun bookmaker. Salvato per questo profilo.",
+  "Moneyline":
+      "Vincente",
+  "Spread":
+      "Handicap",
+  "Over":
+      "Over",
+  "Under":
+      "Under",
+  "Draw":
+      "Pareggio",
+  "Favourite":
+      "Favorito",
+  "Total":
+      "Totale",
+  "Betting odds · {book}":
+      "Quote · {book}",
 };

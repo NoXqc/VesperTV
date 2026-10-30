@@ -227,8 +227,11 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   Future<void> _syncTrackers(SeriesEpisodesResult result) async {
     final imdb = widget.imdbId;
     final tmdb = widget.series.tmdbId;
-    if (imdb == null && (tmdb == null || tmdb.isEmpty)) return;
     final numbers = _episodeNumbers(result);
+    // Send log: Skip intro and Trakt/Simkl need these ids.
+    debugPrint('SeriesIds: imdb=${imdb ?? '-'} tmdb=${tmdb ?? '-'} '
+        'numbered=${numbers.length}/${_allEpisodes.length}');
+    if (imdb == null && (tmdb == null || tmdb.isEmpty)) return;
     for (final e in numbers.entries) {
       WatchTracker.instance.register(
           e.key,

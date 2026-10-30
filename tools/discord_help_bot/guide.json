@@ -387,7 +387,7 @@
     "id": "c3c55479d877f7c1",
     "category": "Sports Trak",
     "title": "Sports Mode (beta)",
-    "answer": "Enable it in Sports Trak or Settings → Interface → Sports Mode to make sports your home for this profile. Your first five leagues sit in a sidebar; the rest, All and Edit leagues stay in the floating top bar. Left from the feed or the first card/control opens the sidebar; Right returns to the page. All opens a dropdown of every enabled league. Today opens the day picker. Standings, My Teams and Networks remain available. Menu gathers Home, Search, Multiview and the other app shortcuts. Turn Sports Mode off to restore the regular home and your previous startup choice. See the player, Live TV panel and Back controls below for the TV layout; narrow and touch layouts keep scrolling page controls.",
+    "answer": "Enable it in Sports Trak or Settings → Sports Trak → Sports Mode to make sports your home for this profile. Your first five leagues sit in a sidebar; the rest, All and Edit leagues stay in the floating top bar. Left from the feed or the first card/control opens the sidebar; Right returns to the page. All opens a dropdown of every enabled league. Today opens the day picker. Standings, My Teams and Networks remain available. Menu gathers Home, Search, Multiview and the other app shortcuts. Turn Sports Mode off to restore the regular home and your previous startup choice. See the player, Live TV panel and Back controls below for the TV layout; narrow and touch layouts keep scrolling page controls.",
     "controls": "OK on Sports Mode",
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },
@@ -525,6 +525,14 @@
     "title": "Hide quiet leagues for the selected day",
     "answer": "Off by default. Turn it on to hide leagues whose schedules confirm there are no games on the day shown. Changing the day updates the league row and Sports Mode sidebar/top row. Upcoming, live and finished games all count, including live games continuing past midnight. Loading or unavailable schedules do not establish an empty league. Your saved league order and favourite are kept; Edit leagues still contains every saved league. If the selected league has no games, the view returns to All. Turning the setting off restores the complete league navigation. Saved for this viewer and included in Backup, Transfer and copying Main's Sports settings.",
     "controls": "Settings → Sports Trak → Hide leagues with no games",
+    "url": "https://vespertv.app/remote.html#Sports%20Trak"
+  },
+  {
+    "id": "25229cf68b172cb7",
+    "category": "Sports Trak",
+    "title": "Show betting odds",
+    "answer": "Off by default. Turn it on to see the line and over/under at the bottom of upcoming and live game cards, in the middle of the matchup panel when there is no injury to show, and a full table (moneyline, spread, total, and draw for soccer) at the top of the game stats (hold OK, Stats). Odds come with the scores from one sportsbook, mostly for North American leagues; finished games show none. Display only: the app never takes bets or links to a sportsbook. Saved for this viewer.",
+    "controls": "Settings → Sports Trak → Betting odds",
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },
   {

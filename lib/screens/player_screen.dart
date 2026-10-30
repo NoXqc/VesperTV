@@ -107,6 +107,17 @@ class _PlayerScreenState extends State<PlayerScreen> {
   /// Playback > Skip intro). OK skips while its button shows.
   final _skip = SkipSegmentWatcher();
 
+  /// The pill, focused by Up from the player bar (OK there reaches the
+  /// focused bar button, not the pill). Focus returns to the screen when
+  /// the pill goes away under it.
+  final FocusNode _skipFocus = FocusNode(debugLabel: 'player-skip');
+
+  bool get _skipShowing => _skip.visibleWith(_bottomVisible) != null;
+
+  void _onSkipChanged() {
+    if (_skipFocus.hasFocus && !_skipShowing) _rootFocus.requestFocus();
+  }
+
   void _onOk() {
     final segment = _skip.visibleWith(_bottomVisible);
     if (segment != null && !_panelOpen && !_scheduleOpen) {
@@ -117,6 +128,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   void _skipSegment(SkipSegment segment) {
+    if (_skipFocus.hasFocus) _rootFocus.requestFocus();
     final next = _playback.nextUpChannel;
     _skip.skip(segment,
         playNext: next == null ? null : () => _playback.play(next));
@@ -343,6 +355,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     });
     _topScope.addListener(_onBarFocusChange);
     _bottomScope.addListener(_onBarFocusChange);
+    _skip.addListener(_onSkipChanged);
     _switchButtonFocus.addListener(_onBarFocusChange);
     _scheduleChipFocus.addListener(_onBarFocusChange);
     _resetHideTimer();
@@ -369,6 +382,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
           _bottomVisible = false;
           _moreVisible = false;
         });
+        // An auto-hidden pill goes with the bar.
+        _onSkipChanged();
       }
     });
   }
@@ -420,6 +435,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
     if (_bottomScope.hasFocus) {
       if (_tryIntraBarMove(_bottomScope, TraversalDirection.up)) return;
+      if (_skipShowing) {
+        _skipFocus.requestFocus();
+        return;
+      }
       if (_hasSwitchButton) {
         _switchButtonFocus.requestFocus();
         return;
@@ -837,7 +856,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _zapInfoTimer?.cancel();
     _dataPoolTimer?.cancel();
     _skipCommit?.cancel();
+    _skip.removeListener(_onSkipChanged);
     _skip.dispose();
+    _skipFocus.dispose();
     _fileInfoRequests.dispose();
     _topScope.removeListener(_onBarFocusChange);
     _bottomScope.removeListener(_onBarFocusChange);
@@ -1296,8 +1317,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
                             watcher: _skip,
                             controlsVisible: _bottomVisible,
                             hasNext: playback.nextUpChannel != null,
-                            showOkHint: !_touch && !_focusInBar,
+                            hint: _touch
+                                ? SkipHint.none
+                                : _bottomScope.hasFocus
+                                    ? SkipHint.up
+                                    : _focusInBar
+                                        ? SkipHint.none
+                                        : SkipHint.ok,
                             onSkip: _skipSegment,
+                            focusNode: _skipFocus,
+                            onDown: _focusBottomBar,
                           ),
 
                           if (controller != null)

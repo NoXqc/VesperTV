@@ -2344,4 +2344,30 @@ const Map<String, String> kEs = {
       "Saltar la intro y los créditos en los episodios",
   "On TV show episodes, a button skips the intro, the recap and the credits (or plays the next episode). Press OK while it shows. Times come from IntroDB (introdb.app), a free community database: it is asked with the show's IMDb id, season and episode number, nothing else.":
       "En los episodios de series, un botón salta la intro, el resumen y los créditos (o reproduce el siguiente episodio). Pulsa OK mientras aparece. Los tiempos vienen de IntroDB (introdb.app), una base comunitaria gratuita: solo se le envía el id de IMDb de la serie, la temporada y el número de episodio.",
+  "Betting odds":
+      "Cuotas de apuestas",
+  "Show betting odds":
+      "Mostrar las cuotas",
+  "The line and over/under on game cards, more in the game stats":
+      "La línea y el total (over/under) en las tarjetas de partido, más en las estadísticas",
+  "Show the line and over/under on games":
+      "Mostrar la línea y el total de los partidos",
+  "Odds come with the scores (one sportsbook, mostly North American leagues) and show before and during a game. Display only: {app} never takes bets or links to a sportsbook. Saved for this viewer.":
+      "Las cuotas llegan con los marcadores (una sola casa de apuestas, sobre todo ligas norteamericanas) y se muestran antes y durante un partido. Solo se muestran: {app} nunca acepta apuestas ni enlaza a una casa de apuestas. Guardado para este perfil.",
+  "Moneyline":
+      "Ganador",
+  "Spread":
+      "Hándicap",
+  "Over":
+      "Más",
+  "Under":
+      "Menos",
+  "Draw":
+      "Empate",
+  "Favourite":
+      "Favorito",
+  "Total":
+      "Total",
+  "Betting odds · {book}":
+      "Cuotas · {book}",
 };

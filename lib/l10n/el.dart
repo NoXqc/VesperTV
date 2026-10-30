@@ -2964,4 +2964,30 @@ const Map<String, String> kEl = {
       "Παράλειψη εισαγωγής και τίτλων τέλους στα επεισόδια",
   "On TV show episodes, a button skips the intro, the recap and the credits (or plays the next episode). Press OK while it shows. Times come from IntroDB (introdb.app), a free community database: it is asked with the show's IMDb id, season and episode number, nothing else.":
       "Στα επεισόδια σειρών, ένα κουμπί παραλείπει την εισαγωγή, την ανακεφαλαίωση και τους τίτλους τέλους (ή παίζει το επόμενο επεισόδιο). Πατήστε OK όσο εμφανίζεται. Οι χρόνοι προέρχονται από το IntroDB (introdb.app), μια δωρεάν κοινοτική βάση: του στέλνεται μόνο το IMDb id της σειράς, η σεζόν και ο αριθμός επεισοδίου.",
+  "Betting odds":
+      "Αποδόσεις στοιχημάτων",
+  "Show betting odds":
+      "Εμφάνιση αποδόσεων",
+  "The line and over/under on game cards, more in the game stats":
+      "Η γραμμή και το over/under στις κάρτες αγώνων, περισσότερα στα στατιστικά",
+  "Show the line and over/under on games":
+      "Εμφάνιση γραμμής και over/under στους αγώνες",
+  "Odds come with the scores (one sportsbook, mostly North American leagues) and show before and during a game. Display only: {app} never takes bets or links to a sportsbook. Saved for this viewer.":
+      "Οι αποδόσεις έρχονται μαζί με τα σκορ (ένα πρακτορείο, κυρίως λίγκες της Βόρειας Αμερικής) και εμφανίζονται πριν και κατά τη διάρκεια ενός αγώνα. Μόνο προβολή: το {app} δεν δέχεται στοιχήματα ούτε παραπέμπει σε πρακτορείο. Αποθηκεύεται για αυτόν τον θεατή.",
+  "Moneyline":
+      "Νικητής",
+  "Spread":
+      "Χάντικαπ",
+  "Over":
+      "Over",
+  "Under":
+      "Under",
+  "Draw":
+      "Ισοπαλία",
+  "Favourite":
+      "Φαβορί",
+  "Total":
+      "Σύνολο",
+  "Betting odds · {book}":
+      "Αποδόσεις · {book}",
 };

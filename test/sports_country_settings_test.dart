@@ -36,6 +36,11 @@ void main() {
       await tester.tap(category);
       await tester.pumpAndSettle();
       if (size.width >= 700) {
+        // Sports Mode is the first row, countries the second.
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.pumpAndSettle();
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pumpAndSettle();
         await tester.sendKeyEvent(LogicalKeyboardKey.select);
       } else {
         await tester.tap(

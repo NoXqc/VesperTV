@@ -1161,7 +1161,13 @@ class SportsGame {
     this.end,
     this.leaders = const [],
     this.situation,
+    this.odds,
   });
+
+  /// Betting lines from the scoreboard (ESPN lists one sportsbook's), only
+  /// before / during a game. Shown only with Settings > Sports Trak >
+  /// Betting odds on.
+  final SportsOdds? odds;
 
   /// The scoreboard's top performers (in-game once it starts), at most one
   /// per stat — the live list's fantasy line. Team sports only.
@@ -1208,6 +1214,55 @@ class SportsGame {
   String get title => isEventOnly
       ? (event?.title ?? first.name)
       : '${first.shortName} $joiner ${second.shortName}';
+}
+
+/// One game's betting lines as ESPN's scoreboard gives them (American odds
+/// as text: "-115", "+215"). Display only: the app never links to or
+/// places a bet.
+class SportsOdds {
+  const SportsOdds({
+    this.provider,
+    this.details,
+    this.total,
+    this.homeMoneyline,
+    this.awayMoneyline,
+    this.drawMoneyline,
+    this.homeSpread,
+    this.awaySpread,
+    this.homeSpreadOdds,
+    this.awaySpreadOdds,
+    this.overOdds,
+    this.underOdds,
+  });
+
+  /// The sportsbook ESPN quotes ("DraftKings").
+  final String? provider;
+
+  /// The favourite and its line ("BOS -14.5", "VGK -115").
+  final String? details;
+
+  /// Over/under ("234.5").
+  final String? total;
+  final String? homeMoneyline;
+  final String? awayMoneyline;
+
+  /// Soccer: the draw.
+  final String? drawMoneyline;
+  final String? homeSpread;
+  final String? awaySpread;
+  final String? homeSpreadOdds;
+  final String? awaySpreadOdds;
+  final String? overOdds;
+  final String? underOdds;
+
+  /// The card's one line: "BOS -14.5 · O/U 234.5".
+  String get line => [
+        if (details != null) details!,
+        if (total != null) 'O/U $total',
+      ].join(' · ');
+
+  bool get isEmpty =>
+      line.isEmpty && homeMoneyline == null && awayMoneyline == null;
 }
 
 /// A stat leader from the scoreboard ("PASS  G. Stockton  181 YDS, 1 TD").

@@ -21,6 +21,12 @@ final RegExp _leadingTag = RegExp(r'^\s*(?:(?:[\[\(|]\s*' +
     _tagWords +
     r')*\s*[-|•]\s+))');
 
+/// "4K: ", "4KDV: ", "UHD HDR: " at the start: a colon only after quality
+/// tags, so "CSI: Miami" keeps its colon. Provider 4K categories name every
+/// title this way and TMDB cast lookups never matched them.
+final RegExp _leadingQualityColon = RegExp(
+    r'^\s*(?:(?:4K|8K|UHD|FHD|HDR10\+?|HDR|DV|DoVi|HEVC|SDR)[-_ +]?)+\s*:\s*');
+
 /// Any "[...]" group, anywhere ("[MULTI-SUB]", "[4K]").
 final RegExp _bracketGroup = RegExp(r'\s*\[[^\]]*\]\s*');
 
@@ -58,7 +64,8 @@ final RegExp _genericEpisode = RegExp(
 String cleanDisplayTitle(String raw) {
   var t = raw;
   for (var i = 0; i < 3; i++) {
-    final next = t.replaceFirst(_leadingTag, '');
+    final next =
+        t.replaceFirst(_leadingQualityColon, '').replaceFirst(_leadingTag, '');
     if (next == t) break;
     t = next;
   }
@@ -83,10 +90,13 @@ const _releaseTags = r'(?:NF|AMZN|DSNP|HMAX|ATVP|HULU|PCOK|PMTP|STAN|CRAV|'
 const _tagSep = r'[\s\-|.•·_/]';
 
 /// One tag (or a "[...]" group) at the very end / very start of a title.
-final RegExp _trailingRelease = RegExp(
-    r'(?:^|' + _tagSep + r'+)(?:' + _releaseTags + r'|\[[^\]]*\])' +
-        _tagSep +
-        r'*$');
+final RegExp _trailingRelease = RegExp(r'(?:^|' +
+    _tagSep +
+    r'+)(?:' +
+    _releaseTags +
+    r'|\[[^\]]*\])' +
+    _tagSep +
+    r'*$');
 final RegExp _leadingRelease = RegExp(r'^' +
     _tagSep +
     r'*(?:' +
@@ -96,7 +106,8 @@ final RegExp _leadingRelease = RegExp(r'^' +
     r')' +
     _tagSep +
     r'*');
-final RegExp _edgeTagSeparators = RegExp(r'^[\s\-|•:·–—._/]+|[\s\-|•:·–—._/]+$');
+final RegExp _edgeTagSeparators =
+    RegExp(r'^[\s\-|•:·–—._/]+|[\s\-|•:·–—._/]+$');
 
 /// Drops runs of release tags from both ends ("NF - 4K", "2160p WEB-DL",
 /// "[MULTI-SUB]") and the separators left between them. Only the edges:
@@ -105,9 +116,8 @@ final RegExp _edgeTagSeparators = RegExp(r'^[\s\-|•:·–—._/]+|[\s\-|•:·
 String stripReleaseTags(String raw) {
   var t = raw;
   for (var i = 0; i < 12; i++) {
-    final next = t
-        .replaceFirst(_trailingRelease, '')
-        .replaceFirst(_leadingRelease, '');
+    final next =
+        t.replaceFirst(_trailingRelease, '').replaceFirst(_leadingRelease, '');
     if (next == t) break;
     t = next;
   }
@@ -148,8 +158,7 @@ String? episodeDisplayTitle(String rawTitle, String seriesName) {
   t = cleanDisplayTitle(t);
   // cleanDisplayTitle falls back to its input; recheck what's really left
   // — "NF - 4K" (all release tags) is nothing.
-  final stripped =
-      stripReleaseTags(t.replaceAll(_edgeSeparators, '').trim());
+  final stripped = stripReleaseTags(t.replaceAll(_edgeSeparators, '').trim());
   if (stripped.isEmpty ||
       _genericEpisode.hasMatch(stripped) ||
       !RegExp(r'[A-Za-zÀ-ÿ0-9]').hasMatch(stripped)) {

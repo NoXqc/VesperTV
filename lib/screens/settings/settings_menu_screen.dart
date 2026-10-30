@@ -32,6 +32,7 @@ import '../../utils/constants.dart';
 import 'sports_country_settings_screen.dart';
 import 'sports_playlist_settings_screen.dart';
 import 'sports_league_visibility_settings_screen.dart';
+import 'sports_odds_settings_screen.dart';
 
 /// One destination row of a Settings category.
 class _Entry {
@@ -186,11 +187,6 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
           [
             _Entry(Icons.palette_outlined, tr('Theme'),
                 tr('Clock, accent color, layout'), (_) => const ThemeScreen()),
-            _Entry(
-                Icons.sports,
-                tr('Sports Mode'),
-                tr('Make Sports Trak your home, with your top five leagues at the side.'),
-                (_) => const SportsModeSettingsScreen()),
             _general('tabs', Icons.tab_outlined, tr('Tabs'),
                 tr('Hide Movies, TV Shows, Media Hub, Recordings or Multiview')),
             _general('goals', Icons.sports_score, tr('Goals alert'),
@@ -249,6 +245,11 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
               {'tab': AppConstants.sportsTabName}),
           [
             _Entry(
+                Icons.sports,
+                tr('Sports Mode'),
+                tr('Make Sports Trak your home, with your top five leagues at the side.'),
+                (_) => const SportsModeSettingsScreen()),
+            _Entry(
                 Icons.flag_outlined,
                 tr('Preferred channel countries'),
                 tr('Prefer local channels while keeping other matches available'),
@@ -263,6 +264,11 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
                 tr('Hide leagues with no games'),
                 tr('Show only leagues with games on the selected day'),
                 (_) => const SportsLeagueVisibilitySettingsScreen()),
+            _Entry(
+                Icons.trending_up,
+                tr('Betting odds'),
+                tr('Show the line and over/under on games'),
+                (_) => const SportsOddsSettingsScreen()),
           ],
         ),
         _Category(

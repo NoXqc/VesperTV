@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 /// What a skip button jumps over.
@@ -54,11 +55,21 @@ class SkipSegments {
     String? tmdbKey,
   }) async {
     var id = imdb != null && _imdbPattern.hasMatch(imdb) ? imdb : null;
-    if (id == null && tmdb != null && (tmdbKey ?? '').trim().isNotEmpty) {
+    final hasKey = (tmdbKey ?? '').trim().isNotEmpty;
+    if (id == null && tmdb != null && hasKey) {
       id = await (_imdbOfTmdb[tmdb] ??= _showImdb(tmdb, tmdbKey!.trim()));
     }
-    if (id == null || season < 0 || episode <= 0) return const [];
-    return _cache['$id:$season:$episode'] ??= _fetch(id, season, episode);
+    // Send log: why an episode has no button (ids, key, IntroDB answer).
+    final tag = 'SkipIntro: S${season}E$episode imdb=${imdb ?? '-'} '
+        'tmdb=${tmdb ?? '-'} key=${hasKey ? 'yes' : 'no'} -> ${id ?? 'no imdb'}';
+    if (id == null || season < 0 || episode <= 0) {
+      debugPrint(tag);
+      return const [];
+    }
+    final segments =
+        await (_cache['$id:$season:$episode'] ??= _fetch(id, season, episode));
+    debugPrint('$tag segments=${segments.map((s) => s.kind.name).join(',')}');
+    return segments;
   }
 
   Future<String?> _showImdb(String tmdb, String key) async {

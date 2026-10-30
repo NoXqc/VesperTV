@@ -3732,7 +3732,7 @@ class _Hero extends StatelessWidget {
     if (narrow) {
       return Column(mainAxisSize: MainAxisSize.min, children: [
         _narrowInfo(context, showScore),
-        _stats(),
+        _stats(context),
       ]);
     }
     return SizedBox(
@@ -3748,13 +3748,18 @@ class _Hero extends StatelessWidget {
               child:
                   _side(context, game.second, alignEnd: true, compact: true)),
         ])),
-        _stats(compact: true),
+        _stats(context, compact: true),
       ]),
     );
   }
 
-  Widget _stats({bool compact = false}) => SportsMatchupStats(
-      game: game, service: service, hideScores: hideScores, compact: compact);
+  Widget _stats(BuildContext context, {bool compact = false}) =>
+      SportsMatchupStats(
+          game: game,
+          service: service,
+          hideScores: hideScores,
+          compact: compact,
+          showOdds: context.read<StorageService>().getSportsShowOdds());
 
   /// The playing hero. Rules from the platform-view bugs (CLAUDE.md §10,
   /// LiveResumeHint, PlayerControls):
@@ -3850,7 +3855,7 @@ class _Hero extends StatelessWidget {
               height: 130, child: _center(context, false, channel: channel))
           : Column(mainAxisSize: MainAxisSize.min, children: [
               _narrowInfo(context, showScore, channel: channel),
-              _stats(compact: true),
+              _stats(context, compact: true),
             ]);
     }
     if (narrow) {
@@ -3867,7 +3872,7 @@ class _Hero extends StatelessWidget {
                 height: 130, child: _center(context, false, channel: channel))
           else
             _narrowInfo(context, showScore, channel: channel),
-          if (!game.isEventOnly) _stats(),
+          if (!game.isEventOnly) _stats(context),
           hint,
         ],
       );
@@ -3883,7 +3888,7 @@ class _Hero extends StatelessWidget {
             child: Column(
               children: [
                 Expanded(child: info),
-                if (!game.isEventOnly) _stats(compact: true),
+                if (!game.isEventOnly) _stats(context, compact: true),
                 hint,
                 const SizedBox(height: 4),
               ],
@@ -4240,6 +4245,11 @@ class _GameCardState extends State<_GameCard> {
     final g = widget.game;
     final live = g.state == GameState.live;
     final showScore = g.state != GameState.pre && !widget.hideScores;
+    // Settings > Sports Trak > Betting odds (off by default).
+    final odds = g.state != GameState.post &&
+            context.read<StorageService>().getSportsShowOdds()
+        ? g.odds?.line
+        : null;
     final status = switch (g.state) {
       GameState.pre => _preLabel(g),
       GameState.live =>
@@ -4468,6 +4478,20 @@ class _GameCardState extends State<_GameCard> {
                                       : Colors.white38),
                             ),
                           ),
+                          if (odds != null && odds.isNotEmpty)
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 140),
+                              child: Padding(
+                                padding: const EdgeInsets.only(left: 6),
+                                child: Text(odds,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white70)),
+                              ),
+                            ),
                         ],
                       ),
                     ],

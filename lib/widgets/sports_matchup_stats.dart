@@ -16,12 +16,16 @@ class SportsMatchupStats extends StatefulWidget {
     required this.service,
     required this.hideScores,
     this.compact = false,
+    this.showOdds = false,
   });
 
   final SportsGame game;
   final SportsService service;
   final bool hideScores;
   final bool compact;
+
+  /// Settings > Sports Trak > Betting odds.
+  final bool showOdds;
 
   @override
   State<SportsMatchupStats> createState() => _SportsMatchupStatsState();
@@ -165,9 +169,17 @@ class _SportsMatchupStatsState extends State<SportsMatchupStats>
           if (summary?.injuries[team.id]?.firstOrNull case final injury?)
             '${injury.name} · ${trSports(injury.status)}',
       ];
+      // Betting odds on (Settings > Sports Trak): the line fills the middle
+      // slot when there's no injury to show.
+      final odds = widget.showOdds ? game.odds : null;
       // Keep a slot beneath each team even when one feed detail is missing.
-      result.insert(1,
-          injuries.isEmpty ? ('', '') : (tr('Injuries'), injuries.join(' / ')));
+      result.insert(
+          1,
+          injuries.isNotEmpty
+              ? (tr('Injuries'), injuries.join(' / '))
+              : odds != null && odds.line.isNotEmpty
+                  ? (tr('Betting odds'), odds.line)
+                  : ('', ''));
       if (result.every((item) => item.$1.isEmpty)) return [];
     } else {
       final goal = summary?.goals.lastOrNull;

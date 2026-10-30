@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:video_player_hdr/video_player_hdr.dart';
 
 import '../l10n/l10n.dart';
@@ -25,6 +26,7 @@ class SkipSegmentWatcher extends ChangeNotifier {
   VideoPlayerHdrController? _controller;
   String? _channelId;
   bool _requested = false;
+  bool _missingLogged = false;
   List<SkipSegment> _segments = const [];
   SkipSegment? _active;
   SkipSegment? _shownFor;
@@ -58,6 +60,7 @@ class SkipSegmentWatcher extends ChangeNotifier {
       // rebuilt in the same pass anyway).
       _channelId = channelId;
       _requested = false;
+      _missingLogged = false;
       _segments = const [];
       _skipped.clear();
       _shownFor = null;
@@ -68,7 +71,13 @@ class SkipSegmentWatcher extends ChangeNotifier {
     final item = WatchTracker.instance.itemFor(channelId);
     // Ids are registered when the series page / Media Hub starts the
     // episode; until then later builds try again.
-    if (item == null || !item.isEpisode) return;
+    if (item == null || !item.isEpisode) {
+      // Send log: an IPTV show without a TMDB id (or episode numbers) is
+      // never registered, so it never asks IntroDB.
+      if (!_missingLogged) debugPrint('SkipIntro: no episode ids (yet)');
+      _missingLogged = true;
+      return;
+    }
     _requested = true;
     unawaited(_source
         .forEpisode(
@@ -155,25 +164,37 @@ class SkipSegmentWatcher extends ChangeNotifier {
   }
 }
 
+/// The remote hint on the pill: none (touch), OK (it takes OK now) or Up
+/// (the player bar has the focus; Up from the bar reaches the pill).
+enum SkipHint { none, ok, up }
+
 /// The white "Skip intro ⏭" pill above the player bar. Always returns a
 /// `Positioned` (it sits straight in the player's Stack; see `_UpNextBubble`
 /// for why a bare widget there collapsed the whole player). A TV remote
-/// uses OK (the player maps it while this shows), a touch screen taps it.
+/// uses OK (the player maps it while this shows and nothing else has the
+/// focus), or Up from the player bar to [focusNode]; a touch screen taps it.
 class SkipSegmentButton extends StatelessWidget {
   const SkipSegmentButton({
     super.key,
     required this.watcher,
     required this.controlsVisible,
     required this.hasNext,
-    required this.showOkHint,
+    required this.hint,
     required this.onSkip,
+    this.focusNode,
+    this.onDown,
   });
 
   final SkipSegmentWatcher watcher;
   final bool controlsVisible;
   final bool hasNext;
-  final bool showOkHint;
+  final SkipHint hint;
   final ValueChanged<SkipSegment> onSkip;
+
+  /// Focused from the player bar (Up). OK skips, Down goes back to the bar
+  /// ([onDown]), Left/Right/Up stay.
+  final FocusNode? focusNode;
+  final VoidCallback? onDown;
 
   static const _hidden = Positioned(
       right: 24, bottom: 200, width: 0, height: 0, child: SizedBox.shrink());
@@ -195,50 +216,92 @@ class SkipSegmentButton extends StatelessWidget {
           right: 24,
           // Above the player bar and the Up Next card.
           bottom: 200,
-          child: Material(
-            color: Colors.white,
-            shape: const StadiumBorder(),
-            elevation: 6,
-            child: InkWell(
-              customBorder: const StadiumBorder(),
-              canRequestFocus: false,
-              onTap: () => onSkip(segment),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 16, 12),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(label(segment.kind, hasNext),
-                        style: const TextStyle(
-                            color: Colors.black,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700)),
-                    const SizedBox(width: 6),
-                    const Icon(Icons.skip_next_rounded,
-                        color: Colors.black, size: 24),
-                    if (showOkHint) ...[
-                      const SizedBox(width: 10),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(5),
-                          border: Border.all(color: Colors.black45),
-                        ),
-                        child: Text(tr('OK'),
+          child: Focus(
+            focusNode: focusNode,
+            canRequestFocus: focusNode != null,
+            skipTraversal: true,
+            onKeyEvent: (_, event) {
+              final key = event.logicalKey;
+              if (key == LogicalKeyboardKey.select ||
+                  key == LogicalKeyboardKey.enter ||
+                  key == LogicalKeyboardKey.numpadEnter) {
+                if (event is KeyDownEvent) onSkip(segment);
+                return KeyEventResult.handled;
+              }
+              if (key == LogicalKeyboardKey.arrowDown) {
+                if (event is KeyDownEvent) onDown?.call();
+                return KeyEventResult.handled;
+              }
+              if (key == LogicalKeyboardKey.arrowUp ||
+                  key == LogicalKeyboardKey.arrowLeft ||
+                  key == LogicalKeyboardKey.arrowRight) {
+                return KeyEventResult.handled;
+              }
+              return KeyEventResult.ignored;
+            },
+            child: Builder(builder: (context) {
+              final focused = Focus.of(context).hasFocus;
+              return _pill(segment, focused);
+            }),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _pill(SkipSegment segment, bool focused) {
+    final shown = focused ? SkipHint.ok : hint;
+    return AnimatedScale(
+      scale: focused ? 1.08 : 1,
+      duration: const Duration(milliseconds: 120),
+      child: Material(
+        color: Colors.white,
+        shape: StadiumBorder(
+            side: focused
+                ? const BorderSide(color: Color(0xFFD4AF37), width: 3)
+                : BorderSide.none),
+        elevation: focused ? 10 : 6,
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          canRequestFocus: false,
+          onTap: () => onSkip(segment),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 16, 12),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(label(segment.kind, hasNext),
+                    style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700)),
+                const SizedBox(width: 6),
+                const Icon(Icons.skip_next_rounded,
+                    color: Colors.black, size: 24),
+                if (shown != SkipHint.none) ...[
+                  const SizedBox(width: 10),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(5),
+                      border: Border.all(color: Colors.black45),
+                    ),
+                    child: shown == SkipHint.up
+                        ? const Icon(Icons.keyboard_arrow_up_rounded,
+                            color: Colors.black54, size: 16)
+                        : Text(tr('OK'),
                             style: const TextStyle(
                                 color: Colors.black54,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600)),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
+                  ),
+                ],
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }

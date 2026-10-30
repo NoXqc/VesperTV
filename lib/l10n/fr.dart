@@ -2347,4 +2347,30 @@ const Map<String, String> kFr = {
       "Passer l'intro et le générique des épisodes",
   "On TV show episodes, a button skips the intro, the recap and the credits (or plays the next episode). Press OK while it shows. Times come from IntroDB (introdb.app), a free community database: it is asked with the show's IMDb id, season and episode number, nothing else.":
       "Sur les épisodes de séries, un bouton passe l'intro, le résumé et le générique (ou lance l'épisode suivant). Appuyez sur OK quand il s'affiche. Les temps viennent d'IntroDB (introdb.app), une base communautaire gratuite : on lui envoie seulement l'identifiant IMDb de la série, la saison et le numéro d'épisode.",
+  "Betting odds":
+      "Cotes de paris",
+  "Show betting odds":
+      "Afficher les cotes",
+  "The line and over/under on game cards, more in the game stats":
+      "La ligne et le total (over/under) sur les cartes de match, plus de détails dans les stats",
+  "Show the line and over/under on games":
+      "Afficher la ligne et le total des matchs",
+  "Odds come with the scores (one sportsbook, mostly North American leagues) and show before and during a game. Display only: {app} never takes bets or links to a sportsbook. Saved for this viewer.":
+      "Les cotes arrivent avec les scores (un seul bookmaker, surtout les ligues nord-américaines) et s'affichent avant et pendant un match. Affichage seulement : {app} ne prend aucun pari et ne renvoie vers aucun bookmaker. Enregistré pour ce profil.",
+  "Moneyline":
+      "Vainqueur",
+  "Spread":
+      "Écart",
+  "Over":
+      "Plus",
+  "Under":
+      "Moins",
+  "Draw":
+      "Nul",
+  "Favourite":
+      "Favori",
+  "Total":
+      "Total",
+  "Betting odds · {book}":
+      "Cotes · {book}",
 };
