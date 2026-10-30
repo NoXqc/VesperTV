@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -120,6 +121,12 @@ void main() {
 
   testWidgets('calendar: D-pad selects days, details show the cup',
       (tester) async {
+    // Decorative logos use the image cache asynchronously. Provide its
+    // platform paths so a late cache open cannot fail after this test exits.
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+            const MethodChannel('plugins.flutter.io/path_provider'),
+            (_) async => Directory.systemTemp.path);
     SharedPreferences.setMockInitialValues({});
     final storage = StorageService();
     await storage.init();
@@ -185,5 +192,9 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.pageUp);
     await tester.pumpAndSettle();
     expect(find.text('vs Brentford'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await tester
+        .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+    await tester.pump();
   });
 }

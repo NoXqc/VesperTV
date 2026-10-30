@@ -345,6 +345,8 @@ class AppConstants {
       'vesper_sports_preferred_countries';
   static const String keySportsPreferredPlaylist =
       'vesper_sports_preferred_playlist';
+  static const String keySportsHideEmptyLeagues =
+      'vesper_sports_hide_empty_leagues';
 
   /// Home page rows, per viewer: ordered row ids, a hidden row as `-id`
   /// (`HomeRows`). Null = never edited (the default order).

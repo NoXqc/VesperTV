@@ -41,6 +41,7 @@ import 'package:nox_iptv/utils/refined_finish.dart';
 import 'package:nox_iptv/utils/route_observer.dart';
 import 'package:nox_iptv/utils/tv_theme.dart';
 import 'package:nox_iptv/widgets/sports_mode_toggle.dart';
+import 'package:nox_iptv/widgets/sports_mode_shell.dart';
 
 class _Storage extends StorageService {
   @override
@@ -132,18 +133,32 @@ SportsGame _game(int index, GameState state) => SportsGame(
     );
 
 class _Feed extends SportsService {
-  _Feed(this.games, {this.gate, this.summary})
+  _Feed(this.games,
+      {this.gate, this.summary, this.days, this.unavailable = const {}})
       : super.forTesting(MockClient((_) async => http.Response('{}', 200)));
   final List<SportsGame> games;
   final List<List<String>> requests = [];
   final Completer<void>? gate;
   final SportsGameSummary? summary;
+  final Map<int, List<SportsGame>>? days;
+  final Set<String> unavailable;
+  @override
+  bool hasReliableSchedule(SportsLeague league, DateTime day) =>
+      !unavailable.contains(league.id);
   @override
   Future<List<SportsGame>> gamesForDay(
       List<SportsLeague> leagues, DateTime day) async {
     requests.add([for (final league in leagues) league.id]);
     await gate?.future;
     final now = DateTime.now();
+    if (days case final byDay?) {
+      final offset =
+          day.difference(DateTime(now.year, now.month, now.day)).inDays;
+      final ids = leagues.map((league) => league.id).toSet();
+      return (byDay[offset] ?? [])
+          .where((game) => ids.contains(game.league.id))
+          .toList();
+    }
     return day.day == now.day ? games : [];
   }
 
@@ -1452,6 +1467,229 @@ void main() {
       await disposePage(tester);
     });
   }
+
+  SportsGame leagueGame(String id) {
+    final base = _game(1, GameState.pre);
+    return SportsGame(
+        id: id,
+        league: sportsLeagueById(id)!,
+        start: base.start,
+        state: base.state,
+        statusText: base.statusText,
+        home: base.home,
+        away: base.away);
+  }
+
+  Finder leagueControl(String id) => find.byWidgetPredicate((widget) =>
+      widget.key == ValueKey('league:$id') ||
+      widget.key == ValueKey('sports-mode-league:$id'));
+
+  for (final mode in [false, true]) {
+    for (final size in [const Size(960, 540), const Size(390, 844)]) {
+      testWidgets(
+          'empty leagues hide in navigation only; failed schedules remain (mode=$mode, $size)',
+          (tester) async {
+        await prefs.setSportsMode(mode);
+        await storage.setSportsHideEmptyLeagues(true);
+        final saved = List<String>.of(storage.getSportsLeagues()!);
+        await open(tester,
+            size: size,
+            feed: _Feed([], days: {
+              0: [leagueGame('nhl'), leagueGame('esp.1')]
+            }, unavailable: {
+              'nfl'
+            }));
+        for (final id in ['nhl', 'nfl', 'esp.1']) {
+          expect(leagueControl(id), findsOneWidget);
+        }
+        for (final id in ['nba', 'mlb', 'eng.1', 'uefa.champions']) {
+          expect(leagueControl(id), findsNothing);
+        }
+        expect(storage.getSportsLeagues(), saved);
+        expect(tester.takeException(), isNull);
+        await disposePage(tester);
+      });
+    }
+  }
+
+  testWidgets(
+      'disabled hiding preserves favorite-only loading and every saved league',
+      (tester) async {
+    await storage.setSportsFavoriteLeague('nfl');
+    final feed = _Feed([], days: {
+      0: [leagueGame('nhl')]
+    });
+    await open(tester, feed: feed);
+    expect(feed.requests.first, ['nfl']);
+    for (final id in storage.getSportsLeagues()!) {
+      expect(leagueControl(id), findsOneWidget);
+    }
+    expect(getFocus(), 'sports-chip-league:nfl');
+    await disposePage(tester);
+  });
+
+  testWidgets(
+      'empty favorite falls back to All without changing saved favorite or order',
+      (tester) async {
+    await storage.setSportsHideEmptyLeagues(true);
+    await storage.setSportsFavoriteLeague('nfl');
+    final saved = List<String>.of(storage.getSportsLeagues()!);
+    final feed = _Feed([], days: const {});
+    await open(tester, feed: feed);
+    expect(feed.requests.first, saved);
+    for (final id in saved) {
+      expect(leagueControl(id), findsNothing);
+    }
+    expect(chip(tester, 'All').selected, true);
+    expect(leagueControl('edit'), findsOneWidget);
+    expect(storage.getSportsFavoriteLeague(), 'nfl');
+    expect(storage.getSportsLeagues(), saved);
+    expect(tester.takeException(), null);
+    await disposePage(tester);
+  });
+
+  testWidgets(
+      'hiding follows Tomorrow and loads all leagues even with a league selected',
+      (tester) async {
+    await prefs.setSportsMode(false);
+    await storage.setSportsHideEmptyLeagues(true);
+    final feed = _Feed([], days: {
+      0: [leagueGame('nhl')],
+      1: [leagueGame('esp.1')]
+    });
+    await open(tester, feed: feed);
+    chip(tester, 'NHL').focusNode.requestFocus();
+    await press(tester, LogicalKeyboardKey.select);
+    expect(feed.requests.last, storage.getSportsLeagues());
+    final tomorrow = chip(tester, 'Tomorrow');
+    tomorrow.focusNode.requestFocus();
+    await tester.pumpAndSettle();
+    await press(tester, LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    expect(leagueControl('nhl'), findsNothing);
+    expect(leagueControl('esp.1'), findsOneWidget);
+    expect(chip(tester, 'All').selected, true);
+    expect(getFocus(), 'sports-chip-day:1');
+    expect(tester.takeException(), null);
+    await disposePage(tester);
+  });
+
+  testWidgets(
+      'refresh restores focus when a league vanishes or crosses the top-five boundary',
+      (tester) async {
+    await storage.setSportsHideEmptyLeagues(true);
+    final days = {
+      0: [for (final id in storage.getSportsLeagues()!) leagueGame(id)]
+    };
+    final feed = _Feed([], days: days);
+    await open(tester, feed: feed);
+    await press(tester, LogicalKeyboardKey.arrowDown);
+    expect(getFocus(), 'sports-chip-league:nfl');
+    days[0] = [leagueGame('esp.1')];
+    await tester.pump(const Duration(seconds: 31));
+    await tester.pumpAndSettle();
+    expect(getFocus(), 'sports-chip-league:esp.1');
+    expect(leagueControl('nfl'), findsNothing);
+    days[0] = [for (final id in storage.getSportsLeagues()!) leagueGame(id)];
+    await tester.pump(const Duration(seconds: 31));
+    await tester.pumpAndSettle();
+    expect(getFocus(), 'sports-chip-league:esp.1');
+    expect(find.byKey(const ValueKey('league:esp.1')), findsOneWidget);
+    expect(tester.takeException(), null);
+    await disposePage(tester);
+  });
+
+  testWidgets(
+      'disabling hiding restores full navigation and focus after returning from settings',
+      (tester) async {
+    await storage.setSportsHideEmptyLeagues(true);
+    await open(tester,
+        feed: _Feed([], days: {
+          0: [leagueGame('esp.1')]
+        }));
+    expect(getFocus(), 'sports-chip-league:esp.1');
+    await storage.setSportsHideEmptyLeagues(false);
+    await tester.pump(const Duration(seconds: 31));
+    await tester.pumpAndSettle();
+    // The rail collapses when the focused league moves into the floating
+    // bar; all league destinations must still be present in its entries.
+    expect(
+        tester
+            .widget<SportsModeShell>(find.byType(SportsModeShell))
+            .entries
+            .map((entry) => entry.id),
+        containsAll(
+            storage.getSportsLeagues()!.take(5).map((id) => 'league:$id')));
+    for (final id in storage.getSportsLeagues()!.skip(5)) {
+      expect(leagueControl(id), findsOneWidget);
+    }
+    expect(getFocus(), 'sports-chip-league:esp.1');
+    expect(tester.takeException(), null);
+    await disposePage(tester);
+  });
+
+  testWidgets(
+      'previously empty leagues return when a refresh becomes unavailable',
+      (tester) async {
+    await storage.setSportsHideEmptyLeagues(true);
+    final unavailable = <String>{};
+    await open(tester,
+        feed: _Feed([], days: const {}, unavailable: unavailable));
+    expect(leagueControl('nfl'), findsNothing);
+    unavailable.add('nfl');
+    await tester.pump(const Duration(seconds: 31));
+    await tester.pumpAndSettle();
+    expect(leagueControl('nfl'), findsOneWidget);
+    expect(leagueControl('nhl'), findsNothing);
+    expect(tester.takeException(), null);
+    await disposePage(tester);
+  });
+
+  testWidgets(
+      'reordering skips hidden leagues and preserves full saved membership',
+      (tester) async {
+    await storage.setSportsHideEmptyLeagues(true);
+    final days = {
+      0: [leagueGame('nhl'), leagueGame('nba')]
+    };
+    await open(tester, feed: _Feed([], days: days));
+    final saved = List<String>.of(storage.getSportsLeagues()!);
+    await holdSelect(tester);
+    await press(tester, LogicalKeyboardKey.arrowDown);
+    final after = storage.getSportsLeagues()!;
+    expect(after.indexOf('nba'), lessThan(after.indexOf('nhl')));
+    expect(after.toSet(), saved.toSet());
+    expect(leagueControl('nfl'), findsNothing);
+    expect(getFocus(), 'sports-chip-league:nhl');
+    days[0] = [leagueGame('nba')];
+    await tester.pump(const Duration(seconds: 31));
+    await tester.pumpAndSettle();
+    expect(
+        leagueControl('nhl'), findsOneWidget); // finish the move before hiding
+    await press(tester, LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    expect(leagueControl('nhl'), findsNothing);
+    expect(getFocus(), 'sports-chip-league:nba');
+    expect(tester.takeException(), null);
+    await disposePage(tester);
+  });
+
+  testWidgets('loading does not hide leagues before schedule confirmation',
+      (tester) async {
+    await storage.setSportsHideEmptyLeagues(true);
+    final gate = Completer<void>();
+    await open(tester, feed: _Feed([], gate: gate, days: const {}));
+    for (final id in storage.getSportsLeagues()!) {
+      expect(leagueControl(id), findsOneWidget);
+    }
+    gate.complete();
+    await tester.pumpAndSettle();
+    for (final id in storage.getSportsLeagues()!) {
+      expect(leagueControl(id), findsNothing);
+    }
+    expect(tester.takeException(), null);
+    await disposePage(tester);
+  });
 
   testWidgets('dedicated My Teams row has no duplicate card focus nodes',
       (tester) async {

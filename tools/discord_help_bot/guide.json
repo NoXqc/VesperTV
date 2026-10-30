@@ -504,6 +504,14 @@
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },
   {
+    "id": "df2f712c5dbf4d56",
+    "category": "Sports Trak",
+    "title": "Hide quiet leagues for the selected day",
+    "answer": "Off by default. Turn it on to hide leagues whose schedules confirm there are no games on the day shown. Changing the day updates the league row and Sports Mode sidebar/top row. Upcoming, live and finished games all count, including live games continuing past midnight. Loading or unavailable schedules do not establish an empty league. Your saved league order and favourite are kept; Edit leagues still contains every saved league. If the selected league has no games, the view returns to All. Turning the setting off restores the complete league navigation. Saved for this viewer and included in Backup, Transfer and copying Main's Sports settings.",
+    "controls": "Settings → Sports Trak → Hide leagues with no games",
+    "url": "https://vespertv.app/remote.html#Sports%20Trak"
+  },
+  {
     "id": "daf3986dfef318b3",
     "category": "Sports Trak",
     "title": "Score alerts for My Teams",

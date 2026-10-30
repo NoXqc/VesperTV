@@ -31,6 +31,7 @@ import '../../widgets/sports_mode_toggle.dart';
 import '../../utils/constants.dart';
 import 'sports_country_settings_screen.dart';
 import 'sports_playlist_settings_screen.dart';
+import 'sports_league_visibility_settings_screen.dart';
 
 /// One destination row of a Settings category.
 class _Entry {
@@ -254,6 +255,11 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
                 tr('Preferred playlist'),
                 tr('Try matching channels from this playlist first'),
                 (_) => const SportsPlaylistSettingsScreen()),
+            _Entry(
+                Icons.filter_list,
+                tr('Hide leagues with no games'),
+                tr('Show only leagues with games on the selected day'),
+                (_) => const SportsLeagueVisibilitySettingsScreen()),
           ],
         ),
         _Category(

@@ -55,6 +55,28 @@ class SportsService {
   late final CflSource _cfl = CflSource(_client);
   final Map<String, _CacheEntry> _cache = {};
   final Map<String, Future<List<SportsGame>>> _inFlight = {};
+  final Set<String> _failedScheduleKeys = {};
+  bool _cflScheduleKnown = false;
+
+  /// Empty is safe to hide only after every date needed for the local day
+  /// loaded successfully. Failed refreshes keep cached games for display,
+  /// but cannot establish that a league has no games. Unfetched is unknown.
+  bool hasReliableSchedule(SportsLeague league, DateTime day) {
+    if (league.isCfl) return _cflScheduleKnown;
+    final local = DateTime(day.year, day.month, day.day);
+    final dates = league.sportsDbId != null
+        ? [local]
+        : [
+            local.subtract(const Duration(days: 1)),
+            local,
+            local.add(const Duration(days: 1))
+          ];
+    return dates.every((date) {
+      final key = '${league.id}|${_espnDate(date)}';
+      return !_failedScheduleKeys.contains(key) &&
+          (_cache[key]?.reliable ?? false);
+    });
+  }
 
   /// Every game of [leagues] that starts on the local calendar day [day],
   /// plus — when [day] is today — games from the day before that are still
@@ -111,10 +133,12 @@ class SportsService {
   Future<List<SportsGame>> _cflGames() async {
     try {
       final games = await _cfl.games();
+      _cflScheduleKnown = true;
       lastError = null;
       return games;
     } catch (e) {
       debugPrint('SportsService: CFL scores failed: $e');
+      _cflScheduleKnown = false;
       lastError = tr('Some scores could not be loaded. Check the connection.');
       return _cfl.cachedGames;
     }
@@ -609,14 +633,17 @@ class SportsService {
       final body = response.body;
       // A busy NFL Sunday is a few hundred KB of JSON — decoded off the UI
       // isolate so the screen keeps responding on a weak box.
-      var games = await compute(
-          db ? parseSportsDbEvents : parseEspnScoreboard, (body, league));
+      final parsed = await compute(_parseDaySchedule, (body, league));
+      var games = parsed.$1;
       if (db) games = await _completeCappedDay(league, date, body, games);
-      _cache[key] = _CacheEntry(games, DateTime.now(), sportsDb: db);
+      _cache[key] =
+          _CacheEntry(games, DateTime.now(), sportsDb: db, reliable: parsed.$2);
+      _failedScheduleKeys.remove(key);
       lastError = null;
       return games;
     } catch (e) {
       debugPrint('SportsService: ${league.id} ${_espnDate(date)} failed: $e');
+      _failedScheduleKeys.add(key);
       lastError = tr('Some scores could not be loaded. Check the connection.');
       return _cache[key]?.games ?? const [];
     }
@@ -624,9 +651,11 @@ class SportsService {
 }
 
 class _CacheEntry {
-  _CacheEntry(this.games, this.fetchedAt, {this.sportsDb = false});
+  _CacheEntry(this.games, this.fetchedAt,
+      {this.sportsDb = false, this.reliable = false});
   final List<SportsGame> games;
   final DateTime fetchedAt;
+  final bool reliable;
 
   /// TheSportsDB's free tier allows 30 requests a minute: live days
   /// refresh every 2 minutes instead of every 50 s.
@@ -649,11 +678,29 @@ class _CacheEntry {
   }
 }
 
+/// Decode/validate on the same worker as the existing parsers. An absent or
+/// malformed events field must not be interpreted as a confirmed empty day.
+(List<SportsGame>, bool) _parseDaySchedule((String, SportsLeague) args) {
+  final (body, league) = args;
+  final db = league.sportsDbId != null;
+  final value = jsonDecode(body);
+  final games =
+      db ? parseSportsDbEvents(args) : _parseEspnEvents(value, league);
+  final events = value is Map ? value['events'] : null;
+  final known = events is List
+      ? events.isEmpty || games.isNotEmpty
+      : db && value is Map && value.containsKey('events') && events == null;
+  return (games, known);
+}
+
 /// Top-level so [compute] can run it on a background isolate.
 @visibleForTesting
 List<SportsGame> parseEspnScoreboard((String, SportsLeague) args) {
   final (body, league) = args;
-  final json = jsonDecode(body);
+  return _parseEspnEvents(jsonDecode(body), league);
+}
+
+List<SportsGame> _parseEspnEvents(dynamic json, SportsLeague league) {
   if (json is! Map<String, dynamic>) return const [];
   final events = json['events'];
   if (events is! List) return const [];

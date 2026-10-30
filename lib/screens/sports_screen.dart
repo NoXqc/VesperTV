@@ -140,6 +140,53 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   late SportsFollows _follows;
 
   late List<SportsLeague> _leagues;
+  bool _hideEmptyLeagues = false;
+  Set<String> _emptyLeagues = {};
+  Set<String>? _movingVisibleLeagues;
+
+  /// Display-only filtering. Saved membership/order and the league manager,
+  /// standings, My Teams and matching sources keep the complete league list.
+  List<SportsLeague> get _navigationLeagues {
+    final moving = _movingVisibleLeagues;
+    if (moving != null) {
+      return _leagues.where((league) => moving.contains(league.id)).toList();
+    }
+    if (!_hideEmptyLeagues) {
+      return _leagues;
+    }
+    return _leagues
+        .where((league) => !_emptyLeagues.contains(league.id))
+        .toList();
+  }
+
+  /// A refresh can remove a focused chip or move it across the top-five
+  /// rail boundary. Keep its node when possible, otherwise land on a real
+  /// visible league/All control after the new widgets have mounted.
+  void _updateLeagueNavigation(VoidCallback update) {
+    final focused = _chipNodes.entries
+        .where(
+            (entry) => entry.key.startsWith('league:') && entry.value.hasFocus)
+        .firstOrNull;
+    final before = _navigationLeagues.map((league) => league.id).join('|');
+    final wasRail = _modeRailFocused;
+    setState(update);
+    if (focused == null ||
+        before == _navigationLeagues.map((league) => league.id).join('|')) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_navigationLeagues
+          .any((league) => 'league:${league.id}' == focused.key)) {
+        focused.value.requestFocus();
+      } else if (_modeActive && wasRail) {
+        _modeShell.currentState?.focusRail();
+      } else {
+        _focusModeNode('league:all');
+      }
+    });
+  }
+
   String? _leagueFilter;
   int _dayOffset = 0;
 
@@ -258,6 +305,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     _picks = SportsChannelPicks.load(_storage);
     _follows = SportsFollows.load(_storage);
     _leagues = _savedLeagues();
+    _hideEmptyLeagues = _storage.getSportsHideEmptyLeagues();
     // Opens on the favourite league (League manager, hold OK), if any.
     _leagueFilter = favoriteSportsLeague(_storage)?.id;
     _hideScores = _storage.getSportsHideScores();
@@ -326,21 +374,49 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   Future<void> _load({bool silent = false}) async {
     final token = ++_loadToken;
+    final viewer = _storage.viewerGeneration;
+    final day = _day;
+    final hideEmpty = _storage.getSportsHideEmptyLeagues();
     if (!silent) {
       setState(() {
         _loading = true;
         _error = null;
       });
     }
-    final games = await _service.gamesForDay(_shownLeagues, _day);
-    if (!mounted || token != _loadToken) return;
-    final filtered = sportsLeagueById(_leagueFilter ?? '');
+    final dayGames =
+        await _service.gamesForDay(hideEmpty ? _leagues : _shownLeagues, day);
+    if (!mounted ||
+        token != _loadToken ||
+        viewer != _storage.viewerGeneration) {
+      return;
+    }
+    if (day != _day) return _load(silent: silent);
+    final active = dayGames.map((game) => game.league.id).toSet();
+    final empty = <String>{
+      if (hideEmpty)
+        for (final league in _leagues)
+          if (!active.contains(league.id) &&
+              _service.hasReliableSchedule(league, day))
+            league.id,
+    };
+    final filter = empty.contains(_leagueFilter) ? null : _leagueFilter;
+    final games = hideEmpty && filter != null
+        ? dayGames.where((game) => game.league.id == filter).toList()
+        : dayGames;
+    final filtered = sportsLeagueById(filter ?? '');
     DateTime? next;
     if (games.isEmpty && filtered != null) {
-      next = await _service.nextGameStart(filtered, _day);
-      if (!mounted || token != _loadToken) return;
+      next = await _service.nextGameStart(filtered, day);
+      if (!mounted ||
+          token != _loadToken ||
+          viewer != _storage.viewerGeneration) {
+        return;
+      }
     }
-    setState(() {
+    _updateLeagueNavigation(() {
+      _hideEmptyLeagues = hideEmpty;
+      _emptyLeagues = empty;
+      _leagueFilter = filter;
       _nextGame = next;
       _nextGameLooked = games.isEmpty && filtered != null;
       _games = games;
@@ -787,7 +863,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     }
     // Every league in the bar (owner: ECHL / AHL were missing on a day
     // without their games), in bar order; a quiet one says No games.
-    final shown = _leagues;
+    final shown = _navigationLeagues;
     String gamesLabel(int n) =>
         n == 1 ? tr('1 game') : tr('{n} games', {'n': n});
     final picked = await showRollDownMenu<String>(
@@ -849,6 +925,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     if (_dayOffset == offset) return;
     setState(() {
       _dayOffset = offset;
+      _emptyLeagues = {};
       _heroGame = null;
     });
     unawaited(_load());
@@ -892,19 +969,29 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     }
   }
 
-  void _startLeagueMove(String id) => setState(() => _movingLeague = id);
+  void _startLeagueMove(String id) => setState(() {
+        _movingVisibleLeagues =
+            _navigationLeagues.map((league) => league.id).toSet();
+        _movingLeague = id;
+      });
 
   void _endLeagueMove() {
     if (_movingLeague == null) return;
-    setState(() => _movingLeague = null);
+    _updateLeagueNavigation(() {
+      _movingLeague = null;
+      _movingVisibleLeagues = null;
+    });
   }
 
   void _moveLeague(int delta) {
     final id = _movingLeague;
     if (id == null) return;
+    final visible = _navigationLeagues;
+    final index = visible.indexWhere((l) => l.id == id);
+    final target = index + delta;
+    if (index < 0 || target < 0 || target >= visible.length) return;
     final from = _leagues.indexWhere((l) => l.id == id);
-    final to = from + delta;
-    if (from < 0 || to < 0 || to >= _leagues.length) return;
+    final to = _leagues.indexWhere((l) => l.id == visible[target].id);
     setState(() {
       final l = _leagues.removeAt(from);
       _leagues.insert(to, l);
@@ -1701,7 +1788,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   List<String> _modeControlIds(int zone) => switch (zone) {
         0 => [
             'league:all',
-            for (final l in _leagues.skip(5)) 'league:${l.id}',
+            for (final l in _navigationLeagues.skip(5)) 'league:${l.id}',
             'league:edit',
             'league:quality',
             'league:scores',
@@ -2230,7 +2317,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       moving: _movingLeague != null,
       onMove: _moveLeague,
       topCount: prefs.hideMultiview ? 2 : 3,
-      leagueCount: _leagues.take(5).length,
+      leagueCount: _navigationLeagues.take(5).length,
       entries: [
         // The top of the Live TV tabs column, so Sports Mode keeps every
         // destination in its own rail (owner, 2026-10-28).
@@ -2246,7 +2333,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                   ? const DesktopMultiviewScreen()
                   : const MultiviewScreen(),
               stopPlayback: true),
-        for (final league in _leagues.take(5))
+        for (final league in _navigationLeagues.take(5))
           SportsModeRailEntry(
             id: 'league:${league.id}',
             label: league.shortName,
@@ -2455,7 +2542,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
             onTap: mode ? _openLeagueMenu : () => _setLeagueFilter(null),
           ),
         ),
-        for (final l in _leagues.skip(mode ? 5 : 0))
+        for (final l in _navigationLeagues.skip(mode ? 5 : 0))
           HoldToActivate(
             // Keyed: the list reorders in move mode, and unkeyed chips
             // swapped focus nodes — focus dropped and stale "focused"

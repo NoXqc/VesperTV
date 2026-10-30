@@ -367,6 +367,14 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **cdx, 2026-10-30 — Hide empty Sports leagues**
+  (`codex/hide-empty-sports-leagues`, stacked on preferred playlist): new
+  off-by-default, per-viewer Sports Trak setting follows the selected day.
+  Navigation hides confirmed empty leagues; unavailable schedules remain.
+  Saved membership/order/favourite and Edit leagues are preserved; quiet
+  selected league falls back to All. See dev-notes/sports-league-visibility.md.
+  Analyze16/1005Flutter and15Node tests pass; guide83 verified. APK529 predates
+  this and preferred playlist. Formuler install still on hold; no build.
 - **cdx, 2026-10-30 — Sports preferred playlist**
   (`codex/sports-preferred-playlist`, stacked on test APK529 sources): new
   per-viewer Settings > Sports Trak > Preferred playlist. Comparable matches

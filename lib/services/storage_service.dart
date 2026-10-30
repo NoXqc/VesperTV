@@ -589,6 +589,10 @@ class StorageService {
       .setStringList(_vk(AppConstants.keySportsPreferredCountries), countries);
   String? getSportsPreferredPlaylist() =>
       _prefs.getString(_vk(AppConstants.keySportsPreferredPlaylist));
+  bool getSportsHideEmptyLeagues() =>
+      _prefs.getBool(_vk(AppConstants.keySportsHideEmptyLeagues)) ?? false;
+  Future<void> setSportsHideEmptyLeagues(bool value) =>
+      _prefs.setBool(_vk(AppConstants.keySportsHideEmptyLeagues), value);
   Future<void> setSportsPreferredPlaylist(String? playlistId) async {
     final key = _vk(AppConstants.keySportsPreferredPlaylist);
     if (playlistId == null) {

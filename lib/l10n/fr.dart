@@ -2317,4 +2317,10 @@ const Map<String, String> kFr = {
   "Selected countries have equal priority. Match evidence comes first, then preferred playlist, country and video quality. Saved for this viewer.":
       "Les pays sélectionnés ont la même priorité. Les preuves du match passent en premier, puis la playlist préférée, le pays et la qualité vidéo. Enregistré pour ce profil.",
   "Rank countries equally": "Donner la même priorité à tous les pays",
+  // Hide empty sports leagues.
+  "Hide leagues with no games": "Masquer les ligues sans match",
+  "Show only leagues with games on the selected day":
+      "Afficher seulement les ligues avec des matchs le jour sélectionné",
+  "Follows the selected day in Sports Trak. Leagues stay visible while schedules are loading or unavailable. Your saved leagues and their order are kept in Edit leagues. Saved for this viewer.":
+      "Suit le jour sélectionné dans Sports Trak. Les ligues restent visibles pendant le chargement ou si les horaires sont indisponibles. Vos ligues et leur ordre sont conservés dans Modifier les ligues. Enregistré pour ce profil.",
 };

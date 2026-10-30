@@ -2934,4 +2934,10 @@ const Map<String, String> kEl = {
   "Selected countries have equal priority. Match evidence comes first, then preferred playlist, country and video quality. Saved for this viewer.":
       "Οι επιλεγμένες χώρες έχουν ίση προτεραιότητα. Προηγείται η αντιστοίχιση αγώνα, μετά η προτιμώμενη λίστα, η χώρα και η ποιότητα βίντεο. Αποθηκεύεται για αυτό το προφίλ.",
   "Rank countries equally": "Ίση προτεραιότητα σε όλες τις χώρες",
+  // Hide empty sports leagues.
+  "Hide leagues with no games": "Απόκρυψη διοργανώσεων χωρίς αγώνες",
+  "Show only leagues with games on the selected day":
+      "Εμφάνιση μόνο διοργανώσεων με αγώνες την επιλεγμένη ημέρα",
+  "Follows the selected day in Sports Trak. Leagues stay visible while schedules are loading or unavailable. Your saved leagues and their order are kept in Edit leagues. Saved for this viewer.":
+      "Ακολουθεί την επιλεγμένη ημέρα στο Sports Trak. Οι διοργανώσεις παραμένουν ορατές κατά τη φόρτωση ή όταν τα προγράμματα δεν είναι διαθέσιμα. Οι αποθηκευμένες διοργανώσεις και η σειρά τους διατηρούνται στην Επεξεργασία διοργανώσεων. Αποθηκεύεται για αυτό το προφίλ.",
 };
