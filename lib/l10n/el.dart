@@ -6,6 +6,10 @@
 /// English-style plural "s" filled in by the code; Greek plurals don't
 /// work that way, so those strings are phrased without it.
 const Map<String, String> kEl = {
+  // Android phone player touch lock.
+  "Lock touch controls": "Κλείδωμα χειριστηρίων αφής",
+  "Unlock touch controls": "Ξεκλείδωμα χειριστηρίων αφής",
+  "Touch controls locked": "Τα χειριστήρια αφής είναι κλειδωμένα",
   // Media Hub custom posters.
   "Add {imdb_id} or {tmdb_id} where the title goes.": "Προσθέστε {imdb_id} ή {tmdb_id} στη θέση του τίτλου.",
   "Custom posters": "Προσαρμοσμένες αφίσες",

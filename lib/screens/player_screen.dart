@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -31,6 +32,7 @@ import 'search_screen.dart';
 import '../l10n/l10n.dart';
 import '../widgets/media_file_info_overlay.dart';
 import '../widgets/phone_picture_in_picture.dart';
+import '../widgets/player_touch_lock.dart';
 
 /// Fullscreen playback screen. Pushed when a channel is tapped on a phone,
 /// or when the mini-player bar is tapped to expand back into fullscreen —
@@ -76,6 +78,32 @@ class _PlayerScreenState extends State<PlayerScreen> {
   bool _immersive = false;
   bool _topVisible = false;
   bool _bottomVisible = false;
+  bool _touchLocked = false;
+
+  void _setTouchLocked(bool locked) {
+    _hideTimer?.cancel();
+    _zapInfoTimer?.cancel();
+    _dataPoolTimer?.cancel();
+    _skipCommit?.cancel();
+    setState(() {
+      _touchLocked = locked;
+      _topVisible = !locked;
+      _bottomVisible = !locked;
+      _moreVisible = false;
+      _panelOpen = false;
+      _scheduleOpen = false;
+      _zapInfoVisible = false;
+      _dataPoolVisible = false;
+      _skipTarget = null;
+      _skipSteps = 0;
+    });
+    if (!locked) {
+      _resetHideTimer();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_touchLocked) _rootFocus.requestFocus();
+      });
+    }
+  }
 
   /// Whether `PlayerControls`'s secondary ("more") action row — Recall,
   /// Reload, audio track, linked-channel failover — is expanded. A second
@@ -899,6 +927,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
     // && a linkedChannel to offer), same caching pattern as [_isTvLayout].
     _hasSwitchButton = playback.error != null && linkedChannel != null;
     _touch = !prefs.isTelevision;
+    final phoneTouch =
+        !kIsWeb && defaultTargetPlatform == TargetPlatform.android && _touch;
+    final touchLocked = phoneTouch && _touchLocked && !inPip;
     if (_touch && !inPip) _syncSystemBars(MediaQuery.orientationOf(context));
     _isTvLayout = prefs.layoutMode == 'tv' ||
         (prefs.layoutMode == 'auto' &&
@@ -906,7 +937,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 MediaQuery.of(context).size.width >=
                     AppConstants.tvLayoutWidthThreshold));
 
-    return withTvThemeIfNeeded(
+    final player = withTvThemeIfNeeded(
         context,
         (context) => PopScope(
             // Back with the side panel / schedule open just closes it;
@@ -916,7 +947,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 !_scheduleChipFocus.hasFocus &&
                 !_sourceBackGuard.blocksBack,
             onPopInvokedWithResult: (didPop, _) {
-              if (didPop || _sourceBackGuard.blocksBack) return;
+              if (didPop || touchLocked || _sourceBackGuard.blocksBack) return;
               if (_scheduleOpen) {
                 _closeSchedule();
               } else if (_scheduleChipFocus.hasFocus) {
@@ -1123,6 +1154,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                                   tooltip: tr('Rotate'),
                                                   onPressed: _toggleRotation,
                                                 ),
+                                              if (phoneTouch)
+                                                _TopBarIconButton(
+                                                  icon: Icons.lock_open,
+                                                  tooltip:
+                                                      tr('Lock touch controls'),
+                                                  onPressed: () =>
+                                                      _setTouchLocked(true),
+                                                ),
                                               _TopBarIconButton(
                                                 icon: prefs.videoFill
                                                     ? Icons.fullscreen_exit
@@ -1292,15 +1331,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
                               ),
                             ),
 
-                          SkipSegmentButton(
-                            watcher: _skip,
-                            controlsVisible: _bottomVisible,
-                            hasNext: playback.nextUpChannel != null,
-                            showOkHint: !_touch && !_focusInBar,
-                            onSkip: _skipSegment,
-                          ),
+                          if (!touchLocked)
+                            SkipSegmentButton(
+                              watcher: _skip,
+                              controlsVisible: _bottomVisible,
+                              hasNext: playback.nextUpChannel != null,
+                              showOkHint: !_touch && !_focusInBar,
+                              onSkip: _skipSegment,
+                            ),
 
-                          if (controller != null)
+                          if (controller != null && !touchLocked)
                             _UpNextBubble(
                               controller: controller,
                               nextChannel: playback.nextUpChannel,
@@ -1377,6 +1417,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 ),
               ),
             )));
+    // The same wrapper stays mounted through lock, rotation and PiP changes;
+    // locking must never recreate the video/controller or intercept PiP's UI.
+    return PlayerTouchLock(
+      locked: touchLocked,
+      onUnlock: () => _setTouchLocked(false),
+      child: player,
+    );
   }
 }
 

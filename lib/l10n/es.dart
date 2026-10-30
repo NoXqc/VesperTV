@@ -6,6 +6,10 @@
 /// "s" filled in by the code; Spanish plurals don't always work that way
 /// (canal/canales), so those strings are phrased to avoid it.
 const Map<String, String> kEs = {
+  // Android phone player touch lock.
+  "Lock touch controls": "Bloquear controles táctiles",
+  "Unlock touch controls": "Desbloquear controles táctiles",
+  "Touch controls locked": "Controles táctiles bloqueados",
   // Media Hub custom posters.
   "Add {imdb_id} or {tmdb_id} where the title goes.": "Añade {imdb_id} o {tmdb_id} donde va el título.",
   "Custom posters": "Pósters personalizados",

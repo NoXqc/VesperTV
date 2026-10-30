@@ -136,6 +136,14 @@
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
   {
+    "id": "577e1f577d7de21e",
+    "category": "Full screen",
+    "title": "Lock touch controls",
+    "answer": "Tap the full-screen video to show its controls, then tap the open padlock in the top bar. Video keeps playing while taps, swipes and Back are blocked. The closed padlock stays visible on the left: tap it once to unlock and restore the controls. The lock stays through rotation and episode changes, is hidden in picture-in-picture, and resets when you leave the player. Android system Home and volume controls remain available. TV boxes do not show this button.",
+    "controls": "Android phone / tablet · padlock",
+    "url": "https://vespertv.app/remote.html#Full%20screen"
+  },
+  {
     "id": "d6f95affba667bd5",
     "category": "Full screen",
     "title": "Back to live",

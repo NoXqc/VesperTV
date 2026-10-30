@@ -5,6 +5,10 @@
 /// Keep every `{placeholder}` exactly as in the key. `{s}` is the plural "s"
 /// the code fills in ("chaîne{s}").
 const Map<String, String> kFr = {
+  // Android phone player touch lock.
+  "Lock touch controls": "Verrouiller les commandes tactiles",
+  "Unlock touch controls": "Déverrouiller les commandes tactiles",
+  "Touch controls locked": "Commandes tactiles verrouillées",
   // Media Hub custom posters.
   "Add {imdb_id} or {tmdb_id} where the title goes.": "Ajoutez {imdb_id} ou {tmdb_id} à l'endroit du titre.",
   "Custom posters": "Affiches personnalisées",
