@@ -367,13 +367,23 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
-- **Claude, 2026-10-30 — Skip intro / credits (Android, unbuilt, `claude/skip-intro` on Codex's
-  f99d00d):** IntroDB (`api.introdb.app/segments?imdb_id&season&episode`, keyless, Nuvio's source)
-  via `services/skip_segments.dart`; ids come from `WatchTracker.itemFor` (Media Hub IMDb; IPTV
-  shows' TMDB -> IMDb with the user's key). `widgets/skip_segment_button.dart`: white pill above the
-  bar, auto-hides after 10 s, back while the bar shows; OK in the player skips while it shows
-  (`_onOk`), credits + queued episode = Next episode. Settings > Playback > Skip intro (on by
-  default, Android). Windows not done (owner: skip for now). Episodes only, no movie credits.
+- **Claude, 2026-10-30 — test builds +532/+533 on main (owner-tested, all OK; Codex releases next):**
+  - **Skip intro / credits (Android):** IntroDB (`api.introdb.app/segments?imdb_id&season&episode`,
+    keyless, Nuvio's source) via `services/skip_segments.dart`; ids from `WatchTracker.itemFor`
+    (Media Hub IMDb; IPTV TMDB -> IMDb with the user's key). Many providers send **no** series ids
+    (LOG-UPRJ8M): `SeriesDetailScreen._syncTrackers` then uses the single exact title/year TMDB match
+    (`ArchiveDiscoveryService.tmdbIdFor`, shared with the cast photos). `widgets/skip_segment_button.dart`:
+    white pill, auto-hides after 10 s, back with the bar; OK skips while no bar button has focus, Up
+    from the bottom bar focuses the pill (`_skipFocus`, ▲ hint), credits + queued episode = Next
+    episode. Settings > Playback > Skip intro (on by default; owner never answered on default-off).
+    Send log: `SeriesIds:` / `SkipIntro:`. Windows not done. Episodes only.
+  - **Betting odds** (Settings > Sports Trak > Betting odds, off, per viewer): ESPN scoreboard
+    `competitions[0].odds` -> `SportsOdds` (`sportsOddsOf`), game card line, matchup middle slot when
+    no injury, `_OddsTable` in the stats pop-up. Display only: never bet links / in-app betting
+    (sportsbooks have no third-party bet API; licensing risk). Sports Mode setting moved to Sports Trak.
+  - `cleanDisplayTitle` drops "4K: " / "4KDV: " colon prefixes (only quality tags before the colon), so
+    IPTV 4K categories get cast. Merged Codex phone touch lock + Plex streams for tracker/list titles.
+  - Parked ideas: `dev-notes/plex-live-tv.md`; Home live mini player (HANDOFF.md).
 - **cdx, 2026-10-30 — IPTV cast portraits** (`codex/iptv-cast-portraits`):
   IPTV movie/show pages reuse Media Hub portraits/actor credits with a saved
   TMDB key. Cast jumps to the row; selected credits open matching IPTV details.
