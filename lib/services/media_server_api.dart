@@ -36,7 +36,7 @@ class MediaServerApi {
   Future<ArchiveSource> connectPlex(PlexServer server, String deviceId) =>
       _plex.connect(server, deviceId);
   static const _timeout = Duration(seconds: 20);
-  static const _pageSize = 100;
+  static const catalogPageSize = PlexApi.pageSize;
 
   /// What the user typed into a base URL: `http://` by default (servers
   /// on a home network rarely have a certificate), no trailing slash, no
@@ -216,7 +216,7 @@ class MediaServerApi {
       'EnableImageTypes': 'Primary,Backdrop',
       'ImageTypeLimit': '1',
       'StartIndex': '$skip',
-      'Limit': '$_pageSize',
+      'Limit': '$catalogPageSize',
       if (search == null) ...{
         'SortBy': 'DateCreated,SortName',
         'SortOrder': 'Descending',
