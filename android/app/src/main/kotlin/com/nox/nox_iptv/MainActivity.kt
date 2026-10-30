@@ -8,6 +8,8 @@ import android.content.res.Configuration
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
+import android.os.StatFs
 import androidx.core.content.FileProvider
 import android.util.Log
 import io.flutter.embedding.android.FlutterActivity
@@ -33,6 +35,28 @@ import java.io.File
  * AndroidManifest.xml/res/xml/file_paths.xml.
  */
 class MainActivity : FlutterActivity() {
+    companion object {
+        // Activity recreation must not delete an APK downloaded in this
+        // process while the system installer may still be reading it.
+        private var cleanedUpdateApk = false
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        if (!cleanedUpdateApk) {
+            cleanedUpdateApk = true
+            try {
+                val leftover = File(cacheDir, "noxplayer_update.apk")
+                if (leftover.isFile && !leftover.delete()) {
+                    Log.w("VesperUpdater", "Could not remove the previous update APK")
+                }
+            } catch (_: Exception) {
+                // Cache cleanup must never prevent the app from starting.
+                Log.w("VesperUpdater", "Could not clean the previous update APK")
+            }
+        }
+        super.onCreate(savedInstanceState)
+    }
+
     private val MEMORY_CHANNEL = "com.nox.nox_iptv/device_memory"
     private val UPDATE_CHANNEL = "com.nox.nox_iptv/app_update"
     private val DEVICE_CHANNEL = "com.nox.nox_iptv/device_type"
@@ -158,6 +182,13 @@ class MainActivity : FlutterActivity() {
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, UPDATE_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
+                "getAvailableStorageBytes" -> {
+                    try {
+                        result.success(StatFs(cacheDir.absolutePath).availableBytes)
+                    } catch (_: Exception) {
+                        result.error("STORAGE_CHECK_FAILED", "Storage check failed", null)
+                    }
+                }
                 "canRequestInstalls" -> {
                     // Only a real gate on Android 8 (API 26)+ — earlier
                     // versions have no per-app "unknown sources" toggle at

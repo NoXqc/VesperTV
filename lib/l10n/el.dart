@@ -2940,4 +2940,12 @@ const Map<String, String> kEl = {
       "Εμφάνιση μόνο διοργανώσεων με αγώνες την επιλεγμένη ημέρα",
   "Follows the selected day in Sports Trak. Leagues stay visible while schedules are loading or unavailable. Your saved leagues and their order are kept in Edit leagues. Saved for this viewer.":
       "Ακολουθεί την επιλεγμένη ημέρα στο Sports Trak. Οι διοργανώσεις παραμένουν ορατές κατά τη φόρτωση ή όταν τα προγράμματα δεν είναι διαθέσιμα. Οι αποθηκευμένες διοργανώσεις και η σειρά τους διατηρούνται στην Επεξεργασία διοργανώσεων. Αποθηκεύεται για αυτό το προφίλ.",
+  // Updater storage and download checks.
+  "Free about {mb} MB and try again.":
+      "Ελευθερώστε περίπου {mb} MB και δοκιμάστε ξανά.",
+  "Could not check free storage. Restart VesperTV and try again.":
+      "Δεν ήταν δυνατός ο έλεγχος του ελεύθερου χώρου. Επανεκκινήστε το VesperTV και δοκιμάστε ξανά.",
+  "Could not check the update size. Check for updates and try again.":
+      "Δεν ήταν δυνατός ο έλεγχος του μεγέθους της ενημέρωσης. Ελέγξτε για ενημερώσεις και δοκιμάστε ξανά.",
+  "Download failed. Please try again.": "Η λήψη απέτυχε. Δοκιμάστε ξανά.",
 };

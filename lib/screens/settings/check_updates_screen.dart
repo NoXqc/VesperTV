@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -17,7 +15,9 @@ import '../../l10n/l10n.dart';
 /// confirmation dialog — nothing past handing the APK to the installer can
 /// be automated further.
 class CheckUpdatesScreen extends StatefulWidget {
-  const CheckUpdatesScreen({super.key, this.startWith});
+  const CheckUpdatesScreen({super.key, this.startWith, this.updateService});
+
+  final AppUpdateService? updateService;
 
   /// From the launch update popup's "Update": skip the check and start
   /// the download (Android) / open the download page (Windows) at once.
@@ -38,7 +38,7 @@ enum _Status {
 }
 
 class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
-  final _updateService = AppUpdateService();
+  late final _updateService = widget.updateService ?? AppUpdateService();
   String _currentVersion = '';
   _Status _status = _Status.idle;
   UpdateInfo? _update;
@@ -58,7 +58,7 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
       _status = _Status.updateAvailable;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        Platform.isWindows ? _openWindowsDownload() : _download();
+        _updateService.downloadInBrowser ? _openWindowsDownload() : _download();
       });
     }
   }
@@ -101,14 +101,16 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
 
   Future<void> _download() async {
     final update = _update;
-    if (update == null) return;
+    if (update == null || _status == _Status.downloading) return;
     setState(() {
       _status = _Status.downloading;
       _downloadProgress = 0;
+      _downloadedApkPath = null;
     });
     try {
       final file = await _updateService.downloadUpdate(
         update.downloadUrl,
+        expectedSizeBytes: update.apkSizeBytes,
         onProgress: (fraction) {
           if (mounted) setState(() => _downloadProgress = fraction);
         },
@@ -224,7 +226,7 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 16),
-          if (Platform.isWindows) ...[
+          if (_updateService.downloadInBrowser) ...[
             FilledButton.icon(
               icon: const Icon(Icons.open_in_browser),
               label: Text(tr('Open Download Page')),

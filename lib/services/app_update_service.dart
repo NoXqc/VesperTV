@@ -32,6 +32,14 @@ class UpdateInfo {
   final int apkSizeBytes;
 }
 
+/// User-readable updater failure without an "Exception:" prefix.
+class UpdateDownloadException implements Exception {
+  const UpdateDownloadException(this.message);
+  final String message;
+  @override
+  String toString() => message;
+}
+
 /// Checks GitHub for a newer release, downloads it, and hands it to
 /// Android's own package installer — there's no Play Store auto-update for
 /// a sideloaded app, so this is the in-app replacement (Settings > Check
@@ -40,6 +48,14 @@ class UpdateInfo {
 /// FileProvider — no pure-Dart/Flutter-plugin way to trigger an APK
 /// install exists).
 class AppUpdateService {
+  AppUpdateService(
+      {http.Client? downloadClient,
+      Future<Directory> Function()? cacheDirectory})
+      : _downloadClient = downloadClient,
+        _cacheDirectory = cacheDirectory ?? getTemporaryDirectory;
+  final http.Client? _downloadClient;
+  final Future<Directory> Function() _cacheDirectory;
+  bool get downloadInBrowser => Platform.isWindows;
   static const _channel = MethodChannel('com.nox.nox_iptv/app_update');
 
   /// Public, unauthenticated GitHub API — fine for a public repo at this
@@ -121,7 +137,7 @@ class AppUpdateService {
     // its release asset is a plain `.zip` of the built Release folder
     // instead (see CheckUpdatesScreen's own doc comment for the simpler
     // "open it in a browser" flow that's all Windows actually needs).
-    final extension = Platform.isWindows ? '.zip' : '.apk';
+    final extension = downloadInBrowser ? '.zip' : '.apk';
     final assets = (decoded['assets'] as List?) ?? const [];
     final matchingAsset = assets.cast<Map<String, dynamic>>().firstWhere(
           (a) =>
@@ -175,27 +191,75 @@ class AppUpdateService {
   /// exactly this one file, nothing broader) — overwrites any previous
   /// download of the same name rather than accumulating old ones.
   Future<File> downloadUpdate(String downloadUrl,
-      {void Function(double fraction)? onProgress}) async {
-    final request = http.Request('GET', Uri.parse(downloadUrl));
-    final response = await http.Client().send(request);
-    if (response.statusCode != 200) {
-      throw Exception('Download failed: HTTP ${response.statusCode}');
+      {required int expectedSizeBytes,
+      void Function(double fraction)? onProgress}) async {
+    if (expectedSizeBytes <= 0) {
+      throw UpdateDownloadException(tr(
+          'Could not check the update size. Check for updates and try again.'));
+    }
+    final available = await getAvailableStorageBytes();
+    // Download + installer staging/unpacking headroom on the same data volume.
+    final shortfall = expectedSizeBytes * 3 - available;
+    if (shortfall > 0) {
+      const mb = 1024 * 1024;
+      throw UpdateDownloadException(tr('Free about {mb} MB and try again.',
+          {'mb': (shortfall + mb - 1) ~/ mb}));
     }
 
-    final total = response.contentLength ?? 0;
-    var received = 0;
-    final dir = await getTemporaryDirectory();
-    final file = File(p.join(dir.path, 'noxplayer_update.apk'));
-    final sink = file.openWrite();
+    final client = _downloadClient ?? http.Client();
+    File? file;
+    IOSink? sink;
+    try {
+      final request = http.Request('GET', Uri.parse(downloadUrl));
+      final response = await client.send(request);
+      if (response.statusCode != 200) {
+        throw UpdateDownloadException(tr('Download failed. Please try again.'));
+      }
+      var received = 0;
+      final dir = await _cacheDirectory();
+      file = File(p.join(dir.path, 'noxplayer_update.apk'));
+      sink = file.openWrite();
+      await sink.addStream(response.stream.map((chunk) {
+        received += chunk.length;
+        if (received > expectedSizeBytes) {
+          throw UpdateDownloadException(
+              tr('Download failed. Please try again.'));
+        }
+        onProgress?.call(received / expectedSizeBytes);
+        return chunk;
+      }));
+      await sink.close();
+      sink = null;
+      if (await file.length() != expectedSizeBytes) {
+        throw UpdateDownloadException(tr('Download failed. Please try again.'));
+      }
+      return file;
+    } catch (_) {
+      // Close first so Windows test hosts can also remove an incomplete file.
+      try {
+        await sink?.close();
+      } catch (_) {}
+      try {
+        if (file != null && await file.exists()) await file.delete();
+      } catch (_) {}
+      throw UpdateDownloadException(tr('Download failed. Please try again.'));
+    } finally {
+      if (_downloadClient == null) client.close();
+    }
+  }
 
-    await response.stream.map((chunk) {
-      received += chunk.length;
-      if (total > 0) onProgress?.call(received / total);
-      return chunk;
-    }).pipe(sink);
-    await sink.close();
-
-    return file;
+  /// Android's app-cache filesystem, queried through the existing updater
+  /// channel. A missing/unavailable check cannot silently bypass the reserve.
+  Future<int> getAvailableStorageBytes() async {
+    try {
+      final available =
+          await _channel.invokeMethod<int>('getAvailableStorageBytes');
+      if (available != null && available >= 0) return available;
+    } catch (_) {
+      // Present one plain message for a platform error or missing bridge.
+    }
+    throw UpdateDownloadException(
+        tr('Could not check free storage. Restart VesperTV and try again.'));
   }
 
   /// Android 8+ only — earlier versions have no per-app "unknown sources"

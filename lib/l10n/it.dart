@@ -2322,4 +2322,11 @@ const Map<String, String> kIt = {
       "Mostra solo i campionati con partite nel giorno selezionato",
   "Follows the selected day in Sports Trak. Leagues stay visible while schedules are loading or unavailable. Your saved leagues and their order are kept in Edit leagues. Saved for this viewer.":
       "Segue il giorno selezionato in Sports Trak. I campionati restano visibili mentre i calendari vengono caricati o non sono disponibili. I campionati salvati e il loro ordine restano in Modifica campionati. Salvato per questo profilo.",
+  // Updater storage and download checks.
+  "Free about {mb} MB and try again.": "Libera circa {mb} MB e riprova.",
+  "Could not check free storage. Restart VesperTV and try again.":
+      "Impossibile verificare lo spazio libero. Riavvia VesperTV e riprova.",
+  "Could not check the update size. Check for updates and try again.":
+      "Impossibile verificare la dimensione dell’aggiornamento. Cerca gli aggiornamenti e riprova.",
+  "Download failed. Please try again.": "Download non riuscito. Riprova.",
 };

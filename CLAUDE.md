@@ -367,6 +367,14 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **cdx, 2026-10-30 — updater storage/download guards**
+  (`codex/updater-storage-check`, stacked on hosted test530): Android StatFs
+  cache free-space check requires3x GitHub APK size before HTTP. Plain localized
+  shortfall errors; invalid/partial/oversized downloads removed before Install.
+  Old update APK deleted at next cold launch, guarded against activity recreation.
+  See dev-notes/app-updater-storage.md. Analyze16/1025Flutter pass and Kotlin
+  debug compilation succeeds. Hosted APK530 predates this change; no version
+  bump/installable APK/install/upload. Cold-launch/low-space device QA pending.
 - **cdx, 2026-10-30 — signed test APK1.0.49+530** (`codex/test-apk-530`):
   includes Plex, title-page row order, My Teams preferred channel, country
   preference, preferred playlist and hide-empty-leagues. Analyze16/1005Flutter
