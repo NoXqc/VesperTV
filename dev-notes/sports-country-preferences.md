@@ -62,3 +62,35 @@ No device build/install, native-player change, version bump or publication.
 Real-provider ranking and physical-box interaction still need the normal owner
 smoke check. Main implementation: sports_channel_countries.dart,
 SportsChannelPicks.orderMatches, sports_country_settings_screen.dart.
+
+## Preferred playlist (Codex, 2026-10-30)
+
+Settings > Sports Trak > Preferred playlist adds a single optional playlist
+choice by stable ID, per viewer. No playlist preference resets only this
+setting. Enabled playlists are selectable; a disabled/deleted saved choice
+is reported as unavailable and other valid matches remain usable. This does
+not change the global Live TV playlist order or enable channels/playlists.
+
+The existing evidence tiers above are preserved. Within each tier, preference
+is now playlist first, then country, then the usual quality/stable order.
+Explicit game/team/series picks remain ahead of automatic preferences, and
+a generic preferred-playlist broadcaster cannot replace a confirmed game
+on another playlist. No preferred-playlist candidate preserves the country
+ranking; with neither preference set, the previous order is unchanged.
+
+Before the existing three-suggestion caps for broadcaster/series fallbacks,
+a stable partition places eligible preferred-playlist feeds first. Thus
+the preference can affect which fallback copies survive those caps, but
+not name/date/time/region checks, EPG queries, scores or candidate eligibility.
+The caps and hidden-channel rules still apply. The post-merge Sports screen
+ordering uses the same preference so added sources cannot undo it.
+
+Storage key: keySportsPreferredPlaylist. Included in ProfileCopy.sports and
+the existing Backup/Transfer payload. The editor uses TvMenuTile and guards
+writes against viewer changes. Country wording now explains playlist priority.
+Tests: sports_playlist_preferences_test.dart covers EPG ranking/candidate
+identity/scores/query count, both capped fallback paths, explicit and manual
+picks, evidence, reset/no-match identity, profile copy and Backup/Transfer,
+TV/phone D-pad navigation, all five languages and large text/stale viewers.
+Remote guide/help index updated locally. APK529 predates this change; no
+new build/install requested here. Formuler installation remains on hold.

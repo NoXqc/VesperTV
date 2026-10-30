@@ -30,6 +30,7 @@ import '../../l10n/l10n.dart';
 import '../../widgets/sports_mode_toggle.dart';
 import '../../utils/constants.dart';
 import 'sports_country_settings_screen.dart';
+import 'sports_playlist_settings_screen.dart';
 
 /// One destination row of a Settings category.
 class _Entry {
@@ -248,6 +249,11 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
                 tr('Preferred channel countries'),
                 tr('Prefer local channels while keeping other matches available'),
                 (_) => const SportsCountrySettingsScreen()),
+            _Entry(
+                Icons.playlist_play,
+                tr('Preferred playlist'),
+                tr('Try matching channels from this playlist first'),
+                (_) => const SportsPlaylistSettingsScreen()),
           ],
         ),
         _Category(

@@ -2920,4 +2920,18 @@ const Map<String, String> kEl = {
   "Luxembourg": "Λουξεμβούργο",
   "Malta": "Μάλτα",
   "Iceland": "Ισλανδία",
+  // Sports preferred playlist.
+  "Preferred playlist": "Προτιμώμενη λίστα αναπαραγωγής",
+  "Try matching channels from this playlist first":
+      "Αναζήτηση αντίστοιχων καναλιών πρώτα σε αυτή τη λίστα",
+  "Among comparable game matches, prefer this playlist, then your preferred countries, then video quality. Your game and team channel choices still come first. Other playlists remain available.":
+      "Μεταξύ συγκρίσιμων αντιστοιχίσεων αγώνων, προτιμάται αυτή η λίστα, μετά οι προτιμώμενες χώρες και τέλος η ποιότητα βίντεο. Οι επιλογές καναλιών σας για αγώνες και ομάδες παραμένουν πρώτες. Οι άλλες λίστες παραμένουν διαθέσιμες.",
+  "Your preferred playlist is unavailable or disabled. Other matching playlists will be used.":
+      "Η προτιμώμενη λίστα δεν είναι διαθέσιμη ή είναι απενεργοποιημένη. Θα χρησιμοποιηθούν άλλες λίστες με αντίστοιχα κανάλια.",
+  "No playlist preference": "Χωρίς προτίμηση λίστας",
+  "Disabled": "Απενεργοποιημένη",
+  "No playlists yet": "Δεν υπάρχουν ακόμα λίστες",
+  "Selected countries have equal priority. Match evidence comes first, then preferred playlist, country and video quality. Saved for this viewer.":
+      "Οι επιλεγμένες χώρες έχουν ίση προτεραιότητα. Προηγείται η αντιστοίχιση αγώνα, μετά η προτιμώμενη λίστα, η χώρα και η ποιότητα βίντεο. Αποθηκεύεται για αυτό το προφίλ.",
+  "Rank countries equally": "Ίση προτεραιότητα σε όλες τις χώρες",
 };

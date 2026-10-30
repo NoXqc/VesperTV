@@ -233,16 +233,24 @@ class SportsChannelPicks {
   SportsCountryPreferences get countryPreferences =>
       SportsCountryPreferences.load(_storage);
 
+  String? get preferredPlaylist => _storage.getSportsPreferredPlaylist();
+
   List<ChannelMatch> orderMatches(List<ChannelMatch> matches,
       {SportsCountryPreferences? countries}) {
     final ordered = preferQuality ? preferSportsSources(matches) : matches;
     final preferences = countries ?? countryPreferences;
-    if (preferences.selected.isEmpty) return ordered;
+    final playlist = preferredPlaylist;
+    if (preferences.selected.isEmpty && playlist == null) return ordered;
     final indices = {for (final (i, match) in ordered.indexed) match: i};
     final preferred = {
-      for (final match in ordered) match: preferences.prefers(match.channel)
+      for (final match in ordered)
+        match: preferences.selected.isNotEmpty &&
+            preferences.prefers(match.channel)
     };
-    if (!preferred.values.any((value) => value)) return ordered;
+    if (!preferred.values.any((value) => value) &&
+        !ordered.any((match) => match.channel.playlistId == playlist)) {
+      return ordered;
+    }
     int tier(ChannelMatch match) => match.reason == MatchReason.pick
         ? (match.score >= 1000 ? 0 : 1)
         : match.gameEvidence
@@ -251,10 +259,15 @@ class SportsChannelPicks {
     return [...ordered]..sort((a, b) {
         final evidence = tier(a).compareTo(tier(b));
         if (evidence != 0) return evidence;
+        if (tier(a) != 0 && playlist != null) {
+          final aPlaylist = a.channel.playlistId == playlist;
+          final bPlaylist = b.channel.playlistId == playlist;
+          if (aPlaylist != bPlaylist) return aPlaylist ? -1 : 1;
+        }
         if (tier(a) != 0 && preferred[a] != preferred[b]) {
           return preferred[a]! ? -1 : 1;
         }
-        // Retain quality/copy/evidence ordering within each country group.
+        // Retain quality/copy ordering within each playlist/country group.
         return indices[a]!.compareTo(indices[b]!);
       });
   }
@@ -1110,6 +1123,18 @@ class SportsChannelMatcher {
     final out = <String, List<ChannelMatch>>{};
     if (games.isEmpty) return out;
     final countries = picks.countryPreferences;
+    final preferredPlaylist = picks.preferredPlaylist;
+    // Keep the existing capped series/network suggestions, but let a valid
+    // preferred-playlist candidate reach the cap before other playlists.
+    // With no preference this returns the exact original iteration order.
+    Iterable<int> playlistFirst(Iterable<int> hits) {
+      if (preferredPlaylist == null) return hits;
+      final list = hits.toList();
+      return [
+        ...list.where((i) => _channels[i].playlistId == preferredPlaylist),
+        ...list.where((i) => _channels[i].playlistId != preferredPlaylist),
+      ];
+    }
 
     // One guide query for the whole day. A title must name every group
     // (both teams), and the loop below checks that — so SQL only needs one
@@ -1323,7 +1348,7 @@ class SportsChannelMatcher {
       // team leagues: "EuroLeague 03 | ..." channels are one game each.
       if (series.isNotEmpty && g.league.kind != SportsKind.team) {
         var taken = 0;
-        for (final i in _channelsNaming(series)) {
+        for (final i in playlistFirst(_channelsNaming(series))) {
           if (taken >= 3) break;
           if (_regionBias(i, g.league) < 0) continue;
           add(i, MatchReason.name, 60 + _regionBias(i, g.league));
@@ -1375,7 +1400,7 @@ class SportsChannelMatcher {
           ]).map((m) => _byId[m.channel.id]!).toList();
         }
         var taken = 0;
-        for (final i in hits) {
+        for (final i in playlistFirst(hits)) {
           if (taken >= 3) break;
           // Same name, different country's channel ("RU: TNT" is not TNT).
           final bias = _regionBias(i, g.league);

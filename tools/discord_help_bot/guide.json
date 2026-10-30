@@ -491,8 +491,16 @@
     "id": "37d7b6bb84088bf0",
     "category": "Sports Trak",
     "title": "Prefer channels from your country",
-    "answer": "Select one or more countries with equal priority. Canadian preferences recognize TSN, Sportsnet, RDS and TVA Sports, including untagged channel names. Country tags and your manual Country corrections help identify other feeds. Explicit game/team picks stay first; game-name or guide evidence stays ahead of generic broadcaster suggestions. Among comparable matches, preferred countries come before other countries, with your usual quality preference inside each group. Other countries remain available as fallbacks. No country preference restores the current automatic ranking. Choices belong to this viewer and travel in Backup and Transfer.",
+    "answer": "Select one or more countries with equal priority. Canadian preferences recognize TSN, Sportsnet, RDS and TVA Sports, including untagged channel names. Country tags and your manual Country corrections help identify other feeds. Explicit game/team picks stay first; game-name or guide evidence stays ahead of generic broadcaster suggestions. Among comparable matches, a preferred playlist comes first when set, then preferred countries, with your usual quality preference inside each group. Other countries remain available as fallbacks. No country preference ranks all countries equally; a playlist preference still applies. Choices belong to this viewer and travel in Backup and Transfer.",
     "controls": "Settings → Sports Trak → Preferred channel countries",
+    "url": "https://vespertv.app/remote.html#Sports%20Trak"
+  },
+  {
+    "id": "df3c97fd4b85aa6d",
+    "category": "Sports Trak",
+    "title": "Prefer matching channels from one playlist",
+    "answer": "Choose an enabled playlist to prefer its matching channels before country and video quality among comparable matches. Your saved game/team channel choices and manually added sources stay first; game-name or guide evidence stays ahead of generic broadcaster suggestions. Other playlists remain available when the preferred one has no suitable match. Disabled or hidden channels are never enabled by this setting. No playlist preference removes this priority while keeping your country choices. Saved for this viewer; included in Backup, Transfer and copying Main's Sports settings.",
+    "controls": "Settings → Sports Trak → Preferred playlist",
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },
   {

@@ -2303,4 +2303,18 @@ const Map<String, String> kFr = {
   "Luxembourg": "Luxembourg",
   "Malta": "Malte",
   "Iceland": "Islande",
+  // Sports preferred playlist.
+  "Preferred playlist": "Playlist préférée",
+  "Try matching channels from this playlist first":
+      "Essayer les chaînes correspondantes de cette playlist en premier",
+  "Among comparable game matches, prefer this playlist, then your preferred countries, then video quality. Your game and team channel choices still come first. Other playlists remain available.":
+      "Parmi les correspondances comparables, privilégiez cette playlist, puis vos pays préférés, puis la qualité vidéo. Vos choix de chaîne pour un match ou une équipe restent prioritaires. Les autres playlists restent disponibles.",
+  "Your preferred playlist is unavailable or disabled. Other matching playlists will be used.":
+      "Votre playlist préférée est indisponible ou désactivée. Les autres playlists correspondantes seront utilisées.",
+  "No playlist preference": "Aucune préférence de playlist",
+  "Disabled": "Désactivée",
+  "No playlists yet": "Aucune playlist pour le moment",
+  "Selected countries have equal priority. Match evidence comes first, then preferred playlist, country and video quality. Saved for this viewer.":
+      "Les pays sélectionnés ont la même priorité. Les preuves du match passent en premier, puis la playlist préférée, le pays et la qualité vidéo. Enregistré pour ce profil.",
+  "Rank countries equally": "Donner la même priorité à tous les pays",
 };

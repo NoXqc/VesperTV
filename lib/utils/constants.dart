@@ -343,6 +343,8 @@ class AppConstants {
   static const String keySportsChannelLists = 'vesper_sports_channel_lists';
   static const String keySportsPreferredCountries =
       'vesper_sports_preferred_countries';
+  static const String keySportsPreferredPlaylist =
+      'vesper_sports_preferred_playlist';
 
   /// Home page rows, per viewer: ordered row ids, a hidden row as `-id`
   /// (`HomeRows`). Null = never edited (the default order).

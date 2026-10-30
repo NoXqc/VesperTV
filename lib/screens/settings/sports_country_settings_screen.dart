@@ -50,14 +50,14 @@ class _SportsCountrySettingsScreenState
               'Prefer these countries among channels that match the game. Other countries remain available. Your game and team channel choices still come first.')),
           const SizedBox(height: 12),
           Text(tr(
-              'Selected countries have equal priority. Match evidence comes before country, then video quality within each group. Saved for this viewer.')),
+              'Selected countries have equal priority. Match evidence comes first, then preferred playlist, country and video quality. Saved for this viewer.')),
           const SizedBox(height: 12),
           TvMenuTile(
               key: const ValueKey('country-automatic'),
               autofocus: true,
               icon: Icons.public,
               title: tr('No country preference'),
-              subtitle: tr('Keep the current automatic ranking'),
+              subtitle: tr('Rank countries equally'),
               trailing: Icon(_selected.isEmpty
                   ? Icons.radio_button_checked
                   : Icons.radio_button_unchecked),

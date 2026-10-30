@@ -587,6 +587,17 @@ class StorageService {
       const [];
   Future<void> setSportsPreferredCountries(List<String> countries) => _prefs
       .setStringList(_vk(AppConstants.keySportsPreferredCountries), countries);
+  String? getSportsPreferredPlaylist() =>
+      _prefs.getString(_vk(AppConstants.keySportsPreferredPlaylist));
+  Future<void> setSportsPreferredPlaylist(String? playlistId) async {
+    final key = _vk(AppConstants.keySportsPreferredPlaylist);
+    if (playlistId == null) {
+      await _prefs.remove(key);
+    } else {
+      await _prefs.setString(key, playlistId);
+    }
+  }
+
   bool getArchiveAutoLargest() =>
       _prefs.getBool(_vk('vesper_archive_auto_largest')) ?? false;
   Future<void> setArchiveAutoLargest(bool value) =>
