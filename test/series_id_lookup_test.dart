@@ -22,7 +22,7 @@ void main() {
           }),
           200);
     }));
-    final meta = ArchiveMeta(
+    const meta = ArchiveMeta(
         id: 'iptv:5', type: ArchiveType.series, name: '4KDV: Carrie (2024)');
     expect(await api.tmdbIdFor(meta, 'k', 'en'), '42');
     expect(queries.single, 'Carrie');
@@ -41,7 +41,8 @@ void main() {
             200)));
     expect(
         await api.tmdbIdFor(
-            ArchiveMeta(id: 'iptv:5', type: ArchiveType.series, name: 'Carrie'),
+            const ArchiveMeta(
+                id: 'iptv:5', type: ArchiveType.series, name: 'Carrie'),
             'k',
             'en'),
         isNull);
