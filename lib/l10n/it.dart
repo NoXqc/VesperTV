@@ -6,6 +6,10 @@
 /// the code; Italian plurals don't work that way (canale/canali), so those
 /// strings are phrased to avoid it.
 const Map<String, String> kIt = {
+  // Android phone player touch lock.
+  "Lock touch controls": "Blocca i comandi touch",
+  "Unlock touch controls": "Sblocca i comandi touch",
+  "Touch controls locked": "Comandi touch bloccati",
   // Media Hub custom posters.
   "Add {imdb_id} or {tmdb_id} where the title goes.": "Aggiungi {imdb_id} o {tmdb_id} dove va il titolo.",
   "Custom posters": "Locandine personalizzate",

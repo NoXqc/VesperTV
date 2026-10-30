@@ -1651,16 +1651,7 @@ class ArchiveService extends ChangeNotifier {
         try {
           final items = await _page(source, catalog, search: target.name);
           if (viewer != _storage.viewerGeneration || _disposed) return;
-          final exact = items
-              .where((m) => target.imdb != null && m.imdb == target.imdb)
-              .firstOrNull;
-          final named = items
-              .where((m) =>
-                  TitleSearch.key(m.name) == TitleSearch.key(target.name) &&
-                  target.year != null &&
-                  m.year == target.year)
-              .toList();
-          final found = exact ?? (named.length == 1 ? named.single : null);
+          final found = _matchingServerTitle(target, items);
           if (found != null) matches.add((source: source, meta: found));
         } catch (_) {/* A disconnected server leaves other sources usable. */}
       }
@@ -1668,6 +1659,80 @@ class ArchiveService extends ChangeNotifier {
 
     await Future.wait([worker(), worker(), worker()]);
     return viewer == _storage.viewerGeneration ? matches.firstOrNull : null;
+  }
+
+  static ArchiveMeta? _matchingServerTitle(
+      ArchiveMeta target, Iterable<ArchiveMeta> items) {
+    final candidates = items.where((m) => m.type == target.type).toList();
+    final exact = candidates
+        .where((m) => target.imdb != null && m.imdb == target.imdb)
+        .firstOrNull;
+    if (exact != null) return exact;
+    final named = candidates
+        .where((m) =>
+            // Never substitute another known film with the same title/year.
+            (target.imdb == null || m.imdb == null) &&
+            TitleSearch.key(m.name) == TitleSearch.key(target.name) &&
+            target.year != null &&
+            m.year == target.year)
+        .toList();
+    return named.length == 1 ? named.single : null;
+  }
+
+  /// Tracker/public catalog ids are not server item ids. Resolve only the
+  /// selected title, independently of how far the viewer has browsed a row.
+  /// These requests stay inside the stream session's three-worker budget.
+  Future<List<ArchiveStream>> _serverTitleStreams(
+      ArchiveSource source,
+      ArchiveMeta target,
+      ArchiveVideo? episode,
+      bool Function() current) async {
+    if (target.type == ArchiveType.series && episode == null) return const [];
+    final candidates = <String, ArchiveMeta>{};
+    for (final catalog in source.catalogs) {
+      if (!current()) return const [];
+      if (catalog.type != target.type) continue;
+      var skip = 0;
+      final seen = <String>{};
+      while (current()) {
+        final items =
+            await _page(source, catalog, skip: skip, search: target.name);
+        if (!current()) return const [];
+        final fresh = items.where((m) => seen.add(m.id)).toList();
+        if (fresh.isEmpty) break; // Also stops servers ignoring pagination.
+        for (final item in fresh) {
+          if (item.type == target.type) candidates[item.id] = item;
+        }
+        if (target.imdb != null &&
+            fresh.any((m) => m.type == target.type && m.imdb == target.imdb)) {
+          break;
+        }
+        if (items.length < MediaServerApi.catalogPageSize) break;
+        skip += items.length;
+      }
+      // A known identity can finish as soon as its library responds. Legacy
+      // title/year fallback waits for all libraries to rule out ambiguity.
+      if (target.imdb != null &&
+          candidates.values.any((m) => m.imdb == target.imdb)) {
+        break;
+      }
+    }
+    final match = _matchingServerTitle(target, candidates.values);
+    if (match == null || !current()) return const [];
+    var id = match.id;
+    if (episode != null) {
+      final full = await _servers.fetchMeta(source, match);
+      if (!current()) return const [];
+      final matches = full?.videos
+              .where((v) =>
+                  v.season == episode.season && v.episode == episode.episode)
+              .toList() ??
+          const <ArchiveVideo>[];
+      if (matches.length != 1) return const [];
+      id = matches.single.id;
+    }
+    if (!current()) return const [];
+    return _servers.streams(source, id);
   }
 
   /// The sources asked for a title's streams: [source] itself, then — for
@@ -1708,7 +1773,12 @@ class ArchiveService extends ChangeNotifier {
               source.streamOnly,
               source.catalogBaseUrl,
               source.imdbResources,
-              source.server?.toJson()
+              source.server?.toJson(),
+              if (source.server != null)
+                [
+                  for (final catalog in source.catalogs)
+                    [catalog.id, catalog.wire]
+                ],
             ],
       ]);
 
@@ -1754,6 +1824,12 @@ class ArchiveService extends ChangeNotifier {
       final id =
           episode == null ? imdb : '$imdb:${episode.season}:${episode.episode}';
       for (final s in enabledSources) {
+        if (source.server == null &&
+            s.server != null &&
+            !s.underOther &&
+            s.catalogs.any((c) => c.type == meta.type)) {
+          targets[s.key] = (s, id);
+        }
         if (!targets.containsKey(s.key) &&
             s.server == null &&
             s.tracker == null &&
@@ -1769,9 +1845,13 @@ class ArchiveService extends ChangeNotifier {
     Future<void> ask(String key) async {
       if (!session.active) return;
       final (s, id) = targets[key]!;
+      final watch = Stopwatch()..start();
       try {
         Future<List<ArchiveStream>> fetch(String id) async => s.server != null
-            ? await _servers.streams(s, id)
+            ? source.server == null
+                ? await _serverTitleStreams(
+                    s, meta, episode, () => session.active)
+                : await _servers.streams(s, id)
             : await _api.fetchStreams(s.baseUrl, meta.type, id,
                 wire: meta.wire);
         var streams = await fetch(id);
@@ -1780,6 +1860,12 @@ class ArchiveService extends ChangeNotifier {
             s.manifestUrl == source.manifestUrl &&
             id != imdbId) {
           streams = await fetch(imdbId);
+        }
+        if (s.server != null) {
+          debugPrint(
+              'ArchiveStreams: source=${s.key} kind=${s.server!.kind.name} '
+              'ref=${ArchiveApiService.diagnosticReference(videoId)} '
+              'items=${streams.length} fetchMs=${watch.elapsedMilliseconds}');
         }
         session.finish(key, [
           for (final stream in streams)
@@ -1792,6 +1878,11 @@ class ArchiveService extends ChangeNotifier {
     }
 
     final pending = targets.keys.toList();
+    // Reserve an initial worker for a connected server, so three slow addons
+    // cannot hide a fast local Plex result behind their network timeouts.
+    final serverIndex =
+        pending.indexWhere((key) => targets[key]!.$1.server != null);
+    if (serverIndex > 0) pending.insert(0, pending.removeAt(serverIndex));
     var running = 0;
     Future<void> worker() async {
       running++;
