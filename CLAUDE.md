@@ -367,6 +367,16 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **cdx, 2026-10-30 - release 1.0.50 (beta), +534:** owner requested push and a new
+  release after +533 acceptance. Android only; Windows stays at1.0.45 with its
+  existing website links. Includes Plex/server streams from tracker lists,
+  IPTV cast portraits, title-page row order, Android skip intro/credits and
+  phone touch lock, updater storage/download guards, Sports preferences/odds,
+  My Teams preferred channel and compact league header/quality setting move.
+  Analyze16 baseline,1090 Flutter and15 guide tests pass;87 guide entries
+  verified. Signed package/version checked. No queued Home mini player or
+  Plex Live TV work added. Notes: dev-notes/releases/1.0.50.md; final push,
+  publication and download verification state: root HANDOFF.md.
 - **Claude, 2026-10-30 — test builds +532/+533 on main (owner-tested, all OK; Codex releases next):**
   - **Skip intro / credits (Android):** IntroDB (`api.introdb.app/segments?imdb_id&season&episode`,
     keyless, Nuvio's source) via `services/skip_segments.dart`; ids from `WatchTracker.itemFor`

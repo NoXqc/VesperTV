@@ -7,7 +7,7 @@ sticks, phones and Windows 10/11 PCs:
   an XMLTV TV guide
 - **Custom REST add-ons** in the Media Hub (any source following the
   catalog/stream add-on format)
-- **Your own Jellyfin or Emby server** — its movie and TV libraries in the Media Hub
+- **Your own Jellyfin, Emby or Plex server** — its movie and TV libraries in the Media Hub
 
 No ads, no tracking, no account. VesperTV ships no content: you bring the sources.
 Built and tested on Android TV boxes (Formuler), Fire TV sticks, phones and Windows.
@@ -65,7 +65,7 @@ Grab the latest release from the [Releases](../../releases) page or
   where your provider offers catch-up. [Controls and setup](https://vespertv.app/remote.html#Live%20TV)
 - Live TV, Movies, and TV Shows (series/episodes) catalogs
 - **Media Hub**: films and series from REST add-ons you add, and from your own
-  Jellyfin / Emby server (sign in with address, user name and password)
+  Jellyfin / Emby / Plex server (Plex uses a sign-in code approved on plex.tv/link)
 - Resume playback position, subtitles, skip/seek controls
 - Auto-advance to the next episode with an "Up Next" prompt
 - Sports tab: live scores, standings, My Teams, and the matching channel in your playlist
@@ -75,15 +75,15 @@ Grab the latest release from the [Releases](../../releases) page or
 - Full remote/D-pad navigation on TV boxes and Firesticks, touch-first layout
   on phones
 - Theming with selectable palettes, including a black-and-gold "Dark / Gold" look
-- English, French, Spanish and Italian
+- English, French, Spanish, Italian and Greek
 - Transfer your whole setup to another device (same Wi-Fi or over the internet)
 
 ## Setup
 
 On first launch, add your playlist under Settings — either a direct M3U URL
 (with an optional separate EPG URL), or Xtream Codes credentials (server,
-username, password). Add-ons and Jellyfin / Emby servers are added from the
-Media Hub (Settings > Media Hub sources, or **Connect Jellyfin / Emby**).
+username, password). Add-ons and Jellyfin / Emby / Plex servers are added from the
+Media Hub (Settings > Media Hub sources, or **Connect Jellyfin / Emby / Plex**).
 
 ## Community
 
