@@ -13,6 +13,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/l10n.dart';
+import '../models/archive_models.dart';
 import '../models/channel.dart';
 import '../models/episode_airing.dart';
 import '../models/series_details.dart';
@@ -222,14 +223,43 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
             e.id: (d.season, d.episodeNumber!),
       };
 
+  /// Title -> TMDB id lookups for provider shows without ids (cached).
+  static final _idLookup = ArchiveDiscoveryService();
+
   /// Trakt / Simkl: plays of these episodes are reported, and episodes
   /// watched (or paused) elsewhere are filled in, then the page redraws.
   Future<void> _syncTrackers(SeriesEpisodesResult result) async {
     final imdb = widget.imdbId;
-    final tmdb = widget.series.tmdbId;
+    var tmdb = widget.series.tmdbId;
     final numbers = _episodeNumbers(result);
+    final storage = context.read<StorageService>();
+    var found = false;
+    // A provider show without ids (many send none): the single exact
+    // title/year TMDB match, like the cast photos, with the viewer's key.
+    if (imdb == null && (tmdb == null || tmdb.isEmpty)) {
+      final key = (storage.getTmdbApiKey() ?? '').trim();
+      if (key.isNotEmpty && numbers.isNotEmpty) {
+        try {
+          tmdb = await (widget.castDiscovery ?? _idLookup).tmdbIdFor(
+              ArchiveMeta(
+                  id: 'iptv:${widget.series.id}',
+                  name: widget.series.name,
+                  type: ArchiveType.series,
+                  year:
+                      (result.details?.year ?? widget.series.releaseDate?.year)
+                          ?.toString()),
+              key,
+              L10n.code);
+          found = tmdb != null;
+        } catch (_) {
+          tmdb = null;
+        }
+        if (!mounted) return;
+      }
+    }
     // Send log: Skip intro and Trakt/Simkl need these ids.
-    debugPrint('SeriesIds: imdb=${imdb ?? '-'} tmdb=${tmdb ?? '-'} '
+    debugPrint('SeriesIds: imdb=${imdb ?? '-'} tmdb=${tmdb ?? '-'}'
+        '${found ? ' (title match)' : ''} '
         'numbered=${numbers.length}/${_allEpisodes.length}');
     if (imdb == null && (tmdb == null || tmdb.isEmpty)) return;
     for (final e in numbers.entries) {
@@ -238,7 +268,6 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
           TrackedItem.episode(imdb,
               tmdb: tmdb, season: e.value.$1, episode: e.value.$2));
     }
-    final storage = context.read<StorageService>();
     final changed = await TrackerSync.instance
         .applyToSeries(storage, imdb: imdb, tmdb: tmdb, episodes: numbers);
     if (changed && mounted) setState(() {});

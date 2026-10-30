@@ -111,6 +111,18 @@ class ArchiveDiscoveryService {
       ArchiveMeta meta, String key, String language) async {
     if (key.trim().isEmpty || meta.wireType != null) return const [];
     final type = meta.type == ArchiveType.movie ? 'movie' : 'tv';
+    final id = await tmdbIdFor(meta, key, language);
+    if (id == null) return const [];
+    return _cast(await _get('$type/$id/credits', key, language));
+  }
+
+  /// [meta]'s TMDB id: its own `tmdb:` id, else the single exact title/year
+  /// search result (null when none or several match). Also how a provider
+  /// show without ids gets Skip intro (series page).
+  Future<String?> tmdbIdFor(
+      ArchiveMeta meta, String key, String language) async {
+    if (key.trim().isEmpty || meta.wireType != null) return null;
+    final type = meta.type == ArchiveType.movie ? 'movie' : 'tv';
     var id = RegExp(r'^tmdb:([1-9]\d*)$').firstMatch(meta.id)?.group(1);
     if (id == null) {
       final year = meta.year ??
@@ -122,7 +134,7 @@ class ArchiveDiscoveryService {
       if (year != null) {
         title = title.replaceFirst(RegExp('\\s+$year\$'), '').trim();
       }
-      if (title.isEmpty) return const [];
+      if (title.isEmpty) return null;
       final found = await _get('search/$type', key, language, {
         'query': title,
         'include_adult': 'false',
@@ -148,10 +160,10 @@ class ArchiveDiscoveryService {
             (year == null || date is String && date.startsWith('$year-'));
       }).toList();
       final ids = results.map((row) => (row['id'] as num).toInt()).toSet();
-      if (ids.length != 1) return const [];
+      if (ids.length != 1) return null;
       id = '${ids.single}';
     }
-    return _cast(await _get('$type/$id/credits', key, language));
+    return id;
   }
 
   Future<ArchiveDiscovery> discover(
