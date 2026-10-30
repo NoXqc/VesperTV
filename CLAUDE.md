@@ -367,6 +367,13 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **cdx, 2026-10-30 — signed test APK1.0.49+530** (`codex/test-apk-530`):
+  includes Plex, title-page row order, My Teams preferred channel, country
+  preference, preferred playlist and hide-empty-leagues. Analyze16/1005Flutter
+  pass; package/version and release certificate verified. Owner requested VPS
+  download hosting: APK ready locally, upload awaits exact-command approval
+  required by AGENTS.md. No device installation/public release/push. Next
+  newly built APK must exceed530. Artifact/hash and state: root HANDOFF.md.
 - **cdx, 2026-10-30 — Hide empty Sports leagues**
   (`codex/hide-empty-sports-leagues`, stacked on preferred playlist): new
   off-by-default, per-viewer Sports Trak setting follows the selected day.
