@@ -2948,4 +2948,8 @@ const Map<String, String> kEl = {
   "Could not check the update size. Check for updates and try again.":
       "Δεν ήταν δυνατός ο έλεγχος του μεγέθους της ενημέρωσης. Ελέγξτε για ενημερώσεις και δοκιμάστε ξανά.",
   "Download failed. Please try again.": "Η λήψη απέτυχε. Δοκιμάστε ξανά.",
+  // IPTV cast portraits.
+  "Metadata provided by TMDB.": "Τα μεταδεδομένα παρέχονται από το TMDB.",
+  "No matching title found in your playlists.":
+      "Δεν βρέθηκε αντίστοιχος τίτλος στις λίστες αναπαραγωγής σας.",
 };

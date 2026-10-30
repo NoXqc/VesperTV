@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/archive_models.dart';
+import '../utils/display_title.dart';
 
 class ArchivePerson {
   const ArchivePerson(
@@ -86,6 +87,73 @@ class ArchiveDiscoveryService {
     ].take(20).toList();
   }
 
+  static String titleKey(String name) => cleanDisplayTitle(name)
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^\p{L}\p{N}]+', unicode: true), ' ')
+      .trim();
+
+  static List<ArchivePerson> _cast(Object? credits) => <ArchivePerson>[
+        for (final person in credits is Map && credits['cast'] is List
+            ? credits['cast']
+            : const [])
+          if (person is Map && person['id'] is num && person['name'] is String)
+            ArchivePerson(
+                id: (person['id'] as num).toInt(),
+                name: person['name'],
+                image: _image(person['profile_path']),
+                role:
+                    person['character'] is String ? person['character'] : null),
+      ].take(12).toList();
+
+  /// IPTV details: just this title's cast, never collections/recommendations.
+  /// Without a provider TMDB id, require one exact title/year search result.
+  Future<List<ArchivePerson>> castForTitle(
+      ArchiveMeta meta, String key, String language) async {
+    if (key.trim().isEmpty || meta.wireType != null) return const [];
+    final type = meta.type == ArchiveType.movie ? 'movie' : 'tv';
+    var id = RegExp(r'^tmdb:([1-9]\d*)$').firstMatch(meta.id)?.group(1);
+    if (id == null) {
+      final year = meta.year ??
+          RegExp(r'\(((?:19|20)\d{2})\)').firstMatch(meta.name)?.group(1) ??
+          RegExp(r'\s((?:19|20)\d{2})$')
+              .firstMatch(cleanDisplayTitle(meta.name))
+              ?.group(1);
+      var title = cleanDisplayTitle(meta.name);
+      if (year != null) {
+        title = title.replaceFirst(RegExp('\\s+$year\$'), '').trim();
+      }
+      if (title.isEmpty) return const [];
+      final found = await _get('search/$type', key, language, {
+        'query': title,
+        'include_adult': 'false',
+        if (year != null)
+          type == 'movie' ? 'year' : 'first_air_date_year': year,
+      });
+      final results =
+          (found['results'] is List ? found['results'] as List : const [])
+              .whereType<Map>()
+              .where((row) {
+        final date = row[type == 'movie' ? 'release_date' : 'first_air_date'];
+        return row['adult'] != true &&
+            row['id'] is num &&
+            (row['id'] as num).toInt() > 0 &&
+            [
+              row['title'],
+              row['original_title'],
+              row['name'],
+              row['original_name']
+            ]
+                .whereType<String>()
+                .any((name) => titleKey(name) == titleKey(title)) &&
+            (year == null || date is String && date.startsWith('$year-'));
+      }).toList();
+      final ids = results.map((row) => (row['id'] as num).toInt()).toSet();
+      if (ids.length != 1) return const [];
+      id = '${ids.single}';
+    }
+    return _cast(await _get('$type/$id/credits', key, language));
+  }
+
   Future<ArchiveDiscovery> discover(
       ArchiveMeta meta, String key, String language) async {
     if (key.trim().isEmpty || meta.wireType != null) {
@@ -107,17 +175,7 @@ class ArchiveDiscoveryService {
     final details = await _get('$type/$id', key, language,
         {'append_to_response': 'credits,recommendations,similar,external_ids'});
     final credits = details['credits'];
-    final cast = <ArchivePerson>[
-      for (final person in credits is Map && credits['cast'] is List
-          ? credits['cast']
-          : const [])
-        if (person is Map && person['id'] is num && person['name'] is String)
-          ArchivePerson(
-              id: (person['id'] as num).toInt(),
-              name: person['name'],
-              image: _image(person['profile_path']),
-              role: person['character'] as String?),
-    ].take(12).toList();
+    final cast = _cast(credits);
     List<ArchiveMeta> list(String name) =>
         _titles(details[name] is Map ? details[name]['results'] : null,
             type: meta.type);

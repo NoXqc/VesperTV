@@ -24,6 +24,8 @@ import '../utils/display_title.dart';
 import '../utils/image_urls.dart';
 import '../utils/tv_theme.dart';
 import '../widgets/cast_bubbles.dart';
+import '../widgets/iptv_cast_panel.dart';
+import '../services/archive_discovery_service.dart';
 import '../widgets/detail_header.dart';
 import '../widgets/hold_to_activate.dart';
 import 'desktop_player_screen.dart';
@@ -46,9 +48,11 @@ import 'player_screen.dart';
 /// back button, Down from it back to Play (explicit [CallbackShortcuts],
 /// CLAUDE.md §10).
 class MovieDetailScreen extends StatefulWidget {
-  const MovieDetailScreen({super.key, required this.channel});
+  const MovieDetailScreen(
+      {super.key, required this.channel, this.castDiscovery});
 
   final Channel channel;
+  final ArchiveDiscoveryService? castDiscovery;
 
   @override
   State<MovieDetailScreen> createState() => _MovieDetailScreenState();
@@ -74,6 +78,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   final _restartNode = FocusNode(debugLabel: 'movie-restart');
   final _favNode = FocusNode(debugLabel: 'movie-fav');
   final _castNode = FocusNode(debugLabel: 'movie-cast');
+  final _castPortraitNode = FocusNode(debugLabel: 'movie-cast-portraits');
+  bool get _canCast =>
+      (context.read<StorageService>().getTmdbApiKey() ?? '').trim().isNotEmpty;
   bool _showCast = false;
   final _pageScroll = ScrollController();
   final List<Timer> _refreshTimers = [];
@@ -123,7 +130,14 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     for (final t in _refreshTimers) {
       t.cancel();
     }
-    for (final n in [_backNode, _playNode, _restartNode, _favNode, _castNode]) {
+    for (final n in [
+      _backNode,
+      _playNode,
+      _restartNode,
+      _favNode,
+      _castNode,
+      _castPortraitNode
+    ]) {
       n.dispose();
     }
     _pageScroll.dispose();
@@ -295,6 +309,18 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
 
   // --- Build ------------------------------------------------------------------
 
+  Widget _castPanel(double pad) => Padding(
+      padding: EdgeInsets.symmetric(horizontal: pad),
+      child: IptvCastPanel(
+          id: widget.channel.id,
+          title: widget.channel.name,
+          series: false,
+          tmdbId: widget.channel.tmdbId,
+          year: _details?.year ?? widget.channel.releaseDate?.year,
+          entryNode: _castPortraitNode,
+          onReturn: _castNode.requestFocus,
+          discovery: widget.castDiscovery));
+
   @override
   Widget build(BuildContext context) {
     final playlist = context.watch<PlaylistManager>();
@@ -365,42 +391,47 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         ),
         SingleChildScrollView(
           controller: _pageScroll,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: h),
-            child: IntrinsicHeight(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(pad - 8 * s, 14 * s, pad, 0),
-                    child: _buildBackButton(s),
-                  ),
-                  const Spacer(),
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(pad, 12 * s, pad, 36 * s),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        if (poster != null) ...[
-                          DetailPoster(url: poster, width: posterW),
-                          SizedBox(width: 24 * s),
-                        ],
-                        ConstrainedBox(
-                          constraints: BoxConstraints(
-                              maxWidth: math.min(
-                                  w * 0.6,
-                                  w -
-                                      2 * pad -
-                                      (poster != null ? posterW + 24 * s : 0))),
-                          child: _buildHeaderText(s, current),
-                        ),
-                      ],
+          child: Column(children: [
+            ConstrainedBox(
+              constraints: BoxConstraints(minHeight: h),
+              child: IntrinsicHeight(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(pad - 8 * s, 14 * s, pad, 0),
+                      child: _buildBackButton(s),
                     ),
-                  ),
-                ],
+                    const Spacer(),
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(pad, 12 * s, pad, 36 * s),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          if (poster != null) ...[
+                            DetailPoster(url: poster, width: posterW),
+                            SizedBox(width: 24 * s),
+                          ],
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                                maxWidth: math.min(
+                                    w * 0.6,
+                                    w -
+                                        2 * pad -
+                                        (poster != null
+                                            ? posterW + 24 * s
+                                            : 0))),
+                            child: _buildHeaderText(s, current),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
+            if (_canCast) _castPanel(pad)
+          ]),
         ),
       ],
     );
@@ -523,7 +554,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       _trailerNode,
       if (resume) _restartNode,
       _favNode,
-      if (_castNames.isNotEmpty) _castNode,
+      if (_castNames.isNotEmpty || _canCast) _castNode,
     ];
     void move(int delta) {
       final active = nodes.where((node) => node.context != null).toList();
@@ -577,14 +608,16 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           onPressed: () => _toggleFavorite(current),
           onFocused: _revealTop,
         ),
-        if (_castNames.isNotEmpty)
+        if (_castNames.isNotEmpty || _canCast)
           DetailPillButton(
             focusNode: _castNode,
             icon: Icons.groups_rounded,
             label: tr('Cast'),
-            selected: _showCast,
+            selected: !_canCast && _showCast,
             scale: s,
-            onPressed: () => setState(() => _showCast = !_showCast),
+            onPressed: () => _canCast
+                ? _castPortraitNode.requestFocus()
+                : setState(() => _showCast = !_showCast),
             onFocused: _revealTop,
           ),
       ],
@@ -619,7 +652,14 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         // The buttons can wrap onto a second row (Favorites, Cast).
         up: () =>
             (detailNodeInRow(nodes, down: false) ?? _backNode).requestFocus(),
-        down: () => detailNodeInRow(nodes, down: true)?.requestFocus(),
+        down: () {
+          final below = detailNodeInRow(nodes, down: true);
+          if (below != null) {
+            below.requestFocus();
+          } else if (_canCast) {
+            _castPortraitNode.requestFocus();
+          }
+        },
         left: () => move(-1),
         right: () => move(1),
       ),
@@ -674,6 +714,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
               ],
             ),
           ),
+          if (_canCast) _castPanel(16),
         ],
       ),
     );

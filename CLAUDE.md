@@ -367,6 +367,13 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **cdx, 2026-10-30 — IPTV cast portraits** (`codex/iptv-cast-portraits`):
+  IPTV movie/show pages reuse Media Hub portraits/actor credits with a saved
+  TMDB key. Cast jumps to the row; selected credits open matching IPTV details.
+  Positive provider TMDB id or unique exact title/year lookup; no key retains
+  provider-name bubbles. Analyze16/1046Flutter and15Node pass; guide84 verified.
+  See dev-notes/iptv-cast-portraits.md. No package/upload; hosted APK530 predates
+  this and updater storage guard. Actual TMDB/provider/device QA pending.
 - **cdx, 2026-10-30 — updater storage/download guards**
   (`codex/updater-storage-check`, stacked on hosted test530): Android StatFs
   cache free-space check requires3x GitHub APK size before HTTP. Plain localized

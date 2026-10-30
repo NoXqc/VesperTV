@@ -156,7 +156,8 @@ class _DetailPillButtonState extends State<DetailPillButton> {
                 Icon(widget.icon, size: 20 * s, color: iconColor),
               if (widget.icon != null && label != null) SizedBox(width: 6 * s),
               if (label != null)
-                Text(
+                Flexible(
+                    child: Text(
                   label,
                   style: TextStyle(
                     color: fg,
@@ -166,7 +167,7 @@ class _DetailPillButtonState extends State<DetailPillButton> {
                             ? FontWeight.bold
                             : FontWeight.w500,
                   ),
-                ),
+                )),
             ],
           ),
         ),

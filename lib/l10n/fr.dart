@@ -2331,4 +2331,8 @@ const Map<String, String> kFr = {
       "Impossible de vérifier la taille de la mise à jour. Recherchez les mises à jour et réessayez.",
   "Download failed. Please try again.":
       "Le téléchargement a échoué. Veuillez réessayer.",
+  // IPTV cast portraits.
+  "Metadata provided by TMDB.": "Métadonnées fournies par TMDB.",
+  "No matching title found in your playlists.":
+      "Aucun titre correspondant trouvé dans vos playlists.",
 };

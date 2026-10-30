@@ -2329,4 +2329,8 @@ const Map<String, String> kIt = {
   "Could not check the update size. Check for updates and try again.":
       "Impossibile verificare la dimensione dell’aggiornamento. Cerca gli aggiornamenti e riprova.",
   "Download failed. Please try again.": "Download non riuscito. Riprova.",
+  // IPTV cast portraits.
+  "Metadata provided by TMDB.": "Metadati forniti da TMDB.",
+  "No matching title found in your playlists.":
+      "Nessun titolo corrispondente trovato nelle tue playlist.",
 };

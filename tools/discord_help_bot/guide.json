@@ -296,6 +296,14 @@
     "url": "https://vespertv.app/remote.html#Movies%20%26%20Shows"
   },
   {
+    "id": "1752b76c26eed33a",
+    "category": "Movies & Shows",
+    "title": "Actor portraits and credits",
+    "answer": "With a TMDB API key saved, Cast jumps to the portrait section. Press OK or Down to enter the actor row, Left/Right to browse and OK on an actor for their movie/show credits. Pick a credit to look for a matching title in your enabled IPTV playlists; a missing match is reported without opening another source. Back restores the actor card. Up returns through the section button to the movie actions or show episodes; on a portrait phone show page it returns to Play. Without a TMDB key, the existing floating cast names stay available. Metadata loads separately and does not block Play.",
+    "controls": "OK on Cast in an IPTV movie or show page",
+    "url": "https://vespertv.app/remote.html#Movies%20%26%20Shows"
+  },
+  {
     "id": "5ac2664e81c45477",
     "category": "Movies & Shows",
     "title": "Mark watched / unwatched",

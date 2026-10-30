@@ -2328,4 +2328,8 @@ const Map<String, String> kEs = {
       "No se pudo comprobar el tamaño de la actualización. Busca actualizaciones y vuelve a intentarlo.",
   "Download failed. Please try again.":
       "La descarga ha fallado. Vuelve a intentarlo.",
+  // IPTV cast portraits.
+  "Metadata provided by TMDB.": "Metadatos proporcionados por TMDB.",
+  "No matching title found in your playlists.":
+      "No se ha encontrado un título coincidente en tus listas.",
 };

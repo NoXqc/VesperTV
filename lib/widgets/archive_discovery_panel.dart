@@ -25,8 +25,23 @@ class ArchiveDiscoveryPanel extends StatefulWidget {
       required this.meta,
       required this.entryNode,
       required this.onReturn,
-      this.discovery});
-  final ArchiveSource source;
+      this.discovery})
+      : assert(source != null),
+        castOnly = false,
+        openTitle = null;
+  const ArchiveDiscoveryPanel.iptvCast(
+      {super.key,
+      required this.meta,
+      required this.entryNode,
+      required this.onReturn,
+      required this.openTitle,
+      this.discovery})
+      : assert(openTitle != null),
+        source = null,
+        castOnly = true;
+  final ArchiveSource? source;
+  final bool castOnly;
+  final Future<void> Function(ArchiveMeta)? openTitle;
   final ArchiveMeta meta;
   final FocusNode entryNode;
   final VoidCallback onReturn;
@@ -55,7 +70,7 @@ class _ArchiveDiscoveryPanelState extends State<ArchiveDiscoveryPanel> {
   void initState() {
     super.initState();
     _viewer = storage.viewerGeneration;
-    _order = ArchiveDetailLayout.load(storage);
+    _order = widget.castOnly ? ['cast'] : ArchiveDetailLayout.load(storage);
     _load();
   }
 
@@ -64,8 +79,16 @@ class _ArchiveDiscoveryPanelState extends State<ArchiveDiscoveryPanel> {
   void didUpdateWidget(covariant ArchiveDiscoveryPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.meta.id != widget.meta.id ||
-        oldWidget.meta.imdb != widget.meta.imdb) {
+        oldWidget.meta.imdb != widget.meta.imdb ||
+        (widget.castOnly &&
+            !widget.meta.id.startsWith('tmdb:') &&
+            (oldWidget.meta.name != widget.meta.name ||
+                oldWidget.meta.year != widget.meta.year))) {
       _loading = true;
+      if (widget.castOnly) {
+        _data = const ArchiveDiscovery();
+        _failed = false;
+      }
       _load();
     }
   }
@@ -73,7 +96,10 @@ class _ArchiveDiscoveryPanelState extends State<ArchiveDiscoveryPanel> {
   Future<void> _load() async {
     final request = ++_request;
     try {
-      final result = await _api.discover(widget.meta, key, L10n.code);
+      final result = widget.castOnly
+          ? ArchiveDiscovery(
+              cast: await _api.castForTitle(widget.meta, key, L10n.code))
+          : await _api.discover(widget.meta, key, L10n.code);
       if (current && request == _request) {
         setState(() {
           _data = result;
@@ -138,9 +164,10 @@ class _ArchiveDiscoveryPanelState extends State<ArchiveDiscoveryPanel> {
   }
 
   List<ArchiveMeta> get _related {
+    if (widget.castOnly) return const [];
     if (_data.related.isNotEmpty) return _data.related;
     final hub = context.read<ArchiveService>();
-    final seen = <String>{archiveTitleIdentity(widget.source, widget.meta)};
+    final seen = <String>{archiveTitleIdentity(widget.source!, widget.meta)};
     final result = <ArchiveMeta>[];
     _localSources.clear();
     for (final row in hub.rows(widget.meta.type)) {
@@ -159,7 +186,17 @@ class _ArchiveDiscoveryPanelState extends State<ArchiveDiscoveryPanel> {
   }
 
   Future<void> _open(ArchiveMeta preview) async {
+    if (!current) return;
     if (_opening) return;
+    if (widget.openTitle case final open?) {
+      setState(() => _opening = true);
+      try {
+        await open(preview);
+      } finally {
+        if (current) setState(() => _opening = false);
+      }
+      return;
+    }
     setState(() => _opening = true);
     final hub = context.read<ArchiveService>();
     ArchiveSource? source = _localSources[preview];
@@ -225,10 +262,12 @@ class _ArchiveDiscoveryPanelState extends State<ArchiveDiscoveryPanel> {
   }
 
   Future<void> _person(ArchivePerson person) async {
+    if (!current) return;
+    final apiKey = key, language = L10n.code;
     await Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => _ArchiveCreditsScreen(
             name: person.name,
-            load: () => _api.credits(person, key, L10n.code),
+            load: () => _api.credits(person, apiKey, language),
             open: _open)));
   }
 
@@ -340,7 +379,8 @@ class _ArchiveDiscoveryPanelState extends State<ArchiveDiscoveryPanel> {
                     widget.onReturn();
                     return KeyEventResult.handled;
                   }
-                  if (e.logicalKey == LogicalKeyboardKey.arrowRight) {
+                  if (!widget.castOnly &&
+                      e.logicalKey == LogicalKeyboardKey.arrowRight) {
                     _customizeNode.requestFocus();
                     return KeyEventResult.handled;
                   }
@@ -353,13 +393,22 @@ class _ArchiveDiscoveryPanelState extends State<ArchiveDiscoveryPanel> {
                 },
                 child: OutlinedButton.icon(
                     focusNode: widget.entryNode,
-                    icon:
-                        Icon(_failed ? Icons.refresh : Icons.explore_outlined),
-                    label: Text(_loading
-                        ? tr('Loading recommendations…')
-                        : _failed
-                            ? tr('Retry recommendations')
-                            : tr('Explore more')),
+                    icon: Icon(_failed
+                        ? Icons.refresh
+                        : widget.castOnly
+                            ? Icons.groups_outlined
+                            : Icons.explore_outlined),
+                    label: Text(widget.castOnly
+                        ? _loading
+                            ? tr('Loading')
+                            : _failed
+                                ? tr('Try Again')
+                                : tr('Cast and credits')
+                        : _loading
+                            ? tr('Loading recommendations…')
+                            : _failed
+                                ? tr('Retry recommendations')
+                                : tr('Explore more')),
                     // Minimal scroll: pinning it 20% from the top scrolled the
                     // page down when coming Up from a row (owner photo).
                     onFocusChange: (has) {
@@ -373,33 +422,36 @@ class _ArchiveDiscoveryPanelState extends State<ArchiveDiscoveryPanel> {
                         _focus(_rows.first, 0);
                       }
                     })),
-            Focus(
-                canRequestFocus: false,
-                skipTraversal: true,
-                onKeyEvent: (_, e) {
-                  if (e is! KeyDownEvent) return KeyEventResult.ignored;
-                  if (e.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                    widget.entryNode.requestFocus();
-                  } else if (e.logicalKey == LogicalKeyboardKey.arrowUp) {
-                    widget.onReturn();
-                  } else if (e.logicalKey == LogicalKeyboardKey.arrowDown &&
-                      _rows.isNotEmpty) {
-                    _focus(_rows.first, 0);
-                  } else {
-                    return KeyEventResult.ignored;
-                  }
-                  return KeyEventResult.handled;
-                },
-                child: OutlinedButton.icon(
-                    focusNode: _customizeNode,
-                    icon: const Icon(Icons.tune),
-                    label: Text(tr('Customize title page')),
-                    onFocusChange: (has) {
-                      if (has) _keepVisible(_customizeNode.context);
-                    },
-                    onPressed: _customize)),
+            if (!widget.castOnly)
+              Focus(
+                  canRequestFocus: false,
+                  skipTraversal: true,
+                  onKeyEvent: (_, e) {
+                    if (e is! KeyDownEvent) return KeyEventResult.ignored;
+                    if (e.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                      widget.entryNode.requestFocus();
+                    } else if (e.logicalKey == LogicalKeyboardKey.arrowUp) {
+                      widget.onReturn();
+                    } else if (e.logicalKey == LogicalKeyboardKey.arrowDown &&
+                        _rows.isNotEmpty) {
+                      _focus(_rows.first, 0);
+                    } else {
+                      return KeyEventResult.ignored;
+                    }
+                    return KeyEventResult.handled;
+                  },
+                  child: OutlinedButton.icon(
+                      focusNode: _customizeNode,
+                      icon: const Icon(Icons.tune),
+                      label: Text(tr('Customize title page')),
+                      onFocusChange: (has) {
+                        if (has) _keepVisible(_customizeNode.context);
+                      },
+                      onPressed: _customize)),
           ]),
           if (_opening) const LinearProgressIndicator(),
+          if (widget.castOnly && !_loading && !_failed && _data.cast.isEmpty)
+            Text(tr('No credits found.')),
           if (key.isEmpty)
             TextButton.icon(
                 icon: const Icon(Icons.movie_outlined),
@@ -444,8 +496,8 @@ class _ArchiveDiscoveryPanelState extends State<ArchiveDiscoveryPanel> {
                     onFocusGained: () => _reveal('cast', i)));
               }),
           if (key.isNotEmpty)
-            const Text('Metadata provided by TMDB.',
-                style: TextStyle(color: Colors.white54, fontSize: 11)),
+            Text(tr('Metadata provided by TMDB.'),
+                style: const TextStyle(color: Colors.white54, fontSize: 11)),
         ]));
   }
 
