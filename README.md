@@ -98,7 +98,7 @@ Media Hub (Settings > Media Hub sources, or **Connect Jellyfin / Emby / Plex**).
 ## Community
 
 Bug reports, suggestions/improvements, or general discussion — join the
-[Discord server](https://discord.gg/DDeGDHvFY), or open an issue here on
+[Discord server](https://discord.gg/VPQ849NPV), or open an issue here on
 GitHub. Please also visit us at r/VesperTV
 
 ## Credits

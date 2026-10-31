@@ -21,7 +21,7 @@ ships no content).
   4 `A` records (185.199.108-111.153) on the apex + `www` CNAME → `noxqc.github.io`, all
   **DNS only / grey cloud** (an orange proxy cloud breaks Pages' certificate issuance). `docs/CNAME`
   = `vespertv.app`. The old `noxplayertv.com` *marketing site* is gone, but **keep that domain registered** - it is still used by other infrastructure (details are in a private notes file on the owner's PC, outside the repo).
-- **Community:** Discord https://discord.gg/DDeGDHvFY, Reddit r/VesperTV. **Downloader (AFTVnews) code: `1760256`**.
+- **Community:** Discord https://discord.gg/VPQ849NPV, Reddit r/VesperTV. **Downloader (AFTVnews) code: `1760256`**.
 - **Package / identifiers deliberately NOT renamed** (renaming would orphan every install's data and
   break in-place updates): Android `applicationId` `com.nox.nox_iptv`, Dart package `nox_iptv`,
   Windows exe `VesperTV.exe` (was `nox_iptv.exe` until the post-3.53.1 build; CMake `BINARY_NAME`; `ProductName`/`CompanyName` in Runner.rc stay `nox_iptv`/`com.nox` because they name the user-data folder), signing alias `noxplayer`, SharedPreferences keys, cache names like
