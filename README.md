@@ -34,6 +34,16 @@ Grab the latest release from the [Releases](../../releases) page or
   <img src="docs/assets/shot-group-menu.png" width="49%" alt="Hold Select on a group: expand catalog, favourite, hide">
 </p>
 
+### Sports Mode (beta) and profiles
+
+<p align="center">
+  <img src="docs/assets/shot-sports-mode-rail.jpg" width="49%" alt="Sports Mode home: a rail of leagues, today's games and My Teams">
+  <img src="docs/assets/shot-sports-mode-feed.jpg" width="49%" alt="Sports Mode with a game playing beside the feed of today's games">
+  <img src="docs/assets/shot-sports-mode-livetv.jpg" width="49%" alt="Live TV inside Sports Mode: channel groups beside the game page">
+  <img src="docs/assets/shot-sports-mode-channels.jpg" width="49%" alt="A see-through channel list over Sports Mode">
+  <img src="docs/assets/shot-profiles.jpg" width="49%" alt="Who is watching: profile cards with photos, one with a PIN lock">
+</p>
+
 ### Sports (new in 1.0.3)
 
 <p align="center">
