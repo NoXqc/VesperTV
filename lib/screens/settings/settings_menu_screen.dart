@@ -26,6 +26,7 @@ import 'trackers_screen.dart';
 import 'tmdb_settings_screen.dart';
 import 'debrid_settings_screen.dart';
 import 'remote_tips_screen.dart';
+import 'support_screen.dart';
 import '../../l10n/l10n.dart';
 import '../../widgets/sports_mode_toggle.dart';
 import '../../utils/constants.dart';
@@ -293,6 +294,11 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
                 tr('Remote tips'),
                 tr('Every hold menu and shortcut, on your phone'),
                 (_) => const RemoteTipsScreen()),
+            _Entry(
+                Icons.local_cafe_outlined,
+                tr('Support VesperTV'),
+                tr('Buy a coffee or become a Supporter'),
+                (_) => const SupportScreen()),
           ],
         ),
         _Category(

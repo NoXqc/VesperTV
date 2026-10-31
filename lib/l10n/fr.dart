@@ -1869,6 +1869,15 @@ const Map<String, String> kFr = {
       "Clé API TorBox",
   // Sports Trak: League bank heading for college conferences
   "College": "Universitaire",
+  // Settings > General > Support VesperTV
+  "Support VesperTV":
+      "Soutenir VesperTV",
+  "Buy a coffee or become a Supporter":
+      "Offrir un café ou devenir Supporter",
+  "VesperTV is free and always will be: no ads, no tracking, no paid features. If you enjoy it, you can buy a coffee or become a Supporter to help pay for the server, the website and development.":
+      "VesperTV est gratuit et le restera : pas de pub, pas de pistage, aucune fonction payante. Si vous l'aimez, vous pouvez offrir un café ou devenir Supporter pour aider à payer le serveur, le site et le développement.",
+  "Supporting is a thank-you, never a paywall: everyone gets the same app.":
+      "Soutenir est un merci, jamais un accès payant : tout le monde a la même application.",
   // Settings > General > Remote tips
   "Language and clock, what plays when the app starts, Fast startup, clearing your history, and remote tips.":
       "Langue et horloge, ce qui joue au démarrage, Démarrage rapide, l'effacement de l'historique et les astuces télécommande.",

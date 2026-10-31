@@ -2484,6 +2484,15 @@ const Map<String, String> kEl = {
       "Κλειδί API TorBox",
   // Sports Trak: League bank heading for college conferences
   "College": "Κολεγιακά",
+  // Settings > General > Support VesperTV
+  "Support VesperTV":
+      "Υποστηρίξτε το VesperTV",
+  "Buy a coffee or become a Supporter":
+      "Κεράστε έναν καφέ ή γίνετε Supporter",
+  "VesperTV is free and always will be: no ads, no tracking, no paid features. If you enjoy it, you can buy a coffee or become a Supporter to help pay for the server, the website and development.":
+      "Το VesperTV είναι δωρεάν και θα μείνει πάντα: χωρίς διαφημίσεις, χωρίς παρακολούθηση, χωρίς επί πληρωμή λειτουργίες. Αν σας αρέσει, μπορείτε να κεράσετε έναν καφέ ή να γίνετε Supporter για να βοηθήσετε στο κόστος του διακομιστή, του ιστότοπου και της ανάπτυξης.",
+  "Supporting is a thank-you, never a paywall: everyone gets the same app.":
+      "Η υποστήριξη είναι ένα ευχαριστώ, ποτέ πληρωμή για πρόσβαση: όλοι έχουν την ίδια εφαρμογή.",
   // Settings > General > Remote tips
   "Language and clock, what plays when the app starts, Fast startup, clearing your history, and remote tips.":
       "Γλώσσα και ρολόι, τι παίζει στην εκκίνηση, Γρήγορη εκκίνηση, διαγραφή ιστορικού και συμβουλές τηλεχειριστηρίου.",
