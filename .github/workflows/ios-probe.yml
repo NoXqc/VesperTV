@@ -1,0 +1,30 @@
+# iOS compatibility probe: builds an unsigned iOS app to see what breaks.
+# Not a release path (no signing, no upload to Apple).
+name: iOS probe
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/ios-probe]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.5
+          cache: true
+      - run: flutter --version
+      - run: flutter pub get
+      - name: Build iOS (no codesign)
+        run: flutter build ios --release --no-codesign 2>&1 | tee build-ios.log; exit ${PIPESTATUS[0]}
+        shell: bash
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-ios-log
+          path: build-ios.log
