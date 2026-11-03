@@ -120,27 +120,17 @@ class _MultiviewCell {
 /// option, with the connection rule explained in [_showTips]. All 4 cells
 /// stay allocated; switching to 2 disposes cells 2-3 to free their
 /// connections and decoders rather than just hiding them.
-/// [main] ("1 + 3"): one big screen (cell 0) on the left, cells 1-3
-/// stacked on the right — each a third of the height at half the big
-/// one's width, so all four stay 16:9 on a 16:9 TV (owner request,
-/// 2026-10-27).
-/// Where each of the 4 cells goes in [area] (null = not on screen).
 ///
 /// TiviMate-style (owner, 2026-11-03): the number of screens follows what's
-/// been added. 1 = one 16:9 screen, 2 = side by side, 3-4 = 2x2 (a third
-/// screen centred under the first two); [enlarged] = that screen big at the
-/// top and the others small in a row underneath; [fullscreen] = that screen
-/// alone over the whole area. Portrait (phones) stacks at most 2.
-///
-/// [main] = 1 + 3: one big 16:9 screen on the left two thirds, three small
-/// ones stacked on the right (all 4 slots, kept for users who like it with
-/// Swap mode, owner 2026-11-03).
+/// been added. 1 = one 16:9 screen, 2 = stacked (or side by side), 3-4 = 2x2;
+/// [enlarged] = that screen big at the top and the others small in a row underneath; 
+/// [fullscreen] = that screen alone over the whole area. Portrait (phones) stacks at most 2.
 @visibleForTesting
 List<Rect?> multiviewSlotRects(Size area, int slots,
     {int? enlarged,
     int? fullscreen,
     bool portrait = false,
-    bool main = false}) {
+    bool stackTwo = true}) {
   const m = 12.0, g = 10.0;
   final out = List<Rect?>.filled(4, null);
   final w0 = area.width, h0 = area.height;
@@ -161,20 +151,7 @@ List<Rect?> multiviewSlotRects(Size area, int slots,
     }
     return out;
   }
-  if (main) {
-    const seam = 2.0;
-    final bigBox = Size(w0 * 2 / 3 - seam * 2, h0 - seam * 2);
-    final bigW = math.min(bigBox.width, bigBox.height * 16 / 9);
-    out[0] =
-        at(seam + (bigBox.width - bigW) / 2, (h0 - bigW * 9 / 16) / 2, bigW);
-    final colLeft = w0 * 2 / 3, colW = w0 / 3 - seam;
-    final rowH = (h0 - seam * 4) / 3;
-    for (var i = 1; i < 4; i++) {
-      out[i] =
-          Rect.fromLTWH(colLeft, seam + (i - 1) * (rowH + seam), colW, rowH);
-    }
-    return out;
-  }
+  
   final n = slots.clamp(1, 4);
   if (n == 1) {
     final w = math.min(w0 - 2 * m, (h0 - 2 * m) * 16 / 9);
@@ -202,11 +179,20 @@ List<Rect?> multiviewSlotRects(Size area, int slots,
     return out;
   }
   if (n == 2) {
-    final w = math.min((w0 - 2 * m - g) / 2, (h0 - 2 * m) * 16 / 9);
-    final top = (h0 - w * 9 / 16) / 2;
-    final left = (w0 - (2 * w + g)) / 2;
-    out[0] = at(left, top, w);
-    out[1] = at(left + w + g, top, w);
+    if (stackTwo) {
+      final h = math.min((h0 - 2 * m - g) / 2, (w0 - 2 * m) * 9 / 16);
+      final w = h * 16 / 9;
+      final top = (h0 - (2 * h + g)) / 2;
+      final left = (w0 - w) / 2;
+      out[0] = at(left, top, w);
+      out[1] = at(left, top + h + g, w);
+    } else {
+      final w = math.min((w0 - 2 * m - g) / 2, (h0 - 2 * m) * 16 / 9);
+      final top = (h0 - w * 9 / 16) / 2;
+      final left = (w0 - (2 * w + g)) / 2;
+      out[0] = at(left, top, w);
+      out[1] = at(left + w + g, top, w);
+    }
     return out;
   }
   final w = math.min((w0 - 2 * m - g) / 2, ((h0 - 2 * m - g) / 2) * 16 / 9);
@@ -244,10 +230,9 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
   /// overlapping one could show on top of it.
   bool _othersHidden = false;
   int? _shrinking;
-
-  /// 1 + 3 layout (header switch, remembered): all 4 screens shown, the
-  /// first one big. Swap mode lives here.
-  bool _main = false;
+  
+  /// Switches between side-by-side and stacked layout for 2 screens
+  bool _stackTwo = true;
 
   /// Last layout, for "is this screen in the top row" (Up opens the header).
   List<Rect?> _rects = List.filled(4, null);
@@ -293,7 +278,6 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
 
   /// Up from a top-row screen opens the header (nothing is above it).
   KeyEventResult _onGridKey(FocusNode node, KeyEvent e) {
-    if (_swapMode) return _onSwapKey(e);
     if (e is! KeyDownEvent ||
         e.logicalKey != LogicalKeyboardKey.arrowUp ||
         _fullscreen != null) {
@@ -331,135 +315,6 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
 
   int get _maxSlots => _portrait ? 2 : _cellCount;
 
-  /// Grid <-> 1 + 3 (remembered). Back to the grid, the playing screens move
-  /// to the front (nothing reconnects).
-  void _toggleMainLayout() {
-    final main = !_main;
-    setState(() {
-      _main = main;
-      _swapMode = false;
-      _enlarged = null;
-      if (main) {
-        _slots = _cellCount;
-      } else {
-        final active = _cells[_activeCell].controller;
-        final playing = [
-          for (final c in _cells)
-            if (c.channel != null) (c.channel, c.controller)
-        ];
-        for (var i = 0; i < _cellCount; i++) {
-          _cells[i]
-            ..channel = i < playing.length ? playing[i].$1 : null
-            ..controller = i < playing.length ? playing[i].$2 : null;
-        }
-        _slots = math.max(1, playing.length);
-        final a = _cells.indexWhere((c) => c.controller == active);
-        _activeCell = a < 0 ? 0 : a;
-      }
-    });
-    final storage = context.read<StorageService>();
-    unawaited(storage.setMultiviewMain(main));
-    unawaited(storage.setMultiviewQuad(false));
-  }
-
-  /// 1 + 3: swaps a small screen with the big one (streams, sound and all;
-  /// nothing reconnects).
-  void _moveToMain(int index) {
-    if (index == 0) return;
-    final a = _cells[0], b = _cells[index];
-    final channel = a.channel, controller = a.controller;
-    a
-      ..channel = b.channel
-      ..controller = b.controller;
-    b
-      ..channel = channel
-      ..controller = controller;
-    if (_activeCell == index) {
-      _activeCell = 0;
-    } else if (_activeCell == 0) {
-      _activeCell = index;
-    }
-    setState(() {});
-    a.focusNode.requestFocus();
-  }
-
-  /// 1 + 3 Swap mode (TiviMate-style, owner 2026-10-29): the D-pad rotates
-  /// the playing screens through the big one (Down/Right = next, Up/Left =
-  /// previous), the sound always on the big screen. Same controller moves
-  /// as [_moveToMain], so nothing reconnects. OK or Back ends it.
-  bool _swapMode = false;
-
-  /// Bumped on every swap: the big tile flashes once.
-  int _swapCount = 0;
-
-  bool get _canSwap =>
-      _main &&
-      !_portrait &&
-      _cells.where((c) => c.channel != null && c.controller != null).length >=
-          2;
-
-  void _enterSwapMode() {
-    if (!_canSwap) return;
-    // A playing screen on the big one first.
-    if (_cells[0].channel == null || _cells[0].controller == null) {
-      _moveToMain(
-          _cells.indexWhere((c) => c.channel != null && c.controller != null));
-    }
-    setState(() => _swapMode = true);
-    _setSwapAudio();
-    _cells[0].focusNode.requestFocus();
-    _hideHeaderSoon(Duration.zero);
-  }
-
-  void _exitSwapMode() {
-    if (_swapMode) setState(() => _swapMode = false);
-  }
-
-  /// Moves every playing screen [step] places through the big one; empty or
-  /// still-loading slots stay put (a loading [_assign] writes back by index).
-  void _rotateSwap(int step) {
-    final slots = [
-      for (var i = 0; i < _cellCount; i++)
-        if (_cells[i].channel != null && _cells[i].controller != null) i
-    ];
-    if (slots.length < 2) return;
-    final order = swapRotation(slots, step);
-    final moved = [
-      for (final from in order) (_cells[from].channel, _cells[from].controller)
-    ];
-    for (var k = 0; k < slots.length; k++) {
-      _cells[slots[k]]
-        ..channel = moved[k].$1
-        ..controller = moved[k].$2;
-    }
-    setState(() => _swapCount++);
-    if (_swapMode) _setSwapAudio();
-  }
-
-  /// Swap mode: only the big screen plays sound.
-  void _setSwapAudio() {
-    _activeCell = 0;
-    for (var i = 0; i < _cellCount; i++) {
-      unawaited(_cells[i].controller?.setVolume(i == 0 ? 1.0 : 0.0));
-    }
-  }
-
-  KeyEventResult _onSwapKey(KeyEvent e) {
-    if (e is KeyUpEvent) return KeyEventResult.ignored;
-    final key = e.logicalKey;
-    if (key == LogicalKeyboardKey.arrowDown ||
-        key == LogicalKeyboardKey.arrowRight) {
-      _rotateSwap(1);
-    } else if (key == LogicalKeyboardKey.arrowUp ||
-        key == LogicalKeyboardKey.arrowLeft) {
-      _rotateSwap(-1);
-    } else {
-      return KeyEventResult.ignored;
-    }
-    _cells[0].focusNode.requestFocus();
-    return KeyEventResult.handled;
-  }
-
   /// Add screen: a new empty screen, focused, with the channel picker open.
   /// Backing out of the picker takes the empty screen away again.
   Future<void> _addScreen() async {
@@ -477,20 +332,6 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
   /// (their streams keep playing, nothing reconnects).
   void _removeScreen(int index) {
     final old = _cells[index].controller;
-    if (_main) {
-      setState(() {
-        _cells[index]
-          ..channel = null
-          ..controller = null;
-        _swapMode = false;
-        if (_fullscreen == index) {
-          _fullscreen = null;
-          _othersHidden = false;
-        }
-      });
-      unawaited(old?.dispose());
-      return;
-    }
     final wasActive = index == _activeCell;
     setState(() {
       for (var j = index; j < _slots - 1; j++) {
@@ -527,7 +368,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
   }
 
   void _toggleEnlarge(int index) {
-    if (_slots < 2 || _portrait || _fullscreen != null || _main) return;
+    if (_slots < 2 || _portrait || _fullscreen != null) return;
     setState(() => _enlarged = _enlarged == index ? null : index);
   }
 
@@ -938,15 +779,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
             value: 'pause',
             icon: playing ? Icons.pause : Icons.play_arrow,
             label: playing ? tr('Pause') : tr('Play')),
-        if (_main && !_portrait && index != 0 && !full)
-          RollDownMenuItem(
-              value: 'main',
-              icon: Icons.open_in_full,
-              label: tr('Move to the big screen')),
-        if (_canSwap && !_swapMode && !full)
-          RollDownMenuItem(
-              value: 'swapMode', icon: Icons.swap_vert, label: tr('Swap mode')),
-        if (_slots >= 2 && !_portrait && !full && !_main)
+        if (_slots >= 2 && !_portrait && !full)
           RollDownMenuItem(
               value: 'enlarge',
               icon: _enlarged == index ? Icons.grid_view : Icons.open_in_full,
@@ -975,10 +808,6 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
         await _togglePause(index);
       case 'enlarge':
         _toggleEnlarge(index);
-      case 'main':
-        _moveToMain(index);
-      case 'swapMode':
-        _enterSwapMode();
       case 'full':
         full ? _exitFullscreen() : await _enterFullscreen(index);
       case 'reload':
@@ -1006,10 +835,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
       if (widget.initialChannel case final c?) c,
       ...widget.initialChannels,
     ].take(_cellCount).toList();
-    if (initial.isEmpty && context.read<StorageService>().getMultiviewMain()) {
-      _main = true;
-      _slots = _cellCount;
-    }
+
     if (initial.length > 1) _slots = initial.length;
     // One at a time: weak boxes (and 1-connection accounts) choke on
     // several streams opening together.
@@ -1049,13 +875,9 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     return PopScope(
       // Back closes the live guide (guide -> groups -> closed), then shrinks
       // a full-screen screen, then leaves.
-      canPop: _fullscreen == null && _panelFor == null && !_swapMode,
+      canPop: _fullscreen == null && _panelFor == null,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
-        if (_swapMode) {
-          _exitSwapMode();
-          return;
-        }
         if (_panelFor != null) {
           if (!(_panelKey.currentState?.back() ?? false)) _closePanel();
           return;
@@ -1121,23 +943,16 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
                     fontSize: 16,
                     fontWeight: FontWeight.w600)),
             const SizedBox(width: 12),
-            if (!_portrait && _fullscreen == null)
+            if (_slots == 2 && !_portrait && _fullscreen == null)
               TextButton.icon(
-                onPressed: _toggleMainLayout,
-                icon: Icon(_main ? Icons.view_quilt : Icons.grid_view,
+                onPressed: () => setState(() => _stackTwo = !_stackTwo),
+                icon: Icon(_stackTwo ? Icons.view_column : Icons.view_stream,
                     color: Colors.white, size: 18),
-                label: Text(_main ? tr('1 + 3 screens') : tr('Equal screens'),
+                label: Text(
+                    _stackTwo ? tr('Side by side') : tr('Stack screens'),
                     style: const TextStyle(color: Colors.white)),
               ),
-            if (_main && _canSwap && _fullscreen == null)
-              TextButton.icon(
-                onPressed: _enterSwapMode,
-                icon:
-                    const Icon(Icons.swap_vert, color: Colors.white, size: 18),
-                label: Text(tr('Swap mode'),
-                    style: const TextStyle(color: Colors.white)),
-              ),
-            if (_slots < _maxSlots && _fullscreen == null && !_main)
+            if (_slots < _maxSlots && _fullscreen == null)
               TextButton.icon(
                 onPressed: _addScreen,
                 icon: const Icon(Icons.add_box_outlined,
@@ -1180,7 +995,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
                   enlarged: _enlarged,
                   fullscreen: _fullscreen,
                   portrait: _portrait,
-                  main: _main && !_portrait);
+                  stackTwo: _stackTwo);
               if (_othersHidden && _fullscreen == null) {
                 // Shrinking back: only the former full-screen tile for now.
                 final keep = _shrinking;
@@ -1211,13 +1026,6 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
             }),
           ),
         ),
-        if (_swapMode && _rects[0] != null)
-          Positioned(
-            left: _rects[0]!.left,
-            width: _rects[0]!.width,
-            top: math.min(_rects[0]!.bottom + 8, size.height - 48),
-            child: const Center(child: _SwapModePill()),
-          ),
         if (_panelFor != null)
           Positioned(
             left: 0,
@@ -1304,17 +1112,6 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     final active = index == _activeCell && cell.channel != null;
     // OK: an empty screen picks a channel, a playing one opens its menu.
     void onTap() {
-      if (_swapMode) {
-        // OK on the big one ends Swap mode; a tap on a small one moves it up.
-        if (index == 0) {
-          _exitSwapMode();
-        } else if (cell.channel != null && cell.controller != null) {
-          _moveToMain(index);
-          _setSwapAudio();
-          setState(() => _swapCount++);
-        }
-        return;
-      }
       if (cell.channel == null) {
         _openPicker(index);
         return;
@@ -1325,14 +1122,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
 
     // Hold OK: enlarge / back to equal screens (one screen: full screen).
     void onHold() {
-      if (cell.channel == null || _swapMode) return;
-      if (_main && !_portrait) {
-        // 1 + 3: a small screen moves to the big one; the big one goes full.
-        index == 0
-            ? (full ? _exitFullscreen() : _enterFullscreen(index))
-            : _moveToMain(index);
-        return;
-      }
+      if (cell.channel == null) return;
       _slots < 2 || _portrait
           ? (full ? _exitFullscreen() : _enterFullscreen(index))
           : _toggleEnlarge(index);
@@ -1354,119 +1144,6 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
         fill: true,
         bare: full,
         alignment: Alignment.center,
-        badge:
-            _swapMode && index == 0 ? _SwapModeBadge(swaps: _swapCount) : null,
-      ),
-    );
-  }
-}
-
-/// The order Swap mode moves the playing [slots] (cell indices, big one
-/// first) into: slot k gets the screen from the returned k-th index.
-@visibleForTesting
-List<int> swapRotation(List<int> slots, int step) {
-  final n = slots.length;
-  return [for (var k = 0; k < n; k++) slots[((k + step) % n + n) % n]];
-}
-
-/// Swap mode on the big screen: a gold flash over the tile on every swap.
-class _SwapModeBadge extends StatefulWidget {
-  const _SwapModeBadge({required this.swaps});
-
-  final int swaps;
-
-  @override
-  State<_SwapModeBadge> createState() => _SwapModeBadgeState();
-}
-
-class _SwapModeBadgeState extends State<_SwapModeBadge>
-    with SingleTickerProviderStateMixin {
-  late final _flash = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 450));
-
-  @override
-  void didUpdateWidget(_SwapModeBadge old) {
-    super.didUpdateWidget(old);
-    if (widget.swaps != old.swaps) _flash.forward(from: 0);
-  }
-
-  @override
-  void dispose() {
-    _flash.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          AnimatedBuilder(
-            animation: _flash,
-            builder: (_, __) => _flash.isAnimating
-                ? ColoredBox(
-                    color: Colors.amber
-                        .withValues(alpha: 0.35 * (1 - _flash.value)))
-                : const SizedBox.shrink(),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Swap mode's blinking "SWAP" pill, in the black band under the big screen
-/// (owner, 2026-10-29: inside the picture it covered the score bar; the
-/// first blink rate was too fast).
-class _SwapModePill extends StatefulWidget {
-  const _SwapModePill();
-
-  @override
-  State<_SwapModePill> createState() => _SwapModePillState();
-}
-
-class _SwapModePillState extends State<_SwapModePill>
-    with SingleTickerProviderStateMixin {
-  late final _blink = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 1300))
-    ..repeat(reverse: true);
-
-  @override
-  void dispose() {
-    _blink.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: FadeTransition(
-        opacity: Tween(begin: 0.35, end: 1.0).animate(_blink),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.75),
-            border: Border.all(color: Colors.amber, width: 2),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.swap_vert, color: Colors.amber, size: 20),
-              const SizedBox(width: 6),
-              Text(tr('SWAP'),
-                  style: const TextStyle(
-                      color: Colors.amber,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 2)),
-              const SizedBox(width: 10),
-              Text(tr('Arrows swap · OK or Back to finish'),
-                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -1488,7 +1165,7 @@ class _MultiviewCellTile extends StatefulWidget {
     this.badge,
   });
 
-  /// Drawn over the video (Swap mode's flash on the big screen).
+  /// Drawn over the video
   final Widget? badge;
 
   /// Full screen: no frame, no rounded corners.
@@ -2022,8 +1699,8 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
                                   title: MultiviewSports.label(live.game),
                                   subtitle: n > 1
                                       ? '${c.name} · ${tr('{n} channels', {
-                                              'n': n
-                                            })}'
+                                            'n': n
+                                          })}'
                                       : c.name,
                                   trailing: n > 1
                                       ? const Icon(Icons.chevron_right,
