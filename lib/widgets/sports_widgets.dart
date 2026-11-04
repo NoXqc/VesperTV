@@ -1,6 +1,5 @@
 import 'glass_menu.dart';
 import '../utils/refined_finish.dart';
-import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +10,7 @@ import '../models/sports.dart';
 import 'hold_to_activate.dart';
 import 'tv_menu_tile.dart';
 import '../l10n/l10n.dart';
+import '../utils/desktop_platform.dart';
 
 // Pieces shared by the Sports screen and its Standings / My Teams screens.
 
@@ -525,7 +525,7 @@ class SportsScreenFrame extends StatelessWidget {
       }
       return SizedBox.fromSize(size: bounds, child: content);
     });
-    if (!Platform.isWindows) return content;
+    if (!isDesktop) return content;
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.escape): () =>
@@ -544,7 +544,7 @@ class SportsBackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!Platform.isWindows) return const SizedBox.shrink();
+    if (!isDesktop) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: ExcludeFocus(
@@ -646,7 +646,7 @@ class _SportsRowArrowsState extends State<SportsRowArrows> {
 
   @override
   Widget build(BuildContext context) {
-    if (!Platform.isWindows) return widget.child;
+    if (!isDesktop) return widget.child;
     return NotificationListener<ScrollMetricsNotification>(
       onNotification: (_) {
         WidgetsBinding.instance.addPostFrameCallback((_) => _update());

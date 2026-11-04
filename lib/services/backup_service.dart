@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'storage_service.dart';
+import '../utils/desktop_platform.dart';
 
 /// One backup file in the backup folder.
 class BackupEntry {
@@ -50,11 +51,14 @@ class BackupService {
   static const keepAuto = 5;
   static const autoInterval = Duration(days: 7);
 
-  static bool get supported => Platform.isAndroid || Platform.isWindows;
+  static bool get supported => Platform.isAndroid || isDesktop;
 
   /// Where the files go, as the user would look for it.
-  static String get locationLabel =>
-      Platform.isWindows ? r'Documents\VesperTV' : 'Download/VesperTV';
+  static String get locationLabel => Platform.isWindows
+      ? r'Documents\VesperTV'
+      : Platform.isMacOS
+          ? 'Documents/VesperTV'
+          : 'Download/VesperTV';
 
   Future<Directory> _windowsDir() async {
     final docs = await getApplicationDocumentsDirectory();
@@ -125,7 +129,7 @@ class BackupService {
           size: (m['size'] as num).toInt(),
         ));
       }
-    } else if (Platform.isWindows) {
+    } else if (isDesktop) {
       await for (final f in (await _windowsDir()).list()) {
         final name = p.basename(f.path);
         if (f is! File ||

@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -9,6 +7,7 @@ import '../services/desktop_mini_player.dart';
 import '../services/playback_service.dart';
 import 'settings_scaffold.dart';
 import 'tv_switch_list_tile.dart';
+import '../utils/desktop_platform.dart';
 
 /// Both entries change one viewer preference and return to the rebuilt home.
 class SportsModeToggle extends StatefulWidget {
@@ -29,7 +28,7 @@ class _SportsModeToggleState extends State<SportsModeToggle> {
     try {
       // A new home must not leave an invisible preview using a connection.
       await context.read<PlaybackService>().stop();
-      if (Platform.isWindows) DesktopMiniPlayer.instance.clear();
+      if (isDesktop) DesktopMiniPlayer.instance.clear();
       if (!mounted) return;
       await prefs.setSportsMode(value);
       if (navigator.mounted) navigator.popUntil((route) => route.isFirst);

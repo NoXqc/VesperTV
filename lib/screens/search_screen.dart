@@ -30,6 +30,7 @@ import 'player_screen.dart';
 import 'series_detail_screen.dart';
 import '../l10n/l10n.dart';
 import '../services/vesper_ai/vesper_ai.dart';
+import '../utils/desktop_platform.dart';
 
 /// Full-screen search — a search bar plus every matching result grouped
 /// into its own horizontally-scrolling poster row (Live TV, Movies, TV
@@ -404,7 +405,7 @@ class _SearchScreenState extends State<SearchScreen> {
     // Every other entry point (TvHomeScreen, movie/series detail) already
     // branches here; this one was missed, reported directly as "picking a
     // channel from search gives a playback error" on Windows specifically.
-    if (Platform.isWindows) {
+    if (isDesktop) {
       DesktopMiniPlayer.instance.clear();
       Navigator.of(context).push(MaterialPageRoute(
           builder: (_) => DesktopPlayerScreen(channel: channel)));

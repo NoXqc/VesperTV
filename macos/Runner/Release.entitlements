@@ -4,5 +4,14 @@
 <dict>
 	<key>com.apple.security.app-sandbox</key>
 	<true/>
+	<!-- Streams, guides, add-ons, the update check: everything is online. -->
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<!-- Wi-Fi Transfer / From phone listen on the local network. -->
+	<key>com.apple.security.network.server</key>
+	<true/>
+	<!-- M3U / backup files the user picks in the open panel. -->
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
 </dict>
 </plist>

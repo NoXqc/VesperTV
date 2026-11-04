@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../utils/constants.dart';
+import '../utils/desktop_platform.dart';
 
 /// Windows only: full screen (the default, TV-style, no title bar) or a
 /// normal resizable window with the system title bar — so it snaps to half
@@ -57,7 +57,7 @@ class DesktopWindow {
   /// Send log: how big the window really is against the screen (a user on a
   /// 1440p monitor showed the app drawn in only part of it, 2026-10-24).
   static Future<void> logState(String why) async {
-    if (!Platform.isWindows) return;
+    if (!isDesktop) return;
     try {
       final view = WidgetsBinding.instance.platformDispatcher.views.first;
       final b = await windowManager.getBounds();
@@ -84,7 +84,7 @@ class DesktopWindow {
   }
 
   static Future<void> setWindowed(bool value) async {
-    if (!Platform.isWindows) return;
+    if (!isDesktop) return;
     windowed.value = value;
     logStateSoon(value ? 'switched to windowed' : 'switched to full screen');
     await _prefs?.setBool(AppConstants.keyWindowsWindowed, value);

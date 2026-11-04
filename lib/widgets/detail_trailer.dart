@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -18,6 +17,7 @@ import '../services/trailer_service.dart';
 import '../utils/route_observer.dart';
 import 'youtube_platform_view.dart';
 import 'detail_header.dart';
+import '../utils/desktop_platform.dart';
 
 /// One opt-in preview per detail route. Never uses the main playback service,
 /// history, tracking, resume positions or the episode queue for its trailer.
@@ -164,7 +164,7 @@ class DetailTrailerState extends State<DetailTrailer>
         if (!mounted || generation != _generation) return;
       }
       if (uri == null) return;
-      if (Platform.isWindows) {
+      if (isDesktop) {
         _pausing = DesktopMiniPlayer.instance.controller?.player.pause();
       } else {
         _pausing = context.read<PlaybackService?>()?.controller?.pause();

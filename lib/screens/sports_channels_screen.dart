@@ -22,6 +22,7 @@ import '../widgets/settings_scaffold.dart';
 import '../widgets/sports_widgets.dart';
 import '../widgets/tv_menu_tile.dart';
 import '../widgets/tv_text_field_gate.dart';
+import '../utils/desktop_platform.dart';
 
 /// Shared all-channel picker: selection is independent of filters and paging.
 class SportsChannelPicker extends StatefulWidget {
@@ -1179,7 +1180,7 @@ class _ChannelsHero extends StatelessWidget {
     final now = c == null ? null : epg.getCurrentProgram(c.epgId);
     final next = c == null ? null : epg.getNextProgram(c.epgId);
     final mini =
-        Platform.isWindows ? DesktopMiniPlayer.instance.controller : null;
+        isDesktop ? DesktopMiniPlayer.instance.controller : null;
     String hm(DateTime t) => TimeFormat.hm.format(t.toLocal());
     return SizedBox(
       height: height,

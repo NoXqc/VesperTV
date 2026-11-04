@@ -8,6 +8,7 @@ import 'package:nox_iptv/services/app_preferences.dart';
 import 'package:nox_iptv/services/storage_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:nox_iptv/utils/desktop_platform.dart';
 
 /// Settings' left panel (owner, 2026-10-21): the focused category's
 /// description and rows show on the right; Right enters them, Left / Back
@@ -93,7 +94,7 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pumpAndSettle();
     expect(
-        focusedLabel(), Platform.isWindows ? 'Audio' : 'Background video');
+        focusedLabel(), isDesktop ? 'Audio' : 'Background video');
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.pumpAndSettle();
     expect(focusedLabel(), 'Playback');

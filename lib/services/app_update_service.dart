@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/l10n.dart';
+import '../utils/desktop_platform.dart';
 
 /// A GitHub release newer than what's currently installed.
 class UpdateInfo {
@@ -55,7 +56,7 @@ class AppUpdateService {
         _cacheDirectory = cacheDirectory ?? getTemporaryDirectory;
   final http.Client? _downloadClient;
   final Future<Directory> Function() _cacheDirectory;
-  bool get downloadInBrowser => Platform.isWindows;
+  bool get downloadInBrowser => isDesktop;
   static const _channel = MethodChannel('com.nox.nox_iptv/app_update');
 
   /// Public, unauthenticated GitHub API — fine for a public repo at this
@@ -68,6 +69,8 @@ class AppUpdateService {
   /// `.apk` asset attached (shouldn't happen for a real release, but a
   /// malformed/source-only one shouldn't crash the check).
   Future<UpdateInfo?> checkForUpdate() async {
+    // No macOS release asset yet: never offer the Windows .zip to a Mac.
+    if (Platform.isMacOS) return null;
     final response = await http.get(
       Uri.parse(_apiUrl),
       headers: {
