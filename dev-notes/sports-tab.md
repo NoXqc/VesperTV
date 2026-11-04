@@ -476,6 +476,30 @@ info version rejected — keep the VS layout). Fire Stick check pending.
 - Widget fixtures must create GameReminders inside testWidgets, not an outer async
   setUp: its initial Future chain otherwise crosses the fake clock and stalls pumps.
 
+### Scorer retry and football TD/FG (cdx note, 2026-11-04)
+
+Claude's `b757fe5`, included in local test **1.0.56+607** (not publicly released),
+handles ESPN's summary arriving after the scoreboard. Observed delay was 11–32 s:
+`GoalsAlertOverlay._lookupScorer` now makes the first request plus up to **8 retries,
+5 s apart** (about 40 s, plus request time). Only ESPN hockey/soccer/football retry;
+TheSportsDB, CFL and other sports retain one attempt. A missing summary stops waiting.
+The popup stays beyond its usual 8 s while waiting, unless another goal is queued;
+a found name keeps it up for another 6 s. New notices, profile/lifecycle changes and
+Hide scores retain the existing cancellation/visibility guards. It never takes focus.
+
+Football summaries now parse ESPN `scoringPlays` into `SportsGameSummary.scoringPlays`.
+Touchdowns and field goals show a line such as **TD: Josh Jacobs · Q2 6:33** or **FG: …**.
+`_footballPlay` takes that team's latest scoring play only when its running score matches
+the scoreboard, or is at most 2 points ahead (the summary may already include the extra
+point/two-point conversion). Hockey/soccer still require the goal count to match, so a
+late summary cannot label the new alert with the previous scorer. Extra points alone
+are not separate scorer lines. Feed coverage can still leave the alert without a name.
+
+Regression coverage: `test/goals_alert_overlay_test.dart` (late scorer, queued alerts,
+football line) and `test/sports_goals_test.dart` (football scoring-play parsing). Actual
+first-goal NHL/NFL checks on +607 are pending with the owner; unit/widget coverage does
+not establish the feed's real-time delay or correctness on a box.
+
 ## Reminders on all upcoming cards (Codex, 2026-10-26; unreleased)
 
 The Sports Trak game menu no longer gates GameReminderMenuTile on My Teams
