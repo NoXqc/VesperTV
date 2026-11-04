@@ -1378,6 +1378,16 @@ class _NoxIptvAppState extends State<NoxIptvApp>
           scaffoldMessengerKey: _scaffoldMessengerKey,
           navigatorKey: _navigatorKey,
           navigatorObservers: [appRouteObserver],
+          // macOS: Esc (Flutter's DismissIntent) is Back when nothing
+          // closer handles it. Dialogs, menus and screens with their own
+          // Esc key handling still win; maybePop honours every PopScope.
+          actions: Platform.isMacOS
+              ? {
+                  ...WidgetsApp.defaultActions,
+                  DismissIntent: CallbackAction<DismissIntent>(
+                      onInvoke: (_) => _navigatorKey.currentState?.maybePop()),
+                }
+              : null,
           onGenerateInitialRoutes: (_) => _startupRoutes.generate(
             preferences: prefs,
             storage: _storage,
