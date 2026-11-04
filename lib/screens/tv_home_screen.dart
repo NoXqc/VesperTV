@@ -5042,41 +5042,35 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                   ),
                   child: _buildTimelinePreviewBox(channel),
                 )
-              : Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Windows gets a proportionally wider video box (Expanded,
-                    // instead of a fixed 284px) to match its own taller preview
-                    // row below — a fixed width sized for the Android TV box's
-                    // fixed 160px-tall row would look like a thin sliver once that
-                    // row is several times taller on a resizable desktop window.
-                    Platform.isWindows
-                        ? Expanded(
-                            // flex 2:1 against the description panel's flex 1 below
-                            // (was 2:3, i.e. 40% of the row) — requested directly:
-                            // extend the mini player right by at least 50%; 2:1
-                            // gives it roughly two-thirds of the row (a ~67%
-                            // increase from 40%), well past that minimum, since the
-                            // live program description next to it doesn't need to
-                            // be nearly that wide to stay readable.
-                            flex: 2,
-                            child: Container(
-                              clipBehavior: Clip.antiAlias,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                    color: Colors.white.withValues(alpha: 0.18),
-                                    width: 1.5),
-                              ),
-                              child: _buildTimelinePreviewBox(channel),
-                            ),
-                          )
-                        // Full-video mode: the video is the screen-wide
-                        // layer behind everything, this slot stays empty.
-                        : _fullVideo
-                            ? const SizedBox(width: 284)
-                            : Container(
-                                width: 284,
+              : LayoutBuilder(builder: (context, constraints) {
+                  // 284px fits beside the description on a TV, but an
+                  // unfolded phone (~720px) with tabs + groups open leaves
+                  // the whole row narrower than that: give the video at
+                  // most half the row there instead of overflowing.
+                  final fixedPreviewWidth = constraints.maxWidth.isFinite
+                      ? (constraints.maxWidth / 2).clamp(0.0, 284.0)
+                      : 284.0;
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Windows gets a proportionally wider video box (Expanded,
+                      // instead of a fixed 284px) to match its own taller preview
+                      // row below — a fixed width sized for the Android TV box's
+                      // fixed 160px-tall row would look like a thin sliver once that
+                      // row is several times taller on a resizable desktop window.
+                      // Target platform, not dart:io: same on a device, but tests
+                      // then get the layout they ask for on any host OS.
+                      defaultTargetPlatform == TargetPlatform.windows
+                          ? Expanded(
+                              // flex 2:1 against the description panel's flex 1 below
+                              // (was 2:3, i.e. 40% of the row) — requested directly:
+                              // extend the mini player right by at least 50%; 2:1
+                              // gives it roughly two-thirds of the row (a ~67%
+                              // increase from 40%), well past that minimum, since the
+                              // live program description next to it doesn't need to
+                              // be nearly that wide to stay readable.
+                              flex: 2,
+                              child: Container(
                                 clipBehavior: Clip.antiAlias,
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(16),
@@ -5087,23 +5081,41 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                                 ),
                                 child: _buildTimelinePreviewBox(channel),
                               ),
-                    Expanded(
-                      flex: 1,
-                      // Full-video mode: the description is a small card
-                      // in the screen's top-right corner instead (drawn by
-                      // build, _buildFullVideoNowCard) — this slot stays
-                      // empty so the picture shows.
-                      child: _fullVideo
-                          ? const SizedBox.shrink()
-                          : _GuideNowPanel(
-                              focusedChannel: _guideFocusedChannel,
-                              focusedProgram: _guideFocusedProgram,
-                              playingChannel: channel,
-                              epg: epg,
-                            ),
-                    ),
-                  ],
-                );
+                            )
+                          // Full-video mode: the video is the screen-wide
+                          // layer behind everything, this slot stays empty.
+                          : _fullVideo
+                              ? SizedBox(width: fixedPreviewWidth)
+                              : Container(
+                                  width: fixedPreviewWidth,
+                                  clipBehavior: Clip.antiAlias,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                        color: Colors.white
+                                            .withValues(alpha: 0.18),
+                                        width: 1.5),
+                                  ),
+                                  child: _buildTimelinePreviewBox(channel),
+                                ),
+                      Expanded(
+                        flex: 1,
+                        // Full-video mode: the description is a small card
+                        // in the screen's top-right corner instead (drawn by
+                        // build, _buildFullVideoNowCard) — this slot stays
+                        // empty so the picture shows.
+                        child: _fullVideo
+                            ? const SizedBox.shrink()
+                            : _GuideNowPanel(
+                                focusedChannel: _guideFocusedChannel,
+                                focusedProgram: _guideFocusedProgram,
+                                playingChannel: channel,
+                                epg: epg,
+                              ),
+                      ),
+                    ],
+                  );
+                });
 
       final guide = Focus(
         focusNode: _guideHoldFocus,
@@ -5219,7 +5231,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                     const Divider(height: 12),
                     Expanded(child: _fullVideoScrim(guide)),
                   ]
-                : Platform.isWindows
+                // Target platform, like the preview row's width above.
+                : defaultTargetPlatform == TargetPlatform.windows
                     ? [
                         // Android TV's fixed 160px preview row read as the right
                         // ratio there (reported directly), but on a much taller,
