@@ -133,8 +133,8 @@ class SyncApiTests(unittest.TestCase):
             self.assertEqual(self.request()[0], 200)
             self.assertEqual(writes.call_count, 1)
 
-    def test_one_megabyte_boundary_and_413_leave_previous_blob_intact(self):
-        self.assertEqual(relay.SYNC_MAX_BODY, 1024 * 1024)
+    def test_four_megabyte_boundary_and_413_leave_previous_blob_intact(self):
+        self.assertEqual(relay.SYNC_MAX_BODY, 4 * 1024 * 1024)
         body = b"x" * relay.SYNC_MAX_BODY
         self.assertEqual(self.put(body=body)[0], 204)
         # Only the declared size is needed: over-limit requests are rejected

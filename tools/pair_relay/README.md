@@ -14,9 +14,9 @@ Server half of Add Playlist > **From my phone** when the phone is *not* on the T
   Caps: 8 MB per blob, 2 GB total (507 when full); expired files are pruned every 5 min. Built so
   short-lived link codes for cloud sync reuse this vault without changing its TTL.
 - **Cloud sync** (`/api/sync/<id>`, `lib/services/cloud_sync.dart`): opaque ciphertext
-  up to 1 MB, versioned with ETags and conditional uploads. Deleted after **90 days**
+  up to 4 MB, versioned with ETags and conditional uploads. Deleted after **90 days**
   without a GET/PUT (the UI calls this 3 months). GET, including 304, extends expiry
-  at most once a day. Wrong token = 403, stale version = 412, over 1 MB = 413,
+  at most once a day. Wrong token = 403, stale version = 412, over 4 MB = 413,
   over 1,200 requests/hour/IP = 429. Shares the vault's 2 GB disk cap (507).
   Files use an `s.` prefix, so even identical vault/sync ids never collide.
   Code resets are encrypted app-level revocation blobs; the relay does not inspect them.
@@ -38,7 +38,7 @@ python -m unittest discover -s tools/pair_relay -p 'test_*.py' -v
 
 Standard library only; binds an ephemeral loopback port and uses a temporary folder,
 fixture tokens and a patched clock. Covers 90-day expiry/pruning, daily touch (including
-304), the exact 1 MB cap, 429 per IP/hour for all methods, 412/403/304, opaque revocation,
+304), the exact 4 MB cap, 429 per IP/hour for all methods, 412/403/304, opaque revocation,
 shared disk cap, metadata privacy and vault/sync namespace isolation. No sleeps for expiry.
 
 ## Sync rollout on an existing install (pending owner approval)
