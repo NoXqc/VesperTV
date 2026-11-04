@@ -17,20 +17,23 @@ lives in memory only for rate limiting.
   Never typed; nothing to brute-force offline.
 - **Link code** (to add a device): 16 digits, the same as Transfer's code. The linked device
   uploads the secret to the **vault** (`/api/v/`, 10 minutes, envelope `kind: sync-link`); the new
-  device types the code (or scans the QR) and gets the secret. Reuses the vault as is.
+  device types the code (or scans the QR) and gets the secret. `X-Vault-Once: 1` makes each
+  link code single-use, for one device; Transfer uploads stay multi-read. Every link/recovery
+  code for that secret shares the same limit of 3 devices per sync.
 - **Recovery code**: the secret itself, 26 characters of Crockford base32 (`ABCD-EFGH-…`). Shown
   once at setup ("Save this code. It's the only way back in if you lose all your devices. We
   can't recover it."), again behind the profile PIN, and as a QR. Optional in Backup & restore.
-- **Reset sync code** (leak / sold box): new secret, re-upload, delete the old blob; other
-  devices then need a new link code.
+- **Reset sync code** (leak / sold box): overwrite the old encrypted snapshot with a reset
+  marker, drop all its device slots, then start a new sync from this device's local data
+  using a new secret and the same device id. Other devices must link again. Save the new
+  recovery code. The marker expires after 30 days and refuses uploads meanwhile (410).
 
 ## What syncs (v1)
 The same keys Transfer copies (`StorageService._transferable`): playlists, every viewer's
 favourites, hidden groups/channels, own groups, watch positions, history, Sports Trak, Media Hub
 sources/favourites/resume, settings. Device-only keys (layout, enabled playlists on this box,
-caches, PIN lockout, current viewer, backup timer) never sync. Not in v1: profile photos, imported
-M3U files and the recently played / Continue Watching history (files in the cache folder, not
-prefs; watch *positions* do sync). **Continue Watching does sync** (since 2026-11-04): each viewer's
+caches, PIN lockout, current viewer, backup timer) never sync. Profile photos and imported M3U
+files do not sync. **Continue Watching does sync** (since 2026-11-04): each viewer's
 `recently_played*` cache file travels as a `file:<name>` key, merges newest first (`mergeSync`
 `newestFirst`; Media Hub Recently watched too, by source + title) and is live (`reloadForViewer`).
 A missing file means "unknown", never "cleared" (`SyncEngine.keepWhenMissing`): Android may empty the
@@ -45,8 +48,9 @@ cache folder, and sync writes the history back instead of wiping every device.
   (`ViewerProfileService` init). Its history file counts as removed, not "missing"
   (`keepHistoryWhenMissing`).
 - **Not synced: profile photos** (files up to 2 MB each): other devices show the default avatar.
-- **Gap:** two devices that each created e.g. "Kids" before linking get two "Kids" (different ids).
-  Same fix as playlists: match on join (by name), with the playlist-matching work.
+- Profiles match on join by trimmed, case/accent-insensitive name. Main never remaps; only the
+  first local duplicate claims an unambiguous server profile. Other duplicates keep their data.
+  See `dev-notes/sync-profile-matching.md` for held migrations, suffixes and history-file ids.
 
 ## Size (measured 2026-11-04)
 Owner's Windows install: 69 keys, 40 KB gzipped. Synthetic heavy user (13 playlists x ~1650 hidden
@@ -98,12 +102,33 @@ the app comes back to the screen, when a show/movie page opens, and every 5 minu
 - Jellyfin/Emby/Plex logins are per device: sync the server + user, each device signs in once.
 
 ## Server API (`relay.py`, `/api/sync/<id>`)
+All current clients send `X-VesperTV-App` and a random `X-Sync-Device` id. A sync has at most
+3 device slots, stored as hashes and last check-in times in `dev`; no hardware ids. Valid GETs
+(including 304) and PUTs enroll/check in the device. A slot expires after 30 days idle; its
+last-seen write is throttled to once an hour. New link/recovery codes never reset this budget.
+
 - `GET` → 200 blob + `ETag: "<version>"`, 304 on `If-None-Match` match, 404. Refreshes the
-  3-month expiry (written at most once a day per sync).
+  active snapshot's 3-month expiry (at most once a day); reset markers never extend their expiry.
 - `PUT` (`X-Vault-Token`, `If-Match: "<version>"`, `"0"` = create) → 204 + new `ETag`;
-  412 version mismatch, 403 wrong token, 413 over 4 MB.
-- `DELETE` (`X-Vault-Token`) → 204 / 404.
+  412 version mismatch, 403 wrong token, 413 over 4 MB, 507 shared disk cap. A reset adds
+  `X-Sync-Revoke: 1`, overwrites the old snapshot, drops `dev`, sets `revoked: true` and a fixed
+  30-day expiry. Further PUTs to that id get 410, including resets retried after success.
+- Fourth device on GET/PUT → **403**, `X-Sync-Error: device-limit`, `X-Sync-Max-Devices: 3`.
+  The client throws `SyncDeviceLimit`; the service clears its state and shows `SyncStatus.full`.
+  This differs from 403 for a wrong write token, which has no device-limit header.
+- `DELETE /api/sync/<id>/device` (`X-Vault-Token`, `X-Sync-Device`) → 204 / 404; frees only
+  this device's slot, retaining the snapshot and other devices. Wrong token = 403, malformed
+  device/token = 400. Stop syncing calls it best effort before deleting the local sync state.
+- `DELETE /api/sync/<id>` (`X-Vault-Token`) → 204 / 404; removes the entire server copy.
 - 429 over 1200 requests/hour per IP (in memory). Shares the vault's 2 GB disk cap.
+- Legacy clients without `X-Sync-Device` remain allowed/unaccounted while
+  `PAIR_SYNC_REQUIRE_DEVICE` is unset/0 (+609/+610 compatibility). With it set to 1, missing
+  device ids are rejected with 400 on the slot-checking paths. Invalid supplied ids are always
+  rejected. Changing that flag needs separate owner approval; no count endpoint was added.
+
+`/api/v/<id>` link uploads add `X-Vault-Once: 1`: first GET returns the encrypted blob and deletes
+both files; later GETs return 404. Vault uploads without that header retain Transfer's normal
+multi-read lifetime. The relay never decrypts either snapshot or reset marker.
 
 ## Phases
 1. **Core (this branch):** relay endpoint + tests; `cloud_sync.dart` (secret, link/recovery
@@ -136,10 +161,11 @@ Deploying the relay change needs the owner's OK (back up the service, restart on
 - Limitation (no accounts): a modified build could reuse another device's id. Fine for the
   normal app / casual sharing.
 
-### CODEX PICKUP (sync device limit)
+### CODEX PICKUP (sync device limit — completed 2026-11-04)
 Done by Claude (committed on `claude/cloud-sync`): relay (`tools/pair_relay/relay.py`), client
 (`cloud_sync.dart`, `cloud_sync_service.dart`, `cloud_transfer.dart`), the link-code test updated.
-Analyze 16, `test/cloud_sync_test.dart` 12/12, relay unittest OK. **Not done, for Codex:**
+Initial checks: analyze 16, `test/cloud_sync_test.dart` 12/12, relay unittest OK.
+**Codex follow-up checklist (items 1–5 now complete; verification below):**
 1. **Sync screen** (`lib/screens/settings/sync_screen.dart`):
    - `SyncStatus.full` banner (like `revoked`): "This sync already has 3 devices. Stop syncing on
      one of them, then try again. A device unused for 30 days frees its place on its own."
@@ -163,3 +189,14 @@ Analyze 16, `test/cloud_sync_test.dart` 12/12, relay unittest OK. **Not done, fo
    API section (new endpoint/headers/status codes).
 5. **Deploy prep only**: relay redeploy steps in `tools/pair_relay/README.md`. **Do not deploy,
    push, merge to main or release** without the owner's OK.
+
+Codex verification (2026-11-04): analyzer **16 issues found**; **1,229 Flutter tests passed**
+(including all 19 Sync widget tests and 17 core sync tests); **18 relay unittests passed**,
+including the disposable smoke with device ids required. Guide extraction: **102 answers**;
+**17 Node help tests** and **6 Python help deployment-script tests** pass locally.
+The full-state join test also caught/fixed a parent-route focus steal: status changes under
+the join page no longer move focus away from its retry action. All new strings have
+FR/ES/IT/EL/DE entries. The relay-only redeploy instructions preserve compatibility for
++609/+610 (`PAIR_SYNC_REQUIRE_DEVICE` unset/0); changing that flag requires separate approval.
+No deployment, push, merge to main, release, version bump or device installation was performed.
+Exact commit and results: main-checkout `HANDOFF.md`.

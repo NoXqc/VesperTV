@@ -87,6 +87,12 @@ Grab the latest release from the [Releases](../../releases) page or
 - Theming with selectable palettes, including a black-and-gold "Dark / Gold" look
 - English, French, Spanish, Italian and Greek
 - Transfer your whole setup to another device (same Wi-Fi or over the internet)
+- **Sync (upcoming release):** encrypted setup and watch progress across up to **3 devices
+  per sync**, with no account. Each 16-digit link code works once for one device and expires
+  after 10 minutes; every code and the recovery code share the same device limit. Stop
+  syncing to free a slot, or an unused device frees it after 30 days. Reset removes the old
+  encrypted server copy and device slots; every other device must be linked again. Save the
+  new recovery code. [Sync guide](https://vespertv.app/remote.html#Sync)
 
 ## Setup
 

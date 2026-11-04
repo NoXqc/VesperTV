@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nox_iptv/services/cloud_sync.dart';
 import 'package:nox_iptv/services/cloud_sync_service.dart';
@@ -64,6 +65,9 @@ void main() {
           'PAIR_PORT': '$port',
           'PAIR_PAGE': 'assets/pair/pair.html',
           'PAIR_VAULT_DIR': vault!.path,
+          // These include legacy requests without device ids; strict mode
+          // is covered separately by the relay unittest suite.
+          'PAIR_SYNC_REQUIRE_DEVICE': '0',
         });
         break;
       } on ProcessException {
@@ -439,5 +443,142 @@ void main() {
         downloadCloudTransfer((await uploadSyncLink(secret)).code),
         throwsA(isA<TransferException>()
             .having((e) => e.kind, 'kind', TransferError.invalid)));
+  });
+
+  test(
+      'device limit makes recovery/link joins full without keeping remote data',
+      () async {
+    if (relay == null) return markTestSkipped('python not found');
+    final secret = newSyncSecret();
+    final devices = [
+      for (var n = 0; n < 3; n++)
+        _Device({
+          'nox_favorites': l(['server::live'])
+        })
+    ];
+    for (final device in devices) {
+      await device.engine.start(secret);
+      await device.engine.sync();
+    }
+    SharedPreferences.setMockInitialValues({
+      'nox_favorites': ['local::live']
+    });
+    final storage = StorageService();
+    await storage.init();
+    final original = storage.exportForSync();
+    final store = _MemoryStore();
+    final service = CloudSyncService(storage, store: store);
+    addTearDown(service.dispose);
+    await service.init();
+    final limit = isA<SyncDeviceLimit>().having((e) => e.max, 'max', 3);
+    await expectLater(
+        service.joinWithRecoveryCode(syncRecoveryCode(secret)), throwsA(limit));
+    expect(service.status, SyncStatus.full);
+    expect(service.syncing, isFalse);
+    expect(store.state, isNull);
+    expect(storage.exportForSync(), original);
+    final link = await uploadSyncLink(secret);
+    await expectLater(service.joinWithLinkCode(link.code), throwsA(limit));
+    expect(service.status, SyncStatus.full);
+    expect(store.state, isNull);
+    expect(storage.exportForSync(), original);
+    // A different code for the same secret never resets the device budget.
+    await devices.first.engine.stop(leave: true);
+    expect(
+        await service.joinWithRecoveryCode(syncRecoveryCode(secret)), isTrue);
+    expect(service.status, SyncStatus.on);
+    expect(store.state!.deviceId, isNotNull);
+    expect(storage.getFavorites(), {'server::live', 'local::live'});
+  });
+
+  test('service stop frees its relay slot and keeps the shared snapshot',
+      () async {
+    if (relay == null) return markTestSkipped('python not found');
+    SharedPreferences.setMockInitialValues({
+      'nox_favorites': ['p::one']
+    });
+    final storage = StorageService();
+    await storage.init();
+    final store = _MemoryStore();
+    final service = CloudSyncService(storage, store: store);
+    addTearDown(service.dispose);
+    await service.init();
+    await service.setUp();
+    final secret = List<int>.of(store.state!.secret);
+    for (var n = 0; n < 2; n++) {
+      final other = _Device({});
+      await other.engine.start(secret);
+      await other.engine.sync();
+    }
+    final fourth = _Device({});
+    await fourth.engine.start(secret);
+    await expectLater(fourth.engine.sync(), throwsA(isA<SyncDeviceLimit>()));
+    await service.stop();
+    expect(service.status, SyncStatus.off);
+    expect(store.state, isNull);
+    expect(storage.getFavorites(), {'p::one'});
+    await fourth.engine.sync(); // succeeds only if stop sent the leave request
+    expect(fourth.values['nox_favorites'], l(['p::one']));
+  });
+
+  test('leave is best effort when the relay refuses the request', () async {
+    final device = _Device({});
+    await device.engine.start(newSyncSecret());
+    final id = device.store.state!.deviceId;
+    var calls = 0;
+    final client = MockClient((request) async {
+      calls++;
+      expect(request.method, 'DELETE');
+      expect(request.url.path, endsWith('/device'));
+      expect(request.headers['X-Sync-Device'], id);
+      return http.Response('', 503);
+    });
+    addTearDown(client.close);
+    await device.engine.stop(leave: true, client: client);
+    expect(calls, 1);
+    expect(device.store.state, isNull);
+  });
+
+  test('reset changes the sync secret while preserving this device id',
+      () async {
+    if (relay == null) return markTestSkipped('python not found');
+    SharedPreferences.setMockInitialValues({
+      'nox_favorites': ['p::one']
+    });
+    final storage = StorageService();
+    await storage.init();
+    final store = _MemoryStore();
+    final service = CloudSyncService(storage, store: store);
+    addTearDown(service.dispose);
+    await service.init();
+    await service.setUp();
+    final old = store.state!;
+    final recovery = await service.resetCode();
+    expect(service.status, SyncStatus.on);
+    expect(store.state!.deviceId, old.deviceId);
+    expect(store.state!.secret, isNot(equals(old.secret)));
+    expect(parseSyncRecoveryCode(recovery), store.state!.secret);
+    final previous =
+        await SyncClient.forSecret(old.secret, deviceId: old.deviceId);
+    addTearDown(previous.close);
+    await expectLater(previous.fetch(), throwsA(isA<SyncRevoked>()));
+    expect(storage.getFavorites(), {'p::one'});
+  });
+
+  test('an old state without device gets one on sync and keeps it thereafter',
+      () async {
+    if (relay == null) return markTestSkipped('python not found');
+    final device = _Device({'x': i(42)});
+    final json = SyncState(secret: newSyncSecret()).toJson();
+    expect(json.containsKey('device'), isFalse);
+    device.store.state = SyncState.fromJson(json);
+    expect(device.store.state!.deviceId, isNull);
+    await device.engine.sync();
+    final id = device.store.state!.deviceId;
+    expect(id, matches(RegExp(r'^[A-Za-z0-9_-]{22}$')));
+    expect(device.values['x'], i(42));
+    await device.engine.sync();
+    expect(device.store.state!.deviceId, id);
+    expect(SyncState.fromJson(device.store.state!.toJson())!.deviceId, id);
   });
 }

@@ -707,7 +707,7 @@
     "id": "7954ed608bb73f76",
     "category": "Sync",
     "title": "Link another device to sync",
-    "answer": "On an already linked device, choose Link a device. Enter its 16-digit link code under I have a code on the other device; the QR contains the same code as text. The countdown lasts 10 minutes. An expired link code needs a new one from the linked device. Use the Sync code screen, not Transfer > Receive. If both devices already have the same server and username or M3U URL, sync matches that playlist so favourites and watch positions line up.",
+    "answer": "On an already linked device, choose Link a device. Enter its 16-digit link code under I have a code on the other device; the QR contains the same code as text. Each link code is single-use: it works once, for one device, and expires after 10 minutes. Its first download uses it up. Create a new link code for each additional device; an expired or already used code needs a new one. Use the Sync code screen, not Transfer > Receive. All link codes and the recovery code share the same limit of 3 devices per sync; another code does not reset that count. If both devices already have the same server and username or M3U URL, sync matches that playlist so favourites and watch positions line up.",
     "controls": "Sync > Link a device; other device > I have a code",
     "url": "https://vespertv.app/remote.html#Sync"
   },
@@ -731,7 +731,7 @@
     "id": "1fecb49a520781cd",
     "category": "Sync",
     "title": "Show or use a sync recovery code",
-    "answer": "The recovery code has 26 characters, displayed in groups with dashes, plus a QR. Show recovery code asks for the profile PIN when one is set. On the new device choose I have a code, then Use a recovery code, and enter it. Keep this code private: anyone holding it can join your sync. A 16-digit link code is temporary; the recovery code is the lasting way back in.",
+    "answer": "The recovery code has 26 characters, displayed in groups with dashes, plus a QR. Show recovery code asks for the profile PIN when one is set. On the new device choose I have a code, then Use a recovery code, and enter it. Keep this code private: anyone holding it can join your sync. A 16-digit link code works once for one device; the recovery code is the lasting way back in. Both use the same 3-device limit for that sync.",
     "controls": "Sync > Show recovery code; other device > I have a code > Use a recovery code",
     "url": "https://vespertv.app/remote.html#Sync"
   },
@@ -747,7 +747,7 @@
     "id": "4492ee2c7a363f92",
     "category": "Sync",
     "title": "Reset the sync code",
-    "answer": "Reset sync code asks for the profile PIN when set, then confirmation. It creates a new recovery code to save. Other devices stop syncing and show that the code was reset on another device. Link each device again using a fresh link code or the new recovery code. Use reset if a code was shared accidentally or a linked box was sold.",
+    "answer": "Reset sync code asks for the profile PIN when set, then confirmation. Reset removes all your encrypted data from the old server copy and clears its device slots. This device keeps its local data and starts a new sync. Save the new recovery code. Every other device stops syncing and must be linked again using a new link code or the new recovery code. Only a small reset notice remains for 30 days so offline devices can learn of the reset; the old snapshot cannot be uploaded again during that period. Use reset if a code was shared accidentally or a linked box was sold.",
     "controls": "Sync > Reset sync code",
     "url": "https://vespertv.app/remote.html#Sync"
   },
@@ -755,7 +755,7 @@
     "id": "2a126a580d7c1c5b",
     "category": "Sync",
     "title": "Stop syncing on this device",
-    "answer": "Confirm Stop syncing on this device to unlink only this device. Your local setup stays, and other devices keep syncing. This is different from Reset sync code, which requires other devices to link again.",
+    "answer": "Confirm Stop syncing on this device to unlink only this device. Your local setup stays, and other devices keep syncing. If this device can reach the server, stopping also frees its place among the 3 devices. This is different from Reset sync code, which requires other devices to link again.",
     "controls": "Sync > Stop syncing on this device",
     "url": "https://vespertv.app/remote.html#Sync"
   },
@@ -765,6 +765,14 @@
     "title": "Sync deleted after three months",
     "answer": "The server deletes a sync after 3 months (90 days) without any linked device checking in. Using a linked device refreshes that period. The temporary 16-digit link code still expires after 10 minutes. After server expiry, a device with the recovery code can start that sync again from its remaining local data; the deleted server snapshot cannot be recovered.",
     "controls": "No device checks in for 3 months",
+    "url": "https://vespertv.app/remote.html#Sync"
+  },
+  {
+    "id": "90de2ea5b4093d85",
+    "category": "Sync",
+    "title": "Sync device limit: 3 devices",
+    "answer": "Each sync supports 3 devices in total. Link codes and the recovery code all lead to the same sync, so generating another code does not reset the count. If you see “This sync already has 3 devices”, open Sync on one linked device and choose Stop syncing on this device, then try linking again. A device unused for 30 days frees its place automatically. A device returning after losing its place needs to link again if the sync is full.",
+    "controls": "Sync > Stop syncing on one linked device",
     "url": "https://vespertv.app/remote.html#Sync"
   },
   {

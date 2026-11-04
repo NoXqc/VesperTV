@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nox_iptv/screens/settings/sync_screen.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
 import 'package:nox_iptv/services/cloud_sync_service.dart';
+import 'package:nox_iptv/services/cloud_sync.dart' show SyncDeviceLimit;
 import 'package:nox_iptv/services/cloud_transfer.dart';
 import 'package:nox_iptv/services/device_transfer.dart';
 import 'package:nox_iptv/services/parental_pin.dart';
@@ -14,6 +15,11 @@ import 'package:nox_iptv/widgets/tv_menu_tile.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+const limitMessage =
+    'This sync already has 3 devices. Stop syncing on one of them, then try again. A device unused for 30 days frees its place on its own.';
+const resetWarning =
+    'Resetting the sync code removes all your encrypted data from the server. Every other device stops syncing and must be linked again with a new code. Save the new recovery code.';
 
 const recovery = '0123-4567-89AB-CDEF-GHJK-MNPQ-RS';
 
@@ -24,6 +30,7 @@ class FakeSync extends CloudSyncService {
   int setups = 0, syncs = 0, resets = 0, stops = 0, reveals = 0;
   String? joined;
   bool typo = false;
+  bool deviceLimit = false;
   DateTime? linkExpires;
   Completer<void>? hold;
 
@@ -61,6 +68,11 @@ class FakeSync extends CloudSyncService {
   @override
   Future<void> joinWithLinkCode(String code) async {
     joined = code;
+    if (deviceLimit) {
+      state = SyncStatus.full;
+      notifyListeners();
+      throw const SyncDeviceLimit(3);
+    }
     if (error != null) throw error!;
     state = SyncStatus.on;
     notifyListeners();
@@ -69,6 +81,11 @@ class FakeSync extends CloudSyncService {
   @override
   Future<bool> joinWithRecoveryCode(String code) async {
     joined = code;
+    if (deviceLimit) {
+      state = SyncStatus.full;
+      notifyListeners();
+      throw const SyncDeviceLimit(3);
+    }
     if (typo) return false;
     state = SyncStatus.on;
     notifyListeners();
@@ -143,6 +160,10 @@ void main() {
                   'The sync code was reset on another device. Link this device again.'),
               findsOneWidget);
         }
+        if (state == SyncStatus.full) {
+          expect(find.text(limitMessage), findsOneWidget);
+          expect(find.text('Sync now'), findsNothing);
+        }
         final expected = state == SyncStatus.on
             ? [
                 'Link a device',
@@ -209,6 +230,8 @@ void main() {
       (tester) async {
     final (sync, _) = await pump(tester, state: SyncStatus.on);
     await tap(tester, 'Reset sync code');
+    expect(find.text(resetWarning), findsOneWidget);
+    expect(sync.resets, 0);
     expect(tile(tester, 'Cancel').focusNode!.hasFocus, isTrue);
     await tap(tester, 'Cancel');
     expect(sync.resets, 0);
@@ -231,6 +254,10 @@ void main() {
       (tester) async {
     final (sync, _) = await pump(tester, state: SyncStatus.on);
     await tap(tester, 'Link a device');
+    expect(
+        find.text(
+            'This code works for one device, once. Create a new code to link another device.'),
+        findsOneWidget);
     expect(find.byType(QrImageView), findsOneWidget);
     expect(find.text('1234 5678 9012 3456'), findsOneWidget);
     expect(find.textContaining('Expires in '), findsOneWidget);
@@ -238,6 +265,10 @@ void main() {
     await tap(tester, 'Done');
     sync.linkExpires = DateTime.now().subtract(const Duration(seconds: 1));
     await tap(tester, 'Link a device');
+    expect(
+        find.text(
+            'This code works for one device, once. Create a new code to link another device.'),
+        findsOneWidget);
     expect(find.byType(QrImageView), findsNothing);
     expect(find.text('1234 5678 9012 3456'), findsNothing);
     await tap(tester, 'Done');
@@ -297,4 +328,38 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
+  for (final tv in [true, false]) {
+    for (final recoveryMode in [true, false]) {
+      testWidgets(
+          'device limit on ${recoveryMode ? 'recovery' : 'link'} join (${tv ? 'TV' : 'phone'}) stays actionable',
+          (tester) async {
+        tester.view.physicalSize =
+            tv ? const Size(1280, 720) : const Size(390, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        final (sync, _) = await pump(tester, tv: tv);
+        sync.deviceLimit = true;
+        await tap(tester, 'I have a code');
+        if (recoveryMode) await tap(tester, 'Use a recovery code');
+        if (tv) {
+          await tester.sendKeyEvent(LogicalKeyboardKey.select);
+          await tester.pumpAndSettle();
+        }
+        await tester.enterText(find.byType(TextField),
+            recoveryMode ? recovery : '1234567890123456');
+        await tap(tester, 'Join sync');
+        expect(find.text(limitMessage), findsOneWidget);
+        expect(
+            find.text("That code isn't right. Check it on the other device."),
+            findsNothing);
+        expect(tile(tester, 'Join sync').focusNode!.hasFocus, isTrue);
+        expect(tester.takeException(), isNull);
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+        expect(find.text(limitMessage), findsOneWidget);
+        expect(tile(tester, 'Set up sync').focusNode!.hasFocus, isTrue);
+        await tester.pumpWidget(const SizedBox());
+      });
+    }
+  }
 }

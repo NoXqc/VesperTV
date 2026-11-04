@@ -2434,8 +2434,7 @@ const Map<String, String> kIt = {
       "Mantieni configurazione e avanzamento tra i dispositivi",
   "Keep your setup and watch progress together across devices. No account needed.":
       "Mantieni configurazione e avanzamento tra i dispositivi. Nessun account necessario.",
-  "Restart now":
-      "Riavvia ora",
+  "Restart now": "Riavvia ora",
   "Your playlists and sources from your other devices are ready. Restart VesperTV to load them.":
       "Le playlist e le fonti dei tuoi altri dispositivi sono pronte. Riavvia VesperTV per caricarle.",
   "Some changes appear after you restart VesperTV. Profile photos stay on each device. Playlists imported from a file (USB drive, SD card or folder) do not sync: import the file on each device. Playlists added with a link or an Xtream login sync normally.":
@@ -2448,8 +2447,7 @@ const Map<String, String> kIt = {
   "Link a device": "Collega un dispositivo",
   "Show recovery code": "Mostra codice di recupero",
   "Reset sync code": "Reimposta codice di sincronizzazione",
-  "Other devices will stop syncing until you link them again. Save the new recovery code.":
-      "Gli altri dispositivi smetteranno di sincronizzarsi finché non li collegherai di nuovo. Conserva il nuovo codice di recupero.",
+
   "Stop syncing on this device":
       "Interrompi la sincronizzazione su questo dispositivo",
   "Your data stays on this device. Other devices keep syncing.":
@@ -2471,4 +2469,12 @@ const Map<String, String> kIt = {
   "Use a recovery code": "Usa un codice di recupero",
   "Link code": "Codice di collegamento",
   "Join sync": "Unisciti alla sincronizzazione",
+
+  // Sync device limit and reset.
+  "This sync already has 3 devices. Stop syncing on one of them, then try again. A device unused for 30 days frees its place on its own.":
+      "Questa sincronizzazione ha già 3 dispositivi. Interrompi la sincronizzazione su uno di essi e riprova. Un dispositivo inutilizzato per 30 giorni libera automaticamente il suo posto.",
+  "Resetting the sync code removes all your encrypted data from the server. Every other device stops syncing and must be linked again with a new code. Save the new recovery code.":
+      "La reimpostazione del codice di sincronizzazione elimina tutti i tuoi dati crittografati dal server. Tutti gli altri dispositivi smettono di sincronizzarsi e devono essere collegati di nuovo con un nuovo codice. Conserva il nuovo codice di recupero.",
+  "This code works for one device, once. Create a new code to link another device.":
+      "Questo codice funziona una sola volta, per un solo dispositivo. Crea un nuovo codice per collegare un altro dispositivo.",
 };

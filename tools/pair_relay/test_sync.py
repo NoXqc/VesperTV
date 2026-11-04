@@ -21,6 +21,7 @@ class SyncApiTests(unittest.TestCase):
     token = "fixture_write_token_01234567890123456789"
     wrong_token = "different_write_token_0123456789012345"
     blob = b"\x01" + bytes(range(63))
+    devices = [f"fixture_device_{i}_0123456789" for i in range(5)]
 
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory(prefix="vesper-sync-test-")
@@ -29,6 +30,7 @@ class SyncApiTests(unittest.TestCase):
         self.patches = [
             patch.object(relay, "VAULT_DIR", self.directory.name),
             patch.object(relay, "REQUIRE_APP", True),
+            patch.object(relay, "REQUIRE_DEVICE", False),
             # Replace only relay's clock, not Python's shared time module.
             patch.object(relay, "time", types.SimpleNamespace(time=lambda: self.now)),
         ]
@@ -64,9 +66,9 @@ class SyncApiTests(unittest.TestCase):
                             headers={"X-Vault-Token": token or self.token,
                                      "If-Match": f'"{version}"', **(headers or {})})
 
-    def delete(self, *, token=None, path=None):
+    def delete(self, *, token=None, path=None, headers=None):
         return self.request("DELETE", path=path,
-                            headers={"X-Vault-Token": token or self.token})
+                            headers={"X-Vault-Token": token or self.token, **(headers or {})})
 
     def meta_path(self):
         return Path(self.directory.name, f"s.{self.sid}.meta")
@@ -195,15 +197,26 @@ class SyncApiTests(unittest.TestCase):
             self.assertEqual(self.delete(path=f"/api/v/{self.sid}")[0], 204)
             self.assertEqual(self.put(1, body=self.blob + b"x")[0], 204)
 
-    def test_metadata_contains_only_hashed_token_expiry_size_version(self):
-        self.put()
+    def test_metadata_only_stores_hashed_token_devices_and_policy_fields(self):
+        device = self.devices[0]
+        self.put(headers={"X-Sync-Device": device})
         meta = self.meta()
-        self.assertEqual(set(meta), {"exp", "tok", "size", "ver"})
+        self.assertEqual(set(meta), {"exp", "tok", "size", "ver", "dev"})
         self.assertEqual(meta["tok"], relay._token_hash(self.token))
-        self.assertNotIn(self.token, self.meta_path().read_text(encoding="utf-8"))
+        self.assertEqual(meta["dev"], {relay._device_hash(device): self.now})
+        text = self.meta_path().read_text(encoding="utf-8")
+        self.assertNotIn(self.token, text)
+        self.assertNotIn(device, text)
+        self.put(1, headers={"X-Sync-Revoke": "1", "X-Sync-Device": device})
+        self.assertEqual(set(self.meta()), {"exp", "tok", "size", "ver", "revoked"})
+        self.put(path=f"/api/v/{self.sid}", headers={"X-Vault-Ttl": "600", "X-Vault-Once": "1"})
+        vault_meta = Path(self.directory.name, self.sid + ".meta")
+        self.assertEqual(set(json.loads(vault_meta.read_text(encoding="utf-8"))),
+                         {"exp", "tok", "size", "once"})
 
     def test_deploy_smoke_uses_disposable_blob_and_cleans_up(self):
-        smoke_sync.smoke("http://127.0.0.1:" + str(self.server.server_port))
+        with patch.object(relay, "REQUIRE_DEVICE", True):
+            smoke_sync.smoke("http://127.0.0.1:" + str(self.server.server_port))
         self.assertEqual(list(Path(self.directory.name).iterdir()), [])
 
     def test_app_header_and_malformed_requests(self):
@@ -214,6 +227,111 @@ class SyncApiTests(unittest.TestCase):
         self.assertEqual(self.put(body=b"tiny")[0], 400)
         self.assertEqual(self.request(path="/api/sync/../bad")[0], 404)
         self.assertEqual(list(Path(self.directory.name).iterdir()), [])
+
+
+    def fill_devices(self):
+        self.assertEqual(relay.SYNC_MAX_DEVICES, 3)
+        self.assertEqual(self.put(headers={"X-Sync-Device": self.devices[0]})[0], 204)
+        for device in self.devices[1:3]:
+            self.assertEqual(self.request(headers={"X-Sync-Device": device})[0], 200)
+        self.assertEqual(len(self.meta()["dev"]), 3)
+
+    def test_fourth_device_refused_on_get_and_put_per_sync(self):
+        self.fill_devices()
+        fourth = {"X-Sync-Device": self.devices[3]}
+        for result in [self.request(headers=fourth), self.put(1, headers=fourth)]:
+            self.assertEqual(result[0], 403)
+            self.assertEqual(result[1]["X-Sync-Error"], "device-limit")
+            self.assertEqual(result[1]["X-Sync-Max-Devices"], "3")
+        self.assertEqual(self.meta()["ver"], 1)
+        self.assertEqual(len(self.meta()["dev"]), 3)
+        self.assertEqual(self.request(headers={"X-Sync-Device": self.devices[1],
+                                               "If-None-Match": '"1"'})[0], 304)
+        # A different sync id has its own budget. Link codes never
+        # participate in the device-slot count.
+        self.assertEqual(self.put(path="/api/sync/another_fixture_0123456789", headers=fourth)[0], 204)
+
+    def test_leave_frees_only_own_slot_without_deleting_snapshot(self):
+        self.fill_devices()
+        leave = f"/api/sync/{self.sid}/device"
+        first = {"X-Sync-Device": self.devices[0]}
+        self.assertEqual(self.delete(path=leave, token=self.wrong_token, headers=first)[0], 403)
+        self.assertEqual(len(self.meta()["dev"]), 3)
+        self.assertEqual(self.delete(path=leave, headers=first)[0], 204)
+        self.assertEqual(self.delete(path=leave, headers=first)[0], 204)
+        self.assertEqual(len(self.meta()["dev"]), 2)
+        self.assertEqual(self.request(headers={"X-Sync-Device": self.devices[3]})[0], 200)
+        self.assertEqual(self.request(headers={"X-Sync-Device": self.devices[4]})[0], 403)
+        self.assertEqual(self.request(headers={"X-Sync-Device": self.devices[1]})[2], self.blob)
+        self.assertEqual(self.meta()["ver"], 1)
+
+    def test_slot_expires_exactly_after_30_days_idle(self):
+        self.assertEqual(relay.SYNC_DEVICE_IDLE, 30 * 24 * 3600)
+        self.fill_devices()
+        start = self.now
+        self.now += 29 * 24 * 3600
+        for device in self.devices[1:3]:
+            self.assertEqual(self.request(headers={"X-Sync-Device": device})[0], 200)
+        self.now = start + relay.SYNC_DEVICE_IDLE - 1
+        self.assertEqual(self.request(headers={"X-Sync-Device": self.devices[3]})[0], 403)
+        self.now += 1
+        self.assertEqual(self.request(headers={"X-Sync-Device": self.devices[3]})[0], 200)
+        self.assertNotIn(relay._device_hash(self.devices[0]), self.meta()["dev"])
+        self.assertEqual(len(self.meta()["dev"]), 3)
+        self.assertEqual(self.request(headers={"X-Sync-Device": self.devices[0]})[0], 403)
+
+    def test_revoke_overwrites_snapshot_drops_devices_and_expires_in_30_days(self):
+        self.fill_devices()
+        marker = b"encrypted reset marker fixture" * 2
+        status, headers, _ = self.put(1, body=marker,
+            headers={"X-Sync-Device": self.devices[0], "X-Sync-Revoke": "1"})
+        self.assertEqual((status, headers["ETag"]), (204, '"2"'))
+        expiry = self.now + 30 * 24 * 3600
+        self.assertEqual(relay.SYNC_REVOKED_TTL, 30 * 24 * 3600)
+        self.assertEqual(self.meta()["exp"], expiry)
+        self.assertTrue(self.meta()["revoked"])
+        self.assertNotIn("dev", self.meta())
+        self.assertEqual(Path(self.directory.name, f"s.{self.sid}.bin").read_bytes(), marker)
+        self.assertEqual(self.meta()["size"], len(marker))
+        for device in self.devices[:4]:
+            self.assertEqual(self.put(2, headers={"X-Sync-Device": device})[0], 410)
+        # Refused/offline devices can learn the reset without claiming a
+        # slot or extending the marker's fixed retention period.
+        self.now += 29 * 24 * 3600
+        self.assertEqual(self.request(headers={"X-Sync-Device": self.devices[3]})[2], marker)
+        self.assertEqual(self.request(headers={"X-Sync-Device": self.devices[1],
+            "If-None-Match": '"2"'})[0], 304)
+        self.assertEqual(self.meta()["exp"], expiry)
+        self.assertNotIn("dev", self.meta())
+        self.now = expiry
+        self.assertEqual(self.request()[0], 404)
+        self.assertEqual(list(Path(self.directory.name).iterdir()), [])
+
+    def test_sync_link_vault_is_once_but_transfer_vault_stays_multi_read(self):
+        vault = f"/api/v/{self.sid}"
+        self.assertEqual(self.put(path=vault, headers={"X-Vault-Ttl": "600", "X-Vault-Once": "1"})[0], 204)
+        self.assertEqual(self.request(path=vault)[2], self.blob)
+        self.assertEqual(self.request(path=vault)[0], 404)
+        self.assertEqual(list(Path(self.directory.name).iterdir()), [])
+        self.assertEqual(self.put(path=vault, headers={"X-Vault-Ttl": "600"})[0], 204)
+        self.assertEqual(self.request(path=vault)[2], self.blob)
+        self.assertEqual(self.request(path=vault)[2], self.blob)
+        self.assertEqual(len(list(Path(self.directory.name).iterdir())), 2)
+
+    def test_require_device_switch_and_legacy_compatibility(self):
+        self.assertEqual(self.put()[0], 204)
+        self.assertEqual(self.request()[0], 200)
+        self.assertNotIn("dev", self.meta())
+        with patch.object(relay, "REQUIRE_DEVICE", True):
+            self.assertEqual(self.request()[0], 400)
+            self.assertEqual(self.put(1)[0], 400)
+            self.assertEqual(self.request(headers={"X-Sync-Device": "invalid!"})[0], 400)
+            device = {"X-Sync-Device": self.devices[0]}
+            self.assertEqual(self.request(headers=device)[0], 200)
+            self.assertEqual(self.put(1, headers=device)[0], 204)
+            self.assertEqual(self.delete(path=f"/api/sync/{self.sid}/device")[0], 400)
+        self.assertEqual(self.request()[0], 200)
+        self.assertEqual(len(self.meta()["dev"]), 1)
 
 
 if __name__ == "__main__":

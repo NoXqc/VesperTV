@@ -2428,8 +2428,7 @@ const Map<String, String> kEs = {
       "Mantén tu configuración y progreso entre dispositivos",
   "Keep your setup and watch progress together across devices. No account needed.":
       "Mantén tu configuración y progreso entre dispositivos. No necesitas una cuenta.",
-  "Restart now":
-      "Reiniciar ahora",
+  "Restart now": "Reiniciar ahora",
   "Your playlists and sources from your other devices are ready. Restart VesperTV to load them.":
       "Tus listas y fuentes de tus otros dispositivos están listas. Reinicia VesperTV para cargarlas.",
   "Some changes appear after you restart VesperTV. Profile photos stay on each device. Playlists imported from a file (USB drive, SD card or folder) do not sync: import the file on each device. Playlists added with a link or an Xtream login sync normally.":
@@ -2442,8 +2441,7 @@ const Map<String, String> kEs = {
   "Link a device": "Vincular un dispositivo",
   "Show recovery code": "Mostrar código de recuperación",
   "Reset sync code": "Restablecer código de sincronización",
-  "Other devices will stop syncing until you link them again. Save the new recovery code.":
-      "Los otros dispositivos dejarán de sincronizarse hasta que los vuelvas a vincular. Guarda el nuevo código de recuperación.",
+
   "Stop syncing on this device": "Dejar de sincronizar este dispositivo",
   "Your data stays on this device. Other devices keep syncing.":
       "Tus datos permanecen en este dispositivo. Los otros dispositivos siguen sincronizándose.",
@@ -2464,4 +2462,12 @@ const Map<String, String> kEs = {
   "Use a recovery code": "Usar un código de recuperación",
   "Link code": "Código de vinculación",
   "Join sync": "Unirse a la sincronización",
+
+  // Sync device limit and reset.
+  "This sync already has 3 devices. Stop syncing on one of them, then try again. A device unused for 30 days frees its place on its own.":
+      "Esta sincronización ya tiene 3 dispositivos. Deja de sincronizar uno de ellos y vuelve a intentarlo. Un dispositivo sin usar durante 30 días libera su plaza automáticamente.",
+  "Resetting the sync code removes all your encrypted data from the server. Every other device stops syncing and must be linked again with a new code. Save the new recovery code.":
+      "Al restablecer el código de sincronización se eliminan todos tus datos cifrados del servidor. Los demás dispositivos dejan de sincronizarse y deben vincularse de nuevo con un código nuevo. Guarda el nuevo código de recuperación.",
+  "This code works for one device, once. Create a new code to link another device.":
+      "Este código sirve una sola vez para un dispositivo. Crea un código nuevo para vincular otro dispositivo.",
 };

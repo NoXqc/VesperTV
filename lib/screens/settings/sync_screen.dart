@@ -8,6 +8,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../../l10n/l10n.dart';
 import '../../services/app_restart.dart';
 import '../../services/cloud_sync_service.dart';
+import '../../services/cloud_sync.dart' show SyncDeviceLimit;
 import '../../services/cloud_transfer.dart';
 import '../../services/device_transfer.dart';
 import '../../services/parental_pin.dart';
@@ -18,6 +19,9 @@ import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_menu_tile.dart';
 import '../../widgets/tv_text_field_gate.dart';
 import 'transfer_screen.dart' show TransferCodeKey;
+
+String _syncDeviceLimitText() => tr(
+    'This sync already has 3 devices. Stop syncing on one of them, then try again. A device unused for 30 days frees its place on its own.');
 
 String _syncError(TransferException error) => switch (error.kind) {
       TransferError.tooBig => tr(
@@ -51,7 +55,11 @@ class _SyncScreenState extends State<SyncScreen> {
   FocusNode _node(String id) => _nodes.putIfAbsent(id, FocusNode.new);
 
   void _focus(String id) => WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _node(id).requestFocus();
+        // A failed join changes status while its code-entry route is still
+        // open. The banner underneath must not steal that route's focus.
+        if (mounted && (ModalRoute.of(context)?.isCurrent ?? false)) {
+          _node(id).requestFocus();
+        }
       });
 
   Future<void> _run(String returnTo, Future<void> Function() action) async {
@@ -62,6 +70,8 @@ class _SyncScreenState extends State<SyncScreen> {
     });
     try {
       await action();
+    } on SyncDeviceLimit {
+      if (mounted) setState(() => _error = _syncDeviceLimitText());
     } on TransferException catch (e) {
       if (mounted) setState(() => _error = _syncError(e));
     } finally {
@@ -141,6 +151,10 @@ class _SyncScreenState extends State<SyncScreen> {
                   Text(
                       tr('Some changes appear after you restart VesperTV. Profile photos stay on each device. Playlists imported from a file (USB drive, SD card or folder) do not sync: import the file on each device. Playlists added with a link or an Xtream login sync normally.'),
                       style: const TextStyle(color: Colors.white54)),
+                  if (sync.status == SyncStatus.full) ...[
+                    const SizedBox(height: 16),
+                    Text(_syncDeviceLimitText()),
+                  ],
                   if (sync.status == SyncStatus.revoked) ...[
                     const SizedBox(height: 16),
                     Text(tr(
@@ -202,7 +216,7 @@ class _SyncScreenState extends State<SyncScreen> {
                                 return;
                               }
                               if (!await _confirm(tr('Reset sync code'),
-                                  tr('Other devices will stop syncing until you link them again. Save the new recovery code.'))) {
+                                  tr('Resetting the sync code removes all your encrypted data from the server. Every other device stops syncing and must be linked again with a new code. Save the new recovery code.'))) {
                                 return;
                               }
                               if (!mounted) return;
@@ -393,6 +407,12 @@ class _SyncCodeScreenState extends State<_SyncCodeScreen> {
                     'Save this code. It\'s the only way back in if you lose all your devices. We can\'t recover it.')
                 : tr(
                     'On the other device, open Settings > Device & data > Sync > I have a code.')),
+            if (link != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                  tr('This code works for one device, once. Create a new code to link another device.'),
+                  style: const TextStyle(color: Colors.white70)),
+            ],
             const SizedBox(height: 20),
             if (active) ...[
               // Plain text QR: codes stay on screen, never in a web URL.
@@ -476,6 +496,8 @@ class _SyncJoinScreenState extends State<_SyncJoinScreen> {
         throw const TransferException(TransferError.invalid);
       }
       Navigator.of(context).pop();
+    } on SyncDeviceLimit {
+      if (mounted) setState(() => _error = _syncDeviceLimitText());
     } on TransferException catch (e) {
       if (mounted) setState(() => _error = _syncError(e));
     } finally {

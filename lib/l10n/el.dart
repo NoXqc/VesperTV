@@ -2389,8 +2389,7 @@ const Map<String, String> kEl = {
       "Κρατήστε τη ρύθμιση και την πρόοδο προβολής σε όλες τις συσκευές",
   "Keep your setup and watch progress together across devices. No account needed.":
       "Κρατήστε τη ρύθμιση και την πρόοδο προβολής σε όλες τις συσκευές. Δεν χρειάζεται λογαριασμός.",
-  "Restart now":
-      "Επανεκκίνηση τώρα",
+  "Restart now": "Επανεκκίνηση τώρα",
   "Your playlists and sources from your other devices are ready. Restart VesperTV to load them.":
       "Οι λίστες και οι πηγές από τις άλλες συσκευές σας είναι έτοιμες. Επανεκκινήστε το VesperTV για να φορτωθούν.",
   "Some changes appear after you restart VesperTV. Profile photos stay on each device. Playlists imported from a file (USB drive, SD card or folder) do not sync: import the file on each device. Playlists added with a link or an Xtream login sync normally.":
@@ -2403,8 +2402,7 @@ const Map<String, String> kEl = {
   "Link a device": "Σύνδεση συσκευής",
   "Show recovery code": "Εμφάνιση κωδικού ανάκτησης",
   "Reset sync code": "Επαναφορά κωδικού συγχρονισμού",
-  "Other devices will stop syncing until you link them again. Save the new recovery code.":
-      "Οι άλλες συσκευές θα σταματήσουν να συγχρονίζονται μέχρι να τις συνδέσετε ξανά. Αποθηκεύστε τον νέο κωδικό ανάκτησης.",
+
   "Stop syncing on this device": "Διακοπή συγχρονισμού σε αυτή τη συσκευή",
   "Your data stays on this device. Other devices keep syncing.":
       "Τα δεδομένα σας παραμένουν σε αυτή τη συσκευή. Οι άλλες συσκευές συνεχίζουν να συγχρονίζονται.",
@@ -2425,4 +2423,12 @@ const Map<String, String> kEl = {
   "Use a recovery code": "Χρήση κωδικού ανάκτησης",
   "Link code": "Κωδικός σύνδεσης",
   "Join sync": "Σύνδεση στον συγχρονισμό",
+
+  // Sync device limit and reset.
+  "This sync already has 3 devices. Stop syncing on one of them, then try again. A device unused for 30 days frees its place on its own.":
+      "Αυτός ο συγχρονισμός έχει ήδη 3 συσκευές. Διακόψτε τον συγχρονισμό σε μία από αυτές και δοκιμάστε ξανά. Μια συσκευή που δεν χρησιμοποιείται για 30 ημέρες ελευθερώνει αυτόματα τη θέση της.",
+  "Resetting the sync code removes all your encrypted data from the server. Every other device stops syncing and must be linked again with a new code. Save the new recovery code.":
+      "Η επαναφορά του κωδικού συγχρονισμού αφαιρεί όλα τα κρυπτογραφημένα δεδομένα σας από τον διακομιστή. Όλες οι άλλες συσκευές σταματούν να συγχρονίζονται και πρέπει να συνδεθούν ξανά με νέο κωδικό. Αποθηκεύστε τον νέο κωδικό ανάκτησης.",
+  "This code works for one device, once. Create a new code to link another device.":
+      "Αυτός ο κωδικός λειτουργεί μία φορά, για μία συσκευή. Δημιουργήστε νέο κωδικό για να συνδέσετε άλλη συσκευή.",
 };

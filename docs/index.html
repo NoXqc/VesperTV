@@ -1275,7 +1275,14 @@ details .ans p + p{ margin-top:12px; }
               <b>Set up once, link the rest</b>
               <span>Settings &rarr; Device &amp; data &rarr; Sync &rarr; Set up sync on your
               first device. On another one, choose I have a code and type the 16-digit link
-              code shown by a linked device. A link code expires after 10 minutes.</span>
+              code shown by a linked device. It works once, for one device, and expires after
+              10 minutes. Create a new code for each additional device.</span>
+            </li>
+            <li>
+              <b>Up to 3 devices per sync</b>
+              <span>Every link code and the recovery code share the same 3-device limit.
+              Another code does not reset it. Stop syncing on one linked device to free
+              its place; a device unused for 30 days frees its place automatically.</span>
             </li>
             <li>
               <b>What travels</b>
@@ -1288,6 +1295,12 @@ details .ans p + p{ margin-top:12px; }
               <b>Encrypted before it leaves</b>
               <span>Your setup is encrypted on the device. The server only ever holds
               ciphertext it can't read, and deletes a sync nobody has used for 3 months.</span>
+            </li>
+            <li>
+              <b>Reset removes the old server copy</b>
+              <span>Resetting the code removes your old encrypted server data and device
+              slots. This device keeps its local data and starts a new sync. Every other
+              device must be linked again. Save the new recovery code.</span>
             </li>
             <li>
               <b>A recovery code, not a password</b>
@@ -2088,7 +2101,7 @@ details .ans p + p{ margin-top:12px; }
               public Android 1.0.56 or Windows 1.0.45 packages. There is no account,
               email or login: Settings &rarr; Device &amp; data &rarr; Sync &rarr;
               Set up sync creates a private sync code. Link a device shows a 16-digit
-              code and QR that work for 10 minutes. Enter it under I have a code on
+              code and QR that work once, for one device, within 10 minutes. Enter it under I have a code on
               the other device. Your setup is encrypted on the device before upload;
               the server cannot read it. Keep your link and recovery codes private.</p>
             <p>See the <a href="remote.html#Sync">Sync remote guide</a> for the controls.</p>
@@ -2122,10 +2135,25 @@ details .ans p + p{ margin-top:12px; }
           <summary>How do I reset sync or unlink a device?</summary>
           <div class="ans">
             <p>Reset sync code asks for the profile PIN when set and confirmation, then
-              gives you a new recovery code to save. Other devices stop syncing until you
-              link them again. Use it after sharing a code accidentally or selling a box.
+              removes all your encrypted data from the old server copy and clears its device
+              slots. This device keeps its local data and starts a new sync with a new recovery
+              code to save. Every other device stops syncing and must be linked again with a
+              new code. A small reset notice remains for 30 days to inform offline devices. Use it after sharing a code accidentally or selling a box.
               Stop syncing on this device only unlinks this device: its data stays and
-              the other devices keep syncing.</p>
+              the other devices keep syncing. Stopping also frees its device slot when it can
+              reach the server.</p>
+          </div>
+        </details>
+        <details>
+          <summary>How many devices can I sync?</summary>
+          <div class="ans">
+            <p>Up to 3 devices per sync. Every link code and the recovery code lead to the
+              same sync, so generating another code never resets the count. Each 16-digit
+              link code works once for one device, and expires after 10 minutes.</p>
+            <p>If the sync is full, choose Sync &rarr; Stop syncing on this device on one
+              linked device, then try linking again. A device unused for 30 days frees its
+              place automatically. This differs from the 3-month deletion of an entirely
+              unused sync.</p>
           </div>
         </details>
         <details>
