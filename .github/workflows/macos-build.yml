@@ -1,0 +1,47 @@
+# macOS build: an unsigned VesperTV.app, zipped, as a workflow artifact.
+# Lets the project produce Mac builds without owning a Mac.
+#
+# Not a release asset on purpose: Windows builds older than the per-platform
+# asset picker (AppUpdateService.pickAsset) take the first ".zip" on the
+# latest release, so attaching this zip could offer a Mac app to a PC.
+# Unsigned / not notarized: on first launch macOS needs right-click > Open
+# (see dev-notes/macos-desktop.md).
+name: macOS build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.9
+          cache: true
+      - run: flutter --version
+      - run: flutter pub get
+      - name: Build macOS (release, unsigned)
+        # CocoaPods is preinstalled on the runner; flutter runs pod install.
+        run: flutter build macos --release 2>&1 | tee build-macos.log; exit ${PIPESTATUS[0]}
+        shell: bash
+        env:
+          LANG: en_US.UTF-8
+      - name: Zip VesperTV.app
+        run: |
+          cd build/macos/Build/Products/Release
+          ditto -c -k --keepParent VesperTV.app "$GITHUB_WORKSPACE/VesperTV-macos.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VesperTV-macos
+          path: VesperTV-macos.zip
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-macos-log
+          path: build-macos.log
