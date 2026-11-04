@@ -178,6 +178,22 @@ void main() {
     client.close();
   });
 
+  test('after Reset sync code, a device on the old code stops', () async {
+    if (relay == null) return markTestSkipped('python not found');
+    final a = _Device({'x': i(1)});
+    final b = _Device({'x': i(1)});
+    final old = newSyncSecret();
+    await a.engine.start(old);
+    await a.engine.sync();
+    await b.engine.start(old);
+    await b.engine.sync();
+    final client = await SyncClient.forSecret(old);
+    await client.revoke();
+    client.close();
+    b.values['x'] = i(2);
+    await expectLater(b.engine.sync(), throwsA(isA<SyncRevoked>()));
+  });
+
   test('a link code hands over the secret; Transfer can\'t open it', () async {
     if (relay == null) return markTestSkipped('python not found');
     final secret = newSyncSecret();

@@ -119,6 +119,12 @@ class SyncRemote {
   final SyncSnapshot? snapshot;
 }
 
+/// The sync code was reset on another device: this secret is dead, the
+/// device must be linked again.
+class SyncRevoked implements Exception {
+  const SyncRevoked();
+}
+
 /// Another device uploaded since the version this one merged against.
 class SyncConflict implements Exception {
   const SyncConflict(this.current);
@@ -164,12 +170,14 @@ class SyncClient {
       try {
         final env = jsonDecode(utf8.decode(gzip.decode(clear)));
         if (env is! Map || env['kind'] != 'sync') return null;
+        if (env['revoked'] == true) return const _Revoked();
         return SyncSnapshot.fromJson(env);
       } catch (_) {
         return null;
       }
     });
     if (snapshot == null) throw const TransferException(TransferError.invalid);
+    if (snapshot is _Revoked) throw const SyncRevoked();
     return SyncRemote(version, snapshot);
   }
 
@@ -206,7 +214,39 @@ class SyncClient {
     }
   }
 
-  /// Removes the server's copy (Reset sync code, Stop syncing). Missing
+  /// Replaces the server's copy with a "reset" marker (Reset sync code), so
+  /// devices still on this secret stop instead of re-creating it. The
+  /// marker expires with the usual 3 months.
+  Future<void> revoke() async {
+    final keys = this.keys;
+    final blob = await Isolate.run(() async => sealVaultBlob(
+        keys,
+        gzip.encode(utf8.encode(jsonEncode(
+            {'kind': 'sync', 'schema': _snapshotSchema, 'revoked': true})))));
+    for (var attempt = 0; attempt < 3; attempt++) {
+      final current = await _currentVersion();
+      final res = await _call(() => _http.put(_uri,
+          headers: {
+            ...kRelayAppHeaders,
+            'Content-Type': 'application/octet-stream',
+            'X-Vault-Token': keys.token,
+            'If-Match': '"$current"',
+          },
+          body: blob));
+      if (res.statusCode == 204) return;
+      if (res.statusCode != 412) break;
+    }
+    throw const TransferException(TransferError.unreachable);
+  }
+
+  Future<int> _currentVersion() async {
+    final res = await _call(() => _http
+        .get(_uri, headers: {...kRelayAppHeaders, 'If-None-Match': '"0"'}));
+    if (res.statusCode == 404) return 0;
+    return _etag(res) ?? 0;
+  }
+
+  /// Removes the server's copy (Stop syncing on the last device). Missing
   /// counts as removed.
   Future<void> delete() async {
     final res = await _call(() => _http.delete(_uri,
@@ -237,6 +277,11 @@ class SyncClient {
       throw const TransferException(TransferError.unreachable);
     }
   }
+}
+
+/// [SyncClient.fetch]'s marker for a revoked sync, never returned.
+class _Revoked extends SyncSnapshot {
+  const _Revoked() : super(const {}, const {});
 }
 
 // ------------------------------------------------------------------ engine
