@@ -1,44 +1,96 @@
-# macOS desktop (prototype)
+# macOS desktop
 
-Status: prototype on the `macos-desktop-prototype` branch of a fork, not released.
-It builds, starts, loads a real playlist and guide on an Apple Silicon Mac
-(macOS 26, Flutter 3.47.9).
+Status: works on an Apple Silicon Mac (macOS 26, Flutter 3.47.9). Debug and
+Release builds tested: live, VOD, guide and Esc. Distributed as an
+**unsigned** zip from CI, not attached to releases (see "Updater" below).
 
 ## Approach
 
-macOS reuses the **Windows desktop stack** (media_kit/mpv, `DesktopPlayerScreen`,
-`DesktopMiniPlayer`, window_manager, mouse layouts), not the Android one.
+macOS reuses the **Windows desktop stack** (media_kit/mpv,
+`DesktopPlayerScreen`, `DesktopMiniPlayer`, window_manager, mouse layouts),
+not the Android one.
 
-- `lib/utils/desktop_platform.dart`: `isDesktop` = Windows or macOS.
-  Every `Platform.isWindows` that meant "computer" now reads `isDesktop`
-  (83 sites). On Windows and Android the behaviour is unchanged: `isDesktop`
-  equals the old `Platform.isWindows` on both.
-- `Platform.isWindows` is kept only for what is really Windows: drive letters
+- `lib/utils/desktop_platform.dart`:
+  - `isDesktop` = Windows or macOS (dart:io). Every `Platform.isWindows`
+    that meant "computer" now uses it.
+  - `isDesktopTarget` is the same test on `defaultTargetPlatform`, for the
+    layout checks that use the target platform so widget tests can exercise
+    either layout on any host.
+  - On Windows and Android, both helpers equal the old checks, so behaviour
+    there is unchanged.
+- `Platform.isWindows` stays only for what is really Windows: drive letters
   in storage import, WebView2 in `youtube_platform_view`, the sqflite FFI
-  factory (macOS has native sqflite), `Documents\VesperTV` label.
-- `main.dart`: `MediaKit.ensureInitialized()` also on macOS.
-- `pubspec.yaml`: `media_kit_libs_macos_video`.
-- Entitlements (sandbox stays on): `network.client` (streams), `network.server`
-  (Wi-Fi Transfer / From phone), `files.user-selected.read-write` (M3U/backup
-  files picked by the user).
-- Updater: `checkForUpdate` returns null on macOS (no Mac release asset yet;
-  it would otherwise offer the Windows `.zip`).
+  factory (macOS has native sqflite), the `Documents\VesperTV` label.
+- `main.dart`:
+  - `MediaKit.ensureInitialized()` runs on macOS too.
+  - On macOS, Esc (`DismissIntent`) falls back to `Navigator.maybePop`
+    (`MaterialApp.actions`). Dialogs, menus and screens with their own Esc
+    handling still win.
+- `pubspec.yaml`: `media_kit_libs_macos_video`. CocoaPods integration lives
+  in `macos/` (Podfile, workspace). Three plugins have no Swift Package
+  Manager support on macOS: media_kit_video, media_kit_libs_macos_video and
+  flutter_inappwebview_macos.
+- App name `VesperTV.app` (`PRODUCT_NAME`). The bundle id stays
+  `com.nox.noxIptv`, because it keys the sandbox container, settings and
+  Application Support (same rule as the Windows exe rename).
+
+## Sandbox
+
+The sandbox stays on. `Release.entitlements` grants:
+
+- `network.client`: streams, guides, add-ons.
+- `network.server`: Transfer, From phone, the playlist editor.
+- `files.user-selected.read-write`: open and save panels.
+
+`Info.plist` has `NSLocalNetworkUsageDescription` (macOS 15+ local network
+privacy).
+
+- **Backup:** regular backups live in the hidden container
+  (`~/Library/Containers/com.nox.noxIptv/Data/Documents/VesperTV`), so the
+  label reads "the app's own storage". macOS-only *Export a backup* uses the
+  save panel, and *Restore from a file* uses the open panel.
+- **Import from storage:** on macOS, *Choose a folder* uses the open panel,
+  and there is no `/` root.
+  - Known limit: access to the folder lasts for the session only. Relative
+    paths inside an imported M3U stop resolving after a relaunch unless
+    security-scoped bookmarks are added.
+
+## Updater
+
+`AppUpdateService.pickAsset` picks the release asset per platform:
+
+- Android takes the `.apk`.
+- Windows takes a `.zip` that is not `-macos.zip`.
+- macOS takes only `-macos.zip`.
+
+`checkForUpdate` still returns null on macOS. **Never attach a Mac zip to a
+release** until most Windows installs run a build with `pickAsset`: older
+Windows builds take the first `.zip` they find.
 
 ## Build
 
-Needs CocoaPods (`brew install cocoapods`): media_kit and flutter_inappwebview
-have no Swift Package Manager support on macOS. Run with `LANG=en_US.UTF-8`.
+Locally: `brew install cocoapods`, then
+`LANG=en_US.UTF-8 flutter build macos --release`. The output is a universal
+build (arm64 + x86_64), about 46 MB zipped.
 
-```
-flutter build macos --debug
-```
+CI: `.github/workflows/macos-build.yml` runs on `macos-latest`, on push to
+`main` or by hand. It uploads `VesperTV-macos.zip` and the build log as
+artifacts.
 
-## Not done / to check
+The build is unsigned. Users need right-click > Open on first launch, or
+must remove the quarantine attribute.
 
-- Playback, Multiview, trailers (WKWebView), subtitles, Backup, Transfer:
-  not yet checked by hand on the Mac.
-- Mac conventions: Cmd+Q, native full screen (green button), menu bar.
-- Distribution: signing + notarization (Apple Developer account), a `.dmg`
-  or `.zip` asset, and teaching `app_update_service.dart` to pick it.
-- Storage import on macOS lists only `/` (Windows lists drive letters);
-  `/Volumes` would be the Mac equivalent.
+## Not done
+
+- **Signing and notarization:** needs an Apple Developer account
+  (Developer ID). The release build currently carries `get-task-allow` from
+  local signing, which notarization rejects: sign with a Developer ID and
+  the hardened runtime in CI.
+- **A Mac release asset and updater:** once signed, and once Windows installs
+  have `pickAsset`.
+- **Not yet checked by hand on the Mac:** Multiview, trailers (WKWebView),
+  subtitles, Transfer.
+- **Mac conventions:** the menu bar items, and the native full-screen button
+  behaviour versus the app's own Windowed / Full screen row.
+- **iOS:** not covered. `isDesktop` mixes "uses media_kit" and "is a
+  computer". An iOS port would split it; most sites are player-stack choices.
