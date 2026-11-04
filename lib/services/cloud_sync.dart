@@ -10,6 +10,7 @@ import 'cloud_transfer.dart';
 import 'device_transfer.dart' show TransferError, TransferException;
 import 'phone_pairing_service.dart' show kRelayAppHeaders;
 import 'sync_merge.dart';
+import '../utils/constants.dart';
 
 /// Cloud sync: no account, no login (owner policy). Devices that share a
 /// random **sync secret** keep one encrypted snapshot on the relay
@@ -567,12 +568,29 @@ class SyncEngine {
         // The server lost it (3 months unused): start it again from here
         // instead of reading that as "everything was removed".
         final base = remote.version == 0 ? null : state.base;
+        final pendingJoin = deferred.containsKey(AppConstants.keyPlaylists);
+        final matched = base == null || pendingJoin
+            ? matchSyncPlaylists(effective, remoteSnap.values,
+                playlistSource: local)
+            : effective;
+        final remapped = !syncValuesEqual(matched, effective);
         final merged = mergeSync(
             base: base,
-            local: effective,
+            local: matched,
             remote: remoteSnap,
-            pending: state.pending,
+            pending: remapped
+                ? stampLocalChanges(
+                    base, matched, const {}, _now().millisecondsSinceEpoch)
+                : state.pending,
             newestFirst: newestFirst);
+        // Keep remapped references together until the loaded playlist can
+        // adopt its new identity at cold start.
+        final holdJoin = applyNow != null &&
+            !applyNow(AppConstants.keyPlaylists) &&
+            (remapped ||
+                (pendingJoin &&
+                    !syncValuesEqual(
+                        matchSyncPlaylists(local, remoteSnap.values), local)));
 
         // What this device has to write, split into now and later.
         final changed = <String, Object?>{};
@@ -581,7 +599,7 @@ class SyncEngine {
         for (final key in {...merged.values.keys, ...local.keys}) {
           final v = merged.values[key];
           if (syncValuesEqual(v, local[key])) continue;
-          if (applyNow != null && !applyNow(key)) {
+          if (holdJoin || (applyNow != null && !applyNow(key))) {
             hold[key] = local[key];
           } else if (v == null) {
             removed.add(key);

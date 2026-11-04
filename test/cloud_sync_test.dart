@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -134,6 +135,70 @@ void main() {
     final idle = await a.engine.sync();
     expect(idle!.pushed, isFalse);
     expect(idle.pulled, 0);
+  });
+
+  test(
+      'joining identical playlists remaps ids; live join holds the migration together',
+      () async {
+    if (relay == null) return markTestSkipped('python not found');
+    Map<String, Object?> playlists(String id) => {
+          't': 's',
+          'v': jsonEncode([
+            {
+              'id': id,
+              'mode': 'xtream',
+              'xtreamServer': 'https://example.invalid',
+              'xtreamUsername': 'fixture',
+              'name': id
+            }
+          ])
+        };
+    for (final liveJoin in [false, true]) {
+      final a = _Device({
+        'nox_playlists': playlists('remote'),
+        'nox_favorites': l(['remote::live_1'])
+      });
+      final b = _Device({
+        'nox_playlists': playlists('local'),
+        'nox_favorites': l(['local::live_2']),
+        'nox_last_position_local::vod_3': i(42000)
+      });
+      final secret = newSyncSecret();
+      await a.engine.start(secret);
+      await a.engine.sync();
+      await b.engine.start(secret);
+      final result = await b.engine
+          .sync(applyNow: liveJoin ? StorageService.isLiveSyncKey : null);
+      if (liveJoin) {
+        expect(result!.pulled, 0);
+        expect(result.deferred, greaterThan(0));
+        expect(b.values['nox_playlists'], playlists('local'));
+        expect(b.values['nox_favorites'], l(['local::live_2']));
+        await b.engine.sync(applyNow: StorageService.isLiveSyncKey);
+        // Still held as one migration, including the old key's removal.
+        expect(b.values['nox_playlists'], playlists('local'));
+        expect(b.values['nox_favorites'], l(['local::live_2']));
+        b.values['nox_favorites'] = l(['local::live_2', 'local::live_4']);
+        await b.engine.sync(applyNow: StorageService.isLiveSyncKey);
+        await a.engine.sync();
+        expect(
+            a.values['nox_favorites'], l(['remote::live_2', 'remote::live_4']));
+        await b.engine.sync();
+      }
+      expect(b.values['nox_playlists'], playlists('remote'));
+      expect(
+          b.values['nox_favorites'],
+          l([
+            if (!liveJoin) 'remote::live_1',
+            'remote::live_2',
+            if (liveJoin) 'remote::live_4'
+          ]));
+      expect(b.values['nox_last_position_remote::vod_3'], i(42000));
+      expect(b.values.containsKey('nox_last_position_local::vod_3'), isFalse);
+      await a.engine.sync();
+      expect(a.values, b.values);
+      expect((await b.engine.sync())!.pushed, isFalse);
+    }
   });
 
   test('an upload from another device in between is merged, not overwritten',
