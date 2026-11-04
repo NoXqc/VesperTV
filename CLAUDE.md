@@ -32,6 +32,15 @@ up on real boxes (weak CPUs, D-pad remotes, Fire OS quirks) — emulators/tests 
 Keep replies short; make routine calls yourself; **confirm before anything destructive or
 outward-facing** (deleting releases, force-pushes, posting). Only commit/release when asked.
 
+## 1b. Save Claude usage: offer Codex first (owner, 2026-11-04)
+The owner runs out of Claude usage; Codex has more room. **Before starting any task, say in one line
+whether Codex could do it instead** and offer a ready-to-paste Codex prompt (rules: `AGENTS.md`,
+`codex/<task>` branch, a HANDOFF block). Good for Codex: well-scoped features with a clear spec,
+translations, docs/site/remote-guide updates, tests, reviews of a diff, diagnostics from a Send log
+when the area is known, mechanical refactors, building/checking a branch. Keep for Claude: releases,
+signing, VPS, Discord, native player/vendored plugin, cloud sync/relay design, root-causing an
+unknown bug across many files, and reviewing/merging Codex branches. When in doubt, ask.
+
 ## 2. Start-here checklist for a clean session
 1. `git pull`, then `git status` (ignore the untracked `*-windows-x64.zip` and
    `third_party/video_player_android/pubspec.lock` — local artifacts).
