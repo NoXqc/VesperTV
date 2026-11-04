@@ -79,7 +79,8 @@ test('sync answers cover setup, recovery, reset and expiry without implying it s
   assert.match(guideReply(entries, 'sync without account').content, /encrypted on the device/);
   assert.match(guideReply(entries, 'lost sync recovery code').content, /cannot recover your old sync/);
   assert.match(guideReply(entries, 'sync deleted after three months').content, /90 days/);
-  assert.match(guideReply(entries, 'what syncs between devices').content, /Profile photos, imported M3U files/);
+  assert.match(guideReply(entries, 'what syncs between devices').content, /Profile photos and imported M3U files/);
+  assert.match(guideReply(entries, 'what syncs between devices').content, /Continue Watching and Media Hub Recently watched merge newest first/);
 });
 
 test('all answers link to a real website tab and never ping users', () => {

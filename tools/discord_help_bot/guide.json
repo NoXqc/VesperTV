@@ -715,7 +715,7 @@
     "id": "e376839ed32e3661",
     "category": "Sync",
     "title": "What syncs between devices",
-    "answer": "Playlists, viewer profiles, favourites and their order, hidden groups and channels, own groups, watch positions, Sports Trak preferences, Media Hub sources/favourites/resume and shared settings sync. Layout, enabled playlists on this box, caches, current viewer, PIN lockout and backup timers stay on this device. Profile photos, imported M3U files and recently played / Continue Watching lists do not sync in this first version; watch positions do. Sync copies your setup, not channels or video files.",
+    "answer": "Playlists, viewer profiles, favourites and their order, hidden groups and channels, own groups, watch positions, recently played / Continue Watching lists, Sports Trak preferences, Media Hub sources/favourites/resume/history and shared settings sync. Layout, enabled playlists on this box, playlist/guide caches, current viewer, PIN lockout and backup timers stay on this device. Profile photos and imported M3U files do not sync in this first version. Continue Watching and Media Hub Recently watched merge newest first. Sync copies your setup, not channels or video files.",
     "controls": "Settings > Device & data > Sync",
     "url": "https://vespertv.app/remote.html#Sync"
   },
