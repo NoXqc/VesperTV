@@ -1559,6 +1559,7 @@ class SportsGameSummary {
     this.leaders = const {},
     this.injuries = const {},
     this.goals = const [],
+    this.scoringPlays = const [],
     this.tables = const [],
   });
 
@@ -1577,6 +1578,11 @@ class SportsGameSummary {
   /// Every goal, in order (soccer and hockey) — the box score only lists a
   /// few players per position, so it can't say who scored.
   final List<SportsGoal> goals;
+
+  /// Football touchdowns and field goals, in order, for the goals alert only:
+  /// [SportsGoal.scorer] is the card text ("TD: Josh Jacobs"), [SportsGoal.period]
+  /// "Q2"/"OT", [SportsGoal.score] the score after the play (with its kick).
+  final List<SportsGoal> scoringPlays;
 
   /// The standings groups that hold either team.
   final List<SportsSummaryTable> tables;

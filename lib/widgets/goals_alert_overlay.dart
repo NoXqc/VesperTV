@@ -20,6 +20,10 @@ class GoalsAlertOverlay extends StatefulWidget {
   /// Settings' "Show a test popup": each bump shows a sample goal card for
   /// 8 s, so the look (e.g. Transparent popups) can be checked any time.
   static final ValueNotifier<int> previewRequests = ValueNotifier(0);
+
+  /// Tests: replaces [SportsService.gameSummary] for the scorer lookup.
+  @visibleForTesting
+  static Future<SportsGameSummary?> Function(SportsGame game)? debugSummary;
   @override
   State<GoalsAlertOverlay> createState() => _GoalsAlertOverlayState();
 }
@@ -41,6 +45,15 @@ class _GoalsAlertOverlayState extends State<GoalsAlertOverlay>
   /// Who scored ("C. Caufield · 2nd 12:34"), from the game's summary, once
   /// it lists this goal (owner, 1.0.51). Null = the card without it.
   String? _scorer;
+
+  /// ESPN's summary lists a goal ~20-30 s after the scoreboard counts it
+  /// (measured on NHL, 2026-11-03), so the scorer lookup retries and the
+  /// card stays up past its 8 s while it does, unless another goal waits.
+  bool _waitingScorer = false;
+  bool _timeIsUp = false;
+
+  /// Lookups 5 s apart: the first + 8 retries = ~40 s.
+  static const _scorerRetries = 8;
 
   @override
   void initState() {
@@ -79,6 +92,7 @@ class _GoalsAlertOverlayState extends State<GoalsAlertOverlay>
     _hide?.cancel();
     _queue.clear();
     _notice = null;
+    _waitingScorer = false;
     _service?.reset();
   }
 
@@ -95,7 +109,10 @@ class _GoalsAlertOverlayState extends State<GoalsAlertOverlay>
       if (_notice != null && !_service!.isCurrent(_notice!)) {
         _notice = null;
       }
-      if (_notice == null) _showNext();
+      if (_notice == null ||
+          (_queue.isNotEmpty && _waitingScorer && _timeIsUp)) {
+        _showNext();
+      }
     } finally {
       if (mounted && _active && _enabled && epoch == _epoch) {
         _poll = Timer(const Duration(seconds: 30), _refresh);
@@ -126,6 +143,7 @@ class _GoalsAlertOverlayState extends State<GoalsAlertOverlay>
         statusText: '2nd',
         home: home,
         away: away);
+    _waitingScorer = false;
     setState(() {
       _preview = true;
       _scorer = 'C. Caufield · 2nd 12:34';
@@ -149,48 +167,107 @@ class _GoalsAlertOverlayState extends State<GoalsAlertOverlay>
         break;
       }
     }
+    _waitingScorer = next != null;
+    _timeIsUp = false;
     setState(() {
       _notice = next;
       _scorer = null;
     });
     if (next != null) {
-      _hide = Timer(const Duration(seconds: 8), _showNext);
+      _hide = Timer(const Duration(seconds: 8), _timeUp);
       unawaited(_lookupScorer(next));
     }
   }
 
+  /// The card's 8 s are up: it stays while the scorer lookup still runs and
+  /// no other goal waits (the lookup then ends it).
+  void _timeUp() {
+    _timeIsUp = true;
+    if (_waitingScorer && _queue.isEmpty) return;
+    _showNext();
+  }
+
   /// The scorer of [notice]'s goal: the summary's last goal by that team,
   /// only when its goal count equals the new score (a summary behind the
-  /// scoreboard would name the previous scorer). A late answer keeps the
-  /// card up a few seconds more.
+  /// scoreboard would name the previous scorer). Retried every 5 s for up to
+  /// ~40 s: the summary trails the scoreboard. A found name keeps
+  /// the card up 6 s more; giving up after the 8 s ends the card.
+  /// Football: "TD: Josh Jacobs · Q2 6:33" (or FG), see [_footballPlay].
   Future<void> _lookupScorer(GoalAlertNotice notice) async {
     final score = int.tryParse(notice.team.score ?? '');
-    if (score == null || score <= 0) return;
-    try {
-      final summary =
-          await SportsService.instance.gameSummary(notice.game, fresh: true);
-      if (!mounted || _notice != notice || summary == null) return;
-      final goals = summary.goals;
-      final mine = goals.where((g) => g.teamId == notice.team.id).toList();
+    if (score == null || score <= 0) {
+      _waitingScorer = false;
+      return;
+    }
+    // Only ESPN hockey/soccer/football summaries list scorers: anything else
+    // gets the one try, never the longer card.
+    final league = notice.game.league;
+    final football = league.sport == 'football';
+    final retry = league.sportsDbId == null &&
+        !league.isCfl &&
+        (football || league.sport == 'hockey' || league.sport == 'soccer');
+    var retries = retry ? _scorerRetries : 0;
+    while (true) {
       SportsGoal? goal;
-      if (mine.isNotEmpty) {
-        if (mine.length == score) goal = mine.last;
-      } else if (goals.isNotEmpty && goals.every((g) => g.teamId == null)) {
-        // No team ids: only when the whole game's count is right.
-        final total = (int.tryParse(notice.game.home.score ?? '') ?? -1) +
-            (int.tryParse(notice.game.away.score ?? '') ?? -1);
-        if (goals.length == total) goal = goals.last;
+      try {
+        final summary =
+            await (GoalsAlertOverlay.debugSummary?.call(notice.game) ??
+                SportsService.instance.gameSummary(notice.game, fresh: true));
+        if (!mounted || _notice != notice) return;
+        // No summary at all (feed down, nothing cached): don't wait on it.
+        if (summary == null) break;
+        if (football) {
+          goal = _footballPlay(summary.scoringPlays, notice, score);
+        } else {
+          final goals = summary.goals;
+          final mine = goals.where((g) => g.teamId == notice.team.id).toList();
+          if (mine.isNotEmpty) {
+            if (mine.length == score) goal = mine.last;
+          } else if (goals.isNotEmpty && goals.every((g) => g.teamId == null)) {
+            // No team ids: only when the whole game's count is right.
+            final total = (int.tryParse(notice.game.home.score ?? '') ?? -1) +
+                (int.tryParse(notice.game.away.score ?? '') ?? -1);
+            if (goals.length == total) goal = goals.last;
+          }
+        }
+      } catch (_) {/* Retried below. */}
+      if (!mounted || _notice != notice) return;
+      if (goal != null && goal.scorer.trim().isNotEmpty) {
+        final when = [goal.period, goal.minute]
+            .whereType<String>()
+            .where((s) => s.isNotEmpty)
+            .join(' ');
+        _waitingScorer = false;
+        setState(() =>
+            _scorer = when.isEmpty ? goal!.scorer : '${goal!.scorer} · $when');
+        _hide?.cancel();
+        _hide = Timer(const Duration(seconds: 6), _showNext);
+        return;
       }
-      if (goal == null || goal.scorer.trim().isEmpty) return;
-      final when = [goal.period, goal.minute]
-          .whereType<String>()
-          .where((s) => s.isNotEmpty)
-          .join(' ');
-      setState(() =>
-          _scorer = when.isEmpty ? goal!.scorer : '${goal!.scorer} · $when');
-      _hide?.cancel();
-      _hide = Timer(const Duration(seconds: 6), _showNext);
-    } catch (_) {/* The card stays as it is. */}
+      if (retries-- <= 0) break;
+      await Future<void>.delayed(const Duration(seconds: 5));
+      if (!mounted || _notice != notice) return;
+    }
+    _waitingScorer = false;
+    if (_timeIsUp) _showNext();
+  }
+
+  /// The team's last touchdown / field goal when its score after the play is
+  /// the new score, or up to 2 more: a scoreboard can count the 6 before the
+  /// kick that ESPN's play already includes. An older play (summary behind)
+  /// never matches.
+  static SportsGoal? _footballPlay(
+      List<SportsGoal> plays, GoalAlertNotice notice, int score) {
+    final home = notice.team.id == notice.game.home.id;
+    for (final p in plays.reversed) {
+      if (p.teamId != notice.team.id) continue;
+      final parts = p.score?.split('-');
+      final after =
+          parts?.length == 2 ? int.tryParse(parts![home ? 1 : 0]) : null;
+      if (after == null) return null;
+      return after >= score && after <= score + 2 ? p : null;
+    }
+    return null;
   }
 
   @override

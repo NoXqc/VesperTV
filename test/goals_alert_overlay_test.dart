@@ -150,6 +150,78 @@ void main() {
     });
   }
 
+  testWidgets('scorer listed late by the summary still shows on the card',
+      (tester) async {
+    await setup();
+    // ESPN's summary trails the scoreboard by ~20-30 s (NHL, 2026-11-03).
+    var goals = <SportsGoal>[];
+    GoalsAlertOverlay.debugSummary =
+        (_) async => SportsGameSummary(goals: goals);
+    addTearDown(() => GoalsAlertOverlay.debugSummary = null);
+    await mount(tester);
+    score = '1';
+    await tick(tester, 30);
+    expect(find.text('Canadiens scored!'), findsOneWidget);
+    expect(find.textContaining('M. Boldy'), findsNothing);
+    // Past the usual 8 s the card waits for the name.
+    await tick(tester, 10);
+    expect(find.text('Canadiens scored!'), findsOneWidget);
+    goals = const [
+      SportsGoal(
+          minute: '4:06', scorer: 'M. Boldy', teamId: 'mtl', period: '1st')
+    ];
+    await tick(tester, 5);
+    expect(find.text('M. Boldy · 1st 4:06'), findsOneWidget);
+    await tick(tester, 6);
+    expect(find.byKey(const ValueKey('goal-alert')), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+  });
+
+  testWidgets('football: TD with the player and time, kick not yet counted',
+      (tester) async {
+    await setup();
+    await storage.setSportsFollowedTeams(['nfl|mtl']);
+    goals.dispose();
+    goals = GoalsAlerts(storage,
+        now: () => time,
+        loadGames: (_, __) async =>
+            [scoreGame(time, league: 'nfl', home: score)]);
+    // The scoreboard shows the 6; ESPN's play already has the kick (7).
+    GoalsAlertOverlay.debugSummary =
+        (_) async => const SportsGameSummary(scoringPlays: [
+              SportsGoal(
+                  minute: '6:33',
+                  scorer: 'TD: Josh Jacobs',
+                  teamId: 'mtl',
+                  period: 'Q2',
+                  score: '0-7'),
+            ]);
+    addTearDown(() => GoalsAlertOverlay.debugSummary = null);
+    await mount(tester);
+    score = '6';
+    await tick(tester, 30);
+    expect(find.text('TD: Josh Jacobs · Q2 6:33'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+  });
+
+  testWidgets('scorer never listed: card ends after the wait', (tester) async {
+    await setup();
+    GoalsAlertOverlay.debugSummary = (_) async => const SportsGameSummary();
+    addTearDown(() => GoalsAlertOverlay.debugSummary = null);
+    await mount(tester);
+    score = '1';
+    await tick(tester, 30);
+    expect(find.text('Canadiens scored!'), findsOneWidget);
+    for (var i = 0; i < 9; i++) {
+      await tick(tester, 5);
+    }
+    expect(find.byKey(const ValueKey('goal-alert')), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+  });
+
   testWidgets('popup appears over dialogs and menus too', (tester) async {
     await setup();
     await mount(tester);

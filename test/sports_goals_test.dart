@@ -53,4 +53,43 @@ void main() {
     expect(first.teamId, '13');
     expect(s.goals.last.assists, isEmpty); // unassisted
   });
+
+  test('football: touchdowns and field goals for the goals alert', () {
+    Map<String, dynamic> score(String type, String text, String team, int q,
+            String clock, int a, int h) =>
+        {
+          'type': {'text': type},
+          'text': text,
+          'team': {'id': team},
+          'period': {'number': q},
+          'clock': {'displayValue': clock},
+          'awayScore': a,
+          'homeScore': h,
+        };
+    final body = jsonEncode({
+      'scoringPlays': [
+        score('Field Goal Good', 'Ryan Fitzgerald 39 Yd Field Goal ', '29', 1,
+            '11:43', 3, 0),
+        score(
+            'Passing Touchdown',
+            'Tucker Kraft 12 Yd pass from Jordan Love (Trey Smack PAT Failed)',
+            '9',
+            1,
+            '5:08',
+            3,
+            6),
+        score('Safety', 'Team safety', '29', 2, '9:00', 5, 6),
+        score('Rushing Touchdown', 'Josh Jacobs 1 Yd Rush (Trey Smack Kick)',
+            '9', 5, '6:33', 5, 13),
+      ],
+    });
+    final plays = parseEspnSummary((body, '9', '29')).scoringPlays;
+    expect(plays.map((p) => p.scorer),
+        ['FG: Ryan Fitzgerald', 'TD: Tucker Kraft', 'TD: Josh Jacobs']);
+    expect(plays[1].period, 'Q1');
+    expect(plays[1].minute, '5:08');
+    expect(plays.last.period, 'OT');
+    expect(plays.last.score, '5-13');
+    expect(plays.last.teamId, '9');
+  });
 }

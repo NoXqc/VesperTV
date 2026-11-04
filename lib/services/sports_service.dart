@@ -1612,6 +1612,34 @@ SportsGameSummary parseEspnSummary((String, String, String) args) {
     }
   }
 
+  // Football touchdowns / field goals for the goals alert ("TD: Josh Jacobs").
+  // ESPN's text starts with the scorer: "Josh Jacobs 1 Yd Rush (… Kick)",
+  // "Tucker Kraft 12 Yd pass from Jordan Love".
+  final scoringPlays = <SportsGoal>[];
+  for (final p in (json['scoringPlays'] as List?) ?? const []) {
+    final m = p as Map;
+    final type = ((m['type'] as Map?)?['text'] ?? '').toString().toLowerCase();
+    final tag = type.contains('touchdown')
+        ? 'TD'
+        : type.contains('field goal')
+            ? 'FG'
+            : null;
+    if (tag == null) continue;
+    final name = RegExp(r'^(.+?) \d+ (?:Yd|Yard)')
+        .firstMatch((m['text'] ?? '').toString().trim())
+        ?.group(1);
+    if (name == null) continue;
+    final q = (m['period'] as Map?)?['number'];
+    final away = m['awayScore'], home = m['homeScore'];
+    scoringPlays.add(SportsGoal(
+      minute: ((m['clock'] as Map?)?['displayValue'] ?? '').toString(),
+      scorer: '$tag: $name',
+      teamId: (m['team'] as Map?)?['id']?.toString(),
+      period: q is num ? (q > 4 ? 'OT' : 'Q$q') : null,
+      score: away is num && home is num ? '$away-$home' : null,
+    ));
+  }
+
   // Standings groups that hold either team: a few columns, wins first.
   const preferred = [
     'overall', 'Total', 'W', 'D', 'L', 'T', 'OTL', 'P', 'PTS', 'PCT', 'GB', //
@@ -1672,6 +1700,7 @@ SportsGameSummary parseEspnSummary((String, String, String) args) {
     leaders: leaders,
     injuries: injuries,
     goals: goals,
+    scoringPlays: scoringPlays,
     tables: tables,
   );
 }
