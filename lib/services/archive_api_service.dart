@@ -143,8 +143,15 @@ class ArchiveApiService {
       final lists = catalogs.where((c) => c.wireType == null).toList();
       final metadataOnly =
           lists.isEmpty && (imdbResources['meta']?.isNotEmpty ?? false);
+      // TMDB catalog add-ons (`tmdb:` ids) list each title's `imdb_id` too,
+      // which is all the list-only path needs: details from Cinemeta by
+      // that id (ArchiveService.meta's fallback), streams from the user's
+      // add-ons. User report 2026-11-04 ("The Movie Database Addon"
+      // refused as "offers no streams").
       if ((lists.isEmpty && !metadataOnly) ||
-          !(prefixes.isEmpty || prefixes.any((p) => p.startsWith('tt')))) {
+          !(prefixes.isEmpty ||
+              prefixes
+                  .any((p) => p.startsWith('tt') || p.startsWith('tmdb')))) {
         throw ArchiveApiException('This source offers no streams.');
       }
       return ArchiveSource(

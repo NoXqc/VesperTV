@@ -25,6 +25,7 @@ void main() {
     final body = switch (req.url.path) {
       '/imdb/manifest.json' => manifest(['tt']),
       '/own/manifest.json' => manifest(['own']),
+      '/tmdb/manifest.json' => manifest(['tmdb:']),
       _ => null,
     };
     if (body == null) return http.Response('not found', 404);
@@ -44,6 +45,14 @@ void main() {
     final again = ArchiveSource.fromJson(
         jsonDecode(jsonEncode(source.toJson())) as Map<String, dynamic>);
     expect(again.listOnly, isTrue);
+  });
+
+  test('a TMDB catalog add-on (tmdb: ids, no streams) is list-only too',
+      () async {
+    final source = await ArchiveApiService(client: client)
+        .fetchManifest('https://x.org/tmdb/manifest.json');
+    expect(source.listOnly, isTrue);
+    expect(source.catalogs, hasLength(2));
   });
 
   test('catalogs on its own ids without streams are still refused', () {
