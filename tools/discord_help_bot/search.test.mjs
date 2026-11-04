@@ -59,6 +59,29 @@ test('unknown and instruction-injection queries do not invent an answer', () => 
   }
 });
 
+test('sync answers cover setup, recovery, reset and expiry without implying it shipped', () => {
+  const cases = [
+    ['sync without account', 'Set up sync without an account'],
+    ['link another device to sync', 'Link another device to sync'],
+    ['what syncs between devices', 'What syncs between devices'],
+    ['show sync recovery code', 'Show or use a sync recovery code'],
+    ['lost sync recovery code', 'Lost sync recovery code'],
+    ['reset sync code', 'Reset the sync code'],
+    ['stop syncing on this device', 'Stop syncing on this device'],
+    ['sync deleted after three months', 'Sync deleted after three months'],
+    ['sync now', 'Sync now and last sync time'],
+  ];
+  for (const [query, title] of cases) {
+    assert.equal(searchGuide(entries, query)[0]?.entry.title, title, query);
+    assert.match(guideReply(entries, query).content, /remote\.html#Sync/);
+  }
+  assert.match(guideReply(entries, 'sync without account').content, /upcoming release/);
+  assert.match(guideReply(entries, 'sync without account').content, /encrypted on the device/);
+  assert.match(guideReply(entries, 'lost sync recovery code').content, /cannot recover your old sync/);
+  assert.match(guideReply(entries, 'sync deleted after three months').content, /90 days/);
+  assert.match(guideReply(entries, 'what syncs between devices').content, /Profile photos, imported M3U files/);
+});
+
 test('all answers link to a real website tab and never ping users', () => {
   for (const entry of entries) {
     const url = new URL(entry.url);

@@ -696,6 +696,78 @@
     "url": "https://vespertv.app/remote.html#Settings"
   },
   {
+    "id": "84dcb061f3168727",
+    "category": "Sync",
+    "title": "Set up sync without an account",
+    "answer": "Sync is planned for an upcoming release; it is not in public Android 1.0.56 or Windows 1.0.45 yet. Open Sync on your first device and choose Set up sync. No account, email or login is needed. Save the recovery code shown once, then choose I saved my recovery code. Your setup is encrypted on the device; the server stores only ciphertext and cannot read it.",
+    "controls": "Settings > Device & data > Sync > Set up sync",
+    "url": "https://vespertv.app/remote.html#Sync"
+  },
+  {
+    "id": "7954ed608bb73f76",
+    "category": "Sync",
+    "title": "Link another device to sync",
+    "answer": "On an already linked device, choose Link a device. Enter its 16-digit link code under I have a code on the other device; the QR contains the same code as text. The countdown lasts 10 minutes. An expired link code needs a new one from the linked device. Use the Sync code screen, not Transfer > Receive. If both devices already have the same server and username or M3U URL, sync matches that playlist so favourites and watch positions line up.",
+    "controls": "Sync > Link a device; other device > I have a code",
+    "url": "https://vespertv.app/remote.html#Sync"
+  },
+  {
+    "id": "e376839ed32e3661",
+    "category": "Sync",
+    "title": "What syncs between devices",
+    "answer": "Playlists, viewer profiles, favourites and their order, hidden groups and channels, own groups, watch positions, Sports Trak preferences, Media Hub sources/favourites/resume and shared settings sync. Layout, enabled playlists on this box, caches, current viewer, PIN lockout and backup timers stay on this device. Profile photos, imported M3U files and recently played / Continue Watching lists do not sync in this first version; watch positions do. Sync copies your setup, not channels or video files.",
+    "controls": "Settings > Device & data > Sync",
+    "url": "https://vespertv.app/remote.html#Sync"
+  },
+  {
+    "id": "8b2b16db2844665d",
+    "category": "Sync",
+    "title": "Sync now and last sync time",
+    "answer": "Last sync shows the time of the latest successful sync; Sync now requests another round. Check the error message if it cannot reach the server. Linked devices also sync while VesperTV is open and when it returns to the screen. Some setup and settings changes appear after a full restart. The first join of an existing playlist can also wait until restart to keep its identity and favourites together.",
+    "controls": "Sync > Sync now",
+    "url": "https://vespertv.app/remote.html#Sync"
+  },
+  {
+    "id": "1fecb49a520781cd",
+    "category": "Sync",
+    "title": "Show or use a sync recovery code",
+    "answer": "The recovery code has 26 characters, displayed in groups with dashes, plus a QR. Show recovery code asks for the profile PIN when one is set. On the new device choose I have a code, then Use a recovery code, and enter it. Keep this code private: anyone holding it can join your sync. A 16-digit link code is temporary; the recovery code is the lasting way back in.",
+    "controls": "Sync > Show recovery code; other device > I have a code > Use a recovery code",
+    "url": "https://vespertv.app/remote.html#Sync"
+  },
+  {
+    "id": "0528114fdb4c0199",
+    "category": "Sync",
+    "title": "Lost sync recovery code",
+    "answer": "If you lost the recovery code but still have a linked device, open Sync > Show recovery code there (profile PIN when set). If you lose all linked devices and the recovery code, we cannot recover your old sync. Set up a new sync from the data you still have. No email or account can restore the old code.",
+    "controls": "Keep a linked device or the saved recovery code",
+    "url": "https://vespertv.app/remote.html#Sync"
+  },
+  {
+    "id": "4492ee2c7a363f92",
+    "category": "Sync",
+    "title": "Reset the sync code",
+    "answer": "Reset sync code asks for the profile PIN when set, then confirmation. It creates a new recovery code to save. Other devices stop syncing and show that the code was reset on another device. Link each device again using a fresh link code or the new recovery code. Use reset if a code was shared accidentally or a linked box was sold.",
+    "controls": "Sync > Reset sync code",
+    "url": "https://vespertv.app/remote.html#Sync"
+  },
+  {
+    "id": "2a126a580d7c1c5b",
+    "category": "Sync",
+    "title": "Stop syncing on this device",
+    "answer": "Confirm Stop syncing on this device to unlink only this device. Your local setup stays, and other devices keep syncing. This is different from Reset sync code, which requires other devices to link again.",
+    "controls": "Sync > Stop syncing on this device",
+    "url": "https://vespertv.app/remote.html#Sync"
+  },
+  {
+    "id": "040899d8914198a0",
+    "category": "Sync",
+    "title": "Sync deleted after three months",
+    "answer": "The server deletes a sync after 3 months (90 days) without any linked device checking in. Using a linked device refreshes that period. The temporary 16-digit link code still expires after 10 minutes. After server expiry, a device with the recovery code can start that sync again from its remaining local data; the deleted server snapshot cannot be recovered.",
+    "controls": "No device checks in for 3 months",
+    "url": "https://vespertv.app/remote.html#Sync"
+  },
+  {
     "id": "eb70da87eaa2bb47",
     "category": "Windows",
     "title": "Select, then open",
