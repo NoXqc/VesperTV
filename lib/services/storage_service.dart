@@ -168,6 +168,32 @@ class StorageService {
   Future<String> rawCachePath(String name, String ext) async =>
       '${(await _ensureCacheDir()).path}/$name.$ext';
 
+  /// Every viewer's Continue Watching history file (`recently_played`,
+  /// `recently_played_vp_<id>`, see PlaybackService) by cache name, for
+  /// cloud sync.
+  Future<Map<String, String>> recentlyPlayedFiles() async {
+    final out = <String, String>{};
+    try {
+      final dir = await _ensureCacheDir();
+      await for (final f in dir.list()) {
+        final name = f.uri.pathSegments.last;
+        if (f is! File || !isRecentlyPlayedFile(name.replaceAll('.json', ''))) {
+          continue;
+        }
+        try {
+          out[name.substring(0, name.length - 5)] = await f.readAsString();
+        } catch (_) {}
+      }
+    } catch (_) {
+      // No cache folder (cleared meanwhile, or tests): nothing to report;
+      // cloud sync reads a missing history as unchanged.
+    }
+    return out;
+  }
+
+  static bool isRecentlyPlayedFile(String name) =>
+      RegExp(r'^recently_played(_vp_[A-Za-z0-9_-]+)?$').hasMatch(name);
+
   Future<String?> readCacheFile(String name) async {
     final dir = await _ensureCacheDir();
     final file = File('${dir.path}/$name.json');
@@ -1502,6 +1528,8 @@ class StorageService {
     AppConstants.keyLastPositionPrefix,
     AppConstants.keyLastDurationPrefix,
     AppConstants.keyPaletteId,
+    // Read from storage on every use (ArchiveService._historyEntries).
+    AppConstants.keyArchiveHistory,
   ];
 
   /// Cloud sync's view of the setup (`SyncData`, cloud_sync.dart): the

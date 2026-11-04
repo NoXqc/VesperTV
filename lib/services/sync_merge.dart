@@ -61,11 +61,17 @@ Map<String, int> stampLocalChanges(SyncSnapshot? base,
 /// JSON lists of `{"id": …}` objects merge per id, anything else goes to
 /// the newer stamp. Joining: lists merge in, every other value is the
 /// server's.
+///
+/// [newestFirst]: keys holding a history (Continue Watching, Media Hub
+/// Recently watched: newest entry first). Their entries merge per id the
+/// same way, but the side that changed last goes first, so a title watched
+/// here a minute ago stays at the front instead of under the server's list.
 SyncSnapshot mergeSync({
   required SyncSnapshot? base,
   required Map<String, Object?> local,
   required SyncSnapshot remote,
   required Map<String, int> pending,
+  bool Function(String key)? newestFirst,
 }) {
   final values = <String, Object?>{};
   final stamps = <String, int>{...remote.stamps};
@@ -92,7 +98,8 @@ SyncSnapshot mergeSync({
         result = l;
         stamps[key] = localStamp;
       } else {
-        result = _both(b, l, r, localStamp > remoteStamp);
+        result = _both(b, l, r, localStamp > remoteStamp,
+            recency: newestFirst?.call(key) ?? false);
         stamps[key] = localStamp > remoteStamp ? localStamp : remoteStamp;
       }
     }
@@ -111,15 +118,16 @@ Object? _join(Object? l, Object? r) {
   }
   final li = _idList(l), ri = _idList(r);
   if (li != null && ri != null) {
-    final ids = {for (final e in ri) e['id']};
-    return _tag(
-        's', jsonEncode([...ri, ...li.where((e) => !ids.contains(e['id']))]));
+    final ids = {for (final e in ri) _entryId(e)};
+    return _tag('s',
+        jsonEncode([...ri, ...li.where((e) => !ids.contains(_entryId(e)))]));
   }
   return r;
 }
 
 /// Both sides changed the key since [b].
-Object? _both(Object? b, Object? l, Object? r, bool localNewer) {
+Object? _both(Object? b, Object? l, Object? r, bool localNewer,
+    {bool recency = false}) {
   final ls = _stringList(l), rs = _stringList(r);
   if (ls != null && rs != null) {
     final bs = _stringList(b) ?? const <String>[];
@@ -134,26 +142,33 @@ Object? _both(Object? b, Object? l, Object? r, bool localNewer) {
   final li = _idList(l), ri = _idList(r);
   if (li != null && ri != null) {
     final bi = _idList(b) ?? const <Map<String, Object?>>[];
-    return _tag('s', jsonEncode(_mergeById(bi, li, ri, localNewer)));
+    return _tag(
+        's', jsonEncode(_mergeById(bi, li, ri, localNewer, recency: recency)));
   }
   return localNewer ? l : r;
 }
 
 /// Per id, the same rules as per key; an entry both sides changed goes to
-/// the newer side. The server's order first, then entries added here.
-List<Map<String, Object?>> _mergeById(
-    List<Map<String, Object?>> b,
-    List<Map<String, Object?>> l,
-    List<Map<String, Object?>> r,
-    bool localNewer) {
+/// the newer side. The server's order first, then entries added here; with
+/// [recency], the newer side's order first (see [mergeSync]).
+List<Map<String, Object?>> _mergeById(List<Map<String, Object?>> b,
+    List<Map<String, Object?>> l, List<Map<String, Object?>> r, bool localNewer,
+    {bool recency = false}) {
   Map<Object?, Map<String, Object?>> byId(List<Map<String, Object?>> list) =>
-      {for (final e in list) e['id']: e};
+      {for (final e in list) _entryId(e): e};
   final bm = byId(b), lm = byId(l), rm = byId(r);
   final out = <Map<String, Object?>>[];
-  final order = [
-    ...r.map((e) => e['id']),
-    ...l.map((e) => e['id']).where((id) => !rm.containsKey(id)),
-  ];
+  final (first, second) = recency && localNewer ? (l, r) : (r, l);
+  final order = {
+    // A history: what either side watched since the base comes first
+    // (newer side, then the other), then the rest in the newer side's order.
+    if (recency) ...[
+      for (final e in [...first, ...second])
+        if (!bm.containsKey(_entryId(e))) _entryId(e),
+    ],
+    ...first.map(_entryId),
+    ...second.map(_entryId),
+  };
   for (final id in order) {
     final be = bm[id], le = lm[id], re = rm[id];
     final localChanged = !syncValuesEqual(le, be);
@@ -180,8 +195,18 @@ List<String>? _stringList(Object? tagged) {
   return v is List ? [for (final s in v) '$s'] : null;
 }
 
-/// A tagged string holding a JSON list of objects that all have a string
-/// `id` (playlists, Media Hub sources, viewer profiles), else null.
+/// An entry's identity: its `id`, or for a Media Hub history entry (no
+/// `id`) its source + title id.
+Object? _entryId(Map<String, Object?> e) {
+  final id = e['id'];
+  if (id is String) return id;
+  final meta = e['meta'];
+  return meta is Map ? '${e['src']}|${meta['id']}' : null;
+}
+
+/// A tagged string holding a JSON list of objects that all have an
+/// identity ([_entryId]: playlists, Media Hub sources, viewer profiles,
+/// histories), else null.
 List<Map<String, Object?>>? _idList(Object? tagged) {
   if (tagged is! Map || tagged['t'] != 's') return null;
   final v = tagged['v'];
@@ -191,8 +216,10 @@ List<Map<String, Object?>>? _idList(Object? tagged) {
     if (list is! List) return null;
     final out = <Map<String, Object?>>[];
     for (final e in list) {
-      if (e is! Map || e['id'] is! String) return null;
-      out.add(Map<String, Object?>.from(e));
+      if (e is! Map) return null;
+      final entry = Map<String, Object?>.from(e);
+      if (_entryId(entry) == null) return null;
+      out.add(entry);
     }
     return out;
   } catch (_) {

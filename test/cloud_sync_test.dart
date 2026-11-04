@@ -24,10 +24,11 @@ class _Device implements SyncData {
   _Device(this.values);
   final Map<String, Object?> values;
   final store = _MemoryStore();
-  late final engine = SyncEngine(store, this);
+  late final engine = SyncEngine(store, this,
+      newestFirst: isHistoryKey, keepWhenMissing: (k) => k.startsWith('file:'));
 
   @override
-  Map<String, Object?> exportForSync() => Map.of(values);
+  Future<Map<String, Object?>> exportForSync() async => Map.of(values);
 
   @override
   Future<void> applySyncChanges(
@@ -273,6 +274,43 @@ void main() {
     await relaunched.syncBeforeLoad();
     expect(playlistsJson(), contains('Home renamed'));
     relaunched.dispose();
+  });
+
+  test('Continue Watching: new titles lead, a wiped cache never deletes it',
+      () async {
+    if (relay == null) return markTestSkipped('python not found');
+    Map<String, Object?> history(List<String> ids) =>
+        {'t': 's', 'v': '[${ids.map((id) => '{"id":"$id"}').join(',')}]'};
+    List<String> idsIn(Object? tagged) => RegExp(r'"id":"([^"]+)"')
+        .allMatches((tagged as Map)['v'] as String)
+        .map((m) => m.group(1)!)
+        .toList();
+    final a = _Device({
+      'file:recently_played': history(['old'])
+    });
+    final b = _Device({});
+    final secret = newSyncSecret();
+    await a.engine.start(secret);
+    await a.engine.sync();
+    await b.engine.start(secret);
+    await b.engine.sync();
+    expect(idsIn(b.values['file:recently_played']), ['old']);
+
+    // B watches an episode, then A watches a movie.
+    b.values['file:recently_played'] = history(['ep1', 'old']);
+    await b.engine.sync();
+    a.values['file:recently_played'] = history(['movie', 'old']);
+    await a.engine.sync();
+    expect(idsIn(a.values['file:recently_played']), ['movie', 'ep1', 'old']);
+    await b.engine.sync();
+    expect(idsIn(b.values['file:recently_played']), ['movie', 'ep1', 'old']);
+
+    // Android empties B's cache folder: the history comes back, A keeps it.
+    b.values.remove('file:recently_played');
+    await b.engine.sync();
+    expect(idsIn(b.values['file:recently_played']), ['movie', 'ep1', 'old']);
+    await a.engine.sync();
+    expect(idsIn(a.values['file:recently_played']), ['movie', 'ep1', 'old']);
   });
 
   test('after Reset sync code, a device on the old code stops', () async {

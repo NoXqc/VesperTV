@@ -603,10 +603,11 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // reload as a profile switch, no network); the rest waits for the
       // next launch. Their notifications mean the user may have changed
       // something worth sending.
-      _cloudSync.onApplied = (_) {
+      _cloudSync.onApplied = (keys) {
         _playlistManager.applyActiveViewer();
         unawaited(_playbackService.reloadForViewer());
         _preferences.reloadPaletteForViewer();
+        if (keys.any(isHistoryKey)) _archiveService.historyChanged();
       };
       _cloudSync.startAutomatic();
       _playlistManager.addListener(_cloudSync.noteLocalChange);

@@ -121,6 +121,47 @@ void main() {
     expect(merged.values['only_here'], i(7));
   });
 
+  test('histories merge newest first: both devices\' new titles lead', () {
+    Map<String, Object?> e(String id) => {'id': id, 'name': id};
+    final base = SyncSnapshot({
+      'h': ids([e('a'), e('b')])
+    }, const {});
+    // The other device watched y (earlier); this one watched x (later).
+    final remote = SyncSnapshot({
+      'h': ids([e('y'), e('a'), e('b')])
+    }, const {
+      'h': 100
+    });
+    final merged = mergeSync(
+        base: base,
+        local: {
+          'h': ids([e('x'), e('a'), e('b')])
+        },
+        remote: remote,
+        pending: const {'h': 200},
+        newestFirst: (k) => k == 'h');
+    expect(idsOf(merged.values['h']), ['x', 'y', 'a', 'b']);
+  });
+
+  test('Media Hub history entries (no id) merge by source + title', () {
+    String entry(String src, String id) =>
+        '{"src":"$src","meta":{"id":"$id","name":"$id"}}';
+    final base = SyncSnapshot({'arc': s('[${entry('s1', 'tt1')}]')}, const {});
+    final remote = SyncSnapshot(
+        {'arc': s('[${entry('s1', 'tt2')},${entry('s1', 'tt1')}]')},
+        const {'arc': 100});
+    final merged = mergeSync(
+        base: base,
+        local: {'arc': s('[${entry('s2', 'tt9')},${entry('s1', 'tt1')}]')},
+        remote: remote,
+        pending: const {'arc': 200},
+        newestFirst: (k) => k == 'arc');
+    final list =
+        jsonDecode((merged.values['arc'] as Map)['v'] as String) as List;
+    expect([for (final x in list) (x as Map)['meta']['id']],
+        ['tt9', 'tt2', 'tt1']);
+  });
+
   test('local changes keep their first stamp until synced', () {
     final base = SyncSnapshot({'a': i(1), 'b': i(1)}, const {});
     var pending = stampLocalChanges(base, {'a': i(2), 'b': i(1)}, {}, 100);

@@ -410,7 +410,7 @@ class FileSyncStore implements SyncStore {
 /// The synced data on this device: `StorageService.exportForSync` /
 /// `applySyncChanges` in the app, a map in tests.
 abstract class SyncData {
-  Map<String, Object?> exportForSync();
+  Future<Map<String, Object?>> exportForSync();
 
   /// Writes [changed] values and removes [removed] keys.
   Future<void> applySyncChanges(
@@ -450,12 +450,21 @@ class SyncResult {
 /// Runs one sync: date local changes, fetch, merge, apply, upload,
 /// retrying after another device's upload (up to 3 times).
 class SyncEngine {
-  SyncEngine(this.store, this.data, {DateTime Function()? clock})
+  SyncEngine(this.store, this.data,
+      {DateTime Function()? clock, this.newestFirst, this.keepWhenMissing})
       : _now = clock ?? DateTime.now;
 
   final SyncStore store;
   final SyncData data;
   final DateTime Function() _now;
+
+  /// History keys, merged newest first (see [mergeSync]).
+  final bool Function(String key)? newestFirst;
+
+  /// Keys whose absence here means "not known", never "removed": files in
+  /// the cache folder, which Android may empty (an app-side clear writes
+  /// an empty list instead). The synced value is written back.
+  final bool Function(String key)? keepWhenMissing;
 
   Future<void>? _running;
 
@@ -494,7 +503,7 @@ class SyncEngine {
   Future<bool> hasLocalChanges() async {
     final state = await store.load();
     if (state == null) return false;
-    final local = _effectiveLocal(state, data.exportForSync());
+    final local = _effectiveLocal(state, await data.exportForSync());
     final base = state.base?.values ?? const {};
     for (final key in {...local.keys, ...base.keys}) {
       if (!syncValuesEqual(local[key], base[key])) return true;
@@ -504,11 +513,21 @@ class SyncEngine {
 
   /// [local] with each still-untouched held key read as the base's value
   /// (it isn't a change of ours, just not written yet).
-  static Map<String, Object?> _effectiveLocal(
+  Map<String, Object?> _effectiveLocal(
       SyncState state, Map<String, Object?> local) {
-    if (state.deferred.isEmpty) return local;
-    final out = {...local};
     final base = state.base?.values ?? const {};
+    final keep = keepWhenMissing;
+    final missing = keep == null
+        ? const <String>[]
+        : [
+            for (final k in base.keys)
+              if (!local.containsKey(k) && keep(k)) k
+          ];
+    if (state.deferred.isEmpty && missing.isEmpty) return local;
+    final out = {...local};
+    for (final k in missing) {
+      out[k] = base[k];
+    }
     for (final e in state.deferred.entries) {
       if (!syncValuesEqual(local[e.key], e.value)) continue;
       final b = base[e.key];
@@ -525,7 +544,7 @@ class SyncEngine {
       http.Client? httpClient, bool Function(String key)? applyNow) async {
     var state = await store.load();
     if (state == null) return null;
-    final local = data.exportForSync();
+    final local = await data.exportForSync();
     // Held keys the user has since edited here are ordinary changes now.
     final deferred = {
       for (final e in state.deferred.entries)
@@ -552,7 +571,8 @@ class SyncEngine {
             base: base,
             local: effective,
             remote: remoteSnap,
-            pending: state.pending);
+            pending: state.pending,
+            newestFirst: newestFirst);
 
         // What this device has to write, split into now and later.
         final changed = <String, Object?>{};
@@ -587,7 +607,7 @@ class SyncEngine {
 
         // The user changed one of these keys meanwhile: keep the old base
         // so the next sync merges that edit properly.
-        final now = data.exportForSync();
+        final now = await data.exportForSync();
         if ([...changed.keys, ...removed]
             .any((k) => !syncValuesEqual(now[k], local[k]))) {
           return SyncResult(pulled: 0, pushed: pushed, busy: true);

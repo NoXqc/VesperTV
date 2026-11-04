@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'cloud_sync.dart';
 import 'cloud_transfer.dart' show CloudTransfer;
 import 'device_transfer.dart' show TransferException;
+import '../utils/constants.dart';
 import 'storage_service.dart';
 
 /// What Settings > Sync shows (dev-notes/cloud-sync.md).
@@ -53,7 +54,8 @@ class CloudSyncService extends ChangeNotifier {
     if (existing != null) return existing;
     _store ??= FileSyncStore(
         '${(await getApplicationSupportDirectory()).path}/cloud_sync.json');
-    return _engine = SyncEngine(_store!, _StorageSyncData(_storage));
+    return _engine = SyncEngine(_store!, _StorageSyncData(_storage),
+        newestFirst: isHistoryKey, keepWhenMissing: _isFileKey);
   }
 
   /// Reads the saved state; call once at startup.
@@ -156,7 +158,10 @@ class CloudSyncService extends ChangeNotifier {
       // Checked per key when the merge decides, so a sync that started
       // before the services loaded still holds what they now own.
       final result = await engine.sync(
-          applyNow: (key) => !_appLoaded || StorageService.isLiveSyncKey(key));
+          applyNow: (key) =>
+              !_appLoaded ||
+              _isFileKey(key) ||
+              StorageService.isLiveSyncKey(key));
       _lastError = null;
       _lastSync = DateTime.now();
       if (result == null) return 0;
@@ -258,15 +263,48 @@ class CloudSyncService extends ChangeNotifier {
   }
 }
 
+/// Sync keys for files rather than prefs: `file:<cache name>`. Only the
+/// Continue Watching histories (re-read by `PlaybackService.reloadForViewer`).
+const _filePrefix = 'file:';
+
+bool _isFileKey(String key) => key.startsWith(_filePrefix);
+
+/// Newest-first lists: Continue Watching and Media Hub Recently watched.
+bool isHistoryKey(String key) =>
+    _isFileKey(key) || key.startsWith(AppConstants.keyArchiveHistory);
+
 class _StorageSyncData implements SyncData {
   _StorageSyncData(this.storage);
   final StorageService storage;
 
   @override
-  Map<String, Object?> exportForSync() => storage.exportForSync();
+  Future<Map<String, Object?>> exportForSync() async => {
+        ...storage.exportForSync(),
+        for (final e in (await storage.recentlyPlayedFiles()).entries)
+          '$_filePrefix${e.key}': {'t': 's', 'v': e.value},
+      };
 
   @override
   Future<void> applySyncChanges(
-          Map<String, Object?> changed, Set<String> removed) =>
-      storage.applySyncChanges(changed, removed);
+      Map<String, Object?> changed, Set<String> removed) async {
+    String? file(String key) {
+      final name = key.substring(_filePrefix.length);
+      return StorageService.isRecentlyPlayedFile(name) ? name : null;
+    }
+
+    for (final e in changed.entries) {
+      if (!_isFileKey(e.key)) continue;
+      final name = file(e.key);
+      final v = e.value is Map ? (e.value as Map)['v'] : null;
+      if (name != null && v is String) await storage.writeCacheFile(name, v);
+    }
+    for (final key in removed.where(_isFileKey)) {
+      final name = file(key);
+      if (name != null) await storage.deleteCacheFile(name);
+    }
+    await storage.applySyncChanges({
+      for (final e in changed.entries)
+        if (!_isFileKey(e.key)) e.key: e.value
+    }, removed.where((k) => !_isFileKey(k)).toSet());
+  }
 }

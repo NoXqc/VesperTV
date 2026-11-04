@@ -1060,6 +1060,10 @@ class ArchiveService extends ChangeNotifier {
     _notify();
   }
 
+  /// Cloud sync wrote another device's Recently watched into storage; the
+  /// rows re-read it ([_historyEntries]) on the rebuild this triggers.
+  void historyChanged() => _notify();
+
   Future<void> removeFromHistory(ArchiveSource source, ArchiveMeta meta) async {
     final entries =
         _historyEntries().where((e) => !_sameTitle(e, source, meta)).toList();

@@ -6,7 +6,7 @@ after **3 months without any device checking in**. Hosted on the VPS relay (`too
 `pair.vespertv.app`), next to Transfer's vault. ~400 active users (estimate) is tiny for it.
 
 ## What the server sees
-An opaque id, a hashed write token, a version number, the expiry and ciphertext (≤ 1 MB).
+An opaque id, a hashed write token, a version number, the expiry and ciphertext (≤ 4 MB).
 No IP is stored (nginx `access_log off`, the relay logs no requests); a per-IP request counter
 lives in memory only for rate limiting.
 
@@ -30,7 +30,18 @@ favourites, hidden groups/channels, own groups, watch positions, history, Sports
 sources/favourites/resume, settings. Device-only keys (layout, enabled playlists on this box,
 caches, PIN lockout, current viewer, backup timer) never sync. Not in v1: profile photos, imported
 M3U files and the recently played / Continue Watching history (files in the cache folder, not
-prefs; watch *positions* do sync).
+prefs; watch *positions* do sync). **Continue Watching does sync** (since 2026-11-04): each viewer's
+`recently_played*` cache file travels as a `file:<name>` key, merges newest first (`mergeSync`
+`newestFirst`; Media Hub Recently watched too, by source + title) and is live (`reloadForViewer`).
+A missing file means "unknown", never "cleared" (`SyncEngine.keepWhenMissing`): Android may empty the
+cache folder, and sync writes the history back instead of wiping every device.
+
+## Size (measured 2026-11-04)
+Owner's Windows install: 69 keys, 40 KB gzipped. Synthetic heavy user (13 playlists x ~1650 hidden
+groups, 3 profiles, 3000 watched titles): ~600 KB gzipped, hidden groups = most of it. Cap raised
+1 MB -> 4 MB (owner OK). Every upload is the whole snapshot: ~600 KB per push for such a user, at most
+every 2 min while watching. If Send log `Sync: … pushed N KB` shows big users, split the snapshot
+into parts (progress / lists / rest) so playback only sends a few KB.
 
 ## Applying while the app runs
 Services read storage once at launch and keep their own copy, so a pulled value they own could be
@@ -78,7 +89,7 @@ the app comes back to the screen, when a show/movie page opens, and every 5 minu
 - `GET` → 200 blob + `ETag: "<version>"`, 304 on `If-None-Match` match, 404. Refreshes the
   3-month expiry (written at most once a day per sync).
 - `PUT` (`X-Vault-Token`, `If-Match: "<version>"`, `"0"` = create) → 204 + new `ETag`;
-  412 version mismatch, 403 wrong token, 413 over 1 MB.
+  412 version mismatch, 403 wrong token, 413 over 4 MB.
 - `DELETE` (`X-Vault-Token`) → 204 / 404.
 - 429 over 1200 requests/hour per IP (in memory). Shares the vault's 2 GB disk cap.
 
