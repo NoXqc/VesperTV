@@ -256,7 +256,8 @@ void main() {
             .isRestricted,
         isTrue);
     expect(storage.getParentalPin(), {'hash': 'server-fixture'});
-    await storage.setActiveViewerId('remote');
+    // The device-only current viewer follows its profile to the synced id.
+    expect(storage.getActiveViewerId(), 'remote');
     expect(storage.getFavorites(), {'p::two', 'p::one'});
     expect(storage.getShownGroups('p'), {'Kids'});
     expect(storage.getHiddenChannels('p'), {'raw1'});

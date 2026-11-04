@@ -10,6 +10,7 @@ import '../models/viewer_profile.dart';
 import '../models/profile_copy.dart';
 import 'profile_photos.dart';
 import 'local_playlist_files.dart';
+import 'sync_profile_match.dart' show syncProfileNameKey;
 import '../utils/constants.dart';
 
 /// Wraps [SharedPreferences] for small settings values, and the OS temp
@@ -1540,6 +1541,7 @@ class StorageService {
   /// removes [removed] keys; device-only keys are never touched.
   Future<void> applySyncChanges(
       Map<String, Object?> changed, Set<String> removed) async {
+    final before = getViewerProfiles();
     for (final key in removed) {
       if (_syncable(key)) await _prefs.remove(key);
     }
@@ -1564,6 +1566,24 @@ class StorageService {
           ]);
       }
     }
+    await _followActiveViewer(before);
+  }
+
+  /// The current viewer is device-only, so a join that gave its profile the
+  /// synced id would leave it pointing at nothing (= Main at the next launch,
+  /// even on a kids' box). Follow it to the one new profile with its name.
+  Future<void> _followActiveViewer(List<ViewerProfile> before) async {
+    final now = getViewerProfiles();
+    if (now.any((p) => p.id == _activeViewerId)) return;
+    final old = before.where((p) => p.id == _activeViewerId).firstOrNull;
+    if (old == null) return;
+    final known = {for (final p in before) p.id};
+    final name = syncProfileNameKey(old.name);
+    final target = now
+        .where(
+            (p) => !known.contains(p.id) && syncProfileNameKey(p.name) == name)
+        .toList();
+    if (target.length == 1) await setActiveViewerId(target.single.id);
   }
 
   Future<void> clearCache() async {

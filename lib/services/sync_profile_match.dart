@@ -38,7 +38,7 @@ Map<String, Object?> matchSyncProfiles(
     final id = profile['id'] as String;
     remoteIds.add(id);
     if (id == AppConstants.mainViewerId) continue;
-    final name = _nameKey(profile['name'] as String);
+    final name = syncProfileNameKey(profile['name'] as String);
     if (name.isNotEmpty) byName.putIfAbsent(name, () => []).add(profile);
   }
   // A profile already known on both sides must not be consumed by another
@@ -48,7 +48,7 @@ Map<String, Object?> matchSyncProfiles(
   for (final profile in source) {
     final id = profile['id'] as String;
     if (id == AppConstants.mainViewerId || remoteIds.contains(id)) continue;
-    final matches = byName[_nameKey(profile['name'] as String)]
+    final matches = byName[syncProfileNameKey(profile['name'] as String)]
         ?.where((target) => !claimed.contains(target['id']))
         .toList();
     if (matches == null || matches.length != 1) continue;
@@ -119,7 +119,8 @@ List<Map<String, Object?>>? _profiles(Object? tagged) {
 // Reuse the catalog's established accent folding, but only on letters:
 // punctuation, emoji and interior whitespace distinguish profile names.
 // Combining accents also fold when the name uses decomposed Unicode.
-String _nameKey(String name) => name
+// StorageService uses it too, to keep the device's active viewer.
+String syncProfileNameKey(String name) => name
     .trim()
     .toLowerCase()
     .replaceAll(RegExp(r'[\u0300-\u036f]'), '')
