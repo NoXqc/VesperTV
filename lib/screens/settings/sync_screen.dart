@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../l10n/l10n.dart';
+import '../../services/app_restart.dart';
 import '../../services/cloud_sync_service.dart';
 import '../../services/cloud_transfer.dart';
 import '../../services/device_transfer.dart';
@@ -45,6 +46,7 @@ class _SyncScreenState extends State<SyncScreen> {
   bool _busy = false;
   String? _error;
   SyncStatus? _shown;
+  bool _restartShown = false;
 
   FocusNode _node(String id) => _nodes.putIfAbsent(id, FocusNode.new);
 
@@ -111,10 +113,13 @@ class _SyncScreenState extends State<SyncScreen> {
   Widget build(BuildContext context) {
     final sync = context.watch<CloudSyncService>();
     final on = sync.status == SyncStatus.on;
-    final ids =
-        on ? ['now', 'link', 'recovery', 'reset', 'stop'] : ['setup', 'join'];
-    if (_shown != sync.status) {
+    final restart = on && sync.restartNeeded;
+    final ids = on
+        ? [if (restart) 'restart', 'now', 'link', 'recovery', 'reset', 'stop']
+        : ['setup', 'join'];
+    if (_shown != sync.status || restart != _restartShown) {
       _shown = sync.status;
+      _restartShown = restart;
       _focus(ids.first);
     }
     return withTvThemeIfNeeded(
@@ -142,6 +147,15 @@ class _SyncScreenState extends State<SyncScreen> {
                         'The sync code was reset on another device. Link this device again.')),
                   ],
                   const SizedBox(height: 16),
+                  if (restart) ...[
+                    Text(tr('Your playlists and sources from your other devices are ready. Restart VesperTV to load them.'),
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.w600)),
+                    _tile('restart', Icons.restart_alt, tr('Restart now'),
+                        () => unawaited(restartApp())),
+                    const SizedBox(height: 16),
+                  ],
                   if (on) ...[
                     Text(sync.lastSync == null
                         ? tr('Not synced yet')

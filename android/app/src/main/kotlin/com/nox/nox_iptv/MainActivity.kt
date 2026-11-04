@@ -175,6 +175,19 @@ class MainActivity : FlutterActivity() {
                 result.success(isTvUiMode || hasLeanback)
             } else if (call.method == "sdkInt") {
                 result.success(Build.VERSION.SDK_INT)
+            } else if (call.method == "restartApp") {
+                // Sync's Restart now: a cold start loads the settings held for
+                // the next launch. Fire TV only has the Leanback launch intent.
+                val launch = packageManager.getLaunchIntentForPackage(packageName)
+                    ?: packageManager.getLeanbackLaunchIntentForPackage(packageName)
+                val component = launch?.component
+                if (component == null) {
+                    result.success(false)
+                } else {
+                    startActivity(Intent.makeRestartActivityTask(component))
+                    result.success(true)
+                    Runtime.getRuntime().exit(0)
+                }
             } else {
                 result.notImplemented()
             }

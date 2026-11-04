@@ -45,6 +45,11 @@ class CloudSyncService extends ChangeNotifier {
   bool _syncing = false;
   bool get syncing => _syncing;
 
+  /// Settings from other devices waiting for the next launch (playlists,
+  /// Media Hub sources...): the Sync screen offers Restart now.
+  bool _restartNeeded = false;
+  bool get restartNeeded => _restartNeeded;
+
   /// The last sync's error, cleared by the next success.
   TransferException? _lastError;
   TransferException? get lastError => _lastError;
@@ -143,6 +148,7 @@ class CloudSyncService extends ChangeNotifier {
     await (await _ensureEngine()).stop();
     _status = SyncStatus.off;
     _lastSync = null;
+    _restartNeeded = false;
     _lastError = null;
     notifyListeners();
   }
@@ -167,6 +173,7 @@ class CloudSyncService extends ChangeNotifier {
       _lastError = null;
       _lastSync = DateTime.now();
       if (result == null) return 0;
+      _restartNeeded = _appLoaded && result.deferred > 0;
       debugPrint('Sync: ${result.pulled} in, ${result.deferred} held, '
           '${result.pushed ? 'pushed ${(result.bytes / 1024).round()} KB' : 'nothing pushed'}'
           '${result.busy ? ', busy (retry later)' : ''}, '

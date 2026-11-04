@@ -349,6 +349,7 @@ void main() {
     expect(storage.getFavorites(), {'p1::ch1', 'p1::ch2'});
     expect(reloaded, {'nox_favorites'});
     expect(playlistsJson(), contains('"Home"')); // held
+    expect(service.restartNeeded, isTrue); // Sync screen: Restart now
     service.dispose();
 
     // Next launch: the sync before the services load writes it.

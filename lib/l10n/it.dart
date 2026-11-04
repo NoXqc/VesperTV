@@ -2434,6 +2434,10 @@ const Map<String, String> kIt = {
       "Mantieni configurazione e avanzamento tra i dispositivi",
   "Keep your setup and watch progress together across devices. No account needed.":
       "Mantieni configurazione e avanzamento tra i dispositivi. Nessun account necessario.",
+  "Restart now":
+      "Riavvia ora",
+  "Your playlists and sources from your other devices are ready. Restart VesperTV to load them.":
+      "Le playlist e le fonti dei tuoi altri dispositivi sono pronte. Riavvia VesperTV per caricarle.",
   "Some changes appear after you restart VesperTV. Profile photos stay on each device. Playlists imported from a file (USB drive, SD card or folder) do not sync: import the file on each device. Playlists added with a link or an Xtream login sync normally.":
       "Alcune modifiche appaiono dopo il riavvio di VesperTV. Le foto del profilo restano su ogni dispositivo. Le playlist importate da un file (chiavetta USB, scheda SD o cartella) non si sincronizzano: importa il file su ogni dispositivo. Le playlist aggiunte con un link o un account Xtream si sincronizzano normalmente.",
   "The sync code was reset on another device. Link this device again.":
