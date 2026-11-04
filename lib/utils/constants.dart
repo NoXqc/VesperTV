@@ -558,6 +558,11 @@ class AppConstants {
   // On-disk cache file names (under the OS temp/cache directory — safe to
   // lose; the app just re-fetches from the network if they're missing).
   static const String cacheFileM3uChannels = 'm3u_channels';
+
+  /// The playlist's own M3U text, saved while it downloads and re-parsed
+  /// on start (replaced the `m3u_channels` JSON, which needed several
+  /// in-memory copies of a big list to write).
+  static const String cacheFileM3uSource = 'm3u_source';
   static const String cacheFileLiveChannels = 'xtream_live_channels';
   static const String cacheFileLiveCategories = 'xtream_live_categories';
   static const String cacheFileVodCategories = 'xtream_vod_categories';

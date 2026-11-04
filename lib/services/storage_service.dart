@@ -163,6 +163,11 @@ class StorageService {
     return await file.exists() ? file.path : null;
   }
 
+  /// Where a raw (non-JSON) cache file `<name>.<ext>` lives, next to the
+  /// JSON caches, whether it exists yet or not.
+  Future<String> rawCachePath(String name, String ext) async =>
+      '${(await _ensureCacheDir()).path}/$name.$ext';
+
   Future<String?> readCacheFile(String name) async {
     final dir = await _ensureCacheDir();
     final file = File('${dir.path}/$name.json');
@@ -274,6 +279,7 @@ class StorageService {
       _prefs.getDouble(AppConstants.keyDesktopVolume) ?? 100;
   Future<void> setDesktopVolume(double value) =>
       _prefs.setDouble(AppConstants.keyDesktopVolume, value);
+
   /// Windows: draw video without the GPU path (Settings > Playback >
   /// Software video). Device-only.
   bool getDesktopSoftwareVideo() =>
