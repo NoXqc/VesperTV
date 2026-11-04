@@ -358,7 +358,8 @@ const Map<String, String> kFr = {
   "See all": "Tout voir",
   "Update automatically": "Mettre à jour automatiquement",
   "Live stream format: HLS": "Format des flux en direct : HLS",
-  "Off: MPEG-TS (default, fastest start). On: HLS, like the HLS option in TiviMate. Plays about 10 seconds further behind live, but hides servers that send live TV in bursts. Applies from the next channel.": "Désactivé : MPEG-TS (par défaut, démarrage le plus rapide). Activé : HLS, comme l'option HLS de TiviMate. Joue environ 10 secondes plus loin du direct, mais masque les serveurs qui envoient la télé en direct par à-coups. S'applique à partir de la prochaine chaîne.",
+  "Off: MPEG-TS (default, fastest start). On: HLS, like the HLS option in TiviMate. Plays about 10 seconds further behind live, but hides servers that send live TV in bursts. Applies from the next channel.":
+      "Désactivé : MPEG-TS (par défaut, démarrage le plus rapide). Activé : HLS, comme l'option HLS de TiviMate. Joue environ 10 secondes plus loin du direct, mais masque les serveurs qui envoient la télé en direct par à-coups. S'applique à partir de la prochaine chaîne.",
   "On: when an update is due, it runs at launch without asking. Off: the app asks \"Update content now?\" first.":
       "Activé : quand une mise à jour est due, elle se lance au démarrage sans demander. Désactivé : l'appli demande d'abord « Mettre à jour le contenu maintenant ? ».",
   "Open on": "Ouvrir sur",
@@ -1821,8 +1822,7 @@ const Map<String, String> kFr = {
   "College": "Universitaire",
   // Settings > General > Support VesperTV
   "Support VesperTV": "Soutenir VesperTV",
-  "How you can help":
-      "Comment aider",
+  "How you can help": "Comment aider",
   "VesperTV is free and always will be: no ads, no tracking, no paid features. The support page shows how you can help pay for the server, the website and development.":
       "VesperTV est gratuit et le restera : sans publicité, sans pistage, sans fonctions payantes. La page de soutien explique comment aider à payer le serveur, le site et le développement.",
   "Supporting is a thank-you, never a paywall: everyone gets the same app.":
@@ -2346,21 +2346,30 @@ const Map<String, String> kFr = {
   "Total": "Total",
   "Betting odds · {book}": "Cotes · {book}",
   "Playlist editor": "Éditeur de playlist",
-  "Rename, hide copies, fallbacks and stream test, from your phone or PC": "Renommer, masquer les copies, chaînes de secours et test des flux, depuis votre téléphone ou PC",
-  "Rename, change logos, hide copies and dead streams, set fallback channels and clean up the guide, from your phone or PC. Your provider's playlist is never changed: edits are kept on this device and run again on every content update.": "Renommez des chaînes, changez les logos, masquez les copies et les flux morts, choisissez des chaînes de secours et allégez le guide, depuis votre téléphone ou PC. La playlist de votre fournisseur n'est jamais modifiée : les changements restent sur cet appareil et s'appliquent à chaque mise à jour du contenu.",
+  "Rename, hide copies, fallbacks and stream test, from your phone or PC":
+      "Renommer, masquer les copies, chaînes de secours et test des flux, depuis votre téléphone ou PC",
+  "Rename, change logos, hide copies and dead streams, set fallback channels and clean up the guide, from your phone or PC. Your provider's playlist is never changed: edits are kept on this device and run again on every content update.":
+      "Renommez des chaînes, changez les logos, masquez les copies et les flux morts, choisissez des chaînes de secours et allégez le guide, depuis votre téléphone ou PC. La playlist de votre fournisseur n'est jamais modifiée : les changements restent sur cet appareil et s'appliquent à chaque mise à jour du contenu.",
   "Could not open the editor: {e}": "Impossible d'ouvrir l'éditeur : {e}",
   "Phone: scan the code.": "Téléphone : scannez le code.",
-  "PC: open this address in a browser": "PC : ouvrez cette adresse dans un navigateur",
+  "PC: open this address in a browser":
+      "PC : ouvrez cette adresse dans un navigateur",
   "and enter the code": "et entrez le code",
-  "Same Wi-Fi or network as this device. The editor closes when you leave this screen.": "Même Wi-Fi ou réseau que cet appareil. L'éditeur se ferme quand vous quittez cet écran.",
+  "Same Wi-Fi or network as this device. The editor closes when you leave this screen.":
+      "Même Wi-Fi ou réseau que cet appareil. L'éditeur se ferme quand vous quittez cet écran.",
   "Open in browser": "Ouvrir dans le navigateur",
-  "Saved from your phone or PC: {name}": "Enregistré depuis votre téléphone ou PC : {name}",
+  "Saved from your phone or PC: {name}":
+      "Enregistré depuis votre téléphone ou PC : {name}",
   "Stream test {done}/{total}: {name}": "Test des flux {done}/{total} : {name}",
-  "Stream test: {done}/{total} tested.": "Test des flux : {done}/{total} testés.",
-  "Switch to another copy when a channel fails": "Passer à une autre copie quand une chaîne échoue",
-  "If a channel doesn't start or keeps dropping, play its next copy (FHD, then HD…) or your fallback channels, without an error screen.": "Si une chaîne ne démarre pas ou coupe sans cesse, sa copie suivante (FHD, puis HD…) ou vos chaînes de secours sont lues, sans écran d'erreur.",
+  "Stream test: {done}/{total} tested.":
+      "Test des flux : {done}/{total} testés.",
+  "Switch to another copy when a channel fails":
+      "Passer à une autre copie quand une chaîne échoue",
+  "If a channel doesn't start or keeps dropping, play its next copy (FHD, then HD…) or your fallback channels, without an error screen.":
+      "Si une chaîne ne démarre pas ou coupe sans cesse, sa copie suivante (FHD, puis HD…) ou vos chaînes de secours sont lues, sans écran d'erreur.",
   "Hide lower-quality copies": "Masquer les copies de moindre qualité",
-  "Only the best copy of each channel is listed; the others stay as automatic fallbacks.": "Seule la meilleure copie de chaque chaîne est listée ; les autres restent en secours automatique.",
+  "Only the best copy of each channel is listed; the others stay as automatic fallbacks.":
+      "Seule la meilleure copie de chaque chaîne est listée ; les autres restent en secours automatique.",
   "Hide separator rows": "Masquer les lignes de séparation",
   "Rows like ##### SPORTS #####": "Lignes comme ##### SPORTS #####",
   "{n} channels hidden by the editor": "{n} chaînes masquées par l'éditeur",
@@ -2377,17 +2386,21 @@ const Map<String, String> kFr = {
   "Down": "Bas",
   "Recently added": "Ajoutées récemment",
   "Recently added channels": "Chaînes ajoutées récemment",
-  "Adds a TV tab group with the channels your playlists added in the last 14 days.": "Ajoute un groupe à l'onglet TV avec les chaînes ajoutées par vos playlists ces 14 derniers jours.",
-  "No channels added in the last 14 days.": "Aucune chaîne ajoutée ces 14 derniers jours.",
+  "Adds a TV tab group with the channels your playlists added in the last 14 days.":
+      "Ajoute un groupe à l'onglet TV avec les chaînes ajoutées par vos playlists ces 14 derniers jours.",
+  "No channels added in the last 14 days.":
+      "Aucune chaîne ajoutée ces 14 derniers jours.",
   "Live buffer": "Tampon du direct",
-  "Hide short dropouts on live channels": "Masque les courtes coupures sur les chaînes en direct",
+  "Hide short dropouts on live channels":
+      "Masque les courtes coupures sur les chaînes en direct",
   "Small (1.5 seconds)": "Petit (1,5 seconde)",
   "Gradual (starts fast, builds up)": "Progressif (démarre vite, se constitue)",
   "building at 96 % speed": "constitution à 96 % de la vitesse",
   "4 seconds": "4 secondes",
   "8 seconds": "8 secondes",
   "12 seconds": "12 secondes",
-  "{size}. Live channels store this much before playing, so short dropouts from the server don't show. Bigger hides longer dropouts, but channels start later and play that much behind live. Applies from the next channel.": "{size}. Les chaînes en direct mettent cette durée en réserve avant de jouer, pour que les courtes coupures du serveur ne se voient pas. Plus grand masque des coupures plus longues, mais les chaînes démarrent plus tard et jouent avec ce retard sur le direct. S'applique à la prochaine chaîne.",
+  "{size}. Live channels store this much before playing, so short dropouts from the server don't show. Bigger hides longer dropouts, but channels start later and play that much behind live. Applies from the next channel.":
+      "{size}. Les chaînes en direct mettent cette durée en réserve avant de jouer, pour que les courtes coupures du serveur ne se voient pas. Plus grand masque des coupures plus longues, mais les chaînes démarrent plus tard et jouent avec ce retard sur le direct. S'applique à la prochaine chaîne.",
   "Seasons": "Saisons",
   "Playlist editor (Test flight)": "Éditeur de playlist (Test flight)",
   "Add screen": "Ajouter un écran",
@@ -2395,22 +2408,68 @@ const Map<String, String> kFr = {
   "Equal screens": "Écrans égaux",
   "Exit full screen": "Quitter le plein écran",
   "Remove screen": "Retirer l'écran",
-  "= audio follows the selected screen · OK for options · hold OK to enlarge": "= le son suit l'écran choisi · OK pour les options · maintenir OK pour agrandir",
+  "= audio follows the selected screen · OK for options · hold OK to enlarge":
+      "= le son suit l'écran choisi · OK pour les options · maintenir OK pour agrandir",
   "Search and add": "Rechercher et ajouter",
   "Hide league names": "Masquer les noms des ligues",
   "Show league names": "Afficher les noms des ligues",
-  "Check up to 4 live games, then choose Open Multiview": "Cochez jusqu'à 4 matchs en direct, puis choisissez Ouvrir le Multiview",
-  "Only live games can be added": "Seuls les matchs en direct peuvent être ajoutés",
+  "Check up to 4 live games, then choose Open Multiview":
+      "Cochez jusqu'à 4 matchs en direct, puis choisissez Ouvrir le Multiview",
+  "Only live games can be added":
+      "Seuls les matchs en direct peuvent être ajoutés",
   "Multiview shows up to 4 screens": "Le Multiview affiche jusqu'à 4 écrans",
   "Check at least one live game": "Cochez au moins un match en direct",
   "Open Multiview ({n})": "Ouvrir le Multiview ({n})",
   "Play in Multiview": "Regarder en Multiview",
-  "Check other live games to watch together": "Cochez d'autres matchs en direct à regarder ensemble",
+  "Check other live games to watch together":
+      "Cochez d'autres matchs en direct à regarder ensemble",
   "{n} sources": "{n} sources",
   "Not listed yet": "Pas encore répertorié",
-  "The newest episode may not be in the catalog yet. Press Play to ask your sources.": "Le dernier épisode n'est peut-être pas encore au catalogue. Appuyez sur Lecture pour interroger vos sources.",
-  "The channel stopped. Still trying to reconnect...": "La chaîne s'est arrêtée. Nouvelle tentative de connexion…",
+  "The newest episode may not be in the catalog yet. Press Play to ask your sources.":
+      "Le dernier épisode n'est peut-être pas encore au catalogue. Appuyez sur Lecture pour interroger vos sources.",
+  "The channel stopped. Still trying to reconnect...":
+      "La chaîne s'est arrêtée. Nouvelle tentative de connexion…",
   "Software video": "Vidéo logicielle",
-  "Turn on if channels or movies stay black while the sound or the stream plays. Draws the video without the graphics card path. Uses more CPU on 4K. Applies from the next video.": "Activez si les chaînes ou les films restent noirs alors que le son ou le flux joue. Affiche la vidéo sans passer par la carte graphique. Utilise plus le processeur en 4K. S'applique à la prochaine vidéo.",
+  "Turn on if channels or movies stay black while the sound or the stream plays. Draws the video without the graphics card path. Uses more CPU on 4K. Applies from the next video.":
+      "Activez si les chaînes ou les films restent noirs alors que le son ou le flux joue. Affiche la vidéo sans passer par la carte graphique. Utilise plus le processeur en 4K. S'applique à la prochaine vidéo.",
   "For PCs where video stays black": "Pour les PC où la vidéo reste noire",
+
+  // Cloud sync settings.
+  "Sync": "Synchronisation",
+  "Keep your setup and watch progress together across devices":
+      "Retrouvez votre configuration et votre progression sur tous vos appareils",
+  "Keep your setup and watch progress together across devices. No account needed.":
+      "Retrouvez votre configuration et votre progression sur tous vos appareils. Aucun compte nécessaire.",
+  "Some changes appear after you restart VesperTV. Profile photos, imported M3U files and recently played lists do not sync.":
+      "Certains changements apparaissent après le redémarrage de VesperTV. Les photos de profil, les fichiers M3U importés et les listes de lecture récente ne sont pas synchronisés.",
+  "The sync code was reset on another device. Link this device again.":
+      "Le code de synchronisation a été réinitialisé sur un autre appareil. Associez à nouveau cet appareil.",
+  "Not synced yet": "Pas encore synchronisé",
+  "Last sync: {time}": "Dernière synchronisation : {time}",
+  "Sync now": "Synchroniser maintenant",
+  "Link a device": "Associer un appareil",
+  "Show recovery code": "Afficher le code de récupération",
+  "Reset sync code": "Réinitialiser le code de synchronisation",
+  "Other devices will stop syncing until you link them again. Save the new recovery code.":
+      "Les autres appareils ne seront plus synchronisés tant que vous ne les aurez pas réassociés. Conservez le nouveau code de récupération.",
+  "Stop syncing on this device": "Arrêter la synchronisation sur cet appareil",
+  "Your data stays on this device. Other devices keep syncing.":
+      "Vos données restent sur cet appareil. Les autres appareils continuent la synchronisation.",
+  "Set up sync": "Configurer la synchronisation",
+  "I have a code": "J’ai un code",
+  "Recovery code": "Code de récupération",
+  "Save this code. It's the only way back in if you lose all your devices. We can't recover it.":
+      "Conservez ce code. C’est le seul moyen de retrouver vos données si vous perdez tous vos appareils. Nous ne pouvons pas le récupérer.",
+  "On the other device, open Settings > Device & data > Sync > I have a code.":
+      "Sur l’autre appareil, ouvrez Paramètres > Appareil et données > Synchronisation > J’ai un code.",
+  "Expires in {time}": "Expire dans {time}",
+  "I saved my recovery code": "J’ai conservé mon code de récupération",
+  "Enter your 26-character recovery code":
+      "Saisissez votre code de récupération de 26 caractères",
+  "Enter the 16-digit link code shown on the other device":
+      "Saisissez le code d’association de 16 chiffres affiché sur l’autre appareil",
+  "Use a link code": "Utiliser un code d’association",
+  "Use a recovery code": "Utiliser un code de récupération",
+  "Link code": "Code d’association",
+  "Join sync": "Rejoindre la synchronisation",
 };
