@@ -519,16 +519,35 @@ class PlaylistSession {
 
   // --- M3U mode -----------------------------------------------------------
 
-  Future<bool> _restoreM3uCache() async {
-    // Read, decode and parse all on a background isolate — this used to do
-    // the lot on the main thread, for a list that can run to tens of
-    // thousands of channels. See StorageService.cacheFilePath.
-    final path = await storage
-        .cacheFilePath(_cacheName(AppConstants.cacheFileM3uChannels));
-    if (path == null) return false;
+  /// The saved M3U text ([AppConstants.cacheFileM3uSource]); null when
+  /// storage has no cache folder (tests).
+  Future<String?> _m3uSourcePath() async {
     try {
-      final loaded =
-          Channel.withUniqueIds(await compute(_readM3uChannelsFile, path));
+      return await storage.rawCachePath(
+          _cacheName(AppConstants.cacheFileM3uSource), 'm3u');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<bool> _restoreM3uCache() async {
+    // Read and parse on a background isolate — this used to do the lot on
+    // the main thread, for a list that can run to tens of thousands of
+    // channels. The saved M3U text first; the JSON cache of builds before
+    // it is still read once, until the next load replaces it.
+    final source = await _m3uSourcePath();
+    final hasSource = source != null && await File(source).exists();
+    final path = hasSource
+        ? null
+        : await storage
+            .cacheFilePath(_cacheName(AppConstants.cacheFileM3uChannels));
+    if (!hasSource && path == null) return false;
+    try {
+      final loaded = Channel.withUniqueIds(hasSource
+          ? await M3uParser.fetchAndParseInBackground(
+              Uri.file(source).toString(),
+              playlistId: profile.id)
+          : await compute(_readM3uChannelsFile, path!));
       for (final channel in loaded) {
         channel.isFavorite = favoriteIds().contains(channel.id);
         channel.epgIdOverride = epgIdOverrides[channel.rawId];
@@ -550,9 +569,14 @@ class PlaylistSession {
     loadingPhase = tr('Connecting to server...');
     onNotify();
 
+    final watch = Stopwatch()..start();
     try {
+      // Parsed on a background isolate, which also saves the raw text as
+      // the cache while it downloads (no JSON copy of the whole list).
+      final source = await _m3uSourcePath();
       final parsed = Channel.withUniqueIds(
-          await M3uParser.fetchAndParse(url, playlistId: profile.id));
+          await M3uParser.fetchAndParseInBackground(url,
+              playlistId: profile.id, saveTo: source));
       for (final channel in parsed) {
         channel.isFavorite = favoriteIds().contains(channel.id);
         channel.epgIdOverride = epgIdOverrides[channel.rawId];
@@ -562,6 +586,16 @@ class PlaylistSession {
       for (final channel in parsed) {
         final category = _classifyGroup(channel.group);
         counts[category] = (counts[category] ?? 0) + 1;
+      }
+      final bytes = source == null ? 0 : await File(source).length();
+      debugPrint('M3uLoad: ${parsed.length} entries (live ${counts['tv']} '
+          'movies ${counts['vod']} shows ${counts['series']}), '
+          '${(bytes / 1048576).toStringAsFixed(1)} MB, '
+          '${watch.elapsedMilliseconds} ms');
+      if (source != null) {
+        // The source text replaces the old JSON cache.
+        await storage
+            .deleteCacheFile(_cacheName(AppConstants.cacheFileM3uChannels));
       }
 
       // Brief staged reveal so the counts are readable, rather than flashing
@@ -585,10 +619,13 @@ class PlaylistSession {
       lastLoadSummary = counts;
       lastLoaded = DateTime.now();
       profile = profile.copyWith(m3uUrl: url);
-      await storage.writeCacheFile(
-        _cacheName(AppConstants.cacheFileM3uChannels),
-        await compute(_encodeJsonList, parsed.map((c) => c.toJson()).toList()),
-      );
+      if (source == null) {
+        await storage.writeCacheFile(
+          _cacheName(AppConstants.cacheFileM3uChannels),
+          await compute(
+              _encodeJsonList, parsed.map((c) => c.toJson()).toList()),
+        );
+      }
 
       loadingPhase = tr('Playlist added');
       onNotify();
@@ -596,6 +633,8 @@ class PlaylistSession {
     } catch (e) {
       error = e.toString();
       debugPrint('PlaylistSession[${profile.id}] error: $e');
+      debugPrint('M3uLoad: failed after ${watch.elapsedMilliseconds} ms '
+          '(${e.runtimeType})');
     } finally {
       isLoading = false;
       loadingPhase = null;
@@ -608,13 +647,13 @@ class PlaylistSession {
   /// All groups, in first-seen order, including hidden ones (used by the
   /// Group Management screen). M3U mode only.
   List<M3uGroup> get allGroups {
-    final order = <String>[];
+    // Map keys keep first-seen order (a List.contains per channel was
+    // entries x groups work on every call for a big M3U).
     final byTitle = <String, List<Channel>>{};
     for (final channel in channels) {
       byTitle.putIfAbsent(channel.group, () => []).add(channel);
-      if (!order.contains(channel.group)) order.add(channel.group);
     }
-    return order
+    return byTitle.keys
         .map((title) => M3uGroup(
               title: title,
               playlistId: profile.id,

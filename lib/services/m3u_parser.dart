@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:http/http.dart' as http;
 
@@ -79,44 +80,73 @@ class M3uParser {
     return (days: days, kind: kind, source: source);
   }
 
+  /// [fetchAndParse] on a background isolate. The list comes back through
+  /// `Isolate.exit`, so it is handed over, not copied, and the download
+  /// buffers and line parsing never touch the UI isolate's memory. A huge
+  /// IPTV Editor M3U (user report, 2026-11-04: "not enough memory") used to
+  /// do all of it on the main isolate.
+  static Future<List<Channel>> fetchAndParseInBackground(String url,
+      {required String playlistId, String? saveTo}) async {
+    try {
+      return await Isolate.run(
+          () => fetchAndParse(url, playlistId: playlistId, saveTo: saveTo));
+    } on M3uHttpError catch (e) {
+      // Translated here: the background isolate has no language loaded.
+      throw Exception(tr('Failed to load playlist from {host} (HTTP {code})',
+          {'host': e.host, 'code': e.code}));
+    }
+  }
+
   /// Streams the response line-by-line rather than buffering the whole body
   /// into one String — Xtream `get.php` playlists with tens of thousands of
   /// entries can be well over 100MB of text, and materializing that as a
   /// single contiguous allocation is what triggers an OutOfMemoryError on
   /// phones with a capped per-app heap (Android's default ~256MB ceiling).
+  ///
+  /// [saveTo]: also writes the raw bytes there as they arrive (the M3U
+  /// cache, re-parsed on the next start), via `<saveTo>.part` so a failed
+  /// load leaves the previous cache in place.
   static Future<List<Channel>> fetchAndParse(String url,
-      {required String playlistId}) async {
-    if (Uri.tryParse(url)?.scheme == 'file') {
+      {required String playlistId, String? saveTo}) async {
+    final part = saveTo == null ? null : File('$saveTo.part');
+    final sink = part?.openWrite();
+    Future<List<Channel>> parse(Stream<List<int>> bytes) async {
       final state = _ParseState(playlistId: playlistId);
-      await File.fromUri(Uri.parse(url))
-          .openRead()
+      await bytes
+          .map((chunk) {
+            sink?.add(chunk);
+            return chunk;
+          })
           .transform(const Utf8Decoder(allowMalformed: true))
           .transform(const LineSplitter())
-          .forEach(state.consumeLine);
+          .forEach(state.consumeLine)
+          .timeout(const Duration(minutes: 5));
+      if (sink != null) {
+        await sink.close();
+        await part!.rename(saveTo!);
+      }
       return state.channels;
     }
+
     final client = http.Client();
     try {
+      if (Uri.tryParse(url)?.scheme == 'file') {
+        return await parse(File.fromUri(Uri.parse(url)).openRead());
+      }
       final request = http.Request('GET', Uri.parse(url));
       final streamedResponse =
           await client.send(request).timeout(const Duration(seconds: 30));
 
       if (streamedResponse.statusCode != 200) {
-        throw Exception(tr(
-            'Failed to load playlist from {host} (HTTP {code})', {
-          'host': Uri.parse(url).host,
-          'code': streamedResponse.statusCode
-        }));
+        throw M3uHttpError(Uri.parse(url).host, streamedResponse.statusCode);
       }
-
-      final state = _ParseState(playlistId: playlistId);
-      await streamedResponse.stream
-          .transform(const Utf8Decoder(allowMalformed: true))
-          .transform(const LineSplitter())
-          .forEach(state.consumeLine)
-          .timeout(const Duration(minutes: 5));
-
-      return state.channels;
+      return await parse(streamedResponse.stream);
+    } catch (_) {
+      if (sink != null) {
+        await sink.close().catchError((_) {});
+        if (await part!.exists()) await part.delete();
+      }
+      rethrow;
     } finally {
       client.close();
     }
@@ -134,6 +164,17 @@ class M3uParser {
   }
 }
 
+/// A playlist server's non-200 answer, thrown by [M3uParser.fetchAndParse]
+/// and turned into the translated message on the UI isolate.
+class M3uHttpError implements Exception {
+  const M3uHttpError(this.host, this.code);
+  final String host;
+  final int code;
+
+  @override
+  String toString() => 'Failed to load playlist from $host (HTTP $code)';
+}
+
 /// Holds the mutable state needed to parse M3U one line at a time, so the
 /// same logic can drive either a fully-buffered string ([M3uParser.parse])
 /// or a live stream ([M3uParser.fetchAndParse]).
@@ -147,6 +188,11 @@ class _ParseState {
   String? _pendingName;
   String? _pendingSubtitleUrl;
   int _autoId = 0;
+
+  /// One String per distinct group title: every entry's title is its own
+  /// substring of its line otherwise, repeated across tens of thousands of
+  /// entries in a big playlist.
+  final Map<String, String> _groupTitles = {};
 
   void consumeLine(String rawLine) {
     final line = rawLine.trim();
@@ -195,7 +241,7 @@ class _ParseState {
             onDemand: onDemand,
             name: _pendingName!,
             group: (groupTitle != null && groupTitle.isNotEmpty)
-                ? groupTitle
+                ? _groupTitles.putIfAbsent(groupTitle, () => groupTitle)
                 : 'Uncategorized',
             url: line,
             logoUrl: _attrs['tvg-logo'],
