@@ -2434,8 +2434,8 @@ const Map<String, String> kIt = {
       "Mantieni configurazione e avanzamento tra i dispositivi",
   "Keep your setup and watch progress together across devices. No account needed.":
       "Mantieni configurazione e avanzamento tra i dispositivi. Nessun account necessario.",
-  "Some changes appear after you restart VesperTV. Profile photos, imported M3U files and recently played lists do not sync.":
-      "Alcune modifiche appaiono dopo il riavvio di VesperTV. Foto del profilo, file M3U importati ed elenchi riprodotti di recente non si sincronizzano.",
+  "Some changes appear after you restart VesperTV. Profile photos and imported M3U files do not sync.":
+      "Alcune modifiche appaiono dopo il riavvio di VesperTV. Foto del profilo e file M3U importati non si sincronizzano.",
   "The sync code was reset on another device. Link this device again.":
       "Il codice di sincronizzazione è stato reimpostato su un altro dispositivo. Collega di nuovo questo dispositivo.",
   "Not synced yet": "Non ancora sincronizzato",

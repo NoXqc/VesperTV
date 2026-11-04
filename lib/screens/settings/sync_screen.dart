@@ -134,7 +134,7 @@ class _SyncScreenState extends State<SyncScreen> {
                       style: const TextStyle(color: Colors.white70)),
                   const SizedBox(height: 12),
                   Text(
-                      tr('Some changes appear after you restart VesperTV. Profile photos, imported M3U files and recently played lists do not sync.'),
+                      tr('Some changes appear after you restart VesperTV. Profile photos and imported M3U files do not sync.'),
                       style: const TextStyle(color: Colors.white54)),
                   if (sync.status == SyncStatus.revoked) ...[
                     const SizedBox(height: 16),

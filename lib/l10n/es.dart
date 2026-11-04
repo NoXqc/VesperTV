@@ -2428,8 +2428,8 @@ const Map<String, String> kEs = {
       "Mantén tu configuración y progreso entre dispositivos",
   "Keep your setup and watch progress together across devices. No account needed.":
       "Mantén tu configuración y progreso entre dispositivos. No necesitas una cuenta.",
-  "Some changes appear after you restart VesperTV. Profile photos, imported M3U files and recently played lists do not sync.":
-      "Algunos cambios aparecen al reiniciar VesperTV. Las fotos de perfil, los archivos M3U importados y las listas de reproducción reciente no se sincronizan.",
+  "Some changes appear after you restart VesperTV. Profile photos and imported M3U files do not sync.":
+      "Algunos cambios aparecen al reiniciar VesperTV. Las fotos de perfil y los archivos M3U importados no se sincronizan.",
   "The sync code was reset on another device. Link this device again.":
       "El código de sincronización se restableció en otro dispositivo. Vuelve a vincular este dispositivo.",
   "Not synced yet": "Aún sin sincronizar",
