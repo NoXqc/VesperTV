@@ -352,7 +352,8 @@ const Map<String, String> kEl = {
   "See all": "Όλα",
   "Update automatically": "Αυτόματη ενημέρωση",
   "Live stream format: HLS": "Μορφή ζωντανής ροής: HLS",
-  "Off: MPEG-TS (default, fastest start). On: HLS, like the HLS option in TiviMate. Plays about 10 seconds further behind live, but hides servers that send live TV in bursts. Applies from the next channel.": "Ανενεργό: MPEG-TS (προεπιλογή, γρηγορότερη εκκίνηση). Ενεργό: HLS, όπως η επιλογή HLS του TiviMate. Παίζει περίπου 10 δευτερόλεπτα πιο πίσω από το ζωντανό, αλλά κρύβει διακομιστές που στέλνουν τη ζωντανή TV κατά ριπές. Ισχύει από το επόμενο κανάλι.",
+  "Off: MPEG-TS (default, fastest start). On: HLS, like the HLS option in TiviMate. Plays about 10 seconds further behind live, but hides servers that send live TV in bursts. Applies from the next channel.":
+      "Ανενεργό: MPEG-TS (προεπιλογή, γρηγορότερη εκκίνηση). Ενεργό: HLS, όπως η επιλογή HLS του TiviMate. Παίζει περίπου 10 δευτερόλεπτα πιο πίσω από το ζωντανό, αλλά κρύβει διακομιστές που στέλνουν τη ζωντανή TV κατά ριπές. Ισχύει από το επόμενο κανάλι.",
   "On: when an update is due, it runs at launch without asking. Off: the app asks \"Update content now?\" first.":
       "Ενεργό: όταν οφείλεται ενημέρωση, γίνεται στην εκκίνηση χωρίς ερώτηση. Ανενεργό: η εφαρμογή ρωτά πρώτα «Ενημέρωση περιεχομένου τώρα;».",
   "Open on": "Άνοιγμα σε",
@@ -1765,8 +1766,7 @@ const Map<String, String> kEl = {
   "College": "Κολεγιακά",
   // Settings > General > Support VesperTV
   "Support VesperTV": "Υποστηρίξτε το VesperTV",
-  "How you can help":
-      "Πώς μπορείτε να βοηθήσετε",
+  "How you can help": "Πώς μπορείτε να βοηθήσετε",
   "VesperTV is free and always will be: no ads, no tracking, no paid features. The support page shows how you can help pay for the server, the website and development.":
       "Το VesperTV είναι δωρεάν και θα είναι πάντα: χωρίς διαφημίσεις, χωρίς παρακολούθηση, χωρίς επί πληρωμή λειτουργίες. Η σελίδα υποστήριξης δείχνει πώς μπορείτε να βοηθήσετε να καλυφθούν ο διακομιστής, ο ιστότοπος και η ανάπτυξη.",
   "Supporting is a thank-you, never a paywall: everyone gets the same app.":
@@ -2293,24 +2293,34 @@ const Map<String, String> kEl = {
   "Total": "Σύνολο",
   "Betting odds · {book}": "Αποδόσεις · {book}",
   "Playlist editor": "Επεξεργασία λίστας",
-  "Rename, hide copies, fallbacks and stream test, from your phone or PC": "Μετονομασία, απόκρυψη αντιγράφων, εφεδρικά κανάλια και δοκιμή ροών, από κινητό ή υπολογιστή",
-  "Rename, change logos, hide copies and dead streams, set fallback channels and clean up the guide, from your phone or PC. Your provider's playlist is never changed: edits are kept on this device and run again on every content update.": "Μετονομάστε κανάλια, αλλάξτε λογότυπα, κρύψτε αντίγραφα και νεκρές ροές, ορίστε εφεδρικά κανάλια και καθαρίστε τον οδηγό, από κινητό ή υπολογιστή. Η λίστα του παρόχου σας δεν αλλάζει ποτέ: οι αλλαγές μένουν σε αυτή τη συσκευή και εφαρμόζονται ξανά σε κάθε ενημέρωση.",
+  "Rename, hide copies, fallbacks and stream test, from your phone or PC":
+      "Μετονομασία, απόκρυψη αντιγράφων, εφεδρικά κανάλια και δοκιμή ροών, από κινητό ή υπολογιστή",
+  "Rename, change logos, hide copies and dead streams, set fallback channels and clean up the guide, from your phone or PC. Your provider's playlist is never changed: edits are kept on this device and run again on every content update.":
+      "Μετονομάστε κανάλια, αλλάξτε λογότυπα, κρύψτε αντίγραφα και νεκρές ροές, ορίστε εφεδρικά κανάλια και καθαρίστε τον οδηγό, από κινητό ή υπολογιστή. Η λίστα του παρόχου σας δεν αλλάζει ποτέ: οι αλλαγές μένουν σε αυτή τη συσκευή και εφαρμόζονται ξανά σε κάθε ενημέρωση.",
   "Could not open the editor: {e}": "Δεν ήταν δυνατό το άνοιγμα: {e}",
   "Phone: scan the code.": "Κινητό: σαρώστε τον κωδικό.",
-  "PC: open this address in a browser": "Υπολογιστής: ανοίξτε αυτή τη διεύθυνση σε φυλλομετρητή",
+  "PC: open this address in a browser":
+      "Υπολογιστής: ανοίξτε αυτή τη διεύθυνση σε φυλλομετρητή",
   "and enter the code": "και πληκτρολογήστε τον κωδικό",
-  "Same Wi-Fi or network as this device. The editor closes when you leave this screen.": "Ίδιο Wi-Fi ή δίκτυο με αυτή τη συσκευή. Ο επεξεργαστής κλείνει όταν φύγετε από αυτή την οθόνη.",
+  "Same Wi-Fi or network as this device. The editor closes when you leave this screen.":
+      "Ίδιο Wi-Fi ή δίκτυο με αυτή τη συσκευή. Ο επεξεργαστής κλείνει όταν φύγετε από αυτή την οθόνη.",
   "Open in browser": "Άνοιγμα στον φυλλομετρητή",
-  "Saved from your phone or PC: {name}": "Αποθηκεύτηκε από κινητό ή υπολογιστή: {name}",
+  "Saved from your phone or PC: {name}":
+      "Αποθηκεύτηκε από κινητό ή υπολογιστή: {name}",
   "Stream test {done}/{total}: {name}": "Δοκιμή ροών {done}/{total}: {name}",
-  "Stream test: {done}/{total} tested.": "Δοκιμή ροών: {done}/{total} ελέγχθηκαν.",
-  "Switch to another copy when a channel fails": "Αλλαγή σε άλλο αντίγραφο όταν ένα κανάλι αποτυγχάνει",
-  "If a channel doesn't start or keeps dropping, play its next copy (FHD, then HD…) or your fallback channels, without an error screen.": "Αν ένα κανάλι δεν ξεκινά ή κόβεται συνέχεια, παίζει το επόμενο αντίγραφο (FHD, μετά HD…) ή τα εφεδρικά σας κανάλια, χωρίς οθόνη σφάλματος.",
+  "Stream test: {done}/{total} tested.":
+      "Δοκιμή ροών: {done}/{total} ελέγχθηκαν.",
+  "Switch to another copy when a channel fails":
+      "Αλλαγή σε άλλο αντίγραφο όταν ένα κανάλι αποτυγχάνει",
+  "If a channel doesn't start or keeps dropping, play its next copy (FHD, then HD…) or your fallback channels, without an error screen.":
+      "Αν ένα κανάλι δεν ξεκινά ή κόβεται συνέχεια, παίζει το επόμενο αντίγραφο (FHD, μετά HD…) ή τα εφεδρικά σας κανάλια, χωρίς οθόνη σφάλματος.",
   "Hide lower-quality copies": "Απόκρυψη αντιγράφων χαμηλότερης ποιότητας",
-  "Only the best copy of each channel is listed; the others stay as automatic fallbacks.": "Εμφανίζεται μόνο το καλύτερο αντίγραφο κάθε καναλιού· τα άλλα μένουν ως αυτόματη εφεδρεία.",
+  "Only the best copy of each channel is listed; the others stay as automatic fallbacks.":
+      "Εμφανίζεται μόνο το καλύτερο αντίγραφο κάθε καναλιού· τα άλλα μένουν ως αυτόματη εφεδρεία.",
   "Hide separator rows": "Απόκρυψη γραμμών διαχωρισμού",
   "Rows like ##### SPORTS #####": "Γραμμές όπως ##### SPORTS #####",
-  "{n} channels hidden by the editor": "{n} κανάλια κρυμμένα από τον επεξεργαστή",
+  "{n} channels hidden by the editor":
+      "{n} κανάλια κρυμμένα από τον επεξεργαστή",
   "Rename channel": "Μετονομασία καναλιού",
   "Channel name": "Όνομα καναλιού",
   "Rename…": "Μετονομασία…",
@@ -2325,17 +2335,21 @@ const Map<String, String> kEl = {
   "Down": "Κάτω",
   "Recently added": "Προστέθηκαν πρόσφατα",
   "Recently added channels": "Κανάλια που προστέθηκαν πρόσφατα",
-  "Adds a TV tab group with the channels your playlists added in the last 14 days.": "Προσθέτει μια ομάδα στην καρτέλα TV με τα κανάλια που πρόσθεσαν οι λίστες σας τις τελευταίες 14 ημέρες.",
-  "No channels added in the last 14 days.": "Κανένα κανάλι δεν προστέθηκε τις τελευταίες 14 ημέρες.",
+  "Adds a TV tab group with the channels your playlists added in the last 14 days.":
+      "Προσθέτει μια ομάδα στην καρτέλα TV με τα κανάλια που πρόσθεσαν οι λίστες σας τις τελευταίες 14 ημέρες.",
+  "No channels added in the last 14 days.":
+      "Κανένα κανάλι δεν προστέθηκε τις τελευταίες 14 ημέρες.",
   "Live buffer": "Buffer ζωντανής μετάδοσης",
-  "Hide short dropouts on live channels": "Κρύβει τις σύντομες διακοπές στα ζωντανά κανάλια",
+  "Hide short dropouts on live channels":
+      "Κρύβει τις σύντομες διακοπές στα ζωντανά κανάλια",
   "Small (1.5 seconds)": "Μικρό (1,5 δευτερόλεπτο)",
   "Gradual (starts fast, builds up)": "Σταδιακό (ξεκινά γρήγορα, χτίζεται)",
   "building at 96 % speed": "χτίζεται στο 96 % της ταχύτητας",
   "4 seconds": "4 δευτερόλεπτα",
   "8 seconds": "8 δευτερόλεπτα",
   "12 seconds": "12 δευτερόλεπτα",
-  "{size}. Live channels store this much before playing, so short dropouts from the server don't show. Bigger hides longer dropouts, but channels start later and play that much behind live. Applies from the next channel.": "{size}. Τα ζωντανά κανάλια αποθηκεύουν τόσο πριν παίξουν, ώστε οι σύντομες διακοπές του διακομιστή να μη φαίνονται. Μεγαλύτερο κρύβει μεγαλύτερες διακοπές, αλλά τα κανάλια ξεκινούν αργότερα και παίζουν τόσο πίσω από το ζωντανό. Ισχύει από το επόμενο κανάλι.",
+  "{size}. Live channels store this much before playing, so short dropouts from the server don't show. Bigger hides longer dropouts, but channels start later and play that much behind live. Applies from the next channel.":
+      "{size}. Τα ζωντανά κανάλια αποθηκεύουν τόσο πριν παίξουν, ώστε οι σύντομες διακοπές του διακομιστή να μη φαίνονται. Μεγαλύτερο κρύβει μεγαλύτερες διακοπές, αλλά τα κανάλια ξεκινούν αργότερα και παίζουν τόσο πίσω από το ζωντανό. Ισχύει από το επόμενο κανάλι.",
   "Seasons": "Σεζόν",
   "Playlist editor (Test flight)": "Επεξεργασία λίστας (Test flight)",
   "Add screen": "Προσθήκη οθόνης",
@@ -2343,22 +2357,68 @@ const Map<String, String> kEl = {
   "Equal screens": "Ίσες οθόνες",
   "Exit full screen": "Έξοδος από πλήρη οθόνη",
   "Remove screen": "Αφαίρεση οθόνης",
-  "= audio follows the selected screen · OK for options · hold OK to enlarge": "= ο ήχος ακολουθεί την επιλεγμένη οθόνη · OK για επιλογές · κρατήστε OK για μεγέθυνση",
+  "= audio follows the selected screen · OK for options · hold OK to enlarge":
+      "= ο ήχος ακολουθεί την επιλεγμένη οθόνη · OK για επιλογές · κρατήστε OK για μεγέθυνση",
   "Search and add": "Αναζήτηση και προσθήκη",
   "Hide league names": "Απόκρυψη ονομάτων πρωταθλημάτων",
   "Show league names": "Εμφάνιση ονομάτων πρωταθλημάτων",
-  "Check up to 4 live games, then choose Open Multiview": "Επιλέξτε έως 4 ζωντανούς αγώνες και μετά Άνοιγμα Multiview",
+  "Check up to 4 live games, then choose Open Multiview":
+      "Επιλέξτε έως 4 ζωντανούς αγώνες και μετά Άνοιγμα Multiview",
   "Only live games can be added": "Μπορούν να προστεθούν μόνο ζωντανοί αγώνες",
   "Multiview shows up to 4 screens": "Το Multiview δείχνει έως 4 οθόνες",
   "Check at least one live game": "Επιλέξτε τουλάχιστον έναν ζωντανό αγώνα",
   "Open Multiview ({n})": "Άνοιγμα Multiview ({n})",
   "Play in Multiview": "Παρακολούθηση σε Multiview",
-  "Check other live games to watch together": "Επιλέξτε κι άλλους ζωντανούς αγώνες για να τους δείτε μαζί",
+  "Check other live games to watch together":
+      "Επιλέξτε κι άλλους ζωντανούς αγώνες για να τους δείτε μαζί",
   "{n} sources": "{n} πηγές",
   "Not listed yet": "Δεν έχει καταχωριστεί ακόμη",
-  "The newest episode may not be in the catalog yet. Press Play to ask your sources.": "Το νεότερο επεισόδιο ίσως δεν είναι ακόμη στον κατάλογο. Πατήστε Αναπαραγωγή για να ρωτήσετε τις πηγές σας.",
-  "The channel stopped. Still trying to reconnect...": "Το κανάλι σταμάτησε. Συνεχίζουμε να προσπαθούμε να επανασυνδεθούμε…",
+  "The newest episode may not be in the catalog yet. Press Play to ask your sources.":
+      "Το νεότερο επεισόδιο ίσως δεν είναι ακόμη στον κατάλογο. Πατήστε Αναπαραγωγή για να ρωτήσετε τις πηγές σας.",
+  "The channel stopped. Still trying to reconnect...":
+      "Το κανάλι σταμάτησε. Συνεχίζουμε να προσπαθούμε να επανασυνδεθούμε…",
   "Software video": "Βίντεο λογισμικού",
-  "Turn on if channels or movies stay black while the sound or the stream plays. Draws the video without the graphics card path. Uses more CPU on 4K. Applies from the next video.": "Ενεργοποιήστε το αν τα κανάλια ή οι ταινίες μένουν μαύρα ενώ παίζει ο ήχος ή η ροή. Εμφανίζει το βίντεο χωρίς την κάρτα γραφικών. Χρησιμοποιεί περισσότερο τον επεξεργαστή στα 4K. Ισχύει από το επόμενο βίντεο.",
-  "For PCs where video stays black": "Για υπολογιστές όπου το βίντεο μένει μαύρο",
+  "Turn on if channels or movies stay black while the sound or the stream plays. Draws the video without the graphics card path. Uses more CPU on 4K. Applies from the next video.":
+      "Ενεργοποιήστε το αν τα κανάλια ή οι ταινίες μένουν μαύρα ενώ παίζει ο ήχος ή η ροή. Εμφανίζει το βίντεο χωρίς την κάρτα γραφικών. Χρησιμοποιεί περισσότερο τον επεξεργαστή στα 4K. Ισχύει από το επόμενο βίντεο.",
+  "For PCs where video stays black":
+      "Για υπολογιστές όπου το βίντεο μένει μαύρο",
+
+  // Cloud sync settings.
+  "Sync": "Συγχρονισμός",
+  "Keep your setup and watch progress together across devices":
+      "Κρατήστε τη ρύθμιση και την πρόοδο προβολής σε όλες τις συσκευές",
+  "Keep your setup and watch progress together across devices. No account needed.":
+      "Κρατήστε τη ρύθμιση και την πρόοδο προβολής σε όλες τις συσκευές. Δεν χρειάζεται λογαριασμός.",
+  "Some changes appear after you restart VesperTV. Profile photos and imported M3U files do not sync.":
+      "Ορισμένες αλλαγές εμφανίζονται μετά την επανεκκίνηση του VesperTV. Οι φωτογραφίες προφίλ και τα εισαγόμενα αρχεία M3U δεν συγχρονίζονται.",
+  "The sync code was reset on another device. Link this device again.":
+      "Έγινε επαναφορά του κωδικού συγχρονισμού σε άλλη συσκευή. Συνδέστε ξανά αυτή τη συσκευή.",
+  "Not synced yet": "Δεν έχει συγχρονιστεί ακόμα",
+  "Last sync: {time}": "Τελευταίος συγχρονισμός: {time}",
+  "Sync now": "Συγχρονισμός τώρα",
+  "Link a device": "Σύνδεση συσκευής",
+  "Show recovery code": "Εμφάνιση κωδικού ανάκτησης",
+  "Reset sync code": "Επαναφορά κωδικού συγχρονισμού",
+  "Other devices will stop syncing until you link them again. Save the new recovery code.":
+      "Οι άλλες συσκευές θα σταματήσουν να συγχρονίζονται μέχρι να τις συνδέσετε ξανά. Αποθηκεύστε τον νέο κωδικό ανάκτησης.",
+  "Stop syncing on this device": "Διακοπή συγχρονισμού σε αυτή τη συσκευή",
+  "Your data stays on this device. Other devices keep syncing.":
+      "Τα δεδομένα σας παραμένουν σε αυτή τη συσκευή. Οι άλλες συσκευές συνεχίζουν να συγχρονίζονται.",
+  "Set up sync": "Ρύθμιση συγχρονισμού",
+  "I have a code": "Έχω κωδικό",
+  "Recovery code": "Κωδικός ανάκτησης",
+  "Save this code. It's the only way back in if you lose all your devices. We can't recover it.":
+      "Αποθηκεύστε αυτόν τον κωδικό. Είναι ο μόνος τρόπος να αποκτήσετε ξανά πρόσβαση αν χάσετε όλες τις συσκευές σας. Δεν μπορούμε να τον ανακτήσουμε.",
+  "On the other device, open Settings > Device & data > Sync > I have a code.":
+      "Στην άλλη συσκευή, ανοίξτε Ρυθμίσεις > Συσκευή και δεδομένα > Συγχρονισμός > Έχω κωδικό.",
+  "Expires in {time}": "Λήγει σε {time}",
+  "I saved my recovery code": "Αποθήκευσα τον κωδικό ανάκτησης",
+  "Enter your 26-character recovery code":
+      "Εισαγάγετε τον κωδικό ανάκτησης 26 χαρακτήρων",
+  "Enter the 16-digit link code shown on the other device":
+      "Εισαγάγετε τον 16ψήφιο κωδικό σύνδεσης που εμφανίζεται στην άλλη συσκευή",
+  "Use a link code": "Χρήση κωδικού σύνδεσης",
+  "Use a recovery code": "Χρήση κωδικού ανάκτησης",
+  "Link code": "Κωδικός σύνδεσης",
+  "Join sync": "Σύνδεση στον συγχρονισμό",
 };

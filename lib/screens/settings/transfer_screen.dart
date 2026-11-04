@@ -824,7 +824,7 @@ class _ReceiveScreenState extends State<_ReceiveScreen> {
               for (final (c, key) in row.indexed)
                 Padding(
                   padding: const EdgeInsets.all(5),
-                  child: _KeyButton(
+                  child: TransferCodeKey(
                     focusNode: _nodes[r][c],
                     autofocus: r == 0 && c == 0,
                     label: key,
@@ -928,8 +928,9 @@ class _ReceiveScreenState extends State<_ReceiveScreen> {
   }
 }
 
-class _KeyButton extends StatelessWidget {
-  const _KeyButton({
+class TransferCodeKey extends StatelessWidget {
+  const TransferCodeKey({
+    super.key,
     required this.focusNode,
     required this.label,
     required this.enabled,

@@ -358,7 +358,8 @@ const Map<String, String> kIt = {
   "See all": "Vedi tutto",
   "Update automatically": "Aggiorna automaticamente",
   "Live stream format: HLS": "Formato dello streaming live: HLS",
-  "Off: MPEG-TS (default, fastest start). On: HLS, like the HLS option in TiviMate. Plays about 10 seconds further behind live, but hides servers that send live TV in bursts. Applies from the next channel.": "Disattivato: MPEG-TS (predefinito, avvio più rapido). Attivato: HLS, come l'opzione HLS di TiviMate. Va circa 10 secondi più indietro rispetto alla diretta, ma nasconde i server che inviano la TV in diretta a scatti. Vale dal canale successivo.",
+  "Off: MPEG-TS (default, fastest start). On: HLS, like the HLS option in TiviMate. Plays about 10 seconds further behind live, but hides servers that send live TV in bursts. Applies from the next channel.":
+      "Disattivato: MPEG-TS (predefinito, avvio più rapido). Attivato: HLS, come l'opzione HLS di TiviMate. Va circa 10 secondi più indietro rispetto alla diretta, ma nasconde i server che inviano la TV in diretta a scatti. Vale dal canale successivo.",
   "On: when an update is due, it runs at launch without asking. Off: the app asks \"Update content now?\" first.":
       "Attivo: quando un aggiornamento è dovuto, parte all'avvio senza chiedere. Disattivo: l'app chiede prima «Aggiornare i contenuti ora?».",
   "Open on": "Apri su",
@@ -1818,8 +1819,7 @@ const Map<String, String> kIt = {
   "College": "Universitario",
   // Settings > General > Support VesperTV
   "Support VesperTV": "Sostieni VesperTV",
-  "How you can help":
-      "Come aiutare",
+  "How you can help": "Come aiutare",
   "VesperTV is free and always will be: no ads, no tracking, no paid features. The support page shows how you can help pay for the server, the website and development.":
       "VesperTV è gratuito e lo sarà sempre: niente pubblicità, niente tracciamento, nessuna funzione a pagamento. La pagina di supporto spiega come aiutare a pagare il server, il sito e lo sviluppo.",
   "Supporting is a thank-you, never a paywall: everyone gets the same app.":
@@ -2340,21 +2340,29 @@ const Map<String, String> kIt = {
   "Total": "Totale",
   "Betting odds · {book}": "Quote · {book}",
   "Playlist editor": "Editor playlist",
-  "Rename, hide copies, fallbacks and stream test, from your phone or PC": "Rinomina, nascondi copie, canali di riserva e test degli stream, dal telefono o dal PC",
-  "Rename, change logos, hide copies and dead streams, set fallback channels and clean up the guide, from your phone or PC. Your provider's playlist is never changed: edits are kept on this device and run again on every content update.": "Rinomina canali, cambia i loghi, nascondi copie e stream morti, scegli canali di riserva e pulisci la guida, dal telefono o dal PC. La playlist del tuo provider non viene mai modificata: le modifiche restano su questo dispositivo e si riapplicano a ogni aggiornamento.",
+  "Rename, hide copies, fallbacks and stream test, from your phone or PC":
+      "Rinomina, nascondi copie, canali di riserva e test degli stream, dal telefono o dal PC",
+  "Rename, change logos, hide copies and dead streams, set fallback channels and clean up the guide, from your phone or PC. Your provider's playlist is never changed: edits are kept on this device and run again on every content update.":
+      "Rinomina canali, cambia i loghi, nascondi copie e stream morti, scegli canali di riserva e pulisci la guida, dal telefono o dal PC. La playlist del tuo provider non viene mai modificata: le modifiche restano su questo dispositivo e si riapplicano a ogni aggiornamento.",
   "Could not open the editor: {e}": "Impossibile aprire l'editor: {e}",
   "Phone: scan the code.": "Telefono: scansiona il codice.",
-  "PC: open this address in a browser": "PC: apri questo indirizzo in un browser",
+  "PC: open this address in a browser":
+      "PC: apri questo indirizzo in un browser",
   "and enter the code": "e inserisci il codice",
-  "Same Wi-Fi or network as this device. The editor closes when you leave this screen.": "Stessa Wi-Fi o rete di questo dispositivo. L'editor si chiude quando esci da questa schermata.",
+  "Same Wi-Fi or network as this device. The editor closes when you leave this screen.":
+      "Stessa Wi-Fi o rete di questo dispositivo. L'editor si chiude quando esci da questa schermata.",
   "Open in browser": "Apri nel browser",
-  "Saved from your phone or PC: {name}": "Salvato dal telefono o dal PC: {name}",
+  "Saved from your phone or PC: {name}":
+      "Salvato dal telefono o dal PC: {name}",
   "Stream test {done}/{total}: {name}": "Test stream {done}/{total}: {name}",
   "Stream test: {done}/{total} tested.": "Test stream: {done}/{total} testati.",
-  "Switch to another copy when a channel fails": "Passa a un'altra copia quando un canale non funziona",
-  "If a channel doesn't start or keeps dropping, play its next copy (FHD, then HD…) or your fallback channels, without an error screen.": "Se un canale non parte o si interrompe, viene riprodotta la copia successiva (FHD, poi HD…) o i tuoi canali di riserva, senza schermata di errore.",
+  "Switch to another copy when a channel fails":
+      "Passa a un'altra copia quando un canale non funziona",
+  "If a channel doesn't start or keeps dropping, play its next copy (FHD, then HD…) or your fallback channels, without an error screen.":
+      "Se un canale non parte o si interrompe, viene riprodotta la copia successiva (FHD, poi HD…) o i tuoi canali di riserva, senza schermata di errore.",
   "Hide lower-quality copies": "Nascondi le copie di qualità inferiore",
-  "Only the best copy of each channel is listed; the others stay as automatic fallbacks.": "Viene mostrata solo la copia migliore di ogni canale; le altre restano come riserva automatica.",
+  "Only the best copy of each channel is listed; the others stay as automatic fallbacks.":
+      "Viene mostrata solo la copia migliore di ogni canale; le altre restano come riserva automatica.",
   "Hide separator rows": "Nascondi le righe separatrici",
   "Rows like ##### SPORTS #####": "Righe come ##### SPORTS #####",
   "{n} channels hidden by the editor": "{n} canali nascosti dall'editor",
@@ -2372,17 +2380,21 @@ const Map<String, String> kIt = {
   "Down": "Giù",
   "Recently added": "Aggiunti di recente",
   "Recently added channels": "Canali aggiunti di recente",
-  "Adds a TV tab group with the channels your playlists added in the last 14 days.": "Aggiunge un gruppo nella scheda TV con i canali aggiunti dalle tue playlist negli ultimi 14 giorni.",
-  "No channels added in the last 14 days.": "Nessun canale aggiunto negli ultimi 14 giorni.",
+  "Adds a TV tab group with the channels your playlists added in the last 14 days.":
+      "Aggiunge un gruppo nella scheda TV con i canali aggiunti dalle tue playlist negli ultimi 14 giorni.",
+  "No channels added in the last 14 days.":
+      "Nessun canale aggiunto negli ultimi 14 giorni.",
   "Live buffer": "Buffer della diretta",
-  "Hide short dropouts on live channels": "Nasconde le brevi interruzioni sui canali live",
+  "Hide short dropouts on live channels":
+      "Nasconde le brevi interruzioni sui canali live",
   "Small (1.5 seconds)": "Piccolo (1,5 secondi)",
   "Gradual (starts fast, builds up)": "Graduale (parte subito, si accumula)",
   "building at 96 % speed": "accumulo al 96 % della velocità",
   "4 seconds": "4 secondi",
   "8 seconds": "8 secondi",
   "12 seconds": "12 secondi",
-  "{size}. Live channels store this much before playing, so short dropouts from the server don't show. Bigger hides longer dropouts, but channels start later and play that much behind live. Applies from the next channel.": "{size}. I canali live accumulano questa riserva prima di partire, così le brevi interruzioni del server non si vedono. Più grande nasconde interruzioni più lunghe, ma i canali partono dopo e restano indietro di quel tempo rispetto alla diretta. Vale dal prossimo canale.",
+  "{size}. Live channels store this much before playing, so short dropouts from the server don't show. Bigger hides longer dropouts, but channels start later and play that much behind live. Applies from the next channel.":
+      "{size}. I canali live accumulano questa riserva prima di partire, così le brevi interruzioni del server non si vedono. Più grande nasconde interruzioni più lunghe, ma i canali partono dopo e restano indietro di quel tempo rispetto alla diretta. Vale dal prossimo canale.",
   "Seasons": "Stagioni",
   "Playlist editor (Test flight)": "Editor playlist (Test flight)",
   "Add screen": "Aggiungi schermo",
@@ -2390,22 +2402,69 @@ const Map<String, String> kIt = {
   "Equal screens": "Schermi uguali",
   "Exit full screen": "Esci da schermo intero",
   "Remove screen": "Rimuovi schermo",
-  "= audio follows the selected screen · OK for options · hold OK to enlarge": "= l'audio segue lo schermo scelto · OK per le opzioni · tieni premuto OK per ingrandire",
+  "= audio follows the selected screen · OK for options · hold OK to enlarge":
+      "= l'audio segue lo schermo scelto · OK per le opzioni · tieni premuto OK per ingrandire",
   "Search and add": "Cerca e aggiungi",
   "Hide league names": "Nascondi i nomi dei campionati",
   "Show league names": "Mostra i nomi dei campionati",
-  "Check up to 4 live games, then choose Open Multiview": "Seleziona fino a 4 partite in diretta, poi scegli Apri Multiview",
-  "Only live games can be added": "Si possono aggiungere solo partite in diretta",
+  "Check up to 4 live games, then choose Open Multiview":
+      "Seleziona fino a 4 partite in diretta, poi scegli Apri Multiview",
+  "Only live games can be added":
+      "Si possono aggiungere solo partite in diretta",
   "Multiview shows up to 4 screens": "Multiview mostra fino a 4 schermi",
   "Check at least one live game": "Seleziona almeno una partita in diretta",
   "Open Multiview ({n})": "Apri Multiview ({n})",
   "Play in Multiview": "Guarda in Multiview",
-  "Check other live games to watch together": "Seleziona altre partite in diretta da guardare insieme",
+  "Check other live games to watch together":
+      "Seleziona altre partite in diretta da guardare insieme",
   "{n} sources": "{n} fonti",
   "Not listed yet": "Non ancora in elenco",
-  "The newest episode may not be in the catalog yet. Press Play to ask your sources.": "L'episodio più recente potrebbe non essere ancora nel catalogo. Premi Riproduci per chiedere alle tue fonti.",
-  "The channel stopped. Still trying to reconnect...": "Il canale si è fermato. Riprovo a riconnettermi…",
+  "The newest episode may not be in the catalog yet. Press Play to ask your sources.":
+      "L'episodio più recente potrebbe non essere ancora nel catalogo. Premi Riproduci per chiedere alle tue fonti.",
+  "The channel stopped. Still trying to reconnect...":
+      "Il canale si è fermato. Riprovo a riconnettermi…",
   "Software video": "Video software",
-  "Turn on if channels or movies stay black while the sound or the stream plays. Draws the video without the graphics card path. Uses more CPU on 4K. Applies from the next video.": "Attiva se canali o film restano neri mentre l'audio o lo stream va. Mostra il video senza passare dalla scheda grafica. Usa più CPU in 4K. Vale dal prossimo video.",
+  "Turn on if channels or movies stay black while the sound or the stream plays. Draws the video without the graphics card path. Uses more CPU on 4K. Applies from the next video.":
+      "Attiva se canali o film restano neri mentre l'audio o lo stream va. Mostra il video senza passare dalla scheda grafica. Usa più CPU in 4K. Vale dal prossimo video.",
   "For PCs where video stays black": "Per i PC dove il video resta nero",
+
+  // Cloud sync settings.
+  "Sync": "Sincronizzazione",
+  "Keep your setup and watch progress together across devices":
+      "Mantieni configurazione e avanzamento tra i dispositivi",
+  "Keep your setup and watch progress together across devices. No account needed.":
+      "Mantieni configurazione e avanzamento tra i dispositivi. Nessun account necessario.",
+  "Some changes appear after you restart VesperTV. Profile photos and imported M3U files do not sync.":
+      "Alcune modifiche appaiono dopo il riavvio di VesperTV. Foto del profilo e file M3U importati non si sincronizzano.",
+  "The sync code was reset on another device. Link this device again.":
+      "Il codice di sincronizzazione è stato reimpostato su un altro dispositivo. Collega di nuovo questo dispositivo.",
+  "Not synced yet": "Non ancora sincronizzato",
+  "Last sync: {time}": "Ultima sincronizzazione: {time}",
+  "Sync now": "Sincronizza ora",
+  "Link a device": "Collega un dispositivo",
+  "Show recovery code": "Mostra codice di recupero",
+  "Reset sync code": "Reimposta codice di sincronizzazione",
+  "Other devices will stop syncing until you link them again. Save the new recovery code.":
+      "Gli altri dispositivi smetteranno di sincronizzarsi finché non li collegherai di nuovo. Conserva il nuovo codice di recupero.",
+  "Stop syncing on this device":
+      "Interrompi la sincronizzazione su questo dispositivo",
+  "Your data stays on this device. Other devices keep syncing.":
+      "I tuoi dati restano su questo dispositivo. Gli altri dispositivi continuano a sincronizzarsi.",
+  "Set up sync": "Configura sincronizzazione",
+  "I have a code": "Ho un codice",
+  "Recovery code": "Codice di recupero",
+  "Save this code. It's the only way back in if you lose all your devices. We can't recover it.":
+      "Conserva questo codice. È l’unico modo per recuperare l’accesso se perdi tutti i dispositivi. Non possiamo recuperarlo.",
+  "On the other device, open Settings > Device & data > Sync > I have a code.":
+      "Sull’altro dispositivo, apri Impostazioni > Dispositivo e dati > Sincronizzazione > Ho un codice.",
+  "Expires in {time}": "Scade tra {time}",
+  "I saved my recovery code": "Ho salvato il mio codice di recupero",
+  "Enter your 26-character recovery code":
+      "Inserisci il codice di recupero di 26 caratteri",
+  "Enter the 16-digit link code shown on the other device":
+      "Inserisci il codice di collegamento di 16 cifre mostrato sull’altro dispositivo",
+  "Use a link code": "Usa un codice di collegamento",
+  "Use a recovery code": "Usa un codice di recupero",
+  "Link code": "Codice di collegamento",
+  "Join sync": "Unisciti alla sincronizzazione",
 };
