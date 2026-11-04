@@ -10,6 +10,7 @@ import 'cloud_transfer.dart';
 import 'device_transfer.dart' show TransferError, TransferException;
 import 'phone_pairing_service.dart' show kRelayAppHeaders;
 import 'sync_merge.dart';
+import 'sync_profile_match.dart';
 import '../utils/constants.dart';
 
 /// Cloud sync: no account, no login (owner policy). Devices that share a
@@ -568,10 +569,10 @@ class SyncEngine {
         // The server lost it (3 months unused): start it again from here
         // instead of reading that as "everything was removed".
         final base = remote.version == 0 ? null : state.base;
-        final pendingJoin = deferred.containsKey(AppConstants.keyPlaylists);
+        final pendingJoin = deferred.containsKey(AppConstants.keyPlaylists) ||
+            deferred.containsKey(AppConstants.keyViewerProfiles);
         final matched = base == null || pendingJoin
-            ? matchSyncPlaylists(effective, remoteSnap.values,
-                playlistSource: local)
+            ? matchSyncJoin(effective, remoteSnap.values, source: local)
             : effective;
         final remapped = !syncValuesEqual(matched, effective);
         final merged = mergeSync(
@@ -583,14 +584,15 @@ class SyncEngine {
                     base, matched, const {}, _now().millisecondsSinceEpoch)
                 : state.pending,
             newestFirst: newestFirst);
-        // Keep remapped references together until the loaded playlist can
-        // adopt its new identity at cold start.
+        // Keep remapped references together until the loaded playlists and
+        // viewer profiles can adopt their new identities at cold start.
         final holdJoin = applyNow != null &&
-            !applyNow(AppConstants.keyPlaylists) &&
+            (!applyNow(AppConstants.keyPlaylists) ||
+                !applyNow(AppConstants.keyViewerProfiles)) &&
             (remapped ||
                 (pendingJoin &&
                     !syncValuesEqual(
-                        matchSyncPlaylists(local, remoteSnap.values), local)));
+                        matchSyncJoin(local, remoteSnap.values), local)));
 
         // What this device has to write, split into now and later.
         final changed = <String, Object?>{};
