@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
@@ -164,20 +165,7 @@ class SyncClient {
     if (res.statusCode != 200 || version == null) {
       throw const TransferException(TransferError.unreachable);
     }
-    final blob = res.bodyBytes;
-    final keys = this.keys;
-    final snapshot = await Isolate.run(() async {
-      final clear = await openVaultBlob(keys, blob);
-      if (clear == null) return null;
-      try {
-        final env = jsonDecode(utf8.decode(gzip.decode(clear)));
-        if (env is! Map || env['kind'] != 'sync') return null;
-        if (env['revoked'] == true) return const _Revoked();
-        return SyncSnapshot.fromJson(env);
-      } catch (_) {
-        return null;
-      }
-    });
+    final snapshot = await _openSyncBlob(keys, res.bodyBytes);
     if (snapshot == null) throw const TransferException(TransferError.invalid);
     if (snapshot is _Revoked) throw const SyncRevoked();
     return SyncRemote(version, snapshot);
@@ -189,14 +177,8 @@ class SyncClient {
   /// Uploads [snapshot] over version [expected]; returns the new version.
   /// Throws [SyncConflict] when another device got there first.
   Future<int> put(SyncSnapshot snapshot, int expected) async {
-    final keys = this.keys;
-    final json = {
-      'kind': 'sync',
-      'schema': _snapshotSchema,
-      ...snapshot.toJson()
-    };
-    final blob = await Isolate.run(() async =>
-        sealVaultBlob(keys, gzip.encode(utf8.encode(jsonEncode(json)))));
+    final blob = await _sealSyncBlob(keys,
+        {'kind': 'sync', 'schema': _snapshotSchema, ...snapshot.toJson()});
     lastPutBytes = blob.length;
     final res = await _call(() => _http.put(_uri,
         headers: {
@@ -224,11 +206,8 @@ class SyncClient {
   /// devices still on this secret stop instead of re-creating it. The
   /// marker expires with the usual 3 months.
   Future<void> revoke() async {
-    final keys = this.keys;
-    final blob = await Isolate.run(() async => sealVaultBlob(
-        keys,
-        gzip.encode(utf8.encode(jsonEncode(
-            {'kind': 'sync', 'schema': _snapshotSchema, 'revoked': true})))));
+    final blob = await _sealSyncBlob(
+        keys, {'kind': 'sync', 'schema': _snapshotSchema, 'revoked': true});
     for (var attempt = 0; attempt < 3; attempt++) {
       final current = await _currentVersion();
       final res = await _call(() => _http.put(_uri,
@@ -289,6 +268,29 @@ class SyncClient {
 class _Revoked extends SyncSnapshot {
   const _Revoked() : super(const {}, const {});
 }
+
+// Top level on purpose: a closure written inside a SyncClient method shares
+// that method's context, which holds `this` once any closure there uses it,
+// and Isolate.run then tries to copy the live HTTP client (unsendable). Only
+// a real IOClient with an open connection fails, so tests never saw it
+// (+609 join on a phone, LOG-9VX59U).
+Future<Uint8List> _sealSyncBlob(VaultKeys keys, Map<String, Object?> json) =>
+    Isolate.run(
+        () => sealVaultBlob(keys, gzip.encode(utf8.encode(jsonEncode(json)))));
+
+Future<SyncSnapshot?> _openSyncBlob(VaultKeys keys, Uint8List blob) =>
+    Isolate.run(() async {
+      final clear = await openVaultBlob(keys, blob);
+      if (clear == null) return null;
+      try {
+        final env = jsonDecode(utf8.decode(gzip.decode(clear)));
+        if (env is! Map || env['kind'] != 'sync') return null;
+        if (env['revoked'] == true) return const _Revoked();
+        return SyncSnapshot.fromJson(env);
+      } catch (_) {
+        return null;
+      }
+    });
 
 // ------------------------------------------------------------------ engine
 

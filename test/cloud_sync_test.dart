@@ -11,6 +11,7 @@ import 'package:nox_iptv/services/device_transfer.dart';
 import 'package:nox_iptv/services/phone_pairing_service.dart'
     show kRelayAppHeaders;
 import 'package:nox_iptv/services/storage_service.dart';
+import 'package:nox_iptv/services/sync_merge.dart' show SyncSnapshot;
 
 class _MemoryStore implements SyncStore {
   SyncState? state;
@@ -221,6 +222,23 @@ void main() {
     expect(a.values, {'x': i(5), 'y': i(6)});
     await b.engine.sync();
     expect(b.values, {'x': i(5), 'y': i(6)});
+  });
+
+  // +609 join on a phone (LOG-9VX59U): the isolate that seals an upload
+  // copied the client's live HTTP connections and threw "object is
+  // unsendable". A request still open on the same client reproduces it.
+  test('upload and download while the client has a request open', () async {
+    if (relay == null) return markTestSkipped('python not found');
+    final client = await SyncClient.forSecret(newSyncSecret());
+    final open = client.fetch();
+    final version = await client.put(SyncSnapshot({'x': i(1)}, const {}), 0);
+    await open;
+    final pending = client.fetch();
+    final remote = await client.fetch();
+    await pending;
+    expect(version, 1);
+    expect(remote.snapshot!.values, {'x': i(1)});
+    await client.delete();
   });
 
   test('relay: wrong token 403, stale If-Match 412, unchanged 304', () async {
