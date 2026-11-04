@@ -59,6 +59,7 @@ nginx config path. Keep these private details out of this public repository.
    server command sequence to submit for approval (run as the service administrator):
 
 ```sh
+set -eu
 # Set these to the reviewed, absolute paths before requesting approval:
 : "${PAIR_RELAY_STAGED:?reviewed staged relay.py path}"
 : "${PAIR_NGINX_STAGED:?reviewed staged nginx config path}"
