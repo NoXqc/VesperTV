@@ -2,11 +2,14 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nox_iptv/services/cloud_sync.dart';
+import 'package:nox_iptv/services/cloud_sync_service.dart';
 import 'package:nox_iptv/services/cloud_transfer.dart';
 import 'package:nox_iptv/services/device_transfer.dart';
 import 'package:nox_iptv/services/phone_pairing_service.dart'
     show kRelayAppHeaders;
+import 'package:nox_iptv/services/storage_service.dart';
 
 class _MemoryStore implements SyncStore {
   SyncState? state;
@@ -176,6 +179,100 @@ void main() {
     await client.delete();
     expect((await http.get(uri, headers: kRelayAppHeaders)).statusCode, 404);
     client.close();
+  });
+
+  test('keys a running app can\'t reload wait for the next cold start',
+      () async {
+    if (relay == null) return markTestSkipped('python not found');
+    Map<String, Object?> s(String v) => {'t': 's', 'v': v};
+    final a = _Device({
+      'fav': l(['ch1']),
+      'theme': s('gold')
+    });
+    final b = _Device({});
+    final secret = newSyncSecret();
+    await a.engine.start(secret);
+    await a.engine.sync();
+    await b.engine.start(secret);
+    await b.engine.sync();
+    bool live(String k) => k == 'fav';
+
+    a.values['fav'] = l(['ch1', 'ch2']);
+    a.values['theme'] = s('red');
+    await a.engine.sync();
+    final r = await b.engine.sync(applyNow: live);
+    expect(b.values['fav'], l(['ch1', 'ch2']));
+    expect(b.values['theme'], s('gold')); // held
+    expect(r!.deferred, 1);
+    // B keeps syncing while held: its old theme is never pushed back.
+    b.values['fav'] = l(['ch1', 'ch2', 'ch3']);
+    await b.engine.sync(applyNow: live);
+    await a.engine.sync();
+    expect(a.values['theme'], s('red'));
+    expect(a.values['fav'], l(['ch1', 'ch2', 'ch3']));
+    // Cold start: the held theme is written.
+    await b.engine.sync();
+    expect(b.values['theme'], s('red'));
+    expect(b.store.state!.deferred, isEmpty);
+
+    // Held again, then edited here: the local edit wins.
+    a.values['theme'] = s('blue');
+    await a.engine.sync();
+    await b.engine.sync(applyNow: live);
+    expect(b.values['theme'], s('red'));
+    b.values['theme'] = s('green');
+    await b.engine.sync(applyNow: live);
+    await a.engine.sync();
+    expect(a.values['theme'], s('green'));
+  });
+
+  test('app service: favourites apply live, playlists at the next launch',
+      () async {
+    if (relay == null) return markTestSkipped('python not found');
+    SharedPreferences.setMockInitialValues({
+      'nox_favorites': ['p1::ch1'],
+      'nox_playlists': '[{"id":"p1","name":"Home"}]',
+      'nox_active_viewer': 'main',
+    });
+    final storage = StorageService();
+    await storage.init();
+    String playlistsJson() =>
+        (storage.exportForSync()['nox_playlists'] as Map)['v'] as String;
+    final store = _MemoryStore();
+    final service = CloudSyncService(storage, store: store);
+    await service.init();
+    await service.setUp();
+    expect(service.status, SyncStatus.on);
+    final code = (await service.recoveryCode())!;
+
+    // A second device joins with the recovery code, changes both.
+    final other = _Device({});
+    await other.engine.start(parseSyncRecoveryCode(code)!);
+    await other.engine.sync();
+    expect(other.values['nox_favorites'], l(['p1::ch1']));
+    expect(other.values.containsKey('nox_active_viewer'), isFalse);
+    other.values['nox_favorites'] = l(['p1::ch1', 'p1::ch2']);
+    other.values['nox_playlists'] = {
+      't': 's',
+      'v': '[{"id":"p1","name":"Home renamed"}]'
+    };
+    await other.engine.sync();
+
+    Set<String>? reloaded;
+    service.onApplied = (keys) => reloaded = keys;
+    service.startAutomatic();
+    await service.syncNow();
+    expect(storage.getFavorites(), {'p1::ch1', 'p1::ch2'});
+    expect(reloaded, {'nox_favorites'});
+    expect(playlistsJson(), contains('"Home"')); // held
+    service.dispose();
+
+    // Next launch: the sync before the services load writes it.
+    final relaunched = CloudSyncService(storage, store: store);
+    await relaunched.init();
+    await relaunched.syncBeforeLoad();
+    expect(playlistsJson(), contains('Home renamed'));
+    relaunched.dispose();
   });
 
   test('after Reset sync code, a device on the old code stops', () async {

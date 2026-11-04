@@ -181,6 +181,9 @@ class SyncClient {
     return SyncRemote(version, snapshot);
   }
 
+  /// Size of the last [put]'s upload (Send log diagnostics).
+  int lastPutBytes = 0;
+
   /// Uploads [snapshot] over version [expected]; returns the new version.
   /// Throws [SyncConflict] when another device got there first.
   Future<int> put(SyncSnapshot snapshot, int expected) async {
@@ -192,6 +195,7 @@ class SyncClient {
     };
     final blob = await Isolate.run(() async =>
         sealVaultBlob(keys, gzip.encode(utf8.encode(jsonEncode(json)))));
+    lastPutBytes = blob.length;
     final res = await _call(() => _http.put(_uri,
         headers: {
           ...kRelayAppHeaders,
@@ -295,6 +299,7 @@ class SyncState {
     this.version = 0,
     this.base,
     this.pending = const {},
+    this.deferred = const {},
     this.lastSync,
   });
 
@@ -304,12 +309,20 @@ class SyncState {
   /// Null until the first successful sync (the device is joining).
   final SyncSnapshot? base;
   final Map<String, int> pending;
+
+  /// Keys other devices changed that this device couldn't take while
+  /// running (see [SyncEngine.sync]'s `applyNow`), with this device's own
+  /// value at the time (null = absent). They're in [base] already and get
+  /// written at the next sync allowed to apply them; a local edit to one
+  /// in the meantime is a real change and wins as usual.
+  final Map<String, Object?> deferred;
   final DateTime? lastSync;
 
   SyncState copyWith({
     int? version,
     SyncSnapshot? base,
     Map<String, int>? pending,
+    Map<String, Object?>? deferred,
     DateTime? lastSync,
   }) =>
       SyncState(
@@ -317,6 +330,7 @@ class SyncState {
         version: version ?? this.version,
         base: base ?? this.base,
         pending: pending ?? this.pending,
+        deferred: deferred ?? this.deferred,
         lastSync: lastSync ?? this.lastSync,
       );
 
@@ -325,6 +339,7 @@ class SyncState {
         'version': version,
         if (base != null) 'base': base!.toJson(),
         'pending': pending,
+        if (deferred.isNotEmpty) 'deferred': deferred,
         if (lastSync != null) 'lastSync': lastSync!.millisecondsSinceEpoch,
       };
 
@@ -334,6 +349,7 @@ class SyncState {
       final secret = base64Url.decode(json['secret'] as String);
       if (secret.length != kSyncSecretLength) return null;
       final pending = json['pending'];
+      final deferred = json['deferred'];
       final last = json['lastSync'];
       return SyncState(
         secret: secret,
@@ -345,6 +361,8 @@ class SyncState {
                   if (e.value is int) '${e.key}': e.value as int
               }
             : const {},
+        deferred:
+            deferred is Map ? Map<String, Object?>.from(deferred) : const {},
         lastSync:
             last is int ? DateTime.fromMillisecondsSinceEpoch(last) : null,
       );
@@ -401,13 +419,32 @@ abstract class SyncData {
 
 /// What one [SyncEngine.sync] did.
 class SyncResult {
-  const SyncResult({required this.pulled, required this.pushed});
+  const SyncResult(
+      {required this.pulled,
+      required this.pushed,
+      this.applied = const {},
+      this.deferred = 0,
+      this.busy = false,
+      this.bytes = 0});
 
   /// Keys changed on this device by other devices' changes.
   final int pulled;
 
   /// Whether this device uploaded a new snapshot.
   final bool pushed;
+
+  /// The keys written here (so the app can reload what holds them).
+  final Set<String> applied;
+
+  /// Keys held for the next cold start (see `applyNow`).
+  final int deferred;
+
+  /// Nothing was written: this device changed a key while syncing; the
+  /// next sync merges again.
+  final bool busy;
+
+  /// Size of the uploaded snapshot (0 = nothing uploaded).
+  final int bytes;
 }
 
 /// Runs one sync: date local changes, fetch, merge, apply, upload,
@@ -430,7 +467,13 @@ class SyncEngine {
   Future<void> stop() => store.save(null);
 
   /// Null when this device doesn't sync. Overlapping calls share one run.
-  Future<SyncResult?> sync({http.Client? client}) async {
+  ///
+  /// [applyNow]: which keys may be written now. While the app runs, only
+  /// keys whose services reload from storage are safe (the rest are held
+  /// in [SyncState.deferred] for the next cold start); null = all, for the
+  /// sync that runs before the services load.
+  Future<SyncResult?> sync(
+      {http.Client? client, bool Function(String key)? applyNow}) async {
     final running = _running;
     if (running != null) {
       await running;
@@ -439,25 +482,64 @@ class SyncEngine {
     final done = Completer<void>();
     _running = done.future;
     try {
-      return await _sync(client);
+      return await _sync(client, applyNow);
     } finally {
       _running = null;
       done.complete();
     }
   }
 
-  Future<SyncResult?> _sync(http.Client? httpClient) async {
+  /// Whether this device has changes the server doesn't (cheap: no
+  /// network), so a change-triggered sync can skip idle rounds.
+  Future<bool> hasLocalChanges() async {
+    final state = await store.load();
+    if (state == null) return false;
+    final local = _effectiveLocal(state, data.exportForSync());
+    final base = state.base?.values ?? const {};
+    for (final key in {...local.keys, ...base.keys}) {
+      if (!syncValuesEqual(local[key], base[key])) return true;
+    }
+    return false;
+  }
+
+  /// [local] with each still-untouched held key read as the base's value
+  /// (it isn't a change of ours, just not written yet).
+  static Map<String, Object?> _effectiveLocal(
+      SyncState state, Map<String, Object?> local) {
+    if (state.deferred.isEmpty) return local;
+    final out = {...local};
+    final base = state.base?.values ?? const {};
+    for (final e in state.deferred.entries) {
+      if (!syncValuesEqual(local[e.key], e.value)) continue;
+      final b = base[e.key];
+      if (b == null) {
+        out.remove(e.key);
+      } else {
+        out[e.key] = b;
+      }
+    }
+    return out;
+  }
+
+  Future<SyncResult?> _sync(
+      http.Client? httpClient, bool Function(String key)? applyNow) async {
     var state = await store.load();
     if (state == null) return null;
-    var local = data.exportForSync();
+    final local = data.exportForSync();
+    // Held keys the user has since edited here are ordinary changes now.
+    final deferred = {
+      for (final e in state.deferred.entries)
+        if (syncValuesEqual(local[e.key], e.value)) e.key: e.value
+    };
+    state = state.copyWith(deferred: deferred);
+    final effective = _effectiveLocal(state, local);
     state = state.copyWith(
-        pending: stampLocalChanges(
-            state.base, local, state.pending, _now().millisecondsSinceEpoch));
+        pending: stampLocalChanges(state.base, effective, state.pending,
+            _now().millisecondsSinceEpoch));
     await store.save(state);
 
     final client = await SyncClient.forSecret(state.secret, client: httpClient);
     try {
-      var pulled = 0;
       for (var attempt = 0;; attempt++) {
         final remote = await client.fetch(
             knownVersion: state!.base == null ? null : state.version);
@@ -468,27 +550,28 @@ class SyncEngine {
         final base = remote.version == 0 ? null : state.base;
         final merged = mergeSync(
             base: base,
-            local: local,
+            local: effective,
             remote: remoteSnap,
             pending: state.pending);
 
+        // What this device has to write, split into now and later.
         final changed = <String, Object?>{};
         final removed = <String>{};
+        final hold = <String, Object?>{};
         for (final key in {...merged.values.keys, ...local.keys}) {
           final v = merged.values[key];
           if (syncValuesEqual(v, local[key])) continue;
-          if (v == null) {
+          if (applyNow != null && !applyNow(key)) {
+            hold[key] = local[key];
+          } else if (v == null) {
             removed.add(key);
           } else {
             changed[key] = v;
           }
         }
-        if (changed.isNotEmpty || removed.isNotEmpty) {
-          await data.applySyncChanges(changed, removed);
-          pulled += changed.length + removed.length;
-          local = data.exportForSync();
-        }
 
+        // Upload first: losing the race (412) then leaves nothing half
+        // written here.
         var version = remote.version;
         var pushed = false;
         if (remote.version == 0 ||
@@ -501,13 +584,35 @@ class SyncEngine {
             continue;
           }
         }
+
+        // The user changed one of these keys meanwhile: keep the old base
+        // so the next sync merges that edit properly.
+        final now = data.exportForSync();
+        if ([...changed.keys, ...removed]
+            .any((k) => !syncValuesEqual(now[k], local[k]))) {
+          return SyncResult(pulled: 0, pushed: pushed, busy: true);
+        }
+        if (changed.isNotEmpty || removed.isNotEmpty) {
+          await data.applySyncChanges(changed, removed);
+        }
         state = state.copyWith(
             version: version,
             base: merged,
             pending: const {},
+            deferred: {
+              for (final e in deferred.entries)
+                if (!changed.containsKey(e.key) && !removed.contains(e.key))
+                  e.key: e.value,
+              ...hold,
+            },
             lastSync: _now());
         await store.save(state);
-        return SyncResult(pulled: pulled, pushed: pushed);
+        return SyncResult(
+            pulled: changed.length + removed.length,
+            pushed: pushed,
+            applied: {...changed.keys, ...removed},
+            deferred: state.deferred.length,
+            bytes: pushed ? client.lastPutBytes : 0);
       }
     } finally {
       if (httpClient == null) client.close();

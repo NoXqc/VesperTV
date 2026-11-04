@@ -1478,6 +1478,32 @@ class StorageService {
   static bool _syncable(String key) =>
       _transferable(key) && !_syncSkipExact.contains(key);
 
+  /// Keys cloud sync may write while the app runs: the ones
+  /// `PlaylistManager.applyActiveViewer` / `PlaybackService.reloadForViewer`
+  /// / `AppPreferences.reloadPaletteForViewer` re-read (plus watch
+  /// positions, read when a title starts). Everything else (playlists,
+  /// Media Hub, settings) lives in services that keep their own copy and
+  /// would save it back over a pulled change, so it waits for the sync
+  /// before the services load (`SyncState.deferred`). Prefixes also match
+  /// the per-viewer/per-playlist suffixed forms.
+  static bool isLiveSyncKey(String key) =>
+      _liveSyncPrefixes.any(key.startsWith);
+
+  static const _liveSyncPrefixes = [
+    AppConstants.keyFavorites,
+    AppConstants.keyFavoriteSeries,
+    AppConstants.keyFavoritedGroups,
+    AppConstants.keyFavoriteLiveOrder,
+    AppConstants.keyMyGroups,
+    AppConstants.keyHiddenGroups,
+    AppConstants.keyShownGroups,
+    AppConstants.keyHiddenChannels,
+    AppConstants.keyHiddenPlaylistGroups,
+    AppConstants.keyLastPositionPrefix,
+    AppConstants.keyLastDurationPrefix,
+    AppConstants.keyPaletteId,
+  ];
+
   /// Cloud sync's view of the setup (`SyncData`, cloud_sync.dart): the
   /// [exportForTransfer] form, minus [_syncSkipExact].
   Map<String, Object?> exportForSync() => _exportWhere(_syncable);

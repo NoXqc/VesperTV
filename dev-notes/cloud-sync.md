@@ -28,8 +28,27 @@ lives in memory only for rate limiting.
 The same keys Transfer copies (`StorageService._transferable`): playlists, every viewer's
 favourites, hidden groups/channels, own groups, watch positions, history, Sports Trak, Media Hub
 sources/favourites/resume, settings. Device-only keys (layout, enabled playlists on this box,
-caches, PIN lockout, sync state itself) never sync. Not in v1: profile photos and imported M3U
-files (files, not prefs: they go with Transfer/Backup only).
+caches, PIN lockout, current viewer, backup timer) never sync. Not in v1: profile photos, imported
+M3U files and the recently played / Continue Watching history (files in the cache folder, not
+prefs; watch *positions* do sync).
+
+## Applying while the app runs
+Services read storage once at launch and keep their own copy, so a pulled value they own could be
+saved back over by them. So:
+- **Live keys** (`StorageService.isLiveSyncKey`: favourites, favourite groups/order, own groups,
+  hidden groups/channels, watch positions, palette) are written at once and the app runs the
+  profile-switch reload (`applyActiveViewer`, `reloadForViewer`, `reloadPaletteForViewer`).
+- **Everything else** (playlists, Media Hub, settings, Sports Trak) is **held**
+  (`SyncState.deferred`): already merged and on the server, written at the next launch by the
+  sync that runs before the services load (`CloudSyncService.syncBeforeLoad`, max 4 s of splash).
+  Held keys are never pushed back as old values; a local edit to one is a normal change.
+- The engine uploads before writing anything, and skips the round if the user changed one of the
+  keys meanwhile (`SyncResult.busy`).
+
+Wiring (`main.dart`): cold sync right after `StorageService.init`, then `startAutomatic()` (every
+5 min), `AppLifecycleListener` resume, and `noteLocalChange` on PlaylistManager / ArchiveService /
+PlaybackService notifications (at most one change-sync per 2 min, only if something differs).
+Send log: `Sync: N in, N held, pushed N KB, T ms` / `Sync: failed (kind)`; never values.
 
 ## Merge (on the device; the server only stores the blob)
 Each device keeps the **base**: the last snapshot it agreed with the server. On sync, per key:
@@ -67,10 +86,8 @@ the app comes back to the screen, when a show/movie page opens, and every 5 minu
 1. **Core (this branch):** relay endpoint + tests; `cloud_sync.dart` (secret, link/recovery
    codes, client with retries), `sync_merge.dart` (pure merge), storage export/apply; unit +
    local-relay tests. No UI, no app wiring.
-2. **App:** Settings > Device & data > **Sync** (set up, link a device, recovery code, reset, last
-   sync, Sync now), lifecycle triggers, applying pulled changes live (reload favourites/history/
-   Media Hub in memory), Send log `Sync:` lines (counts and timings, never values), playlist
-   matching by server + username on join. All strings through `tr()` (FR/ES/IT/EL/DE).
+2. **App:** lifecycle + live apply + Send log (done, Claude); Settings > Device & data > **Sync**
+   screen, playlist matching on join, relay tests/deploy prep, docs (Codex, HANDOFF pickup).
 3. **Logins + polish:** token rotation, per-device media-server sign-in, reminder to save the
    recovery code, Backup & restore option.
 

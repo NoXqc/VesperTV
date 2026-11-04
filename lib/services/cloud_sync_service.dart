@@ -149,26 +149,112 @@ class CloudSyncService extends ChangeNotifier {
     if (_status != SyncStatus.on) return 0;
     final engine = await _ensureEngine();
     _syncing = true;
+    _lastAttempt = DateTime.now();
     notifyListeners();
+    final watch = Stopwatch()..start();
     try {
-      final result = await engine.sync();
+      // Checked per key when the merge decides, so a sync that started
+      // before the services loaded still holds what they now own.
+      final result = await engine.sync(
+          applyNow: (key) => !_appLoaded || StorageService.isLiveSyncKey(key));
       _lastError = null;
       _lastSync = DateTime.now();
-      return result?.pulled ?? 0;
+      if (result == null) return 0;
+      debugPrint('Sync: ${result.pulled} in, ${result.deferred} held, '
+          '${result.pushed ? 'pushed ${(result.bytes / 1024).round()} KB' : 'nothing pushed'}'
+          '${result.busy ? ', busy (retry later)' : ''}, '
+          '${watch.elapsedMilliseconds} ms');
+      if (_appLoaded && result.applied.isNotEmpty) {
+        onApplied?.call(result.applied);
+      }
+      return result.pulled;
     } on SyncRevoked {
+      debugPrint('Sync: code was reset on another device');
       await engine.stop();
       _status = SyncStatus.revoked;
       return 0;
     } on TransferException catch (e) {
+      debugPrint('Sync: failed (${e.kind.name}) after '
+          '${watch.elapsedMilliseconds} ms');
       _lastError = e;
       return 0;
     } on SyncConflict {
       // Three uploads lost the race in a row: next sync tries again.
+      debugPrint('Sync: lost the race 3 times, later');
       return 0;
     } finally {
       _syncing = false;
       notifyListeners();
     }
+  }
+
+  // ------------------------------------------------------------- lifecycle
+
+  /// How long the splash waits for the sync before the services load.
+  static const coldBudget = Duration(seconds: 4);
+
+  /// Sync on its own every this long while the app is open.
+  static const _every = Duration(minutes: 5);
+
+  /// Changes noticed by [noteLocalChange] go up at most this often (watch
+  /// positions change every few seconds while playing).
+  static const _changeEvery = Duration(minutes: 2);
+
+  bool _appLoaded = false;
+  DateTime? _lastAttempt;
+  Timer? _periodic;
+  Timer? _changeTimer;
+
+  /// Called with the keys a live sync wrote, so the app can reload what
+  /// holds them (favourites, hidden groups, positions, palette).
+  void Function(Set<String> keys)? onApplied;
+
+  /// The sync before the services load (they read storage once): every
+  /// key may be written here. Waits at most [coldBudget]; a slower sync
+  /// keeps going and holds what the services own from then on.
+  Future<void> syncBeforeLoad() async {
+    if (_status != SyncStatus.on) return;
+    await syncNow().timeout(coldBudget, onTimeout: () => 0);
+  }
+
+  /// The services are up: from now on only live-safe keys are written,
+  /// and sync runs on a timer, on resume and after changes.
+  void startAutomatic() {
+    _appLoaded = true;
+    _periodic?.cancel();
+    _periodic = Timer.periodic(_every, (_) => unawaited(syncNow()));
+  }
+
+  /// The app came back to the screen.
+  void onResumed() {
+    final last = _lastAttempt;
+    if (last != null && DateTime.now().difference(last) < _changeEvery) {
+      return;
+    }
+    unawaited(syncNow());
+  }
+
+  /// Something the user owns may have changed (favourites, positions…):
+  /// syncs within [_changeEvery] if it really differs from the server's.
+  void noteLocalChange() {
+    if (_status != SyncStatus.on || _changeTimer != null) return;
+    final last = _lastAttempt;
+    final wait = last == null
+        ? const Duration(seconds: 10)
+        : _changeEvery - DateTime.now().difference(last);
+    _changeTimer =
+        Timer(wait.isNegative ? const Duration(seconds: 10) : wait, () async {
+      _changeTimer = null;
+      final engine = await _ensureEngine();
+      if (await engine.hasLocalChanges()) await syncNow();
+    });
+  }
+
+  @override
+  void dispose() {
+    _periodic?.cancel();
+    _changeTimer?.cancel();
+    super.dispose();
   }
 }
 

@@ -29,6 +29,7 @@ import 'services/app_log.dart';
 import 'services/app_preferences.dart';
 import 'services/archive_posters.dart';
 import 'services/catalog_database.dart';
+import 'services/cloud_sync_service.dart';
 import 'services/device_defaults.dart';
 import 'services/device_memory_service.dart';
 import 'services/epg_service.dart';
@@ -205,6 +206,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   late final ViewerProfileService _viewerProfileService;
   late final ParentalPin _parentalPin;
   late final ArchiveService _archiveService;
+  late final CloudSyncService _cloudSync;
+  AppLifecycleListener? _syncLifecycle;
   bool _ready = false;
   Completer<void>? _profileSelection;
 
@@ -348,6 +351,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     if (selection != null && !selection.isCompleted) selection.complete();
     ProfileGate.unregister();
     HardwareKeyboard.instance.removeHandler(_onGuideKey);
+    _syncLifecycle?.dispose();
     _gameReminders?.dispose();
     _programmeReminders?.dispose();
     RecordingService.instance.prepareProgramme = null;
@@ -501,6 +505,17 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     try {
       _storage = StorageService();
       await _storage.init();
+      // Cloud sync first: the services below read storage once, so other
+      // devices' changes are written before they load (dev-notes/
+      // cloud-sync.md). Never holds the splash more than a few seconds and
+      // never fails the launch.
+      _cloudSync = CloudSyncService(_storage);
+      try {
+        await _cloudSync.init();
+        await _cloudSync.syncBeforeLoad();
+      } catch (e) {
+        debugPrint('Sync: startup failed: $e');
+      }
       _gameReminders = GameReminders(_storage);
       _programmeReminders = ProgrammeReminders(_storage);
       _goalsAlerts = GoalsAlerts(_storage);
@@ -583,6 +598,21 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       _viewerProfileService = ViewerProfileService(
           _storage, _playlistManager, _playbackService,
           onViewerChanged: _preferences.reloadPaletteForViewer);
+
+      // From here sync only writes what these services re-read (the same
+      // reload as a profile switch, no network); the rest waits for the
+      // next launch. Their notifications mean the user may have changed
+      // something worth sending.
+      _cloudSync.onApplied = (_) {
+        _playlistManager.applyActiveViewer();
+        unawaited(_playbackService.reloadForViewer());
+        _preferences.reloadPaletteForViewer();
+      };
+      _cloudSync.startAutomatic();
+      _playlistManager.addListener(_cloudSync.noteLocalChange);
+      _archiveService.addListener(_cloudSync.noteLocalChange);
+      _playbackService.addListener(_cloudSync.noteLocalChange);
+      _syncLifecycle = AppLifecycleListener(onResume: _cloudSync.onResumed);
 
       // Restores category lists (small, fast regardless of catalog size —
       // see that method's doc comment for why live channels/category
@@ -1062,6 +1092,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     return MultiProvider(
       providers: [
         Provider<StorageService>.value(value: _storage),
+        ChangeNotifierProvider<CloudSyncService>.value(value: _cloudSync),
         ChangeNotifierProvider<GameReminders>.value(value: _gameReminders!),
         ChangeNotifierProvider<ProgrammeReminders>.value(
             value: _programmeReminders!),
