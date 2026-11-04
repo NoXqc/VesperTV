@@ -174,7 +174,10 @@ class _SyncPlaylistRemap {
       } else {
         try {
           final decoded = jsonDecode(raw);
-          final mapped = _json(bare, decoded);
+          final mapped = RegExp(r'^file:recently_played(_vp_[A-Za-z0-9_-]+)?$')
+                  .hasMatch(bare)
+              ? _history(decoded)
+              : _json(bare, decoded);
           if (!syncValuesEqual(decoded, mapped)) changed = jsonEncode(mapped);
         } catch (_) {
           // Malformed preferences remain intact for their normal reader.
@@ -209,6 +212,23 @@ class _SyncPlaylistRemap {
             'Playlist': _list(data['Playlist'], plain: true),
           if (data.containsKey('Group')) 'Group': _list(data['Group']),
         }
+      : data;
+
+  // Channel.toJson() history files now travel through sync too. Only their
+  // identity fields change; stream URLs, raw provider ids and labels do not.
+  Object? _history(Object? data) => data is List
+      ? [
+          for (final row in data)
+            if (row is Map)
+              {
+                ...row,
+                if (row['id'] is String) 'id': composite(row['id'] as String),
+                if (row['playlistId'] is String)
+                  'playlistId': playlist(row['playlistId'] as String),
+              }
+            else
+              row,
+        ]
       : data;
 
   Object? _json(String bare, Object? data) {

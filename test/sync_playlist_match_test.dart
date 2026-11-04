@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nox_iptv/models/playlist_profile.dart';
+import 'package:nox_iptv/models/channel.dart';
 import 'package:nox_iptv/services/storage_service.dart';
 import 'package:nox_iptv/services/sync_merge.dart';
 import 'package:nox_iptv/utils/constants.dart';
@@ -287,5 +288,39 @@ void main() {
     expect(r['nox_hidden_groups_remote'], tagged(['B', 'A']));
     expect(r['nox_last_position_remote::a'], tagged(200));
     expect(r['nox_favorites'], tagged(['remote::a']));
+  });
+  test(
+      'Continue Watching file references remap across viewers without changing media data',
+      () {
+    final channel = Channel(
+        id: 'local::vod_5',
+        rawId: 'vod_5',
+        playlistId: 'local',
+        name: 'local::title',
+        group: 'local::group',
+        url: 'https://example.invalid/local::fixture',
+        seriesId: 2,
+        onDemand: true);
+    for (final key in [
+      'file:recently_played',
+      'file:recently_played_vp_kids'
+    ]) {
+      final local = {
+        'nox_playlists': json([playlist('local')]),
+        key: json([channel.toJson()])
+      };
+      final result = matchSyncPlaylists(local, remote);
+      final rows = jsonDecode((result[key] as Map)['v'] as String) as List;
+      final restored =
+          Channel.fromJson(Map<String, dynamic>.from(rows.single as Map));
+      expect(restored.id, 'remote::vod_5');
+      expect(restored.playlistId, 'remote');
+      expect(restored.seriesId, channel.seriesId);
+      expect(restored.rawId, channel.rawId);
+      expect(restored.sourceName, channel.sourceName);
+      expect(restored.group, channel.group);
+      expect(restored.url, channel.url);
+      expect(local[key], json([channel.toJson()]));
+    }
   });
 }
