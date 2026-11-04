@@ -2428,8 +2428,8 @@ const Map<String, String> kEs = {
       "Mantén tu configuración y progreso entre dispositivos",
   "Keep your setup and watch progress together across devices. No account needed.":
       "Mantén tu configuración y progreso entre dispositivos. No necesitas una cuenta.",
-  "Some changes appear after you restart VesperTV. Profile photos and imported M3U files do not sync.":
-      "Algunos cambios aparecen al reiniciar VesperTV. Las fotos de perfil y los archivos M3U importados no se sincronizan.",
+  "Some changes appear after you restart VesperTV. Profile photos stay on each device. Playlists imported from a file (USB drive, SD card or folder) do not sync: import the file on each device. Playlists added with a link or an Xtream login sync normally.":
+      "Algunos cambios aparecen al reiniciar VesperTV. Las fotos de perfil se quedan en cada dispositivo. Las listas importadas desde un archivo (memoria USB, tarjeta SD o carpeta) no se sincronizan: importa el archivo en cada dispositivo. Las listas añadidas con un enlace o una cuenta Xtream se sincronizan normalmente.",
   "The sync code was reset on another device. Link this device again.":
       "El código de sincronización se restableció en otro dispositivo. Vuelve a vincular este dispositivo.",
   "Not synced yet": "Aún sin sincronizar",

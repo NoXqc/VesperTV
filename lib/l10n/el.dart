@@ -2389,8 +2389,8 @@ const Map<String, String> kEl = {
       "Κρατήστε τη ρύθμιση και την πρόοδο προβολής σε όλες τις συσκευές",
   "Keep your setup and watch progress together across devices. No account needed.":
       "Κρατήστε τη ρύθμιση και την πρόοδο προβολής σε όλες τις συσκευές. Δεν χρειάζεται λογαριασμός.",
-  "Some changes appear after you restart VesperTV. Profile photos and imported M3U files do not sync.":
-      "Ορισμένες αλλαγές εμφανίζονται μετά την επανεκκίνηση του VesperTV. Οι φωτογραφίες προφίλ και τα εισαγόμενα αρχεία M3U δεν συγχρονίζονται.",
+  "Some changes appear after you restart VesperTV. Profile photos stay on each device. Playlists imported from a file (USB drive, SD card or folder) do not sync: import the file on each device. Playlists added with a link or an Xtream login sync normally.":
+      "Ορισμένες αλλαγές εμφανίζονται μετά την επανεκκίνηση του VesperTV. Οι φωτογραφίες προφίλ μένουν σε κάθε συσκευή. Οι λίστες που εισήχθησαν από αρχείο (USB, κάρτα SD ή φάκελο) δεν συγχρονίζονται: εισαγάγετε το αρχείο σε κάθε συσκευή. Οι λίστες που προστέθηκαν με σύνδεσμο ή λογαριασμό Xtream συγχρονίζονται κανονικά.",
   "The sync code was reset on another device. Link this device again.":
       "Έγινε επαναφορά του κωδικού συγχρονισμού σε άλλη συσκευή. Συνδέστε ξανά αυτή τη συσκευή.",
   "Not synced yet": "Δεν έχει συγχρονιστεί ακόμα",

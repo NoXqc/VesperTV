@@ -2329,8 +2329,8 @@ const Map<String, String> kDe = {
       "Einrichtung und Wiedergabefortschritt auf allen Geräten abgleichen",
   "Keep your setup and watch progress together across devices. No account needed.":
       "Gleiche Einrichtung und Wiedergabefortschritt auf allen Geräten ab. Kein Konto nötig.",
-  "Some changes appear after you restart VesperTV. Profile photos and imported M3U files do not sync.":
-      "Einige Änderungen erscheinen nach einem Neustart von VesperTV. Profilfotos und importierte M3U-Dateien werden nicht synchronisiert.",
+  "Some changes appear after you restart VesperTV. Profile photos stay on each device. Playlists imported from a file (USB drive, SD card or folder) do not sync: import the file on each device. Playlists added with a link or an Xtream login sync normally.":
+      "Einige Änderungen erscheinen nach einem Neustart von VesperTV. Profilfotos bleiben auf jedem Gerät. Aus einer Datei importierte Playlists (USB-Stick, SD-Karte oder Ordner) werden nicht synchronisiert: Importiere die Datei auf jedem Gerät. Playlists, die mit einem Link oder einem Xtream-Login hinzugefügt wurden, werden normal synchronisiert.",
   "The sync code was reset on another device. Link this device again.":
       "Der Synchronisierungscode wurde auf einem anderen Gerät zurückgesetzt. Verknüpfe dieses Gerät erneut.",
   "Not synced yet": "Noch nicht synchronisiert",

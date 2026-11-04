@@ -2440,8 +2440,8 @@ const Map<String, String> kFr = {
       "Retrouvez votre configuration et votre progression sur tous vos appareils",
   "Keep your setup and watch progress together across devices. No account needed.":
       "Retrouvez votre configuration et votre progression sur tous vos appareils. Aucun compte nécessaire.",
-  "Some changes appear after you restart VesperTV. Profile photos and imported M3U files do not sync.":
-      "Certains changements apparaissent après le redémarrage de VesperTV. Les photos de profil et les fichiers M3U importés ne sont pas synchronisés.",
+  "Some changes appear after you restart VesperTV. Profile photos stay on each device. Playlists imported from a file (USB drive, SD card or folder) do not sync: import the file on each device. Playlists added with a link or an Xtream login sync normally.":
+      "Certains changements apparaissent après le redémarrage de VesperTV. Les photos de profil restent sur chaque appareil. Les playlists importées depuis un fichier (clé USB, carte SD ou dossier) ne sont pas synchronisées : importez le fichier sur chaque appareil. Les playlists ajoutées avec un lien ou un compte Xtream se synchronisent normalement.",
   "The sync code was reset on another device. Link this device again.":
       "Le code de synchronisation a été réinitialisé sur un autre appareil. Associez à nouveau cet appareil.",
   "Not synced yet": "Pas encore synchronisé",
