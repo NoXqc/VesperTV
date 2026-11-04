@@ -1467,6 +1467,51 @@ class StorageService {
       keep:
           values.containsKey(_transferArchiveExcluded) ? _isArchiveKey : null);
 
+  /// Kept per device even when syncing, on top of what Transfer leaves
+  /// out: each box has its own current viewer and its own backup timer.
+  static const _syncSkipExact = {
+    AppConstants.keyActiveViewerId,
+    AppConstants.keyAutoBackup,
+    AppConstants.keyLastAutoBackup,
+  };
+
+  static bool _syncable(String key) =>
+      _transferable(key) && !_syncSkipExact.contains(key);
+
+  /// Cloud sync's view of the setup (`SyncData`, cloud_sync.dart): the
+  /// [exportForTransfer] form, minus [_syncSkipExact].
+  Map<String, Object?> exportForSync() => _exportWhere(_syncable);
+
+  /// Writes values merged in from other devices ([exportForSync] form) and
+  /// removes [removed] keys; device-only keys are never touched.
+  Future<void> applySyncChanges(
+      Map<String, Object?> changed, Set<String> removed) async {
+    for (final key in removed) {
+      if (_syncable(key)) await _prefs.remove(key);
+    }
+    for (final entry in changed.entries) {
+      if (!_syncable(entry.key)) continue;
+      final tagged = entry.value;
+      if (tagged is! Map) continue;
+      final v = tagged['v'];
+      switch (tagged['t']) {
+        case 's' when v is String:
+          await _prefs.setString(entry.key, v);
+        case 'b' when v is bool:
+          await _prefs.setBool(entry.key, v);
+        case 'i' when v is int:
+          await _prefs.setInt(entry.key, v);
+        case 'd' when v is num:
+          await _prefs.setDouble(entry.key, v.toDouble());
+        case 'l' when v is List:
+          await _prefs.setStringList(entry.key, [
+            for (final s in v)
+              if (s is String) s
+          ]);
+      }
+    }
+  }
+
   Future<void> clearCache() async {
     await _prefs.remove(AppConstants.keyEpgCache);
     await _prefs.remove(AppConstants.keyEpgLastUpdated);

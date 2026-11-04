@@ -121,16 +121,19 @@ String formatCloudCode(String code) => [
     ].join(' ');
 
 /// Encrypts [payload] under a new code and uploads it for [lifetime].
+/// [kind] tells a setup (`transfer`) from a sync link (`sync-link`, see
+/// cloud_sync.dart), so one code can never be opened as the other.
 /// Throws [TransferException].
 Future<CloudTransfer> uploadCloudTransfer(
-    Map<String, Object> payload, Duration lifetime) async {
+    Map<String, Object> payload, Duration lifetime,
+    {String kind = 'transfer'}) async {
   final code = newCloudCode();
   final created = DateTime.now().millisecondsSinceEpoch;
   final (keys, blob) = await Isolate.run(() async {
     final keys = await VaultKeys.fromCode(code);
     final clear = gzip.encode(utf8.encode(
-        jsonEncode({'kind': 'transfer', 'created': created, 'data': payload})));
-    return (keys, await _seal(keys, clear));
+        jsonEncode({'kind': kind, 'created': created, 'data': payload})));
+    return (keys, await sealVaultBlob(keys, clear));
   });
   final res = await _call(() => http.put(_uri(keys.id),
       headers: {
@@ -153,8 +156,10 @@ Future<CloudTransfer> uploadCloudTransfer(
 }
 
 /// Downloads and opens the setup [code] points to. Throws
-/// [TransferException] (`notFound` = wrong, expired or deleted).
-Future<Map<String, Object?>> downloadCloudTransfer(String code) async {
+/// [TransferException] (`notFound` = wrong, expired or deleted; `invalid`
+/// = not a [kind] upload).
+Future<Map<String, Object?>> downloadCloudTransfer(String code,
+    {String kind = 'transfer'}) async {
   if (!RegExp('^\\d{$kCloudCodeLength}\$').hasMatch(code)) {
     throw const TransferException(TransferError.wrongCode);
   }
@@ -169,11 +174,12 @@ Future<Map<String, Object?>> downloadCloudTransfer(String code) async {
   }
   final blob = res.bodyBytes;
   final data = await Isolate.run(() async {
-    final clear = await _open(keys, blob);
+    final clear = await openVaultBlob(keys, blob);
     if (clear == null) return null;
     try {
       final env = jsonDecode(utf8.decode(gzip.decode(clear)));
-      final data = env is Map ? env['data'] : null;
+      if (env is! Map || env['kind'] != kind) return null;
+      final data = env['data'];
       return data is Map<String, Object?> ? data : null;
     } catch (_) {
       return null;
@@ -217,7 +223,8 @@ Future<http.Response> _call(Future<http.Response> Function() send) async {
 }
 
 /// `[version][nonce 12][ciphertext][tag 16]`, the id bound in as AAD.
-Future<Uint8List> _seal(VaultKeys keys, List<int> clear) async {
+/// Shared with cloud sync's snapshots.
+Future<Uint8List> sealVaultBlob(VaultKeys keys, List<int> clear) async {
   final box = await AesGcm.with256bits().encrypt(clear,
       secretKey: SecretKey(keys.key),
       aad: utf8.encode('vesper-vault|${keys.id}'));
@@ -225,7 +232,8 @@ Future<Uint8List> _seal(VaultKeys keys, List<int> clear) async {
       [_blobVersion, ...box.nonce, ...box.cipherText, ...box.mac.bytes]);
 }
 
-Future<List<int>?> _open(VaultKeys keys, Uint8List blob) async {
+/// The plaintext of a [sealVaultBlob] blob, or null (wrong key, damaged).
+Future<List<int>?> openVaultBlob(VaultKeys keys, Uint8List blob) async {
   if (blob.length < 1 + 12 + 16 || blob[0] != _blobVersion) return null;
   final nonce = blob.sublist(1, 13);
   final ct = blob.sublist(13, blob.length - 16);
