@@ -55,7 +55,9 @@ class CloudSyncService extends ChangeNotifier {
     _store ??= FileSyncStore(
         '${(await getApplicationSupportDirectory()).path}/cloud_sync.json');
     return _engine = SyncEngine(_store!, _StorageSyncData(_storage),
-        newestFirst: isHistoryKey, keepWhenMissing: _isFileKey);
+        newestFirst: isHistoryKey,
+        keepWhenMissing: (key) => keepHistoryWhenMissing(
+            key, {for (final p in _storage.getViewerProfiles()) p.id}));
   }
 
   /// Reads the saved state; call once at startup.
@@ -268,6 +270,18 @@ class CloudSyncService extends ChangeNotifier {
 const _filePrefix = 'file:';
 
 bool _isFileKey(String key) => key.startsWith(_filePrefix);
+
+/// A Continue Watching file missing here is "unknown" (Android emptied the
+/// cache folder: sync writes it back) only while its viewer still exists;
+/// a deleted profile's file is a real removal, or the profile's history
+/// would come back and stay on the server for good.
+bool keepHistoryWhenMissing(String key, Set<String> viewerIds) {
+  if (!_isFileKey(key)) return false;
+  final name = key.substring(_filePrefix.length);
+  const viewerPrefix = 'recently_played_vp_';
+  return !name.startsWith(viewerPrefix) ||
+      viewerIds.contains(name.substring(viewerPrefix.length));
+}
 
 /// Newest-first lists: Continue Watching and Media Hub Recently watched.
 bool isHistoryKey(String key) =>

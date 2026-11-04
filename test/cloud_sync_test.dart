@@ -313,6 +313,18 @@ void main() {
     expect(idsIn(a.values['file:recently_played']), ['movie', 'ep1', 'old']);
   });
 
+  test('a deleted profile history goes away everywhere', () {
+    // Main's file and an existing profile's: kept when missing.
+    expect(keepHistoryWhenMissing('file:recently_played', {'main'}), isTrue);
+    expect(
+        keepHistoryWhenMissing('file:recently_played_vp_kid', {'main', 'kid'}),
+        isTrue);
+    // Deleted profile: a real removal. Prefs keys never use this rule.
+    expect(keepHistoryWhenMissing('file:recently_played_vp_kid', {'main'}),
+        isFalse);
+    expect(keepHistoryWhenMissing('nox_favorites', {'main'}), isFalse);
+  });
+
   test('after Reset sync code, a device on the old code stops', () async {
     if (relay == null) return markTestSkipped('python not found');
     final a = _Device({'x': i(1)});

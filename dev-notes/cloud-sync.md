@@ -36,6 +36,18 @@ prefs; watch *positions* do sync). **Continue Watching does sync** (since 2026-1
 A missing file means "unknown", never "cleared" (`SyncEngine.keepWhenMissing`): Android may empty the
 cache folder, and sync writes the history back instead of wiping every device.
 
+## Profiles (checked 2026-11-04)
+- Every profile syncs: the list (`nox_viewer_profiles`, merged per id), each one's keys (`__vp_<id>`
+  suffix) and Continue Watching file. Which profile is active stays per device; switching on one box
+  never moves another. One sync per device covers all profiles (Settings is PIN-gated for kids).
+- Parental PIN (hashed) syncs, so it's the same everywhere; lockout counters stay per device.
+- Deleting a profile removes it everywhere; a box using it falls back to Main at its next launch
+  (`ViewerProfileService` init). Its history file counts as removed, not "missing"
+  (`keepHistoryWhenMissing`).
+- **Not synced: profile photos** (files up to 2 MB each): other devices show the default avatar.
+- **Gap:** two devices that each created e.g. "Kids" before linking get two "Kids" (different ids).
+  Same fix as playlists: match on join (by name), with the playlist-matching work.
+
 ## Size (measured 2026-11-04)
 Owner's Windows install: 69 keys, 40 KB gzipped. Synthetic heavy user (13 playlists x ~1650 hidden
 groups, 3 profiles, 3000 watched titles): ~600 KB gzipped, hidden groups = most of it. Cap raised
