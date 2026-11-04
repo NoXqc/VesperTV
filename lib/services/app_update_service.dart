@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
@@ -136,18 +137,9 @@ class AppUpdateService {
     final packageInfo = await PackageInfo.fromPlatform();
     if (!_isDifferent(latestVersion, packageInfo.version)) return null;
 
-    // Windows has no package-installer equivalent to hand an `.apk` to —
-    // its release asset is a plain `.zip` of the built Release folder
-    // instead (see CheckUpdatesScreen's own doc comment for the simpler
-    // "open it in a browser" flow that's all Windows actually needs).
-    final extension = downloadInBrowser ? '.zip' : '.apk';
     final assets = (decoded['assets'] as List?) ?? const [];
-    final matchingAsset = assets.cast<Map<String, dynamic>>().firstWhere(
-          (a) =>
-              (a['name'] as String?)?.toLowerCase().endsWith(extension) ??
-              false,
-          orElse: () => const {},
-        );
+    final matchingAsset = pickAsset(
+        assets.cast<Map<String, dynamic>>(), Platform.operatingSystem);
     final downloadUrl = matchingAsset['browser_download_url'] as String?;
     if (downloadUrl == null) return null;
 
@@ -157,6 +149,27 @@ class AppUpdateService {
       downloadUrl: downloadUrl,
       apkSizeBytes: (matchingAsset['size'] as int?) ?? 0,
     );
+  }
+
+  /// The release asset for [os] (`Platform.operatingSystem`), or an empty
+  /// map. Android takes the `.apk`. Windows has no package installer to
+  /// hand an `.apk` to: its asset is a plain `.zip` of the built Release
+  /// folder, opened in a browser (see CheckUpdatesScreen). macOS takes only
+  /// a `-macos.zip`, and Windows never does, so a Mac build attached to a
+  /// release can't be offered to a PC (older Windows builds take the first
+  /// `.zip`: never attach a Mac zip until they've updated).
+  @visibleForTesting
+  static Map<String, dynamic> pickAsset(
+      List<Map<String, dynamic>> assets, String os) {
+    bool matches(String name) => switch (os) {
+          'android' => name.endsWith('.apk'),
+          'macos' => name.endsWith('-macos.zip'),
+          'windows' => name.endsWith('.zip') && !name.endsWith('-macos.zip'),
+          _ => false,
+        };
+    return assets.firstWhere(
+        (a) => matches((a['name'] as String?)?.toLowerCase() ?? ''),
+        orElse: () => const {});
   }
 
   /// True when the release's tag names a different version from the

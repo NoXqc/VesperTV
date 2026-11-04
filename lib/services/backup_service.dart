@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -8,6 +9,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'storage_service.dart';
+import '../l10n/l10n.dart';
 import '../utils/desktop_platform.dart';
 
 /// One backup file in the backup folder.
@@ -53,12 +55,19 @@ class BackupService {
 
   static bool get supported => Platform.isAndroid || isDesktop;
 
-  /// Where the files go, as the user would look for it.
+  /// Where the files go, as the user would look for it. macOS keeps them in
+  /// the sandbox container (hidden from Finder): Export saves a copy.
   static String get locationLabel => Platform.isWindows
       ? r'Documents\VesperTV'
       : Platform.isMacOS
-          ? 'Documents/VesperTV'
+          ? tr('the app\'s own storage')
           : 'Download/VesperTV';
+
+  static const _jsonFiles = XTypeGroup(
+      label: 'VesperTV backup',
+      extensions: ['json'],
+      mimeTypes: ['application/json'],
+      uniformTypeIdentifiers: ['public.json']);
 
   Future<Directory> _windowsDir() async {
     final docs = await getApplicationDocumentsDirectory();
@@ -87,18 +96,23 @@ class BackupService {
         '${two(t.hour)}${two(t.minute)}${two(t.second)}';
   }
 
+  /// macOS: saves a backup of the current setup where the user chooses
+  /// (the sandbox keeps the regular backups out of Finder's reach). False
+  /// when cancelled.
+  Future<bool> exportToFile() async {
+    final now = DateTime.now();
+    final location = await getSaveLocation(
+        suggestedName: '$manualPrefix${_stamp(now)}.json',
+        acceptedTypeGroups: const [_jsonFiles]);
+    if (location == null) return false;
+    await File(location.path).writeAsString(await _content(now), flush: true);
+    return true;
+  }
+
   /// Writes a backup of the current setup and returns it.
   Future<BackupEntry> create({bool auto = false}) async {
-    final info = await PackageInfo.fromPlatform();
     final now = DateTime.now();
-    final content = jsonEncode({
-      'format': _format,
-      'formatVersion': 1,
-      'app': '${info.version}+${info.buildNumber}',
-      'platform': Platform.operatingSystem,
-      'created': now.toIso8601String(),
-      'data': await _storage.withProfilePhotos(_storage.exportForBackup()),
-    });
+    final content = await _content(now);
     final name = '${auto ? autoPrefix : manualPrefix}${_stamp(now)}.json';
     final String id;
     if (Platform.isAndroid) {
@@ -113,6 +127,18 @@ class BackupService {
     if (auto) await _pruneAuto();
     return BackupEntry(
         id: id, name: name, modified: now, size: utf8.encode(content).length);
+  }
+
+  Future<String> _content(DateTime now) async {
+    final info = await PackageInfo.fromPlatform();
+    return jsonEncode({
+      'format': _format,
+      'formatVersion': 1,
+      'app': '${info.version}+${info.buildNumber}',
+      'platform': Platform.operatingSystem,
+      'created': now.toIso8601String(),
+      'data': await _storage.withProfilePhotos(_storage.exportForBackup()),
+    });
   }
 
   /// Newest first.
@@ -159,7 +185,12 @@ class BackupService {
   /// reinstall on Android 11+, where [list] can't see the old files). Null
   /// when cancelled; a [PlatformException] `NO_PICKER` when the device has
   /// no picker (Fire TV).
+  /// macOS: the open panel (the only way past the sandbox to a file).
   Future<Map<String, Object?>?> pickAndLoad() async {
+    if (Platform.isMacOS) {
+      final file = await openFile(acceptedTypeGroups: const [_jsonFiles]);
+      return file == null ? null : decode(await file.readAsString());
+    }
     final raw = await _channel.invokeMethod<String>('pick');
     return raw == null ? null : decode(raw);
   }

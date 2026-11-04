@@ -261,7 +261,7 @@ class _StorageImportScreenState extends State<StorageImportScreen> {
                         padding: const EdgeInsets.all(16),
                         child: Text(tr(
                             'Import M3U playlists and Media Hub source links from USB, SD card or external storage. Choose M3U/M3U8 playlists or TXT/JSON source files.'))),
-                    if (Platform.isAndroid)
+                    if (Platform.isAndroid || Platform.isMacOS)
                       TvMenuTile(
                           icon: Icons.folder_open,
                           title: tr('Choose a folder'),

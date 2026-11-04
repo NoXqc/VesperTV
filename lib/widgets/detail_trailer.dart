@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:media_kit/media_kit.dart' as mk;
 import 'package:media_kit_video/media_kit_video.dart' as mv;
 import 'package:provider/provider.dart';
@@ -312,7 +311,7 @@ class _PreviewState extends State<_Preview> {
 
   Future<void> _initialize() async {
     try {
-      if (defaultTargetPlatform == TargetPlatform.windows) {
+      if (isDesktopTarget) {
         final player = _windows = mk.Player();
         _windowsVideo = mv.VideoController(player);
         _completed = player.stream.completed.listen((done) {

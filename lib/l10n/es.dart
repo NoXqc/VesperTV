@@ -2895,4 +2895,8 @@ const Map<String, String> kEs = {
       "Quitar de mi lista",
   "An AI app wants to clear your watch list.":
       "Una app de IA quiere vaciar tu lista.",
+  "the app's own storage": "el almacenamiento de la app",
+  "Export a backup": "Exportar una copia",
+  "Save a backup file anywhere on this Mac": "Guardar un archivo de copia en cualquier lugar de este Mac",
+  "Backup exported.": "Copia exportada.",
 };

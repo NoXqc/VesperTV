@@ -2798,4 +2798,8 @@ const Map<String, String> kDe = {
       "Von der Merkliste entfernen",
   "An AI app wants to clear your watch list.":
       "Eine KI-App möchte deine Merkliste leeren.",
+  "the app's own storage": "App-Speicher",
+  "Export a backup": "Sicherung exportieren",
+  "Save a backup file anywhere on this Mac": "Eine Sicherungsdatei an einem beliebigen Ort auf diesem Mac speichern",
+  "Backup exported.": "Sicherung exportiert.",
 };

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -55,10 +56,22 @@ class StorageImportService {
                 folder: true)
       ];
     }
+    // macOS: the sandbox only opens folders the user picks (Choose a
+    // folder); listing '/' from here only shows permission errors.
+    if (Platform.isMacOS) return const [];
     return [StorageItem(uri: Directory('/').uri, name: '/', folder: true)];
   }
 
+  /// Android: the system folder picker. macOS: the open panel, which grants
+  /// the sandbox access to that folder for this session.
   Future<StorageItem?> pickFolder() async {
+    if (Platform.isMacOS) {
+      final path = await getDirectoryPath();
+      return path == null
+          ? null
+          : StorageItem(
+              uri: Directory(path).uri, name: p.basename(path), folder: true);
+    }
     final value = await _channel.invokeMapMethod<String, dynamic>('pickFolder');
     return value == null ? null : StorageItem.fromMap(value);
   }
