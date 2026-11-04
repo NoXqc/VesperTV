@@ -123,10 +123,11 @@ String formatCloudCode(String code) => [
 /// Encrypts [payload] under a new code and uploads it for [lifetime].
 /// [kind] tells a setup (`transfer`) from a sync link (`sync-link`, see
 /// cloud_sync.dart), so one code can never be opened as the other.
+/// [once]: the relay deletes it after the first download (sync links).
 /// Throws [TransferException].
 Future<CloudTransfer> uploadCloudTransfer(
     Map<String, Object> payload, Duration lifetime,
-    {String kind = 'transfer'}) async {
+    {String kind = 'transfer', bool once = false}) async {
   final code = newCloudCode();
   final created = DateTime.now().millisecondsSinceEpoch;
   final (keys, blob) = await Isolate.run(() async {
@@ -141,6 +142,8 @@ Future<CloudTransfer> uploadCloudTransfer(
         'Content-Type': 'application/octet-stream',
         'X-Vault-Token': keys.token,
         'X-Vault-Ttl': '${lifetime.inSeconds}',
+        // The relay deletes it on the first download.
+        if (once) 'X-Vault-Once': '1',
       },
       body: blob));
   switch (res.statusCode) {

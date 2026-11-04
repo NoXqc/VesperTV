@@ -19,6 +19,11 @@ enum SyncStatus {
 
   /// The sync code was reset on another device: link this one again.
   revoked,
+
+  /// The sync already has [kSyncMaxDevices] devices, so this one was
+  /// refused (joining, or its slot expired after 30 days unused). It
+  /// doesn't sync; one of the others must stop syncing first.
+  full,
 }
 
 /// The app's cloud sync: owns the [SyncEngine], keeps its state in the
@@ -99,11 +104,16 @@ class CloudSyncService extends ChangeNotifier {
     return true;
   }
 
+  /// Throws [SyncDeviceLimit] when the sync already has its devices
+  /// (nothing is kept on this device then).
   Future<void> _join(List<int> secret) async {
     final engine = await _ensureEngine();
     await engine.start(secret);
     _status = SyncStatus.on;
     await syncNow();
+    if (_status == SyncStatus.full) {
+      throw const SyncDeviceLimit(kSyncMaxDevices);
+    }
   }
 
   /// A 16-digit code (10 minutes) for linking another device; null when
@@ -121,14 +131,16 @@ class CloudSyncService extends ChangeNotifier {
     return state == null ? null : syncRecoveryCode(state.secret);
   }
 
-  /// Reset sync code: a new secret holds the data from now on, the old one
-  /// is marked reset so devices still on it stop (they must be linked
-  /// again). Returns the new recovery code.
+  /// Reset sync code: a new secret holds the data from now on. The old
+  /// one's encrypted data and device slots are removed from the server
+  /// (only a small "reset" marker stays 30 days, so devices still on it
+  /// stop and must be linked again). Returns the new recovery code.
   Future<String> resetCode() async {
     final engine = await _ensureEngine();
     final old = await engine.store.load();
     if (old != null) {
-      final client = await SyncClient.forSecret(old.secret);
+      final client =
+          await SyncClient.forSecret(old.secret, deviceId: old.deviceId);
       try {
         await client.revoke();
       } finally {
@@ -136,16 +148,16 @@ class CloudSyncService extends ChangeNotifier {
       }
     }
     final secret = newSyncSecret();
-    await engine.start(secret);
+    await engine.start(secret, deviceId: old?.deviceId);
     _status = SyncStatus.on;
     await syncNow();
     return syncRecoveryCode(secret);
   }
 
-  /// Stops syncing on this device; its data stays, the other devices keep
-  /// syncing.
+  /// Stops syncing on this device and frees its slot on the server; its
+  /// data stays, the other devices keep syncing.
   Future<void> stop() async {
-    await (await _ensureEngine()).stop();
+    await (await _ensureEngine()).stop(leave: true);
     _status = SyncStatus.off;
     _lastSync = null;
     _restartNeeded = false;
@@ -186,6 +198,11 @@ class CloudSyncService extends ChangeNotifier {
       debugPrint('Sync: code was reset on another device');
       await engine.stop();
       _status = SyncStatus.revoked;
+      return 0;
+    } on SyncDeviceLimit catch (e) {
+      debugPrint('Sync: refused, the sync already has ${e.max} devices');
+      await engine.stop();
+      _status = SyncStatus.full;
       return 0;
     } on TransferException catch (e) {
       debugPrint('Sync: failed (${e.kind.name}) after '

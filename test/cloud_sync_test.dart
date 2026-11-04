@@ -425,13 +425,18 @@ void main() {
     await expectLater(b.engine.sync(), throwsA(isA<SyncRevoked>()));
   });
 
-  test('a link code hands over the secret; Transfer can\'t open it', () async {
+  test('a link code hands over the secret once; Transfer can\'t open it',
+      () async {
     if (relay == null) return markTestSkipped('python not found');
     final secret = newSyncSecret();
     final link = await uploadSyncLink(secret);
     expect(await downloadSyncLink(link.code), secret);
     await expectLater(
-        downloadCloudTransfer(link.code),
+        downloadSyncLink(link.code),
+        throwsA(isA<TransferException>()
+            .having((e) => e.kind, 'kind', TransferError.notFound)));
+    await expectLater(
+        downloadCloudTransfer((await uploadSyncLink(secret)).code),
         throwsA(isA<TransferException>()
             .having((e) => e.kind, 'kind', TransferError.invalid)));
   });

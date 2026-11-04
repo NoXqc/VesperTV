@@ -94,11 +94,11 @@ List<int>? parseSyncRecoveryCode(String code) {
 // --------------------------------------------------------------- link code
 
 /// Puts [secret] on the vault under a new 16-digit code for
-/// [kSyncLinkLifetime]; another device types the code to join.
-/// Throws [TransferException].
+/// [kSyncLinkLifetime]; one other device types the code to join (the
+/// relay deletes it on the first download). Throws [TransferException].
 Future<CloudTransfer> uploadSyncLink(List<int> secret) =>
     uploadCloudTransfer({'secret': base64Url.encode(secret)}, kSyncLinkLifetime,
-        kind: 'sync-link');
+        kind: 'sync-link', once: true);
 
 /// The secret a link code holds. Throws [TransferException] (`notFound` =
 /// wrong or expired code, `invalid` = a Transfer code, not a link code).
@@ -128,6 +128,24 @@ class SyncRevoked implements Exception {
   const SyncRevoked();
 }
 
+/// The sync already has [max] devices (relay `SYNC_MAX_DEVICES`); one of
+/// them must stop syncing first. A device silent for 30 days frees its
+/// slot on its own.
+class SyncDeviceLimit implements Exception {
+  const SyncDeviceLimit(this.max);
+  final int max;
+}
+
+/// Most devices one sync takes (the relay's `SYNC_MAX_DEVICES`); used
+/// when its answer doesn't say.
+const int kSyncMaxDevices = 3;
+
+/// A random id for this device's slot on the relay (not tied to the
+/// hardware; a new one after Stop syncing).
+String newSyncDeviceId() => base64Url
+    .encode(List.generate(16, (_) => Random.secure().nextInt(256)))
+    .replaceAll('=', '');
+
 /// Another device uploaded since the version this one merged against.
 class SyncConflict implements Exception {
   const SyncConflict(this.current);
@@ -136,24 +154,34 @@ class SyncConflict implements Exception {
 
 /// Talks to `/api/sync/<id>` for one secret.
 class SyncClient {
-  SyncClient(this.keys, {http.Client? client})
+  SyncClient(this.keys, {this.deviceId, http.Client? client})
       : _http = client ?? http.Client();
 
   final VaultKeys keys;
+
+  /// This device's slot id ([SyncState.deviceId]); null only for states
+  /// saved before the device limit (they get one at their next sync).
+  final String? deviceId;
   final http.Client _http;
 
   static Future<SyncClient> forSecret(List<int> secret,
-          {http.Client? client}) async =>
-      SyncClient(await VaultKeys.fromMaster(secret), client: client);
+          {String? deviceId, http.Client? client}) async =>
+      SyncClient(await VaultKeys.fromMaster(secret),
+          deviceId: deviceId, client: client);
 
   Uri get _uri => Uri.parse('$cloudTransferBase/api/sync/${keys.id}');
+
+  Map<String, String> get _headers => {
+        ...kRelayAppHeaders,
+        if (deviceId != null) 'X-Sync-Device': deviceId!,
+      };
 
   /// The server's snapshot; version 0 + empty when there is none (new, or
   /// deleted after 3 months unused). [knownVersion]: answer "unchanged"
   /// (null snapshot) when it still matches.
   Future<SyncRemote> fetch({int? knownVersion}) async {
     final res = await _call(() => _http.get(_uri, headers: {
-          ...kRelayAppHeaders,
+          ..._headers,
           if (knownVersion != null && knownVersion > 0)
             'If-None-Match': '"$knownVersion"',
         }));
@@ -182,7 +210,7 @@ class SyncClient {
     lastPutBytes = blob.length;
     final res = await _call(() => _http.put(_uri,
         headers: {
-          ...kRelayAppHeaders,
+          ..._headers,
           'Content-Type': 'application/octet-stream',
           'X-Vault-Token': keys.token,
           'If-Match': '"$expected"',
@@ -204,7 +232,8 @@ class SyncClient {
 
   /// Replaces the server's copy with a "reset" marker (Reset sync code), so
   /// devices still on this secret stop instead of re-creating it. The
-  /// marker expires with the usual 3 months.
+  /// relay drops the snapshot and every device slot, refuses later
+  /// uploads (410) and deletes the marker after 30 days.
   Future<void> revoke() async {
     final blob = await _sealSyncBlob(
         keys, {'kind': 'sync', 'schema': _snapshotSchema, 'revoked': true});
@@ -212,21 +241,23 @@ class SyncClient {
       final current = await _currentVersion();
       final res = await _call(() => _http.put(_uri,
           headers: {
-            ...kRelayAppHeaders,
+            ..._headers,
             'Content-Type': 'application/octet-stream',
             'X-Vault-Token': keys.token,
             'If-Match': '"$current"',
+            'X-Sync-Revoke': '1',
           },
           body: blob));
-      if (res.statusCode == 204) return;
+      // 410: already reset (a retry whose first answer got lost).
+      if (res.statusCode == 204 || res.statusCode == 410) return;
       if (res.statusCode != 412) break;
     }
     throw const TransferException(TransferError.unreachable);
   }
 
   Future<int> _currentVersion() async {
-    final res = await _call(() => _http
-        .get(_uri, headers: {...kRelayAppHeaders, 'If-None-Match': '"0"'}));
+    final res = await _call(
+        () => _http.get(_uri, headers: {..._headers, 'If-None-Match': '"0"'}));
     if (res.statusCode == 404) return 0;
     return _etag(res) ?? 0;
   }
@@ -236,6 +267,17 @@ class SyncClient {
   Future<void> delete() async {
     final res = await _call(() => _http.delete(_uri,
         headers: {...kRelayAppHeaders, 'X-Vault-Token': keys.token}));
+    if (res.statusCode != 204 && res.statusCode != 404) {
+      throw const TransferException(TransferError.unreachable);
+    }
+  }
+
+  /// Frees this device's slot (Stop syncing). Missing counts as freed.
+  Future<void> leave() async {
+    if (deviceId == null) return;
+    final res = await _call(() => _http.delete(
+        Uri.parse('$cloudTransferBase/api/sync/${keys.id}/device'),
+        headers: {..._headers, 'X-Vault-Token': keys.token}));
     if (res.statusCode != 204 && res.statusCode != 404) {
       throw const TransferException(TransferError.unreachable);
     }
@@ -255,8 +297,16 @@ class SyncClient {
       if (res.statusCode == 429) {
         throw const TransferException(TransferError.unreachable);
       }
+      if (res.statusCode == 403 &&
+          res.headers['x-sync-error'] == 'device-limit') {
+        throw SyncDeviceLimit(
+            int.tryParse(res.headers['x-sync-max-devices'] ?? '') ??
+                kSyncMaxDevices);
+      }
       return res;
     } on TransferException {
+      rethrow;
+    } on SyncDeviceLimit {
       rethrow;
     } catch (_) {
       throw const TransferException(TransferError.unreachable);
@@ -300,6 +350,7 @@ Future<SyncSnapshot?> _openSyncBlob(VaultKeys keys, Uint8List blob) =>
 class SyncState {
   const SyncState({
     required this.secret,
+    this.deviceId,
     this.version = 0,
     this.base,
     this.pending = const {},
@@ -308,6 +359,9 @@ class SyncState {
   });
 
   final List<int> secret;
+
+  /// This device's slot on the relay (see [SyncClient.deviceId]).
+  final String? deviceId;
   final int version;
 
   /// Null until the first successful sync (the device is joining).
@@ -331,6 +385,7 @@ class SyncState {
   }) =>
       SyncState(
         secret: secret,
+        deviceId: deviceId,
         version: version ?? this.version,
         base: base ?? this.base,
         pending: pending ?? this.pending,
@@ -340,6 +395,7 @@ class SyncState {
 
   Map<String, Object?> toJson() => {
         'secret': base64Url.encode(secret),
+        if (deviceId != null) 'device': deviceId,
         'version': version,
         if (base != null) 'base': base!.toJson(),
         'pending': pending,
@@ -355,8 +411,10 @@ class SyncState {
       final pending = json['pending'];
       final deferred = json['deferred'];
       final last = json['lastSync'];
+      final device = json['device'];
       return SyncState(
         secret: secret,
+        deviceId: device is String ? device : null,
         version: json['version'] as int? ?? 0,
         base: json['base'] == null ? null : SyncSnapshot.fromJson(json['base']),
         pending: pending is Map
@@ -473,11 +531,28 @@ class SyncEngine {
   Future<void>? _running;
 
   /// Starts syncing with a new secret (first device) or a linked/recovered
-  /// one (joining device). The next [sync] does the work.
-  Future<void> start(List<int> secret) => store.save(SyncState(secret: secret));
+  /// one (joining device). The next [sync] does the work. [deviceId] keeps
+  /// this device's id (Reset sync code); null = a new one.
+  Future<void> start(List<int> secret, {String? deviceId}) => store
+      .save(SyncState(secret: secret, deviceId: deviceId ?? newSyncDeviceId()));
 
-  /// Stops syncing on this device (its data stays).
-  Future<void> stop() => store.save(null);
+  /// Stops syncing on this device (its data stays). [leave]: free its slot
+  /// on the relay first, best effort (an unused slot frees itself after
+  /// 30 days).
+  Future<void> stop({bool leave = false, http.Client? client}) async {
+    final state = leave ? await store.load() : null;
+    if (state != null && state.deviceId != null) {
+      final c = await SyncClient.forSecret(state.secret,
+          deviceId: state.deviceId, client: client);
+      try {
+        await c.leave();
+      } catch (_) {
+      } finally {
+        if (client == null) c.close();
+      }
+    }
+    await store.save(null);
+  }
 
   /// Null when this device doesn't sync. Overlapping calls share one run.
   ///
@@ -548,6 +623,17 @@ class SyncEngine {
       http.Client? httpClient, bool Function(String key)? applyNow) async {
     var state = await store.load();
     if (state == null) return null;
+    if (state.deviceId == null) {
+      // Saved before the device limit: take a slot from now on.
+      state = SyncState(
+          secret: state.secret,
+          deviceId: newSyncDeviceId(),
+          version: state.version,
+          base: state.base,
+          pending: state.pending,
+          deferred: state.deferred,
+          lastSync: state.lastSync);
+    }
     final local = await data.exportForSync();
     // Held keys the user has since edited here are ordinary changes now.
     final deferred = {
@@ -561,7 +647,8 @@ class SyncEngine {
             _now().millisecondsSinceEpoch));
     await store.save(state);
 
-    final client = await SyncClient.forSecret(state.secret, client: httpClient);
+    final client = await SyncClient.forSecret(state.secret,
+        deviceId: state.deviceId, client: httpClient);
     try {
       for (var attempt = 0;; attempt++) {
         final remote = await client.fetch(

@@ -115,3 +115,51 @@ the app comes back to the screen, when a show/movie page opens, and every 5 minu
    recovery code, Backup & restore option.
 
 Deploying the relay change needs the owner's OK (back up the service, restart only pair-relay).
+
+## Device limit + reset wipe (Claude, 2026-11-04, owner-approved design)
+- **3 devices per sync**, counted per sync (secret), not per link code: every code and the
+  recovery code lead to the same sync id, so a new code never resets the count.
+  Each device keeps a random `SyncState.deviceId` (state file key `device`; old states get one at
+  their next sync) and sends `X-Sync-Device` on every sync call. The relay keeps a hash of it +
+  last check-in in the meta (`dev`); a 4th id gets **403 + `X-Sync-Error: device-limit`**
+  (`X-Sync-Max-Devices: 3`) -> `SyncDeviceLimit` -> `SyncStatus.full` (engine stopped, nothing
+  kept). `joinWithLinkCode`/`joinWithRecoveryCode` throw `SyncDeviceLimit` for the screen.
+  A device silent **30 days** loses its slot. **Stop syncing** frees the slot first
+  (`DELETE /api/sync/<id>/device`, best effort). Requests without a device id are allowed and not
+  counted until `PAIR_SYNC_REQUIRE_DEVICE=1` (test builds +609/+610 don't send one).
+- **Link codes are single-use** (`X-Vault-Once: 1`): the relay deletes the code on the first
+  download. Transfer codes are unchanged (any number of downloads until expiry).
+- **Reset sync code** PUTs the reset marker with `X-Sync-Revoke: 1`: the encrypted snapshot is
+  overwritten, all device slots dropped, later PUTs on the old id get **410**, and the marker
+  itself is deleted after **30 days** (devices that were offline still learn of the reset).
+  The resetting device keeps its device id on the new sync.
+- Limitation (no accounts): a modified build could reuse another device's id. Fine for the
+  normal app / casual sharing.
+
+### CODEX PICKUP (sync device limit)
+Done by Claude (committed on `claude/cloud-sync`): relay (`tools/pair_relay/relay.py`), client
+(`cloud_sync.dart`, `cloud_sync_service.dart`, `cloud_transfer.dart`), the link-code test updated.
+Analyze 16, `test/cloud_sync_test.dart` 12/12, relay unittest OK. **Not done, for Codex:**
+1. **Sync screen** (`lib/screens/settings/sync_screen.dart`):
+   - `SyncStatus.full` banner (like `revoked`): "This sync already has 3 devices. Stop syncing on
+     one of them, then try again. A device unused for 30 days frees its place on its own."
+   - Join screen: catch `SyncDeviceLimit` from `joinWithLinkCode`/`joinWithRecoveryCode` and show
+     the same text (don't treat it as a wrong code).
+   - **Reset confirmation text** (owner wording, polish it): "Resetting the sync code removes all
+     your encrypted data from the server. Every other device stops syncing and must be linked
+     again with a new code. Save the new recovery code." (replaces "Other devices will stop
+     syncing until you link them again. Save the new recovery code.")
+   - Link-a-device screen: say the code works for **one** device.
+   - Optional: "Devices: n of 3" needs a relay count endpoint; skip unless the owner asks.
+2. **Translations** for every new string: fr, es, it, el, de.
+3. **Tests**: relay unittest cases (4th device 403 on GET and PUT, leave frees a slot, 30-day idle
+   frees a slot, revoke drops `dev` + 30-day exp + 410 on PUT, `X-Vault-Once` deletes on first GET,
+   Transfer vault still multi-read, `PAIR_SYNC_REQUIRE_DEVICE`); update
+   `test_metadata_contains_only_hashed_token_expiry_size_version` for `dev`/`revoked`/`once`.
+   Dart: limit -> `SyncStatus.full`, stop() calls leave, reset keeps deviceId, old state without
+   `device` gets one.
+4. **Docs**: remote guide Sync tab + FAQ + homepage "05 / SYNC" section in `docs/index.html`
+   (3 devices, single-use link code, reset wording), README/help index regen, this file's Server
+   API section (new endpoint/headers/status codes).
+5. **Deploy prep only**: relay redeploy steps in `tools/pair_relay/README.md`. **Do not deploy,
+   push, merge to main or release** without the owner's OK.

@@ -20,7 +20,8 @@ decrypt a blob. Expired blobs are deleted.
 
     PUT    /api/v/<id>  -> store/replace; headers X-Vault-Token, X-Vault-Ttl
                            (seconds). 409 if the id has another token.
-    GET    /api/v/<id>  -> 200 + blob (any number of times until expiry), 404
+    GET    /api/v/<id>  -> 200 + blob (any number of times until expiry,
+                           or once when stored with X-Vault-Once: 1), 404
     DELETE /api/v/<id>  -> 204 (X-Vault-Token must match), 404
 
 **Cloud sync** (lib/services/cloud_sync.dart, dev-notes/cloud-sync.md) keeps
@@ -33,6 +34,20 @@ last device checked in (GET or PUT).
     PUT    /api/sync/<id> -> 204 + ETag; X-Vault-Token, If-Match "<version>"
                              ("0" = create). 412 version changed, 403 token
     DELETE /api/sync/<id> -> 204 (X-Vault-Token must match), 404
+    DELETE /api/sync/<id>/device -> 204: frees this device's slot
+                             (X-Vault-Token + X-Sync-Device), 404
+
+**At most SYNC_MAX_DEVICES devices per sync** (owner, 2026-11-04). Each
+device sends a random X-Sync-Device id on every sync call; the meta keeps
+a hash of it and its last check-in. A new id past the limit gets 403 with
+X-Sync-Error: device-limit. The limit is per sync (secret), not per link
+code, so a new link code or the recovery code doesn't get around it. A
+device silent for SYNC_DEVICE_IDLE loses its slot (lost or sold box).
+
+**Reset sync code** PUTs a small "reset" marker with X-Sync-Revoke: 1: the
+snapshot is overwritten, the device list dropped, further PUTs get 410,
+and the marker itself is deleted after SYNC_REVOKED_TTL (devices that
+were offline still learn the code was reset if they come back by then).
 
 App calls (the TV's GET /api/s/<id> and everything under /api/v/) carry
 `X-VesperTV-App`, so forks that kept this relay's address can be told
@@ -89,6 +104,15 @@ SYNC_TTL = 90 * 24 * 3600              # deleted after 3 months unused (owner)
 SYNC_TOUCH_EVERY = 24 * 3600           # GETs rewrite the expiry once a day
 SYNC_MAX_BODY = 4 * 1024 * 1024        # heavy user ~600 KB gzipped (2026-11-04)
 SYNC_PER_HOUR = 1200                   # requests per IP (memory only)
+SYNC_MAX_DEVICES = 3                   # owner, 2026-11-04
+SYNC_DEVICE_IDLE = 30 * 24 * 3600      # a silent device's slot frees up
+SYNC_DEVICE_TOUCH = 3600               # last-seen rewritten at most hourly
+SYNC_REVOKED_TTL = 30 * 24 * 3600      # how long a reset marker stays
+DEVICE_HEADER = "X-Sync-Device"
+DEVICE_RE = re.compile(r"^[A-Za-z0-9_-]{16,64}$")
+SYNC_DEVICE_RE = re.compile(r"^/api/sync/([A-Za-z0-9_-]{22,64})/device$")
+# Test builds +609/+610 send no device id; turn on once those are gone.
+REQUIRE_DEVICE = os.environ.get("PAIR_SYNC_REQUIRE_DEVICE", "") == "1"
 VERSION_RE = re.compile(r'^(?:W/)?"?(\d{1,12})"?$')
 _sync_hits = {}  # ip -> (hour bucket, count)
 
@@ -333,6 +357,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_DELETE(self):
         path = self.path.split("?", 1)[0]
+        d = SYNC_DEVICE_RE.match(path)
+        if d:
+            if not self._app_ok() or not self._sync_rate_ok():
+                return
+            return self._sync_leave(d.group(1))
         v = VAULT_ID_RE.match(path)
         sy = SYNC_ID_RE.match(path)
         if not v and not sy:
@@ -396,6 +425,8 @@ class Handler(BaseHTTPRequestHandler):
                     body = f.read()
             except OSError:
                 return self._send(404)
+            if m.get("once"):  # a sync link code: one device per code
+                _vault_remove(vid)
         return self._send(200, body, "application/octet-stream")
 
     def _vault_put(self, vid):
@@ -423,9 +454,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(507)
             try:
                 _write_atomic(blob, body)
-                _write_atomic(meta, json.dumps(
-                    {"exp": int(time.time()) + ttl, "tok": tok,
-                     "size": length}).encode("utf-8"))
+                new = {"exp": int(time.time()) + ttl, "tok": tok,
+                       "size": length}
+                if self.headers.get("X-Vault-Once") == "1":
+                    new["once"] = True
+                _write_atomic(meta, json.dumps(new).encode("utf-8"))
             except OSError:
                 _vault_remove(vid)
                 return self._send(500)
@@ -467,8 +500,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(404)
             version = m.get("ver", 0)
             now = int(time.time())
-            if m["exp"] - now < SYNC_TTL - SYNC_TOUCH_EVERY:
+            seen = self._sync_device(m, now)
+            if seen is None:
+                return
+            touch = (not m.get("revoked")
+                     and m["exp"] - now < SYNC_TTL - SYNC_TOUCH_EVERY)
+            if touch:
                 m["exp"] = now + SYNC_TTL
+            if touch or seen:
                 try:
                     _write_atomic(_vault_paths(vid)[1],
                                   json.dumps(m).encode("utf-8"))
@@ -504,22 +543,101 @@ class Handler(BaseHTTPRequestHandler):
             m = _vault_meta(vid)
             if m is not None and not hmac.compare_digest(m.get("tok", ""), tok):
                 return self._send(403)
+            if m is not None and m.get("revoked"):
+                return self._send(410)
             current = m.get("ver", 0) if m else 0
             if expected != current:
                 return self._send_sync(412, current)
+            now = int(time.time())
+            revoke = self.headers.get("X-Sync-Revoke") == "1"
+            devices = dict((m or {}).get("dev") or {})
+            if not revoke:
+                probe = {"dev": devices}
+                if self._sync_device(probe, now) is None:
+                    return
+                devices = probe.get("dev", devices)
             old = m.get("size", 0) if m else 0
             if _vault_total() - old + length > VAULT_MAX_TOTAL:
                 return self._send(507)
             version = current + 1
+            if revoke:
+                new = {"exp": now + SYNC_REVOKED_TTL, "tok": tok,
+                       "size": length, "ver": version, "revoked": True}
+            else:
+                new = {"exp": now + SYNC_TTL, "tok": tok, "size": length,
+                       "ver": version}
+                if devices:
+                    new["dev"] = devices
             try:
                 _write_atomic(blob, body)
-                _write_atomic(meta, json.dumps(
-                    {"exp": int(time.time()) + SYNC_TTL, "tok": tok,
-                     "size": length, "ver": version}).encode("utf-8"))
+                _write_atomic(meta, json.dumps(new).encode("utf-8"))
             except OSError:
                 _vault_remove(vid)
                 return self._send(500)
         return self._send_sync(204, version)
+
+    def _sync_device(self, m, now):
+        """Checks this request's X-Sync-Device against the sync's slots and
+        records it in m["dev"] (the caller writes the meta). True = m
+        changed, False = unchanged, None = refused (response sent)."""
+        device = self.headers.get(DEVICE_HEADER, "")
+        if not device:
+            if REQUIRE_DEVICE:
+                self._send(400)
+                return None
+            return False
+        if not DEVICE_RE.match(device):
+            self._send(400)
+            return None
+        if m.get("revoked"):
+            return False  # the device must still learn of the reset
+        devices = m.get("dev") or {}
+        live = {h: t for h, t in devices.items()
+                if now - t < SYNC_DEVICE_IDLE}
+        h = _device_hash(device)
+        if h not in live and len(live) >= SYNC_MAX_DEVICES:
+            self.send_response(403)
+            self.send_header("X-Sync-Error", "device-limit")
+            self.send_header("X-Sync-Max-Devices", str(SYNC_MAX_DEVICES))
+            self.send_header("Content-Length", "0")
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            return None
+        if (h in live and now - live[h] < SYNC_DEVICE_TOUCH
+                and len(live) == len(devices)):
+            return False
+        live[h] = now
+        m["dev"] = live
+        return True
+
+    def _sync_leave(self, sid):
+        """Stop syncing on this device: frees its slot."""
+        vid = _sync_key(sid)
+        token = self.headers.get("X-Vault-Token", "")
+        device = self.headers.get(DEVICE_HEADER, "")
+        if not TOKEN_RE.match(token) or not DEVICE_RE.match(device):
+            return self._send(400)
+        with _vault_lock:
+            m = _vault_meta(vid)
+            if m is None:
+                return self._send(404)
+            if not hmac.compare_digest(m.get("tok", ""), _token_hash(token)):
+                return self._send(403)
+            devices = m.get("dev") or {}
+            if devices.pop(_device_hash(device), None) is not None:
+                m["dev"] = devices
+                try:
+                    _write_atomic(_vault_paths(vid)[1],
+                                  json.dumps(m).encode("utf-8"))
+                except OSError:
+                    return self._send(500)
+        return self._send(204)
+
+
+def _device_hash(device):
+    """What the meta keeps of a device id: random already, but the relay
+    stores nothing a device sent as is."""
+    return hashlib.sha256(device.encode("ascii")).hexdigest()[:32]
 
 
 def _sync_key(sid):
