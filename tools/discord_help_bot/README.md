@@ -24,7 +24,7 @@ python -m unittest discover -s tools/discord_help_bot -p test_update_auto.py
 ```
 
 Commit `guide.json` with the website change and redeploy the bot when answers
-change. The index currently contains 87 guide entries. Links use the website's
+change. The index currently contains 102 guide entries. Links use the website's
 existing category fragments; publishing the website is a separate step.
 
 The Android1.0.46 guide adds the remote Guide/EPG key (including Formuler), the
@@ -37,6 +37,15 @@ provider/platform limits. Plain questions such as “How do I watch catch up?”
 “Can I pause live TV?” use the same answers as `/howto`. Catchup, catch-up and
 catch up spellings are equivalent. These instructions describe Android; Windows
 catch-up is not shipped yet.
+
+The Sync tab documents the upcoming cloud-sync release: account-free setup, 16-digit
+single-use link code / QR (one device, 10 minutes), 26-character recovery code, PIN-protected reveal, reset,
+stop/free a device slot, the shared 3-device cap, 30-day idle slot expiry, reset wiping
+the old server copy (30-day notice), what syncs and exclusions, restart timing and
+deletion after 3 months (90 days)
+unused. It explicitly says Sync is not in the current public packages. The generated
+index is prepared locally; do not deploy the bot or publish the site without the
+owner's request, and update availability text when the feature actually ships.
 
 For the existing automatic bot, `update-auto.py --ssh OWNER_DESTINATION` previews
 the update. After the owner's approval, add `--apply`: it backs up and replaces

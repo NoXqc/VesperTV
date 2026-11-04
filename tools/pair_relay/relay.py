@@ -20,8 +20,34 @@ decrypt a blob. Expired blobs are deleted.
 
     PUT    /api/v/<id>  -> store/replace; headers X-Vault-Token, X-Vault-Ttl
                            (seconds). 409 if the id has another token.
-    GET    /api/v/<id>  -> 200 + blob (any number of times until expiry), 404
+    GET    /api/v/<id>  -> 200 + blob (any number of times until expiry,
+                           or once when stored with X-Vault-Once: 1), 404
     DELETE /api/v/<id>  -> 204 (X-Vault-Token must match), 404
+
+**Cloud sync** (lib/services/cloud_sync.dart, dev-notes/cloud-sync.md) keeps
+one encrypted snapshot per sync secret in the same folder, versioned so two
+devices can't overwrite each other blindly. It expires SYNC_TTL after the
+last device checked in (GET or PUT).
+
+    GET    /api/sync/<id> -> 200 + blob + ETag "<version>"; 304 when
+                             If-None-Match matches; 404
+    PUT    /api/sync/<id> -> 204 + ETag; X-Vault-Token, If-Match "<version>"
+                             ("0" = create). 412 version changed, 403 token
+    DELETE /api/sync/<id> -> 204 (X-Vault-Token must match), 404
+    DELETE /api/sync/<id>/device -> 204: frees this device's slot
+                             (X-Vault-Token + X-Sync-Device), 404
+
+**At most SYNC_MAX_DEVICES devices per sync** (owner, 2026-11-04). Each
+device sends a random X-Sync-Device id on every sync call; the meta keeps
+a hash of it and its last check-in. A new id past the limit gets 403 with
+X-Sync-Error: device-limit. The limit is per sync (secret), not per link
+code, so a new link code or the recovery code doesn't get around it. A
+device silent for SYNC_DEVICE_IDLE loses its slot (lost or sold box).
+
+**Reset sync code** PUTs a small "reset" marker with X-Sync-Revoke: 1: the
+snapshot is overwritten, the device list dropped, further PUTs get 410,
+and the marker itself is deleted after SYNC_REVOKED_TTL (devices that
+were offline still learn the code was reset if they come back by then).
 
 App calls (the TV's GET /api/s/<id> and everything under /api/v/) carry
 `X-VesperTV-App`, so forks that kept this relay's address can be told
@@ -72,6 +98,23 @@ VAULT_MAX_TOTAL = 2 * 1024 * 1024 * 1024  # disk cap for all blobs
 VAULT_PRUNE_EVERY = 300
 VAULT_ID_RE = re.compile(r"^/api/v/([A-Za-z0-9_-]{22,64})$")
 TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{32,128}$")
+
+SYNC_ID_RE = re.compile(r"^/api/sync/([A-Za-z0-9_-]{22,64})$")
+SYNC_TTL = 90 * 24 * 3600              # deleted after 3 months unused (owner)
+SYNC_TOUCH_EVERY = 24 * 3600           # GETs rewrite the expiry once a day
+SYNC_MAX_BODY = 4 * 1024 * 1024        # heavy user ~600 KB gzipped (2026-11-04)
+SYNC_PER_HOUR = 1200                   # requests per IP (memory only)
+SYNC_MAX_DEVICES = 3                   # owner, 2026-11-04
+SYNC_DEVICE_IDLE = 30 * 24 * 3600      # a silent device's slot frees up
+SYNC_DEVICE_TOUCH = 3600               # last-seen rewritten at most hourly
+SYNC_REVOKED_TTL = 30 * 24 * 3600      # how long a reset marker stays
+DEVICE_HEADER = "X-Sync-Device"
+DEVICE_RE = re.compile(r"^[A-Za-z0-9_-]{16,64}$")
+SYNC_DEVICE_RE = re.compile(r"^/api/sync/([A-Za-z0-9_-]{22,64})/device$")
+# Test builds +609/+610 send no device id; turn on once those are gone.
+REQUIRE_DEVICE = os.environ.get("PAIR_SYNC_REQUIRE_DEVICE", "") == "1"
+VERSION_RE = re.compile(r'^(?:W/)?"?(\d{1,12})"?$')
+_sync_hits = {}  # ip -> (hour bucket, count)
 
 APP_HEADER = "X-VesperTV-App"
 REQUIRE_APP = os.environ.get("PAIR_REQUIRE_APP", "") == "1"
@@ -250,6 +293,11 @@ class Handler(BaseHTTPRequestHandler):
             if not self._app_ok():
                 return
             return self._vault_get(v.group(1))
+        sy = SYNC_ID_RE.match(path)
+        if sy:
+            if not self._app_ok() or not self._sync_rate_ok():
+                return
+            return self._sync_get(sy.group(1))
         m = ID_RE.match(path)
         if not m:
             return self._send(404)
@@ -270,6 +318,11 @@ class Handler(BaseHTTPRequestHandler):
             if not self._app_ok():
                 return
             return self._vault_put(v.group(1))
+        sy = SYNC_ID_RE.match(path)
+        if sy:
+            if not self._app_ok() or not self._sync_rate_ok():
+                return
+            return self._sync_put(sy.group(1))
         m = ID_RE.match(path)
         if not m:
             return self._send(404)
@@ -303,21 +356,31 @@ class Handler(BaseHTTPRequestHandler):
         return self._log_post()
 
     def do_DELETE(self):
-        v = VAULT_ID_RE.match(self.path.split("?", 1)[0])
-        if not v:
+        path = self.path.split("?", 1)[0]
+        d = SYNC_DEVICE_RE.match(path)
+        if d:
+            if not self._app_ok() or not self._sync_rate_ok():
+                return
+            return self._sync_leave(d.group(1))
+        v = VAULT_ID_RE.match(path)
+        sy = SYNC_ID_RE.match(path)
+        if not v and not sy:
             return self._send(404)
         if not self._app_ok():
             return
+        if sy and not self._sync_rate_ok():
+            return
+        vid = v.group(1) if v else _sync_key(sy.group(1))
         token = self.headers.get("X-Vault-Token", "")
         if not TOKEN_RE.match(token):
             return self._send(400)
         with _vault_lock:
-            m = _vault_meta(v.group(1))
+            m = _vault_meta(vid)
             if m is None:
                 return self._send(404)
             if not hmac.compare_digest(m.get("tok", ""), _token_hash(token)):
                 return self._send(403)
-            _vault_remove(v.group(1))
+            _vault_remove(vid)
         return self._send(204)
 
     # ----------------------------------------------------------------- log
@@ -362,6 +425,8 @@ class Handler(BaseHTTPRequestHandler):
                     body = f.read()
             except OSError:
                 return self._send(404)
+            if m.get("once"):  # a sync link code: one device per code
+                _vault_remove(vid)
         return self._send(200, body, "application/octet-stream")
 
     def _vault_put(self, vid):
@@ -389,13 +454,202 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(507)
             try:
                 _write_atomic(blob, body)
-                _write_atomic(meta, json.dumps(
-                    {"exp": int(time.time()) + ttl, "tok": tok,
-                     "size": length}).encode("utf-8"))
+                new = {"exp": int(time.time()) + ttl, "tok": tok,
+                       "size": length}
+                if self.headers.get("X-Vault-Once") == "1":
+                    new["once"] = True
+                _write_atomic(meta, json.dumps(new).encode("utf-8"))
             except OSError:
                 _vault_remove(vid)
                 return self._send(500)
         return self._send(204)
+
+    # ---------------------------------------------------------------- sync
+
+    def _sync_rate_ok(self):
+        """False (429 sent) past SYNC_PER_HOUR requests from this IP this
+        hour. Counted in memory only; nothing about the IP is written."""
+        ip = self.headers.get("X-Real-IP") or self.client_address[0]
+        bucket = int(time.time() // 3600)
+        with _log_lock:
+            for k in [k for k, (b, _) in _sync_hits.items() if b != bucket]:
+                del _sync_hits[k]
+            _, n = _sync_hits.get(ip, (bucket, 0))
+            ok = n < SYNC_PER_HOUR
+            if ok:
+                _sync_hits[ip] = (bucket, n + 1)
+        if not ok:
+            self._send(429)
+        return ok
+
+    def _send_sync(self, code, version, body=b""):
+        self.send_response(code)
+        self.send_header("Content-Type", "application/octet-stream")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("ETag", f'"{version}"')
+        self.end_headers()
+        if body:
+            self.wfile.write(body)
+
+    def _sync_get(self, sid):
+        vid = _sync_key(sid)
+        with _vault_lock:
+            m = _vault_meta(vid)
+            if m is None:
+                return self._send(404)
+            version = m.get("ver", 0)
+            now = int(time.time())
+            seen = self._sync_device(m, now)
+            if seen is None:
+                return
+            touch = (not m.get("revoked")
+                     and m["exp"] - now < SYNC_TTL - SYNC_TOUCH_EVERY)
+            if touch:
+                m["exp"] = now + SYNC_TTL
+            if touch or seen:
+                try:
+                    _write_atomic(_vault_paths(vid)[1],
+                                  json.dumps(m).encode("utf-8"))
+                except OSError:
+                    pass
+            if _version(self.headers.get("If-None-Match")) == version:
+                return self._send_sync(304, version)
+            try:
+                with open(_vault_paths(vid)[0], "rb") as f:
+                    body = f.read()
+            except OSError:
+                return self._send(404)
+        return self._send_sync(200, version, body)
+
+    def _sync_put(self, sid):
+        vid = _sync_key(sid)
+        token = self.headers.get("X-Vault-Token", "")
+        expected = _version(self.headers.get("If-Match"))
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            return self._send(400)
+        if not TOKEN_RE.match(token) or expected is None:
+            return self._send(400)
+        if length < 29 or length > SYNC_MAX_BODY:  # version+nonce+tag
+            return self._send(413 if length > SYNC_MAX_BODY else 400)
+        body = self.rfile.read(length)
+        if len(body) != length:
+            return self._send(400)
+        tok = _token_hash(token)
+        blob, meta = _vault_paths(vid)
+        with _vault_lock:
+            m = _vault_meta(vid)
+            if m is not None and not hmac.compare_digest(m.get("tok", ""), tok):
+                return self._send(403)
+            if m is not None and m.get("revoked"):
+                return self._send(410)
+            current = m.get("ver", 0) if m else 0
+            if expected != current:
+                return self._send_sync(412, current)
+            now = int(time.time())
+            revoke = self.headers.get("X-Sync-Revoke") == "1"
+            devices = dict((m or {}).get("dev") or {})
+            if not revoke:
+                probe = {"dev": devices}
+                if self._sync_device(probe, now) is None:
+                    return
+                devices = probe.get("dev", devices)
+            old = m.get("size", 0) if m else 0
+            if _vault_total() - old + length > VAULT_MAX_TOTAL:
+                return self._send(507)
+            version = current + 1
+            if revoke:
+                new = {"exp": now + SYNC_REVOKED_TTL, "tok": tok,
+                       "size": length, "ver": version, "revoked": True}
+            else:
+                new = {"exp": now + SYNC_TTL, "tok": tok, "size": length,
+                       "ver": version}
+                if devices:
+                    new["dev"] = devices
+            try:
+                _write_atomic(blob, body)
+                _write_atomic(meta, json.dumps(new).encode("utf-8"))
+            except OSError:
+                _vault_remove(vid)
+                return self._send(500)
+        return self._send_sync(204, version)
+
+    def _sync_device(self, m, now):
+        """Checks this request's X-Sync-Device against the sync's slots and
+        records it in m["dev"] (the caller writes the meta). True = m
+        changed, False = unchanged, None = refused (response sent)."""
+        device = self.headers.get(DEVICE_HEADER, "")
+        if not device:
+            if REQUIRE_DEVICE:
+                self._send(400)
+                return None
+            return False
+        if not DEVICE_RE.match(device):
+            self._send(400)
+            return None
+        if m.get("revoked"):
+            return False  # the device must still learn of the reset
+        devices = m.get("dev") or {}
+        live = {h: t for h, t in devices.items()
+                if now - t < SYNC_DEVICE_IDLE}
+        h = _device_hash(device)
+        if h not in live and len(live) >= SYNC_MAX_DEVICES:
+            self.send_response(403)
+            self.send_header("X-Sync-Error", "device-limit")
+            self.send_header("X-Sync-Max-Devices", str(SYNC_MAX_DEVICES))
+            self.send_header("Content-Length", "0")
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            return None
+        if (h in live and now - live[h] < SYNC_DEVICE_TOUCH
+                and len(live) == len(devices)):
+            return False
+        live[h] = now
+        m["dev"] = live
+        return True
+
+    def _sync_leave(self, sid):
+        """Stop syncing on this device: frees its slot."""
+        vid = _sync_key(sid)
+        token = self.headers.get("X-Vault-Token", "")
+        device = self.headers.get(DEVICE_HEADER, "")
+        if not TOKEN_RE.match(token) or not DEVICE_RE.match(device):
+            return self._send(400)
+        with _vault_lock:
+            m = _vault_meta(vid)
+            if m is None:
+                return self._send(404)
+            if not hmac.compare_digest(m.get("tok", ""), _token_hash(token)):
+                return self._send(403)
+            devices = m.get("dev") or {}
+            if devices.pop(_device_hash(device), None) is not None:
+                m["dev"] = devices
+                try:
+                    _write_atomic(_vault_paths(vid)[1],
+                                  json.dumps(m).encode("utf-8"))
+                except OSError:
+                    return self._send(500)
+        return self._send(204)
+
+
+def _device_hash(device):
+    """What the meta keeps of a device id: random already, but the relay
+    stores nothing a device sent as is."""
+    return hashlib.sha256(device.encode("ascii")).hexdigest()[:32]
+
+
+def _sync_key(sid):
+    """Sync blobs share the vault folder; the "s." prefix keeps them apart
+    (vault ids can't contain a dot)."""
+    return "s." + sid
+
+
+def _version(header):
+    """The number in an ETag-style header, or None."""
+    m = VERSION_RE.match((header or "").strip())
+    return int(m.group(1)) if m else None
 
 
 def _summary(text):

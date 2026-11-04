@@ -18,6 +18,7 @@ import 'profiles_screen.dart';
 import 'recording_settings_screen.dart';
 import 'send_log_screen.dart';
 import 'transfer_screen.dart';
+import 'sync_screen.dart';
 import 'guide_settings_screen.dart';
 import 'theme_screen.dart';
 import 'addons_screen.dart';
@@ -329,6 +330,11 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
           tr('Device & data'),
           tr('Move your whole setup to another device, keep a backup of it, and update VesperTV.'),
           [
+            _Entry(
+                Icons.sync,
+                tr('Sync'),
+                tr('Keep your setup and watch progress together across devices'),
+                (_) => const SyncScreen()),
             _Entry(
                 Icons.devices,
                 tr('Transfer to another device'),

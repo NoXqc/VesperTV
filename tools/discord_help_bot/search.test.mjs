@@ -59,6 +59,51 @@ test('unknown and instruction-injection queries do not invent an answer', () => 
   }
 });
 
+test('sync answers cover setup, recovery, reset and expiry without implying it shipped', () => {
+  const cases = [
+    ['sync without account', 'Set up sync without an account'],
+    ['link another device to sync', 'Link another device to sync'],
+    ['what syncs between devices', 'What syncs between devices'],
+    ['show sync recovery code', 'Show or use a sync recovery code'],
+    ['lost sync recovery code', 'Lost sync recovery code'],
+    ['reset sync code', 'Reset the sync code'],
+    ['stop syncing on this device', 'Stop syncing on this device'],
+    ['sync deleted after three months', 'Sync deleted after three months'],
+    ['sync now', 'Sync now and last sync time'],
+  ];
+  for (const [query, title] of cases) {
+    assert.equal(searchGuide(entries, query)[0]?.entry.title, title, query);
+    assert.match(guideReply(entries, query).content, /remote\.html#Sync/);
+  }
+  assert.match(guideReply(entries, 'sync without account').content, /upcoming release/);
+  assert.match(guideReply(entries, 'sync without account').content, /encrypted on the device/);
+  assert.match(guideReply(entries, 'lost sync recovery code').content, /cannot recover your old sync/);
+  assert.match(guideReply(entries, 'sync deleted after three months').content, /90 days/);
+  assert.match(guideReply(entries, 'what syncs between devices').content, /Profile photos and imported M3U files/);
+  assert.match(guideReply(entries, 'what syncs between devices').content, /Continue Watching and Media Hub Recently watched merge newest first/);
+});
+
+test('sync device limits, single-use links and reset wipe return the current policy', () => {
+  for (const query of ['sync device limit', 'how many devices can I sync', 'sync already has 3 devices']) {
+    assert.equal(searchGuide(entries, query)[0]?.entry.title, 'Sync device limit: 3 devices', query);
+    const answer = guideReply(entries, query).content;
+    assert.match(answer, /3 devices in total/);
+    assert.match(answer, /another code does not reset the count/);
+    assert.match(answer, /unused for 30 days/);
+    assert.match(answer, /Stop syncing on this device/);
+  }
+  const link = guideReply(entries, 'single use link code').content;
+  assert.equal(searchGuide(entries, 'single use link code')[0]?.entry.title, 'Link another device to sync');
+  assert.match(link, /single-use: it works once, for one device/);
+  assert.match(link, /10 minutes/);
+  const reset = guideReply(entries, 'reset sync code').content;
+  assert.match(reset, /removes all your encrypted data from the old server copy/);
+  assert.match(reset, /clears its device slots/);
+  assert.match(reset, /This device keeps its local data/);
+  assert.match(reset, /Every other device stops syncing/);
+  assert.match(reset, /30 days/);
+});
+
 test('all answers link to a real website tab and never ping users', () => {
   for (const entry of entries) {
     const url = new URL(entry.url);

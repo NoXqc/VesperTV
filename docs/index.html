@@ -1262,6 +1262,55 @@ details .ans p + p{ margin-top:12px; }
           </ul>
         </article>
 
+        <!-- 05 -->
+        <article class="cluster reveal">
+          <div class="cluster-head">
+            <p class="step-no">05 / SYNC</p>
+            <h3>Your setup on every screen</h3>
+            <p>Coming in an upcoming release. No account, no email, no login.</p>
+          </div>
+
+          <ul class="feat-list">
+            <li>
+              <b>Set up once, link the rest</b>
+              <span>Settings &rarr; Device &amp; data &rarr; Sync &rarr; Set up sync on your
+              first device. On another one, choose I have a code and type the 16-digit link
+              code shown by a linked device. It works once, for one device, and expires after
+              10 minutes. Create a new code for each additional device.</span>
+            </li>
+            <li>
+              <b>Up to 3 devices per sync</b>
+              <span>Every link code and the recovery code share the same 3-device limit.
+              Another code does not reset it. Stop syncing on one linked device to free
+              its place; a device unused for 30 days frees its place automatically.</span>
+            </li>
+            <li>
+              <b>What travels</b>
+              <span>Playlists, viewer profiles, favourites and their order, hidden groups and
+              channels, your own groups, watch positions, Continue Watching, Sports Trak
+              preferences, Media Hub sources and history, and shared settings. Layout, caches
+              and which playlists are switched on stay with each box.</span>
+            </li>
+            <li>
+              <b>Encrypted before it leaves</b>
+              <span>Your setup is encrypted on the device. The server only ever holds
+              ciphertext it can't read, and deletes a sync nobody has used for 3 months.</span>
+            </li>
+            <li>
+              <b>Reset removes the old server copy</b>
+              <span>Resetting the code removes your old encrypted server data and device
+              slots. This device keeps its local data and starts a new sync. Every other
+              device must be linked again. Save the new recovery code.</span>
+            </li>
+            <li>
+              <b>A recovery code, not a password</b>
+              <span>You get a 26-character recovery code once. Keep it somewhere safe: with no
+              account behind it, nobody — including us — can recover it if you lose it and
+              every linked device.</span>
+            </li>
+          </ul>
+        </article>
+
       </div>
     </div>
   </section>
@@ -2046,6 +2095,79 @@ details .ans p + p{ margin-top:12px; }
 
       <div class="faq reveal">
         <details>
+          <summary>Can I sync devices without creating an account?</summary>
+          <div class="ans">
+            <p>Sync is being prepared for an upcoming release; it is not in the current
+              public Android 1.0.56 or Windows 1.0.45 packages. There is no account,
+              email or login: Settings &rarr; Device &amp; data &rarr; Sync &rarr;
+              Set up sync creates a private sync code. Link a device shows a 16-digit
+              code and QR that work once, for one device, within 10 minutes. Enter it under I have a code on
+              the other device. Your setup is encrypted on the device before upload;
+              the server cannot read it. Keep your link and recovery codes private.</p>
+            <p>See the <a href="remote.html#Sync">Sync remote guide</a> for the controls.</p>
+          </div>
+        </details>
+        <details>
+          <summary>What will sync, and what stays on this device?</summary>
+          <div class="ans">
+            <p>Playlists, viewer profiles, favourites/order, hidden channels and groups,
+              own groups, watch positions, recently played / Continue Watching lists, Sports Trak
+              preferences, Media Hub sources/favourites/resume/history and shared settings sync. Some changes appear after a
+              full restart. Existing playlists with the same server and username or
+              M3U URL are matched when joining.</p>
+            <p>Layout, which playlists are enabled on this box, playlist/guide caches, current viewer,
+              PIN lockout and backup timers stay local. This first version does not sync
+              profile photos or imported M3U files. Continue Watching and Media Hub Recently
+              watched merge newest first; watch positions also sync. Content and video files are not copied.</p>
+          </div>
+        </details>
+        <details>
+          <summary>What if I lose my sync recovery code?</summary>
+          <div class="ans">
+            <p>Save the 26-character recovery code shown at setup. If a linked device is
+              still available, choose Sync &rarr; Show recovery code there (profile PIN
+              when set). You can enter that code on another device under I have a code
+              &rarr; Use a recovery code. If you lose every linked device and the code,
+              we cannot recover the old sync. Create a new one from the data you still have.</p>
+          </div>
+        </details>
+        <details>
+          <summary>How do I reset sync or unlink a device?</summary>
+          <div class="ans">
+            <p>Reset sync code asks for the profile PIN when set and confirmation, then
+              removes all your encrypted data from the old server copy and clears its device
+              slots. This device keeps its local data and starts a new sync with a new recovery
+              code to save. Every other device stops syncing and must be linked again with a
+              new code. A small reset notice remains for 30 days to inform offline devices. Use it after sharing a code accidentally or selling a box.
+              Stop syncing on this device only unlinks this device: its data stays and
+              the other devices keep syncing. Stopping also frees its device slot when it can
+              reach the server.</p>
+          </div>
+        </details>
+        <details>
+          <summary>How many devices can I sync?</summary>
+          <div class="ans">
+            <p>Up to 3 devices per sync. Every link code and the recovery code lead to the
+              same sync, so generating another code never resets the count. Each 16-digit
+              link code works once for one device, and expires after 10 minutes.</p>
+            <p>If the sync is full, choose Sync &rarr; Stop syncing on this device on one
+              linked device, then try linking again. A device unused for 30 days frees its
+              place automatically. This differs from the 3-month deletion of an entirely
+              unused sync.</p>
+          </div>
+        </details>
+        <details>
+          <summary>How long does the server keep an unused sync?</summary>
+          <div class="ans">
+            <p>It deletes a sync after 3 months (90 days) without any linked device
+              checking in. Using a linked device refreshes that period. A device with
+              the recovery code can start syncing its remaining local data again after
+              expiry, but the deleted server snapshot cannot be recovered. This is
+              separate from the temporary link code's 10-minute expiry.</p>
+          </div>
+        </details>
+
+        <details>
           <summary>Does VesperTV come with channels?</summary>
           <div class="ans">
             <p>
@@ -2082,9 +2204,11 @@ details .ans p + p{ margin-top:12px; }
           <div class="ans">
             <p>
               No analytics, no crash reporting services, no accounts. Your playlist URLs and
-              credentials are stored on the device and are sent only to the provider you
-              entered, because that's who serves the streams. The source is public if you'd
-              rather verify that than take a stranger's word for it.
+              credentials are stored on the device and sent to the provider you entered
+              to load your content. If you choose internet Transfer, your setup is encrypted
+              on the device before upload; only someone with the code can open it. Upcoming
+              optional Sync uses the same principle. The relay stores ciphertext, never a
+              readable copy of your setup. The source is public if you'd like to verify it.
             </p>
           </div>
         </details>

@@ -10,6 +10,7 @@ import '../models/viewer_profile.dart';
 import '../models/profile_copy.dart';
 import 'profile_photos.dart';
 import 'local_playlist_files.dart';
+import 'sync_profile_match.dart' show syncProfileNameKey;
 import '../utils/constants.dart';
 
 /// Wraps [SharedPreferences] for small settings values, and the OS temp
@@ -167,6 +168,32 @@ class StorageService {
   /// JSON caches, whether it exists yet or not.
   Future<String> rawCachePath(String name, String ext) async =>
       '${(await _ensureCacheDir()).path}/$name.$ext';
+
+  /// Every viewer's Continue Watching history file (`recently_played`,
+  /// `recently_played_vp_<id>`, see PlaybackService) by cache name, for
+  /// cloud sync.
+  Future<Map<String, String>> recentlyPlayedFiles() async {
+    final out = <String, String>{};
+    try {
+      final dir = await _ensureCacheDir();
+      await for (final f in dir.list()) {
+        final name = f.uri.pathSegments.last;
+        if (f is! File || !isRecentlyPlayedFile(name.replaceAll('.json', ''))) {
+          continue;
+        }
+        try {
+          out[name.substring(0, name.length - 5)] = await f.readAsString();
+        } catch (_) {}
+      }
+    } catch (_) {
+      // No cache folder (cleared meanwhile, or tests): nothing to report;
+      // cloud sync reads a missing history as unchanged.
+    }
+    return out;
+  }
+
+  static bool isRecentlyPlayedFile(String name) =>
+      RegExp(r'^recently_played(_vp_[A-Za-z0-9_-]+)?$').hasMatch(name);
 
   Future<String?> readCacheFile(String name) async {
     final dir = await _ensureCacheDir();
@@ -1466,6 +1493,98 @@ class StorageService {
       values, _transferable,
       keep:
           values.containsKey(_transferArchiveExcluded) ? _isArchiveKey : null);
+
+  /// Kept per device even when syncing, on top of what Transfer leaves
+  /// out: each box has its own current viewer and its own backup timer.
+  static const _syncSkipExact = {
+    AppConstants.keyActiveViewerId,
+    AppConstants.keyAutoBackup,
+    AppConstants.keyLastAutoBackup,
+  };
+
+  static bool _syncable(String key) =>
+      _transferable(key) && !_syncSkipExact.contains(key);
+
+  /// Keys cloud sync may write while the app runs: the ones
+  /// `PlaylistManager.applyActiveViewer` / `PlaybackService.reloadForViewer`
+  /// / `AppPreferences.reloadPaletteForViewer` re-read (plus watch
+  /// positions, read when a title starts). Everything else (playlists,
+  /// Media Hub, settings) lives in services that keep their own copy and
+  /// would save it back over a pulled change, so it waits for the sync
+  /// before the services load (`SyncState.deferred`). Prefixes also match
+  /// the per-viewer/per-playlist suffixed forms.
+  static bool isLiveSyncKey(String key) =>
+      _liveSyncPrefixes.any(key.startsWith);
+
+  static const _liveSyncPrefixes = [
+    AppConstants.keyFavorites,
+    AppConstants.keyFavoriteSeries,
+    AppConstants.keyFavoritedGroups,
+    AppConstants.keyFavoriteLiveOrder,
+    AppConstants.keyMyGroups,
+    AppConstants.keyHiddenGroups,
+    AppConstants.keyShownGroups,
+    AppConstants.keyHiddenChannels,
+    AppConstants.keyHiddenPlaylistGroups,
+    AppConstants.keyLastPositionPrefix,
+    AppConstants.keyLastDurationPrefix,
+    AppConstants.keyPaletteId,
+    // Read from storage on every use (ArchiveService._historyEntries).
+    AppConstants.keyArchiveHistory,
+  ];
+
+  /// Cloud sync's view of the setup (`SyncData`, cloud_sync.dart): the
+  /// [exportForTransfer] form, minus [_syncSkipExact].
+  Map<String, Object?> exportForSync() => _exportWhere(_syncable);
+
+  /// Writes values merged in from other devices ([exportForSync] form) and
+  /// removes [removed] keys; device-only keys are never touched.
+  Future<void> applySyncChanges(
+      Map<String, Object?> changed, Set<String> removed) async {
+    final before = getViewerProfiles();
+    for (final key in removed) {
+      if (_syncable(key)) await _prefs.remove(key);
+    }
+    for (final entry in changed.entries) {
+      if (!_syncable(entry.key)) continue;
+      final tagged = entry.value;
+      if (tagged is! Map) continue;
+      final v = tagged['v'];
+      switch (tagged['t']) {
+        case 's' when v is String:
+          await _prefs.setString(entry.key, v);
+        case 'b' when v is bool:
+          await _prefs.setBool(entry.key, v);
+        case 'i' when v is int:
+          await _prefs.setInt(entry.key, v);
+        case 'd' when v is num:
+          await _prefs.setDouble(entry.key, v.toDouble());
+        case 'l' when v is List:
+          await _prefs.setStringList(entry.key, [
+            for (final s in v)
+              if (s is String) s
+          ]);
+      }
+    }
+    await _followActiveViewer(before);
+  }
+
+  /// The current viewer is device-only, so a join that gave its profile the
+  /// synced id would leave it pointing at nothing (= Main at the next launch,
+  /// even on a kids' box). Follow it to the one new profile with its name.
+  Future<void> _followActiveViewer(List<ViewerProfile> before) async {
+    final now = getViewerProfiles();
+    if (now.any((p) => p.id == _activeViewerId)) return;
+    final old = before.where((p) => p.id == _activeViewerId).firstOrNull;
+    if (old == null) return;
+    final known = {for (final p in before) p.id};
+    final name = syncProfileNameKey(old.name);
+    final target = now
+        .where(
+            (p) => !known.contains(p.id) && syncProfileNameKey(p.name) == name)
+        .toList();
+    if (target.length == 1) await setActiveViewerId(target.single.id);
+  }
 
   Future<void> clearCache() async {
     await _prefs.remove(AppConstants.keyEpgCache);
