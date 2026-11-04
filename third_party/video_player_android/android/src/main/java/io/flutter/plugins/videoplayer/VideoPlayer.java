@@ -110,6 +110,16 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
               androidx.media3.common.Player.PositionInfo after, int reason) {
             vodTrace.onPositionDiscontinuity(time, before, after, reason);
           }
+          @Override public void onLoadError(EventTime time,
+              androidx.media3.exoplayer.source.LoadEventInfo info,
+              androidx.media3.exoplayer.source.MediaLoadData data,
+              java.io.IOException error, boolean wasCanceled) {
+            vodTrace.onLoadError(time, info, data, error, wasCanceled);
+          }
+          @Override public void onPlayerError(EventTime time,
+              androidx.media3.common.PlaybackException error) {
+            vodTrace.onPlayerError(time, error);
+          }
           @Override
           public void onVideoDecoderInitialized(
               @NonNull EventTime eventTime, @NonNull String decoderName,
@@ -465,6 +475,7 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
   @NonNull
   /** Catch-up playback: see ExoPlayerEventListener.setFiniteMode. */
   void setFiniteMode(boolean on) {
+    vodTrace.setCatchup(on);
     if (exoPlayerEventListener != null) exoPlayerEventListener.setFiniteMode(on);
     if (streamStats != null) streamStats.finite = on;
     if (on) dropLiveCopies();
