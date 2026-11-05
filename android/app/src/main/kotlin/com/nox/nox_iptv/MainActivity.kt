@@ -110,7 +110,18 @@ class MainActivity : FlutterActivity() {
         phonePip.onModeChanged(active)
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        EpisodeAlertsWork.gate.setVisible(true)
+    }
+
     override fun onStop() {
+        EpisodeAlertsWork.gate.setVisible(false)
         super.onStop()
         phonePip.onStop()
     }
@@ -138,6 +149,10 @@ class MainActivity : FlutterActivity() {
         // Sports Trak recording — see RecorderService / RecorderScheduler.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "vespertv/recorder")
             .setMethodCallHandler { call, result -> recorderBridge.handle(call, result) }
+
+        EpisodeAlertsWork.connect(applicationContext, flutterEngine,
+            { intent?.getBooleanExtra("vespertv_episode_alert", false) == true },
+            { intent?.removeExtra("vespertv_episode_alert") })
 
         // "Notify me" new-episode alerts — see EpisodeNotifier.
         val episodeNotifier = EpisodeNotifier(this)

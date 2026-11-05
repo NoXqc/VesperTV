@@ -4,13 +4,16 @@ import 'package:flutter/services.dart';
 
 import '../l10n/l10n.dart';
 import '../models/archive_models.dart';
+import '../models/channel.dart';
 import '../models/episode_airing.dart';
 import '../models/xtream_series.dart';
+import '../models/series_details.dart';
 import 'archive_service.dart';
 import 'episode_air_date_service.dart';
 import 'episode_alerts.dart';
 import 'playlist_manager.dart';
 import 'storage_service.dart';
+import 'xtream_api_service.dart';
 
 /// Wires [EpisodeAlerts] to the app: how a followed show's newest episode is
 /// found (IPTV: the provider's own episode list, so "available" means it
@@ -20,7 +23,11 @@ class EpisodeAlertLookup {
   EpisodeAlertLookup(this.storage, this.playlist, this.archive);
 
   final StorageService storage;
-  final PlaylistManager playlist;
+
+  /// No PlaylistManager init, catalogs or SQLite in the headless engine.
+  EpisodeAlertLookup.background(this.storage, this.archive) : playlist = null;
+
+  final PlaylistManager? playlist;
   final ArchiveService archive;
 
   static const _channel = MethodChannel('vespertv/notify');
@@ -43,7 +50,10 @@ class EpisodeAlertLookup {
         categoryId: show.categoryId ?? '',
         coverUrl: show.posterUrl,
         tmdbId: show.tmdbId);
-    final result = await playlist.loadSeriesEpisodes(series);
+    final foreground = playlist;
+    final result = foreground != null
+        ? await foreground.loadSeriesEpisodes(series)
+        : await _backgroundEpisodes(show);
     // Playlist disabled or not loaded yet: no answer (not "no episodes").
     if (result.episodes.isEmpty) return null;
     final pairs = <(int, int)>[];
@@ -79,6 +89,29 @@ class EpisodeAlertLookup {
         count: pairs);
   }
 
+  Future<SeriesEpisodesResult> _backgroundEpisodes(FollowedShow show) async {
+    final profile = storage
+        .getPlaylists()
+        .where((p) => p.id == show.playlistId && p.enabled && p.isXtream)
+        .firstOrNull;
+    if (profile != null) {
+      for (final server in profile.serverCandidates) {
+        try {
+          final result = await XtreamApiService(
+                  server: server,
+                  username: profile.xtreamUsername ?? '',
+                  password: profile.xtreamPassword ?? '',
+                  playlistId: profile.id)
+              .getSeriesEpisodes(show.seriesId!, show.title);
+          if (result.episodes.isNotEmpty) return result;
+        } catch (_) {
+          /* Try a configured backup, without printing credentials. */
+        }
+      }
+    }
+    return (episodes: <int, List<Channel>>{}, plot: null, details: null);
+  }
+
   Future<EpisodeStatus?> _mediaHub(FollowedShow show) async {
     final url = show.sourceUrl, raw = show.meta;
     if (url == null || raw == null) return null;
@@ -88,7 +121,9 @@ class EpisodeAlertLookup {
     }
     final preview = ArchiveMeta.fromJson(raw);
     if (source == null || preview == null) return null;
-    final meta = await archive.meta(source, preview);
+    if (playlist == null && !source.enabled) return null;
+    final meta = await archive.meta(source, preview,
+        registerIdentities: playlist != null);
     if (meta == null || meta.videos.isEmpty) return null;
     final now = DateTime.now();
     final pairs = <(int, int)>[];
@@ -126,13 +161,22 @@ class EpisodeAlertLookup {
     return compareEpisode(s, e, best.$1, best.$2) > 0 ? next : null;
   }
 
-  Future<void> notify(EpisodeNotice notice) async {
+  /// Stable across engine/process restarts; String.hashCode is not a disk id.
+  static int notificationId(String showKey) {
+    var hash = 0x811c9dc5;
+    for (final unit in showKey.codeUnits) {
+      hash = ((hash ^ unit) * 0x01000193) & 0xffffffff;
+    }
+    return hash & 0x7fffffff;
+  }
+
+  static Future<void> notify(EpisodeNotice notice) async {
     final text = notice.count > 1
         ? tr('{count} new episodes - {code} is available',
             {'count': '${notice.count}', 'code': notice.code})
         : tr('{code} is available', {'code': notice.code});
     await _channel.invokeMethod('episode', {
-      'id': notice.showKey.hashCode & 0x7fffffff,
+      'id': notificationId(notice.showKey),
       'title': notice.title,
       'text': text,
       'channel': tr('New episodes'),

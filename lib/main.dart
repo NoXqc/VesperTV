@@ -56,6 +56,7 @@ import 'widgets/programme_reminder_overlay.dart';
 import 'services/goals_alerts.dart';
 import 'services/episode_alert_lookup.dart';
 import 'services/episode_alerts.dart';
+import 'services/episode_alerts_background.dart';
 import 'widgets/game_reminder_overlay.dart';
 import 'widgets/goals_alert_overlay.dart';
 import 'widgets/native_video_hole.dart';
@@ -219,6 +220,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     // The application Navigator must exist before startup playback can push.
     await WidgetsBinding.instance.endOfFrame;
     if (selection != null && !selection.isCompleted) selection.complete();
+    unawaited(_episodeBackground?.openPending());
   }
 
   /// The remote's Guide button, anywhere in the app ([GuideKey]).
@@ -246,6 +248,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   ProgrammeReminders? _programmeReminders;
   GoalsAlerts? _goalsAlerts;
   EpisodeAlerts? _episodeAlerts;
+  EpisodeAlertsBackground? _episodeBackground;
+  bool _episodeNotificationOpened = false;
 
   /// True while [PlaylistManager.runFullCatalogSync] is blocking the
   /// launch — see [CatalogSyncScreen] and [_bootstrap] for the whole
@@ -357,6 +361,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     _syncLifecycle?.dispose();
     _gameReminders?.dispose();
     _programmeReminders?.dispose();
+    _episodeBackground?.dispose();
     _episodeAlerts?.dispose();
     RecordingService.instance.prepareProgramme = null;
     _goalsAlerts?.dispose();
@@ -603,6 +608,21 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       _episodeAlerts = EpisodeAlerts(_storage);
       EpisodeAlertLookup(_storage, _playlistManager, _archiveService)
           .attach(_episodeAlerts!);
+      _episodeBackground = EpisodeAlertsBackground(_episodeAlerts!, onOpen: () {
+        final navigator = _navigatorKey.currentState;
+        if (!mounted ||
+            !_ready ||
+            _profileSelection != null ||
+            navigator == null) {
+          return false;
+        }
+        _episodeNotificationOpened = true;
+        navigator.popUntil((route) => route.isFirst);
+        unawaited(navigator
+            .push(MaterialPageRoute<void>(builder: (_) => const HomeScreen())));
+        return true;
+      });
+      await _episodeBackground!.start();
       _episodeAlerts!.start();
       _viewerProfileService = ViewerProfileService(
           _storage, _playlistManager, _playbackService,
@@ -781,6 +801,10 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // Profile selection waits for the application's first frame above. Any
       // callbacks just queued still need a new frame, even on an idle screen.
       if (selection != null) WidgetsBinding.instance.ensureVisualUpdate();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        unawaited(_episodeBackground?.openPending());
+      });
+      WidgetsBinding.instance.scheduleFrame();
       // `_epgService.init()` was started during the splash (see above);
       // awaiting it here only makes sure startAutoRefresh sees whether the
       // database has data — which decides if a refresh is due right away.
@@ -875,12 +899,18 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   /// this, resume-last-channel would silently find an empty list and do
   /// nothing on every Xtream launch.
   Future<void> _autoResumeLastChannel() async {
+    if (Platform.isAndroid &&
+        (await _episodeBackground?.pendingTap == true ||
+            _episodeNotificationOpened)) {
+      return;
+    }
     // The sports home starts with its dashboard, never an unrelated stream.
     if (_preferences.sportsMode || _preferences.hideLiveTv) return;
     if (_playbackService.isPlayingSomething) return;
     final lastId = _storage.getLastChannelId();
     if (lastId == null) return;
     await _playlistManager.ensureLiveChannelsLoaded();
+    if (_episodeNotificationOpened) return;
     // Settings > General > Startup (both platforms): full screen (default),
     // or playing in the guide's preview box, or neither.
     // Another start section (Startup > Open on) wins over full screen: the

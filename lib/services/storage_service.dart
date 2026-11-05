@@ -97,12 +97,22 @@ class StorageService {
   int viewerGeneration = 0;
   String _activeViewerId = AppConstants.mainViewerId;
 
-  Future<void> init() async {
+  Future<void> init({String? viewerId, bool migrate = true}) async {
     _prefs = await SharedPreferences.getInstance();
-    _activeViewerId = _prefs.getString(AppConstants.keyActiveViewerId) ??
+    _activeViewerId = viewerId ??
+        _prefs.getString(AppConstants.keyActiveViewerId) ??
         AppConstants.mainViewerId;
-    await _migrateViewerPalettes();
+    if (migrate) await _migrateViewerPalettes();
   }
+
+  /// Another Flutter engine may have committed episode checkpoints while this
+  /// engine was suspended. Never write the cached snapshot back over them.
+  Future<void> reloadPreferences() => _prefs.reload();
+
+  String episodeAlertsKey(String viewerId) =>
+      _vk(AppConstants.keyEpisodeAlerts, viewerId: viewerId);
+
+  String getLanguage() => _prefs.getString(AppConstants.keyLanguage) ?? 'auto';
 
   /// Snapshot the old shared colour for existing viewers once. Main's
   /// original key is read only; future profiles start with the default.

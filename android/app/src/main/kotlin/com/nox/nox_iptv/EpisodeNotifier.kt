@@ -7,6 +7,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import io.flutter.plugin.common.MethodCall
@@ -17,7 +18,7 @@ import io.flutter.plugin.common.MethodChannel
  * notification per show, replaced by a newer one; tapping it opens the app,
  * where Home has the "New episodes" row. Channel `vespertv/notify`.
  */
-class EpisodeNotifier(private val activity: Activity) {
+class EpisodeNotifier(private val context: Context, private val activity: Activity? = context as? Activity) {
     companion object {
         private const val CHANNEL_ID = "episodes"
         private const val PERMISSION_REQUEST = 4711
@@ -36,10 +37,10 @@ class EpisodeNotifier(private val activity: Activity) {
             }
             "requestPermission" -> {
                 if (Build.VERSION.SDK_INT >= 33 &&
-                    activity.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
+                    context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
                     PackageManager.PERMISSION_GRANTED
                 ) {
-                    activity.requestPermissions(
+                    activity?.requestPermissions(
                         arrayOf(Manifest.permission.POST_NOTIFICATIONS), PERMISSION_REQUEST
                     )
                 }
@@ -50,7 +51,7 @@ class EpisodeNotifier(private val activity: Activity) {
     }
 
     private fun post(id: Int, title: String, text: String, channelName: String) {
-        val nm = activity.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
             nm.getNotificationChannel(CHANNEL_ID) == null
         ) {
@@ -58,15 +59,17 @@ class EpisodeNotifier(private val activity: Activity) {
                 NotificationChannel(CHANNEL_ID, channelName, NotificationManager.IMPORTANCE_DEFAULT)
             )
         }
-        val open = activity.packageManager.getLaunchIntentForPackage(activity.packageName)?.let {
+        val open = context.packageManager.getLaunchIntentForPackage(context.packageName)?.let {
+            it.putExtra("vespertv_episode_alert", true)
+            it.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             PendingIntent.getActivity(
-                activity, id, it,
+                context, id, it,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
         }
         @Suppress("DEPRECATION")
         val b = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-            Notification.Builder(activity, CHANNEL_ID) else Notification.Builder(activity)
+            Notification.Builder(context, CHANNEL_ID) else Notification.Builder(context)
         val n = b.setContentTitle(title)
             .setContentText(text)
             .setSmallIcon(android.R.drawable.ic_media_play)

@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../models/playlist_profile.dart';
 import 'device_defaults.dart';
+import 'episode_alerts_background.dart';
 import 'phone_pairing_service.dart' show kPairRelayBase, kRelayAppHeaders;
 
 /// Settings > Device & data > Send log. Keeps the app's own `print` /
@@ -137,6 +138,7 @@ class AppLog {
     }
     if (Platform.isAndroid) {
       out.writeln();
+      out.writeln(await EpisodeAlertsBackground.diagnostics());
       out.writeln('== Android logcat (this process)');
       out.writeln(await _logcat());
     }

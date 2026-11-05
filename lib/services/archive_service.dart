@@ -1603,7 +1603,8 @@ class ArchiveService extends ChangeNotifier {
           {required bool episode}) =>
       '$playlistId::${_rawId(source, videoId, episode: episode)}';
 
-  Future<ArchiveMeta?> meta(ArchiveSource source, ArchiveMeta preview) async {
+  Future<ArchiveMeta?> meta(ArchiveSource source, ArchiveMeta preview,
+      {bool registerIdentities = true}) async {
     final viewer = _storage.viewerGeneration;
     ArchiveMeta? full;
     try {
@@ -1630,7 +1631,7 @@ class ArchiveService extends ChangeNotifier {
           ArchiveCatalogProvider.baseUrl, preview.type, preview.imdb!);
     }
     if (_storage.viewerGeneration != viewer || _disposed) return null;
-    if (full != null) {
+    if (full != null && registerIdentities) {
       if (preview.wireType == null && full.imdb != null) {
         final mappedPreview = ArchiveMeta.fromJson(
             {...preview.toJson(includeVideos: true), 'imdb_id': full.imdb});

@@ -207,6 +207,28 @@ class EpisodeAlerts extends ChangeNotifier {
   /// Android system notification (phone shade / TV); null elsewhere.
   Future<void> Function(EpisodeNotice notice)? systemNotify;
 
+  /// Headless Android commits use a guarded compare-and-set against the disk
+  /// snapshot. A foreground launch invalidates that worker's right to commit.
+  Future<void> Function(String viewerId, String data)? persist;
+  Future<bool> Function()? canCheck;
+  Future<void> Function()? beforeCheck;
+
+  static bool isDue(FollowedShow show, DateTime now) =>
+      show.checkedAt == null || now.difference(show.checkedAt!) >= checkEvery;
+
+  /// Refresh after another engine has written while the app was stopped.
+  Future<void> refreshFromDisk() async {
+    await _write;
+    final revision = _revision;
+    await storage.reloadPreferences();
+    if (!_disposed && revision == _revision) {
+      loadViewer(force: true);
+      _changed();
+    }
+  }
+
+  int _revision = 0;
+
   final Map<String, FollowedShow> _shows = {};
   final Map<String, EpisodeNotice> _notices = {};
   String? viewerId;
@@ -236,9 +258,9 @@ class EpisodeAlerts extends ChangeNotifier {
     return _shows.containsKey(key);
   }
 
-  void loadViewer() {
+  void loadViewer({bool force = false}) {
     final id = storage.getActiveViewerId();
-    if (viewerId == id) return;
+    if (!force && viewerId == id) return;
     viewerId = id;
     _shows.clear();
     _notices.clear();
@@ -266,13 +288,18 @@ class EpisodeAlerts extends ChangeNotifier {
       'shows': [for (final s in _shows.values) s.toJson()],
       'notices': [for (final n in _notices.values) n.toJson()],
     });
-    _write = _write
-        .catchError((Object _) {})
-        .then((_) => storage.setEpisodeAlerts(data, viewerId: viewer));
+    _write = _write.catchError((Object _) {}).then((_) async {
+      if (persist case final save?) {
+        await save(viewer!, data);
+      } else {
+        await storage.setEpisodeAlerts(data, viewerId: viewer);
+      }
+    });
     return _write;
   }
 
   void _changed() {
+    _revision++;
     if (!_disposed) notifyListeners();
   }
 
@@ -311,20 +338,16 @@ class EpisodeAlerts extends ChangeNotifier {
   }
 
   Future<void> checkAll({bool force = false}) async {
-    loadViewer();
-    if (_checking || lookup == null) return;
+    if (_checking || lookup == null || _disposed) return;
     _checking = true;
-    final viewer = viewerId;
     try {
+      await beforeCheck?.call();
+      loadViewer();
+      final viewer = viewerId;
       for (final show in _shows.values.toList()) {
         if (_disposed || viewer != storage.getActiveViewerId()) return;
-        final checked = show.checkedAt;
-        if (!force &&
-            checked != null &&
-            now().difference(checked) <
-                checkEvery - const Duration(minutes: 5)) {
-          continue;
-        }
+        if (canCheck != null && !await canCheck!()) return;
+        if (!force && !isDue(show, now())) continue;
         await _check(show);
       }
     } finally {
@@ -346,8 +369,15 @@ class EpisodeAlerts extends ChangeNotifier {
         status == null) {
       return;
     }
+    if (canCheck != null && !await canCheck!()) return;
+    if (_disposed ||
+        viewer != storage.getActiveViewerId() ||
+        !identical(_shows[show.key], show)) {
+      return;
+    }
     show.checkedAt = now();
     show.next = status.next;
+    EpisodeNotice? pending;
     final s = status.season, e = status.episode;
     if (s != null && e != null) {
       final known = show.lastSeason != null && show.lastEpisode != null;
@@ -370,7 +400,7 @@ class EpisodeAlerts extends ChangeNotifier {
             count: count < 1 ? 1 : count,
             episodeTitle: status.episodeTitle);
         _notices[show.key] = notice;
-        unawaited(systemNotify?.call(notice).catchError((Object _) {}));
+        pending = notice;
       }
       if (!known || newer) {
         show.lastSeason = s;
@@ -378,7 +408,15 @@ class EpisodeAlerts extends ChangeNotifier {
       }
     }
     _changed();
+    // Persist the baseline before notifying, so a new engine cannot repeat it.
     await _save();
+    if (pending != null && !_disposed) {
+      try {
+        await systemNotify?.call(pending);
+      } catch (_) {
+        /* The Home notice remains when OS notification is denied. */
+      }
+    }
   }
 
   @override
