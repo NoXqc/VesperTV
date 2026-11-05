@@ -103,6 +103,12 @@ void main() {
       expect(find.byType(ProfileCard), findsNothing);
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
       await tester.pumpAndSettle();
+      if (populated) {
+        // Left on the first card stays on Home; Back leaves it.
+        expect(find.byType(HomeScreen), findsOneWidget);
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+      }
       expect(find.text('Open Home'), findsOneWidget);
       expect(find.byType(HomeScreen), findsNothing);
       await tester.pumpWidget(const SizedBox.shrink());

@@ -714,11 +714,10 @@ class _HomeScreenState extends State<HomeScreen> {
         return KeyEventResult.handled;
       }
       if (key == LogicalKeyboardKey.arrowLeft) {
-        if (_profileIndex > 0) {
-          _focusProfiles(_profileIndex - 1);
-        } else {
-          Navigator.of(context).maybePop();
-        }
+        // The first card stays put (Back leaves Home): Home has no tabs
+        // column beside it, so Left used to drop out of the page (owner,
+        // 2026-11-05).
+        if (_profileIndex > 0) _focusProfiles(_profileIndex - 1);
         return KeyEventResult.handled;
       }
       if (key == LogicalKeyboardKey.arrowDown) {
@@ -763,12 +762,8 @@ class _HomeScreenState extends State<HomeScreen> {
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowLeft) {
-      if (i > 0) {
-        _focusCard(_row, i - 1);
-      } else {
-        // Like the other tabs: Left from the first card = the tabs column.
-        Navigator.of(context).maybePop();
-      }
+      // First card: stay (see the profiles strip above). Back leaves Home.
+      if (i > 0) _focusCard(_row, i - 1);
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
