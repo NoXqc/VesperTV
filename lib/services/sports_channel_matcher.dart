@@ -1555,7 +1555,56 @@ class SportsChannelMatcher {
           ? NoMatchCause.guideNotReaching
           : NoMatchCause.notFound);
     }
+    _dropStationsShowingOtherGames(games, out);
     return out;
+  }
+
+  /// Games at the same time must not all point to one station: a channel
+  /// the guide confirms is showing game A is dropped from an overlapping
+  /// game B where it is only a guess (network/series/team fallback), with
+  /// all its quality copies. Saved picks and B's own confirmed matches stay
+  /// (user report 2026-11-05: simultaneous games all sent to one 4K
+  /// station).
+  void _dropStationsShowingOtherGames(
+      List<SportsGame> games, Map<String, List<ChannelMatch>> out) {
+    String station(Channel c) {
+      final key = channelCopyKey(c.sourceName);
+      return key.isEmpty ? c.id : key;
+    }
+
+    final confirmed = <SportsGame, Set<String>>{};
+    for (final g in games) {
+      final list = out[SportsChannelPicks.eventKey(g)];
+      if (list == null) continue;
+      final stations = {
+        for (final m in list)
+          if (isConfirmedMatch(m)) station(m.channel)
+      };
+      if (stations.isNotEmpty) confirmed[g] = stations;
+    }
+    if (confirmed.isEmpty) return;
+    for (final g in games) {
+      final key = SportsChannelPicks.eventKey(g);
+      final list = out[key];
+      if (list == null || list.isEmpty) continue;
+      final taken = <String>{
+        for (final e in confirmed.entries)
+          if (e.key != g && gamesOverlap(e.key, g)) ...e.value
+      };
+      if (taken.isEmpty) continue;
+      final own = confirmed[g] ?? const <String>{};
+      final kept = [
+        for (final m in list)
+          if (m.reason == MatchReason.pick ||
+              isConfirmedMatch(m) ||
+              own.contains(station(m.channel)) ||
+              !taken.contains(station(m.channel)))
+            m
+      ];
+      if (kept.length == list.length) continue;
+      out[key] = kept;
+      if (kept.isEmpty) _noMatch[key] = const NoMatch(NoMatchCause.notFound);
+    }
   }
 
   /// Channels whose name contains every word of [query] — the manual
@@ -1576,6 +1625,22 @@ class SportsChannelMatcher {
   }
 }
 
+/// The guide (or an event channel naming the game) says this channel is
+/// showing the game, or the viewer chose it - not just a network, series or
+/// team guess.
+bool isConfirmedMatch(ChannelMatch m) =>
+    m.gameEvidence ||
+    m.reason == MatchReason.guide ||
+    m.reason == MatchReason.pick;
+
+/// Whether two games are on at the same time (kickoff to end, or a
+/// three-hour estimate when the feed gives no end).
+bool gamesOverlap(SportsGame a, SportsGame b) {
+  DateTime end(SportsGame g) =>
+      g.end ?? g.start.add(const Duration(hours: 3));
+  return a.start.isBefore(end(b)) && b.start.isBefore(end(a));
+}
+
 int _sportsQuality(Channel c) {
   if (Real4kChannels.contains(c.id)) return 5;
   final name = c.sourceName.toUpperCase();
@@ -1586,8 +1651,11 @@ int _sportsQuality(Channel c) {
   return 1;
 }
 
-/// Saved choices first, then matched 4K sources across all broadcasters.
-/// Keep the existing copy/score ordering for the remaining fallback sources.
+/// Saved choices first, then 4K sources confirmed to show the game, across
+/// all broadcasters. A 4K channel that is only a network/series guess no
+/// longer jumps ahead of the channel the guide says is showing the game.
+/// Among the other confirmed sources the higher quality goes first; the
+/// remaining fallbacks keep the existing copy/score ordering.
 List<ChannelMatch> preferSportsSources(List<ChannelMatch> matches) {
   final groups = <String, List<ChannelMatch>>{};
   for (final m in matches) {
@@ -1609,7 +1677,7 @@ List<ChannelMatch> preferSportsSources(List<ChannelMatch> matches) {
   int priority(ChannelMatch m) =>
       m.reason == MatchReason.pick && m.score >= 1000
           ? 3
-          : _sportsQuality(m.channel) >= 4
+          : _sportsQuality(m.channel) >= 4 && isConfirmedMatch(m)
               ? 2
               : m.reason == MatchReason.pick
                   ? 1
@@ -1629,5 +1697,20 @@ List<ChannelMatch> preferSportsSources(List<ChannelMatch> matches) {
     }
     return previousOrder[a]!.compareTo(previousOrder[b]!);
   });
+  // The other confirmed sources: best quality first, in the slots they
+  // already hold (guesses keep their places around them).
+  final slots = [
+    for (final (i, m) in ordered.indexed)
+      if (priority(m) == 0 && isConfirmedMatch(m)) i
+  ];
+  final byQuality = [...slots]..sort((x, y) {
+      final quality = _sportsQuality(ordered[y].channel)
+          .compareTo(_sportsQuality(ordered[x].channel));
+      return quality != 0 ? quality : x.compareTo(y);
+    });
+  final moved = [for (final i in byQuality) ordered[i]];
+  for (final (n, i) in slots.indexed) {
+    ordered[i] = moved[n];
+  }
   return ordered;
 }

@@ -123,7 +123,9 @@ void main() {
         ChannelMatch(channel('4k', 'CA: TSN 1 4K'), MatchReason.guide, 80);
     final other =
         ChannelMatch(channel('other', 'US: ESPN 4K'), MatchReason.network, 50);
-    expect(preferSportsSources([hd, uhd, other]), [uhd, other, hd]);
+    // A 4K network guess no longer outranks the HD channel the guide says
+    // is showing the game (user report 2026-11-05).
+    expect(preferSportsSources([hd, uhd, other]), [uhd, hd, other]);
     final picked = ChannelMatch(hd.channel, MatchReason.pick, 1000);
     expect(preferSportsSources([picked, uhd, other]).first, same(picked));
   });
