@@ -376,7 +376,11 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
-- **Claude, 2026-11-05 - release 1.0.57 (beta), +630 (latest):** owner said "cut it". Android only; Windows
+- **Claude, 2026-11-05 - release 1.0.58 (beta), +632 (latest):** the 1.0.57 release renamed quietly (owner: no
+  announcement) so 1.0.57 installs are offered the fixes: transparency slider no longer traps the remote, guide layout
+  per profile. The updater compares tag vs versionName only: replacing an APK under the same tag never reaches users
+  already on that version. Notes: dev-notes/releases/1.0.58.md. Next build > 632.
+- **Claude, 2026-11-05 - release 1.0.57 (beta), +630:** owner said "cut it". Android only; Windows
   stays 1.0.45. TV player flow (OK = bar + info card, Down = options row, Up/Down = channel with nothing on screen,
   live timeline into catch-up, no TV top bar), Audio sync +/-5 s (vendored `AudioDelay`), Notify me with the app closed
   (WorkManager; `android/app/proguard-rules.pro` keeps its Room DB - +621 crashed without it), Sports phone notifications
