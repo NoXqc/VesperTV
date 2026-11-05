@@ -14,6 +14,7 @@ import '../services/archive_ready_watch.dart';
 import '../services/archive_service.dart';
 import '../services/archive_stream_session.dart';
 import '../utils/image_urls.dart';
+import '../utils/route_observer.dart';
 import '../widgets/detail_header.dart';
 import '../widgets/hd_network_image.dart';
 import '../widgets/archive_row_settings.dart';
@@ -55,7 +56,8 @@ class ArchiveScreen extends StatefulWidget {
   State<ArchiveScreen> createState() => _ArchiveScreenState();
 }
 
-class _ArchiveScreenState extends State<ArchiveScreen> {
+class _ArchiveScreenState extends State<ArchiveScreen>
+    with WidgetsBindingObserver, RouteAware {
   ArchiveType _type = ArchiveType.movie;
   final _railScope = FocusScopeNode(debugLabel: 'archive-rail');
   final _contentScope = FocusScopeNode(debugLabel: 'archive-content');
@@ -87,6 +89,11 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
   final Map<String, ScrollController> _rowScrolls = {};
 
   Timer? _progressRefresh;
+  Timer? _widePreviewTimer;
+  (String, int, String)? _expandedCard;
+  PageRoute<void>? _previewRoute;
+  bool _previewForeground = true;
+  bool _previewRouteVisible = true;
   String? _focusedRowKey;
   int _focusedRow = 0;
   ArchiveMeta? _focused;
@@ -100,6 +107,10 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    _previewForeground =
+        lifecycle == null || lifecycle == AppLifecycleState.resumed;
     _releaseResumeHint = LiveResumeHint.hideWhileMounted();
     // PopScope's canPop reads _contentScope.hasFocus at build time; moving
     // focus rows -> rail doesn't rebuild by itself, which left Back stuck
@@ -112,6 +123,39 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
       context.read<ArchiveService>().open();
       _firstRailNode.requestFocus();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute<void> && route != _previewRoute) {
+      appRouteObserver.unsubscribe(this);
+      _previewRoute = route;
+      appRouteObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didPushNext() {
+    _previewRouteVisible = false;
+    _suspendWidePreview();
+  }
+
+  @override
+  void didPopNext() {
+    _previewRouteVisible = true;
+    _resumeWidePreview();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _previewForeground = state == AppLifecycleState.resumed;
+    if (_previewForeground) {
+      _resumeWidePreview();
+    } else {
+      _suspendWidePreview();
+    }
   }
 
   bool _contentHadFocus = false;
@@ -142,14 +186,18 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
   bool get _awayFromRail => _contentScope.hasFocus || _barScope.hasFocus;
 
   void _onContentFocus() {
+    final collapsed = !_contentScope.hasFocus && _clearWidePreview();
     final has = _awayFromRail;
-    if (has == _contentHadFocus || !mounted) return;
+    if ((has == _contentHadFocus && !collapsed) || !mounted) return;
     _contentHadFocus = has;
     setState(() {});
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    appRouteObserver.unsubscribe(this);
+    _widePreviewTimer?.cancel();
     _contentScope.removeListener(_onContentFocus);
     _barScope.removeListener(_onContentFocus);
     _railScope.removeListener(_onRailFocus);
@@ -216,16 +264,99 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
   /// Wide focused cards: TV/desktop widths only (a phone row has no room).
   bool get _wideCards => MediaQuery.sizeOf(context).width >= 700;
 
-  /// The card of [row] drawn wide: its focused card while the rows have
-  /// focus, when that title has a backdrop. Every card before it is a
-  /// normal slot, which keeps [_focusCard]'s maths exact.
+  bool get _canPreview =>
+      _previewForeground &&
+      _previewRouteVisible &&
+      _wideCards &&
+      ModalRoute.of(context)?.isCurrent != false;
+
+  /// Only the title kept focused for three seconds may occupy a wide slot.
+  /// Validate identity again: a refreshed row may reuse the same index/node.
   int? _wideIndex(ArchiveRow row) {
-    if (!_wideCards || !_contentScope.hasFocus || row.key != _focusedRowKey) {
+    final expanded = _expandedCard;
+    if (!_canPreview ||
+        !_contentScope.hasFocus ||
+        expanded == null ||
+        expanded.$1 != row.key ||
+        row.key != _focusedRowKey) {
       return null;
     }
-    final i = _lastIndex[row.key];
-    if (i == null || i >= row.items.length) return null;
-    return row.items[i].backgroundUrl == null ? null : i;
+    final i = expanded.$2;
+    if (i >= row.items.length ||
+        _lastIndex[row.key] != i ||
+        row.items[i].id != expanded.$3 ||
+        !(_nodes[row.key]?[i]?.hasFocus ?? false)) {
+      return null;
+    }
+    return (row.items[i].backgroundUrl?.isNotEmpty ?? false) ? i : null;
+  }
+
+  bool _clearWidePreview() {
+    _widePreviewTimer?.cancel();
+    _widePreviewTimer = null;
+    final changed = _expandedCard != null;
+    _expandedCard = null;
+    return changed;
+  }
+
+  void _suspendWidePreview() {
+    if (_clearWidePreview() && mounted) setState(() {});
+  }
+
+  void _resumeWidePreview() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_canPreview) return;
+      final rows = context.read<ArchiveService>().rows(_type);
+      final r = rows.indexWhere((row) => row.key == _focusedRowKey);
+      if (r < 0) return;
+      final row = rows[r];
+      final i = _lastIndex[row.key];
+      if (i != null &&
+          i < row.items.length &&
+          (_nodes[row.key]?[i]?.hasFocus ?? false)) {
+        _armWidePreview(row, i);
+      }
+    });
+    WidgetsBinding.instance.scheduleFrame();
+  }
+
+  void _armWidePreview(ArchiveRow row, int i) {
+    _clearWidePreview();
+    final type = _type;
+    final id = row.items[i].id;
+    final node = _node(row.key, i);
+    if (!_canPreview || !(row.items[i].backgroundUrl?.isNotEmpty ?? false)) {
+      return;
+    }
+    _widePreviewTimer = Timer(const Duration(seconds: 3), () {
+      _widePreviewTimer = null;
+      if (!mounted ||
+          !_canPreview ||
+          _type != type ||
+          _focusedRowKey != row.key ||
+          _lastIndex[row.key] != i ||
+          !node.hasFocus) {
+        return;
+      }
+      final rows = context.read<ArchiveService>().rows(type);
+      final r = rows.indexWhere((item) => item.key == row.key);
+      if (r < 0 ||
+          i >= rows[r].items.length ||
+          rows[r].items[i].id != id ||
+          !(rows[r].items[i].backgroundUrl?.isNotEmpty ?? false)) {
+        return;
+      }
+      setState(() => _expandedCard = (row.key, i, id));
+      _revealFocusedAfterLayout(rows[r], i);
+    });
+  }
+
+  void _revealFocusedAfterLayout(ArchiveRow row, int i) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && (_nodes[row.key]?[i]?.hasFocus ?? false)) {
+        _revealCard(row, i);
+      }
+    });
   }
 
   /// One extent builder per row, replaced only when that row's wide card
@@ -242,21 +373,15 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
     return builder;
   }
 
-  /// Scrolls [row] so card [i] is on screen (with a card of room past it),
-  /// then focuses it — after a frame when the jump had to build it, retried
-  /// for a few frames on a slow box (owner, 2026-10-21: holding Right, the
-  /// selector got lost on titles not built yet). Card [i] will be the wide
-  /// one once focused, and the cards before it normal slots.
+  /// Reveal before focusing so lazy cards exist; reconcile after layout
+  /// when a previously expanded card collapses or a row reaches its end.
   void _focusCard(ArchiveRow row, int i) {
+    if (!(_nodes[row.key]?[i]?.hasFocus ?? false) && _clearWidePreview()) {
+      setState(() {});
+    }
     _revealCard(row, i);
     _focusWhenBuilt(_node(row.key, i));
-    // Again once the card is wide: the jump above was clamped to the row's
-    // old length, short by the wide slot near the end of a row.
-    if (_wideCards) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _revealCard(row, i);
-      });
-    }
+    _revealFocusedAfterLayout(row, i);
   }
 
   void _revealCard(ArchiveRow row, int i) {
@@ -264,17 +389,21 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
     if (c != null && c.hasClients && i < row.items.length) {
       final pos = c.position;
       final start = _rowPadding + i * _cardExtent;
-      final extent = _wideCards && row.items[i].backgroundUrl != null
-          ? _wideExtent
-          : _cardExtent;
-      double? to;
-      if (start - _cardExtent < pos.pixels) {
-        to = start - _cardExtent;
-      } else if (start + extent + _cardExtent >
-          pos.pixels + pos.viewportDimension) {
-        to = start + extent + _cardExtent - pos.viewportDimension;
+      if (_wideCards) {
+        // Move the row from the selector's position, showing the upcoming
+        // titles immediately. At the actual end, retain the natural clamp.
+        c.jumpTo((start - _rowPadding).clamp(0.0, pos.maxScrollExtent));
+      } else {
+        // Narrow/touch rows retain their existing minimal-reveal behavior.
+        double? to;
+        if (start - _cardExtent < pos.pixels) {
+          to = start - _cardExtent;
+        } else if (start + _cardExtent * 2 >
+            pos.pixels + pos.viewportDimension) {
+          to = start + _cardExtent * 2 - pos.viewportDimension;
+        }
+        if (to != null) c.jumpTo(to.clamp(0.0, pos.maxScrollExtent));
       }
-      if (to != null) c.jumpTo(to.clamp(0.0, pos.maxScrollExtent));
     }
   }
 
@@ -374,6 +503,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
   Future<void> _applyGenre(ArchiveService service, String? genre) async {
     final type = _type;
     setState(() {
+      _clearWidePreview();
       _focusedRow = 0;
       _focusedRowKey = null;
       _focused = null;
@@ -508,6 +638,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
   void _setType(ArchiveType type) {
     if (type == _type) return;
     setState(() {
+      _clearWidePreview();
       _type = type;
       _focusedRow = 0;
       _focusedRowKey = null;
@@ -1082,6 +1213,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
   Future<void> _toggleNewest(ArchiveService service) async {
     final type = _type;
     setState(() {
+      _clearWidePreview();
       _focusedRow = 0;
       _focusedRowKey = null;
       _focused = null;
@@ -1634,17 +1766,14 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                       if (i >= row.items.length - 12) {
                         context.read<ArchiveService>().loadMore(row);
                       }
-                      if (_focused?.id == meta.id &&
-                          _focusedRow == r &&
-                          wideAt == i) {
-                        return;
-                      }
+                      _armWidePreview(row, i);
                       setState(() {
                         _focusedRow = r;
                         _focused = meta;
                         _focusedLabel = row.labelAt(i);
                         _focusedFromServer = row.sourceAt(i).server != null;
                       });
+                      _revealFocusedAfterLayout(row, i);
                     },
                   ),
                 ),
