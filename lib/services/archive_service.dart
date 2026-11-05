@@ -413,7 +413,9 @@ class ArchiveService extends ChangeNotifier {
       if (index < 0) return;
       final saved = current[index];
       current[index] = fresh.copyWith(
-          enabled: saved.enabled, otherChoice: saved.otherChoice);
+          enabled: saved.enabled,
+          otherChoice: saved.otherChoice,
+          liveTvChoice: saved.liveTvChoice);
       if (jsonEncode(current[index].toJson()) != jsonEncode(saved.toJson())) {
         await _saveSources(current);
       }
@@ -513,7 +515,9 @@ class ArchiveService extends ChangeNotifier {
     final at = list.indexWhere((s) => s.key == source.key);
     if (at >= 0) {
       source = source.copyWith(
-          enabled: list[at].enabled, otherChoice: list[at].otherChoice);
+          enabled: list[at].enabled,
+          otherChoice: list[at].otherChoice,
+          liveTvChoice: list[at].liveTvChoice);
     }
     await _saveSources(at < 0
         ? [...list, source]
