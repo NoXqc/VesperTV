@@ -2552,4 +2552,20 @@ const Map<String, String> kFr = {
   "VesperTV overlay test": "Test de superposition VesperTV",
   "This test closes after 6 seconds.": "Ce test se ferme après 6 secondes.",
   "Overlay tests": "Tests de superposition",
+  "No delay":
+      "Aucun décalage",
+  "{value} · sound later":
+      "{value} · son plus tard",
+  "{value} · sound earlier":
+      "{value} · son plus tôt",
+  "Audio sync":
+      "Synchro audio",
+  "Sound ahead of the picture? Press Right. Sound late? Press Left. OK when it matches.":
+      "Le son est en avance sur l’image ? Appuyez sur Droite. En retard ? Appuyez sur Gauche. OK quand c’est synchro.",
+  "Reset":
+      "Réinitialiser",
+  "Audio delay":
+      "Décalage audio",
+  "For sound that is ahead of or behind the picture. Also in the player: Audio sync.":
+      "Pour un son en avance ou en retard sur l’image. Aussi dans le lecteur : Synchro audio.",
 };

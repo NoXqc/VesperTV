@@ -7,6 +7,7 @@ import '../models/cyberpunk_palette.dart';
 import '../utils/constants.dart';
 import '../utils/live_group_sort.dart';
 import '../utils/time_format.dart';
+import 'audio_delay.dart';
 import 'display_match.dart';
 import 'device_defaults.dart';
 import 'playback_service.dart';
@@ -174,6 +175,12 @@ class AppPreferences extends ChangeNotifier {
   /// Opt-in after a user missed Atmos (Discord, 2026-10-22). Device-only.
   bool get audioPassthrough => _storage.getAudioPassthrough();
 
+  /// Audio delay / A/V sync (Android, device-only, 0 by default): positive =
+  /// sound later, negative = sooner, in ms (vendored `AudioDelay`). Applies
+  /// at once while playing. Shield + soundbar user, sound ahead on some
+  /// sports channels (2026-11-05).
+  int get audioDelayMs => _storage.getAudioDelayMs();
+
   /// Green-flicker fix (Android, off by default, device-only): the main
   /// player's video surface as a media overlay (vendored `VideoLayering`),
   /// for NVIDIA Shield green frames under the translucent guide without
@@ -197,6 +204,13 @@ class AppPreferences extends ChangeNotifier {
   void setVideoMediaOverlay(bool value) {
     _storage.setVideoMediaOverlay(value);
     unawaited(PlaybackService.setVideoMediaOverlay(value));
+    notifyListeners();
+  }
+
+  void setAudioDelayMs(int value) {
+    final ms = value.clamp(-AudioDelay.maxMs, AudioDelay.maxMs);
+    _storage.setAudioDelayMs(ms);
+    unawaited(PlaybackService.setAudioDelay(ms));
     notifyListeners();
   }
 

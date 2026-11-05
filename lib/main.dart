@@ -562,6 +562,10 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       }
       unawaited(
           PlaybackService.setAudioPassthrough(_preferences.audioPassthrough));
+      unawaited(PlaybackService.setAudioDelay(_preferences.audioDelayMs));
+      if (_preferences.audioDelayMs != 0) {
+        debugPrint('AudioDelay: ${_preferences.audioDelayMs} ms');
+      }
       unawaited(
           PlaybackService.setVideoMediaOverlay(_preferences.videoMediaOverlay));
 

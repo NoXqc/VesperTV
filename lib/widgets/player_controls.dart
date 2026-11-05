@@ -19,6 +19,7 @@ import '../services/audio_track_preferences.dart';
 import '../services/catchup_session.dart';
 import '../utils/time_format.dart';
 import '../utils/video_quality.dart';
+import 'audio_delay_adjuster.dart';
 import 'data_pool_card.dart';
 import 'epg_guide.dart';
 import 'gold_tag.dart';
@@ -781,6 +782,17 @@ class PlayerControls extends StatelessWidget {
                                 key: ValueKey(Object.hash(
                                     'subs', controller, channel?.id)),
                                 controller: controller),
+                            // Every stream, not only multi-track ones: the
+                            // sound can be off on any channel (Shield +
+                            // soundbar user, 2026-11-05).
+                            _LabeledIconButton(
+                              icon: Icons.av_timer,
+                              label: tr('Audio sync'),
+                              onPressed: () {
+                                onActivity?.call();
+                                showAudioDelayAdjuster(context);
+                              },
+                            ),
                             if (linkedChannel != null)
                               _LinkedChannelButton(
                                   linkedChannel: linkedChannel!),

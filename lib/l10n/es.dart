@@ -2539,4 +2539,20 @@ const Map<String, String> kEs = {
   "This test closes after 6 seconds.":
       "Esta prueba se cierra después de 6 segundos.",
   "Overlay tests": "Pruebas de superposición",
+  "No delay":
+      "Sin retraso",
+  "{value} · sound later":
+      "{value} · sonido más tarde",
+  "{value} · sound earlier":
+      "{value} · sonido antes",
+  "Audio sync":
+      "Sincronía de audio",
+  "Sound ahead of the picture? Press Right. Sound late? Press Left. OK when it matches.":
+      "¿El sonido va por delante de la imagen? Pulsa Derecha. ¿Va retrasado? Pulsa Izquierda. OK cuando coincida.",
+  "Reset":
+      "Restablecer",
+  "Audio delay":
+      "Retraso de audio",
+  "For sound that is ahead of or behind the picture. Also in the player: Audio sync.":
+      "Para un sonido adelantado o retrasado respecto a la imagen. También en el reproductor: Sincronía de audio.",
 };

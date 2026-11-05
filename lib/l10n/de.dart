@@ -2442,4 +2442,20 @@ const Map<String, String> kDe = {
   "This test closes after 6 seconds.":
       "Dieser Test schließt sich nach 6 Sekunden.",
   "Overlay tests": "Overlay-Tests",
+  "No delay":
+      "Keine Verzögerung",
+  "{value} · sound later":
+      "{value} · Ton später",
+  "{value} · sound earlier":
+      "{value} · Ton früher",
+  "Audio sync":
+      "Audio-Sync",
+  "Sound ahead of the picture? Press Right. Sound late? Press Left. OK when it matches.":
+      "Ton vor dem Bild? Rechts drücken. Ton zu spät? Links drücken. OK, wenn es passt.",
+  "Reset":
+      "Zurücksetzen",
+  "Audio delay":
+      "Audioverzögerung",
+  "For sound that is ahead of or behind the picture. Also in the player: Audio sync.":
+      "Für Ton, der dem Bild voraus ist oder hinterherhinkt. Auch im Player: Audio-Sync.",
 };

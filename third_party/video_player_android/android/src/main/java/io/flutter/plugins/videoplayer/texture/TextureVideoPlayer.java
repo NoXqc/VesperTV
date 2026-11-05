@@ -121,10 +121,10 @@ public final class TextureVideoPlayer extends VideoPlayer implements SurfaceProd
                     boolean enableFloatOutput,
                     boolean enableAudioOutputPlaybackParams) {
                   //noinspection deprecation — deliberate: see the comment above.
-                  return new DefaultAudioSink.Builder()
+                  return io.flutter.plugins.videoplayer.AudioDelay.wrap(new DefaultAudioSink.Builder()
                       .setEnableFloatOutput(enableFloatOutput)
                       .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
-                      .build();
+                      .build());
                 }
               };
           // ON, not PREFER — see PlatformViewVideoPlayer.create()'s own doc
