@@ -96,8 +96,8 @@ void main() {
   });
 
   test('the guide-confirmed source outranks a 4K guess', () {
-    final guess = ChannelMatch(
-        channel('uhd', 'US: ESPN 4K'), MatchReason.network, 50);
+    final guess =
+        ChannelMatch(channel('uhd', 'US: ESPN 4K'), MatchReason.network, 50);
     final shown = ChannelMatch(
         channel('hd', 'US: ESPN2 HD'), MatchReason.guide, 80,
         gameEvidence: true);
@@ -105,8 +105,7 @@ void main() {
     expect(preferSportsSources([shown, guess]).first, same(shown));
   });
 
-  test('confirmed sources go best quality first; guesses keep their place',
-      () {
+  test('confirmed sources go best quality first; guesses keep their place', () {
     final hd = ChannelMatch(channel('hd', 'US: FS1 HD'), MatchReason.guide, 80,
         gameEvidence: true);
     final guess = ChannelMatch(

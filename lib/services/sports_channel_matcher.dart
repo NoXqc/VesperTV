@@ -848,7 +848,9 @@ class SportsChannelMatcher {
       final canon = canonicalChannelKey(c.sourceName);
       if (canon.isNotEmpty) (byCanonical[canon] ??= <int>[]).add(i);
       (byEpgId[normalizeEpgId(c.epgId)] ??= <int>[]).add(i);
-      if (_parseAbbrEvent(i, c.sourceName, c.group) case final e?) abbrEvents.add(e);
+      if (_parseAbbrEvent(i, c.sourceName, c.group) case final e?) {
+        abbrEvents.add(e);
+      }
     }
     _channels = channels;
     _abbrEvents = abbrEvents;
@@ -1519,7 +1521,8 @@ class SportsChannelMatcher {
           final s = y.score.compareTo(x.score);
           return s != 0
               ? s
-              : x.channel.sourceName.length.compareTo(y.channel.sourceName.length);
+              : x.channel.sourceName.length
+                  .compareTo(y.channel.sourceName.length);
         });
       final key = SportsChannelPicks.eventKey(g);
       out[key] = distinctCopiesFirst(
@@ -1636,8 +1639,7 @@ bool isConfirmedMatch(ChannelMatch m) =>
 /// Whether two games are on at the same time (kickoff to end, or a
 /// three-hour estimate when the feed gives no end).
 bool gamesOverlap(SportsGame a, SportsGame b) {
-  DateTime end(SportsGame g) =>
-      g.end ?? g.start.add(const Duration(hours: 3));
+  DateTime end(SportsGame g) => g.end ?? g.start.add(const Duration(hours: 3));
   return a.start.isBefore(end(b)) && b.start.isBefore(end(a));
 }
 
