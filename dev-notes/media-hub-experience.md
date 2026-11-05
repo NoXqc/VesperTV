@@ -166,7 +166,7 @@ dark -> backdrop without a poster flash (`_focusedArtPending`).
 - **Rail redesign (2026-11-01, owner):** the left rail is the top bar's glass pill stood up (`_glassPill`,
   `_BarButton(expand, alignStart)`), 250 px wide. Search moved into it (top): OK pulls out a small
   Movies / TV Shows menu beside it (`_pickSearchType`, `showRollDownMenu` with a side anchor),
-  then opens that category's search. The top bar keeps Newest, row jumps, Genre, Customize, and
+  then opens that category's search. The top bar keeps Genre, Newest, row jumps, Customize, and
   (only while a search is active) Sources + a Clear button labelled with the query. Phones keep
   Search in the top bar (`_narrow`). Test: `archive_rail_search_test.dart`.
 - **Collapsing rail (2026-11-01, owner: "way too big"):** the rail is open (240 px, labels) only while it
@@ -174,3 +174,8 @@ dark -> backdrop without a poster flash (`_focusedArtPending`).
   Open, it pushes the hero/rows aside (`Row` + `AnimatedContainer`); never over the posters (owner,
   +553 photo: the overlay showed the hero text and rows through the glass). Glass stays see-through.
   80 px = an entry with its label still fits at the start of the open animation (no overflow).
+
+- **Genre first (Codex, 2026-11-05):** movie/show genre filters lead the floating
+  bar, before Newest and catalog jumps, with matching explicit Left/Right order.
+  The phone Menu list also starts with genres. Up from the first content row still
+  returns to that row's jump button; existing filter behavior is unchanged.

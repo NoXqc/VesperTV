@@ -1016,6 +1016,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
 
   /// The floating bar's buttons, in order (for explicit Left/Right).
   List<FocusNode> _barNodes(ArchiveService service, List<ArchiveRow> rows) => [
+        if (service.genres(_type).isNotEmpty) _barGenreNode,
         if (_showNewest(service)) _barNewestNode,
         if (_narrow && service.canSearch(_type)) _railSearchNode,
         if (service.searchQuery(_type) != null) ...[
@@ -1024,7 +1025,6 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
         ],
         if (service.genre(_type) == ArchiveService.otherGenre) _barBackNode,
         for (final r in _barRows(rows)) _barRowNode(rows[r].key),
-        if (service.genres(_type).isNotEmpty) _barGenreNode,
         _barManageNode,
       ];
 
@@ -1073,9 +1073,9 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
     });
   }
 
-  /// Search, then the category's row jumps (Popular / New / Featured /
-  /// Recently watched...) and Genre, centred at the top in the phone
-  /// tab bar's floating pill. D-pad: Left/Right along it (Left past the
+  /// Genre first, then Newest, search controls and the category's row
+  /// jumps (Popular / New / Featured / Recently watched...), centred at
+  /// the top in a floating pill. D-pad: Left/Right along it (Left past the
   /// first = rail), Down = the rows.
   /// Phone (touch, narrow): the floating bar only fitted one or two of its
   /// buttons (owner + vision-impaired user, 2026-11-02). Search stays a
@@ -1125,6 +1125,15 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
     final genre = service.genre(_type);
     final query = service.searchQuery(_type);
     final items = <(IconData, String, bool, Future<void> Function())>[
+      if (service.genres(_type).isNotEmpty)
+        (
+          Icons.category_outlined,
+          genre == null
+              ? (movies ? tr('Movie genres') : tr('TV show genres'))
+              : _genreName(genre),
+          genre != null,
+          () => _pickGenre(service)
+        ),
       if (_showNewest(service))
         (
           Icons.new_releases_outlined,
@@ -1156,15 +1165,6 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
           _barRowLabel(rows[r]),
           false,
           () async => _focusRow(rows, r)
-        ),
-      if (service.genres(_type).isNotEmpty)
-        (
-          Icons.category_outlined,
-          genre == null
-              ? (movies ? tr('Movie genres') : tr('TV show genres'))
-              : _genreName(genre),
-          genre != null,
-          () => _pickGenre(service)
         ),
       (
         Icons.tune,
@@ -1251,8 +1251,27 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Newest leads the bar (owner, 2026-10-28), then
-                    // Search, the row jumps and Genre.
+                    // Keep Genre within reach before the scrolling row
+                    // jumps, including sources with many catalogs.
+                    if (hasGenres)
+                      _BarButton(
+                        focusNode: _barGenreNode,
+                        icon: Icons.category_outlined,
+                        label: genre == null
+                            ? (movies
+                                ? tr('Movie genres')
+                                : tr('TV show genres'))
+                            : _genreName(genre),
+                        active: genre != null,
+                        onTap: () => _pickGenre(service),
+                      ),
+                    if (hasGenres)
+                      Container(
+                        width: 1,
+                        height: 24,
+                        margin: const EdgeInsets.symmetric(horizontal: 6),
+                        color: Colors.white24,
+                      ),
                     if (_showNewest(service)) ...[
                       _BarButton(
                         focusNode: _barNewestNode,
@@ -1310,9 +1329,8 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                         margin: const EdgeInsets.symmetric(horizontal: 6),
                         color: Colors.white24,
                       ),
-                    // Under Other, its many category buttons pushed Genre
-                    // far to the right: leaving Other comes right after
-                    // Search (user request, 2026-10-20).
+                    // Under Other, keep Back to main ahead of its many
+                    // category buttons.
                     if (other) ...[
                       _BarButton(
                         focusNode: _barBackNode,
@@ -1342,24 +1360,12 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                         onTap: () => _focusRow(rows, r),
                         onHold: () => _showRowMenu(rows, r),
                       ),
-                    if (barRows.isNotEmpty && hasGenres)
+                    if (barRows.isNotEmpty)
                       Container(
                         width: 1,
                         height: 24,
                         margin: const EdgeInsets.symmetric(horizontal: 6),
                         color: Colors.white24,
-                      ),
-                    if (hasGenres)
-                      _BarButton(
-                        focusNode: _barGenreNode,
-                        icon: Icons.category_outlined,
-                        label: genre == null
-                            ? (movies
-                                ? tr('Movie genres')
-                                : tr('TV show genres'))
-                            : _genreName(genre),
-                        active: genre != null,
-                        onTap: () => _pickGenre(service),
                       ),
                     _BarButton(
                         focusNode: _barManageNode,
