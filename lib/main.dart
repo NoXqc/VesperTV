@@ -57,6 +57,8 @@ import 'services/goals_alerts.dart';
 import 'services/episode_alert_lookup.dart';
 import 'services/episode_alerts.dart';
 import 'services/episode_alerts_background.dart';
+import 'services/sports_phone_notifications.dart';
+import 'services/sports_goal_background.dart' show sportsGoalBackgroundMain;
 import 'widgets/game_reminder_overlay.dart';
 import 'widgets/goals_alert_overlay.dart';
 import 'widgets/native_video_hole.dart';
@@ -77,6 +79,9 @@ import 'services/watch_tracker.dart';
 import 'services/perf_diagnostics.dart';
 import 'services/desktop_live_recovery.dart';
 import 'services/desktop_stream_setup.dart';
+
+@pragma('vm:entry-point')
+void sportsPhoneGoalMain() => sportsGoalBackgroundMain();
 
 // AppLog keeps print/errors for Settings > Send log; the binding must be
 // initialized inside its zone (same zone as runApp).
@@ -221,6 +226,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     await WidgetsBinding.instance.endOfFrame;
     if (selection != null && !selection.isCompleted) selection.complete();
     unawaited(_episodeBackground?.openPending());
+    unawaited(_sportsNotifications?.openPending());
   }
 
   /// The remote's Guide button, anywhere in the app ([GuideKey]).
@@ -249,6 +255,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   GoalsAlerts? _goalsAlerts;
   EpisodeAlerts? _episodeAlerts;
   EpisodeAlertsBackground? _episodeBackground;
+  SportsPhoneNotifications? _sportsNotifications;
   bool _episodeNotificationOpened = false;
 
   /// True while [PlaylistManager.runFullCatalogSync] is blocking the
@@ -361,6 +368,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     _syncLifecycle?.dispose();
     _gameReminders?.dispose();
     _programmeReminders?.dispose();
+    _sportsNotifications?.dispose();
     _episodeBackground?.dispose();
     _episodeAlerts?.dispose();
     RecordingService.instance.prepareProgramme = null;
@@ -527,7 +535,9 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       }
       _gameReminders = GameReminders(_storage);
       _programmeReminders = ProgrammeReminders(_storage);
-      _goalsAlerts = GoalsAlerts(_storage);
+      _goalsAlerts = GoalsAlerts(_storage,
+          persistSamples: Platform.isAndroid,
+          sampleFreshness: const Duration(minutes: 3));
       LiveResumeHint.pillEnabled.value = _storage.getShowResumePill();
       ArchivePosters.pattern = _storage.getArchivePosterPattern();
 
@@ -624,6 +634,23 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       });
       await _episodeBackground!.start();
       _episodeAlerts!.start();
+      _sportsNotifications = SportsPhoneNotifications(
+          _storage, _gameReminders!, _goalsAlerts!, onOpen: (target) {
+        final navigator = _navigatorKey.currentState;
+        if (!mounted ||
+            !_ready ||
+            _profileSelection != null ||
+            navigator == null) {
+          return false;
+        }
+        _episodeNotificationOpened = true;
+        navigator.popUntil((route) => route.isFirst);
+        unawaited(navigator.push(MaterialPageRoute<void>(
+            builder: (_) => SportsScreen(
+                initialGameKey: target.key, initialDay: target.start))));
+        return true;
+      });
+      _sportsNotifications!.start();
       _viewerProfileService = ViewerProfileService(
           _storage, _playlistManager, _playbackService,
           onViewerChanged: _preferences.reloadPaletteForViewer);
@@ -803,6 +830,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       if (selection != null) WidgetsBinding.instance.ensureVisualUpdate();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         unawaited(_episodeBackground?.openPending());
+        unawaited(_sportsNotifications?.openPending());
       });
       WidgetsBinding.instance.scheduleFrame();
       // `_epgService.init()` was started during the splash (see above);
@@ -901,6 +929,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   Future<void> _autoResumeLastChannel() async {
     if (Platform.isAndroid &&
         (await _episodeBackground?.pendingTap == true ||
+            await _sportsNotifications?.pendingTap == true ||
             _episodeNotificationOpened)) {
       return;
     }

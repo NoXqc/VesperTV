@@ -242,7 +242,9 @@ void main() {
       Size size = const Size(960, 540),
       double scale = 1,
       NavigatorObserver? observer,
-      _Feed? feed}) async {
+      _Feed? feed,
+      String? initialGameKey,
+      DateTime? initialDay}) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -278,6 +280,8 @@ void main() {
               key: boundary,
               child: SportsScreen(
                   home: true,
+                  initialGameKey: initialGameKey,
+                  initialDay: initialDay,
                   service: feed ??
                       _Feed(games ??
                           [
@@ -326,6 +330,22 @@ void main() {
   }
 
   for (final mode in [false, true]) {
+    testWidgets(
+        'notification opens the requested game without starting playback (mode=$mode)',
+        (tester) async {
+      await prefs.setSportsMode(mode);
+      final game = _game(101, GameState.live);
+      await open(tester,
+          games: [_game(100, GameState.live), game],
+          initialGameKey: 'nhl:game101',
+          initialDay: game.start);
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(getFocus(), 'sports-card-nhl:game101');
+      expect(playback.plays, isEmpty);
+      expect(tester.takeException(), isNull);
+      await disposePage(tester);
+    });
+
     testWidgets(
         'first OK previews, next uses same stream full screen (mode=$mode)',
         (tester) async {

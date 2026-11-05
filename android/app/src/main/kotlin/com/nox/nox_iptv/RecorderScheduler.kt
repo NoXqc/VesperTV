@@ -113,6 +113,7 @@ class RecorderAlarmReceiver : BroadcastReceiver() {
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        SportsNotifications.arm(context)
         EpisodeAlertsWork.enqueue(context)
         RecorderScheduler.arm(context)
     }

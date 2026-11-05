@@ -118,10 +118,12 @@ class MainActivity : FlutterActivity() {
     override fun onStart() {
         super.onStart()
         EpisodeAlertsWork.gate.setVisible(true)
+        SportsNotifications.onVisible(applicationContext, true)
     }
 
     override fun onStop() {
         EpisodeAlertsWork.gate.setVisible(false)
+        SportsNotifications.onVisible(applicationContext, false)
         super.onStop()
         phonePip.onStop()
     }
@@ -150,6 +152,7 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "vespertv/recorder")
             .setMethodCallHandler { call, result -> recorderBridge.handle(call, result) }
 
+        SportsNotifications.connect(this, flutterEngine)
         EpisodeAlertsWork.connect(applicationContext, flutterEngine,
             { intent?.getBooleanExtra("vespertv_episode_alert", false) == true },
             { intent?.removeExtra("vespertv_episode_alert") })

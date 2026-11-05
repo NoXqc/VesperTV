@@ -2539,4 +2539,18 @@ const Map<String, String> kEs = {
   "This test closes after 6 seconds.":
       "Esta prueba se cierra después de 6 segundos.",
   "Overlay tests": "Pruebas de superposición",
+
+  // Android phone sports notifications.
+  "Phone notifications": "Notificaciones del teléfono",
+  "Game reminders": "Recordatorios de partidos",
+  "Goal alerts": "Alertas de goles",
+  "Following games": "Siguiendo partidos",
+  "Following goals: {game}": "Siguiendo goles: {game}",
+  "Starting now": "Empieza ahora",
+  "Stop": "Detener",
+  "Notify this phone for game reminders and subscribed goals, even when the app is closed. Saved for this viewer.":
+      "Recibe en este teléfono recordatorios de partidos y alertas de goles suscritas, incluso con la aplicación cerrada. Guardado para este perfil.",
+  "Game reminders and goal alerts while the app is closed":
+      "Recordatorios de partidos y alertas de goles con la aplicación cerrada",
+  "{home} vs {away}": "{home} vs {away}",
 };

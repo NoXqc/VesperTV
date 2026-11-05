@@ -2552,4 +2552,18 @@ const Map<String, String> kFr = {
   "VesperTV overlay test": "Test de superposition VesperTV",
   "This test closes after 6 seconds.": "Ce test se ferme après 6 secondes.",
   "Overlay tests": "Tests de superposition",
+
+  // Android phone sports notifications.
+  "Phone notifications": "Notifications du téléphone",
+  "Game reminders": "Rappels de matchs",
+  "Goal alerts": "Alertes de buts",
+  "Following games": "Suivi des matchs",
+  "Following goals: {game}": "Suivi des buts : {game}",
+  "Starting now": "Commence maintenant",
+  "Stop": "Arrêter",
+  "Notify this phone for game reminders and subscribed goals, even when the app is closed. Saved for this viewer.":
+      "Recevez sur ce téléphone les rappels de matchs et les buts auxquels vous êtes abonné, même quand l’application est fermée. Enregistré pour ce profil.",
+  "Game reminders and goal alerts while the app is closed":
+      "Rappels de matchs et alertes de buts quand l’application est fermée",
+  "{home} vs {away}": "{home} contre {away}",
 };

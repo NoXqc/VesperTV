@@ -2501,4 +2501,18 @@ const Map<String, String> kEl = {
   "This test closes after 6 seconds.":
       "Αυτή η δοκιμή κλείνει μετά από 6 δευτερόλεπτα.",
   "Overlay tests": "Δοκιμές επικάλυψης",
+
+  // Android phone sports notifications.
+  "Phone notifications": "Ειδοποιήσεις τηλεφώνου",
+  "Game reminders": "Υπενθυμίσεις αγώνων",
+  "Goal alerts": "Ειδοποιήσεις γκολ",
+  "Following games": "Παρακολούθηση αγώνων",
+  "Following goals: {game}": "Παρακολούθηση γκολ: {game}",
+  "Starting now": "Ξεκινά τώρα",
+  "Stop": "Διακοπή",
+  "Notify this phone for game reminders and subscribed goals, even when the app is closed. Saved for this viewer.":
+      "Λάβετε σε αυτό το τηλέφωνο υπενθυμίσεις αγώνων και ειδοποιήσεις γκολ που ακολουθείτε, ακόμη και με κλειστή την εφαρμογή. Αποθηκεύεται για αυτό το προφίλ.",
+  "Game reminders and goal alerts while the app is closed":
+      "Υπενθυμίσεις αγώνων και ειδοποιήσεις γκολ με κλειστή την εφαρμογή",
+  "{home} vs {away}": "{home} εναντίον {away}",
 };

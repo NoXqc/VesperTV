@@ -126,7 +126,11 @@ class _GameReminderOverlayState extends State<GameReminderOverlay>
     _scheduleRefresh?.cancel();
     _queue.clear();
     setState(() => _notice = null);
-    if (_active) _refresh();
+    if (_active) {
+      unawaited(_reminders!.refreshFromDisk().then((_) {
+        if (mounted && _active) _refresh();
+      }).catchError((Object _) {}));
+    }
   }
 
   @override
@@ -243,7 +247,8 @@ class _GameReminderOverlayState extends State<GameReminderOverlay>
                           // No tooltip: this popup sits above the Navigator (no Overlay).
                           icon: Icon(Icons.close,
                               semanticLabel: tr('Close'),
-                              color: Colors.white70, size: 19),
+                              color: Colors.white70,
+                              size: 19),
                           onPressed: _showNext,
                         ),
                       )),

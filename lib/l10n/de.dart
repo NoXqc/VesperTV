@@ -2442,4 +2442,18 @@ const Map<String, String> kDe = {
   "This test closes after 6 seconds.":
       "Dieser Test schließt sich nach 6 Sekunden.",
   "Overlay tests": "Overlay-Tests",
+
+  // Android phone sports notifications.
+  "Phone notifications": "Telefonbenachrichtigungen",
+  "Game reminders": "Spielerinnerungen",
+  "Goal alerts": "Torbenachrichtigungen",
+  "Following games": "Verfolgte Spiele",
+  "Following goals: {game}": "Tore verfolgen: {game}",
+  "Starting now": "Beginnt jetzt",
+  "Stop": "Beenden",
+  "Notify this phone for game reminders and subscribed goals, even when the app is closed. Saved for this viewer.":
+      "Erhalte auf diesem Telefon Spielerinnerungen und abonnierte Torbenachrichtigungen, auch bei geschlossener App. Für dieses Profil gespeichert.",
+  "Game reminders and goal alerts while the app is closed":
+      "Spielerinnerungen und Torbenachrichtigungen bei geschlossener App",
+  "{home} vs {away}": "{home} gegen {away}",
 };
