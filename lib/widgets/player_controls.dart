@@ -695,12 +695,16 @@ class PlayerControls extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.bottomCenter,
           end: Alignment.topCenter,
-          stops: [0, 0.75, 1],
-          colors: [Color(0xF5000000), Color(0xEB000000), Color(0x00000000)],
+          stops: [0, 0.7, 1],
+          // Between the first (see-through) and +623 (solid) versions
+          // (owner photo, 2026-11-05).
+          colors: [Color(0xD9000000), Color(0xB3000000), Color(0x00000000)],
         ),
       ),
+      // Flush with the bottom edge; 40 at the sides clears TV overscan
+      // (the first tile was cut off on the Formuler's TV).
       padding: EdgeInsets.fromLTRB(
-          16 + inset.left, 22, 16 + inset.right, 6 + inset.bottom),
+          40 + inset.left, 18, 40 + inset.right, inset.bottom),
       child: _OptionTiles(
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -2090,13 +2094,13 @@ class _LabeledIconButtonState extends State<_LabeledIconButton> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           width: 116,
-          height: 96,
-          padding: const EdgeInsets.fromLTRB(6, 10, 6, 6),
+          height: 84,
+          padding: const EdgeInsets.fromLTRB(6, 8, 6, 4),
           decoration: BoxDecoration(
             color: _focused
                 ? Color.alphaBlend(
-                    accent.withValues(alpha: 0.25), const Color(0xFF1A1A1A))
-                : const Color(0xFF1A1A1A),
+                    accent.withValues(alpha: 0.25), const Color(0xB3141414))
+                : const Color(0xB3141414),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
                 color: _focused ? accent : Colors.transparent, width: 2),

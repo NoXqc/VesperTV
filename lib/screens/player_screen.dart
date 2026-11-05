@@ -1654,7 +1654,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                         node: _optionsScope,
                                         child: PlayerControls(
                                           optionsRow: true,
-                                          insetForSystemBars: true,
+                                          // TV only: the system-bar inset
+                                          // left a big gap under the row.
+                                          insetForSystemBars: false,
                                           controller: controller,
                                           title: channel.name,
                                           channelId: channel.epgId,
