@@ -34,7 +34,15 @@ const profileCopyKeys = <ProfileCopy, Set<String>>{
     AppConstants.keyMyGroups,
     AppConstants.keyArchiveSourcePrefs
   },
-  ProfileCopy.home: {AppConstants.keyHomeRows, AppConstants.keyHideProfiles},
+  ProfileCopy.home: {
+    AppConstants.keyHomeRows,
+    AppConstants.keyHideProfiles,
+    AppConstants.keyGuideViewMode,
+    AppConstants.keyGuideFullVideo,
+    AppConstants.keyGuideTransparency,
+    AppConstants.keyGuideExpanded,
+    AppConstants.keyGuideCompact,
+  },
 };
 const profileCopyPrefixes = <ProfileCopy, Set<String>>{
   ProfileCopy.favourites: {'${AppConstants.keyFavoritedGroups}_'},

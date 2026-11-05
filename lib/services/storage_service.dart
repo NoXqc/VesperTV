@@ -815,25 +815,36 @@ class StorageService {
   Future<void> setLanguage(String value) =>
       _prefs.setString(AppConstants.keyLanguage, value);
 
+  // Guide layout is per viewer (owner, 1.0.57: one profile on the
+  // see-through full-screen guide, another on the solid one with the mini
+  // player). A viewer that never changed it reads the shared value saved
+  // before, so nothing moves until someone flips a setting.
+  String? _guideString(String key) =>
+      _prefs.getString(_vk(key)) ?? _prefs.getString(key);
+  bool? _guideBool(String key) =>
+      _prefs.getBool(_vk(key)) ?? _prefs.getBool(key);
+
   /// 'live' or 'timeline'.
   String getGuideViewMode() =>
-      _prefs.getString(AppConstants.keyGuideViewMode) ??
+      _guideString(AppConstants.keyGuideViewMode) ??
       AppConstants.defaultGuideViewMode;
   Future<void> setGuideViewMode(String mode) =>
-      _prefs.setString(AppConstants.keyGuideViewMode, mode);
+      _prefs.setString(_vk(AppConstants.keyGuideViewMode), mode);
 
   bool getGuideFullVideo() =>
-      _prefs.getBool(AppConstants.keyGuideFullVideo) ?? false;
+      _guideBool(AppConstants.keyGuideFullVideo) ?? false;
   Future<void> setGuideFullVideo(bool value) =>
-      _prefs.setBool(AppConstants.keyGuideFullVideo, value);
+      _prefs.setBool(_vk(AppConstants.keyGuideFullVideo), value);
 
-  /// Device-only percentage: 45 preserves the original 55% dark background.
+  /// Percentage: 45 preserves the original 55% dark background.
   int getGuideTransparency() =>
-      (_prefs.getInt(AppConstants.keyGuideTransparency) ?? 45)
+      (_prefs.getInt(_vk(AppConstants.keyGuideTransparency)) ??
+              _prefs.getInt(AppConstants.keyGuideTransparency) ??
+              45)
           .clamp(0, 100)
           .toInt();
   Future<void> setGuideTransparency(int value) => _prefs.setInt(
-      AppConstants.keyGuideTransparency, value.clamp(0, 100).toInt());
+      _vk(AppConstants.keyGuideTransparency), value.clamp(0, 100).toInt());
 
   bool getAutoTrailers() =>
       _prefs.getBool(AppConstants.keyAutoTrailers) ?? false;
@@ -841,17 +852,17 @@ class StorageService {
       _prefs.setBool(AppConstants.keyAutoTrailers, value);
 
   bool getGuideExpanded() =>
-      _prefs.getBool(AppConstants.keyGuideExpanded) ?? false;
+      _guideBool(AppConstants.keyGuideExpanded) ?? false;
   Future<void> setGuideExpanded(bool value) =>
-      _prefs.setBool(AppConstants.keyGuideExpanded, value);
+      _prefs.setBool(_vk(AppConstants.keyGuideExpanded), value);
   bool getExpandedBrowse() =>
       _prefs.getBool(AppConstants.keyExpandedBrowse) ?? false;
   Future<void> setExpandedBrowse(bool value) =>
       _prefs.setBool(AppConstants.keyExpandedBrowse, value);
   bool getGuideCompact() =>
-      _prefs.getBool(AppConstants.keyGuideCompact) ?? false;
+      _guideBool(AppConstants.keyGuideCompact) ?? false;
   Future<void> setGuideCompact(bool value) =>
-      _prefs.setBool(AppConstants.keyGuideCompact, value);
+      _prefs.setBool(_vk(AppConstants.keyGuideCompact), value);
 
   // --- Favorites (per viewer, shared across every playlist) -----------------
   // Favorites aren't namespaced by playlist (a favorited channel is just a

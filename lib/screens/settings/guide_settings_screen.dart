@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../services/app_preferences.dart';
@@ -85,19 +86,23 @@ class GuideSettingsScreen extends StatelessWidget {
                                 'percent': '${prefs.guideTransparency}',
                               })),
                             ]),
-                            Slider(
-                              value: prefs.guideTransparency.toDouble(),
-                              min: 0,
-                              max: 100,
-                              divisions: 100,
-                              label: tr('{percent}%', {
-                                'percent': '${prefs.guideTransparency}',
-                              }),
-                              semanticFormatterCallback: (value) => tr(
-                                  '{percent}%',
-                                  {'percent': '${value.round()}'}),
-                              onChanged: (value) =>
-                                  prefs.setGuideTransparency(value.round()),
+                            _RemoteSlider(
+                              value: prefs.guideTransparency,
+                              onChanged: prefs.setGuideTransparency,
+                              child: Slider(
+                                value: prefs.guideTransparency.toDouble(),
+                                min: 0,
+                                max: 100,
+                                divisions: 100,
+                                label: tr('{percent}%', {
+                                  'percent': '${prefs.guideTransparency}',
+                                }),
+                                semanticFormatterCallback: (value) => tr(
+                                    '{percent}%',
+                                    {'percent': '${value.round()}'}),
+                                onChanged: (value) =>
+                                    prefs.setGuideTransparency(value.round()),
+                              ),
                             ),
                             Text(
                               tr('0% is solid; 100% is clear.'),
@@ -118,5 +123,65 @@ class GuideSettingsScreen extends StatelessWidget {
                 ],
               ),
             ));
+  }
+}
+
+/// The remote's way onto a 0-100 slider: Left/Right change it by 5, Up/Down
+/// move on to the next setting. Flutter's Slider took Up/Down as +/- on TV,
+/// so the remote was stuck on it (owner, 1.0.57). The Slider itself stays
+/// out of D-pad focus and keeps working for touch and mouse.
+class _RemoteSlider extends StatefulWidget {
+  const _RemoteSlider(
+      {required this.value, required this.onChanged, required this.child});
+
+  final int value;
+  final ValueChanged<int> onChanged;
+  final Widget child;
+
+  @override
+  State<_RemoteSlider> createState() => _RemoteSliderState();
+}
+
+class _RemoteSliderState extends State<_RemoteSlider> {
+  final _focus = FocusNode(debugLabel: 'remote-slider');
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
+
+  KeyEventResult _onKey(FocusNode _, KeyEvent event) {
+    if (event is KeyUpEvent) return KeyEventResult.ignored;
+    final key = event.logicalKey;
+    final step = key == LogicalKeyboardKey.arrowRight
+        ? 5
+        : key == LogicalKeyboardKey.arrowLeft
+            ? -5
+            : 0;
+    if (step == 0) return KeyEventResult.ignored;
+    widget.onChanged((widget.value + step).clamp(0, 100));
+    return KeyEventResult.handled;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final focused = _focus.hasFocus;
+    return Focus(
+      focusNode: _focus,
+      onKeyEvent: _onKey,
+      onFocusChange: (_) => setState(() {}),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+              color: focused
+                  ? Theme.of(context).colorScheme.primary
+                  : Colors.transparent,
+              width: 2),
+        ),
+        child: ExcludeFocus(child: widget.child),
+      ),
+    );
   }
 }

@@ -45,20 +45,37 @@ void main() {
 
   testWidgets('remote arrows and touch set and persist the percentage',
       (tester) async {
+    tester.view.physicalSize = const Size(1280, 2000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     prefs.setGuideFullVideo(true);
     await tester.pumpWidget(settings());
     expect(find.text('45%'), findsOneWidget);
     final slider = find.byType(Slider);
-    final focus = find.descendant(
-        of: slider, matching: find.byType(FocusableActionDetector));
-    tester.widget<FocusableActionDetector>(focus).focusNode!.requestFocus();
+    // The remote reaches the slider through its own focus target (Left/
+    // Right = 5%); Flutter's Slider stays out of D-pad focus.
+    final remote = find.byWidgetPredicate(
+        (w) => w is Focus && w.focusNode?.debugLabel == 'remote-slider');
+    final node = tester.widget<Focus>(remote).focusNode!;
+    node.requestFocus();
     await tester.pumpAndSettle();
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pumpAndSettle();
-    expect(storage.getGuideTransparency(), 46);
-    expect(find.text('46%'), findsOneWidget);
+    expect(storage.getGuideTransparency(), 50);
+    expect(find.text('50%'), findsOneWidget);
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.pumpAndSettle();
+    expect(storage.getGuideTransparency(), 45);
+    // Up / Down leave it (the remote used to be stuck: they changed it).
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(node.hasFocus, isFalse);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pumpAndSettle();
+    expect(node.hasFocus, isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pumpAndSettle();
+    expect(node.hasFocus, isFalse);
     expect(storage.getGuideTransparency(), 45);
 
     final rect = tester.getRect(slider);

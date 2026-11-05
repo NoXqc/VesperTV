@@ -416,14 +416,16 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// A profile switch only reloads viewer-specific appearance. Device
-  /// settings (layout, video compatibility, clock, etc.) stay as they are.
+  /// A profile switch only reloads viewer-specific appearance: colours and
+  /// the guide layout. Device settings (layout, video compatibility, clock,
+  /// etc.) stay as they are.
   void reloadPaletteForViewer() {
-    final next = _paletteById(_storage.getPaletteId());
-    final finish = _storage.getRefinedFinish();
-    if (palette.id == next.id && refinedFinish == finish) return;
-    palette = next;
-    refinedFinish = finish;
+    palette = _paletteById(_storage.getPaletteId());
+    refinedFinish = _storage.getRefinedFinish();
+    guideViewMode = _storage.getGuideViewMode();
+    guideFullVideo = _storage.getGuideFullVideo();
+    guideExpanded = _storage.getGuideExpanded();
+    guideCompact = _storage.getGuideCompact();
     notifyListeners();
   }
 
