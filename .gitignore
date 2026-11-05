@@ -70,3 +70,14 @@ app.*.map.json
 # Users' Send-log files the owner saves for the agents to read (never commit)
 /Logs/
 AGENTS.md
+
+# Local agent files (Codex attachments/one-off scripts, Claude settings, owner's proposal draft)
+/.codex-attachments/
+/.codex-remote-attachments/
+/tools/codex_*.py
+/.claude/
+/PROPOSAL.md
+
+# Build output and generated lockfile of the vendored player
+/android/build/
+/third_party/video_player_android/pubspec.lock
