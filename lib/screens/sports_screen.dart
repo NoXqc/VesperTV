@@ -5347,6 +5347,7 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
   /// Up -> suggestion chips — same idea as Add Playlist's
   /// `_handleFieldEscapeKey`.
   KeyEventResult _onFieldKey(FocusNode node, KeyEvent event) {
+    if (TvTextFieldGate.isEditing(node)) return KeyEventResult.ignored;
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
     final key = event.logicalKey;
     if (key == LogicalKeyboardKey.arrowDown) {

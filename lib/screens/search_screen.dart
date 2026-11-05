@@ -399,8 +399,8 @@ class _SearchScreenState extends State<SearchScreen> {
     // explanation of the bug this avoids.
     await context.read<PlaybackService>().play(channel);
     if (!mounted) return;
-    Navigator.of(context).push(
-        PlayerPageRoute(builder: (_) => PlayerScreen(channel: channel)));
+    Navigator.of(context)
+        .push(PlayerPageRoute(builder: (_) => PlayerScreen(channel: channel)));
   }
 
   void _openSeries(XtreamSeries series) {
@@ -557,10 +557,10 @@ class _SearchScreenState extends State<SearchScreen> {
                 // shortcuts, so it wins over the field's own arrow keys).
                 CallbackShortcuts(
                   bindings: {
-                    const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
-                        _moveRowFocus(-1, rows),
-                    const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
-                        _moveRowFocus(1, rows),
+                    const TvNavigationActivator(LogicalKeyboardKey.arrowUp):
+                        () => _moveRowFocus(-1, rows),
+                    const TvNavigationActivator(LogicalKeyboardKey.arrowDown):
+                        () => _moveRowFocus(1, rows),
                   },
                   child: Scaffold(
                     backgroundColor: Colors.transparent,

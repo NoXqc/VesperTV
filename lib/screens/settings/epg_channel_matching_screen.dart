@@ -61,6 +61,7 @@ class _EpgChannelMatchingScreenState extends State<EpgChannelMatchingScreen> {
   /// assumption Down was already reaching the list fine on its own —
   /// confirmed wrong, it needs the exact same explicit handling as Up).
   bool _handleSearchEscape(KeyEvent event) {
+    if (TvTextFieldGate.isEditing(_searchFocus)) return false;
     if (event is! KeyDownEvent) return false;
     if (event.logicalKey != LogicalKeyboardKey.arrowUp &&
         event.logicalKey != LogicalKeyboardKey.arrowDown) {

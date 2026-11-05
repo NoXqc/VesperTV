@@ -15,7 +15,7 @@ import 'wide_guide_back_test.dart' show GuidePlaylist, GuideEpg;
 /// Google TV + Gboard (owner, 2026-11-02): typing in a field, Left went to
 /// the "Playlist source" pane and the remote then seemed stuck there.
 void main() {
-  testWidgets('Left out of a field being typed in, then Right comes back',
+  testWidgets('Gboard edits stay in the field; Back restores pane navigation',
       (tester) async {
     tester.view.physicalSize = const Size(1920, 1080);
     tester.view.devicePixelRatio = 1;
@@ -43,8 +43,8 @@ void main() {
         'none';
     bool inField() =>
         FocusManager.instance.primaryFocus?.context
-            ?.findAncestorWidgetOfExactType<TextField>() !=
-        null ||
+                ?.findAncestorWidgetOfExactType<TextField>() !=
+            null ||
         FocusManager.instance.primaryFocus?.context?.widget is EditableText;
 
     // Pick Xtream Codes in the left pane (Down, OK).
@@ -65,7 +65,19 @@ void main() {
     await tester.pumpAndSettle();
     tester.testTextInput.enterText('secret');
     await tester.pumpAndSettle();
-    // Left: out of the field to the source pane.
+    final editing = FocusManager.instance.primaryFocus;
+    // Overlay Gboard can forward arrows without reporting a keyboard inset.
+    // Those arrows edit text, rather than switching panes or fields.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus, same(editing));
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus, same(editing));
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
+    // Once editing has explicitly ended, Left returns to the source pane.
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.pumpAndSettle();
     expect(inField(), isFalse, reason: 'Left should leave the field');

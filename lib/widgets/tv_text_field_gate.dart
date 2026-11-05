@@ -21,6 +21,10 @@ import '../services/device_defaults.dart';
 /// field ([builder] with `readOnly: false`).
 ///
 /// The [builder] must pass `readOnly` and [focusNode] to its `TextField`.
+/// While editing, arrows belong to the field/IME. A disappearing keyboard
+/// inset, focus loss, or Back delivered to the app ends editing. Overlay
+/// keyboards may consume the first Back without reporting dismissal; another
+/// Back then returns the field to navigation without closing its page.
 /// A [FocusNode] created and disposed with this widget, for a
 /// [TvTextFieldGate] in a dialog or a picker that has no node of its own:
 /// `FocusNodeOwner(builder: (_, node) => TvTextFieldGate(focusNode: node, …))`.
@@ -56,8 +60,23 @@ class TvTextFieldGate extends StatefulWidget {
   final FocusNode focusNode;
   final Widget Function(BuildContext context, bool readOnly) builder;
 
+  static final _editors = <FocusNode, _TvTextFieldGateState>{};
+
+  /// Screen-level shortcuts must leave arrows with an actively edited field.
+  static bool isEditing(FocusNode? node) => _editors[node]?._typing ?? false;
+
   @override
   State<TvTextFieldGate> createState() => _TvTextFieldGateState();
+}
+
+/// Navigation shortcuts yield to text editing, including zero-inset TV IMEs.
+class TvNavigationActivator extends SingleActivator {
+  const TvNavigationActivator(super.trigger);
+
+  @override
+  bool accepts(KeyEvent event, HardwareKeyboard state) =>
+      !TvTextFieldGate.isEditing(FocusManager.instance.primaryFocus) &&
+      super.accepts(event, state);
 }
 
 class _TvTextFieldGateState extends State<TvTextFieldGate>
@@ -67,10 +86,18 @@ class _TvTextFieldGateState extends State<TvTextFieldGate>
   /// The keyboard took screen space while typing (it reports an inset).
   bool _keyboardShown = false;
 
+  bool get _foreground =>
+      WidgetsBinding.instance.lifecycleState == null ||
+      WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+
+  bool get _canRecover =>
+      mounted && _foreground && (ModalRoute.of(context)?.isCurrent ?? true);
+
   @override
   void initState() {
     super.initState();
     widget.focusNode.addListener(_onFocus);
+    TvTextFieldGate._editors[widget.focusNode] = this;
     HardwareKeyboard.instance.addHandler(_onKey);
     WidgetsBinding.instance.addObserver(this);
   }
@@ -95,7 +122,7 @@ class _TvTextFieldGateState extends State<TvTextFieldGate>
     _keyboardShown = false;
     setState(() => _typing = false);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      if (!_canRecover) return;
       final now = FocusManager.instance.primaryFocus;
       if (now == null || now is FocusScopeNode) {
         widget.focusNode.requestFocus();
@@ -108,6 +135,13 @@ class _TvTextFieldGateState extends State<TvTextFieldGate>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.focusNode != widget.focusNode) {
       oldWidget.focusNode.removeListener(_onFocus);
+      if (TvTextFieldGate._editors[oldWidget.focusNode] == this) {
+        TvTextFieldGate._editors.remove(oldWidget.focusNode);
+      }
+      TvTextFieldGate._editors[widget.focusNode] = this;
+      _rehide?.cancel();
+      _typing = false;
+      _keyboardShown = false;
       widget.focusNode.addListener(_onFocus);
     }
   }
@@ -116,9 +150,36 @@ class _TvTextFieldGateState extends State<TvTextFieldGate>
   void dispose() {
     _rehide?.cancel();
     widget.focusNode.removeListener(_onFocus);
+    if (TvTextFieldGate._editors[widget.focusNode] == this) {
+      TvTextFieldGate._editors.remove(widget.focusNode);
+    }
     HardwareKeyboard.instance.removeHandler(_onKey);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) _rehide?.cancel();
+    // Inactive can mean that the TV keyboard owns the window. Only an actual
+    // background transition ends typing; never steal focus from that IME.
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      _keyboardShown = false;
+      if (_typing && mounted) setState(() => _typing = false);
+    }
+  }
+
+  void _stopTyping() {
+    if (!_typing) return;
+    _keyboardShown = false;
+    _rehide?.cancel();
+    setState(() => _typing = false);
+    if (_canRecover) {
+      SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
+      if (!_isFireOs) _hideAgainLater();
+    }
   }
 
   /// The next field never opens its keyboard by itself, even after the
@@ -130,10 +191,10 @@ class _TvTextFieldGateState extends State<TvTextFieldGate>
     if (widget.focusNode.hasFocus || !_typing) return;
     _keyboardShown = false;
     setState(() => _typing = false);
-    if (!_isFireOs) _hideAgainLater();
+    if (!_isFireOs && _canRecover) _hideAgainLater();
     // Fire OS: Back on its keyboard drops Flutter's focus altogether.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      if (!_canRecover) return;
       final now = FocusManager.instance.primaryFocus;
       if (now == null || now is FocusScopeNode) {
         widget.focusNode.requestFocus();
@@ -145,28 +206,15 @@ class _TvTextFieldGateState extends State<TvTextFieldGate>
   /// the field's own subtree can claim the key.
   bool _onKey(KeyEvent event) {
     if (event is! KeyDownEvent || !widget.focusNode.hasFocus) return false;
+    if (!_canRecover) return false;
     if (!context.read<AppPreferences>().isTelevision) return false;
     final key = event.logicalKey;
     final ok = key == LogicalKeyboardKey.select ||
         key == LogicalKeyboardKey.gameButtonA;
     if (_typing) {
-      final direction = _arrows[key];
-      if (direction != null && !_isFireOs) {
-        // An arrow only reaches the app when the keyboard isn't using it:
-        // a visible keyboard takes the D-pad itself. So the keyboard is
-        // closed and the field must give the remote back. Google TV
-        // (Chromecast): Gboard reports no inset, so didChangeMetrics never
-        // saw it close, and the open input connection turned the arrows
-        // into cursor moves (user report, 1.0.52). Handled here, the key
-        // never reaches the input connection. Not on Fire OS: its keyboard
-        // sends its own selector moves to the app as arrows.
-        _keyboardShown = false;
-        setState(() => _typing = false);
-        SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
-        _move(direction);
-        _hideAgainLater();
-        return true;
-      }
+      // IMEs may forward cursor arrows while visible (including overlay
+      // Gboard with no inset). An arrow is not evidence of dismissal.
+      if (_arrows.containsKey(key)) return false;
       // Keyboard dismissed but the field kept focus (Formuler): OK raises
       // it again. Only the remote's own OK key: Fire OS turns Back on its
       // keyboard into a numpadEnter, which must not reopen it.
@@ -181,6 +229,8 @@ class _TvTextFieldGateState extends State<TvTextFieldGate>
     }
     // readOnly -> false while focused opens the input connection and shows
     // the keyboard (EditableText.didUpdateWidget).
+    _rehide?.cancel();
+    _keyboardShown = (View.maybeOf(context)?.viewInsets.bottom ?? 0) > 0;
     setState(() => _typing = true);
     return true;
   }
@@ -194,7 +244,7 @@ class _TvTextFieldGateState extends State<TvTextFieldGate>
   void _hideAgainLater() {
     _rehide?.cancel();
     _rehide = Timer(const Duration(milliseconds: 250), () {
-      if (!mounted || _typing) return;
+      if (!_canRecover || _typing) return;
       SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
     });
   }
@@ -224,7 +274,7 @@ class _TvTextFieldGateState extends State<TvTextFieldGate>
   /// Its focus change is applied in a microtask queued before this one, so
   /// the move only happens when nothing else has moved focus already.
   void _move(TraversalDirection direction) => scheduleMicrotask(() {
-        if (mounted && widget.focusNode.hasPrimaryFocus) {
+        if (_canRecover && !_typing && widget.focusNode.hasPrimaryFocus) {
           widget.focusNode.focusInDirection(direction);
         }
       });
@@ -234,20 +284,30 @@ class _TvTextFieldGateState extends State<TvTextFieldGate>
     if (!context.read<AppPreferences>().isTelevision) {
       return widget.builder(context, false);
     }
-    return Actions(
-      actions: {
-        ExtendSelectionVerticallyToAdjacentLineIntent:
-            CallbackAction<ExtendSelectionVerticallyToAdjacentLineIntent>(
-          onInvoke: (i) => _move(
-              i.forward ? TraversalDirection.down : TraversalDirection.up),
-        ),
-        ExtendSelectionByCharacterIntent:
-            CallbackAction<ExtendSelectionByCharacterIntent>(
-          onInvoke: (i) => _move(
-              i.forward ? TraversalDirection.right : TraversalDirection.left),
-        ),
+    return PopScope(
+      canPop: !_typing,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _typing) _stopTyping();
       },
-      child: widget.builder(context, !_typing),
+      child: Actions(
+        actions: _typing
+            ? const <Type, Action<Intent>>{}
+            : {
+                ExtendSelectionVerticallyToAdjacentLineIntent: CallbackAction<
+                    ExtendSelectionVerticallyToAdjacentLineIntent>(
+                  onInvoke: (i) => _move(i.forward
+                      ? TraversalDirection.down
+                      : TraversalDirection.up),
+                ),
+                ExtendSelectionByCharacterIntent:
+                    CallbackAction<ExtendSelectionByCharacterIntent>(
+                  onInvoke: (i) => _move(i.forward
+                      ? TraversalDirection.right
+                      : TraversalDirection.left),
+                ),
+              },
+        child: widget.builder(context, !_typing),
+      ),
     );
   }
 }

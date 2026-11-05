@@ -59,6 +59,7 @@ class _ChannelLinkingScreenState extends State<ChannelLinkingScreen> {
   /// first and was confirmed still not enough), reported directly
   /// against this screen too.
   bool _handleSearchEscape(KeyEvent event) {
+    if (TvTextFieldGate.isEditing(_searchFocus)) return false;
     if (event is! KeyDownEvent) return false;
     if (event.logicalKey != LogicalKeyboardKey.arrowUp &&
         event.logicalKey != LogicalKeyboardKey.arrowDown) {

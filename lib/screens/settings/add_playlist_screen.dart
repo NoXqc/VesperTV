@@ -327,6 +327,10 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
     // [_lastFocusedTextField]'s own doc comment for the real-hardware case
     // that fallback covers).
     final current = FocusManager.instance.primaryFocus;
+    if (TvTextFieldGate.isEditing(current) ||
+        TvTextFieldGate.isEditing(_lastFocusedTextField)) {
+      return false;
+    }
 
     final effective =
         (current == _nameFocus || _allTrackedFields.contains(current))
@@ -805,7 +809,7 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                 // own non-text-field sibling (e.g. the radio list), or
                 // the status/Add-Playlist pane —
                 // never mid-typing.
-                const SingleActivator(LogicalKeyboardKey.arrowLeft): () {
+                const TvNavigationActivator(LogicalKeyboardKey.arrowLeft): () {
                   if (_statusScope.hasFocus) {
                     (_mode == 'phone' ? _phoneToggleFocus : _nameFocus)
                         .requestFocus();
@@ -814,7 +818,7 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                   }
                   // Already in the mode list — no-op, nothing further left.
                 },
-                const SingleActivator(LogicalKeyboardKey.arrowRight): () {
+                const TvNavigationActivator(LogicalKeyboardKey.arrowRight): () {
                   if (_modeScope.hasFocus) {
                     (_mode == 'phone' ? _phoneToggleFocus : _nameFocus)
                         .requestFocus();

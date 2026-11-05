@@ -1841,6 +1841,7 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
   }
 
   bool _handleSearchFieldEscapeKey(KeyEvent event) {
+    if (TvTextFieldGate.isEditing(_searchFocus)) return false;
     if (event is! KeyDownEvent) return false;
     if (!(ModalRoute.of(context)?.isCurrent ?? true)) return false;
     if (event.logicalKey != LogicalKeyboardKey.arrowDown) return false;
@@ -1900,7 +1901,7 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
         ),
         body: CallbackShortcuts(
           bindings: <ShortcutActivator, VoidCallback>{
-            const SingleActivator(LogicalKeyboardKey.arrowLeft): () {
+            const TvNavigationActivator(LogicalKeyboardKey.arrowLeft): () {
               // No-op when already there — EditableText claims Left/Right
               // for caret movement whenever the search field has focus, so
               // this only ever actually fires while focus is on a group or
@@ -1909,7 +1910,7 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
                 _groupFocusNodes[_selectedGroupIndex].requestFocus();
               }
             },
-            const SingleActivator(LogicalKeyboardKey.arrowRight): () {
+            const TvNavigationActivator(LogicalKeyboardKey.arrowRight): () {
               // Into the channel list, not the search field: focusing the
               // field pops the on-screen keyboard, and on Fire OS that
               // keyboard swallows Back and then traps D-pad focus (CLAUDE.md

@@ -543,6 +543,90 @@ void main() {
     await disposePage(tester);
   });
 
+  for (final inset in [0.0, 300.0]) {
+    testWidgets('channel picker edits ESPN2 without escaping; inset=$inset',
+        (tester) async {
+      final base = _game(100, GameState.live);
+      final game = SportsGame(
+          id: base.id,
+          league: base.league,
+          start: base.start,
+          state: base.state,
+          statusText: base.statusText,
+          home: const SportsTeam(
+              id: 'emu',
+              name: 'Eastern Michigan',
+              shortName: 'E Michigan',
+              abbreviation: 'EMU'),
+          away: const SportsTeam(
+              id: 'cmu',
+              name: 'Central Michigan',
+              shortName: 'C Michigan',
+              abbreviation: 'CMU'),
+          broadcasts: const ['ESPN2']);
+      playlist.live = [
+        Channel(
+            id: 'p1::espn2',
+            rawId: 'espn2',
+            playlistId: 'p1',
+            name: 'ESPN 2',
+            group: 'Sports',
+            url: 'https://test/espn2'),
+      ];
+      await SportsChannelPicks.load(storage)
+          .pickForGame(game, playlist.live.single.id);
+      await open(tester, games: [game]);
+      final card = find.byWidgetPredicate((w) =>
+          w is InkWell && w.focusNode?.debugLabel == 'sports-card-nhl:game100');
+      await tester.longPress(card);
+      await tester.pumpAndSettle();
+      final pick = find.byWidgetPredicate((w) =>
+          w is Text &&
+          (w.data == 'Choose a different channel' ||
+              w.data == 'Pick the channel'));
+      await tester.scrollUntilVisible(pick, 150,
+          scrollable: find.descendant(
+              of: find.byType(Dialog), matching: find.byType(Scrollable)));
+      await tester.tap(pick);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('ESPN2'));
+      await tester.pumpAndSettle();
+      final field = tester.widget<TextField>(find.byType(TextField));
+      field.focusNode!.requestFocus();
+      await tester.pump();
+      await press(tester, LogicalKeyboardKey.select);
+      tester.view.viewInsets = FakeViewPadding(bottom: inset);
+      await tester.pumpAndSettle();
+      field.controller!.selection = const TextSelection.collapsed(offset: 5);
+      await press(tester, LogicalKeyboardKey.arrowLeft);
+      expect(field.controller!.selection.baseOffset, 4);
+      expect(field.focusNode!.hasPrimaryFocus, isTrue);
+      expect(
+          tester.widget<TextField>(find.byType(TextField)).readOnly, isFalse);
+      tester.testTextInput.updateEditingValue(const TextEditingValue(
+          text: 'ESPN 2', selection: TextSelection.collapsed(offset: 5)));
+      await tester.pumpAndSettle();
+      await press(tester, LogicalKeyboardKey.arrowDown);
+      expect(field.focusNode!.hasPrimaryFocus, isTrue);
+      expect(field.controller!.text, 'ESPN 2');
+      if (inset > 0) {
+        tester.view.viewInsets = FakeViewPadding.zero;
+      } else {
+        await tester.binding.handlePopRoute();
+      }
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(tester.widget<TextField>(find.byType(TextField)).readOnly, isTrue);
+      await press(tester, LogicalKeyboardKey.arrowDown);
+      expect(field.focusNode!.hasFocus, isFalse);
+      expect(find.byWidgetPredicate((w) => w is Text && w.data == 'ESPN 2'),
+          findsOneWidget);
+      expect(playback.plays, isEmpty);
+      expect(tester.takeException(), isNull);
+      await disposePage(tester);
+    });
+  }
+
   testWidgets('My Teams watch opens a visible player from its own page',
       (tester) async {
     final games = await matchedGames();
