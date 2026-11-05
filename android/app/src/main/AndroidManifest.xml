@@ -1,5 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- User-granted access for the explicit, one-shot TV overlay test. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
     <!-- Lets the in-app "Check for Updates" feature (Settings) trigger the
          system installer on a downloaded APK. Android 8+ additionally
          requires the user to grant this app "install unknown apps" access
@@ -82,6 +84,11 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Recording a live TV channel the user scheduled (DVR)"/>
         </service>
+        <!-- Synthetic 16-second capability test, not background score monitoring. -->
+        <service
+            android:name=".OverlayProbeService"
+            android:exported="false"
+            android:foregroundServiceType="shortService"/>
         <receiver android:name=".RecorderAlarmReceiver" android:exported="false"/>
         <receiver android:name=".BootReceiver" android:exported="false">
             <intent-filter>
@@ -116,6 +123,9 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+        <intent>
+            <action android:name="android.settings.action.MANAGE_OVERLAY_PERMISSION" />
+        </intent>
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <category android:name="android.intent.category.BROWSABLE" />

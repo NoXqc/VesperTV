@@ -2507,4 +2507,34 @@ const Map<String, String> kFr = {
   "Removes Sports Trak from navigation and turns off Sports Mode.":
       "Retire Sports Trak de la navigation et désactive le mode Sports.",
   "Choose which tabs to show.": "Choisissez les onglets à afficher.",
+
+  // Native outside-app overlay capability test.
+  "Alerts over other apps (beta)":
+      "Alertes par-dessus les autres applis (bêta)",
+  "Checking overlay access…": "Vérification de l’accès à la superposition…",
+  "Overlay access granted": "Superposition autorisée",
+  "Open settings to allow overlays":
+      "Ouvrir les paramètres pour autoriser la superposition",
+  "Overlay access not available": "Superposition indisponible",
+  "Open overlay settings": "Ouvrir les paramètres de superposition",
+  "Allow VesperTV to display over other apps, then return here.":
+      "Autorisez VesperTV à s’afficher par-dessus les autres applis, puis revenez ici.",
+  "Test popup over other apps":
+      "Tester la fenêtre par-dessus les autres applis",
+  "Overlay test running. Switch to another app.":
+      "Test en cours. Passez à une autre appli.",
+  "Waits 10 seconds, shows a test card for 6 seconds, then stops.":
+      "Attend 10 secondes, affiche une carte de test pendant 6 secondes, puis s’arrête.",
+  "Test popup in 10 seconds. Switch to another app.":
+      "Fenêtre de test dans 10 secondes. Passez à une autre appli.",
+  "The overlay test could not start. Check overlay access and try again.":
+      "Le test n’a pas pu démarrer. Vérifiez l’autorisation de superposition et réessayez.",
+  "Test finished. Check whether the popup appeared in the other app.":
+      "Test terminé. Vérifiez si la fenêtre est apparue dans l’autre appli.",
+  "Overlay test cancelled.": "Test de superposition annulé.",
+  "The overlay test could not run on this device.":
+      "Le test de superposition n’a pas pu fonctionner sur cet appareil.",
+  "VesperTV overlay test": "Test de superposition VesperTV",
+  "This test closes after 6 seconds.": "Ce test se ferme après 6 secondes.",
+  "Overlay tests": "Tests de superposition",
 };

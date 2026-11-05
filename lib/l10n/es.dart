@@ -2495,4 +2495,33 @@ const Map<String, String> kEs = {
   "Removes Sports Trak from navigation and turns off Sports Mode.":
       "Quita Sports Trak de la navegación y desactiva el modo Deportes.",
   "Choose which tabs to show.": "Elige qué pestañas mostrar.",
+
+  // Native outside-app overlay capability test.
+  "Alerts over other apps (beta)": "Alertas sobre otras aplicaciones (beta)",
+  "Checking overlay access…": "Comprobando el permiso de superposición…",
+  "Overlay access granted": "Superposición permitida",
+  "Open settings to allow overlays":
+      "Abre los ajustes para permitir superposiciones",
+  "Overlay access not available": "Superposición no disponible",
+  "Open overlay settings": "Abrir ajustes de superposición",
+  "Allow VesperTV to display over other apps, then return here.":
+      "Permite que VesperTV se muestre sobre otras aplicaciones y vuelve aquí.",
+  "Test popup over other apps": "Probar ventana sobre otras aplicaciones",
+  "Overlay test running. Switch to another app.":
+      "Prueba en curso. Cambia a otra aplicación.",
+  "Waits 10 seconds, shows a test card for 6 seconds, then stops.":
+      "Espera 10 segundos, muestra una tarjeta de prueba durante 6 segundos y se detiene.",
+  "Test popup in 10 seconds. Switch to another app.":
+      "Ventana de prueba en 10 segundos. Cambia a otra aplicación.",
+  "The overlay test could not start. Check overlay access and try again.":
+      "No se pudo iniciar la prueba. Comprueba el permiso de superposición e inténtalo de nuevo.",
+  "Test finished. Check whether the popup appeared in the other app.":
+      "Prueba terminada. Comprueba si la ventana apareció en la otra aplicación.",
+  "Overlay test cancelled.": "Prueba de superposición cancelada.",
+  "The overlay test could not run on this device.":
+      "La prueba de superposición no pudo ejecutarse en este dispositivo.",
+  "VesperTV overlay test": "Prueba de superposición de VesperTV",
+  "This test closes after 6 seconds.":
+      "Esta prueba se cierra después de 6 segundos.",
+  "Overlay tests": "Pruebas de superposición",
 };

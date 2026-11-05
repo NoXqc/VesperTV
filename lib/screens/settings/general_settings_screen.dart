@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -15,6 +16,7 @@ import '../../services/subtitle_tracks.dart';
 import '../../utils/constants.dart';
 import '../../utils/tv_theme.dart';
 import '../../widgets/goals_alert_overlay.dart';
+import '../../widgets/goal_overlay_probe_settings.dart';
 import '../../widgets/native_video_hole.dart';
 import '../../widgets/live_resume_hint.dart';
 import '../../widgets/settings_scaffold.dart';
@@ -344,6 +346,9 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                       ]),
                   _section('goals', Icons.sports_score, tr('Goals alert'),
                       children: [
+                        if (defaultTargetPlatform == TargetPlatform.android &&
+                            context.watch<AppPreferences>().isTelevision)
+                          const GoalOverlayProbeSettings(),
                         TvSwitchListTile(
                           title: Text(tr('Goals alert')),
                           subtitle: Text(tr(

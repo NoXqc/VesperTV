@@ -2502,4 +2502,33 @@ const Map<String, String> kIt = {
   "Removes Sports Trak from navigation and turns off Sports Mode.":
       "Rimuove Sports Trak dalla navigazione e disattiva la modalità Sport.",
   "Choose which tabs to show.": "Scegli quali schede mostrare.",
+
+  // Native outside-app overlay capability test.
+  "Alerts over other apps (beta)": "Avvisi sopra le altre app (beta)",
+  "Checking overlay access…":
+      "Verifica dell’autorizzazione di sovrapposizione…",
+  "Overlay access granted": "Sovrapposizione autorizzata",
+  "Open settings to allow overlays":
+      "Apri le impostazioni per consentire la sovrapposizione",
+  "Overlay access not available": "Sovrapposizione non disponibile",
+  "Open overlay settings": "Apri impostazioni di sovrapposizione",
+  "Allow VesperTV to display over other apps, then return here.":
+      "Consenti a VesperTV di comparire sopra le altre app, poi torna qui.",
+  "Test popup over other apps": "Prova popup sopra le altre app",
+  "Overlay test running. Switch to another app.":
+      "Test in corso. Passa a un’altra app.",
+  "Waits 10 seconds, shows a test card for 6 seconds, then stops.":
+      "Attende 10 secondi, mostra una scheda di prova per 6 secondi, poi si arresta.",
+  "Test popup in 10 seconds. Switch to another app.":
+      "Popup di prova tra 10 secondi. Passa a un’altra app.",
+  "The overlay test could not start. Check overlay access and try again.":
+      "Impossibile avviare il test. Controlla l’autorizzazione di sovrapposizione e riprova.",
+  "Test finished. Check whether the popup appeared in the other app.":
+      "Test terminato. Controlla se il popup è apparso nell’altra app.",
+  "Overlay test cancelled.": "Test di sovrapposizione annullato.",
+  "The overlay test could not run on this device.":
+      "Impossibile eseguire il test di sovrapposizione su questo dispositivo.",
+  "VesperTV overlay test": "Test di sovrapposizione VesperTV",
+  "This test closes after 6 seconds.": "Questo test si chiude dopo 6 secondi.",
+  "Overlay tests": "Test di sovrapposizione",
 };

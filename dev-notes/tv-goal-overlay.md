@@ -1,8 +1,9 @@
 # TV goal alerts outside VesperTV - Phase 1 proposal
 
 Codex, 2026-11-05. Base: `main` at `514863f`; branch: `codex/tv-goal-overlay`.
-**Status: investigation and proposal only. No service, permission, settings, player,
-launcher integration or version change is implemented by this branch.**
+**Phase 1 proposal retained in sections 1-7; those describe base `514863f`.**
+**Phase 2a: owner authorized the one-shot native capability test only; see section 8.**
+No score polling, real scores, watch-set/checkpoint or launcher implementation.
 Current source/installed Formuler package: 1.0.56+615 (min SDK 24, target SDK 36).
 Public Android release remains 1.0.56+606; public Windows remains 1.0.45.
 
@@ -284,3 +285,57 @@ show unsupported status rather than promising one cross-device Watch Next featur
 
 Phase 1 stops with this document and a CODEX PICKUP block in root HANDOFF.md.
 No feature, permission mutation, APK build/install, version bump, push or release.
+
+## 8. Phase 2a: bounded native capability test (2026-11-05)
+
+Owner explicitly approved implementation on this branch and a signed local test
+APK, without installation. Section 7's previous stop instruction is superseded only
+for this capability test; monitoring and launcher work remain unapproved.
+
+- Settings > Interface > Goals alert, on actual Android TV hardware, now includes
+  **Alerts over other apps (beta)**, grant/settings/unavailable status, **Open overlay
+  settings**, and **Test popup over other apps**. There is no saved monitoring switch.
+- The narrow MethodChannel checks native TV capability and the real grant, tries
+  package/generic settings intents, and accepts a test only from a resumed Activity.
+  A matching `<queries>` intent avoids settings resolver filtering. The return to
+  VesperTV refreshes permission status; failures are handled without a crash.
+- `OverlayProbeService` immediately enters foreground, waits **10 seconds**, adds a
+  top-right native synthetic card for **6 seconds**, removes it and stops itself.
+  Repeated requests cannot extend the lifetime. `START_NOT_STICKY`, no receiver,
+  alarm, network, scoring client, subscription, persistence, engine or wake lock.
+- API34+ uses **shortService**, appropriate for this bounded 16-second test, rather
+  than the proposal's long-running specialUse candidate. Earlier APIs use the normal
+  foreground notification path; API24/25 use legacy TYPE_PHONE, API26+ use
+  TYPE_APPLICATION_OVERLAY. Recording's declaration and behavior are untouched.
+  [Short-service contract](https://developer.android.com/develop/background-work/services/fgs/service-types#short-service).
+- The card uses NOT_FOCUSABLE/NOT_TOUCHABLE, real wrap-content bounds and alpha at
+  most 0.8/the platform's touch-obscuring limit. It requests no audio focus. Its
+  low-importance notification has no sound/vibration and a localized Cancel action.
+- The grant is rechecked at display time. Screen off/locked, revoked grant,
+  window-add failure, service timeout/destruction and cancellation clean up the
+  pending callbacks/window/notification. A successful add does not prove another
+  app allowed the overlay: the completion message asks the owner to check visibility.
+- The UI's short-lived status refresh is only a capability check. It does not drive
+  the native timers; leaving/discarding the Flutter settings widget does not cancel
+  the native test. All UI/native payload text goes through tr() in EN/FR/ES/IT/EL/DE.
+
+Implementation locations: `lib/services/goal_overlay_probe.dart`,
+`lib/widgets/goal_overlay_probe_settings.dart`, General settings integration,
+`OverlayProbeBridge.kt`, `OverlayProbeService.kt`, `OverlayProbeSession.kt`,
+MainActivity's channel registration and AndroidManifest's permission/service/query.
+Native session tests use JUnit, without a new runtime dependency or device install.
+`test/goal_overlay_probe_test.dart` covers access states/actions/lifecycle/errors,
+localization, foreground-settings disposal and Android TV gating.
+
+For the requested test package, retain pubspec.yaml's **1.0.56+615** and set only the
+APK's next build number using `flutter build apk --release --no-pub --build-number=616`.
+This honors the no-source-version-bump constraint while producing an installable
+update over +615. Artifact, final checks and signing result: root HANDOFF.md.
+
+Owner-driven check after a separately authorized installation: open the new row,
+grant overlay access in system settings (or use section 4's optional ADB fallback),
+return, confirm granted, select Test, switch to YouTube/launcher within 10 seconds,
+and observe the top-right card for six seconds. Verify D-pad/playback/audio remain
+with the other app and that the service/notification disappear. Also test cancel,
+denial/revocation and repeated activation. No device was driven or installed during
+Phase 2a; Formuler/Google TV/Fire TV rendering and permission flows remain unverified.
