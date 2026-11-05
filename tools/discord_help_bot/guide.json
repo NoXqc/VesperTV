@@ -259,7 +259,7 @@
     "id": "e00cfc92c6e8de46",
     "category": "Full screen",
     "title": "Audio sync (audio delay)",
-    "answer": "If the sound is ahead of or behind the picture, open Audio sync and press Right (sound later) or Left (sound earlier) in 25 ms steps; it changes as you press, so line it up by eye, then OK. Also in Settings › Playback › Audio › Audio delay. Applies to this device, every channel.",
+    "answer": "If the sound is ahead of or behind the picture, open Audio sync and press Right (sound later) or Left (sound earlier) in 25 ms steps (hold to go faster, up to 5 seconds either way); it changes as you press, so line it up by eye, then OK. Also in Settings › Playback › Audio › Audio delay. Applies to this device, every channel.",
     "controls": "Options row: Audio sync ANDROID",
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },

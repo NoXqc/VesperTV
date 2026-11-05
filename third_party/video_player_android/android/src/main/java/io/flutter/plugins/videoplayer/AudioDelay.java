@@ -17,7 +17,7 @@ import androidx.media3.exoplayer.audio.ForwardingAudioSink;
 @OptIn(markerClass = UnstableApi.class)
 public final class AudioDelay extends ForwardingAudioSink {
   /** Limits of the setting, also enforced on the Dart side. */
-  public static final int MAX_MS = 1000;
+  public static final int MAX_MS = 5000;
 
   private static volatile long delayUs = 0;
 

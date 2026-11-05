@@ -2585,4 +2585,6 @@ const Map<String, String> kIt = {
   "No live channels. In Media Hub sources, turn on TV add-on for a source of live channels.":
       "Nessun canale in diretta. Nelle fonti Media Hub, attiva Add-on TV per una fonte di canali in diretta.",
   "◀ Catch-up": "◀ Replay",
+  "Sound ahead of the picture? Press Right. Sound late? Press Left. Hold to go faster. OK when it matches.":
+      "L’audio è in anticipo sull’immagine? Premi Destra. In ritardo? Premi Sinistra. Tieni premuto per andare più veloce. OK quando coincide.",
 };

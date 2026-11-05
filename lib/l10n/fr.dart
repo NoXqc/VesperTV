@@ -2591,4 +2591,6 @@ const Map<String, String> kFr = {
   "No live channels. In Media Hub sources, turn on TV add-on for a source of live channels.":
       "Aucune chaîne en direct. Dans les sources Media Hub, activez Add-on TV pour une source de chaînes en direct.",
   "◀ Catch-up": "◀ Rattrapage",
+  "Sound ahead of the picture? Press Right. Sound late? Press Left. Hold to go faster. OK when it matches.":
+      "Le son est en avance sur l’image ? Appuyez sur Droite. En retard ? Appuyez sur Gauche. Maintenez pour aller plus vite. OK quand c’est synchro.",
 };

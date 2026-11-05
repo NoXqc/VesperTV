@@ -9,11 +9,14 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  test('steps of 25 ms, clamped to one second either way', () {
+  test('steps of 25 ms, clamped to five seconds either way', () {
     expect(AudioDelay.step(0, 1), 25);
     expect(AudioDelay.step(0, -1), -25);
-    expect(AudioDelay.step(1000, 1), 1000);
-    expect(AudioDelay.step(-1000, -1), -1000);
+    expect(AudioDelay.step(5000, 1), 5000);
+    expect(AudioDelay.step(-5000, -1), -5000);
+    expect(AudioDelay.stepFor(0), 25);
+    expect(AudioDelay.stepFor(10), 100);
+    expect(AudioDelay.stepFor(30), 250);
   });
 
   test('labels say which way the sound moves', () {

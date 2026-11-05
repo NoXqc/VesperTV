@@ -27,20 +27,23 @@ class _AudioDelayDialog extends StatefulWidget {
 }
 
 class _AudioDelayDialogState extends State<_AudioDelayDialog> {
-  void _change(int direction) {
+  /// Key repeats of the arrow being held (0 on a fresh press).
+  int _repeats = 0;
+
+  void _change(int direction, {int by = AudioDelay.stepMs}) {
     final prefs = context.read<AppPreferences>();
-    prefs.setAudioDelayMs(AudioDelay.step(prefs.audioDelayMs, direction));
+    prefs.setAudioDelayMs(
+        AudioDelay.step(prefs.audioDelayMs, direction, by: by));
   }
 
   KeyEventResult _onKey(FocusNode _, KeyEvent event) {
     if (event is KeyUpEvent) return KeyEventResult.ignored;
     final key = event.logicalKey;
-    if (key == LogicalKeyboardKey.arrowLeft) {
-      _change(-1);
-      return KeyEventResult.handled;
-    }
-    if (key == LogicalKeyboardKey.arrowRight) {
-      _change(1);
+    if (key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight) {
+      _repeats = event is KeyRepeatEvent ? _repeats + 1 : 0;
+      _change(key == LogicalKeyboardKey.arrowLeft ? -1 : 1,
+          by: AudioDelay.stepFor(_repeats));
       return KeyEventResult.handled;
     }
     if (event is KeyDownEvent &&
@@ -121,7 +124,7 @@ class _AudioDelayDialogState extends State<_AudioDelayDialog> {
                 const SizedBox(height: 12),
                 Text(
                   tr(
-                    'Sound ahead of the picture? Press Right. Sound late? Press Left. OK when it matches.',
+                    'Sound ahead of the picture? Press Right. Sound late? Press Left. Hold to go faster. OK when it matches.',
                   ),
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: Colors.white70, fontSize: 13),

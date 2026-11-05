@@ -2540,4 +2540,6 @@ const Map<String, String> kEl = {
   "No live channels. In Media Hub sources, turn on TV add-on for a source of live channels.":
       "Δεν υπάρχουν ζωντανά κανάλια. Στις πηγές του Media Hub, ενεργοποιήστε το Πρόσθετο TV για μια πηγή ζωντανών καναλιών.",
   "◀ Catch-up": "◀ Catch-up",
+  "Sound ahead of the picture? Press Right. Sound late? Press Left. Hold to go faster. OK when it matches.":
+      "Ο ήχος προηγείται της εικόνας; Πατήστε Δεξιά. Καθυστερεί; Πατήστε Αριστερά. Κρατήστε πατημένο για πιο γρήγορα. OK όταν ταιριάζει.",
 };

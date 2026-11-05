@@ -2578,4 +2578,6 @@ const Map<String, String> kEs = {
   "No live channels. In Media Hub sources, turn on TV add-on for a source of live channels.":
       "No hay canales en directo. En las fuentes de Media Hub, activa Add-on de TV para una fuente de canales en directo.",
   "◀ Catch-up": "◀ Diferido",
+  "Sound ahead of the picture? Press Right. Sound late? Press Left. Hold to go faster. OK when it matches.":
+      "¿El sonido va por delante de la imagen? Pulsa Derecha. ¿Va retrasado? Pulsa Izquierda. Mantén pulsado para ir más rápido. OK cuando coincida.",
 };
