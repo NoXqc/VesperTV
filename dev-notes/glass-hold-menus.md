@@ -80,6 +80,14 @@ physical-device QA, version bump, push or release.
 The Live TV channel hold menu now caps its width at 360 logical pixels (was
 560), following the owner's Formuler +612 photo. Text size, row padding,
 scrolling and glass styling are retained; long labels wrap within the narrower
-rows. Other menu widths are unchanged. This applies to the shared channel menu
+rows. This applies to the shared channel menu
 opened from the live list or Timeline guide. Physical-device appearance is
 pending a new test build; +612 predates this adjustment.
+
+## Group menu width (cdx, 2026-11-05)
+
+The provider-group and own-group hold menus now cap their width at 280 logical
+pixels, half the previous 560. Shared by TV and Movies/TV Shows provider groups;
+text size, action handling and scrolling are retained. The channel menu keeps
+its separate 360 cap. `test/tv_favourites_entry_test.dart` verifies the real
+provider-group menu geometry and that dismissing it preserves the chosen group.

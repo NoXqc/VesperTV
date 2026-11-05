@@ -174,6 +174,13 @@ void main() {
             navigatorObservers: [appRouteObserver],
             home: const TvHomeScreen())));
     await tester.pumpAndSettle();
+    // TV now starts on Favourites. These catch-up fixtures exercise News,
+    // so choose that group explicitly before the existing remote sequence.
+    final tabFocus = Focus.of(tester.element(find.text('TV')));
+    await tester.tap(find.text('News'));
+    await tester.pumpAndSettle();
+    tabFocus.requestFocus();
+    await tester.pumpAndSettle();
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
     await tester.pump(const Duration(seconds: 16));

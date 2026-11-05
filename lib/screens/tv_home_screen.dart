@@ -239,6 +239,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   FocusNode _tabFocusNode(String tab) => _tabFocusNodes.putIfAbsent(
       tab, () => FocusNode(debugLabel: 'tv-tab-$tab'));
   bool _returnToTv = false;
+  bool _returnHomeToFavorites = false;
   Timer? _returnBackGuard;
   bool _focusRecoveryScheduled = false;
   int _browseFocusRequest = 0;
@@ -266,8 +267,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     });
   }
 
-  void _restoreTvTab() {
-    if (_tab != 'TV') {
+  void _restoreTvTab({bool startOnFavorites = false}) {
+    // A Home visit starts TV browsing over, including the groups scope's
+    // remembered selector. Other covered pages retain their existing return.
+    if (_tab != 'TV' || startOnFavorites) {
       _onTabChanged('TV', restoreLiveFocus: false);
     }
     _timelineFilterController.clear();
@@ -276,9 +279,23 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       _phonePage = 1;
       _timelineFilterActive = false;
       _timelineFilterQuery = '';
+      if (startOnFavorites) {
+        _selectedGroup = _favoritesGroupSentinel;
+        _focusGroupKeyOnBuild = null;
+        _guideFocusedChannel = null;
+        _guideFocusedProgram = null;
+      }
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+        if (startOnFavorites) {
+          if (_groupsScroll.hasClients) {
+            _groupsScroll.jumpTo(0);
+          }
+          if (_liveListController.hasClients) {
+            _liveListController.jumpTo(0);
+          }
+        }
         _tabFocusNode('TV').requestFocus();
       }
     });
@@ -452,6 +469,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     final choice = await showGlassMenu<String>(
       context: context,
       builder: (context) => GlassMenuDialog(
+        maxWidth: 280,
         title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
         children: [
           if (category != null)
@@ -590,6 +608,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     final choice = await showGlassMenu<String>(
       context: context,
       builder: (context) => GlassMenuDialog(
+        maxWidth: 280,
         title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
         children: [
           TvDialogOption(
@@ -2032,6 +2051,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     _returnToTv = widget.startupBrowseCovered || widget.startupSportsCovered;
     _initialTab = widget.initialTab;
     _tab = _initialTab;
+    if (_tab == 'TV') {
+      _selectedGroup = _favoritesGroupSentinel;
+    }
     _showWhatsNew = _isBrowseTab(_tab);
     if (_showWhatsNew) {
       _phonePage = 1;
@@ -2198,7 +2220,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       _returnBackGuard = Timer(const Duration(milliseconds: 700), () {
         _returnBackGuard = null;
       });
-      _restoreTvTab();
+      final startOnFavorites = _returnHomeToFavorites;
+      _returnHomeToFavorites = false;
+      _restoreTvTab(startOnFavorites: startOnFavorites);
       return;
     }
     _scheduleFocusRecovery();
@@ -2748,6 +2772,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// page, and its own cards start what plays next.
   void _openHome() {
     _returnToTv = true;
+    _returnHomeToFavorites = true;
     _parkLiveChannel();
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => const HomeScreen()));
