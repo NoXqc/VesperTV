@@ -384,6 +384,12 @@ class StorageService {
   Future<void> setArchiveSourcesJson(String json) =>
       _prefs.setString(AppConstants.keyArchiveSources, json);
 
+  /// Per viewer (see [AppConstants.keyArchiveSourcePrefs]).
+  String? getArchiveSourcePrefsJson() =>
+      _prefs.getString(_vk(AppConstants.keyArchiveSourcePrefs));
+  Future<void> setArchiveSourcePrefsJson(String json) =>
+      _prefs.setString(_vk(AppConstants.keyArchiveSourcePrefs), json);
+
   /// Languages picked from online subtitles (add-on codes like "fre"),
   /// most recent first — the player's Subtitles list offers them directly.
   String? getSeriesSubtitlesJson() =>

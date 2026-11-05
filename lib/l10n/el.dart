@@ -2542,4 +2542,8 @@ const Map<String, String> kEl = {
   "◀ Catch-up": "◀ Catch-up",
   "Sound ahead of the picture? Press Right. Sound late? Press Left. Hold to go faster. OK when it matches.":
       "Ο ήχος προηγείται της εικόνας; Πατήστε Δεξιά. Καθυστερεί; Πατήστε Αριστερά. Κρατήστε πατημένο για πιο γρήγορα. OK όταν ταιριάζει.",
+  "This removes it for every profile on this device. To hide it for this profile only, turn off Enabled instead.":
+      "Αυτό την αφαιρεί για όλα τα προφίλ αυτής της συσκευής. Για να την κρύψετε μόνο σε αυτό το προφίλ, απενεργοποιήστε το Ενεργό.",
+  "Enabled and Show under Other are your own for each profile; sources are shared on this device.":
+      "Τα Ενεργό και Εμφάνιση στα Άλλα είναι δικά σας για κάθε προφίλ· οι πηγές είναι κοινές σε αυτή τη συσκευή.",
 };

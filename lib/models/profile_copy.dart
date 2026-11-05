@@ -30,7 +30,10 @@ const profileCopyKeys = <ProfileCopy, Set<String>>{
     AppConstants.keySportsHideEmptyLeagues,
     AppConstants.keySportsShowOdds,
   },
-  ProfileCopy.visibility: {AppConstants.keyMyGroups},
+  ProfileCopy.visibility: {
+    AppConstants.keyMyGroups,
+    AppConstants.keyArchiveSourcePrefs
+  },
   ProfileCopy.home: {AppConstants.keyHomeRows, AppConstants.keyHideProfiles},
 };
 const profileCopyPrefixes = <ProfileCopy, Set<String>>{

@@ -2483,4 +2483,8 @@ const Map<String, String> kDe = {
   "◀ Catch-up": "◀ Catch-up",
   "Sound ahead of the picture? Press Right. Sound late? Press Left. Hold to go faster. OK when it matches.":
       "Ton vor dem Bild? Rechts drücken. Ton zu spät? Links drücken. Gedrückt halten geht schneller. OK, wenn es passt.",
+  "This removes it for every profile on this device. To hide it for this profile only, turn off Enabled instead.":
+      "Das entfernt sie für jedes Profil auf diesem Gerät. Um sie nur für dieses Profil auszublenden, schalte stattdessen Aktiviert aus.",
+  "Enabled and Show under Other are your own for each profile; sources are shared on this device.":
+      "Aktiviert und Unter Sonstiges zeigen gelten je Profil; Quellen werden auf diesem Gerät geteilt.",
 };

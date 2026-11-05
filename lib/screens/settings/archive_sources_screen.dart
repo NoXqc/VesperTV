@@ -231,6 +231,11 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
       builder: (dialogContext) => SwallowHeldActivate(
           child: GlassMenuDialog(
         title: Text(tr('Remove {name}?', {'name': source.name})),
+        content: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(tr(
+              'This removes it for every profile on this device. To hide it for this profile only, turn off Enabled instead.')),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
@@ -653,6 +658,9 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
                     style: TextStyle(
                         fontSize: 11, color: scheme.onSurfaceVariant)),
                 const SizedBox(height: 8),
+                Text(
+                    tr('Enabled and Show under Other are your own for each profile; sources are shared on this device.'),
+                    style: TextStyle(color: scheme.onSurfaceVariant)),
                 Text(tr('Hold OK on Enabled to remove a source.'),
                     style: TextStyle(color: scheme.onSurfaceVariant)),
                 const SizedBox(height: 12),

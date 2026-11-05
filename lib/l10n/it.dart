@@ -2587,4 +2587,8 @@ const Map<String, String> kIt = {
   "◀ Catch-up": "◀ Replay",
   "Sound ahead of the picture? Press Right. Sound late? Press Left. Hold to go faster. OK when it matches.":
       "L’audio è in anticipo sull’immagine? Premi Destra. In ritardo? Premi Sinistra. Tieni premuto per andare più veloce. OK quando coincide.",
+  "This removes it for every profile on this device. To hide it for this profile only, turn off Enabled instead.":
+      "La rimuove per tutti i profili di questo dispositivo. Per nasconderla solo in questo profilo, disattiva Attiva.",
+  "Enabled and Show under Other are your own for each profile; sources are shared on this device.":
+      "Attiva e Mostra in Altro sono di ogni profilo; le fonti sono condivise su questo dispositivo.",
 };

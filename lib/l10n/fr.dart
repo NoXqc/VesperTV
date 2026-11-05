@@ -2593,4 +2593,8 @@ const Map<String, String> kFr = {
   "◀ Catch-up": "◀ Rattrapage",
   "Sound ahead of the picture? Press Right. Sound late? Press Left. Hold to go faster. OK when it matches.":
       "Le son est en avance sur l’image ? Appuyez sur Droite. En retard ? Appuyez sur Gauche. Maintenez pour aller plus vite. OK quand c’est synchro.",
+  "This removes it for every profile on this device. To hide it for this profile only, turn off Enabled instead.":
+      "Cela la retire pour tous les profils de cet appareil. Pour la masquer seulement sur ce profil, désactivez plutôt Activée.",
+  "Enabled and Show under Other are your own for each profile; sources are shared on this device.":
+      "Activée et Afficher sous Autre sont propres à chaque profil ; les sources sont partagées sur cet appareil.",
 };

@@ -173,7 +173,7 @@ class ArchiveService extends ChangeNotifier {
     if (!login.needsRefresh) return login;
     final fresh = await _trackers.refresh(login);
     await _saveSources([
-      for (final x in sources)
+      for (final x in _storedSources)
         x.manifestUrl == s.manifestUrl ? x.copyWith(tracker: fresh) : x,
     ]);
     return fresh;
@@ -207,7 +207,7 @@ class ArchiveService extends ChangeNotifier {
       tracker: login,
     );
     await _saveSources([
-      for (final s in sources)
+      for (final s in _storedSources)
         if (s.tracker?.kind != login.kind) s,
       source,
     ]);
@@ -251,8 +251,51 @@ class ArchiveService extends ChangeNotifier {
     _newest.clear();
   }
 
+  /// The sources as this profile sees them: the shared list with the
+  /// profile's own Enabled / Show under Other (owner, 2026-11-05: turning a
+  /// source off on one profile turned it off for everyone). Never save this
+  /// list back: [_storedSources] is what [_saveSources] writes.
   List<ArchiveSource> get sources {
     _ensureViewerState();
+    final prefs = _sourcePrefs();
+    return [
+      for (final s in _storedSources)
+        if (prefs[s.manifestUrl] case final p?)
+          s.copyWith(
+              enabled: p['enabled'] is bool ? p['enabled'] as bool : null,
+              otherChoice: p['other'] is bool ? p['other'] as bool : null)
+        else
+          s,
+    ];
+  }
+
+  /// This profile's choices, by manifest URL.
+  Map<String, Map<String, dynamic>> _sourcePrefs() {
+    final raw = _storage.getArchiveSourcePrefsJson();
+    if (raw == null) return const {};
+    try {
+      return {
+        for (final e in (jsonDecode(raw) as Map).entries)
+          if (e.value is Map)
+            e.key.toString(): Map<String, dynamic>.from(e.value as Map),
+      };
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  Future<void> _setSourcePref(
+      ArchiveSource source, String field, bool value) async {
+    final prefs = {
+      for (final e in _sourcePrefs().entries) e.key: {...e.value},
+    };
+    (prefs[source.manifestUrl] ??= {})[field] = value;
+    await _storage.setArchiveSourcePrefsJson(jsonEncode(prefs));
+    _notify();
+  }
+
+  /// The shared list as saved (every profile's sources and their defaults).
+  List<ArchiveSource> get _storedSources {
     final raw = _storage.getArchiveSourcesJson();
     if (raw == null) return const [];
     try {
@@ -305,7 +348,7 @@ class ArchiveService extends ChangeNotifier {
 
   /// The source's "TV add-on" switch (see [ArchiveSource.isLiveTv]).
   Future<void> setLiveTv(ArchiveSource source, bool on) => _saveSources([
-        for (final s in sources)
+        for (final s in _storedSources)
           s.manifestUrl == source.manifestUrl
               ? s.copyWith(liveTvChoice: on)
               : s,
@@ -408,7 +451,7 @@ class ArchiveService extends ChangeNotifier {
           .timeout(const Duration(seconds: 10));
       // Settings may have changed while the network request was pending.
       // Never resurrect a removed source or overwrite its current choices.
-      final current = sources;
+      final current = _storedSources;
       final index = current.indexWhere((p) => p.manifestUrl == s.manifestUrl);
       if (index < 0) return;
       final saved = current[index];
@@ -462,7 +505,7 @@ class ArchiveService extends ChangeNotifier {
   /// already in the list is left out. Returns the ones added.
   Future<List<ArchiveSource>> addCheckedSources(
       List<ArchiveSource> found) async {
-    final list = sources;
+    final list = _storedSources;
     final have = {for (final s in list) s.manifestUrl};
     final added = [
       for (final s in found)
@@ -484,7 +527,7 @@ class ArchiveService extends ChangeNotifier {
   /// (bad link, no streams/catalogs) or [StateError] (already added).
   Future<ArchiveSource> addSource(String link) async {
     final source = await _api.fetchManifest(link);
-    final list = sources;
+    final list = _storedSources;
     if (list.any((s) => s.manifestUrl == source.manifestUrl)) {
       throw StateError('already added');
     }
@@ -511,7 +554,7 @@ class ArchiveService extends ChangeNotifier {
   }
 
   Future<ArchiveSource> _addServerSource(ArchiveSource source) async {
-    final list = sources;
+    final list = _storedSources;
     final at = list.indexWhere((s) => s.key == source.key);
     if (at >= 0) {
       source = source.copyWith(
@@ -526,20 +569,18 @@ class ArchiveService extends ChangeNotifier {
     return source;
   }
 
-  /// The source's "Show under Other" switch (see [ArchiveSource.underOther]).
-  Future<void> setUnderOther(ArchiveSource source, bool on) => _saveSources([
-        for (final s in sources)
-          s.manifestUrl == source.manifestUrl ? s.copyWith(otherChoice: on) : s,
-      ]);
+  /// The source's "Show under Other" switch (see [ArchiveSource.underOther]),
+  /// for this profile only.
+  Future<void> setUnderOther(ArchiveSource source, bool on) =>
+      _setSourcePref(source, 'other', on);
 
-  Future<void> setEnabled(ArchiveSource source, bool on) => _saveSources([
-        for (final s in sources)
-          s.manifestUrl == source.manifestUrl ? s.copyWith(enabled: on) : s,
-      ]);
+  /// Enabled, for this profile only (Remove still removes it for all).
+  Future<void> setEnabled(ArchiveSource source, bool on) =>
+      _setSourcePref(source, 'enabled', on);
 
   Future<void> removeSource(ArchiveSource source) async {
     await _saveSources(
-        sources.where((s) => s.manifestUrl != source.manifestUrl).toList());
+        _storedSources.where((s) => s.manifestUrl != source.manifestUrl).toList());
     _items.removeWhere((k, _) => k.startsWith('${source.key}|'));
     await _cache.deleteSource(source.key);
     _notify();

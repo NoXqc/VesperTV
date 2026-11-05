@@ -56,6 +56,9 @@ class AppConstants {
   static const String keyAddons = 'vesper_addons';
   // Archive tab sources (Stremio-schema catalogs + streams), JSON list.
   static const String keyArchiveSources = 'vesper_archive_sources';
+  // Per viewer: this profile's own Enabled / Show under Other for each
+  // Media Hub source, by manifest URL (absent = the shared source's value).
+  static const String keyArchiveSourcePrefs = 'vesper_archive_source_prefs';
   static const String keyArchiveCinemetaCatalog =
       'vesper_archive_cinemeta_catalog';
 
