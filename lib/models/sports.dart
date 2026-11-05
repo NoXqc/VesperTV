@@ -901,6 +901,15 @@ const List<SportsLeague> kSportsLeagueBank = [
       logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/22.png',
       region: 'Americas',
       soccer: true),
+  SportsLeague(
+      id: 'per.1',
+      espnPath: 'soccer/per.1',
+      homeTags: ['pe'],
+      name: 'Peruvian Liga 1',
+      shortName: 'PER L1',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/1813.png',
+      region: 'Americas',
+      soccer: true),
   // Chile on ESPN (checked 2026-11-02: league with standings, Copa Chile,
   // Supercopa).
   SportsLeague(

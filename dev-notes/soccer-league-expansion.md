@@ -108,3 +108,17 @@ fallback metadata after EFL Trophy becomes a known bank entry.
 - `flutter analyze`: `16 issues found. (ran in 7.8s)` (existing infos only).
 - `flutter test --no-pub --reporter compact`: `00:39 +1229: All tests passed!`
 - No app build, physical-device QA, version bump, push or release.
+
+## Peruvian Liga 1 follow-up (Codex, 2026-11-05)
+
+Added optional `per.1` / `soccer/per.1` under Americas (Football soccer in
+the collapsible bank), using ESPN's name **Peruvian Liga 1**, badge `1813.png`
+and home-channel tag `pe`. Proper competition names follow the existing bank
+convention; saved league choices/defaults remain unchanged.
+
+Live checks: the default scoreboard reports the 2026 Clausura and the next
+fixture, Cusco FC at Atletico Grau on 2026-11-06 20:00 UTC. The 2026 season
+scoreboard returns 306 fixtures; standings returns 18 Clausura teams.
+Sources: [ESPN scoreboard](https://site.api.espn.com/apis/site/v2/sports/soccer/per.1/scoreboard),
+[season fixtures](https://site.api.espn.com/apis/site/v2/sports/soccer/per.1/scoreboard?dates=2026&limit=1000),
+[standings](https://site.api.espn.com/apis/v2/sports/soccer/per.1/standings).

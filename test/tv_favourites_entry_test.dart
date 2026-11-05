@@ -221,6 +221,25 @@ void main() {
     await close(tester);
   });
 
+  testWidgets('Home return respects hidden Live TV after merging Favourites',
+      (tester) async {
+    prefs.setHideLiveTv(true);
+    await open(tester, initialTab: 'Movies');
+    await tester.tap(find.text('Home'));
+    await tester.pumpAndSettle();
+    expect(find.byType(HomeScreen), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'tv-tab-Movies');
+    expect(find.text('TV').hitTestable(), findsNothing);
+    final selected = find.byWidgetPredicate((widget) =>
+        widget.runtimeType.toString() == '_SelectableRow' &&
+        (widget as dynamic).label == 'Movies' &&
+        (widget as dynamic).selected == true);
+    expect(selected, findsOneWidget);
+    await close(tester);
+  });
+
   testWidgets('group hold menu is half width and dismissal keeps the group',
       (tester) async {
     await open(tester);
