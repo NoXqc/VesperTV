@@ -1,3 +1,4 @@
+import '../widgets/glass_menu.dart';
 import '../widgets/detail_trailer.dart';
 import '../services/app_preferences.dart';
 import '../widgets/trailer_button.dart';
@@ -463,10 +464,10 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     if (episodes.isEmpty) return;
     final storage = context.read<StorageService>();
     final watched = !episodes.every((e) => storage.isFullyWatched(e.id));
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showGlassMenu<bool>(
         context: context,
         builder: (ctx) =>
-            SimpleDialog(title: Text(_seasonLabel(season)), children: [
+            GlassMenuDialog(title: Text(_seasonLabel(season)), children: [
               TvDialogOption(
                   autofocus: true,
                   onPressed: () => Navigator.pop(ctx, true),
@@ -505,9 +506,9 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
 
   /// Phone season picker: every season in a scrollable list.
   Future<void> _pickSeason(int current) async {
-    final picked = await showDialog<int>(
+    final picked = await showGlassMenu<int>(
       context: context,
-      builder: (dialogContext) => SimpleDialog(
+      builder: (dialogContext) => GlassMenuDialog(
         title: Text(tr('Seasons')),
         children: [
           for (final x in _seasons)

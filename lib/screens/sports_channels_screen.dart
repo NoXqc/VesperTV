@@ -1,7 +1,7 @@
+import '../widgets/glass_menu.dart';
 import '../utils/refined_finish.dart';
 import 'dart:async';
 import 'dart:io';
-import 'dart:ui' show ImageFilter;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -63,10 +63,10 @@ class _SportsChannelPickerState extends State<SportsChannelPicker> {
   }
 
   Future<void> _tags() async {
-    final kind = await showDialog<String>(
+    final kind = await showGlassMenu<String>(
         context: context,
         builder: (dialog) =>
-            SimpleDialog(title: Text(tr('Edit tags')), children: [
+            GlassMenuDialog(title: Text(tr('Edit tags')), children: [
               for (final key in ['Country', 'Network', 'Sport', 'League'])
                 TvMenuTile(
                     icon: Icons.label,
@@ -75,9 +75,9 @@ class _SportsChannelPickerState extends State<SportsChannelPicker> {
             ]));
     if (kind == null || !mounted) return;
     final controller = TextEditingController();
-    final value = await showDialog<String>(
+    final value = await showGlassMenu<String>(
         context: context,
-        builder: (dialog) => AlertDialog(
+        builder: (dialog) => GlassMenuDialog(
                 title: Text(tr(kind)),
                 content: FocusNodeOwner(
                     builder: (_, node) => TvTextFieldGate(
@@ -344,10 +344,10 @@ Future<Map<String, List<String>>?> showSportsChannelFilters(
       }
     }
   }
-  return showDialog<Map<String, List<String>>>(
+  return showGlassMenu<Map<String, List<String>>>(
       context: context,
       builder: (dialog) => StatefulBuilder(
-          builder: (_, update) => AlertDialog(
+          builder: (_, update) => GlassMenuDialog(
                 title: Text(tr('Filters')),
                 content: SizedBox(
                     width: 600,
@@ -373,7 +373,7 @@ Future<Map<String, List<String>>?> showSportsChannelFilters(
                               }.toList()
                                 ..sort();
                               var query = '';
-                              await showDialog<void>(
+                              await showGlassMenu<void>(
                                   context: dialog,
                                   builder:
                                       (facetDialog) =>
@@ -396,7 +396,7 @@ Future<Map<String, List<String>>?> showSportsChannelFilters(
                                                             .skip(1)
                                                             .join('::')
                                                         : tr(value);
-                                            return AlertDialog(
+                                            return GlassMenuDialog(
                                                 title: Text(tr(dimension)),
                                                 content: SizedBox(
                                                     width: 560,
@@ -568,10 +568,10 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
   Future<void> _edit([SportsChannelList? list]) async {
     bool groupFirst = false;
     if (list == null) {
-      final choice = await showDialog<bool>(
+      final choice = await showGlassMenu<bool>(
           context: context,
           builder: (dialog) =>
-              SimpleDialog(title: Text(tr('Create list')), children: [
+              GlassMenuDialog(title: Text(tr('Create list')), children: [
                 TvMenuTile(
                     icon: Icons.checklist,
                     title: tr('Pick channels myself'),
@@ -634,10 +634,10 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
   }
 
   Future<void> _manage(SportsChannelList list) async {
-    final action = await showDialog<String>(
+    final action = await showGlassMenu<String>(
         context: context,
         builder: (dialog) => SwallowHeldActivate(
-                child: SimpleDialog(title: Text(list.name), children: [
+                child: GlassMenuDialog(title: Text(list.name), children: [
               for (final key in [
                 'Edit list',
                 'Rename list',
@@ -660,9 +660,9 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
       list.name = name;
     } else if (action == 'Move Up / Down') {
       final index = _store.lists.indexOf(list);
-      final target = await showDialog<int>(
+      final target = await showGlassMenu<int>(
           context: context,
-          builder: (dialog) => SimpleDialog(children: [
+          builder: (dialog) => GlassMenuDialog(children: [
                 for (var i = 0; i < _store.lists.length; i++)
                   TvMenuTile(
                       icon: Icons.swap_vert,
@@ -674,9 +674,9 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
         ..removeAt(index)
         ..insert(target, list);
     } else if (action == 'Delete list') {
-      final confirm = await showDialog<bool>(
+      final confirm = await showGlassMenu<bool>(
           context: context,
-          builder: (dialog) => AlertDialog(
+          builder: (dialog) => GlassMenuDialog(
                   title: Text(tr('Delete list')),
                   content: Text(list.name),
                   actions: [
@@ -696,9 +696,9 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
 
   Future<String?> _name(String initial) async {
     final field = TextEditingController(text: initial);
-    final result = await showDialog<String>(
+    final result = await showGlassMenu<String>(
         context: context,
-        builder: (dialog) => AlertDialog(
+        builder: (dialog) => GlassMenuDialog(
                 title: Text(tr('List name')),
                 content: FocusNodeOwner(
                     builder: (_, node) => TvTextFieldGate(
@@ -754,43 +754,46 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
     final epg = context.read<EpgService>();
     final main = _mainOf(g);
     final favorite = _store.favoriteNetworks.contains(g.id);
-    final action = await showDialog<Object>(
+    final action = await showGlassMenu<Object>(
         context: context,
         barrierColor: Colors.black26,
         builder: (dialog) => SwallowHeldActivate(
-                child: _GlassMenu(title: g.name, children: [
-              if (row.list == null)
-                TvMenuTile(
-                    icon: favorite ? Icons.star : Icons.star_outline,
-                    title: favorite
-                        ? tr('Remove from favourite networks')
-                        : tr('Favourite this network'),
-                    onTap: () => Navigator.pop(dialog, 'favorite')),
-              for (final c in g.channels)
-                TvMenuTile(
-                    autofocus: c.id == main.id,
-                    icon: c.id == _preview?.id
-                        ? Icons.play_circle
-                        : Icons.live_tv,
-                    title: c.name,
-                    subtitle: epg.getCurrentProgram(c.epgId)?.title,
-                    onTap: () => Navigator.pop(dialog, c)),
-              for (final list in _store.lists)
-                if (list != row.list)
+                child: GlassMenuDialog(
+                    title: Text(g.name),
+                    maxWidth: 760,
+                    children: [
+                  if (row.list == null)
+                    TvMenuTile(
+                        icon: favorite ? Icons.star : Icons.star_outline,
+                        title: favorite
+                            ? tr('Remove from favourite networks')
+                            : tr('Favourite this network'),
+                        onTap: () => Navigator.pop(dialog, 'favorite')),
+                  for (final c in g.channels)
+                    TvMenuTile(
+                        autofocus: c.id == main.id,
+                        icon: c.id == _preview?.id
+                            ? Icons.play_circle
+                            : Icons.live_tv,
+                        title: c.name,
+                        subtitle: epg.getCurrentProgram(c.epgId)?.title,
+                        onTap: () => Navigator.pop(dialog, c)),
+                  for (final list in _store.lists)
+                    if (list != row.list)
+                      TvMenuTile(
+                          icon: Icons.playlist_add,
+                          title: '${tr('Add to list')} · ${list.name}',
+                          onTap: () => Navigator.pop(dialog, list)),
+                  if (row.list != null)
+                    TvMenuTile(
+                        icon: Icons.edit,
+                        title: tr('Edit list'),
+                        onTap: () => Navigator.pop(dialog, 'manage')),
                   TvMenuTile(
-                      icon: Icons.playlist_add,
-                      title: '${tr('Add to list')} · ${list.name}',
-                      onTap: () => Navigator.pop(dialog, list)),
-              if (row.list != null)
-                TvMenuTile(
-                    icon: Icons.edit,
-                    title: tr('Edit list'),
-                    onTap: () => Navigator.pop(dialog, 'manage')),
-              TvMenuTile(
-                  icon: Icons.add,
-                  title: tr('Create list'),
-                  onTap: () => Navigator.pop(dialog, 'create')),
-            ])));
+                      icon: Icons.add,
+                      title: tr('Create list'),
+                      onTap: () => Navigator.pop(dialog, 'create')),
+                ])));
     if (!mounted || action == null) return;
     if (action is Channel) {
       _store.networkPicks[g.id] = action.id;
@@ -1152,68 +1155,6 @@ class _SportsChannelsScreenState extends State<SportsChannelsScreen> {
               ),
             ),
         ],
-      ),
-    );
-  }
-}
-
-/// The Networks hold menu: a dark, blurred, see-through panel (like the
-/// full-screen player's side panel, a little more opaque) instead of the
-/// theme's flat dialog (owner: "looks bland").
-class _GlassMenu extends StatelessWidget {
-  const _GlassMenu({required this.title, required this.children});
-  final String title;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    final size = MediaQuery.sizeOf(context);
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 48, vertical: 32),
-      child: ConstrainedBox(
-        constraints:
-            BoxConstraints(maxWidth: 760, maxHeight: size.height * 0.8),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(18),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-            child: Material(
-              color: Colors.black.withValues(alpha: 0.74),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-                side: const BorderSide(color: Colors.white12),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
-                    child: Text(title,
-                        style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white)),
-                  ),
-                  const Divider(height: 1, color: Colors.white12),
-                  Flexible(
-                    // Not lazy: autofocus on the picked channel needs it built.
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: children,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }

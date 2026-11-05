@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'hold_to_activate.dart';
+import 'glass_menu.dart';
 
 /// A [SimpleDialogOption] with a visible D-pad selector. The plain one
 /// draws no focus highlight on the TV theme, so a hold-OK menu showed no
@@ -41,19 +42,31 @@ class _TvDialogOptionState extends State<TvDialogOption> {
         autofocus: widget.autofocus,
         onTap: widget.onPressed,
         borderRadius: BorderRadius.circular(10),
-        onFocusChange: (f) => setState(() => _focused = f),
+        onFocusChange: (f) {
+          setState(() => _focused = f);
+          if (f) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && _focused) {
+                Scrollable.ensureVisible(context, alignment: 0.5);
+              }
+            });
+          }
+        },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           padding: widget.padding ??
               const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-          decoration: BoxDecoration(
-            color: _focused ? scheme.primary.withValues(alpha: 0.18) : null,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: _focused ? scheme.primary : Colors.transparent,
-              width: 2,
-            ),
-          ),
+          decoration: GlassMenuSurface.of(context)
+              ? GlassMenuSurface.rowDecoration(context, focused: _focused)
+              : BoxDecoration(
+                  color:
+                      _focused ? scheme.primary.withValues(alpha: 0.18) : null,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: _focused ? scheme.primary : Colors.transparent,
+                    width: 2,
+                  ),
+                ),
           child: DefaultTextStyle.merge(
             style: TextStyle(
               fontWeight: _focused ? FontWeight.w700 : null,

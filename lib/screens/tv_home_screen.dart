@@ -1,3 +1,4 @@
+import '../widgets/glass_menu.dart';
 import '../utils/refined_finish.dart';
 import 'dart:async';
 import 'dart:io';
@@ -448,9 +449,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     final isFavorited = playlist.isGroupFavorited(playlistId, title);
     final isPending = _pendingHideGroups.contains(_groupKey(playlistId, title));
 
-    final choice = await showDialog<String>(
+    final choice = await showGlassMenu<String>(
       context: context,
-      builder: (context) => SimpleDialog(
+      builder: (context) => GlassMenuDialog(
         title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
         children: [
           if (category != null)
@@ -586,9 +587,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// Hold OK on one of the viewer's own groups.
   Future<void> _showMyGroupOptions(String title) async {
     final playlist = context.read<PlaylistManager>();
-    final choice = await showDialog<String>(
+    final choice = await showGlassMenu<String>(
       context: context,
-      builder: (context) => SimpleDialog(
+      builder: (context) => GlassMenuDialog(
         title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
         children: [
           TvDialogOption(
@@ -835,9 +836,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
           ],
         );
 
-    final choice = await showDialog<String>(
+    final choice = await showGlassMenu<String>(
       context: context,
-      builder: (context) => SimpleDialog(
+      builder: (context) => GlassMenuDialog(
         title: Text(channel.name, maxLines: 1, overflow: TextOverflow.ellipsis),
         children: [
           if (inCatchup)
@@ -2904,9 +2905,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   Future<void> _showHistoryPopup() async {
     final channels =
         context.read<PlaybackService>().recentLiveChannels(limit: 10);
-    final picked = await showDialog<Channel>(
+    final picked = await showGlassMenu<Channel>(
       context: context,
-      builder: (dialogContext) => SimpleDialog(
+      builder: (dialogContext) => GlassMenuDialog(
         title: Text(tr('History')),
         children: [
           if (channels.isEmpty)
@@ -2941,12 +2942,12 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// (Settings > General also clears recent searches). Cancel is focused
   /// first so a stray Select can't wipe anything.
   Future<void> _confirmClearChannelHistory() async {
-    final ok = await showDialog<bool>(
+    final ok = await showGlassMenu<bool>(
       context: context,
       // SwallowHeldActivate: the still-held Select's repeats otherwise hit
       // the autofocused Cancel and close this before it's ever seen.
       builder: (dialogContext) => SwallowHeldActivate(
-          child: AlertDialog(
+          child: GlassMenuDialog(
         title: Text(tr('Delete watched history?')),
         content: Text(tr('Removes the History list of live channels.')),
         actions: [
@@ -2973,11 +2974,11 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// (starred items + favourited groups) after a confirm.
   Future<void> _confirmClearFavorites() async {
     final tab = _tab;
-    final ok = await showDialog<bool>(
+    final ok = await showGlassMenu<bool>(
       context: context,
       // Opened by a hold: see _confirmClearChannelHistory.
       builder: (dialogContext) => SwallowHeldActivate(
-          child: AlertDialog(
+          child: GlassMenuDialog(
         title: Text(tr('Clear favourites?')),
         content: Text(tr(
             'Removes every starred item and favourite group from this tab\'s Favourites.')),
@@ -4189,9 +4190,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
 
   Future<void> _showLiveGroupSort() async {
     final prefs = context.read<AppPreferences>();
-    final choice = await showDialog<LiveGroupSort>(
+    final choice = await showGlassMenu<LiveGroupSort>(
       context: context,
-      builder: (context) => SimpleDialog(
+      builder: (context) => GlassMenuDialog(
         title: Text(tr('Sort groups')),
         children: [
           for (final (sort, label) in const [

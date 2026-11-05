@@ -1,3 +1,4 @@
+import '../../widgets/glass_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -225,10 +226,10 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
 
   Future<void> _remove(ArchiveSource source) async {
     final service = context.read<ArchiveService>();
-    final ok = await showDialog<bool>(
+    final ok = await showGlassMenu<bool>(
       context: context,
       builder: (dialogContext) => SwallowHeldActivate(
-          child: AlertDialog(
+          child: GlassMenuDialog(
         title: Text(tr('Remove {name}?', {'name': source.name})),
         actions: [
           TextButton(

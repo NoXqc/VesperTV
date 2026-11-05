@@ -1,3 +1,4 @@
+import '../widgets/glass_menu.dart';
 import '../utils/refined_finish.dart';
 import '../widgets/sports_league_rail.dart';
 import '../widgets/sports_mode_live_panel.dart';
@@ -513,12 +514,11 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     if (choices.isEmpty) return;
     final savedId = _picks.redZoneChannelId;
     final auto = choices.first;
-    final picked = await showDialog<Object>(
+    final picked = await showGlassMenu<Object>(
       context: context,
       // Opened by a hold: drop the held OK's repeats.
       builder: (context) => SwallowHeldActivate(
-        child: AlertDialog(
-          backgroundColor: const Color(0xFF15151A),
+        child: GlassMenuDialog(
           title: Text(tr('NFL RedZone channel')),
           content: SizedBox(
             width: 480,
@@ -1494,7 +1494,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     ];
     matches.sort((a, b) => b.score.compareTo(a.score));
     matches = _picks.orderMatches(matches);
-    final result = await showDialog<_GameAction>(
+    final result = await showGlassMenu<_GameAction>(
       context: context,
       // Opened by a hold too: drop the held OK's repeats (see the widget).
       builder: (_) => SwallowHeldActivate(
@@ -1564,10 +1564,10 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         final found = await _matcher.matchDay([game], _picks, limit: 100000);
         if (!mounted) return;
         final all = found[_gameKey(game)] ?? [];
-        await showDialog<void>(
+        await showGlassMenu<void>(
             context: context,
             builder: (dialog) =>
-                SimpleDialog(title: Text(tr('More sources')), children: [
+                GlassMenuDialog(title: Text(tr('More sources')), children: [
                   SizedBox(
                       width: 600,
                       height: MediaQuery.sizeOf(context).height * 0.65,
@@ -1597,10 +1597,10 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final library = SportsChannelLibrary(
         playlist.visibleChannels(category: 'tv'),
         store: store);
-    final listId = await showDialog<String>(
+    final listId = await showGlassMenu<String>(
         context: context,
         builder: (dialog) =>
-            SimpleDialog(title: Text(tr('Add sources')), children: [
+            GlassMenuDialog(title: Text(tr('Add sources')), children: [
               TvMenuTile(
                   icon: Icons.live_tv,
                   title: tr('Browse all channels'),
@@ -1621,10 +1621,10 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                     list == null ? library.channels : library.members(list),
                 selected: store.sourcesFor(game, _gameKey(game)))));
     if (chosen == null || !mounted) return;
-    final scope = await showDialog<String>(
+    final scope = await showGlassMenu<String>(
         context: context,
         builder: (dialog) =>
-            SimpleDialog(title: Text(tr('Add sources')), children: [
+            GlassMenuDialog(title: Text(tr('Add sources')), children: [
               TvMenuTile(
                   icon: Icons.event,
                   title: tr('This game'),
@@ -1701,7 +1701,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       ),
     );
     if (channel == null || !mounted) return;
-    final scope = await showDialog<_PickScope>(
+    final scope = await showGlassMenu<_PickScope>(
       context: context,
       builder: (_) => _PickScopeDialog(game: game, channel: channel),
     );
@@ -5019,9 +5019,7 @@ class _GameDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final showScore =
         game.state != GameState.pre && !hideScores && !game.isEventOnly;
-    return Dialog(
-      backgroundColor: const Color(0xFF15151A),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+    return GlassMenuDialog.custom(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 560, maxHeight: 520),
         child: Padding(
@@ -5212,8 +5210,7 @@ class _PickScopeDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: const Color(0xFF15151A),
+    return GlassMenuDialog(
       title: Text(tr('Remember this channel?')),
       content: SizedBox(
         width: 460,

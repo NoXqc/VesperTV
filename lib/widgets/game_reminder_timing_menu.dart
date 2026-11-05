@@ -1,3 +1,4 @@
+import 'glass_menu.dart';
 import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
@@ -16,7 +17,7 @@ String gameReminderLeadLabel(int minutes) => switch (minutes) {
 
 Future<int?> showGameReminderTimingMenu(
     BuildContext context, SportsGame game, GameReminders reminders) {
-  return showDialog<int>(
+  return showGlassMenu<int>(
       context: context,
       builder: (context) {
         final selected = reminders.leadMinutesFor(game);
@@ -27,11 +28,9 @@ Future<int?> showGameReminderTimingMenu(
                 .isAfter(reminders.now());
         final focus = available(selected) ? selected : 0;
         return SwallowHeldActivate(
-            child: Dialog(
+            child: GlassMenuDialog.custom(
           alignment: Alignment.centerRight,
           insetPadding: const EdgeInsets.all(20),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           child: ConstrainedBox(
             constraints: BoxConstraints(
                 maxWidth: 390,
