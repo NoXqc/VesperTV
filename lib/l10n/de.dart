@@ -2472,4 +2472,6 @@ const Map<String, String> kDe = {
   "Game reminders and goal alerts while the app is closed":
       "Spielerinnerungen und Torbenachrichtigungen bei geschlossener App",
   "{home} vs {away}": "{home} gegen {away}",
+  "Channels list": "Senderliste",
+  "Stream info": "Stream-Infos",
 };

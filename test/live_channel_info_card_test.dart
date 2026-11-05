@@ -266,4 +266,62 @@ void main() {
     playback.dispose();
     prefs.dispose();
   });
+
+  testWidgets('remote: OK bar, Down options row, Up bar, Back video',
+      (tester) async {
+    tester.view.physicalSize = const Size(1280, 720);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final previous = VideoPlayerPlatform.instance;
+    VideoPlayerPlatform.instance = _Platform();
+    addTearDown(() => VideoPlayerPlatform.instance = previous);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMessageHandler(
+            'dev.flutter.pigeon.wakelock_plus_platform_interface.WakelockPlusApi.toggle',
+            (_) async => const StandardMessageCodec().encodeMessage([null]));
+    final prefs = AppPreferences(storage);
+    await prefs.init();
+    prefs.isTelevision = true;
+    final controller = _Controller();
+    final playback = PlaybackService(storage, playlist)
+      ..controller = controller
+      ..currentChannel = _channel;
+    await tester.pumpWidget(MultiProvider(providers: [
+      Provider<StorageService>.value(value: storage),
+      ChangeNotifierProvider<AppPreferences>.value(value: prefs),
+      ChangeNotifierProvider<PlaylistManager>.value(value: playlist),
+      ChangeNotifierProvider<EpgService>.value(value: epg),
+      ChangeNotifierProvider<PlaybackService>.value(value: playback)
+    ], child: MaterialApp(home: PlayerScreen(channel: _channel))));
+    await tester.pumpAndSettle();
+    Future<void> press(LogicalKeyboardKey key) async {
+      await tester.sendKeyEvent(key);
+      await tester.pumpAndSettle();
+    }
+
+    String? focused() => FocusManager.instance.primaryFocus?.debugLabel;
+    // The options row is built but hidden: its tiles can't take focus.
+    await press(LogicalKeyboardKey.select);
+    expect(focused(), 'player-play');
+    await press(LogicalKeyboardKey.arrowDown);
+    final tile = FocusManager.instance.primaryFocus;
+    expect(tile?.debugLabel, 'labeled-icon-button');
+    expect(find.text('Channels list'), findsOneWidget);
+    await press(LogicalKeyboardKey.arrowUp);
+    expect(focused(), 'player-play');
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(focused(), 'player-root');
+    // Still in the player: Back from the bar only hid it.
+    expect(find.byType(PlayerScreen), findsOneWidget);
+    // 6 s without a key hides an open bar.
+    await press(LogicalKeyboardKey.select);
+    expect(focused(), 'player-play');
+    await tester.pump(const Duration(seconds: 7));
+    await tester.pumpAndSettle();
+    expect(focused(), 'player-root');
+    await tester.pumpWidget(const SizedBox());
+    playback.dispose();
+    prefs.dispose();
+  });
 }

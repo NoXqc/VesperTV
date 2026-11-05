@@ -73,6 +73,13 @@ class PlayerPageRoute<T> extends MaterialPageRoute<T> {
 ///   audio track/linked-channel) — see [_moreVisible].
 /// Both bars auto-hide after inactivity so they can't permanently trap the
 /// D-pad the way the seek bar used to.
+///
+/// **Remote (TV) flow since 2026-11-05 (owner, TiviMate-style):** no top
+/// bar. A: video only — Up/Down change channel on live (Fire Sticks have no
+/// CH+/CH-), OK = B. B: the player bar (focus on Play/Pause) + the channel
+/// info card; Up from the bar reaches the card's Channel schedule, Down = C.
+/// C: the options row ([PlayerControls.optionsRow]) replaces the bar; Up or
+/// Back = B. Back in B = A; 6 s without a key = A. Touch keeps the old bars.
 class PlayerScreen extends StatefulWidget {
   const PlayerScreen({super.key, required this.channel, this.sources});
 
@@ -99,6 +106,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       _topVisible = !locked;
       _bottomVisible = !locked;
       _moreVisible = false;
+      _optionsVisible = false;
       _panelOpen = false;
       _scheduleOpen = false;
       _zapInfoVisible = false;
@@ -125,6 +133,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
   /// collapsed again next time it's revealed.
   bool _moreVisible = false;
   Timer? _hideTimer;
+
+  /// Remote only: the options row (state C), shown instead of the bar.
+  bool _optionsVisible = false;
+  final FocusScopeNode _optionsScope =
+      FocusScopeNode(debugLabel: 'player-options');
+
+  /// The bar button focused when the options row opened (Up returns to it).
+  FocusNode? _barFocusBeforeOptions;
 
   /// Request counter for the independent Media Hub selected-file cue.
   final _fileInfoRequests = ValueNotifier<int>(0);
@@ -221,8 +237,96 @@ class _PlayerScreenState extends State<PlayerScreen> {
       _skipSegment(segment);
       return;
     }
+    if (!_touch) {
+      _openBar();
+      return;
+    }
     _toggleInfoCard();
   }
+
+  /// Remote, state B: the player bar with Play/Pause focused, the channel
+  /// info card above it on live/catch-up, and the Data pool card when that
+  /// setting is on (what OK used to show on its own).
+  void _openBar() {
+    if (_panelOpen || _scheduleOpen) return;
+    final current = _playback.currentChannel ?? widget.channel;
+    if (current.mediaFileInfo != null) _fileInfoRequests.value++;
+    final live = current.isLive || _playback.catchup != null;
+    final dataPool = context.read<AppPreferences>().dataPool;
+    _zapInfoTimer?.cancel();
+    setState(() {
+      _zapInfoVisible = live;
+      _optionsVisible = false;
+      if (dataPool) _dataPoolVisible = true;
+    });
+    if (dataPool) {
+      _dataPoolTimer?.cancel();
+      _dataPoolTimer = Timer(const Duration(seconds: 10), () {
+        if (mounted) setState(() => _dataPoolVisible = false);
+      });
+    }
+    _resetHideTimer();
+    _focusBottomBar();
+  }
+
+  /// Remote, state C: the options row replaces the bar and the info card.
+  void _openOptions() {
+    _barFocusBeforeOptions = FocusManager.instance.primaryFocus;
+    setState(() {
+      _optionsVisible = true;
+      _bottomVisible = false;
+      _zapInfoVisible = false;
+    });
+    _resetHideTimer();
+    // Next frames: the row is ExcludeFocus'd until it's visible, then
+    // land on its first tile.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_optionsVisible) return;
+      _optionsScope.requestFocus();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_optionsVisible) return;
+        if (FocusManager.instance.primaryFocus == _optionsScope) {
+          _optionsScope.nextFocus();
+        }
+      });
+      WidgetsBinding.instance.scheduleFrame();
+    });
+  }
+
+  /// Up / Back from the options row: the bar again, on the button it left.
+  void _closeOptions() {
+    if (!_optionsVisible) return;
+    final current = _playback.currentChannel ?? widget.channel;
+    setState(() {
+      _optionsVisible = false;
+      _bottomVisible = true;
+      _zapInfoVisible = current.isLive || _playback.catchup != null;
+    });
+    _resetHideTimer();
+    final previous = _barFocusBeforeOptions;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (previous != null && previous.context != null) {
+        previous.requestFocus();
+      } else {
+        _focusBottomBar();
+      }
+    });
+  }
+
+  /// Remote, state A or a bar without focus: hide everything, focus the video.
+  void _hideAll() {
+    _hideTimer?.cancel();
+    setState(() {
+      _bottomVisible = false;
+      _optionsVisible = false;
+      _zapInfoVisible = false;
+    });
+    _rootFocus.requestFocus();
+  }
+
+  /// What Up/Down zap from (catch-up zaps from its live channel).
+  bool get _zappable => (_playback.liveChannel ?? widget.channel).isLive;
 
   void _skipSegment(SkipSegment segment) {
     if (_skipFocus.hasFocus) _rootFocus.requestFocus();
@@ -245,6 +349,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       _panelOpen = true;
       _topVisible = false;
       _bottomVisible = false;
+      _optionsVisible = false;
       _moreVisible = false;
     });
   }
@@ -270,6 +375,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   /// Down/Back on the chip: back to the video, the card hides as usual.
   void _leaveScheduleChip() {
+    if (!_touch) {
+      _focusBottomBar();
+      return;
+    }
     _rootFocus.requestFocus();
     _zapInfoTimer?.cancel();
     _zapInfoTimer = Timer(const Duration(seconds: 4), () {
@@ -287,6 +396,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       _dataPoolVisible = false;
       _topVisible = false;
       _bottomVisible = false;
+      _optionsVisible = false;
       _moreVisible = false;
     });
   }
@@ -333,6 +443,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     setState(() {
       _topVisible = false;
       _bottomVisible = false;
+      _optionsVisible = false;
       _moreVisible = false;
     });
     try {
@@ -417,7 +528,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
   /// [_handleUp]/[_handleDown], which don't run during a build themselves.
   bool _hasSwitchButton = false;
 
-  bool get _focusInBar => _topScope.hasFocus || _bottomScope.hasFocus;
+  bool get _focusInBar =>
+      _topScope.hasFocus || _bottomScope.hasFocus || _optionsScope.hasFocus;
 
   /// Search from the player should land on the tab that matches what's
   /// playing — inferred from the Xtream id prefix (see
@@ -476,11 +588,18 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _hideTimer?.cancel();
     _hideTimer = Timer(const Duration(seconds: 6), () {
       if (mounted) {
+        final remoteUi = !_touch && (_bottomVisible || _optionsVisible);
+        final hadFocus = _bottomScope.hasFocus ||
+            _optionsScope.hasFocus ||
+            _scheduleChipFocus.hasFocus;
         setState(() {
           _topVisible = false;
           _bottomVisible = false;
+          _optionsVisible = false;
           _moreVisible = false;
+          if (remoteUi) _zapInfoVisible = false;
         });
+        if (hadFocus) _rootFocus.requestFocus();
         // An auto-hidden pill goes with the bar.
         _onSkipChanged();
       }
@@ -514,7 +633,71 @@ class _PlayerScreenState extends State<PlayerScreen> {
     return false;
   }
 
+  /// Remote Up (see the class doc's flow). Always handles the key.
+  void _remoteUp() {
+    _resetHideTimer();
+    if (_optionsScope.hasFocus) {
+      _closeOptions();
+      return;
+    }
+    if (_scheduleChipFocus.hasFocus ||
+        _skipFocus.hasFocus ||
+        _watchFocus.hasFocus ||
+        _switchButtonFocus.hasFocus) {
+      return;
+    }
+    if (_bottomScope.hasFocus) {
+      if (_tryIntraBarMove(_bottomScope, TraversalDirection.up)) return;
+      if (_skipShowing) {
+        _skipFocus.requestFocus();
+      } else if (_watchOffer != null) {
+        _watchFocus.requestFocus();
+      } else if (_hasSwitchButton) {
+        _switchButtonFocus.requestFocus();
+      } else if (_zapInfoVisible) {
+        _focusScheduleChip();
+      }
+      return;
+    }
+    if (_bottomVisible || _optionsVisible) {
+      _focusBottomBar();
+    } else if (_zappable) {
+      _zapChannel(-1);
+    } else {
+      _openBar();
+    }
+  }
+
+  /// Remote Down (see the class doc's flow). Always handles the key.
+  void _remoteDown() {
+    _resetHideTimer();
+    if (_optionsScope.hasFocus || _skipFocus.hasFocus || _watchFocus.hasFocus) {
+      return;
+    }
+    if (_switchButtonFocus.hasFocus) {
+      _focusBottomBar();
+      return;
+    }
+    if (_bottomScope.hasFocus) {
+      if (!_tryIntraBarMove(_bottomScope, TraversalDirection.down)) {
+        _openOptions();
+      }
+      return;
+    }
+    if (_bottomVisible || _optionsVisible) {
+      _focusBottomBar();
+    } else if (_zappable) {
+      _zapChannel(1);
+    } else {
+      _openBar();
+    }
+  }
+
   void _handleUp() {
+    if (!_touch) {
+      _remoteUp();
+      return;
+    }
     // Info card up: Up reaches its "Channel schedule" chip first.
     if (_zapInfoVisible &&
         !_focusInBar &&
@@ -569,6 +752,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
   /// highlighted: it took a second Down plus Left/Right to see where the
   /// remote was (owner, 2026-10-18).
   void _focusBottomBar() {
+    if (_bottomVisible && _playFocus.context != null) {
+      _playFocus.requestFocus();
+      return;
+    }
     if (!_bottomVisible) setState(() => _bottomVisible = true);
     // Next frame: the bar is ExcludeFocus'd until it's visible.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -582,6 +769,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   void _handleDown() {
+    if (!_touch) {
+      _remoteDown();
+      return;
+    }
     _resetHideTimer();
     if (_switchButtonFocus.hasFocus) {
       _focusBottomBar();
@@ -842,6 +1033,17 @@ class _PlayerScreenState extends State<PlayerScreen> {
   /// 4 s (owner, 2026-10-18); OK again hides it. With Data pool on, its
   /// card too — and on movies/episodes (provider or Media Hub) the Data
   /// pool card alone (owner, 2026-10-21: a user missed VOD stream specs).
+  /// Options row > Stream info: the Data pool card for 10 s (works with the
+  /// Data pool setting off too: it's asked for here).
+  void _showDataPool() {
+    _hideAll();
+    _dataPoolTimer?.cancel();
+    setState(() => _dataPoolVisible = true);
+    _dataPoolTimer = Timer(const Duration(seconds: 10), () {
+      if (mounted) setState(() => _dataPoolVisible = false);
+    });
+  }
+
   void _toggleInfoCard() {
     if (_panelOpen || _scheduleOpen) return;
     final current = _playback.currentChannel ?? widget.channel;
@@ -973,6 +1175,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _scheduleChipFocus.dispose();
     _topScope.dispose();
     _bottomScope.dispose();
+    _optionsScope.dispose();
     _playFocus.dispose();
     _switchButtonFocus.dispose();
     _rootFocus.dispose();
@@ -1047,15 +1250,20 @@ class _PlayerScreenState extends State<PlayerScreen> {
             canPop: !_panelOpen &&
                 !_scheduleOpen &&
                 !_scheduleChipFocus.hasFocus &&
-                !_sourceBackGuard.blocksBack,
+                !_sourceBackGuard.blocksBack &&
+                (_touch || (!_bottomVisible && !_optionsVisible)),
             onPopInvokedWithResult: (didPop, _) {
               if (didPop || touchLocked || _sourceBackGuard.blocksBack) return;
               if (_scheduleOpen) {
                 _closeSchedule();
               } else if (_scheduleChipFocus.hasFocus) {
                 _leaveScheduleChip();
-              } else {
+              } else if (_panelOpen) {
                 _closePanel();
+              } else if (_optionsVisible) {
+                _closeOptions();
+              } else if (!_touch && _bottomVisible) {
+                _hideAll();
               }
             },
             child: Scaffold(
@@ -1136,6 +1344,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 child: Focus(
                   focusNode: _rootFocus,
                   autofocus: true,
+                  // Moving inside the bar or the options row (Left/Right)
+                  // keeps them up; only 6 s without a key hides them.
+                  onKeyEvent: (_, event) {
+                    if (event is! KeyUpEvent &&
+                        (_bottomVisible || _optionsVisible)) {
+                      _resetHideTimer();
+                    }
+                    return KeyEventResult.ignored;
+                  },
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: _revealBottomOnTap,
@@ -1195,12 +1412,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
                             right: 0,
                             // Hidden = not tappable either (an invisible back
                             // button used to still catch taps up there).
+                            // Touch only: on TV its items moved to the
+                            // options row (owner, 2026-11-05).
                             child: IgnorePointer(
-                              ignoring: !_topVisible,
+                              ignoring: !_topVisible || !_touch,
                               child: ExcludeFocus(
-                                excluding: !_topVisible,
+                                excluding: !_topVisible || !_touch,
                                 child: AnimatedOpacity(
-                                  opacity: _topVisible ? 1 : 0,
+                                  opacity: _topVisible && _touch ? 1 : 0,
                                   duration: const Duration(milliseconds: 200),
                                   child: FocusTraversalGroup(
                                     child: FocusScope(
@@ -1407,10 +1626,103 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                         onToggleMore: () => setState(
                                             () => _moreVisible = !_moreVisible),
                                         playFocusNode: _playFocus,
+                                        showActions: _touch,
                                         onOpenMultiview: channel.isLive &&
                                                 !prefs.hideMultiview
                                             ? () => _openMultiview(channel)
                                             : null,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                          // Remote: the options row (Down from the bar),
+                          // shown instead of the bar.
+                          if (controller != null && !_touch)
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              child: IgnorePointer(
+                                ignoring: !_optionsVisible,
+                                child: ExcludeFocus(
+                                  excluding: !_optionsVisible,
+                                  child: AnimatedOpacity(
+                                    opacity: _optionsVisible ? 1 : 0,
+                                    duration: const Duration(milliseconds: 200),
+                                    child: FocusTraversalGroup(
+                                      child: FocusScope(
+                                        node: _optionsScope,
+                                        child: PlayerControls(
+                                          optionsRow: true,
+                                          insetForSystemBars: true,
+                                          controller: controller,
+                                          title: channel.name,
+                                          channelId: channel.epgId,
+                                          isLive: channel.isLive,
+                                          channel: channel,
+                                          linkedChannel: linkedChannel,
+                                          onActivity: _resetHideTimer,
+                                          onToggleMore: () {},
+                                          onOpenMultiview: channel.isLive &&
+                                                  !prefs.hideMultiview
+                                              ? () => _openMultiview(channel)
+                                              : null,
+                                          leadingOptions: [
+                                            if (channel.isLive ||
+                                                playback.catchup != null) ...[
+                                              PlayerOption(
+                                                icon: Icons.list,
+                                                label: tr('Channels list'),
+                                                onPressed: _openPanel,
+                                              ),
+                                              PlayerOption(
+                                                icon: Icons.calendar_month,
+                                                label: tr('Channel schedule'),
+                                                onPressed: _openSchedule,
+                                              ),
+                                            ],
+                                          ],
+                                          trailingOptions: [
+                                            if (widget.sources != null)
+                                              PlayerOption(
+                                                icon: Icons.swap_horiz,
+                                                label: tr('Sources'),
+                                                onPressed: _openSources,
+                                              ),
+                                            PlayerOption(
+                                              icon: Icons.analytics_outlined,
+                                              label: tr('Stream info'),
+                                              onPressed: _showDataPool,
+                                            ),
+                                            PlayerOption(
+                                              icon: prefs.videoFill
+                                                  ? Icons.fullscreen_exit
+                                                  : Icons.fullscreen,
+                                              label: prefs.videoFill
+                                                  ? tr('Fit to screen')
+                                                  : tr('Fill screen'),
+                                              onPressed: _toggleImmersive,
+                                            ),
+                                            PlayerOption(
+                                              icon: Icons.search,
+                                              label: tr('Search'),
+                                              onPressed: () {
+                                                _hideAll();
+                                                Navigator.of(context).push(
+                                                  MaterialPageRoute(
+                                                    builder: (_) =>
+                                                        SearchScreen(
+                                                            initialScope:
+                                                                _searchScope),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),

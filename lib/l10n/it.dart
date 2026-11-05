@@ -2576,4 +2576,6 @@ const Map<String, String> kIt = {
   "Game reminders and goal alerts while the app is closed":
       "Promemoria partite e avvisi gol quando l’app è chiusa",
   "{home} vs {away}": "{home} contro {away}",
+  "Channels list": "Elenco canali",
+  "Stream info": "Info stream",
 };

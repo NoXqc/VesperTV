@@ -2569,4 +2569,6 @@ const Map<String, String> kEs = {
   "Game reminders and goal alerts while the app is closed":
       "Recordatorios de partidos y alertas de goles con la aplicación cerrada",
   "{home} vs {away}": "{home} vs {away}",
+  "Channels list": "Lista de canales",
+  "Stream info": "Info del stream",
 };

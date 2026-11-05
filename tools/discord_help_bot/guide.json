@@ -208,18 +208,26 @@
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },
   {
-    "id": "6d16610d9ad9e6d3",
+    "id": "085dd54ff0bc126e",
     "category": "Full screen",
-    "title": "Info card",
-    "answer": "What's on now and next, with a gold tag naming the channel's playlist. With Settings › Playback › Data pool on, a second card shows resolution, fps, codecs and bitrate.",
-    "controls": "OK LIVE",
+    "title": "Player bar + info card",
+    "answer": "OK opens the player bar with Play/Pause selected (clock, transport, favourite). On a live channel the info card shows above it: what's on now and next, with a gold tag naming the channel's playlist. With Settings › Playback › Data pool on, the stream details card opens too. Six seconds without a key hides everything; Back hides it at once.",
+    "controls": "OK",
+    "url": "https://vespertv.app/remote.html#Full%20screen"
+  },
+  {
+    "id": "896ce8024773d362",
+    "category": "Full screen",
+    "title": "Change channel with the arrows",
+    "answer": "With nothing on screen, Up and Down change channel like CH+ / CH− (handy on Fire TV remotes, which have no channel buttons). On movies and episodes they open the player bar.",
+    "controls": "▲ ▼ LIVE · TV",
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },
   {
     "id": "92145e3cf74489fc",
     "category": "Full screen",
     "title": "Channel schedule",
-    "answer": "With the info card up, Up highlights Channel schedule and OK opens the channel's programmes on the left, on the show playing. Rewind / Fast-forward on the remote jump a screenful. OK on a past show with catch-up watches it from the start; OK on the show on now goes back to live. OK on an upcoming show opens Remind me / Record. Reminders appear five minutes before and at the start while VesperTV is open; they never change the channel. Record uses the guide start and end times and can run while the app is closed (leave the box powered). Reopen the upcoming show to cancel, or manage recordings in Recordings. Back returns to the selected programme.",
+    "answer": "With the player bar and info card up, Up highlights Channel schedule and OK opens the channel's programmes on the left, on the show playing. Rewind / Fast-forward on the remote jump a screenful. OK on a past show with catch-up watches it from the start; OK on the show on now goes back to live. OK on an upcoming show opens Remind me / Record. Reminders appear five minutes before and at the start while VesperTV is open; they never change the channel. Record uses the guide start and end times and can run while the app is closed (leave the box powered). Reopen the upcoming show to cancel, or manage recordings in Recordings. Back returns to the selected programme.",
     "controls": "OK ▲ OK LIVE · ANDROID",
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },
@@ -240,11 +248,19 @@
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },
   {
-    "id": "631313a545b6fb65",
+    "id": "5f71da8ddda39a6a",
     "category": "Full screen",
-    "title": "Player bar",
-    "answer": "Opens the bar with Play/Pause already selected: audio track, subtitles, Multiview and more are on the same row.",
-    "controls": "↓",
+    "title": "More options",
+    "answer": "Down from the player bar swaps it for a row of options: Channels list, Channel schedule, Recall, Watch from the start, Reload channel, Audio track, Subtitles, Audio sync, linked channel, Multiview, Sources, Stream info, Fill screen and Search. Left / Right move along it, OK picks one, Up or Back returns to the player bar. Phones keep these buttons in the player bar.",
+    "controls": "OK then ▼ TV",
+    "url": "https://vespertv.app/remote.html#Full%20screen"
+  },
+  {
+    "id": "e00cfc92c6e8de46",
+    "category": "Full screen",
+    "title": "Audio sync (audio delay)",
+    "answer": "If the sound is ahead of or behind the picture, open Audio sync and press Right (sound later) or Left (sound earlier) in 25 ms steps; it changes as you press, so line it up by eye, then OK. Also in Settings › Playback › Audio › Audio delay. Applies to this device, every channel.",
+    "controls": "Options row: Audio sync ANDROID",
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },
   {
@@ -291,7 +307,7 @@
     "id": "ee9e6c9cd3e66fc3",
     "category": "Full screen",
     "title": "Leave full screen",
-    "answer": "With the side panel open, Back closes the panel first.",
+    "answer": "With the side panel open, Back closes the panel first. On TV, Back first hides the player bar or the options row.",
     "controls": "Back",
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },

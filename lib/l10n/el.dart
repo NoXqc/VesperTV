@@ -2531,4 +2531,6 @@ const Map<String, String> kEl = {
   "Game reminders and goal alerts while the app is closed":
       "Υπενθυμίσεις αγώνων και ειδοποιήσεις γκολ με κλειστή την εφαρμογή",
   "{home} vs {away}": "{home} εναντίον {away}",
+  "Channels list": "Λίστα καναλιών",
+  "Stream info": "Πληροφορίες ροής",
 };

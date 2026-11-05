@@ -2582,4 +2582,6 @@ const Map<String, String> kFr = {
   "Game reminders and goal alerts while the app is closed":
       "Rappels de matchs et alertes de buts quand l’application est fermée",
   "{home} vs {away}": "{home} contre {away}",
+  "Channels list": "Liste des chaînes",
+  "Stream info": "Infos du flux",
 };

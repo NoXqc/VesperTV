@@ -443,6 +443,10 @@ class PlayerControls extends StatelessWidget {
     this.onToggleMore,
     this.onOpenMultiview,
     this.playFocusNode,
+    this.showActions = true,
+    this.optionsRow = false,
+    this.leadingOptions = const [],
+    this.trailingOptions = const [],
     this.insetForSystemBars = false,
   });
 
@@ -545,6 +549,17 @@ class PlayerControls extends StatelessWidget {
   /// when the bar opens (PlayerScreen._focusBottomBar).
   final FocusNode? playFocusNode;
 
+  /// False: the bar keeps only the transport (TV: the actions live in the
+  /// options row instead, owner 2026-11-05).
+  final bool showActions;
+
+  /// Build the TV options row (big tiles) instead of the bar.
+  final bool optionsRow;
+
+  /// Options-row items before / after the bar's own actions.
+  final List<PlayerOption> leadingOptions;
+  final List<PlayerOption> trailingOptions;
+
   String _formatDuration(Duration d) {
     final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
@@ -552,8 +567,156 @@ class PlayerControls extends StatelessWidget {
     return hours > 0 ? '$hours:$minutes:$seconds' : '$minutes:$seconds';
   }
 
+  /// Recall, Watch from the start, Reload, tracks, Audio sync, linked
+  /// channel, Multiview: in the bar on phones, in the options row on TV.
+  List<Widget> _actionButtons(
+      BuildContext context, PlaybackService? playback) {
+    int? audioDelay;
+    try {
+      audioDelay = context.watch<AppPreferences>().audioDelayMs;
+    } on ProviderNotFoundException {
+      audioDelay = null;
+    }
+    return [
+      if (isLive && channel != null)
+        _LabeledIconButton(
+          icon: Icons.history,
+          label:
+              tr('Recall — go back to a recent channel'),
+          onPressed: () {
+            onActivity?.call();
+            showRecallPicker(context, channel!);
+          },
+        ),
+      // Start over: the programme on now, from
+      // its start (catch-up channels only).
+      if (isLive &&
+          channel != null &&
+          channel!.hasCatchup)
+        _LabeledIconButton(
+          icon: Icons.restart_alt,
+          label: tr('Watch from the start'),
+          onPressed: () {
+            onActivity?.call();
+            final now = context
+                .read<EpgService>()
+                .getCurrentProgram(channel!.epgId);
+            if (now != null) {
+              playback?.playCatchup(channel!, now.start);
+            }
+          },
+        ),
+      // Manual recovery for a channel that's silently
+      // stalled (frozen frame, no spinner, no error) — see
+      // PlaybackService.reloadCurrentChannel's doc comment
+      // for why this is a manual button rather than an
+      // automatic watchdog. Live only, same gating as Recall
+      // above.
+      if (isLive && channel != null)
+        _LabeledIconButton(
+          icon: Icons.refresh,
+          label: tr('Reload channel'),
+          onPressed: () {
+            onActivity?.call();
+            context
+                .read<PlaybackService>()
+                .reloadCurrentChannel();
+          },
+        ),
+      // Keyed by stream: the bar stays mounted
+      // across zaps (and a native live zap
+      // keeps the controller), so without a
+      // new key the track lists were read
+      // once per player screen and a later
+      // channel's audio tracks never showed
+      // (CBC Montreal described-video track,
+      // owner 2026-10-26).
+      _AudioTrackButton(
+          key: ValueKey(Object.hash(
+              'audio', controller, channel?.id)),
+          controller: controller),
+      _SubtitleButton(
+          key: ValueKey(Object.hash(
+              'subs', controller, channel?.id)),
+          controller: controller),
+      // Every stream, not only multi-track ones: the
+      // sound can be off on any channel (Shield +
+      // soundbar user, 2026-11-05).
+      _LabeledIconButton(
+        icon: Icons.av_timer,
+        label: tr('Audio sync'),
+        detail: audioDelay == null || audioDelay == 0
+            ? null
+            : '${audioDelay > 0 ? '+' : '-'}${audioDelay.abs()} ms',
+        onPressed: () {
+          onActivity?.call();
+          showAudioDelayAdjuster(context);
+        },
+      ),
+      if (linkedChannel != null)
+        _LinkedChannelButton(
+            linkedChannel: linkedChannel!),
+      if (isLive && onOpenMultiview != null)
+        _LabeledIconButton(
+          icon: Icons.grid_view,
+          label: tr('Open in Multiview'),
+          onPressed: () {
+            onActivity?.call();
+            onOpenMultiview!();
+          },
+        ),
+    ];
+  }
+
+  /// The TV options row (Down from the player bar): the caller's own
+  /// items around the bar's actions, as big icon + label tiles.
+  Widget _buildOptionsRow(BuildContext context) {
+    PlaybackService? playback;
+    try {
+      playback = context.watch<PlaybackService>();
+    } on ProviderNotFoundException {
+      playback = null;
+    }
+    final inset = insetForSystemBars
+        ? MediaQuery.viewPaddingOf(context)
+        : EdgeInsets.zero;
+    Widget option(PlayerOption o) => _LabeledIconButton(
+        icon: o.icon,
+        label: o.label,
+        detail: o.detail,
+        onPressed: () {
+          onActivity?.call();
+          o.onPressed();
+        });
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.bottomCenter,
+          end: Alignment.topCenter,
+          colors: [Color(0xE6000000), Color(0x00000000)],
+        ),
+      ),
+      padding: EdgeInsets.fromLTRB(
+          24 + inset.left, 40, 24 + inset.right, 20 + inset.bottom),
+      child: _OptionTiles(
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final o in leadingOptions) option(o),
+              ..._actionButtons(context, playback),
+              for (final o in trailingOptions) option(o),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (optionsRow) return _buildOptionsRow(context);
     final inset = insetForSystemBars
         ? MediaQuery.viewPaddingOf(context)
         : EdgeInsets.zero;
@@ -720,92 +883,10 @@ class PlayerControls extends StatelessWidget {
                             ),
                           if (catchup != null)
                             ..._catchupTrailing(context, playback!, catchup),
-                          if (onToggleMore != null) ...[
-                            if (isLive && channel != null)
-                              _LabeledIconButton(
-                                icon: Icons.history,
-                                label:
-                                    tr('Recall — go back to a recent channel'),
-                                onPressed: () {
-                                  onActivity?.call();
-                                  showRecallPicker(context, channel!);
-                                },
-                              ),
-                            // Start over: the programme on now, from
-                            // its start (catch-up channels only).
-                            if (isLive &&
-                                channel != null &&
-                                channel!.hasCatchup)
-                              _LabeledIconButton(
-                                icon: Icons.restart_alt,
-                                label: tr('Watch from the start'),
-                                onPressed: () {
-                                  onActivity?.call();
-                                  final now = context
-                                      .read<EpgService>()
-                                      .getCurrentProgram(channel!.epgId);
-                                  if (now != null) {
-                                    playback?.playCatchup(channel!, now.start);
-                                  }
-                                },
-                              ),
-                            // Manual recovery for a channel that's silently
-                            // stalled (frozen frame, no spinner, no error) — see
-                            // PlaybackService.reloadCurrentChannel's doc comment
-                            // for why this is a manual button rather than an
-                            // automatic watchdog. Live only, same gating as Recall
-                            // above.
-                            if (isLive && channel != null)
-                              _LabeledIconButton(
-                                icon: Icons.refresh,
-                                label: tr('Reload channel'),
-                                onPressed: () {
-                                  onActivity?.call();
-                                  context
-                                      .read<PlaybackService>()
-                                      .reloadCurrentChannel();
-                                },
-                              ),
-                            // Keyed by stream: the bar stays mounted
-                            // across zaps (and a native live zap
-                            // keeps the controller), so without a
-                            // new key the track lists were read
-                            // once per player screen and a later
-                            // channel's audio tracks never showed
-                            // (CBC Montreal described-video track,
-                            // owner 2026-10-26).
-                            _AudioTrackButton(
-                                key: ValueKey(Object.hash(
-                                    'audio', controller, channel?.id)),
-                                controller: controller),
-                            _SubtitleButton(
-                                key: ValueKey(Object.hash(
-                                    'subs', controller, channel?.id)),
-                                controller: controller),
-                            // Every stream, not only multi-track ones: the
-                            // sound can be off on any channel (Shield +
-                            // soundbar user, 2026-11-05).
-                            _LabeledIconButton(
-                              icon: Icons.av_timer,
-                              label: tr('Audio sync'),
-                              onPressed: () {
-                                onActivity?.call();
-                                showAudioDelayAdjuster(context);
-                              },
-                            ),
-                            if (linkedChannel != null)
-                              _LinkedChannelButton(
-                                  linkedChannel: linkedChannel!),
-                            if (isLive && onOpenMultiview != null)
-                              _LabeledIconButton(
-                                icon: Icons.grid_view,
-                                label: tr('Open in Multiview'),
-                                onPressed: () {
-                                  onActivity?.call();
-                                  onOpenMultiview!();
-                                },
-                              ),
-                          ],
+                          // Phones keep them here; the TV remote reaches
+                          // them in the options row (Down from the bar).
+                          if (onToggleMore != null && showActions)
+                            ..._actionButtons(context, playback),
                         ],
                       ),
                     ),
@@ -1914,13 +1995,46 @@ class _LinkedChannelButton extends StatelessWidget {
 /// what this icon does" for every *other* button in it — this is now
 /// shared by all of them (Recall, Reload, audio track, linked-channel)
 /// instead of leaving one explained and the rest bare.
+/// One tile of the TV options row that the player screen adds itself
+/// (Channels list, Channel schedule, Sources, Fill, Data pool, Search).
+class PlayerOption {
+  const PlayerOption(
+      {required this.icon,
+      required this.label,
+      required this.onPressed,
+      this.detail});
+
+  final IconData icon;
+  final String label;
+  final String? detail;
+  final VoidCallback onPressed;
+}
+
+/// Under the options row, [_LabeledIconButton]s draw as big tiles (icon
+/// over a label, TiviMate-style) instead of the bar's icon + hover label.
+class _OptionTiles extends InheritedWidget {
+  const _OptionTiles({required super.child});
+
+  static bool of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_OptionTiles>() != null;
+
+  @override
+  bool updateShouldNotify(_OptionTiles oldWidget) => false;
+}
+
 class _LabeledIconButton extends StatefulWidget {
   const _LabeledIconButton(
-      {required this.icon, required this.label, required this.onPressed});
+      {required this.icon,
+      required this.label,
+      required this.onPressed,
+      this.detail});
 
   final IconData icon;
   final String label;
   final VoidCallback onPressed;
+
+  /// Second line under the label in the options row (e.g. "+150 ms").
+  final String? detail;
 
   @override
   State<_LabeledIconButton> createState() => _LabeledIconButtonState();
@@ -1952,8 +2066,60 @@ class _LabeledIconButtonState extends State<_LabeledIconButton> {
     super.dispose();
   }
 
+  Widget _buildTile(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: InkWell(
+        focusNode: _focusNode,
+        onTap: widget.onPressed,
+        borderRadius: BorderRadius.circular(10),
+        focusColor: Colors.transparent,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          width: 116,
+          height: 96,
+          padding: const EdgeInsets.fromLTRB(6, 10, 6, 6),
+          decoration: BoxDecoration(
+            color: _focused
+                ? accent.withValues(alpha: 0.22)
+                : Colors.white.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+                color: _focused ? accent : Colors.transparent, width: 2),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(widget.icon,
+                  color: _focused ? accent : Colors.white, size: 30),
+              const SizedBox(height: 6),
+              Text(
+                widget.label,
+                maxLines: widget.detail == null ? 2 : 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: _focused ? Colors.white : Colors.white70,
+                    fontSize: 12,
+                    height: 1.15,
+                    fontWeight: FontWeight.w500),
+              ),
+              if (widget.detail case final detail?)
+                Text(detail,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: accent, fontSize: 12)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_OptionTiles.of(context)) return _buildTile(context);
     // Stack, not a Column — a Column makes the label a real sibling of
     // the icon, growing (and visibly shifting) the whole row every time a
     // label appears, confirmed directly on real hardware the first time
