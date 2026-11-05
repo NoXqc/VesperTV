@@ -179,3 +179,33 @@ dark -> backdrop without a poster flash (`_focusedArtPending`).
   bar, before Newest and catalog jumps, with matching explicit Left/Right order.
   The phone Menu list also starts with genres. Up from the first content row still
   returns to that row's jump button; existing filter behavior is unchanged.
+
+- **Rail navigation (Codex, 2026-11-05, Sony Bravia Google TV report):** the
+  wide sidebar now owns stable nodes for each visible entry and explicit
+  Up/Down/Left/Right shortcuts. Top/bottom stay on visible entries; Left stays
+  in the sidebar; Right enters the remembered title row (or empty-state action).
+  The old plain key-handler Focus could itself receive directional focus: a
+  regression reproduced Down past the final entry focusing an invisible box.
+  CallbackShortcuts removes that stop and handles repeats; minimum reveal scroll
+  keeps entries visible on short TV viewports with large text. The existing
+  delayed _focusRow handoff now explicitly schedules a frame: Right from an
+  idle sidebar otherwise queued a callback without causing a frame.
+  Tests cover boundaries, repeats, no Search, short/large text, row/top-bar
+  returns and empty-content entry. Actual Bravia acceptance remains pending;
+  the exact device-specific trigger for the owner's initial stuck state has
+  not been reproduced on hardware. No version bump/build/install in this fix.
+
+- **Poster browsing (Codex, 2026-11-05, owner Nuvio comparison):** TV/desktop
+  rows (width >= 700) scroll with each focused selection, anchored at the left
+  padding until the natural end-of-row clamp. Narrow layouts keep minimal reveal.
+  Hero metadata still changes immediately; the focused card stays portrait until
+  three seconds on that same title, then expands when a backdrop is available.
+  Movement, row/bar/rail changes, route coverage and app backgrounding cancel the
+  dwell; returning starts a fresh three seconds. Revalidate type, row, index,
+  title identity and actual focus before expanding, including after refresh.
+  Keep `itemExtentBuilder` throughout; reconcile the scroll after expansion or
+  collapse without replacing the sliver or losing the sparse lazy focus nodes.
+  `archive_wide_card_test.dart` covers the leading anchor, exact dwell timing,
+  cancellation/return, refreshed identity, portrait layout and end-of-row clamp;
+  existing large-catalog and rail regressions also pass. Hardware acceptance
+  remains pending. No APK build/install or version bump in this change.
