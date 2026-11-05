@@ -486,9 +486,6 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
     return exoPlayer;
   }
 
-  // TODO: Migrate to stable API, see https://github.com/flutter/flutter/issues/147039.
-  @UnstableApi
-  @Override
   /**
    * VesperTV: the audio track's codec for Dart. A .ts stream has no codecs
    * string, so fall back to the sample MIME type; Dolby Atmos (E-AC-3 JOC,
@@ -502,6 +499,9 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
     return format.sampleMimeType;
   }
 
+  // TODO: Migrate to stable API, see https://github.com/flutter/flutter/issues/147039.
+  @UnstableApi
+  @Override
   public @NonNull NativeAudioTrackData getAudioTracks() {
     List<ExoPlayerAudioTrackData> audioTracks = new ArrayList<>();
 
