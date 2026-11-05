@@ -2482,4 +2482,7 @@ const Map<String, String> kFr = {
       "La réinitialisation du code de synchronisation supprime toutes vos données chiffrées du serveur. Tous les autres appareils cessent la synchronisation et doivent être réassociés avec un nouveau code. Conservez le nouveau code de récupération.",
   "This code works for one device, once. Create a new code to link another device.":
       "Ce code fonctionne une seule fois, pour un seul appareil. Créez un nouveau code pour associer un autre appareil.",
+  "Guide transparency": "Transparence du guide",
+  "{percent}%": "{percent} %",
+  "0% is solid; 100% is clear.": "0 % est opaque ; 100 % est transparent.",
 };

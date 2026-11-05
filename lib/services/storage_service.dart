@@ -773,6 +773,14 @@ class StorageService {
   Future<void> setGuideFullVideo(bool value) =>
       _prefs.setBool(AppConstants.keyGuideFullVideo, value);
 
+  /// Device-only percentage: 45 preserves the original 55% dark background.
+  int getGuideTransparency() =>
+      (_prefs.getInt(AppConstants.keyGuideTransparency) ?? 45)
+          .clamp(0, 100)
+          .toInt();
+  Future<void> setGuideTransparency(int value) => _prefs.setInt(
+      AppConstants.keyGuideTransparency, value.clamp(0, 100).toInt());
+
   bool getAutoTrailers() =>
       _prefs.getBool(AppConstants.keyAutoTrailers) ?? false;
   Future<void> setAutoTrailers(bool value) =>

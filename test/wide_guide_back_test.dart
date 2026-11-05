@@ -201,6 +201,39 @@ void main() {
     expect(tester.takeException(), isNull);
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
+  testWidgets('guide transparency updates backgrounds without replacing focus',
+      (tester) async {
+    await pumpHome(tester, const Size(1280, 720),
+        television: true, refined: true);
+    final tabs = find
+        .byWidgetPredicate((w) => w.runtimeType.toString() == '_SelectableRow')
+        .first;
+    final state = tester.state(tabs);
+    final focus = FocusManager.instance.primaryFocus;
+    final prefs =
+        tester.element(find.byType(TvHomeScreen)).read<AppPreferences>();
+    final scrims = find.byWidgetPredicate(
+        (w) => w is DecoratedBox && w.child is RefinedFinishBackdrop);
+    expect(scrims, findsAtLeast(2));
+
+    void verify(double alpha) {
+      for (final box in tester.widgetList<DecoratedBox>(scrims)) {
+        expect((box.decoration as BoxDecoration).color!.a,
+            closeTo(alpha, 0.00001));
+      }
+      expect(tester.state(tabs), same(state));
+      expect(FocusManager.instance.primaryFocus, same(focus));
+    }
+
+    verify(0.55);
+    for (final percent in [75, 0, 100]) {
+      prefs.setGuideTransparency(percent);
+      await tester.pumpAndSettle();
+      verify(1 - percent / 100);
+    }
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
   testWidgets(
       'picking an unbuilt movie group materializes and focuses its poster',
       (tester) async {

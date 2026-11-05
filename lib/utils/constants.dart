@@ -116,7 +116,8 @@ class AppConstants {
 
   /// Device-only: a failing channel may switch to the same channel in
   /// another playlist (after its own copies). On unless turned off.
-  static const String keyCrossPlaylistFallback = 'vesper_cross_playlist_fallback';
+  static const String keyCrossPlaylistFallback =
+      'vesper_cross_playlist_fallback';
 
   /// Device-only: "Combine playlists" — a channel already shown by a
   /// higher playlist is hidden in the lower ones (kept as a fallback).
@@ -453,6 +454,7 @@ class AppConstants {
   /// Timeline guide only: the live video fills the whole screen behind a
   /// translucent guide (and a 3-row grid) instead of the small corner box.
   static const String keyGuideFullVideo = 'vesper_guide_full_video';
+  static const String keyGuideTransparency = 'vesper_guide_transparency';
 
   static const String keyGuideExpanded = 'vesper_guide_expanded';
   static const String keyGuideCompact = 'vesper_guide_compact';
