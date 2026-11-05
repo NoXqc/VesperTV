@@ -114,7 +114,7 @@ Kotlin Android TV app (fork of OwnTV, GPL-3.0 like us), files under
 - **Built (1.0.7+235): League manager** — `screens/sports_league_manager_screen.dart`, opened by
   the Edit leagues chip. "Your leagues" = 13 base (`kSportsLeagues`, hide only) + added bank
   leagues (OK = show/hide, hold = send back to the bank); "League bank" = `kSportsLeagueBank`
-  (63, grouped by `region`, `kSportsLeagueRegions`), OK = add + show. Two columns with explicit
+  (now grouped into collapsible sports; see below), OK = add + show. Two columns with explicit
   Left/Right on TV, one list on phones. Stored per viewer: `vesper_sports_added_leagues` +
   the existing shown/order list. `SportsLeague.hasStandings=false` (cups) keeps a league out of
   Standings. Empty day with one league selected → `SportsService.nextGameStart` (dateless
@@ -174,8 +174,28 @@ NASCAR Cup `racing/nascar-premier`, IndyCar `racing/irl`). Parsing in `sports_se
   Arena/taping times can differ from broadcast times; provider timings are not independently
   verified against TV schedules. Horse racing remains unimplemented.
 - Lazy-list focus gotcha (fixed twice here): `requestFocus` on a chip/tile that a lazy `ListView`
-  hasn't built does nothing — League manager `_bank` is now in screen (region) order; the Sports
-  league chip row is a `SingleChildScrollView` + `ensureVisible`.
+  hasn't built does nothing. The League manager and Sports league chip row use
+  `SingleChildScrollView` + `ensureVisible` so every visible navigation target is mounted.
+
+### League bank by sport (cdx, 2026-11-05)
+
+- Active leagues remain on the left; the bank on the right starts with collapsed sport
+  sections (one combined list on phones). Football 🏈 and Football ⚽ are separate;
+  hockey, basketball, baseball, golf, fighting, motorsport, tennis, rugby, cricket,
+  darts, volleyball and Australian football each have their own section.
+- Group by `SportsLeague.sport`, combining rugby union/league and MMA/boxing/wrestling.
+  College leagues follow their sport; region metadata and saved league IDs stay intact.
+- `_bankRows` defines the visible header/expanded-league order. Explicit Up/Down
+  uses that order, reveals the focused row immediately and works beyond either end
+  of the viewport. Left/Right retains each column's last focus. Sections keep their
+  expanded state while adding leagues; collapsed rows are not focus targets.
+- Adding a league focuses the next surviving bank row, then the preceding one if
+  needed. Adding the last entry removes its empty sport heading; exhausting the
+  entire bank follows the added league to the left. Membership/order/favourites
+  and existing show/hide/hold actions use the same storage paths.
+- `test/sports_league_manager_test.dart` covers exact bank membership, long soccer
+  traversal both ways, lower section expansion, larger text, column return, adding
+  leagues and phone navigation. Physical Formuler check follows the requested build.
 
 ## CFL (2026-10-21)
 - CFL is a **base league** beside NFL (`kSportsLeagues`, also in the new-install defaults),

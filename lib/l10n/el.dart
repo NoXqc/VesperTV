@@ -2434,4 +2434,20 @@ const Map<String, String> kEl = {
   "Guide transparency": "Διαφάνεια οδηγού",
   "{percent}%": "{percent}%",
   "0% is solid; 100% is clear.": "0% είναι αδιαφανές· 100% είναι διαφανές.",
+
+  // Collapsible league bank sports.
+  "Football 🏈": "Αμερικανικό ποδόσφαιρο 🏈",
+  "Football ⚽": "Ποδόσφαιρο ⚽",
+  "Hockey 🏒": "Χόκεϊ 🏒",
+  "Basketball 🏀": "Μπάσκετ 🏀",
+  "Baseball ⚾": "Μπέιζμπολ ⚾",
+  "Golf ⛳": "Γκολφ ⛳",
+  "Fighting 🥊": "Μαχητικά αθλήματα 🥊",
+  "Motorsport 🏎️": "Μηχανοκίνητος αθλητισμός 🏎️",
+  "Tennis 🎾": "Τένις 🎾",
+  "Rugby 🏉": "Ράγκμπι 🏉",
+  "Cricket 🏏": "Κρίκετ 🏏",
+  "Darts 🎯": "Βελάκια 🎯",
+  "Volleyball 🏐": "Βόλεϊ 🏐",
+  "Australian football 🏉": "Αυστραλιανό ποδόσφαιρο 🏉",
 };

@@ -2473,4 +2473,20 @@ const Map<String, String> kEs = {
   "Guide transparency": "Transparencia de la guía",
   "{percent}%": "{percent} %",
   "0% is solid; 100% is clear.": "0 % es opaco; 100 % es transparente.",
+
+  // Collapsible league bank sports.
+  "Football 🏈": "Fútbol americano 🏈",
+  "Football ⚽": "Fútbol ⚽",
+  "Hockey 🏒": "Hockey 🏒",
+  "Basketball 🏀": "Baloncesto 🏀",
+  "Baseball ⚾": "Béisbol ⚾",
+  "Golf ⛳": "Golf ⛳",
+  "Fighting 🥊": "Combate 🥊",
+  "Motorsport 🏎️": "Automovilismo 🏎️",
+  "Tennis 🎾": "Tenis 🎾",
+  "Rugby 🏉": "Rugby 🏉",
+  "Cricket 🏏": "Críquet 🏏",
+  "Darts 🎯": "Dardos 🎯",
+  "Volleyball 🏐": "Voleibol 🏐",
+  "Australian football 🏉": "Fútbol australiano 🏉",
 };

@@ -8,12 +8,34 @@ import '../services/storage_service.dart';
 import '../utils/constants.dart';
 import '../utils/tv_theme.dart';
 import '../widgets/hold_to_activate.dart';
-import '../widgets/section_label.dart';
 import '../widgets/settings_scaffold.dart';
 import '../widgets/sports_widgets.dart';
 import '../widgets/game_score_alert_menu_tile.dart';
 import '../widgets/tv_menu_tile.dart';
 import '../l10n/l10n.dart';
+
+const _bankSports = [
+  ('football', 'Football 🏈'),
+  ('soccer', 'Football ⚽'),
+  ('hockey', 'Hockey 🏒'),
+  ('basketball', 'Basketball 🏀'),
+  ('baseball', 'Baseball ⚾'),
+  ('golf', 'Golf ⛳'),
+  ('fighting', 'Fighting 🥊'),
+  ('racing', 'Motorsport 🏎️'),
+  ('tennis', 'Tennis 🎾'),
+  ('rugby', 'Rugby 🏉'),
+  ('cricket', 'Cricket 🏏'),
+  ('darts', 'Darts 🎯'),
+  ('volleyball', 'Volleyball 🏐'),
+  ('australian-football', 'Australian football 🏉'),
+];
+
+String _bankSport(SportsLeague league) => switch (league.sport) {
+      'mma' || 'boxing' || 'wrestling' => 'fighting',
+      'rugby-league' => 'rugby',
+      final sport => sport,
+    };
 
 /// Which leagues the Sports tab shows, and which extra leagues it knows.
 ///
@@ -22,7 +44,7 @@ import '../l10n/l10n.dart';
 /// holding OK opens the league's menu: make it the favourite (Sports Trak
 /// opens on it, its games lead the player's Live now) and, for an added
 /// league, send it back to the bank. "League bank" =
-/// [kSportsLeagueBank] minus what's added, grouped by region; OK adds (and
+/// [kSportsLeagueBank] minus what's added, in collapsible sports; OK adds (and
 /// shows) a league. Saves on every change; pops `true` if anything changed.
 ///
 /// Two columns side by side on a wide screen (Left/Right switch column,
@@ -51,6 +73,7 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
   final _yoursScope = FocusScopeNode(debugLabel: 'leagues-yours');
   final _bankScope = FocusScopeNode(debugLabel: 'leagues-bank');
   final Map<String, FocusNode> _nodes = {};
+  final Set<String> _expandedSports = {};
 
   FocusNode _node(String id) => _nodes.putIfAbsent(id, FocusNode.new);
 
@@ -86,14 +109,22 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
         for (final id in _added) sportsLeagueById(id)!,
       ];
 
-  /// In screen order (grouped by region), not [kSportsLeagueBank]'s order:
-  /// Right focuses the first one and adding one focuses its neighbour. With
-  /// list order, Right aimed at golf — far down, not built yet in the lazy
-  /// list — and did nothing.
   List<SportsLeague> get _bank => [
-        for (final region in kSportsLeagueRegions)
+        for (final (sport, _) in _bankSports)
           for (final l in kSportsLeagueBank)
-            if (l.region == region && !_added.contains(l.id)) l
+            if (_bankSport(l) == sport && !_added.contains(l.id)) l
+      ];
+
+  /// The exact visible row order, including sport headers. Collapsed leagues
+  /// never participate in traversal or focus restoration after an addition.
+  List<String> _bankRows(List<SportsLeague> bank) => [
+        for (final (sport, _) in _bankSports)
+          if (bank.any((l) => _bankSport(l) == sport)) ...[
+            'bank-sport:$sport',
+            if (_expandedSports.contains(sport))
+              for (final l in bank)
+                if (_bankSport(l) == sport) l.id,
+          ],
       ];
 
   Future<void> _save() async {
@@ -171,16 +202,20 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
   }
 
   void _add(SportsLeague l) {
-    final bank = _bank;
-    final i = bank.indexWhere((b) => b.id == l.id);
+    final rows = _bankRows(_bank);
+    final i = rows.indexOf(l.id);
     setState(() {
       _added.add(l.id);
       if (!_shown.contains(l.id)) _shown.add(l.id);
     });
     _save();
-    // Keep the D-pad in the bank, on the league that took this one's place.
-    final rest = _bank;
-    if (rest.isNotEmpty) _focusLater(rest[i.clamp(0, rest.length - 1)].id);
+    // Prefer the following visible row even when an exhausted sport's header
+    // disappears too. If the bank is exhausted, follow the added league left.
+    final rest = _bankRows(_bank);
+    final next = rows.skip(i + 1).where(rest.contains).firstOrNull;
+    final previous =
+        rows.take(i).toList().reversed.where(rest.contains).firstOrNull;
+    _focusLater(next ?? previous ?? l.id);
   }
 
   void _remove(SportsLeague l) {
@@ -204,39 +239,68 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
   void _focusLater(String id) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final node = _nodes[id];
-      if (node?.context == null) return;
-      node!.requestFocus();
-      Scrollable.ensureVisible(node.context!, alignment: 0.5);
+      _focusRow(id);
     });
   }
 
-  void _focusColumn(FocusScopeNode scope, List<SportsLeague> leagues) {
-    if (scope.hasFocus || leagues.isEmpty) return;
+  void _focusRow(String id) {
+    final node = _nodes[id];
+    if (node?.context == null) return;
+    node!.requestFocus();
+    Scrollable.ensureVisible(node.context!,
+        alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd);
+    Scrollable.ensureVisible(node.context!,
+        alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart);
+  }
+
+  void _focusColumn(FocusScopeNode scope, List<String> rows) {
+    if (scope.hasFocus || rows.isEmpty) return;
     if (scope.focusedChild != null) {
       scope.requestFocus();
     } else {
-      _node(leagues.first.id).requestFocus();
+      _focusRow(rows.first);
     }
   }
+
+  void _moveRow(List<String> rows, int direction) {
+    final index = rows.indexWhere((id) => _nodes[id]?.hasFocus ?? false);
+    if (index < 0) return;
+    _focusRow(rows[(index + direction).clamp(0, rows.length - 1)]);
+  }
+
+  Widget _scrollingRows(List<String> rows, List<Widget> tiles) =>
+      CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
+              _moveRow(rows, -1),
+          const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
+              _moveRow(rows, 1),
+        },
+        // Build every expanded row so the remote can reach past the viewport.
+        // The bank is small and collapsed leagues have no mounted rows.
+        child: SingleChildScrollView(
+          child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch, children: tiles),
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
     final narrow = MediaQuery.sizeOf(context).width < 700;
     final yours = _yours;
     final bank = _bank;
+    final yoursRows = [for (final l in yours) l.id];
+    final bankRows = _bankRows(bank);
     final yoursTiles = [
       for (final (i, l) in yours.indexed) _yourTile(l, autofocus: i == 0),
     ];
     final bankTiles = <Widget>[
-      for (final region in kSportsLeagueRegions)
-        if (bank.any((l) => l.region == region)) ...[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 14, 8, 4),
-            child: SectionLabel(tr(region)),
-          ),
-          for (final l in bank)
-            if (l.region == region) _bankTile(l),
+      for (final (sport, label) in _bankSports)
+        if (bank.any((l) => _bankSport(l) == sport)) ...[
+          _sportTile(sport, label),
+          if (_expandedSports.contains(sport))
+            for (final l in bank)
+              if (_bankSport(l) == sport) _bankTile(l),
         ],
       if (bank.isEmpty)
         Padding(
@@ -250,8 +314,9 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
     if (narrow) {
       body = FocusScope(
         node: _yoursScope,
-        child: ListView(
-          children: [
+        child: _scrollingRows(
+          [...yoursRows, ...bankRows],
+          [
             _columnTitle(tr('Your leagues')),
             ...yoursTiles,
             const SizedBox(height: 12),
@@ -264,9 +329,9 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
       body = CallbackShortcuts(
         bindings: {
           const SingleActivator(LogicalKeyboardKey.arrowLeft): () =>
-              _focusColumn(_yoursScope, yours),
+              _focusColumn(_yoursScope, yoursRows),
           const SingleActivator(LogicalKeyboardKey.arrowRight): () =>
-              _focusColumn(_bankScope, bank),
+              _focusColumn(_bankScope, bankRows),
         },
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -278,7 +343,7 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _columnTitle(tr('Your leagues')),
-                    Expanded(child: ListView(children: yoursTiles)),
+                    Expanded(child: _scrollingRows(yoursRows, yoursTiles)),
                   ],
                 ),
               ),
@@ -291,7 +356,7 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _columnTitle(tr('League bank')),
-                    Expanded(child: ListView(children: bankTiles)),
+                    Expanded(child: _scrollingRows(bankRows, bankTiles)),
                   ],
                 ),
               ),
@@ -325,11 +390,16 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
                           child: Row(
                             children: [
                               const SportsBackButton(),
-                              Text(tr('League manager'),
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .headlineSmall
-                                      ?.copyWith(fontWeight: FontWeight.w800)),
+                              Expanded(
+                                child: Text(tr('League manager'),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineSmall
+                                        ?.copyWith(
+                                            fontWeight: FontWeight.w800)),
+                              ),
                             ],
                           ),
                         ),
@@ -399,6 +469,31 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
       title: l.name,
       trailing: const Icon(Icons.add_circle_outline, color: Colors.white54),
       onTap: () => _add(l),
+    );
+  }
+
+  Widget _sportTile(String sport, String label) {
+    final expanded = _expandedSports.contains(sport);
+    final id = 'bank-sport:$sport';
+    return Semantics(
+      expanded: expanded,
+      child: TvMenuTile(
+        key: ValueKey(id),
+        focusNode: _node(id),
+        icon: expanded ? Icons.folder_open_outlined : Icons.folder_outlined,
+        title: tr(label),
+        trailing: Icon(expanded ? Icons.expand_less : Icons.expand_more),
+        onTap: () {
+          setState(() {
+            if (expanded) {
+              _expandedSports.remove(sport);
+            } else {
+              _expandedSports.add(sport);
+            }
+          });
+          _focusLater(id);
+        },
+      ),
     );
   }
 }

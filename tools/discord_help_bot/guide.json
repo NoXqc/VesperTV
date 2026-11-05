@@ -603,7 +603,7 @@
     "id": "05385729a65f1266",
     "category": "Sports Trak",
     "title": "Show / hide, favourite, send back",
-    "answer": "OK shows or hides a league in the tab. Hold: Make favourite league (Sports Trak opens on it), Send back to the league bank. Add more leagues from the bank below.",
+    "answer": "Your leagues stay on the left; the league bank is on the right (below on phones). In the bank, OK expands or collapses a sport: Football 🏈, Football ⚽, Hockey 🏒 and more. Up/Down moves through sport headings and expanded leagues, scrolling the selector into view in either direction. Left/Right switches columns and remembers your place. OK on a bank league adds it and keeps the selector in the bank. OK on one of your leagues shows or hides it in the tab. Hold: Make favourite league (Sports Trak opens on it), Send back to the league bank.",
     "controls": "League manager: OK / Hold OK",
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },

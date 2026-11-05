@@ -2376,4 +2376,20 @@ const Map<String, String> kDe = {
   "{percent}%": "{percent} %",
   "0% is solid; 100% is clear.":
       "0 % ist undurchsichtig; 100 % ist durchsichtig.",
+
+  // Collapsible league bank sports.
+  "Football 🏈": "Football 🏈",
+  "Football ⚽": "Fußball ⚽",
+  "Hockey 🏒": "Eishockey 🏒",
+  "Basketball 🏀": "Basketball 🏀",
+  "Baseball ⚾": "Baseball ⚾",
+  "Golf ⛳": "Golf ⛳",
+  "Fighting 🥊": "Kampfsport 🥊",
+  "Motorsport 🏎️": "Motorsport 🏎️",
+  "Tennis 🎾": "Tennis 🎾",
+  "Rugby 🏉": "Rugby 🏉",
+  "Cricket 🏏": "Cricket 🏏",
+  "Darts 🎯": "Darts 🎯",
+  "Volleyball 🏐": "Volleyball 🏐",
+  "Australian football 🏉": "Australian Football 🏉",
 };

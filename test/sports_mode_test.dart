@@ -1005,11 +1005,12 @@ void main() {
     await tester.pumpAndSettle();
     await press(tester, LogicalKeyboardKey.select);
     expect(find.byType(SportsLeagueManagerScreen), findsOneWidget);
-    await tester.scrollUntilVisible(
-        find.byKey(const ValueKey('bank:basketball.mens-college-basketball')),
-        400,
-        scrollable: find.byType(Scrollable).last,
-        maxScrolls: 150);
+    await tester
+        .ensureVisible(find.byKey(const ValueKey('bank-sport:basketball')));
+    await tester.tap(find.byKey(const ValueKey('bank-sport:basketball')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+        find.byKey(const ValueKey('bank:basketball.mens-college-basketball')));
     await tester.tap(
         find.byKey(const ValueKey('bank:basketball.mens-college-basketball')));
     await tester.pumpAndSettle();

@@ -2485,4 +2485,20 @@ const Map<String, String> kFr = {
   "Guide transparency": "Transparence du guide",
   "{percent}%": "{percent} %",
   "0% is solid; 100% is clear.": "0 % est opaque ; 100 % est transparent.",
+
+  // Collapsible league bank sports.
+  "Football 🏈": "Football 🏈",
+  "Football ⚽": "Football ⚽",
+  "Hockey 🏒": "Hockey 🏒",
+  "Basketball 🏀": "Basketball 🏀",
+  "Baseball ⚾": "Baseball ⚾",
+  "Golf ⛳": "Golf ⛳",
+  "Fighting 🥊": "Combat 🥊",
+  "Motorsport 🏎️": "Sports mécaniques 🏎️",
+  "Tennis 🎾": "Tennis 🎾",
+  "Rugby 🏉": "Rugby 🏉",
+  "Cricket 🏏": "Cricket 🏏",
+  "Darts 🎯": "Fléchettes 🎯",
+  "Volleyball 🏐": "Volley-ball 🏐",
+  "Australian football 🏉": "Football australien 🏉",
 };

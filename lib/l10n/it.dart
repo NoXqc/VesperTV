@@ -2480,4 +2480,20 @@ const Map<String, String> kIt = {
   "Guide transparency": "Trasparenza della guida",
   "{percent}%": "{percent}%",
   "0% is solid; 100% is clear.": "0% è opaco; 100% è trasparente.",
+
+  // Collapsible league bank sports.
+  "Football 🏈": "Football americano 🏈",
+  "Football ⚽": "Calcio ⚽",
+  "Hockey 🏒": "Hockey 🏒",
+  "Basketball 🏀": "Basket 🏀",
+  "Baseball ⚾": "Baseball ⚾",
+  "Golf ⛳": "Golf ⛳",
+  "Fighting 🥊": "Combattimento 🥊",
+  "Motorsport 🏎️": "Sport motoristici 🏎️",
+  "Tennis 🎾": "Tennis 🎾",
+  "Rugby 🏉": "Rugby 🏉",
+  "Cricket 🏏": "Cricket 🏏",
+  "Darts 🎯": "Freccette 🎯",
+  "Volleyball 🏐": "Pallavolo 🏐",
+  "Australian football 🏉": "Football australiano 🏉",
 };
