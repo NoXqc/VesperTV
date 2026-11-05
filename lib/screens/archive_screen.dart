@@ -63,6 +63,10 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
   final _emptyActionNode = FocusNode(debugLabel: 'archive-empty-action');
   final _barScope = FocusScopeNode(debugLabel: 'archive-bar');
   final _railSearchNode = FocusNode(debugLabel: 'archive-rail-search');
+  final _railShowsNode = FocusNode(debugLabel: 'archive-rail-shows');
+  final _railRefreshNode = FocusNode(debugLabel: 'archive-rail-refresh');
+  final _railSourcesNode = FocusNode(debugLabel: 'archive-rail-sources');
+  final _railServerNode = FocusNode(debugLabel: 'archive-rail-server');
   final _barClearNode = FocusNode(debugLabel: 'archive-bar-clear');
   final _barGenreNode = FocusNode(debugLabel: 'archive-bar-genre');
   final _barNewestNode = FocusNode(debugLabel: 'archive-bar-newest');
@@ -153,6 +157,10 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
     _progressRefresh?.cancel();
     _barScope.dispose();
     _railSearchNode.dispose();
+    _railShowsNode.dispose();
+    _railRefreshNode.dispose();
+    _railSourcesNode.dispose();
+    _railServerNode.dispose();
     _barClearNode.dispose();
     _barGenreNode.dispose();
     _barNewestNode.dispose();
@@ -527,6 +535,9 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focusCard(row, i);
     });
+    // Right from a settled rail can leave layout unchanged. A post-frame
+    // callback alone does not arrange a frame to hand focus to the card.
+    WidgetsBinding.instance.scheduleFrame();
   }
 
   KeyEventResult _onContentKey(
@@ -703,22 +714,51 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
     );
   }
 
+  void _focusRailNode(FocusNode node) {
+    node.requestFocus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = node.context;
+      if (!mounted || !node.hasFocus || ctx == null) return;
+      Scrollable.ensureVisible(ctx,
+          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd);
+      Scrollable.ensureVisible(ctx,
+          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart);
+    });
+  }
+
   Widget _buildRail(ArchiveService service, List<ArchiveRow> rows) {
+    final hasSearch = ArchiveType.values.any(service.canSearch);
+    final nodes = [
+      if (hasSearch) _railSearchNode,
+      _firstRailNode,
+      _railShowsNode,
+      _railRefreshNode,
+      _railSourcesNode,
+      _railServerNode,
+    ];
+    void move(int delta) {
+      final current = nodes.indexWhere((node) => node.hasFocus);
+      final from = current < 0 ? nodes.indexOf(_firstRailNode) : current;
+      _focusRailNode(nodes[(from + delta).clamp(0, nodes.length - 1)]);
+    }
+
     return FocusScope(
       node: _railScope,
-      child: Focus(
-        // Right from anywhere in the rail = into the rows.
-        onKeyEvent: (_, event) {
-          if (event is KeyDownEvent &&
-              event.logicalKey == LogicalKeyboardKey.arrowRight) {
+      // The old key-handler Focus was itself a directional target: Down
+      // past the final entry could land on its invisible full-rail box.
+      // CallbackShortcuts cannot take focus; arrows visit concrete entries.
+      child: CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.arrowUp): () => move(-1),
+          const SingleActivator(LogicalKeyboardKey.arrowDown): () => move(1),
+          const SingleActivator(LogicalKeyboardKey.arrowLeft): () {},
+          const SingleActivator(LogicalKeyboardKey.arrowRight): () {
             if (rows.isNotEmpty) {
               _focusRow(rows, _focusedRow);
             } else if (_emptyActionNode.context != null) {
               _emptyActionNode.requestFocus();
             }
-            return KeyEventResult.handled;
-          }
-          return KeyEventResult.ignored;
+          },
         },
         // The same floating glass pill as the top bar (owner, 2026-11-01),
         // stood up: Search (pulls out Movies / TV Shows), the two
@@ -758,7 +798,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (ArchiveType.values.any(service.canSearch)) ...[
+                  if (hasSearch) ...[
                     _railButton(
                       node: _railSearchNode,
                       icon: Icons.search,
@@ -778,6 +818,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                     onTap: () => _setType(ArchiveType.movie),
                   ),
                   _railButton(
+                    node: _railShowsNode,
                     icon: Icons.video_library,
                     label: tr('TV Shows'),
                     active: _type == ArchiveType.series,
@@ -785,16 +826,19 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                   ),
                   _railDivider(),
                   _railButton(
+                    node: _railRefreshNode,
                     icon: Icons.refresh,
                     label: service.refreshing ? tr('Updating…') : tr('Refresh'),
                     onTap: () => service.refresh(force: true, manifests: true),
                   ),
                   _railButton(
+                    node: _railSourcesNode,
                     icon: Icons.extension_outlined,
                     label: tr('Media Hub sources'),
                     onTap: _openSources,
                   ),
                   _railButton(
+                    node: _railServerNode,
                     icon: Icons.dns_outlined,
                     label: tr('Connect Jellyfin / Emby'),
                     onTap: _connectMediaServer,

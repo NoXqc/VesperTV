@@ -179,3 +179,18 @@ dark -> backdrop without a poster flash (`_focusedArtPending`).
   bar, before Newest and catalog jumps, with matching explicit Left/Right order.
   The phone Menu list also starts with genres. Up from the first content row still
   returns to that row's jump button; existing filter behavior is unchanged.
+
+- **Rail navigation (Codex, 2026-11-05, Sony Bravia Google TV report):** the
+  wide sidebar now owns stable nodes for each visible entry and explicit
+  Up/Down/Left/Right shortcuts. Top/bottom stay on visible entries; Left stays
+  in the sidebar; Right enters the remembered title row (or empty-state action).
+  The old plain key-handler Focus could itself receive directional focus: a
+  regression reproduced Down past the final entry focusing an invisible box.
+  CallbackShortcuts removes that stop and handles repeats; minimum reveal scroll
+  keeps entries visible on short TV viewports with large text. The existing
+  delayed _focusRow handoff now explicitly schedules a frame: Right from an
+  idle sidebar otherwise queued a callback without causing a frame.
+  Tests cover boundaries, repeats, no Search, short/large text, row/top-bar
+  returns and empty-content entry. Actual Bravia acceptance remains pending;
+  the exact device-specific trigger for the owner's initial stuck state has
+  not been reproduced on hardware. No version bump/build/install in this fix.
