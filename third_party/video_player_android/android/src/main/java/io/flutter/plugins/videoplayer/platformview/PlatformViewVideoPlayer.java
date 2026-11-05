@@ -149,16 +149,16 @@ public class PlatformViewVideoPlayer extends VideoPlayer {
                     boolean enableFloatOutput,
                     boolean enableAudioOutputPlaybackParams) {
                   if (passthrough) {
-                    return new DefaultAudioSink.Builder(context)
+                    return io.flutter.plugins.videoplayer.AudioDelay.wrap(new DefaultAudioSink.Builder(context)
                         .setEnableFloatOutput(enableFloatOutput)
                         .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
-                        .build();
+                        .build());
                   }
                   //noinspection deprecation — deliberate: see the comment above.
-                  return new DefaultAudioSink.Builder()
+                  return io.flutter.plugins.videoplayer.AudioDelay.wrap(new DefaultAudioSink.Builder()
                       .setEnableFloatOutput(enableFloatOutput)
                       .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
-                      .build();
+                      .build());
                 }
               };
           // ON, not PREFER: PREFER makes ExoPlayer always choose the

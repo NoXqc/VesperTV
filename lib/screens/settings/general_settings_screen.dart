@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../services/desktop_stream_setup.dart';
 import '../../services/app_preferences.dart';
+import '../../services/audio_delay.dart';
 import '../../services/archive_service.dart';
 import '../../services/device_defaults.dart';
 import '../../services/playback_service.dart';
@@ -15,6 +16,7 @@ import '../../services/vod_buffering.dart';
 import '../../services/subtitle_tracks.dart';
 import '../../utils/constants.dart';
 import '../../utils/tv_theme.dart';
+import '../../widgets/audio_delay_adjuster.dart';
 import '../../widgets/goals_alert_overlay.dart';
 import '../../widgets/goal_overlay_probe_settings.dart';
 import '../../widgets/native_video_hole.dart';
@@ -555,6 +557,12 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                             child: Text(
                                 tr('Movies and episodes use these languages when available. Your manual track choices take priority when resuming.'),
                                 style: const TextStyle(color: Colors.white70)),
+                          ),
+                          TvMenuTile(
+                            title: tr('Audio delay'),
+                            subtitle: '${AudioDelay.label(context.watch<AppPreferences>().audioDelayMs)}'
+                                ' · ${tr('For sound that is ahead of or behind the picture. Also in the player: Audio sync.')}',
+                            onTap: () => showAudioDelayAdjuster(context),
                           ),
                           TvSwitchListTile(
                             title:

@@ -315,6 +315,10 @@ class AppConstants {
   /// (device-only; AppPreferences.audioPassthrough).
   static const String keyAudioPassthrough = 'vesper_audio_passthrough';
 
+  /// Settings > Playback > Audio: audio delay / A/V sync in ms, positive =
+  /// sound later (device-only; AppPreferences.audioDelayMs).
+  static const String keyAudioDelayMs = 'vesper_audio_delay_ms';
+
   /// Settings > Playback > Background video: Shield green-flicker fix
   /// (device-only; AppPreferences.videoMediaOverlay).
   static const String keyVideoMediaOverlay = 'vesper_video_media_overlay';

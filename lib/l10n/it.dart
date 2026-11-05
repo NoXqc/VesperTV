@@ -2546,4 +2546,20 @@ const Map<String, String> kIt = {
   "VesperTV overlay test": "Test di sovrapposizione VesperTV",
   "This test closes after 6 seconds.": "Questo test si chiude dopo 6 secondi.",
   "Overlay tests": "Test di sovrapposizione",
+  "No delay":
+      "Nessun ritardo",
+  "{value} · sound later":
+      "{value} · audio più tardi",
+  "{value} · sound earlier":
+      "{value} · audio prima",
+  "Audio sync":
+      "Sincronia audio",
+  "Sound ahead of the picture? Press Right. Sound late? Press Left. OK when it matches.":
+      "L’audio è in anticipo sull’immagine? Premi Destra. In ritardo? Premi Sinistra. OK quando coincide.",
+  "Reset":
+      "Ripristina",
+  "Audio delay":
+      "Ritardo audio",
+  "For sound that is ahead of or behind the picture. Also in the player: Audio sync.":
+      "Per un audio in anticipo o in ritardo rispetto all’immagine. Anche nel lettore: Sincronia audio.",
 };

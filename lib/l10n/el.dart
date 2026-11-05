@@ -2501,4 +2501,20 @@ const Map<String, String> kEl = {
   "This test closes after 6 seconds.":
       "Αυτή η δοκιμή κλείνει μετά από 6 δευτερόλεπτα.",
   "Overlay tests": "Δοκιμές επικάλυψης",
+  "No delay":
+      "Χωρίς καθυστέρηση",
+  "{value} · sound later":
+      "{value} · ήχος αργότερα",
+  "{value} · sound earlier":
+      "{value} · ήχος νωρίτερα",
+  "Audio sync":
+      "Συγχρονισμός ήχου",
+  "Sound ahead of the picture? Press Right. Sound late? Press Left. OK when it matches.":
+      "Ο ήχος προηγείται της εικόνας; Πατήστε Δεξιά. Καθυστερεί; Πατήστε Αριστερά. OK όταν ταιριάζει.",
+  "Reset":
+      "Επαναφορά",
+  "Audio delay":
+      "Καθυστέρηση ήχου",
+  "For sound that is ahead of or behind the picture. Also in the player: Audio sync.":
+      "Για ήχο που προηγείται ή καθυστερεί σε σχέση με την εικόνα. Επίσης στο πρόγραμμα αναπαραγωγής: Συγχρονισμός ήχου.",
 };

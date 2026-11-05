@@ -514,6 +514,10 @@ class StorageService {
   Future<void> setAudioPassthrough(bool value) =>
       _prefs.setBool(AppConstants.keyAudioPassthrough, value);
 
+  int getAudioDelayMs() => _prefs.getInt(AppConstants.keyAudioDelayMs) ?? 0;
+  Future<void> setAudioDelayMs(int value) =>
+      _prefs.setInt(AppConstants.keyAudioDelayMs, value);
+
   bool getVideoMediaOverlay() =>
       _prefs.getBool(AppConstants.keyVideoMediaOverlay) ?? false;
   Future<void> setVideoMediaOverlay(bool value) =>
@@ -1324,6 +1328,7 @@ class StorageService {
     AppConstants.keyCompatVideo,
     AppConstants.keyDeviceDefaults,
     AppConstants.keyAudioPassthrough,
+    AppConstants.keyAudioDelayMs,
     AppConstants.keyVideoMediaOverlay,
     AppConstants.keyNativeVideoSurface,
     AppConstants.keyMatchFrameRate,

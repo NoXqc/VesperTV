@@ -981,6 +981,17 @@ class PlaybackService extends ChangeNotifier {
   /// Tells the vendored player whether new main players pass Dolby audio
   /// through over HDMI ([AppPreferences.audioPassthrough]). Read when a
   /// player is created, so it applies from the next channel.
+  /// Shifts the sound against the picture on every Android player at once
+  /// ([AppPreferences.audioDelayMs]; positive = sound later).
+  static Future<void> setAudioDelay(int ms) async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _audioChannel.invokeMethod<void>('setAudioDelay', {'ms': ms});
+    } catch (e) {
+      debugPrint('PlaybackService: audio delay not set: $e');
+    }
+  }
+
   static Future<void> setAudioPassthrough(bool enabled) async {
     if (!Platform.isAndroid) return;
     try {

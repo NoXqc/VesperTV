@@ -33,6 +33,12 @@ public final class AudioPassthrough implements MethodChannel.MethodCallHandler {
 
   @Override
   public void onMethodCall(@NonNull MethodCall call, @NonNull MethodChannel.Result result) {
+    if ("setAudioDelay".equals(call.method)) {
+      Integer ms = call.argument("ms");
+      AudioDelay.setDelayMs(ms == null ? 0 : ms);
+      result.success(null);
+      return;
+    }
     if (!"setPassthrough".equals(call.method)) {
       result.notImplemented();
       return;
