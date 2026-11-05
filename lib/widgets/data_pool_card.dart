@@ -45,6 +45,15 @@ class DataPoolCard extends StatefulWidget {
 
   /// Same short names as the card, for the player's audio track picker.
   static String? codecName(String? raw) => _DataPoolCardState._codec(raw);
+
+  /// Dolby Atmos in a stream: E-AC-3 with object audio (JOC), which the
+  /// player reads from the audio frames themselves (`eac3-joc`), or `ec+3`
+  /// in a manifest's codecs string. Never guessed from 5.1 / bitrate.
+  static bool isAtmos(String? raw) {
+    final c = raw?.toLowerCase() ?? '';
+    return c == 'eac3-joc' || c.endsWith('/eac3-joc') || c.startsWith('ec+3');
+  }
+
   static String? channelsName(int? n) => _DataPoolCardState._channels(n);
 
   @override
@@ -167,12 +176,21 @@ class _DataPoolCardState extends State<DataPoolCard> {
   /// "avc1.640028" -> "H.264"; unknown codecs pass through upper-cased.
   static String? _codec(String? raw) {
     if (raw == null || raw.isEmpty) return null;
-    final c = raw.toLowerCase();
+    if (DataPoolCard.isAtmos(raw)) return 'E-AC-3 Atmos';
+    // A .ts stream reports a MIME type ("audio/eac3") instead of codecs.
+    final c = raw.toLowerCase().replaceFirst(RegExp(r'^audio/'), '');
+    if (c == 'truehd' || c == 'true-hd') return 'TrueHD';
+    if (c.startsWith('vnd.dts.hd')) return 'DTS-HD';
+    if (c.startsWith('vnd.dts')) return 'DTS';
+    if (c == 'ac4' || c.startsWith('ac-4')) return 'AC-4';
+    if (c == 'mpeg' || c == 'mpeg-l2') return 'MP2/MP3';
     if (c.startsWith('avc') || c.contains('h264')) return 'H.264';
     if (c.startsWith('hev') || c.startsWith('hvc') || c.contains('h265')) {
       return 'H.265';
     }
     if (c.startsWith('mp4a') || c.contains('aac')) return 'AAC';
+    if (c == 'opus') return 'Opus';
+    if (c == 'flac') return 'FLAC';
     if (c.startsWith('ac-3') || c == 'ac3') return 'AC-3';
     if (c.startsWith('ec-3') || c == 'eac3') return 'E-AC-3';
     if (c.contains('mpeg') && c.contains('audio')) return 'MP2/MP3';

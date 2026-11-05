@@ -1288,8 +1288,14 @@ class _AudioChannelBadgeState extends State<_AudioChannelBadge> {
         }
       }
       final channels = selected?.channelCount;
-      if (!mounted || channels == null) return;
-      final label = _channelLabel(channels);
+      if (!mounted) return;
+      // Dolby Atmos (E-AC-3 JOC, read from the audio frames) beats the
+      // channel count: Atmos is 5.1/7.1 + objects.
+      final label = DataPoolCard.isAtmos(selected?.codec)
+          ? 'ATMOS'
+          : channels == null
+              ? null
+              : _channelLabel(channels);
       if (label != _label) setState(() => _label = label);
     } catch (_) {
       // Same "leave it hidden rather than show something stale/wrong"

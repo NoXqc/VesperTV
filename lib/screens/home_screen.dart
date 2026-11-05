@@ -714,10 +714,13 @@ class _HomeScreenState extends State<HomeScreen> {
         return KeyEventResult.handled;
       }
       if (key == LogicalKeyboardKey.arrowLeft) {
-        // The first card stays put (Back leaves Home): Home has no tabs
-        // column beside it, so Left used to drop out of the page (owner,
-        // 2026-11-05).
-        if (_profileIndex > 0) _focusProfiles(_profileIndex - 1);
+        // The first profile card still leads to the tabs column (with every
+        // content tab hidden, that's the way to Settings).
+        if (_profileIndex > 0) {
+          _focusProfiles(_profileIndex - 1);
+        } else {
+          Navigator.of(context).maybePop();
+        }
         return KeyEventResult.handled;
       }
       if (key == LogicalKeyboardKey.arrowDown) {
@@ -762,7 +765,9 @@ class _HomeScreenState extends State<HomeScreen> {
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowLeft) {
-      // First card: stay (see the profiles strip above). Back leaves Home.
+      // First card of a row: stay. Left there kept dropping out of Home to
+      // the IPTV home (owner, 2026-11-05); Back, or Up to the profiles
+      // strip then Left, still leaves.
       if (i > 0) _focusCard(_row, i - 1);
       return KeyEventResult.handled;
     }

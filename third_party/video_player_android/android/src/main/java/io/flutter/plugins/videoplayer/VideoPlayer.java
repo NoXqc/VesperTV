@@ -16,6 +16,7 @@ import androidx.annotation.Nullable;
 import androidx.media3.common.AudioAttributes;
 import androidx.media3.common.C;
 import androidx.media3.common.Format;
+import androidx.media3.common.MimeTypes;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.PlaybackParameters;
 import androidx.media3.common.Player;
@@ -488,6 +489,19 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
   // TODO: Migrate to stable API, see https://github.com/flutter/flutter/issues/147039.
   @UnstableApi
   @Override
+  /**
+   * VesperTV: the audio track's codec for Dart. A .ts stream has no codecs
+   * string, so fall back to the sample MIME type; Dolby Atmos (E-AC-3 JOC,
+   * detected by ExoPlayer from the frame header) and TrueHD are named
+   * explicitly so the player can show an ATMOS / TrueHD badge.
+   */
+  private static String audioCodec(Format format) {
+    if (MimeTypes.AUDIO_E_AC3_JOC.equals(format.sampleMimeType)) return "eac3-joc";
+    if (MimeTypes.AUDIO_TRUEHD.equals(format.sampleMimeType)) return "truehd";
+    if (format.codecs != null) return format.codecs;
+    return format.sampleMimeType;
+  }
+
   public @NonNull NativeAudioTrackData getAudioTracks() {
     List<ExoPlayerAudioTrackData> audioTracks = new ArrayList<>();
 
@@ -515,7 +529,7 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
                   getFormatValue(format.bitrate),
                   getFormatValue(format.sampleRate),
                   getFormatValue(format.channelCount),
-                  format.codecs != null ? format.codecs : null);
+                  audioCodec(format));
 
           audioTracks.add(audioTrack);
         }
