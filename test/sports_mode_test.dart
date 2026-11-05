@@ -1210,6 +1210,28 @@ void main() {
     await disposePage(tester);
   });
 
+  testWidgets('Hide Live TV closes its Sports Mode panel and blocks Guide',
+      (tester) async {
+    await openLivePanel(tester);
+    prefs.setHideLiveTv(true);
+    await tester.pumpAndSettle();
+    expect(find.text('Live TV'), findsNothing);
+    expect(find.byType(SportsModeLivePanel), findsNothing);
+    GuideKey.handle(
+        const KeyDownEvent(
+            physicalKey: PhysicalKeyboardKey(0x110000016a),
+            logicalKey: LogicalKeyboardKey(0x11000000e4),
+            timeStamp: Duration.zero),
+        navigator: tester.state<NavigatorState>(find.byType(Navigator)));
+    await tester.pumpAndSettle();
+    expect(find.byType(SportsModeLivePanel), findsNothing);
+    prefs.setHideLiveTv(false);
+    await tester.pumpAndSettle();
+    expect(find.text('Live TV'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await disposePage(tester);
+  });
+
   testWidgets(
       'Live TV guide: OK plays in the Sports Mode player, again full screen',
       (tester) async {

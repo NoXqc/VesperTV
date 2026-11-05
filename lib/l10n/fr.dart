@@ -2501,4 +2501,10 @@ const Map<String, String> kFr = {
   "Darts 🎯": "Fléchettes 🎯",
   "Volleyball 🏐": "Volley-ball 🏐",
   "Australian football 🏉": "Football australien 🏉",
+  "Hide Live TV": "Masquer la télé en direct",
+  "Removes the Live TV tab.": "Retire l'onglet Télé en direct.",
+  "Hide Sports Trak": "Masquer Sports Trak",
+  "Removes Sports Trak from navigation and turns off Sports Mode.":
+      "Retire Sports Trak de la navigation et désactive le mode Sports.",
+  "Choose which tabs to show.": "Choisissez les onglets à afficher.",
 };

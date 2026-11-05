@@ -867,7 +867,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   /// nothing on every Xtream launch.
   Future<void> _autoResumeLastChannel() async {
     // The sports home starts with its dashboard, never an unrelated stream.
-    if (_preferences.sportsMode) return;
+    if (_preferences.sportsMode || _preferences.hideLiveTv) return;
     if (_playbackService.isPlayingSomething) return;
     final lastId = _storage.getLastChannelId();
     if (lastId == null) return;
@@ -1238,12 +1238,14 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         return TvHomeScreen(
           key: key,
           initialTab: switch (section) {
+            'home' when prefs.hideLiveTv => 'Home',
             'movies' => 'Movies',
             'series' => 'TV Shows',
             _ => 'TV',
           },
           startupSportsCovered: section == 'sports',
-          startupBrowseCovered: section == 'home' || section == 'hub',
+          startupBrowseCovered:
+              (section == 'home' && !prefs.hideLiveTv) || section == 'hub',
         );
       },
     );

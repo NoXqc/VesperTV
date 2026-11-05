@@ -134,6 +134,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   @override
   void openGuide() {
     if (!mounted) return;
+    if (context.read<AppPreferences>().hideLiveTv) return;
     if (_tab != 'TV') {
       _onTabChanged('TV');
       return;
@@ -268,10 +269,12 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   }
 
   void _restoreTvTab({bool startOnFavorites = false}) {
+    final tab = context.read<AppPreferences>().fallbackTab;
+    final resetFavorites = startOnFavorites && tab == 'TV';
     // A Home visit starts TV browsing over, including the groups scope's
-    // remembered selector. Other covered pages retain their existing return.
-    if (_tab != 'TV' || startOnFavorites) {
-      _onTabChanged('TV', restoreLiveFocus: false);
+    // remembered selector. Hidden TV falls back to a visible tab instead.
+    if (_tab != tab || resetFavorites) {
+      _onTabChanged(tab, restoreLiveFocus: false);
     }
     _timelineFilterController.clear();
     setState(() {
@@ -279,7 +282,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       _phonePage = 1;
       _timelineFilterActive = false;
       _timelineFilterQuery = '';
-      if (startOnFavorites) {
+      if (resetFavorites) {
         _selectedGroup = _favoritesGroupSentinel;
         _focusGroupKeyOnBuild = null;
         _guideFocusedChannel = null;
@@ -288,7 +291,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && ModalRoute.of(context)?.isCurrent == true) {
-        if (startOnFavorites) {
+        if (resetFavorites) {
           if (_groupsScroll.hasClients) {
             _groupsScroll.jumpTo(0);
           }
@@ -296,7 +299,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             _liveListController.jumpTo(0);
           }
         }
-        _tabFocusNode('TV').requestFocus();
+        _tabFocusNode(tab).requestFocus();
       }
     });
   }
@@ -1270,14 +1273,16 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   bool get _touchPreview =>
       Platform.isAndroid && !context.read<AppPreferences>().isTelevision;
 
-  /// [_tabs] minus Movies and/or TV Shows when Settings > General hides
-  /// them. Watches AppPreferences, so toggling it rebuilds the tabs column.
+  /// [_tabs] minus the content tabs that Settings > Interface hides.
+  /// Watches AppPreferences, so toggling it rebuilds the tabs column.
   List<String> get _visibleTabs {
     final prefs = context.watch<AppPreferences>();
     return _tabs.where((t) => !prefs.isTabHidden(t)).toList();
   }
 
   void _onTabChanged(String tab, {bool restoreLiveFocus = true}) {
+    final prefs = context.read<AppPreferences>();
+    if (prefs.isTabHidden(tab)) tab = prefs.fallbackTab;
     ++_browseFocusRequest;
     _disarmLeftEdge();
     // _col1Scope/_col2Scope are shared across every tab (see the widget
@@ -1340,8 +1345,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         if (mounted) _restoreLiveFocus();
       });
     }
-    if (_isBrowseTab(tab)) {
-      unawaited(_parkLiveChannel(keepNativeSurface: true));
+    if (_isBrowseTab(tab) || tab == 'Home') {
+      unawaited(_parkLiveChannel(keepNativeSurface: _isBrowseTab(tab)));
     }
   }
 
@@ -2049,13 +2054,16 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     GuideKey.register(this);
     FocusManager.instance.addListener(_scheduleFocusRecovery);
     _returnToTv = widget.startupBrowseCovered || widget.startupSportsCovered;
-    _initialTab = widget.initialTab;
+    final prefs = context.read<AppPreferences>();
+    _initialTab = prefs.isTabHidden(widget.initialTab)
+        ? prefs.fallbackTab
+        : widget.initialTab;
     _tab = _initialTab;
     if (_tab == 'TV') {
       _selectedGroup = _favoritesGroupSentinel;
     }
     _showWhatsNew = _isBrowseTab(_tab);
-    if (_showWhatsNew) {
+    if (_showWhatsNew || _tab == 'Home') {
       _phonePage = 1;
     }
     _startupSportsCovered = widget.startupSportsCovered &&
@@ -2066,7 +2074,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       if (!mounted) return;
       // Preserve the browse pages' live-video parking without deferring
       // the selected screen's first paint or changing resume behavior.
-      if (_isBrowseTab(_initialTab) || widget.startupBrowseCovered) {
+      if (_isBrowseTab(_initialTab) ||
+          _initialTab == 'Home' ||
+          widget.startupBrowseCovered) {
         unawaited(
             _parkLiveChannel(keepNativeSurface: _isBrowseTab(_initialTab)));
       }
@@ -2227,11 +2237,12 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     }
     _scheduleFocusRecovery();
     final isBrowseTab = _isBrowseTab(_tab);
-    // Back from Settings with Movies/TV Shows just hidden while one of them
-    // was the open tab: fall back to TV. Here rather than in build so the
+    // Back from Settings with the active tab just hidden: use a visible
+    // section. Here rather than in build so the
     // tab switch's focus restore doesn't run under the Settings screen.
-    if (isBrowseTab && context.read<AppPreferences>().isTabHidden(_tab)) {
-      _onTabChanged('TV');
+    final prefs = context.read<AppPreferences>();
+    if (prefs.isTabHidden(_tab)) {
+      _onTabChanged(prefs.fallbackTab);
       return;
     }
     if (!isBrowseTab) {
@@ -2739,6 +2750,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   }
 
   Future<void> _openSports() {
+    if (context.read<AppPreferences>().hideSportsTrak) return Future.value();
     if (context.read<AppPreferences>().sportsMode) {
       Navigator.of(context).popUntil((route) => route.isFirst);
       return Future.value();
@@ -2771,6 +2783,11 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// Home parks a background live channel like Media Hub: it's a browse
   /// page, and its own cards start what plays next.
   void _openHome() {
+    if (_tab == 'Home') {
+      setState(() => _phonePage = 1);
+      _col1Scope.requestFocus();
+      return;
+    }
     _returnToTv = true;
     _returnHomeToFavorites = true;
     _parkLiveChannel();
@@ -3096,7 +3113,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     // _buildLiveRegion for where it actually swaps the content, and the
     // Left/Right binding override just below for why the depth-2 column's
     // own key handling needs to know about it too.
-    final showTimelineGuide = !isBrowseTab && prefs.guideViewMode == 'timeline';
+    final showTimelineGuide = _tab == 'TV' && prefs.guideViewMode == 'timeline';
     final playbackState = context.watch<PlaybackService>();
     final playing = playbackState.currentChannel;
     // A catch-up programme shows where live does (it is that channel).
@@ -3402,22 +3419,26 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                                                     _focusDepth > 0
                                                 ? Colors.transparent
                                                 : null),
-                                        _collapsible(
-                                          depth: 1,
-                                          expandedWidth: 260,
-                                          child: _fullVideoScrim(_groupsScope(
-                                              playlist, isBrowseTab,
-                                              collapsed: _focusDepth > 1)),
-                                        ),
-                                        VerticalDivider(
-                                            width: 1,
-                                            color: (_fullVideo || _fullArt) &&
-                                                    _focusDepth > 1
-                                                ? Colors.transparent
-                                                : null),
-                                        Expanded(
-                                            child: _contentScope(
-                                                playlist, epg, isBrowseTab)),
+                                        if (_tab == 'Home')
+                                          Expanded(child: _homeScope())
+                                        else ...[
+                                          _collapsible(
+                                            depth: 1,
+                                            expandedWidth: 260,
+                                            child: _fullVideoScrim(_groupsScope(
+                                                playlist, isBrowseTab,
+                                                collapsed: _focusDepth > 1)),
+                                          ),
+                                          VerticalDivider(
+                                              width: 1,
+                                              color: (_fullVideo || _fullArt) &&
+                                                      _focusDepth > 1
+                                                  ? Colors.transparent
+                                                  : null),
+                                          Expanded(
+                                              child: _contentScope(
+                                                  playlist, epg, isBrowseTab)),
+                                        ],
                                       ],
                                     ),
                             ),
@@ -3507,6 +3528,15 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               ? _buildBrowseGroupsColumn(playlist, collapsed: collapsed)
               : _buildGroupsColumn(playlist, collapsed: collapsed),
         ),
+      );
+
+  /// Keeps Home and the navigation rail usable with every content tab hidden.
+  Widget _homeScope() => FocusScope(
+        node: _col1Scope,
+        onFocusChange: (has) {
+          if (has) _onColumnFocus(1);
+        },
+        child: const HomeScreen(),
       );
 
   Widget _contentScope(
@@ -3642,8 +3672,14 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             sizing: StackFit.expand,
             children: [
               _tabsScope(collapsed: false),
-              _groupsScope(playlist, isBrowseTab, collapsed: false),
-              _contentScope(playlist, epg, isBrowseTab),
+              if (_tab == 'Home')
+                _homeScope()
+              else
+                _groupsScope(playlist, isBrowseTab, collapsed: false),
+              if (_tab == 'Home')
+                const SizedBox.shrink()
+              else
+                _contentScope(playlist, epg, isBrowseTab),
             ],
           ),
         ),
@@ -3742,8 +3778,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                   Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const ArchiveScreen()));
                 }),
-              item(Icons.sports_hockey, AppConstants.sportsTabName, false,
-                  _openSports),
+              if (!context.watch<AppPreferences>().hideSportsTrak)
+                item(Icons.sports_hockey, AppConstants.sportsTabName, false,
+                    _openSports),
               item(Icons.menu, tr('More'), !onTabs,
                   () => setState(() => _phonePage = 0)),
             ],
@@ -3831,8 +3868,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         _SelectableRow(
           icon: Icons.home_outlined,
           label: tr('Home'),
-          selected: false,
+          selected: _tab == 'Home',
           collapsed: collapsed,
+          focusNode: _tabFocusNode('Home'),
           onTap: _openHome,
         ),
         _SelectableRow(
@@ -3889,13 +3927,14 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         // column model.
         // Portrait phone: these live in the bottom tab bar instead.
         if (!_compact) ...[
-          _SelectableRow(
-            icon: Icons.sports_hockey,
-            label: AppConstants.sportsTabName,
-            selected: false,
-            collapsed: collapsed,
-            onTap: _openSports,
-          ),
+          if (!context.watch<AppPreferences>().hideSportsTrak)
+            _SelectableRow(
+              icon: Icons.sports_hockey,
+              label: AppConstants.sportsTabName,
+              selected: false,
+              collapsed: collapsed,
+              onTap: _openSports,
+            ),
           const Divider(height: 16, color: Colors.white24),
           for (final tab in _visibleTabs)
             _SelectableRow(

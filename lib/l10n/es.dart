@@ -2489,4 +2489,10 @@ const Map<String, String> kEs = {
   "Darts 🎯": "Dardos 🎯",
   "Volleyball 🏐": "Voleibol 🏐",
   "Australian football 🏉": "Fútbol australiano 🏉",
+  "Hide Live TV": "Ocultar TV en directo",
+  "Removes the Live TV tab.": "Quita la pestaña de TV en directo.",
+  "Hide Sports Trak": "Ocultar Sports Trak",
+  "Removes Sports Trak from navigation and turns off Sports Mode.":
+      "Quita Sports Trak de la navegación y desactiva el modo Deportes.",
+  "Choose which tabs to show.": "Elige qué pestañas mostrar.",
 };

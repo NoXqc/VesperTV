@@ -2450,4 +2450,10 @@ const Map<String, String> kEl = {
   "Darts 🎯": "Βελάκια 🎯",
   "Volleyball 🏐": "Βόλεϊ 🏐",
   "Australian football 🏉": "Αυστραλιανό ποδόσφαιρο 🏉",
+  "Hide Live TV": "Απόκρυψη ζωντανής τηλεόρασης",
+  "Removes the Live TV tab.": "Αφαιρεί την καρτέλα ζωντανής τηλεόρασης.",
+  "Hide Sports Trak": "Απόκρυψη Sports Trak",
+  "Removes Sports Trak from navigation and turns off Sports Mode.":
+      "Αφαιρεί το Sports Trak από την πλοήγηση και απενεργοποιεί την αθλητική λειτουργία.",
+  "Choose which tabs to show.": "Επιλέξτε ποιες καρτέλες θα εμφανίζονται.",
 };

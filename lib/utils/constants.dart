@@ -285,6 +285,8 @@ class AppConstants {
   // Split from keyHideMoviesShows (which now only seeds these two).
   static const String keyHideMovies = 'vesper_hide_movies';
   static const String keyHideShows = 'vesper_hide_shows';
+  static const String keyHideLiveTv = 'vesper_hide_live_tv';
+  static const String keyHideSportsTrak = 'vesper_hide_sports_trak';
   static const String keyHideArchive = 'vesper_hide_archive';
   static const String keyHideRecordings = 'vesper_hide_recordings';
   static const String keyHideCatchupGroup = 'vesper_hide_catchup_group';

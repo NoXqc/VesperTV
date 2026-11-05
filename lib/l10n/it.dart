@@ -2496,4 +2496,10 @@ const Map<String, String> kIt = {
   "Darts 🎯": "Freccette 🎯",
   "Volleyball 🏐": "Pallavolo 🏐",
   "Australian football 🏉": "Football australiano 🏉",
+  "Hide Live TV": "Nascondi TV in diretta",
+  "Removes the Live TV tab.": "Rimuove la scheda TV in diretta.",
+  "Hide Sports Trak": "Nascondi Sports Trak",
+  "Removes Sports Trak from navigation and turns off Sports Mode.":
+      "Rimuove Sports Trak dalla navigazione e disattiva la modalità Sport.",
+  "Choose which tabs to show.": "Scegli quali schede mostrare.",
 };

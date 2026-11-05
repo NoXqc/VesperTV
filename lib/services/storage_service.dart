@@ -438,6 +438,15 @@ class StorageService {
   Future<void> setHideMoviesShows(bool value) =>
       _prefs.setBool(AppConstants.keyHideMoviesShows, value);
 
+  /// Device-wide navigation switches, visible by default.
+  bool getHideLiveTv() => _prefs.getBool(AppConstants.keyHideLiveTv) ?? false;
+  Future<void> setHideLiveTv(bool value) =>
+      _prefs.setBool(AppConstants.keyHideLiveTv, value);
+  bool getHideSportsTrak() =>
+      _prefs.getBool(AppConstants.keyHideSportsTrak) ?? false;
+  Future<void> setHideSportsTrak(bool value) =>
+      _prefs.setBool(AppConstants.keyHideSportsTrak, value);
+
   /// Separate Movies / TV Shows switches; unset = the old combined one.
   bool getHideMovies() =>
       _prefs.getBool(AppConstants.keyHideMovies) ?? getHideMoviesShows();

@@ -38,11 +38,13 @@ class StartupRoutes {
         unawaited(storage.setStartSectionPending(false));
       }
       if (!AppPreferences.startSections.any((entry) => entry.$1 == section)) {
-        section = 'tv';
+        section = preferences.fallbackStartSection;
       }
       if (section != 'tv') {
         if (storage.getStartSectionPending()) {
-          section = 'tv';
+          // Home is the safe recovery page when TV is hidden; retrying the
+          // first visible browse tab could repeat the startup crash.
+          section = preferences.hideLiveTv ? 'home' : 'tv';
           unawaited(storage.setStartSectionPending(false));
         } else {
           unawaited(storage.setStartSectionPending(true));
@@ -55,7 +57,9 @@ class StartupRoutes {
     return [
       MaterialPageRoute<void>(
           settings: const RouteSettings(name: '/'), builder: rootBuilder),
-      if (first && destinations.containsKey(section))
+      if (first &&
+          destinations.containsKey(section) &&
+          !(section == 'home' && preferences.hideLiveTv))
         MaterialPageRoute<void>(
             settings: RouteSettings(name: '/startup-$section'),
             builder: destinations[section]!),

@@ -157,6 +157,54 @@ void main() {
     startup.dispose();
   });
 
+  for (final page in ['tv', 'sports']) {
+    testWidgets('hidden $page starts on Movies without a hidden first frame',
+        (tester) async {
+      prefs.setHideLiveTv(true);
+      prefs.setHideSportsTrak(true);
+      prefs.setStartSection(page);
+      await tester.pumpWidget(app());
+      expect(find.text('Page movies').hitTestable(), findsOneWidget);
+      expect(find.text('Page tv'), findsNothing);
+      expect(find.text('Page sports'), findsNothing);
+      startup.dispose();
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
+
+  for (final pending in [false, true]) {
+    testWidgets('all content hidden uses one Home root; crash guard=$pending',
+        (tester) async {
+      prefs.setHideLiveTv(true);
+      prefs.setHideMovies(true);
+      prefs.setHideShows(true);
+      await storage.setStartSectionPending(pending);
+      await tester.pumpWidget(app(
+          rootBuilder: (_) =>
+              Scaffold(body: Text('Root ${startup.takeRootSection()}'))));
+      expect(find.text('Root home').hitTestable(), findsOneWidget);
+      expect(find.text('Page home'), findsNothing);
+      expect(tester.state<NavigatorState>(find.byType(Navigator)).canPop(),
+          isFalse);
+      startup.dispose();
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
+
+  testWidgets('crashed browse startup with TV hidden recovers to Home',
+      (tester) async {
+    prefs.setHideLiveTv(true);
+    prefs.setStartSection('movies');
+    await storage.setStartSectionPending(true);
+    await tester.pumpWidget(app(
+        rootBuilder: (_) =>
+            Scaffold(body: Text('Root ${startup.takeRootSection()}'))));
+    expect(find.text('Root home').hitTestable(), findsOneWidget);
+    expect(find.text('Page home'), findsNothing);
+    expect(storage.getStartSectionPending(), isFalse);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   for (final page in ['home', 'hub', 'movies', 'series', 'sports']) {
     testWidgets('real TV root starts on $page without a TV-first transition',
         (tester) async {

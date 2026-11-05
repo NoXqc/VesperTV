@@ -210,7 +210,7 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
                 tr('Live TV guide layout, full-screen video, compact rows'),
                 (_) => const GuideSettingsScreen()),
             _general('tabs', Icons.tab_outlined, tr('Tabs'),
-                tr('Hide Movies, TV Shows, Media Hub, Recordings or Multiview')),
+                tr('Choose which tabs to show.')),
             _general('goals', Icons.sports_score, tr('Goals alert'),
                 tr('Score alerts for My Teams on any screen')),
             _general('favourites', Icons.star_outline, tr('Favourites'),

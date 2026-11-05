@@ -42,6 +42,8 @@ class AppPreferences extends ChangeNotifier {
   /// own switch (Settings > General > Tabs).
   late bool hideMovies;
   late bool hideShows;
+  late bool hideLiveTv;
+  late bool hideSportsTrak;
 
   /// The Extras row (the Archive tab; tabs column / phone "More" page)
   /// hidden.
@@ -117,11 +119,26 @@ class AppPreferences extends ChangeNotifier {
   /// Both Movies and TV Shows hidden.
   bool get hideMoviesShows => hideMovies && hideShows;
 
-  /// Whether the tab id 'Movies' / 'TV Shows' is hidden.
+  /// Whether a content tab is hidden. Home and Settings always remain available.
   bool isTabHidden(String tab) => switch (tab) {
+        'TV' => hideLiveTv,
         'Movies' => hideMovies,
         'TV Shows' => hideShows,
         _ => false,
+      };
+
+  /// A visible root tab, including Home when all three content tabs are hidden.
+  String get fallbackTab =>
+      ['TV', 'Movies', 'TV Shows']
+          .where((tab) => !isTabHidden(tab))
+          .firstOrNull ??
+      'Home';
+
+  String get fallbackStartSection => switch (fallbackTab) {
+        'Movies' => 'movies',
+        'TV Shows' => 'series',
+        'Home' => 'home',
+        _ => 'tv',
       };
 
   /// Set once at startup from Android's own UI mode (see
@@ -227,7 +244,7 @@ class AppPreferences extends ChangeNotifier {
 
   /// Where the app opens after the splash (user request: "load on Sports
   /// Trak"): `tv` (default), `movies`, `series`, `hub` (Media Hub) or
-  /// `sports`. A hidden tab falls back to TV. With "Resume last channel in
+  /// `sports`. A hidden tab falls back to a visible section. With "Resume last channel in
   /// full screen" on and another section chosen, the channel resumes in
   /// the background instead (main.dart `_autoResumeLastChannel`): the
   /// chosen section wins. Device-only.
@@ -248,11 +265,13 @@ class AppPreferences extends ChangeNotifier {
     ('sports', AppConstants.sportsTabName),
   ];
 
-  /// [startSection] unless what it names is hidden (then `tv`).
+  /// [startSection] unless what it names is hidden.
   String get effectiveStartSection => switch (startSection) {
-        'movies' when hideMovies => 'tv',
-        'series' when hideShows => 'tv',
-        'hub' when hideArchive => 'tv',
+        'tv' when hideLiveTv => fallbackStartSection,
+        'movies' when hideMovies => fallbackStartSection,
+        'series' when hideShows => fallbackStartSection,
+        'hub' when hideArchive => fallbackStartSection,
+        'sports' when hideSportsTrak => fallbackStartSection,
         final s => s,
       };
 
@@ -281,8 +300,12 @@ class AppPreferences extends ChangeNotifier {
       .reduce((a, b) => (a.$1 - scale).abs() <= (b.$1 - scale).abs() ? a : b)
       .$2;
 
-  bool get sportsMode => _storage.getSportsMode();
+  bool get sportsMode => !hideSportsTrak && _storage.getSportsMode();
   Future<void> setSportsMode(bool value) async {
+    if (value && hideSportsTrak) {
+      hideSportsTrak = false;
+      await _storage.setHideSportsTrak(false);
+    }
     await _storage.setSportsMode(value);
     notifyListeners();
   }
@@ -342,6 +365,8 @@ class AppPreferences extends ChangeNotifier {
     expandedBrowse = _storage.getExpandedBrowse();
     hideMovies = _storage.getHideMovies();
     hideShows = _storage.getHideShows();
+    hideLiveTv = _storage.getHideLiveTv();
+    hideSportsTrak = _storage.getHideSportsTrak();
     hideArchive = _storage.getHideArchive();
     hideRecordings = _storage.getHideRecordings();
     hideCatchupGroup = _storage.getHideCatchupGroup();
@@ -461,6 +486,19 @@ class AppPreferences extends ChangeNotifier {
   void setHideMovies(bool value) {
     hideMovies = value;
     _storage.setHideMovies(value);
+    notifyListeners();
+  }
+
+  void setHideLiveTv(bool value) {
+    hideLiveTv = value;
+    _storage.setHideLiveTv(value);
+    notifyListeners();
+  }
+
+  void setHideSportsTrak(bool value) {
+    hideSportsTrak = value;
+    _storage.setHideSportsTrak(value);
+    if (value) _storage.setSportsMode(false);
     notifyListeners();
   }
 
