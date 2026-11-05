@@ -131,16 +131,16 @@ void main() {
     service.dispose();
   });
 
-  testWidgets('moving at 2.9 seconds starts a complete new dwell period',
+  testWidgets('moving at 1.9 seconds starts a complete new dwell period',
       (tester) async {
     final service = await _open(tester);
     await _press(tester, LogicalKeyboardKey.arrowRight);
-    await tester.pump(const Duration(milliseconds: 2900));
+    await tester.pump(const Duration(milliseconds: 1900));
     await _press(tester, LogicalKeyboardKey.arrowRight);
     await tester.pump(const Duration(milliseconds: 100));
     expect(_wideCards(tester), isEmpty,
         reason: 'the previous timer was cancelled');
-    await tester.pump(const Duration(milliseconds: 2899));
+    await tester.pump(const Duration(milliseconds: 1899));
     expect(_wideCards(tester), isEmpty);
     await tester.pump(const Duration(milliseconds: 1));
     expect(_wideCards(tester).map((c) => c.title), ['Title 0-1']);
@@ -157,12 +157,12 @@ void main() {
       (tester) async {
     final service = await _open(tester);
     await _press(tester, LogicalKeyboardKey.arrowRight);
-    await tester.pump(const Duration(seconds: 2));
+    await tester.pump(const Duration(seconds: 1));
     await _press(tester, LogicalKeyboardKey.arrowUp);
     await tester.pump(const Duration(seconds: 5));
     expect(_wideCards(tester), isEmpty);
     await _press(tester, LogicalKeyboardKey.arrowDown);
-    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(seconds: 2));
     expect(_wideCards(tester).length, 1);
     await _press(tester, LogicalKeyboardKey.arrowLeft);
     await tester.pump(const Duration(seconds: 5));
@@ -171,18 +171,17 @@ void main() {
     service.dispose();
   });
 
-  testWidgets(
-      'background cancels the dwell; returning waits three seconds again',
+  testWidgets('background cancels the dwell; returning waits two seconds again',
       (tester) async {
     final service = await _open(tester);
     await _press(tester, LogicalKeyboardKey.arrowRight);
-    await tester.pump(const Duration(seconds: 2));
+    await tester.pump(const Duration(seconds: 1));
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
     await tester.pump(const Duration(seconds: 10));
     expect(_wideCards(tester), isEmpty);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 2999));
+    await tester.pump(const Duration(milliseconds: 1999));
     expect(_wideCards(tester), isEmpty);
     await tester.pump(const Duration(milliseconds: 1));
     expect(_wideCards(tester).length, 1);
@@ -194,7 +193,7 @@ void main() {
       (tester) async {
     final service = await _open(tester);
     await _press(tester, LogicalKeyboardKey.arrowRight);
-    await tester.pump(const Duration(seconds: 2));
+    await tester.pump(const Duration(seconds: 1));
     final navigator = tester.state<NavigatorState>(find.byType(Navigator));
     navigator.push(MaterialPageRoute<void>(
         builder: (_) => const Scaffold(body: Text('Covered'))));
@@ -204,7 +203,7 @@ void main() {
     navigator.pop();
     await tester.pumpAndSettle();
     expect(_wideCards(tester), isEmpty);
-    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(seconds: 2));
     expect(_wideCards(tester).length, 1);
     await tester.pumpWidget(const SizedBox());
     service.dispose();
@@ -214,7 +213,7 @@ void main() {
       (tester) async {
     final service = await _open(tester);
     await _press(tester, LogicalKeyboardKey.arrowRight);
-    await tester.pump(const Duration(seconds: 2));
+    await tester.pump(const Duration(seconds: 1));
     service.entries.first.items[0] = const ArchiveMeta(
         id: 'replacement',
         type: ArchiveType.movie,
@@ -252,7 +251,7 @@ void main() {
     expect(_focusedCard(tester).title, 'Title 0-0');
     expect(_focusedCard(tester).wideWidth, isNull,
         reason: 'moving focus must leave posters compact');
-    await tester.pump(const Duration(milliseconds: 2999));
+    await tester.pump(const Duration(milliseconds: 1999));
     expect(_wideCards(tester), isEmpty);
     await tester.pump(const Duration(milliseconds: 1));
     expect(_focusedCard(tester).wideWidth, PosterCard.wideCardWidth);
@@ -264,14 +263,14 @@ void main() {
     await _press(tester, LogicalKeyboardKey.arrowRight, 3);
     expect(_focusedCard(tester).title, 'Title 0-3');
     expect(_wideCards(tester), isEmpty);
-    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(seconds: 2));
     expect(_wideCards(tester).map((c) => c.title), ['Title 0-3']);
 
     // A title without a backdrop stays a poster.
     await _press(tester, LogicalKeyboardKey.arrowRight);
     expect(_focusedCard(tester).title, 'Title 0-4');
     expect(_wideCards(tester), isEmpty);
-    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(seconds: 2));
     expect(_wideCards(tester), isEmpty);
 
     // To the end of the row: the wide last card is fully on screen.
@@ -279,7 +278,7 @@ void main() {
     await tester.pump();
     expect(_focusedCard(tester).title, 'Title 0-13');
     expect(_wideCards(tester), isEmpty);
-    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(seconds: 2));
     await tester.pump();
     final rect = tester.getRect(find.byWidgetPredicate(
         (w) => w is PosterCard && (w.focusNode?.hasFocus ?? false)));
@@ -290,7 +289,7 @@ void main() {
     await _press(tester, LogicalKeyboardKey.arrowDown);
     expect(_focusedCard(tester).title, startsWith('Title 1-'));
     expect(_wideCards(tester), isEmpty);
-    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(seconds: 2));
     expect(_wideCards(tester).length, 1);
     expect(_wideCards(tester).single.title, startsWith('Title 1-'));
 

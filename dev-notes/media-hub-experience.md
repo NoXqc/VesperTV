@@ -199,9 +199,9 @@ dark -> backdrop without a poster flash (`_focusedArtPending`).
   rows (width >= 700) scroll with each focused selection, anchored at the left
   padding until the natural end-of-row clamp. Narrow layouts keep minimal reveal.
   Hero metadata still changes immediately; the focused card stays portrait until
-  three seconds on that same title, then expands when a backdrop is available.
+  two seconds on that same title, then expands when a backdrop is available.
   Movement, row/bar/rail changes, route coverage and app backgrounding cancel the
-  dwell; returning starts a fresh three seconds. Revalidate type, row, index,
+  dwell; returning starts a fresh two seconds. Revalidate type, row, index,
   title identity and actual focus before expanding, including after refresh.
   Keep `itemExtentBuilder` throughout; reconcile the scroll after expansion or
   collapse without replacing the sliver or losing the sparse lazy focus nodes.
@@ -209,3 +209,7 @@ dark -> backdrop without a poster flash (`_focusedArtPending`).
   cancellation/return, refreshed identity, portrait layout and end-of-row clamp;
   existing large-catalog and rail regressions also pass. Hardware acceptance
   remains pending. No APK build/install or version bump in this change.
+
+- **Preview timing follow-up (Codex, 2026-11-05):** owner requested two seconds
+  instead of three. Timer and existing boundary/cancellation tests now use two
+  seconds; scrolling and all other preview behavior remain unchanged.

@@ -371,7 +371,7 @@
     "id": "ad512e8c893f29ab",
     "category": "Media Hub",
     "title": "Left panel",
-    "answer": "Search, Movies, TV Shows, Refresh, Media Hub sources and Jellyfin / Emby. Up/Down moves between these entries and stays at the ends; Right enters the title rows. While you browse the rows or the top bar it folds to a slim strip of icons; Left (or Back) from the rows opens it again and slides the rows aside. On a TV, the title you're on fills the top of the page with its logo, genre, year, IMDb rating and description, and its card turns into a wide picture after you keep it focused for three seconds. Rows scroll with each selection, keeping the selector near the left edge so you can see upcoming titles, until you reach the end of the row.",
+    "answer": "Search, Movies, TV Shows, Refresh, Media Hub sources and Jellyfin / Emby. Up/Down moves between these entries and stays at the ends; Right enters the title rows. While you browse the rows or the top bar it folds to a slim strip of icons; Left (or Back) from the rows opens it again and slides the rows aside. On a TV, the title you're on fills the top of the page with its logo, genre, year, IMDb rating and description, and its card turns into a wide picture after you keep it focused for two seconds. Rows scroll with each selection, keeping the selector near the left edge so you can see upcoming titles, until you reach the end of the row.",
     "controls": "← from the first card",
     "url": "https://vespertv.app/remote.html#Media%20Hub"
   },

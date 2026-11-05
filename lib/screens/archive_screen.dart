@@ -270,7 +270,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
       _wideCards &&
       ModalRoute.of(context)?.isCurrent != false;
 
-  /// Only the title kept focused for three seconds may occupy a wide slot.
+  /// Only the title kept focused for two seconds may occupy a wide slot.
   /// Validate identity again: a refreshed row may reuse the same index/node.
   int? _wideIndex(ArchiveRow row) {
     final expanded = _expandedCard;
@@ -328,7 +328,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     if (!_canPreview || !(row.items[i].backgroundUrl?.isNotEmpty ?? false)) {
       return;
     }
-    _widePreviewTimer = Timer(const Duration(seconds: 3), () {
+    _widePreviewTimer = Timer(const Duration(seconds: 2), () {
       _widePreviewTimer = null;
       if (!mounted ||
           !_canPreview ||
