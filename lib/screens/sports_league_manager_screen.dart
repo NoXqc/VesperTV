@@ -1,3 +1,4 @@
+import '../widgets/glass_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -107,12 +108,11 @@ class _SportsLeagueManagerScreenState extends State<SportsLeagueManagerScreen> {
   /// Hold OK on one of your leagues: favourite on/off, send back (added).
   Future<void> _openMenu(SportsLeague l) async {
     final favorite = _favorite == l.id;
-    final action = await showDialog<String>(
+    final action = await showGlassMenu<String>(
       context: context,
       // Opened by a hold: drop the held OK's repeats.
       builder: (context) => SwallowHeldActivate(
-        child: AlertDialog(
-          backgroundColor: const Color(0xFF15151A),
+        child: GlassMenuDialog(
           title: Text(l.name),
           content: SizedBox(
             width: 440,

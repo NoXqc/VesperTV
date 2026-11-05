@@ -1,3 +1,4 @@
+import 'glass_menu.dart';
 import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
@@ -23,9 +24,9 @@ Future<MoveToGroupChoice?> showMoveToGroupDialog(
   required String providerGroup,
 }) async {
   final moved = currentGroup != providerGroup;
-  final choice = await showDialog<String>(
+  final choice = await showGlassMenu<String>(
     context: context,
-    builder: (context) => SimpleDialog(
+    builder: (context) => GlassMenuDialog(
       title: Text(tr('Move {name} to', {'name': channelName}),
           maxLines: 2, overflow: TextOverflow.ellipsis),
       children: [
@@ -71,9 +72,9 @@ Future<MoveToGroupChoice?> showMoveToGroupDialog(
 /// group hold menu's "New group…".
 Future<String?> askGroupName(BuildContext context) async {
   final controller = TextEditingController();
-  final entered = await showDialog<String>(
+  final entered = await showGlassMenu<String>(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (context) => GlassMenuDialog(
       title: Text(tr('New group')),
       content: FocusNodeOwner(
         builder: (context, node) => TvTextFieldGate(
@@ -114,9 +115,9 @@ Future<String?> askGroupName(BuildContext context) async {
 /// new display name, '' to go back to the provider's name, or null.
 Future<String?> askChannelName(BuildContext context, String current) async {
   final controller = TextEditingController(text: current);
-  final entered = await showDialog<String>(
+  final entered = await showGlassMenu<String>(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (context) => GlassMenuDialog(
       title: Text(tr('Rename channel')),
       content: FocusNodeOwner(
         builder: (context, node) => TvTextFieldGate(

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../services/app_preferences.dart';
 import 'hold_to_activate.dart';
+import 'glass_menu.dart';
 
 /// One choice in a [showRollDownMenu].
 class RollDownMenuItem<T> {
@@ -102,6 +103,8 @@ class _RollDownMenu<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screen = MediaQuery.sizeOf(context);
+    final padding = MediaQuery.paddingOf(context);
+    final insets = MediaQuery.viewInsetsOf(context);
     final a = anchor;
     final w = width.clamp(160.0, screen.width - 24);
     final double left = (a == null
@@ -110,8 +113,16 @@ class _RollDownMenu<T> extends StatelessWidget {
                 ? a.center.dx - w / 2
                 : a.left)
         .clamp(12.0, screen.width - w - 12);
-    final top = (a?.bottom ?? 72) + 8;
-    final maxHeight = (screen.height - top - 16).clamp(120.0, screen.height);
+    final topEdge = padding.top + 12;
+    final bottomEdge = (screen.height - padding.bottom - insets.bottom - 12)
+        .clamp(topEdge + 1, screen.height);
+    final preferredTop = (a?.bottom ?? 72) + 8;
+    final below = (bottomEdge - preferredTop).clamp(0.0, screen.height);
+    final anchorTop = (a?.top ?? topEdge).clamp(topEdge + 8, bottomEdge + 8);
+    final above = (anchorTop - 8 - topEdge).clamp(0.0, screen.height);
+    final opensAbove = a != null && below < 160 && above > below;
+    final top = preferredTop.clamp(topEdge, bottomEdge - 1);
+    final maxHeight = (opensAbove ? above : below).clamp(1.0, screen.height);
     final focusIndex = items.indexWhere((i) => i.selected);
     final curve =
         CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
@@ -119,7 +130,8 @@ class _RollDownMenu<T> extends StatelessWidget {
       children: [
         Positioned(
           left: left,
-          top: top,
+          top: opensAbove ? null : top,
+          bottom: opensAbove ? screen.height - anchorTop + 8 : null,
           width: w,
           child: Material(
             type: MaterialType.transparency,
@@ -127,80 +139,73 @@ class _RollDownMenu<T> extends StatelessWidget {
               opacity: curve,
               child: SizeTransition(
                 sizeFactor: curve,
-                alignment: Alignment.topCenter,
-                child: Container(
+                alignment:
+                    opensAbove ? Alignment.bottomCenter : Alignment.topCenter,
+                child: ConstrainedBox(
                   constraints: BoxConstraints(maxHeight: maxHeight),
-                  padding: const EdgeInsets.fromLTRB(6, 10, 6, 6),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.white.withValues(alpha: 0.12),
-                        Colors.white.withValues(alpha: 0.04),
-                      ],
-                    ),
-                    color: const Color(0xF20D0D10),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: Colors.white24),
-                    boxShadow: const [
-                      BoxShadow(color: Colors.black87, blurRadius: 24),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                        child: Text(title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                fontSize: 13,
-                                color: Colors.white60,
-                                fontWeight: FontWeight.w600)),
-                      ),
-                      // Non-lazy: every item has a context, so focus can
-                      // reach any of them (a long list scrolls).
-                      Flexible(
-                        child: SingleChildScrollView(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              for (var i = 0; i < items.length; i++)
-                                Padding(
-                                  padding: EdgeInsets.only(
-                                      bottom: i == items.length - 1 ? 0 : 4),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: _RollDownMenuButton(
-                                          item: items[i],
-                                          autofocus: i ==
-                                              (focusIndex < 0 ? 0 : focusIndex),
-                                          onTap: () => Navigator.of(context)
-                                              .pop(items[i].value),
-                                        ),
-                                      ),
-                                      if (items[i].action
-                                          case final action?) ...[
-                                        const SizedBox(width: 4),
-                                        _RollDownActionButton(
-                                          icon: action.icon,
-                                          label: action.label,
-                                          onTap: () => Navigator.of(context)
-                                              .pop(action.value),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                            ],
+                  child: GlassMenuSurface(
+                    radius: 24,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(6, 10, 6, 6),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                            child: Text(title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.white60,
+                                    fontWeight: FontWeight.w600)),
                           ),
-                        ),
+                          // Non-lazy: every item has a context, so focus can
+                          // reach any of them (a long list scrolls).
+                          Flexible(
+                            child: SingleChildScrollView(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  for (var i = 0; i < items.length; i++)
+                                    Padding(
+                                      padding: EdgeInsets.only(
+                                          bottom:
+                                              i == items.length - 1 ? 0 : 4),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: _RollDownMenuButton(
+                                              item: items[i],
+                                              autofocus: i ==
+                                                  (focusIndex < 0
+                                                      ? 0
+                                                      : focusIndex),
+                                              onTap: () => Navigator.of(context)
+                                                  .pop(items[i].value),
+                                            ),
+                                          ),
+                                          if (items[i].action
+                                              case final action?) ...[
+                                            const SizedBox(width: 4),
+                                            _RollDownActionButton(
+                                              icon: action.icon,
+                                              label: action.label,
+                                              onTap: () => Navigator.of(context)
+                                                  .pop(action.value),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -244,13 +249,8 @@ class _RollDownMenuButtonState extends State<_RollDownMenuButton> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-        decoration: BoxDecoration(
-          color:
-              lit ? Colors.white.withValues(alpha: 0.14) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-              color: _focused ? scheme.primary : Colors.transparent, width: 2),
-        ),
+        decoration: GlassMenuSurface.rowDecoration(context,
+            focused: _focused, selected: item.selected, radius: 20),
         child: Row(
           children: [
             Icon(item.selected ? Icons.check : item.icon,
@@ -317,14 +317,8 @@ class _RollDownActionButtonState extends State<_RollDownActionButton> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-        decoration: BoxDecoration(
-          color: _focused
-              ? Colors.white.withValues(alpha: 0.14)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-              color: _focused ? scheme.primary : Colors.transparent, width: 2),
-        ),
+        decoration: GlassMenuSurface.rowDecoration(context,
+            focused: _focused, radius: 20),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [

@@ -1,3 +1,4 @@
+import '../widgets/glass_menu.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -74,11 +75,10 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
       .push(PlayerPageRoute(builder: (_) => PlayerScreen(channel: c)));
 
   Future<void> _menu(RecordingEntry r) async {
-    final action = await showDialog<String>(
+    final action = await showGlassMenu<String>(
       context: context,
       builder: (context) => SwallowHeldActivate(
-        child: AlertDialog(
-          backgroundColor: const Color(0xFF15151A),
+        child: GlassMenuDialog(
           title: Text(r.title, maxLines: 2, overflow: TextOverflow.ellipsis),
           content: SizedBox(
             width: 460,

@@ -1,3 +1,4 @@
+import '../../widgets/glass_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -78,10 +79,10 @@ class _AddonsScreenState extends State<AddonsScreen> {
   Future<void> _remove(int i) async {
     final addon = _addons[i];
     if (addon.manifestUrl == AddonService.openSubtitlesManifest) return;
-    final ok = await showDialog<bool>(
+    final ok = await showGlassMenu<bool>(
       context: context,
       builder: (dialogContext) => SwallowHeldActivate(
-          child: AlertDialog(
+          child: GlassMenuDialog(
         title: Text(tr('Remove {name}?', {'name': addon.name})),
         actions: [
           TextButton(

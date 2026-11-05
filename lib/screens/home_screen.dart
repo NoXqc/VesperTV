@@ -1,3 +1,4 @@
+import '../widgets/glass_menu.dart';
 import '../utils/refined_finish.dart';
 import 'dart:async';
 import 'dart:io';
@@ -703,9 +704,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final viewer = storage.getActiveViewerId();
     final shown = _rowsConfig.visible;
     final i = shown.indexOf(kind);
-    final choice = await showDialog<String>(
+    final choice = await showGlassMenu<String>(
       context: context,
-      builder: (context) => SimpleDialog(
+      builder: (context) => GlassMenuDialog(
         title: Text(tr(kind.title)),
         children: [
           if (item?.removeFromHistory != null)
@@ -777,10 +778,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Every row with a switch (a hidden row comes back from here).
   Future<void> _editRows() async {
-    await showDialog<void>(
+    await showGlassMenu<void>(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialog) => SimpleDialog(
+        builder: (context, setDialog) => GlassMenuDialog(
           title: Text(tr('Home rows')),
           children: [
             for (final (n, k) in _rowsConfig.order.indexed)

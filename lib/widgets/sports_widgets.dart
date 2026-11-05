@@ -1,3 +1,4 @@
+import 'glass_menu.dart';
 import '../utils/refined_finish.dart';
 import 'dart:io';
 
@@ -17,11 +18,10 @@ import '../l10n/l10n.dart';
 /// change. Opened by a hold, so the held OK is swallowed.
 Future<bool> showSportsFollowDialog(BuildContext context,
     {required SportsTeam team, required bool followed}) async {
-  final confirmed = await showDialog<bool>(
+  final confirmed = await showGlassMenu<bool>(
     context: context,
     builder: (context) => SwallowHeldActivate(
-      child: AlertDialog(
-        backgroundColor: const Color(0xFF15151A),
+      child: GlassMenuDialog(
         title: Row(
           children: [
             SportsLogo(
@@ -72,11 +72,10 @@ Future<SportsTeamAction?> showSportsTeamMenu(BuildContext context,
     bool canFollow = true,
     bool canPickChannel = false,
     String? preferredChannelName}) {
-  return showDialog<SportsTeamAction>(
+  return showGlassMenu<SportsTeamAction>(
     context: context,
     builder: (context) => SwallowHeldActivate(
-      child: AlertDialog(
-        backgroundColor: const Color(0xFF15151A),
+      child: GlassMenuDialog(
         title: Row(
           children: [
             SportsLogo(
