@@ -2578,4 +2578,11 @@ const Map<String, String> kIt = {
   "{home} vs {away}": "{home} contro {away}",
   "Channels list": "Elenco canali",
   "Stream info": "Info stream",
+  "TV add-on":
+      "Add-on TV",
+  "TV add-on lists a source of live channels under Media Hub > Live TV (on by itself for TV-type add-ons).":
+      "Add-on TV mostra una fonte di canali in diretta in Media Hub > TV in diretta (attivo da solo per gli add-on di tipo TV).",
+  "No live channels. In Media Hub sources, turn on TV add-on for a source of live channels.":
+      "Nessun canale in diretta. Nelle fonti Media Hub, attiva Add-on TV per una fonte di canali in diretta.",
+  "◀ Catch-up": "◀ Replay",
 };

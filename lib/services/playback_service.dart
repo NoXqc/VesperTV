@@ -163,6 +163,10 @@ class PlaybackService extends ChangeNotifier {
   /// CH+/CH- step through. Plain field, no notify; PlayerScreen falls back
   /// to the channel's own group when the playing channel isn't in it.
   List<Channel>? zapList;
+
+  /// Media Hub Live TV: its channels have no stream address until played
+  /// (ArchiveService.resolveLive); [play] asks this first for one.
+  Future<Channel?> Function(Channel channel)? resolveLive;
   VideoPlayerHdrController? controller;
 
   /// When the current channel was tuned (the Data pool's "Playing for"; a
@@ -432,6 +436,14 @@ class PlaybackService extends ChangeNotifier {
   final _nativeSwitchReleases = <VoidCallback>{};
 
   Future<void> play(Channel channel) async {
+    if (channel.url.isEmpty && resolveLive != null) {
+      final resolved = await resolveLive!(channel);
+      if (resolved == null || resolved.url.isEmpty) {
+        debugPrint('HubLive: no playable stream');
+        return;
+      }
+      channel = resolved;
+    }
     if (!usesNativeSurface ||
         !NativeVideoSurface.active ||
         textureVideo ||

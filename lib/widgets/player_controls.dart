@@ -688,16 +688,19 @@ class PlayerControls extends StatelessWidget {
           onActivity?.call();
           o.onPressed();
         });
+    // Low on the screen and nearly opaque: the picture showed through the
+    // tiles and their labels were hard to read (owner photo, 2026-11-05).
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.bottomCenter,
           end: Alignment.topCenter,
-          colors: [Color(0xE6000000), Color(0x00000000)],
+          stops: [0, 0.75, 1],
+          colors: [Color(0xF5000000), Color(0xEB000000), Color(0x00000000)],
         ),
       ),
       padding: EdgeInsets.fromLTRB(
-          24 + inset.left, 40, 24 + inset.right, 20 + inset.bottom),
+          16 + inset.left, 22, 16 + inset.right, 6 + inset.bottom),
       child: _OptionTiles(
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -759,6 +762,15 @@ class PlayerControls extends StatelessWidget {
               // from keyboard/remote focus traversal.
               // The Slider itself stays out of focus; [_ScrubBar] is the
               // remote's way onto it (Up from the buttons).
+              // Live: the programme on now, how far in, and (catch-up
+              // channels) Left/Right back into catch-up (owner, 2026-11-05).
+              if (isLive && catchup == null && ownsPlayer && channel != null)
+                _LiveTimeline(
+                  channel: channel!,
+                  epgId: channelId,
+                  playback: playback,
+                  onActivity: onActivity,
+                ),
               if (showSeek)
                 _ScrubBar(
                   controller: controller,
@@ -2082,8 +2094,9 @@ class _LabeledIconButtonState extends State<_LabeledIconButton> {
           padding: const EdgeInsets.fromLTRB(6, 10, 6, 6),
           decoration: BoxDecoration(
             color: _focused
-                ? accent.withValues(alpha: 0.22)
-                : Colors.white.withValues(alpha: 0.06),
+                ? Color.alphaBlend(
+                    accent.withValues(alpha: 0.25), const Color(0xFF1A1A1A))
+                : const Color(0xFF1A1A1A),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
                 color: _focused ? accent : Colors.transparent, width: 2),
@@ -2331,6 +2344,185 @@ class _ScrubBarState extends State<_ScrubBar> {
     final h = d.inHours, m = d.inMinutes % 60, s = d.inSeconds % 60;
     String two(int v) => v.toString().padLeft(2, '0');
     return h > 0 ? '$h:${two(m)}:${two(s)}' : '$m:${two(s)}';
+  }
+}
+
+/// The live programme's timeline in the player bar: start and end times,
+/// a bar up to now. On a catch-up channel it's a remote target (Up from
+/// the buttons): Left/Right move a time back (growing steps, like
+/// [_ScrubBar]), and 700 ms after the last press (or OK) catch-up plays
+/// from there; back to now = live. Without a guide listing it's hidden.
+class _LiveTimeline extends StatefulWidget {
+  const _LiveTimeline({
+    required this.channel,
+    required this.epgId,
+    required this.playback,
+    this.onActivity,
+  });
+
+  final Channel channel;
+  final String epgId;
+  final PlaybackService playback;
+  final VoidCallback? onActivity;
+
+  @override
+  State<_LiveTimeline> createState() => _LiveTimelineState();
+}
+
+class _LiveTimelineState extends State<_LiveTimeline> {
+  final _focus = FocusNode(debugLabel: 'live-timeline');
+  DateTime? _target;
+  int _steps = 0;
+  Timer? _commit;
+
+  @override
+  void dispose() {
+    _commit?.cancel();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  void _move(int sign) {
+    widget.onActivity?.call();
+    final now = DateTime.now();
+    final from = _target ?? now;
+    var next = from
+        .add(Duration(seconds: sign * _ScrubBarState.stepSeconds(_steps++)));
+    final oldest = CatchupSession.oldest(widget.channel, now);
+    if (next.isBefore(oldest)) next = oldest;
+    if (next.isAfter(now)) next = now;
+    setState(() => _target = next);
+    _commit?.cancel();
+    _commit = Timer(const Duration(milliseconds: 700), _go);
+  }
+
+  void _go() {
+    _commit?.cancel();
+    final target = _target;
+    _steps = 0;
+    if (mounted) setState(() => _target = null);
+    if (target == null ||
+        DateTime.now().difference(target) < CatchupSession.liveEdge) {
+      return;
+    }
+    unawaited(widget.playback.playCatchup(widget.channel, target));
+  }
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (event is KeyUpEvent) return KeyEventResult.ignored;
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.arrowLeft) {
+      _move(-1);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowRight) {
+      _move(1);
+      return KeyEventResult.handled;
+    }
+    if (_target != null &&
+        event is KeyDownEvent &&
+        (key == LogicalKeyboardKey.select ||
+            key == LogicalKeyboardKey.enter ||
+            key == LogicalKeyboardKey.numpadEnter)) {
+      _go();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    EpgService? epg;
+    try {
+      epg = context.watch<EpgService>();
+    } on ProviderNotFoundException {
+      epg = null;
+    }
+    final now = DateTime.now();
+    final programme = epg?.getCurrentProgram(widget.epgId);
+    if (programme == null) return const SizedBox.shrink();
+    final span = programme.stop.difference(programme.start).inSeconds;
+    if (span <= 0) return const SizedBox.shrink();
+    double at(DateTime t) =>
+        (t.difference(programme.start).inSeconds / span).clamp(0.0, 1.0);
+    final scheme = Theme.of(context).colorScheme;
+    final focused = _focus.hasFocus;
+    final canScrub = widget.channel.hasCatchup;
+    final target = _target;
+    final hm = TimeFormat.hm;
+    final bar = SizedBox(
+      height: 18,
+      child: LayoutBuilder(builder: (context, box) {
+        final w = box.maxWidth;
+        return Stack(
+          alignment: Alignment.centerLeft,
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+                height: focused ? 5 : 3,
+                decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(3))),
+            Container(
+                width: w * at(now),
+                height: focused ? 5 : 3,
+                decoration: BoxDecoration(
+                    color: focused ? scheme.primary : Colors.white70,
+                    borderRadius: BorderRadius.circular(3))),
+            if (target != null || focused)
+              Positioned(
+                left: (w * at(target ?? now)) - (focused ? 8 : 6),
+                child: Container(
+                  width: focused ? 16 : 12,
+                  height: focused ? 16 : 12,
+                  decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: scheme.primary, width: 2)),
+                ),
+              ),
+          ],
+        );
+      }),
+    );
+    final row = Row(children: [
+      Text(hm.format(programme.start),
+          style: const TextStyle(color: Colors.white70, fontSize: 12)),
+      const SizedBox(width: 10),
+      Expanded(child: bar),
+      const SizedBox(width: 10),
+      Text(hm.format(programme.stop),
+          style: const TextStyle(color: Colors.white70, fontSize: 12)),
+      if (target != null)
+        Padding(
+          padding: const EdgeInsets.only(left: 10),
+          child: Text(
+            '${hm.format(target)}  (−${_ScrubBarState._clock(now.difference(target))})',
+            style: const TextStyle(
+                fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white),
+          ),
+        )
+      else if (focused)
+        Padding(
+          padding: const EdgeInsets.only(left: 10),
+          child: Text(tr('◀ Catch-up'),
+              style: TextStyle(color: scheme.primary, fontSize: 12)),
+        ),
+    ]);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: canScrub
+          ? Focus(
+              focusNode: _focus,
+              onKeyEvent: _onKey,
+              onFocusChange: (has) {
+                if (!has && _target != null) _go();
+                setState(() {});
+              },
+              child: row,
+            )
+          : ExcludeFocus(child: row),
+    );
   }
 }
 

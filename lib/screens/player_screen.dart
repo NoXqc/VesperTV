@@ -252,19 +252,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
     final current = _playback.currentChannel ?? widget.channel;
     if (current.mediaFileInfo != null) _fileInfoRequests.value++;
     final live = current.isLive || _playback.catchup != null;
-    final dataPool = context.read<AppPreferences>().dataPool;
     _zapInfoTimer?.cancel();
+    // No Data pool here: on TV it opens from the options row's Stream info
+    // only (owner, 2026-11-05).
     setState(() {
       _zapInfoVisible = live;
       _optionsVisible = false;
-      if (dataPool) _dataPoolVisible = true;
     });
-    if (dataPool) {
-      _dataPoolTimer?.cancel();
-      _dataPoolTimer = Timer(const Duration(seconds: 10), () {
-        if (mounted) setState(() => _dataPoolVisible = false);
-      });
-    }
     _resetHideTimer();
     _focusBottomBar();
   }
@@ -272,10 +266,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
   /// Remote, state C: the options row replaces the bar and the info card.
   void _openOptions() {
     _barFocusBeforeOptions = FocusManager.instance.primaryFocus;
+    _dataPoolTimer?.cancel();
     setState(() {
       _optionsVisible = true;
       _bottomVisible = false;
       _zapInfoVisible = false;
+      // It sat over the row (owner photo, 2026-11-05); Stream info reopens it.
+      _dataPoolVisible = false;
     });
     _resetHideTimer();
     // Next frames: the row is ExcludeFocus'd until it's visible, then
@@ -1033,8 +1030,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
   /// 4 s (owner, 2026-10-18); OK again hides it. With Data pool on, its
   /// card too — and on movies/episodes (provider or Media Hub) the Data
   /// pool card alone (owner, 2026-10-21: a user missed VOD stream specs).
-  /// Options row > Stream info: the Data pool card for 10 s (works with the
-  /// Data pool setting off too: it's asked for here).
+  /// Options row > Stream info (shown while Settings > Playback > Data pool
+  /// is on, the default): the Data pool card for 10 s.
   void _showDataPool() {
     _hideAll();
     _dataPoolTimer?.cancel();
@@ -1692,11 +1689,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                                 label: tr('Sources'),
                                                 onPressed: _openSources,
                                               ),
-                                            PlayerOption(
-                                              icon: Icons.analytics_outlined,
-                                              label: tr('Stream info'),
-                                              onPressed: _showDataPool,
-                                            ),
+                                            if (prefs.dataPool)
+                                              PlayerOption(
+                                                icon: Icons.analytics_outlined,
+                                                label: tr('Stream info'),
+                                                onPressed: _showDataPool,
+                                              ),
                                             PlayerOption(
                                               icon: prefs.videoFill
                                                   ? Icons.fullscreen_exit

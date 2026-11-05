@@ -392,6 +392,7 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
         if (source.tracker == null) _node('source-${source.key}-url'),
         if (source.server == null && source.tracker == null)
           _node('source-${source.key}-other'),
+        if (source.canBeLiveTv) _node('source-${source.key}-tv'),
       ];
 
   Widget _sourceCard(ArchiveSource source, ArchiveService service) {
@@ -443,11 +444,21 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
         if (source.server == null && source.tracker == null)
           _SourceControl(
             id: '$controlId-other',
-            node: nodes.last,
+            node: _node('source-${source.key}-other'),
             label: tr('Show under Other'),
             value: source.underOther,
             onTap: () => service.setUnderOther(source, !source.underOther),
-            onFocus: () => _reveal(nodes.last),
+            onFocus: () => _reveal(_node('source-${source.key}-other')),
+          ),
+        // Live channels: Media Hub > Live TV instead of Movies / Other.
+        if (source.canBeLiveTv)
+          _SourceControl(
+            id: '$controlId-tv',
+            node: _node('source-${source.key}-tv'),
+            label: tr('TV add-on'),
+            value: source.isLiveTv,
+            onTap: () => service.setLiveTv(source, !source.isLiveTv),
+            onFocus: () => _reveal(_node('source-${source.key}-tv')),
           ),
       ],
     );
@@ -649,6 +660,9 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
                     tr('Show under Other keeps a source behind the Other genre filter in Movies and TV Shows.'),
                     style: TextStyle(color: scheme.onSurfaceVariant)),
                 Text(tr('Refresh Media Hub after changing Other.'),
+                    style: TextStyle(color: scheme.onSurfaceVariant)),
+                Text(
+                    tr('TV add-on lists a source of live channels under Media Hub > Live TV (on by itself for TV-type add-ons).'),
                     style: TextStyle(color: scheme.onSurfaceVariant)),
                 if (sources.isNotEmpty) ...[
                   const Divider(height: 32),

@@ -2533,4 +2533,11 @@ const Map<String, String> kEl = {
   "{home} vs {away}": "{home} εναντίον {away}",
   "Channels list": "Λίστα καναλιών",
   "Stream info": "Πληροφορίες ροής",
+  "TV add-on":
+      "Πρόσθετο TV",
+  "TV add-on lists a source of live channels under Media Hub > Live TV (on by itself for TV-type add-ons).":
+      "Το Πρόσθετο TV εμφανίζει μια πηγή ζωντανών καναλιών στο Media Hub > Ζωντανή TV (ενεργό από μόνο του για πρόσθετα τύπου TV).",
+  "No live channels. In Media Hub sources, turn on TV add-on for a source of live channels.":
+      "Δεν υπάρχουν ζωντανά κανάλια. Στις πηγές του Media Hub, ενεργοποιήστε το Πρόσθετο TV για μια πηγή ζωντανών καναλιών.",
+  "◀ Catch-up": "◀ Catch-up",
 };

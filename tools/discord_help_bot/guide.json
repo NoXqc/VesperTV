@@ -211,7 +211,7 @@
     "id": "085dd54ff0bc126e",
     "category": "Full screen",
     "title": "Player bar + info card",
-    "answer": "OK opens the player bar with Play/Pause selected (clock, transport, favourite). On a live channel the info card shows above it: what's on now and next, with a gold tag naming the channel's playlist. With Settings › Playback › Data pool on, the stream details card opens too. Six seconds without a key hides everything; Back hides it at once.",
+    "answer": "OK opens the player bar with Play/Pause selected (clock, transport, favourite). On a live channel the info card shows above it: what's on now and next, with a gold tag naming the channel's playlist. On a channel with a guide listing, a timeline shows the programme's start, end and how far it has gone; on a catch-up channel, Up from the buttons selects it and Left / Right go back into catch-up (it starts 0.7 s after your last press, or on OK; back to now returns to live). Six seconds without a key hides everything; Back hides it at once.",
     "controls": "OK",
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },
@@ -243,8 +243,8 @@
     "id": "7dd60da1eb923f65",
     "category": "Full screen",
     "title": "Data pool",
-    "answer": "With Settings › Playback › Data pool on, OK opens the stream details card: resolution, frame rate, codecs, measured bitrate, buffer and playback state.",
-    "controls": "OK MOVIE / EPISODE · ANDROID",
+    "answer": "Stream info in the options row opens the stream details card for 10 seconds: resolution, frame rate, codecs, measured bitrate, buffer and playback state. It's on by default; turn it off in Settings › Playback › Data pool to remove the tile.",
+    "controls": "Options row: Stream info ANDROID",
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },
   {

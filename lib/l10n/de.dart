@@ -2474,4 +2474,11 @@ const Map<String, String> kDe = {
   "{home} vs {away}": "{home} gegen {away}",
   "Channels list": "Senderliste",
   "Stream info": "Stream-Infos",
+  "TV add-on":
+      "TV-Add-on",
+  "TV add-on lists a source of live channels under Media Hub > Live TV (on by itself for TV-type add-ons).":
+      "TV-Add-on zeigt eine Quelle mit Live-Sendern unter Media Hub > Live-TV (bei TV-Add-ons automatisch an).",
+  "No live channels. In Media Hub sources, turn on TV add-on for a source of live channels.":
+      "Keine Live-Sender. Schalte in den Media-Hub-Quellen TV-Add-on für eine Quelle mit Live-Sendern ein.",
+  "◀ Catch-up": "◀ Catch-up",
 };

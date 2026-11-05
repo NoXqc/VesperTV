@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 
@@ -14,6 +15,7 @@ import 'archive_stream_session.dart';
 import 'media_server_api.dart';
 import 'plex_api.dart';
 import 'storage_service.dart';
+import 'stream_resolver.dart';
 import 'tracker_api.dart';
 
 /// One row of the Archive browse: a source's catalog and its titles, or
@@ -285,10 +287,94 @@ class ArchiveService extends ChangeNotifier {
 
   // Hide only the automatic browse/search catalogs. Stream resolution and
   // metadata still use these enabled sources, including saved titles.
+  /// A TV add-on's catalogs are live channels: Live TV only, never in
+  /// Movies / Other rows, search or genres ([ArchiveSource.isLiveTv]).
   bool _showCatalogs(ArchiveSource source) =>
-      showCinemetaCatalog ||
-      !source.streamOnly ||
-      source.catalogProviderUrl != ArchiveCatalogProvider.baseUrl;
+      !source.isLiveTv &&
+      (showCinemetaCatalog ||
+          !source.streamOnly ||
+          source.catalogProviderUrl != ArchiveCatalogProvider.baseUrl);
+
+  // ---- Live TV add-ons ----------------------------------------------------
+
+  /// Enabled TV add-ons, browsed in Media Hub > Live TV.
+  List<ArchiveSource> get liveTvSources =>
+      enabledSources.where((s) => s.isLiveTv).toList();
+
+  bool get hasLiveTv => enabledSources.any((s) => s.isLiveTv);
+
+  /// The source's "TV add-on" switch (see [ArchiveSource.isLiveTv]).
+  Future<void> setLiveTv(ArchiveSource source, bool on) => _saveSources([
+        for (final s in sources)
+          s.manifestUrl == source.manifestUrl
+              ? s.copyWith(liveTvChoice: on)
+              : s,
+      ]);
+
+  /// One catalog of a TV add-on, fresh (live lists change; not cached).
+  Future<List<ArchiveMeta>> liveCatalog(
+          ArchiveSource source, ArchiveCatalog catalog) =>
+      _page(source, catalog);
+
+  /// Live channels handed to the player, by channel id: what
+  /// [resolveLive] asks for a stream when a zap lands on one.
+  final Map<String, (ArchiveSource, ArchiveMeta)> _liveById = {};
+
+  /// A TV add-on channel as a live [Channel] without a stream address yet
+  /// ([resolveLive] fills it in). Its own id prefix makes it live
+  /// ([Channel.isLiveId]); transient = no history, resume or tracking.
+  Channel liveChannelFor(ArchiveSource source, ArchiveMeta meta,
+      {String group = ''}) {
+    final hash =
+        sha1.convert(utf8.encode(meta.id)).toString().substring(0, 16);
+    final rawId = 'hublive_${source.key}_$hash';
+    final channel = Channel(
+      id: '$playlistId::$rawId',
+      rawId: rawId,
+      playlistId: playlistId,
+      name: meta.name,
+      group: group,
+      url: '',
+      logoUrl: meta.logoUrl ?? meta.posterUrl,
+      posterUrl: meta.posterUrl,
+      backdropUrl: meta.backgroundUrl,
+      transientPlayback: true,
+    );
+    _liveById[channel.id] = (source, meta);
+    return channel;
+  }
+
+  /// The add-on's stream options for a live channel made by
+  /// [liveChannelFor] (empty when unknown).
+  Future<List<ArchiveStreamOption>> liveStreams(String channelId) async {
+    final entry = _liveById[channelId];
+    if (entry == null) return const [];
+    return [
+      for (final o in await streams(entry.$1, entry.$2))
+        if (o.stream.url.isNotEmpty && o.stream.ytId == null) o
+    ];
+  }
+
+  /// [channel] (from [liveChannelFor]) playing [option]'s stream, its
+  /// redirects followed once like Media Hub titles.
+  static Future<Channel> withLiveStream(
+      Channel channel, ArchiveStreamOption option) async {
+    final link = await resolveLink(option.stream.url,
+        headers: option.stream.requestHeaders);
+    return channel.copyWith(
+        url: link.url,
+        httpHeaders: link.headers.isEmpty
+            ? option.stream.requestHeaders
+            : link.headers);
+  }
+
+  /// Zapping (Up/Down, CH+/CH-) onto a channel without an address: its
+  /// first stream (PlaybackService.resolveLive). Null = none playable.
+  Future<Channel?> resolveLive(Channel channel) async {
+    final options = await liveStreams(channel.id);
+    if (options.isEmpty) return null;
+    return withLiveStream(channel, options.first);
+  }
 
   Future<void> _saveSources(List<ArchiveSource> list) async {
     await _storage

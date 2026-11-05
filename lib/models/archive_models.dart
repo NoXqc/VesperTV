@@ -365,6 +365,7 @@ class ArchiveSource {
     this.server,
     this.tracker,
     this.otherChoice,
+    this.liveTvChoice,
     this.listOnly = false,
     this.imdbResources = const {},
     this.searchCatalogsChecked = true,
@@ -438,6 +439,35 @@ class ArchiveSource {
   /// was the automatic default before that.
   bool get underOther => otherChoice ?? false;
 
+  /// The user's "TV add-on" switch (Settings > Media Hub sources): true =
+  /// its catalogs are live channels, browsed in Media Hub > Live TV instead
+  /// of Movies / Other. Null = never touched: [autoLiveTv] decides.
+  final bool? liveTvChoice;
+
+  /// The default: an add-on serving its own catalogs of Stremio's live
+  /// types, `tv` or `channel` (StremTV; owner, 2026-11-05). Custom types
+  /// (a `sport` add-on of live channels) need the switch.
+  bool get autoLiveTv =>
+      !streamOnly &&
+      !listOnly &&
+      server == null &&
+      tracker == null &&
+      catalogs.any((c) => c.wire == 'tv' || c.wire == 'channel');
+
+  /// Its catalogs are live channels (Media Hub > Live TV only).
+  bool get isLiveTv =>
+      server == null && tracker == null && (liveTvChoice ?? autoLiveTv);
+
+  /// The switch is offered for add-ons with their own catalogs of a type
+  /// other than movie/series (`tv`, `sport`…) or already switched: a plain
+  /// movie/series add-on never lists live channels.
+  bool get canBeLiveTv =>
+      !streamOnly &&
+      !listOnly &&
+      server == null &&
+      tracker == null &&
+      (liveTvChoice != null || catalogs.any((c) => c.wireType != null));
+
   /// Where its resources live: the manifest URL minus `/manifest.json` (a
   /// media server: its API base, without the `#userId`).
   String get baseUrl {
@@ -468,7 +498,8 @@ class ArchiveSource {
           {bool? enabled,
           List<ArchiveCatalog>? catalogs,
           TrackerLogin? tracker,
-          bool? otherChoice}) =>
+          bool? otherChoice,
+          bool? liveTvChoice}) =>
       ArchiveSource(
         manifestUrl: manifestUrl,
         name: name,
@@ -480,6 +511,7 @@ class ArchiveSource {
         server: server,
         tracker: tracker ?? this.tracker,
         otherChoice: otherChoice ?? this.otherChoice,
+        liveTvChoice: liveTvChoice ?? this.liveTvChoice,
         listOnly: listOnly,
         imdbResources: imdbResources,
         searchCatalogsChecked: searchCatalogsChecked,
@@ -496,6 +528,7 @@ class ArchiveSource {
         if (server != null) 'server': server!.toJson(),
         if (tracker != null) 'tracker': tracker!.toJson(),
         if (otherChoice != null) 'other': otherChoice,
+        if (liveTvChoice != null) 'liveTv': liveTvChoice,
         if (listOnly) 'listOnly': true,
         if (imdbResources.isNotEmpty) 'imdbResources': imdbResources,
         'searchCatalogsChecked': searchCatalogsChecked,
@@ -527,6 +560,7 @@ class ArchiveSource {
       server: MediaServerLogin.fromJson(j['server']),
       tracker: TrackerLogin.fromJson(j['tracker']),
       otherChoice: j['other'] is bool ? j['other'] as bool : null,
+      liveTvChoice: j['liveTv'] is bool ? j['liveTv'] as bool : null,
       listOnly: j['listOnly'] == true,
       searchCatalogsChecked: j['searchCatalogsChecked'] == true,
       imdbResources: {

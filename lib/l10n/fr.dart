@@ -2584,4 +2584,11 @@ const Map<String, String> kFr = {
   "{home} vs {away}": "{home} contre {away}",
   "Channels list": "Liste des chaînes",
   "Stream info": "Infos du flux",
+  "TV add-on":
+      "Add-on TV",
+  "TV add-on lists a source of live channels under Media Hub > Live TV (on by itself for TV-type add-ons).":
+      "Add-on TV range une source de chaînes en direct dans Media Hub > TV en direct (activé d'office pour les add-ons de type TV).",
+  "No live channels. In Media Hub sources, turn on TV add-on for a source of live channels.":
+      "Aucune chaîne en direct. Dans les sources Media Hub, activez Add-on TV pour une source de chaînes en direct.",
+  "◀ Catch-up": "◀ Rattrapage",
 };

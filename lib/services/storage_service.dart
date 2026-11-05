@@ -585,7 +585,9 @@ class StorageService {
       _prefs.setBool(AppConstants.keyCompatVideo, value);
 
   /// Settings > General > Data pool display (off by default).
-  bool getDataPool() => _prefs.getBool(AppConstants.keyDataPool) ?? false;
+  /// On by default since 2026-11-05 (owner); on TV it only opens from the
+  /// player's options row (Stream info), never on OK.
+  bool getDataPool() => _prefs.getBool(AppConstants.keyDataPool) ?? true;
   Future<void> setDataPool(bool value) =>
       _prefs.setBool(AppConstants.keyDataPool, value);
 
