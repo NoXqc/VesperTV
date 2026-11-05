@@ -74,3 +74,12 @@ Final checks: `16 issues found. (ran in 6.6s)`;
 the keyboard-open anchored-menu case. TV and large-text RTL phone previews were
 rendered with Roboto/Material Icons and visually checked. No app build or
 physical-device QA, version bump, push or release.
+
+## Channel menu width (cdx, 2026-11-05)
+
+The Live TV channel hold menu now caps its width at 360 logical pixels (was
+560), following the owner's Formuler +612 photo. Text size, row padding,
+scrolling and glass styling are retained; long labels wrap within the narrower
+rows. Other menu widths are unchanged. This applies to the shared channel menu
+opened from the live list or Timeline guide. Physical-device appearance is
+pending a new test build; +612 predates this adjustment.

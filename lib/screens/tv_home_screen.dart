@@ -839,6 +839,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     final choice = await showGlassMenu<String>(
       context: context,
       builder: (context) => GlassMenuDialog(
+        maxWidth: 360,
         title: Text(channel.name, maxLines: 1, overflow: TextOverflow.ellipsis),
         children: [
           if (inCatchup)
