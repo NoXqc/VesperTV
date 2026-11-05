@@ -1677,12 +1677,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                                 label: tr('Channels list'),
                                                 onPressed: _openPanel,
                                               ),
-                                              PlayerOption(
-                                                icon: Icons.calendar_month,
-                                                label: tr('Channel schedule'),
-                                                onPressed: _openSchedule,
-                                              ),
                                             ],
+                                            if (prefs.dataPool)
+                                              PlayerOption(
+                                                icon: Icons.analytics_outlined,
+                                                label: tr('Stream info'),
+                                                onPressed: _showDataPool,
+                                              ),
                                           ],
                                           trailingOptions: [
                                             if (widget.sources != null)
@@ -1690,12 +1691,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                                 icon: Icons.swap_horiz,
                                                 label: tr('Sources'),
                                                 onPressed: _openSources,
-                                              ),
-                                            if (prefs.dataPool)
-                                              PlayerOption(
-                                                icon: Icons.analytics_outlined,
-                                                label: tr('Stream info'),
-                                                onPressed: _showDataPool,
                                               ),
                                             PlayerOption(
                                               icon: prefs.videoFill
