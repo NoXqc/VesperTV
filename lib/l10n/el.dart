@@ -2471,4 +2471,34 @@ const Map<String, String> kEl = {
   "Removes Sports Trak from navigation and turns off Sports Mode.":
       "Αφαιρεί το Sports Trak από την πλοήγηση και απενεργοποιεί την αθλητική λειτουργία.",
   "Choose which tabs to show.": "Επιλέξτε ποιες καρτέλες θα εμφανίζονται.",
+
+  // Native outside-app overlay capability test.
+  "Alerts over other apps (beta)":
+      "Ειδοποιήσεις πάνω από άλλες εφαρμογές (beta)",
+  "Checking overlay access…": "Έλεγχος άδειας επικάλυψης…",
+  "Overlay access granted": "Η επικάλυψη επιτρέπεται",
+  "Open settings to allow overlays":
+      "Ανοίξτε τις ρυθμίσεις για να επιτρέψετε την επικάλυψη",
+  "Overlay access not available": "Η επικάλυψη δεν είναι διαθέσιμη",
+  "Open overlay settings": "Άνοιγμα ρυθμίσεων επικάλυψης",
+  "Allow VesperTV to display over other apps, then return here.":
+      "Επιτρέψτε στο VesperTV να εμφανίζεται πάνω από άλλες εφαρμογές και επιστρέψτε εδώ.",
+  "Test popup over other apps": "Δοκιμή αναδυόμενου πάνω από άλλες εφαρμογές",
+  "Overlay test running. Switch to another app.":
+      "Η δοκιμή εκτελείται. Μεταβείτε σε άλλη εφαρμογή.",
+  "Waits 10 seconds, shows a test card for 6 seconds, then stops.":
+      "Περιμένει 10 δευτερόλεπτα, εμφανίζει μια κάρτα δοκιμής για 6 δευτερόλεπτα και σταματά.",
+  "Test popup in 10 seconds. Switch to another app.":
+      "Αναδυόμενο δοκιμής σε 10 δευτερόλεπτα. Μεταβείτε σε άλλη εφαρμογή.",
+  "The overlay test could not start. Check overlay access and try again.":
+      "Η δοκιμή δεν ξεκίνησε. Ελέγξτε την άδεια επικάλυψης και δοκιμάστε ξανά.",
+  "Test finished. Check whether the popup appeared in the other app.":
+      "Η δοκιμή ολοκληρώθηκε. Ελέγξτε αν το αναδυόμενο εμφανίστηκε στην άλλη εφαρμογή.",
+  "Overlay test cancelled.": "Η δοκιμή επικάλυψης ακυρώθηκε.",
+  "The overlay test could not run on this device.":
+      "Η δοκιμή επικάλυψης δεν μπόρεσε να εκτελεστεί σε αυτή τη συσκευή.",
+  "VesperTV overlay test": "Δοκιμή επικάλυψης VesperTV",
+  "This test closes after 6 seconds.":
+      "Αυτή η δοκιμή κλείνει μετά από 6 δευτερόλεπτα.",
+  "Overlay tests": "Δοκιμές επικάλυψης",
 };

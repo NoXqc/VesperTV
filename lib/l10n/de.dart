@@ -2413,4 +2413,33 @@ const Map<String, String> kDe = {
   "Removes Sports Trak from navigation and turns off Sports Mode.":
       "Entfernt Sports Trak aus der Navigation und deaktiviert den Sportmodus.",
   "Choose which tabs to show.": "Wähle aus, welche Tabs angezeigt werden.",
+
+  // Native outside-app overlay capability test.
+  "Alerts over other apps (beta)": "Meldungen über anderen Apps (Beta)",
+  "Checking overlay access…": "Overlay-Berechtigung wird geprüft…",
+  "Overlay access granted": "Overlay-Berechtigung erteilt",
+  "Open settings to allow overlays":
+      "Einstellungen öffnen, um Overlays zu erlauben",
+  "Overlay access not available": "Overlay-Berechtigung nicht verfügbar",
+  "Open overlay settings": "Overlay-Einstellungen öffnen",
+  "Allow VesperTV to display over other apps, then return here.":
+      "Erlaube VesperTV, über anderen Apps zu erscheinen, und kehre dann hierher zurück.",
+  "Test popup over other apps": "Test-Popup über anderen Apps",
+  "Overlay test running. Switch to another app.":
+      "Overlay-Test läuft. Wechsle zu einer anderen App.",
+  "Waits 10 seconds, shows a test card for 6 seconds, then stops.":
+      "Wartet 10 Sekunden, zeigt eine Testkarte für 6 Sekunden und beendet sich dann.",
+  "Test popup in 10 seconds. Switch to another app.":
+      "Test-Popup in 10 Sekunden. Wechsle zu einer anderen App.",
+  "The overlay test could not start. Check overlay access and try again.":
+      "Der Overlay-Test konnte nicht starten. Prüfe die Berechtigung und versuche es erneut.",
+  "Test finished. Check whether the popup appeared in the other app.":
+      "Test beendet. Prüfe, ob das Popup in der anderen App erschienen ist.",
+  "Overlay test cancelled.": "Overlay-Test abgebrochen.",
+  "The overlay test could not run on this device.":
+      "Der Overlay-Test konnte auf diesem Gerät nicht ausgeführt werden.",
+  "VesperTV overlay test": "VesperTV-Overlay-Test",
+  "This test closes after 6 seconds.":
+      "Dieser Test schließt sich nach 6 Sekunden.",
+  "Overlay tests": "Overlay-Tests",
 };

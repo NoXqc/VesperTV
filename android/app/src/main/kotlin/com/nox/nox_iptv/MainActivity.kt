@@ -65,6 +65,7 @@ class MainActivity : FlutterActivity() {
     private val localImportStore by lazy { LocalImportStore(this) }
     private val recorderBridge by lazy { RecorderBridge(this) }
     private val displayModes by lazy { DisplayModes(this) }
+    private val overlayProbe by lazy { OverlayProbeBridge(this) }
 
     /**
      * Native video surface (beta, Settings > Interface > Background video): Flutter starts
@@ -126,6 +127,9 @@ class MainActivity : FlutterActivity() {
             .setMethodCallHandler(localImportStore::handle)
 
         phonePip.connect(flutterEngine.dartExecutor.binaryMessenger)
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "vespertv/goal_overlay_probe")
+            .setMethodCallHandler(overlayProbe::handle)
 
         // Settings > Backup & restore — see BackupStore.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, BACKUP_CHANNEL)
