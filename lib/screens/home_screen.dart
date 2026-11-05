@@ -17,6 +17,7 @@ import '../services/app_preferences.dart';
 import '../services/archive_service.dart';
 import '../services/desktop_mini_player.dart';
 import '../services/epg_service.dart';
+import '../services/episode_alerts.dart';
 import '../services/home_rows.dart';
 import '../services/multiview_sports.dart';
 import '../services/playback_service.dart';
@@ -68,6 +69,9 @@ class _HomeItem {
     this.live = false,
     this.game,
     this.removeFromHistory,
+    this.removeLabel = 'Remove from history',
+    this.tag,
+    this.tagHighlight = false,
   });
 
   final String key;
@@ -80,6 +84,14 @@ class _HomeItem {
   final bool live;
   final SportsGame? game;
   final Future<void> Function()? removeFromHistory;
+
+  /// Untranslated hold-menu label for [removeFromHistory].
+  final String removeLabel;
+
+  /// Top-right corner tag on the card ("NEW", "Airs in 5 days"); gold
+  /// when [tagHighlight].
+  final String? tag;
+  final bool tagHighlight;
   final Future<void> Function(BuildContext context) open;
 }
 
@@ -130,9 +142,28 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _profilesHidden = false;
   Timer? _hubProgressRefresh;
 
+  EpisodeAlerts? _episodeAlerts;
+
+  /// A check found a new episode (or a follow changed): redraw that row.
+  void _episodesChanged() {
+    if (!mounted || _loading) return;
+    final rows = <HomeRowKind, _HomeRow?>{
+      for (final row in _rows) row.kind: row
+    };
+    if (!_rowsConfig.visible.contains(HomeRowKind.newEpisodes)) return;
+    rows[HomeRowKind.newEpisodes] = _newEpisodesRow();
+    _apply(_loadId, rows, focusFirst: false, done: true);
+  }
+
   @override
   void initState() {
     super.initState();
+    try {
+      _episodeAlerts = context.read<EpisodeAlerts>()
+        ..addListener(_episodesChanged);
+    } on ProviderNotFoundException {
+      _episodeAlerts = null;
+    }
     _rowsConfig = HomeRows.load(context.read<StorageService>());
     unawaited(_load(focusFirst: true));
     if (_rowsConfig.visible.contains(HomeRowKind.continueWatching)) {
@@ -165,6 +196,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _episodeAlerts?.removeListener(_episodesChanged);
     _hubProgressRefresh?.cancel();
     _pageScroll.dispose();
     for (final c in _rowScrolls.values) {
@@ -205,6 +237,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final quick = <HomeRowKind, _HomeRow?>{
       if (visible.contains(HomeRowKind.continueWatching))
         HomeRowKind.continueWatching: _continueRow(),
+      if (visible.contains(HomeRowKind.newEpisodes))
+        HomeRowKind.newEpisodes: _newEpisodesRow(),
       if (visible.contains(HomeRowKind.recentChannels))
         HomeRowKind.recentChannels: _recentRow(epg),
       if (visible.contains(HomeRowKind.favourites))
@@ -364,6 +398,94 @@ class _HomeScreenState extends State<HomeScreen> {
     items.sort((a, b) => a.at.compareTo(b.at));
     return _HomeRow(HomeRowKind.continueWatching, _CardShape.wide,
         [for (final e in items.take(20)) e.item]);
+  }
+
+  /// "Notify me" shows: a new episode first ("S1 E3 is available"), then
+  /// the next scheduled ones ("S1 E4 · Airs in 5 days"), like Nuvio.
+  _HomeRow? _newEpisodesRow() {
+    final alerts = _episodeAlerts;
+    if (alerts == null) return null;
+    final now = DateTime.now();
+    final noticed = <String>{};
+    final items = <_HomeItem>[
+      for (final n in alerts.notices)
+        if (alerts.show(n.showKey) case final show? when noticed.add(n.showKey))
+          _HomeItem(
+            key: 'ne:${n.showKey}',
+            title: n.title,
+            subtitle: n.count > 1
+                ? tr('{count} new episodes - {code} is available',
+                    {'count': '${n.count}', 'code': n.code})
+                : tr('{code} is available', {'code': n.code}),
+            description: n.episodeTitle,
+            imageUrl: show.backdropUrl ?? show.posterUrl,
+            backdropUrl: show.backdropUrl,
+            tag: tr('NEW'),
+            tagHighlight: true,
+            removeLabel: 'Dismiss',
+            removeFromHistory: () => alerts.dismiss(n.showKey),
+            open: (ctx) => _openFollowed(ctx, show),
+          ),
+    ];
+    final upcoming = [
+      for (final s in alerts.shows)
+        if (s.next case final next?
+            when !noticed.contains(s.key) && next.upcoming(now))
+          (show: s, next: next)
+    ]..sort((a, b) => a.next.date.compareTo(b.next.date));
+    for (final (:show, :next) in upcoming) {
+      items.add(_HomeItem(
+        key: 'ne:${show.key}',
+        title: show.title,
+        subtitle: next.season != null && next.episode != null
+            ? 'S${next.season} E${next.episode}'
+            : null,
+        tag: _airsIn(next.displayDate, now),
+        imageUrl: show.backdropUrl ?? show.posterUrl,
+        backdropUrl: show.backdropUrl,
+        open: (ctx) => _openFollowed(ctx, show),
+      ));
+    }
+    return _HomeRow(HomeRowKind.newEpisodes, _CardShape.wide, items);
+  }
+
+  static String _airsIn(DateTime date, DateTime now) {
+    final days = DateTime(date.year, date.month, date.day)
+        .difference(DateTime(now.year, now.month, now.day))
+        .inDays;
+    if (days <= 0) return tr('Airs today');
+    if (days == 1) return tr('Airs tomorrow');
+    return tr('Airs in {count} days', {'count': '$days'});
+  }
+
+  Future<void> _openFollowed(BuildContext ctx, FollowedShow show) async {
+    if (!show.isMediaHub) {
+      final playlistId = show.playlistId, seriesId = show.seriesId;
+      if (playlistId == null || seriesId == null) return;
+      await Navigator.of(ctx).push(MaterialPageRoute(
+          builder: (_) => SeriesDetailScreen(
+              series: XtreamSeries(
+                  seriesId: seriesId,
+                  playlistId: playlistId,
+                  name: show.title,
+                  categoryId: show.categoryId ?? '',
+                  coverUrl: show.posterUrl,
+                  backdropUrl: show.backdropUrl,
+                  tmdbId: show.tmdbId))));
+      return;
+    }
+    final hub = ctx.read<ArchiveService>();
+    ArchiveSource? source;
+    for (final s in hub.sources) {
+      if (s.manifestUrl == show.sourceUrl) source = s;
+    }
+    final meta = show.meta == null ? null : ArchiveMeta.fromJson(show.meta!);
+    if (source == null || meta == null) {
+      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+          content: Text(tr("This show's Media Hub source was removed."))));
+      return;
+    }
+    await openArchiveSeries(ctx, source, meta);
   }
 
   _HomeItem _channelItem(Channel c, EpgService epg, String prefix) {
@@ -713,7 +835,7 @@ class _HomeScreenState extends State<HomeScreen> {
             TvDialogOption(
               autofocus: true,
               onPressed: () => Navigator.of(context).pop('remove'),
-              child: Text(tr('Remove from history')),
+              child: Text(tr(item!.removeLabel)),
             ),
           if (i > 0)
             TvDialogOption(
@@ -1251,6 +1373,29 @@ class _LivePill extends StatelessWidget {
       );
 }
 
+/// "NEW" (theme gold) or "Airs in 5 days" (dark glass) on a card's corner.
+class _CornerTag extends StatelessWidget {
+  const _CornerTag(this.text, {this.highlight = false});
+  final String text;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    final gold = Theme.of(context).colorScheme.primary;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+          color: highlight ? gold : Colors.black.withValues(alpha: 0.72),
+          borderRadius: BorderRadius.circular(6)),
+      child: Text(text,
+          style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: highlight ? Colors.black : Colors.white)),
+    );
+  }
+}
+
 /// A card: art with rounded corners that grows and gets a gold edge when
 /// focused, the title (and progress / LIVE) underneath.
 class _HomeCard extends StatefulWidget {
@@ -1341,6 +1486,11 @@ class _HomeCardState extends State<_HomeCard> {
         child: Stack(fit: StackFit.expand, children: [
           art,
           if (item.live) const Positioned(left: 8, top: 8, child: _LivePill()),
+          if (item.tag case final tag?)
+            Positioned(
+                right: 8,
+                top: 8,
+                child: _CornerTag(tag, highlight: item.tagHighlight)),
           if (progress != null && progress > 0)
             Positioned(
               left: 0,

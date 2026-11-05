@@ -401,6 +401,10 @@ class AppConstants {
   static const String keyGameReminders = 'vesper_game_reminders';
   static const String keyProgrammeReminders = 'vesper_programme_reminders';
 
+  /// Per viewer: TV shows followed with "Notify me" and their unread
+  /// new-episode notices (`EpisodeAlerts`). Travels with Transfer/Backup.
+  static const String keyEpisodeAlerts = 'vesper_episode_alerts';
+
   /// Per viewer: the favourite league (League manager, hold OK): Sports Trak
   /// opens on it and its games lead the player side panel's Live now.
   static const String keySportsFavoriteLeague = 'vesper_sports_favorite_league';

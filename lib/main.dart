@@ -54,6 +54,8 @@ import 'services/game_reminders.dart';
 import 'services/programme_reminders.dart';
 import 'widgets/programme_reminder_overlay.dart';
 import 'services/goals_alerts.dart';
+import 'services/episode_alert_lookup.dart';
+import 'services/episode_alerts.dart';
 import 'widgets/game_reminder_overlay.dart';
 import 'widgets/goals_alert_overlay.dart';
 import 'widgets/native_video_hole.dart';
@@ -243,6 +245,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   GameReminders? _gameReminders;
   ProgrammeReminders? _programmeReminders;
   GoalsAlerts? _goalsAlerts;
+  EpisodeAlerts? _episodeAlerts;
 
   /// True while [PlaylistManager.runFullCatalogSync] is blocking the
   /// launch — see [CatalogSyncScreen] and [_bootstrap] for the whole
@@ -354,6 +357,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     _syncLifecycle?.dispose();
     _gameReminders?.dispose();
     _programmeReminders?.dispose();
+    _episodeAlerts?.dispose();
     RecordingService.instance.prepareProgramme = null;
     _goalsAlerts?.dispose();
     if (Platform.isWindows) windowManager.removeListener(this);
@@ -595,6 +599,11 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // Trakt/Simkl scrobbling reads the connected accounts from here.
       WatchTracker.instance.attach(_archiveService);
       TrackerSync.instance.attach(_archiveService);
+      // "Notify me" on TV shows: checked at launch and every few hours.
+      _episodeAlerts = EpisodeAlerts(_storage);
+      EpisodeAlertLookup(_storage, _playlistManager, _archiveService)
+          .attach(_episodeAlerts!);
+      _episodeAlerts!.start();
       _viewerProfileService = ViewerProfileService(
           _storage, _playlistManager, _playbackService,
           onViewerChanged: _preferences.reloadPaletteForViewer);
@@ -1098,6 +1107,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         ChangeNotifierProvider<ProgrammeReminders>.value(
             value: _programmeReminders!),
         ChangeNotifierProvider<GoalsAlerts>.value(value: _goalsAlerts!),
+        ChangeNotifierProvider<EpisodeAlerts>.value(value: _episodeAlerts!),
         Provider<CatalogDatabase>.value(value: _catalogDb),
         ChangeNotifierProvider<AppPreferences>.value(value: _preferences),
         ChangeNotifierProvider<PlaylistManager>.value(value: _playlistManager),

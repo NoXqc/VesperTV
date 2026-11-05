@@ -6,6 +6,21 @@
 /// "s" filled in by the code; Spanish plurals don't always work that way
 /// (canal/canales), so those strings are phrased to avoid it.
 const Map<String, String> kEs = {
+  "New episodes": "Nuevos episodios",
+  "Notify me": "Avisarme",
+  "NEW": "NUEVO",
+  "Airs today": "Se emite hoy",
+  "Airs tomorrow": "Se emite mañana",
+  "Airs in {count} days": "Se emite en {count} días",
+  "{code} is available": "{code} está disponible",
+  "{count} new episodes - {code} is available":
+      "{count} episodios nuevos - {code} está disponible",
+  "You'll be told when a new episode is out":
+      "Te avisaremos cuando salga un nuevo episodio",
+  "New episode alerts off for this show":
+      "Avisos de nuevos episodios desactivados para esta serie",
+  "This show's Media Hub source was removed.":
+      "La fuente de Media Hub de esta serie se eliminó.",
   "Discord": "Discord",
   "Direct support through Discord": "Soporte directo en Discord",
   "Questions, help with setup, feature ideas and release news: join the VesperTV community on Discord.":

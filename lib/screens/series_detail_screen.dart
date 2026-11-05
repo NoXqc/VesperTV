@@ -20,6 +20,8 @@ import '../models/episode_airing.dart';
 import '../models/series_details.dart';
 import '../models/xtream_series.dart';
 import '../services/desktop_mini_player.dart';
+import '../services/episode_alert_lookup.dart';
+import '../services/episode_alerts.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
 import '../services/storage_service.dart';
@@ -71,7 +73,12 @@ class SeriesDetailScreen extends StatefulWidget {
     this.sourceLabel,
     this.discoveryBuilder,
     this.castDiscovery,
+    this.followTarget,
   });
+
+  /// "Notify me" for a Media Hub show (its source + meta). IPTV shows build
+  /// theirs from [series]; null with [loadEpisodes] set = no button.
+  final FollowedShow Function()? followTarget;
 
   /// The show's IMDb id when known (Media Hub shows): with
   /// [XtreamSeries.tmdbId] (IPTV, from the provider) it matches the show
@@ -135,6 +142,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   final _playNode = FocusNode(debugLabel: 'series-play');
   final _restartNode = FocusNode(debugLabel: 'series-restart');
   final _favNode = FocusNode(debugLabel: 'series-fav');
+  final _notifyNode = FocusNode(debugLabel: 'series-notify');
   final _castNode = FocusNode(debugLabel: 'series-cast');
   bool _showCast = false;
   final Map<int, FocusNode> _seasonNodes = {};
@@ -166,6 +174,10 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
       if (mounted && !_loaded) _backNode.requestFocus();
     });
     _load();
+    // Opening the show reads its "new episode" card.
+    if (_followTarget()?.key case final key?) {
+      unawaited(_alerts()?.dismiss(key));
+    }
   }
 
   Future<void> _load() async {
@@ -285,6 +297,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
       _playNode,
       _restartNode,
       _favNode,
+      _notifyNode,
       _castNode,
       ..._seasonNodes.values,
       ..._episodeNodes.values,
@@ -404,6 +417,51 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
           PlayerPageRoute(builder: (_) => PlayerScreen(channel: episode)));
     }
     _refreshProgress();
+  }
+
+  /// Null in tests/screens built without the app's providers.
+  EpisodeAlerts? _alerts({bool listen = false}) {
+    try {
+      return Provider.of<EpisodeAlerts>(context, listen: listen);
+    } on ProviderNotFoundException {
+      return null;
+    }
+  }
+
+  /// The show as "Notify me" stores it; null when this page can't follow.
+  FollowedShow? _followTarget() {
+    final custom = widget.followTarget;
+    if (custom != null) return custom();
+    if (widget.loadEpisodes != null) return null;
+    final s = widget.series;
+    return FollowedShow(
+        key: FollowedShow.iptvKey(s.playlistId, s.seriesId),
+        title: s.name,
+        posterUrl: s.posterUrl ?? s.coverUrl,
+        backdropUrl: s.backdropUrl,
+        playlistId: s.playlistId,
+        seriesId: s.seriesId,
+        categoryId: s.categoryId,
+        tmdbId: s.tmdbId);
+  }
+
+  Future<void> _toggleNotify(FollowedShow target) async {
+    final alerts = _alerts();
+    if (alerts == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final on = !alerts.isFollowing(target.key);
+    if (on) {
+      await EpisodeAlertLookup.requestPermission();
+      await alerts.follow(target);
+    } else {
+      await alerts.unfollow(target.key);
+    }
+    messenger.showSnackBar(SnackBar(
+      content: Text(on
+          ? tr("You'll be told when a new episode is out")
+          : tr('New episode alerts off for this show')),
+      duration: const Duration(seconds: 2),
+    ));
   }
 
   void _toggleFavorite() {
@@ -1042,11 +1100,15 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     final favorited = widget.showFavorite &&
         context.watch<PlaylistManager>().isSeriesFavorited(widget.series.id);
     final next = _loaded ? _nextUp() : null;
+    final alerts = _alerts(listen: true);
+    final follow = alerts == null ? null : _followTarget();
+    final following = follow != null && alerts!.isFollowing(follow.key);
     final nodes = <FocusNode>[
       if (next != null) _playNode,
       _trailerNode,
       if (next != null && next.resume) _restartNode,
       if (widget.showFavorite) _favNode,
+      if (follow != null) _notifyNode,
       if (_castNames.isNotEmpty || _canCast) _castNode,
     ];
     void move(int delta) {
@@ -1105,6 +1167,18 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
           selected: favorited,
           scale: s,
           onPressed: _toggleFavorite,
+          onFocused: _revealTop,
+        ),
+      if (follow != null)
+        DetailPillButton(
+          focusNode: _notifyNode,
+          icon: following
+              ? Icons.notifications_active_rounded
+              : Icons.notifications_none_rounded,
+          label: tr('Notify me'),
+          selected: following,
+          scale: s,
+          onPressed: () => _toggleNotify(follow),
           onFocused: _revealTop,
         ),
       if (_castNames.isNotEmpty || _canCast)

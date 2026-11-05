@@ -1022,6 +1022,11 @@ class StorageService {
       _prefs.setString(
           _vk(AppConstants.keyProgrammeReminders, viewerId: viewerId), json);
 
+  String? getEpisodeAlerts({String? viewerId}) =>
+      _prefs.getString(_vk(AppConstants.keyEpisodeAlerts, viewerId: viewerId));
+  Future<void> setEpisodeAlerts(String json, {String? viewerId}) => _prefs
+      .setString(_vk(AppConstants.keyEpisodeAlerts, viewerId: viewerId), json);
+
   /// Match score subscriptions belong to this viewer and device, like reminders.
   String? getMatchScoreAlerts({String? viewerId}) => _prefs
       .getString(_vk(AppConstants.keyMatchScoreAlerts, viewerId: viewerId));

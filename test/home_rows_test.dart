@@ -16,8 +16,11 @@ void main() {
       HomeRowKind.recentChannels
     ]);
     expect(rows.hidden, {HomeRowKind.games});
-    // Rows added in a later version are appended, shown.
+    // Rows added in a later version are appended, shown; New episodes goes
+    // under Continue Watching.
     expect(rows.visible, contains(HomeRowKind.newShows));
+    final continueAt = rows.order.indexOf(HomeRowKind.continueWatching);
+    expect(rows.order[continueAt + 1], HomeRowKind.newEpisodes);
     expect(HomeRows.parse(rows.encoded).encoded, rows.encoded);
   });
 
@@ -25,6 +28,7 @@ void main() {
     final rows = HomeRows.parse([
       'games',
       '-continue',
+      '-new_episodes',
       'recent',
       'favourites',
       'new_movies',
@@ -36,6 +40,7 @@ void main() {
     expect(rows.visible.first, HomeRowKind.recentChannels);
     rows.move(HomeRowKind.newShows, 1); // already last
     expect(rows.visible.last, HomeRowKind.newShows);
-    expect(rows.hidden, {HomeRowKind.continueWatching});
+    expect(
+        rows.hidden, {HomeRowKind.continueWatching, HomeRowKind.newEpisodes});
   });
 }

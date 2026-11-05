@@ -4,6 +4,7 @@ import 'storage_service.dart';
 enum HomeRowKind {
   games('games', "Today's games"),
   continueWatching('continue', 'Continue Watching'),
+  newEpisodes('new_episodes', 'New episodes'),
   recentChannels('recent', 'Recent channels'),
   favourites('favourites', 'Favourite channels'),
   newMovies('new_movies', 'New movies'),
@@ -20,7 +21,8 @@ enum HomeRowKind {
 
 /// Which Home rows the active viewer sees, in their order. Stored per viewer
 /// as ids, a hidden row as `-id` (`StorageService.getHomeRows`). A row added
-/// in a later version (not in the saved list) is appended, shown.
+/// in a later version (not in the saved list) is appended, shown — except
+/// New episodes, which goes right under Continue Watching.
 class HomeRows {
   HomeRows(this.order, this.hidden);
 
@@ -44,7 +46,13 @@ class HomeRows {
       if (off) hidden.add(kind);
     }
     for (final k in HomeRowKind.values) {
-      if (!order.contains(k)) order.add(k);
+      if (order.contains(k)) continue;
+      final cw = order.indexOf(HomeRowKind.continueWatching);
+      if (k == HomeRowKind.newEpisodes && cw >= 0) {
+        order.insert(cw + 1, k);
+      } else {
+        order.add(k);
+      }
     }
     return HomeRows(order, hidden);
   }

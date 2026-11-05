@@ -5,6 +5,21 @@
 /// Keep every `{placeholder}` exactly as in the key. `{s}` is the plural "s"
 /// the code fills in ("chaîne{s}").
 const Map<String, String> kFr = {
+  "New episodes": "Nouveaux épisodes",
+  "Notify me": "M'avertir",
+  "NEW": "NOUVEAU",
+  "Airs today": "Diffusé aujourd'hui",
+  "Airs tomorrow": "Diffusé demain",
+  "Airs in {count} days": "Diffusé dans {count} jours",
+  "{code} is available": "{code} est disponible",
+  "{count} new episodes - {code} is available":
+      "{count} nouveaux épisodes - {code} est disponible",
+  "You'll be told when a new episode is out":
+      "Vous serez averti à la sortie d'un nouvel épisode",
+  "New episode alerts off for this show":
+      "Alertes de nouveaux épisodes désactivées pour cette série",
+  "This show's Media Hub source was removed.":
+      "La source Media Hub de cette série a été retirée.",
   "Discord": "Discord",
   "Direct support through Discord": "Aide directe sur Discord",
   "Questions, help with setup, feature ideas and release news: join the VesperTV community on Discord.":

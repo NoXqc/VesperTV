@@ -3,6 +3,21 @@
 /// Informal "du". Machine-authored, not native-reviewed. Keep every
 /// `{placeholder}` exactly as in the key.
 const Map<String, String> kDe = {
+  "New episodes": "Neue Folgen",
+  "Notify me": "Benachrichtigen",
+  "NEW": "NEU",
+  "Airs today": "Läuft heute",
+  "Airs tomorrow": "Läuft morgen",
+  "Airs in {count} days": "Läuft in {count} Tagen",
+  "{code} is available": "{code} ist verfügbar",
+  "{count} new episodes - {code} is available":
+      "{count} neue Folgen - {code} ist verfügbar",
+  "You'll be told when a new episode is out":
+      "Du wirst benachrichtigt, sobald eine neue Folge erscheint",
+  "New episode alerts off for this show":
+      "Benachrichtigungen zu neuen Folgen für diese Serie aus",
+  "This show's Media Hub source was removed.":
+      "Die Media-Hub-Quelle dieser Serie wurde entfernt.",
   "Discord": "Discord",
   "Direct support through Discord": "Direkter Support über Discord",
   "Questions, help with setup, feature ideas and release news: join the VesperTV community on Discord.":

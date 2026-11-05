@@ -12,6 +12,7 @@ import '../models/channel.dart';
 import '../models/series_details.dart';
 import '../models/xtream_series.dart';
 import '../services/archive_service.dart';
+import '../services/episode_alerts.dart';
 import '../services/missing_episodes.dart';
 import '../services/archive_playback_sources.dart';
 import '../services/archive_resume_source.dart';
@@ -459,6 +460,14 @@ Future<void> openArchiveSeries(
             showFavorite: false,
             imdbId: preview.imdb,
             sourceLabel: source.name,
+            followTarget: () => FollowedShow(
+                key: FollowedShow.hubKey(source.manifestUrl, preview.id),
+                title: preview.name,
+                posterUrl: preview.posterUrl,
+                backdropUrl: preview.backgroundUrl,
+                sourceUrl: source.manifestUrl,
+                meta: preview.toJson(),
+                imdbId: preview.imdb),
             discoveryBuilder: (entry, back) => ArchiveDiscoveryPanel(
                 source: source,
                 meta: preview,

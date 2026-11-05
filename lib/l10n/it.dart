@@ -6,6 +6,21 @@
 /// the code; Italian plurals don't work that way (canale/canali), so those
 /// strings are phrased to avoid it.
 const Map<String, String> kIt = {
+  "New episodes": "Nuovi episodi",
+  "Notify me": "Avvisami",
+  "NEW": "NUOVO",
+  "Airs today": "In onda oggi",
+  "Airs tomorrow": "In onda domani",
+  "Airs in {count} days": "In onda tra {count} giorni",
+  "{code} is available": "{code} è disponibile",
+  "{count} new episodes - {code} is available":
+      "{count} nuovi episodi - {code} è disponibile",
+  "You'll be told when a new episode is out":
+      "Riceverai un avviso quando esce un nuovo episodio",
+  "New episode alerts off for this show":
+      "Avvisi dei nuovi episodi disattivati per questa serie",
+  "This show's Media Hub source was removed.":
+      "La fonte Media Hub di questa serie è stata rimossa.",
   "Discord": "Discord",
   "Direct support through Discord": "Supporto diretto su Discord",
   "Questions, help with setup, feature ideas and release news: join the VesperTV community on Discord.":

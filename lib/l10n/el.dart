@@ -6,6 +6,21 @@
 /// English-style plural "s" filled in by the code; Greek plurals don't
 /// work that way, so those strings are phrased without it.
 const Map<String, String> kEl = {
+  "New episodes": "Νέα επεισόδια",
+  "Notify me": "Ειδοποίησέ με",
+  "NEW": "ΝΕΟ",
+  "Airs today": "Προβάλλεται σήμερα",
+  "Airs tomorrow": "Προβάλλεται αύριο",
+  "Airs in {count} days": "Προβάλλεται σε {count} ημέρες",
+  "{code} is available": "Το {code} είναι διαθέσιμο",
+  "{count} new episodes - {code} is available":
+      "{count} νέα επεισόδια - Το {code} είναι διαθέσιμο",
+  "You'll be told when a new episode is out":
+      "Θα ειδοποιηθείτε όταν βγει νέο επεισόδιο",
+  "New episode alerts off for this show":
+      "Οι ειδοποιήσεις νέων επεισοδίων απενεργοποιήθηκαν για αυτή τη σειρά",
+  "This show's Media Hub source was removed.":
+      "Η πηγή Media Hub αυτής της σειράς αφαιρέθηκε.",
   "Discord": "Discord",
   "Direct support through Discord": "Άμεση υποστήριξη μέσω Discord",
   "Questions, help with setup, feature ideas and release news: join the VesperTV community on Discord.":

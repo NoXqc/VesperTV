@@ -135,6 +135,11 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "vespertv/recorder")
             .setMethodCallHandler { call, result -> recorderBridge.handle(call, result) }
 
+        // "Notify me" new-episode alerts — see EpisodeNotifier.
+        val episodeNotifier = EpisodeNotifier(this)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "vespertv/notify")
+            .setMethodCallHandler { call, result -> episodeNotifier.handle(call, result) }
+
         // Settings > Interface > Display: Match frame rate / resolution — see DisplayModes.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "vespertv/display")
             .setMethodCallHandler { call, result -> displayModes.handle(call, result) }
