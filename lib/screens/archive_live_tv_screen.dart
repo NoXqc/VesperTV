@@ -69,11 +69,29 @@ class _ArchiveLiveTvScreenState extends State<ArchiveLiveTvScreen> {
   @override
   void initState() {
     super.initState();
+    _playback = context.read<PlaybackService>();
     unawaited(_load());
+  }
+
+  late final PlaybackService _playback;
+
+  /// Leaving the player (or this screen) turns a Live TV channel off: this
+  /// screen has no preview for it, and it used to carry on into the main
+  /// player behind the TV home (owner, 2026-11-05).
+  void _stopLiveTv() {
+    final current = _playback.currentChannel;
+    if (current != null && Channel.isHubLiveId(current.rawId)) {
+      unawaited(_playback.stop());
+    }
+    if (_playback.zapList?.any((c) => Channel.isHubLiveId(c.rawId)) ??
+        false) {
+      _playback.zapList = null;
+    }
   }
 
   @override
   void dispose() {
+    _stopLiveTv();
     _vertical.dispose();
     for (final c in _horizontal.values) {
       c.dispose();
@@ -160,7 +178,7 @@ class _ArchiveLiveTvScreenState extends State<ArchiveLiveTvScreen> {
   Future<void> _play(LiveTvRow row, int index) async {
     if (_starting != null) return;
     final service = context.read<ArchiveService>();
-    final playback = context.read<PlaybackService>();
+    final playback = _playback;
     final channels = [
       for (final m in row.metas)
         service.liveChannelFor(row.source, m, group: row.title)
@@ -206,6 +224,7 @@ class _ArchiveLiveTvScreenState extends State<ArchiveLiveTvScreen> {
         await Navigator.of(context).push(PlayerPageRoute(
             builder: (_) => PlayerScreen(channel: channel, sources: sources)));
       }
+      _stopLiveTv();
     } catch (e) {
       debugPrint('HubLive: play failed ${e.runtimeType}');
       if (mounted) {
