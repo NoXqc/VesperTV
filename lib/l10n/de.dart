@@ -2458,4 +2458,18 @@ const Map<String, String> kDe = {
       "Audioverzögerung",
   "For sound that is ahead of or behind the picture. Also in the player: Audio sync.":
       "Für Ton, der dem Bild voraus ist oder hinterherhinkt. Auch im Player: Audio-Sync.",
+
+  // Android phone sports notifications.
+  "Phone notifications": "Telefonbenachrichtigungen",
+  "Game reminders": "Spielerinnerungen",
+  "Goal alerts": "Torbenachrichtigungen",
+  "Following games": "Verfolgte Spiele",
+  "Following goals: {game}": "Tore verfolgen: {game}",
+  "Starting now": "Beginnt jetzt",
+  "Stop": "Beenden",
+  "Notify this phone for game reminders and subscribed goals, even when the app is closed. Saved for this viewer.":
+      "Erhalte auf diesem Telefon Spielerinnerungen und abonnierte Torbenachrichtigungen, auch bei geschlossener App. Für dieses Profil gespeichert.",
+  "Game reminders and goal alerts while the app is closed":
+      "Spielerinnerungen und Torbenachrichtigungen bei geschlossener App",
+  "{home} vs {away}": "{home} gegen {away}",
 };

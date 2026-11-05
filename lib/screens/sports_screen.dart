@@ -87,7 +87,14 @@ bool get _desktopSports => defaultTargetPlatform == TargetPlatform.windows;
 /// zones explicitly (CLAUDE.md §10: default traversal across differently
 /// shaped rows is unreliable); Left/Right is plain traversal inside a row.
 class SportsScreen extends StatefulWidget {
-  const SportsScreen({super.key, this.home = false, this.service});
+  const SportsScreen(
+      {super.key,
+      this.home = false,
+      this.service,
+      this.initialGameKey,
+      this.initialDay});
+  final String? initialGameKey;
+  final DateTime? initialDay;
   final bool home;
 
   /// A supplied service lets navigation tests run without live feeds.
@@ -202,6 +209,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   String? _leagueFilter;
   int _dayOffset = 0;
+  bool _notificationFocused = false;
 
   /// Empty day with one league picked: that league's next game (from
   /// [SportsService.nextGameStart]), offered as a jump. Null = none found.
@@ -321,6 +329,24 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     _hideEmptyLeagues = _storage.getSportsHideEmptyLeagues();
     // Opens on the favourite league (League manager, hold OK), if any.
     _leagueFilter = favoriteSportsLeague(_storage)?.id;
+    if (widget.initialGameKey case final target?) {
+      final split = target.indexOf(':');
+      final league =
+          split <= 0 ? null : sportsLeagueById(target.substring(0, split));
+      if (league != null) {
+        if (!_leagues.any((l) => l.id == league.id)) {
+          _leagues = [..._leagues, league];
+        }
+        _leagueFilter = league.id;
+      }
+      final day = widget.initialDay?.toLocal();
+      final now = DateTime.now();
+      if (day != null) {
+        _dayOffset = DateTime.utc(day.year, day.month, day.day)
+            .difference(DateTime.utc(now.year, now.month, now.day))
+            .inDays;
+      }
+    }
     _hideScores = _storage.getSportsHideScores();
     _railExpanded = _storage.getSportsRailExpanded();
     if (_modeActive) _ensureInitialFocus();
@@ -456,6 +482,24 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           _defaultHero(games);
     });
     _ensureInitialFocus();
+    if (!_notificationFocused && widget.initialGameKey != null) {
+      final game = games
+          .where((g) => '${g.league.id}:${g.id}' == widget.initialGameKey)
+          .firstOrNull;
+      if (game != null) {
+        _notificationFocused = true;
+        _focusGame(game);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          final sections = _sections;
+          final r = sections.indexWhere((s) => s.games
+              .any((g) => g.id == game.id && g.league.id == game.league.id));
+          if (r < 0) return;
+          _lastCardInRow[sections[r].id] = _gameKey(game);
+          _focusZone(_firstRowZone + r, sections);
+        });
+      }
+    }
     // Team ranks beside the names, from the cached standings tables.
     unawaited(SportsRanks.ensure(games.map((g) => g.league)).then((changed) {
       if (changed && mounted) setState(() {});

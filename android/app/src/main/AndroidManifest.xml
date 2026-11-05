@@ -89,6 +89,12 @@
             android:name=".OverlayProbeService"
             android:exported="false"
             android:foregroundServiceType="shortService"/>
+        <service android:name=".SportsGoalService" android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="User-requested live sports goal notifications for subscribed games; overlapping games share one bounded session with a Stop action."/>
+        </service>
+        <receiver android:name=".SportsAlarmReceiver" android:exported="false"/>
         <receiver android:name=".RecorderAlarmReceiver" android:exported="false"/>
         <receiver android:name=".BootReceiver" android:exported="false">
             <intent-filter>

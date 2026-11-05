@@ -12,11 +12,13 @@ class GoalAlertNotice {
       {required this.viewerId,
       required this.game,
       required this.team,
-      required this.observedAt});
+      required this.observedAt,
+      this.previousScore});
   final String viewerId;
   final SportsGame game;
   final SportsTeam team;
   final DateTime observedAt;
+  final int? previousScore;
 }
 
 class _ScoreSample {
@@ -44,12 +46,64 @@ class _MatchScoreWatch {
 /// cached scoreboard client; no new endpoint or per-team network request.
 class GoalsAlerts extends ChangeNotifier {
   GoalsAlerts(this.storage,
-      {DateTime Function()? now,
+      {this.persistSamples = false,
+      this.includeLeagueSubscriptions = true,
+      this.sampleFreshness = const Duration(hours: 6),
+      this.allowHiddenScores = false,
+      this.restrictGames,
+      this.gameStarts = const {},
+      DateTime Function()? now,
       Future<List<SportsGame>> Function(List<SportsLeague>, DateTime)?
           loadGames})
       : now = now ?? DateTime.now,
         _loadGames = loadGames ?? SportsService.instance.gamesForDay;
   final StorageService storage;
+  final bool persistSamples;
+  final bool includeLeagueSubscriptions;
+  final Duration sampleFreshness;
+  final bool allowHiddenScores;
+  final Set<String>? restrictGames;
+  final Map<String, DateTime> gameStarts;
+  Future<bool> Function(String? expected, String data)? saveCheckpoint;
+  Future<bool> Function()? canPoll;
+  Future<void> Function(List<GoalAlertNotice>)? systemNotify;
+  void Function(List<SportsGame>)? observedGames;
+  String _scope() => jsonEncode([
+        storage.getGoalsAlert(),
+        storage.getSportsFollowedTeams(),
+        storage.getMatchScoreAlerts(),
+        storage.getLeagueGoalAlerts()
+      ]);
+
+  void _restoreSamples() {
+    _scores.clear();
+    try {
+      final data = jsonDecode(storage.getGoalPhoneCheckpoint() ?? '{}');
+      if (data is! Map || data['scope'] != _scope()) return;
+      for (final item in (data['samples'] as List? ?? []).take(512)) {
+        if (item is! Map) continue;
+        final at = DateTime.tryParse('${item['at']}');
+        final start = DateTime.tryParse('${item['start']}');
+        final score = item['score'];
+        final state =
+            GameState.values.where((s) => s.name == item['state']).firstOrNull;
+        if (at == null ||
+            start == null ||
+            score is! int ||
+            state == null ||
+            now().difference(at) > sampleFreshness) {
+          continue;
+        }
+        _scores['${item['key']}'] = _ScoreSample(
+            score, state, at, '${item['owner']}', start, '${item['game']}');
+      }
+    } catch (_) {/* Invalid samples are a silent first baseline. */}
+  }
+
+  List<({SportsLeague league, String id, DateTime start})> get matchWatches => [
+        for (final watch in _matches().values)
+          (league: watch.league, id: watch.id, start: watch.start)
+      ];
   final DateTime Function() now;
   final Future<List<SportsGame>> Function(List<SportsLeague>, DateTime)
       _loadGames;
@@ -63,7 +117,7 @@ class GoalsAlerts extends ChangeNotifier {
       caseSensitive: false);
 
   bool get enabled =>
-      !storage.getSportsHideScores() &&
+      (allowHiddenScores || !storage.getSportsHideScores()) &&
       (storage.getGoalsAlert() ||
           _matches().isNotEmpty ||
           _leagueIds.isNotEmpty);
@@ -74,7 +128,9 @@ class GoalsAlerts extends ChangeNotifier {
   static String gameKey(SportsGame game) => '${game.league.id}:${game.id}';
 
   /// Leagues whose every game alerts (game hold menu / League manager).
-  Set<String> get _leagueIds => storage.getLeagueGoalAlerts().toSet();
+  Set<String> get _leagueIds => includeLeagueSubscriptions
+      ? storage.getLeagueGoalAlerts().toSet()
+      : <String>{};
 
   bool isLeagueSet(SportsLeague league) => _leagueIds.contains(league.id);
 
@@ -189,7 +245,10 @@ class GoalsAlerts extends ChangeNotifier {
       now().difference(notice.observedAt) <= const Duration(seconds: 90);
 
   Future<List<GoalAlertNotice>> poll() async {
-    if (_disposed) return const [];
+    if (_disposed || (canPoll != null && !await canPoll!())) return const [];
+    if (persistSamples) await storage.reloadPreferences();
+    final expected = storage.getGoalPhoneCheckpoint();
+    final scope = _scope();
     final viewer = storage.getActiveViewerId();
     if (!enabled) {
       reset();
@@ -199,6 +258,7 @@ class GoalsAlerts extends ChangeNotifier {
       reset();
       _viewer = viewer;
     }
+    if (persistSamples) _restoreSamples();
     final followed = _followed;
     final matches = _matches();
     final leagueIds = _leagueIds;
@@ -224,6 +284,10 @@ class GoalsAlerts extends ChangeNotifier {
         leagues[league.id] = league;
       }
     }
+    if (restrictGames != null) {
+      leagues.removeWhere(
+          (id, _) => !restrictGames!.any((key) => key.startsWith('$id:')));
+    }
     if (leagues.isEmpty || _busyEpoch == _epoch) return const [];
     final epoch = _epoch;
     _busyEpoch = epoch;
@@ -237,6 +301,15 @@ class GoalsAlerts extends ChangeNotifier {
           final current = now().toLocal();
           final today = DateTime(current.year, current.month, current.day);
           final dates = <DateTime>{today};
+          for (final entry in gameStarts.entries) {
+            if (!entry.key.startsWith('${league.id}:')) continue;
+            final start = entry.value.toLocal();
+            final day = DateTime(start.year, start.month, start.day);
+            if (day.isBefore(today) &&
+                today.difference(day) <= const Duration(days: 2)) {
+              dates.add(day);
+            }
+          }
           // Keep an overnight live game's start day through its final update;
           // the normal day helper otherwise carries over live games only.
           // A saved match can cross midnight even before the first poll after
@@ -278,9 +351,11 @@ class GoalsAlerts extends ChangeNotifier {
       if (_disposed ||
           epoch != _epoch ||
           viewer != storage.getActiveViewerId() ||
-          !enabled) {
+          !enabled ||
+          (canPoll != null && !await canPoll!())) {
         return const [];
       }
+      observedGames?.call(all);
       final at = now();
       final owners = _followed;
       final selected = _matches();
@@ -289,6 +364,8 @@ class GoalsAlerts extends ChangeNotifier {
       final notices = <GoalAlertNotice>[];
       for (final game in all) {
         if (game.league.kind != SportsKind.team ||
+            (restrictGames != null &&
+                !restrictGames!.contains(gameKey(game))) ||
             !seen.add('${game.league.id}:${game.id}')) {
           continue;
         }
@@ -320,13 +397,53 @@ class GoalsAlerts extends ChangeNotifier {
               previous.state != GameState.post &&
               score > previous.score) {
             notices.add(GoalAlertNotice(
-                viewerId: viewer, game: game, team: team, observedAt: at));
+                viewerId: viewer,
+                game: game,
+                team: team,
+                observedAt: at,
+                previousScore: previous.score));
           }
         }
       }
       while (_scores.length > 512) {
         _scores.remove(_scores.keys.first);
       }
+      if (persistSamples) {
+        if (_scope() != scope || (canPoll != null && !await canPoll!())) {
+          return const [];
+        }
+        if (_disposed ||
+            epoch != _epoch ||
+            viewer != storage.getActiveViewerId()) {
+          return const [];
+        }
+        final data = jsonEncode({
+          'scope': scope,
+          'samples': [
+            for (final entry in _scores.entries)
+              {
+                'key': entry.key,
+                'score': entry.value.score,
+                'state': entry.value.state.name,
+                'at': entry.value.at.toIso8601String(),
+                'owner': entry.value.owner,
+                'start': entry.value.start.toIso8601String(),
+                'game': entry.value.gameKey
+              }
+          ]
+        });
+        if (saveCheckpoint case final save?) {
+          if (!await save(expected, data)) return const [];
+        } else {
+          await storage.setGoalPhoneCheckpoint(data);
+        }
+      }
+      if (_disposed ||
+          epoch != _epoch ||
+          viewer != storage.getActiveViewerId()) {
+        return const [];
+      }
+      await systemNotify?.call(notices);
       return notices;
     } finally {
       if (_busyEpoch == epoch) _busyEpoch = null;

@@ -228,9 +228,22 @@ class GameReminders extends ChangeNotifier {
       !RegExp(r'postpon|cancel|suspend|\btbd\b', caseSensitive: false)
           .hasMatch(game.statusText);
 
-  void loadViewer() {
+  List<GameReminder> get entries {
+    loadViewer();
+    return _entries.values.toList();
+  }
+
+  Future<void> refreshFromDisk() async {
+    await _write;
+    await _storage.reloadPreferences();
+    if (_disposed) return;
+    loadViewer(force: true);
+    notifyListeners();
+  }
+
+  void loadViewer({bool force = false}) {
     final active = _storage.getActiveViewerId();
-    if (viewerId == active) return;
+    if (!force && viewerId == active) return;
     viewerId = active;
     _entries.clear();
     _teams.clear();

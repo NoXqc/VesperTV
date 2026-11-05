@@ -23,6 +23,29 @@ class StorageService {
       : profilePhotos = photos ?? ProfilePhotos(),
         localPlaylists = localPlaylists ?? LocalPlaylistFiles();
   late SharedPreferences _prefs;
+  void Function()? onSportsNotificationsChanged;
+  Future<void> Function(String viewer, String data)? persistGameReminders;
+  Future<void> _sportsChanged(Future<Object?> write) async {
+    await write;
+    onSportsNotificationsChanged?.call();
+  }
+
+  bool getPhoneGameReminders() =>
+      _prefs.getBool(_vk('vesper_phone_game_reminders')) ?? true;
+  bool getPhoneGoalAlerts() =>
+      _prefs.getBool(_vk('vesper_phone_goal_alerts')) ?? true;
+  Future<void> setPhoneGameReminders(bool value) =>
+      _sportsChanged(_prefs.setBool(_vk('vesper_phone_game_reminders'), value));
+  Future<void> setPhoneGoalAlerts(bool value) =>
+      _sportsChanged(_prefs.setBool(_vk('vesper_phone_goal_alerts'), value));
+  String? getGoalPhoneCheckpoint() =>
+      _prefs.getString(_vk('vesper_goal_phone_checkpoint'));
+  Future<void> setGoalPhoneCheckpoint(String data) async {
+    await _prefs.setString(_vk('vesper_goal_phone_checkpoint'), data);
+  }
+
+  String sportsViewerKey(String base, String viewer) =>
+      _vk(base, viewerId: viewer);
   Directory? _cacheDir;
   final ProfilePhotos profilePhotos;
   final LocalPlaylistFiles localPlaylists;
@@ -711,8 +734,8 @@ class StorageService {
       _prefs.getBool(_vk(AppConstants.keySportsMode)) ?? false;
   Future<void> setSportsMode(bool value) =>
       _prefs.setBool(_vk(AppConstants.keySportsMode), value);
-  Future<void> setSportsHideScores(bool value) =>
-      _prefs.setBool(_vk(AppConstants.keySportsHideScores), value);
+  Future<void> setSportsHideScores(bool value) => _sportsChanged(
+      _prefs.setBool(_vk(AppConstants.keySportsHideScores), value));
 
   /// Raw JSON of the user's game/team -> channel picks; parsed by
   /// `SportsChannelPicks` (null = none yet).
@@ -725,7 +748,7 @@ class StorageService {
   bool getGoalsAlert() =>
       _prefs.getBool(_vk(AppConstants.keyGoalsAlert)) ?? false;
   Future<void> setGoalsAlert(bool value) =>
-      _prefs.setBool(_vk(AppConstants.keyGoalsAlert), value);
+      _sportsChanged(_prefs.setBool(_vk(AppConstants.keyGoalsAlert), value));
 
   /// Reminder and goal-alert popups without their fill (outline only).
   bool getTransparentPopups() =>
@@ -737,8 +760,8 @@ class StorageService {
   List<String> getSportsFollowedTeams() =>
       _prefs.getStringList(_vk(AppConstants.keySportsFollowedTeams)) ??
       const [];
-  Future<void> setSportsFollowedTeams(List<String> teams) =>
-      _prefs.setStringList(_vk(AppConstants.keySportsFollowedTeams), teams);
+  Future<void> setSportsFollowedTeams(List<String> teams) => _sportsChanged(
+      _prefs.setStringList(_vk(AppConstants.keySportsFollowedTeams), teams));
 
   /// Last Multiview layout: true = 4 screens (2x2), false = 2 stacked.
   bool getMultiviewQuad() =>
@@ -1026,8 +1049,16 @@ class StorageService {
   /// Pending game reminders stay on this device and belong to one viewer.
   String? getGameReminders({String? viewerId}) =>
       _prefs.getString(_vk(AppConstants.keyGameReminders, viewerId: viewerId));
-  Future<void> setGameReminders(String json, {String? viewerId}) => _prefs
-      .setString(_vk(AppConstants.keyGameReminders, viewerId: viewerId), json);
+  Future<void> setGameReminders(String json, {String? viewerId}) async {
+    final viewer = viewerId ?? getActiveViewerId();
+    if (persistGameReminders case final save?) {
+      await save(viewer, json);
+    } else {
+      await _prefs.setString(
+          _vk(AppConstants.keyGameReminders, viewerId: viewer), json);
+    }
+    onSportsNotificationsChanged?.call();
+  }
 
   /// Programme reminders belong to this viewer and stay on this device.
   String? getProgrammeReminders({String? viewerId}) => _prefs
@@ -1045,8 +1076,8 @@ class StorageService {
   String? getMatchScoreAlerts({String? viewerId}) => _prefs
       .getString(_vk(AppConstants.keyMatchScoreAlerts, viewerId: viewerId));
   Future<void> setMatchScoreAlerts(String json, {String? viewerId}) =>
-      _prefs.setString(
-          _vk(AppConstants.keyMatchScoreAlerts, viewerId: viewerId), json);
+      _sportsChanged(_prefs.setString(
+          _vk(AppConstants.keyMatchScoreAlerts, viewerId: viewerId), json));
 
   /// Leagues whose every goal alerts this viewer (league ids).
   List<String> getLeagueGoalAlerts({String? viewerId}) =>
@@ -1054,8 +1085,8 @@ class StorageService {
           _vk(AppConstants.keyLeagueGoalAlerts, viewerId: viewerId)) ??
       const [];
   Future<void> setLeagueGoalAlerts(List<String> ids, {String? viewerId}) =>
-      _prefs.setStringList(
-          _vk(AppConstants.keyLeagueGoalAlerts, viewerId: viewerId), ids);
+      _sportsChanged(_prefs.setStringList(
+          _vk(AppConstants.keyLeagueGoalAlerts, viewerId: viewerId), ids));
 
   String? getSportsChannelLists({String? viewerId}) => _prefs
       .getString(_vk(AppConstants.keySportsChannelLists, viewerId: viewerId));

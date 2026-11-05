@@ -2562,4 +2562,18 @@ const Map<String, String> kIt = {
       "Ritardo audio",
   "For sound that is ahead of or behind the picture. Also in the player: Audio sync.":
       "Per un audio in anticipo o in ritardo rispetto all’immagine. Anche nel lettore: Sincronia audio.",
+
+  // Android phone sports notifications.
+  "Phone notifications": "Notifiche del telefono",
+  "Game reminders": "Promemoria partite",
+  "Goal alerts": "Avvisi gol",
+  "Following games": "Partite seguite",
+  "Following goals: {game}": "Gol seguiti: {game}",
+  "Starting now": "Inizia ora",
+  "Stop": "Interrompi",
+  "Notify this phone for game reminders and subscribed goals, even when the app is closed. Saved for this viewer.":
+      "Ricevi su questo telefono promemoria delle partite e avvisi dei gol seguiti, anche quando l’app è chiusa. Salvato per questo profilo.",
+  "Game reminders and goal alerts while the app is closed":
+      "Promemoria partite e avvisi gol quando l’app è chiusa",
+  "{home} vs {away}": "{home} contro {away}",
 };

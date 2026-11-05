@@ -37,6 +37,7 @@ import 'sports_country_settings_screen.dart';
 import 'sports_playlist_settings_screen.dart';
 import 'sports_league_visibility_settings_screen.dart';
 import 'sports_auto_play_settings_screen.dart';
+import 'sports_phone_notifications_settings_screen.dart';
 import 'sports_odds_settings_screen.dart';
 import 'sports_quality_settings_screen.dart';
 import 'playlist_editor_screen.dart';
@@ -300,6 +301,11 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
                 tr('Betting odds'),
                 tr('Show the line and over/under on games'),
                 (_) => const SportsOddsSettingsScreen()),
+            _Entry(
+                Icons.notifications_outlined,
+                tr('Phone notifications'),
+                tr('Game reminders and goal alerts while the app is closed'),
+                (_) => const SportsPhoneNotificationsSettingsScreen()),
             _Entry(
                 Icons.play_circle_outline,
                 tr('Watch game button'),

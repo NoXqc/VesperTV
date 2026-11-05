@@ -2555,4 +2555,18 @@ const Map<String, String> kEs = {
       "Retraso de audio",
   "For sound that is ahead of or behind the picture. Also in the player: Audio sync.":
       "Para un sonido adelantado o retrasado respecto a la imagen. También en el reproductor: Sincronía de audio.",
+
+  // Android phone sports notifications.
+  "Phone notifications": "Notificaciones del teléfono",
+  "Game reminders": "Recordatorios de partidos",
+  "Goal alerts": "Alertas de goles",
+  "Following games": "Siguiendo partidos",
+  "Following goals: {game}": "Siguiendo goles: {game}",
+  "Starting now": "Empieza ahora",
+  "Stop": "Detener",
+  "Notify this phone for game reminders and subscribed goals, even when the app is closed. Saved for this viewer.":
+      "Recibe en este teléfono recordatorios de partidos y alertas de goles suscritas, incluso con la aplicación cerrada. Guardado para este perfil.",
+  "Game reminders and goal alerts while the app is closed":
+      "Recordatorios de partidos y alertas de goles con la aplicación cerrada",
+  "{home} vs {away}": "{home} vs {away}",
 };

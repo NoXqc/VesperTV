@@ -539,7 +539,7 @@
     "id": "c249bece8e471315",
     "category": "Sports Trak",
     "title": "Score alerts for one match",
-    "answer": "Choose Set goals alert for this match to get the existing top-left score popup when either team scores, even if neither team is in My Teams. Remove goals alert for this match stops it. This per-game choice works independently of the My Teams Goals alert switch. Hide scores still pauses all score alerts. Choices belong to this profile and device; alerts follow the sports feed while VesperTV is open.",
+    "answer": "Choose Set goals alert for this match to get the existing top-left score popup when either team scores, even if neither team is in My Teams. Remove goals alert for this match stops it. This per-game choice works independently of the My Teams Goals alert switch. Hide scores still pauses in-app score popups. Choices belong to this profile and device; alerts follow the sports feed while VesperTV is open.",
     "controls": "Hold OK on an upcoming or live team game",
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },
@@ -549,6 +549,14 @@
     "title": "Score alerts for a whole league",
     "answer": "Choose Goals alert for all of (league) to get the score popup for every goal in that league, for any team. Remove goals alert for (league) stops it. Hide scores pauses these alerts too. Saved for this profile on this device.",
     "controls": "Hold OK on a game, or on a league in League manager",
+    "url": "https://vespertv.app/remote.html#Sports%20Trak"
+  },
+  {
+    "id": "64f3a701aec43049",
+    "category": "Sports Trak",
+    "title": "Game and goal notifications on Android",
+    "answer": "Game reminders and Goal alerts are on by default for this viewer; they notify only for reminders and goals you subscribed to. Reminders use the saved advance time and kickoff time even after normal app closure. My Teams goal alerts and per-match goal alerts use one ongoing Following goals notification during scheduled games, with a Stop action. Each game is limited to five hours. Tap an alert to open its game in Sports Trak. While the app is visible, its existing popups take over. Hide scores removes score text from system goal notifications. Android notification permission and exact-alarm access are needed; Force stop prevents delivery until you reopen the app, and power-saving restrictions or delayed sports feeds can delay alerts.",
+    "controls": "Settings → Sports Trak → Phone notifications",
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },
   {
