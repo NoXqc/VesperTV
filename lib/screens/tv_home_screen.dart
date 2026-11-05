@@ -3427,7 +3427,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   Widget _buildFullVideoNowCard(Channel? channel, EpgService epg) => Container(
         constraints: const BoxConstraints(maxWidth: 420),
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.55),
+          color: Colors.black.withValues(
+              alpha: context.read<AppPreferences>().guideOverlayOpacity),
           borderRadius: BorderRadius.circular(12),
         ),
         child: _GuideNowPanel(
@@ -3443,10 +3444,13 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// video behind the whole screen; transparent otherwise. Always the same
   /// wrapper (only the color changes) so flipping the mode never remounts
   /// the column and loses its focus or scroll position.
-  Widget _fullVideoScrim(Widget child, {double alpha = 0.55}) => DecoratedBox(
+  Widget _fullVideoScrim(Widget child) => DecoratedBox(
         decoration: BoxDecoration(
             color: (_fullVideo || _fullArt)
-                ? Colors.black.withValues(alpha: alpha)
+                ? Colors.black.withValues(
+                    alpha: _fullVideo
+                        ? context.read<AppPreferences>().guideOverlayOpacity
+                        : 0.55)
                 : Colors.transparent),
         child: RefinedFinishBackdrop(
           translucent: _fullVideo,
@@ -9989,7 +9993,13 @@ class _ProgramBlockState extends State<_ProgramBlock> {
                           ? null
                           : widget.isNow
                               ? (widget.translucent
-                                  ? Colors.black.withValues(alpha: 0.45)
+                                  // Preserve the original cell contrast at
+                                  // 45%, and clear its dark fill at 100%.
+                                  ? Colors.black.withValues(
+                                      alpha: context
+                                              .read<AppPreferences>()
+                                              .guideOverlayOpacity *
+                                          (0.45 / 0.55))
                                   : Colors.black87)
                               : Colors.white.withValues(alpha: 0.06),
                       // Same real diagonal sheen as `_SelectableRow`'s own focus

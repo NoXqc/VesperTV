@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -11,7 +10,7 @@ import '../../widgets/tv_switch_list_tile.dart';
 import '../../l10n/l10n.dart';
 
 /// Settings > Interface > Guide: the Live TV guide's layout (Live or
-/// Timeline, full-screen video, Expand, Compact). Was part of Theme.
+/// Timeline, full-screen video/transparency, Expand, Compact). Was part of Theme.
 ///
 /// No custom D-pad handling, same as ThemeScreen.
 class GuideSettingsScreen extends StatelessWidget {
@@ -63,7 +62,7 @@ class GuideSettingsScreen extends StatelessWidget {
                   // Android only for now — Windows' preview runs on its
                   // own media_kit player and isn't wired for this yet.
                   if (prefs.guideViewMode == 'timeline' &&
-                      !Platform.isWindows) ...[
+                      defaultTargetPlatform != TargetPlatform.windows) ...[
                     const SizedBox(height: 8),
                     TvSwitchListTile(
                       title: Text(tr('Full-screen video behind the guide')),
@@ -73,7 +72,40 @@ class GuideSettingsScreen extends StatelessWidget {
                       value: prefs.guideFullVideo,
                       onChanged: prefs.setGuideFullVideo,
                     ),
-                    if (prefs.guideFullVideo)
+                    if (prefs.guideFullVideo) ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 8),
+                            Row(children: [
+                              Expanded(child: Text(tr('Guide transparency'))),
+                              Text(tr('{percent}%', {
+                                'percent': '${prefs.guideTransparency}',
+                              })),
+                            ]),
+                            Slider(
+                              value: prefs.guideTransparency.toDouble(),
+                              min: 0,
+                              max: 100,
+                              divisions: 100,
+                              label: tr('{percent}%', {
+                                'percent': '${prefs.guideTransparency}',
+                              }),
+                              semanticFormatterCallback: (value) => tr(
+                                  '{percent}%',
+                                  {'percent': '${value.round()}'}),
+                              onChanged: (value) =>
+                                  prefs.setGuideTransparency(value.round()),
+                            ),
+                            Text(
+                              tr('0% is solid; 100% is clear.'),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                      ),
                       TvSwitchListTile(
                         title: Text(tr('Expand')),
                         subtitle:
@@ -81,6 +113,7 @@ class GuideSettingsScreen extends StatelessWidget {
                         value: prefs.guideExpanded,
                         onChanged: prefs.setGuideExpanded,
                       ),
+                    ],
                   ],
                 ],
               ),

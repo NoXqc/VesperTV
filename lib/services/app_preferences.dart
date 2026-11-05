@@ -423,6 +423,15 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Full-video Timeline guide background: 0% solid, 100% clear.
+  int get guideTransparency => _storage.getGuideTransparency();
+  double get guideOverlayOpacity => 1 - guideTransparency / 100;
+
+  void setGuideTransparency(int value) {
+    _storage.setGuideTransparency(value);
+    notifyListeners();
+  }
+
   /// Device-only: trailer playback while browsing movie/show details, opt-in.
   bool get autoTrailers => _storage.getAutoTrailers();
 

@@ -2372,4 +2372,8 @@ const Map<String, String> kDe = {
       "Das Zurücksetzen des Synchronisierungscodes entfernt alle deine verschlüsselten Daten vom Server. Alle anderen Geräte synchronisieren nicht mehr und müssen mit einem neuen Code erneut verknüpft werden. Bewahre den neuen Wiederherstellungscode auf.",
   "This code works for one device, once. Create a new code to link another device.":
       "Dieser Code gilt einmalig für ein Gerät. Erstelle einen neuen Code, um ein weiteres Gerät zu verknüpfen.",
+  "Guide transparency": "Transparenz des Programmführers",
+  "{percent}%": "{percent} %",
+  "0% is solid; 100% is clear.":
+      "0 % ist undurchsichtig; 100 % ist durchsichtig.",
 };
