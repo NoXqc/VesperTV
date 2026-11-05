@@ -128,6 +128,9 @@ Kotlin Android TV app (fork of OwnTV, GPL-3.0 like us), files under
   (`eng.2`). Premier League (`eng.1`) remains a base league; Carabao/EFL Cup is separate.
   ESPN scoreboard for 2026-10-24 returned 12/11 upcoming fixtures; both standings feeds
   returned 24 teams. League logos verified as `25.png` / `26.png`. Add through League manager.
+- **2026-11-04: Requested soccer competitions** - catalogue audit, provider ids,
+  dated fixture/table checks and free-feed limits: [soccer-league-expansion.md](soccer-league-expansion.md).
+  Premier League Cup (U21) still needs a supported data source.
 - **Takeaway for us:** adding leagues is cheap: one `SportsLeague(espnPath: ...)` entry each (we have 13).
   To scale past a handful we'd need what they built: a lazy catalogue (active vs available), a
   searchable "all leagues" picker, and event-sport (athlete) parsing for golf/F1/UFC/tennis.
