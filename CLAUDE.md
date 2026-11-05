@@ -376,6 +376,13 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-05 - release 1.0.57 (beta), +630 (latest):** owner said "cut it". Android only; Windows
+  stays 1.0.45. TV player flow (OK = bar + info card, Down = options row, Up/Down = channel with nothing on screen,
+  live timeline into catch-up, no TV top bar), Audio sync +/-5 s (vendored `AudioDelay`), Notify me with the app closed
+  (WorkManager; `android/app/proguard-rules.pro` keeps its Room DB - +621 crashed without it), Sports phone notifications
+  (Codex, alarms + specialUse foreground service), Media Hub Live TV (`isLiveTv`, `hublive_` channels), per-profile
+  Media Hub Enabled/Show under Other, cloud sync, playlist editor, ATMOS badge, sports channel fix. Analyze 16, 1372
+  tests. Notes: dev-notes/releases/1.0.57.md. Next build > 630.
 - **Claude, 2026-11-03 - release 1.0.56 (beta), +606 (latest):** owner said "cut the release". Android only; Windows
   stays 1.0.45. Big-playlist work from a 13-playlist / ~350k-channel user (Samsung + Onn 4K Pro logs): cached
   `PlaylistManager.visibleChannels`/`catchupLiveChannels` (cleared in notifyListeners), catalog index
