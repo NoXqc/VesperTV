@@ -77,8 +77,20 @@ CI: `.github/workflows/macos-build.yml` runs on `macos-latest`, on push to
 `main` or by hand. It uploads `VesperTV-macos.zip` and the build log as
 artifacts.
 
-The build is unsigned. Users need right-click > Open on first launch, or
-must remove the quarantine attribute.
+The build is unsigned. Since macOS 15, right-click > Open no longer gets
+past Gatekeeper: after the first blocked launch, users open System Settings >
+Privacy & Security > Open Anyway (or remove the quarantine attribute).
+
+DMG: `tools/macos_dmg/build.sh` (after the Release build) writes
+`build/dmg/VesperTV-<version>-macos.dmg` with a black + gold background,
+a drag-to-Applications layout and the gold volume icon.
+
+- `make_background.py` reuses `assets/icon/gen_icon.py` and writes a 1x
+  and a @2x image.
+- `settings.py` is the dmgbuild layout.
+- Pillow and dmgbuild go into a private venv in `build/`.
+- Finder draws icon labels black in light mode and white in dark mode, so
+  the icons sit on a mid-tone gold shelf that keeps both readable.
 
 ## Not done
 

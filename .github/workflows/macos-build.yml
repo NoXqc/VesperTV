@@ -4,8 +4,8 @@
 # Not a release asset on purpose: Windows builds older than the per-platform
 # asset picker (AppUpdateService.pickAsset) take the first ".zip" on the
 # latest release, so attaching this zip could offer a Mac app to a PC.
-# Unsigned / not notarized: on first launch macOS needs right-click > Open
-# (see dev-notes/macos-desktop.md).
+# Unsigned / not notarized: after the first blocked launch, macOS needs
+# System Settings > Privacy & Security > Open Anyway (dev-notes/macos-desktop.md).
 name: macOS build
 
 on:
