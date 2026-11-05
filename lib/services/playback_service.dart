@@ -504,9 +504,11 @@ class PlaybackService extends ChangeNotifier {
       }
       channel = resolved;
     }
-    // Archive titles and recordings belong to no playlist (see
-    // ArchiveService, RecordingService).
+    // Archive titles, Media Hub Live TV channels and recordings belong to
+    // no playlist (see ArchiveService, RecordingService). Live TV channels
+    // hit this on the Formuler: "This playlist is disabled" (+625).
     if (!Channel.isArchiveId(channel.rawId) &&
+        !Channel.isHubLiveId(channel.rawId) &&
         !Channel.isRecordingId(channel.rawId) &&
         !_playlistManager.isPlaylistEnabled(channel.playlistId)) {
       error = tr(

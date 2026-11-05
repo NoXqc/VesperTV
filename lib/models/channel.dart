@@ -435,6 +435,10 @@ class Channel {
   static bool isArchiveId(String rawId) =>
       rawId.startsWith('arc_vod_') || rawId.startsWith('arc_ep_');
 
+  /// A Media Hub > Live TV channel (ArchiveService.liveChannelFor): live,
+  /// but like [isArchiveId] it belongs to no playlist.
+  static bool isHubLiveId(String rawId) => rawId.startsWith('hublive_');
+
   /// A Sports Trak recording (RecordingService.channelFor): a local file,
   /// seekable, no playlist profile backs it.
   static const recordingPrefix = 'rec_';

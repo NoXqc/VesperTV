@@ -68,5 +68,6 @@ void main() {
   test('live TV channel ids are live, Media Hub title ids are not', () {
     expect(Channel.isLiveId('hublive_abc_123'), isTrue);
     expect(Channel.isLiveId('arc_vod_abc'), isFalse);
+    expect(Channel.isHubLiveId('hublive_abc_123'), isTrue);
   });
 }
