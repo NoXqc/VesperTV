@@ -57,9 +57,9 @@ const _carabao = {
   'alternateId': '41',
 };
 const _unknownCup = {
-  'slug': 'eng.trophy',
-  'name': 'EFL Trophy',
-  'abbreviation': 'EFL Trophy',
+  'slug': 'eng.test_cup',
+  'name': 'Test Cup',
+  'abbreviation': 'Test Cup',
   'alternateId': '99',
 };
 
@@ -108,8 +108,8 @@ void main() {
     expect(byOpponent['Brentford']!.league.id, 'eng.league_cup');
     expect(byOpponent['Brentford']!.league.name, 'Carabao Cup');
     final unknown = byOpponent['Barnet']!.league;
-    expect(unknown.id, 'eng.trophy');
-    expect(unknown.espnPath, 'soccer/eng.trophy');
+    expect(unknown.id, 'eng.test_cup');
+    expect(unknown.espnPath, 'soccer/eng.test_cup');
     expect(unknown.logoUrl, endsWith('/soccer/500/99.png'));
   });
 

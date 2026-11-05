@@ -217,10 +217,11 @@ const List<String> kDefaultSportsLeagueIds = [
 ];
 
 /// Extra leagues the user can add in the League manager (and remove again,
-/// which sends them back here). Every entry was checked against ESPN's
+/// which sends them back here). The initial ESPN entries were checked against
 /// scoreboard (+ standings for team sports) on 2026-10-14 (see
-/// dev-notes/sports-tab.md). Golf, fighting and motorsport are event sports
-/// ([SportsKind]); of those only motorsport has standings (the drivers' /
+/// dev-notes/sports-tab.md); later soccer additions and provider limits are in
+/// dev-notes/soccer-league-expansion.md. Golf, fighting and motorsport are event
+/// sports ([SportsKind]); of those only motorsport has standings (the drivers' /
 /// constructors' championship). ESPN's UFC rankings are frozen around 2021
 /// and golf's points race lists 600 unsorted athlete links — both left out.
 const List<SportsLeague> kSportsLeagueBank = [
@@ -426,11 +427,295 @@ const List<SportsLeague> kSportsLeagueBank = [
       region: 'England',
       soccer: true),
   SportsLeague(
+      id: 'eng.5',
+      espnPath: 'soccer/eng.5',
+      name: 'National League',
+      shortName: 'NAT LGE',
+      logoUrl: '',
+      region: 'England',
+      soccer: true),
+  SportsLeague(
       id: 'esp.2',
       espnPath: 'soccer/esp.2',
       name: 'LALIGA 2',
       shortName: 'LALIGA2',
       logoUrl: 'http://a.espncdn.com/i/leaguelogos/soccer/500/107.png',
+      region: 'Spain',
+      soccer: true),
+  // Spanish federation groups: TheSportsDB, checked 2026-11-04.
+  SportsLeague(
+      id: 'esp.3.1',
+      espnPath: 'soccer/esp.3.1',
+      sportsDbId: '5086',
+      homeTags: ['es'],
+      name: 'Primera Federación (Group 1)',
+      shortName: '1RFEF G1',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/bnkh2y1689803190.png',
+      region: 'Spain',
+      soccer: true),
+  SportsLeague(
+      id: 'esp.3.2',
+      espnPath: 'soccer/esp.3.2',
+      sportsDbId: '5088',
+      homeTags: ['es'],
+      name: 'Primera Federación (Group 2)',
+      shortName: '1RFEF G2',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/pseiy91689803230.png',
+      region: 'Spain',
+      soccer: true),
+  SportsLeague(
+      id: 'esp.4.1',
+      espnPath: 'soccer/esp.4.1',
+      sportsDbId: '5087',
+      homeTags: ['es'],
+      name: 'Segunda Federación (Group 1)',
+      shortName: '2RFEF G1',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/7hgkcr1689804228.png',
+      region: 'Spain',
+      soccer: true),
+  SportsLeague(
+      id: 'esp.4.2',
+      espnPath: 'soccer/esp.4.2',
+      sportsDbId: '5089',
+      homeTags: ['es'],
+      name: 'Segunda Federación (Group 2)',
+      shortName: '2RFEF G2',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/2d0pgi1689804233.png',
+      region: 'Spain',
+      soccer: true),
+  SportsLeague(
+      id: 'esp.4.3',
+      espnPath: 'soccer/esp.4.3',
+      sportsDbId: '5090',
+      homeTags: ['es'],
+      name: 'Segunda Federación (Group 3)',
+      shortName: '2RFEF G3',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/bhav7f1689804239.png',
+      region: 'Spain',
+      soccer: true),
+  SportsLeague(
+      id: 'esp.4.4',
+      espnPath: 'soccer/esp.4.4',
+      sportsDbId: '5091',
+      homeTags: ['es'],
+      name: 'Segunda Federación (Group 4)',
+      shortName: '2RFEF G4',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/hzl3601689804245.png',
+      region: 'Spain',
+      soccer: true),
+  SportsLeague(
+      id: 'esp.4.5',
+      espnPath: 'soccer/esp.4.5',
+      sportsDbId: '5092',
+      homeTags: ['es'],
+      name: 'Segunda Federación (Group 5)',
+      shortName: '2RFEF G5',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/ushxxf1689804250.png',
+      region: 'Spain',
+      soccer: true),
+  SportsLeague(
+      id: 'esp.5.1',
+      espnPath: 'soccer/esp.5.1',
+      sportsDbId: '5538',
+      homeTags: ['es'],
+      name: 'Tercera Federación (Group 1)',
+      shortName: '3RFEF G1',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/wc70fv1735915594.png',
+      region: 'Spain',
+      soccer: true),
+  SportsLeague(
+      id: 'esp.5.2',
+      espnPath: 'soccer/esp.5.2',
+      sportsDbId: '5539',
+      homeTags: ['es'],
+      name: 'Tercera Federación (Group 2)',
+      shortName: '3RFEF G2',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/hfblqs1735916034.png',
+      region: 'Spain',
+      soccer: true),
+  SportsLeague(
+      id: 'esp.5.3',
+      espnPath: 'soccer/esp.5.3',
+      sportsDbId: '5540',
+      homeTags: ['es'],
+      name: 'Tercera Federación (Group 3)',
+      shortName: '3RFEF G3',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/v45ir61735917052.png',
+      region: 'Spain',
+      soccer: true),
+  SportsLeague(
+      id: 'esp.5.4',
+      espnPath: 'soccer/esp.5.4',
+      sportsDbId: '5541',
+      homeTags: ['es'],
+      name: 'Tercera Federación (Group 4)',
+      shortName: '3RFEF G4',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/r35jgo1735917693.png',
+      region: 'Spain',
+      soccer: true),
+  SportsLeague(
+      id: 'esp.5.5',
+      espnPath: 'soccer/esp.5.5',
+      sportsDbId: '5542',
+      homeTags: ['es'],
+      name: 'Tercera Federación (Group 5)',
+      shortName: '3RFEF G5',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/ykql4g1735918078.png',
+      region: 'Spain',
+      soccer: true),
+  SportsLeague(
+      id: 'esp.5.6',
+      espnPath: 'soccer/esp.5.6',
+      sportsDbId: '5543',
+      homeTags: ['es'],
+      name: 'Tercera Federación (Group 6)',
+      shortName: '3RFEF G6',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/y52wn81735918718.png',
+      region: 'Spain',
+      soccer: true),
+  SportsLeague(
+      id: 'esp.5.7',
+      espnPath: 'soccer/esp.5.7',
+      sportsDbId: '5544',
+      homeTags: ['es'],
+      name: 'Tercera Federación (Group 7)',
+      shortName: '3RFEF G7',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/bvvgps1735919293.png',
+      region: 'Spain',
+      soccer: true),
+  SportsLeague(
+      id: 'esp.5.8',
+      espnPath: 'soccer/esp.5.8',
+      sportsDbId: '5545',
+      homeTags: ['es'],
+      name: 'Tercera Federación (Group 8)',
+      shortName: '3RFEF G8',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/ij9mb01735919692.png',
+      region: 'Spain',
+      soccer: true),
+  SportsLeague(
+      id: 'esp.5.9',
+      espnPath: 'soccer/esp.5.9',
+      sportsDbId: '5546',
+      homeTags: ['es'],
+      name: 'Tercera Federación (Group 9)',
+      shortName: '3RFEF G9',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/qbzkul1735920629.png',
+      region: 'Spain',
+      soccer: true),
+  SportsLeague(
+      id: 'esp.5.10',
+      espnPath: 'soccer/esp.5.10',
+      sportsDbId: '5547',
+      homeTags: ['es'],
+      name: 'Tercera Federación (Group 10)',
+      shortName: '3RFEF G10',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/3lvp0z1735922316.png',
+      region: 'Spain',
+      soccer: true),
+  SportsLeague(
+      id: 'esp.5.11',
+      espnPath: 'soccer/esp.5.11',
+      sportsDbId: '5548',
+      homeTags: ['es'],
+      name: 'Tercera Federación (Group 11)',
+      shortName: '3RFEF G11',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/59jb781735922834.png',
+      region: 'Spain',
+      soccer: true),
+  SportsLeague(
+      id: 'esp.5.12',
+      espnPath: 'soccer/esp.5.12',
+      sportsDbId: '5549',
+      homeTags: ['es'],
+      name: 'Tercera Federación (Group 12)',
+      shortName: '3RFEF G12',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/7dlq8p1735923150.png',
+      region: 'Spain',
+      soccer: true),
+  SportsLeague(
+      id: 'esp.5.13',
+      espnPath: 'soccer/esp.5.13',
+      sportsDbId: '5550',
+      homeTags: ['es'],
+      name: 'Tercera Federación (Group 13)',
+      shortName: '3RFEF G13',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/olsh461735923475.png',
+      region: 'Spain',
+      soccer: true),
+  SportsLeague(
+      id: 'esp.5.14',
+      espnPath: 'soccer/esp.5.14',
+      sportsDbId: '5551',
+      homeTags: ['es'],
+      name: 'Tercera Federación (Group 14)',
+      shortName: '3RFEF G14',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/k23gyr1735923988.png',
+      region: 'Spain',
+      soccer: true),
+  SportsLeague(
+      id: 'esp.5.15',
+      espnPath: 'soccer/esp.5.15',
+      sportsDbId: '5552',
+      homeTags: ['es'],
+      name: 'Tercera Federación (Group 15)',
+      shortName: '3RFEF G15',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/epkzlm1735924518.png',
+      region: 'Spain',
+      soccer: true),
+  SportsLeague(
+      id: 'esp.5.16',
+      espnPath: 'soccer/esp.5.16',
+      sportsDbId: '5553',
+      homeTags: ['es'],
+      name: 'Tercera Federación (Group 16)',
+      shortName: '3RFEF G16',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/xzvjrk1735925534.png',
+      region: 'Spain',
+      soccer: true),
+  SportsLeague(
+      id: 'esp.5.17',
+      espnPath: 'soccer/esp.5.17',
+      sportsDbId: '5554',
+      homeTags: ['es'],
+      name: 'Tercera Federación (Group 17)',
+      shortName: '3RFEF G17',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/zoenwp1735943116.png',
+      region: 'Spain',
+      soccer: true),
+  SportsLeague(
+      id: 'esp.5.18',
+      espnPath: 'soccer/esp.5.18',
+      sportsDbId: '5555',
+      homeTags: ['es'],
+      name: 'Tercera Federación (Group 18)',
+      shortName: '3RFEF G18',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/r4o5j81735943458.png',
       region: 'Spain',
       soccer: true),
   SportsLeague(
@@ -628,6 +913,17 @@ const List<SportsLeague> kSportsLeagueBank = [
       region: 'Americas',
       soccer: true),
   SportsLeague(
+      id: 'chi.2',
+      espnPath: 'soccer/chi.2',
+      sportsDbId: '4899',
+      homeTags: ['cl'],
+      name: 'Chilean Primera B',
+      shortName: 'CHI B',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/t1vndf1738858796.png',
+      region: 'Americas',
+      soccer: true),
+  SportsLeague(
       id: 'chi.copa_chi',
       espnPath: 'soccer/chi.copa_chi',
       homeTags: ['cl'],
@@ -755,6 +1051,17 @@ const List<SportsLeague> kSportsLeagueBank = [
       region: 'Cups',
       soccer: true),
   SportsLeague(
+      id: 'uefa.youth',
+      espnPath: 'soccer/uefa.youth',
+      sportsDbId: '5417',
+      name: 'UEFA Youth League',
+      shortName: 'UYL',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/fz8b671705073849.png',
+      region: 'Cups',
+      soccer: true,
+      hasStandings: false),
+  SportsLeague(
       id: 'eng.fa',
       espnPath: 'soccer/eng.fa',
       name: 'English FA Cup',
@@ -772,6 +1079,23 @@ const List<SportsLeague> kSportsLeagueBank = [
       region: 'England',
       soccer: true,
       hasStandings: false),
+  SportsLeague(
+      id: 'eng.charity',
+      espnPath: 'soccer/eng.charity',
+      name: 'FA Community Shield',
+      shortName: 'COMM SHIELD',
+      logoUrl: '',
+      region: 'England',
+      soccer: true,
+      hasStandings: false),
+  SportsLeague(
+      id: 'eng.trophy',
+      espnPath: 'soccer/eng.trophy',
+      name: 'EFL Trophy',
+      shortName: 'EFL TROPHY',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/42.png',
+      region: 'England',
+      soccer: true),
   SportsLeague(
       id: 'ger.dfb_pokal',
       espnPath: 'soccer/ger.dfb_pokal',
@@ -927,6 +1251,25 @@ const List<SportsLeague> kSportsLeagueBank = [
       region: 'Women',
       soccer: true),
   SportsLeague(
+      id: 'eng.w.league_cup',
+      espnPath: 'soccer/eng.w.league_cup',
+      name: "Women's League Cup (England)",
+      shortName: 'WSL CUP',
+      logoUrl: '',
+      region: 'Women',
+      soccer: true),
+  SportsLeague(
+      id: 'ita.w.1',
+      espnPath: 'soccer/ita.w.1',
+      sportsDbId: '5205',
+      homeTags: ['it'],
+      name: 'Serie A Women',
+      shortName: 'SA WOMEN',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/4jzsvd1755765302.png',
+      region: 'Women',
+      soccer: true),
+  SportsLeague(
       id: 'esp.w.1',
       espnPath: 'soccer/esp.w.1',
       name: 'Liga F',
@@ -956,6 +1299,23 @@ const List<SportsLeague> kSportsLeagueBank = [
       name: "UEFA Women's Champions League",
       shortName: 'UWCL',
       logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2408.png',
+      region: 'Women',
+      soccer: true),
+  SportsLeague(
+      id: 'uefa.w.europa',
+      espnPath: 'soccer/uefa.w.europa',
+      name: "UEFA Women's Europa Cup",
+      shortName: 'UWEC',
+      logoUrl: '',
+      region: 'Women',
+      soccer: true,
+      hasStandings: false),
+  SportsLeague(
+      id: 'uefa.weuro',
+      espnPath: 'soccer/uefa.weuro',
+      name: "UEFA Women's European Championship",
+      shortName: 'W EURO',
+      logoUrl: 'https://a.espncdn.com/i/leaguelogos/soccer/500/2381.png',
       region: 'Women',
       soccer: true),
   // Not on ESPN (its euroleague feed is empty): TheSportsDB, 2026-10-20.
