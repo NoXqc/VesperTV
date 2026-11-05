@@ -85,10 +85,17 @@ DMG: `tools/macos_dmg/build.sh` (after the Release build) writes
 `build/dmg/VesperTV-<version>-macos.dmg` with a black + gold background,
 a drag-to-Applications layout and the gold volume icon.
 
+- Needs `brew install create-dmg`. Pillow goes into a private venv in
+  `build/`.
 - `make_background.py` reuses `assets/icon/gen_icon.py` and writes a 1x
-  and a @2x image.
-- `settings.py` is the dmgbuild layout.
-- Pillow and dmgbuild go into a private venv in `build/`.
+  and a @2x image; `tiffutil -cathidpicheck` combines them into one HiDPI
+  TIFF.
+- **Why create-dmg, not dmgbuild:** dmgbuild writes the `.DS_Store` itself,
+  and the macOS 26 (Tahoe) Finder showed only the two icons, no background,
+  even though the file was correct. create-dmg sets the layout through Finder
+  (AppleScript), so Finder writes it in its own format. The first run may ask
+  to let Terminal control Finder. A DMG laid out on Tahoe may lose its
+  background on older macOS versions (Apple forums); install still works.
 - Finder draws icon labels black in light mode and white in dark mode, so
   the icons sit on a mid-tone gold shelf that keeps both readable.
 

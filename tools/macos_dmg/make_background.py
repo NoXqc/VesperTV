@@ -2,11 +2,11 @@
 
 Reuses assets/icon/gen_icon.py (horizon-glow background, gold V + star mark,
 gold gradient) so the installer matches the app icon. Writes background.png
-(660x400, the Finder window size) and background@2x.png (Retina); dmgbuild
-combines the pair into one HiDPI TIFF.
+(660x400, the Finder window size) and background@2x.png (Retina); build.sh
+combines the pair into one HiDPI TIFF (tiffutil).
 
 Run from the repo root:  python tools/macos_dmg/make_background.py <out dir>
-Coordinates here must match settings.py (window size, icon positions).
+Coordinates here must match build.sh (window size, icon positions).
 """
 import importlib.util
 import math
@@ -23,7 +23,7 @@ gen_icon = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(gen_icon)
 
 W, H = 660, 400          # Finder window content size (points)
-APP_X, APPS_X = 170, 490  # icon centres, see settings.py icon_locations
+APP_X, APPS_X = 170, 490  # icon centres, see build.sh
 ICON_Y = 228
 
 FONTS = [
