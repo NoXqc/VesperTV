@@ -945,13 +945,19 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   /// Every enabled playlist's EPG source, evaluated fresh on each
   /// `EpgService.startAutoRefresh` tick — see `EpgService.refresh`'s doc
   /// comment for why each playlist's own channel ids matter here.
-  List<EpgSource> _epgSources() => _playlistManager.profiles
-      .where((p) => p.enabled && (p.epgUrl?.isNotEmpty ?? false))
-      .map((p) => (
-            url: p.epgUrl!,
-            knownChannelIds: _playlistManager.knownChannelIdsFor(p.id)
-          ))
-      .toList();
+  /// A playlist's extra guides (playlist editor) come after its own.
+  List<EpgSource> _epgSources() => [
+        for (final p in _playlistManager.profiles)
+          if (p.enabled)
+            for (final url in {
+              if (p.epgUrl?.isNotEmpty ?? false) p.epgUrl!,
+              ...p.extraEpgUrls,
+            })
+              (
+                url: url,
+                knownChannelIds: _playlistManager.knownChannelIdsFor(p.id)
+              ),
+      ];
 
   void _showToast(String message) {
     _scaffoldMessengerKey.currentState?.showSnackBar(

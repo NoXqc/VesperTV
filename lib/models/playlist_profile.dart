@@ -30,7 +30,9 @@ class PlaylistProfile {
     this.serverTimeOffsetMinutes,
     List<String>? backupServers,
     this.lastWorkingServer,
-  }) : backupServers = backupServers ?? <String>[];
+    List<String>? extraEpgUrls,
+  })  : backupServers = backupServers ?? <String>[],
+        extraEpgUrls = extraEpgUrls ?? <String>[];
 
   /// Stable identifier, generated once and never reused — every
   /// per-playlist prefs key, cache-file name, and catalog-database row
@@ -154,6 +156,11 @@ class PlaylistProfile {
   /// their backup hostnames before they've got the playlist working.
   List<String> backupServers;
 
+  /// More XMLTV guides for this playlist's channels, added in the
+  /// playlist editor (a channel with no guide in [epgUrl] gets linked to
+  /// one of their channels). Loaded alongside [epgUrl].
+  List<String> extraEpgUrls;
+
   /// Whichever of [xtreamServer]/[backupServers] actually answered last
   /// time, re-tried first on the next connect. Without this, a primary
   /// that's been down for a week costs every single launch the full
@@ -213,6 +220,7 @@ class PlaylistProfile {
     int? maxConnections,
     List<String>? backupServers,
     String? lastWorkingServer,
+    List<String>? extraEpgUrls,
   }) =>
       PlaylistProfile(
         id: id,
@@ -243,6 +251,7 @@ class PlaylistProfile {
         serverTimeOffsetMinutes: serverTimeOffsetMinutes,
         backupServers: backupServers ?? List<String>.from(this.backupServers),
         lastWorkingServer: lastWorkingServer ?? this.lastWorkingServer,
+        extraEpgUrls: extraEpgUrls ?? List<String>.from(this.extraEpgUrls),
       );
 
   Map<String, dynamic> toJson() => {
@@ -271,6 +280,7 @@ class PlaylistProfile {
           'serverTimeOffsetMinutes': serverTimeOffsetMinutes,
         'backupServers': backupServers,
         'lastWorkingServer': lastWorkingServer,
+        if (extraEpgUrls.isNotEmpty) 'extraEpgUrls': extraEpgUrls,
       };
 
   factory PlaylistProfile.fromJson(Map<String, dynamic> json) =>
@@ -306,6 +316,11 @@ class PlaylistProfile {
                 .toList() ??
             <String>[],
         lastWorkingServer: json['lastWorkingServer'] as String?,
+        extraEpgUrls: (json['extraEpgUrls'] as List?)
+                ?.map((e) => e.toString())
+                .where((s) => s.isNotEmpty)
+                .toList() ??
+            <String>[],
       );
 
   bool get isXtream => mode == 'xtream';

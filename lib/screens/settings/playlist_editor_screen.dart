@@ -40,6 +40,9 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
         context.read<PlaybackService>(), context.read<StorageService>())
       ..hasNoGuide =
           ((c) => epg.lastUpdated != null && !epg.hasPrograms(c.epgId))
+      ..guideCatalog = (() => epg.channelCatalog)
+      ..refreshGuide = epg.refreshAll
+      ..guideLoading = (() => epg.isLoading)
       ..addListener(_changed);
     _server.start().catchError((Object e) {
       if (mounted) setState(() => _error = e.toString());

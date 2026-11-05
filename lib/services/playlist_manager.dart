@@ -1172,7 +1172,7 @@ class PlaylistManager extends ChangeNotifier {
           final g = s.liveGroupOf(c);
           if (s.hiddenGroups.contains(g)) continue;
           groups.add(g);
-          final k = channelCopyKey(c.sourceName);
+          final k = channelCopyKey(c.name);
           if (k.isNotEmpty && seen.contains(k)) {
             hidden.add(c.rawId);
             continue;

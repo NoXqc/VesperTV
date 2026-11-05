@@ -28,6 +28,7 @@ td,th{padding:6px;border-bottom:1px solid var(--line);text-align:left;vertical-a
 th{color:var(--dim);font-weight:500;font-size:13px}
 td input.name{width:100%;min-width:140px}
 .tag{display:inline-block;font-size:12px;border:1px solid var(--line);border-radius:6px;padding:1px 6px;margin:1px 2px;white-space:nowrap}
+button.tag{background:none;color:inherit;cursor:pointer;font:inherit;font-size:12px}button.tag:hover{border-color:var(--gold)}
 .tag.g{border-color:var(--gold);color:var(--gold)}.tag.r{border-color:var(--red);color:var(--red)}.tag.ok{border-color:var(--green);color:var(--green)}
 img.logo{width:36px;height:24px;object-fit:contain;background:#000;border-radius:4px}
 .bar{position:fixed;left:0;right:0;bottom:0;background:#141418f2;border-top:1px solid var(--line);padding:10px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;z-index:6}
@@ -134,7 +135,8 @@ img.logo{width:36px;height:24px;object-fit:contain;background:#000;border-radius
   <section id="t-dupes" style="display:none">
     <div class="card dim">Copies of the same channel (TSN 1 4K / FHD / HD). With <b>Hide lower-quality copies</b> on, only the best is listed;
       the others stay as automatic fallbacks when it fails. Ranking uses the stream test when there is one, else the name label.
-      Tick <b>Always show</b> to keep a copy listed anyway.</div>
+      Tick <b>Always show</b> to keep a copy listed anyway. Renamed channels are grouped by their new name, so renaming
+      <code>UK| NOW: Sky Sports PL</code> and <code>VIP: Sky Sports PL HD</code> the same makes them copies of one channel.</div>
     <div class="row"><input id="dq" placeholder="Search" class="grow"></div>
     <div id="dupeList"></div>
   </section>
@@ -160,7 +162,7 @@ img.logo{width:36px;height:24px;object-fit:contain;background:#000;border-radius
   <section id="t-test" style="display:none">
     <div class="card warn">
       <h3 style="margin-top:0;color:var(--red)">Before you test</h3>
-      <p>Testing opens each selected stream for a few seconds, one at a time, to read its real resolution and frame rate.
+      <p>Testing opens each selected stream for a few seconds, one at a time, to read its real resolution and frame rate. Channels that really are 4K get the gold 4K tag on the TV right away.
         <b>If your provider allows only 1 connection, or watches for unusual activity, your account could be suspended.</b>
         The test stops by itself if the provider refuses a connection.</p>
       <p id="gate" class="dim">Checking your account…</p>
@@ -190,6 +192,19 @@ img.logo{width:36px;height:24px;object-fit:contain;background:#000;border-radius
   <div class="row"><select id="fbPl"></select><input id="fbQ" placeholder="Search to add" class="grow"></div>
   <div id="fbResults"></div>
   <div class="row"><span class="grow"></span><button class="gold" id="fbDone">Done</button></div>
+</div></div>
+
+<div class="modal" id="gdModal"><div class="card">
+  <h3 style="margin-top:0">Guide for <span id="gdFor" style="color:var(--gold)"></span></h3>
+  <p class="dim" id="gdNow"></p>
+  <div class="row"><input id="gdQ" placeholder="Search the guide's channels (name or id)" class="grow"><button id="gdUnlink">Unlink</button></div>
+  <div id="gdResults"></div>
+  <h3>Extra guide sources for this playlist</h3>
+  <p class="dim">An XMLTV link (.xml or .xml.gz) whose channels you want to link. It loads on the TV in the background (can take a minute or two), then search above.</p>
+  <div id="gdUrls"></div>
+  <div class="row"><input id="gdUrl" placeholder="https://.../guide.xml.gz" class="grow"><button id="gdAdd">Add guide</button></div>
+  <p class="dim" id="gdMsg"></p>
+  <div class="row"><span class="grow"></span><button class="gold" id="gdDone">Done</button></div>
 </div></div>
 
 <script>
@@ -237,7 +252,19 @@ async function load(id) {
   renderAll();
 }
 function setDirty(v) { dirty = v; $('dirty').textContent = v ? 'Unsaved changes' : ''; }
-function copies() { const m = new Map(); for (const c of data.channels) if (c.k) { if (!m.has(c.k)) m.set(c.k, []); m.get(c.k).push(c); } return m; }
+// Same as the app's channelCopyKey (channel_name_matching.dart), on the
+// name the viewer sees, so a rename regroups copies before saving.
+const COPY_TOKENS = new Set(['HD','HEVC','UHD','FHD','SD','HDR','H265','H264','RAW','4K','8K','2160P','1080P','720P','50FPS','60FPS']);
+function shownName(c) { return edits.names[c.r] || c.d || c.n; }
+function copyKey(name) {
+  let at = -1, len = 0;
+  for (const sep of ['|', ':', ' - ']) { const i = name.indexOf(sep); if (i > 0 && (at < 0 || i < at)) { at = i; len = sep.length; } }
+  const rest = at < 0 ? name : name.slice(at + len), tag = name.slice(0, name.length - rest.length).toUpperCase();
+  const tokens = rest.toUpperCase().replace(/[^A-Z0-9_+]/g, ' ').split(/\s+/).filter(t => t && !COPY_TOKENS.has(t))
+    .flatMap(t => { const m = /^([A-Z]+)(\d+)$/.exec(t); return m ? [m[1], m[2]] : [t]; }).sort();
+  return tokens.length ? tag.replace(/[^A-Z0-9_+]/g, '') + '|' + tokens.join(' ') : '';
+}
+function copies() { const m = new Map(); for (const c of data.channels) { const k = copyKey(shownName(c)); if (!k) continue; if (!m.has(k)) m.set(k, []); m.get(k).push(c); } return m; }
 function isHidden(c) { return c.th || c.gh || c.eh; }
 function info(c) {
   const t = [];
@@ -245,13 +272,15 @@ function info(c) {
   if (c.gh) t.push('<span class="tag">group hidden</span>');
   if (c.eh) t.push('<span class="tag r">hidden by editor</span>');
   if (c.p) t.push(`<span class="tag ${c.p.startsWith('dead') ? 'r' : 'ok'}">${esc(c.p)}</span>`);
-  if (c.ne) t.push('<span class="tag">no guide</span>');
+  if (c.eo) t.push(`<button class="tag g" data-guide="${esc(c.r)}" title="Linked guide channel: ${esc(c.eo)}">guide linked</button>`);
+  else if (c.ne) t.push(`<button class="tag" data-guide="${esc(c.r)}" title="Link a guide channel or add a guide">no guide · add</button>`);
   if (edits.fallbacks[c.r]) t.push(`<span class="tag g">${edits.fallbacks[c.r].length} fallback</span>`);
   return t.join('');
 }
 let shown = [];
 function filtered() {
   const q = $('q').value.trim().toLowerCase(), g = $('grp').value, f = $('flt').value, cp = f === 'dupes' ? copies() : null;
+  const keyOf = c => copyKey(shownName(c));
   return data.channels.filter(c => {
     if (g && c.g !== g) return false;
     if (q && !(c.n.toLowerCase().includes(q) || (edits.names[c.r] || '').toLowerCase().includes(q))) return false;
@@ -259,7 +288,7 @@ function filtered() {
       case 'visible': return !isHidden(c);
       case 'hidden': return isHidden(c) || edits.hidden.includes(c.r);
       case 'renamed': return !!(edits.names[c.r] || c.d);
-      case 'dupes': return c.k && cp.get(c.k).length > 1;
+      case 'dupes': { const k = keyOf(c); return k && cp.get(k).length > 1; }
       case 'noguide': return !!c.ne;
       case 'dead': return c.p && c.p.startsWith('dead');
       case 'fallbacks': return !!edits.fallbacks[c.r];
@@ -285,10 +314,10 @@ function renderChannels() {
 }
 function renderDupes() {
   const q = $('dq').value.trim().toLowerCase();
-  const groups = [...copies().values()].filter(l => l.length > 1 && (!q || l.some(c => c.n.toLowerCase().includes(q))));
+  const groups = [...copies().values()].filter(l => l.length > 1 && (!q || l.some(c => (c.n + ' ' + shownName(c)).toLowerCase().includes(q))));
   $('dupeList').innerHTML = groups.slice(0, 300).map(l => {
     l = [...l].sort((a, b) => b.q - a.q);
-    return `<div class="card"><table>${l.map(c => `<tr class="${c.eh ? 'hidden-row' : ''}"><td>${esc(c.n)}<div class="dim" style="font-size:12px">${esc(c.g)}</div></td>
+    return `<div class="card"><table>${l.map(c => `<tr class="${c.eh ? 'hidden-row' : ''}"><td>${esc(shownName(c))}<div class="dim" style="font-size:12px">${shownName(c) !== c.n ? esc(c.n) + ' · ' : ''}${esc(c.g)}</div></td>
       <td>${c.eh ? '<span class="tag">fallback</span>' : '<span class="tag g">listed</span>'} ${c.p ? `<span class="tag ${c.p.startsWith('dead') ? 'r' : 'ok'}">${esc(c.p)}</span>` : ''}</td>
       <td><label><input type="checkbox" data-shown="${esc(c.r)}" ${edits.shown.includes(c.r) ? 'checked' : ''}> Always show</label></td></tr>`).join('')}</table></div>`;
   }).join('') + (groups.length > 300 ? `<p class="dim">${groups.length - 300} more, refine the search.</p>` : '') + (groups.length ? '' : '<p class="dim">No copies found.</p>');
@@ -342,9 +371,9 @@ $('tabs').onclick = e => {
 $('rows').addEventListener('change', e => {
   const s = e.target.dataset.s, n = e.target.dataset.n;
   if (s !== undefined) { e.target.checked ? sel.add(s) : sel.delete(s); $('selMsg').textContent = sel.size + ' selected'; }
-  if (n !== undefined) { edits.names[n] = e.target.value; setDirty(true); }
+  if (n !== undefined) { edits.names[n] = e.target.value; setDirty(true); renderDupes(); }
 });
-$('rows').addEventListener('click', e => { const fb = e.target.dataset.fb; if (fb) openFallbacks(fb); });
+$('rows').addEventListener('click', e => { const d = e.target.dataset; if (d.fb) openFallbacks(d.fb); if (d.guide) openGuide(d.guide); });
 $('all').onchange = e => { for (const c of shown.slice(0, page)) e.target.checked ? sel.add(c.r) : sel.delete(c.r); renderChannels(); };
 $('dupeList').addEventListener('change', e => {
   const r = e.target.dataset.shown; if (!r) return;
@@ -423,6 +452,45 @@ $('fbResults').onclick = e => {
   edits.fallbacks[fbFor] = l; setDirty(true); renderFb();
 };
 $('fbDone').onclick = () => { $('fbModal').style.display = 'none'; renderChannels(); };
+
+// Guide: link a channel to a guide channel, add extra XMLTV sources.
+let gdFor = null;
+function openGuide(r) {
+  gdFor = r; const c = data.channels.find(x => x.r === r);
+  $('gdFor').textContent = shownName(c); $('gdQ').value = shownName(c).replace(/[^\p{L}\p{N} ]/gu, ' ').replace(/\s+/g, ' ').trim();
+  $('gdNow').textContent = c.eo ? 'Linked to guide channel: ' + c.eo : 'No guide data for this channel yet.';
+  $('gdUnlink').style.display = c.eo ? '' : 'none'; $('gdMsg').textContent = ''; $('gdUrl').value = '';
+  $('gdModal').style.display = 'flex'; renderGuideUrls(); gdSearch();
+}
+async function renderGuideUrls() {
+  const r = await api('/api/epg?pl=' + encodeURIComponent(pl));
+  $('gdUrls').innerHTML = r.extra.map(u => `<div class="row"><span class="grow dim" style="word-break:break-all">${esc(u)}</span><button data-urm="${esc(u)}">Remove</button></div>`).join('')
+    || '<p class="dim">None yet.</p>';
+  if (r.loading) $('gdMsg').textContent = 'The TV is loading the guide...';
+}
+let gdTimer = null;
+function gdSearch() { clearTimeout(gdTimer); gdTimer = setTimeout(async () => {
+  const q = $('gdQ').value.trim(); if (q.length < 2) { $('gdResults').innerHTML = ''; return; }
+  const r = await api('/api/epg/search?q=' + encodeURIComponent(q));
+  $('gdResults').innerHTML = r.results.map(x => `<div class="row"><span class="grow">${esc(x.n)} <span class="dim">${esc(x.id)}</span></span><button data-link="${esc(x.id)}">Link</button></div>`).join('')
+    || '<p class="dim">Nothing found. Try fewer words, or add a guide below.</p>';
+}, 250); }
+async function linkGuide(id) {
+  await api('/api/epg/link?pl=' + encodeURIComponent(pl), {r: gdFor, id});
+  const c = data.channels.find(x => x.r === gdFor); c.eo = id || undefined; if (id) c.ne = 0;
+  $('gdModal').style.display = 'none'; renderChannels();
+  $('status').textContent = id ? 'Linked. The TV reloads the guide in about 20 seconds.' : 'Unlinked.';
+}
+$('gdQ').addEventListener('input', gdSearch);
+$('gdResults').onclick = e => { const id = e.target.dataset.link; if (id) linkGuide(id); };
+$('gdUnlink').onclick = () => linkGuide(null);
+$('gdAdd').onclick = async () => {
+  const r = await api('/api/epg?pl=' + encodeURIComponent(pl), {add: $('gdUrl').value});
+  if (r.error) { $('gdMsg').textContent = r.error; return; }
+  $('gdUrl').value = ''; $('gdMsg').textContent = 'Added. The TV is loading it: search again in a minute or two.'; renderGuideUrls();
+};
+$('gdUrls').onclick = async e => { const u = e.target.dataset.urm; if (!u) return; await api('/api/epg?pl=' + encodeURIComponent(pl), {remove: u}); renderGuideUrls(); };
+$('gdDone').onclick = () => { $('gdModal').style.display = 'none'; };
 
 // Groups
 async function loadGroups() {

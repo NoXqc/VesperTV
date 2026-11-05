@@ -52,7 +52,8 @@ class ChannelCopyFallback {
   /// one that prefers measured quality.
   static List<Channel> copiesOf(Channel channel, Iterable<Channel> pool,
       {int Function(Channel)? rank}) {
-    final key = channelCopyKey(channel.sourceName);
+    // Displayed names: playlist editor renames group copies too.
+    final key = channelCopyKey(channel.name);
     if (key.isEmpty) return const [];
     final score = rank ?? (Channel c) => qualityRank(c.sourceName);
     final copies = [
@@ -60,7 +61,7 @@ class ChannelCopyFallback {
         if (c.id != channel.id &&
             c.url != channel.url &&
             c.url.isNotEmpty &&
-            channelCopyKey(c.sourceName) == key)
+            channelCopyKey(c.name) == key)
           c
     ];
     int value(Channel c) => score(c) * 10 - failuresOf(c.url).clamp(0, 9);

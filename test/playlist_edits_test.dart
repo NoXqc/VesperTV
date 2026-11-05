@@ -40,7 +40,8 @@ void main() {
   });
 
   test('group renames merge groups', () {
-    final e = PlaylistEdits(groupNames: {'US| SPORTS': 'Sports', 'CA| SPORT': 'Sports'});
+    final e = PlaylistEdits(
+        groupNames: {'US| SPORTS': 'Sports', 'CA| SPORT': 'Sports'});
     expect(e.groupTitle('US| SPORTS'), 'Sports');
     expect(e.groupTitle('CA| SPORT'), 'Sports');
     expect(e.groupTitle('Other'), 'Other');
@@ -85,6 +86,28 @@ void main() {
     e.probes['a'] =
         ProbeResult(ok: false, at: DateTime.now(), error: 'HTTP 404');
     expect(e.apply(list), {'a', 'c'});
+  });
+
+  test('renamed channels are copies by their new name (Discord, 2026-11-05)',
+      () {
+    final list = [
+      ch('a', 'UK| NOW: Sky Sports PL HD'),
+      ch('b', 'VIP: Sky Sports Premier League 4K'),
+      ch('c', 'UK: Sky Sports Premier League RAW'),
+    ];
+    final e = PlaylistEdits(hideLowerCopies: true);
+    // Different provider prefixes: three separate channels.
+    expect(e.apply(list), isEmpty);
+    e.names.addAll({
+      'a': 'SKY SPORTS PREMIER LEAGUE ᴴᴰ',
+      'b': 'SKY SPORTS PREMIER LEAGUE ᴴᴰ',
+      'c': 'SKY SPORTS PREMIER LEAGUE ᴿᴬᵂ',
+    });
+    // One channel now: the 4K (by its source name) stays listed.
+    expect(e.apply(list), {'a', 'c'});
+    // ...and the others are its automatic fallbacks.
+    expect(ChannelCopyFallback.copiesOf(list[1], list).map((c) => c.rawId),
+        ['a', 'c']);
   });
 
   test('failover order: label rank, then reliability', () {

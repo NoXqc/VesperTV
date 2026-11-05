@@ -13,6 +13,7 @@ import 'playback_service.dart';
 import 'playlist_edits.dart';
 import 'playlist_manager.dart';
 import 'playlist_session.dart';
+import 'real_4k_channels.dart';
 import 'storage_service.dart';
 import 'stream_probe.dart';
 
@@ -77,6 +78,12 @@ class PlaylistEditorServer extends ChangeNotifier {
 
   Future<void> stop() async {
     _stopProbe = true;
+    // A pending reload still runs: links made just before closing count.
+    final pending = _guideReload;
+    if (pending != null && pending.isActive) {
+      pending.cancel();
+      unawaited(refreshGuide?.call());
+    }
     final s = _server;
     _server = null;
     await s?.close(force: true);
@@ -241,7 +248,9 @@ class PlaylistEditorServer extends ChangeNotifier {
         if (body['names'] is Map) {
           for (final e in (body['names'] as Map).entries) {
             final v = e.value;
-            if (e.key is String && v is String && v.trim().isNotEmpty &&
+            if (e.key is String &&
+                v is String &&
+                v.trim().isNotEmpty &&
                 v.trim() != e.key) {
               names[e.key as String] =
                   v.trim().length > 120 ? v.trim().substring(0, 120) : v.trim();
@@ -254,10 +263,16 @@ class PlaylistEditorServer extends ChangeNotifier {
         await s.saveEdits(s.edits);
         await s.setTvGroupLayout(
           order: body['order'] is List
-              ? [for (final x in body['order'] as List) if (x is String) x]
+              ? [
+                  for (final x in body['order'] as List)
+                    if (x is String) x
+                ]
               : null,
           hidden: body['hidden'] is List
-              ? {for (final x in body['hidden'] as List) if (x is String) x}
+              ? {
+                  for (final x in body['hidden'] as List)
+                    if (x is String) x
+                }
               : null,
         );
         lastChange = s.profile.name;
@@ -289,6 +304,64 @@ class PlaylistEditorServer extends ChangeNotifier {
         };
         final error = await _startProbe(s, ids);
         return {'started': error == null, 'error': error};
+      case ('GET', '/api/epg'):
+        final s = _session(q['pl']);
+        if (s == null) return null;
+        return {
+          'extra': s.profile.extraEpgUrls,
+          'hasMain': s.profile.epgUrl?.isNotEmpty ?? false,
+          'loading': guideLoading?.call() ?? false,
+        };
+      case ('POST', '/api/epg'):
+        final s = _session(q['pl']);
+        if (s == null || body is! Map) return null;
+        final add = (body['add'] as String?)?.trim();
+        final remove = body['remove'] as String?;
+        final urls = List<String>.from(s.profile.extraEpgUrls);
+        if (add != null && add.isNotEmpty) {
+          final uri = Uri.tryParse(add);
+          if (uri == null ||
+              !(uri.scheme == 'http' || uri.scheme == 'https') ||
+              uri.host.isEmpty) {
+            return {'error': 'Enter a full http(s):// link to an XMLTV file.'};
+          }
+          if (urls.length >= 5) return {'error': 'Five extra guides at most.'};
+          if (!urls.contains(add) && add != s.profile.epgUrl) urls.add(add);
+        }
+        if (remove != null) urls.remove(remove);
+        await _playlists.updatePlaylist(s.profile.copyWith(extraEpgUrls: urls));
+        lastChange = s.profile.name;
+        notifyListeners();
+        if (add != null && add.isNotEmpty) unawaited(refreshGuide?.call());
+        return {'extra': urls};
+      case ('GET', '/api/epg/search'):
+        final words = (q['q'] ?? '')
+            .toLowerCase()
+            .split(RegExp(r'\s+'))
+            .where((w) => w.isNotEmpty)
+            .toList();
+        if (words.isEmpty) return {'results': const []};
+        final out = <Map<String, String>>[];
+        for (final e in (guideCatalog?.call() ?? const {}).entries) {
+          final hay = '${e.value} ${e.key}'.toLowerCase();
+          if (words.every(hay.contains)) {
+            out.add({'id': e.key, 'n': e.value});
+            if (out.length >= 40) break;
+          }
+        }
+        return {'results': out};
+      case ('POST', '/api/epg/link'):
+        final s = _session(q['pl']);
+        if (s == null || body is! Map || body['r'] is! String) return null;
+        final id = (body['id'] as String?)?.trim();
+        await s.setEpgIdOverride(
+            body['r'] as String, id == null || id.isEmpty ? null : id);
+        // The guide only keeps programmes for channels it knows: load the
+        // newly linked ids once the user is done linking.
+        _guideReload?.cancel();
+        _guideReload = Timer(
+            const Duration(seconds: 20), () => unawaited(refreshGuide?.call()));
+        return {'ok': true};
       case ('POST', '/api/probe/stop'):
         _stopProbe = true;
         return {'ok': true};
@@ -323,7 +396,8 @@ class PlaylistEditorServer extends ChangeNotifier {
             if (s.hiddenChannels.contains(c.rawId)) 'th': 1,
             if (s.editHidden.contains(c.rawId)) 'eh': 1,
             if (s.hiddenGroups.contains(s.liveGroupOf(c))) 'gh': 1,
-            'k': channelCopyKey(c.sourceName),
+            'k': channelCopyKey(c.name),
+            if (c.epgIdOverride != null) 'eo': c.epgIdOverride,
             'q': e.copyRank(c),
             if (e.probes[c.rawId] case final p?) 'p': p.label,
             if (!s.isLiveHidden(c.rawId) && _epgMissing(c)) 'ne': 1,
@@ -334,6 +408,13 @@ class PlaylistEditorServer extends ChangeNotifier {
 
   /// Hook for "no guide data" (set by the TV screen from EpgService).
   bool Function(Channel)? hasNoGuide;
+
+  /// Guide hooks (EpgService, set by the TV screen): every guide channel's
+  /// id -> name, a full guide reload, and whether one is running.
+  Map<String, String> Function()? guideCatalog;
+  Future<void> Function()? refreshGuide;
+  bool Function()? guideLoading;
+  Timer? _guideReload;
   bool _epgMissing(Channel c) => hasNoGuide?.call(c) ?? false;
 
   // ------------------------------------------------------------- test
@@ -393,6 +474,11 @@ class PlaylistEditorServer extends ChangeNotifier {
         notifyListeners();
         final r = await probe.probe(c);
         s.edits.probes[c.rawId] = r;
+        // A measured picture size counts like playing it: the gold 4K tag
+        // on the TV appears (or goes) without playing each channel.
+        if (r.ok && (r.height != null || r.width != null)) {
+          Real4kChannels.record(c.id, r.width ?? 0, r.height ?? 0);
+        }
         probeDone++;
         if (StreamProbe.isRefusal(r)) {
           probeStopReason =

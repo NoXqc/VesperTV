@@ -269,7 +269,10 @@ class PlaylistEdits {
         continue;
       }
       if (hideLowerCopies) {
-        final key = channelCopyKey(c.sourceName);
+        // The name the viewer sees: renaming `UK| NOW: Sky Sports PL` and
+        // `VIP: Sky Sports PL HD` alike makes them copies of one channel
+        // (Discord, 2026-11-05). Quality still comes from the source name.
+        final key = channelCopyKey(display);
         if (key.isNotEmpty) (byCopy[key] ??= []).add(c);
       }
     }
