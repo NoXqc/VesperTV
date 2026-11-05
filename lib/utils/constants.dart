@@ -116,7 +116,8 @@ class AppConstants {
 
   /// Device-only: a failing channel may switch to the same channel in
   /// another playlist (after its own copies). On unless turned off.
-  static const String keyCrossPlaylistFallback = 'vesper_cross_playlist_fallback';
+  static const String keyCrossPlaylistFallback =
+      'vesper_cross_playlist_fallback';
 
   /// Device-only: "Combine playlists" — a channel already shown by a
   /// higher playlist is hidden in the lower ones (kept as a fallback).
@@ -284,6 +285,8 @@ class AppConstants {
   // Split from keyHideMoviesShows (which now only seeds these two).
   static const String keyHideMovies = 'vesper_hide_movies';
   static const String keyHideShows = 'vesper_hide_shows';
+  static const String keyHideLiveTv = 'vesper_hide_live_tv';
+  static const String keyHideSportsTrak = 'vesper_hide_sports_trak';
   static const String keyHideArchive = 'vesper_hide_archive';
   static const String keyHideRecordings = 'vesper_hide_recordings';
   static const String keyHideCatchupGroup = 'vesper_hide_catchup_group';

@@ -2477,4 +2477,10 @@ const Map<String, String> kIt = {
       "La reimpostazione del codice di sincronizzazione elimina tutti i tuoi dati crittografati dal server. Tutti gli altri dispositivi smettono di sincronizzarsi e devono essere collegati di nuovo con un nuovo codice. Conserva il nuovo codice di recupero.",
   "This code works for one device, once. Create a new code to link another device.":
       "Questo codice funziona una sola volta, per un solo dispositivo. Crea un nuovo codice per collegare un altro dispositivo.",
+  "Hide Live TV": "Nascondi TV in diretta",
+  "Removes the Live TV tab.": "Rimuove la scheda TV in diretta.",
+  "Hide Sports Trak": "Nascondi Sports Trak",
+  "Removes Sports Trak from navigation and turns off Sports Mode.":
+      "Rimuove Sports Trak dalla navigazione e disattiva la modalità Sport.",
+  "Choose which tabs to show.": "Scegli quali schede mostrare.",
 };

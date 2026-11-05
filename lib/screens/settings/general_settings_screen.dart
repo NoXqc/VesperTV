@@ -396,6 +396,21 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                           context.read<AppPreferences>().setShowGroupCounts(v),
                     ),
                     TvSwitchListTile(
+                      title: Text(tr('Hide Live TV')),
+                      subtitle: Text(tr('Removes the Live TV tab.')),
+                      value: context.watch<AppPreferences>().hideLiveTv,
+                      onChanged: (v) =>
+                          context.read<AppPreferences>().setHideLiveTv(v),
+                    ),
+                    TvSwitchListTile(
+                      title: Text(tr('Hide Sports Trak')),
+                      subtitle: Text(tr(
+                          'Removes Sports Trak from navigation and turns off Sports Mode.')),
+                      value: context.watch<AppPreferences>().hideSportsTrak,
+                      onChanged: (v) =>
+                          context.read<AppPreferences>().setHideSportsTrak(v),
+                    ),
+                    TvSwitchListTile(
                       title: Text(tr('Hide Movies')),
                       subtitle: Text(tr(
                           'Removes the Movies tab and movie search results.')),

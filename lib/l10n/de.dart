@@ -2372,4 +2372,10 @@ const Map<String, String> kDe = {
       "Das Zurücksetzen des Synchronisierungscodes entfernt alle deine verschlüsselten Daten vom Server. Alle anderen Geräte synchronisieren nicht mehr und müssen mit einem neuen Code erneut verknüpft werden. Bewahre den neuen Wiederherstellungscode auf.",
   "This code works for one device, once. Create a new code to link another device.":
       "Dieser Code gilt einmalig für ein Gerät. Erstelle einen neuen Code, um ein weiteres Gerät zu verknüpfen.",
+  "Hide Live TV": "Live-TV ausblenden",
+  "Removes the Live TV tab.": "Entfernt den Live-TV-Tab.",
+  "Hide Sports Trak": "Sports Trak ausblenden",
+  "Removes Sports Trak from navigation and turns off Sports Mode.":
+      "Entfernt Sports Trak aus der Navigation und deaktiviert den Sportmodus.",
+  "Choose which tabs to show.": "Wähle aus, welche Tabs angezeigt werden.",
 };

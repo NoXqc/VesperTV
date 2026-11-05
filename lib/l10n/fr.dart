@@ -2482,4 +2482,10 @@ const Map<String, String> kFr = {
       "La réinitialisation du code de synchronisation supprime toutes vos données chiffrées du serveur. Tous les autres appareils cessent la synchronisation et doivent être réassociés avec un nouveau code. Conservez le nouveau code de récupération.",
   "This code works for one device, once. Create a new code to link another device.":
       "Ce code fonctionne une seule fois, pour un seul appareil. Créez un nouveau code pour associer un autre appareil.",
+  "Hide Live TV": "Masquer la télé en direct",
+  "Removes the Live TV tab.": "Retire l'onglet Télé en direct.",
+  "Hide Sports Trak": "Masquer Sports Trak",
+  "Removes Sports Trak from navigation and turns off Sports Mode.":
+      "Retire Sports Trak de la navigation et désactive le mode Sports.",
+  "Choose which tabs to show.": "Choisissez les onglets à afficher.",
 };

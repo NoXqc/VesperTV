@@ -2470,4 +2470,10 @@ const Map<String, String> kEs = {
       "Al restablecer el código de sincronización se eliminan todos tus datos cifrados del servidor. Los demás dispositivos dejan de sincronizarse y deben vincularse de nuevo con un código nuevo. Guarda el nuevo código de recuperación.",
   "This code works for one device, once. Create a new code to link another device.":
       "Este código sirve una sola vez para un dispositivo. Crea un código nuevo para vincular otro dispositivo.",
+  "Hide Live TV": "Ocultar TV en directo",
+  "Removes the Live TV tab.": "Quita la pestaña de TV en directo.",
+  "Hide Sports Trak": "Ocultar Sports Trak",
+  "Removes Sports Trak from navigation and turns off Sports Mode.":
+      "Quita Sports Trak de la navegación y desactiva el modo Deportes.",
+  "Choose which tabs to show.": "Elige qué pestañas mostrar.",
 };

@@ -334,6 +334,14 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (context.watch<AppPreferences>().hideLiveTv && _liveOpen) {
+      _liveOpen = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+          _modeShell.currentState?.focusRail();
+        }
+      });
+    }
     final route = ModalRoute.of(context);
     if (route is PageRoute<void>) appRouteObserver.subscribe(this, route);
   }
@@ -348,6 +356,13 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   @override
   void didPopNext() {
     _covered = false;
+    if (context.read<AppPreferences>().hideLiveTv) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+          _modeShell.currentState?.focusRail();
+        }
+      });
+    }
     unawaited(_load(silent: true));
   }
 
@@ -2169,6 +2184,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   /// small player keeps playing (owner, 2026-10-29: the TV home stopped
   /// it). Touch/narrow layouts have no panel: the TV home, as the rail does.
   void _openGuide() {
+    if (context.read<AppPreferences>().hideLiveTv) return;
     if (!_livePanelLayout) {
       GuideKey.openGuideOnNextHome();
       unawaited(_openModePage(const TvHomeScreen()));
@@ -2191,6 +2207,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   }
 
   void _openLive() {
+    if (context.read<AppPreferences>().hideLiveTv) return;
     if (_liveOpen) {
       _livePanel.currentState?.focusLast();
       return;
@@ -2602,16 +2619,17 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           ),
         // TV: the Live TV panel inside Sports Mode; touch/narrow layouts
         // keep the TV home (the panel needs the side-by-side room).
-        scrollPage
-            ? app('tv', tr('Live TV'), Icons.live_tv, const TvHomeScreen())
-            : SportsModeRailEntry(
-                id: 'tv',
-                label: tr('Live TV'),
-                icon: Icons.live_tv,
-                focusNode: _chipNode('mode:tv'),
-                enabled: _movingLeague == null,
-                selected: _liveOpen,
-                onTap: _openLive),
+        if (!prefs.hideLiveTv)
+          scrollPage
+              ? app('tv', tr('Live TV'), Icons.live_tv, const TvHomeScreen())
+              : SportsModeRailEntry(
+                  id: 'tv',
+                  label: tr('Live TV'),
+                  icon: Icons.live_tv,
+                  focusNode: _chipNode('mode:tv'),
+                  enabled: _movingLeague == null,
+                  selected: _liveOpen,
+                  onTap: _openLive),
         if (!prefs.hideMovies)
           app('movies', tr('Movies'), Icons.movie_outlined,
               const TvHomeScreen(initialTab: 'Movies')),
