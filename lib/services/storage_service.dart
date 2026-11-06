@@ -611,6 +611,16 @@ class StorageService {
   Future<void> setAiConfirmRemotePlay(bool value) =>
       _prefs.setBool(AppConstants.keyAiConfirmRemotePlay, value);
 
+  /// The ✨ Vesper 🎙️ row in the TV menu (and the phone header mic).
+  bool getAiShortcut() => _prefs.getBool(AppConstants.keyAiShortcut) ?? true;
+  Future<void> setAiShortcut(bool value) =>
+      _prefs.setBool(AppConstants.keyAiShortcut, value);
+
+  String? getVesperWatchList() =>
+      _prefs.getString(_vk(AppConstants.keyVesperWatchList));
+  Future<void> setVesperWatchList(String json) =>
+      _prefs.setString(_vk(AppConstants.keyVesperWatchList), json);
+
   String? getAiPhoneToken() => _prefs.getString(AppConstants.keyAiPhoneToken);
   Future<void> setAiPhoneToken(String token) =>
       _prefs.setString(AppConstants.keyAiPhoneToken, token);

@@ -13,6 +13,7 @@ import '../playlist_manager.dart';
 import '../sports_channel_matcher.dart';
 import '../sports_service.dart';
 import '../storage_service.dart';
+import 'watch_list.dart';
 
 /// Who asked: the viewer on the TV (voice / typing / phone microphone, or
 /// their own AI key acting for them) or an AI app linked over MCP from
@@ -725,6 +726,83 @@ final List<VesperTool> vesperTools = [
       final on = box.playlist.isChannelFavorited(item.id);
       if (on != (action == 'add')) await box.playlist.toggleFavorite(item);
       return {'done': action, 'title': item.name};
+    },
+  ),
+  VesperTool(
+    name: 'watchlist',
+    description:
+        'The viewer\'s watch list (shown as a row on the Home page): list '
+        'it, add or remove titles (a ref from search, a name, or "current" '
+        'for what is playing), or clear it. Use it for lists like "a movie '
+        'night list for Friday": search, then add each pick with a short '
+        'note.',
+    schema: {
+      'type': 'object',
+      'properties': {
+        'action': {
+          'type': 'string',
+          'enum': ['list', 'add', 'remove', 'clear'],
+        },
+        'ref': {'type': 'string'},
+        'name': {
+          'type': 'string',
+          'description': 'Title name when there is no ref.'
+        },
+        'note': {
+          'type': 'string',
+          'description': 'For add: why it is on the list (a few words).'
+        },
+      },
+      'required': ['action'],
+    },
+    run: (box, args, caller) async {
+      final action = _str(args, 'action');
+      final list = WatchList.instance;
+      if (action == 'list') {
+        return {
+          'watchlist': [
+            for (final i in list.load(box.storage))
+              {
+                'ref': box.refFor((i.channel ?? i.series)!),
+                'title': i.title,
+                'kind': i.kind,
+                if (i.note != null) 'note': i.note,
+              }
+          ]
+        };
+      }
+      if (action == 'clear') {
+        await _confirmRemote(
+            box, caller, 'An AI app wants to clear your watch list.', const {});
+        return {'cleared': await list.clear(box.storage)};
+      }
+      final ref = _str(args, 'ref');
+      final name = _str(args, 'name');
+      Object? item = ref == 'current'
+          ? box.playback.liveChannel
+          : (ref.isNotEmpty ? box.lookup(ref) : null);
+      if (item == null && name.isNotEmpty) {
+        item = (await box.findMovies(name, limit: 1)).firstOrNull ??
+            (await box.findSeries(name, limit: 1)).firstOrNull ??
+            box.findM3uShows(name, limit: 1).firstOrNull ??
+            (await box.findLive(name, limit: 1)).firstOrNull;
+      }
+      final entry = switch (item) {
+        Channel c => WatchListItem(channel: c, note: _str(args, 'note')),
+        XtreamSeries s => WatchListItem(series: s, note: _str(args, 'note')),
+        _ => null,
+      };
+      if (entry == null) throw VesperToolError('Which title? Search first.');
+      if (action == 'remove') {
+        final removed = await list.remove(box.storage, entry.id);
+        return {'removed': removed, 'title': entry.title};
+      }
+      final added = await list.add(box.storage, entry);
+      return {
+        'added': added,
+        'title': entry.title,
+        if (!added) 'note': 'Already on the watch list.',
+      };
     },
   ),
   VesperTool(

@@ -96,6 +96,18 @@ void main() {
     });
   });
 
+  test('help and the watch list', () {
+    expect(p('what can you do?')?.tool, 'help');
+    expect(p('aide')?.tool, 'help');
+    expect(p('my watch list')?.args, {'action': 'list'});
+    expect(p('add this to my watch list')?.args,
+        {'action': 'add', 'ref': 'current'});
+    expect(
+        p('add Dune to my watchlist')?.args, {'action': 'add', 'name': 'dune'});
+    expect(
+        p('ajoute Dune à ma liste')?.args, {'action': 'add', 'name': 'dune'});
+  });
+
   test('anything else is for the AI', () {
     expect(p('make me a movie night list for Friday'), isNull);
     expect(p(''), isNull);

@@ -2844,4 +2844,35 @@ const Map<String, String> kEs = {
       "Ajustar",
   "Fill":
       "Llenar",
+  // Vesper AI
+  "Your watch list is empty.":
+      "Tu lista está vacía.",
+  "Added {title} to your watch list":
+      "{title} añadido a tu lista",
+  "{title} is already on your watch list":
+      "{title} ya está en tu lista",
+  "Ask me anything about what's on: \"play TSN 1\", \"what's on tonight\", \"put on the Habs game\", \"make me a movie night list for Friday\", \"hide every Turkish group\", \"go back 30 seconds\".":
+      "Pregúntame lo que quieras sobre lo que hay: «pon TSN 1», «qué hay esta noche», «pon el partido del Madrid», «hazme una lista de películas para el viernes», «oculta todos los grupos turcos», «retrocede 30 segundos».",
+  "Try: \"play TSN 1\", \"what's on\", \"pause\", \"go back 30 seconds\", \"open the movies\", \"put on the Habs game\", \"add this to my watch list\". Add your own AI in Settings > Vesper AI for anything else.":
+      "Prueba: «pon TSN 1», «qué es esto», «pausa», «retrocede 30 segundos», «abre las películas», «pon el partido del Madrid», «añadir a mi lista». Añade tu propia IA en Ajustes > Vesper AI para todo lo demás.",
+  "Vesper shortcut":
+      "Acceso directo a Vesper",
+  "A ✨ Vesper 🎙️ row in the TV menu, under Search (a mic in the phone header).":
+      "Una fila ✨ Vesper 🎙️ en el menú de la tele, bajo Búsqueda (un micrófono en la cabecera del teléfono).",
+  "Things to ask":
+      "Qué preguntar",
+  "Without any AI (remote, typing or phone):":
+      "Sin IA (mando, teclado o teléfono):",
+  "\"play TSN 1\" · \"mets RDS\" · \"pause\" · \"go back 30 seconds\" · \"next channel\" · \"back to live\" · \"what's on\" · \"what's on TSN 1\" · \"when is the Simpsons on\" · \"open the movies\" · \"search for Dune\" · \"put on the Habs game\" · \"today's games\" · \"add this to my watch list\" · \"my favourites\" · \"help\"":
+      "«pon TSN 1» · «pausa» · «retrocede 30 segundos» · «canal siguiente» · «en directo» · «qué es esto» · «cuándo juega el Madrid» · «abre las películas» · «busca Dune» · «pon el partido del Madrid» · «partidos de hoy» · «añadir a mi lista» · «mis favoritos» · «ayuda»",
+  "With your AI, or from Claude / ChatGPT:":
+      "Con tu IA, o desde Claude / ChatGPT:",
+  "\"make me a movie night list for Friday\" (it goes on your watch list on Home) · \"hide every Turkish group\" · \"what crime shows do I have?\" · \"is the Leafs game on, and on which channel?\" · \"play the newest episode of something like Severance\" · \"pause the TV\" · \"tell the TV dinner is ready\"":
+      "«hazme una lista de películas para el viernes» (va a tu lista en Inicio) · «oculta todos los grupos turcos» · «¿qué series policiacas tengo?» · «¿hay partido del Madrid y en qué canal?» · «pon algo parecido a Severance» · «pausa la tele» · «dile a la tele que la cena está lista»",
+  "Watch list":
+      "Mi lista",
+  "Remove from watch list":
+      "Quitar de mi lista",
+  "An AI app wants to clear your watch list.":
+      "Una app de IA quiere vaciar tu lista.",
 };

@@ -344,6 +344,10 @@ class AppConstants {
   static const String keyAiLinkEnabled = 'vesper_ai_dev_link_on';
   static const String keyAiConfirmRemotePlay = 'vesper_ai_dev_confirm_play';
   static const String keyAiPhoneToken = 'vesper_ai_dev_phone_token';
+  static const String keyAiShortcut = 'vesper_ai_dev_shortcut';
+
+  /// The viewer's watch list (per profile; Vesper / AI apps fill it).
+  static const String keyVesperWatchList = 'vesper_watchlist';
 
   /// Settings > Playback > Background video: Shield green-flicker fix
   /// (device-only; AppPreferences.videoMediaOverlay).

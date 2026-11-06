@@ -37,6 +37,7 @@ import 'series_detail_screen.dart';
 import 'settings/profile_editor_screen.dart';
 import '../widgets/profile_card.dart';
 import 'sports_screen.dart';
+import '../services/vesper_ai/watch_list.dart';
 
 /// The Home page (top of the tabs column, or Settings > Startup > Open on:
 /// Home): the viewer's profiles strip, a hero for the focused card, then
@@ -165,6 +166,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _episodeAlerts = null;
     }
     _rowsConfig = HomeRows.load(context.read<StorageService>());
+    WatchList.instance.changes.addListener(_watchListChanged);
     unawaited(_load(focusFirst: true));
     if (_rowsConfig.visible.contains(HomeRowKind.continueWatching)) {
       unawaited(
@@ -196,6 +198,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    WatchList.instance.changes.removeListener(_watchListChanged);
     _episodeAlerts?.removeListener(_episodesChanged);
     _hubProgressRefresh?.cancel();
     _pageScroll.dispose();
@@ -241,6 +244,8 @@ class _HomeScreenState extends State<HomeScreen> {
         HomeRowKind.newEpisodes: _newEpisodesRow(),
       if (visible.contains(HomeRowKind.recentChannels))
         HomeRowKind.recentChannels: _recentRow(epg),
+      if (visible.contains(HomeRowKind.watchList))
+        HomeRowKind.watchList: _watchListRow(storage),
       if (visible.contains(HomeRowKind.favourites))
         HomeRowKind.favourites: _favouritesRow(epg, playlist, prefs),
     };
@@ -514,6 +519,40 @@ class _HomeScreenState extends State<HomeScreen> {
       live: true,
       open: (ctx) => _playChannel(ctx, c),
     );
+  }
+
+  /// Vesper AI / AI apps changed the watch list (maybe from the phone).
+  void _watchListChanged() {
+    if (mounted) unawaited(_load());
+  }
+
+  /// The viewer's watch list (Vesper AI's `watchlist` tool fills it).
+  _HomeRow? _watchListRow(StorageService storage) {
+    final list = WatchList.instance;
+    return _HomeRow(HomeRowKind.watchList, _CardShape.poster, [
+      for (final i in list.load(storage).take(40))
+        _HomeItem(
+          key: 'wl:${i.id}',
+          title: i.title,
+          subtitle: i.note,
+          imageUrl: i.series != null
+              ? (i.series!.posterUrl ?? i.series!.coverUrl)
+              : (i.channel!.posterUrl ?? i.channel!.logoUrl),
+          backdropUrl: i.series?.anyBackdropUrl ?? i.channel?.anyBackdropUrl,
+          removeFromHistory: () => list.remove(storage, i.id),
+          removeLabel: 'Remove from watch list',
+          open: (ctx) {
+            if (i.series case final s?) {
+              return Navigator.of(ctx).push(MaterialPageRoute(
+                  builder: (_) => SeriesDetailScreen(series: s)));
+            }
+            final c = i.channel!;
+            if (c.isLive) return _playChannel(ctx, c);
+            return Navigator.of(ctx).push(
+                MaterialPageRoute(builder: (_) => MovieDetailScreen(channel: c)));
+          },
+        ),
+    ]);
   }
 
   _HomeRow? _recentRow(EpgService epg) {

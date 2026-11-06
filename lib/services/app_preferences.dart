@@ -177,6 +177,13 @@ class AppPreferences extends ChangeNotifier {
   /// Opt-in after a user missed Atmos (Discord, 2026-10-22). Device-only.
   bool get audioPassthrough => _storage.getAudioPassthrough();
 
+  /// Settings > Vesper AI > Vesper shortcut (device-only, on by default).
+  bool get vesperShortcut => _storage.getAiShortcut();
+  Future<void> setVesperShortcut(bool value) async {
+    await _storage.setAiShortcut(value);
+    notifyListeners();
+  }
+
   /// Audio delay / A/V sync (Android + Windows, device-only, 0 by default): positive =
   /// sound later, negative = sooner, in ms (vendored `AudioDelay`). Applies
   /// at once while playing. Shield + soundbar user, sound ahead on some

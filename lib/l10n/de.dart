@@ -2747,4 +2747,35 @@ const Map<String, String> kDe = {
       "Einpassen",
   "Fill":
       "Füllen",
+  // Vesper AI
+  "Your watch list is empty.":
+      "Deine Merkliste ist leer.",
+  "Added {title} to your watch list":
+      "{title} zur Merkliste hinzugefügt",
+  "{title} is already on your watch list":
+      "{title} ist schon auf deiner Merkliste",
+  "Ask me anything about what's on: \"play TSN 1\", \"what's on tonight\", \"put on the Habs game\", \"make me a movie night list for Friday\", \"hide every Turkish group\", \"go back 30 seconds\".":
+      "Frag mich alles zum Programm: „spiel TSN 1“, „was läuft heute Abend“, „das Spiel von Bayern“, „mach mir eine Filmliste für Freitag“, „blende alle türkischen Gruppen aus“, „zurück 30 Sekunden“.",
+  "Try: \"play TSN 1\", \"what's on\", \"pause\", \"go back 30 seconds\", \"open the movies\", \"put on the Habs game\", \"add this to my watch list\". Add your own AI in Settings > Vesper AI for anything else.":
+      "Versuche: „spiel TSN 1“, „was läuft“, „pausieren“, „zurück 30 Sekunden“, „öffne die Filme“, „das Spiel von Bayern“, „zur Merkliste hinzufügen“. Für alles andere füge in Einstellungen > Vesper AI deine eigene KI hinzu.",
+  "Vesper shortcut":
+      "Vesper-Verknüpfung",
+  "A ✨ Vesper 🎙️ row in the TV menu, under Search (a mic in the phone header).":
+      "Eine Zeile ✨ Vesper 🎙️ im TV-Menü unter Suche (ein Mikrofon in der Kopfzeile am Handy).",
+  "Things to ask":
+      "Was du fragen kannst",
+  "Without any AI (remote, typing or phone):":
+      "Ohne KI (Fernbedienung, Tastatur oder Handy):",
+  "\"play TSN 1\" · \"mets RDS\" · \"pause\" · \"go back 30 seconds\" · \"next channel\" · \"back to live\" · \"what's on\" · \"what's on TSN 1\" · \"when is the Simpsons on\" · \"open the movies\" · \"search for Dune\" · \"put on the Habs game\" · \"today's games\" · \"add this to my watch list\" · \"my favourites\" · \"help\"":
+      "„spiel TSN 1“ · „pausieren“ · „zurück 30 Sekunden“ · „nächster Sender“ · „zurück zu live“ · „was läuft“ · „wann spielt Bayern“ · „öffne die Filme“ · „suche Dune“ · „das Spiel von Bayern“ · „Spiele heute“ · „zur Merkliste hinzufügen“ · „meine Favoriten“ · „Hilfe“",
+  "With your AI, or from Claude / ChatGPT:":
+      "Mit deiner KI oder aus Claude / ChatGPT:",
+  "\"make me a movie night list for Friday\" (it goes on your watch list on Home) · \"hide every Turkish group\" · \"what crime shows do I have?\" · \"is the Leafs game on, and on which channel?\" · \"play the newest episode of something like Severance\" · \"pause the TV\" · \"tell the TV dinner is ready\"":
+      "„mach mir eine Filmliste für Freitag“ (landet auf deiner Merkliste auf der Startseite) · „blende alle türkischen Gruppen aus“ · „welche Krimiserien habe ich?“ · „läuft das Bayern-Spiel, und auf welchem Sender?“ · „spiel etwas wie Severance“ · „pausiere den Fernseher“ · „sag dem Fernseher, dass das Essen fertig ist“",
+  "Watch list":
+      "Merkliste",
+  "Remove from watch list":
+      "Von der Merkliste entfernen",
+  "An AI app wants to clear your watch list.":
+      "Eine KI-App möchte deine Merkliste leeren.",
 };

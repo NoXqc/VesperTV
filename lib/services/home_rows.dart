@@ -5,6 +5,7 @@ enum HomeRowKind {
   games('games', "Today's games"),
   continueWatching('continue', 'Continue Watching'),
   newEpisodes('new_episodes', 'New episodes'),
+  watchList('watchlist', 'Watch list'),
   recentChannels('recent', 'Recent channels'),
   favourites('favourites', 'Favourite channels'),
   newMovies('new_movies', 'New movies'),
@@ -48,7 +49,11 @@ class HomeRows {
     for (final k in HomeRowKind.values) {
       if (order.contains(k)) continue;
       final cw = order.indexOf(HomeRowKind.continueWatching);
-      if (k == HomeRowKind.newEpisodes && cw >= 0) {
+      final ne = order.indexOf(HomeRowKind.newEpisodes);
+      if (k == HomeRowKind.watchList && (ne >= 0 || cw >= 0)) {
+        // Vesper AI's watch list: under New episodes / Continue Watching.
+        order.insert((ne >= 0 ? ne : cw) + 1, k);
+      } else if (k == HomeRowKind.newEpisodes && cw >= 0) {
         order.insert(cw + 1, k);
       } else {
         order.add(k);

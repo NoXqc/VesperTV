@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../l10n/l10n.dart';
+import '../../services/app_preferences.dart';
 import '../../services/phone_pairing_service.dart' show PairingKind;
 import '../../services/storage_service.dart';
 import '../../services/vesper_ai/ai_provider.dart';
@@ -219,6 +220,14 @@ class _VesperAiSettingsScreenState extends State<VesperAiSettingsScreen> {
               subtitle: tr('Opens the Vesper panel'),
               onTap: () => VesperAi.instance.openPanel(),
             ),
+            TvSwitchListTile(
+              title: Text(tr('Vesper shortcut')),
+              subtitle: Text(tr(
+                  'A ✨ Vesper 🎙️ row in the TV menu, under Search (a mic in the phone header).')),
+              value: context.watch<AppPreferences>().vesperShortcut,
+              onChanged: (v) =>
+                  context.read<AppPreferences>().setVesperShortcut(v),
+            ),
 
             // ------------------------------------------------- voice
             _heading(Icons.mic, tr('Voice')),
@@ -290,75 +299,6 @@ class _VesperAiSettingsScreenState extends State<VesperAiSettingsScreen> {
                           const TextStyle(fontSize: 13, color: Colors.white60)),
                 ],
               ),
-
-            // ------------------------------------------------- your AI
-            _heading(Icons.psychology_outlined, tr('Your AI')),
-            _note(tr(
-                'Bring your own AI key: VesperTV sends what you say and what it finds in your playlists straight to that AI, never through us. You pay the AI service for what you use.')),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final (id, label) in [
-                  (null, tr('None')),
-                  ('anthropic', 'Claude'),
-                  ('openai', tr('OpenAI-compatible')),
-                  ('gemini', 'Gemini'),
-                ])
-                  ChoiceChip(
-                    label: Text(label),
-                    selected: _provider == id,
-                    onSelected: (_) => setState(() => _provider = id),
-                  ),
-              ],
-            ),
-            if (_provider != null) ...[
-              const SizedBox(height: 12),
-              if (_provider == 'anthropic')
-                _note(tr('Key from console.anthropic.com. Models: {list}.',
-                    {'list': AnthropicProvider.suggestedModels.join(', ')})),
-              if (_provider == 'gemini')
-                _note(tr('Key from aistudio.google.com.')),
-              if (_provider == 'openai')
-                _note(tr(
-                    'OpenAI, or any service with the same API (OpenRouter, Groq, Mistral, a local Ollama or LM Studio): its address, model name and key.')),
-              _field(_model, _modelFocus, _keyFocus, tr('Model'),
-                  hint: _defaultModel.isEmpty
-                      ? null
-                      : tr('Default: {model}', {'model': _defaultModel})),
-              const SizedBox(height: 12),
-              _field(
-                  _key,
-                  _keyFocus,
-                  _provider == 'openai' ? _baseFocus : _saveFocus,
-                  tr('API key'),
-                  obscure: true),
-              if (_provider == 'openai') ...[
-                const SizedBox(height: 12),
-                _field(_baseUrl, _baseFocus, _saveFocus, tr('Address'),
-                    hint: OpenAiProvider.defaultBaseUrl),
-              ],
-            ],
-            const SizedBox(height: 12),
-            Wrap(spacing: 10, runSpacing: 8, children: [
-              FilledButton(
-                focusNode: _saveFocus,
-                onPressed: _testing ? null : _save,
-                child: _testing
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2))
-                    : Text(
-                        _provider == null ? tr('Save') : tr('Save and test')),
-              ),
-              if (_provider != null)
-                OutlinedButton.icon(
-                  onPressed: _fromPhone,
-                  icon: const Icon(Icons.smartphone),
-                  label: Text(tr('Key from phone')),
-                ),
-            ]),
 
             // ------------------------------------------------- AI apps
             _heading(Icons.hub_outlined, tr('AI apps')),
@@ -450,6 +390,83 @@ class _VesperAiSettingsScreenState extends State<VesperAiSettingsScreen> {
                     : _note('${tr('Recent requests')}: ${lines.join(' · ')}'),
               ),
             ],
+            // ------------------------------------------------- your AI
+            _heading(Icons.psychology_outlined, tr('Your AI')),
+            _note(tr(
+                'Bring your own AI key: VesperTV sends what you say and what it finds in your playlists straight to that AI, never through us. You pay the AI service for what you use.')),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final (id, label) in [
+                  (null, tr('None')),
+                  ('anthropic', 'Claude'),
+                  ('openai', tr('OpenAI-compatible')),
+                  ('gemini', 'Gemini'),
+                ])
+                  ChoiceChip(
+                    label: Text(label),
+                    selected: _provider == id,
+                    onSelected: (_) => setState(() => _provider = id),
+                  ),
+              ],
+            ),
+            if (_provider != null) ...[
+              const SizedBox(height: 12),
+              if (_provider == 'anthropic')
+                _note(tr('Key from console.anthropic.com. Models: {list}.',
+                    {'list': AnthropicProvider.suggestedModels.join(', ')})),
+              if (_provider == 'gemini')
+                _note(tr('Key from aistudio.google.com.')),
+              if (_provider == 'openai')
+                _note(tr(
+                    'OpenAI, or any service with the same API (OpenRouter, Groq, Mistral, a local Ollama or LM Studio): its address, model name and key.')),
+              _field(_model, _modelFocus, _keyFocus, tr('Model'),
+                  hint: _defaultModel.isEmpty
+                      ? null
+                      : tr('Default: {model}', {'model': _defaultModel})),
+              const SizedBox(height: 12),
+              _field(
+                  _key,
+                  _keyFocus,
+                  _provider == 'openai' ? _baseFocus : _saveFocus,
+                  tr('API key'),
+                  obscure: true),
+              if (_provider == 'openai') ...[
+                const SizedBox(height: 12),
+                _field(_baseUrl, _baseFocus, _saveFocus, tr('Address'),
+                    hint: OpenAiProvider.defaultBaseUrl),
+              ],
+            ],
+            const SizedBox(height: 12),
+            Wrap(spacing: 10, runSpacing: 8, children: [
+              FilledButton(
+                focusNode: _saveFocus,
+                onPressed: _testing ? null : _save,
+                child: _testing
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : Text(
+                        _provider == null ? tr('Save') : tr('Save and test')),
+              ),
+              if (_provider != null)
+                OutlinedButton.icon(
+                  onPressed: _fromPhone,
+                  icon: const Icon(Icons.smartphone),
+                  label: Text(tr('Key from phone')),
+                ),
+            ]),
+
+            // ------------------------------------------------- examples
+            _heading(Icons.lightbulb_outline, tr('Things to ask')),
+            _note(tr('Without any AI (remote, typing or phone):')),
+            _note(tr(
+                '"play TSN 1" · "mets RDS" · "pause" · "go back 30 seconds" · "next channel" · "back to live" · "what\'s on" · "what\'s on TSN 1" · "when is the Simpsons on" · "open the movies" · "search for Dune" · "put on the Habs game" · "today\'s games" · "add this to my watch list" · "my favourites" · "help"')),
+            _note(tr('With your AI, or from Claude / ChatGPT:')),
+            _note(tr(
+                '"make me a movie night list for Friday" (it goes on your watch list on Home) · "hide every Turkish group" · "what crime shows do I have?" · "is the Leafs game on, and on which channel?" · "play the newest episode of something like Severance" · "pause the TV" · "tell the TV dinner is ready"')),
             const SizedBox(height: 32),
           ],
         ),

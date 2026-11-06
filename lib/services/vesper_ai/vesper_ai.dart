@@ -107,6 +107,7 @@ class VesperAi {
     }
     final ai = provider;
     final command = parseVesperCommand(spoken);
+    if (command?.tool == 'help') return VesperReply(helpText(hasOwnAi));
     if (command != null) {
       final result = await box.call(command.tool, command.args);
       if (!result.containsKey('error') || ai == null) {
@@ -280,6 +281,19 @@ class VesperAi {
           for (final c in list.take(8))
             if (c is Map) '${c['title']}'
         ].join(' · '));
+      case 'watchlist':
+        if (command.args['action'] == 'list') {
+          final list = (r['watchlist'] as List?) ?? const [];
+          if (list.isEmpty) return VesperReply(tr('Your watch list is empty.'));
+          return VesperReply([
+            for (final c in list.take(8))
+              if (c is Map) '${c['title']}'
+          ].join(' · '));
+        }
+        return VesperReply(r['added'] == true
+            ? tr('Added {title} to your watch list', {'title': s('title')})
+            : tr('{title} is already on your watch list',
+                {'title': s('title')}));
       case 'sports_today':
         final list = (r['games'] as List?) ?? const [];
         if (list.isEmpty) return VesperReply(tr('No games today.'));
@@ -291,6 +305,13 @@ class VesperAi {
     }
     return VesperReply(tr('Done'));
   }
+
+  /// "help" / "what can you do".
+  static String helpText(bool withAi) => withAi
+      ? tr(
+          'Ask me anything about what\'s on: "play TSN 1", "what\'s on tonight", "put on the Habs game", "make me a movie night list for Friday", "hide every Turkish group", "go back 30 seconds".')
+      : tr(
+          'Try: "play TSN 1", "what\'s on", "pause", "go back 30 seconds", "open the movies", "put on the Habs game", "add this to my watch list". Add your own AI in Settings > Vesper AI for anything else.');
 
   static String _dayWord(Object? day) => switch (day) {
         'today' => tr('today'),
@@ -310,6 +331,9 @@ class VesperAi {
       'find_on_tv' => tr('That is not in the guide.'),
       'open' => tr('That section is hidden.'),
       'favorites' => tr('Nothing is playing.'),
+      'watchlist' when name.isNotEmpty =>
+        tr('I could not find "{title}" in your playlists.', {'title': name}),
+      'watchlist' => tr('Nothing is playing.'),
       'player' when '$error'.contains('rewound') =>
         tr('This channel cannot be rewound.'),
       'player' when '$error'.contains('Windows') =>

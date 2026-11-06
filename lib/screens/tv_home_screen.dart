@@ -77,6 +77,7 @@ import 'series_detail_screen.dart';
 import 'settings/check_updates_screen.dart';
 import 'settings/settings_menu_screen.dart';
 import '../l10n/l10n.dart';
+import '../services/vesper_ai/vesper_ai.dart';
 
 /// Directional D-pad focus movement between widgets (arrow keys via the
 /// default `FocusTraversalPolicy`) does *not* automatically scroll a newly
@@ -3667,6 +3668,13 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                             fontWeight: FontWeight.w600)),
                   ),
                   // Search without going back to the tabs page first.
+                  if (context.watch<AppPreferences>().vesperShortcut)
+                    IconButton(
+                      icon: const Icon(Icons.mic_none, color: Colors.white),
+                      tooltip: 'Vesper AI',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => VesperAi.instance.openPanel(),
+                    ),
                   IconButton(
                     icon: const Icon(Icons.search, color: Colors.white),
                     tooltip: tr('Search'),
@@ -3991,6 +3999,15 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             ),
         ],
         const Divider(height: 16, color: Colors.white24),
+        // Vesper AI, under the tabs (Settings > Vesper AI > Vesper shortcut, on by default).
+        if (context.watch<AppPreferences>().vesperShortcut)
+          _SelectableRow(
+            icon: Icons.auto_awesome,
+            label: 'Vesper 🎙️',
+            selected: false,
+            collapsed: collapsed,
+            onTap: () => VesperAi.instance.openPanel(),
+          ),
         _SelectableRow(
           icon: Icons.playlist_add_check,
           label: tr('Update Content'),

@@ -2806,4 +2806,35 @@ const Map<String, String> kEl = {
       "Προσαρμογή",
   "Fill":
       "Γέμισμα",
+  // Vesper AI
+  "Your watch list is empty.":
+      "Η λίστα σου είναι άδεια.",
+  "Added {title} to your watch list":
+      "Το {title} προστέθηκε στη λίστα σου",
+  "{title} is already on your watch list":
+      "Το {title} είναι ήδη στη λίστα σου",
+  "Ask me anything about what's on: \"play TSN 1\", \"what's on tonight\", \"put on the Habs game\", \"make me a movie night list for Friday\", \"hide every Turkish group\", \"go back 30 seconds\".":
+      "Ρώτα με ό,τι θέλεις για το πρόγραμμα: «play TSN 1», «τι παίζει απόψε», «put on the Olympiacos game», «κάνε μου λίστα ταινιών για την Παρασκευή», «κρύψε όλες τις τουρκικές ομάδες», «go back 30 seconds».",
+  "Try: \"play TSN 1\", \"what's on\", \"pause\", \"go back 30 seconds\", \"open the movies\", \"put on the Habs game\", \"add this to my watch list\". Add your own AI in Settings > Vesper AI for anything else.":
+      "Δοκίμασε: «play TSN 1», «what's on», «pause», «go back 30 seconds», «open the movies», «put on the Olympiacos game», «add this to my watch list». Πρόσθεσε τη δική σου AI στις Ρυθμίσεις > Vesper AI για οτιδήποτε άλλο.",
+  "Vesper shortcut":
+      "Συντόμευση Vesper",
+  "A ✨ Vesper 🎙️ row in the TV menu, under Search (a mic in the phone header).":
+      "Μια γραμμή ✨ Vesper 🎙️ στο μενού της τηλεόρασης, κάτω από την Αναζήτηση (ένα μικρόφωνο στην κεφαλίδα στο κινητό).",
+  "Things to ask":
+      "Τι να ρωτήσεις",
+  "Without any AI (remote, typing or phone):":
+      "Χωρίς AI (τηλεχειριστήριο, πληκτρολόγιο ή κινητό):",
+  "\"play TSN 1\" · \"mets RDS\" · \"pause\" · \"go back 30 seconds\" · \"next channel\" · \"back to live\" · \"what's on\" · \"what's on TSN 1\" · \"when is the Simpsons on\" · \"open the movies\" · \"search for Dune\" · \"put on the Habs game\" · \"today's games\" · \"add this to my watch list\" · \"my favourites\" · \"help\"":
+      "\"play TSN 1\" · \"pause\" · \"go back 30 seconds\" · \"next channel\" · \"back to live\" · \"what's on\" · \"when is the Simpsons on\" · \"open the movies\" · \"search for Dune\" · \"put on the Olympiacos game\" · \"today's games\" · \"add this to my watch list\" · \"my favourites\" · \"help\"",
+  "With your AI, or from Claude / ChatGPT:":
+      "Με τη δική σου AI ή από το Claude / ChatGPT:",
+  "\"make me a movie night list for Friday\" (it goes on your watch list on Home) · \"hide every Turkish group\" · \"what crime shows do I have?\" · \"is the Leafs game on, and on which channel?\" · \"play the newest episode of something like Severance\" · \"pause the TV\" · \"tell the TV dinner is ready\"":
+      "«κάνε μου λίστα ταινιών για την Παρασκευή» (μπαίνει στη λίστα σου στην Αρχική) · «κρύψε όλες τις τουρκικές ομάδες» · «τι αστυνομικές σειρές έχω;» · «παίζει ο Ολυμπιακός, και σε ποιο κανάλι;» · «βάλε κάτι σαν το Severance» · «κάνε παύση στην τηλεόραση» · «πες στην τηλεόραση ότι το φαγητό είναι έτοιμο»",
+  "Watch list":
+      "Λίστα παρακολούθησης",
+  "Remove from watch list":
+      "Αφαίρεση από τη λίστα",
+  "An AI app wants to clear your watch list.":
+      "Μια εφαρμογή AI θέλει να αδειάσει τη λίστα σου.",
 };

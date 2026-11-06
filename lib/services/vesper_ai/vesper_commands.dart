@@ -19,7 +19,10 @@ class VesperCommand {
 /// Matching is done on [TitleSearch.fold]ed text (lowercase, no accents,
 /// punctuation as spaces), so the patterns below are written that way.
 VesperCommand? parseVesperCommand(String spoken) {
-  var s = ' ${TitleSearch.fold(spoken)} ';
+  final folded = TitleSearch.fold(spoken).trim();
+  // Before the fillers: "what can you do" holds one ("can you").
+  if (_help.contains(folded)) return const VesperCommand('help');
+  var s = ' $folded ';
   // Politeness and the assistant's name never change the command.
   for (final filler in _fillers) {
     s = s.replaceAll(' $filler ', ' ');
@@ -59,6 +62,23 @@ VesperCommand? parseVesperCommand(String spoken) {
     return const VesperCommand('favorites', {'action': 'list'});
   }
   if (_isOneOf(s, _sportsToday)) return const VesperCommand('sports_today');
+  if (_isOneOf(s, _help)) return const VesperCommand('help');
+  if (_isOneOf(s, _watchListShow)) {
+    return const VesperCommand('watchlist', {'action': 'list'});
+  }
+  if (_isOneOf(s, _watchListAdd)) {
+    return const VesperCommand(
+        'watchlist', {'action': 'add', 'ref': 'current'});
+  }
+  for (final verb in _watchListAddVerbs) {
+    final m = RegExp('^$verb (.+?) (?:to|on|a|dans|en|alla|zur|auf) '
+            r'(?:my |ma |mi |la mia |meine )?(?:watch ?list|liste|lista|merkliste)$')
+        .firstMatch(s);
+    final name = _strip(m?.group(1) ?? '');
+    if (name.isNotEmpty && name != 'this' && name != 'ca') {
+      return VesperCommand('watchlist', {'action': 'add', 'name': name});
+    }
+  }
 
   final seek = _seek(s);
   if (seek != null) return seek;
@@ -480,6 +500,58 @@ const _sportsToday = [
   'partidos de hoy',
   'partite di oggi',
   'spiele heute',
+];
+
+const _help = [
+  'help',
+  'what can you do',
+  'what can i say',
+  'what can i ask',
+  'how does this work',
+  'aide',
+  'que peux tu faire',
+  'qu est ce que tu peux faire',
+  'ayuda',
+  'que puedes hacer',
+  'aiuto',
+  'cosa puoi fare',
+  'hilfe',
+  'was kannst du',
+];
+const _watchListShow = [
+  'my watch list',
+  'my watchlist',
+  'watch list',
+  'watchlist',
+  'show my watch list',
+  'ma liste',
+  'ma liste a regarder',
+  'mi lista',
+  'la mia lista',
+  'meine merkliste',
+  'merkliste',
+];
+const _watchListAdd = [
+  'add this to my watch list',
+  'add this to my watchlist',
+  'add to my watch list',
+  'add to watch list',
+  'add to my watchlist',
+  'save this for later',
+  'ajoute ca a ma liste',
+  'ajoute a ma liste',
+  'anadir a mi lista',
+  'aggiungi alla mia lista',
+  'zur merkliste hinzufugen',
+];
+const _watchListAddVerbs = [
+  'add',
+  'put',
+  'ajoute',
+  'mets',
+  'anade',
+  'aggiungi',
+  'fuge'
 ];
 
 const _back = [

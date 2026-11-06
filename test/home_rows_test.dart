@@ -21,6 +21,7 @@ void main() {
     expect(rows.visible, contains(HomeRowKind.newShows));
     final continueAt = rows.order.indexOf(HomeRowKind.continueWatching);
     expect(rows.order[continueAt + 1], HomeRowKind.newEpisodes);
+    expect(rows.order[continueAt + 2], HomeRowKind.watchList);
     expect(HomeRows.parse(rows.encoded).encoded, rows.encoded);
   });
 
@@ -29,6 +30,7 @@ void main() {
       'games',
       '-continue',
       '-new_episodes',
+      '-watchlist',
       'recent',
       'favourites',
       'new_movies',
@@ -40,7 +42,10 @@ void main() {
     expect(rows.visible.first, HomeRowKind.recentChannels);
     rows.move(HomeRowKind.newShows, 1); // already last
     expect(rows.visible.last, HomeRowKind.newShows);
-    expect(
-        rows.hidden, {HomeRowKind.continueWatching, HomeRowKind.newEpisodes});
+    expect(rows.hidden, {
+      HomeRowKind.continueWatching,
+      HomeRowKind.newEpisodes,
+      HomeRowKind.watchList
+    });
   });
 }
