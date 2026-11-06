@@ -230,7 +230,7 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
                   Icons.picture_in_picture_alt,
                   tr('Background video'),
                   tr('Fixes for the picture on some Fire TV sticks')),
-            if (Platform.isAndroid)
+            if (Platform.isAndroid || Platform.isWindows)
               _general('audio', Icons.surround_sound_outlined, tr('Audio'),
                   tr('Audio languages, subtitles and surround sound')),
             if (Platform.isAndroid)
@@ -239,10 +239,14 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
                   Icons.tv_outlined,
                   tr('Frame rate & resolution'),
                   tr('Match the TV to the video\'s frame rate and resolution')),
-            if (!Platform.isWindows)
-              _general('datapool', Icons.analytics_outlined, tr('Data pool'),
-                  tr('Stream details when you press OK while watching')),
-            if (Platform.isAndroid)
+            _general(
+                'datapool',
+                Icons.analytics_outlined,
+                tr('Data pool'),
+                Platform.isWindows
+                    ? tr('Stream details from a button in the player bar')
+                    : tr('Stream details when you press OK while watching')),
+            if (Platform.isAndroid || Platform.isWindows)
               _general('catchup', Icons.history_toggle_off, tr('Catch-up'),
                   tr('What happens when a catch-up programme ends')),
             if (Platform.isAndroid || Platform.isWindows)

@@ -16,7 +16,9 @@ import '../../services/storage_service.dart';
 import '../../utils/tv_theme.dart';
 import '../../widgets/mode_button.dart';
 import '../../widgets/settings_scaffold.dart';
+import '../../widgets/tv_dialog_option.dart';
 import '../../widgets/tv_menu_tile.dart';
+import 'backup_screen.dart';
 
 /// Additive import, separate from replacing the setup with a backup.
 class StorageImportScreen extends StatefulWidget {
@@ -116,10 +118,53 @@ class _StorageImportScreenState extends State<StorageImportScreen> {
   Future<void> _import(StorageItem item) async {
     if (_busy || _path.isEmpty) return;
     final name = p.basenameWithoutExtension(item.name);
-    final confirmed = await showDialog<bool>(
+    // A VesperTV backup: restore it whole, or only take its sources.
+    Map<String, Object?>? backup;
+    if (!item.playlist) {
+      setState(() => _busy = true);
+      try {
+        backup = await _importer.readBackup(item);
+      } catch (_) {
+        backup = null;
+      } finally {
+        if (mounted) setState(() => _busy = false);
+      }
+      if (!mounted) return;
+    }
+    if (backup != null) {
+      final choice = await showDialog<String>(
         context: context,
-        builder: (_) => _StorageImportConfirmation(name: name));
-    if (confirmed != true || !mounted) return;
+        builder: (context) => SimpleDialog(
+          title: Text(tr('This is a VesperTV backup.')),
+          children: [
+            TvDialogOption(
+              autofocus: true,
+              onPressed: () => Navigator.of(context).pop('restore'),
+              child: Text(tr('Restore this backup')),
+            ),
+            TvDialogOption(
+              onPressed: () => Navigator.of(context).pop('sources'),
+              child: Text(tr('Only add its Media Hub sources')),
+            ),
+            TvDialogOption(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(tr('Cancel')),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) return;
+      if (choice == 'restore') {
+        await restoreBackup(context, backup, from: item.name);
+        return;
+      }
+      if (choice != 'sources') return;
+    } else {
+      final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (_) => _StorageImportConfirmation(name: name));
+      if (confirmed != true || !mounted) return;
+    }
     setState(() => _busy = true);
     final manager = context.read<PlaylistManager>();
     final archive = context.read<ArchiveService>();

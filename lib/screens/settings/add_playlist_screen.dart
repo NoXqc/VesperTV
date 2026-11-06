@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../models/playlist_profile.dart';
 import '../../services/epg_service.dart';
 import '../../services/playlist_manager.dart';
+import '../../services/xtream_api_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/smart_add_parser.dart';
 import '../../utils/tv_theme.dart';
@@ -193,6 +194,11 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
   /// Playlist" again in that window re-ran the whole thing a second time,
   /// which is how two overlapping warm-up passes happened.
   bool _saving = false;
+
+  /// The last failed add's reason. `playlist.error` is the failed
+  /// playlist's own, and goes away with it when the failed add is rolled
+  /// back below, so the red message only blinked (owner, LOG-MSUG7R).
+  String? _failure;
 
   /// The profile being edited, or null when adding a brand-new playlist —
   /// resolved once in [initState] rather than re-looked-up on every
@@ -503,7 +509,10 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
       );
       return;
     }
-    setState(() => _saving = true);
+    setState(() {
+      _saving = true;
+      _failure = null;
+    });
     try {
       final mode = _effectiveMode;
       final isEditing = _editingProfile != null;
@@ -595,12 +604,33 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
         );
       }
 
-      if (isEditing) {
-        await playlist.updatePlaylist(profile);
-      } else {
+      // An Xtream panel's M3U link is read through its Xtream login, as
+      // TiviMate does: shows and episodes load when opened instead of a
+      // 1.28M-entry list stored on every update (~10 min on a Formuler).
+      // The M3U is the fallback when the login doesn't work.
+      final m3uProfile = profile.isXtream ? null : profile;
+      final asXtream =
+          m3uProfile == null ? null : await _xtreamProfileFor(m3uProfile);
+      if (asXtream != null) {
+        profile = asXtream;
+        epgUrl = asXtream.epgUrl ?? '';
+      }
+      if (!isEditing) {
         await playlist.addPlaylist(profile);
+      } else if (_editingProfile!.mode != profile.mode) {
+        await playlist.switchPlaylistType(profile);
+      } else {
+        await playlist.updatePlaylist(profile);
       }
       await playlist.loadPlaylist(playlistId);
+      if (asXtream != null && playlist.error != null) {
+        debugPrint('AddPlaylist: Xtream login failed (${playlist.error}), '
+            'loading the M3U');
+        profile = m3uProfile!;
+        epgUrl = m3uProfile.epgUrl ?? '';
+        await playlist.switchPlaylistType(profile);
+        await playlist.loadPlaylist(playlistId);
+      }
 
       // A failed authenticate() (bad credentials, server down/blocked,
       // account expired) sets the session's error and returns normally
@@ -632,11 +662,12 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
         // alone on failure — that profile (and its real cached catalog,
         // hidden groups, favorites) predates this attempt and shouldn't
         // be destroyed just because a credential change didn't verify.
+        setState(() => _failure = playlist.error);
         if (!isEditing) await playlist.removePlaylist(playlistId);
         return;
       }
 
-      if (!isEditing && mode == 'xtream') {
+      if (!isEditing && profile.isXtream) {
         await _promptDownloadScope(playlist, playlistId);
       }
 
@@ -679,6 +710,41 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  /// [m3u] as an Xtream playlist when its link is an Xtream panel's
+  /// `get.php` export and that login answers (checked here so a panel
+  /// with its API off never loses an already-loaded M3U). Same id,
+  /// settings and M3U link (kept for the fallback); the EPG field, or the
+  /// panel's own xmltv.php when it's blank.
+  Future<PlaylistProfile?> _xtreamProfileFor(PlaylistProfile m3u) async {
+    final login = XtreamHelper.fromM3uUrl(m3u.m3uUrl ?? '');
+    if (login == null) return null;
+    try {
+      await XtreamApiService(
+              server: login.server,
+              username: login.username,
+              password: login.password,
+              playlistId: m3u.id)
+          .authenticate()
+          .timeout(const Duration(seconds: 20));
+    } catch (e) {
+      debugPrint('AddPlaylist: get.php link, Xtream login unavailable: $e');
+      return null;
+    }
+    final epg = m3u.epgUrl ?? '';
+    return m3u.copyWith(
+      mode: 'xtream',
+      xtreamServer: login.server,
+      xtreamUsername: login.username,
+      xtreamPassword: login.password,
+      epgUrl: epg.isNotEmpty
+          ? epg
+          : XtreamHelper.buildEpgUrl(
+              server: login.server,
+              username: login.username,
+              password: login.password),
+    );
   }
 
   /// Asks "download everything, or choose groups first?" — and, crucially,
@@ -1287,7 +1353,7 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
                                 constraints:
                                     const BoxConstraints(minHeight: 56),
                                 child: Builder(builder: (context) {
-                                  final error = playlist.error;
+                                  final error = playlist.error ?? _failure;
                                   Color? accent;
                                   Widget content = const SizedBox.shrink();
                                   if (playlist.isLoading) {

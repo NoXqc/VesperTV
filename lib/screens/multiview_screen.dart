@@ -1463,8 +1463,8 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
 }
 
 /// The order Swap mode moves the playing [slots] (cell indices, big one
-/// first) into: slot k gets the screen from the returned k-th index.
-@visibleForTesting
+/// first) into: slot k gets the screen from the returned k-th index. Also
+/// Windows' Multiview (desktop_multiview_screen.dart).
 List<int> swapRotation(List<int> slots, int step) {
   final n = slots.length;
   return [for (var k = 0; k < n; k++) slots[((k + step) % n + n) % n]];

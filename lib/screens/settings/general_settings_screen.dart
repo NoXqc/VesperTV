@@ -529,12 +529,13 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                               },
                             ),
                         ]),
-                  // Android only: Windows plays through media_kit.
-                  if (Platform.isAndroid)
+                  // Windows: the same settings through mpv (DesktopAudio).
+                  if (Platform.isAndroid || Platform.isWindows)
                     _section(
                         'audio', Icons.surround_sound_outlined, tr('Audio'),
                         children: [
                           TvMenuTile(
+                            icon: Icons.record_voice_over_outlined,
                             title: tr('Preferred audio language'),
                             subtitle:
                                 _storage.getPreferredAudioLanguage().isEmpty
@@ -544,6 +545,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                             onTap: () => _pickTrackLanguage(audio: true),
                           ),
                           TvMenuTile(
+                            icon: Icons.subtitles_outlined,
                             title: tr('Preferred subtitle language'),
                             subtitle: _storage.getPreferredSubtitleLanguage() ==
                                     'off'
@@ -559,8 +561,10 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                                 style: const TextStyle(color: Colors.white70)),
                           ),
                           TvMenuTile(
+                            icon: Icons.av_timer,
                             title: tr('Audio delay'),
-                            subtitle: '${AudioDelay.label(context.watch<AppPreferences>().audioDelayMs)}'
+                            subtitle:
+                                '${AudioDelay.label(context.watch<AppPreferences>().audioDelayMs)}'
                                 ' · ${tr('For sound that is ahead of or behind the picture. Also in the player: Audio sync.')}',
                             onTap: () => showAudioDelayAdjuster(context),
                           ),
@@ -615,21 +619,24 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                                 .setMatchResolution(v),
                           ),
                         ]),
-                  // Windows has no OK info card yet, so no Data pool there.
-                  if (!Platform.isWindows)
-                    _section(
-                        'datapool', Icons.analytics_outlined, tr('Data pool'),
-                        children: [
-                          TvSwitchListTile(
-                            title: Text(tr('Data pool display')),
-                            subtitle: Text(tr(
-                                'Press OK while a channel, movie or episode plays to open a card with the stream\'s details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer and HDR. Off: OK shows only the channel info.')),
-                            value: context.watch<AppPreferences>().dataPool,
-                            onChanged: (v) =>
-                                context.read<AppPreferences>().setDataPool(v),
-                          ),
-                        ]),
-                  if (Platform.isAndroid)
+                  // Windows: a player bar button / the I key opens it
+                  // (DesktopDataPoolCard, mpv's numbers).
+                  _section(
+                      'datapool', Icons.analytics_outlined, tr('Data pool'),
+                      children: [
+                        TvSwitchListTile(
+                          title: Text(tr('Data pool display')),
+                          subtitle: Text(Platform.isWindows
+                              ? tr(
+                                  'Adds a Data pool button to the player bar (or press I) that opens a card with the stream\'s details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer, HDR and decoder.')
+                              : tr(
+                                  'Press OK while a channel, movie or episode plays to open a card with the stream\'s details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer and HDR. Off: OK shows only the channel info.')),
+                          value: context.watch<AppPreferences>().dataPool,
+                          onChanged: (v) =>
+                              context.read<AppPreferences>().setDataPool(v),
+                        ),
+                      ]),
+                  if (Platform.isAndroid || Platform.isWindows)
                     _section(
                         'catchup', Icons.history_toggle_off, tr('Catch-up'),
                         children: [

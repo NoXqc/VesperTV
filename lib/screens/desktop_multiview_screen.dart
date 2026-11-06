@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:provider/provider.dart';
@@ -15,6 +16,7 @@ import '../widgets/game_channel_chooser.dart';
 import '../l10n/l10n.dart';
 import '../services/desktop_stream_setup.dart';
 import '../services/desktop_live_recovery.dart';
+import 'multiview_screen.dart' show swapRotation;
 
 /// Windows-only: a grid of simultaneously-playing live channels —
 /// requested directly, citing TiviMate's own multiview (proven to run
@@ -60,7 +62,12 @@ class _MultiviewCell {
 /// allocated regardless of which is active; only [dual]'s own two extra
 /// cells get disposed when switching down to it (see [_setLayout]) to
 /// actually free their connections rather than just hiding them.
-enum _MultiviewLayout { dual, quad }
+///
+/// [main] = 1 + 3: one big screen and three small ones beside it, where
+/// Swap mode rotates the playing screens through the big one (Android's,
+/// owner 2026-10-29). Remembered with the Android keys
+/// (`getMultiviewMain` / `getMultiviewQuad`).
+enum _MultiviewLayout { dual, quad, main }
 
 class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
   static const _cellCount = 4;
@@ -69,8 +76,112 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
   int _activeCell = 0;
   _MultiviewLayout _layout = _MultiviewLayout.quad;
 
+  /// 1 + 3 Swap mode: arrows (or a click on a small screen) move the
+  /// playing screens through the big one; only the big one has sound. The
+  /// players themselves move, so nothing reconnects.
+  bool _swapMode = false;
+
+  /// Bumped on every swap: the big screen flashes gold once.
+  int _swapCount = 0;
+
+  final _keys = FocusNode(debugLabel: 'desktop-multiview');
+
+  @override
+  void initState() {
+    super.initState();
+    final storage = context.read<StorageService>();
+    _layout = storage.getMultiviewMain()
+        ? _MultiviewLayout.main
+        : storage.getMultiviewQuad()
+            ? _MultiviewLayout.quad
+            : _MultiviewLayout.dual;
+  }
+
+  bool _playing(_MultiviewCell c) => c.channel != null && c.player != null;
+
+  bool get _canSwap =>
+      _layout == _MultiviewLayout.main && _cells.where(_playing).length >= 2;
+
+  void _enterSwapMode() {
+    if (!_canSwap) return;
+    // A playing screen on the big one first.
+    if (!_playing(_cells[0])) _moveToMain(_cells.indexWhere(_playing));
+    setState(() => _swapMode = true);
+    _setSwapAudio();
+    _keys.requestFocus();
+    debugPrint('DesktopMultiview: swap mode on');
+  }
+
+  void _exitSwapMode() {
+    if (_swapMode) setState(() => _swapMode = false);
+  }
+
+  /// [index]'s screen onto the big one (the big one's goes where it was).
+  void _moveToMain(int index) {
+    if (index <= 0 || index >= _cellCount) return;
+    final big = _cells[0];
+    _cells[0] = _cells[index];
+    _cells[index] = big;
+    setState(() => _swapCount++);
+    _setSwapAudio();
+  }
+
+  /// Every playing screen [step] places through the big one; empty slots
+  /// stay put.
+  void _rotateSwap(int step) {
+    final slots = [
+      for (var i = 0; i < _cellCount; i++)
+        if (_playing(_cells[i])) i
+    ];
+    if (slots.length < 2) return;
+    final moved = [for (final from in swapRotation(slots, step)) _cells[from]];
+    for (var k = 0; k < slots.length; k++) {
+      _cells[slots[k]] = moved[k];
+    }
+    setState(() => _swapCount++);
+    _setSwapAudio();
+  }
+
+  /// Swap mode / 1 + 3 after a move: only the big screen plays sound.
+  void _setSwapAudio() {
+    _activeCell = 0;
+    for (var i = 0; i < _cellCount; i++) {
+      _cells[i].player?.setVolume(i == 0 ? 100 : 0);
+    }
+  }
+
+  KeyEventResult _onKey(FocusNode _, KeyEvent e) {
+    if (!_swapMode || e is KeyUpEvent) return KeyEventResult.ignored;
+    final key = e.logicalKey;
+    if (key == LogicalKeyboardKey.arrowDown ||
+        key == LogicalKeyboardKey.arrowRight) {
+      _rotateSwap(1);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowLeft) {
+      _rotateSwap(-1);
+      return KeyEventResult.handled;
+    }
+    if (e is KeyDownEvent &&
+        (key == LogicalKeyboardKey.escape ||
+            key == LogicalKeyboardKey.enter ||
+            key == LogicalKeyboardKey.numpadEnter ||
+            key == LogicalKeyboardKey.select)) {
+      _exitSwapMode();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
   void _setLayout(_MultiviewLayout layout) {
     if (layout == _layout) return;
+    final storage = context.read<StorageService>();
+    unawaited(storage.setMultiviewMain(layout == _MultiviewLayout.main));
+    if (layout != _MultiviewLayout.main) {
+      unawaited(storage.setMultiviewQuad(layout == _MultiviewLayout.quad));
+      _swapMode = false;
+    }
     if (layout == _MultiviewLayout.dual) {
       // Actually free cells 2/3's connections/decode sessions, not just
       // hide them — leaving them playing, muted, off-screen would still
@@ -87,6 +198,7 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
 
   @override
   void dispose() {
+    _keys.dispose();
     for (final cell in _cells) {
       cell.completedSubscription?.cancel();
       DesktopLiveRecovery.disposePlayer(cell.player);
@@ -164,131 +276,191 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: true,
+      // Back in Swap mode ends it first.
+      canPop: !_swapMode,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _exitSwapMode();
+      },
       child: Scaffold(
         backgroundColor: Colors.black,
-        body: SafeArea(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
-                child: Row(
-                  children: [
-                    IconButton(
-                      tooltip: tr('Back'),
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                    Text(tr('Multiview'),
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600)),
-                    const SizedBox(width: 8),
-                    PopupMenuButton<_MultiviewLayout>(
-                      tooltip: tr('Layout'),
-                      icon: const Icon(Icons.grid_view, color: Colors.white),
-                      onSelected: _setLayout,
-                      itemBuilder: (context) => [
-                        CheckedPopupMenuItem(
-                          value: _MultiviewLayout.dual,
-                          checked: _layout == _MultiviewLayout.dual,
-                          child: Text(tr('2 channels')),
+        body: Focus(
+          focusNode: _keys,
+          autofocus: true,
+          onKeyEvent: _onKey,
+          child: SafeArea(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        tooltip: tr('Back'),
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                      Text(tr('Multiview'),
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600)),
+                      const SizedBox(width: 8),
+                      PopupMenuButton<_MultiviewLayout>(
+                        tooltip: tr('Layout'),
+                        icon: const Icon(Icons.grid_view, color: Colors.white),
+                        onSelected: _setLayout,
+                        itemBuilder: (context) => [
+                          CheckedPopupMenuItem(
+                            value: _MultiviewLayout.dual,
+                            checked: _layout == _MultiviewLayout.dual,
+                            child: Text(tr('2 channels')),
+                          ),
+                          CheckedPopupMenuItem(
+                            value: _MultiviewLayout.quad,
+                            checked: _layout == _MultiviewLayout.quad,
+                            child: Text(tr('4 channels')),
+                          ),
+                          CheckedPopupMenuItem(
+                            value: _MultiviewLayout.main,
+                            checked: _layout == _MultiviewLayout.main,
+                            child: Text(tr('1 + 3 screens')),
+                          ),
+                        ],
+                      ),
+                      if (_layout == _MultiviewLayout.main)
+                        TextButton.icon(
+                          icon: Icon(Icons.swap_vert,
+                              color: _swapMode ? Colors.amber : Colors.white),
+                          label: Text(tr('Swap mode'),
+                              style: TextStyle(
+                                  color:
+                                      _swapMode ? Colors.amber : Colors.white)),
+                          onPressed: _swapMode
+                              ? _exitSwapMode
+                              : _canSwap
+                                  ? _enterSwapMode
+                                  : null,
                         ),
-                        CheckedPopupMenuItem(
-                          value: _MultiviewLayout.quad,
-                          checked: _layout == _MultiviewLayout.quad,
-                          child: Text(tr('4 channels')),
-                        ),
+                      const Spacer(),
+                      if (_swapMode)
+                        const _DesktopSwapPill()
+                      else ...[
+                        const Icon(Icons.volume_up,
+                            color: Colors.amber, size: 16),
+                        const SizedBox(width: 4),
+                        Text(tr('= audio — click a channel to switch'),
+                            style: const TextStyle(
+                                color: Colors.white54, fontSize: 12)),
                       ],
-                    ),
-                    const Spacer(),
-                    const Icon(Icons.volume_up, color: Colors.amber, size: 16),
-                    const SizedBox(width: 4),
-                    Text(tr('= audio — click a channel to switch'),
-                        style: const TextStyle(
-                            color: Colors.white54, fontSize: 12)),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(6),
-                  // Stacked (Column), not side-by-side — requested
-                  // directly: splitting a landscape screen into left/
-                  // right halves squeezes each cell into a tall, narrow
-                  // near-square, badly distorting a widescreen video's
-                  // actual shape. Splitting top/bottom instead lets each
-                  // cell span the full screen width, keeping something
-                  // much closer to its real aspect ratio even though it's
-                  // shorter.
-                  // The cell *frame* (border/header/buttons) fills the
-                  // whole row, same as a quad cell fills its quarter —
-                  // constraining the whole frame to 16:9 (an earlier
-                  // version of this fix) made dual cells look noticeably
-                  // smaller than quad's. Only the video itself is aspect-
-                  // constrained now (inside `_buildCell`), letterboxing
-                  // within the full-size frame instead of shrinking the
-                  // frame around it.
-                  // Flex 13:7 instead of a flat 50/50 split when only one
-                  // of the two cells actually has a channel in it — a
-                  // plain even split made a single active stream look
-                  // small (letterboxed within an exactly-half-height row),
-                  // reported directly as needing to be "bigger by 30%".
-                  // 13:7 gives the occupied row exactly 65% of the
-                  // available height, i.e. 1.3x the even-split baseline —
-                  // once both cells are filled they're back to equal flex
-                  // (13:13) and split evenly like a normal multiview grid.
-                  child: _layout == _MultiviewLayout.dual
-                      ? Column(
-                          children: [
-                            Expanded(
-                                flex: _cells[0].channel != null ? 13 : 7,
-                                child: Padding(
-                                    padding: const EdgeInsets.all(3),
-                                    child: _buildCell(0))),
-                            Expanded(
-                                flex: _cells[1].channel != null ? 13 : 7,
-                                child: Padding(
-                                    padding: const EdgeInsets.all(3),
-                                    child: _buildCell(1))),
-                          ],
-                        )
-                      : Column(
-                          children: [
-                            Expanded(
-                              child: Row(
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(6),
+                    // Stacked (Column), not side-by-side — requested
+                    // directly: splitting a landscape screen into left/
+                    // right halves squeezes each cell into a tall, narrow
+                    // near-square, badly distorting a widescreen video's
+                    // actual shape. Splitting top/bottom instead lets each
+                    // cell span the full screen width, keeping something
+                    // much closer to its real aspect ratio even though it's
+                    // shorter.
+                    // The cell *frame* (border/header/buttons) fills the
+                    // whole row, same as a quad cell fills its quarter —
+                    // constraining the whole frame to 16:9 (an earlier
+                    // version of this fix) made dual cells look noticeably
+                    // smaller than quad's. Only the video itself is aspect-
+                    // constrained now (inside `_buildCell`), letterboxing
+                    // within the full-size frame instead of shrinking the
+                    // frame around it.
+                    // Flex 13:7 instead of a flat 50/50 split when only one
+                    // of the two cells actually has a channel in it — a
+                    // plain even split made a single active stream look
+                    // small (letterboxed within an exactly-half-height row),
+                    // reported directly as needing to be "bigger by 30%".
+                    // 13:7 gives the occupied row exactly 65% of the
+                    // available height, i.e. 1.3x the even-split baseline —
+                    // once both cells are filled they're back to equal flex
+                    // (13:13) and split evenly like a normal multiview grid.
+                    child: _layout == _MultiviewLayout.main
+                        ? Row(
+                            children: [
+                              Expanded(
+                                  flex: 3,
+                                  child: Padding(
+                                      padding: const EdgeInsets.all(3),
+                                      child: _DesktopSwapFlash(
+                                          swaps: _swapCount,
+                                          child: _buildCell(0)))),
+                              Expanded(
+                                child: Column(
+                                  children: [
+                                    for (var i = 1; i < _cellCount; i++)
+                                      Expanded(
+                                          child: Padding(
+                                              padding: const EdgeInsets.all(3),
+                                              child: _buildCell(i))),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          )
+                        : _layout == _MultiviewLayout.dual
+                            ? Column(
                                 children: [
                                   Expanded(
+                                      flex: _cells[0].channel != null ? 13 : 7,
                                       child: Padding(
                                           padding: const EdgeInsets.all(3),
                                           child: _buildCell(0))),
                                   Expanded(
+                                      flex: _cells[1].channel != null ? 13 : 7,
                                       child: Padding(
                                           padding: const EdgeInsets.all(3),
                                           child: _buildCell(1))),
                                 ],
-                              ),
-                            ),
-                            Expanded(
-                              child: Row(
+                              )
+                            : Column(
                                 children: [
                                   Expanded(
-                                      child: Padding(
-                                          padding: const EdgeInsets.all(3),
-                                          child: _buildCell(2))),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                            child: Padding(
+                                                padding:
+                                                    const EdgeInsets.all(3),
+                                                child: _buildCell(0))),
+                                        Expanded(
+                                            child: Padding(
+                                                padding:
+                                                    const EdgeInsets.all(3),
+                                                child: _buildCell(1))),
+                                      ],
+                                    ),
+                                  ),
                                   Expanded(
-                                      child: Padding(
-                                          padding: const EdgeInsets.all(3),
-                                          child: _buildCell(3))),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                            child: Padding(
+                                                padding:
+                                                    const EdgeInsets.all(3),
+                                                child: _buildCell(2))),
+                                        Expanded(
+                                            child: Padding(
+                                                padding:
+                                                    const EdgeInsets.all(3),
+                                                child: _buildCell(3))),
+                                      ],
+                                    ),
+                                  ),
                                 ],
                               ),
-                            ),
-                          ],
-                        ),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -299,8 +471,16 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
     final cell = _cells[index];
     final active = index == _activeCell && cell.channel != null;
     return InkWell(
-      onTap: () =>
-          cell.channel == null ? _openPicker(index) : _setActive(index),
+      onTap: () {
+        if (cell.channel == null) {
+          _openPicker(index);
+        } else if (_swapMode) {
+          // A small screen moves up; the big one ends Swap mode.
+          index == 0 ? _exitSwapMode() : _moveToMain(index);
+        } else {
+          _setActive(index);
+        }
+      },
       child: Container(
         decoration: BoxDecoration(
           border: Border.all(
@@ -324,6 +504,8 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
                   child: AspectRatio(
                     aspectRatio: 16 / 9,
                     child: Video(
+                        // A swap moves the controller to another screen.
+                        key: ObjectKey(cell.controller),
                         controller: cell.controller!,
                         controls: NoVideoControls),
                   ),
@@ -601,6 +783,113 @@ class _ChannelPickerDialogState extends State<_ChannelPickerDialog> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Swap mode in the header: blinks like Android's SWAP pill.
+class _DesktopSwapPill extends StatefulWidget {
+  const _DesktopSwapPill();
+
+  @override
+  State<_DesktopSwapPill> createState() => _DesktopSwapPillState();
+}
+
+class _DesktopSwapPillState extends State<_DesktopSwapPill>
+    with SingleTickerProviderStateMixin {
+  late final _blink = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 1300))
+    ..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _blink.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: Tween(begin: 0.35, end: 1.0).animate(_blink),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.75),
+          border: Border.all(color: Colors.amber, width: 2),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.swap_vert, color: Colors.amber, size: 18),
+            const SizedBox(width: 6),
+            Text(tr('SWAP'),
+                style: const TextStyle(
+                    color: Colors.amber,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 2)),
+            const SizedBox(width: 10),
+            Text(tr('Arrows or a click swap · Esc to finish'),
+                style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A gold flash over the big screen on every swap ([swaps] changes).
+class _DesktopSwapFlash extends StatefulWidget {
+  const _DesktopSwapFlash({required this.swaps, required this.child});
+
+  final int swaps;
+  final Widget child;
+
+  @override
+  State<_DesktopSwapFlash> createState() => _DesktopSwapFlashState();
+}
+
+class _DesktopSwapFlashState extends State<_DesktopSwapFlash>
+    with SingleTickerProviderStateMixin {
+  late final _flash = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 450), value: 1);
+
+  @override
+  void didUpdateWidget(_DesktopSwapFlash old) {
+    super.didUpdateWidget(old);
+    if (old.swaps != widget.swaps) _flash.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _flash.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        widget.child,
+        IgnorePointer(
+          child: AnimatedBuilder(
+            animation: _flash,
+            builder: (context, _) => DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: Colors.amber
+                        .withValues(alpha: (1 - _flash.value) * 0.9),
+                    width: 4),
+                color:
+                    Colors.amber.withValues(alpha: (1 - _flash.value) * 0.18),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

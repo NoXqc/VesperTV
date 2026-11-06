@@ -2644,13 +2644,19 @@ class _TvHomeScreenState extends State<TvHomeScreen>
 
   /// OK on a past programme (or Watch from the start): plays [channel]'s
   /// catch-up from [at] in the preview; OK again on the same one = full
-  /// screen. Windows has no catch-up player yet: plays the channel live.
+  /// screen. Windows opens it full screen at once (DesktopCatchup).
   Future<void> _previewOrOpenCatchup(Channel channel, DateTime at) async {
+    if (!channel.hasCatchup) return _previewOrOpenChannel(channel);
     // The target platform (not dart:io), so Android tests on a Windows PC
-    // take this path too.
-    if (defaultTargetPlatform == TargetPlatform.windows ||
-        !channel.hasCatchup) {
-      return _previewOrOpenChannel(channel);
+    // take the Android path.
+    if (defaultTargetPlatform == TargetPlatform.windows) {
+      // One stream at a time: the preview's connection goes first.
+      DesktopMiniPlayer.instance.clear();
+      _catchupPreview = null;
+      await Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) =>
+              DesktopPlayerScreen(channel: channel, catchupAt: at)));
+      return;
     }
     final playback = context.read<PlaybackService>();
     playback.zapList = _currentLiveChannels(context.read<PlaylistManager>());
@@ -2856,7 +2862,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     if (playlist.profiles.any((p) => p.enabled && p.isXtream)) {
       // Shared with Settings > Clear Cache — see its doc comment for why
       // this needed to become a reusable helper rather than living here.
-      final didSync = await confirmAndRunFullCatalogSync(context, playlist);
+      final didSync = await confirmAndRunFullCatalogSync(context, playlist,
+          beforeRun: _parkLiveChannel);
       if (didSync && mounted) _showUpdateToast();
     }
 
@@ -2886,8 +2893,28 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       ),
     );
     if (confirmed != true || !context.mounted) return;
-    for (final profile in m3uProfiles) {
-      await playlist.loadPlaylist(profile.id);
+    // Nothing to watch behind the progress screen: the channel's decoder,
+    // network and CPU go to the update (a 1.28M-entry list is processed
+    // on the box itself). The resume pill brings it back afterwards.
+    await _parkLiveChannel();
+    if (!context.mounted) return;
+    // The same progress screen as an Xtream update (it only showed a small
+    // "Updating..." before, for a download and store that can take minutes).
+    final navigator = Navigator.of(context);
+    unawaited(navigator.push(MaterialPageRoute(
+      builder: (_) => PopScope(
+        canPop: false,
+        child: Scaffold(
+            backgroundColor: Colors.black,
+            body: CatalogSyncBody(playlist: playlist)),
+      ),
+    )));
+    try {
+      for (final profile in m3uProfiles) {
+        await playlist.loadPlaylist(profile.id);
+      }
+    } finally {
+      if (mounted) navigator.pop();
     }
   }
 
@@ -5910,7 +5937,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     final rowKeys = <({String playlistId, String title})?>[
       if (continueRow != null) null,
     ];
-    final favorites = playlist.isXtream
+    final favorites = playlist.hasCatalogDb
         ? _buildFavoritesBrowseRows<XtreamSeries>(
             items: _showFavorites ? playlist.favoriteSeries : const [],
             firstRowIndex: rows.length,

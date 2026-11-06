@@ -2484,6 +2484,24 @@ const Map<String, String> kDe = {
       "Das entfernt sie für jedes Profil auf diesem Gerät. Um sie nur für dieses Profil auszublenden, schalte stattdessen Aktiviert aus.",
   "Enabled and Show under Other are your own for each profile; sources are shared on this device.":
       "Aktiviert und Unter Sonstiges zeigen gelten je Profil; Quellen werden auf diesem Gerät geteilt.",
+  "Downloading playlist... {mb} MB":
+      "Playlist wird heruntergeladen… {mb} MB",
+  "The server stopped sending the playlist after {mb} MB. Try again later.":
+      "Der Server hat nach {mb} MB aufgehört, die Playlist zu senden. Versuche es später erneut.",
+  "The server did not answer within {s} seconds.":
+      "Der Server hat nicht innerhalb von {s} Sekunden geantwortet.",
+  "The server closed the connection without answering.":
+      "Der Server hat die Verbindung ohne Antwort geschlossen.",
+  "This is a VesperTV backup.":
+      "Das ist eine VesperTV-Sicherung.",
+  "Only add its Media Hub sources":
+      "Nur ihre Media-Hub-Quellen hinzufügen",
+  "Add M3U playlists, Media Hub sources or a backup from USB or external storage":
+      "M3U-Playlists, Media-Hub-Quellen oder eine Sicherung von USB oder externem Speicher hinzufügen",
+  "This device has no file picker. Copy the backup onto a USB drive and open it in Import from storage.":
+      "Dieses Gerät hat keine Dateiauswahl. Kopiere die Sicherung auf einen USB-Stick und öffne sie unter Aus dem Speicher importieren.",
+  "Preparing {name} for faster starts. This happens once... {p}%":
+      "{name} wird für schnellere Starts vorbereitet. Nur dieses eine Mal... {p} %",
   "Goal disallowed after review": "Tor nach Überprüfung aberkannt",
   "Score overturned after review": "Punkte nach Überprüfung aberkannt",
   // Vesper AI
@@ -2687,4 +2705,46 @@ const Map<String, String> kDe = {
       "Eine KI-App möchte {count} Gruppen ausblenden ({words}).",
   "An AI app wants to show {count} groups ({words}).":
       "Eine KI-App möchte {count} Gruppen einblenden ({words}).",
+  "Main guide": "Hauptprogrammführer",
+  "Extra guide {number}": "Zusätzlicher Programmführer {number}",
+  "Use EPG logo": "EPG-Logo verwenden",
+  "Use provider logo": "Anbieterlogo verwenden",
+  "All guide sources": "Alle Programmführerquellen",
+  "No EPG logo": "Kein EPG-Logo",
+  "Logo selected. Save changes to apply it.":
+      "Logo ausgewählt. Änderungen speichern, um es anzuwenden.",
+  "Provider logo selected. Save changes to apply it.":
+      "Anbieterlogo ausgewählt. Änderungen speichern, um es anzuwenden.",
+  "The viewer changed. Reopen the playlist editor.":
+      "Das Profil hat sich geändert. Öffne den Playlist-Editor erneut.",
+  "Logo URLs must be HTTP(S) links of at most 1000 characters.":
+      "Logo-URLs müssen HTTP(S)-Links mit höchstens 1000 Zeichen sein.",
+  "Guide sources": "Programmführerquellen",
+  "Guide and logo": "Programmführer und Logo",
+  "Using the channel's default guide match.":
+      "Die Standardzuordnung des Senders zum Programmführer wird verwendet.",
+  "The TV is loading the guide. Search again when it finishes.":
+      "Der Fernseher lädt den Programmführer. Suche nach Abschluss erneut.",
+  "No matching guide channels. Try fewer words or Update EPG Now.":
+      "Keine passenden Sender. Versuche weniger Wörter oder EPG jetzt aktualisieren.",
+  "Decoder":
+      "Decoder",
+  "Software":
+      "Software",
+  "Hardware ({api})":
+      "Hardware ({api})",
+  "Stream details from a button in the player bar":
+      "Stream-Details über eine Taste in der Player-Leiste",
+  "Adds a Data pool button to the player bar (or press I) that opens a card with the stream's details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer, HDR and decoder.":
+      "Fügt der Player-Leiste eine Data-pool-Taste hinzu (oder drücke I), die eine Karte mit den Details des Streams öffnet: Auflösung, Bildrate, Codecs, Bitrate, Qualitätsstufen, Audiospuren, Puffer, HDR und Decoder.",
+  "Arrows or a click swap · Esc to finish":
+      "Pfeile oder ein Klick tauschen · Esc zum Beenden",
+  "Recent":
+      "Zuletzt",
+  "Start over":
+      "Von vorn",
+  "Fit":
+      "Einpassen",
+  "Fill":
+      "Füllen",
 };

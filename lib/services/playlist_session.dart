@@ -15,6 +15,7 @@ import '../models/xtream_series.dart';
 import '../utils/catalog_sort.dart';
 import '../utils/constants.dart';
 import 'catalog_database.dart';
+import 'm3u_import.dart';
 import 'm3u_parser.dart';
 import 'storage_service.dart';
 import 'xtream_api_service.dart';
@@ -135,9 +136,27 @@ class PlaylistSession {
       isOwnHidden(rawId) || mergeHidden.contains(rawId);
 
   /// Every live channel of this playlist, hidden ones included.
-  Iterable<Channel> get allLiveChannels => isXtream
-      ? liveChannels
-      : channels.where((c) => _classifyGroup(c.group) == 'tv');
+  Iterable<Channel> get allLiveChannels =>
+      isXtream ? liveChannels : m3uEntriesOf('tv');
+
+  /// An M3U playlist's entries of one tab ('tv', 'vod' or 'series', by
+  /// group: [M3uParser.entryCategory]), in playlist order.
+  List<Channel> m3uEntriesOf(String category) =>
+      _m3uList.byTab[category] ?? const [];
+
+  /// [m3uEntriesOf], [allGroups]' buckets and each group's tab, built once
+  /// per loaded M3U list instead of on every call: each call scanned every
+  /// entry (320k for LOG-QKPTCP's playlist; several calls per TV home build
+  /// made every rebuild ~1.4 s on an onn 4K Pro). [channels] is only ever
+  /// replaced, never edited in place, so its identity keys it. A load hands
+  /// over the split it built on the background isolate.
+  M3uList get _m3uList {
+    final split = _split;
+    if (split != null && identical(split.channels, channels)) return split;
+    return _split = M3uList(channels);
+  }
+
+  M3uList? _split;
 
   /// Live rawId -> first time this device saw it (ms); 0 = it was already
   /// there when tracking started. See [AppConstants.cacheFileLiveFirstSeen].
@@ -308,6 +327,20 @@ class PlaylistSession {
 
   bool get isXtream => profile.isXtream;
 
+  /// An M3U playlist whose movies and episodes are in [catalogDb] (an
+  /// [M3uImport]), browsed like an Xtream catalog: [channels] then holds
+  /// its live channels only.
+  bool m3uCatalogInDb = false;
+
+  /// Shown under the splash while a launch stores an older build's saved
+  /// M3U text in the catalog database, once (13 min for a 1.28M-entry list
+  /// on a Formuler before multi-row inserts; a silent splash looked hung).
+  static final ValueNotifier<String?> startupNote = ValueNotifier(null);
+
+  /// Movies and shows come from [catalogDb] ([vodCategories] /
+  /// [vodByCategoryName], [seriesCategories] / [seriesByCategoryName]).
+  bool get catalogInDb => isXtream || m3uCatalogInDb;
+
   /// How many categories to fetch concurrently — capped at the account's
   /// own `max_connections` (from [XtreamApiService.authenticate]) when
   /// known, since firing more concurrent requests than an account allows
@@ -384,8 +417,9 @@ class PlaylistSession {
   /// [_loadViewerScopedState]. Xtream mode's three category lists cover
   /// live/VOD/series; M3U mode has only [channels] to derive group titles
   /// from (no separate category list exists in that mode).
-  Set<String> _allKnownGroupTitles() => isXtream
+  Set<String> _allKnownGroupTitles() => catalogInDb
       ? {
+          if (!isXtream) ...channels.map((c) => c.group),
           ...liveCategories.map((c) => c.name),
           ...vodCategories.map((c) => c.name),
           ...seriesCategories.map((c) => c.name),
@@ -529,12 +563,121 @@ class PlaylistSession {
     }
   }
 
+  /// Where an [M3uImport] keeps this playlist's live channels and group
+  /// lists; null when storage has no cache folder (tests).
+  Future<String?> _m3uCatalogPath() async {
+    try {
+      return await storage.rawCachePath(
+          _cacheName(AppConstants.cacheFileM3uCatalog), 'json');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _useM3uImport(M3uImported imported) {
+    _useM3uList(imported.live);
+    vodCategories = [
+      for (final g in imported.vodGroups) XtreamCategory(id: g, name: g)
+    ];
+    seriesCategories = [
+      for (final g in imported.seriesGroups) XtreamCategory(id: g, name: g)
+    ];
+    vodByCategoryName.clear();
+    seriesByCategoryName.clear();
+    vodCategoryTotalCount.clear();
+    seriesCategoryTotalCount.clear();
+    categoryFailureCounts.clear();
+    m3uCatalogInDb = true;
+  }
+
+  Future<M3uImported> _importM3u(String url, String catalogPath,
+          {void Function(int bytes)? onProgress}) =>
+      M3uImport.run(url,
+          playlistId: profile.id,
+          catalog: catalogDb,
+          catalogPath: catalogPath,
+          favorites: favoriteIds(),
+          favoriteSeries: favoriteSeriesIds(),
+          epgOverrides: epgIdOverrides,
+          onProgress: onProgress);
+
+  /// The copies of the whole list older builds kept (all text / all JSON).
+  Future<void> _deleteOldM3uCopies() async {
+    final source = await _m3uSourcePath();
+    if (source != null && await File(source).exists()) {
+      await File(source).delete();
+    }
+    await storage
+        .deleteCacheFile(_cacheName(AppConstants.cacheFileM3uChannels));
+  }
+
+  /// This playlist's saved M3U files (it is being removed).
+  Future<void> deleteM3uFiles() async {
+    try {
+      await _deleteOldM3uCopies();
+      final catalog = await _m3uCatalogPath();
+      if (catalog != null && await File(catalog).exists()) {
+        await File(catalog).delete();
+      }
+    } catch (_) {}
+  }
+
   Future<bool> _restoreM3uCache() async {
+    // The live channels an import saved (movies and episodes are in the
+    // catalog database): a few seconds, where re-reading a 1.28M-entry
+    // list took ~2.5 min on a Formuler (LOG-9VRVMG).
+    final catalog = await _m3uCatalogPath();
+    if (catalog != null && await File(catalog).exists()) {
+      try {
+        final watch = Stopwatch()..start();
+        final imported = await M3uImport.readCatalog(catalog,
+            favorites: favoriteIds(), epgOverrides: epgIdOverrides);
+        _useM3uImport(imported);
+        applyEdits();
+        debugPrint('M3uRestore: ${imported.live.channels.length} live, '
+            '${imported.vodGroups.length} movie and '
+            '${imported.seriesGroups.length} show groups in '
+            '${watch.elapsedMilliseconds} ms');
+        return true;
+      } catch (e) {
+        debugPrint('PlaylistSession[${profile.id}]: failed to read the '
+            'saved M3U catalog: $e');
+      }
+    }
+    // An older build saved the whole list as text: stored the new way
+    // once, from that copy.
+    final source = await _m3uSourcePath();
+    if (catalog != null && source != null && await File(source).exists()) {
+      try {
+        final watch = Stopwatch()..start();
+        final total = await File(source).length();
+        void note(int bytes) => startupNote.value = tr(
+                'Preparing {name} for faster starts. This happens once... {p}%',
+                {
+                  'name': profile.name,
+                  'p': total == 0 ? 0 : (bytes * 100 ~/ total).clamp(0, 100),
+                });
+        note(0);
+        try {
+          _useM3uImport(await _importM3u(Uri.file(source).toString(), catalog,
+              onProgress: note));
+        } finally {
+          startupNote.value = null;
+        }
+        applyEdits();
+        await _deleteOldM3uCopies();
+        debugPrint('M3uRestore: stored the saved list in the catalog in '
+            '${watch.elapsedMilliseconds} ms');
+        return true;
+      } catch (e) {
+        debugPrint('PlaylistSession[${profile.id}]: failed to store the '
+            'saved M3U text: $e');
+      }
+    }
     // Read and parse on a background isolate — this used to do the lot on
     // the main thread, for a list that can run to tens of thousands of
     // channels. The saved M3U text first; the JSON cache of builds before
     // it is still read once, until the next load replaces it.
-    final source = await _m3uSourcePath();
     final hasSource = source != null && await File(source).exists();
     final path = hasSource
         ? null
@@ -542,16 +685,24 @@ class PlaylistSession {
             .cacheFilePath(_cacheName(AppConstants.cacheFileM3uChannels));
     if (!hasSource && path == null) return false;
     try {
-      final loaded = Channel.withUniqueIds(hasSource
-          ? await M3uParser.fetchAndParseInBackground(
-              Uri.file(source).toString(),
-              playlistId: profile.id)
-          : await compute(_readM3uChannelsFile, path!));
-      for (final channel in loaded) {
-        channel.isFavorite = favoriteIds().contains(channel.id);
-        channel.epgIdOverride = epgIdOverrides[channel.rawId];
+      if (hasSource) {
+        final watch = Stopwatch()..start();
+        _useM3uList(await M3uParser.fetchAndParseInBackground(
+            Uri.file(source).toString(),
+            playlistId: profile.id,
+            favorites: favoriteIds(),
+            epgOverrides: epgIdOverrides));
+        debugPrint('M3uRestore: ${channels.length} entries from the saved '
+            'copy in ${watch.elapsedMilliseconds} ms');
+      } else {
+        final loaded =
+            Channel.withUniqueIds(await compute(_readM3uChannelsFile, path!));
+        for (final channel in loaded) {
+          channel.isFavorite = favoriteIds().contains(channel.id);
+          channel.epgIdOverride = epgIdOverrides[channel.rawId];
+        }
+        channels = loaded;
       }
-      channels = loaded;
       applyEdits();
       return true;
     } catch (e) {
@@ -569,33 +720,57 @@ class PlaylistSession {
     onNotify();
 
     final watch = Stopwatch()..start();
+    // The download's size so far, shown instead of "Connecting to
+    // server..." for the whole download (a big list takes minutes and
+    // looked stuck).
+    var received = 0;
+    var shownMb = -1;
+    var downloading = true;
+    void showProgress(int bytes) {
+      received = bytes;
+      final mb = bytes >> 20;
+      if (!downloading || mb == shownMb) return;
+      shownMb = mb;
+      loadingPhase = tr('Downloading playlist... {mb} MB', {'mb': mb});
+      onNotify();
+    }
+
     try {
-      // Parsed on a background isolate, which also saves the raw text as
-      // the cache while it downloads (no JSON copy of the whole list).
-      final source = await _m3uSourcePath();
-      final parsed = Channel.withUniqueIds(
-          await M3uParser.fetchAndParseInBackground(url,
-              playlistId: profile.id, saveTo: source));
-      for (final channel in parsed) {
-        channel.isFavorite = favoriteIds().contains(channel.id);
-        channel.epgIdOverride = epgIdOverrides[channel.rawId];
+      // Stored on a background isolate while it downloads: live channels
+      // in memory, movies and episodes in the catalog database (M3uImport).
+      // Without a cache folder (tests), the whole list stays in memory.
+      final catalog = await _m3uCatalogPath();
+      final M3uImported? imported;
+      final M3uList? parsed;
+      try {
+        imported = catalog == null
+            ? null
+            : await _importM3u(url, catalog, onProgress: showProgress);
+        parsed = imported != null
+            ? null
+            : await M3uParser.fetchAndParseInBackground(url,
+                playlistId: profile.id,
+                favorites: favoriteIds(),
+                epgOverrides: epgIdOverrides,
+                onProgress: showProgress);
+      } finally {
+        downloading = false;
       }
 
-      final counts = <String, int>{'tv': 0, 'vod': 0, 'series': 0};
-      for (final channel in parsed) {
-        final category = _classifyGroup(channel.group);
-        counts[category] = (counts[category] ?? 0) + 1;
-      }
-      final bytes = source == null ? 0 : await File(source).length();
-      debugPrint('M3uLoad: ${parsed.length} entries (live ${counts['tv']} '
-          'movies ${counts['vod']} shows ${counts['series']}), '
-          '${(bytes / 1048576).toStringAsFixed(1)} MB, '
-          '${watch.elapsedMilliseconds} ms');
-      if (source != null) {
-        // The source text replaces the old JSON cache.
-        await storage
-            .deleteCacheFile(_cacheName(AppConstants.cacheFileM3uChannels));
-      }
+      final counts = imported != null
+          ? {
+              'tv': imported.counts['tv'] ?? 0,
+              'vod': imported.counts['vod'] ?? 0,
+              'series': imported.counts['shows'] ?? 0,
+            }
+          : {for (final e in parsed!.byTab.entries) e.key: e.value.length};
+      debugPrint('M3uLoad: live ${counts['tv']}, movies ${counts['vod']}, '
+          'shows ${counts['series']}'
+          '${imported == null ? '' : ' (${imported.counts['series']} episodes)'}'
+          ', ${(received / 1048576).toStringAsFixed(1)} MB, '
+          '${watch.elapsedMilliseconds} ms'
+          '${imported == null ? '' : ' (${imported.timings})'}');
+      if (imported != null) await _deleteOldM3uCopies();
 
       // Brief staged reveal so the counts are readable, rather than flashing
       // by instantly — the parsing above is already done at this point.
@@ -613,18 +788,16 @@ class PlaylistSession {
       onNotify();
       await Future.delayed(const Duration(milliseconds: 400));
 
-      channels = parsed;
+      if (imported != null) {
+        _useM3uImport(imported);
+      } else {
+        _useM3uList(parsed!);
+        m3uCatalogInDb = false;
+      }
       applyEdits();
       lastLoadSummary = counts;
       lastLoaded = DateTime.now();
       profile = profile.copyWith(m3uUrl: url);
-      if (source == null) {
-        await storage.writeCacheFile(
-          _cacheName(AppConstants.cacheFileM3uChannels),
-          await compute(
-              _encodeJsonList, parsed.map((c) => c.toJson()).toList()),
-        );
-      }
 
       loadingPhase = tr('Playlist added');
       onNotify();
@@ -632,7 +805,8 @@ class PlaylistSession {
     } catch (e) {
       error = e.toString();
       debugPrint('PlaylistSession[${profile.id}] error: $e');
-      debugPrint('M3uLoad: failed after ${watch.elapsedMilliseconds} ms '
+      debugPrint('M3uLoad: failed after ${watch.elapsedMilliseconds} ms, '
+          '${(received / 1048576).toStringAsFixed(1)} MB received '
           '(${e.runtimeType})');
     } finally {
       isLoading = false;
@@ -645,13 +819,13 @@ class PlaylistSession {
 
   /// All groups, in first-seen order, including hidden ones (used by the
   /// Group Management screen). M3U mode only.
+  /// [channels] by `group-title`, in playlist order.
+  // Map keys keep first-seen order (a List.contains per channel was
+  // entries x groups work on every call for a big M3U).
+  Map<String, List<Channel>> get _groupBuckets => _m3uList.byGroup;
+
   List<M3uGroup> get allGroups {
-    // Map keys keep first-seen order (a List.contains per channel was
-    // entries x groups work on every call for a big M3U).
-    final byTitle = <String, List<Channel>>{};
-    for (final channel in channels) {
-      byTitle.putIfAbsent(channel.group, () => []).add(channel);
-    }
+    final byTitle = _groupBuckets;
     return byTitle.keys
         .map((title) => M3uGroup(
               title: title,
@@ -662,12 +836,25 @@ class PlaylistSession {
         .toList();
   }
 
-  /// Classifies an M3U group into one of the three content tabs based on
-  /// its `group-title`. Series is checked before VOD/movie so "TV Series"
-  /// style group names land in the Series tab rather than Movies. Xtream
-  /// mode doesn't need this — it gets live/VOD/series as separate API
+  /// An M3U playlist's groups on one content tab ('tv', 'vod', 'series'),
+  /// each with that tab's entries only ([M3uList.groupsOf]). Xtream mode
+  /// doesn't need this — it gets live/VOD/series as separate API
   /// categories directly.
-  String _classifyGroup(String title) => M3uParser.groupCategory(title);
+  List<M3uGroup> _m3uGroupsOf(String tab) => [
+        for (final e in (_m3uList.groupsOf[tab] ?? const {}).entries)
+          M3uGroup(
+            title: e.key,
+            playlistId: profile.id,
+            channels: e.value,
+            isHidden: hiddenGroups.contains(e.key),
+          )
+      ];
+
+  /// A freshly loaded list and the split the background isolate built.
+  void _useM3uList(M3uList list) {
+    channels = list.channels;
+    _split = list;
+  }
 
   // --- Xtream mode ----------------------------------------------------------
 
@@ -1090,10 +1277,14 @@ class PlaylistSession {
     // Only the first load in flight changes what's on screen (the
     // spinner); each extra notify rebuilt the whole TV home, and a big
     // playlist opens hundreds of rows (300k-channel user, 2026-11-03).
+    // A gentle (after-launch) load runs one category at a time, so every
+    // category was "first": 57 extra TV home rebuilds in 31 s, ~220 ms each
+    // on a Formuler, froze the remote after leaving Home (LOG-24KKHW). Its
+    // rows arrive through the throttled [_notifyCategoryLoaded].
     final first = loadingCategoryNames.isEmpty;
     loadingCategoryNames.add(key);
     isLoading = true;
-    if (first) onNotify();
+    if (first && _gentleLoads == 0) onNotify();
 
     try {
       if (tabCategory == 'vod') {
@@ -1498,6 +1689,21 @@ class PlaylistSession {
   /// Fetches episodes for one series, grouped by season number.
   Future<SeriesEpisodesResult> loadSeriesEpisodes(XtreamSeries series,
       {bool plotOnly = false}) async {
+    if (!isXtream && m3uCatalogInDb) {
+      // An M3U show: its episode lines, grouped by M3uImport.
+      final episodes = plotOnly
+          ? <int, List<Channel>>{}
+          : await catalogDb.getM3uEpisodes(profile.id, series.seriesId);
+      for (final list in episodes.values) {
+        for (final channel in list) {
+          channel.isFavorite = favoriteIds().contains(channel.id);
+          channel.seriesId = series.seriesId;
+          channel.seriesName = series.name;
+          channel.seriesCoverUrl = series.coverUrl;
+        }
+      }
+      return (episodes: episodes, plot: null, details: null);
+    }
     final api = xtreamApi;
     if (api == null) {
       return (episodes: <int, List<Channel>>{}, plot: null, details: null);
@@ -1661,13 +1867,13 @@ class PlaylistSession {
               ))
           .toList();
     }
-    return allGroups.where((g) => _classifyGroup(g.title) == 'tv').toList();
+    return _m3uGroupsOf('tv');
   }
 
   List<M3uGroup> get vodGroups => _ordered('vod', _providerVodGroups);
 
   List<M3uGroup> get _providerVodGroups {
-    if (isXtream) {
+    if (catalogInDb) {
       return vodCategories
           .map((c) => M3uGroup(
                 title: c.name,
@@ -1677,13 +1883,13 @@ class PlaylistSession {
               ))
           .toList();
     }
-    return allGroups.where((g) => _classifyGroup(g.title) == 'vod').toList();
+    return _m3uGroupsOf('vod');
   }
 
   List<M3uGroup> get seriesGroups => _ordered('series', _providerSeriesGroups);
 
   List<M3uGroup> get _providerSeriesGroups {
-    if (isXtream) {
+    if (catalogInDb) {
       return seriesCategories
           .map((c) => M3uGroup(
                 title: c.name,
@@ -1693,11 +1899,15 @@ class PlaylistSession {
               ))
           .toList();
     }
-    return allGroups.where((g) => _classifyGroup(g.title) == 'series').toList();
+    return _m3uGroupsOf('series');
   }
 
   List<Channel> visibleChannels(
       {String? groupTitle, required String category}) {
+    // Movies of an M3U list in the catalog database read like Xtream's;
+    // its shows are [visibleSeries], its live channels the M3U path below.
+    if (m3uCatalogInDb && category == 'vod') return _vodRows(groupTitle);
+    if (m3uCatalogInDb && category == 'series') return const [];
     if (isXtream) {
       switch (category) {
         case 'tv':
@@ -1712,19 +1922,14 @@ class PlaylistSession {
           // whole group isn't the option the user actually wants.
           return list.where((c) => !isLiveHidden(c.rawId)).toList();
         case 'vod':
-          return groupTitle != null
-              ? (vodByCategoryName[groupTitle] ?? const [])
-              : vodByCategoryName.entries
-                  .where((e) => !hiddenGroups.contains(e.key))
-                  .expand((e) => e.value)
-                  .toList();
+          return _vodRows(groupTitle);
         default:
           return const [];
       }
     }
 
     if (groupTitle != null) {
-      final inGroup = channels.where(
+      final inGroup = _m3uGroupEntries(groupTitle, category).where(
           (c) => (category == 'tv' ? liveGroupOf(c) : c.group) == groupTitle);
       final list =
           category == 'tv' ? _orderedChannels(groupTitle, inGroup) : inGroup;
@@ -1733,21 +1938,41 @@ class PlaylistSession {
               : list)
           .toList();
     }
-    return channels
+    return m3uEntriesOf(category)
         .where((c) =>
-            _classifyGroup(c.group) == category &&
             !hiddenGroups
                 .contains(category == 'tv' ? liveGroupOf(c) : c.group) &&
             (category != 'tv' || !isLiveHidden(c.rawId)))
         .toList();
   }
 
+  /// Movies loaded from [catalogDb]: one category's, or every shown one's.
+  List<Channel> _vodRows(String? groupTitle) => groupTitle != null
+      ? (vodByCategoryName[groupTitle] ?? const [])
+      : vodByCategoryName.entries
+          .where((e) => !hiddenGroups.contains(e.key))
+          .expand((e) => e.value)
+          .toList();
+
+  /// The entries that can be in [groupTitle]: its own `group-title` bucket
+  /// instead of every entry (a scan of 320k per group, each Movies row and
+  /// live group after every notify). A live group can also gain channels
+  /// from an editor rename (same title from another group) or an own-group
+  /// move, which keep every live entry. Moves only go to own groups, whose
+  /// names never equal a provider group's, so a provider group gains none.
+  Iterable<Channel> _m3uGroupEntries(String groupTitle, String category) {
+    final bucket = _m3uList.groupsOf[category]?[groupTitle];
+    if (category != 'tv') return bucket ?? const [];
+    if (bucket == null || edits.groupNames.isNotEmpty) {
+      return m3uEntriesOf('tv');
+    }
+    return bucket;
+  }
+
   /// The live channels [visibleChannels] leaves out (hidden groups and
   /// channels): Sports Trak says when a game is only on one of them.
   List<Channel> hiddenLiveChannels() {
-    final live = isXtream
-        ? liveChannels
-        : channels.where((c) => _classifyGroup(c.group) == 'tv');
+    final live = isXtream ? liveChannels : m3uEntriesOf('tv');
     return live
         .where((c) =>
             hiddenGroups.contains(liveGroupOf(c)) || isLiveHidden(c.rawId))

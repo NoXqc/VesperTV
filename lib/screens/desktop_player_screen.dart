@@ -25,7 +25,13 @@ import '../services/watch_tracker.dart';
 import '../l10n/l10n.dart';
 import '../widgets/media_file_info_overlay.dart';
 import '../widgets/player_side_panel.dart';
+import '../widgets/desktop_audio_button.dart';
+import '../services/desktop_catchup.dart';
+import '../utils/time_format.dart';
+import '../widgets/desktop_data_pool_card.dart';
+import '../widgets/desktop_quality_badges.dart';
 import '../widgets/desktop_subtitles.dart';
+import '../services/desktop_audio.dart';
 import '../widgets/player_bar_title.dart';
 import '../widgets/gold_tag.dart';
 import '../services/desktop_stream_setup.dart';
@@ -67,9 +73,13 @@ class DesktopPlayerScreen extends StatefulWidget {
     this.resolveQueued,
     this.existingPlayer,
     this.existingController,
+    this.catchupAt,
   });
 
   final Channel channel;
+
+  /// Opens [channel] (a live channel) as catch-up from this time instead
+  /// of live: OK on a past programme in the guide ([DesktopCatchup]).
   final ArchivePlaybackSources? sources;
 
   /// Every episode of the series this channel belongs to, in order — only
@@ -90,6 +100,7 @@ class DesktopPlayerScreen extends StatefulWidget {
   /// always starts a fresh session.
   final Player? existingPlayer;
   final VideoController? existingController;
+  final DateTime? catchupAt;
 
   @override
   State<DesktopPlayerScreen> createState() => _DesktopPlayerScreenState();
@@ -123,6 +134,33 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   /// channel: the left-edge tab or the Left key opens it, Esc / a click on
   /// the video closes it — Windows has no remote Left (owner, 2026-10-18).
   bool _panelOpen = false;
+
+  /// Settings > Playback > Data pool: the card is open (the bar's Data
+  /// pool button or the I key).
+  bool _dataPoolOpen = false;
+
+  /// When the current stream was opened (the card's "Playing for").
+  DateTime _openedAt = DateTime.now();
+
+  /// Catch-up of the live channel ([DesktopCatchup]); made on first use.
+  DesktopCatchup? _catchupPlayer;
+  DesktopCatchup get _catchupCtl => _catchupPlayer ??= DesktopCatchup(_player,
+      profileFor: (id) => context
+          .read<PlaylistManager>()
+          .profiles
+          .where((p) => p.id == id)
+          .firstOrNull,
+      guide: (live) => context.read<EpgService>().getPrograms(live.epgId),
+      keepPlaying: () => context.read<StorageService>().getCatchupKeepPlaying(),
+      onLive: _playLiveAgain);
+
+  /// Playing a catch-up programme of [_currentChannel] (still the live
+  /// channel, so history / favourites / rows stay on it).
+  bool get _inCatchup => _catchupPlayer?.active ?? false;
+
+  /// When the live channel was paused: Play after more than 90 s resumes
+  /// from there as catch-up (timeshift, like Android).
+  DateTime? _livePausedAt;
   final FocusNode _rootFocus = FocusNode(debugLabel: 'desktop-player-root');
 
   void _openPanel() {
@@ -251,7 +289,11 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       final storage = context.read<StorageService>();
       unawaited(_player.setVolume(
           storage.getDesktopMuted() ? 0 : storage.getDesktopVolume()));
-      unawaited(_openMedia(_currentChannel));
+      if (widget.catchupAt case final at? when _currentChannel.isLive) {
+        unawaited(_startCatchup(at));
+      } else {
+        unawaited(_openMedia(_currentChannel));
+      }
       _applySeriesSubtitles();
     }
     if (_isLive) _DesktopLiveHistory.record(_currentChannel);
@@ -296,7 +338,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
 
   void _skipSegment(SkipSegment segment) {
     final next = _nextEpisode;
-    _segments.skip(segment, playNext: next == null ? null : () => _switchTo(next));
+    _segments.skip(segment,
+        playNext: next == null ? null : () => _switchTo(next));
   }
 
   /// The real end of a movie or episode: Settings > Playback > Up Next.
@@ -341,6 +384,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
         mounted &&
         generation == _openGeneration &&
         _currentChannel.id == channel.id;
+    _openedAt = DateTime.now();
     try {
       final resume = start ?? _progress.resumePosition(channel);
       if (start == null) _cutRetries = 0;
@@ -408,6 +452,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     }
     _completedSubscription?.cancel();
     _heightSubscription?.cancel();
+    _catchupPlayer?.dispose();
     _segments.dispose();
     _rootFocus.dispose();
     if (!_handedOffToMiniPlayer) DesktopLiveRecovery.of(_player).stop();
@@ -422,6 +467,12 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   /// [dispose] tears its `Player` down the same way it always has.
   void _handleBack() {
     if (_sourceBackGuard.blocksBack) return;
+    // A catch-up stream isn't the live channel: never minimized as it.
+    if (_inCatchup) {
+      _catchupPlayer?.dispose();
+      Navigator.of(context).pop();
+      return;
+    }
     if (_isLive) {
       DesktopMiniPlayer.instance
           .minimize(_currentChannel, _player, _videoController);
@@ -453,6 +504,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     _saveProgress();
     _progressReady = false;
     _reportStopped();
+    _catchupPlayer?.dispose();
+    _livePausedAt = null;
     setState(() => _currentChannel = channel);
     await _openMedia(channel, start: start, play: play);
     if (!mounted) return;
@@ -468,9 +521,16 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   }
 
   /// An episode gets the subtitles chosen earlier in its series (same
-  /// memory as Android's, see DesktopSubtitles.applyForSeries).
+  /// memory as Android's, see DesktopSubtitles.applyForSeries), and a
+  /// movie / episode the audio track picked last time or the preferred
+  /// audio language (DesktopAudio.applyRemembered).
   void _applySeriesSubtitles() {
     if (_isLive) return;
+    final playing = _currentChannel;
+    unawaited(DesktopAudio.applyRemembered(
+            context.read<StorageService>(), playing, _player,
+            isCurrent: () => mounted && _currentChannel == playing)
+        .catchError((Object _) {}));
     final channel = _currentChannel;
     unawaited(DesktopSubtitles.applyForSeries(
             context.read<StorageService>(), channel, _player,
@@ -490,7 +550,58 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     }));
   }
 
+  /// Catch-up from [at] on the same player. Live recovery stops first:
+  /// it would take the finite archive stream for a dead live one.
+  Future<void> _startCatchup(DateTime at) async {
+    DesktopLiveRecovery.of(_player).stop();
+    _livePausedAt = null;
+    final started = await _catchupCtl.play(_currentChannel, at);
+    if (mounted) setState(() {});
+    if (started) {
+      debugPrint('DesktopPlayer: catch-up of ${_currentChannel.name}');
+    }
+  }
+
+  /// Catch-up handed back to the live channel.
+  Future<void> _playLiveAgain(Channel live) async {
+    if (!mounted) return;
+    setState(() {});
+    await _openMedia(live);
+  }
+
+  void _togglePlay(bool playing) {
+    if (playing) {
+      if (_isLive && !_inCatchup) _livePausedAt = DateTime.now();
+      _player.pause();
+      return;
+    }
+    final pausedAt = _livePausedAt;
+    _livePausedAt = null;
+    if (_inCatchup) {
+      _catchupCtl.resume();
+      return;
+    }
+    if (pausedAt != null &&
+        _currentChannel.hasCatchup &&
+        DateTime.now().difference(pausedAt) > const Duration(seconds: 90)) {
+      unawaited(_startCatchup(pausedAt));
+      return;
+    }
+    _player.play();
+  }
+
+  void _toggleDataPool() {
+    setState(() => _dataPoolOpen = !_dataPoolOpen);
+    if (_dataPoolOpen) {
+      debugPrint('DesktopDataPool: opened on ${_currentChannel.name}');
+    }
+  }
+
   void _skip(Duration amount) {
+    if (_inCatchup) {
+      unawaited(_catchupCtl.seekBy(amount));
+      return;
+    }
     final current = _player.state.position;
     var target = current + amount;
     if (target < Duration.zero) target = Duration.zero;
@@ -569,6 +680,48 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   /// the width), time on the right; a slim seek bar above it for VOD. Live
   /// shows what's left of the programme instead of a seek bar — never from
   /// the stream's own duration (a DVR window looked like a ~30 s file).
+  /// Catch-up's scrub bar: the programme at the playhead in clock times
+  /// (its start .. end), else the request's own length. Seeking past what
+  /// the stream holds asks a new request (DesktopCatchup.seekTo).
+  Widget _catchupBar() {
+    return StreamBuilder<Duration>(
+      stream: _player.stream.position,
+      builder: (context, _) {
+        final ctl = _catchupCtl;
+        final s = ctl.session, at = ctl.playhead;
+        if (s == null || at == null) return const SizedBox(height: 24);
+        final programme = ctl.programme;
+        final start = programme?.start ?? s.requestStart;
+        final end = programme?.stop ??
+            s.requestStart.add(_player.state.duration > Duration.zero
+                ? _player.state.duration
+                : const Duration(hours: 1));
+        final total = end.difference(start).inSeconds.clamp(1, 1 << 30);
+        final value = at.difference(start).inSeconds.clamp(0, total);
+        final clock = TimeFormat.hm;
+        return Row(
+          children: [
+            Text(clock.format(start.toLocal()),
+                style: const TextStyle(color: Colors.white70, fontSize: 12)),
+            Expanded(
+              child: SizedBox(
+                height: 24,
+                child: Slider(
+                  value: value.toDouble(),
+                  max: total.toDouble(),
+                  onChanged: (v) => unawaited(
+                      ctl.seekTo(start.add(Duration(seconds: v.round())))),
+                ),
+              ),
+            ),
+            Text(clock.format(end.toLocal()),
+                style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildBar(PlaylistManager playlist) {
     return StreamBuilder<bool>(
       stream: _player.stream.playing,
@@ -580,7 +733,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             // Recall goes furthest left: it means *backward*.
-            if (_isLive)
+            if (_isLive && !_inCatchup)
               IconButton(
                 icon: const Icon(Icons.history, color: Colors.white),
                 tooltip: tr('Recall — go back to a recent channel'),
@@ -599,7 +752,15 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 setState(() {});
               },
             ),
-            if (_isLive)
+            if (_inCatchup)
+              TextButton.icon(
+                icon: const Icon(Icons.fiber_manual_record,
+                    color: Colors.redAccent, size: 14),
+                label: Text(tr('LIVE'),
+                    style: const TextStyle(color: Colors.white)),
+                onPressed: () => unawaited(_catchupCtl.backToLive()),
+              ),
+            if (_isLive && !_inCatchup)
               IconButton(
                 icon: const Icon(Icons.refresh, color: Colors.white),
                 tooltip: tr('Reload channel'),
@@ -611,7 +772,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 tooltip: tr('Previous episode'),
                 onPressed: () => _switchTo(_previousEpisode!),
               ),
-            if (!_isLive)
+            if (!_isLive || _inCatchup)
               IconButton(
                 tooltip: tr('Back 10 seconds'),
                 icon: const Icon(Icons.replay_10, color: Colors.white),
@@ -622,9 +783,9 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
               iconSize: 40,
               color: Colors.white,
               icon: Icon(playing ? Icons.pause : Icons.play_arrow),
-              onPressed: () => playing ? _player.pause() : _player.play(),
+              onPressed: () => _togglePlay(playing),
             ),
-            if (!_isLive)
+            if (!_isLive || _inCatchup)
               IconButton(
                 tooltip: tr('Forward 10 seconds'),
                 icon: const Icon(Icons.forward_10, color: Colors.white),
@@ -636,6 +797,18 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 tooltip: tr('Next episode'),
                 onPressed: () => _switchTo(_nextEpisode!),
               ),
+            if (context.watch<AppPreferences>().dataPool)
+              IconButton(
+                icon: Icon(Icons.analytics_outlined,
+                    color: _dataPoolOpen ? Colors.amber : Colors.white),
+                tooltip: tr('Data pool'),
+                onPressed: _toggleDataPool,
+              ),
+            DesktopAudioButton(
+                // A new stream is a new track list.
+                key: ValueKey('audio-${_currentChannel.id}'),
+                player: _player,
+                channel: _currentChannel),
             if (!_isLive)
               DesktopSubtitleButton(
                   // A new episode is a new file: fresh track list.
@@ -648,6 +821,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (_inCatchup) _catchupBar(),
             if (!_isLive)
               StreamBuilder<Duration>(
                 stream: _player.stream.position,
@@ -696,6 +870,12 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                             fontSize: 16,
                             fontWeight: FontWeight.w600),
                       ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: DesktopQualityBadges(
+                            key: ValueKey('badges-${_currentChannel.id}'),
+                            player: _player),
+                      ),
                       if (_isLive &&
                           playlist
                               .playlistNameFor(_currentChannel.playlistId)
@@ -718,18 +898,31 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 Expanded(
                   child: Align(
                     alignment: Alignment.centerRight,
-                    child: _isLive
-                        ? _LiveRemainingLabel(channelId: _currentChannel.epgId)
-                        : StreamBuilder<Duration>(
+                    child: _inCatchup
+                        ? StreamBuilder<Duration>(
                             stream: _player.stream.position,
-                            initialData: _player.state.position,
-                            builder: (context, posSnapshot) => Text(
-                              '${_formatDuration(posSnapshot.data ?? Duration.zero)}'
-                              ' / ${_formatDuration(_player.state.duration)}',
+                            builder: (context, _) => Text(
+                              _catchupCtl.playhead == null
+                                  ? ''
+                                  : TimeFormat.hm
+                                      .format(_catchupCtl.playhead!.toLocal()),
                               style: const TextStyle(
                                   color: Colors.white70, fontSize: 13),
                             ),
-                          ),
+                          )
+                        : _isLive
+                            ? _LiveRemainingLabel(
+                                channelId: _currentChannel.epgId)
+                            : StreamBuilder<Duration>(
+                                stream: _player.stream.position,
+                                initialData: _player.state.position,
+                                builder: (context, posSnapshot) => Text(
+                                  '${_formatDuration(posSnapshot.data ?? Duration.zero)}'
+                                  ' / ${_formatDuration(_player.state.duration)}',
+                                  style: const TextStyle(
+                                      color: Colors.white70, fontSize: 13),
+                                ),
+                              ),
                   ),
                 ),
               ],
@@ -774,6 +967,13 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
               _openSources();
               return KeyEventResult.handled;
             }
+            // I = Data pool (when it's on in Settings > Playback).
+            if (event is KeyDownEvent &&
+                event.logicalKey == LogicalKeyboardKey.keyI &&
+                context.read<AppPreferences>().dataPool) {
+              _toggleDataPool();
+              return KeyEventResult.handled;
+            }
             // M = mute / unmute, like most desktop players.
             if (event is KeyDownEvent &&
                 event.logicalKey == LogicalKeyboardKey.keyM) {
@@ -785,6 +985,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 // Not while arrowing along the player bar's buttons.
                 _rootFocus.hasPrimaryFocus &&
                 _isLive &&
+                !_inCatchup &&
                 !_panelOpen) {
               _openPanel();
               return KeyEventResult.handled;
@@ -887,7 +1088,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                       child: _buildBar(playlist),
                     ),
                   ),
-                  if (_isLive && !_panelOpen)
+                  if (_isLive && !_inCatchup && !_panelOpen)
                     Positioned(
                       left: 0,
                       top: 0,
@@ -897,6 +1098,27 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                       ),
                     ),
                 ],
+                if (_dataPoolOpen && context.watch<AppPreferences>().dataPool)
+                  Positioned(
+                    left: 16,
+                    right: 16,
+                    // Above the player bar while it shows.
+                    bottom: _controlsVisible ? 120 : 16,
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 980),
+                        child: GestureDetector(
+                          // A click on the card mustn't hide the bar.
+                          onTap: () {},
+                          child: DesktopDataPoolCard(
+                              key: ValueKey('pool-${_currentChannel.id}'),
+                              player: _player,
+                              channel: _currentChannel,
+                              since: _openedAt),
+                        ),
+                      ),
+                    ),
+                  ),
                 if (_currentChannel.mediaFileInfo case final info?)
                   MediaFileInfoOverlay(
                       key: ValueKey('file-info-${_currentChannel.id}'),

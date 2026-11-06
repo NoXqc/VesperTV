@@ -3,6 +3,7 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
 import '../models/channel.dart';
+import 'desktop_audio.dart';
 import 'live_stream_format.dart';
 import 'vod_buffering.dart';
 
@@ -15,10 +16,12 @@ const kDesktopStreamUserAgent =
     'Dalvik/2.1.0 (Linux; U; Android 11; VesperTV Windows)';
 
 /// The shared mpv setup for every Windows stream player (full screen, mini
-/// player, Multiview): reconnect tuning, the User-Agent above, and mpv
-/// errors into Send log (a refused stream used to fail silently).
+/// player, Multiview): reconnect tuning, the User-Agent above, mpv errors
+/// into Send log (a refused stream used to fail silently), and Settings >
+/// Playback > Audio ([DesktopAudio]; never passthrough in Multiview).
 void configureDesktopStreamPlayer(Player player, String tag) {
   final native = player.platform as NativePlayer;
+  DesktopAudio.track(player, multiview: tag == 'multiview');
   // Software video: decode on the CPU too (no GPU surfaces at all).
   if (desktopSoftwareVideo) native.setProperty('hwdec', 'no');
   // See DesktopPlayerScreen.initState for the reconnect story.

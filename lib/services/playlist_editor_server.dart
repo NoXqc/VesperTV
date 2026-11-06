@@ -7,6 +7,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
 import '../models/channel.dart';
+import '../l10n/l10n.dart';
+import 'epg_channel_info.dart';
+import 'playlist_editor_epg.dart';
 import '../utils/channel_name_matching.dart';
 import 'phone_pairing_service.dart' show privateLanIpv4;
 import 'playback_service.dart';
@@ -125,6 +128,16 @@ class PlaylistEditorServer extends ChangeNotifier {
         return;
       }
       final body = req.method == 'POST' ? await _readBody(req) : null;
+      if (req.headers.value('x-editor-viewer') case final viewer?) {
+        if (viewer != _storage.getActiveViewerId()) {
+          res.statusCode = HttpStatus.conflict;
+          res.headers.contentType = ContentType.json;
+          res.write(jsonEncode({
+            'error': tr('The viewer changed. Reopen the playlist editor.')
+          }));
+          return;
+        }
+      }
       final out = await _route(req.method, path, req.uri.queryParameters, body);
       if (out == null) {
         res.statusCode = HttpStatus.notFound;
@@ -154,6 +167,8 @@ class PlaylistEditorServer extends ChangeNotifier {
     switch ((method, path)) {
       case ('GET', '/api/playlists'):
         return {
+          'viewer': _storage.getActiveViewerId(),
+          'epgTexts': editorEpgTexts(),
           'copyFallback': _storage.getCopyFallback(),
           'crossFallback': _storage.getCrossPlaylistFallback(),
           'merge': _storage.getMergePlaylists(),
@@ -187,6 +202,14 @@ class PlaylistEditorServer extends ChangeNotifier {
       case ('POST', '/api/edits'):
         final s = _session(q['pl']);
         if (s == null || body is! Map) return null;
+        final rawLogos = body['edits'] is Map ? body['edits']['logos'] : null;
+        if (rawLogos is Map &&
+            rawLogos.values.any((v) => v is! String || epgLogoUrl(v) == null)) {
+          return {
+            'error': tr(
+                'Logo URLs must be HTTP(S) links of at most 1000 characters.')
+          };
+        }
         final next = PlaylistEdits.fromJson(body['edits']);
         // The page never edits test results; keep the TV's.
         next.probes
@@ -311,6 +334,7 @@ class PlaylistEditorServer extends ChangeNotifier {
           'extra': s.profile.extraEpgUrls,
           'hasMain': s.profile.epgUrl?.isNotEmpty ?? false,
           'loading': guideLoading?.call() ?? false,
+          'sources': editorGuideSources(s.profile),
         };
       case ('POST', '/api/epg'):
         final s = _session(q['pl']);
@@ -335,21 +359,17 @@ class PlaylistEditorServer extends ChangeNotifier {
         if (add != null && add.isNotEmpty) unawaited(refreshGuide?.call());
         return {'extra': urls};
       case ('GET', '/api/epg/search'):
-        final words = (q['q'] ?? '')
-            .toLowerCase()
-            .split(RegExp(r'\s+'))
-            .where((w) => w.isNotEmpty)
-            .toList();
-        if (words.isEmpty) return {'results': const []};
-        final out = <Map<String, String>>[];
-        for (final e in (guideCatalog?.call() ?? const {}).entries) {
-          final hay = '${e.value} ${e.key}'.toLowerCase();
-          if (words.every(hay.contains)) {
-            out.add({'id': e.key, 'n': e.value});
-            if (out.length >= 40) break;
-          }
-        }
-        return {'results': out};
+        final s = _session(q['pl']);
+        if (s == null) return null;
+        return {
+          'results': editorGuideSearch(s.profile,
+              (url) => guideChannels?.call(url) ?? const [], q['q'] ?? '',
+              source: q['source'])
+        };
+      case ('POST', '/api/epg/refresh'):
+        if (_session(q['pl']) == null) return null;
+        if (!(guideLoading?.call() ?? false)) unawaited(refreshGuide?.call());
+        return {'ok': true};
       case ('POST', '/api/epg/link'):
         final s = _session(q['pl']);
         if (s == null || body is! Map || body['r'] is! String) return null;
@@ -409,9 +429,8 @@ class PlaylistEditorServer extends ChangeNotifier {
   /// Hook for "no guide data" (set by the TV screen from EpgService).
   bool Function(Channel)? hasNoGuide;
 
-  /// Guide hooks (EpgService, set by the TV screen): every guide channel's
-  /// id -> name, a full guide reload, and whether one is running.
-  Map<String, String> Function()? guideCatalog;
+  /// Source-aware channel directory, a full reload and loading state.
+  Iterable<EpgChannelInfo> Function(String)? guideChannels;
   Future<void> Function()? refreshGuide;
   bool Function()? guideLoading;
   Timer? _guideReload;

@@ -1,31 +1,21 @@
-/// Frame rate above which 1080p content counts as "FHD" rather than
-/// plain "HD" — comfortably between a 30ish-fps broadcast feed (23.976,
-/// 24, 25, 29.97, 30) and a 50/59.94/60fps one, so real-world rounding on
-/// either side never crosses it by accident.
-const _highFrameRateThreshold = 40.0;
-
-/// Maps a decoded video track's real pixel height (and, at 1080p, its
-/// frame rate) to a familiar broadcast quality label — read directly off
-/// the already-playing stream's selected track, never guessed from a
-/// channel's name (providers routinely tag a channel "4K" or "UHD" that
-/// never actually decodes above 1080p, and conflate a 1080p30 broadcast
-/// feed with true 1080p60).
+/// Maps a decoded video track's real size to the usual consumer label:
+/// 720p = HD, 1080p = FHD (Full HD), 2160p = 4K - read off the playing
+/// stream's selected track, never guessed from a channel's name
+/// (providers routinely tag a channel "4K" or "UHD" that never decodes
+/// above 1080p). Frame rate has its own pill beside it. Until 2026-11-06
+/// 1080p was "HD" below 40 fps and "FHD" at 50/60, and 720p had no badge
+/// (owner: not the standard).
 ///
-/// Null below 1080p — not worth a badge for the common case, and this app
-/// has no reliable way to tell an honest 720p feed from a downscaled one.
+/// Null below 720p.
 ///
 /// [width] counts too: a film is usually wider than 16:9, so a 4K movie is
-/// 3840x1600 and a 1080p one 1920x800 — by height alone they read as HD
-/// and nothing (user report, 2026-10-21: a 4K Media Hub stream showed HD).
-/// The width bars sit a little under the nominal 3840/1920 for crops.
-String? qualityLabelForTrack(
-    {required int height, int? width, double? frameRate}) {
+/// 3840x1600 and a 1080p one 1920x800 - by height alone they read lower
+/// (user report, 2026-10-21: a 4K Media Hub stream showed HD).
+/// The width bars sit a little under the nominal 3840/1920/1280 for crops.
+String? qualityLabelForTrack({required int height, int? width}) {
   final w = width ?? 0;
   if (height >= 2160 || w >= 3800) return '4K';
-  if (height >= 1080 || w >= 1900) {
-    return (frameRate != null && frameRate > _highFrameRateThreshold)
-        ? 'FHD'
-        : 'HD';
-  }
+  if (height >= 1080 || w >= 1900) return 'FHD';
+  if (height >= 720 || w >= 1260) return 'HD';
   return null;
 }

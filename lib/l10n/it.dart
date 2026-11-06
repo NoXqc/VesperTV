@@ -2588,6 +2588,24 @@ const Map<String, String> kIt = {
       "La rimuove per tutti i profili di questo dispositivo. Per nasconderla solo in questo profilo, disattiva Attiva.",
   "Enabled and Show under Other are your own for each profile; sources are shared on this device.":
       "Attiva e Mostra in Altro sono di ogni profilo; le fonti sono condivise su questo dispositivo.",
+  "Downloading playlist... {mb} MB":
+      "Download della lista… {mb} MB",
+  "The server stopped sending the playlist after {mb} MB. Try again later.":
+      "Il server ha smesso di inviare la lista dopo {mb} MB. Riprova più tardi.",
+  "The server did not answer within {s} seconds.":
+      "Il server non ha risposto entro {s} secondi.",
+  "The server closed the connection without answering.":
+      "Il server ha chiuso la connessione senza rispondere.",
+  "This is a VesperTV backup.":
+      "Questo è un backup di VesperTV.",
+  "Only add its Media Hub sources":
+      "Aggiungi solo le sue fonti Media Hub",
+  "Add M3U playlists, Media Hub sources or a backup from USB or external storage":
+      "Aggiungi liste M3U, fonti Media Hub o un backup da USB o memoria esterna",
+  "This device has no file picker. Copy the backup onto a USB drive and open it in Import from storage.":
+      "Questo dispositivo non ha un selettore di file. Copia il backup su una chiavetta USB e aprilo in Importa da memoria esterna.",
+  "Preparing {name} for faster starts. This happens once... {p}%":
+      "Preparazione di {name} per avvii più rapidi. Solo questa volta... {p}%",
   "Goal disallowed after review": "Gol annullato dopo la revisione",
   "Score overturned after review": "Punteggio annullato dopo la revisione",
   // Vesper AI
@@ -2791,4 +2809,46 @@ const Map<String, String> kIt = {
       "Un'app di IA vuole nascondere {count} gruppi ({words}).",
   "An AI app wants to show {count} groups ({words}).":
       "Un'app di IA vuole mostrare {count} gruppi ({words}).",
+  "Main guide": "Guida principale",
+  "Extra guide {number}": "Guida aggiuntiva {number}",
+  "Use EPG logo": "Usa logo EPG",
+  "Use provider logo": "Usa logo del fornitore",
+  "All guide sources": "Tutte le fonti della guida",
+  "No EPG logo": "Nessun logo EPG",
+  "Logo selected. Save changes to apply it.":
+      "Logo selezionato. Salva le modifiche per applicarlo.",
+  "Provider logo selected. Save changes to apply it.":
+      "Logo del fornitore selezionato. Salva le modifiche per applicarlo.",
+  "The viewer changed. Reopen the playlist editor.":
+      "Il profilo è cambiato. Riapri l’editor della playlist.",
+  "Logo URLs must be HTTP(S) links of at most 1000 characters.":
+      "Gli URL dei loghi devono essere link HTTP(S) di massimo 1000 caratteri.",
+  "Guide sources": "Fonti della guida",
+  "Guide and logo": "Guida e logo",
+  "Using the channel's default guide match.":
+      "È in uso la corrispondenza predefinita della guida del canale.",
+  "The TV is loading the guide. Search again when it finishes.":
+      "La TV sta caricando la guida. Cerca di nuovo al termine.",
+  "No matching guide channels. Try fewer words or Update EPG Now.":
+      "Nessun canale corrispondente. Prova meno parole o Aggiorna EPG ora.",
+  "Decoder":
+      "Decodificatore",
+  "Software":
+      "Software",
+  "Hardware ({api})":
+      "Hardware ({api})",
+  "Stream details from a button in the player bar":
+      "Dettagli dello stream da un pulsante della barra del lettore",
+  "Adds a Data pool button to the player bar (or press I) that opens a card with the stream's details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer, HDR and decoder.":
+      "Aggiunge un pulsante Data pool alla barra del lettore (o premi I) che apre una scheda con i dettagli dello stream: risoluzione, fotogrammi al secondo, codec, bitrate, varianti di qualità, tracce audio, buffer, HDR e decodificatore.",
+  "Arrows or a click swap · Esc to finish":
+      "Frecce o un clic per scambiare · Esc per finire",
+  "Recent":
+      "Recenti",
+  "Start over":
+      "Dall'inizio",
+  "Fit":
+      "Adatta",
+  "Fill":
+      "Riempi",
 };
