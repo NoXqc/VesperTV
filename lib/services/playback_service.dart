@@ -16,6 +16,7 @@ import '../models/epg_program.dart';
 import '../models/playlist_profile.dart';
 import '../utils/constants.dart';
 import '../widgets/native_video_hole.dart';
+import 'perf_diagnostics.dart';
 import 'playlist_manager.dart';
 import 'm3u_parser.dart';
 import 'real_4k_channels.dart';
@@ -599,6 +600,7 @@ class PlaybackService extends ChangeNotifier {
     initFuture = newController
         .initialize(viewType: _viewTypeFor(newController))
         .then((_) async {
+      PerfDiagnostics.mark('videoInit');
       if (controller != newController) return;
       await VodBuffering.configure(newController, channel);
       if (controller != newController) return;
@@ -1388,6 +1390,68 @@ class PlaybackService extends ChangeNotifier {
       return;
     }
     await play(channel);
+  }
+
+  /// "Open in Multiview" from the full-screen player (owner, 2026-11-05:
+  /// TiviMate shrinks the playing picture into its Multiview; ours stopped
+  /// it and reconnected the channel as a new screen). Lets go of the
+  /// playing live controller without disposing it: the caller owns it from
+  /// here (every listener here checks `controller == c`, so they go
+  /// quiet). Null when there is nothing to hand over (catch-up, a movie or
+  /// episode, not started yet, an error): the caller stops it as before.
+  ({Channel channel, VideoPlayerHdrController controller})? releaseLive() {
+    final c = liveHandover;
+    final ch = currentChannel;
+    if (c == null || ch == null) return null;
+    _nativeZapGeneration++;
+    _playGen++;
+    _catchupGen++;
+    _pendingCatchup = null;
+    _cancelNativeSwitchHolds();
+    _positionSaveTimer?.cancel();
+    _positionSaveTimer = null;
+    controller = null;
+    initFuture = null;
+    playingSince = null;
+    currentChannel = null;
+    reconnectStatus = null;
+    pendingResumeChannel = null;
+    notifyListeners();
+    return (channel: ch, controller: c);
+  }
+
+  /// The controller [releaseLive] would hand over now, or null.
+  VideoPlayerHdrController? get liveHandover {
+    final c = controller;
+    final ch = currentChannel;
+    if (c == null ||
+        ch == null ||
+        !ch.isLive ||
+        catchup != null ||
+        error != null ||
+        !c.value.isInitialized) {
+      return null;
+    }
+    return c;
+  }
+
+  /// Back from Multiview: [c] (handed over by [releaseLive], still playing
+  /// [channel]) is the main player again, no reconnect.
+  Future<void> adoptLive(Channel channel, VideoPlayerHdrController c) async {
+    if (controller != null && controller != c) await stop();
+    _playGen++;
+    controller = c;
+    currentChannel = channel;
+    initFuture = Future<void>.value();
+    playingSince = DateTime.now();
+    error = null;
+    reconnectStatus = null;
+    switching = false;
+    _watchRestartLoop(c, channel);
+    await c.setVolume(1.0);
+    unawaited(WakelockPlus.enable());
+    notifyListeners();
+    await _storage.setLastChannelId(channel.id);
   }
 
   Future<void> stop() async {

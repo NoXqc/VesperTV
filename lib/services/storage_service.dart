@@ -39,9 +39,9 @@ class StorageService {
   Future<void> setPhoneGoalAlerts(bool value) =>
       _sportsChanged(_prefs.setBool(_vk('vesper_phone_goal_alerts'), value));
   String? getGoalPhoneCheckpoint() =>
-      _prefs.getString(_vk('vesper_goal_phone_checkpoint'));
+      _prefs.getString(_vk(_goalPhoneCheckpoint));
   Future<void> setGoalPhoneCheckpoint(String data) async {
-    await _prefs.setString(_vk('vesper_goal_phone_checkpoint'), data);
+    await _prefs.setString(_vk(_goalPhoneCheckpoint), data);
   }
 
   String sportsViewerKey(String base, String viewer) =>
@@ -1415,13 +1415,20 @@ class StorageService {
 
   /// Prefix-matched skips: the per-playlist full-sync timestamps (a copied
   /// one would tell the new, empty device its catalog is fresh), and transient
-  /// device-local game reminders (restoring them could replay old alerts).
+  /// device-local game reminders (restoring them could replay old alerts),
+  /// and the goal-alert service's own checkpoint: rewritten every few
+  /// minutes during games, it made every 5-minute cloud sync upload the
+  /// whole 325 KB snapshot, and each upload froze the remote ~1 s (owner's
+  /// Formuler, LOG-9CQQJ4).
   static const _transferSkipPrefixes = [
     AppConstants.keyLastFullSyncAt,
     AppConstants.keyGameReminders,
     AppConstants.keyProgrammeReminders,
     AppConstants.keyMatchScoreAlerts,
+    _goalPhoneCheckpoint,
   ];
+
+  static const _goalPhoneCheckpoint = 'vesper_goal_phone_checkpoint';
 
   static bool _transferable(String key) =>
       !_transferSkipExact.contains(key) &&

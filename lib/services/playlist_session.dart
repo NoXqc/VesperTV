@@ -164,13 +164,11 @@ class PlaylistSession {
     if (!_firstSeenLoaded) {
       _firstSeenLoaded = true;
       try {
-        final raw = await storage.readCacheFile(name);
-        if (raw != null) {
-          _firstSeen = {
-            for (final e in (jsonDecode(raw) as Map).entries)
-              if (e.value is int) e.key as String: e.value as int
-          };
-        }
+        // Read + decoded on an isolate: one entry per channel (26,718 on
+        // the owner's playlist), decoded on the main thread it stalled the
+        // remote just as the live list arrived after launch (LOG-GEFTKH).
+        final path = await storage.cacheFilePath(name);
+        if (path != null) _firstSeen = await compute(_readFirstSeen, path);
       } catch (_) {
         _firstSeen = {};
       }
@@ -185,7 +183,8 @@ class PlaylistSession {
     }
     if (changed) {
       try {
-        await storage.writeCacheFile(name, jsonEncode(_firstSeen));
+        await storage.writeCacheFile(
+            name, await compute(_encodeFirstSeen, _firstSeen));
       } catch (_) {}
     }
   }
@@ -794,6 +793,7 @@ class PlaylistSession {
           .cacheFilePath(_cacheName(AppConstants.cacheFileLiveChannels));
       if (path != null) {
         loaded = await compute(_readChannelsFile, path);
+        PerfDiagnostics.mark('liveDecoded');
       } else {
         final api = xtreamApi;
         if (api == null) return;
@@ -1173,7 +1173,9 @@ class PlaylistSession {
     final since = _lastCategoryNotify == null
         ? null
         : now.difference(_lastCategoryNotify!);
-    const window = Duration(milliseconds: 400);
+    final window = _gentleLoads > 0
+        ? const Duration(seconds: 2)
+        : const Duration(milliseconds: 400);
     if (since == null || since >= window) {
       _lastCategoryNotify = now;
       onNotify();
@@ -1199,13 +1201,21 @@ class PlaylistSession {
   /// could silently stall for 10+ seconds once nothing else happened to
   /// rebuild the screen).
   Future<void> ensureCategoriesLoaded(
-      Iterable<String> categoryNames, String tabCategory) async {
+      Iterable<String> categoryNames, String tabCategory,
+      {bool gentle = false}) async {
     if (categoriesLoadingActive.contains(tabCategory)) return;
     final namesList = categoryNames.toList();
     if (namesList.isEmpty) return;
 
     categoriesLoadingActive.add(tabCategory);
-    final maxConcurrent = _categoryConcurrency;
+    // gentle (the launch pre-load behind the UI): one category at a time
+    // and a pause after each, so the remote keeps the main thread between
+    // them. The database answers on the main thread too (each row set
+    // crosses the platform channel there), so concurrency alone isn't it.
+    final maxConcurrent = gentle ? 1 : _categoryConcurrency;
+    if (gentle) _gentleLoads++;
+    final watch = Stopwatch()..start();
+    var loaded = 0, slowest = 0;
     try {
       final loadedMap =
           tabCategory == 'vod' ? vodByCategoryName : seriesByCategoryName;
@@ -1218,7 +1228,15 @@ class PlaylistSession {
               (categoryFailureCounts[key] ?? 0) >= _maxCategoryFailures) {
             continue;
           }
+          final one = Stopwatch()..start();
           await ensureCategoryLoaded(name, tabCategory);
+          loaded++;
+          if (one.elapsedMilliseconds > slowest) {
+            slowest = one.elapsedMilliseconds;
+          }
+          if (gentle) {
+            await Future<void>.delayed(const Duration(milliseconds: 80));
+          }
         }
       }
 
@@ -1226,8 +1244,20 @@ class PlaylistSession {
           maxConcurrent.clamp(1, namesList.length), (_) => worker()));
     } finally {
       categoriesLoadingActive.remove(tabCategory);
+      if (gentle) {
+        _gentleLoads--;
+        debugPrint('Preload: $tabCategory $loaded categories in '
+            '${watch.elapsedMilliseconds} ms (slowest $slowest ms)');
+      }
     }
   }
+
+  /// Launch pre-loads running ([ensureCategoriesLoaded] gentle): their
+  /// category notifies go out at most every 2 s, not every 0.4 s. Each one
+  /// rebuilds every PlaylistManager listener — the whole TV screen with its
+  /// guide included — for rows nobody is looking at yet (26 rebuilds in
+  /// 10 s on the owner's Formuler, LOG-H63MUE).
+  int _gentleLoads = 0;
 
   Future<void> _loadOneVodCategory(XtreamApiService api, XtreamCategory cat,
       {bool force = false}) async {
@@ -1979,8 +2009,19 @@ _XtreamCategoriesDecoded _decodeXtreamCategoriesBatch(
 List<Channel> _readM3uChannelsFile(String path) =>
     _readChannelsFile(path).map(M3uParser.withCatalogType).toList();
 
-List<Channel> _readChannelsFile(String path) =>
-    _decodeLiveChannelsBatch(File(path).readAsStringSync());
+Map<String, int> _readFirstSeen(String path) => {
+      for (final e
+          in (jsonDecode(File(path).readAsStringSync()) as Map).entries)
+        if (e.value is int) e.key as String: e.value as int
+    };
+
+String _encodeFirstSeen(Map<String, int> seen) => jsonEncode(seen);
+
+/// Also makes the ids unique here, on the isolate: on the main thread that
+/// pass over a big list cost a visible stall right after the splash (the
+/// caller's own pass is then a no-op, see Channel.withUniqueIds).
+List<Channel> _readChannelsFile(String path) => Channel.withUniqueIds(
+    _decodeLiveChannelsBatch(File(path).readAsStringSync()));
 
 List<Channel> _decodeLiveChannelsBatch(String raw) => (jsonDecode(raw) as List)
     .map((e) => Channel.fromJson(e as Map<String, dynamic>))

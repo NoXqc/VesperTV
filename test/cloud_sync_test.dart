@@ -314,6 +314,79 @@ void main() {
     expect(a.values['theme'], s('green'));
   });
 
+  test('file store: saved state reads back, also in a new store', () async {
+    final dir = await Directory.systemTemp.createTemp('sync_store_');
+    addTearDown(() => dir.delete(recursive: true));
+    final path = '${dir.path}/sync.json';
+    final store = FileSyncStore(path);
+    expect(await store.load(), isNull);
+    final state = SyncState(
+        secret: newSyncSecret(),
+        deviceId: 'dev1',
+        version: 7,
+        base: SyncSnapshot({'fav': l(['ch1'])}, const {'fav': 5}),
+        pending: const {'fav': 9});
+    await store.save(state);
+    final json = jsonEncode(state.toJson());
+    expect(jsonEncode((await store.load())!.toJson()), json);
+    expect(jsonEncode((await FileSyncStore(path).load())!.toJson()), json);
+    await store.save(null);
+    expect(await store.load(), isNull);
+    expect(await FileSyncStore(path).load(), isNull);
+  });
+
+  test('the goal-alert checkpoint never syncs or transfers', () async {
+    SharedPreferences.setMockInitialValues({
+      'nox_favorites': ['p1::ch1'],
+      'vesper_goal_phone_checkpoint': '{"a":1}',
+      'vesper_goal_phone_checkpoint_kid': '{"b":2}',
+    });
+    final storage = StorageService();
+    await storage.init();
+    final synced = storage.exportForSync();
+    expect(synced.containsKey('nox_favorites'), isTrue);
+    expect(synced.keys.where((k) => k.startsWith('vesper_goal_phone')),
+        isEmpty);
+    expect(
+        storage
+            .exportForTransfer()
+            .keys
+            .where((k) => k.startsWith('vesper_goal_phone')),
+        isEmpty);
+  });
+
+  test('cold start only pulls: own changes go up after the launch', () async {
+    if (relay == null) return markTestSkipped('python not found');
+    final a = _Device({'fav': l(['ch1'])});
+    final b = _Device({});
+    await a.engine.start(newSyncSecret());
+    await a.engine.sync();
+    await b.engine.start(a.store.state!.secret);
+    await b.engine.sync();
+
+    // Changed here, nothing new on the server: nothing uploaded yet.
+    a.values['fav'] = l(['ch1', 'ch2']);
+    final cold = await a.engine.sync(pushLocal: false);
+    expect(cold!.pushed, isFalse);
+    expect(cold.pushLater, isTrue);
+    expect(await a.engine.hasLocalChanges(), isTrue);
+    await b.engine.sync();
+    expect(b.values['fav'], l(['ch1']));
+
+    // The next ordinary sync sends it.
+    final later = await a.engine.sync();
+    expect(later!.pushed, isTrue);
+    await b.engine.sync();
+    expect(b.values['fav'], l(['ch1', 'ch2']));
+
+    // Something new on the server: a cold sync pulls it (and merges).
+    b.values['fav'] = l(['ch1', 'ch2', 'ch3']);
+    await b.engine.sync();
+    final pulled = await a.engine.sync(pushLocal: false);
+    expect(pulled!.pulled, 1);
+    expect(a.values['fav'], l(['ch1', 'ch2', 'ch3']));
+  });
+
   test('app service: favourites apply live, playlists at the next launch',
       () async {
     if (relay == null) return markTestSkipped('python not found');

@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player_hdr/video_player_hdr.dart';
@@ -14,6 +15,7 @@ import '../widgets/archive_source_drawer.dart';
 import '../utils/playback_modal_back_guard.dart';
 import '../services/app_preferences.dart';
 import '../services/playback_service.dart';
+import '../services/subtitle_tracks.dart';
 import '../services/watch_game_offer.dart';
 import '../services/playlist_manager.dart';
 import '../services/skip_segments.dart';
@@ -22,6 +24,7 @@ import '../utils/constants.dart';
 import '../utils/tv_theme.dart';
 import '../widgets/channel_schedule_panel.dart';
 import '../widgets/live_channel_info_card.dart';
+import '../widgets/native_video_hole.dart';
 import '../widgets/data_pool_card.dart';
 import '../widgets/epg_guide.dart';
 import '../widgets/player_controls.dart';
@@ -36,11 +39,328 @@ import '../widgets/media_file_info_overlay.dart';
 import '../widgets/phone_picture_in_picture.dart';
 import '../widgets/player_touch_lock.dart';
 
-/// The route every full-screen player opens with. Plain [MaterialPageRoute]
-/// again: a native-surface glide between the preview and full screen was
-/// tried and dropped (owner, 2026-11-03: the snappy switch felt better).
+/// The route every full-screen player opens with, except from the guide's
+/// preview with the native surface on ([PlayerGlideRoute]).
 class PlayerPageRoute<T> extends MaterialPageRoute<T> {
   PlayerPageRoute({required super.builder, super.settings});
+}
+
+/// Full screen from the Live list / Timeline guide preview while the native
+/// surface draws it: the playing picture grows out of the preview and, on
+/// Back, shrinks back into it, like Multiview's glide (owner, 2026-11-05).
+/// Same player, no reload.
+///
+/// A first try (dropped 2026-11-03) rode the page transition: the player's
+/// first build ate the first frames, and the native surface kept the
+/// unscaled size of a scaled hole (a black square). Here the page is only
+/// scaled (no relayout per frame), the glide starts once the page is built,
+/// and the native surface follows the player's hole and its scaled size
+/// ([NativeVideoSurface.gliding]). `PlayerGlide:` lines in Send log give
+/// each glide's frame count and worst frame.
+class PlayerGlideRoute<T> extends PageRoute<T> {
+  PlayerGlideRoute({required this.builder, required this.from});
+
+  final WidgetBuilder builder;
+
+  /// The preview on screen (logical pixels).
+  final Rect from;
+
+  /// Completes once the picture is full screen.
+  final glided = Completer<void>();
+
+  /// Multiview's glide (owner: as smooth as TiviMate's).
+  static const glide = Duration(milliseconds: 280);
+  static const curve = Curves.easeInOutCubic;
+
+  /// The way back, measured on TiviMate (owner's clip, 2026-11-05, 30 fps):
+  /// the shrink starts at full speed (a quarter of the way in its first
+  /// frame) and settles into the preview, ~220 ms. Ours eased in.
+  static const backGlide = Duration(milliseconds: 220);
+  static const backCurve = Curves.easeOutCubic;
+
+  /// The frames Back held for (ms each), and the slowest build / raster
+  /// from Back until a second later (`PlayerGlide: back frames`).
+  final heldFrames = <int>[];
+
+  /// The glide out of [playback]'s preview, or the plain switch when the
+  /// native surface doesn't draw it or no preview of it is on screen.
+  static PageRoute<void> open(PlaybackService playback, WidgetBuilder builder) {
+    final c = playback.controller;
+    final from = c != null && PlaybackService.drawsNativeSurface(c)
+        ? NativeVideoSurface.holeRect(playerId: SubtitleTracks.playerIdOf(c))
+        : null;
+    if (from == null || from.width < 16 || from.height < 16) {
+      return PlayerPageRoute(builder: builder);
+    }
+    return PlayerGlideRoute(builder: builder, from: from);
+  }
+
+  // Opaque only once the transition is done: the guide stays painted around
+  // the picture while it grows, and again while it shrinks.
+  @override
+  bool get opaque => true;
+
+  @override
+  bool get maintainState => true;
+
+  @override
+  Color? get barrierColor => null;
+
+  @override
+  String? get barrierLabel => null;
+
+  // The page's first frame plus the glide (which starts after it).
+  @override
+  Duration get transitionDuration => const Duration(milliseconds: 700);
+
+  @override
+  Duration get reverseTransitionDuration => glide;
+
+  /// Set by the glide: plays the glide back, then calls [_finishBack].
+  VoidCallback? _onBack;
+  bool _gone = false;
+
+  /// How long Back held the picture full screen (see [didPop]).
+  int heldMs = 0;
+
+  /// Back: the guide below rebuilds on its first frame back (it skips
+  /// rebuilds while hidden), ~200 ms on the Formuler, and that frame ate
+  /// the glide back's first frames (5 frames of 17, LOG-3B5RGF). The picture
+  /// stays where it is until that frame is drawn and a frame is quick again
+  /// (the guide's post-frame focus work done; at most 600 ms), then glides
+  /// back whole.
+  @override
+  bool didPop(T? result) {
+    final popped = super.didPop(result);
+    final c = controller;
+    if (c == null || !c.isAnimating) return popped;
+    c.stop();
+    final held = Stopwatch()..start();
+    _watchFrames();
+    Future<void> frame() async {
+      final f = Stopwatch()..start();
+      await WidgetsBinding.instance.endOfFrame;
+      heldFrames.add(f.elapsedMilliseconds);
+    }
+
+    unawaited(() async {
+      await Future.any([
+        () async {
+          await frame();
+          await frame();
+          while (held.elapsedMilliseconds < 600) {
+            await frame();
+            if (heldFrames.last < 30) break;
+          }
+        }(),
+        Future<void>.delayed(const Duration(milliseconds: 600)),
+      ]);
+      if (_gone) return;
+      heldMs = held.elapsedMilliseconds;
+      final back = _onBack;
+      if (back != null) {
+        back();
+      } else {
+        unawaited(controller?.reverse());
+      }
+    }());
+    return popped;
+  }
+
+  /// Build vs raster of the guide's comeback: which side to make cheaper.
+  /// Release builds report frame timings in batches, so the line comes a
+  /// second and a half after Back.
+  void _watchFrames() {
+    var build = 0, raster = 0, slow = <String>[];
+    void onTimings(List<FrameTiming> timings) {
+      for (final t in timings) {
+        final b = t.buildDuration.inMilliseconds;
+        final r = t.rasterDuration.inMilliseconds;
+        build = math.max(build, b);
+        raster = math.max(raster, r);
+        if ((b >= 30 || r >= 30) && slow.length < 6) slow.add('$b/$r');
+      }
+    }
+
+    SchedulerBinding.instance.addTimingsCallback(onTimings);
+    Timer(const Duration(milliseconds: 1500), () {
+      SchedulerBinding.instance.removeTimingsCallback(onTimings);
+      debugPrint('PlayerGlide: back frames build max ${build}ms raster max '
+          '${raster}ms, slow (build/raster ms) [${slow.join(' ')}],'
+          ' held frames $heldFrames');
+    });
+  }
+
+  /// The glide back is done: the route goes.
+  void _finishBack() {
+    if (!_gone) controller?.value = 0;
+  }
+
+  @override
+  void dispose() {
+    _gone = true;
+    super.dispose();
+  }
+
+  @override
+  Widget buildPage(BuildContext context, Animation<double> animation,
+          Animation<double> secondaryAnimation) =>
+      builder(context);
+
+  @override
+  Widget buildTransitions(BuildContext context, Animation<double> animation,
+          Animation<double> secondaryAnimation, Widget child) =>
+      _PlayerGlide(route: this, child: child);
+}
+
+class _PlayerGlide extends StatefulWidget {
+  const _PlayerGlide({required this.route, required this.child});
+
+  final PlayerGlideRoute<dynamic> route;
+  final Widget child;
+
+  @override
+  State<_PlayerGlide> createState() => _PlayerGlideState();
+}
+
+class _PlayerGlideState extends State<_PlayerGlide>
+    with SingleTickerProviderStateMixin {
+  /// 0 = on the preview, 1 = full screen.
+  final _t = ValueNotifier<double>(0);
+  late final Ticker _ticker = createTicker(_tick);
+  late final Animation<double> _page = widget.route.animation!;
+
+  /// Time-based, but one frame never moves the picture more than this much
+  /// time's worth: after a slow frame (startup work, the guide's comeback,
+  /// LOG-EPR56D) the glide slows for a moment instead of jumping ahead.
+  static const _maxStepMs = 33;
+
+  double _target = 1;
+  Completer<void>? _run;
+  Duration _lastTick = Duration.zero;
+
+  /// Going back, and where the preview is now.
+  bool _back = false;
+  Rect? _backTo;
+
+  final _clock = Stopwatch();
+  int _frames = 0;
+  int _worstMs = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    NativeVideoSurface.gliding = widget.route;
+    _page.addStatusListener(_onPageStatus);
+    // After the page's first frame and the one after it: that build is the
+    // heavy part, and the glide's clock must not count it.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted || _back) return;
+      await _glideTo(1);
+      if (!mounted || _back) return;
+      _log('in');
+      if (NativeVideoSurface.gliding == widget.route) {
+        NativeVideoSurface.gliding = null;
+      }
+      if (!widget.route.glided.isCompleted) widget.route.glided.complete();
+    });
+  }
+
+  Future<void> _glideTo(double target) {
+    _ticker.stop();
+    _run?.complete();
+    final run = _run = Completer<void>();
+    _target = target;
+    _lastTick = Duration.zero;
+    _frames = 0;
+    _worstMs = 0;
+    _clock
+      ..reset()
+      ..start();
+    _ticker.start();
+    return run.future;
+  }
+
+  void _tick(Duration elapsed) {
+    final stepMs = (elapsed - _lastTick).inMilliseconds;
+    _lastTick = elapsed;
+    _frames++;
+    _worstMs = math.max(_worstMs, stepMs);
+    final length = _back ? PlayerGlideRoute.backGlide : PlayerGlideRoute.glide;
+    final step = math.min(stepMs, _maxStepMs) / length.inMilliseconds;
+    final t = _t.value;
+    final next =
+        _target > t ? math.min(_target, t + step) : math.max(_target, t - step);
+    _t.value = next;
+    if (next == _target) {
+      _ticker.stop();
+      final run = _run;
+      _run = null;
+      run?.complete();
+    }
+  }
+
+  void _onPageStatus(AnimationStatus status) {
+    if (status != AnimationStatus.reverse || _back) return;
+    _back = true;
+    _ticker.stop();
+    NativeVideoSurface.gliding = widget.route;
+    widget.route._onBack = _glideBack;
+  }
+
+  /// Once the guide is drawn again (its preview where it is now).
+  Future<void> _glideBack() async {
+    if (!mounted) return;
+    _backTo = NativeVideoSurface.holeRect(skip: widget.route);
+    await _glideTo(0);
+    if (!mounted) return;
+    _log('out');
+    widget.route._finishBack();
+  }
+
+  void _log(String way) =>
+      debugPrint('PlayerGlide: $way ${_clock.elapsedMilliseconds} ms,'
+          ' $_frames frames, worst $_worstMs ms'
+          '${way == 'out' ? ', held ${widget.route.heldMs} ms' : ''}');
+
+  @override
+  void dispose() {
+    widget.route._onBack = null;
+    if (NativeVideoSurface.gliding == widget.route) {
+      NativeVideoSurface.gliding = null;
+    }
+    if (!widget.route.glided.isCompleted) widget.route.glided.complete();
+    _run?.complete();
+    _page.removeStatusListener(_onPageStatus);
+    _ticker.dispose();
+    _t.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    return ValueListenableBuilder<double>(
+      valueListenable: _t,
+      // Always the same Transform (identity once full screen): the player
+      // page below must keep its state.
+      child: widget.child,
+      builder: (context, t, child) {
+        final from = _back ? _backTo ?? widget.route.from : widget.route.from;
+        // Back: t runs 1 -> 0, the curve over the shrink (1 - t).
+        final k = _back
+            ? 1 - PlayerGlideRoute.backCurve.transform(1 - t)
+            : PlayerGlideRoute.curve.transform(t);
+        final r = Rect.lerp(from, Offset.zero & size, k)!;
+        return Transform(
+          transform: Matrix4.translationValues(r.left, r.top, 0)
+            ..scaleByDouble(r.width / size.width, r.height / size.height, 1, 1),
+          child: child,
+        );
+      },
+    );
+  }
 }
 
 /// Fullscreen playback screen. Pushed when a channel is tapped on a phone,
@@ -556,7 +876,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
     // sometimes not hiding when it should: a release build has no
     // assertion for this (unlike debug), so the resulting rebuild just
     // silently got lost instead of throwing.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Gliding out of the preview: after the glide, so the guide behind
+      // it doesn't rebuild mid-glide.
+      final route = mounted ? ModalRoute.of(context) : null;
+      if (route is PlayerGlideRoute) await route.glided.future;
       if (mounted) _playback.setFullscreenActive(true);
     });
     _topScope.addListener(_onBarFocusChange);
@@ -804,11 +1128,61 @@ class _PlayerScreenState extends State<PlayerScreen> {
   /// background session is a real stability cost too. Same fix already
   /// established for `TvHomeScreen`'s own "Multiview" sidebar entry —
   /// this just applies it to this second entry point, which missed it.
+  ///
+  /// Since 2026-11-05 (owner: TiviMate shrinks the playing picture into its
+  /// Multiview, ours reloaded the channel) the playing player itself becomes
+  /// screen 1 when it can ([PlaybackService.releaseLive]): on the native
+  /// video surface it moves onto a tile surface, as a texture it is simply
+  /// shown in the grid. Back returns the screen with the sound to full
+  /// screen: this same player again without a reconnect, or that screen's
+  /// channel played anew. The platform-view player (native surface off, not
+  /// Compatibility video) can't be moved: stopped and reopened as before.
   Future<void> _openMultiview(Channel channel) async {
-    await _playback.stop();
-    if (!mounted) return;
-    await Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => MultiviewScreen(initialChannel: channel)));
+    // The picture moves to its full-screen tile first (while this screen
+    // still shows it), then the controller is handed over: no black gap.
+    final candidate =
+        _playback.usesNativeSurface || PlaybackService.textureVideo
+            ? _playback.liveHandover
+            : null;
+    final movable = candidate != null &&
+        (!PlaybackService.drawsNativeSurface(candidate) ||
+            await NativeMultiviewTiles.adopt(
+                SubtitleTracks.playerIdOf(candidate)));
+    var handover = movable ? _playback.releaseLive() : null;
+    if (handover != null && handover.controller != candidate) {
+      // Zapped meanwhile: that player isn't on the tile.
+      await handover.controller.dispose();
+      handover = null;
+    }
+    if (handover == null) await _playback.stop();
+    if (!mounted) {
+      unawaited(handover?.controller.dispose());
+      return;
+    }
+    Widget page(BuildContext _) => MultiviewScreen(
+        initialChannel: handover == null ? channel : null, handover: handover);
+    // On a tile, Multiview's own glide is the transition: it opens on the
+    // same full-screen picture and closes on it, so the route switches
+    // instantly both ways (a page slide would move the picture twice).
+    final glides = handover != null &&
+        PlaybackService.drawsNativeSurface(handover.controller);
+    final back = await Navigator.of(context).push<MultiviewReturn>(glides
+        ? PageRouteBuilder<MultiviewReturn>(
+            transitionDuration: Duration.zero,
+            reverseTransitionDuration: Duration.zero,
+            pageBuilder: (context, _, __) => page(context))
+        : MaterialPageRoute<MultiviewReturn>(builder: page));
+    if (back == null) return;
+    final kept = back.controller;
+    if (!mounted) {
+      unawaited(kept?.dispose());
+      return;
+    }
+    if (kept != null) {
+      await _playback.adoptLive(back.channel, kept);
+    } else {
+      unawaited(_playback.play(back.channel));
+    }
   }
 
   void _revealBottomOnTap() {
@@ -1677,12 +2051,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                                 label: tr('Channels list'),
                                                 onPressed: _openPanel,
                                               ),
-                                              PlayerOption(
-                                                icon: Icons.calendar_month,
-                                                label: tr('Channel schedule'),
-                                                onPressed: _openSchedule,
-                                              ),
                                             ],
+                                            if (prefs.dataPool)
+                                              PlayerOption(
+                                                icon: Icons.analytics_outlined,
+                                                label: tr('Stream info'),
+                                                onPressed: _showDataPool,
+                                              ),
                                           ],
                                           trailingOptions: [
                                             if (widget.sources != null)
@@ -1690,12 +2065,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                                 icon: Icons.swap_horiz,
                                                 label: tr('Sources'),
                                                 onPressed: _openSources,
-                                              ),
-                                            if (prefs.dataPool)
-                                              PlayerOption(
-                                                icon: Icons.analytics_outlined,
-                                                label: tr('Stream info'),
-                                                onPressed: _showDataPool,
                                               ),
                                             PlayerOption(
                                               icon: prefs.videoFill

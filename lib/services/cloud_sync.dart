@@ -5,6 +5,7 @@ import 'dart:isolate';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:http/http.dart' as http;
 
 import 'cloud_transfer.dart';
@@ -443,29 +444,51 @@ abstract class SyncStore {
   Future<void> save(SyncState? state);
 }
 
+/// The JSON (de)coding runs on an isolate and the last state stays in
+/// memory: the file holds the whole base snapshot (325 KB on the owner's
+/// Formuler), and a sync loaded and saved it twice on the main thread —
+/// 0.4-0.8 s remote freezes per sync (LOG-H63MUE). Only this app's engine
+/// writes the file, so the cached copy is the file's content.
 class FileSyncStore implements SyncStore {
   FileSyncStore(this.path);
   final String path;
 
+  SyncState? _cached;
+  bool _loaded = false;
+
   @override
   Future<SyncState?> load() async {
+    if (_loaded) return _cached;
     try {
-      return SyncState.fromJson(jsonDecode(await File(path).readAsString()));
+      final target = path;
+      final json = await Isolate.run(() {
+        final file = File(target);
+        return file.existsSync() ? jsonDecode(file.readAsStringSync()) : null;
+      });
+      _cached = json == null ? null : SyncState.fromJson(json);
     } catch (_) {
-      return null;
+      _cached = null;
     }
+    _loaded = true;
+    return _cached;
   }
 
   @override
   Future<void> save(SyncState? state) async {
-    final file = File(path);
+    _cached = state;
+    _loaded = true;
+    final target = path;
     if (state == null) {
+      final file = File(target);
       if (await file.exists()) await file.delete();
       return;
     }
-    final tmp = File('$path.tmp');
-    await tmp.writeAsString(jsonEncode(state.toJson()), flush: true);
-    await tmp.rename(path);
+    final json = state.toJson();
+    await Isolate.run(() {
+      final tmp = File('$target.tmp');
+      tmp.writeAsStringSync(jsonEncode(json), flush: true);
+      tmp.renameSync(target);
+    });
   }
 }
 
@@ -487,7 +510,12 @@ class SyncResult {
       this.applied = const {},
       this.deferred = 0,
       this.busy = false,
-      this.bytes = 0});
+      this.bytes = 0,
+      this.pushLater = false});
+
+  /// A pull-only sync found nothing new on the server; this device's own
+  /// changes stay pending for the next sync (see `sync`'s pushLocal).
+  final bool pushLater;
 
   /// Keys changed on this device by other devices' changes.
   final int pulled;
@@ -560,8 +588,16 @@ class SyncEngine {
   /// keys whose services reload from storage are safe (the rest are held
   /// in [SyncState.deferred] for the next cold start); null = all, for the
   /// sync that runs before the services load.
+  ///
+  /// [pushLocal] false (cold start): when the server still holds our base
+  /// there is nothing to pull, so it returns without uploading; the
+  /// device's own changes are stamped and saved, and the next sync sends
+  /// them. The full snapshot upload (325 KB on the owner's Formuler, every
+  /// launch) held the splash for the whole cold budget (LOG-GEFTKH).
   Future<SyncResult?> sync(
-      {http.Client? client, bool Function(String key)? applyNow}) async {
+      {http.Client? client,
+      bool Function(String key)? applyNow,
+      bool pushLocal = true}) async {
     final running = _running;
     if (running != null) {
       await running;
@@ -570,7 +606,7 @@ class SyncEngine {
     final done = Completer<void>();
     _running = done.future;
     try {
-      return await _sync(client, applyNow);
+      return await _sync(client, applyNow, pushLocal);
     } finally {
       _running = null;
       done.complete();
@@ -619,8 +655,8 @@ class SyncEngine {
     return out;
   }
 
-  Future<SyncResult?> _sync(
-      http.Client? httpClient, bool Function(String key)? applyNow) async {
+  Future<SyncResult?> _sync(http.Client? httpClient,
+      bool Function(String key)? applyNow, bool pushLocal) async {
     var state = await store.load();
     if (state == null) return null;
     if (state.deviceId == null) {
@@ -653,6 +689,18 @@ class SyncEngine {
       for (var attempt = 0;; attempt++) {
         final remote = await client.fetch(
             knownVersion: state!.base == null ? null : state.version);
+        // Keys held from a live sync (SyncState.deferred) are written by
+        // exactly this cold sync, so they always take the full path.
+        if (!pushLocal &&
+            remote.snapshot == null &&
+            remote.version != 0 &&
+            deferred.isEmpty) {
+          return SyncResult(
+              pulled: 0,
+              pushed: false,
+              deferred: state.deferred.length,
+              pushLater: true);
+        }
         // Unchanged on the server: it still holds our base.
         final remoteSnap = remote.snapshot ?? state.base!;
         // The server lost it (3 months unused): start it again from here
@@ -705,6 +753,15 @@ class SyncEngine {
         var pushed = false;
         if (remote.version == 0 ||
             !syncValuesEqual(merged.toJson(), remoteSnap.toJson())) {
+          // Which settings changed (names only, never values): every
+          // 5-minute sync re-uploaded the whole 325 KB snapshot on the
+          // owner's Formuler while he only watched live TV (LOG-5BW3NJ).
+          final names = [
+            for (final k in {...merged.values.keys, ...remoteSnap.values.keys})
+              if (!syncValuesEqual(merged.values[k], remoteSnap.values[k])) k
+          ];
+          debugPrint('Sync: upload for ${names.length} changed '
+              '${names.isEmpty ? '(timestamps only)' : names.take(8).join(', ')}');
           try {
             version = await client.put(merged, remote.version);
             pushed = true;

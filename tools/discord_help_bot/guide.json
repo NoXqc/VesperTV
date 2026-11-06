@@ -251,7 +251,7 @@
     "id": "5f71da8ddda39a6a",
     "category": "Full screen",
     "title": "More options",
-    "answer": "Down from the player bar swaps it for a row of options: Channels list, Channel schedule, Recall, Watch from the start, Reload channel, Audio track, Subtitles, Audio sync, linked channel, Multiview, Sources, Stream info, Fill screen and Search. Left / Right move along it, OK picks one, Up or Back returns to the player bar. Phones keep these buttons in the player bar.",
+    "answer": "Down from the player bar swaps it for a row of options: Channels list, Stream info, Recall, Watch from the start, Reload channel, Audio track, Subtitles, Audio sync, linked channel, Multiview, Sources, Fill screen and Search. Left / Right move along it, OK picks one, Up or Back returns to the player bar. Phones keep these buttons in the player bar.",
     "controls": "OK then ▼ TV",
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },

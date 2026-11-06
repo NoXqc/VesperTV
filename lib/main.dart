@@ -26,6 +26,8 @@ import 'screens/sports_screen.dart';
 import 'screens/welcome_add_playlist_screen.dart';
 import 'screens/startup_profile_screen.dart';
 import 'services/app_log.dart';
+import 'services/app_exit.dart';
+import 'services/startup_quiet.dart';
 import 'services/app_preferences.dart';
 import 'services/archive_posters.dart';
 import 'services/catalog_database.dart';
@@ -88,6 +90,7 @@ void sportsPhoneGoalMain() => sportsGoalBackgroundMain();
 Future<void> main() => AppLog.capture(_main);
 
 Future<void> _main() async {
+  PerfDiagnostics.markLaunch();
   WidgetsFlutterBinding.ensureInitialized();
   // sqflite on Android runs EVERY database (guide, catalog, Media Hub cache and
   // the image cache's metadata) on ONE worker thread. A long query on a big
@@ -522,6 +525,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     try {
       _storage = StorageService();
       await _storage.init();
+      PerfDiagnostics.mark('prefs');
       // Cloud sync first: the services below read storage once, so other
       // devices' changes are written before they load (dev-notes/
       // cloud-sync.md). Never holds the splash more than a few seconds and
@@ -533,6 +537,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       } catch (e) {
         debugPrint('Sync: startup failed: $e');
       }
+      PerfDiagnostics.mark('sync');
       _gameReminders = GameReminders(_storage);
       _programmeReminders = ProgrammeReminders(_storage);
       _goalsAlerts = GoalsAlerts(_storage,
@@ -560,7 +565,9 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         _preferences.androidSdk = await DeviceTypeService.sdkInt();
       }
       await DeviceDefaults.load(_storage.getDeviceDefaults());
-      unawaited(_preferences.refreshDeviceDefaults());
+      // Network + a prefs write: after the quiet period (StartupQuiet).
+      unawaited(StartupQuiet.after(const Duration(seconds: 6))
+          .then((_) => _preferences.refreshDeviceDefaults()));
       PlaybackService.textureVideo = _preferences.compatVideo;
       NativeVideoSurface.active =
           Platform.isAndroid && _preferences.nativeVideoSurface;
@@ -670,10 +677,26 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         if (keys.any(isHistoryKey)) _archiveService.historyChanged();
       };
       _cloudSync.startAutomatic();
+      // The cold sync above only pulled: this device's own changes go up
+      // after the launch quiet period (StartupQuiet).
+      unawaited(StartupQuiet.after(const Duration(seconds: 8))
+          .then((_) => _cloudSync.pushPending()));
       _playlistManager.addListener(_cloudSync.noteLocalChange);
       _archiveService.addListener(_cloudSync.noteLocalChange);
       _playbackService.addListener(_cloudSync.noteLocalChange);
-      _syncLifecycle = AppLifecycleListener(onResume: _cloudSync.onResumed);
+      _syncLifecycle = AppLifecycleListener(onResume: () {
+        _cloudSync.onResumed();
+        AppExit.resumed();
+      });
+      // Back > Exit is a warm exit (AppExit): nothing keeps playing in the
+      // background, and coming back runs the Startup resume choice again
+      // (after Who's watching when that shows first).
+      AppExit.beforeWarm = _playbackService.stop;
+      AppExit.afterWarm = () {
+        if (mounted && _ready && _profileSelection == null) {
+          unawaited(_autoResumeLastChannel());
+        }
+      };
 
       // Restores category lists (small, fast regardless of catalog size —
       // see that method's doc comment for why live channels/category
@@ -682,6 +705,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // already be correct, so there's no way to let the UI go up first
       // this time.
       await _playlistManager.init();
+      PerfDiagnostics.mark('playlistInit');
 
       // Brand-new install, nothing configured yet — ask once up front
       // rather than leaving a new user to land on an empty TV/Movies/TV
@@ -741,44 +765,27 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // so this is a fast local-database read in the common case, not a
       // network fetch — no artificial delay, this is genuinely the same
       // work that would otherwise happen the moment you opened either tab.
-      // Fast startup (opt-in, Settings > General > Startup): the UI opens
-      // now and Movies/TV Shows fill in behind it. Off by default — on a
-      // weak box early remote input during this load crashed the app
-      // (CLAUDE.md §10), which is why the splash waits for it.
+      // Fast startup (on by default, Settings > General > Startup): the
+      // UI opens after the splash floor and Movies/TV Shows load behind
+      // it. Until +632 the pre-load ran under the splash and kept going
+      // behind the UI at full concurrency: every category's rows crossed
+      // the platform channel and became Channel objects on the main
+      // thread, with a TV home rebuild every 400 ms, for as long as the
+      // catalog took (owner, 2026-11-05: 10-15 s of a laggy, skipping
+      // remote after the splash). Dart shares Android's main thread, so
+      // that work and the key presses queue on the same thread. Now the
+      // pre-load waits for the quiet period and runs one category at a
+      // time (StartupQuiet, PlaylistSession.ensureCategoriesLoaded
+      // gentle). Opening Movies/TV Shows earlier loads what the screen
+      // shows, as it always did.
       final fast = _preferences.fastStartup;
-      if (!didSync && _playlistManager.isXtream) {
-        // One pre-load pass per enabled Xtream playlist — group names
-        // alone aren't enough to route to the right playlist's session
-        // once more than one can exist (two playlists could share a
-        // category name), so this groups the merged vod/seriesGroups
-        // lists by their own `playlistId` first.
-        final futures = <Future<void>>[];
-        for (final profile in _playlistManager.profiles
-            .where((p) => p.enabled && p.isXtream)) {
-          final vodNames = _playlistManager.vodGroups
-              .where((g) => g.playlistId == profile.id && !g.isHidden)
-              .map((g) => g.title);
-          final seriesNames = _playlistManager.seriesGroups
-              .where((g) => g.playlistId == profile.id && !g.isHidden)
-              .map((g) => g.title);
-          futures.add(_playlistManager.ensureCategoriesLoaded(
-              profile.id, vodNames, 'vod'));
-          futures.add(_playlistManager.ensureCategoriesLoaded(
-              profile.id, seriesNames, 'series'));
-        }
-        final preload = Future.wait(futures);
-        if (fast) {
-          // Whatever loads within the fast splash is ready on arrival.
-          final left = _fastSplashDuration - DateTime.now().difference(started);
-          await Future.any([
-            preload.then((_) {},
-                onError: (Object e) => debugPrint('Fast startup preload: $e')),
-            Future<void>.delayed(left.isNegative ? Duration.zero : left),
-          ]);
-        } else {
-          await preload;
-        }
+      if (!didSync && _playlistManager.isXtream && fast) {
+        unawaited(StartupQuiet.after(const Duration(seconds: 2))
+            .then((_) => _preloadCatalogs(gentle: true)));
+      } else if (!didSync && _playlistManager.isXtream) {
+        await _preloadCatalogs();
       }
+      PerfDiagnostics.mark('preload');
 
       // Anything the pre-load above kicked off but didn't itself await
       // (a warm-up someone else started, a category still in flight)
@@ -795,13 +802,17 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // A fixed floor on top of the real work above — on a very small
       // catalog (or M3U mode, which skips the pre-load entirely) that
       // work alone might finish in well under a second, too fast for the
-      // splash's pulse animation to actually register at all.
-      final floor = fast ? _fastSplashDuration : _minSplashDuration;
+      // splash's pulse animation to actually register at all. Fast startup
+      // used 3.5 s here because the pre-load filled it; that runs after the
+      // launch now, so it takes the plain floor (owner, 2026-11-05: a
+      // ~3 s splash is fine).
+      const floor = _minSplashDuration;
       final elapsed = DateTime.now().difference(started);
       if (elapsed < floor) {
         await Future.delayed(floor - elapsed);
       }
       if (!mounted) return;
+      PerfDiagnostics.mark('splashEnd');
       if (_preferences.launchWithProfiles) {
         _profileSelection = Completer<void>();
       }
@@ -814,6 +825,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // playback until the selected viewer and their appearance are applied.
       if (selection != null) await selection.future;
       if (!mounted) return;
+      PerfDiagnostics.mark('ui');
+      StartupQuiet.uiShown();
       if (didSync) {
         // The toast needs the real MaterialApp's ScaffoldMessengerKey,
         // which doesn't exist until the tree above actually builds.
@@ -852,22 +865,26 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // Recordings: states of anything that ran while the app was closed,
       // then the auto-recorded team's next games (needs the guide).
       if (RecordingService.supported) {
-        unawaited(RecordingService.instance.init());
+        unawaited(StartupQuiet.after(const Duration(seconds: 4))
+            .then((_) => RecordingService.instance.init()));
         unawaited(Future<void>.delayed(const Duration(seconds: 60))
             .then((_) => _refreshAutoRecordings()));
       }
       unawaited(() async {
         await _playbackService.init();
+        PerfDiagnostics.mark('playbackInit');
         await Future.wait([
           _autoResumeLastChannel(),
-          _epgService.init(),
+          PerfDiagnostics.task('epgInit', _epgService.init),
         ]);
+        PerfDiagnostics.mark('epgInit');
         _epgService.startAutoRefresh(
             _storage.getRefreshInterval(), _epgSources);
         // No-op for most launches (no key set, or already refreshed this
         // week) — see PlaylistManager.refreshWhatsNewTmdbIfDue's doc
         // comment for why this is a launch-time due-check rather than an
         // in-process weekly timer.
+        await StartupQuiet.after(const Duration(seconds: 10));
         await _playlistManager.refreshWhatsNewTmdbIfDue();
       }());
     } catch (e) {
@@ -875,6 +892,49 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // instead of leaving the app stuck on the splash spinner forever.
       if (mounted) setState(() => _bootstrapError = e.toString());
     }
+  }
+
+  /// One pre-load pass per enabled Xtream playlist — group names alone
+  /// aren't enough to route to the right playlist's session once more
+  /// than one can exist (two playlists could share a category name), so
+  /// this groups the merged vod/seriesGroups lists by their own
+  /// `playlistId` first. [gentle]: one category at a time with a pause
+  /// between them (behind the UI, see _bootstrap).
+  Future<void> _preloadCatalogs({bool gentle = false}) async {
+    // Gentle: one load at a time (Movies, then TV Shows, playlist by
+    // playlist); the splash pre-load runs them all together.
+    final loads = <Future<void> Function()>[];
+    for (final profile
+        in _playlistManager.profiles.where((p) => p.enabled && p.isXtream)) {
+      final vodNames = _playlistManager.vodGroups
+          .where((g) => g.playlistId == profile.id && !g.isHidden)
+          .map((g) => g.title)
+          .toList();
+      final seriesNames = _playlistManager.seriesGroups
+          .where((g) => g.playlistId == profile.id && !g.isHidden)
+          .map((g) => g.title)
+          .toList();
+      loads.add(() => _playlistManager.ensureCategoriesLoaded(
+          profile.id, vodNames, 'vod',
+          gentle: gentle));
+      loads.add(() => _playlistManager.ensureCategoriesLoaded(
+          profile.id, seriesNames, 'series',
+          gentle: gentle));
+    }
+    try {
+      await PerfDiagnostics.task('preload', () async {
+        if (gentle) {
+          for (final load in loads) {
+            await load();
+          }
+        } else {
+          await Future.wait([for (final load in loads) load()]);
+        }
+      });
+    } catch (e) {
+      debugPrint('Catalog preload: $e');
+    }
+    if (gentle) PerfDiagnostics.mark('preload');
   }
 
   /// Upper bound on how long the splash will hold for the catalog. A
@@ -942,7 +1002,9 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     if (_playbackService.isPlayingSomething) return;
     final lastId = _storage.getLastChannelId();
     if (lastId == null) return;
-    await _playlistManager.ensureLiveChannelsLoaded();
+    await PerfDiagnostics.task(
+        'liveList', _playlistManager.ensureLiveChannelsLoaded);
+    PerfDiagnostics.mark('liveList');
     if (_episodeNotificationOpened) return;
     // Settings > General > Startup (both platforms): full screen (default),
     // or playing in the guide's preview box, or neither.
@@ -979,6 +1041,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
           // (then only the pill below). Same push the pill's own resume
           // does; PlayerScreen.initState starts playback.
           if (_playbackService.isPlayingSomething) return;
+          PerfDiagnostics.mark('playerPushed');
           _navigatorKey.currentState?.push(
               PlayerPageRoute(builder: (_) => PlayerScreen(channel: channel)));
         } else {

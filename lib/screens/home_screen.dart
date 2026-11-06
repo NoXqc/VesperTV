@@ -247,14 +247,27 @@ class _HomeScreenState extends State<HomeScreen> {
     _apply(id, quick, focusFirst: focusFirst, done: false);
 
     final slow = <HomeRowKind, _HomeRow?>{...quick};
-    await Future.wait([
+    // Each slow row shows as soon as it's ready (they used to wait for one
+    // another), and Today's games twice: straight from the scores feed,
+    // then with their channels — matching waits for the whole live list
+    // (owner, 2026-11-05: the game cards took seconds to appear).
+    void arrived(HomeRowKind kind, _HomeRow? row) {
+      slow[kind] = row;
+      _apply(id, slow, focusFirst: focusFirst, done: false);
+    }
+
+    await Future.wait(<Future<void>>[
       if (visible.contains(HomeRowKind.games))
-        _gamesRow(storage, playlist, epg)
-            .then((r) => slow[HomeRowKind.games] = r),
+        () async {
+          arrived(HomeRowKind.games,
+              await _gamesRow(storage, playlist, epg, match: false));
+          arrived(HomeRowKind.games, await _gamesRow(storage, playlist, epg));
+        }(),
       if (visible.contains(HomeRowKind.newMovies))
-        _newMoviesRow(playlist).then((r) => slow[HomeRowKind.newMovies] = r),
+        _newMoviesRow(playlist)
+            .then((r) => arrived(HomeRowKind.newMovies, r)),
       if (visible.contains(HomeRowKind.newShows))
-        _newShowsRow(playlist).then((r) => slow[HomeRowKind.newShows] = r),
+        _newShowsRow(playlist).then((r) => arrived(HomeRowKind.newShows, r)),
     ].map((f) => f.catchError((Object e, StackTrace st) {
           // The first frames of the stack say which row and which call:
           // "RangeError (length) 0..5440: 40600" (LOG-NDQPJU) had no origin.
@@ -521,10 +534,13 @@ class _HomeScreenState extends State<HomeScreen> {
         [for (final c in channels.take(30)) _channelItem(c, epg, 'fav')]);
   }
 
+  /// [match] false: the cards without channels yet (see [_load]); a tap
+  /// then opens Sports Trak, like a game no channel carries.
   Future<_HomeRow?> _gamesRow(
-      StorageService storage, PlaylistManager playlist, EpgService epg) async {
+      StorageService storage, PlaylistManager playlist, EpgService epg,
+      {bool match = true}) async {
     final games = await MultiviewSports.todaysGames(
-        storage: storage, playlist: playlist, epg: epg);
+        storage: storage, playlist: playlist, epg: epg, match: match);
     final hideScores = storage.getSportsHideScores();
     return _HomeRow(HomeRowKind.games, _CardShape.wide, [
       for (final g in games.take(20))

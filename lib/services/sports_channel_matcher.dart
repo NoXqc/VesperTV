@@ -6,6 +6,7 @@ import '../models/channel.dart';
 import '../models/epg_program.dart';
 import '../models/sports.dart';
 import 'greek_sports_names.dart';
+import 'perf_diagnostics.dart';
 import '../utils/channel_name_matching.dart';
 import 'epg_service.dart';
 import 'storage_service.dart';
@@ -785,7 +786,7 @@ class SportsChannelMatcher {
     final hidden = _hidden;
     final names = List<String>.filled(hidden.length, '');
     for (var i = 0; i < hidden.length; i++) {
-      if (i % 3000 == 2999) await Future<void>.delayed(Duration.zero);
+      if (i % 400 == 399) await Future<void>.delayed(Duration.zero);
       names[i] = sportsNormalize(hidden[i].sourceName);
     }
     if (identical(hidden, _hidden)) _hiddenNames = names;
@@ -813,15 +814,25 @@ class SportsChannelMatcher {
   /// event loop every few thousand rows so a weak box keeps drawing.
   /// [hidden]: the viewer's hidden live channels, see [whyNoMatch].
   Future<void> prepare(List<Channel> channels,
+          {List<Channel> hidden = const []}) =>
+      PerfDiagnostics.task(
+          'matcherPrepare', () => _prepare(channels, hidden: hidden));
+
+  Future<void> _prepare(List<Channel> channels,
       {List<Channel> hidden = const []}) async {
     // visibleChannels() builds a new list per call, so compare a signature
     // rather than identity. Every id, name and guide id goes into it: the
     // old count + first/last id missed a renamed channel or a changed EPG
     // override in the middle, and kept matching against the stale index
     // (matching audit, 2026-10-21).
+    // Small slices with a yield between them: a 26,718-channel list in
+    // slices of 3,000 held the remote for half a second at a time right
+    // after launch (owner's Formuler, LOG-5BW3NJ, `matcherPrepare`).
     var signature = Object.hash(channels.length, hidden.length);
+    var n = 0;
     for (final list in [channels, hidden]) {
       for (final c in list) {
+        if (++n % 4000 == 0) await Future<void>.delayed(Duration.zero);
         signature = Object.hash(signature, c.id, c.sourceName, c.epgId);
       }
     }
@@ -835,7 +846,7 @@ class SportsChannelMatcher {
     hidden = List.of(hidden);
     final names = List<String>.filled(channels.length, '');
     for (var i = 0; i < channels.length; i++) {
-      if (i % 3000 == 2999) await Future<void>.delayed(Duration.zero);
+      if (i % 400 == 399) await Future<void>.delayed(Duration.zero);
       final c = channels[i];
       final norm = sportsNormalize(c.sourceName);
       names[i] = norm;

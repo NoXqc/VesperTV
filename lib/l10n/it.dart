@@ -741,9 +741,6 @@ const Map<String, String> kIt = {
   'Hide this channel': "Nascondi questo canale",
   'Double': "Doppio",
   'for groups': "per i gruppi",
-  'Exit and free up this login?': "Uscire e liberare questo account?",
-  'This disconnects your login here so it can be used on another device, then fully closes VesperTV. Your channels/movies will need to reload next time you open it.':
-      "Disconnette qui il tuo account, così può essere usato su un altro dispositivo, poi chiude del tutto VesperTV. Canali e film dovranno ricaricarsi alla prossima apertura.",
   'Exit': "Esci",
   'Exit {appName}?': "Uscire da {appName}?",
   'Are you sure you want to exit {appName}?':
@@ -754,7 +751,7 @@ const Map<String, String> kIt = {
   'Update Content': "Agg. contenuti",
   'Minimize': "Riduci a icona",
   'Close': "Chiudi",
-  'Disable and exit': "Disattiva ed esci",
+  'Exit {appName}': "Esci da {appName}",
   'Long-press a group elsewhere to favorite the whole thing.':
       "Tieni premuto OK su un gruppo altrove per aggiungerlo tutto ai preferiti.",
   'Nothing playing': "Nessuna riproduzione",

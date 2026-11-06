@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'cloud_sync.dart';
 import 'cloud_transfer.dart' show CloudTransfer;
 import 'device_transfer.dart' show TransferException;
+import 'perf_diagnostics.dart';
 import '../utils/constants.dart';
 import 'storage_service.dart';
 
@@ -167,7 +168,9 @@ class CloudSyncService extends ChangeNotifier {
 
   /// One sync now. Returns how many settings changed here from other
   /// devices (0 when not syncing or on error; see [lastError]).
-  Future<int> syncNow() async {
+  /// [pushLocal]: see [SyncEngine.sync] (false only before the services
+  /// load, [syncBeforeLoad]).
+  Future<int> syncNow({bool pushLocal = true}) async {
     if (_status != SyncStatus.on) return 0;
     final engine = await _ensureEngine();
     _syncing = true;
@@ -177,17 +180,20 @@ class CloudSyncService extends ChangeNotifier {
     try {
       // Checked per key when the merge decides, so a sync that started
       // before the services loaded still holds what they now own.
-      final result = await engine.sync(
-          applyNow: (key) =>
-              !_appLoaded ||
-              _isFileKey(key) ||
-              StorageService.isLiveSyncKey(key));
+      final result = await PerfDiagnostics.task(
+          'sync',
+          () => engine.sync(
+              pushLocal: pushLocal,
+              applyNow: (key) =>
+                  !_appLoaded ||
+                  _isFileKey(key) ||
+                  StorageService.isLiveSyncKey(key)));
       _lastError = null;
       _lastSync = DateTime.now();
       if (result == null) return 0;
       _restartNeeded = _appLoaded && result.deferred > 0;
       debugPrint('Sync: ${result.pulled} in, ${result.deferred} held, '
-          '${result.pushed ? 'pushed ${(result.bytes / 1024).round()} KB' : 'nothing pushed'}'
+          '${result.pushed ? 'pushed ${(result.bytes / 1024).round()} KB' : result.pushLater ? 'nothing new, own changes go up after launch' : 'nothing pushed'}'
           '${result.busy ? ', busy (retry later)' : ''}, '
           '${watch.elapsedMilliseconds} ms');
       if (_appLoaded && result.applied.isNotEmpty) {
@@ -243,9 +249,20 @@ class CloudSyncService extends ChangeNotifier {
   /// The sync before the services load (they read storage once): every
   /// key may be written here. Waits at most [coldBudget]; a slower sync
   /// keeps going and holds what the services own from then on.
+  /// Pull only: this device's own changes wait for [pushPending].
   Future<void> syncBeforeLoad() async {
     if (_status != SyncStatus.on) return;
-    await syncNow().timeout(coldBudget, onTimeout: () => 0);
+    await syncNow(pushLocal: false).timeout(coldBudget, onTimeout: () => 0);
+  }
+
+  /// After the launch (main.dart, past StartupQuiet): sends what
+  /// [syncBeforeLoad] left pending, if anything.
+  Future<void> pushPending() async {
+    if (_status != SyncStatus.on) return;
+    final engine = await _ensureEngine();
+    if (await PerfDiagnostics.task('sync', engine.hasLocalChanges)) {
+      await syncNow();
+    }
   }
 
   /// The services are up: from now on only live-safe keys are written,

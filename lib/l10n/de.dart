@@ -717,9 +717,6 @@ const Map<String, String> kDe = {
   "Hide this channel": "Diesen Sender ausblenden",
   "Double": "Doppelt",
   "for groups": "für Gruppen",
-  "Exit and free up this login?": "Beenden und diese Anmeldung freigeben?",
-  "This disconnects your login here so it can be used on another device, then fully closes VesperTV. Your channels/movies will need to reload next time you open it.":
-      "Dadurch wird deine Anmeldung hier getrennt, damit sie auf einem anderen Gerät genutzt werden kann, und VesperTV wird vollständig geschlossen. Deine Sender/Filme müssen beim nächsten Öffnen neu geladen werden.",
   "Exit": "Beenden",
   "Exit {appName}?": "{appName} beenden?",
   "Are you sure you want to exit {appName}?":
@@ -730,7 +727,7 @@ const Map<String, String> kDe = {
   "Update Content": "Inhalte aktualisieren",
   "Minimize": "Minimieren",
   "Close": "Schließen",
-  "Disable and exit": "Deaktivieren und beenden",
+  "Exit {appName}": "{appName} beenden",
   "Long-press a group elsewhere to favorite the whole thing.":
       "Halte anderswo eine Gruppe gedrückt, um die ganze Gruppe als Favorit zu markieren.",
   "Nothing playing": "Es läuft nichts",
