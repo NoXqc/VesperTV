@@ -25,7 +25,9 @@ import '../services/watch_tracker.dart';
 import '../l10n/l10n.dart';
 import '../widgets/media_file_info_overlay.dart';
 import '../widgets/player_side_panel.dart';
+import '../widgets/desktop_audio_button.dart';
 import '../widgets/desktop_subtitles.dart';
+import '../services/desktop_audio.dart';
 import '../widgets/player_bar_title.dart';
 import '../widgets/gold_tag.dart';
 import '../services/desktop_stream_setup.dart';
@@ -296,7 +298,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
 
   void _skipSegment(SkipSegment segment) {
     final next = _nextEpisode;
-    _segments.skip(segment, playNext: next == null ? null : () => _switchTo(next));
+    _segments.skip(segment,
+        playNext: next == null ? null : () => _switchTo(next));
   }
 
   /// The real end of a movie or episode: Settings > Playback > Up Next.
@@ -468,9 +471,16 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   }
 
   /// An episode gets the subtitles chosen earlier in its series (same
-  /// memory as Android's, see DesktopSubtitles.applyForSeries).
+  /// memory as Android's, see DesktopSubtitles.applyForSeries), and a
+  /// movie / episode the audio track picked last time or the preferred
+  /// audio language (DesktopAudio.applyRemembered).
   void _applySeriesSubtitles() {
     if (_isLive) return;
+    final playing = _currentChannel;
+    unawaited(DesktopAudio.applyRemembered(
+            context.read<StorageService>(), playing, _player,
+            isCurrent: () => mounted && _currentChannel == playing)
+        .catchError((Object _) {}));
     final channel = _currentChannel;
     unawaited(DesktopSubtitles.applyForSeries(
             context.read<StorageService>(), channel, _player,
@@ -636,6 +646,11 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 tooltip: tr('Next episode'),
                 onPressed: () => _switchTo(_nextEpisode!),
               ),
+            DesktopAudioButton(
+                // A new stream is a new track list.
+                key: ValueKey('audio-${_currentChannel.id}'),
+                player: _player,
+                channel: _currentChannel),
             if (!_isLive)
               DesktopSubtitleButton(
                   // A new episode is a new file: fresh track list.

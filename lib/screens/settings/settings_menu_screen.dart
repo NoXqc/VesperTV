@@ -229,7 +229,7 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
                   Icons.picture_in_picture_alt,
                   tr('Background video'),
                   tr('Fixes for the picture on some Fire TV sticks')),
-            if (Platform.isAndroid)
+            if (Platform.isAndroid || Platform.isWindows)
               _general('audio', Icons.surround_sound_outlined, tr('Audio'),
                   tr('Audio languages, subtitles and surround sound')),
             if (Platform.isAndroid)

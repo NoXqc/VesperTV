@@ -529,12 +529,13 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                               },
                             ),
                         ]),
-                  // Android only: Windows plays through media_kit.
-                  if (Platform.isAndroid)
+                  // Windows: the same settings through mpv (DesktopAudio).
+                  if (Platform.isAndroid || Platform.isWindows)
                     _section(
                         'audio', Icons.surround_sound_outlined, tr('Audio'),
                         children: [
                           TvMenuTile(
+                            icon: Icons.record_voice_over_outlined,
                             title: tr('Preferred audio language'),
                             subtitle:
                                 _storage.getPreferredAudioLanguage().isEmpty
@@ -544,6 +545,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                             onTap: () => _pickTrackLanguage(audio: true),
                           ),
                           TvMenuTile(
+                            icon: Icons.subtitles_outlined,
                             title: tr('Preferred subtitle language'),
                             subtitle: _storage.getPreferredSubtitleLanguage() ==
                                     'off'
@@ -559,8 +561,10 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                                 style: const TextStyle(color: Colors.white70)),
                           ),
                           TvMenuTile(
+                            icon: Icons.av_timer,
                             title: tr('Audio delay'),
-                            subtitle: '${AudioDelay.label(context.watch<AppPreferences>().audioDelayMs)}'
+                            subtitle:
+                                '${AudioDelay.label(context.watch<AppPreferences>().audioDelayMs)}'
                                 ' · ${tr('For sound that is ahead of or behind the picture. Also in the player: Audio sync.')}',
                             onTap: () => showAudioDelayAdjuster(context),
                           ),

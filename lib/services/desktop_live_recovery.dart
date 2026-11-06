@@ -6,6 +6,7 @@ import 'package:media_kit/media_kit.dart';
 import '../l10n/l10n.dart';
 import '../models/channel.dart';
 import 'channel_copy_fallback.dart';
+import 'desktop_audio.dart';
 import 'desktop_stream_setup.dart';
 
 /// Windows live TV recovery, one per mpv [Player] ([of]), so it follows the
@@ -46,6 +47,7 @@ class DesktopLiveRecovery {
     if (player == null) return;
     _byPlayer[player]?.dispose();
     _byPlayer[player] = null;
+    DesktopAudio.forget(player);
     player.dispose();
   }
 

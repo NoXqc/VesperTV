@@ -8,8 +8,8 @@ owner has tested it.
 
 | Phase | What | Status |
 |---|---|---|
-| 0 | Windows build of current code, Android-only calls guarded, owner checklist | in progress (`claude/windows-parity`) |
-| 1 | Audio tracks + surround passthrough + ATMOS badge | not started |
+| 0 | Windows build of current code, Android-only calls guarded, owner checklist | done, waiting for the owner's checklist (`claude/windows-parity`) |
+| 1 | Audio tracks + surround passthrough + audio delay (no ATMOS badge: mpv can't tell) | done, owner test pending (`claude/windows-parity`) |
 | 2 | Data pool + quality / FPS badges | not started |
 | 3 | Catch-up | not started |
 | 4 | Toast notifications while the app runs | not started |
@@ -76,6 +76,17 @@ phone PiP.
 10. Windowed / Full screen toggle, Minimize, Exit.
 
 ## Phase 1: audio tracks + surround
+**Done 2026-11-06 (Claude):** `services/desktop_audio.dart` (`DesktopAudio`: `audio-spdif`
+ac3,eac3,dts,dts-hd,truehd when passthrough is on, never in Multiview; `audio-delay` from
+Settings / Audio sync, applied live to every tracked player; labels; remembered track via the
+shared `AudioTrackPreferences.matchWith` / `rememberChoice`), `widgets/desktop_audio_button.dart`
+(player bar: tracks when 2+, Audio sync row), Settings > Playback > Audio shown on Windows.
+Send log: `DesktopAudio:` / `DesktopAudioTracks:`. **No ATMOS badge:** media_kit's libmpv is
+mpv 0.36 / FFmpeg 6.0, which has no `codec-profile` and no E-AC-3 JOC profile, so Atmos can't be
+told from plain E-AC-3; passthrough still sends Atmos to a receiver. Also fixed: the Audio
+section's rows had no icon (`TvMenuTile` assert, debug only, never drawn in tests before).
+
+Original plan:
 - Audio-track picker in the Windows player bar, same look as the Windows subtitle picker
   (`widgets/desktop_subtitles.dart`): mpv `player.state.tracks.audio` / `setAudioTrack`. Labels
   like Android: name, else language (skip `mis/mul/und/zxx/qaa`), else "Audio n", plus codec +

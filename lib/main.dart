@@ -81,6 +81,7 @@ import 'services/tracker_sync.dart';
 import 'services/watch_tracker.dart';
 import 'services/perf_diagnostics.dart';
 import 'services/desktop_live_recovery.dart';
+import 'services/desktop_audio.dart';
 import 'services/desktop_stream_setup.dart';
 
 @pragma('vm:entry-point')
@@ -604,6 +605,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // Windows live recovery: a channel's other copies (Settings'
       // automatic failover, same as Android's PlaybackService).
       desktopSoftwareVideo = _storage.getDesktopSoftwareVideo();
+      DesktopAudio.passthrough = _storage.getAudioPassthrough();
+      DesktopAudio.delayMs = _storage.getAudioDelayMs();
       DesktopLiveRecovery.copiesOf = (channel) => _storage.getCopyFallback()
           ? _playlistManager.failoverCandidatesFor(channel)
           : const [];

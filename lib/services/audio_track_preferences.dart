@@ -27,26 +27,40 @@ class AudioTrackPreferences {
   }
 
   static Future<void> remember(
-      StorageService storage, Channel channel, VideoAudioTrack track) async {
+          StorageService storage, Channel channel, VideoAudioTrack track) =>
+      rememberChoice(storage, channel,
+          language: track.language, label: track.label);
+
+  /// [remember] for any player's track (Windows: media_kit's `AudioTrack`).
+  static Future<void> rememberChoice(StorageService storage, Channel channel,
+      {String? language, String? label}) async {
     final key = SubtitleTracks.seriesKeyOf(channel);
     if (key == null) return;
     final all = _choices(storage);
-    all[key] = {'lang': track.language, 'label': track.label};
+    all[key] = {'lang': language, 'label': label};
     await storage.setAudioTrackChoicesJson(jsonEncode(all));
   }
 
   static VideoAudioTrack? match(
-      List<VideoAudioTrack> tracks, Map<String, dynamic> choice) {
+          List<VideoAudioTrack> tracks, Map<String, dynamic> choice) =>
+      matchWith(tracks, choice,
+          language: (t) => t.language, label: (t) => t.label);
+
+  /// [match] for any player's tracks: same language (the label decides
+  /// between several), or the same label when the choice had no language.
+  static T? matchWith<T>(List<T> tracks, Map<String, dynamic> choice,
+      {required String? Function(T) language,
+      required String? Function(T) label}) {
     final lang = choice['lang'] as String?;
-    final label = choice['label'] as String?;
+    final wanted = choice['label'] as String?;
     final candidates = tracks.where((track) =>
-        sameTrackLanguage(track.language, lang) ||
+        sameTrackLanguage(language(track), lang) ||
         ((lang == null || lang.isEmpty || lang == 'und') &&
-            label != null &&
-            label.isNotEmpty &&
-            track.label == label));
+            wanted != null &&
+            wanted.isNotEmpty &&
+            label(track) == wanted));
     return candidates
-            .where((t) => label != null && t.label == label)
+            .where((t) => wanted != null && label(t) == wanted)
             .firstOrNull ??
         candidates.firstOrNull;
   }
