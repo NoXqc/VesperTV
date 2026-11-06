@@ -115,3 +115,51 @@ test('all answers link to a real website tab and never ping users', () => {
   assert.ok(result.content.length <= 2000);
   assert.ok(!result.content.includes('@everyone'));
 });
+
+
+test('Vesper AI questions resolve to setup, free commands, phone, voice and MCP help', () => {
+  const cases = [
+    ['vesper ai', 'Vesper AI'],
+    ['how do I open vesper ai', 'Vesper AI'],
+    ['does vesper need an api key', 'Vesper AI without an API key'],
+    ['talk to vesper from my phone', 'Talk to Vesper AI from your phone'],
+    ['vesper fire tv alexa button', 'Vesper AI remote voice button'],
+    ['vesper bring your own ai', 'Bring your own AI to Vesper'],
+    ['connect claude mcp', 'Connect an AI app with MCP'],
+    ['vesper on multiple tvs', 'Vesper AI on several TVs'],
+    ['vesper watch list', 'Vesper AI watch list'],
+    ['vesper ai privacy', 'Vesper AI privacy'],
+    ['vesper windows', 'Vesper AI limits and Windows'],
+  ];
+  for (const [question, title] of cases) {
+    assert.equal(searchGuide(entries, question)[0]?.entry.title, title, question);
+    const reply = guideReply(entries, question);
+    assert.match(reply.content, /remote\.html#Vesper%20AI/);
+    assert.ok(reply.content.length <= 2000, question);
+  }
+});
+
+test('Vesper replies preserve privacy, confirmation and platform limits', () => {
+  const free = guideReply(entries, 'does vesper need an api key').content;
+  assert.match(free, /Leave Your AI set to None/);
+  assert.match(free, /does not make streaming, guide updates or voice recognition work offline/);
+  const phone = guideReply(entries, 'talk to vesper from my phone').content;
+  assert.match(phone, /phone's keyboard/);
+  assert.match(phone, /HTTP page has no browser microphone button/);
+  const remote = guideReply(entries, 'vesper fire tv alexa button').content;
+  assert.match(remote, /off by default/);
+  assert.match(remote, /Fire TV keeps its Alexa button/);
+  const mcp = guideReply(entries, 'connect claude mcp').content;
+  assert.match(mcp, /Ask on the TV first is on by default/);
+  assert.match(mcp, /can run without a dialog/);
+  assert.match(mcp, /Reset the address invalidates the old link/);
+  const privacy = guideReply(entries, 'vesper ai privacy').content;
+  assert.match(privacy, /failed built-in commands/);
+  assert.match(privacy, /without an AI provider/);
+  assert.match(privacy, /directly from the TV to your chosen AI provider/);
+  assert.match(privacy, /no saved conversation history/);
+  const windows = guideReply(entries, 'vesper windows').content;
+  assert.match(windows, /public Windows package is 1.0.45/);
+  assert.match(windows, /picking an episode by command are not implemented/);
+  assert.match(guideReply(entries, 'vesper watch list').content, /separate from Trakt or Simkl/);
+});
