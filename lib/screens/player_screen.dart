@@ -2048,7 +2048,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                                 playback.catchup != null) ...[
                                               PlayerOption(
                                                 icon: Icons.list,
-                                                label: tr('Channels list'),
+                                                label: tr('Channels'),
                                                 onPressed: _openPanel,
                                               ),
                                             ],
@@ -2071,8 +2071,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                                   ? Icons.fullscreen_exit
                                                   : Icons.fullscreen,
                                               label: prefs.videoFill
-                                                  ? tr('Fit to screen')
-                                                  : tr('Fill screen'),
+                                                  ? tr('Fit')
+                                                  : tr('Fill'),
                                               onPressed: _toggleImmersive,
                                             ),
                                             PlayerOption(

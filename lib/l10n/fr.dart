@@ -2626,4 +2626,12 @@ const Map<String, String> kFr = {
       "Ajoute un bouton Data pool à la barre du lecteur (ou appuyez sur I) qui ouvre une carte avec les détails du flux : résolution, fréquence d'images, codecs, débit, variantes de qualité, pistes audio, mémoire tampon, HDR et décodeur.",
   "Arrows or a click swap · Esc to finish":
       "Flèches ou un clic pour échanger · Échap pour terminer",
+  "Recent":
+      "Récents",
+  "Start over":
+      "Depuis le début",
+  "Fit":
+      "Ajuster",
+  "Fill":
+      "Remplir",
 };

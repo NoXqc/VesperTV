@@ -2613,4 +2613,12 @@ const Map<String, String> kEs = {
       "Añade un botón Data pool a la barra del reproductor (o pulsa I) que abre una tarjeta con los detalles de la transmisión: resolución, fotogramas por segundo, códecs, tasa de bits, variantes de calidad, pistas de audio, búfer, HDR y decodificador.",
   "Arrows or a click swap · Esc to finish":
       "Flechas o un clic para intercambiar · Esc para terminar",
+  "Recent":
+      "Recientes",
+  "Start over":
+      "Desde el inicio",
+  "Fit":
+      "Ajustar",
+  "Fill":
+      "Llenar",
 };
