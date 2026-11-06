@@ -144,8 +144,7 @@ class _BackupScreenState extends State<BackupScreen> {
     } on PlatformException catch (e) {
       _toast(e.code == 'NO_PICKER'
           ? tr(
-              'This device has no file picker. Copy the backup into {path} on this device instead.',
-              {'path': BackupService.locationLabel})
+              'This device has no file picker. Copy the backup onto a USB drive and open it in Import from storage.')
           : e.message ?? e.code);
       return;
     } on FormatException {
@@ -156,43 +155,9 @@ class _BackupScreenState extends State<BackupScreen> {
     await _restore(values, tr('the chosen file'));
   }
 
-  /// Cancel is focused by default so a stray Select can't replace anything.
-  Future<void> _restore(Map<String, Object?> values, String from) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(tr('Restore backup?')),
-        content: Text(tr(
-            'Everything on this device (playlists, favourites, profiles, settings) is replaced by the backup from {from}. Your current setup is saved as an automatic backup first. VesperTV closes afterwards.',
-            {'from': from})),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(tr('Restore')),
-          ),
-          TextButton(
-            autofocus: true,
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(tr('Cancel')),
-          ),
-        ],
-      ),
-    );
-    if (ok != true || !mounted) return;
-    setState(() => _busy = true);
-    // Undo point; best effort (no storage access on Android 9- = no undo).
-    try {
-      if (await _backups.ensurePermission(write: true)) {
-        await _backups.create(auto: true);
-      }
-    } catch (e) {
-      debugPrint('Pre-restore backup failed: $e');
-    }
-    if (!mounted) return;
-    await replaceSetupAndExit(context,
-        title: tr('Backup restored'),
-        importer: (storage) => storage.importForBackup(values));
-  }
+  Future<void> _restore(Map<String, Object?> values, String from) =>
+      restoreBackup(context, values,
+          from: from, onStart: () => setState(() => _busy = true));
 
   @override
   Widget build(BuildContext context) {
@@ -240,7 +205,7 @@ class _BackupScreenState extends State<BackupScreen> {
               icon: Icons.usb,
               title: tr('Import from storage'),
               subtitle: tr(
-                  'Add M3U playlists and Media Hub sources from USB or external storage'),
+                  'Add M3U playlists, Media Hub sources or a backup from USB or external storage'),
               enabled: !_busy,
               onTap: () => Navigator.of(context).push(MaterialPageRoute(
                   builder: (_) => const StorageImportScreen())),
@@ -279,4 +244,48 @@ class _BackupScreenState extends State<BackupScreen> {
       ),
     );
   }
+}
+
+/// Replaces this device's setup with the backup [values] and closes the
+/// app. Settings > Backup & restore and Import from storage (a backup file
+/// on USB, for boxes with no file picker) both end here. Cancel is focused
+/// by default so a stray Select can't replace anything; the current setup
+/// is saved as an automatic backup first.
+Future<void> restoreBackup(BuildContext context, Map<String, Object?> values,
+    {required String from, VoidCallback? onStart}) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: Text(tr('Restore backup?')),
+      content: Text(tr(
+          'Everything on this device (playlists, favourites, profiles, settings) is replaced by the backup from {from}. Your current setup is saved as an automatic backup first. VesperTV closes afterwards.',
+          {'from': from})),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+          child: Text(tr('Restore')),
+        ),
+        TextButton(
+          autofocus: true,
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: Text(tr('Cancel')),
+        ),
+      ],
+    ),
+  );
+  if (ok != true || !context.mounted) return;
+  onStart?.call();
+  final backups = BackupService(context.read<StorageService>());
+  // Undo point; best effort (no storage access on Android 9- = no undo).
+  try {
+    if (await backups.ensurePermission(write: true)) {
+      await backups.create(auto: true);
+    }
+  } catch (e) {
+    debugPrint('Pre-restore backup failed: $e');
+  }
+  if (!context.mounted) return;
+  await replaceSetupAndExit(context,
+      title: tr('Backup restored'),
+      importer: (storage) => storage.importForBackup(values));
 }

@@ -2594,6 +2594,24 @@ const Map<String, String> kFr = {
       "Cela la retire pour tous les profils de cet appareil. Pour la masquer seulement sur ce profil, désactivez plutôt Activée.",
   "Enabled and Show under Other are your own for each profile; sources are shared on this device.":
       "Activée et Afficher sous Autre sont propres à chaque profil ; les sources sont partagées sur cet appareil.",
+  "Downloading playlist... {mb} MB":
+      "Téléchargement de la liste… {mb} Mo",
+  "The server stopped sending the playlist after {mb} MB. Try again later.":
+      "Le serveur a cessé d'envoyer la liste après {mb} Mo. Réessayez plus tard.",
+  "The server did not answer within {s} seconds.":
+      "Le serveur n'a pas répondu en {s} secondes.",
+  "The server closed the connection without answering.":
+      "Le serveur a fermé la connexion sans répondre.",
+  "This is a VesperTV backup.":
+      "C'est une sauvegarde VesperTV.",
+  "Only add its Media Hub sources":
+      "Ajouter seulement ses sources Media Hub",
+  "Add M3U playlists, Media Hub sources or a backup from USB or external storage":
+      "Ajouter des listes M3U, des sources Media Hub ou une sauvegarde depuis une clé USB ou un stockage externe",
+  "This device has no file picker. Copy the backup onto a USB drive and open it in Import from storage.":
+      "Cet appareil n'a pas de sélecteur de fichiers. Copiez la sauvegarde sur une clé USB et ouvrez-la dans Importer depuis un stockage.",
+  "Preparing {name} for faster starts. This happens once... {p}%":
+      "Préparation de {name} pour des démarrages plus rapides. Une seule fois... {p} %",
   "Goal disallowed after review": "But refusé après révision",
   "Score overturned after review": "Score annulé après révision",
   "Main guide": "Guide principal",
@@ -2618,4 +2636,24 @@ const Map<String, String> kFr = {
       "Le téléviseur charge le guide. Relancez la recherche une fois terminé.",
   "No matching guide channels. Try fewer words or Update EPG Now.":
       "Aucune chaîne correspondante. Essayez moins de mots ou Mettre à jour l’EPG maintenant.",
+  "Decoder":
+      "Décodeur",
+  "Software":
+      "Logiciel",
+  "Hardware ({api})":
+      "Matériel ({api})",
+  "Stream details from a button in the player bar":
+      "Détails du flux depuis un bouton de la barre du lecteur",
+  "Adds a Data pool button to the player bar (or press I) that opens a card with the stream's details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer, HDR and decoder.":
+      "Ajoute un bouton Data pool à la barre du lecteur (ou appuyez sur I) qui ouvre une carte avec les détails du flux : résolution, fréquence d'images, codecs, débit, variantes de qualité, pistes audio, mémoire tampon, HDR et décodeur.",
+  "Arrows or a click swap · Esc to finish":
+      "Flèches ou un clic pour échanger · Échap pour terminer",
+  "Recent":
+      "Récents",
+  "Start over":
+      "Depuis le début",
+  "Fit":
+      "Ajuster",
+  "Fill":
+      "Remplir",
 };

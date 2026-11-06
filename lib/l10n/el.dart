@@ -2543,6 +2543,24 @@ const Map<String, String> kEl = {
       "Αυτό την αφαιρεί για όλα τα προφίλ αυτής της συσκευής. Για να την κρύψετε μόνο σε αυτό το προφίλ, απενεργοποιήστε το Ενεργό.",
   "Enabled and Show under Other are your own for each profile; sources are shared on this device.":
       "Τα Ενεργό και Εμφάνιση στα Άλλα είναι δικά σας για κάθε προφίλ· οι πηγές είναι κοινές σε αυτή τη συσκευή.",
+  "Downloading playlist... {mb} MB":
+      "Λήψη λίστας… {mb} MB",
+  "The server stopped sending the playlist after {mb} MB. Try again later.":
+      "Ο διακομιστής σταμάτησε να στέλνει τη λίστα μετά από {mb} MB. Δοκιμάστε ξανά αργότερα.",
+  "The server did not answer within {s} seconds.":
+      "Ο διακομιστής δεν απάντησε μέσα σε {s} δευτερόλεπτα.",
+  "The server closed the connection without answering.":
+      "Ο διακομιστής έκλεισε τη σύνδεση χωρίς να απαντήσει.",
+  "This is a VesperTV backup.":
+      "Αυτό είναι αντίγραφο ασφαλείας του VesperTV.",
+  "Only add its Media Hub sources":
+      "Προσθήκη μόνο των πηγών Media Hub",
+  "Add M3U playlists, Media Hub sources or a backup from USB or external storage":
+      "Προσθήκη λιστών M3U, πηγών Media Hub ή αντιγράφου ασφαλείας από USB ή εξωτερικό χώρο αποθήκευσης",
+  "This device has no file picker. Copy the backup onto a USB drive and open it in Import from storage.":
+      "Αυτή η συσκευή δεν έχει επιλογέα αρχείων. Αντιγράψτε το αντίγραφο ασφαλείας σε USB και ανοίξτε το στην Εισαγωγή από αποθηκευτικό μέσο.",
+  "Preparing {name} for faster starts. This happens once... {p}%":
+      "Προετοιμασία του {name} για γρηγορότερη εκκίνηση. Γίνεται μία φορά... {p}%",
   "Goal disallowed after review": "Το γκολ ακυρώθηκε μετά από επανεξέταση",
   "Score overturned after review": "Το σκορ ακυρώθηκε μετά από επανεξέταση",
   "Main guide": "Κύριος οδηγός",
@@ -2567,4 +2585,24 @@ const Map<String, String> kEl = {
       "Η τηλεόραση φορτώνει τον οδηγό. Αναζητήστε ξανά όταν ολοκληρωθεί.",
   "No matching guide channels. Try fewer words or Update EPG Now.":
       "Δεν βρέθηκαν αντίστοιχα κανάλια. Δοκιμάστε λιγότερες λέξεις ή Ενημέρωση EPG τώρα.",
+  "Decoder":
+      "Αποκωδικοποιητής",
+  "Software":
+      "Λογισμικό",
+  "Hardware ({api})":
+      "Υλικό ({api})",
+  "Stream details from a button in the player bar":
+      "Λεπτομέρειες ροής από ένα κουμπί στη γραμμή του προγράμματος αναπαραγωγής",
+  "Adds a Data pool button to the player bar (or press I) that opens a card with the stream's details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer, HDR and decoder.":
+      "Προσθέτει ένα κουμπί Data pool στη γραμμή αναπαραγωγής (ή πατήστε I) που ανοίγει μια κάρτα με τις λεπτομέρειες της ροής: ανάλυση, καρέ ανά δευτερόλεπτο, κωδικοποιητές, ρυθμό bit, παραλλαγές ποιότητας, κομμάτια ήχου, buffer, HDR και αποκωδικοποιητή.",
+  "Arrows or a click swap · Esc to finish":
+      "Βέλη ή ένα κλικ για εναλλαγή · Esc για τέλος",
+  "Recent":
+      "Πρόσφατα",
+  "Start over":
+      "Από την αρχή",
+  "Fit":
+      "Προσαρμογή",
+  "Fill":
+      "Γέμισμα",
 };

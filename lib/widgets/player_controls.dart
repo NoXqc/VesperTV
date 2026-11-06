@@ -569,8 +569,7 @@ class PlayerControls extends StatelessWidget {
 
   /// Recall, Watch from the start, Reload, tracks, Audio sync, linked
   /// channel, Multiview: in the bar on phones, in the options row on TV.
-  List<Widget> _actionButtons(
-      BuildContext context, PlaybackService? playback) {
+  List<Widget> _actionButtons(BuildContext context, PlaybackService? playback) {
     int? audioDelay;
     try {
       audioDelay = context.watch<AppPreferences>().audioDelayMs;
@@ -581,8 +580,8 @@ class PlayerControls extends StatelessWidget {
       if (isLive && channel != null)
         _LabeledIconButton(
           icon: Icons.history,
-          label:
-              tr('Recall — go back to a recent channel'),
+          label: tr('Recall — go back to a recent channel'),
+          shortLabel: tr('Recent'),
           onPressed: () {
             onActivity?.call();
             showRecallPicker(context, channel!);
@@ -590,17 +589,15 @@ class PlayerControls extends StatelessWidget {
         ),
       // Start over: the programme on now, from
       // its start (catch-up channels only).
-      if (isLive &&
-          channel != null &&
-          channel!.hasCatchup)
+      if (isLive && channel != null && channel!.hasCatchup)
         _LabeledIconButton(
           icon: Icons.restart_alt,
           label: tr('Watch from the start'),
+          shortLabel: tr('Start over'),
           onPressed: () {
             onActivity?.call();
-            final now = context
-                .read<EpgService>()
-                .getCurrentProgram(channel!.epgId);
+            final now =
+                context.read<EpgService>().getCurrentProgram(channel!.epgId);
             if (now != null) {
               playback?.playCatchup(channel!, now.start);
             }
@@ -616,11 +613,10 @@ class PlayerControls extends StatelessWidget {
         _LabeledIconButton(
           icon: Icons.refresh,
           label: tr('Reload channel'),
+          shortLabel: tr('Reload'),
           onPressed: () {
             onActivity?.call();
-            context
-                .read<PlaybackService>()
-                .reloadCurrentChannel();
+            context.read<PlaybackService>().reloadCurrentChannel();
           },
         ),
       // Keyed by stream: the bar stays mounted
@@ -632,12 +628,10 @@ class PlayerControls extends StatelessWidget {
       // (CBC Montreal described-video track,
       // owner 2026-10-26).
       _AudioTrackButton(
-          key: ValueKey(Object.hash(
-              'audio', controller, channel?.id)),
+          key: ValueKey(Object.hash('audio', controller, channel?.id)),
           controller: controller),
       _SubtitleButton(
-          key: ValueKey(Object.hash(
-              'subs', controller, channel?.id)),
+          key: ValueKey(Object.hash('subs', controller, channel?.id)),
           controller: controller),
       // Every stream, not only multi-track ones: the
       // sound can be off on any channel (Shield +
@@ -654,12 +648,12 @@ class PlayerControls extends StatelessWidget {
         },
       ),
       if (linkedChannel != null)
-        _LinkedChannelButton(
-            linkedChannel: linkedChannel!),
+        _LinkedChannelButton(linkedChannel: linkedChannel!),
       if (isLive && onOpenMultiview != null)
         _LabeledIconButton(
           icon: Icons.grid_view,
           label: tr('Open in Multiview'),
+          shortLabel: tr('Multiview'),
           onPressed: () {
             onActivity?.call();
             onOpenMultiview!();
@@ -688,35 +682,116 @@ class PlayerControls extends StatelessWidget {
           onActivity?.call();
           o.onPressed();
         });
-    // Low on the screen and nearly opaque: the picture showed through the
-    // tiles and their labels were hard to read (owner photo, 2026-11-05).
+    final accent = Theme.of(context).colorScheme.primary;
+    final catchup = playback?.catchup != null;
+    // Owner design (2026-11-06): the Media Hub top menu's glass pill with
+    // round icon buttons and short labels under them, a status line above
+    // it (what is playing on the left, the sound on the right). A soft
+    // scrim behind keeps both readable over a bright picture.
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.bottomCenter,
           end: Alignment.topCenter,
-          stops: [0, 0.7, 1],
-          // Between the first (see-through) and +623 (solid) versions
-          // (owner photo, 2026-11-05).
-          colors: [Color(0xD9000000), Color(0xB3000000), Color(0x00000000)],
+          stops: [0, 0.65, 1],
+          colors: [Color(0xCC000000), Color(0x66000000), Color(0x00000000)],
         ),
       ),
-      // Flush with the bottom edge; 40 at the sides clears TV overscan
-      // (the first tile was cut off on the Formuler's TV).
+      // 40 at the sides clears TV overscan (the first tile was cut off on
+      // the Formuler's TV).
       padding: EdgeInsets.fromLTRB(
-          40 + inset.left, 18, 40 + inset.right, inset.bottom),
-      child: _OptionTiles(
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final o in leadingOptions) option(o),
-              ..._actionButtons(context, playback),
-              for (final o in trailingOptions) option(o),
-            ],
+          40 + inset.left, 14, 40 + inset.right, 4 + inset.bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Hugs its buttons, centred (owner photo, 2026-11-06); a long
+          // row still scrolls inside the screen width.
+          Align(
+            // The title line sits on the pill, as wide as it (owner photo,
+            // 2026-11-06): the Stack takes the pill's size, the line floats
+            // in the space reserved above it.
+            child: Padding(
+              padding: const EdgeInsets.only(top: 24),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: [
+                        Colors.white.withValues(alpha: 0.10),
+                        Colors.white.withValues(alpha: 0.04),
+                      ]),
+                      color: const Color(0xE6000000),
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(color: Colors.white24),
+                      boxShadow: const [
+                        BoxShadow(color: Colors.black54, blurRadius: 8),
+                      ],
+                    ),
+                    child: _OptionTiles(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            for (final o in leadingOptions) option(o),
+                            ..._actionButtons(context, playback),
+                            for (final o in trailingOptions) option(o),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 16,
+                    right: 16,
+                    top: -24,
+                    height: 20,
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: _OptionsTitle(
+                              controller: controller,
+                              channel: channel,
+                              title: title,
+                              isLive: isLive),
+                        ),
+                        if (isLive || catchup) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 1),
+                            decoration: BoxDecoration(
+                                color: catchup ? Colors.transparent : accent,
+                                border: Border.all(color: accent),
+                                borderRadius: BorderRadius.circular(12)),
+                            child: Text(
+                                catchup
+                                    ? tr('Catch-up').toUpperCase()
+                                    : tr('LIVE'),
+                                style: TextStyle(
+                                    color: catchup ? accent : Colors.black,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.6)),
+                          ),
+                        ],
+                        const Spacer(),
+                        _AudioSummary(
+                            key: ValueKey(
+                                Object.hash('sound', controller, channel?.id)),
+                            controller: controller),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -1215,10 +1290,7 @@ class _QualityBadgeState extends State<_QualityBadge> {
   String? _label;
 
   /// The same selected video track's own frame rate, shown as a second
-  /// pill alongside the quality label — confirmed as data this widget
-  /// already fetches every refresh (it's what decides FHD vs. plain HD),
-  /// just never previously displayed on its own. Rounded for display
-  /// only; the raw value still goes to [qualityLabelForTrack] unrounded.
+  /// pill alongside the quality label. Rounded for display.
   int? _frameRate;
   Timer? _timer;
 
@@ -1258,10 +1330,8 @@ class _QualityBadgeState extends State<_QualityBadge> {
       }
       final height = selected?.height;
       if (!mounted || height == null) return;
-      final label = qualityLabelForTrack(
-          height: height,
-          width: selected?.width,
-          frameRate: selected?.frameRate);
+      final label =
+          qualityLabelForTrack(height: height, width: selected?.width);
       final frameRate = selected?.frameRate?.round();
       if (label != _label || frameRate != _frameRate) {
         setState(() {
@@ -1588,6 +1658,7 @@ class _AudioTrackButtonState extends State<_AudioTrackButton> {
     return _LabeledIconButton(
       icon: Icons.multitrack_audio,
       label: tr('Audio track'),
+      shortLabel: tr('Audio'),
       onPressed: _openPicker,
     );
   }
@@ -1997,6 +2068,7 @@ class _LinkedChannelButton extends StatelessWidget {
       icon: Icons.swap_horiz,
       label: tr('Switch to {playlistName}: {name}',
           {'playlistName': playlistName, 'name': linkedChannel.name}),
+      shortLabel: playlistName,
       onPressed: () => context.read<PlaybackService>().play(linkedChannel),
     );
   }
@@ -2011,6 +2083,139 @@ class _LinkedChannelButton extends StatelessWidget {
 /// what this icon does" for every *other* button in it — this is now
 /// shared by all of them (Recall, Reload, audio track, linked-channel)
 /// instead of leaving one explained and the rest bare.
+/// The options row's status line, left side: the channel and the
+/// programme on now ("TSN 1 | NHL Hockey"; catch-up: the programme at the
+/// replay position), or a movie / episode's own title. Owner, 2026-11-06.
+class _OptionsTitle extends StatelessWidget {
+  const _OptionsTitle(
+      {required this.controller,
+      required this.channel,
+      required this.title,
+      required this.isLive});
+
+  final VideoPlayerHdrController controller;
+  final Channel? channel;
+  final String title;
+  final bool isLive;
+
+  @override
+  Widget build(BuildContext context) {
+    EpgService? epg;
+    PlaybackService? playback;
+    try {
+      epg = context.watch<EpgService>();
+    } on ProviderNotFoundException {
+      epg = null;
+    }
+    try {
+      playback = context.read<PlaybackService>();
+    } on ProviderNotFoundException {
+      playback = null;
+    }
+    final session = playback?.catchup;
+    final live = session?.live ?? channel;
+    final name = session != null || isLive ? (live?.name ?? title) : title;
+    String? programme;
+    if (session != null && epg != null) {
+      programme = CatchupSession.programmeAt(
+              epg.getPrograms(session.live.epgId),
+              session.playhead(controller.value.position))
+          ?.title;
+    } else if (isLive && live != null) {
+      programme = epg?.getCurrentProgram(live.epgId)?.title;
+    }
+    const style = TextStyle(color: Colors.white, fontSize: 12);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: Text(name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: style.copyWith(fontWeight: FontWeight.w700)),
+        ),
+        if (programme != null && programme.isNotEmpty) ...[
+          Container(
+              width: 1,
+              height: 12,
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              color: Colors.white38),
+          Flexible(
+            flex: 2,
+            child: Text(programme,
+                maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// The options row's status line, right side: the playing sound as
+/// "English • Stereo" / "English • Dolby Atmos" (selected audio track's
+/// language and layout, the Android picker's rules). Read every 5 s like the badges; empty while
+/// the stream reports nothing.
+class _AudioSummary extends StatefulWidget {
+  const _AudioSummary({super.key, required this.controller});
+
+  final VideoPlayerHdrController controller;
+
+  @override
+  State<_AudioSummary> createState() => _AudioSummaryState();
+}
+
+class _AudioSummaryState extends State<_AudioSummary> {
+  String? _text;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+    _timer = Timer.periodic(const Duration(seconds: 5), (_) => _refresh());
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _refresh() async {
+    final c = widget.controller;
+    if (!c.isAudioTrackSupportAvailable()) return;
+    try {
+      final tracks = await c.getAudioTracks();
+      VideoAudioTrack? selected;
+      for (final t in tracks) {
+        if (t.isSelected) selected = t;
+      }
+      final language = selected?.language?.toLowerCase() ?? '';
+      final text = [
+        if (language.isNotEmpty &&
+            !_AudioTrackButtonState._noLanguage.contains(language))
+          languageName(language),
+        // Atmos (E-AC-3 JOC) the way the ATMOS badge reads it, else the
+        // layout (owner, 2026-11-06: an Atmos channel said "5.1").
+        DataPoolCard.isAtmos(selected?.codec)
+            ? 'Dolby Atmos'
+            : DataPoolCard.channelsName(selected?.channelCount),
+      ].whereType<String>().where((s) => s.isNotEmpty).join(' • ');
+      if (mounted && text != _text) setState(() => _text = text);
+    } catch (_) {
+      // No track info for this stream: nothing shown.
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = _text;
+    if (text == null || text.isEmpty) return const SizedBox.shrink();
+    return Text(text,
+        style: const TextStyle(color: Colors.white, fontSize: 12));
+  }
+}
+
 /// One tile of the TV options row that the player screen adds itself
 /// (Channels list, Channel schedule, Sources, Fill, Data pool, Search).
 class PlayerOption {
@@ -2043,10 +2248,15 @@ class _LabeledIconButton extends StatefulWidget {
       {required this.icon,
       required this.label,
       required this.onPressed,
-      this.detail});
+      this.detail,
+      this.shortLabel});
 
   final IconData icon;
   final String label;
+
+  /// The options row's one- or two-word name under the round button
+  /// ("Recent", "Multiview"); [label] when null.
+  final String? shortLabel;
   final VoidCallback onPressed;
 
   /// Second line under the label in the options row (e.g. "+150 ms").
@@ -2082,53 +2292,59 @@ class _LabeledIconButtonState extends State<_LabeledIconButton> {
     super.dispose();
   }
 
+  /// The options row's button: a round icon (filled with the accent when
+  /// focused, like the Media Hub top menu's lit buttons) over a short
+  /// label that turns the accent colour too.
   Widget _buildTile(BuildContext context) {
     final accent = Theme.of(context).colorScheme.primary;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: InkWell(
-        focusNode: _focusNode,
-        onTap: widget.onPressed,
-        borderRadius: BorderRadius.circular(10),
-        focusColor: Colors.transparent,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
-          width: 116,
-          height: 84,
-          padding: const EdgeInsets.fromLTRB(6, 8, 6, 4),
-          decoration: BoxDecoration(
-            color: _focused
-                ? Color.alphaBlend(
-                    accent.withValues(alpha: 0.25), const Color(0xB3141414))
-                : const Color(0xB3141414),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-                color: _focused ? accent : Colors.transparent, width: 2),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(widget.icon,
-                  color: _focused ? accent : Colors.white, size: 30),
-              const SizedBox(height: 6),
-              Text(
-                widget.label,
-                maxLines: widget.detail == null ? 2 : 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    color: _focused ? Colors.white : Colors.white70,
-                    fontSize: 12,
-                    height: 1.15,
-                    fontWeight: FontWeight.w500),
+    return InkWell(
+      focusNode: _focusNode,
+      onTap: widget.onPressed,
+      borderRadius: BorderRadius.circular(16),
+      focusColor: Colors.transparent,
+      hoverColor: Colors.transparent,
+      child: SizedBox(
+        width: 68,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 140),
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _focused ? accent : Colors.white.withValues(alpha: 0.06),
+                border: Border.all(
+                    color: _focused ? accent : Colors.white38, width: 1),
+                boxShadow: _focused
+                    ? [
+                        BoxShadow(
+                            color: accent.withValues(alpha: 0.45),
+                            blurRadius: 8)
+                      ]
+                    : null,
               ),
-              if (widget.detail case final detail?)
-                Text(detail,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: accent, fontSize: 12)),
-            ],
-          ),
+              child: Icon(widget.icon,
+                  color: _focused ? Colors.black : Colors.white, size: 18),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              widget.shortLabel ?? widget.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  color: _focused ? accent : Colors.white,
+                  fontSize: 10,
+                  fontWeight: _focused ? FontWeight.w700 : FontWeight.w500),
+            ),
+            if (widget.detail case final detail?)
+              Text(detail,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: accent, fontSize: 9)),
+          ],
         ),
       ),
     );

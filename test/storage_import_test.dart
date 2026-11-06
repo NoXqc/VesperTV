@@ -63,6 +63,37 @@ void main() {
     }
   });
 
+  test('a backup on storage is recognised, other JSON is not', () async {
+    // Boxes with no file picker restore from USB (Android 11+ hides the
+    // old Download/VesperTV backups after a reinstall).
+    final backup = File('${temp.path}/VesperTV-backup.json');
+    await backup.writeAsString(jsonEncode({
+      'format': 'vespertv-backup',
+      'data': {'nox_playlists': '[]'}
+    }));
+    final other = File('${temp.path}/sources.json');
+    await other.writeAsString(jsonEncode(['https://x.example/manifest.json']));
+    expect(
+        await importer.readBackup(
+            StorageItem(uri: backup.uri, name: 'VesperTV-backup.json')),
+        {'nox_playlists': '[]'});
+    expect(
+        await importer
+            .readBackup(StorageItem(uri: other.uri, name: 'sources.json')),
+        isNull);
+    expect(
+        await importer
+            .readBackup(StorageItem(uri: backup.uri, name: 'list.m3u')),
+        isNull);
+    // No scratch copies left behind.
+    expect(
+        temp
+            .listSync(recursive: true)
+            .whereType<File>()
+            .where((f) => f.path.endsWith('.backup')),
+        isEmpty);
+  });
+
   test('folder lists only playlists/source definitions and folders', () async {
     await Directory('${temp.path}/Movies').create();
     await File('${temp.path}/list.M3U8').writeAsString('');

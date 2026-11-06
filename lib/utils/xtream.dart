@@ -1,3 +1,5 @@
+import 'smart_add_parser.dart';
+
 /// Builds the XMLTV EPG URL for an Xtream Codes ("XC API") panel from a
 /// server address, username, and password.
 ///
@@ -16,6 +18,30 @@ class XtreamHelper {
     final user = Uri.encodeQueryComponent(username);
     final pass = Uri.encodeQueryComponent(password);
     return '$base/xmltv.php?username=$user&password=$pass';
+  }
+
+  /// The Xtream login inside a panel's M3U export link
+  /// (`http://host:port/get.php?username=U&password=P&type=m3u_plus`), as
+  /// Smart add reads it: the same catalog, which the Xtream API serves a
+  /// category / show at a time instead of one 300+ MB list. Null for any
+  /// other link.
+  static ({String server, String username, String password})? fromM3uUrl(
+      String url) {
+    if (!RegExp(r'^https?://[^?#]+/get\.php(?:[?#]|$)', caseSensitive: false)
+        .hasMatch(url.trim())) {
+      return null;
+    }
+    final parsed = parseSmartAddText(url);
+    if (parsed.serverCandidates.isEmpty ||
+        parsed.username.isEmpty ||
+        parsed.password.isEmpty) {
+      return null;
+    }
+    return (
+      server: parsed.serverCandidates.first,
+      username: parsed.username,
+      password: parsed.password,
+    );
   }
 
   static String _normalizeServer(String server) {

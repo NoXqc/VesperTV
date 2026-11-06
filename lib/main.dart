@@ -51,6 +51,7 @@ import 'services/sports_service.dart';
 import 'models/channel.dart';
 import 'widgets/recording_conflict_dialog.dart';
 import 'services/playlist_manager.dart';
+import 'services/playlist_session.dart';
 import 'services/storage_service.dart';
 import 'services/game_reminders.dart';
 import 'services/programme_reminders.dart';
@@ -80,6 +81,7 @@ import 'services/tracker_sync.dart';
 import 'services/watch_tracker.dart';
 import 'services/perf_diagnostics.dart';
 import 'services/desktop_live_recovery.dart';
+import 'services/desktop_audio.dart';
 import 'services/desktop_stream_setup.dart';
 
 @pragma('vm:entry-point')
@@ -603,6 +605,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // Windows live recovery: a channel's other copies (Settings'
       // automatic failover, same as Android's PlaybackService).
       desktopSoftwareVideo = _storage.getDesktopSoftwareVideo();
+      DesktopAudio.passthrough = _storage.getAudioPassthrough();
+      DesktopAudio.delayMs = _storage.getAudioDelayMs();
       DesktopLiveRecovery.copiesOf = (channel) => _storage.getCopyFallback()
           ? _playlistManager.failoverCandidatesFor(channel)
           : const [];
@@ -779,10 +783,14 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // gentle). Opening Movies/TV Shows earlier loads what the screen
       // shows, as it always did.
       final fast = _preferences.fastStartup;
-      if (!didSync && _playlistManager.isXtream && fast) {
+      // Every playlist whose movies/shows are in the catalog database:
+      // Xtream, and an M3U stored by M3uImport (it was skipped, so its
+      // TV Shows groups filled in one by one after each cold launch).
+      final catalogDb = _playlistManager.hasCatalogDb;
+      if (!didSync && catalogDb && fast) {
         unawaited(StartupQuiet.after(const Duration(seconds: 2))
             .then((_) => _preloadCatalogs(gentle: true)));
-      } else if (!didSync && _playlistManager.isXtream) {
+      } else if (!didSync && catalogDb) {
         await _preloadCatalogs();
       }
       PerfDiagnostics.mark('preload');
@@ -904,8 +912,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     // Gentle: one load at a time (Movies, then TV Shows, playlist by
     // playlist); the splash pre-load runs them all together.
     final loads = <Future<void> Function()>[];
-    for (final profile
-        in _playlistManager.profiles.where((p) => p.enabled && p.isXtream)) {
+    for (final profile in _playlistManager.profiles
+        .where((p) => p.enabled && _playlistManager.catalogInDbFor(p.id))) {
       final vodNames = _playlistManager.vodGroups
           .where((g) => g.playlistId == profile.id && !g.isHidden)
           .map((g) => g.title)
@@ -914,9 +922,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
           .where((g) => g.playlistId == profile.id && !g.isHidden)
           .map((g) => g.title)
           .toList();
-      loads.add(() => _playlistManager.ensureCategoriesLoaded(
-          profile.id, vodNames, 'vod',
-          gentle: gentle));
+      loads.add(() => _playlistManager
+          .ensureCategoriesLoaded(profile.id, vodNames, 'vod', gentle: gentle));
       loads.add(() => _playlistManager.ensureCategoriesLoaded(
           profile.id, seriesNames, 'series',
           gentle: gentle));
@@ -1211,8 +1218,13 @@ class _NoxIptvAppState extends State<NoxIptvApp>
                                 fontSize: 16,
                                 fontStyle: FontStyle.italic)),
                         const SizedBox(height: 20),
-                        Text(_splashStatus,
-                            style: const TextStyle(color: Colors.white70)),
+                        ValueListenableBuilder<String?>(
+                          valueListenable: PlaylistSession.startupNote,
+                          builder: (context, note, _) => Text(
+                              note ?? _splashStatus,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.white70)),
+                        ),
                       ],
                     );
                   },

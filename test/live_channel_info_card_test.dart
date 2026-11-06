@@ -306,7 +306,7 @@ void main() {
     await press(LogicalKeyboardKey.arrowDown);
     final tile = FocusManager.instance.primaryFocus;
     expect(tile?.debugLabel, 'labeled-icon-button');
-    expect(find.text('Channels list'), findsOneWidget);
+    expect(find.text('Channels'), findsOneWidget);
     await press(LogicalKeyboardKey.arrowUp);
     expect(focused(), 'player-play');
     await tester.binding.handlePopRoute();
