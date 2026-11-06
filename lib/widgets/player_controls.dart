@@ -742,22 +742,24 @@ class PlayerControls extends StatelessWidget {
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [
-                Colors.white.withValues(alpha: 0.10),
-                Colors.white.withValues(alpha: 0.04),
-              ]),
-              color: const Color(0xE6000000),
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: Colors.white24),
-              boxShadow: const [
-                BoxShadow(color: Colors.black54, blurRadius: 8),
-              ],
-            ),
-            child: _OptionTiles(
-              child: Center(
+          // Hugs its buttons, centred (owner photo, 2026-11-06); a long
+          // row still scrolls inside the screen width.
+          Align(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [
+                  Colors.white.withValues(alpha: 0.10),
+                  Colors.white.withValues(alpha: 0.04),
+                ]),
+                color: const Color(0xE6000000),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: Colors.white24),
+                boxShadow: const [
+                  BoxShadow(color: Colors.black54, blurRadius: 8),
+                ],
+              ),
+              child: _OptionTiles(
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
