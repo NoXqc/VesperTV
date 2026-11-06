@@ -12,7 +12,7 @@ owner has tested it.
 | 1 | Audio tracks + surround passthrough + audio delay (no ATMOS badge: mpv can't tell) | done, owner test pending (`claude/windows-parity`) |
 | 2 | Data pool + quality / FPS / surround badges | done, owner test pending (`claude/windows-parity`) |
 | 3 | Catch-up | done, owner test pending (`claude/windows-parity`) |
-| 4 | Toast notifications while the app runs | waiting for the owner (plugin = Start-menu shortcut / registry entry) |
+| 4 | Toast notifications while the app runs | **not doing it for now** (owner, 2026-11-06: a toast plugin adds a Start-menu shortcut / registry entry) |
 | 5 | Multiview 1+3 and Swap | done, owner test pending (`claude/windows-parity`) |
 
 ## Why
