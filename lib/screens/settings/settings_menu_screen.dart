@@ -245,7 +245,7 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
                 Platform.isWindows
                     ? tr('Stream details from a button in the player bar')
                     : tr('Stream details when you press OK while watching')),
-            if (Platform.isAndroid)
+            if (Platform.isAndroid || Platform.isWindows)
               _general('catchup', Icons.history_toggle_off, tr('Catch-up'),
                   tr('What happens when a catch-up programme ends')),
             if (Platform.isAndroid || Platform.isWindows)

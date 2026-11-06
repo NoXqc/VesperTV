@@ -11,7 +11,7 @@ owner has tested it.
 | 0 | Windows build of current code, Android-only calls guarded, owner checklist | done, waiting for the owner's checklist (`claude/windows-parity`) |
 | 1 | Audio tracks + surround passthrough + audio delay (no ATMOS badge: mpv can't tell) | done, owner test pending (`claude/windows-parity`) |
 | 2 | Data pool + quality / FPS / surround badges | done, owner test pending (`claude/windows-parity`) |
-| 3 | Catch-up | not started |
+| 3 | Catch-up | done, owner test pending (`claude/windows-parity`) |
 | 4 | Toast notifications while the app runs | not started |
 | 5 | Multiview 1+3 and Swap | not started |
 
@@ -124,6 +124,18 @@ Original plan:
 - Feed the Real 4K tag from the same height reading if it isn't already (`real_4k_channels.dart`).
 
 ## Phase 3: catch-up
+**Done 2026-11-06 (Claude):** `services/desktop_catchup.dart` (`DesktopCatchup`: `plan()` = the
+same rules as `PlaybackService.playCatchup`, tested in `test/desktop_catchup_test.dart`; request
+end carries on / goes live, programme-end pause with Keep playing off, seek inside the request or
+a new request). `DesktopPlayerScreen(catchupAt:)`: `_currentChannel` stays the live channel,
+`_inCatchup` drives the programme scrub bar (clock times), LIVE button, ±10 s, no recall /
+reload / side panel, Back closes (never minimizes an archive stream). Live recovery is stopped
+for catch-up and watched again on live. Pause on live > 90 s then Play = timeshift. Guide OK on
+a past programme opens it full screen (no preview step on Windows; the mini player is cleared
+first: one connection). Settings > Playback > Catch-up shown on Windows. Send log:
+`DesktopCatchup:` lines. Not done: the Windows side panel / info card have no catch-up entry.
+
+Original plan:
 Read `dev-notes/catchup-plan.md` (C4 = this task).
 - Shared already: `services/catchup_url.dart`, `catchup_session.dart`, EPG past days, the guide's
   past navigation. Windows needs: play a transient `cu_` channel in `DesktopPlayerScreen` (never

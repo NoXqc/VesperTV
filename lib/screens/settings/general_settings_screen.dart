@@ -636,7 +636,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                               context.read<AppPreferences>().setDataPool(v),
                         ),
                       ]),
-                  if (Platform.isAndroid)
+                  if (Platform.isAndroid || Platform.isWindows)
                     _section(
                         'catchup', Icons.history_toggle_off, tr('Catch-up'),
                         children: [

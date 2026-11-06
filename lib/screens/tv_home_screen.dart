@@ -2599,13 +2599,19 @@ class _TvHomeScreenState extends State<TvHomeScreen>
 
   /// OK on a past programme (or Watch from the start): plays [channel]'s
   /// catch-up from [at] in the preview; OK again on the same one = full
-  /// screen. Windows has no catch-up player yet: plays the channel live.
+  /// screen. Windows opens it full screen at once (DesktopCatchup).
   Future<void> _previewOrOpenCatchup(Channel channel, DateTime at) async {
+    if (!channel.hasCatchup) return _previewOrOpenChannel(channel);
     // The target platform (not dart:io), so Android tests on a Windows PC
-    // take this path too.
-    if (defaultTargetPlatform == TargetPlatform.windows ||
-        !channel.hasCatchup) {
-      return _previewOrOpenChannel(channel);
+    // take the Android path.
+    if (defaultTargetPlatform == TargetPlatform.windows) {
+      // One stream at a time: the preview's connection goes first.
+      DesktopMiniPlayer.instance.clear();
+      _catchupPreview = null;
+      await Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) =>
+              DesktopPlayerScreen(channel: channel, catchupAt: at)));
+      return;
     }
     final playback = context.read<PlaybackService>();
     playback.zapList = _currentLiveChannels(context.read<PlaylistManager>());
