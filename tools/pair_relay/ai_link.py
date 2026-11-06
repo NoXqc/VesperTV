@@ -20,12 +20,15 @@ this relay never sees the viewer's playlists except the answers it carries.
     GET  /api/ai/poll     the TV: X-Vesper-Link; 200 {"id","msg"} or 204
     POST /api/ai/reply    the TV: X-Vesper-Link; {"id","msg"} -> 204
 """
+import base64
 import hashlib
 import json
 import os
 import re
+import sys
 import threading
 import time
+import urllib.parse
 import uuid
 
 SECRET_RE = re.compile(r"^/mcp/([A-Za-z0-9_-]{32,128})/?$")
@@ -307,3 +310,165 @@ def reply(h, clock=time.time):
         slot[1] = json.dumps(msg).encode()
         slot[0].set()
     return h._send(204)
+
+
+# ----------------------------------------------------------------- OAuth
+#
+# Claude (and other MCP apps) may insist on an OAuth sign-in before using a
+# connector. The link secret in the URL is what grants access, so this is a
+# minimal OAuth 2.1 server that approves at once: discovery metadata,
+# dynamic client registration, an authorize step that redirects straight
+# back with a code (PKCE S256 checked), and opaque tokens. The MCP endpoint
+# accepts requests with or without a token (the phone page sends none).
+
+ISSUER = os.environ.get("PAIR_PUBLIC_BASE", "https://pair.vespertv.app")
+CODE_TTL = 300
+_codes = {}  # code -> (expires, redirect_uri, challenge, method)
+_codes_lock = threading.Lock()
+WELL_KNOWN_PR = re.compile(
+    r"^/\.well-known/oauth-protected-resource(/mcp/[A-Za-z0-9_-]{32,128})?/?$")
+WELL_KNOWN_AS = re.compile(
+    r"^/\.well-known/(oauth-authorization-server|openid-configuration)(/.*)?$")
+
+
+def debug(h, path, code):
+    """Temporary (Claude connector bring-up): method, masked path, status and
+    a few header names. Never bodies, tokens or the link secret."""
+    masked = re.sub(r"(/mcp/)([A-Za-z0-9_-]{4})[A-Za-z0-9_-]+", r"\1\2…", path)
+    masked = re.sub(r"(code|state|code_challenge|refresh_token)=[^&]*", r"\1=…", masked)
+    ua = (h.headers.get("User-Agent") or "")[:60]
+    print(f"ai_link {h.command} {masked} -> {code} ua={ua!r} "
+          f"accept={(h.headers.get('Accept') or '')[:60]!r} "
+          f"auth={'yes' if h.headers.get('Authorization') else 'no'} "
+          f"mcpv={h.headers.get('MCP-Protocol-Version')!r}",
+          file=sys.stderr, flush=True)
+
+
+def _as_metadata():
+    return {
+        "issuer": ISSUER,
+        "authorization_endpoint": ISSUER + "/oauth/authorize",
+        "token_endpoint": ISSUER + "/oauth/token",
+        "registration_endpoint": ISSUER + "/oauth/register",
+        "response_types_supported": ["code"],
+        "grant_types_supported": ["authorization_code", "refresh_token"],
+        "code_challenge_methods_supported": ["S256"],
+        "token_endpoint_auth_methods_supported": ["none"],
+        "scopes_supported": ["vespertv"],
+    }
+
+
+def oauth_get(h, path, query):
+    """GET routes under /.well-known and /oauth; False if not ours."""
+    m = WELL_KNOWN_PR.match(path)
+    if m:
+        resource = ISSUER + (m.group(1) or "/mcp")
+        h._send(200, json.dumps({
+            "resource": resource,
+            "authorization_servers": [ISSUER],
+            "scopes_supported": ["vespertv"],
+            "bearer_methods_supported": ["header"],
+        }).encode())
+        return True
+    if WELL_KNOWN_AS.match(path):
+        h._send(200, json.dumps(_as_metadata()).encode())
+        return True
+    if path == "/oauth/authorize":
+        q = urllib.parse.parse_qs(query)
+        one = lambda k: (q.get(k) or [""])[0]
+        redirect = one("redirect_uri")
+        parsed = urllib.parse.urlparse(redirect)
+        local = parsed.hostname in ("localhost", "127.0.0.1")
+        if one("response_type") != "code" or not parsed.netloc or not (
+                parsed.scheme == "https" or (parsed.scheme == "http" and local)):
+            h._send(400, json.dumps({"error": "invalid_request"}).encode())
+            return True
+        code = uuid.uuid4().hex + uuid.uuid4().hex
+        with _codes_lock:
+            now = time.time()
+            for k in [k for k, v in _codes.items() if v[0] < now]:
+                del _codes[k]
+            if len(_codes) > 5000:
+                _codes.clear()
+            _codes[code] = (now + CODE_TTL, redirect,
+                            one("code_challenge"), one("code_challenge_method"))
+        params = {"code": code}
+        if one("state"):
+            params["state"] = one("state")
+        sep = "&" if parsed.query else "?"
+        h.send_response(302)
+        h.send_header("Location", redirect + sep + urllib.parse.urlencode(params))
+        h.send_header("Cache-Control", "no-store")
+        h.send_header("Content-Length", "0")
+        h.end_headers()
+        return True
+    return False
+
+
+def _token_reply(h):
+    h._send(200, json.dumps({
+        "access_token": "vtv_" + uuid.uuid4().hex + uuid.uuid4().hex,
+        "token_type": "Bearer",
+        "expires_in": 365 * 24 * 3600,
+        "refresh_token": "vtr_" + uuid.uuid4().hex + uuid.uuid4().hex,
+        "scope": "vespertv",
+    }).encode())
+
+
+def oauth_post(h, path):
+    """POST /oauth/register and /oauth/token; False if not ours."""
+    if path == "/oauth/register":
+        raw = _body(h, 16 * 1024)
+        try:
+            req = json.loads(raw) if raw else {}
+            if not isinstance(req, dict):
+                raise ValueError
+        except ValueError:
+            h._send(400, json.dumps({"error": "invalid_client_metadata"}).encode())
+            return True
+        out = {
+            "client_id": "vtc_" + uuid.uuid4().hex,
+            "client_id_issued_at": int(time.time()),
+            "token_endpoint_auth_method": "none",
+            "grant_types": ["authorization_code", "refresh_token"],
+            "response_types": ["code"],
+        }
+        for k in ("redirect_uris", "client_name", "scope"):
+            if k in req:
+                out[k] = req[k]
+        h._send(201, json.dumps(out).encode())
+        return True
+    if path == "/oauth/token":
+        raw = _body(h, 16 * 1024) or b""
+        ctype = h.headers.get("Content-Type", "")
+        try:
+            if "json" in ctype:
+                form = {k: str(v) for k, v in json.loads(raw).items()}
+            else:
+                form = {k: v[0] for k, v in
+                        urllib.parse.parse_qs(raw.decode()).items()}
+        except (ValueError, AttributeError):
+            form = {}
+        grant = form.get("grant_type")
+        if grant == "refresh_token" and form.get("refresh_token"):
+            _token_reply(h)
+            return True
+        if grant != "authorization_code":
+            h._send(400, json.dumps({"error": "unsupported_grant_type"}).encode())
+            return True
+        with _codes_lock:
+            item = _codes.pop(form.get("code", ""), None)
+        bad = item is None or item[0] < time.time()
+        if not bad and form.get("redirect_uri") and form["redirect_uri"] != item[1]:
+            bad = True
+        if not bad and item[2]:
+            verifier = form.get("code_verifier", "")
+            digest = base64.urlsafe_b64encode(
+                hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
+            bad = digest != item[2]
+        if bad:
+            h._send(400, json.dumps({"error": "invalid_grant"}).encode())
+            return True
+        _token_reply(h)
+        return True
+    return False

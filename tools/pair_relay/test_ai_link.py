@@ -160,5 +160,62 @@ class AiLinkTests(unittest.TestCase):
         conn.close()
 
 
+    def test_oauth_sign_in_approves_at_once_with_pkce(self):
+        import base64, hashlib, urllib.parse
+        status, meta = self.request(
+            "GET", f"/.well-known/oauth-protected-resource/mcp/{SECRET}")
+        self.assertEqual(status, 200)
+        self.assertTrue(meta["resource"].endswith(f"/mcp/{SECRET}"))
+        status, asm = self.request("GET", "/.well-known/oauth-authorization-server")
+        self.assertEqual(asm["code_challenge_methods_supported"], ["S256"])
+        status, reg = self.request("POST", "/oauth/register",
+                                   {"redirect_uris": ["https://claude.ai/api/mcp/auth_callback"],
+                                    "client_name": "Claude"})
+        self.assertEqual(status, 201)
+        verifier = "v" * 50
+        challenge = base64.urlsafe_b64encode(
+            hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
+        q = urllib.parse.urlencode({
+            "response_type": "code", "client_id": reg["client_id"],
+            "redirect_uri": "https://claude.ai/api/mcp/auth_callback",
+            "code_challenge": challenge, "code_challenge_method": "S256",
+            "state": "xyz"})
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        conn.request("GET", "/oauth/authorize?" + q)
+        res = conn.getresponse(); res.read()
+        self.assertEqual(res.status, 302)
+        loc = urllib.parse.urlparse(res.getheader("Location"))
+        got = urllib.parse.parse_qs(loc.query)
+        self.assertEqual(got["state"], ["xyz"])
+        code = got["code"][0]
+
+        def token(form):
+            conn.request("POST", "/oauth/token", body=urllib.parse.urlencode(form),
+                         headers={"Content-Type": "application/x-www-form-urlencoded"})
+            r = conn.getresponse()
+            return r.status, json.loads(r.read())
+
+        self.assertEqual(token({"grant_type": "authorization_code", "code": code,
+                                "code_verifier": "wrong"})[0], 400)
+        conn.request("GET", "/oauth/authorize?" + q)
+        res = conn.getresponse(); res.read()
+        code = urllib.parse.parse_qs(urllib.parse.urlparse(
+            res.getheader("Location")).query)["code"][0]
+        status, tok = token({"grant_type": "authorization_code", "code": code,
+                             "code_verifier": verifier,
+                             "redirect_uri": "https://claude.ai/api/mcp/auth_callback"})
+        self.assertEqual(status, 200)
+        self.assertEqual(tok["token_type"], "Bearer")
+        status, again = token({"grant_type": "refresh_token",
+                               "refresh_token": tok["refresh_token"]})
+        self.assertEqual(status, 200)
+        conn.close()
+        # The MCP endpoint takes the token (or none).
+        status, body = self.request("POST", f"/mcp/{SECRET}",
+                                    {"jsonrpc": "2.0", "id": 1, "method": "ping"},
+                                    headers={"Authorization": "Bearer " + tok["access_token"]})
+        self.assertEqual(body["result"], {})
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -260,6 +260,29 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):  # no access log: URLs carry session ids
         pass
 
+    def send_response(self, code, message=None):
+        self._status = code
+        super().send_response(code, message)
+
+    def _ai_route(self, path):
+        return path.startswith(("/mcp/", "/.well-known/", "/oauth/"))
+
+    def do_GET(self):
+        self._status = None
+        try:
+            self._do_get()
+        finally:
+            if self._ai_route(self.path.split("?", 1)[0]):
+                ai_link.debug(self, self.path, self._status)
+
+    def do_POST(self):
+        self._status = None
+        try:
+            self._do_post()
+        finally:
+            if self._ai_route(self.path.split("?", 1)[0]):
+                ai_link.debug(self, self.path, self._status)
+
     def _send(self, code, body=b"", ctype="application/json"):
         self.send_response(code)
         self.send_header("Content-Type", ctype)
@@ -289,8 +312,10 @@ class Handler(BaseHTTPRequestHandler):
         self._send(403)
         return False
 
-    def do_GET(self):
-        path = self.path.split("?", 1)[0]
+    def _do_get(self):
+        path, _, query = self.path.partition("?")
+        if ai_link.oauth_get(self, path, query):
+            return
         if path in ("/", "/p", "/p/"):
             try:
                 return self._send(200, _load_page(), "text/html; charset=utf-8")
@@ -365,8 +390,10 @@ class Handler(BaseHTTPRequestHandler):
             _store[m.group(1)] = (now, body)
         return self._send(204)
 
-    def do_POST(self):
+    def _do_post(self):
         path = self.path.split("?", 1)[0]
+        if ai_link.oauth_post(self, path):
+            return
         mcp = ai_link.SECRET_RE.match(path)
         if mcp:
             # The AI app's own servers: no app header to check.
