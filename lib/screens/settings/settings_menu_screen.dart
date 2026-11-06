@@ -238,9 +238,13 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
                   Icons.tv_outlined,
                   tr('Frame rate & resolution'),
                   tr('Match the TV to the video\'s frame rate and resolution')),
-            if (!Platform.isWindows)
-              _general('datapool', Icons.analytics_outlined, tr('Data pool'),
-                  tr('Stream details when you press OK while watching')),
+            _general(
+                'datapool',
+                Icons.analytics_outlined,
+                tr('Data pool'),
+                Platform.isWindows
+                    ? tr('Stream details from a button in the player bar')
+                    : tr('Stream details when you press OK while watching')),
             if (Platform.isAndroid)
               _general('catchup', Icons.history_toggle_off, tr('Catch-up'),
                   tr('What happens when a catch-up programme ends')),

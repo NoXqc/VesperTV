@@ -2563,4 +2563,14 @@ const Map<String, String> kEl = {
       "Προετοιμασία του {name} για γρηγορότερη εκκίνηση. Γίνεται μία φορά... {p}%",
   "Goal disallowed after review": "Το γκολ ακυρώθηκε μετά από επανεξέταση",
   "Score overturned after review": "Το σκορ ακυρώθηκε μετά από επανεξέταση",
+  "Decoder":
+      "Αποκωδικοποιητής",
+  "Software":
+      "Λογισμικό",
+  "Hardware ({api})":
+      "Υλικό ({api})",
+  "Stream details from a button in the player bar":
+      "Λεπτομέρειες ροής από ένα κουμπί στη γραμμή του προγράμματος αναπαραγωγής",
+  "Adds a Data pool button to the player bar (or press I) that opens a card with the stream's details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer, HDR and decoder.":
+      "Προσθέτει ένα κουμπί Data pool στη γραμμή αναπαραγωγής (ή πατήστε I) που ανοίγει μια κάρτα με τις λεπτομέρειες της ροής: ανάλυση, καρέ ανά δευτερόλεπτο, κωδικοποιητές, ρυθμό bit, παραλλαγές ποιότητας, κομμάτια ήχου, buffer, HDR και αποκωδικοποιητή.",
 };

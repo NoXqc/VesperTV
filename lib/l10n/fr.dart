@@ -2614,4 +2614,14 @@ const Map<String, String> kFr = {
       "Préparation de {name} pour des démarrages plus rapides. Une seule fois... {p} %",
   "Goal disallowed after review": "But refusé après révision",
   "Score overturned after review": "Score annulé après révision",
+  "Decoder":
+      "Décodeur",
+  "Software":
+      "Logiciel",
+  "Hardware ({api})":
+      "Matériel ({api})",
+  "Stream details from a button in the player bar":
+      "Détails du flux depuis un bouton de la barre du lecteur",
+  "Adds a Data pool button to the player bar (or press I) that opens a card with the stream's details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer, HDR and decoder.":
+      "Ajoute un bouton Data pool à la barre du lecteur (ou appuyez sur I) qui ouvre une carte avec les détails du flux : résolution, fréquence d'images, codecs, débit, variantes de qualité, pistes audio, mémoire tampon, HDR et décodeur.",
 };

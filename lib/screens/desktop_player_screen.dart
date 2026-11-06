@@ -26,6 +26,8 @@ import '../l10n/l10n.dart';
 import '../widgets/media_file_info_overlay.dart';
 import '../widgets/player_side_panel.dart';
 import '../widgets/desktop_audio_button.dart';
+import '../widgets/desktop_data_pool_card.dart';
+import '../widgets/desktop_quality_badges.dart';
 import '../widgets/desktop_subtitles.dart';
 import '../services/desktop_audio.dart';
 import '../widgets/player_bar_title.dart';
@@ -125,6 +127,13 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   /// channel: the left-edge tab or the Left key opens it, Esc / a click on
   /// the video closes it — Windows has no remote Left (owner, 2026-10-18).
   bool _panelOpen = false;
+
+  /// Settings > Playback > Data pool: the card is open (the bar's Data
+  /// pool button or the I key).
+  bool _dataPoolOpen = false;
+
+  /// When the current stream was opened (the card's "Playing for").
+  DateTime _openedAt = DateTime.now();
   final FocusNode _rootFocus = FocusNode(debugLabel: 'desktop-player-root');
 
   void _openPanel() {
@@ -344,6 +353,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
         mounted &&
         generation == _openGeneration &&
         _currentChannel.id == channel.id;
+    _openedAt = DateTime.now();
     try {
       final resume = start ?? _progress.resumePosition(channel);
       if (start == null) _cutRetries = 0;
@@ -500,6 +510,13 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     }));
   }
 
+  void _toggleDataPool() {
+    setState(() => _dataPoolOpen = !_dataPoolOpen);
+    if (_dataPoolOpen) {
+      debugPrint('DesktopDataPool: opened on ${_currentChannel.name}');
+    }
+  }
+
   void _skip(Duration amount) {
     final current = _player.state.position;
     var target = current + amount;
@@ -646,6 +663,13 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 tooltip: tr('Next episode'),
                 onPressed: () => _switchTo(_nextEpisode!),
               ),
+            if (context.watch<AppPreferences>().dataPool)
+              IconButton(
+                icon: Icon(Icons.analytics_outlined,
+                    color: _dataPoolOpen ? Colors.amber : Colors.white),
+                tooltip: tr('Data pool'),
+                onPressed: _toggleDataPool,
+              ),
             DesktopAudioButton(
                 // A new stream is a new track list.
                 key: ValueKey('audio-${_currentChannel.id}'),
@@ -710,6 +734,12 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                             color: Colors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.w600),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: DesktopQualityBadges(
+                            key: ValueKey('badges-${_currentChannel.id}'),
+                            player: _player),
                       ),
                       if (_isLive &&
                           playlist
@@ -787,6 +817,13 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 _rootFocus.hasPrimaryFocus &&
                 widget.sources != null) {
               _openSources();
+              return KeyEventResult.handled;
+            }
+            // I = Data pool (when it's on in Settings > Playback).
+            if (event is KeyDownEvent &&
+                event.logicalKey == LogicalKeyboardKey.keyI &&
+                context.read<AppPreferences>().dataPool) {
+              _toggleDataPool();
               return KeyEventResult.handled;
             }
             // M = mute / unmute, like most desktop players.
@@ -912,6 +949,27 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                       ),
                     ),
                 ],
+                if (_dataPoolOpen && context.watch<AppPreferences>().dataPool)
+                  Positioned(
+                    left: 16,
+                    right: 16,
+                    // Above the player bar while it shows.
+                    bottom: _controlsVisible ? 120 : 16,
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 980),
+                        child: GestureDetector(
+                          // A click on the card mustn't hide the bar.
+                          onTap: () {},
+                          child: DesktopDataPoolCard(
+                              key: ValueKey('pool-${_currentChannel.id}'),
+                              player: _player,
+                              channel: _currentChannel,
+                              since: _openedAt),
+                        ),
+                      ),
+                    ),
+                  ),
                 if (_currentChannel.mediaFileInfo case final info?)
                   MediaFileInfoOverlay(
                       key: ValueKey('file-info-${_currentChannel.id}'),

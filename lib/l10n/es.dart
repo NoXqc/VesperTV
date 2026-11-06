@@ -2601,4 +2601,14 @@ const Map<String, String> kEs = {
       "Preparando {name} para arranques más rápidos. Solo esta vez... {p} %",
   "Goal disallowed after review": "Gol anulado tras la revisión",
   "Score overturned after review": "Anotación anulada tras la revisión",
+  "Decoder":
+      "Decodificador",
+  "Software":
+      "Software",
+  "Hardware ({api})":
+      "Hardware ({api})",
+  "Stream details from a button in the player bar":
+      "Detalles de la transmisión desde un botón de la barra del reproductor",
+  "Adds a Data pool button to the player bar (or press I) that opens a card with the stream's details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer, HDR and decoder.":
+      "Añade un botón Data pool a la barra del reproductor (o pulsa I) que abre una tarjeta con los detalles de la transmisión: resolución, fotogramas por segundo, códecs, tasa de bits, variantes de calidad, pistas de audio, búfer, HDR y decodificador.",
 };

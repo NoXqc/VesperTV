@@ -2504,4 +2504,14 @@ const Map<String, String> kDe = {
       "{name} wird für schnellere Starts vorbereitet. Nur dieses eine Mal... {p} %",
   "Goal disallowed after review": "Tor nach Überprüfung aberkannt",
   "Score overturned after review": "Punkte nach Überprüfung aberkannt",
+  "Decoder":
+      "Decoder",
+  "Software":
+      "Software",
+  "Hardware ({api})":
+      "Hardware ({api})",
+  "Stream details from a button in the player bar":
+      "Stream-Details über eine Taste in der Player-Leiste",
+  "Adds a Data pool button to the player bar (or press I) that opens a card with the stream's details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer, HDR and decoder.":
+      "Fügt der Player-Leiste eine Data-pool-Taste hinzu (oder drücke I), die eine Karte mit den Details des Streams öffnet: Auflösung, Bildrate, Codecs, Bitrate, Qualitätsstufen, Audiospuren, Puffer, HDR und Decoder.",
 };

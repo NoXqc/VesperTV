@@ -619,20 +619,23 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                                 .setMatchResolution(v),
                           ),
                         ]),
-                  // Windows has no OK info card yet, so no Data pool there.
-                  if (!Platform.isWindows)
-                    _section(
-                        'datapool', Icons.analytics_outlined, tr('Data pool'),
-                        children: [
-                          TvSwitchListTile(
-                            title: Text(tr('Data pool display')),
-                            subtitle: Text(tr(
-                                'Press OK while a channel, movie or episode plays to open a card with the stream\'s details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer and HDR. Off: OK shows only the channel info.')),
-                            value: context.watch<AppPreferences>().dataPool,
-                            onChanged: (v) =>
-                                context.read<AppPreferences>().setDataPool(v),
-                          ),
-                        ]),
+                  // Windows: a player bar button / the I key opens it
+                  // (DesktopDataPoolCard, mpv's numbers).
+                  _section(
+                      'datapool', Icons.analytics_outlined, tr('Data pool'),
+                      children: [
+                        TvSwitchListTile(
+                          title: Text(tr('Data pool display')),
+                          subtitle: Text(Platform.isWindows
+                              ? tr(
+                                  'Adds a Data pool button to the player bar (or press I) that opens a card with the stream\'s details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer, HDR and decoder.')
+                              : tr(
+                                  'Press OK while a channel, movie or episode plays to open a card with the stream\'s details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer and HDR. Off: OK shows only the channel info.')),
+                          value: context.watch<AppPreferences>().dataPool,
+                          onChanged: (v) =>
+                              context.read<AppPreferences>().setDataPool(v),
+                        ),
+                      ]),
                   if (Platform.isAndroid)
                     _section(
                         'catchup', Icons.history_toggle_off, tr('Catch-up'),

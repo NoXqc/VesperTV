@@ -56,6 +56,16 @@ class DataPoolCard extends StatefulWidget {
 
   static String? channelsName(int? n) => _DataPoolCardState._channels(n);
 
+  /// "12.4 Mbps" / "640 kbps", null for nothing.
+  static String? rateName(int? bitsPerSecond) =>
+      _DataPoolCardState._rate(bitsPerSecond);
+
+  /// 1920x1080 -> "16:9".
+  static String aspectName(Size size) => _DataPoolCardState._aspect(size);
+
+  /// "1:02:03" / "02:03".
+  static String clockName(Duration d) => _DataPoolCardState._clock(d);
+
   @override
   State<DataPoolCard> createState() => _DataPoolCardState();
 }
@@ -325,6 +335,118 @@ class _DataPoolCardState extends State<DataPoolCard> {
             ? reportedBytes
             : widget.fileSizeBytes);
     final https = c.dataSource.toLowerCase().startsWith('https');
+    return DataPoolFrame(
+      read: _read,
+      left: [
+        _row(tr('Video'),
+            videoParts.isEmpty ? notReported : videoParts.join(' · ')),
+        _row(
+            tr('Stream bitrate'),
+            _measuredBitrate != null
+                ? '${_rate(_measuredBitrate)} ${tr('(measured)')}'
+                : _first == null || identical(_first, _last)
+                    ? tr('Measuring…')
+                    : notReported),
+        if (_rate(v?.bitrate) != null)
+          _row(tr('Declared bitrate'), _rate(v?.bitrate)!),
+        if (_last?['dropped'] is num)
+          _row(tr('Dropped frames'), '${_last!['dropped']}'),
+        if (size.width > 0 && size.height > 0)
+          _row(tr('Picture'),
+              '${size.width.round()}×${size.height.round()} · ${_aspect(size)}'),
+        // Source or decoder evidence, not the TV's active HDMI mode.
+        if (_last?['hdr'] is String)
+          _row(tr('Video HDR'), VideoHdrReport.label(_last!)),
+        if (_last != null && VideoHdrReport.decoderDifference(_last!) != null)
+          _row(tr('Decoder HDR'), VideoHdrReport.decoderDifference(_last!)!),
+        _row(
+            tr('Quality variants'),
+            heights.length > 1
+                ? heights.map((h) => '${h}p').join(' · ')
+                : tr('One (not adaptive)')),
+      ],
+      right: [
+        _row(tr('Audio'),
+            audioParts.isEmpty ? notReported : audioParts.join(' · ')),
+        if (_audioTracks.length > 1)
+          _row(
+              tr('Audio tracks'),
+              languages.isEmpty
+                  ? '${_audioTracks.length}'
+                  : '${_audioTracks.length} · ${languages.join(', ')}'),
+        if (widget.showFileSize)
+          _row(tr('File size'), fileSize ?? tr('File size unavailable')),
+        _row(tr('Stream'), '${_container(c)} · ${https ? 'HTTPS' : 'HTTP'}'),
+        _row(
+            tr('Buffered'),
+            buffered == null
+                ? notReported
+                : [
+                    tr('{seconds} s', {
+                      'seconds':
+                          (buffered.inMilliseconds / 1000).toStringAsFixed(1)
+                    }),
+                    // Live buffer > Gradual (VideoPlayer.cushionTick).
+                    if (_last?['cushionSlow'] == true)
+                      tr('building at 96 % speed'),
+                  ].join(' · ')),
+        _row(
+            tr('State'),
+            value.isBuffering
+                ? tr('Buffering…')
+                : value.isPlaying
+                    ? tr('Playing for {time}', {
+                        'time': _clock(widget.since == null
+                            ? value.position
+                            : DateTime.now().difference(widget.since!))
+                      })
+                    : tr('Paused')),
+        FutureBuilder<String?>(
+          future: _hdr,
+          builder: (context, snap) => snap.data == null
+              ? const SizedBox.shrink()
+              : _row(tr('Device HDR'), snap.data!),
+        ),
+      ],
+    );
+  }
+
+  Widget _row(String label, String value) => DataPoolFrame.row(label, value);
+}
+
+/// The Data pool card's look: the see-through card, its title, and two
+/// tables of label / value rows beside each other. Shared by Android's
+/// [DataPoolCard] and Windows' `DesktopDataPoolCard` (mpv's numbers).
+class DataPoolFrame extends StatelessWidget {
+  const DataPoolFrame(
+      {super.key, required this.read, required this.left, required this.right});
+
+  /// False until the first reading: "Reading the stream…" instead of rows.
+  final bool read;
+  final List<Widget> left;
+  final List<Widget> right;
+
+  static Widget row(String label, String value) => Padding(
+        padding: const EdgeInsets.only(top: 2),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 2,
+              child: Text(label,
+                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
+            ),
+            Expanded(
+              flex: 3,
+              child: Text(value,
+                  style: const TextStyle(color: Colors.white, fontSize: 12)),
+            ),
+          ],
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
@@ -353,7 +475,7 @@ class _DataPoolCardState extends State<DataPoolCard> {
             ],
           ),
           const SizedBox(height: 6),
-          if (!_read)
+          if (!read)
             Text(tr('Reading the stream…'),
                 style: const TextStyle(color: Colors.white70, fontSize: 12))
           else
@@ -361,113 +483,16 @@ class _DataPoolCardState extends State<DataPoolCard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  _row(
-                      tr('Video'),
-                      videoParts.isEmpty
-                          ? notReported
-                          : videoParts.join(' · ')),
-                  _row(
-                      tr('Stream bitrate'),
-                      _measuredBitrate != null
-                          ? '${_rate(_measuredBitrate)} ${tr('(measured)')}'
-                          : _first == null || identical(_first, _last)
-                              ? tr('Measuring…')
-                              : notReported),
-                  if (_rate(v?.bitrate) != null)
-                    _row(tr('Declared bitrate'), _rate(v?.bitrate)!),
-                  if (_last?['dropped'] is num)
-                    _row(tr('Dropped frames'), '${_last!['dropped']}'),
-                  if (size.width > 0 && size.height > 0)
-                    _row(tr('Picture'),
-                        '${size.width.round()}×${size.height.round()} · ${_aspect(size)}'),
-                  // Source or decoder evidence, not the TV's active HDMI mode.
-                  if (_last?['hdr'] is String)
-                    _row(tr('Video HDR'), VideoHdrReport.label(_last!)),
-                  if (_last != null &&
-                      VideoHdrReport.decoderDifference(_last!) != null)
-                    _row(tr('Decoder HDR'),
-                        VideoHdrReport.decoderDifference(_last!)!),
-                  _row(
-                      tr('Quality variants'),
-                      heights.length > 1
-                          ? heights.map((h) => '${h}p').join(' · ')
-                          : tr('One (not adaptive)')),
-                ])),
+                    child:
+                        Column(mainAxisSize: MainAxisSize.min, children: left)),
                 const SizedBox(width: 16),
                 Expanded(
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  _row(
-                      tr('Audio'),
-                      audioParts.isEmpty
-                          ? notReported
-                          : audioParts.join(' · ')),
-                  if (_audioTracks.length > 1)
-                    _row(
-                        tr('Audio tracks'),
-                        languages.isEmpty
-                            ? '${_audioTracks.length}'
-                            : '${_audioTracks.length} · ${languages.join(', ')}'),
-                  if (widget.showFileSize)
-                    _row(tr('File size'),
-                        fileSize ?? tr('File size unavailable')),
-                  _row(tr('Stream'),
-                      '${_container(c)} · ${https ? 'HTTPS' : 'HTTP'}'),
-                  _row(
-                      tr('Buffered'),
-                      buffered == null
-                          ? notReported
-                          : [
-                              tr('{seconds} s', {
-                                'seconds': (buffered.inMilliseconds / 1000)
-                                    .toStringAsFixed(1)
-                              }),
-                              // Live buffer > Gradual (VideoPlayer.cushionTick).
-                              if (_last?['cushionSlow'] == true)
-                                tr('building at 96 % speed'),
-                            ].join(' · ')),
-                  _row(
-                      tr('State'),
-                      value.isBuffering
-                          ? tr('Buffering…')
-                          : value.isPlaying
-                              ? tr('Playing for {time}', {
-                                  'time': _clock(widget.since == null
-                                      ? value.position
-                                      : DateTime.now()
-                                          .difference(widget.since!))
-                                })
-                              : tr('Paused')),
-                  FutureBuilder<String?>(
-                    future: _hdr,
-                    builder: (context, snap) => snap.data == null
-                        ? const SizedBox.shrink()
-                        : _row(tr('Device HDR'), snap.data!),
-                  ),
-                ])),
+                    child: Column(
+                        mainAxisSize: MainAxisSize.min, children: right)),
               ],
             ),
         ],
       ),
     );
   }
-
-  Widget _row(String label, String value) => Padding(
-        padding: const EdgeInsets.only(top: 2),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 2,
-              child: Text(label,
-                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
-            ),
-            Expanded(
-              flex: 3,
-              child: Text(value,
-                  style: const TextStyle(color: Colors.white, fontSize: 12)),
-            ),
-          ],
-        ),
-      );
 }

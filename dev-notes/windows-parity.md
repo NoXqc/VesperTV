@@ -10,7 +10,7 @@ owner has tested it.
 |---|---|---|
 | 0 | Windows build of current code, Android-only calls guarded, owner checklist | done, waiting for the owner's checklist (`claude/windows-parity`) |
 | 1 | Audio tracks + surround passthrough + audio delay (no ATMOS badge: mpv can't tell) | done, owner test pending (`claude/windows-parity`) |
-| 2 | Data pool + quality / FPS badges | not started |
+| 2 | Data pool + quality / FPS / surround badges | done, owner test pending (`claude/windows-parity`) |
 | 3 | Catch-up | not started |
 | 4 | Toast notifications while the app runs | not started |
 | 5 | Multiview 1+3 and Swap | not started |
@@ -104,6 +104,15 @@ Original plan:
   receiver, passthrough on.
 
 ## Phase 2: Data pool + badges
+**Done 2026-11-06 (Claude):** `widgets/desktop_data_pool_card.dart` (`DesktopDataPoolCard` +
+`DesktopStreamStats`: mpv properties once a second while open; adds a Decoder row,
+hardware API or software), drawn with the shared `DataPoolFrame` (pulled out of
+`data_pool_card.dart`, Android unchanged). Player bar button + I key when Settings > Playback >
+Data pool is on (setting now shown on Windows). `widgets/desktop_quality_badges.dart`: HD / FHD /
+4K, FPS and 5.1 / 7.1 pills under the title (every 5 s). Real 4K tag was already fed on Windows.
+No Device HDR row (no Windows API for it here).
+
+Original plan:
 - Settings > Playback > Data pool on Windows (same key). Click on the video / a bar button opens
   the shared `widgets/data_pool_card.dart` fed from mpv properties: `video-params` (w/h/pixel
   format/colormatrix/gamma for HDR kind), `container-fps`/`estimated-vf-fps`, `video-codec`,
