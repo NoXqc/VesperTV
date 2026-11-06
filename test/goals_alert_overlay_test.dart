@@ -150,6 +150,34 @@ void main() {
     });
   }
 
+  testWidgets(
+      'overturned popup shows corrected score without looking up a scorer',
+      (tester) async {
+    await setup();
+    var lookups = 0;
+    GoalsAlertOverlay.debugSummary = (_) async {
+      lookups++;
+      return null;
+    };
+    addTearDown(() => GoalsAlertOverlay.debugSummary = null);
+    await mount(tester);
+    score = '1';
+    await tick(tester, 30);
+    expect(find.text('Canadiens scored!'), findsOneWidget);
+    expect(lookups, 1);
+    await tick(tester, 8);
+    score = '0';
+    await tick(tester, 22);
+    expect(find.text('Goal disallowed after review'), findsOneWidget);
+    expect(find.textContaining('0 – 0'), findsOneWidget);
+    expect(lookups, 1);
+    expect(focus.hasFocus, isTrue);
+    await tick(tester, 8);
+    expect(find.byKey(const ValueKey('goal-alert')), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+  });
+
   testWidgets('scorer listed late by the summary still shows on the card',
       (tester) async {
     await setup();

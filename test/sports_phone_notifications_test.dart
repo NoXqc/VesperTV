@@ -214,6 +214,155 @@ void main() {
     expect(await again.poll(), isEmpty);
     again.dispose();
   });
+  test('headless checkpoints retain rollback eligibility and consume it once',
+      () async {
+    await follow();
+    var game = fixture(now);
+    final posted = <GoalAlertNotice>[];
+    Future<void> poll() async {
+      await pollPhoneGoals([
+        {'id': 'watch', 'key': 'nhl:g', 'viewer': 'main'}
+      ],
+          allowed: () async => true,
+          save: (s, expected, data) async {
+            expect(s.getGoalPhoneCheckpoint(), expected);
+            await s.setGoalPhoneCheckpoint(data);
+            return true;
+          },
+          post: (_, notice) async => posted.add(notice),
+          loadGames: (_, __) async => [game]);
+    }
+
+    await poll();
+    game = fixture(now, home: '1');
+    await poll();
+    game = fixture(now);
+    await poll();
+    expect(posted.map((n) => n.overturned), [false, true]);
+    expect(posted.last.team.score, '0');
+    await poll();
+    game = fixture(now, home: '1');
+    await poll();
+    game = fixture(now);
+    await poll();
+    expect(posted, hasLength(2));
+    game = fixture(now, home: '2');
+    await poll();
+    expect(posted, hasLength(3));
+    expect(posted.last.overturned, isFalse);
+  });
+
+  test('rejected checkpoint cannot consume or deliver an overturned notice',
+      () async {
+    await follow();
+    var game = fixture(now);
+    final goals = GoalsAlerts(storage,
+        persistSamples: true,
+        now: () => now,
+        loadGames: (_, __) async => [game]);
+    addTearDown(goals.dispose);
+    await goals.poll();
+    game = fixture(now, home: '1');
+    await goals.poll();
+    final before = storage.getGoalPhoneCheckpoint();
+    goals.saveCheckpoint = (_, __) async => false;
+    game = fixture(now);
+    expect(await goals.poll(), isEmpty);
+    expect(storage.getGoalPhoneCheckpoint(), before);
+    goals.saveCheckpoint = null;
+    expect((await goals.poll()).single.overturned, isTrue);
+    expect(await goals.poll(), isEmpty);
+  });
+
+  test('old checkpoints baseline without inventing a prior goal notice',
+      () async {
+    await follow();
+    var game = fixture(now, home: '1');
+    final goals = GoalsAlerts(storage,
+        persistSamples: true,
+        now: () => now,
+        loadGames: (_, __) async => [game]);
+    addTearDown(goals.dispose);
+    await goals.poll();
+    final data = jsonDecode(storage.getGoalPhoneCheckpoint()!) as Map;
+    for (final sample in data['samples'] as List) {
+      (sample as Map).remove('peak');
+    }
+    await storage.setGoalPhoneCheckpoint(jsonEncode(data));
+    game = fixture(now);
+    expect(await goals.poll(), isEmpty);
+  });
+
+  test('review phone text is localized, masked and never fetches a scorer',
+      () async {
+    await follow();
+    final calls = <MethodCall>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SportsPhoneNotifications.channel,
+            (call) async {
+      if (call.method == 'foreground') return false;
+      calls.add(call);
+      return null;
+    });
+    addTearDown(() => TestDefaultBinaryMessengerBinding
+        .instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SportsPhoneNotifications.channel, null));
+    var lookups = 0;
+    for (final hidden in [false, true]) {
+      await storage.setSportsHideScores(hidden);
+      final game = fixture(now);
+      final notice = GoalAlertNotice(
+          viewerId: 'main',
+          game: game,
+          team: game.home,
+          observedAt: now,
+          previousScore: 1,
+          overturned: true);
+      await SportsPhoneNotifications.postGoal(storage, notice,
+          summaryLoader: (_) async {
+        lookups++;
+        return null;
+      });
+      final args = calls.last.arguments as Map;
+      expect(args['title'], 'Goal disallowed after review');
+      expect(args['hiddenText'], 'Goal disallowed after review');
+      expect(args['id'], 'overturned|nhl:g|h|0');
+      expect(args['text'],
+          hidden ? 'Goal disallowed after review' : 'Home vs Away · 0–0');
+    }
+    expect(lookups, 0);
+    for (final language in ['fr', 'es', 'it', 'el', 'de']) {
+      await L10n.apply(language);
+      final game = fixture(now);
+      expect(
+          GoalAlertNotice(
+                  viewerId: 'main',
+                  game: game,
+                  team: game.home,
+                  observedAt: now,
+                  overturned: true)
+              .overturnedText,
+          isNot('Goal disallowed after review'));
+      final football = SportsGame(
+          id: 'f',
+          league: sportsLeagueById('nfl')!,
+          start: now,
+          state: GameState.live,
+          statusText: 'Q2',
+          home: game.home,
+          away: game.away);
+      expect(
+          GoalAlertNotice(
+                  viewerId: 'main',
+                  game: football,
+                  team: football.home,
+                  observedAt: now,
+                  overturned: true)
+              .overturnedText,
+          isNot('Score overturned after review'));
+    }
+  });
+
   test('foreground return during fetch cannot commit or notify', () async {
     await follow();
     var allowed = true;

@@ -167,7 +167,7 @@ class _GoalsAlertOverlayState extends State<GoalsAlertOverlay>
         break;
       }
     }
-    _waitingScorer = next != null;
+    _waitingScorer = next != null && !next.overturned;
     _timeIsUp = false;
     setState(() {
       _notice = next;
@@ -175,7 +175,7 @@ class _GoalsAlertOverlayState extends State<GoalsAlertOverlay>
     });
     if (next != null) {
       _hide = Timer(const Duration(seconds: 8), _timeUp);
-      unawaited(_lookupScorer(next));
+      if (!next.overturned) unawaited(_lookupScorer(next));
     }
   }
 
@@ -379,9 +379,12 @@ class _GoalsAlertOverlayState extends State<GoalsAlertOverlay>
                                               CrossAxisAlignment.start,
                                           children: [
                                         Text(
-                                            tr('{team} scored!', {
-                                              'team': notice.team.shortName
-                                            }),
+                                            notice.overturned
+                                                ? notice.overturnedText
+                                                : tr('{team} scored!', {
+                                                    'team':
+                                                        notice.team.shortName
+                                                  }),
                                             maxLines: 2,
                                             overflow: TextOverflow.ellipsis,
                                             style: TextStyle(

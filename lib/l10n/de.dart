@@ -2484,4 +2484,6 @@ const Map<String, String> kDe = {
       "Das entfernt sie für jedes Profil auf diesem Gerät. Um sie nur für dieses Profil auszublenden, schalte stattdessen Aktiviert aus.",
   "Enabled and Show under Other are your own for each profile; sources are shared on this device.":
       "Aktiviert und Unter Sonstiges zeigen gelten je Profil; Quellen werden auf diesem Gerät geteilt.",
+  "Goal disallowed after review": "Tor nach Überprüfung aberkannt",
+  "Score overturned after review": "Punkte nach Überprüfung aberkannt",
 };

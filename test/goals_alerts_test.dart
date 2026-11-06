@@ -127,8 +127,7 @@ void main() {
         {'nhl|mtl', 'nhl|buf', 'nba|mtl'});
   });
 
-  test(
-      'pre-game and downward corrections are silent, real subsequent increase alerts',
+  test('drop after a goal raises one overturned notice; rebounds do not spam',
       () async {
     await storage.setGoalsAlert(true);
     games = [scoreGame(time, state: GameState.pre)];
@@ -136,12 +135,108 @@ void main() {
     games = [scoreGame(time, home: '1')];
     expect((await service.poll()).length, 1);
     games = [scoreGame(time, home: '0')];
+    final correction = (await service.poll()).single;
+    expect(correction.overturned, isTrue);
+    expect(correction.team.score, '0');
+    expect(correction.game.away.score, '0');
+    expect(correction.overturnedText, 'Goal disallowed after review');
     expect(await service.poll(), isEmpty);
     games = [scoreGame(time, home: '1')];
-    expect((await service.poll()).length, 1);
+    expect(await service.poll(), isEmpty);
+    games = [scoreGame(time, home: '0')];
+    expect(await service.poll(), isEmpty);
+    games = [scoreGame(time, home: '2')];
+    expect((await service.poll()).single.overturned, isFalse);
     games = [scoreGame(time, home: '2', state: GameState.pre)];
     expect(await service.poll(), isEmpty);
   });
+
+  test('drop with no recent goal notice is silent, including another game',
+      () async {
+    await storage.setGoalsAlert(true);
+    games = [scoreGame(time, home: '2')];
+    await service.poll();
+    games = [scoreGame(time, home: '1')];
+    expect(await service.poll(), isEmpty);
+    games = [scoreGame(time, home: '3')];
+    await service.poll();
+    time = time.add(const Duration(minutes: 15, seconds: 1));
+    games = [scoreGame(time, home: '1')];
+    expect(await service.poll(), isEmpty);
+    games = [scoreGame(time, id: 'other', home: '1')];
+    await service.poll();
+    games = [scoreGame(time, id: 'other')];
+    expect(await service.poll(), isEmpty);
+  });
+
+  test('only an exact rollback of the notified score while live qualifies',
+      () async {
+    await storage.setGoalsAlert(true);
+    games = [scoreGame(time, home: '2')];
+    await service.poll();
+    games = [scoreGame(time, home: '3')];
+    await service.poll();
+    games = [scoreGame(time, home: '1')];
+    expect(await service.poll(), isEmpty);
+    games = [scoreGame(time, home: '2')];
+    expect(await service.poll(), isEmpty);
+    games = [scoreGame(time, home: '4')];
+    await service.poll();
+    games = [scoreGame(time, home: '2', state: GameState.post)];
+    expect(await service.poll(), isEmpty);
+  });
+
+  test('selected match rollbacks work for either team; basketball skips them',
+      () async {
+    await storage.setSportsFollowedTeams([]);
+    await service.setGame(games.single, true);
+    await service.poll();
+    games = [scoreGame(time, away: '1')];
+    await service.poll();
+    time = time.add(const Duration(minutes: 15));
+    games = [scoreGame(time)];
+    final notice = (await service.poll()).single;
+    expect(notice.team.id, 'buf');
+    expect(notice.overturned, isTrue);
+    await storage.setSportsHideScores(true);
+    expect(service.isCurrent(notice), isFalse);
+    expect(await service.poll(), isEmpty);
+    await storage.setSportsHideScores(false);
+    await storage.setActiveViewerId('other');
+    expect(await service.poll(), isEmpty);
+
+    await storage.setGoalsAlert(true);
+    await storage.setSportsFollowedTeams(['nba|mtl']);
+    games = [scoreGame(time, league: 'nba')];
+    await service.poll();
+    games = [scoreGame(time, league: 'nba', home: '3')];
+    expect((await service.poll()).single.overturned, isFalse);
+    games = [scoreGame(time, league: 'nba', home: '2')];
+    expect(await service.poll(), isEmpty);
+    games = [scoreGame(time, league: 'nba')];
+    expect(await service.poll(), isEmpty);
+  });
+
+  for (final league in ['eng.1', 'nfl']) {
+    test('$league uses the sport-specific review text', () async {
+      await storage.setGoalsAlert(true);
+      await storage.setSportsFollowedTeams(['$league|mtl']);
+      games = [scoreGame(time, league: league)];
+      await service.poll();
+      games = [
+        scoreGame(time, league: league, home: league == 'nfl' ? '6' : '1')
+      ];
+      await service.poll();
+      games = [scoreGame(time, league: league)];
+      final notice = (await service.poll()).single;
+      expect(notice.overturned, isTrue);
+      expect(
+          notice.overturnedText,
+          league == 'nfl'
+              ? 'Score overturned after review'
+              : 'Goal disallowed after review');
+    });
+  }
 
   test(
       'final winning score is reported once, already finished games never replay',

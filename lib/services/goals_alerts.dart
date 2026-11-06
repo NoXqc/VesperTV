@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 
 import '../models/sports.dart';
+import '../l10n/l10n.dart';
 import 'sports_service.dart';
 import 'storage_service.dart';
 
@@ -13,23 +14,36 @@ class GoalAlertNotice {
       required this.game,
       required this.team,
       required this.observedAt,
-      this.previousScore});
+      this.previousScore,
+      this.overturned = false});
   final String viewerId;
   final SportsGame game;
   final SportsTeam team;
   final DateTime observedAt;
   final int? previousScore;
+  final bool overturned;
+
+  String get overturnedText =>
+      game.league.sport == 'soccer' || game.league.sport == 'hockey'
+          ? tr('Goal disallowed after review')
+          : tr('Score overturned after review');
 }
 
 class _ScoreSample {
   _ScoreSample(
-      this.score, this.state, this.at, this.owner, this.start, this.gameKey);
+      this.score, this.state, this.at, this.owner, this.start, this.gameKey,
+      {int? peak, this.goalAt, this.goalPreviousScore})
+      : peak = peak ?? score;
   final int score;
   final GameState state;
   final DateTime at;
   final String owner;
   final DateTime start;
   final String gameKey;
+  // Keep the peak after a correction: a feed rebound must not replay a goal.
+  final int peak;
+  final DateTime? goalAt;
+  final int? goalPreviousScore;
 }
 
 class _MatchScoreWatch {
@@ -95,7 +109,14 @@ class GoalsAlerts extends ChangeNotifier {
           continue;
         }
         _scores['${item['key']}'] = _ScoreSample(
-            score, state, at, '${item['owner']}', start, '${item['game']}');
+            score, state, at, '${item['owner']}', start, '${item['game']}',
+            peak: item['peak'] is int
+                ? math.max(score, item['peak'] as int)
+                : score,
+            goalAt: DateTime.tryParse('${item['goalAt']}'),
+            goalPreviousScore: item['goalPreviousScore'] is int
+                ? item['goalPreviousScore'] as int
+                : null);
       }
     } catch (_) {/* Invalid samples are a silent first baseline. */}
   }
@@ -384,25 +405,52 @@ class GoalsAlerts extends ChangeNotifier {
           final key = '${game.league.id}:${game.id}|${team.id}';
           final score = team.id == game.home.id ? home : away;
           final previous = _scores[key];
-          _scores[key] = _ScoreSample(
-              score, game.state, at, owner, game.start, gameKey(game));
+          var goalAt = previous?.goalAt;
+          var goalPreviousScore = previous?.goalPreviousScore;
           final eligible = game.state == GameState.live ||
               (game.state == GameState.post &&
                   previous?.state == GameState.live &&
                   at.difference(previous!.at) <= const Duration(minutes: 3));
           // First observation (including first launch, new team or resume) is
-          // only a baseline. Corrections downward are also silent.
+          // only a baseline. Only a new peak can raise another goal notice.
           if (previous != null &&
               eligible &&
               previous.state != GameState.post &&
-              score > previous.score) {
+              score > previous.score &&
+              score > previous.peak) {
+            goalAt = at;
+            goalPreviousScore = previous.score;
             notices.add(GoalAlertNotice(
                 viewerId: viewer,
                 game: game,
                 team: team,
                 observedAt: at,
                 previousScore: previous.score));
+          } else if (previous != null &&
+              game.state == GameState.live &&
+              previous.state == GameState.live &&
+              game.league.sport != 'basketball' &&
+              score < previous.score &&
+              goalAt != null &&
+              !at.isBefore(goalAt) &&
+              at.difference(goalAt) <= const Duration(minutes: 15) &&
+              score == goalPreviousScore) {
+            notices.add(GoalAlertNotice(
+                viewerId: viewer,
+                game: game,
+                team: team,
+                observedAt: at,
+                previousScore: previous.score,
+                overturned: true));
+            // Consume the matching goal, including across headless restarts.
+            goalAt = null;
+            goalPreviousScore = null;
           }
+          _scores[key] = _ScoreSample(
+              score, game.state, at, owner, game.start, gameKey(game),
+              peak: math.max(score, previous?.peak ?? score),
+              goalAt: goalAt,
+              goalPreviousScore: goalPreviousScore);
         }
       }
       while (_scores.length > 512) {
@@ -428,7 +476,12 @@ class GoalsAlerts extends ChangeNotifier {
                 'at': entry.value.at.toIso8601String(),
                 'owner': entry.value.owner,
                 'start': entry.value.start.toIso8601String(),
-                'game': entry.value.gameKey
+                'game': entry.value.gameKey,
+                'peak': entry.value.peak,
+                if (entry.value.goalAt != null)
+                  'goalAt': entry.value.goalAt!.toIso8601String(),
+                if (entry.value.goalPreviousScore != null)
+                  'goalPreviousScore': entry.value.goalPreviousScore
               }
           ]
         });

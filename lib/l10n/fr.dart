@@ -2594,4 +2594,6 @@ const Map<String, String> kFr = {
       "Cela la retire pour tous les profils de cet appareil. Pour la masquer seulement sur ce profil, désactivez plutôt Activée.",
   "Enabled and Show under Other are your own for each profile; sources are shared on this device.":
       "Activée et Afficher sous Autre sont propres à chaque profil ; les sources sont partagées sur cet appareil.",
+  "Goal disallowed after review": "But refusé après révision",
+  "Score overturned after review": "Score annulé après révision",
 };
