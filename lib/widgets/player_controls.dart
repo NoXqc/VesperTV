@@ -705,72 +705,89 @@ class PlayerControls extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 5),
-            child: Row(
-              children: [
-                Flexible(
-                  child: _OptionsTitle(
-                      controller: controller,
-                      channel: channel,
-                      title: title,
-                      isLive: isLive),
-                ),
-                if (isLive || catchup) ...[
-                  const SizedBox(width: 6),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                    decoration: BoxDecoration(
-                        color: catchup ? Colors.transparent : accent,
-                        border: Border.all(color: accent),
-                        borderRadius: BorderRadius.circular(12)),
-                    child: Text(
-                        catchup ? tr('Catch-up').toUpperCase() : tr('LIVE'),
-                        style: TextStyle(
-                            color: catchup ? accent : Colors.black,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.6)),
-                  ),
-                ],
-                const Spacer(),
-                _AudioSummary(
-                    key:
-                        ValueKey(Object.hash('sound', controller, channel?.id)),
-                    controller: controller),
-              ],
-            ),
-          ),
           // Hugs its buttons, centred (owner photo, 2026-11-06); a long
           // row still scrolls inside the screen width.
           Align(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [
-                  Colors.white.withValues(alpha: 0.10),
-                  Colors.white.withValues(alpha: 0.04),
-                ]),
-                color: const Color(0xE6000000),
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: Colors.white24),
-                boxShadow: const [
-                  BoxShadow(color: Colors.black54, blurRadius: 8),
-                ],
-              ),
-              child: _OptionTiles(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      for (final o in leadingOptions) option(o),
-                      ..._actionButtons(context, playback),
-                      for (final o in trailingOptions) option(o),
-                    ],
+            // The title line sits on the pill, as wide as it (owner photo,
+            // 2026-11-06): the Stack takes the pill's size, the line floats
+            // in the space reserved above it.
+            child: Padding(
+              padding: const EdgeInsets.only(top: 24),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: [
+                        Colors.white.withValues(alpha: 0.10),
+                        Colors.white.withValues(alpha: 0.04),
+                      ]),
+                      color: const Color(0xE6000000),
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(color: Colors.white24),
+                      boxShadow: const [
+                        BoxShadow(color: Colors.black54, blurRadius: 8),
+                      ],
+                    ),
+                    child: _OptionTiles(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            for (final o in leadingOptions) option(o),
+                            ..._actionButtons(context, playback),
+                            for (final o in trailingOptions) option(o),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  Positioned(
+                    left: 16,
+                    right: 16,
+                    top: -24,
+                    height: 20,
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: _OptionsTitle(
+                              controller: controller,
+                              channel: channel,
+                              title: title,
+                              isLive: isLive),
+                        ),
+                        if (isLive || catchup) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 1),
+                            decoration: BoxDecoration(
+                                color: catchup ? Colors.transparent : accent,
+                                border: Border.all(color: accent),
+                                borderRadius: BorderRadius.circular(12)),
+                            child: Text(
+                                catchup
+                                    ? tr('Catch-up').toUpperCase()
+                                    : tr('LIVE'),
+                                style: TextStyle(
+                                    color: catchup ? accent : Colors.black,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.6)),
+                          ),
+                        ],
+                        const Spacer(),
+                        _AudioSummary(
+                            key: ValueKey(
+                                Object.hash('sound', controller, channel?.id)),
+                            controller: controller),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
