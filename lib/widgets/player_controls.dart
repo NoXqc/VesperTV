@@ -2152,8 +2152,8 @@ class _OptionsTitle extends StatelessWidget {
 }
 
 /// The options row's status line, right side: the playing sound as
-/// "English • Stereo" (selected audio track's language and layout, the
-/// Android picker's rules). Read every 5 s like the badges; empty while
+/// "English • Stereo" / "English • Dolby Atmos" (selected audio track's
+/// language and layout, the Android picker's rules). Read every 5 s like the badges; empty while
 /// the stream reports nothing.
 class _AudioSummary extends StatefulWidget {
   const _AudioSummary({super.key, required this.controller});
@@ -2195,7 +2195,11 @@ class _AudioSummaryState extends State<_AudioSummary> {
         if (language.isNotEmpty &&
             !_AudioTrackButtonState._noLanguage.contains(language))
           languageName(language),
-        DataPoolCard.channelsName(selected?.channelCount),
+        // Atmos (E-AC-3 JOC) the way the ATMOS badge reads it, else the
+        // layout (owner, 2026-11-06: an Atmos channel said "5.1").
+        DataPoolCard.isAtmos(selected?.codec)
+            ? 'Dolby Atmos'
+            : DataPoolCard.channelsName(selected?.channelCount),
       ].whereType<String>().where((s) => s.isNotEmpty).join(' • ');
       if (mounted && text != _text) setState(() => _text = text);
     } catch (_) {
