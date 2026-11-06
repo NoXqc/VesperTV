@@ -2545,4 +2545,26 @@ const Map<String, String> kEl = {
       "Τα Ενεργό και Εμφάνιση στα Άλλα είναι δικά σας για κάθε προφίλ· οι πηγές είναι κοινές σε αυτή τη συσκευή.",
   "Goal disallowed after review": "Το γκολ ακυρώθηκε μετά από επανεξέταση",
   "Score overturned after review": "Το σκορ ακυρώθηκε μετά από επανεξέταση",
+  "Main guide": "Κύριος οδηγός",
+  "Extra guide {number}": "Πρόσθετος οδηγός {number}",
+  "Use EPG logo": "Χρήση λογότυπου EPG",
+  "Use provider logo": "Χρήση λογότυπου παρόχου",
+  "All guide sources": "Όλες οι πηγές οδηγού",
+  "No EPG logo": "Χωρίς λογότυπο EPG",
+  "Logo selected. Save changes to apply it.":
+      "Επιλέχθηκε λογότυπο. Αποθηκεύστε τις αλλαγές για εφαρμογή.",
+  "Provider logo selected. Save changes to apply it.":
+      "Επιλέχθηκε λογότυπο παρόχου. Αποθηκεύστε τις αλλαγές για εφαρμογή.",
+  "The viewer changed. Reopen the playlist editor.":
+      "Το προφίλ άλλαξε. Ανοίξτε ξανά τον επεξεργαστή λίστας.",
+  "Logo URLs must be HTTP(S) links of at most 1000 characters.":
+      "Τα URL λογότυπων πρέπει να είναι σύνδεσμοι HTTP(S) έως 1000 χαρακτήρες.",
+  "Guide sources": "Πηγές οδηγού",
+  "Guide and logo": "Οδηγός και λογότυπο",
+  "Using the channel's default guide match.":
+      "Χρησιμοποιείται η προεπιλεγμένη αντιστοίχιση οδηγού του καναλιού.",
+  "The TV is loading the guide. Search again when it finishes.":
+      "Η τηλεόραση φορτώνει τον οδηγό. Αναζητήστε ξανά όταν ολοκληρωθεί.",
+  "No matching guide channels. Try fewer words or Update EPG Now.":
+      "Δεν βρέθηκαν αντίστοιχα κανάλια. Δοκιμάστε λιγότερες λέξεις ή Ενημέρωση EPG τώρα.",
 };

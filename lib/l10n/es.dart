@@ -2583,4 +2583,26 @@ const Map<String, String> kEs = {
       "Activada y Mostrar en Otros son propios de cada perfil; las fuentes se comparten en este dispositivo.",
   "Goal disallowed after review": "Gol anulado tras la revisión",
   "Score overturned after review": "Anotación anulada tras la revisión",
+  "Main guide": "Guía principal",
+  "Extra guide {number}": "Guía adicional {number}",
+  "Use EPG logo": "Usar logo de la EPG",
+  "Use provider logo": "Usar logo del proveedor",
+  "All guide sources": "Todas las fuentes de guía",
+  "No EPG logo": "Sin logo de EPG",
+  "Logo selected. Save changes to apply it.":
+      "Logo seleccionado. Guarda los cambios para aplicarlo.",
+  "Provider logo selected. Save changes to apply it.":
+      "Logo del proveedor seleccionado. Guarda los cambios para aplicarlo.",
+  "The viewer changed. Reopen the playlist editor.":
+      "El perfil ha cambiado. Vuelve a abrir el editor de listas.",
+  "Logo URLs must be HTTP(S) links of at most 1000 characters.":
+      "Las URL de logos deben ser enlaces HTTP(S) de hasta 1000 caracteres.",
+  "Guide sources": "Fuentes de guía",
+  "Guide and logo": "Guía y logo",
+  "Using the channel's default guide match.":
+      "Se usa la coincidencia predeterminada de la guía del canal.",
+  "The TV is loading the guide. Search again when it finishes.":
+      "La TV está cargando la guía. Busca de nuevo cuando termine.",
+  "No matching guide channels. Try fewer words or Update EPG Now.":
+      "No hay canales coincidentes. Prueba con menos palabras o Actualizar EPG ahora.",
 };

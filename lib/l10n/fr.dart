@@ -2596,4 +2596,26 @@ const Map<String, String> kFr = {
       "Activée et Afficher sous Autre sont propres à chaque profil ; les sources sont partagées sur cet appareil.",
   "Goal disallowed after review": "But refusé après révision",
   "Score overturned after review": "Score annulé après révision",
+  "Main guide": "Guide principal",
+  "Extra guide {number}": "Guide supplémentaire {number}",
+  "Use EPG logo": "Utiliser le logo EPG",
+  "Use provider logo": "Utiliser le logo du fournisseur",
+  "All guide sources": "Toutes les sources du guide",
+  "No EPG logo": "Aucun logo EPG",
+  "Logo selected. Save changes to apply it.":
+      "Logo sélectionné. Enregistrez les modifications pour l’appliquer.",
+  "Provider logo selected. Save changes to apply it.":
+      "Logo du fournisseur sélectionné. Enregistrez les modifications pour l’appliquer.",
+  "The viewer changed. Reopen the playlist editor.":
+      "Le profil a changé. Rouvrez l’éditeur de playlist.",
+  "Logo URLs must be HTTP(S) links of at most 1000 characters.":
+      "Les URL des logos doivent être des liens HTTP(S) de 1000 caractères maximum.",
+  "Guide sources": "Sources du guide",
+  "Guide and logo": "Guide et logo",
+  "Using the channel's default guide match.":
+      "Correspondance automatique du guide de la chaîne.",
+  "The TV is loading the guide. Search again when it finishes.":
+      "Le téléviseur charge le guide. Relancez la recherche une fois terminé.",
+  "No matching guide channels. Try fewer words or Update EPG Now.":
+      "Aucune chaîne correspondante. Essayez moins de mots ou Mettre à jour l’EPG maintenant.",
 };

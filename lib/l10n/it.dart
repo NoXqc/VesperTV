@@ -2590,4 +2590,26 @@ const Map<String, String> kIt = {
       "Attiva e Mostra in Altro sono di ogni profilo; le fonti sono condivise su questo dispositivo.",
   "Goal disallowed after review": "Gol annullato dopo la revisione",
   "Score overturned after review": "Punteggio annullato dopo la revisione",
+  "Main guide": "Guida principale",
+  "Extra guide {number}": "Guida aggiuntiva {number}",
+  "Use EPG logo": "Usa logo EPG",
+  "Use provider logo": "Usa logo del fornitore",
+  "All guide sources": "Tutte le fonti della guida",
+  "No EPG logo": "Nessun logo EPG",
+  "Logo selected. Save changes to apply it.":
+      "Logo selezionato. Salva le modifiche per applicarlo.",
+  "Provider logo selected. Save changes to apply it.":
+      "Logo del fornitore selezionato. Salva le modifiche per applicarlo.",
+  "The viewer changed. Reopen the playlist editor.":
+      "Il profilo è cambiato. Riapri l’editor della playlist.",
+  "Logo URLs must be HTTP(S) links of at most 1000 characters.":
+      "Gli URL dei loghi devono essere link HTTP(S) di massimo 1000 caratteri.",
+  "Guide sources": "Fonti della guida",
+  "Guide and logo": "Guida e logo",
+  "Using the channel's default guide match.":
+      "È in uso la corrispondenza predefinita della guida del canale.",
+  "The TV is loading the guide. Search again when it finishes.":
+      "La TV sta caricando la guida. Cerca di nuovo al termine.",
+  "No matching guide channels. Try fewer words or Update EPG Now.":
+      "Nessun canale corrispondente. Prova meno parole o Aggiorna EPG ora.",
 };

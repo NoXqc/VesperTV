@@ -1,7 +1,7 @@
 # EPG channel logos in the playlist editor
 
 Investigation: Codex, 2026-11-06. Base: main bd7e13c (source 1.0.58+645).
-Status: proposal only; no application or editor behavior changed.
+Status: implemented on codex/epg-channel-logos; local source only, no build/deployment.
 
 ## Requested behavior
 
@@ -25,7 +25,7 @@ allowed; start with the first nonempty supported HTTP(S) URL.
 Primary reference: [XMLTV DTD](https://github.com/XMLTV/xmltv/blob/master/xmltv.dtd)
 (channel declaration and icon definition).
 
-## Existing implementation
+## Baseline inspected before implementation
 
 - `lib/services/epg_service.dart`: `_parseXmltvStream` streams programme rows to
   SQLite and collects channel names and current programmes, but ignores icons.
@@ -56,7 +56,7 @@ Primary reference: [XMLTV DTD](https://github.com/XMLTV/xmltv/blob/master/xmltv.
 
 ## Recommended first version
 
-1. In the channel's Guide popup, show the guide source (Provider guide / Extra
+1. In the channel's Guide popup, show the guide source (Main guide / Extra
    guide 1, etc.), candidate name/ID, and a small logo preview. Let the user
    filter sources so identical IDs from different feeds remain selectable.
 2. Offer **Use EPG logo** for a specific candidate, disabled when it has no usable
@@ -129,5 +129,32 @@ manual-vs-EPG precedence, and explicit feed removal/relink behavior; defer it.
 - Real phone/PC editor against a TV and Windows: preview, Save, guide/player logo,
   reset, restart. Use a synthetic public fixture; no user credentials in tests.
 - Run changed-file formatting, baseline16 analyze, full flutter test, and any
-  editor JavaScript checks added for the implementation. No implementation tests
-  were added for this investigation-only document.
+  editor JavaScript checks added for the implementation. Implementation tests are listed below.
+
+## Implemented (2026-11-06)
+
+- `epg_channel_info.dart` holds immutable channel metadata and HTTP(S) logo URL
+  validation (relative resolution, credential/blank/overlong rejection).
+- `EpgService` retains each source's channel directory after successful parsing.
+  Failed loads retain prior metadata; successful loads replace the whole source.
+  Configured feed removal is reflected in the editor immediately and metadata is
+  pruned on refreshAll; Clear Cache clears it. Programme handling stays streamed.
+- `playlist_editor_epg.dart` provides source-scoped search (40-result cap) and
+  translated source labels/text. Editor search receives playlist and source index.
+  Source labels contain no private feed URLs. Existing global EPG matching is
+  unchanged. Candidates are session-only; Update EPG Now is in the popup.
+- Browser Use EPG logo and Use provider logo modify the active draft. Link only
+  edits programme mapping. Normal Save sends pending logos/names/hides together.
+  Existing logo edits retain viewer+playlist scope and Backup/Transfer/sync paths.
+- Search generations and popup/playlist guards discard stale replies. The editor
+  sends a captured viewer header; API rejects requests after a viewer switch.
+  Server validates logo URLs before existing decode length caps could truncate.
+- New labels are supplied through tr() and FR/ES/IT/EL/DE dictionaries. Old unrelated
+  English editor labels remain as found. Remote guide and bot index updated locally.
+- Tests: epg_channel_logos_test.dart (streamed XML/source isolation/refresh/URL
+  handling/Backup+Transfer/profile scope/localization); playlist_editor_logos_test.dart
+  (real local HTTP/API/save/link/reset/validation/viewer guard/refresh callback);
+  editor_epg_logos.test.mjs (eight browser-script interaction/race/draft tests).
+- Run JavaScript tests with `node --test test/editor_epg_logos.test.mjs`.
+  Actual phone/TV/Windows image rendering and device navigation remain owner QA;
+  no signed APK or Windows build was requested. No native/player changes.

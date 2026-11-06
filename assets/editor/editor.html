@@ -38,6 +38,8 @@ img.logo{width:36px;height:24px;object-fit:contain;background:#000;border-radius
 .modal{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:9;padding:16px}
 .modal .card{max-width:640px;width:100%;max-height:85vh;overflow:auto}
 .hidden-row td{opacity:.55}
+#gdResults .grow{min-width:140px;overflow-wrap:anywhere}
+#gdSource{max-width:100%}
 @media (max-width:700px){.wide{display:none}td,th{padding:5px 3px}}
 </style>
 </head>
@@ -198,6 +200,8 @@ img.logo{width:36px;height:24px;object-fit:contain;background:#000;border-radius
   <h3 style="margin-top:0">Guide for <span id="gdFor" style="color:var(--gold)"></span></h3>
   <p class="dim" id="gdNow"></p>
   <div class="row"><input id="gdQ" placeholder="Search the guide's channels (name or id)" class="grow"><button id="gdUnlink">Unlink</button></div>
+  <div class="row"><select id="gdSource"></select><button id="gdRefresh" data-epg-text="Update EPG Now"></button><button id="gdProvider" data-epg-text="Use provider logo"></button></div>
+  <p class="dim" id="gdLogoMsg"></p>
   <div id="gdResults"></div>
   <h3>Extra guide sources for this playlist</h3>
   <p class="dim">An XMLTV link (.xml or .xml.gz) whose channels you want to link. It loads on the TV in the background (can take a minute or two), then search above.</p>
@@ -211,22 +215,28 @@ img.logo{width:36px;height:24px;object-fit:contain;background:#000;border-radius
 'use strict';
 let probeMax = 60, groupData = null, groupOrder = [], groupHidden = new Set(), groupSel = new Set();
 let code = '', pl = '', data = null, edits = null, playlists = [], page = 300, sel = new Set(), dirty = false, tab = 'channels';
+let viewer = '', epgTexts = {}, loadEpoch = 0;
+const epgText = key => epgTexts[key] || key;
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 async function api(path, body) {
   const r = await fetch(path, {method: body === undefined ? 'GET' : 'POST',
-    headers: {'X-Editor-Code': code, 'Content-Type': 'application/json'},
+    headers: {'X-Editor-Code': code, ...(viewer ? {'X-Editor-Viewer': viewer} : {}), 'Content-Type': 'application/json'},
     body: body === undefined ? undefined : JSON.stringify(body)});
   if (r.status === 401) { showLogin('Wrong or expired code. Check the TV.'); throw new Error('auth'); }
+  if (r.status === 409) { showLogin(epgText('The viewer changed. Reopen the playlist editor.')); throw new Error('viewer'); }
   if (!r.ok) throw new Error('HTTP ' + r.status);
   return r.json();
 }
 function showLogin(msg) { $('app').style.display = 'none'; $('login').style.display = ''; $('loginMsg').textContent = msg || ''; }
 async function login() {
-  code = $('code').value.trim();
+  viewer = ''; code = $('code').value.trim();
   try {
     const p = await api('/api/playlists');
+    viewer = p.viewer; epgTexts = p.epgTexts || {};
+    for (const el of document.querySelectorAll('[data-epg-text]')) el.textContent = epgText(el.dataset.epgText);
+    $('gdSource').setAttribute('aria-label', epgText('Guide sources'));
     playlists = p.playlists; $('cf').checked = p.copyFallback;
     $('xfb').checked = p.crossFallback; $('merge').checked = p.merge;
     probeMax = p.probeMax || 60; pollProbe();
@@ -239,8 +249,11 @@ async function login() {
 async function load(id) {
   if (!id) { $('status').textContent = 'No playlists on this TV.'; return; }
   if (dirty && !confirm('Unsaved changes will be lost. Continue?')) { $('pl').value = pl; return; }
+  const epoch = ++loadEpoch; closeGuide();
   pl = id; $('status').textContent = 'Loading…';
-  data = await api('/api/channels?pl=' + encodeURIComponent(pl));
+  const loaded = await api('/api/channels?pl=' + encodeURIComponent(id));
+  if (epoch !== loadEpoch || pl !== id) return;
+  data = loaded;
   edits = Object.assign({names:{}, logos:{}, hidden:[], shown:[], fallbacks:{}, rules:[]}, data.edits);
   for (const k of ['names','logos','fallbacks']) edits[k] = edits[k] || {};
   for (const k of ['hidden','shown','rules']) edits[k] = edits[k] || [];
@@ -274,6 +287,7 @@ function info(c) {
   if (c.p) t.push(`<span class="tag ${c.p.startsWith('dead') ? 'r' : 'ok'}">${esc(c.p)}</span>`);
   if (c.eo) t.push(`<button class="tag g" data-guide="${esc(c.r)}" title="Linked guide channel: ${esc(c.eo)}">guide linked</button>`);
   else if (c.ne) t.push(`<button class="tag" data-guide="${esc(c.r)}" title="Link a guide channel or add a guide">no guide · add</button>`);
+  if (!c.eo && !c.ne) t.push(`<button class="tag" data-guide="${esc(c.r)}">${esc(epgText('Guide and logo'))}</button>`);
   if (edits.fallbacks[c.r]) t.push(`<span class="tag g">${edits.fallbacks[c.r].length} fallback</span>`);
   return t.join('');
 }
@@ -341,15 +355,16 @@ function payload() {
   return e;
 }
 async function save() {
-  $('save').disabled = true;
+  $('save').disabled = true; $('pl').disabled = true; closeGuide();
   try {
     const r = await api('/api/edits?pl=' + encodeURIComponent(pl), {edits: payload()});
+    if (r.error) throw new Error(r.error);
     await api('/api/settings', {copyFallback: $('cf').checked});
     setDirty(false); dirty = false;
     await load(pl);
     $('status').textContent = 'Saved. ' + r.hidden + ' channels hidden by the editor.';
   } catch (e) { alert('Could not save: ' + e.message); }
-  $('save').disabled = false;
+  $('save').disabled = false; $('pl').disabled = false;
 }
 
 // Events
@@ -453,44 +468,95 @@ $('fbResults').onclick = e => {
 };
 $('fbDone').onclick = () => { $('fbModal').style.display = 'none'; renderChannels(); };
 
-// Guide: link a channel to a guide channel, add extra XMLTV sources.
-let gdFor = null;
+// Guide choices are source-aware. Logos join the existing draft; Link only
+// changes programme matching. Never apply an old response to another row/playlist.
+let gdFor = null, gdPl = null, gdEpoch = 0, gdSearchEpoch = 0, gdResults = [], gdTimer = null;
+function closeGuide() { gdEpoch++; gdSearchEpoch++; clearTimeout(gdTimer); gdFor = null; gdPl = null; gdResults = []; $('gdModal').style.display = 'none'; }
+function guideCurrent(epoch, playlist, raw) { return epoch === gdEpoch && playlist === pl && playlist === gdPl && raw === gdFor; }
 function openGuide(r) {
-  gdFor = r; const c = data.channels.find(x => x.r === r);
+  closeGuide(); gdFor = r; gdPl = pl;
+  const c = data.channels.find(x => x.r === r); if (!c) return;
   $('gdFor').textContent = shownName(c); $('gdQ').value = shownName(c).replace(/[^\p{L}\p{N} ]/gu, ' ').replace(/\s+/g, ' ').trim();
-  $('gdNow').textContent = c.eo ? 'Linked to guide channel: ' + c.eo : 'No guide data for this channel yet.';
-  $('gdUnlink').style.display = c.eo ? '' : 'none'; $('gdMsg').textContent = ''; $('gdUrl').value = '';
-  $('gdModal').style.display = 'flex'; renderGuideUrls(); gdSearch();
+  $('gdNow').textContent = c.eo ? 'Linked to guide channel: ' + c.eo : c.ne ? 'No guide data for this channel yet.' : epgText("Using the channel's default guide match.");
+  $('gdUnlink').style.display = c.eo ? '' : 'none'; $('gdMsg').textContent = ''; $('gdLogoMsg').textContent = ''; $('gdUrl').value = '';
+  $('gdSource').innerHTML = `<option value="">${esc(epgText('All guide sources'))}</option>`;
+  $('gdResults').innerHTML = ''; $('gdModal').style.display = 'flex';
+  renderGuideUrls().then(() => { if (gdFor === r && gdPl === pl) gdSearch(); }).catch(() => {});
 }
 async function renderGuideUrls() {
-  const r = await api('/api/epg?pl=' + encodeURIComponent(pl));
-  $('gdUrls').innerHTML = r.extra.map(u => `<div class="row"><span class="grow dim" style="word-break:break-all">${esc(u)}</span><button data-urm="${esc(u)}">Remove</button></div>`).join('')
-    || '<p class="dim">None yet.</p>';
+  const epoch = gdEpoch, playlist = gdPl, raw = gdFor;
+  const r = await api('/api/epg?pl=' + encodeURIComponent(playlist));
+  if (!guideCurrent(epoch, playlist, raw)) return;
+  const selected = $('gdSource').value;
+  $('gdSource').innerHTML = `<option value="">${esc(epgText('All guide sources'))}</option>` + r.sources.map(x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
+  if ([...$('gdSource').options].some(o => o.value === selected)) $('gdSource').value = selected;
+  $('gdUrls').innerHTML = r.extra.map(u => `<div class="row"><span class="grow dim" style="word-break:break-all">${esc(u)}</span><button data-urm="${esc(u)}">Remove</button></div>`).join('') || '<p class="dim">None yet.</p>';
   if (r.loading) $('gdMsg').textContent = 'The TV is loading the guide...';
 }
-let gdTimer = null;
-function gdSearch() { clearTimeout(gdTimer); gdTimer = setTimeout(async () => {
-  const q = $('gdQ').value.trim(); if (q.length < 2) { $('gdResults').innerHTML = ''; return; }
-  const r = await api('/api/epg/search?q=' + encodeURIComponent(q));
-  $('gdResults').innerHTML = r.results.map(x => `<div class="row"><span class="grow">${esc(x.n)} <span class="dim">${esc(x.id)}</span></span><button data-link="${esc(x.id)}">Link</button></div>`).join('')
-    || '<p class="dim">Nothing found. Try fewer words, or add a guide below.</p>';
-}, 250); }
+function gdSearch() {
+  clearTimeout(gdTimer); const epoch = gdEpoch, searchEpoch = ++gdSearchEpoch, playlist = gdPl, raw = gdFor;
+  gdResults = []; $('gdResults').innerHTML = '';
+  gdTimer = setTimeout(async () => {
+    const q = $('gdQ').value.trim(); if (q.length < 2 || !raw) return;
+    try {
+      const r = await api('/api/epg/search?pl=' + encodeURIComponent(playlist) + '&source=' + encodeURIComponent($('gdSource').value) + '&q=' + encodeURIComponent(q));
+      if (!guideCurrent(epoch, playlist, raw) || searchEpoch !== gdSearchEpoch) return;
+      gdResults = r.results;
+      $('gdResults').innerHTML = r.results.map((x, i) => `<div class="row">
+        ${x.l ? `<img class="logo" loading="lazy" src="${esc(x.l)}" alt="" referrerpolicy="no-referrer">` : ''}
+        <span class="grow">${esc(x.n)} <span class="dim">${esc(x.id)} · ${esc(x.sourceName)}</span></span>
+        <button data-link="${esc(x.id)}">Link</button>
+        <button data-logo="${i}" ${x.l ? '' : 'disabled'}>${esc(epgText(x.l ? 'Use EPG logo' : 'No EPG logo'))}</button></div>`).join('')
+        || `<p class="dim">${esc(epgText('No matching guide channels. Try fewer words or Update EPG Now.'))}</p>`;
+    } catch (_) {}
+  }, 250);
+}
+function chooseGuideLogo(index) {
+  if (gdPl !== pl || !gdFor) return;
+  const logo = gdResults[index]?.l; if (!logo) return;
+  edits.logos[gdFor] = logo; setDirty(true); renderChannels();
+  $('gdLogoMsg').textContent = epgText('Logo selected. Save changes to apply it.');
+}
 async function linkGuide(id) {
-  await api('/api/epg/link?pl=' + encodeURIComponent(pl), {r: gdFor, id});
-  const c = data.channels.find(x => x.r === gdFor); c.eo = id || undefined; if (id) c.ne = 0;
-  $('gdModal').style.display = 'none'; renderChannels();
+  const epoch = gdEpoch, playlist = gdPl, raw = gdFor;
+  await api('/api/epg/link?pl=' + encodeURIComponent(playlist), {r: raw, id});
+  if (!guideCurrent(epoch, playlist, raw)) return;
+  const c = data.channels.find(x => x.r === raw); c.eo = id || undefined; if (id) c.ne = 0;
+  closeGuide(); renderChannels();
   $('status').textContent = id ? 'Linked. The TV reloads the guide in about 20 seconds.' : 'Unlinked.';
 }
 $('gdQ').addEventListener('input', gdSearch);
-$('gdResults').onclick = e => { const id = e.target.dataset.link; if (id) linkGuide(id); };
+$('gdSource').onchange = gdSearch;
+$('gdResults').onclick = e => {
+  if (e.target.dataset.logo !== undefined) chooseGuideLogo(+e.target.dataset.logo);
+  else if (e.target.dataset.link) linkGuide(e.target.dataset.link);
+};
+$('gdProvider').onclick = () => {
+  if (gdPl !== pl || !gdFor) return;
+  delete edits.logos[gdFor]; setDirty(true); renderChannels();
+  $('gdLogoMsg').textContent = epgText('Provider logo selected. Save changes to apply it.');
+};
 $('gdUnlink').onclick = () => linkGuide(null);
 $('gdAdd').onclick = async () => {
-  const r = await api('/api/epg?pl=' + encodeURIComponent(pl), {add: $('gdUrl').value});
+  const epoch = gdEpoch, playlist = gdPl, raw = gdFor;
+  const r = await api('/api/epg?pl=' + encodeURIComponent(playlist), {add: $('gdUrl').value});
+  if (!guideCurrent(epoch, playlist, raw)) return;
   if (r.error) { $('gdMsg').textContent = r.error; return; }
   $('gdUrl').value = ''; $('gdMsg').textContent = 'Added. The TV is loading it: search again in a minute or two.'; renderGuideUrls();
 };
-$('gdUrls').onclick = async e => { const u = e.target.dataset.urm; if (!u) return; await api('/api/epg?pl=' + encodeURIComponent(pl), {remove: u}); renderGuideUrls(); };
-$('gdDone').onclick = () => { $('gdModal').style.display = 'none'; };
+$('gdUrls').onclick = async e => {
+  const u = e.target.dataset.urm; if (!u) return;
+  const epoch = gdEpoch, playlist = gdPl, raw = gdFor;
+  await api('/api/epg?pl=' + encodeURIComponent(playlist), {remove: u});
+  if (!guideCurrent(epoch, playlist, raw)) return;
+  await renderGuideUrls(); gdSearch();
+};
+$('gdRefresh').onclick = async () => {
+  const epoch = gdEpoch, playlist = gdPl, raw = gdFor;
+  await api('/api/epg/refresh?pl=' + encodeURIComponent(playlist), {});
+  if (guideCurrent(epoch, playlist, raw)) $('gdMsg').textContent = epgText('The TV is loading the guide. Search again when it finishes.');
+};
+$('gdDone').onclick = closeGuide;
 
 // Groups
 async function loadGroups() {

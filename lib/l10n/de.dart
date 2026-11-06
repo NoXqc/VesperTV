@@ -2486,4 +2486,26 @@ const Map<String, String> kDe = {
       "Aktiviert und Unter Sonstiges zeigen gelten je Profil; Quellen werden auf diesem Gerät geteilt.",
   "Goal disallowed after review": "Tor nach Überprüfung aberkannt",
   "Score overturned after review": "Punkte nach Überprüfung aberkannt",
+  "Main guide": "Hauptprogrammführer",
+  "Extra guide {number}": "Zusätzlicher Programmführer {number}",
+  "Use EPG logo": "EPG-Logo verwenden",
+  "Use provider logo": "Anbieterlogo verwenden",
+  "All guide sources": "Alle Programmführerquellen",
+  "No EPG logo": "Kein EPG-Logo",
+  "Logo selected. Save changes to apply it.":
+      "Logo ausgewählt. Änderungen speichern, um es anzuwenden.",
+  "Provider logo selected. Save changes to apply it.":
+      "Anbieterlogo ausgewählt. Änderungen speichern, um es anzuwenden.",
+  "The viewer changed. Reopen the playlist editor.":
+      "Das Profil hat sich geändert. Öffne den Playlist-Editor erneut.",
+  "Logo URLs must be HTTP(S) links of at most 1000 characters.":
+      "Logo-URLs müssen HTTP(S)-Links mit höchstens 1000 Zeichen sein.",
+  "Guide sources": "Programmführerquellen",
+  "Guide and logo": "Programmführer und Logo",
+  "Using the channel's default guide match.":
+      "Die Standardzuordnung des Senders zum Programmführer wird verwendet.",
+  "The TV is loading the guide. Search again when it finishes.":
+      "Der Fernseher lädt den Programmführer. Suche nach Abschluss erneut.",
+  "No matching guide channels. Try fewer words or Update EPG Now.":
+      "Keine passenden Sender. Versuche weniger Wörter oder EPG jetzt aktualisieren.",
 };

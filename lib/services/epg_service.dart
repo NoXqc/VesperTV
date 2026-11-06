@@ -10,6 +10,7 @@ import '../models/epg_program.dart';
 import 'perf_diagnostics.dart';
 import '../utils/constants.dart';
 import 'epg_database.dart';
+import 'epg_channel_info.dart';
 import 'storage_service.dart';
 import '../l10n/l10n.dart';
 
@@ -185,6 +186,12 @@ class EpgService extends ChangeNotifier {
   final Map<String, String> _channelCatalog = {};
   Map<String, String> get channelCatalog => Map.unmodifiable(_channelCatalog);
 
+  // Keep source identity for editor branding choices. Publish after a complete
+  // parse only; failed refreshes retain the last successful source directory.
+  final Map<String, List<EpgChannelInfo>> _sourceChannels = {};
+  List<EpgChannelInfo> channelsFromSource(String url) =>
+      _sourceChannels[url] ?? const [];
+
   /// Every `<channel id>`'s own currently-airing programme, as of
   /// whenever it was last refreshed — lets "Assign EPG channel" show what
   /// a *candidate* id is airing right now (e.g. telling `espn.us` apart
@@ -298,6 +305,7 @@ class EpgService extends ChangeNotifier {
   Future<void> refreshAll() async {
     if (isLoading) return;
     final sources = _sourcesProvider?.call() ?? const [];
+    _sourceChannels.removeWhere((url, _) => !sources.any((s) => s.url == url));
     if (sources.isEmpty) return;
     await _runRefresh(sources);
   }
@@ -345,6 +353,7 @@ class EpgService extends ChangeNotifier {
 
   /// Wipes every stored programme ("Clear Cache" in EPG settings).
   Future<void> clearAll() async {
+    _sourceChannels.clear();
     await _db.clearAll();
     lastUpdated = null;
     _soon = {};
@@ -397,7 +406,9 @@ class EpgService extends ChangeNotifier {
         await _autoGunzip(streamedResponse.stream),
         knownChannelIds: effectiveFilter,
         onRows: (rows) => _db.insertBatch(rows, url, gen),
+        sourceUrl: url,
       ).timeout(const Duration(minutes: 10));
+      _sourceChannels[url] = List.unmodifiable(result.channels.values);
       // First-seen wins on a duplicate id across sources — an arbitrary
       // but harmless tie-break; these are just display labels for a
       // picker, not something correctness depends on.
@@ -468,11 +479,13 @@ class EpgService extends ChangeNotifier {
       ({
         int stored,
         Map<String, String> channelNames,
+        Map<String, EpgChannelInfo> channels,
         Map<String, EpgProgram> nowPlaying
       })> _parseXmltvStream(
     Stream<List<int>> byteStream, {
     Set<String>? knownChannelIds,
     required Future<void> Function(List<EpgRow> rows) onRows,
+    required String sourceUrl,
   }) async {
     const batchSize = 1000;
     var pending = <EpgRow>[];
@@ -482,6 +495,7 @@ class EpgService extends ChangeNotifier {
     // why the *whole* feed's directory matters here, not just whatever one
     // playlist already owns.
     final channelNames = <String, String>{};
+    final channels = <String, EpgChannelInfo>{};
     // Every <channel id>'s own currently-airing programme, same
     // unfiltered-by-design reasoning as [channelNames] — "Assign EPG
     // channel" needs to show what's actually on right now for each
@@ -508,6 +522,8 @@ class EpgService extends ChangeNotifier {
     String? desc;
     String? catalogChannelId;
     String? catalogDisplayName;
+    String? catalogLogo;
+    final parents = <String>[];
 
     void finalizeProgramme() {
       if (channelId == null || startRaw == null || stopRaw == null) return;
@@ -577,6 +593,8 @@ class EpgService extends ChangeNotifier {
         await Future<void>.delayed(Duration.zero);
       }
       if (event is XmlStartElementEvent) {
+        final parent = parents.lastOrNull;
+        if (!event.isSelfClosing) parents.add(event.name);
         if (event.name == 'programme') {
           channelId = null;
           startRaw = null;
@@ -600,10 +618,17 @@ class EpgService extends ChangeNotifier {
         } else if (event.name == 'channel') {
           catalogChannelId = null;
           catalogDisplayName = null;
+          catalogLogo = null;
           currentTextTag = null;
           for (final attr in event.attributes) {
             if (attr.name == 'id') {
               catalogChannelId = normalizeEpgId(attr.value);
+            }
+          }
+        } else if (event.name == 'icon' && parent == 'channel') {
+          for (final attr in event.attributes) {
+            if (attr.name == 'src' && catalogLogo == null) {
+              catalogLogo = epgLogoUrl(attr.value, sourceUrl: sourceUrl);
             }
           }
         } else if ((event.name == 'title' ||
@@ -636,16 +661,32 @@ class EpgService extends ChangeNotifier {
           finalizeProgramme();
         } else if (event.name == 'channel') {
           final id = catalogChannelId;
+          if (id != null) {
+            channels.putIfAbsent(
+                id,
+                () => EpgChannelInfo(
+                    id,
+                    catalogDisplayName?.trim().isNotEmpty == true
+                        ? catalogDisplayName!.trim()
+                        : id,
+                    catalogLogo));
+          }
           if (id != null && catalogDisplayName != null) {
             channelNames.putIfAbsent(id, () => catalogDisplayName!.trim());
           }
         }
+        if (parents.isNotEmpty) parents.removeLast();
       }
       if (pending.length >= batchSize) await flush();
     }
     await flush();
 
-    return (stored: stored, channelNames: channelNames, nowPlaying: nowPlaying);
+    return (
+      stored: stored,
+      channelNames: channelNames,
+      channels: channels,
+      nowPlaying: nowPlaying
+    );
   }
 
   /// Parses XMLTV timestamps such as `20240101120000 +0000`.

@@ -688,6 +688,14 @@
     "url": "https://vespertv.app/remote.html#Recordings"
   },
   {
+    "id": "fb8a10d73d9c9785",
+    "category": "Settings",
+    "title": "Use a channel logo from your EPG",
+    "answer": "Open the editor on your phone or PC. In a channel's Guide popup, choose Main guide or an Extra guide, search for the channel and select Use EPG logo beside its preview. Save changes to apply the image. Link changes programme matching separately. Use provider logo resets only the image. If the directory is empty after starting VesperTV, choose Update EPG Now, then search again when it finishes. Your chosen logo URL is saved for this viewer and playlist, survives content updates and travels in Backup and Transfer. Later changes to the guide's logo URL require selecting it again.",
+    "controls": "Settings → Playlists & guide → Playlist editor → Guide and logo",
+    "url": "https://vespertv.app/remote.html#Settings"
+  },
+  {
     "id": "7b60e5009aeab80e",
     "category": "Settings",
     "title": "Filter Group Management",
