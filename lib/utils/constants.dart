@@ -578,6 +578,10 @@ class AppConstants {
   /// on start (replaced the `m3u_channels` JSON, which needed several
   /// in-memory copies of a big list to write).
   static const String cacheFileM3uSource = 'm3u_source';
+
+  /// An M3U playlist's live channels and movie / show group lists
+  /// (`M3uImport`); its movies and episodes are in the catalog database.
+  static const String cacheFileM3uCatalog = 'm3u_catalog';
   static const String cacheFileLiveChannels = 'xtream_live_channels';
   static const String cacheFileLiveCategories = 'xtream_live_categories';
   static const String cacheFileVodCategories = 'xtream_vod_categories';

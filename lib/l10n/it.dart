@@ -2588,4 +2588,22 @@ const Map<String, String> kIt = {
       "La rimuove per tutti i profili di questo dispositivo. Per nasconderla solo in questo profilo, disattiva Attiva.",
   "Enabled and Show under Other are your own for each profile; sources are shared on this device.":
       "Attiva e Mostra in Altro sono di ogni profilo; le fonti sono condivise su questo dispositivo.",
+  "Downloading playlist... {mb} MB":
+      "Download della lista… {mb} MB",
+  "The server stopped sending the playlist after {mb} MB. Try again later.":
+      "Il server ha smesso di inviare la lista dopo {mb} MB. Riprova più tardi.",
+  "The server did not answer within {s} seconds.":
+      "Il server non ha risposto entro {s} secondi.",
+  "The server closed the connection without answering.":
+      "Il server ha chiuso la connessione senza rispondere.",
+  "This is a VesperTV backup.":
+      "Questo è un backup di VesperTV.",
+  "Only add its Media Hub sources":
+      "Aggiungi solo le sue fonti Media Hub",
+  "Add M3U playlists, Media Hub sources or a backup from USB or external storage":
+      "Aggiungi liste M3U, fonti Media Hub o un backup da USB o memoria esterna",
+  "This device has no file picker. Copy the backup onto a USB drive and open it in Import from storage.":
+      "Questo dispositivo non ha un selettore di file. Copia il backup su una chiavetta USB e aprilo in Importa da memoria esterna.",
+  "Preparing {name} for faster starts. This happens once... {p}%":
+      "Preparazione di {name} per avvii più rapidi. Solo questa volta... {p}%",
 };

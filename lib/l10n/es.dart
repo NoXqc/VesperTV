@@ -2581,4 +2581,22 @@ const Map<String, String> kEs = {
       "Esto la quita para todos los perfiles de este dispositivo. Para ocultarla solo en este perfil, desactiva Activada.",
   "Enabled and Show under Other are your own for each profile; sources are shared on this device.":
       "Activada y Mostrar en Otros son propios de cada perfil; las fuentes se comparten en este dispositivo.",
+  "Downloading playlist... {mb} MB":
+      "Descargando la lista… {mb} MB",
+  "The server stopped sending the playlist after {mb} MB. Try again later.":
+      "El servidor dejó de enviar la lista tras {mb} MB. Inténtalo más tarde.",
+  "The server did not answer within {s} seconds.":
+      "El servidor no respondió en {s} segundos.",
+  "The server closed the connection without answering.":
+      "El servidor cerró la conexión sin responder.",
+  "This is a VesperTV backup.":
+      "Es una copia de seguridad de VesperTV.",
+  "Only add its Media Hub sources":
+      "Añadir solo sus fuentes de Media Hub",
+  "Add M3U playlists, Media Hub sources or a backup from USB or external storage":
+      "Añade listas M3U, fuentes de Media Hub o una copia de seguridad desde USB o almacenamiento externo",
+  "This device has no file picker. Copy the backup onto a USB drive and open it in Import from storage.":
+      "Este dispositivo no tiene selector de archivos. Copia la copia de seguridad en un USB y ábrela en Importar desde almacenamiento.",
+  "Preparing {name} for faster starts. This happens once... {p}%":
+      "Preparando {name} para arranques más rápidos. Solo esta vez... {p} %",
 };

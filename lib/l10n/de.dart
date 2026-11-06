@@ -2484,4 +2484,22 @@ const Map<String, String> kDe = {
       "Das entfernt sie für jedes Profil auf diesem Gerät. Um sie nur für dieses Profil auszublenden, schalte stattdessen Aktiviert aus.",
   "Enabled and Show under Other are your own for each profile; sources are shared on this device.":
       "Aktiviert und Unter Sonstiges zeigen gelten je Profil; Quellen werden auf diesem Gerät geteilt.",
+  "Downloading playlist... {mb} MB":
+      "Playlist wird heruntergeladen… {mb} MB",
+  "The server stopped sending the playlist after {mb} MB. Try again later.":
+      "Der Server hat nach {mb} MB aufgehört, die Playlist zu senden. Versuche es später erneut.",
+  "The server did not answer within {s} seconds.":
+      "Der Server hat nicht innerhalb von {s} Sekunden geantwortet.",
+  "The server closed the connection without answering.":
+      "Der Server hat die Verbindung ohne Antwort geschlossen.",
+  "This is a VesperTV backup.":
+      "Das ist eine VesperTV-Sicherung.",
+  "Only add its Media Hub sources":
+      "Nur ihre Media-Hub-Quellen hinzufügen",
+  "Add M3U playlists, Media Hub sources or a backup from USB or external storage":
+      "M3U-Playlists, Media-Hub-Quellen oder eine Sicherung von USB oder externem Speicher hinzufügen",
+  "This device has no file picker. Copy the backup onto a USB drive and open it in Import from storage.":
+      "Dieses Gerät hat keine Dateiauswahl. Kopiere die Sicherung auf einen USB-Stick und öffne sie unter Aus dem Speicher importieren.",
+  "Preparing {name} for faster starts. This happens once... {p}%":
+      "{name} wird für schnellere Starts vorbereitet. Nur dieses eine Mal... {p} %",
 };

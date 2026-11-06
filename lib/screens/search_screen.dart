@@ -199,7 +199,7 @@ class _SearchScreenState extends State<SearchScreen> {
       _hubDebounce = Timer(
           const Duration(milliseconds: 500), () => _runHubSearch(trimmed));
     }
-    if (trimmed.isEmpty || !context.read<PlaylistManager>().isXtream) {
+    if (trimmed.isEmpty || !context.read<PlaylistManager>().hasCatalogDb) {
       setState(() {
         _dbVodResults = null;
         _dbSeriesResults = null;
@@ -216,10 +216,9 @@ class _SearchScreenState extends State<SearchScreen> {
     final playlist = context.read<PlaylistManager>();
     // Restricted to enabled playlists — a disabled playlist's stale
     // cached rows shouldn't surface in search results.
-    final playlistIds = playlist.profiles
-        .where((p) => p.enabled && p.isXtream)
-        .map((p) => p.id)
-        .toList();
+    // Xtream and stored M3U playlists alike (M3uImport).
+    final playlistIds =
+        playlist.profiles.where((p) => p.enabled).map((p) => p.id).toList();
     // Goes through PlaylistManager, not CatalogDatabase directly — see
     // PlaylistManager.searchVisibleVod's doc comment for why a direct DB
     // search has no hidden-group awareness at all.
@@ -373,7 +372,7 @@ class _SearchScreenState extends State<SearchScreen> {
     });
     _searchDebounce?.cancel();
     _hubDebounce?.cancel();
-    if (context.read<PlaylistManager>().isXtream) {
+    if (context.read<PlaylistManager>().hasCatalogDb) {
       unawaited(_runDbSearch(query.trim()));
     }
     unawaited(_runHubSearch(query.trim()));
@@ -744,8 +743,9 @@ class _SearchScreenState extends State<SearchScreen> {
     final prefs = context.read<AppPreferences>();
     if (prefs.hideMoviesShows) return rows..addAll(_buildHubRows(rows.length));
 
-    final vodMatches =
-        playlist.isXtream ? _dbVodResults : _matching(playlist, 'vod', search);
+    final vodMatches = playlist.hasCatalogDb
+        ? _dbVodResults
+        : _matching(playlist, 'vod', search);
     if (!prefs.hideMovies && vodMatches != null && vodMatches.isNotEmpty) {
       rows.add(_buildChannelRow(rows.length, tr('Movies'), vodMatches,
           isPoster: true));
@@ -753,7 +753,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
     if (prefs.hideShows) {
       // Settings > General hides TV Shows: no series row.
-    } else if (playlist.isXtream) {
+    } else if (playlist.hasCatalogDb) {
       final seriesMatches = _dbSeriesResults;
       if (seriesMatches != null && seriesMatches.isNotEmpty) {
         rows.add(_buildSeriesRow(rows.length, tr('TV Shows'), seriesMatches));

@@ -30,9 +30,20 @@ import 'perf_diagnostics.dart';
 /// below is scoped by `(category_name, playlist_id)` together, not name
 /// alone.
 class CatalogDatabase {
-  CatalogDatabase({String? databasePath}) : _databasePath = databasePath;
+  CatalogDatabase({String? databasePath, this.resetOnFailure = true})
+      : _databasePath = databasePath;
   final String? _databasePath;
   Database? _db;
+
+  /// Off for an M3U import's background isolate ([M3uImport]): a failed
+  /// open there must fail that import, never delete the catalog the UI
+  /// isolate is reading.
+  final bool resetOnFailure;
+
+  /// The database file (an M3U import opens the same one from its isolate).
+  Future<String> get path async =>
+      _databasePath ??
+      p.join((await getApplicationDocumentsDirectory()).path, 'nox_catalog.db');
 
   /// Live favorite lookups, set once by `PlaylistManager` at construction —
   /// every row this class reads back stamps `isFavorite` through these
@@ -63,12 +74,11 @@ class CatalogDatabase {
   }
 
   Future<Database> _openOnce() async {
-    final path = _databasePath ??
-        p.join(
-            (await getApplicationDocumentsDirectory()).path, 'nox_catalog.db');
+    final path = await this.path;
     try {
       _db = await _open(path);
     } catch (e) {
+      if (!resetOnFailure) rethrow;
       // Everything in here is re-derivable from the provider, so a
       // database that won't open is worth strictly less than the cost of
       // not opening it: every catalog read for every playlist fails, and
@@ -84,7 +94,20 @@ class CatalogDatabase {
   Future<Database> _open(String path) async {
     final db = await openDatabase(
       path,
-      version: 9,
+      version: 10,
+      // Write-ahead log: a commit appends to one file instead of copying
+      // each page to a rollback journal first and syncing both - fewer
+      // flash writes and syncs for a big import (a 1.28M-entry M3U
+      // refresh took ~10 min on a Formuler), and reads don't wait for a
+      // write in progress. Optional: a failure keeps the old mode.
+      onConfigure: (db) async {
+        try {
+          await db.rawQuery('PRAGMA journal_mode=WAL');
+          await db.rawQuery('PRAGMA synchronous=NORMAL');
+        } catch (e) {
+          debugPrint('CatalogDatabase: WAL skipped: $e');
+        }
+      },
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE vod_channels (
@@ -107,7 +130,8 @@ class CatalogDatabase {
             poster_url TEXT,
             backdrop_url TEXT,
             provider_poster_url TEXT,
-            provider_backdrop_url TEXT
+            provider_backdrop_url TEXT,
+            import_mark INTEGER
           )
         ''');
         await db.execute(
@@ -131,13 +155,15 @@ class CatalogDatabase {
             release_date INTEGER,
             poster_url TEXT,
             backdrop_url TEXT,
-            provider_backdrop_url TEXT
+            provider_backdrop_url TEXT,
+            import_mark INTEGER
           )
         ''');
         await db.execute(
             'CREATE INDEX idx_series_category ON series_items(category_name)');
         await db.execute(
             'CREATE INDEX idx_series_playlist ON series_items(playlist_id)');
+        await db.execute(_m3uEpisodesTable);
       },
       // v1 -> v2: added series_items.rating.
       // v2 -> v3: added multi-playlist support — playlist_id on both
@@ -278,6 +304,15 @@ class CatalogDatabase {
             }
           }
         }
+        if (oldVersion < 10) {
+          // M3U movies and episodes moved out of memory (see M3uImport):
+          // which import wrote a row, and the episodes of M3U shows.
+          await _addColumnIfMissing(
+              db, 'vod_channels', 'import_mark', 'INTEGER');
+          await _addColumnIfMissing(
+              db, 'series_items', 'import_mark', 'INTEGER');
+          await db.execute(_m3uEpisodesTable);
+        }
       },
     );
     // Rows are read and replaced by playlist + category; category alone
@@ -288,6 +323,7 @@ class CatalogDatabase {
       ('series_items', 'idx_series_added', 'added_at'),
       ('vod_channels', 'idx_vod_playlist_cat', 'playlist_id, category_name'),
       ('series_items', 'idx_series_playlist_cat', 'playlist_id, category_name'),
+      ('m3u_episodes', 'idx_m3u_episodes_show', 'playlist_id, series_id'),
     ]) {
       // Optional speed-up: a failure must never reach [_database]'s
       // catch, which would delete the whole catalog.
@@ -306,6 +342,18 @@ class CatalogDatabase {
   /// A trivial query: how long it waits = the database's queue
   /// ([PerfDiagnostics]).
   Future<void> ping() async => (await _database).rawQuery('SELECT 1');
+
+  /// A bigger page cache while an M3U import writes ~1M rows (its indexes
+  /// stay in memory instead of being re-read from flash), then back to
+  /// SQLite's default (2 MB). Never fails the import.
+  Future<void> bulkWrites(bool on) async {
+    try {
+      await (await _database)
+          .rawQuery('PRAGMA cache_size=${on ? -65536 : -2000}');
+    } catch (e) {
+      debugPrint('CatalogDatabase: cache_size: $e');
+    }
+  }
 
   /// Rows per playlist: `vod_channels` / `series_items` (Send log only).
   Future<Map<String, (int, int)>> rowCounts() async {
@@ -335,7 +383,32 @@ class CatalogDatabase {
     await db.execute('ALTER TABLE $table ADD COLUMN $column $type');
   }
 
-  Map<String, Object?> _channelToRow(String categoryName, Channel c) => {
+  /// The episodes of an M3U playlist's shows: an M3U list has no show
+  /// entries, only episode lines, which [M3uImport] groups into the
+  /// `series_items` rows these belong to ([series_id]).
+  static const _m3uEpisodesTable = '''
+    CREATE TABLE IF NOT EXISTS m3u_episodes (
+      id TEXT PRIMARY KEY,
+      playlist_id TEXT NOT NULL,
+      series_id INTEGER NOT NULL,
+      category_name TEXT NOT NULL,
+      season INTEGER NOT NULL,
+      episode INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      url TEXT NOT NULL,
+      logo_url TEXT,
+      subtitle_url TEXT,
+      import_mark INTEGER
+    )
+  ''';
+
+  Map<String, Object?> _channelToRow(String categoryName, Channel c) =>
+      vodRow(categoryName, c);
+
+  /// A `vod_channels` row; [importMark] for rows an M3U import writes.
+  static Map<String, Object?> vodRow(String categoryName, Channel c,
+          {int? importMark}) =>
+      {
         'id': c.id,
         'playlist_id': c.playlistId,
         'category_name': categoryName,
@@ -356,6 +429,7 @@ class CatalogDatabase {
         'backdrop_url': c.backdropUrl,
         'provider_poster_url': c.providerPosterUrl,
         'provider_backdrop_url': c.providerBackdropUrl,
+        if (importMark != null) 'import_mark': importMark,
       };
 
   Channel _rowToChannel(Map<String, Object?> row) {
@@ -378,6 +452,9 @@ class CatalogDatabase {
       url: row['url'] as String,
       logoUrl: row['logo_url'] as String?,
       subtitleUrl: row['subtitle_url'] as String?,
+      // Every row here is a movie or episode: an M3U one's id doesn't say
+      // so the way Xtream's `xt_vod_` does (Channel.isLive).
+      onDemand: true,
       isFavorite: isVodFavorite?.call(id) ?? (row['is_favorite'] as int) == 1,
       rating: row['rating'] as String?,
       addedAt:
@@ -396,7 +473,13 @@ class CatalogDatabase {
     );
   }
 
-  Map<String, Object?> _seriesToRow(String categoryName, XtreamSeries s) => {
+  Map<String, Object?> _seriesToRow(String categoryName, XtreamSeries s) =>
+      seriesRow(categoryName, s);
+
+  /// A `series_items` row; [importMark] for rows an M3U import writes.
+  static Map<String, Object?> seriesRow(String categoryName, XtreamSeries s,
+          {int? importMark}) =>
+      {
         'id': s.id,
         'series_id': s.seriesId,
         'playlist_id': s.playlistId,
@@ -412,7 +495,121 @@ class CatalogDatabase {
         'poster_url': s.posterUrl,
         'backdrop_url': s.backdropUrl,
         'provider_backdrop_url': s.providerBackdropUrl,
+        if (importMark != null) 'import_mark': importMark,
       };
+
+  /// An `m3u_episodes` row: [c] is the episode's own M3U entry.
+  static Map<String, Object?> episodeRow(Channel c,
+          {required int seriesId,
+          required int season,
+          required int episode,
+          required int importMark}) =>
+      {
+        'id': c.id,
+        'playlist_id': c.playlistId,
+        'series_id': seriesId,
+        'category_name': c.group,
+        'season': season,
+        'episode': episode,
+        'name': c.name,
+        'url': c.url,
+        'logo_url': c.logoUrl,
+        'subtitle_url': c.subtitleUrl,
+        'import_mark': importMark,
+      };
+
+  /// One batch of an M3U import ([M3uImport]): rows already in the
+  /// database (same id) are replaced in place, so the catalog stays
+  /// browsable while a refresh runs.
+  Future<void> writeM3uRows(
+      {List<Map<String, Object?>> vod = const [],
+      List<Map<String, Object?>> series = const [],
+      List<Map<String, Object?>> episodes = const []}) async {
+    writeGeneration++;
+    final db = await _database;
+    final batch = db.batch();
+    for (final (table, rows) in [
+      ('vod_channels', vod),
+      ('series_items', series),
+      ('m3u_episodes', episodes),
+    ]) {
+      _insertMany(batch, table, rows);
+    }
+    await batch.commit(noResult: true);
+  }
+
+  /// Many rows per INSERT: one statement per row through the plugin made
+  /// storing a 1.28M-entry list take 13 min on a Formuler (LOG-24KKHW).
+  /// Kept under SQLite's 999 bound values (Android 11's build).
+  static void _insertMany(
+      Batch batch, String table, List<Map<String, Object?>> rows) {
+    if (rows.isEmpty) return;
+    final columns = rows.first.keys.toList();
+    final perStatement = (999 ~/ columns.length).clamp(1, 500);
+    final one = '(${List.filled(columns.length, '?').join(',')})';
+    for (var start = 0; start < rows.length; start += perStatement) {
+      final chunk =
+          rows.sublist(start, (start + perStatement).clamp(0, rows.length));
+      // Rows that don't share the first one's columns go one by one.
+      final same = chunk.every(
+          (r) => r.length == columns.length && columns.every(r.containsKey));
+      if (!same) {
+        for (final r in chunk) {
+          batch.insert(table, r, conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+        continue;
+      }
+      batch.rawInsert(
+          'INSERT OR REPLACE INTO $table (${columns.join(',')}) VALUES '
+          '${List.filled(chunk.length, one).join(',')}',
+          [
+            for (final r in chunk)
+              for (final c in columns) r[c]
+          ]);
+    }
+  }
+
+  /// After a complete M3U import: drops the playlist's rows that import
+  /// didn't write (titles the provider removed). A failed import never
+  /// gets here, so it leaves the previous catalog in place.
+  Future<void> finishM3uImport(String playlistId, int importMark) async {
+    writeGeneration++;
+    final db = await _database;
+    for (final table in ['vod_channels', 'series_items', 'm3u_episodes']) {
+      await db.delete(table,
+          where:
+              'playlist_id = ? AND (import_mark IS NULL OR import_mark != ?)',
+          whereArgs: [playlistId, importMark]);
+    }
+  }
+
+  /// One M3U show's episodes by season, in playlist order within each.
+  Future<Map<int, List<Channel>>> getM3uEpisodes(
+      String playlistId, int seriesId) async {
+    final db = await _database;
+    final rows = await db.query('m3u_episodes',
+        where: 'playlist_id = ? AND series_id = ?',
+        whereArgs: [playlistId, seriesId],
+        orderBy: 'season, episode, rowid');
+    final out = <int, List<Channel>>{};
+    for (final row in rows) {
+      final id = row['id'] as String;
+      final prefix = '$playlistId::';
+      out.putIfAbsent(row['season'] as int, () => []).add(Channel(
+            id: id,
+            rawId: id.startsWith(prefix) ? id.substring(prefix.length) : id,
+            playlistId: playlistId,
+            name: row['name'] as String,
+            group: row['category_name'] as String,
+            url: row['url'] as String,
+            logoUrl: row['logo_url'] as String?,
+            subtitleUrl: row['subtitle_url'] as String?,
+            onDemand: true,
+            isFavorite: isVodFavorite?.call(id) ?? false,
+          ));
+    }
+    return out;
+  }
 
   XtreamSeries _rowToSeries(Map<String, Object?> row) {
     final addedAt = row['added_at'] as int?;
@@ -841,19 +1038,41 @@ class CatalogDatabase {
   /// Deletes every row belonging to one playlist — used when that playlist
   /// is removed entirely (`PlaylistManager.removePlaylist`), so its cached
   /// catalog doesn't linger for a disabled/deleted playlist.
+  /// A big M3U's rows (~1M episodes) took minutes to delete in one
+  /// statement on a Formuler, and every other query (the next playlist's
+  /// update) waited behind it. The episodes table is emptied at once when
+  /// no other playlist has rows there (SQLite drops its pages instead of
+  /// deleting row by row); otherwise rows go in small chunks the queue
+  /// can run other work between.
   Future<void> clearForPlaylist(String playlistId) async {
     writeGeneration++;
     final db = await _database;
-    await db.delete('vod_channels',
-        where: 'playlist_id = ?', whereArgs: [playlistId]);
-    await db.delete('series_items',
-        where: 'playlist_id = ?', whereArgs: [playlistId]);
+    final others = await db.rawQuery(
+        'SELECT 1 FROM m3u_episodes WHERE playlist_id != ? LIMIT 1',
+        [playlistId]);
+    if (others.isEmpty) {
+      await db.delete('m3u_episodes');
+    } else {
+      await _deleteInChunks(db, 'm3u_episodes', playlistId);
+    }
+    await _deleteInChunks(db, 'vod_channels', playlistId);
+    await _deleteInChunks(db, 'series_items', playlistId);
+  }
+
+  static Future<void> _deleteInChunks(
+      Database db, String table, String playlistId) async {
+    while (await db.rawDelete(
+            'DELETE FROM $table WHERE rowid IN (SELECT rowid FROM $table '
+            'WHERE playlist_id = ? LIMIT 20000)',
+            [playlistId]) >
+        0) {}
   }
 
   Future<void> clearAll() async {
     final db = await _database;
     await db.delete('vod_channels');
     await db.delete('series_items');
+    await db.delete('m3u_episodes');
   }
 
   Future<void> close() async {

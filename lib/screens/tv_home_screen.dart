@@ -2811,7 +2811,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     if (playlist.profiles.any((p) => p.enabled && p.isXtream)) {
       // Shared with Settings > Clear Cache — see its doc comment for why
       // this needed to become a reusable helper rather than living here.
-      final didSync = await confirmAndRunFullCatalogSync(context, playlist);
+      final didSync = await confirmAndRunFullCatalogSync(context, playlist,
+          beforeRun: _parkLiveChannel);
       if (didSync && mounted) _showUpdateToast();
     }
 
@@ -2841,8 +2842,28 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       ),
     );
     if (confirmed != true || !context.mounted) return;
-    for (final profile in m3uProfiles) {
-      await playlist.loadPlaylist(profile.id);
+    // Nothing to watch behind the progress screen: the channel's decoder,
+    // network and CPU go to the update (a 1.28M-entry list is processed
+    // on the box itself). The resume pill brings it back afterwards.
+    await _parkLiveChannel();
+    if (!context.mounted) return;
+    // The same progress screen as an Xtream update (it only showed a small
+    // "Updating..." before, for a download and store that can take minutes).
+    final navigator = Navigator.of(context);
+    unawaited(navigator.push(MaterialPageRoute(
+      builder: (_) => PopScope(
+        canPop: false,
+        child: Scaffold(
+            backgroundColor: Colors.black,
+            body: CatalogSyncBody(playlist: playlist)),
+      ),
+    )));
+    try {
+      for (final profile in m3uProfiles) {
+        await playlist.loadPlaylist(profile.id);
+      }
+    } finally {
+      if (mounted) navigator.pop();
     }
   }
 
@@ -5865,7 +5886,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     final rowKeys = <({String playlistId, String title})?>[
       if (continueRow != null) null,
     ];
-    final favorites = playlist.isXtream
+    final favorites = playlist.hasCatalogDb
         ? _buildFavoritesBrowseRows<XtreamSeries>(
             items: _showFavorites ? playlist.favoriteSeries : const [],
             firstRowIndex: rows.length,

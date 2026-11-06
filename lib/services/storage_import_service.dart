@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'backup_service.dart';
 import 'm3u_parser.dart';
 import 'addon_import.dart';
 import 'local_playlist_files.dart';
@@ -198,6 +199,31 @@ class StorageImportService {
 
     visit(text, 0);
     return links.toList();
+  }
+
+  /// [item]'s backup data when it is a VesperTV backup, else null. Lets a
+  /// box with no file picker restore a backup copied onto USB: after a
+  /// reinstall on Android 11+, the backup list can't see the old files in
+  /// Download/VesperTV (Shield user, 2026-11-06).
+  Future<Map<String, Object?>?> readBackup(StorageItem item) async {
+    if (p.extension(item.name).toLowerCase() != '.json') return null;
+    final dir = await _directory();
+    final scratch = File(
+        p.join(dir.path, '${DateTime.now().microsecondsSinceEpoch}.backup'));
+    try {
+      if (item.uri.scheme == 'content') {
+        await _channel.invokeMethod('copyImportFile',
+            {'uri': item.uri.toString(), 'target': scratch.path});
+      } else {
+        await File.fromUri(item.uri).copy(scratch.path);
+      }
+      if (await scratch.length() > 64 * 1024 * 1024) return null;
+      return BackupService.decode(await scratch.readAsString());
+    } on FormatException {
+      return null;
+    } finally {
+      if (await scratch.exists()) await scratch.delete();
+    }
   }
 
   Future<List<String>> readSourceLinks(StorageItem item) async {

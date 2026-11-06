@@ -146,8 +146,10 @@ class CatalogSyncScreen extends StatelessWidget {
 ///
 /// Returns true if the sync actually ran (false if cancelled), so
 /// callers know whether to show their own "content updated" toast.
+/// [beforeRun]: runs once confirmed (TV home stops the background channel).
 Future<bool> confirmAndRunFullCatalogSync(
-    BuildContext context, PlaylistManager playlist) async {
+    BuildContext context, PlaylistManager playlist,
+    {Future<void> Function()? beforeRun}) async {
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
@@ -173,6 +175,8 @@ Future<bool> confirmAndRunFullCatalogSync(
     ),
   );
   if (confirmed != true || !context.mounted) return false;
+  if (beforeRun != null) await beforeRun();
+  if (!context.mounted) return false;
 
   final syncFuture = playlist.runFullCatalogSync();
   if (!context.mounted) return false;

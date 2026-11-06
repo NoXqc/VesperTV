@@ -199,6 +199,15 @@ class PlaylistManager extends ChangeNotifier {
   /// panel) check `PlaylistProfile.isXtream` directly instead.
   bool get isXtream => _enabledSessionsSorted.any((s) => s.isXtream);
 
+  /// Some enabled playlist keeps its movies and shows in the catalog
+  /// database (every Xtream one, and an M3U one stored by `M3uImport`):
+  /// search them there.
+  bool get hasCatalogDb => _enabledSessionsSorted.any((s) => s.catalogInDb);
+
+  /// [playlistId]'s movies and shows are in the catalog database.
+  bool catalogInDbFor(String playlistId) =>
+      _sessionFor(playlistId)?.catalogInDb ?? false;
+
   // --- Init / migration -----------------------------------------------------
 
   Future<void> init() async {
@@ -405,16 +414,39 @@ class PlaylistManager extends ChangeNotifier {
   Future<void> addPlaylist(PlaylistProfile profile) async {
     final updated = [..._storage.getPlaylists(), profile];
     await _storage.setPlaylists(updated);
-    _sessions.add(PlaylistSession(
-      profile: profile,
-      storage: _storage,
-      catalogDb: _catalogDb,
-      favoriteIds: () => _favoriteIds,
-      favoriteSeriesIds: () => _favoriteSeriesIds,
-      isRestrictedViewer: () => _activeViewerRestricted,
-      onNotify: notifyListeners,
-      myGroupOf: _myGroupOf,
-    )..onEditsApplied = recomputeMerge);
+    _sessions.add(_newSession(profile));
+    notifyListeners();
+  }
+
+  PlaylistSession _newSession(PlaylistProfile profile) => PlaylistSession(
+        profile: profile,
+        storage: _storage,
+        catalogDb: _catalogDb,
+        favoriteIds: () => _favoriteIds,
+        favoriteSeriesIds: () => _favoriteSeriesIds,
+        isRestrictedViewer: () => _activeViewerRestricted,
+        onNotify: notifyListeners,
+        myGroupOf: _myGroupOf,
+      )..onEditsApplied = recomputeMerge;
+
+  /// A playlist read another way (M3U <-> Xtream: an Xtream panel's M3U
+  /// link goes through its Xtream login, or back to the M3U when that
+  /// fails): same id and settings, but the other kind's catalog is
+  /// dropped and a fresh session replaces the old one.
+  Future<void> switchPlaylistType(PlaylistProfile profile) async {
+    await _sessionFor(profile.id)?.deleteM3uFiles();
+    await _catalogDb.clearForPlaylist(profile.id);
+    await _storage.setPlaylists([
+      for (final p in _storage.getPlaylists()) p.id == profile.id ? profile : p
+    ]);
+    final index = _sessions.indexWhere((s) => s.profile.id == profile.id);
+    final fresh = _newSession(profile);
+    if (index >= 0) {
+      _sessions[index] = fresh;
+    } else {
+      _sessions.add(fresh);
+    }
+    if (_foregroundSession?.profile.id == profile.id) _foregroundSession = null;
     notifyListeners();
   }
 
@@ -468,6 +500,7 @@ class PlaylistManager extends ChangeNotifier {
     final updated =
         _storage.getPlaylists().where((p) => p.id != playlistId).toList();
     await _storage.setPlaylists(updated);
+    await _sessionFor(playlistId)?.deleteM3uFiles();
     _sessions.removeWhere((s) => s.profile.id == playlistId);
     await _catalogDb.clearForPlaylist(playlistId);
     if (_foregroundSession?.profile.id == playlistId) _foregroundSession = null;
@@ -1193,7 +1226,11 @@ class PlaylistManager extends ChangeNotifier {
 
   /// "Recently added" (TV tab, opt in): visible live channels of every
   /// enabled playlist added in the last [days] days, newest first.
-  List<Channel> recentLiveChannels({int days = 14, int limit = 300}) {
+  List<Channel> recentLiveChannels({int days = 14, int limit = 300}) =>
+      List.of(_visibleCache['recent/$days/$limit'] ??=
+          _recentLiveChannels(days, limit));
+
+  List<Channel> _recentLiveChannels(int days, int limit) {
     final since = DateTime.now().subtract(Duration(days: days));
     final found = <(Channel, DateTime)>[];
     for (final s in _enabledSessionsSortedFor('tv')) {
@@ -1384,8 +1421,9 @@ class PlaylistManager extends ChangeNotifier {
   Future<void> ensureCategoriesLoaded(
           String playlistId, Iterable<String> categoryNames, String tabCategory,
           {bool gentle = false}) =>
-      _sessionFor(playlistId)
-          ?.ensureCategoriesLoaded(categoryNames, tabCategory, gentle: gentle) ??
+      _sessionFor(playlistId)?.ensureCategoriesLoaded(
+          categoryNames, tabCategory,
+          gentle: gentle) ??
       Future.value();
 
   /// Cached until the next [notifyListeners] (like [liveGroupCount]): one
@@ -1606,8 +1644,12 @@ class PlaylistManager extends ChangeNotifier {
           _storage.getShownGroups(playlistId).contains(group));
 
   List<Channel> get favoriteChannels => _enabledSessionsSorted
-          .expand((s) =>
-              s.isXtream ? [...s.liveChannels, ...s.allCachedVod] : s.channels)
+          .expand((s) => s.catalogInDb
+              ? [
+                  ...(s.isXtream ? s.liveChannels : s.channels),
+                  ...s.allCachedVod
+                ]
+              : s.channels)
           .where((c) {
         if (_isHiddenForActiveViewer(c.playlistId, c.group)) return false;
         final favoritedGroups = _sessionFor(c.playlistId)?.favoritedGroups;
@@ -1616,12 +1658,15 @@ class PlaylistManager extends ChangeNotifier {
 
   /// The TV tab's Favourites list: starred live channels plus every
   /// channel of a favourited live group, per playlist in order (starred
-  /// first within each playlist).
-  List<Channel> get favoriteLiveChannelsWithGroups =>
+  /// first within each playlist). Cached like [visibleChannels]: the TV
+  /// tab opens on Favourites, and this scanned every live channel on each
+  /// TV home build (~0.6 s per build with a 144k-channel M3U, LOG-QKPTCP).
+  List<Channel> get favoriteLiveChannelsWithGroups => List.of(
+      _visibleCache['favoritesWithGroups'] ??= _favoriteLiveChannelsWithGroups);
+
+  List<Channel> get _favoriteLiveChannelsWithGroups =>
       _enabledSessionsSortedFor('tv').expand((s) {
-        final live = s.isXtream
-            ? s.liveChannels
-            : s.channels.where((c) => _classifyGroupPublic(c.group) == 'tv');
+        final live = s.allLiveChannels;
         final visible = live
             .where((c) =>
                 !_isHiddenForActiveViewer(c.playlistId, s.liveGroupOf(c)))
@@ -1678,22 +1723,23 @@ class PlaylistManager extends ChangeNotifier {
     return to;
   }
 
-  List<Channel> get favoriteLiveChannels => _enabledSessionsSortedFor('tv')
-      .expand((s) => s.isXtream
-          ? s.liveChannels.where((c) => c.isFavorite)
-          : s.channels.where(
-              (c) => c.isFavorite && _classifyGroupPublic(c.group) == 'tv'))
-      .where((c) => !_isHiddenForActiveViewer(c.playlistId, c.group))
-      .toList();
+  List<Channel> get favoriteLiveChannels =>
+      List.of(_visibleCache['favorites'] ??= _enabledSessionsSortedFor('tv')
+          .expand((s) => s.allLiveChannels.where((c) => c.isFavorite))
+          .where((c) => !_isHiddenForActiveViewer(c.playlistId, c.group))
+          .toList());
 
   /// Resolve saved ids, never the database's legacy Main-only favourite bit.
   /// Cached by viewer/ids/enabled playlists so calling from build is safe.
   /// Small batches also support older Android SQLite variable limits.
   Future<void> ensureFavoriteCatalogLoaded() {
-    final playlists = _enabledSessionsSorted.where((s) => s.isXtream).toList();
+    final playlists =
+        _enabledSessionsSorted.where((s) => s.catalogInDb).toList();
+    // An M3U movie's id has no `xt_vod_`: any of the playlist's starred
+    // ids may be one (the live ones simply aren't in the database).
     final vodIds = _favoriteIds
-        .where((id) =>
-            playlists.any((s) => id.startsWith('${s.profile.id}::xt_vod_')))
+        .where((id) => playlists.any((s) => id.startsWith(
+            s.isXtream ? '${s.profile.id}::xt_vod_' : '${s.profile.id}::')))
         .toList();
     final seriesIds = _favoriteSeriesIds
         .where((id) => playlists.any((s) => id.startsWith('${s.profile.id}::')))
@@ -1753,23 +1799,24 @@ class PlaylistManager extends ChangeNotifier {
     }
   }
 
-  List<Channel> get favoriteMovies => _enabledSessionsSorted.expand((s) {
+  List<Channel> get favoriteMovies =>
+      List.of(_visibleCache['favoriteMovies'] ??=
+          _enabledSessionsSorted.expand((s) {
         final byId = <String, Channel>{
-          if (s.isXtream)
+          if (s.catalogInDb)
             for (final c in _favoriteVod.values)
               if (c.playlistId == s.profile.id) c.id: c,
-          for (final c in s.isXtream
-              ? s.allCachedVod
-              : s.channels.where((c) => _classifyGroupPublic(c.group) == 'vod'))
+          for (final c
+              in s.catalogInDb ? s.allCachedVod : s.m3uEntriesOf('vod'))
             c.id: c,
         };
         return byId.values.where((c) =>
             _favoriteIds.contains(c.id) &&
             _isFavoriteGroupVisible(c.playlistId, c.group));
-      }).toList();
+      }).toList());
 
   List<XtreamSeries> get favoriteSeries => _enabledSessionsSorted
-      .where((s) => s.isXtream)
+      .where((s) => s.catalogInDb)
       .expand((s) => <String, XtreamSeries>{
             for (final item in _favoriteShows.values)
               if (item.playlistId == s.profile.id) item.id: item,
@@ -1779,24 +1826,13 @@ class PlaylistManager extends ChangeNotifier {
               _isFavoriteGroupVisible(item.playlistId, item.categoryId)))
       .toList();
 
-  List<Channel> get favoriteShowChannels => _enabledSessionsSorted
-      .where((s) => !s.isXtream)
-      .expand((s) => s.channels)
-      .where((c) =>
-          c.isFavorite &&
-          _classifyGroupPublic(c.group) == 'series' &&
-          !_isHiddenForActiveViewer(c.playlistId, c.group))
-      .toList();
-
-  /// Same classification `PlaylistSession._classifyGroup` uses — needed
-  /// here too since the merged favorite getters above operate across
-  /// sessions, not from inside one.
-  String _classifyGroupPublic(String title) {
-    final lower = title.toLowerCase();
-    if (lower.contains('series') || lower.contains('show')) return 'series';
-    if (lower.contains('vod') || lower.contains('movie')) return 'vod';
-    return 'tv';
-  }
+  List<Channel> get favoriteShowChannels =>
+      List.of(_visibleCache['favoriteShows'] ??= _enabledSessionsSorted
+          .where((s) => !s.catalogInDb)
+          .expand((s) => s.m3uEntriesOf('series'))
+          .where((c) =>
+              c.isFavorite && !_isHiddenForActiveViewer(c.playlistId, c.group))
+          .toList());
 
   Future<void> toggleFavorite(Channel channel) async {
     channel.isFavorite = !_favoriteIds.contains(channel.id);
@@ -1805,9 +1841,14 @@ class PlaylistManager extends ChangeNotifier {
     } else {
       _favoriteIds.remove(channel.id);
     }
+    final owner = _sessionFor(channel.playlistId);
     if (channel.isFavorite &&
-        (_sessionFor(channel.playlistId)?.isXtream ?? false) &&
-        channel.rawId.startsWith('xt_vod_')) {
+        (owner?.catalogInDb ?? false) &&
+        (channel.rawId.startsWith('xt_vod_') ||
+            // An M3U movie in the catalog database (not an episode).
+            (!owner!.isXtream &&
+                channel.onDemand &&
+                channel.seriesId == null))) {
       _favoriteVod[channel.id] = channel;
     } else {
       _favoriteVod.remove(channel.id);
