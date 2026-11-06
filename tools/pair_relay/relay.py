@@ -260,28 +260,11 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):  # no access log: URLs carry session ids
         pass
 
-    def send_response(self, code, message=None):
-        self._status = code
-        super().send_response(code, message)
-
-    def _ai_route(self, path):
-        return path.startswith(("/mcp/", "/.well-known/", "/oauth/"))
-
     def do_GET(self):
-        self._status = None
-        try:
-            self._do_get()
-        finally:
-            if self._ai_route(self.path.split("?", 1)[0]):
-                ai_link.debug(self, self.path, self._status)
+        self._do_get()
 
     def do_POST(self):
-        self._status = None
-        try:
-            self._do_post()
-        finally:
-            if self._ai_route(self.path.split("?", 1)[0]):
-                ai_link.debug(self, self.path, self._status)
+        self._do_post()
 
     def _send(self, code, body=b"", ctype="application/json"):
         self.send_response(code)

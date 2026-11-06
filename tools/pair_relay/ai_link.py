@@ -25,7 +25,6 @@ import hashlib
 import json
 import os
 import re
-import sys
 import threading
 import time
 import urllib.parse
@@ -329,19 +328,6 @@ WELL_KNOWN_PR = re.compile(
     r"^/\.well-known/oauth-protected-resource(/mcp/[A-Za-z0-9_-]{32,128})?/?$")
 WELL_KNOWN_AS = re.compile(
     r"^/\.well-known/(oauth-authorization-server|openid-configuration)(/.*)?$")
-
-
-def debug(h, path, code):
-    """Temporary (Claude connector bring-up): method, masked path, status and
-    a few header names. Never bodies, tokens or the link secret."""
-    masked = re.sub(r"(/mcp/)([A-Za-z0-9_-]{4})[A-Za-z0-9_-]+", r"\1\2…", path)
-    masked = re.sub(r"(code|state|code_challenge|refresh_token)=[^&]*", r"\1=…", masked)
-    ua = (h.headers.get("User-Agent") or "")[:60]
-    print(f"ai_link {h.command} {masked} -> {code} ua={ua!r} "
-          f"accept={(h.headers.get('Accept') or '')[:60]!r} "
-          f"auth={'yes' if h.headers.get('Authorization') else 'no'} "
-          f"mcpv={h.headers.get('MCP-Protocol-Version')!r}",
-          file=sys.stderr, flush=True)
 
 
 def _as_metadata():
