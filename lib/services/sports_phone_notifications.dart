@@ -296,7 +296,10 @@ class SportsPhoneNotifications with WidgetsBindingObserver {
   /// One summary fetch for each scoring update, using the existing cache/bucket.
   static Future<void> postGoal(StorageService scoped, GoalAlertNotice notice,
       {Future<SportsGameSummary?> Function(SportsGame)? summaryLoader}) async {
-    if (!scoped.getPhoneGoalAlerts()) return;
+    if (!scoped.getPhoneGoalAlerts() ||
+        scoped.getActiveViewerId() != notice.viewerId) {
+      return;
+    }
     final followsTeam = scoped.getGoalsAlert() &&
         scoped
             .getSportsFollowedTeams()
@@ -321,13 +324,15 @@ class SportsPhoneNotifications with WidgetsBindingObserver {
           ]
         : [current];
     SportsGameSummary? summary;
-    if (!scoped.getSportsHideScores()) {
+    if (!notice.overturned && !scoped.getSportsHideScores()) {
       try {
         summary = await (summaryLoader?.call(game) ??
             SportsService.instance.gameSummary(game, fresh: true));
       } catch (_) {}
     }
-    final hidden = tr('{team} scored!', {'team': notice.team.shortName});
+    final hidden = notice.overturned
+        ? notice.overturnedText
+        : tr('{team} scored!', {'team': notice.team.shortName});
     for (final score in scores) {
       String? scorer;
       final mine =
@@ -362,7 +367,8 @@ class SportsPhoneNotifications with WidgetsBindingObserver {
       ].join(' · ');
       await channel.invokeMethod<void>('goal', {
         'viewer': notice.viewerId,
-        'id': 'goal|${GoalsAlerts.gameKey(game)}|${notice.team.id}|$score',
+        'id':
+            '${notice.overturned ? 'overturned' : 'goal'}|${GoalsAlerts.gameKey(game)}|${notice.team.id}|$score',
         'key': GoalsAlerts.gameKey(game),
         'startAt': game.start.millisecondsSinceEpoch,
         'title': hidden,

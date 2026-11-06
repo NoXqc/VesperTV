@@ -2599,4 +2599,6 @@ const Map<String, String> kEs = {
       "Este dispositivo no tiene selector de archivos. Copia la copia de seguridad en un USB y ábrela en Importar desde almacenamiento.",
   "Preparing {name} for faster starts. This happens once... {p}%":
       "Preparando {name} para arranques más rápidos. Solo esta vez... {p} %",
+  "Goal disallowed after review": "Gol anulado tras la revisión",
+  "Score overturned after review": "Anotación anulada tras la revisión",
 };

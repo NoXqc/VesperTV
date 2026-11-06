@@ -2612,4 +2612,6 @@ const Map<String, String> kFr = {
       "Cet appareil n'a pas de sélecteur de fichiers. Copiez la sauvegarde sur une clé USB et ouvrez-la dans Importer depuis un stockage.",
   "Preparing {name} for faster starts. This happens once... {p}%":
       "Préparation de {name} pour des démarrages plus rapides. Une seule fois... {p} %",
+  "Goal disallowed after review": "But refusé après révision",
+  "Score overturned after review": "Score annulé après révision",
 };

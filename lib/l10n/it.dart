@@ -2606,4 +2606,6 @@ const Map<String, String> kIt = {
       "Questo dispositivo non ha un selettore di file. Copia il backup su una chiavetta USB e aprilo in Importa da memoria esterna.",
   "Preparing {name} for faster starts. This happens once... {p}%":
       "Preparazione di {name} per avvii più rapidi. Solo questa volta... {p}%",
+  "Goal disallowed after review": "Gol annullato dopo la revisione",
+  "Score overturned after review": "Punteggio annullato dopo la revisione",
 };

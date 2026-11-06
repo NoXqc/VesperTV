@@ -2502,4 +2502,6 @@ const Map<String, String> kDe = {
       "Dieses Gerät hat keine Dateiauswahl. Kopiere die Sicherung auf einen USB-Stick und öffne sie unter Aus dem Speicher importieren.",
   "Preparing {name} for faster starts. This happens once... {p}%":
       "{name} wird für schnellere Starts vorbereitet. Nur dieses eine Mal... {p} %",
+  "Goal disallowed after review": "Tor nach Überprüfung aberkannt",
+  "Score overturned after review": "Punkte nach Überprüfung aberkannt",
 };

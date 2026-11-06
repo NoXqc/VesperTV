@@ -61,6 +61,18 @@ player changes, APK, installation, version bump, merge or publication in this ta
   goals. Scorer is supplied only when a fresh summary matches that score; a
   missing/late scorer does not delay the alert or invent a name. One summary
   request per update, no five-second summary retry loop.
+- Review corrections (Codex, 2026-11-06): while live, a non-basketball score drop
+  raises one overturned notice only when it exactly restores the previous score
+  of that team's last goal notice, observed within 15 minutes (inclusive).
+  Each team/game sample persists `goalAt`, `goalPreviousScore` and `peak` in the
+  existing viewer checkpoint. Consuming the goal clears its review eligibility;
+  the peak remains so a drop/rebound cannot replay goals or reviews, even across
+  headless passes. New goals must exceed the observed peak. Legacy checkpoints
+  have no review eligibility; existing freshness/scope/reset/CAS rules apply.
+  Soccer/hockey say "Goal disallowed after review"; other sports say "Score
+  overturned after review". Same overlay style and corrected scoreline, no scorer
+  lookup. Phone alerts use a separate `overturned|...` tag and the same native
+  Hide scores masking as goals. No new native class, alarm or polling cadence.
 - Ongoing low-priority Following goals notification names games without scores.
   Stop blocks the currently active windows; future games remain scheduled. Finals
   are removed as observed, partial overlaps continue, all final stops the service.
