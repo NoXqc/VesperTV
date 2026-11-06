@@ -32,7 +32,7 @@ class GoalAlertNotice {
 class _ScoreSample {
   _ScoreSample(
       this.score, this.state, this.at, this.owner, this.start, this.gameKey,
-      {int? peak, this.goalAt, this.goalPreviousScore})
+      {int? peak, this.goalAt, this.goalPreviousScore, this.overturnedAt})
       : peak = peak ?? score;
   final int score;
   final GameState state;
@@ -44,7 +44,15 @@ class _ScoreSample {
   final int peak;
   final DateTime? goalAt;
   final int? goalPreviousScore;
+
+  /// When this team's last goal was reported overturned: a climb back
+  /// within [_reboundWindow] is the feed flipping back (silent), a later
+  /// one is a real goal even though it doesn't beat [peak] (1-0, disallowed
+  /// to 0-0, a real goal makes it 1-0 again).
+  final DateTime? overturnedAt;
 }
+
+const _reboundWindow = Duration(minutes: 2);
 
 class _MatchScoreWatch {
   const _MatchScoreWatch(this.league, this.id, this.start);
@@ -116,7 +124,8 @@ class GoalsAlerts extends ChangeNotifier {
             goalAt: DateTime.tryParse('${item['goalAt']}'),
             goalPreviousScore: item['goalPreviousScore'] is int
                 ? item['goalPreviousScore'] as int
-                : null);
+                : null,
+            overturnedAt: DateTime.tryParse('${item['overturnedAt']}'));
       }
     } catch (_) {/* Invalid samples are a silent first baseline. */}
   }
@@ -407,6 +416,9 @@ class GoalsAlerts extends ChangeNotifier {
           final previous = _scores[key];
           var goalAt = previous?.goalAt;
           var goalPreviousScore = previous?.goalPreviousScore;
+          var overturnedAt = previous?.overturnedAt;
+          final afterOverturn = overturnedAt != null &&
+              at.difference(overturnedAt) > _reboundWindow;
           final eligible = game.state == GameState.live ||
               (game.state == GameState.post &&
                   previous?.state == GameState.live &&
@@ -417,9 +429,10 @@ class GoalsAlerts extends ChangeNotifier {
               eligible &&
               previous.state != GameState.post &&
               score > previous.score &&
-              score > previous.peak) {
+              (score > previous.peak || afterOverturn)) {
             goalAt = at;
             goalPreviousScore = previous.score;
+            overturnedAt = null;
             notices.add(GoalAlertNotice(
                 viewerId: viewer,
                 game: game,
@@ -445,12 +458,14 @@ class GoalsAlerts extends ChangeNotifier {
             // Consume the matching goal, including across headless restarts.
             goalAt = null;
             goalPreviousScore = null;
+            overturnedAt = at;
           }
           _scores[key] = _ScoreSample(
               score, game.state, at, owner, game.start, gameKey(game),
               peak: math.max(score, previous?.peak ?? score),
               goalAt: goalAt,
-              goalPreviousScore: goalPreviousScore);
+              goalPreviousScore: goalPreviousScore,
+              overturnedAt: overturnedAt);
         }
       }
       while (_scores.length > 512) {
@@ -481,7 +496,9 @@ class GoalsAlerts extends ChangeNotifier {
                 if (entry.value.goalAt != null)
                   'goalAt': entry.value.goalAt!.toIso8601String(),
                 if (entry.value.goalPreviousScore != null)
-                  'goalPreviousScore': entry.value.goalPreviousScore
+                  'goalPreviousScore': entry.value.goalPreviousScore,
+                if (entry.value.overturnedAt != null)
+                  'overturnedAt': entry.value.overturnedAt!.toIso8601String()
               }
           ]
         });

@@ -151,6 +151,28 @@ void main() {
     expect(await service.poll(), isEmpty);
   });
 
+  test('a real goal after a disallowed one alerts (past the rebound window)',
+      () async {
+    await storage.setGoalsAlert(true);
+    games = [scoreGame(time)];
+    await service.poll();
+    games = [scoreGame(time, home: '1')];
+    expect((await service.poll()).single.overturned, isFalse);
+    time = time.add(const Duration(minutes: 3));
+    games = [scoreGame(time)];
+    expect((await service.poll()).single.overturned, isTrue);
+    // The feed flipping back right away stays silent...
+    time = time.add(const Duration(minutes: 1));
+    games = [scoreGame(time, home: '1')];
+    expect(await service.poll(), isEmpty);
+    games = [scoreGame(time)];
+    expect(await service.poll(), isEmpty);
+    // ...a goal later on is real, though it doesn't beat the old 1.
+    time = time.add(const Duration(minutes: 10));
+    games = [scoreGame(time, home: '1')];
+    expect((await service.poll()).single.overturned, isFalse);
+  });
+
   test('drop with no recent goal notice is silent, including another game',
       () async {
     await storage.setGoalsAlert(true);
