@@ -2543,4 +2543,6 @@ const Map<String, String> kEl = {
       "Αυτό την αφαιρεί για όλα τα προφίλ αυτής της συσκευής. Για να την κρύψετε μόνο σε αυτό το προφίλ, απενεργοποιήστε το Ενεργό.",
   "Enabled and Show under Other are your own for each profile; sources are shared on this device.":
       "Τα Ενεργό και Εμφάνιση στα Άλλα είναι δικά σας για κάθε προφίλ· οι πηγές είναι κοινές σε αυτή τη συσκευή.",
+  "Goal disallowed after review": "Το γκολ ακυρώθηκε μετά από επανεξέταση",
+  "Score overturned after review": "Το σκορ ακυρώθηκε μετά από επανεξέταση",
 };

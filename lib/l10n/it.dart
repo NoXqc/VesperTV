@@ -2588,4 +2588,6 @@ const Map<String, String> kIt = {
       "La rimuove per tutti i profili di questo dispositivo. Per nasconderla solo in questo profilo, disattiva Attiva.",
   "Enabled and Show under Other are your own for each profile; sources are shared on this device.":
       "Attiva e Mostra in Altro sono di ogni profilo; le fonti sono condivise su questo dispositivo.",
+  "Goal disallowed after review": "Gol annullato dopo la revisione",
+  "Score overturned after review": "Punteggio annullato dopo la revisione",
 };

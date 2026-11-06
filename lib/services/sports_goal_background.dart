@@ -56,7 +56,7 @@ Future<PhoneGoalPollResult> pollPhoneGoals(
     goals.systemNotify = (notices) async {
       for (final notice in notices) {
         final id =
-            '${GoalsAlerts.gameKey(notice.game)}|${notice.team.id}|${notice.team.score}';
+            '${GoalsAlerts.gameKey(notice.game)}|${notice.team.id}|${notice.team.score}|${notice.overturned}';
         if (sent.add(id)) await post(storage, notice);
       }
     };

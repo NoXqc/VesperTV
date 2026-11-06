@@ -2581,4 +2581,6 @@ const Map<String, String> kEs = {
       "Esto la quita para todos los perfiles de este dispositivo. Para ocultarla solo en este perfil, desactiva Activada.",
   "Enabled and Show under Other are your own for each profile; sources are shared on this device.":
       "Activada y Mostrar en Otros son propios de cada perfil; las fuentes se comparten en este dispositivo.",
+  "Goal disallowed after review": "Gol anulado tras la revisión",
+  "Score overturned after review": "Anotación anulada tras la revisión",
 };
