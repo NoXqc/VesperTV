@@ -376,6 +376,10 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-06 - release 1.0.59 (beta), +669 (latest):** owner said "commit push everything and cut a
+  release". Android only; Windows stays 1.0.45 (windows-parity is merged in main but its UI is untested and no zip
+  was built). Vesper AI, player-bar pill, Codex EPG logos, big M3U, startup responsiveness, goal overturned.
+  Relay (Vesper AI link, OAuth auto-approve) deployed on the VPS. Notes: dev-notes/releases/1.0.59.md. Next build > 669.
 - **Claude, 2026-11-06 - Vesper AI on `claude/vesper-ai` (+660, not merged/released, relay part not
   deployed):** voice/typed/phone commands (built-in, free) + bring-your-own AI key (Claude / OpenAI-compatible /
   Gemini) + AI apps over MCP through the relay (`tools/pair_relay/ai_link.py`). One tool layer
