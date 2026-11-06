@@ -96,6 +96,9 @@ One tool layer, three front ends:
   Reset makes a new one. Not checked yet: whether either app insists on OAuth.
 
 ## Not done / next
+- **Several TVs** (owner, 2026-11-06: test as is): today one connector per TV (each TV has its own link; name them
+  "VesperTV Living room" etc. in the AI app). Parked idea: one shared link via Sync, TV names, relay routes by
+  name, optional `tv` argument + a list-TVs tool, default = the TV that's on / used last.
 - Real-device tests: which key each remote sends (Formuler, Shield, Onn, Fire
   Stick), SpeechRecognizer on the Formuler, relay deploy + a real Claude/ChatGPT
   connector session.
