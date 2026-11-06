@@ -700,13 +700,13 @@ class PlayerControls extends StatelessWidget {
       // 40 at the sides clears TV overscan (the first tile was cut off on
       // the Formuler's TV).
       padding: EdgeInsets.fromLTRB(
-          40 + inset.left, 28, 40 + inset.right, 18 + inset.bottom),
+          40 + inset.left, 14, 40 + inset.right, 4 + inset.bottom),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(28, 0, 28, 10),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 5),
             child: Row(
               children: [
                 Flexible(
@@ -717,10 +717,10 @@ class PlayerControls extends StatelessWidget {
                       isLive: isLive),
                 ),
                 if (isLive || catchup) ...[
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 6),
                   Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                     decoration: BoxDecoration(
                         color: catchup ? Colors.transparent : accent,
                         border: Border.all(color: accent),
@@ -729,9 +729,9 @@ class PlayerControls extends StatelessWidget {
                         catchup ? tr('Catch-up').toUpperCase() : tr('LIVE'),
                         style: TextStyle(
                             color: catchup ? accent : Colors.black,
-                            fontSize: 13,
+                            fontSize: 9,
                             fontWeight: FontWeight.w800,
-                            letterSpacing: 0.8)),
+                            letterSpacing: 0.6)),
                   ),
                 ],
                 const Spacer(),
@@ -743,17 +743,17 @@ class PlayerControls extends StatelessWidget {
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
             decoration: BoxDecoration(
               gradient: LinearGradient(colors: [
                 Colors.white.withValues(alpha: 0.10),
                 Colors.white.withValues(alpha: 0.04),
               ]),
               color: const Color(0xE6000000),
-              borderRadius: BorderRadius.circular(48),
+              borderRadius: BorderRadius.circular(28),
               border: Border.all(color: Colors.white24),
               boxShadow: const [
-                BoxShadow(color: Colors.black54, blurRadius: 12),
+                BoxShadow(color: Colors.black54, blurRadius: 8),
               ],
             ),
             child: _OptionTiles(
@@ -2105,7 +2105,7 @@ class _OptionsTitle extends StatelessWidget {
     } else if (isLive && live != null) {
       programme = epg?.getCurrentProgram(live.epgId)?.title;
     }
-    const style = TextStyle(color: Colors.white, fontSize: 17);
+    const style = TextStyle(color: Colors.white, fontSize: 12);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -2118,8 +2118,8 @@ class _OptionsTitle extends StatelessWidget {
         if (programme != null && programme.isNotEmpty) ...[
           Container(
               width: 1,
-              height: 18,
-              margin: const EdgeInsets.symmetric(horizontal: 14),
+              height: 12,
+              margin: const EdgeInsets.symmetric(horizontal: 8),
               color: Colors.white38),
           Flexible(
             flex: 2,
@@ -2189,7 +2189,7 @@ class _AudioSummaryState extends State<_AudioSummary> {
     final text = _text;
     if (text == null || text.isEmpty) return const SizedBox.shrink();
     return Text(text,
-        style: const TextStyle(color: Colors.white, fontSize: 17));
+        style: const TextStyle(color: Colors.white, fontSize: 12));
   }
 }
 
@@ -2281,31 +2281,31 @@ class _LabeledIconButtonState extends State<_LabeledIconButton> {
       focusColor: Colors.transparent,
       hoverColor: Colors.transparent,
       child: SizedBox(
-        width: 128,
+        width: 68,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             AnimatedContainer(
               duration: const Duration(milliseconds: 140),
-              width: 72,
-              height: 72,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: _focused ? accent : Colors.white.withValues(alpha: 0.06),
                 border: Border.all(
-                    color: _focused ? accent : Colors.white38, width: 1.5),
+                    color: _focused ? accent : Colors.white38, width: 1),
                 boxShadow: _focused
                     ? [
                         BoxShadow(
                             color: accent.withValues(alpha: 0.45),
-                            blurRadius: 14)
+                            blurRadius: 8)
                       ]
                     : null,
               ),
               child: Icon(widget.icon,
-                  color: _focused ? Colors.black : Colors.white, size: 32),
+                  color: _focused ? Colors.black : Colors.white, size: 18),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 4),
             Text(
               widget.shortLabel ?? widget.label,
               maxLines: 1,
@@ -2313,14 +2313,14 @@ class _LabeledIconButtonState extends State<_LabeledIconButton> {
               textAlign: TextAlign.center,
               style: TextStyle(
                   color: _focused ? accent : Colors.white,
-                  fontSize: 16,
+                  fontSize: 10,
                   fontWeight: _focused ? FontWeight.w700 : FontWeight.w500),
             ),
             if (widget.detail case final detail?)
               Text(detail,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: accent, fontSize: 12)),
+                  style: TextStyle(color: accent, fontSize: 9)),
           ],
         ),
       ),
