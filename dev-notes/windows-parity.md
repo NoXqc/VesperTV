@@ -12,8 +12,8 @@ owner has tested it.
 | 1 | Audio tracks + surround passthrough + audio delay (no ATMOS badge: mpv can't tell) | done, owner test pending (`claude/windows-parity`) |
 | 2 | Data pool + quality / FPS / surround badges | done, owner test pending (`claude/windows-parity`) |
 | 3 | Catch-up | done, owner test pending (`claude/windows-parity`) |
-| 4 | Toast notifications while the app runs | not started |
-| 5 | Multiview 1+3 and Swap | not started |
+| 4 | Toast notifications while the app runs | waiting for the owner (plugin = Start-menu shortcut / registry entry) |
+| 5 | Multiview 1+3 and Swap | done, owner test pending (`claude/windows-parity`) |
 
 ## Why
 Public Windows is still **1.0.45**; Android is 1.0.58 (+632 public, +659 local). Every release
@@ -155,6 +155,15 @@ Read `dev-notes/catchup-plan.md` (C4 = this task).
 - Not in scope: alerts while the app is fully closed (needs a startup helper; ask the owner).
 
 ## Phase 5: Multiview 1+3 and Swap
+**Done 2026-11-06 (Claude):** `desktop_multiview_screen.dart`: layout menu gains 1 + 3 screens
+(big left, three stacked right), all layouts remembered with Android's `getMultiviewMain` /
+`getMultiviewQuad`. Swap mode button (1 + 3 with 2+ playing): arrows rotate the playing screens
+through the big one (`swapRotation`, shared with Android), a click on a small screen moves it up,
+click on the big one / Esc / Enter / Back ends; only the big one has sound; the `_MultiviewCell`
+objects (player + controller) move, nothing reconnects (`Video` keyed by controller). Blinking
+SWAP pill in the header, gold flash on the big screen per swap. `test/desktop_multiview_test.dart`.
+
+Original plan:
 - `desktop_multiview_screen.dart`: the 1 + 3 layout and Swap mode like Android
   (`multiview_screen.dart`): arrows/clicks rotate the playing screens through the big one without
   reconnecting (move players, don't recreate), sound only from the big screen, SWAP pill + gold

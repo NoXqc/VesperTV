@@ -2514,4 +2514,6 @@ const Map<String, String> kDe = {
       "Stream-Details über eine Taste in der Player-Leiste",
   "Adds a Data pool button to the player bar (or press I) that opens a card with the stream's details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer, HDR and decoder.":
       "Fügt der Player-Leiste eine Data-pool-Taste hinzu (oder drücke I), die eine Karte mit den Details des Streams öffnet: Auflösung, Bildrate, Codecs, Bitrate, Qualitätsstufen, Audiospuren, Puffer, HDR und Decoder.",
+  "Arrows or a click swap · Esc to finish":
+      "Pfeile oder ein Klick tauschen · Esc zum Beenden",
 };

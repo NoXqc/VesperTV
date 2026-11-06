@@ -2618,4 +2618,6 @@ const Map<String, String> kIt = {
       "Dettagli dello stream da un pulsante della barra del lettore",
   "Adds a Data pool button to the player bar (or press I) that opens a card with the stream's details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer, HDR and decoder.":
       "Aggiunge un pulsante Data pool alla barra del lettore (o premi I) che apre una scheda con i dettagli dello stream: risoluzione, fotogrammi al secondo, codec, bitrate, varianti di qualità, tracce audio, buffer, HDR e decodificatore.",
+  "Arrows or a click swap · Esc to finish":
+      "Frecce o un clic per scambiare · Esc per finire",
 };

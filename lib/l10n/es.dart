@@ -2611,4 +2611,6 @@ const Map<String, String> kEs = {
       "Detalles de la transmisión desde un botón de la barra del reproductor",
   "Adds a Data pool button to the player bar (or press I) that opens a card with the stream's details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer, HDR and decoder.":
       "Añade un botón Data pool a la barra del reproductor (o pulsa I) que abre una tarjeta con los detalles de la transmisión: resolución, fotogramas por segundo, códecs, tasa de bits, variantes de calidad, pistas de audio, búfer, HDR y decodificador.",
+  "Arrows or a click swap · Esc to finish":
+      "Flechas o un clic para intercambiar · Esc para terminar",
 };

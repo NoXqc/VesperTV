@@ -2573,4 +2573,6 @@ const Map<String, String> kEl = {
       "Λεπτομέρειες ροής από ένα κουμπί στη γραμμή του προγράμματος αναπαραγωγής",
   "Adds a Data pool button to the player bar (or press I) that opens a card with the stream's details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer, HDR and decoder.":
       "Προσθέτει ένα κουμπί Data pool στη γραμμή αναπαραγωγής (ή πατήστε I) που ανοίγει μια κάρτα με τις λεπτομέρειες της ροής: ανάλυση, καρέ ανά δευτερόλεπτο, κωδικοποιητές, ρυθμό bit, παραλλαγές ποιότητας, κομμάτια ήχου, buffer, HDR και αποκωδικοποιητή.",
+  "Arrows or a click swap · Esc to finish":
+      "Βέλη ή ένα κλικ για εναλλαγή · Esc για τέλος",
 };
