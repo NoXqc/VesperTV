@@ -569,8 +569,7 @@ class PlayerControls extends StatelessWidget {
 
   /// Recall, Watch from the start, Reload, tracks, Audio sync, linked
   /// channel, Multiview: in the bar on phones, in the options row on TV.
-  List<Widget> _actionButtons(
-      BuildContext context, PlaybackService? playback) {
+  List<Widget> _actionButtons(BuildContext context, PlaybackService? playback) {
     int? audioDelay;
     try {
       audioDelay = context.watch<AppPreferences>().audioDelayMs;
@@ -581,8 +580,7 @@ class PlayerControls extends StatelessWidget {
       if (isLive && channel != null)
         _LabeledIconButton(
           icon: Icons.history,
-          label:
-              tr('Recall — go back to a recent channel'),
+          label: tr('Recall — go back to a recent channel'),
           onPressed: () {
             onActivity?.call();
             showRecallPicker(context, channel!);
@@ -590,17 +588,14 @@ class PlayerControls extends StatelessWidget {
         ),
       // Start over: the programme on now, from
       // its start (catch-up channels only).
-      if (isLive &&
-          channel != null &&
-          channel!.hasCatchup)
+      if (isLive && channel != null && channel!.hasCatchup)
         _LabeledIconButton(
           icon: Icons.restart_alt,
           label: tr('Watch from the start'),
           onPressed: () {
             onActivity?.call();
-            final now = context
-                .read<EpgService>()
-                .getCurrentProgram(channel!.epgId);
+            final now =
+                context.read<EpgService>().getCurrentProgram(channel!.epgId);
             if (now != null) {
               playback?.playCatchup(channel!, now.start);
             }
@@ -618,9 +613,7 @@ class PlayerControls extends StatelessWidget {
           label: tr('Reload channel'),
           onPressed: () {
             onActivity?.call();
-            context
-                .read<PlaybackService>()
-                .reloadCurrentChannel();
+            context.read<PlaybackService>().reloadCurrentChannel();
           },
         ),
       // Keyed by stream: the bar stays mounted
@@ -632,12 +625,10 @@ class PlayerControls extends StatelessWidget {
       // (CBC Montreal described-video track,
       // owner 2026-10-26).
       _AudioTrackButton(
-          key: ValueKey(Object.hash(
-              'audio', controller, channel?.id)),
+          key: ValueKey(Object.hash('audio', controller, channel?.id)),
           controller: controller),
       _SubtitleButton(
-          key: ValueKey(Object.hash(
-              'subs', controller, channel?.id)),
+          key: ValueKey(Object.hash('subs', controller, channel?.id)),
           controller: controller),
       // Every stream, not only multi-track ones: the
       // sound can be off on any channel (Shield +
@@ -654,8 +645,7 @@ class PlayerControls extends StatelessWidget {
         },
       ),
       if (linkedChannel != null)
-        _LinkedChannelButton(
-            linkedChannel: linkedChannel!),
+        _LinkedChannelButton(linkedChannel: linkedChannel!),
       if (isLive && onOpenMultiview != null)
         _LabeledIconButton(
           icon: Icons.grid_view,
@@ -1215,10 +1205,7 @@ class _QualityBadgeState extends State<_QualityBadge> {
   String? _label;
 
   /// The same selected video track's own frame rate, shown as a second
-  /// pill alongside the quality label — confirmed as data this widget
-  /// already fetches every refresh (it's what decides FHD vs. plain HD),
-  /// just never previously displayed on its own. Rounded for display
-  /// only; the raw value still goes to [qualityLabelForTrack] unrounded.
+  /// pill alongside the quality label. Rounded for display.
   int? _frameRate;
   Timer? _timer;
 
@@ -1258,10 +1245,8 @@ class _QualityBadgeState extends State<_QualityBadge> {
       }
       final height = selected?.height;
       if (!mounted || height == null) return;
-      final label = qualityLabelForTrack(
-          height: height,
-          width: selected?.width,
-          frameRate: selected?.frameRate);
+      final label =
+          qualityLabelForTrack(height: height, width: selected?.width);
       final frameRate = selected?.frameRate?.round();
       if (label != _label || frameRate != _frameRate) {
         setState(() {
