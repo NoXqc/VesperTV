@@ -557,6 +557,64 @@ class StorageService {
   Future<void> setAudioDelayMs(int value) =>
       _prefs.setInt(AppConstants.keyAudioDelayMs, value);
 
+  // --- Vesper AI ----------------------------------------------------------
+
+  String? getAiProvider() => _prefs.getString(AppConstants.keyAiProvider);
+  String? getAiModel() => _prefs.getString(AppConstants.keyAiModel);
+  String? getAiApiKey() => _prefs.getString(AppConstants.keyAiApiKey);
+  String? getAiBaseUrl() => _prefs.getString(AppConstants.keyAiBaseUrl);
+
+  /// Saves the Your AI form at once; an empty value removes that key.
+  Future<void> setAiConfig(
+      {required String? provider,
+      required String model,
+      required String apiKey,
+      required String baseUrl}) async {
+    Future<void> put(String key, String? v) => v == null || v.trim().isEmpty
+        ? _prefs.remove(key)
+        : _prefs.setString(key, v.trim());
+    await put(AppConstants.keyAiProvider, provider);
+    await put(AppConstants.keyAiModel, model);
+    await put(AppConstants.keyAiApiKey, apiKey);
+    await put(AppConstants.keyAiBaseUrl, baseUrl);
+  }
+
+  bool getAiVoiceButton() =>
+      _prefs.getBool(AppConstants.keyAiVoiceButton) ?? false;
+  Future<void> setAiVoiceButton(bool value) =>
+      _prefs.setBool(AppConstants.keyAiVoiceButton, value);
+
+  /// The remote key the user taught Settings > Vesper AI (a Flutter
+  /// LogicalKeyboardKey id), or null.
+  int? getAiLearnedKey() => _prefs.getInt(AppConstants.keyAiLearnedKey);
+  Future<void> setAiLearnedKey(int? keyId) => keyId == null
+      ? _prefs.remove(AppConstants.keyAiLearnedKey)
+      : _prefs.setInt(AppConstants.keyAiLearnedKey, keyId);
+
+  bool getAiSpeakReplies() =>
+      _prefs.getBool(AppConstants.keyAiSpeakReplies) ?? false;
+  Future<void> setAiSpeakReplies(bool value) =>
+      _prefs.setBool(AppConstants.keyAiSpeakReplies, value);
+
+  String? getAiLinkSecret() => _prefs.getString(AppConstants.keyAiLinkSecret);
+  Future<void> setAiLinkSecret(String? secret) => secret == null
+      ? _prefs.remove(AppConstants.keyAiLinkSecret)
+      : _prefs.setString(AppConstants.keyAiLinkSecret, secret);
+
+  bool getAiLinkEnabled() =>
+      _prefs.getBool(AppConstants.keyAiLinkEnabled) ?? false;
+  Future<void> setAiLinkEnabled(bool value) =>
+      _prefs.setBool(AppConstants.keyAiLinkEnabled, value);
+
+  bool getAiConfirmRemotePlay() =>
+      _prefs.getBool(AppConstants.keyAiConfirmRemotePlay) ?? true;
+  Future<void> setAiConfirmRemotePlay(bool value) =>
+      _prefs.setBool(AppConstants.keyAiConfirmRemotePlay, value);
+
+  String? getAiPhoneToken() => _prefs.getString(AppConstants.keyAiPhoneToken);
+  Future<void> setAiPhoneToken(String token) =>
+      _prefs.setString(AppConstants.keyAiPhoneToken, token);
+
   bool getVideoMediaOverlay() =>
       _prefs.getBool(AppConstants.keyVideoMediaOverlay) ?? false;
   Future<void> setVideoMediaOverlay(bool value) =>
@@ -1426,6 +1484,7 @@ class StorageService {
     AppConstants.keyProgrammeReminders,
     AppConstants.keyMatchScoreAlerts,
     _goalPhoneCheckpoint,
+    AppConstants.keyAiDevicePrefix,
   ];
 
   static const _goalPhoneCheckpoint = 'vesper_goal_phone_checkpoint';

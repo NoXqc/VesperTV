@@ -2596,4 +2596,205 @@ const Map<String, String> kFr = {
       "Activée et Afficher sous Autre sont propres à chaque profil ; les sources sont partagées sur cet appareil.",
   "Goal disallowed after review": "But refusé après révision",
   "Score overturned after review": "Score annulé après révision",
+  // Vesper AI
+  "I did not hear anything.":
+      "Je n'ai rien entendu.",
+  "I did not understand \"{text}\". Try \"play TSN 1\", \"what's on\" or \"open the movies\". Add your own AI in Settings > Vesper AI for anything else.":
+      "Je n'ai pas compris « {text} ». Essayez « mets TSN 1 », « qu'est-ce qui joue » ou « ouvre les films ». Ajoutez votre propre IA dans Paramètres > Vesper AI pour tout le reste.",
+  "Opened {title}":
+      "{title} ouvert",
+  "Playing {title}":
+      "Lecture de {title}",
+  "Playing {game} on {title}":
+      "{game} sur {title}",
+  "Playing":
+      "Lecture",
+  "Stopped":
+      "Arrêté",
+  "Nothing is playing.":
+      "Rien ne joue.",
+  "now: {title}":
+      "maintenant : {title}",
+  "next: {title} at {time}":
+      "ensuite : {title} à {time}",
+  "No guide for {title}.":
+      "Pas de guide pour {title}.",
+  "That is not in the guide.":
+      "Ce n'est pas dans le guide.",
+  "No favourites yet.":
+      "Pas encore de favoris.",
+  "Added {title} to Favourites":
+      "{title} ajouté aux favoris",
+  "Removed {title} from Favourites":
+      "{title} retiré des favoris",
+  "Nothing watched yet.":
+      "Rien de regardé pour l'instant.",
+  "No games today.":
+      "Aucun match aujourd'hui.",
+  "today":
+      "aujourd'hui",
+  "tomorrow":
+      "demain",
+  "yesterday":
+      "hier",
+  "I could not find \"{title}\" in your playlists.":
+      "Je n'ai pas trouvé « {title} » dans vos listes.",
+  "No channel shows a {title} game today.":
+      "Aucune chaîne ne présente un match de {title} aujourd'hui.",
+  "I could not find the channel \"{title}\".":
+      "Je n'ai pas trouvé la chaîne « {title} ».",
+  "That section is hidden.":
+      "Cette section est masquée.",
+  "This channel cannot be rewound.":
+      "Cette chaîne ne peut pas être reculée.",
+  "Not available on Windows yet.":
+      "Pas encore offert sur Windows.",
+  "That did not work.":
+      "Ça n'a pas fonctionné.",
+  "Talk from my phone":
+      "Parler depuis mon téléphone",
+  "Scan with your phone. Works on any network, and the page has its own microphone button.":
+      "Scannez avec votre téléphone. Fonctionne sur n'importe quel réseau, et la page a son propre bouton micro.",
+  "Scan with your phone on the same Wi-Fi as this TV, then type or tap the microphone on your phone's keyboard.":
+      "Scannez avec votre téléphone sur le même Wi-Fi que cette télé, puis tapez ou touchez le micro du clavier.",
+  "This TV is not on a Wi-Fi or wired network.":
+      "Cette télé n'est pas sur un réseau Wi-Fi ou filaire.",
+  "Same Wi-Fi instead":
+      "Plutôt le même Wi-Fi",
+  "Phone not on this Wi-Fi?":
+      "Téléphone pas sur ce Wi-Fi?",
+  "AI app":
+      "App d'IA",
+  "VesperTV may not use the microphone. Allow it in Android Settings > Apps > VesperTV, or type instead.":
+      "VesperTV n'a pas accès au micro. Autorisez-le dans Paramètres Android > Applications > VesperTV, ou tapez plutôt.",
+  "Voice needs the internet.":
+      "La voix a besoin d'Internet.",
+  "The microphone is busy. Try again.":
+      "Le micro est occupé. Réessayez.",
+  "Voice is not available on this device. Type, or talk from your phone.":
+      "La voix n'est pas offerte sur cet appareil. Tapez, ou parlez depuis votre téléphone.",
+  "Press Talk and say what you want to watch.":
+      "Appuyez sur Parler et dites ce que vous voulez regarder.",
+  "Type what you want, or talk from your phone.":
+      "Tapez ce que vous voulez, ou parlez depuis votre téléphone.",
+  "Listening...":
+      "J'écoute...",
+  "Thinking...":
+      "Je réfléchis...",
+  "Built-in commands":
+      "Commandes intégrées",
+  "Or type here":
+      "Ou tapez ici",
+  "Talk":
+      "Parler",
+  "Try: \"play TSN 1\", \"what's on\", \"pause\", \"go back 30 seconds\", \"open the movies\", \"put on the Habs game\".":
+      "Essayez : « mets TSN 1 », « qu'est-ce qui joue », « pause », « recule de 30 secondes », « ouvre les films », « mets le match du Canadien ».",
+  "Learned: {key}":
+      "Appris : {key}",
+  "Vesper uses its built-in commands only.":
+      "Vesper n'utilise que ses commandes intégrées.",
+  "Saved. Add the model name (and the key for OpenAI).":
+      "Enregistré. Ajoutez le nom du modèle (et la clé pour OpenAI).",
+  "Saved. Add your key to use it.":
+      "Enregistré. Ajoutez votre clé pour l'utiliser.",
+  "Saved — it answered: {text}":
+      "Enregistré — réponse : {text}",
+  "Your AI key":
+      "Votre clé d'IA",
+  "Tell VesperTV what you want: \"play TSN 1\", \"what's on\", \"pause\", \"go back 30 seconds\", \"put on the Habs game\". Everyday commands work without any AI. Add your own AI below for anything else (\"make me a movie night list\", \"hide every Turkish group\"), or link the AI app you already use.":
+      "Dites à VesperTV ce que vous voulez : « mets TSN 1 », « qu'est-ce qui joue », « pause », « recule de 30 secondes », « mets le match du Canadien ». Les commandes de tous les jours fonctionnent sans IA. Ajoutez votre propre IA ci-dessous pour tout le reste (« fais-moi une liste de films pour vendredi », « masque tous les groupes turcs »), ou reliez l'app d'IA que vous utilisez déjà.",
+  "Talk to Vesper now":
+      "Parler à Vesper",
+  "Opens the Vesper panel":
+      "Ouvre le panneau Vesper",
+  "Voice":
+      "Voix",
+  "Remote voice button opens Vesper":
+      "Le bouton vocal de la télécommande ouvre Vesper",
+  "The microphone / search button of your remote, while VesperTV is open. Off: it opens the device's own assistant.":
+      "Le bouton micro / recherche de votre télécommande, quand VesperTV est ouvert. Désactivé : il ouvre l'assistant de l'appareil.",
+  "Press your remote's button now...":
+      "Appuyez maintenant sur le bouton de la télécommande...",
+  "Teach it your remote's button":
+      "Lui apprendre le bouton de la télécommande",
+  "For a remote whose button is not found by itself":
+      "Pour une télécommande dont le bouton n'est pas reconnu tout seul",
+  "Forget the learned button":
+      "Oublier le bouton appris",
+  "If nothing happens, your TV keeps that button for its own assistant (Fire TV always does). Use Talk to Vesper, the mic in Search, or your phone.":
+      "Si rien ne se passe, votre télé garde ce bouton pour son propre assistant (Fire TV le fait toujours). Utilisez Parler à Vesper, le micro de la Recherche ou votre téléphone.",
+  "Read replies aloud":
+      "Lire les réponses à voix haute",
+  "A QR code for your phone: type or speak there":
+      "Un code QR pour votre téléphone : tapez ou parlez-y",
+  "Make Vesper the TV's assistant (advanced)":
+      "Faire de Vesper l'assistant de la télé (avancé)",
+  "On some Android TV boxes the remote's assistant button can open Vesper even outside VesperTV. From a computer with ADB connected to the box, run:":
+      "Sur certains boîtiers Android TV, le bouton assistant de la télécommande peut ouvrir Vesper même hors de VesperTV. Depuis un ordinateur avec ADB connecté au boîtier, lancez :",
+  "To undo it, pick your assistant again in the TV's settings (Apps > Default apps > Assistant), or run: adb shell settings delete secure assistant. Google TV and Fire TV may ignore it.":
+      "Pour annuler, choisissez de nouveau votre assistant dans les paramètres de la télé (Applications > Applications par défaut > Assistant), ou lancez : adb shell settings delete secure assistant. Google TV et Fire TV peuvent l'ignorer.",
+  "Your AI":
+      "Votre IA",
+  "Bring your own AI key: VesperTV sends what you say and what it finds in your playlists straight to that AI, never through us. You pay the AI service for what you use.":
+      "Apportez votre propre clé d'IA : VesperTV envoie ce que vous dites et ce qu'il trouve dans vos listes directement à cette IA, jamais par nous. Vous payez le service d'IA pour ce que vous utilisez.",
+  "OpenAI-compatible":
+      "Compatible OpenAI",
+  "Key from console.anthropic.com. Models: {list}.":
+      "Clé sur console.anthropic.com. Modèles : {list}.",
+  "Key from aistudio.google.com.":
+      "Clé sur aistudio.google.com.",
+  "OpenAI, or any service with the same API (OpenRouter, Groq, Mistral, a local Ollama or LM Studio): its address, model name and key.":
+      "OpenAI, ou tout service avec la même API (OpenRouter, Groq, Mistral, un Ollama ou LM Studio local) : son adresse, le nom du modèle et la clé.",
+  "Model":
+      "Modèle",
+  "Default: {model}":
+      "Par défaut : {model}",
+  "API key":
+      "Clé d'API",
+  "Address":
+      "Adresse",
+  "Save and test":
+      "Enregistrer et tester",
+  "Key from phone":
+      "Clé depuis le téléphone",
+  "AI apps":
+      "Apps d'IA",
+  "Use VesperTV from the AI app you already have (Claude, ChatGPT or any app with MCP connectors), on your phone or computer, by voice or text, with your own subscription. Plays and changes are confirmed on the TV.":
+      "Utilisez VesperTV depuis l'app d'IA que vous avez déjà (Claude, ChatGPT ou toute app avec des connecteurs MCP), sur votre téléphone ou ordinateur, à la voix ou par écrit, avec votre propre abonnement. Les lectures et changements sont confirmés sur la télé.",
+  "Let AI apps control VesperTV":
+      "Laisser les apps d'IA contrôler VesperTV",
+  "Requests pass through the VesperTV relay to this TV while the app is open. The relay keeps nothing.":
+      "Les requêtes passent par le relais VesperTV jusqu'à cette télé quand l'app est ouverte. Le relais ne garde rien.",
+  "Scan with your phone to copy this connector address, then add it in your AI app:":
+      "Scannez avec votre téléphone pour copier cette adresse de connecteur, puis ajoutez-la dans votre app d'IA :",
+  "Claude: Settings > Connectors > Add custom connector. ChatGPT: Settings > Connectors > Create (developer mode, no authentication).":
+      "Claude : Paramètres > Connecteurs > Ajouter un connecteur personnalisé. ChatGPT : Paramètres > Connecteurs > Créer (mode développeur, sans authentification).",
+  "Connecting to the relay...":
+      "Connexion au relais...",
+  "Connected to the relay":
+      "Connecté au relais",
+  "Keep this address private: anyone with it can control VesperTV while it is open.":
+      "Gardez cette adresse privée : quiconque l'a peut contrôler VesperTV quand il est ouvert.",
+  "Ask on the TV first":
+      "Demander d'abord sur la télé",
+  "An AI app's play, hide or show waits for OK on the TV.":
+      "Une lecture, un masquage ou un affichage demandé par une app d'IA attend OK sur la télé.",
+  "Reset the address":
+      "Réinitialiser l'adresse",
+  "The old address stops working; add the new one":
+      "L'ancienne adresse cesse de fonctionner; ajoutez la nouvelle",
+  "Recent requests":
+      "Requêtes récentes",
+  "Talk to VesperTV with your remote's microphone, your phone or by typing. Bring your own AI for more, or link the AI app you already use.":
+      "Parlez à VesperTV avec le micro de la télécommande, votre téléphone ou en tapant. Apportez votre propre IA pour aller plus loin, ou reliez l'app d'IA que vous utilisez déjà.",
+  "Voice, your own AI, AI apps":
+      "Voix, votre IA, apps d'IA",
+  "An AI app wants to play {title}.":
+      "Une app d'IA veut lire {title}.",
+  "An AI app wants to open {title}.":
+      "Une app d'IA veut ouvrir {title}.",
+  "An AI app wants to hide {count} groups ({words}).":
+      "Une app d'IA veut masquer {count} groupes ({words}).",
+  "An AI app wants to show {count} groups ({words}).":
+      "Une app d'IA veut afficher {count} groupes ({words}).",
 };

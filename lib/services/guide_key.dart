@@ -8,6 +8,11 @@ abstract interface class GuideTarget {
 
   /// TV tab, focus on the playing channel in the guide.
   void openGuide();
+
+  /// Vesper AI's "open": 'tv', 'guide', 'movies', 'series', 'home', 'hub',
+  /// 'sports', 'search' (with [query]) or 'settings', through the home's own
+  /// openers. False when that section is hidden.
+  bool openSection(String section, {String? query});
 }
 
 /// The remote's Guide / EPG button opens the live guide from anywhere in the
@@ -60,6 +65,26 @@ class GuideKey {
       // Android keys Flutter has no name for: 0x11 << 32 | code.
       event.physicalKey.usbHidUsage == 0x110000016a || // scan code 362
       event.logicalKey.keyId == 0x11000000e4; // Formuler keycode 228
+
+  /// Vesper AI: opens [section] on the newest TV home (closing what is
+  /// above it). Null when no TV home is open (the Sports Mode root): the
+  /// caller then opens the page itself; 'tv' / 'guide' use the opener.
+  static bool? openSection(NavigatorState navigator, String section,
+      {String? query}) {
+    for (final target in _targets.reversed) {
+      final route = target.guideRoute;
+      if (route == null || !route.isActive) continue;
+      navigator.popUntil((r) => r == route);
+      return target.openSection(section, query: query);
+    }
+    final open = _opener;
+    if (open != null && (section == 'tv' || section == 'guide')) {
+      navigator.popUntil((r) => r.isFirst);
+      open();
+      return true;
+    }
+    return null;
+  }
 
   static bool handle(KeyEvent event, {required NavigatorState? navigator}) {
     if (event is! KeyDownEvent || !isGuide(event) || navigator == null) {

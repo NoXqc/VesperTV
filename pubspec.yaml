@@ -1,7 +1,7 @@
 name: nox_iptv
 description: "VesperTV - an M3U/EPG IPTV player for Android phones, boxes, and Firesticks."
 publish_to: 'none'
-version: 1.0.58+645
+version: 1.0.58+660
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -101,6 +101,7 @@ flutter:
     # TV over Wi-Fi; the same file is deployed to the pairing relay.
     - assets/pair/pair.html
     - assets/editor/editor.html
+    - assets/vesper_ai/phone.html
 
 # Generates android/ic_launcher (legacy + adaptive) and the ios/web/macos/
 # windows app icons from assets/icon/*.png (see assets/icon/gen_icon.py for

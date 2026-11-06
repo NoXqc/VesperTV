@@ -2545,4 +2545,205 @@ const Map<String, String> kEl = {
       "Τα Ενεργό και Εμφάνιση στα Άλλα είναι δικά σας για κάθε προφίλ· οι πηγές είναι κοινές σε αυτή τη συσκευή.",
   "Goal disallowed after review": "Το γκολ ακυρώθηκε μετά από επανεξέταση",
   "Score overturned after review": "Το σκορ ακυρώθηκε μετά από επανεξέταση",
+  // Vesper AI
+  "I did not hear anything.":
+      "Δεν άκουσα τίποτα.",
+  "I did not understand \"{text}\". Try \"play TSN 1\", \"what's on\" or \"open the movies\". Add your own AI in Settings > Vesper AI for anything else.":
+      "Δεν κατάλαβα «{text}». Δοκίμασε «play TSN 1», «what's on» ή «open the movies». Πρόσθεσε τη δική σου AI στις Ρυθμίσεις > Vesper AI για οτιδήποτε άλλο.",
+  "Opened {title}":
+      "Άνοιξε: {title}",
+  "Playing {title}":
+      "Παίζει: {title}",
+  "Playing {game} on {title}":
+      "{game} στο {title}",
+  "Playing":
+      "Αναπαραγωγή",
+  "Stopped":
+      "Σταμάτησε",
+  "Nothing is playing.":
+      "Δεν παίζει τίποτα.",
+  "now: {title}":
+      "τώρα: {title}",
+  "next: {title} at {time}":
+      "μετά: {title} στις {time}",
+  "No guide for {title}.":
+      "Δεν υπάρχει οδηγός για το {title}.",
+  "That is not in the guide.":
+      "Δεν υπάρχει στον οδηγό.",
+  "No favourites yet.":
+      "Δεν υπάρχουν ακόμα αγαπημένα.",
+  "Added {title} to Favourites":
+      "Το {title} προστέθηκε στα αγαπημένα",
+  "Removed {title} from Favourites":
+      "Το {title} αφαιρέθηκε από τα αγαπημένα",
+  "Nothing watched yet.":
+      "Δεν έχεις δει τίποτα ακόμα.",
+  "No games today.":
+      "Δεν υπάρχουν αγώνες σήμερα.",
+  "today":
+      "σήμερα",
+  "tomorrow":
+      "αύριο",
+  "yesterday":
+      "χθες",
+  "I could not find \"{title}\" in your playlists.":
+      "Δεν βρήκα το «{title}» στις λίστες σου.",
+  "No channel shows a {title} game today.":
+      "Κανένα κανάλι δεν δείχνει αγώνα της {title} σήμερα.",
+  "I could not find the channel \"{title}\".":
+      "Δεν βρήκα το κανάλι «{title}».",
+  "That section is hidden.":
+      "Αυτή η ενότητα είναι κρυφή.",
+  "This channel cannot be rewound.":
+      "Αυτό το κανάλι δεν γυρίζει πίσω.",
+  "Not available on Windows yet.":
+      "Δεν είναι ακόμα διαθέσιμο στα Windows.",
+  "That did not work.":
+      "Δεν λειτούργησε.",
+  "Talk from my phone":
+      "Μίλα από το κινητό μου",
+  "Scan with your phone. Works on any network, and the page has its own microphone button.":
+      "Σάρωσε με το κινητό σου. Λειτουργεί σε κάθε δίκτυο και η σελίδα έχει δικό της κουμπί μικροφώνου.",
+  "Scan with your phone on the same Wi-Fi as this TV, then type or tap the microphone on your phone's keyboard.":
+      "Σάρωσε με το κινητό στο ίδιο Wi-Fi με την τηλεόραση και μετά γράψε ή πάτα το μικρόφωνο του πληκτρολογίου.",
+  "This TV is not on a Wi-Fi or wired network.":
+      "Η τηλεόραση δεν είναι σε δίκτυο Wi-Fi ή καλωδιακό.",
+  "Same Wi-Fi instead":
+      "Καλύτερα το ίδιο Wi-Fi",
+  "Phone not on this Wi-Fi?":
+      "Το κινητό δεν είναι σε αυτό το Wi-Fi;",
+  "AI app":
+      "Εφαρμογή AI",
+  "VesperTV may not use the microphone. Allow it in Android Settings > Apps > VesperTV, or type instead.":
+      "Το VesperTV δεν έχει πρόσβαση στο μικρόφωνο. Επέτρεψέ το στις Ρυθμίσεις Android > Εφαρμογές > VesperTV ή γράψε.",
+  "Voice needs the internet.":
+      "Η φωνή χρειάζεται internet.",
+  "The microphone is busy. Try again.":
+      "Το μικρόφωνο είναι απασχολημένο. Δοκίμασε ξανά.",
+  "Voice is not available on this device. Type, or talk from your phone.":
+      "Η φωνή δεν είναι διαθέσιμη σε αυτή τη συσκευή. Γράψε ή μίλα από το κινητό σου.",
+  "Press Talk and say what you want to watch.":
+      "Πάτα Μίλα και πες τι θέλεις να δεις.",
+  "Type what you want, or talk from your phone.":
+      "Γράψε τι θέλεις ή μίλα από το κινητό σου.",
+  "Listening...":
+      "Ακούω...",
+  "Thinking...":
+      "Σκέφτομαι...",
+  "Built-in commands":
+      "Ενσωματωμένες εντολές",
+  "Or type here":
+      "Ή γράψε εδώ",
+  "Talk":
+      "Μίλα",
+  "Try: \"play TSN 1\", \"what's on\", \"pause\", \"go back 30 seconds\", \"open the movies\", \"put on the Habs game\".":
+      "Δοκίμασε: «play TSN 1», «what's on», «pause», «go back 30 seconds», «open the movies», «put on the Olympiacos game».",
+  "Learned: {key}":
+      "Καταχωρήθηκε: {key}",
+  "Vesper uses its built-in commands only.":
+      "Το Vesper χρησιμοποιεί μόνο τις ενσωματωμένες εντολές.",
+  "Saved. Add the model name (and the key for OpenAI).":
+      "Αποθηκεύτηκε. Πρόσθεσε το όνομα του μοντέλου (και το κλειδί για το OpenAI).",
+  "Saved. Add your key to use it.":
+      "Αποθηκεύτηκε. Πρόσθεσε το κλειδί σου για να το χρησιμοποιήσεις.",
+  "Saved — it answered: {text}":
+      "Αποθηκεύτηκε — απάντησε: {text}",
+  "Your AI key":
+      "Το κλειδί της AI σου",
+  "Tell VesperTV what you want: \"play TSN 1\", \"what's on\", \"pause\", \"go back 30 seconds\", \"put on the Habs game\". Everyday commands work without any AI. Add your own AI below for anything else (\"make me a movie night list\", \"hide every Turkish group\"), or link the AI app you already use.":
+      "Πες στο VesperTV τι θέλεις: «play TSN 1», «what's on», «pause», «go back 30 seconds», «put on the Olympiacos game». Οι καθημερινές εντολές λειτουργούν χωρίς AI. Πρόσθεσε παρακάτω τη δική σου AI για οτιδήποτε άλλο («κάνε μου λίστα ταινιών για την Παρασκευή», «κρύψε όλες τις τουρκικές ομάδες»), ή σύνδεσε την εφαρμογή AI που ήδη χρησιμοποιείς.",
+  "Talk to Vesper now":
+      "Μίλα στο Vesper τώρα",
+  "Opens the Vesper panel":
+      "Ανοίγει τον πίνακα του Vesper",
+  "Voice":
+      "Φωνή",
+  "Remote voice button opens Vesper":
+      "Το κουμπί φωνής του τηλεχειριστηρίου ανοίγει το Vesper",
+  "The microphone / search button of your remote, while VesperTV is open. Off: it opens the device's own assistant.":
+      "Το κουμπί μικροφώνου / αναζήτησης του τηλεχειριστηρίου, όσο είναι ανοιχτό το VesperTV. Ανενεργό: ανοίγει τον βοηθό της συσκευής.",
+  "Press your remote's button now...":
+      "Πάτα τώρα το κουμπί του τηλεχειριστηρίου...",
+  "Teach it your remote's button":
+      "Δίδαξέ του το κουμπί του τηλεχειριστηρίου",
+  "For a remote whose button is not found by itself":
+      "Για τηλεχειριστήριο που το κουμπί του δεν αναγνωρίζεται μόνο του",
+  "Forget the learned button":
+      "Ξέχασε το καταχωρημένο κουμπί",
+  "If nothing happens, your TV keeps that button for its own assistant (Fire TV always does). Use Talk to Vesper, the mic in Search, or your phone.":
+      "Αν δεν γίνεται τίποτα, η τηλεόραση κρατά το κουμπί για τον δικό της βοηθό (το Fire TV πάντα). Χρησιμοποίησε το Μίλα στο Vesper, το μικρόφωνο στην Αναζήτηση ή το κινητό σου.",
+  "Read replies aloud":
+      "Ανάγνωση απαντήσεων φωναχτά",
+  "A QR code for your phone: type or speak there":
+      "Ένας κωδικός QR για το κινητό σου: γράψε ή μίλα εκεί",
+  "Make Vesper the TV's assistant (advanced)":
+      "Κάνε το Vesper βοηθό της τηλεόρασης (για προχωρημένους)",
+  "On some Android TV boxes the remote's assistant button can open Vesper even outside VesperTV. From a computer with ADB connected to the box, run:":
+      "Σε ορισμένα box Android TV το κουμπί βοηθού του τηλεχειριστηρίου μπορεί να ανοίγει το Vesper και εκτός VesperTV. Από υπολογιστή με ADB συνδεδεμένο στο box, εκτέλεσε:",
+  "To undo it, pick your assistant again in the TV's settings (Apps > Default apps > Assistant), or run: adb shell settings delete secure assistant. Google TV and Fire TV may ignore it.":
+      "Για αναίρεση, διάλεξε ξανά τον βοηθό στις ρυθμίσεις της τηλεόρασης (Εφαρμογές > Προεπιλεγμένες εφαρμογές > Βοηθός) ή εκτέλεσε: adb shell settings delete secure assistant. Το Google TV και το Fire TV μπορεί να το αγνοήσουν.",
+  "Your AI":
+      "Η AI σου",
+  "Bring your own AI key: VesperTV sends what you say and what it finds in your playlists straight to that AI, never through us. You pay the AI service for what you use.":
+      "Φέρε το δικό σου κλειδί AI: το VesperTV στέλνει ό,τι λες και ό,τι βρίσκει στις λίστες σου απευθείας σε εκείνη την AI, ποτέ μέσω εμάς. Πληρώνεις την υπηρεσία AI για ό,τι χρησιμοποιείς.",
+  "OpenAI-compatible":
+      "Συμβατό με OpenAI",
+  "Key from console.anthropic.com. Models: {list}.":
+      "Κλειδί από το console.anthropic.com. Μοντέλα: {list}.",
+  "Key from aistudio.google.com.":
+      "Κλειδί από το aistudio.google.com.",
+  "OpenAI, or any service with the same API (OpenRouter, Groq, Mistral, a local Ollama or LM Studio): its address, model name and key.":
+      "OpenAI ή οποιαδήποτε υπηρεσία με το ίδιο API (OpenRouter, Groq, Mistral, τοπικό Ollama ή LM Studio): η διεύθυνση, το όνομα του μοντέλου και το κλειδί.",
+  "Model":
+      "Μοντέλο",
+  "Default: {model}":
+      "Προεπιλογή: {model}",
+  "API key":
+      "Κλειδί API",
+  "Address":
+      "Διεύθυνση",
+  "Save and test":
+      "Αποθήκευση και δοκιμή",
+  "Key from phone":
+      "Κλειδί από το κινητό",
+  "AI apps":
+      "Εφαρμογές AI",
+  "Use VesperTV from the AI app you already have (Claude, ChatGPT or any app with MCP connectors), on your phone or computer, by voice or text, with your own subscription. Plays and changes are confirmed on the TV.":
+      "Χρησιμοποίησε το VesperTV από την εφαρμογή AI που ήδη έχεις (Claude, ChatGPT ή όποια εφαρμογή έχει συνδέσμους MCP), στο κινητό ή στον υπολογιστή, με φωνή ή κείμενο, με τη δική σου συνδρομή. Οι αναπαραγωγές και οι αλλαγές επιβεβαιώνονται στην τηλεόραση.",
+  "Let AI apps control VesperTV":
+      "Οι εφαρμογές AI ελέγχουν το VesperTV",
+  "Requests pass through the VesperTV relay to this TV while the app is open. The relay keeps nothing.":
+      "Τα αιτήματα περνούν από τον αναμεταδότη του VesperTV σε αυτή την τηλεόραση όσο είναι ανοιχτή η εφαρμογή. Ο αναμεταδότης δεν κρατά τίποτα.",
+  "Scan with your phone to copy this connector address, then add it in your AI app:":
+      "Σάρωσε με το κινητό για να αντιγράψεις αυτή τη διεύθυνση συνδέσμου και πρόσθεσέ την στην εφαρμογή AI:",
+  "Claude: Settings > Connectors > Add custom connector. ChatGPT: Settings > Connectors > Create (developer mode, no authentication).":
+      "Claude: Ρυθμίσεις > Σύνδεσμοι > Προσθήκη προσαρμοσμένου συνδέσμου. ChatGPT: Ρυθμίσεις > Σύνδεσμοι > Δημιουργία (λειτουργία προγραμματιστή, χωρίς έλεγχο ταυτότητας).",
+  "Connecting to the relay...":
+      "Σύνδεση με τον αναμεταδότη...",
+  "Connected to the relay":
+      "Συνδέθηκε με τον αναμεταδότη",
+  "Keep this address private: anyone with it can control VesperTV while it is open.":
+      "Κράτα αυτή τη διεύθυνση ιδιωτική: όποιος την έχει μπορεί να ελέγχει το VesperTV όσο είναι ανοιχτό.",
+  "Ask on the TV first":
+      "Ερώτηση πρώτα στην τηλεόραση",
+  "An AI app's play, hide or show waits for OK on the TV.":
+      "Η αναπαραγωγή, απόκρυψη ή εμφάνιση από εφαρμογή AI περιμένει OK στην τηλεόραση.",
+  "Reset the address":
+      "Επαναφορά διεύθυνσης",
+  "The old address stops working; add the new one":
+      "Η παλιά διεύθυνση σταματά να λειτουργεί· πρόσθεσε τη νέα",
+  "Recent requests":
+      "Πρόσφατα αιτήματα",
+  "Talk to VesperTV with your remote's microphone, your phone or by typing. Bring your own AI for more, or link the AI app you already use.":
+      "Μίλα στο VesperTV με το μικρόφωνο του τηλεχειριστηρίου, το κινητό ή γράφοντας. Φέρε τη δική σου AI για περισσότερα ή σύνδεσε την εφαρμογή AI που ήδη χρησιμοποιείς.",
+  "Voice, your own AI, AI apps":
+      "Φωνή, η AI σου, εφαρμογές AI",
+  "An AI app wants to play {title}.":
+      "Μια εφαρμογή AI θέλει να παίξει το {title}.",
+  "An AI app wants to open {title}.":
+      "Μια εφαρμογή AI θέλει να ανοίξει το {title}.",
+  "An AI app wants to hide {count} groups ({words}).":
+      "Μια εφαρμογή AI θέλει να κρύψει {count} ομάδες ({words}).",
+  "An AI app wants to show {count} groups ({words}).":
+      "Μια εφαρμογή AI θέλει να εμφανίσει {count} ομάδες ({words}).",
 };

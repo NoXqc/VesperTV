@@ -29,6 +29,7 @@ import 'desktop_player_screen.dart';
 import 'player_screen.dart';
 import 'series_detail_screen.dart';
 import '../l10n/l10n.dart';
+import '../services/vesper_ai/vesper_ai.dart';
 
 /// Full-screen search — a search bar plus every matching result grouped
 /// into its own horizontally-scrolling poster row (Live TV, Movies, TV
@@ -38,7 +39,10 @@ import '../l10n/l10n.dart';
 /// content type is visible at once now, the same way a modern TV app's
 /// search results page reads.
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({super.key, required this.initialScope});
+  const SearchScreen({super.key, required this.initialScope, this.initialQuery});
+
+  /// Searched at once (Vesper AI's "search for ...").
+  final String? initialQuery;
 
   /// Kept for call-site compatibility (callers still pass the tab the user
   /// was on) but no longer used to gate results — every type now shows
@@ -167,6 +171,12 @@ class _SearchScreenState extends State<SearchScreen> {
     // Needed for a live-channel search to find anything at all — see
     // PlaylistManager.ensureLiveChannelsLoaded's doc comment.
     unawaited(context.read<PlaylistManager>().ensureLiveChannelsLoaded());
+    final initial = widget.initialQuery?.trim() ?? '';
+    if (initial.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _runSearch(initial);
+      });
+    }
   }
 
   @override
@@ -600,6 +610,12 @@ class _SearchScreenState extends State<SearchScreen> {
                         ),
                       ),
                       actions: [
+                        // Vesper AI: say it instead ("play TSN 1"...).
+                        IconButton(
+                          tooltip: 'Vesper AI',
+                          icon: const Icon(Icons.mic_none),
+                          onPressed: () => VesperAi.instance.openPanel(),
+                        ),
                         if (_query.isNotEmpty)
                           IconButton(
                             tooltip: tr('Clear'),

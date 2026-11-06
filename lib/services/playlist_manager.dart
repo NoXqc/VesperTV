@@ -117,6 +117,10 @@ class PlaylistManager extends ChangeNotifier {
   /// to every session immediately with no per-session plumbing needed.
   bool _activeViewerRestricted = false;
 
+  /// The active viewer's groups are limited (a kid profile): Vesper AI may
+  /// not hide or show groups for it.
+  bool get activeViewerRestricted => _activeViewerRestricted;
+
   final List<PlaylistSession> _sessions = [];
 
   /// Whichever session a foreground operation (adding/editing/syncing one

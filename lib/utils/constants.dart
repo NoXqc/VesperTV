@@ -322,6 +322,29 @@ class AppConstants {
   /// sound later (device-only; AppPreferences.audioDelayMs).
   static const String keyAudioDelayMs = 'vesper_audio_delay_ms';
 
+  // --- Vesper AI (lib/services/vesper_ai/) --------------------------------
+
+  /// Settings > Vesper AI > Your AI: which provider answers free-form
+  /// requests ('anthropic', 'openai', 'gemini'; absent = built-in commands
+  /// only), its model, the user's own key and (OpenAI-compatible) base URL.
+  /// Part of the setup: transferred and synced like the TMDB key.
+  static const String keyAiProvider = 'vesper_ai_provider';
+  static const String keyAiModel = 'vesper_ai_model';
+  static const String keyAiApiKey = 'vesper_ai_api_key';
+  static const String keyAiBaseUrl = 'vesper_ai_base_url';
+
+  /// Prefix of the Vesper AI keys that describe this device (remote voice
+  /// button, its learned key, the AI-app link secret): never transferred,
+  /// synced or backed up (StorageService._transferSkipPrefixes).
+  static const String keyAiDevicePrefix = 'vesper_ai_dev_';
+  static const String keyAiVoiceButton = 'vesper_ai_dev_voice_button';
+  static const String keyAiLearnedKey = 'vesper_ai_dev_learned_key';
+  static const String keyAiSpeakReplies = 'vesper_ai_dev_speak';
+  static const String keyAiLinkSecret = 'vesper_ai_dev_link_secret';
+  static const String keyAiLinkEnabled = 'vesper_ai_dev_link_on';
+  static const String keyAiConfirmRemotePlay = 'vesper_ai_dev_confirm_play';
+  static const String keyAiPhoneToken = 'vesper_ai_dev_phone_token';
+
   /// Settings > Playback > Background video: Shield green-flicker fix
   /// (device-only; AppPreferences.videoMediaOverlay).
   static const String keyVideoMediaOverlay = 'vesper_video_media_overlay';

@@ -145,6 +145,51 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     unawaited(_restoreLiveFocus());
   }
 
+  /// Vesper AI's "open" ([GuideKey.openSection]), through the same openers
+  /// as the tabs and the sidebar (Settings PIN, parking, Back to TV).
+  @override
+  bool openSection(String section, {String? query}) {
+    if (!mounted) return false;
+    final prefs = context.read<AppPreferences>();
+    switch (section) {
+      case 'tv' || 'guide':
+        if (prefs.hideLiveTv) return false;
+        openGuide();
+        return true;
+      case 'movies':
+        if (prefs.hideMovies) return false;
+        _onTabChanged('Movies');
+        return true;
+      case 'series':
+        if (prefs.hideShows) return false;
+        _onTabChanged('TV Shows');
+        return true;
+      case 'home':
+        _openHome();
+        return true;
+      case 'hub':
+        if (prefs.hideArchive) return false;
+        _returnToTv = true;
+        _parkLiveChannel();
+        Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const ArchiveScreen()));
+        return true;
+      case 'sports':
+        if (prefs.hideSportsTrak) return false;
+        unawaited(_openSports());
+        return true;
+      case 'search':
+        unawaited(_pushOverLiveVideo(MaterialPageRoute(
+            builder: (_) =>
+                SearchScreen(initialScope: _tab, initialQuery: query))));
+        return true;
+      case 'settings':
+        unawaited(_openSettings());
+        return true;
+    }
+    return false;
+  }
+
   bool _retrying = false;
 
   /// Settings > Theme "Full-screen video behind the guide", in effect right

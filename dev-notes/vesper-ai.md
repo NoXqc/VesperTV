@@ -1,0 +1,106 @@
+# Vesper AI (Claude, 2026-11-06, branch `claude/vesper-ai`)
+
+Owner: "add an AI assistant; voice from the remote; users bring their own AI
+and unlock more; they could even talk to it from their AI app connected as
+MCP" (inspired by Lumenia's ChatGPT/Claude MCP connector, r/AndroidTVApps).
+
+## Shape
+One tool layer, three front ends:
+
+```
+ remote mic / Search mic / typing / phone page ─┐
+                                                ├─ VesperAi.ask(text)
+                                                │    1. parseVesperCommand  (built-in, free, offline)
+                                                │    2. viewer's own AI     (BYO key: Claude / OpenAI-compatible / Gemini)
+ Claude / ChatGPT app (MCP connector) ──relay──►└─ McpBridge.handle → VesperToolbox.call(..., remoteApp)
+```
+
+- `lib/services/vesper_ai/vesper_tools.dart` — `VesperToolbox` + `vesperTools`:
+  search, play, now_playing, player, guide, find_on_tv, open, favorites, recent,
+  groups (list/hide/show), sports_today, play_game, show_message. JSON-Schema
+  objects shared by all providers and MCP. Search hands out short refs
+  (`l12`, `m3`, `s7`) kept in memory. Respects visibleChannels / hidden groups /
+  restricted viewers (groups refused) / Hide scores / hidden tabs.
+- `VesperHost` (`screens/vesper_ai/vesper_host.dart`): plays like a guide pick
+  (popUntil first + PlayerScreen / DesktopPlayerScreen), opens sections through
+  `GuideKey.openSection` → `TvHomeScreen.openSection` (its own openers: Settings
+  PIN, parking, Back to TV), confirms AI-app actions with a dialog (1 min = no).
+- `vesper_commands.dart` — EN/FR/ES/IT/DE phrases (Greek mostly via AI), folded
+  with `TitleSearch.fold`. Pure function, `test/vesper_commands_test.dart`.
+- `vesper_ai.dart` — orchestrator, system prompt, built-in reply sentences
+  (`describeResult`), the bottom bubble (`bubble`, `VesperBubbleOverlay`).
+  Conversation resets after 10 min idle. Local time goes in the user turn, not
+  the system prompt (keeps it cacheable).
+
+## Providers (BYO key, Settings > Vesper AI > Your AI)
+- **Claude** (`anthropic_provider.dart`): raw HTTP `POST /v1/messages` (no Dart
+  SDK), `anthropic-version: 2026-10-21`, default `claude-opus-5-5`, effort `low`
+  (voice wants short/fast), top-level `cache_control`, `fallbacks: "default"` +
+  beta `server-side-fallback-2026-07-01` on opus-5*/fable-5-1/sonnet-5-5 only,
+  `refusal` stop reason handled, history append-only (thinking blocks returned
+  unchanged), all tool_results in one user message, no temperature / thinking
+  params, no forced tool_choice.
+- **OpenAI-compatible** (`openai_provider.dart`): `{base}/chat/completions`
+  function tools; base URL lets OpenRouter/Groq/Mistral/local Ollama/LM Studio
+  work (local: no key).
+- **Gemini** (`gemini_provider.dart`): `generateContent`, functionDeclarations
+  with UPPER-case types, model turns kept verbatim (thought signatures).
+- Any failure mid-loop resets the conversation (no dangling tool call).
+- Keys: `vesper_ai_provider/model/api_key/base_url` — transferred/synced like
+  the TMDB key. "Key from phone" reuses `PhoneLinkScreen(PairingKind.apiKey)`.
+
+## Voice (Android)
+- `VoiceBridge.kt`: `SpeechRecognizer` (MethodChannel `vespertv/voice`,
+  EventChannel `vespertv/voice/events`), RECORD_AUDIO asked on first use
+  (request code 4731), `TextToSpeech` for "Read replies aloud", ACTION_ASSIST /
+  VOICE_ASSIST intent filter (assistant launch, `takeAssist` so it's never lost
+  or doubled). Manifest: RECORD_AUDIO, microphone `required=false`, `<queries>`
+  RecognitionService + TTS_SERVICE.
+- Remote key (`voice_key.dart`, main.dart `_onVoiceKey`): KEYCODE_SEARCH
+  (browserSearch), ASSIST (launchAssistant), VOICE_ASSIST (0x11000000e7), or a
+  key taught in Settings. **Off by default** (it otherwise opens the device's
+  assistant). Many systems never pass ASSIST/VOICE_ASSIST to apps; Fire OS keeps
+  its Alexa button — unfixable, phone path instead.
+- Advanced: `adb shell settings put secure assistant com.nox.nox_iptv/.MainActivity`
+  (untested on real boxes; Google TV may ignore it).
+- Panel: `screens/vesper_ai/vesper_panel.dart` (route over the current screen;
+  Talk / gated text field / Talk from my phone / Close). An action pops it (host
+  popUntil first) and the reply goes to the bubble.
+
+## Phone microphone (V2)
+- Same Wi-Fi: `PhoneMicServer` serves `assets/vesper_ai/phone.html` at
+  `http://<tv-ip>:8931/v/<token>` (token kept per device, stops after 1 h idle);
+  POST `/say` → `askFromPhone` (reply to phone + bubble on TV). Plain http, so
+  the browser's speech API is blocked: the phone keyboard's own mic is the voice.
+- Any network: relay page `https://pair.vespertv.app/ai#<link>` (copy
+  `tools/pair_relay/ai.html`, test keeps them identical) sends JSON-RPC
+  `vesper/say` through the AI link; HTTPS → Web Speech mic button works.
+
+## AI apps over MCP (V3b)
+- `tools/pair_relay/ai_link.py` (+ `test_ai_link.py`, 6 tests): `POST /mcp/<secret>`
+  Streamable HTTP with JSON answers; relay answers `initialize`/`ping`,
+  notifications → 202, forwards the rest to the TV's long-poll
+  (`GET /api/ai/poll` 25 s, `POST /api/ai/reply`, header `X-Vesper-Link`,
+  app header). Waits 75 s (TV may ask the viewer). TV offline → clear text
+  result (`tools/list` from cache). Only sha256(secret) kept; in memory only;
+  caps per link/global. `GET /mcp/<secret>` in a browser = help page with Copy.
+- nginx: `/mcp/` (90 s) and `/api/ai/` (40 s) locations added to
+  `nginx-pair.conf`. **Not deployed yet** — needs the owner's OK (§2: back up,
+  `nginx -t`, reload).
+- `McpBridge` (Dart): link secret per device (`vesper_ai_dev_link_secret`,
+  never transferred/synced/backed up), poll only while the app is shown
+  (AppLifecycleListener onHide/onShow), `tools/call` as `VesperCaller.remoteApp`
+  (play/open/hide/show confirmed on the TV unless "Ask on the TV first" is off).
+- Claude: Settings > Connectors > Add custom connector (authless URL).
+  ChatGPT: developer-mode connector, no auth. Secret-in-URL = the credential;
+  Reset makes a new one. Not checked yet: whether either app insists on OAuth.
+
+## Not done / next
+- Real-device tests: which key each remote sends (Formuler, Shield, Onn, Fire
+  Stick), SpeechRecognizer on the Formuler, relay deploy + a real Claude/ChatGPT
+  connector session.
+- Windows: no voice; player/now_playing tools say "not on Windows yet".
+- No episode picking (series → show page), no Media Hub search tool yet.
+- Remote tips page (`docs/remote.html`) + help index not updated (Codex task).
+- Privacy note for site/README: with your own AI, titles/channel names the tools
+  return go to that AI provider; the relay only carries MCP traffic, keeps none.

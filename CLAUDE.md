@@ -376,6 +376,11 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-06 - Vesper AI on `claude/vesper-ai` (+660, not merged/released, relay part not
+  deployed):** voice/typed/phone commands (built-in, free) + bring-your-own AI key (Claude / OpenAI-compatible /
+  Gemini) + AI apps over MCP through the relay (`tools/pair_relay/ai_link.py`). One tool layer
+  (`lib/services/vesper_ai/vesper_tools.dart`). Remote voice key off by default. Design, limits, deploy steps:
+  `dev-notes/vesper-ai.md`.
 - **Claude, 2026-11-05 - release 1.0.58 (beta), +632 (latest):** the 1.0.57 release renamed quietly (owner: no
   announcement) so 1.0.57 installs are offered the fixes: transparency slider no longer traps the remote, guide layout
   per profile. The updater compares tag vs versionName only: replacing an APK under the same tag never reaches users

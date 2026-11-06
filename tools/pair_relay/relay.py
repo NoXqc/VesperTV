@@ -67,6 +67,12 @@ text first; nothing is stored here.
 PAIR_LOG_WEBHOOK (the Discord webhook URL) is a secret: it lives only in
 /etc/pair-relay.env on the VPS, never in the repo.
 
+**Vesper AI link** (ai_link.py): an AI app's MCP requests and the phone
+page reach the viewer's TV through a long-poll; nothing is stored.
+
+    POST /mcp/<secret>, GET /mcp/<secret>, GET /ai,
+    GET /api/ai/poll, POST /api/ai/reply   (see ai_link.py)
+
 Stdlib only. Listens on 127.0.0.1; nginx terminates TLS in front of it.
 """
 import hashlib
@@ -81,6 +87,8 @@ import urllib.error
 import urllib.request
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+import ai_link
 
 HOST = os.environ.get("PAIR_HOST", "127.0.0.1")
 PORT = int(os.environ.get("PAIR_PORT", "8930"))
@@ -288,6 +296,15 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, _load_page(), "text/html; charset=utf-8")
             except OSError:
                 return self._send(500)
+        if path in ("/ai", "/ai/"):
+            return ai_link.phone_page(self)
+        mcp = ai_link.SECRET_RE.match(path)
+        if mcp:
+            return ai_link.mcp_get(self, mcp.group(1))
+        if path == "/api/ai/poll":
+            if not self._app_ok():
+                return
+            return ai_link.poll(self)
         v = VAULT_ID_RE.match(path)
         if v:
             if not self._app_ok():
@@ -349,7 +366,16 @@ class Handler(BaseHTTPRequestHandler):
         return self._send(204)
 
     def do_POST(self):
-        if self.path.split("?", 1)[0] != "/api/log":
+        path = self.path.split("?", 1)[0]
+        mcp = ai_link.SECRET_RE.match(path)
+        if mcp:
+            # The AI app's own servers: no app header to check.
+            return ai_link.mcp_post(self, mcp.group(1))
+        if path == "/api/ai/reply":
+            if not self._app_ok():
+                return
+            return ai_link.reply(self)
+        if path != "/api/log":
             return self._send(405)
         if not self._app_ok():
             return

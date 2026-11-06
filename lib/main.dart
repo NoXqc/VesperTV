@@ -81,6 +81,14 @@ import 'services/watch_tracker.dart';
 import 'services/perf_diagnostics.dart';
 import 'services/desktop_live_recovery.dart';
 import 'services/desktop_stream_setup.dart';
+import 'services/vesper_ai/mcp_bridge.dart';
+import 'services/vesper_ai/vesper_ai.dart';
+import 'services/vesper_ai/vesper_tools.dart';
+import 'services/vesper_ai/voice_input.dart';
+import 'services/vesper_ai/voice_key.dart';
+import 'screens/vesper_ai/vesper_bubble.dart';
+import 'screens/vesper_ai/vesper_host.dart';
+import 'screens/vesper_ai/vesper_panel.dart';
 
 @pragma('vm:entry-point')
 void sportsPhoneGoalMain() => sportsGoalBackgroundMain();
@@ -219,6 +227,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   late final ArchiveService _archiveService;
   late final CloudSyncService _cloudSync;
   AppLifecycleListener? _syncLifecycle;
+  AppLifecycleListener? _vesperLifecycle;
   bool _ready = false;
   Completer<void>? _profileSelection;
 
@@ -230,6 +239,27 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     if (selection != null && !selection.isCompleted) selection.complete();
     unawaited(_episodeBackground?.openPending());
     unawaited(_sportsNotifications?.openPending());
+  }
+
+  /// Vesper AI (Settings > Vesper AI): the remote's voice button when it is
+  /// on, and Settings' "teach the button" listener first ([VoiceKey]).
+  bool _onVoiceKey(KeyEvent event) {
+    if (event is! KeyDownEvent) return false;
+    final learn = VoiceKey.learning;
+    if (learn != null && learn(event)) return true;
+    if (!_ready || _profileSelection != null) return false;
+    if (!_storage.getAiVoiceButton()) return false;
+    if (!VoiceKey.isVoice(event, learned: _storage.getAiLearnedKey())) {
+      return false;
+    }
+    _openVesper();
+    return true;
+  }
+
+  void _openVesper({bool listen = true, String? text}) {
+    final nav = _navigatorKey.currentState;
+    if (nav == null || !_ready || _profileSelection != null) return;
+    unawaited(showVesperPanel(nav, listen: listen, text: text));
   }
 
   /// The remote's Guide button, anywhere in the app ([GuideKey]).
@@ -346,6 +376,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   void initState() {
     super.initState();
     HardwareKeyboard.instance.addHandler(_onGuideKey);
+    HardwareKeyboard.instance.addHandler(_onVoiceKey);
     _bootstrap();
     // Windows only — a window can't be minimized while it's *in*
     // `fullScreen` mode at all (confirmed directly: the sidebar's
@@ -368,7 +399,10 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     if (selection != null && !selection.isCompleted) selection.complete();
     ProfileGate.unregister();
     HardwareKeyboard.instance.removeHandler(_onGuideKey);
+    HardwareKeyboard.instance.removeHandler(_onVoiceKey);
     _syncLifecycle?.dispose();
+    _vesperLifecycle?.dispose();
+    McpBridge.instance.stop();
     _gameReminders?.dispose();
     _programmeReminders?.dispose();
     _sportsNotifications?.dispose();
@@ -698,6 +732,32 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         }
       };
 
+      // Vesper AI: one toolbox for the voice / typed commands, the viewer's
+      // own AI and linked AI apps (lib/services/vesper_ai/).
+      VesperAi.instance.attach(VesperToolbox(
+        playlist: _playlistManager,
+        playback: _playbackService,
+        epg: _epgService,
+        storage: _storage,
+        prefs: _preferences,
+        host: AppVesperHost(
+            navigatorKey: _navigatorKey,
+            playback: _playbackService,
+            prefs: _preferences),
+      ));
+      VesperAi.instance.openPanelHandler =
+          ({bool listen = true, String? text}) =>
+              _openVesper(listen: listen, text: text);
+      VoiceInput.instance
+        ..speakReplies = _storage.getAiSpeakReplies
+        ..onAssist = _openVesper
+        ..start();
+      McpBridge.instance.attach(_storage);
+      _vesperLifecycle = AppLifecycleListener(
+        onHide: McpBridge.instance.pause,
+        onShow: McpBridge.instance.resume,
+      );
+
       // Restores category lists (small, fast regardless of catalog size —
       // see that method's doc comment for why live channels/category
       // *items* are no longer touched here). Awaited, unlike before: the
@@ -827,6 +887,12 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       if (!mounted) return;
       PerfDiagnostics.mark('ui');
       StartupQuiet.uiShown();
+      // Started as the device's assistant (VoiceBridge.onIntent).
+      unawaited(VoiceInput.instance.takeAssist().then((assist) {
+        if (assist && mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) => _openVesper());
+        }
+      }));
       if (didSync) {
         // The toast needs the real MaterialApp's ScaffoldMessengerKey,
         // which doesn't exist until the tree above actually builds.
@@ -1328,6 +1394,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
               GameReminderOverlay(onGameStarting: _offerStartingGame),
               const ProgrammeReminderOverlay(),
               const GoalsAlertOverlay(),
+              const VesperBubbleOverlay(),
             ],
           ),
           // Always dark, regardless of the OS/system light-dark setting —

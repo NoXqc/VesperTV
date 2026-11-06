@@ -41,6 +41,7 @@ import 'sports_phone_notifications_settings_screen.dart';
 import 'sports_odds_settings_screen.dart';
 import 'sports_quality_settings_screen.dart';
 import 'playlist_editor_screen.dart';
+import 'vesper_ai_settings_screen.dart';
 
 /// One destination row of a Settings category.
 class _Entry {
@@ -373,6 +374,18 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
                 tr('Discord'),
                 tr('Direct support through Discord'),
                 (_) => const CommunityScreen()),
+          ],
+        ),
+        _Category(
+          Icons.auto_awesome,
+          'Vesper AI',
+          tr('Talk to VesperTV with your remote\'s microphone, your phone or by typing. Bring your own AI for more, or link the AI app you already use.'),
+          [
+            _Entry(
+                Icons.auto_awesome,
+                'Vesper AI',
+                tr('Voice, your own AI, AI apps'),
+                (_) => const VesperAiSettingsScreen()),
           ],
         ),
         _Category(

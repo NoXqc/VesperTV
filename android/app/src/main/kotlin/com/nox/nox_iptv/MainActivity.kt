@@ -66,6 +66,7 @@ class MainActivity : FlutterActivity() {
     private val recorderBridge by lazy { RecorderBridge(this) }
     private val displayModes by lazy { DisplayModes(this) }
     private val overlayProbe by lazy { OverlayProbeBridge(this) }
+    private val voiceBridge by lazy { VoiceBridge(this) }
 
     /**
      * Native video surface (beta, Settings > Interface > Background video): Flutter starts
@@ -85,7 +86,8 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        if (!backupStore.onPermissionResult(requestCode, grantResults)) {
+        if (!voiceBridge.onPermissionResult(requestCode, grantResults) &&
+            !backupStore.onPermissionResult(requestCode, grantResults)) {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         }
     }
@@ -113,6 +115,7 @@ class MainActivity : FlutterActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        voiceBridge.onIntent(intent)
     }
 
     override fun onStart() {
@@ -130,6 +133,7 @@ class MainActivity : FlutterActivity() {
 
     override fun onDestroy() {
         localImportStore.close()
+        voiceBridge.dispose()
         super.onDestroy()
     }
 
@@ -140,6 +144,10 @@ class MainActivity : FlutterActivity() {
             .setMethodCallHandler(localImportStore::handle)
 
         phonePip.connect(flutterEngine.dartExecutor.binaryMessenger)
+
+        // Vesper AI: speech recognizer, text-to-speech, assistant launch.
+        voiceBridge.connect(flutterEngine.dartExecutor.binaryMessenger)
+        voiceBridge.onIntent(intent)
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "vespertv/goal_overlay_probe")
             .setMethodCallHandler(overlayProbe::handle)

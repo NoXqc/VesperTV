@@ -27,10 +27,14 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32"/>
+    <!-- Vesper AI: the remote's / phone's microphone through Android's speech
+         recognizer (asked for only when the viewer first talks to it). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
 
     <!-- Not TV-only: phones/tablets can still install and run this fine. -->
     <uses-feature android:name="android.software.leanback" android:required="false"/>
     <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>
+    <uses-feature android:name="android.hardware.microphone" android:required="false"/>
 
     <application
         android:label="VesperTV"
@@ -74,6 +78,14 @@
                      launch the app at all — without this it can install
                      silently and simply never appear or start. -->
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER"/>
+            </intent-filter>
+            <!-- Vesper AI as the device's assistant (opt-in, set by the user:
+                 adb shell settings put secure assistant
+                 com.nox.nox_iptv/.MainActivity). See VoiceBridge.onIntent. -->
+            <intent-filter>
+                <action android:name="android.intent.action.ASSIST"/>
+                <action android:name="android.intent.action.VOICE_ASSIST"/>
+                <category android:name="android.intent.category.DEFAULT"/>
             </intent-filter>
         </activity>
         <service
@@ -136,6 +148,13 @@
             <action android:name="android.intent.action.VIEW" />
             <category android:name="android.intent.category.BROWSABLE" />
             <data android:scheme="https" />
+        </intent>
+        <!-- SpeechRecognizer.isRecognitionAvailable on Android 11+. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE"/>
         </intent>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>

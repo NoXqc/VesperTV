@@ -20,6 +20,14 @@ class _HomeState extends State<_Home> implements GuideTarget {
   @override
   void openGuide() => setState(() => opened++);
 
+  String? section;
+
+  @override
+  bool openSection(String section, {String? query}) {
+    setState(() => this.section = section);
+    return true;
+  }
+
   @override
   void initState() {
     super.initState();
