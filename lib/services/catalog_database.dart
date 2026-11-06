@@ -107,6 +107,15 @@ class CatalogDatabase {
         } catch (e) {
           debugPrint('CatalogDatabase: WAL skipped: $e');
         }
+        // Windows/Linux: an M3U import writes from its own connection
+        // (M3uImport, FFI in a background isolate). Without a timeout the
+        // other connection's writes failed at once with "database is
+        // locked" while an import batch was being committed.
+        try {
+          await db.rawQuery('PRAGMA busy_timeout=10000');
+        } catch (e) {
+          debugPrint('CatalogDatabase: busy_timeout skipped: $e');
+        }
       },
       onCreate: (db, version) async {
         await db.execute('''
