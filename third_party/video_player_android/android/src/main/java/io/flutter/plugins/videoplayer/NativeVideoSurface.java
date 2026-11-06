@@ -125,6 +125,16 @@ public final class NativeVideoSurface implements MethodChannel.MethodCallHandler
     this.activity = activity;
   }
 
+  /**
+   * Multiview adopted this player (MultiviewTiles.adopt): stop tracking it without clearing its
+   * output, which moves to the tile right after. Dart's next attach takes it back.
+   */
+  void letGo(long id) {
+    if (id != attachedId) return;
+    Log.i(TAG, "player " + id + " handed to Multiview");
+    detach(false);
+  }
+
   /** The plugin is disposing this player: let go of it first. */
   void onPlayerDisposed(long id) {
     if (id == attachedId) {

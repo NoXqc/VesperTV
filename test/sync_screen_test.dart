@@ -49,7 +49,7 @@ class FakeSync extends CloudSyncService {
   }
 
   @override
-  Future<int> syncNow() async {
+  Future<int> syncNow({bool pushLocal = true}) async {
     syncs++;
     notifyListeners();
     return 0;

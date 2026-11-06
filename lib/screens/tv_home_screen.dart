@@ -21,6 +21,8 @@ import '../models/m3u_group.dart';
 import '../models/xtream_series.dart';
 import '../services/app_preferences.dart';
 import '../services/perf_diagnostics.dart';
+import '../services/startup_quiet.dart';
+import '../services/app_exit.dart';
 import '../services/desktop_live_recovery.dart';
 import '../widgets/desktop_reconnecting_badge.dart';
 import '../services/app_update_service.dart';
@@ -2104,8 +2106,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   Future<void> _checkForUpdateOnLaunch() async {
     if (_updateChecked) return;
     _updateChecked = true;
-    // Let the first screen settle (and any auto-resume start) first.
-    await Future<void>.delayed(const Duration(seconds: 4));
+    // After the launch quiet period (StartupQuiet): the remote first.
+    await StartupQuiet.after(const Duration(seconds: 3));
     UpdateInfo? update;
     try {
       update = await AppUpdateService().checkForUpdate();
@@ -2614,8 +2616,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         playback.catchup?.live.id == channel.id) {
       final playing = playback.currentChannel;
       if (playing == null) return;
-      Navigator.of(context).push(
-          PlayerPageRoute(builder: (_) => PlayerScreen(channel: playing)));
+      Navigator.of(context).push(PlayerGlideRoute.open(
+          playback, (_) => PlayerScreen(channel: playing)));
       return;
     }
     _catchupPreview = (id: channel.id, at: at);
@@ -2654,8 +2656,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       // create/dispose race _selectChannel's own comment describes.
       if (pending != null) await pending;
       if (!mounted || playback.currentChannel?.id != channel.id) return;
-      Navigator.of(context).push(
-          PlayerPageRoute(builder: (_) => PlayerScreen(channel: channel)));
+      Navigator.of(context).push(PlayerGlideRoute.open(
+          playback, (_) => PlayerScreen(channel: channel)));
       return;
     }
     // The plain Live list hands the playing row `_currentChannelFocusNode`
@@ -2707,10 +2709,11 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   }
 
   void _goFullscreenIfPlaying() {
-    final channel = context.read<PlaybackService>().currentChannel;
+    final playback = context.read<PlaybackService>();
+    final channel = playback.currentChannel;
     if (channel == null) return;
-    Navigator.of(context)
-        .push(PlayerPageRoute(builder: (_) => PlayerScreen(channel: channel)));
+    Navigator.of(context).push(
+        PlayerGlideRoute.open(playback, (_) => PlayerScreen(channel: channel)));
   }
 
   /// The catalog row a movie/series was just opened from — see
@@ -2843,73 +2846,13 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     }
   }
 
-  /// Some Xtream providers cap concurrent connections per login — just
-  /// backgrounding/minimizing the app doesn't release that slot, but
-  /// disabling the playlist does (same mechanism as the manual toggle in
-  /// Content Manager: stop touching the server, keep the cached
-  /// credentials/catalog). Confirmed first since it's a deliberate
-  /// "free this login up for another device" action, not an accidental
-  /// tap consequence.
-  Future<void> _confirmHardExit() async {
-    // A restricted viewer gets a plain close, no confirmation and no
-    // playlist-disabling — the "free up this login" framing below doesn't
-    // apply to them, and disabling every playlist here would combine badly
-    // with Settings being PIN-gated: the next person to open the app would
-    // find every playlist disabled with no ungated way back in. Only the
-    // *active* viewer's restricted status matters here, not whether any
-    // restricted profile exists at all — Main (or any other unrestricted
-    // profile) exiting the app behaves exactly as it always has.
-    if (context.read<ViewerProfileService>().isActiveRestricted) {
-      _closeApp();
-      return;
-    }
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(tr('Exit and free up this login?')),
-        content: Text(
-          tr('This disconnects your login here so it can be used on another device, then fully closes VesperTV. Your channels/movies will need to reload next time you open it.'),
-        ),
-        actions: [
-          ModeButton(
-            label: tr('Cancel'),
-            selected: false,
-            onTap: () => Navigator.of(context).pop(false),
-          ),
-          ModeButton(
-            label: tr('Exit'),
-            selected: false,
-            onTap: () => Navigator.of(context).pop(true),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) _hardExit();
-  }
+  /// The sidebar's bottom row: a normal, full exit (the activity finishes,
+  /// the next launch starts cold). It used to be "Disable and exit": it
+  /// disabled every playlist first to free the provider login for another
+  /// device; owner (2026-11-05): a plain exit instead, and Back > Exit is
+  /// the warm one ([AppExit]).
+  void _fullExit() => unawaited(AppExit.full());
 
-  void _hardExit() {
-    // Disables every currently-enabled playlist (not just one, now that
-    // more than one can exist) — see this button's own dialog copy:
-    // freeing up "this login" for another device meant *every* login
-    // this device was actively holding a connection slot on.
-    final playlist = context.read<PlaylistManager>();
-    for (final profile in playlist.profiles.where((p) => p.enabled)) {
-      playlist.setPlaylistEnabled(profile.id, false);
-    }
-    _closeApp();
-  }
-
-  /// `SystemNavigator.pop()` is a mobile-oriented API — on Android it maps
-  /// directly to finishing the Activity, but Flutter's Windows desktop
-  /// embedder doesn't reliably implement it as "close the window" at all.
-  /// Confirmed directly: the sidebar's new plain "Close" row did nothing
-  /// with it, right after `windowManager.minimize()` (a real, properly
-  /// supported native call from the same plugin) was confirmed working —
-  /// `windowManager.close()` is the equivalent reliable call for actually
-  /// closing the window. Used here too (not just the dedicated Close row)
-  /// so `_hardExit`'s own final step — and the restricted-viewer plain-
-  /// close path above — both close the window for real on Windows,
-  /// instead of silently leaving it open after disabling every playlist.
   bool _exitPromptOpen = false;
 
   /// Back from the tabs column: "Are you sure?" instead of closing at once.
@@ -2939,7 +2882,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       ),
     );
     _exitPromptOpen = false;
-    if (exit == true && mounted) _closeApp();
+    // Warm (owner, 2026-11-05): like the remote's Home key, so opening
+    // VesperTV again is instant ([AppExit.warm]).
+    if (exit == true && mounted) unawaited(AppExit.warm());
   }
 
   /// "History" row under Favourites: a popup of the last 10 live channels
@@ -3082,9 +3027,24 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     );
   }
 
+  Widget? _lastBuilt;
+
+  /// Fully hidden under an opaque page (Home, a player, Sports...: the
+  /// overlay turns tickers off for it), the screen keeps its last build
+  /// instead of rebuilding for every catalog/guide/playback change behind
+  /// that page; it rebuilds once when shown again (the TickerMode
+  /// dependency). 32 hidden rebuilds in 10 s while the owner was on Home
+  /// (LOG-W8R8UJ, the Movies preload notifying). See-through menus over it
+  /// leave tickers on, so it still updates under those.
   @override
-  Widget build(BuildContext context) =>
-      PerfDiagnostics.timedSync('homeBuild', () => _build(context));
+  Widget build(BuildContext context) {
+    final hidden = !TickerMode.valuesOf(context).enabled;
+    final last = _lastBuilt;
+    if (hidden && last != null) return last;
+    final built = PerfDiagnostics.timedSync('homeBuild', () => _build(context));
+    _lastBuilt = built;
+    return built;
+  }
 
   Widget _build(BuildContext context) {
     PerfDiagnostics.homeBuilds++;
@@ -3977,17 +3937,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         // Windows only — the app always launches fullscreen there now
         // (see main.dart's WindowOptions) with the title bar hidden
         // entirely, so there's no OS minimize *or* close button at all
-        // anymore. Reported directly, in two parts: "Exit App" was the
-        // only way to leave the foreground at all (it deliberately
-        // disables every playlist too — see _hardExit's own doc comment,
-        // a real feature, "free up this login for another device," not
-        // something to lose for an ordinary minimize/close), and with no
-        // title bar, Alt+F4 became the *only* way to close the window
-        // short of that. Minimize/Close are the lightweight alternatives:
-        // Minimize just sends the window to the taskbar, Close just quits
-        // normally via _closeApp (the same call `_hardExit` ends with,
-        // minus the playlist-disabling step) — neither touches playback
-        // or playlists.
+        // anymore, and Alt+F4 was the only way out. Minimize sends the
+        // window to the taskbar, Close quits normally via _closeApp
+        // (windowManager.close: SystemNavigator.pop does nothing on
+        // Windows) — neither touches playback or playlists.
         if (Platform.isWindows) ...[
           _SelectableRow(
             icon: Icons.remove,
@@ -4021,10 +3974,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         // tab list above it.
         _SelectableRow(
           icon: Icons.power_settings_new,
-          label: tr('Disable and exit'),
+          label: tr('Exit {appName}', {'appName': AppConstants.appName}),
           selected: false,
           collapsed: collapsed,
-          onTap: _confirmHardExit,
+          onTap: _fullExit,
         ),
       ],
     );
@@ -4740,8 +4693,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         // Off while the pane shows an error: its buttons need the taps.
         onTap: context.watch<PlaybackService>().error != null
             ? null
-            : () => Navigator.of(context).push(PlayerPageRoute(
-                builder: (_) => PlayerScreen(channel: channel))),
+            : () => Navigator.of(context).push(PlayerGlideRoute.open(
+                context.read<PlaybackService>(),
+                (_) => PlayerScreen(channel: channel))),
         // Same channel-id key as the full-size pane in the non-timeline
         // branch below — see the long comment there for why (stale-frame
         // vs. texture-teardown race). showControls: false — the full
@@ -5252,8 +5206,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               child: IconButton.filledTonal(
                 tooltip: tr('Full screen'),
                 icon: const Icon(Icons.fullscreen),
-                onPressed: () => Navigator.of(context).push(PlayerPageRoute(
-                    builder: (_) => PlayerScreen(channel: channel))),
+                onPressed: () => Navigator.of(context).push(
+                    PlayerGlideRoute.open(context.read<PlaybackService>(),
+                        (_) => PlayerScreen(channel: channel))),
               ),
             ),
           Positioned(
@@ -8323,13 +8278,19 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
     // A scroll position has no extents until the first layout (on a slow box
     // this callback ran earlier: "Null check operator" in maxScrollExtent, the
     // guide then opened at its start instead of "now" — owner's Formuler,
-    // LOG-NDQPJU). Wait for the layout, a few frames at most.
+    // LOG-NDQPJU). Wait for the layout, a few frames at most — or, while
+    // another page covers this one, for as long as it does: a covered page
+    // is never laid out. With Open on: Home the guide was built under Home,
+    // gave up after 5 frames and opened an hour back (at its start, in the
+    // catch-up past) when the owner left Home (2026-11-05 photo).
     void jumpToNow(int triesLeft) {
-      if (!mounted || !_gridHScroll.hasClients) return;
-      if (!_gridHScroll.position.hasContentDimensions) {
-        if (triesLeft > 0) {
-          WidgetsBinding.instance
-              .addPostFrameCallback((_) => jumpToNow(triesLeft - 1));
+      if (!mounted) return;
+      final covered = ModalRoute.of(context)?.isCurrent == false;
+      if (!_gridHScroll.hasClients ||
+          !_gridHScroll.position.hasContentDimensions) {
+        if (triesLeft > 0 || covered) {
+          WidgetsBinding.instance.addPostFrameCallback(
+              (_) => jumpToNow(covered ? triesLeft : triesLeft - 1));
         }
         return;
       }

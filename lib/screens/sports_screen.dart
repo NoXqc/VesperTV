@@ -4,6 +4,7 @@ import '../widgets/sports_league_rail.dart';
 import '../widgets/sports_mode_live_panel.dart';
 import '../widgets/sports_mode_shell.dart';
 import '../widgets/sports_mode_toggle.dart';
+import '../services/app_exit.dart';
 import '../services/viewer_profile_service.dart';
 import 'archive_screen.dart';
 import 'tv_home_screen.dart';
@@ -14,7 +15,6 @@ import 'desktop_multiview_screen.dart';
 import 'recordings_screen.dart';
 import 'settings/settings_menu_screen.dart';
 import 'settings/profiles_screen.dart';
-import 'package:window_manager/window_manager.dart';
 import '../services/game_reminders.dart';
 import '../widgets/game_reminder_menu_tile.dart';
 import '../widgets/game_score_alert_menu_tile.dart';
@@ -2331,13 +2331,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
               ],
             ));
     _exitPromptOpen = false;
-    if (exit == true && mounted) {
-      if (_desktopSports) {
-        await windowManager.close();
-      } else {
-        await SystemNavigator.pop();
-      }
-    }
+    // Warm, like the TV home's Back > Exit ([AppExit.warm]).
+    if (exit == true && mounted) await AppExit.warm();
   }
 
   bool get _previewOn => _livePreview(context.read<PlaybackService>()) != null;

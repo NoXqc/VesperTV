@@ -734,9 +734,6 @@ const Map<String, String> kEl = {
   "Hide this channel": "Απόκρυψη αυτού του καναλιού",
   "Double": "Διπλό",
   "for groups": "για ομάδες",
-  "Exit and free up this login?": "Έξοδος και αποδέσμευση αυτής της σύνδεσης;",
-  "This disconnects your login here so it can be used on another device, then fully closes VesperTV. Your channels/movies will need to reload next time you open it.":
-      "Αποσυνδέει τη σύνδεσή σας εδώ ώστε να χρησιμοποιηθεί σε άλλη συσκευή και μετά κλείνει εντελώς το VesperTV. Τα κανάλια/ταινίες θα χρειαστεί να φορτώσουν ξανά την επόμενη φορά.",
   "Exit": "Έξοδος",
   "Exit {appName}?": "Έξοδος από το {appName};",
   "Are you sure you want to exit {appName}?":
@@ -747,7 +744,7 @@ const Map<String, String> kEl = {
   "Update Content": "Ενημέρωση περιεχομένου",
   "Minimize": "Ελαχιστοποίηση",
   "Close": "Κλείσιμο",
-  "Disable and exit": "Απενεργοποίηση και έξοδος",
+  "Exit {appName}": "Έξοδος από το {appName}",
   "Long-press a group elsewhere to favorite the whole thing.":
       "Κρατήστε πατημένη μια ομάδα αλλού για να την προσθέσετε ολόκληρη στα αγαπημένα.",
   "Nothing playing": "Δεν παίζει τίποτα",

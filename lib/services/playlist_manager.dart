@@ -76,11 +76,13 @@ class PlaylistManager extends ChangeNotifier {
       _deferredNotifyPending = true;
       SchedulerBinding.instance.addPostFrameCallback((_) {
         _deferredNotifyPending = false;
-        super.notifyListeners();
+        PerfDiagnostics.timedSync('notify', super.notifyListeners);
       });
       return;
     }
-    super.notifyListeners();
+    // Every listener runs right here (SlowMain: notify N ms names a slow
+    // round; LOG-9CQQJ4 had a 1.6 s stall as the live list landed).
+    PerfDiagnostics.timedSync('notify', super.notifyListeners);
   }
 
   Set<String> _favoriteIds = {};
@@ -1379,10 +1381,11 @@ class PlaylistManager extends ChangeNotifier {
           ?.ensureCategoryLoaded(categoryName, tabCategory) ??
       Future.value();
 
-  Future<void> ensureCategoriesLoaded(String playlistId,
-          Iterable<String> categoryNames, String tabCategory) =>
+  Future<void> ensureCategoriesLoaded(
+          String playlistId, Iterable<String> categoryNames, String tabCategory,
+          {bool gentle = false}) =>
       _sessionFor(playlistId)
-          ?.ensureCategoriesLoaded(categoryNames, tabCategory) ??
+          ?.ensureCategoriesLoaded(categoryNames, tabCategory, gentle: gentle) ??
       Future.value();
 
   /// Cached until the next [notifyListeners] (like [liveGroupCount]): one

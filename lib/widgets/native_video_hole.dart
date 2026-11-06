@@ -50,6 +50,30 @@ class NativeVideoSurface {
   static Timer? _diagTimer;
   static int _switchHolds = 0;
 
+  /// The full-screen player route gliding out of (or back into) the guide's
+  /// preview (`PlayerGlideRoute`): its hole wins, even over a preview hole
+  /// rebuilt after it (zapped to a new player meanwhile), and its scaled
+  /// rect is followed.
+  static ModalRoute<dynamic>? gliding;
+
+  /// Where the topmost visible hole of player [playerId] is (logical
+  /// pixels): the preview a full-screen player glides out of. [skip]: the
+  /// topmost hole not on that route instead, visible or not (the preview
+  /// beneath the player gliding back).
+  static Rect? holeRect({int? playerId, ModalRoute<dynamic>? skip}) {
+    for (final hole in _holes.reversed) {
+      if (skip != null ? hole._route == skip : !hole.visible) continue;
+      if (playerId != null && hole.widget.playerId != playerId) continue;
+      final box = hole.renderBox;
+      if (box == null || !box.attached || !box.hasSize) continue;
+      return _globalRect(box);
+    }
+    return null;
+  }
+
+  static Rect _globalRect(RenderBox box) => MatrixUtils.transformRect(
+      box.getTransformTo(null), Offset.zero & box.size);
+
   /// Keep the native output in place while a replacement initializes. The
   /// owner must release on completion, failure or explicit stop/disposal.
   static VoidCallback retainForPlayerSwitch() {
@@ -85,13 +109,24 @@ class NativeVideoSurface {
 
   static void _afterFrame(Duration _) {
     _NativeVideoHoleState? top;
+    final glide = gliding;
+    if (glide != null) {
+      for (final hole in _holes.reversed) {
+        if (hole.visible && hole._route == glide) {
+          top = hole;
+          break;
+        }
+      }
+    }
     // Last registered visible hole wins (a pushed full-screen player over the
     // guide's preview). Holes on routes covered by an opaque route have their
     // tickers off.
-    for (final hole in _holes.reversed) {
-      if (hole.visible) {
-        top = hole;
-        break;
+    if (top == null) {
+      for (final hole in _holes.reversed) {
+        if (hole.visible) {
+          top = hole;
+          break;
+        }
       }
     }
     final box = top?.renderBox;
@@ -119,15 +154,19 @@ class NativeVideoSurface {
       _diagTimer = Timer(const Duration(seconds: 5), logDiagnostics);
     }
     final dpr = top.devicePixelRatio;
-    final origin = box.localToGlobal(Offset.zero);
+    // Gliding, the player page is scaled: its hole's size must be too.
+    final at = glide != null && top._route == glide
+        ? _globalRect(box)
+        : box.localToGlobal(Offset.zero) & box.size;
     final rect = Rect.fromLTWH(
-      (origin.dx * dpr).roundToDouble(),
-      (origin.dy * dpr).roundToDouble(),
-      (box.size.width * dpr).roundToDouble(),
-      (box.size.height * dpr).roundToDouble(),
+      (at.left * dpr).roundToDouble(),
+      (at.top * dpr).roundToDouble(),
+      (at.width * dpr).roundToDouble(),
+      (at.height * dpr).roundToDouble(),
     );
     if (rect == _sentRect && _shown) return;
-    if (_sentRect?.size != rect.size || !_shown) {
+    // The glide logs its own summary line (`PlayerGlide:`), not every frame.
+    if ((_sentRect?.size != rect.size && glide == null) || !_shown) {
       debugPrint('NativeSurface: hole ${rect.width.toInt()}x'
           '${rect.height.toInt()} at ${rect.left.toInt()},${rect.top.toInt()}'
           ' (dpr $dpr)');
@@ -286,6 +325,28 @@ class NativeMultiviewTiles {
   /// Call right before `initialize(viewType: textureView)`: that player gets
   /// its own SurfaceView (bound before its decoder starts).
   static Future<void> nextIsTile() => _channel.invokeMethod<void>('nextIsTile');
+
+  /// "Open in Multiview" from the full-screen player: the playing player
+  /// [playerId] (on the main native surface) moves onto a tile surface of
+  /// its own, still playing (no new connection). False = it couldn't.
+  static Future<bool> adopt(int playerId) async {
+    final ok = await _channel.invokeMethod<bool>(
+            'adopt', {'playerId': playerId}).catchError((Object e) {
+          debugPrint('Multiview: adopt failed: $e');
+          return false;
+        }) ??
+        false;
+    // The main surface's next attach must be sent again on the way back.
+    if (ok && NativeVideoSurface._attached == playerId) {
+      NativeVideoSurface._attached = null;
+    }
+    return ok;
+  }
+
+  /// An adopted player went back to full screen: its tile surface goes.
+  static Future<void> release(int playerId) =>
+      _channel.invokeMethod<void>('release', {'playerId': playerId}).catchError(
+          (Object e) => debugPrint('Multiview: release failed: $e'));
 
   static final _holes = <_NativeTileHoleState>[];
   static bool _hooked = false;

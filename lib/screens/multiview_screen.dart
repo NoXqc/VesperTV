@@ -12,7 +12,7 @@ import '../services/app_preferences.dart';
 import '../services/epg_service.dart';
 import '../services/multiview_sports.dart';
 import '../services/playback_service.dart'
-    show learnHlsHost, streamController, unlearnHlsUrl;
+    show PlaybackService, learnHlsHost, streamController, unlearnHlsUrl;
 import '../services/playlist_manager.dart';
 import '../services/real_4k_channels.dart';
 import '../services/storage_service.dart';
@@ -60,9 +60,29 @@ import '../l10n/l10n.dart';
 /// Full screen and Enlarge are layouts, not routes: one tile, one
 /// controller, one video view that slides to its new place
 /// ([multiviewSlotRects]); nothing renders the same stream twice.
+/// What Back from Multiview hands the full-screen player (`PlayerScreen`):
+/// the screen with the sound. [controller] is set when that screen is the
+/// player the full-screen view handed over ([MultiviewScreen.handover]),
+/// still playing: no reconnect. Null controller = play [channel] again.
+class MultiviewReturn {
+  const MultiviewReturn(this.channel, this.controller);
+  final Channel channel;
+  final VideoPlayerHdrController? controller;
+}
+
 class MultiviewScreen extends StatefulWidget {
   const MultiviewScreen(
-      {super.key, this.initialChannel, this.initialChannels = const []});
+      {super.key,
+      this.initialChannel,
+      this.initialChannels = const [],
+      this.handover});
+
+  /// "Open in Multiview" from the full-screen player: its playing player
+  /// (`PlaybackService.releaseLive`), screen 1 as is — the channel keeps
+  /// playing instead of reconnecting (owner, 2026-11-05, like TiviMate).
+  /// On the native video surface `PlayerScreen` already moved it onto a
+  /// tile surface (`NativeMultiviewTiles.adopt`).
+  final ({Channel channel, VideoPlayerHdrController controller})? handover;
 
   /// Pre-loads cell 0 with this channel on open — set when reached from
   /// `PlayerScreen`'s own "Open in Multiview" action (see
@@ -1002,6 +1022,23 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     _hideHeaderSoon(const Duration(seconds: 4));
     // Opened from the player bar ("Open in Multiview"): always equal screens
     // first (owner, 2026-11-03); 1 + 3 only when chosen in the header.
+    final handover = widget.handover;
+    if (handover != null) {
+      _handedOver = handover.controller;
+      if (PlaybackService.drawsNativeSurface(handover.controller)) {
+        _tileControllers[handover.controller] = true;
+      }
+      _cells[0]
+        ..channel = handover.channel
+        ..controller = handover.controller;
+      // Opens on screen 1 in the full-screen layout (exactly the picture
+      // the player showed; its tile surface starts full screen too), then
+      // glides it into its slot (owner, 2026-11-05: like TiviMate).
+      if (_tileControllers[handover.controller] == true) {
+        _fullscreen = 0;
+        _othersHidden = true;
+      }
+    }
     final initial = [
       if (widget.initialChannel case final c?) c,
       ...widget.initialChannels,
@@ -1024,9 +1061,59 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       _cells[0].focusNode.requestFocus();
+      if (handover != null && _fullscreen == 0) _exitFullscreen();
       await _showTips();
       if (mounted) _cells[0].focusNode.requestFocus();
     });
+  }
+
+  /// The player [MultiviewScreen.handover] gave this screen.
+  VideoPlayerHdrController? _handedOver;
+
+  /// The controller [_leave] gives back to the full-screen player: not
+  /// disposed here.
+  VideoPlayerHdrController? _kept;
+
+  /// Leaves Multiview with the screen that has the sound for the
+  /// full-screen player behind it ([MultiviewReturn]). The other screens
+  /// close first, so their provider connections are free before the
+  /// full-screen player connects again (1-connection accounts).
+  ///
+  /// When that screen is the handed-over player on a native tile, it first
+  /// grows back to full screen (the reverse glide), becomes the main player
+  /// again (still covered, so its full-screen view is ready underneath) and
+  /// Multiview closes without a page transition (see `PlayerScreen`).
+  bool _leaving = false;
+
+  Future<void> _leave() async {
+    if (_leaving) return;
+    _leaving = true;
+    final index = _activeCell;
+    final cell = _cells[index];
+    final channel = cell.channel;
+    final c = cell.controller;
+    final keep = channel != null && c != null && c == _handedOver;
+    if (keep && _tileControllers[c] == true) {
+      if (_fullscreen != index) {
+        await _enterFullscreen(index);
+        await Future<void>.delayed(_anim);
+        if (!mounted) return;
+      }
+      await context.read<PlaybackService>().adoptLive(channel, c);
+      if (!mounted) return;
+    }
+    MultiviewReturn? back;
+    if (channel != null) {
+      if (keep) _kept = c;
+      back = MultiviewReturn(channel, keep ? c : null);
+    }
+    for (final other in _cells) {
+      final oc = other.controller;
+      if (oc == null || oc == _kept) continue;
+      other.controller = null;
+      unawaited(oc.dispose());
+    }
+    if (mounted) Navigator.of(context).pop(back);
   }
 
   @override
@@ -1037,8 +1124,17 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     _headerScope.dispose();
     _headerFirst.dispose();
     for (final cell in _cells) {
-      cell.controller?.dispose();
+      if (cell.controller != _kept) cell.controller?.dispose();
       cell.focusNode.dispose();
+    }
+    final kept = _kept;
+    if (kept != null && _tileControllers[kept] == true) {
+      // The full-screen view's native surface takes the output back on its
+      // next frame; then this tile surface goes.
+      final id = SubtitleTracks.playerIdOf(kept);
+      unawaited(Future<void>.delayed(const Duration(milliseconds: 800),
+          () => NativeMultiviewTiles.release(id)));
+      _tileControllers[kept] = false;
     }
     unawaited(WakelockPlus.disable());
     super.dispose();
@@ -1048,8 +1144,9 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
   Widget build(BuildContext context) {
     return PopScope(
       // Back closes the live guide (guide -> groups -> closed), then shrinks
-      // a full-screen screen, then leaves.
-      canPop: _fullscreen == null && _panelFor == null && !_swapMode,
+      // a full-screen screen, then leaves (_leave: with a result for the
+      // full-screen player).
+      canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
         if (_swapMode) {
@@ -1060,7 +1157,11 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
           if (!(_panelKey.currentState?.back() ?? false)) _closePanel();
           return;
         }
-        _exitFullscreen();
+        if (_fullscreen != null) {
+          _exitFullscreen();
+          return;
+        }
+        unawaited(_leave());
       },
       child: Scaffold(
         backgroundColor: Colors.black,
@@ -1113,7 +1214,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
               tooltip: tr('Back'),
               focusNode: _headerFirst,
               icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => unawaited(_leave()),
             ),
             Text(tr('Multiview'),
                 style: const TextStyle(

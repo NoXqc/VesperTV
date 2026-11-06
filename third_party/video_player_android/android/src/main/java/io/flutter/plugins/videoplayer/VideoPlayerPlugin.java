@@ -60,7 +60,8 @@ public class VideoPlayerPlugin implements FlutterPlugin, ActivityAware, AndroidV
     audioPassthrough = new AudioPassthrough(binding.getBinaryMessenger());
     videoLayering = new VideoLayering(binding.getBinaryMessenger());
     nativeVideoSurface = new NativeVideoSurface(binding.getBinaryMessenger(), videoPlayers);
-    multiviewTiles = new MultiviewTiles(binding.getBinaryMessenger());
+    multiviewTiles =
+        new MultiviewTiles(binding.getBinaryMessenger(), videoPlayers, nativeVideoSurface);
 
     binding
         .getPlatformViewRegistry()

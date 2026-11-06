@@ -744,9 +744,6 @@ const Map<String, String> kEs = {
   'Hide this channel': "Ocultar este canal",
   'Double': "Doble",
   'for groups': "para los grupos",
-  'Exit and free up this login?': "¿Salir y liberar esta cuenta?",
-  'This disconnects your login here so it can be used on another device, then fully closes VesperTV. Your channels/movies will need to reload next time you open it.':
-      "Esto desconecta tu cuenta aquí para que se pueda usar en otro dispositivo y luego cierra VesperTV por completo. Tus canales y películas tendrán que volver a cargarse la próxima vez.",
   'Exit': "Salir",
   'Exit {appName}?': "¿Salir de {appName}?",
   'Are you sure you want to exit {appName}?':
@@ -757,7 +754,7 @@ const Map<String, String> kEs = {
   'Update Content': "Act. contenido",
   'Minimize': "Minimizar",
   'Close': "Cerrar",
-  'Disable and exit': "Desactivar y salir",
+  'Exit {appName}': "Salir de {appName}",
   'Long-press a group elsewhere to favorite the whole thing.':
       "Mantén OK en un grupo en otra parte para añadirlo entero a favoritos.",
   'Nothing playing': "Nada en reproducción",

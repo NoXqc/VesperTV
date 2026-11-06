@@ -202,6 +202,10 @@ class MainActivity : FlutterActivity() {
                 result.success(isTvUiMode || hasLeanback)
             } else if (call.method == "sdkInt") {
                 result.success(Build.VERSION.SDK_INT)
+            } else if (call.method == "moveTaskToBack") {
+                // Warm exit (AppExit.warm): like the remote's Home key, the
+                // process and engine stay, so the next launch is instant.
+                result.success(moveTaskToBack(true))
             } else if (call.method == "restartApp") {
                 // Sync's Restart now: a cold start loads the settings held for
                 // the next launch. Fire TV only has the Leanback launch intent.

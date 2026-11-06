@@ -1,15 +1,14 @@
-import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:window_manager/window_manager.dart';
 
 import '../l10n/l10n.dart';
 import '../models/viewer_profile.dart';
 import '../utils/constants.dart';
+import '../services/app_exit.dart';
 import '../services/viewer_profile_service.dart';
 import '../widgets/profile_card.dart';
 
@@ -126,11 +125,8 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
     );
     _exitPromptOpen = false;
     if (exit != true || !mounted) return;
-    if (Platform.isWindows) {
-      await windowManager.close();
-    } else {
-      await SystemNavigator.pop();
-    }
+    // Warm, like the TV home's Back > Exit ([AppExit.warm]).
+    await AppExit.warm();
   }
 
   Widget _profileGrid(

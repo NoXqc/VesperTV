@@ -179,4 +179,34 @@ void main() {
     expect(calls.where((c) => c.method == 'attach'), hasLength(1));
     await finish(tester);
   });
+
+  testWidgets('gliding player page sends its scaled hole rect', (tester) async {
+    await mount(tester);
+    expect(NativeVideoSurface.holeRect(playerId: player),
+        const Rect.fromLTWH(280, 232.5, 240, 135));
+    final full = nextPlayer++;
+    late ModalRoute<dynamic> route;
+    // Like PlayerGlideRoute: a plain PageRoute, the page below stays put.
+    navigator.currentState!
+        .push(PageRouteBuilder<void>(pageBuilder: (context, _, __) {
+      route = ModalRoute.of(context)!;
+      return Transform.scale(
+          scale: 0.5,
+          alignment: Alignment.topLeft,
+          child: NativeVideoHole(playerId: full));
+    }));
+    await tester.pumpAndSettle();
+    NativeVideoSurface.gliding = route;
+    addTearDown(() => NativeVideoSurface.gliding = null);
+    tester.binding.scheduleFrame();
+    await tester.pump();
+    final dpr = tester.view.devicePixelRatio;
+    final rect = calls.lastWhere((c) => c.method == 'setRect').arguments as Map;
+    expect(rect['width'], (400 * dpr).round());
+    expect(rect['height'], (300 * dpr).round());
+    expect(NativeVideoSurface.holeRect(skip: route),
+        const Rect.fromLTWH(280, 232.5, 240, 135));
+    NativeVideoSurface.gliding = null;
+    await finish(tester);
+  });
 }

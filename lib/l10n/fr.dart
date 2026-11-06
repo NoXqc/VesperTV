@@ -745,9 +745,6 @@ const Map<String, String> kFr = {
   'Hide this channel': "Masquer cette chaîne",
   'Double': "Double",
   'for groups': "pour les groupes",
-  'Exit and free up this login?': "Quitter et libérer cette connexion?",
-  'This disconnects your login here so it can be used on another device, then fully closes VesperTV. Your channels/movies will need to reload next time you open it.':
-      "Ça déconnecte votre compte ici pour qu'il serve sur un autre appareil, puis ferme complètement VesperTV. Vos chaînes et films devront recharger à la prochaine ouverture.",
   'Exit': "Quitter",
   'Exit {appName}?': "Quitter {appName}?",
   'Are you sure you want to exit {appName}?':
@@ -758,7 +755,7 @@ const Map<String, String> kFr = {
   'Update Content': "MAJ du contenu",
   'Minimize': "Réduire",
   'Close': "Fermer",
-  'Disable and exit': "Désactiver et quitter",
+  'Exit {appName}': "Quitter {appName}",
   'Long-press a group elsewhere to favorite the whole thing.':
       "Maintenez OK sur un groupe ailleurs pour l'ajouter en entier aux favoris.",
   'Nothing playing': "Rien en lecture",

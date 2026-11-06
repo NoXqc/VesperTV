@@ -53,13 +53,23 @@ class MultiviewSports {
   /// Today's games in the viewer's leagues for the Home page: live first,
   /// then upcoming, then final; a game with no channel is kept (empty
   /// matches — Home opens Sports Trak for it).
+  ///
+  /// [match] false: the games alone, no channels (Home shows its cards from
+  /// the scores feed at once, then again with channels: matching waits for
+  /// the whole live list, ~11 s after a cold start on the owner's
+  /// 26,718-channel playlist).
   static Future<List<LiveGameChannel>> todaysGames({
     required StorageService storage,
     required PlaylistManager playlist,
     required EpgService epg,
+    bool match = true,
   }) async {
     final all = await _games(
-        storage: storage, playlist: playlist, epg: epg, liveOnly: false);
+        storage: storage,
+        playlist: playlist,
+        epg: epg,
+        liveOnly: false,
+        match: match);
     final now = DateTime.now();
     for (final g in all) {
       if (g.game.state != GameState.post) _lastUnfinished[g.game.id] = now;
@@ -130,6 +140,7 @@ class MultiviewSports {
     required PlaylistManager playlist,
     required EpgService epg,
     required bool liveOnly,
+    bool match = true,
   }) async {
     final follows = SportsFollows.load(storage);
     final leagues = <String, SportsLeague>{
@@ -144,6 +155,9 @@ class MultiviewSports {
         .toList()
       ..sort((a, b) => a.start.compareTo(b.start));
     if (games.isEmpty) return const [];
+    if (!match) {
+      return [for (final g in games) (game: g, matches: const <ChannelMatch>[])];
+    }
     final matcher = SportsChannelMatcher.shared(epg);
     await playlist.ensureLiveChannelsLoaded();
     await matcher.prepare(playlist.visibleChannels(category: 'tv'),

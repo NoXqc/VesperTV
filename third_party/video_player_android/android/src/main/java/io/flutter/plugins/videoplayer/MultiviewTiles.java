@@ -10,6 +10,7 @@ package io.flutter.plugins.videoplayer;
 
 import android.app.Activity;
 import android.util.Log;
+import android.util.LongSparseArray;
 import android.view.Gravity;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -31,6 +32,8 @@ final class MultiviewTiles implements MethodChannel.MethodCallHandler {
   private static final String TAG = "VesperMultiviewTiles";
 
   private final MethodChannel methods;
+  private final LongSparseArray<VideoPlayer> players;
+  @Nullable private final NativeVideoSurface nativeSurface;
   @Nullable private Activity activity;
   /** Texture-view creations still owed a tile (Dart's "nextIsTile" before each initialize). */
   private int pendingTiles = 0;
@@ -38,7 +41,12 @@ final class MultiviewTiles implements MethodChannel.MethodCallHandler {
   /** Last rect per tile, {left, top, width, height}; absent = off screen. */
   private final Map<Long, int[]> rects = new HashMap<>();
 
-  MultiviewTiles(@NonNull BinaryMessenger messenger) {
+  MultiviewTiles(
+      @NonNull BinaryMessenger messenger,
+      @NonNull LongSparseArray<VideoPlayer> players,
+      @Nullable NativeVideoSurface nativeSurface) {
+    this.players = players;
+    this.nativeSurface = nativeSurface;
     methods = new MethodChannel(messenger, "vespertv/multiview_tiles");
     methods.setMethodCallHandler(this);
   }
@@ -63,6 +71,15 @@ final class MultiviewTiles implements MethodChannel.MethodCallHandler {
   @Nullable SurfaceHolder claimTile(long id) {
     if (pendingTiles <= 0) return null;
     pendingTiles--;
+    return newTile(id, null);
+  }
+
+  /** Runs once a tile's surface exists (see [adopt]). */
+  private final Map<Long, Runnable> whenCreated = new HashMap<>();
+  private final android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
+
+  /** {@code at}: where the new tile starts ({left, top, width, height}); null = off screen. */
+  @Nullable private SurfaceHolder newTile(long id, @Nullable int[] at) {
     if (activity == null) {
       Log.w(TAG, "no activity: player " + id + " falls back to a texture");
       return null;
@@ -78,6 +95,8 @@ final class MultiviewTiles implements MethodChannel.MethodCallHandler {
           @Override
           public void surfaceCreated(@NonNull SurfaceHolder holder) {
             Log.i(TAG, "tile " + id + " surface created");
+            Runnable then = whenCreated.remove(id);
+            if (then != null) then.run();
           }
 
           @Override
@@ -92,7 +111,8 @@ final class MultiviewTiles implements MethodChannel.MethodCallHandler {
         });
     // Index 0 = behind the Flutter view, like NativeVideoSurface. Starts off screen (not GONE:
     // GONE destroys the surface) until Dart reports where the tile is.
-    content.addView(view, 0, params(null));
+    content.addView(view, 0, params(at));
+    if (at != null) rects.put(id, at);
     tiles.put(id, view);
     Log.i(TAG, "tile surface for player " + id + " (" + tiles.size() + " tiles)");
     return view.getHolder();
@@ -111,6 +131,13 @@ final class MultiviewTiles implements MethodChannel.MethodCallHandler {
           pendingTiles++;
           result.success(null);
           return;
+        case "adopt":
+          adopt(num(call.argument("playerId")), result);
+          return;
+        case "release":
+          release(num(call.argument("playerId")));
+          result.success(null);
+          return;
         case "setTiles":
           {
             List<?> list = call.argument("tiles");
@@ -125,6 +152,71 @@ final class MultiviewTiles implements MethodChannel.MethodCallHandler {
       Log.w(TAG, call.method + " failed", e);
       result.error("multiview_tiles", String.valueOf(e), null);
     }
+  }
+
+  /**
+   * "Open in Multiview" from the full-screen player: the playing player (on the main native
+   * surface) gets a tile surface of its own, and its output moves there. Same ExoPlayer, same
+   * decoder session, no new connection (owner, 2026-11-05: TiviMate shrinks the playing picture
+   * into its Multiview; ours reconnected the channel). Back to full screen, the main surface's
+   * attach takes the output back and Dart calls [release].
+   */
+  private void adopt(long id, @NonNull MethodChannel.Result result) {
+    VideoPlayer player = players.get(id);
+    if (player == null) {
+      Log.w(TAG, "adopt: no player " + id);
+      result.success(false);
+      return;
+    }
+    if (tiles.containsKey(id)) {
+      result.success(true);
+      return;
+    }
+    // Full screen, where the picture already is: Multiview opens with this screen in its full
+    // screen layout and glides it into its slot. The output moves only once the surface exists
+    // (creating it took ~180 ms on the Formuler: black in between, LOG-W8R8UJ).
+    int w = activity == null ? 1 : activity.getWindow().getDecorView().getWidth();
+    int h = activity == null ? 1 : activity.getWindow().getDecorView().getHeight();
+    SurfaceHolder holder = newTile(id, new int[] {0, 0, Math.max(1, w), Math.max(1, h)});
+    if (holder == null) {
+      result.success(false);
+      return;
+    }
+    final boolean[] done = {false};
+    Runnable move =
+        () -> {
+          if (done[0]) return;
+          done[0] = true;
+          whenCreated.remove(id);
+          if (!tiles.containsKey(id) || players.get(id) != player) {
+            result.success(false);
+            return;
+          }
+          if (nativeSurface != null) nativeSurface.letGo(id);
+          player.getExoPlayer().setVideoSurfaceHolder(holder);
+          player.nativeSurfaceHolder = holder;
+          Log.i(TAG, "adopted playing player " + id + " as a tile");
+          result.success(true);
+        };
+    if (holder.getSurface() != null && holder.getSurface().isValid()) {
+      move.run();
+    } else {
+      whenCreated.put(id, move);
+      main.postDelayed(move, 1500); // never created: move anyway, ExoPlayer waits for it
+    }
+  }
+
+  /** An adopted player went back to full screen: its tile surface can go. */
+  private void release(long id) {
+    SurfaceView view = tiles.get(id);
+    if (view == null) return;
+    VideoPlayer player = players.get(id);
+    if (player != null && player.nativeSurfaceHolder == view.getHolder()) {
+      // Still drawing here (the main surface hasn't taken it back yet).
+      player.getExoPlayer().clearVideoSurfaceHolder(view.getHolder());
+      player.nativeSurfaceHolder = null;
+    }
+    removeTile(id);
   }
 
   /** Every tile on screen now; any tile not listed moves off screen. */
@@ -168,6 +260,8 @@ final class MultiviewTiles implements MethodChannel.MethodCallHandler {
   private void removeTile(long id) {
     SurfaceView view = tiles.remove(id);
     rects.remove(id);
+    Runnable pending = whenCreated.remove(id);
+    if (pending != null) pending.run(); // answers Dart (false: the tile is gone)
     if (view == null) return;
     ViewGroup parent = (ViewGroup) view.getParent();
     if (parent != null) parent.removeView(view);

@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:xml/xml_events.dart';
 
 import '../models/epg_program.dart';
+import 'perf_diagnostics.dart';
 import '../utils/constants.dart';
 import 'epg_database.dart';
 import 'storage_service.dart';
@@ -242,10 +243,13 @@ class EpgService extends ChangeNotifier {
   Future<void> _reloadCaches() async {
     _readCatchupDays();
     final now = DateTime.now();
-    final soon = await _db.programmesBetween(
-        now.millisecondsSinceEpoch, now.add(_soonAhead).millisecondsSinceEpoch);
+    final soon = await PerfDiagnostics.timed(
+        'epg soon',
+        () => _db.programmesBetween(now.millisecondsSinceEpoch,
+            now.add(_soonAhead).millisecondsSinceEpoch));
     final withData = await _db.channelIdsWithData(now.millisecondsSinceEpoch);
-    _soon = _toPrograms(soon);
+    _soon = PerfDiagnostics.timedSync(
+        'epg soon n=${soon.length}', () => _toPrograms(soon));
     _withData = withData;
     _full.clear();
     _cacheEpoch++;
