@@ -1586,7 +1586,14 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         // Watching another of the listed channels makes it this game's
         // default (owner: the card kept showing the first match) — a game
         // pick only; team-wide picks stay a deliberate "Pick a channel".
-        if (channel.id != matches.firstOrNull?.channel.id) {
+        // Compared with what the card shows (its list is also spread by
+        // distinctCopiesFirst), not this menu's first row: choosing a first
+        // row the card didn't show was never saved, so the card went back.
+        final shown = (gameMatches ?? _matches[_gameKey(game)])
+            ?.firstOrNull
+            ?.channel
+            .id;
+        if (channel.id != shown) {
           await _picks.pickForGame(game, channel.id);
           unawaited(_rematch());
         }
