@@ -2896,6 +2896,16 @@ const Map<String, String> kEs = {
       "Con tu IA, o desde Claude / ChatGPT:",
   "\"make me a movie night list for Friday\" (it goes on your watch list on Home) · \"hide every Turkish group\" · \"what crime shows do I have?\" · \"is the Leafs game on, and on which channel?\" · \"play the newest episode of something like Severance\" · \"pause the TV\" · \"tell the TV dinner is ready\"":
       "«hazme una lista de películas para el viernes» (va a tu lista en Inicio) · «oculta todos los grupos turcos» · «¿qué series policiacas tengo?» · «¿hay partido del Madrid y en qué canal?» · «pon algo parecido a Severance» · «pausa la tele» · «dile a la tele que la cena está lista»",
+  "Added to watch list":
+      "Añadido a Mi lista",
+  "Removed from watch list":
+      "Quitado de Mi lista",
+  "This title's Media Hub source is not available.":
+      "La fuente de Media Hub de este título no está disponible.",
+  "Nothing on your watch list yet. Open a movie or show and choose Watch list.":
+      "Aún no hay nada en Mi lista. Abre una película o serie y elige Mi lista.",
+  "Hold OK on a title to take it off the list.":
+      "Mantén OK sobre un título para quitarlo de la lista.",
   "Watch list":
       "Mi lista",
   "Remove from watch list":

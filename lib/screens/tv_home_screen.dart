@@ -77,6 +77,7 @@ import 'settings/check_updates_screen.dart';
 import 'settings/settings_menu_screen.dart';
 import '../l10n/l10n.dart';
 import '../services/vesper_ai/vesper_ai.dart';
+import '../services/vesper_ai/watch_list.dart';
 import '../utils/desktop_platform.dart';
 
 /// Directional D-pad focus movement between widgets (arrow keys via the
@@ -2174,6 +2175,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     super.initState();
     GuideKey.register(this);
     FocusManager.instance.addListener(_scheduleFocusRecovery);
+    WatchList.instance.changes.addListener(_watchListChanged);
     _returnToTv = widget.startupBrowseCovered || widget.startupSportsCovered;
     final prefs = context.read<AppPreferences>();
     _initialTab = prefs.isTabHidden(widget.initialTab)
@@ -2279,6 +2281,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   @override
   void dispose() {
     GuideKey.unregister(this);
+    WatchList.instance.changes.removeListener(_watchListChanged);
     _returnBackGuard?.cancel();
     appRouteObserver.unsubscribe(this);
     _releasePreviewHint?.call();
@@ -4616,7 +4619,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     }
 
     final playlistsRow = _playlistsRow(allGroups, groups, playlist,
-        collapsed: collapsed, rowsAbove: 4);
+        collapsed: collapsed,
+        rowsAbove: 4 + (_watchListFor(_tab).isNotEmpty ? 1 : 0));
 
     return ListView(
       key: ValueKey(_tab),
@@ -4652,6 +4656,17 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             onLongPress: _confirmClearFavorites,
           ),
         ),
+        // Jumps to the Watch list row (only when this tab has one).
+        if (_watchListFor(_tab).isNotEmpty)
+          _SelectableRow(
+            icon: Icons.bookmark_rounded,
+            label: tr('Watch list'),
+            selected: false,
+            collapsed: collapsed,
+            fontSize: _groupFontSize,
+            onTap: () => _leaveWhatsNewThen(
+                () => _scrollToBrowseGroup('', _watchListRowTitle)),
+          ),
         _SelectableRow(
           icon: Icons.apps,
           label: tr('All'),
@@ -5759,6 +5774,67 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     );
   }
 
+  /// Pseudo-group title of the browse "Watch list" row in
+  /// [_browseRowKeys] (playlistId ''), like [_favoritesRowTitle].
+  static const _watchListRowTitle = '__watch_list__';
+
+  void _watchListChanged() {
+    if (mounted) setState(() {});
+  }
+
+  /// This tab's titles on the viewer's watch list (Movies: IPTV movies,
+  /// TV Shows: IPTV shows), newest first.
+  List<WatchListItem> _watchListFor(String tab) => [
+        for (final i
+            in WatchList.instance.load(context.read<StorageService>()))
+          if (tab == 'Movies'
+              ? i.channel != null && !i.channel!.isLive
+              : i.series != null)
+            i
+      ];
+
+  /// Hold OK on a card in the Watch list row: off the list.
+  Future<void> _removeFromWatchList(WatchListItem item) async {
+    await WatchList.instance
+        .remove(context.read<StorageService>(), item.id);
+    if (!mounted) return;
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
+      content: Text(tr('Removed from watch list')),
+      duration: const Duration(seconds: 2),
+    ));
+  }
+
+  /// The "Watch list" row under Continue Watching (not in the Favourites
+  /// view): the viewer's own list, filled from a movie / show page's Watch
+  /// list button or by Vesper AI. Hold OK on a card takes it off.
+  Widget? _buildWatchListRow<T>({
+    required List<T> items,
+    required int rowIndex,
+    required Widget Function(T item, _FavoriteCardExtras extras) card,
+  }) {
+    if (items.isEmpty) return null;
+    final rowKey = _keyForGroup('', _watchListRowTitle);
+    return KeyedSubtree(
+      key: rowKey,
+      child: _CategoryRow<T>(
+        title: tr('Watch list'),
+        items: items,
+        itemBuilder: (item, index) => card(
+          item,
+          (
+            focusNode: index == 0
+                ? _firstPosterFocusNodeForGroup('', _watchListRowTitle)
+                : null,
+            onFocused: () {
+              _ensureRowVisible(rowKey);
+              _setFocusedBrowseRow(rowIndex);
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
   /// Pseudo-group title of the browse "Favourites" rows in
   /// [_browseRowKeys] (playlistId = the row's playlist), so they reuse the
   /// per-group row key / first-poster focus node machinery.
@@ -5889,10 +5965,47 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     final continueRow = _showFavorites
         ? null
         : _buildContinueWatchingRow(idPrefix: 'xt_vod_', onTap: _openMovie);
+    final watchItems = _showFavorites
+        ? const <WatchListItem>[]
+        : _watchListFor('Movies');
+    final watchRow = _buildWatchListRow<WatchListItem>(
+      items: watchItems,
+      rowIndex: continueRow != null ? 1 : 0,
+      card: (i, x) {
+        final c = i.channel!;
+        return PosterCard(
+          title: c.name,
+          imageUrl: c.logoUrl,
+          rating: c.rating,
+          watched: storage.isFullyWatched(c.id),
+          progressFraction: storage.getWatchedFraction(c.id),
+          cardWidth: _browsePosterWidth,
+          cardPosterHeight: _browsePosterHeight,
+          tapToPreview: _touchPreview,
+          focusNode: x.focusNode,
+          onToggleFavorite: () => _removeFromWatchList(i),
+          onTap: () => _openMovie(c),
+          onFocusGained: () {
+            _updateBrowseFocus(
+              playlist: playlist,
+              id: c.id,
+              title: c.name,
+              imageUrl: c.logoUrl,
+              backdropUrl: c.anyBackdropUrl,
+              backdropOf: () => c.anyBackdropUrl,
+              fetchDescription: () => playlist.getHeroVodDescription(c),
+            );
+            x.onFocused();
+          },
+        );
+      },
+    );
+    final aboveFavorites =
+        (continueRow != null ? 1 : 0) + (watchRow != null ? 1 : 0);
     final groupSuffix = _favoriteGroupSuffix(groupsWithItems);
     final favorites = _buildFavoritesBrowseRows<Channel>(
       items: _showFavorites ? playlist.favoriteMovies : const [],
-      firstRowIndex: continueRow != null ? 1 : 0,
+      firstRowIndex: aboveFavorites,
       playlistIdOf: (c) => c.playlistId,
       nameOf: (c) => c.name,
       card: (c, x) => PosterCard(
@@ -5922,12 +6035,13 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         },
       ),
     );
-    final topRows = (continueRow != null ? 1 : 0) + favorites.rows.length;
+    final topRows = aboveFavorites + favorites.rows.length;
     // See _browseRowKeys' doc comment — parallel to `rows` below, same
     // order (Continue Watching first when present, then Favourites, then
     // one entry per category), rebuilt fresh on every call.
     _browseRowKeys = [
       if (continueRow != null) null,
+      if (watchRow != null) (playlistId: '', title: _watchListRowTitle),
       ...favorites.keys,
       for (final group in groupsWithItems)
         (playlistId: group.playlistId, title: group.title),
@@ -5935,6 +6049,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     return _buildBrowseScaffold(
       rows: [
         if (continueRow != null) continueRow,
+        if (watchRow != null) watchRow,
         ...favorites.rows,
         for (final (groupIndex, group) in groupsWithItems.indexed)
           KeyedSubtree(
@@ -6040,6 +6155,42 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     final rowKeys = <({String playlistId, String title})?>[
       if (continueRow != null) null,
     ];
+    final watchRow = _buildWatchListRow<WatchListItem>(
+      items: _showFavorites
+          ? const <WatchListItem>[]
+          : _watchListFor('TV Shows'),
+      rowIndex: rows.length,
+      card: (i, x) {
+        final s = i.series!;
+        return PosterCard(
+          title: s.name,
+          imageUrl: s.coverUrl,
+          rating: s.rating,
+          cardWidth: _browsePosterWidth,
+          cardPosterHeight: _browsePosterHeight,
+          tapToPreview: _touchPreview,
+          focusNode: x.focusNode,
+          onToggleFavorite: () => _removeFromWatchList(i),
+          onTap: () => _openSeries(s),
+          onFocusGained: () {
+            _updateBrowseFocus(
+              playlist: playlist,
+              id: s.id,
+              title: s.name,
+              imageUrl: s.coverUrl,
+              backdropUrl: s.anyBackdropUrl,
+              backdropOf: () => s.anyBackdropUrl,
+              fetchDescription: () => playlist.getHeroSeriesDescription(s),
+            );
+            x.onFocused();
+          },
+        );
+      },
+    );
+    if (watchRow != null) {
+      rows.add(watchRow);
+      rowKeys.add((playlistId: '', title: _watchListRowTitle));
+    }
     final favorites = playlist.hasCatalogDb
         ? _buildFavoritesBrowseRows<XtreamSeries>(
             items: _showFavorites ? playlist.favoriteSeries : const [],

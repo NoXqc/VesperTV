@@ -27,6 +27,8 @@ import '../widgets/iptv_cast_panel.dart';
 import '../services/archive_discovery_service.dart';
 import '../widgets/detail_header.dart';
 import '../widgets/hold_to_activate.dart';
+import '../widgets/watch_list_button.dart';
+import '../services/vesper_ai/watch_list.dart';
 import 'desktop_player_screen.dart';
 import 'player_screen.dart';
 import '../utils/desktop_platform.dart';
@@ -77,6 +79,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   final _playNode = FocusNode(debugLabel: 'movie-play');
   final _restartNode = FocusNode(debugLabel: 'movie-restart');
   final _favNode = FocusNode(debugLabel: 'movie-fav');
+  final _watchListNode = FocusNode(debugLabel: 'movie-watch-list');
   final _castNode = FocusNode(debugLabel: 'movie-cast');
   final _castPortraitNode = FocusNode(debugLabel: 'movie-cast-portraits');
   bool get _canCast =>
@@ -135,6 +138,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       _playNode,
       _restartNode,
       _favNode,
+      _watchListNode,
       _castNode,
       _castPortraitNode
     ]) {
@@ -560,6 +564,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       _trailerNode,
       if (resume) _restartNode,
       _favNode,
+      _watchListNode,
       if (_castNames.isNotEmpty || _canCast) _castNode,
     ];
     void move(int delta) {
@@ -612,6 +617,12 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
               context.read<PlaylistManager>().isChannelFavorited(current.id),
           scale: s,
           onPressed: () => _toggleFavorite(current),
+          onFocused: _revealTop,
+        ),
+        WatchListButton(
+          item: WatchListItem(channel: current),
+          focusNode: _watchListNode,
+          scale: s,
           onFocused: _revealTop,
         ),
         if (_castNames.isNotEmpty || _canCast)

@@ -24,6 +24,7 @@ import '../widgets/roll_down_menu.dart';
 import '../widgets/tv_text_field_gate.dart';
 import '../services/app_preferences.dart';
 import 'archive_live_tv_screen.dart';
+import 'archive_watch_list_screen.dart';
 import 'archive_catalog_screen.dart';
 import 'archive_detail_screen.dart';
 import 'archive_playback.dart';
@@ -71,6 +72,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   final _railSearchNode = FocusNode(debugLabel: 'archive-rail-search');
   final _railShowsNode = FocusNode(debugLabel: 'archive-rail-shows');
   final _railLiveNode = FocusNode(debugLabel: 'archive-rail-live');
+  final _railWatchListNode = FocusNode(debugLabel: 'archive-rail-watch-list');
   final _railRefreshNode = FocusNode(debugLabel: 'archive-rail-refresh');
   final _railSourcesNode = FocusNode(debugLabel: 'archive-rail-sources');
   final _railServerNode = FocusNode(debugLabel: 'archive-rail-server');
@@ -241,6 +243,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     _railSearchNode.dispose();
     _railShowsNode.dispose();
     _railLiveNode.dispose();
+    _railWatchListNode.dispose();
     _railRefreshNode.dispose();
     _railSourcesNode.dispose();
     _railServerNode.dispose();
@@ -899,6 +902,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
       _firstRailNode,
       _railShowsNode,
       if (service.hasLiveTv) _railLiveNode,
+      _railWatchListNode,
       _railRefreshNode,
       _railSourcesNode,
       _railServerNode,
@@ -999,6 +1003,14 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                       label: tr('Live TV'),
                       onTap: _openLiveTv,
                     ),
+                  // Movies + TV Shows rows of this viewer's Media Hub
+                  // titles on the watch list.
+                  _railButton(
+                    node: _railWatchListNode,
+                    icon: Icons.bookmark_rounded,
+                    label: tr('Watch list'),
+                    onTap: _openWatchList,
+                  ),
                   _railDivider(),
                   _railButton(
                     node: _railRefreshNode,
@@ -1070,6 +1082,9 @@ class _ArchiveScreenState extends State<ArchiveScreen>
 
   void _openLiveTv() => Navigator.of(context)
       .push(MaterialPageRoute(builder: (_) => const ArchiveLiveTvScreen()));
+
+  void _openWatchList() => Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const ArchiveWatchListScreen()));
 
   Future<void> _openTypeMenu() async {
     final picked = await showRollDownMenu<ArchiveType>(
@@ -1354,6 +1369,12 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     final genre = service.genre(_type);
     final query = service.searchQuery(_type);
     final items = <(IconData, String, bool, Future<void> Function())>[
+      (
+        Icons.bookmark_rounded,
+        tr('Watch list'),
+        false,
+        () async => _openWatchList()
+      ),
       if (service.genres(_type).isNotEmpty)
         (
           Icons.category_outlined,

@@ -38,6 +38,8 @@ import '../widgets/hd_network_image.dart';
 import '../widgets/hold_to_activate.dart';
 import '../widgets/tv_dialog_option.dart';
 import '../widgets/sports_widgets.dart' show SportsRowArrows;
+import '../services/vesper_ai/watch_list.dart';
+import '../widgets/watch_list_button.dart';
 import 'desktop_player_screen.dart';
 import 'player_screen.dart';
 import '../utils/desktop_platform.dart';
@@ -74,7 +76,13 @@ class SeriesDetailScreen extends StatefulWidget {
     this.discoveryBuilder,
     this.castDiscovery,
     this.followTarget,
+    this.watchListItem,
   });
+
+  /// The Watch list button's entry for a Media Hub show (its source + meta).
+  /// IPTV shows build theirs from [series]; null with [loadEpisodes] set =
+  /// no button.
+  final WatchListItem? watchListItem;
 
   /// "Notify me" for a Media Hub show (its source + meta). IPTV shows build
   /// theirs from [series]; null with [loadEpisodes] set = no button.
@@ -143,6 +151,11 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   final _restartNode = FocusNode(debugLabel: 'series-restart');
   final _favNode = FocusNode(debugLabel: 'series-fav');
   final _notifyNode = FocusNode(debugLabel: 'series-notify');
+  final _watchListNode = FocusNode(debugLabel: 'series-watch-list');
+
+  WatchListItem? get _watchListItem =>
+      widget.watchListItem ??
+      (widget.loadEpisodes == null ? WatchListItem(series: widget.series) : null);
   final _castNode = FocusNode(debugLabel: 'series-cast');
   bool _showCast = false;
   final Map<int, FocusNode> _seasonNodes = {};
@@ -298,6 +311,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
       _restartNode,
       _favNode,
       _notifyNode,
+      _watchListNode,
       _castNode,
       ..._seasonNodes.values,
       ..._episodeNodes.values,
@@ -1103,12 +1117,14 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     final alerts = _alerts(listen: true);
     final follow = alerts == null ? null : _followTarget();
     final following = follow != null && alerts!.isFollowing(follow.key);
+    final watchItem = _watchListItem;
     final nodes = <FocusNode>[
       if (next != null) _playNode,
       _trailerNode,
       if (next != null && next.resume) _restartNode,
       if (widget.showFavorite) _favNode,
       if (follow != null) _notifyNode,
+      if (watchItem != null) _watchListNode,
       if (_castNames.isNotEmpty || _canCast) _castNode,
     ];
     void move(int delta) {
@@ -1179,6 +1195,13 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
           selected: following,
           scale: s,
           onPressed: () => _toggleNotify(follow),
+          onFocused: _revealTop,
+        ),
+      if (watchItem != null)
+        WatchListButton(
+          item: watchItem,
+          focusNode: _watchListNode,
+          scale: s,
           onFocused: _revealTop,
         ),
       if (_castNames.isNotEmpty || _canCast)

@@ -83,7 +83,11 @@ class VesperToolbox {
     required this.storage,
     required this.prefs,
     required this.host,
+    this.findHubTitle,
   });
+
+  /// Media Hub search by title for the watch list (null = no Media Hub).
+  final Future<HubTitle?> Function(String name)? findHubTitle;
 
   final PlaylistManager playlist;
   final PlaybackService playback;
@@ -103,12 +107,14 @@ class VesperToolbox {
     final key = switch (item) {
       Channel c => '${c.isLive ? 'l' : 'm'}:${c.id}',
       XtreamSeries s => 's:${s.playlistId}:${s.id}',
+      HubTitle h => 'h:${h.key}',
       _ => '$item',
     };
     final existing = _refOf[key];
     if (existing != null) return existing;
     final prefix = switch (item) {
       Channel c => c.isLive ? 'l' : 'm',
+      HubTitle _ => 'h',
       _ => 's',
     };
     final ref = '$prefix${_nextRef++}';
@@ -899,11 +905,13 @@ final List<VesperTool> vesperTools = [
   VesperTool(
     name: 'watchlist',
     description:
-        'The viewer\'s watch list (shown as a row on the Home page): list '
-        'it, add or remove titles (a ref from search, a name, or "current" '
-        'for what is playing), or clear it. Use it for lists like "a movie '
-        'night list for Friday": search, then add each pick with a short '
-        'note.',
+        'The viewer\'s watch list (a row on the Home page, in Movies / TV '
+        'Shows and a page in Media Hub): list it, add or remove titles (a ref '
+        'from search or from this list, a name, or "current" for what is '
+        'playing), or clear it. Titles come from the IPTV playlists or from '
+        'Media Hub (source: "media_hub"); by name, the playlists are tried '
+        'first, then Media Hub. Use it for lists like "a movie night list for '
+        'Friday": search, then add each pick with a short note.',
     schema: {
       'type': 'object',
       'properties': {
@@ -915,6 +923,11 @@ final List<VesperTool> vesperTools = [
         'name': {
           'type': 'string',
           'description': 'Title name when there is no ref.'
+        },
+        'source': {
+          'type': 'string',
+          'enum': ['iptv', 'media_hub'],
+          'description': 'For a name: only look there.'
         },
         'note': {
           'type': 'string',
@@ -931,9 +944,10 @@ final List<VesperTool> vesperTools = [
           'watchlist': [
             for (final i in list.load(box.storage))
               {
-                'ref': box.refFor((i.channel ?? i.series)!),
+                'ref': box.refFor((i.channel ?? i.series ?? i.hub)!),
                 'title': i.title,
                 'kind': i.kind,
+                if (i.hub != null) 'source': 'Media Hub',
                 if (i.note != null) 'note': i.note,
               }
           ]
@@ -946,18 +960,47 @@ final List<VesperTool> vesperTools = [
       }
       final ref = _str(args, 'ref');
       final name = _str(args, 'name');
+      final source = _str(args, 'source');
+      final note = _str(args, 'note');
+      // Removing by name: what is on the list wins over a fresh search.
+      if (action == 'remove' && ref.isEmpty && name.isNotEmpty) {
+        final want = name.toLowerCase();
+        final saved = list.load(box.storage);
+        final hit = saved
+                .where((i) => i.title.toLowerCase() == want)
+                .firstOrNull ??
+            saved
+                .where((i) => i.title.toLowerCase().contains(want))
+                .firstOrNull;
+        if (hit != null) {
+          await list.remove(box.storage, hit.id);
+          return {'removed': true, 'title': hit.title};
+        }
+      }
       Object? item = ref == 'current'
           ? box.playback.liveChannel
           : (ref.isNotEmpty ? box.lookup(ref) : null);
-      if (item == null && name.isNotEmpty) {
+      if (item == null && name.isNotEmpty && source != 'media_hub') {
         item = (await box.findMovies(name, limit: 1)).firstOrNull ??
             (await box.findSeries(name, limit: 1)).firstOrNull ??
             box.findM3uShows(name, limit: 1).firstOrNull ??
-            (await box.findLive(name, limit: 1)).firstOrNull;
+            (source == 'iptv'
+                ? (await box.findLive(name, limit: 1)).firstOrNull
+                : null);
+      }
+      if (item == null &&
+          name.isNotEmpty &&
+          source != 'iptv' &&
+          box.findHubTitle != null) {
+        item = await box.findHubTitle!(name);
+      }
+      if (item == null && name.isNotEmpty && source.isEmpty) {
+        item = (await box.findLive(name, limit: 1)).firstOrNull;
       }
       final entry = switch (item) {
-        Channel c => WatchListItem(channel: c, note: _str(args, 'note')),
-        XtreamSeries s => WatchListItem(series: s, note: _str(args, 'note')),
+        Channel c => WatchListItem(channel: c, note: note),
+        XtreamSeries s => WatchListItem(series: s, note: note),
+        HubTitle h => WatchListItem(hub: h, note: note),
         _ => null,
       };
       if (entry == null) throw VesperToolError('Which title? Search first.');
@@ -969,6 +1012,7 @@ final List<VesperTool> vesperTools = [
       return {
         'added': added,
         'title': entry.title,
+        if (entry.hub != null) 'source': 'Media Hub',
         if (!added) 'note': 'Already on the watch list.',
       };
     },
