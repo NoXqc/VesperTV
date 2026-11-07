@@ -2911,6 +2911,16 @@ const Map<String, String> kFr = {
       "Avec votre IA, ou depuis Claude / ChatGPT :",
   "\"make me a movie night list for Friday\" (it goes on your watch list on Home) · \"hide every Turkish group\" · \"what crime shows do I have?\" · \"is the Leafs game on, and on which channel?\" · \"play the newest episode of something like Severance\" · \"pause the TV\" · \"tell the TV dinner is ready\"":
       "« fais-moi une liste de films pour vendredi » (elle va dans votre liste sur l'Accueil) · « masque tous les groupes turcs » · « quelles séries policières j'ai? » · « le match des Leafs joue-t-il, et sur quelle chaîne? » · « mets quelque chose comme Severance » · « mets la télé sur pause » · « dis à la télé que le souper est prêt »",
+  "Added to watch list":
+      "Ajouté à la liste à regarder",
+  "Removed from watch list":
+      "Retiré de la liste à regarder",
+  "This title's Media Hub source is not available.":
+      "La source Media Hub de ce titre n'est pas disponible.",
+  "Nothing on your watch list yet. Open a movie or show and choose Watch list.":
+      "Rien dans votre liste à regarder pour l'instant. Ouvrez un film ou une série et choisissez Liste à regarder.",
+  "Hold OK on a title to take it off the list.":
+      "Maintenez OK sur un titre pour le retirer de la liste.",
   "Watch list":
       "Liste à regarder",
   "Remove from watch list":

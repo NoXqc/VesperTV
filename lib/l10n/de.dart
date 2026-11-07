@@ -2801,6 +2801,16 @@ const Map<String, String> kDe = {
       "Mit deiner KI oder aus Claude / ChatGPT:",
   "\"make me a movie night list for Friday\" (it goes on your watch list on Home) · \"hide every Turkish group\" · \"what crime shows do I have?\" · \"is the Leafs game on, and on which channel?\" · \"play the newest episode of something like Severance\" · \"pause the TV\" · \"tell the TV dinner is ready\"":
       "„mach mir eine Filmliste für Freitag“ (landet auf deiner Merkliste auf der Startseite) · „blende alle türkischen Gruppen aus“ · „welche Krimiserien habe ich?“ · „läuft das Bayern-Spiel, und auf welchem Sender?“ · „spiel etwas wie Severance“ · „pausiere den Fernseher“ · „sag dem Fernseher, dass das Essen fertig ist“",
+  "Added to watch list":
+      "Zur Merkliste hinzugefügt",
+  "Removed from watch list":
+      "Von der Merkliste entfernt",
+  "This title's Media Hub source is not available.":
+      "Die Media-Hub-Quelle dieses Titels ist nicht verfügbar.",
+  "Nothing on your watch list yet. Open a movie or show and choose Watch list.":
+      "Deine Merkliste ist noch leer. Öffne einen Film oder eine Serie und wähle Merkliste.",
+  "Hold OK on a title to take it off the list.":
+      "Halte OK auf einem Titel gedrückt, um ihn von der Liste zu entfernen.",
   "Watch list":
       "Merkliste",
   "Remove from watch list":

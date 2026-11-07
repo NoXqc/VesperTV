@@ -24,6 +24,7 @@ import '../services/tracker_api.dart';
 import '../services/archive_ready_watch.dart';
 import '../services/stream_resolver.dart';
 import '../services/watch_tracker.dart';
+import '../services/vesper_ai/watch_list.dart';
 import '../widgets/archive_stream_picker.dart';
 import '../services/archive_stream_session.dart';
 import '../services/archive_playback_preferences.dart';
@@ -480,6 +481,8 @@ Future<void> openArchiveSeries(
             showFavorite: false,
             imdbId: preview.imdb,
             sourceLabel: source.name,
+            watchListItem: WatchListItem(
+                hub: HubTitle(source.manifestUrl, preview)),
             followTarget: () => FollowedShow(
                 key: FollowedShow.hubKey(source.manifestUrl, preview.id),
                 title: preview.name,

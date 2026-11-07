@@ -2860,6 +2860,16 @@ const Map<String, String> kEl = {
       "Με τη δική σου AI ή από το Claude / ChatGPT:",
   "\"make me a movie night list for Friday\" (it goes on your watch list on Home) · \"hide every Turkish group\" · \"what crime shows do I have?\" · \"is the Leafs game on, and on which channel?\" · \"play the newest episode of something like Severance\" · \"pause the TV\" · \"tell the TV dinner is ready\"":
       "«κάνε μου λίστα ταινιών για την Παρασκευή» (μπαίνει στη λίστα σου στην Αρχική) · «κρύψε όλες τις τουρκικές ομάδες» · «τι αστυνομικές σειρές έχω;» · «παίζει ο Ολυμπιακός, και σε ποιο κανάλι;» · «βάλε κάτι σαν το Severance» · «κάνε παύση στην τηλεόραση» · «πες στην τηλεόραση ότι το φαγητό είναι έτοιμο»",
+  "Added to watch list":
+      "Προστέθηκε στη λίστα παρακολούθησης",
+  "Removed from watch list":
+      "Αφαιρέθηκε από τη λίστα παρακολούθησης",
+  "This title's Media Hub source is not available.":
+      "Η πηγή Media Hub αυτού του τίτλου δεν είναι διαθέσιμη.",
+  "Nothing on your watch list yet. Open a movie or show and choose Watch list.":
+      "Η λίστα παρακολούθησης είναι ακόμα άδεια. Ανοίξτε μια ταινία ή σειρά και επιλέξτε Λίστα παρακολούθησης.",
+  "Hold OK on a title to take it off the list.":
+      "Κρατήστε πατημένο το OK σε έναν τίτλο για να τον αφαιρέσετε από τη λίστα.",
   "Watch list":
       "Λίστα παρακολούθησης",
   "Remove from watch list":

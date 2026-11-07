@@ -87,6 +87,7 @@ import 'services/vesper_ai/mcp_bridge.dart';
 import 'services/vesper_ai/vesper_ai.dart';
 import 'services/vesper_ai/vesper_tools.dart';
 import 'services/vesper_ai/voice_input.dart';
+import 'services/vesper_ai/watch_list.dart';
 import 'services/vesper_ai/voice_key.dart';
 import 'screens/vesper_ai/vesper_bubble.dart';
 import 'screens/vesper_ai/vesper_host.dart';
@@ -759,6 +760,12 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         epg: _epgService,
         storage: _storage,
         prefs: _preferences,
+        findHubTitle: (name) async {
+          final found = await _archiveService.findTitle(name);
+          return found == null
+              ? null
+              : HubTitle(found.$1.manifestUrl, found.$2);
+        },
         host: AppVesperHost(
             navigatorKey: _navigatorKey,
             playback: _playbackService,

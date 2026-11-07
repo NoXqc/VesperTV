@@ -142,6 +142,7 @@ void main() {
     for (final label in [
       'Movies',
       'TV Shows',
+      'Watch list',
       'Refresh',
       'Media Hub sources',
       'Connect Jellyfin / Emby'
@@ -172,12 +173,12 @@ void main() {
         isTrue);
     await tester.sendKeyRepeatEvent(LogicalKeyboardKey.arrowDown);
     await tester.pumpAndSettle();
-    expect(
-        Focus.of(tester.element(find.text('Refresh'))).hasPrimaryFocus, isTrue);
+    expect(Focus.of(tester.element(find.text('Watch list'))).hasPrimaryFocus,
+        isTrue);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowDown);
     await tester.pumpAndSettle();
-    expect(
-        Focus.of(tester.element(find.text('Refresh'))).hasPrimaryFocus, isTrue);
+    expect(Focus.of(tester.element(find.text('Watch list'))).hasPrimaryFocus,
+        isTrue);
     await tester.pumpWidget(const SizedBox());
     service.dispose();
   });
@@ -212,8 +213,8 @@ void main() {
         isTrue);
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pumpAndSettle();
-    expect(
-        Focus.of(tester.element(find.text('Refresh'))).hasPrimaryFocus, isTrue);
+    expect(Focus.of(tester.element(find.text('Watch list'))).hasPrimaryFocus,
+        isTrue);
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pumpAndSettle();
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
@@ -221,8 +222,8 @@ void main() {
     expect(FocusManager.instance.primaryFocus?.debugLabel, 'archive-bar-row');
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.pumpAndSettle();
-    expect(
-        Focus.of(tester.element(find.text('Refresh'))).hasPrimaryFocus, isTrue);
+    expect(Focus.of(tester.element(find.text('Watch list'))).hasPrimaryFocus,
+        isTrue);
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
     await tester.pumpAndSettle();
     expect(Focus.of(tester.element(find.text('TV Shows'))).hasPrimaryFocus,
@@ -238,6 +239,7 @@ void main() {
         await _pump(tester, size: const Size(960, 360), textScale: 1.6);
     for (final label in [
       'TV Shows',
+      'Watch list',
       'Refresh',
       'Media Hub sources',
       'Connect Jellyfin / Emby'
@@ -254,6 +256,7 @@ void main() {
     for (final label in [
       'Media Hub sources',
       'Refresh',
+      'Watch list',
       'TV Shows',
       'Movies',
       'Search'

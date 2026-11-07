@@ -15,6 +15,8 @@ import '../services/storage_service.dart';
 import '../services/tracker_sync.dart';
 import '../widgets/cast_bubbles.dart';
 import '../widgets/detail_header.dart';
+import '../widgets/watch_list_button.dart';
+import '../services/vesper_ai/watch_list.dart';
 import 'archive_playback.dart';
 import '../utils/desktop_platform.dart';
 
@@ -53,6 +55,7 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
   final _restartNode = FocusNode(debugLabel: 'archive-restart');
   final _discoveryNode = FocusNode(debugLabel: 'archive-discovery');
   final _castNode = FocusNode(debugLabel: 'archive-cast');
+  final _watchListNode = FocusNode(debugLabel: 'archive-watch-list');
   final _pageScroll = ScrollController();
   bool _showCast = false;
 
@@ -94,6 +97,7 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
     _playNode.dispose();
     _restartNode.dispose();
     _castNode.dispose();
+    _watchListNode.dispose();
     _discoveryNode.dispose();
     _pageScroll.dispose();
     super.dispose();
@@ -306,6 +310,12 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
               scale: 1,
               onPressed: () => _play(restart: true),
             ),
+          WatchListButton(
+            item: WatchListItem(
+                hub: HubTitle(widget.source.manifestUrl, meta)),
+            focusNode: _watchListNode,
+            scale: 1,
+          ),
           if (meta.cast.isNotEmpty)
             DetailPillButton(
               focusNode: _castNode,

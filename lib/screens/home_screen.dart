@@ -28,6 +28,7 @@ import '../utils/time_format.dart';
 import '../widgets/hd_network_image.dart';
 import '../widgets/hold_to_activate.dart';
 import '../widgets/tv_dialog_option.dart';
+import 'archive_detail_screen.dart';
 import 'archive_playback.dart';
 import 'desktop_player_screen.dart';
 import 'movie_detail_screen.dart';
@@ -505,6 +506,26 @@ class _HomeScreenState extends State<HomeScreen> {
     await openArchiveSeries(ctx, source, meta);
   }
 
+  /// A Media Hub title on the watch list, through its source.
+  Future<void> _openHubTitle(BuildContext ctx, HubTitle title) async {
+    ArchiveSource? source;
+    for (final s in ctx.read<ArchiveService>().enabledSources) {
+      if (s.manifestUrl == title.sourceUrl) source = s;
+    }
+    if (source == null) {
+      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+          content: Text(tr("This title's Media Hub source is not available."))));
+      return;
+    }
+    if (title.meta.type == ArchiveType.series) {
+      await openArchiveSeries(ctx, source, title.meta);
+    } else {
+      await Navigator.of(ctx).push(MaterialPageRoute(
+          builder: (_) =>
+              ArchiveDetailScreen(source: source!, preview: title.meta)));
+    }
+  }
+
   _HomeItem _channelItem(Channel c, EpgService epg, String prefix) {
     final now = epg.getCurrentProgram(c.epgId);
     return _HomeItem(
@@ -534,13 +555,12 @@ class _HomeScreenState extends State<HomeScreen> {
           key: 'wl:${i.id}',
           title: i.title,
           subtitle: i.note,
-          imageUrl: i.series != null
-              ? (i.series!.posterUrl ?? i.series!.coverUrl)
-              : (i.channel!.posterUrl ?? i.channel!.logoUrl),
-          backdropUrl: i.series?.anyBackdropUrl ?? i.channel?.anyBackdropUrl,
+          imageUrl: i.posterUrl,
+          backdropUrl: i.backdropUrl,
           removeFromHistory: () => list.remove(storage, i.id),
           removeLabel: 'Remove from watch list',
           open: (ctx) {
+            if (i.hub case final h?) return _openHubTitle(ctx, h);
             if (i.series case final s?) {
               return Navigator.of(ctx).push(MaterialPageRoute(
                   builder: (_) => SeriesDetailScreen(series: s)));

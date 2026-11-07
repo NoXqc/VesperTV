@@ -864,6 +864,18 @@ class ArchiveService extends ChangeNotifier {
     }
   }
 
+  /// The best Media Hub match for [name] (movies first, then shows; never
+  /// Other titles): what Vesper AI's watch list adds by name. Null when
+  /// nothing matches.
+  Future<(ArchiveSource, ArchiveMeta)?> findTitle(String name) async {
+    for (final type in ArchiveType.values) {
+      for (final row in await searchRows(type, name, underOther: false)) {
+        if (row.items.isNotEmpty) return (row.source, row.items.first);
+      }
+    }
+    return null;
+  }
+
   /// Incremental provider results, with bounded work and stale-request guards.
   /// The returned list remains in configured source order for non-UI callers.
   Future<List<ArchiveRow>> searchRows(ArchiveType type, String q,
