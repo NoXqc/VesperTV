@@ -1,4 +1,4 @@
-# macOS build: an unsigned VesperTV.app, zipped, as a workflow artifact.
+# macOS build: an unsigned VesperTV.app, zipped, plus a plain DMG, as workflow artifacts.
 # Lets the project produce Mac builds without owning a Mac.
 #
 # Not a release asset on purpose: Windows builds older than the per-platform
@@ -36,10 +36,26 @@ jobs:
         run: |
           cd build/macos/Build/Products/Release
           ditto -c -k --keepParent VesperTV.app "$GITHUB_WORKSPACE/VesperTV-macos.zip"
+      - name: Make the DMG
+        # Plain drag-to-Applications layout. The styled black + gold one
+        # (tools/macos_dmg/build.sh) lays its window out through Finder, which
+        # needs a GUI session the runner doesn't have: build that one on a Mac.
+        run: |
+          version="$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)"
+          mkdir -p dmg-src
+          ditto build/macos/Build/Products/Release/VesperTV.app dmg-src/VesperTV.app
+          ln -s /Applications dmg-src/Applications
+          hdiutil create -volname "VesperTV $version" -srcfolder dmg-src \
+            -format UDZO -ov "VesperTV-$version-macos.dmg"
+          hdiutil verify "VesperTV-$version-macos.dmg"
       - uses: actions/upload-artifact@v4
         with:
           name: VesperTV-macos
           path: VesperTV-macos.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VesperTV-macos-dmg
+          path: VesperTV-*-macos.dmg
       - uses: actions/upload-artifact@v4
         if: always()
         with:
