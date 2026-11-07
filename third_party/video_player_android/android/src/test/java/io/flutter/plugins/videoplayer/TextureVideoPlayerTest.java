@@ -13,6 +13,7 @@ import androidx.media3.common.AudioAttributes;
 import androidx.media3.common.C;
 import androidx.media3.common.PlaybackParameters;
 import androidx.media3.common.Player;
+import androidx.media3.common.Tracks;
 import androidx.media3.common.VideoSize;
 import androidx.media3.exoplayer.ExoPlayer;
 import io.flutter.plugins.videoplayer.texture.TextureVideoPlayer;
@@ -57,6 +58,9 @@ public final class TextureVideoPlayerTest {
     fakeVideoAsset = new FakeVideoAsset(FAKE_ASSET_URL);
     when(mockProducer.getSurface()).thenReturn(mock(Surface.class));
     when(mockProducer.handlesCropAndRotation()).thenReturn(true);
+    // A real ExoPlayer never returns null tracks; the mock would, and the
+    // listener reads them when the video format is still unknown.
+    lenient().when(mockExoPlayer.getCurrentTracks()).thenReturn(Tracks.EMPTY);
   }
 
   private VideoPlayer createVideoPlayer() {
@@ -130,8 +134,10 @@ public final class TextureVideoPlayerTest {
 
     // Pretend we have a video, and capture the registered event listener.
     when(mockExoPlayer.getVideoSize()).thenReturn(new VideoSize(300, 200));
-    verify(mockExoPlayer).addListener(listenerCaptor.capture());
-    Player.Listener listener = listenerCaptor.getValue();
+    // VideoPlayer also registers its live queue and stall counter: the
+    // event listener is the first one.
+    verify(mockExoPlayer, atLeastOnce()).addListener(listenerCaptor.capture());
+    Player.Listener listener = listenerCaptor.getAllValues().get(0);
 
     // Trigger an event that would trigger onInitialized.
     listener.onPlaybackStateChanged(Player.STATE_READY);
@@ -154,8 +160,10 @@ public final class TextureVideoPlayerTest {
     verify(mockProducer).setCallback(callbackCaptor.capture());
     TextureRegistry.SurfaceProducer.Callback producerLifecycle = callbackCaptor.getValue();
 
-    verify(mockExoPlayer).addListener(listenerCaptor.capture());
-    Player.Listener listener = listenerCaptor.getValue();
+    // VideoPlayer also registers its live queue and stall counter: the
+    // event listener is the first one.
+    verify(mockExoPlayer, atLeastOnce()).addListener(listenerCaptor.capture());
+    Player.Listener listener = listenerCaptor.getAllValues().get(0);
 
     // Trigger ready state, which should trigger initialization.
     listener.onPlaybackStateChanged(Player.STATE_READY);
