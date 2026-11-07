@@ -119,7 +119,8 @@ void main() {
       final service = SportsService.forTesting(client);
       expect(await service.gamesForDay([league], day), isEmpty);
       expect(service.hasReliableSchedule(league, day), known);
-      expect(requests, 1);
+      // One per UTC date the local day spans (two away from UTC).
+      expect(requests, SportsService.sportsDbDatesFor(day).length);
     }
   });
 

@@ -64,7 +64,8 @@ class SportsService {
   bool hasReliableSchedule(SportsLeague league, DateTime day) {
     if (league.isCfl) return _cflScheduleKnown;
     final local = DateTime(day.year, day.month, day.day);
-    final dates = league.sportsDbId != null ? [local] : _aroundDay(local);
+    final dates =
+        league.sportsDbId != null ? sportsDbDatesFor(local) : _aroundDay(local);
     return dates.every((date) {
       final key = '${league.id}|${_espnDate(date)}';
       return !_failedScheduleKeys.contains(key) &&
@@ -91,6 +92,28 @@ class SportsService {
         DateTime(day.year, day.month, day.day + 1),
       ];
 
+  /// The UTC calendar dates TheSportsDB files the local day [day] under
+  /// (it buckets by UTC date). Two away from UTC: in the Americas an
+  /// evening start is the next UTC date — Raw at 7 pm Eastern is `00:00Z`
+  /// the day after, so fetching the local date alone never showed WWE/AEW
+  /// shows or evening boxing cards (user report, 2026-11-07).
+  static List<DateTime> sportsDbDatesFor(DateTime day) => utcDatesBetween(
+      DateTime(day.year, day.month, day.day),
+      DateTime(day.year, day.month, day.day + 1));
+
+  /// The UTC dates of every instant in [start, end), as plain dates.
+  @visibleForTesting
+  static List<DateTime> utcDatesBetween(DateTime start, DateTime end) {
+    DateTime date(DateTime t) {
+      final u = t.toUtc();
+      return DateTime(u.year, u.month, u.day);
+    }
+
+    final first = date(start);
+    final last = date(end.subtract(const Duration(milliseconds: 1)));
+    return first == last ? [first] : [first, last];
+  }
+
   Future<List<SportsGame>> gamesForDay(
       List<SportsLeague> leagues, DateTime day) async {
     final local = DateTime(day.year, day.month, day.day);
@@ -101,10 +124,10 @@ class SportsService {
         if (league.isCfl)
           _cflGames()
         else
-          // TheSportsDB: the local date only (its rate limit). It buckets by
-          // UTC date, which is the local one for European kick-offs here and
-          // in the Americas; a viewer far east loses the evening games.
-          for (final d in league.sportsDbId != null ? [local] : dates)
+          // TheSportsDB: only the UTC dates the local day spans (its rate
+          // limit), not three days like ESPN.
+          for (final d
+              in league.sportsDbId != null ? sportsDbDatesFor(local) : dates)
             _fetch(league, d),
     ]);
     final seen = <String>{};
