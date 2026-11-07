@@ -47,6 +47,8 @@ jobs:
           flutter-version: 3.47.9
           cache: true
       - run: flutter pub get
+      # android/gradlew is git-ignored: let Flutter generate the wrapper.
+      - run: flutter build apk --config-only
       - name: Native player tests
         working-directory: android
         run: ./gradlew :video_player_android:testDebugUnitTest
