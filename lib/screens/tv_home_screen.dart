@@ -39,6 +39,7 @@ import '../services/storage_service.dart';
 import '../services/viewer_profile_service.dart';
 import '../utils/scroll_safety.dart';
 import '../utils/live_group_sort.dart';
+import '../utils/favorite_live_sort.dart';
 import '../utils/time_format.dart';
 import '../utils/constants.dart';
 import '../utils/display_title.dart';
@@ -868,6 +869,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// hold has only ever meant one thing.
   Future<void> _showChannelOptions(Channel channel) async {
     final playlist = context.read<PlaylistManager>();
+    final menuViewer = context.read<StorageService>().getActiveViewerId();
     final isFavorited = channel.isFavorite;
     final isHidden = playlist.isChannelHidden(channel);
     // Favourites has its own order across groups/playlists. Filtered rows
@@ -960,6 +962,11 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               onPressed: () => Navigator.of(context).pop('move'),
               child: Text(tr('Move Up / Down')),
             ),
+          if (group == _favoritesGroupSentinel && _mixFavorites)
+            TvDialogOption(
+              onPressed: () => Navigator.of(context).pop('sortFavorites'),
+              child: Text(tr('Sort favourites')),
+            ),
           TvDialogOption(
             onPressed: () => Navigator.of(context).pop('group'),
             child: Text(tr('Move to group…')),
@@ -1005,6 +1012,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
 
     if (!mounted) return;
     switch (choice) {
+      case 'sortFavorites':
+        await _sortFavoriteChannels(menuViewer);
       case 'live':
         await playbackNow.backToLive();
         if (mounted) _timelineGuideKey.currentState?.backToNow();
@@ -1051,6 +1060,51 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         }
         _toggleHiddenWithFeedback(context, channel);
     }
+  }
+
+  Future<void> _sortFavoriteChannels(String viewer) async {
+    final storage = context.read<StorageService>();
+    final playlist = context.read<PlaylistManager>();
+    bool stillHere() =>
+        mounted &&
+        storage.getActiveViewerId() == viewer &&
+        _mixFavorites &&
+        _effectiveLiveGroup(playlist) == _favoritesGroupSentinel;
+    if (!stillHere()) return;
+    final choice = await showGlassMenu<FavoriteLiveSort>(
+      context: context,
+      builder: (context) => GlassMenuDialog(
+        title: Text(tr('Sort favourites')),
+        children: [
+          for (final (sort, label) in const [
+            (FavoriteLiveSort.aToZ, 'Name A–Z'),
+            (FavoriteLiveSort.zToA, 'Name Z–A'),
+            (FavoriteLiveSort.original, 'Revert to original order'),
+          ])
+            TvDialogOption(
+              autofocus: playlist.favoriteLiveSort == sort,
+              onPressed: () => Navigator.of(context).pop(sort),
+              child: Text(tr(label)),
+            ),
+        ],
+      ),
+    );
+    if (choice == null || !stillHere()) return;
+    _endChannelMove();
+    await playlist.setFavoriteLiveSort(choice);
+    if (!stillHere()) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!stillHere()) return;
+      if (context.read<AppPreferences>().guideViewMode == 'timeline') {
+        final channels = _filteredLiveChannelsForGuide(playlist);
+        if (channels.isNotEmpty) {
+          _timelineGuideKey.currentState
+              ?.restoreFocusToChannel(channels.first.id);
+        }
+      } else {
+        _resetLiveListFocus();
+      }
+    });
   }
 
   /// Hold OK on a channel → Record: from now to the end of the guide's

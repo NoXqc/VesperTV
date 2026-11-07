@@ -1210,8 +1210,16 @@ class StorageService {
   /// Live Favourites order across playlists (per viewer).
   List<String> getFavoriteLiveOrder() =>
       _prefs.getStringList(_vk(AppConstants.keyFavoriteLiveOrder)) ?? [];
-  Future<void> setFavoriteLiveOrder(List<String> ids) async =>
-      _prefs.setStringList(_vk(AppConstants.keyFavoriteLiveOrder), ids);
+  Future<void> setFavoriteLiveOrder(List<String> ids,
+          {String? viewerId}) async =>
+      _prefs.setStringList(
+          _vk(AppConstants.keyFavoriteLiveOrder, viewerId: viewerId), ids);
+
+  String? getFavoriteLiveSort() =>
+      _prefs.getString(_vk(AppConstants.keyFavoriteLiveSort));
+  Future<void> setFavoriteLiveSort(String value, {String? viewerId}) async =>
+      _prefs.setString(
+          _vk(AppConstants.keyFavoriteLiveSort, viewerId: viewerId), value);
 
   // --- Search history (per viewer) ------------------------------------------
 
@@ -1709,6 +1717,7 @@ class StorageService {
     AppConstants.keyFavoriteSeries,
     AppConstants.keyFavoritedGroups,
     AppConstants.keyFavoriteLiveOrder,
+    AppConstants.keyFavoriteLiveSort,
     AppConstants.keyMyGroups,
     AppConstants.keyHiddenGroups,
     AppConstants.keyShownGroups,

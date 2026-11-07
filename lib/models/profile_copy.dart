@@ -9,6 +9,7 @@ const profileCopyKeys = <ProfileCopy, Set<String>>{
     AppConstants.keyFavorites,
     AppConstants.keyFavoriteSeries,
     AppConstants.keyFavoriteLiveOrder,
+    AppConstants.keyFavoriteLiveSort,
     AppConstants.keyArchiveFavorites
   },
   ProfileCopy.history: {

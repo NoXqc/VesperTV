@@ -2936,4 +2936,6 @@ const Map<String, String> kIt = {
       "Guida elenca le partite del giorno sotto il confronto, una per riga, con la lega, il punteggio o l'orario e il canale. Scorrendo le leghe a sinistra si vedono le loro partite. OK guarda, OK di nuovo va a schermo intero, tieni premuto OK apre il menu della partita. Schede resta l'impostazione predefinita. Salvato per questo spettatore.",
   "OK: watch  ·  OK again: full screen  ·  Hold OK: game menu":
       "OK: guarda  ·  OK di nuovo: schermo intero  ·  Tieni premuto OK: menu partita",
+  "Sort favourites": "Ordina preferiti",
+  "Revert to original order": "Ripristina l’ordine originale",
 };

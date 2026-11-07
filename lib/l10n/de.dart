@@ -2832,4 +2832,6 @@ const Map<String, String> kDe = {
       "Guide zeigt die Spiele des Tages unter der Paarung, eins pro Zeile, mit Liga, Spielstand oder Anstoßzeit und Sender. Beim Durchgehen der Ligen links erscheinen ihre Spiele. OK schaut, nochmal OK geht in den Vollbildmodus, OK gedrückt halten öffnet das Spielmenü. Karten bleibt die Voreinstellung. Für diesen Zuschauer gespeichert.",
   "OK: watch  ·  OK again: full screen  ·  Hold OK: game menu":
       "OK: schauen  ·  Nochmal OK: Vollbild  ·  OK halten: Spielmenü",
+  "Sort favourites": "Favoriten sortieren",
+  "Revert to original order": "Ursprüngliche Reihenfolge wiederherstellen",
 };

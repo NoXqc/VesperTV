@@ -2942,4 +2942,6 @@ const Map<String, String> kFr = {
       "Guide liste les matchs du jour sous l'affiche, un par ligne, avec la ligue, le score ou l'heure et la chaîne. Parcourir les ligues à gauche affiche leurs matchs. OK regarde, OK encore passe en plein écran, maintenir OK ouvre le menu du match. Cartes reste le choix par défaut. Enregistré pour ce spectateur.",
   "OK: watch  ·  OK again: full screen  ·  Hold OK: game menu":
       "OK : regarder  ·  OK encore : plein écran  ·  Maintenir OK : menu du match",
+  "Sort favourites": "Trier les favoris",
+  "Revert to original order": "Rétablir l’ordre initial",
 };

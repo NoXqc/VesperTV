@@ -51,8 +51,16 @@
     "id": "ad2f3fe6d3ade9fd",
     "category": "Live TV",
     "title": "Channel menu",
-    "answer": "Add to / Remove from Favourites, Hide this channel, Move Up / Down (your own order inside the group or Favourites), Move to group…, Remove from a group, and Record on Android. To reorder Favourites in the list or Timeline guide, hold OK on a channel, choose Move Up / Down, use ↑ / ↓, then OK or Back to finish. Each viewer's order is saved across playlists and takes priority over the default playlist or A-Z order. Clear the guide's search filter before moving a channel.",
+    "answer": "Add to / Remove from Favourites, Hide this channel, Move Up / Down (your own order inside the group or Favourites), Move to group…, Remove from a group, and Record on Android. To reorder Favourites in the list or Timeline guide, hold OK on a channel, choose Move Up / Down, use ↑ / ↓, then OK or Back to finish. Each viewer's manual order is saved across playlists. Sort favourites can temporarily show an alphabetical order without erasing it. Clear the guide's search filter before moving a channel.",
     "controls": "Hold OK on a channel",
+    "url": "https://vespertv.app/remote.html#Live%20TV"
+  },
+  {
+    "id": "d225a4c1f3311df4",
+    "category": "Live TV",
+    "title": "Sort mixed favourite channels A–Z or Z–A",
+    "answer": "First enable Settings → Interface → Favourites → Mix playlists in Favourites. Inside the Live TV Favourites channel list or Timeline guide, hold OK on a channel and choose Sort favourites, then Name A–Z or Name Z–A. The choice sorts favourite channels from all playlists, including channels from favourited groups, by their displayed name. Revert to original order restores your saved manual arrangement, or the default mixed order if you have not moved anything; alphabetical sorting never erases it. New favourites follow the chosen alphabetical order. Using Move Up / Down starts a new manual arrangement from the displayed order. Sorting is saved per viewer and travels in Backup, Transfer and Sync. The menu is absent in provider groups or while Mix playlists is off.",
+    "controls": "Favourites → Hold OK on a channel → Sort favourites",
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
   {

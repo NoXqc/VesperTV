@@ -12,6 +12,7 @@ import '../models/vod_details.dart';
 import '../models/xtream_series.dart';
 import '../utils/channel_name_matching.dart';
 import '../utils/constants.dart';
+import '../utils/favorite_live_sort.dart';
 import 'catalog_database.dart';
 import 'epg_service.dart';
 import 'live_stream_format.dart';
@@ -1685,10 +1686,35 @@ class PlaylistManager extends ChangeNotifier {
         ];
       }).toList();
 
-  /// The list and Timeline share this order. Until the viewer moves a row,
-  /// keep the existing playlist/A-Z defaults; a saved manual order wins.
+  FavoriteLiveSort get favoriteLiveSort =>
+      FavoriteLiveSort.values
+          .where((sort) => sort.name == _storage.getFavoriteLiveSort())
+          .firstOrNull ??
+      FavoriteLiveSort.original;
+
+  Future<void> setFavoriteLiveSort(FavoriteLiveSort value) async {
+    await _storage.setFavoriteLiveSort(value.name);
+    notifyListeners();
+  }
+
+  /// List and Timeline share the same order. Explicit alphabetical sorting
+  /// only applies when playlists are mixed, and never rewrites manual order.
   List<Channel> orderedFavoriteLiveChannels({bool mixPlaylists = false}) {
     var channels = favoriteLiveChannelsWithGroups;
+    final sort = favoriteLiveSort;
+    if (mixPlaylists && sort != FavoriteLiveSort.original) {
+      final indexed = channels.indexed.toList()
+        ..sort((a, b) {
+          final name =
+              a.$2.name.toLowerCase().compareTo(b.$2.name.toLowerCase());
+          return name == 0
+              ? a.$1.compareTo(b.$1)
+              : sort == FavoriteLiveSort.zToA
+                  ? -name
+                  : name;
+        });
+      return indexed.map((entry) => entry.$2).toList();
+    }
     if (mixPlaylists) {
       final starred = channels.where((c) => c.isFavorite).toList()
         ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
@@ -1711,18 +1737,32 @@ class PlaylistManager extends ChangeNotifier {
   Future<int?> moveFavoriteLiveChannel(Channel channel, int delta,
       {bool mixPlaylists = false}) async {
     final shown = orderedFavoriteLiveChannels(mixPlaylists: mixPlaylists);
+    final viewer = _storage.getActiveViewerId();
     final from = shown.indexWhere((c) => c.id == channel.id);
     if (from < 0) return null;
     final to = (from + delta).clamp(0, shown.length - 1);
     if (from == to) return null;
-    final order = _storage.getFavoriteLiveOrder().toSet().toList();
+    var order = _storage.getFavoriteLiveOrder().toSet().toList();
+    if (mixPlaylists && favoriteLiveSort != FavoriteLiveSort.original) {
+      // A manual move begins with the currently displayed alphabetical list.
+      // Keep unavailable ids in their saved slots instead of dropping them.
+      final visible = shown.map((c) => c.id).toSet();
+      var next = 0;
+      order = [
+        for (final id in order)
+          if (visible.contains(id)) shown[next++].id else id
+      ];
+      order.addAll(shown.skip(next).map((c) => c.id));
+    }
     final known = order.toSet();
     order.addAll(shown.map((c) => c.id).where((id) => known.add(id)));
     final a = order.indexOf(channel.id);
     final b = order.indexOf(shown[to].id);
     order[a] = shown[to].id;
     order[b] = channel.id;
-    await _storage.setFavoriteLiveOrder(order);
+    await _storage.setFavoriteLiveOrder(order, viewerId: viewer);
+    await _storage.setFavoriteLiveSort(FavoriteLiveSort.original.name,
+        viewerId: viewer);
     notifyListeners();
     return to;
   }

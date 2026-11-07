@@ -2929,4 +2929,6 @@ const Map<String, String> kEs = {
       "Guía muestra los partidos del día bajo el enfrentamiento, uno por fila, con la liga, el marcador o la hora y el canal. Al recorrer las ligas de la izquierda se ven sus partidos. OK mira, OK otra vez pasa a pantalla completa, mantener OK abre el menú del partido. Tarjetas sigue siendo la opción predeterminada. Guardado para este espectador.",
   "OK: watch  ·  OK again: full screen  ·  Hold OK: game menu":
       "OK: ver  ·  OK otra vez: pantalla completa  ·  Mantener OK: menú del partido",
+  "Sort favourites": "Ordenar favoritos",
+  "Revert to original order": "Restaurar el orden original",
 };

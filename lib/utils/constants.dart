@@ -183,6 +183,7 @@ class AppConstants {
 
   /// Live Favourites order across playlists, per viewer; composite channel ids.
   static const String keyFavoriteLiveOrder = 'vesper_favorite_live_order';
+  static const String keyFavoriteLiveSort = 'vesper_favorite_live_sort';
 
   /// The viewer's own live groups, across every playlist (see
   /// `UserGroups` for the JSON). Per viewer, not per playlist.

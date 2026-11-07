@@ -26,6 +26,7 @@ class _EntryPlaylist extends GuidePlaylist {
   _EntryPlaylist(super.storage);
 
   bool emptyFavorites = false;
+  final extraFavorites = <Channel>[];
   final favorite = Channel(
       id: 'p::favorite',
       rawId: 'favorite',
@@ -36,7 +37,7 @@ class _EntryPlaylist extends GuidePlaylist {
       url: 'https://example.com/favorite');
 
   @override
-  List<Channel> get channels => [live, favorite];
+  List<Channel> get channels => [live, favorite, ...extraFavorites];
 
   @override
   List<M3uGroup> get tvGroups => [
@@ -48,7 +49,7 @@ class _EntryPlaylist extends GuidePlaylist {
 
   @override
   List<Channel> get favoriteLiveChannelsWithGroups =>
-      emptyFavorites ? [] : [favorite];
+      emptyFavorites ? [] : [favorite, ...extraFavorites];
 
   @override
   List<Channel> get favoriteLiveChannels => favoriteLiveChannelsWithGroups;
@@ -258,6 +259,150 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Test channel'), findsWidgets);
     expect(find.text('Favourite channel'), findsNothing);
+    await close(tester);
+  });
+  Future<void> holdChannel(WidgetTester tester, String name) async {
+    final label = find.text(name).first;
+    await tester.ensureVisible(label);
+    if (prefs.guideViewMode == 'timeline') {
+      final row = find.byWidgetPredicate((w) =>
+          w.runtimeType.toString() == '_TimelineRow' &&
+          (w as dynamic).channel.name == name);
+      final focus = find
+          .descendant(
+              of: row,
+              matching: find.byWidgetPredicate((w) =>
+                  w is Focus && w.focusNode != null && w.canRequestFocus))
+          .first;
+      tester.widget<Focus>(focus).focusNode!.requestFocus();
+    } else {
+      Focus.of(tester.element(label)).requestFocus();
+    }
+    await tester.pumpAndSettle();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.select);
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.sendKeyRepeatEvent(LogicalKeyboardKey.select);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+  }
+
+  for (final view in ['live', 'timeline']) {
+    testWidgets(
+        'mixed favourites sort A-Z, Z-A and revert without losing manual order: $view',
+        (tester) async {
+      prefs.guideViewMode = view;
+      prefs.mixFavoritePlaylists = true;
+      playlist.extraFavorites.addAll([
+        Channel(
+            id: 'other::z',
+            rawId: 'z',
+            playlistId: 'other',
+            name: 'Zulu channel',
+            group: 'Other',
+            url: 'https://example.com/z',
+            isFavorite: true),
+        Channel(
+            id: 'other::a',
+            rawId: 'a',
+            playlistId: 'other',
+            name: 'Alpha channel',
+            group: 'Other',
+            url: 'https://example.com/a',
+            isFavorite: true),
+      ]);
+      final original = ['other::z', 'other::a', playlist.favorite.id];
+      await storage.setFavoriteLiveOrder(original);
+      await open(tester);
+      for (final (label, expected) in [
+        ('Name A–Z', ['other::a', playlist.favorite.id, 'other::z']),
+        ('Name Z–A', ['other::z', playlist.favorite.id, 'other::a']),
+        ('Revert to original order', original),
+      ]) {
+        await holdChannel(tester, 'Favourite channel');
+        final sort = find.text('Sort favourites');
+        await tester.ensureVisible(sort);
+        await tester.tap(sort);
+        await tester.pumpAndSettle();
+        expect(find.text('Revert to original order'), findsOneWidget);
+        await tester.tap(find.text(label));
+        await tester.pumpAndSettle();
+        expect(
+            playlist
+                .orderedFavoriteLiveChannels(mixPlaylists: true)
+                .map((c) => c.id),
+            expected);
+        expect(storage.getFavoriteLiveOrder(), original);
+        final positions = {
+          for (final name in [
+            'Zulu channel',
+            'Alpha channel',
+            'Favourite channel'
+          ])
+            name: tester.getTopLeft(find.text(name).first).dy
+        };
+        final names = {
+          playlist.favorite.id: 'Favourite channel',
+          'other::z': 'Zulu channel',
+          'other::a': 'Alpha channel'
+        };
+        expect(positions[names[expected[0]]]!,
+            lessThan(positions[names[expected[1]]]!));
+        expect(positions[names[expected[1]]]!,
+            lessThan(positions[names[expected[2]]]!));
+        expect(FocusManager.instance.primaryFocus, isNotNull);
+      }
+      await close(tester);
+    });
+
+    testWidgets('favourites sort is absent with mixing off: $view',
+        (tester) async {
+      prefs.guideViewMode = view;
+      prefs.mixFavoritePlaylists = false;
+      await open(tester);
+      await holdChannel(tester, 'Favourite channel');
+      expect(find.text('Remove from Favourites'), findsOneWidget);
+      expect(find.text('Sort favourites'), findsNothing);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      await close(tester);
+    });
+  }
+
+  testWidgets('sort is absent in provider groups even when mixing is on',
+      (tester) async {
+    prefs.guideViewMode = 'live';
+    prefs.mixFavoritePlaylists = true;
+    await open(tester);
+    await tester.tap(find.text('Test group'));
+    await tester.pumpAndSettle();
+    await holdChannel(tester, 'Test channel');
+    expect(find.text('Sort favourites'), findsNothing);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    await close(tester);
+  });
+
+  testWidgets(
+      'viewer switch or cancelling sort never overwrites another viewer',
+      (tester) async {
+    prefs.guideViewMode = 'live';
+    prefs.mixFavoritePlaylists = true;
+    await open(tester);
+    await holdChannel(tester, 'Favourite channel');
+    await tester.tap(find.text('Sort favourites'));
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(storage.getFavoriteLiveSort(), isNull);
+    await holdChannel(tester, 'Favourite channel');
+    await tester.tap(find.text('Sort favourites'));
+    await tester.pumpAndSettle();
+    await storage.setActiveViewerId('other');
+    await tester.tap(find.text('Name Z–A'));
+    await tester.pumpAndSettle();
+    expect(storage.getFavoriteLiveSort(), isNull);
+    await storage.setActiveViewerId('main');
+    expect(storage.getFavoriteLiveSort(), isNull);
     await close(tester);
   });
 }

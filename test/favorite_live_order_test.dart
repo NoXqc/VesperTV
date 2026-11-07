@@ -1,5 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nox_iptv/models/channel.dart';
+import 'package:nox_iptv/models/profile_copy.dart';
+import 'package:nox_iptv/utils/favorite_live_sort.dart';
+import 'package:nox_iptv/utils/constants.dart';
 import 'package:nox_iptv/services/catalog_database.dart';
 import 'package:nox_iptv/services/playlist_manager.dart';
 import 'package:nox_iptv/services/storage_service.dart';
@@ -117,5 +120,85 @@ void main() {
     await storage.setFavoriteLiveOrder([]);
     await storage.importForBackup(backup);
     expect(ids(), ['b::Same', 'a::Same']);
+  });
+  test(
+      'A-Z and Z-A span playlists and favourite groups without destroying original order',
+      () async {
+    final original = ['a::Group channel', 'b::Alpha', 'a::Zulu'];
+    await storage.setFavoriteLiveOrder(original);
+    await playlist.setFavoriteLiveSort(FavoriteLiveSort.aToZ);
+    expect(ids(mix: true), ['b::Alpha', 'a::Group channel', 'a::Zulu']);
+    expect(storage.getFavoriteLiveOrder(), original);
+    await playlist.setFavoriteLiveSort(FavoriteLiveSort.zToA);
+    expect(ids(mix: true), ['a::Zulu', 'a::Group channel', 'b::Alpha']);
+    expect(
+        ids(), original); // Mixed-playlist setting off ignores the sort view.
+    await playlist.setFavoriteLiveSort(FavoriteLiveSort.original);
+    expect(ids(mix: true), original);
+  });
+
+  test(
+      'sort uses current display names, stable ties and automatically places new favourites',
+      () async {
+    playlist.favorites = [ch('a', 'Same'), ch('b', 'same'), ch('b', 'Zulu')];
+    await playlist.setFavoriteLiveSort(FavoriteLiveSort.aToZ);
+    expect(ids(mix: true), ['a::Same', 'b::same', 'b::Zulu']);
+    playlist.favorites.add(ch('c', 'Alpha'));
+    playlist.favorites.last.nameOverride = 'Zzz renamed';
+    expect(ids(mix: true).last, 'c::Alpha');
+    await playlist.setFavoriteLiveSort(FavoriteLiveSort.zToA);
+    expect(ids(mix: true), ['c::Alpha', 'b::Zulu', 'a::Same', 'b::same']);
+    expect(storage.getChannelOrder('a'), isEmpty);
+  });
+
+  test(
+      'manual move after sorting starts with visible order and retains unavailable ids',
+      () async {
+    await storage.setFavoriteLiveOrder(
+        ['a::Zulu', 'hidden::missing', 'b::Alpha', 'a::Group channel']);
+    await playlist.setFavoriteLiveSort(FavoriteLiveSort.aToZ);
+    expect(
+        await playlist.moveFavoriteLiveChannel(playlist.favorites.first, -1,
+            mixPlaylists: true),
+        1);
+    expect(playlist.favoriteLiveSort, FavoriteLiveSort.original);
+    expect(ids(mix: true), ['b::Alpha', 'a::Zulu', 'a::Group channel']);
+    expect(storage.getFavoriteLiveOrder()[1], 'hidden::missing');
+  });
+
+  test(
+      'sort survives reopening, backup, transfer and copying Main; scoped per viewer',
+      () async {
+    await playlist.setFavoriteLiveSort(FavoriteLiveSort.zToA);
+    final backup = storage.exportForBackup(),
+        transfer = storage.exportForTransfer();
+    final reopened = StorageService();
+    await reopened.init();
+    expect(reopened.getFavoriteLiveSort(), 'zToA');
+    expect(
+        StorageService.isLiveSyncKey(AppConstants.keyFavoriteLiveSort), isTrue);
+    expect(
+        storage.exportForSync().containsKey(AppConstants.keyFavoriteLiveSort),
+        isTrue);
+    await storage.setActiveViewerId('other');
+    expect(playlist.favoriteLiveSort, FavoriteLiveSort.original);
+    await storage.setActiveViewerId('main');
+    await storage.copyMainToViewer('other', {ProfileCopy.favourites},
+        restricted: false);
+    await storage.setActiveViewerId('other');
+    expect(playlist.favoriteLiveSort, FavoriteLiveSort.zToA);
+    await storage.setActiveViewerId('main');
+    await playlist.setFavoriteLiveSort(FavoriteLiveSort.original);
+    await storage.importForBackup(backup);
+    expect(playlist.favoriteLiveSort, FavoriteLiveSort.zToA);
+    await playlist.setFavoriteLiveSort(FavoriteLiveSort.original);
+    await storage.importForTransfer(transfer);
+    expect(playlist.favoriteLiveSort, FavoriteLiveSort.zToA);
+  });
+
+  test('invalid sort value safely falls back to the original view', () async {
+    await storage.setFavoriteLiveSort('unknown');
+    expect(playlist.favoriteLiveSort, FavoriteLiveSort.original);
+    expect(ids(mix: true), ['b::Alpha', 'a::Zulu', 'a::Group channel']);
   });
 }
