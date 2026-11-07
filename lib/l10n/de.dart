@@ -2298,6 +2298,8 @@ const Map<String, String> kDe = {
   "No channels added in the last 14 days.":
       "Keine neuen Sender in den letzten 14 Tagen.",
   "Live buffer": "Live-Puffer",
+  "Buffer": "Puffer",
+  "Gradual": "Schrittweise",
   "Hide short dropouts on live channels":
       "Kurze Aussetzer bei Live-Sendern verbergen",
   "Small (1.5 seconds)": "Klein (1,5 Sekunden)",

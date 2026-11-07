@@ -2398,6 +2398,8 @@ const Map<String, String> kEs = {
   "No channels added in the last 14 days.":
       "Ningún canal añadido en los últimos 14 días.",
   "Live buffer": "Búfer en directo",
+  "Buffer": "Búfer",
+  "Gradual": "Progresivo",
   "Hide short dropouts on live channels":
       "Oculta los cortes breves en los canales en directo",
   "Small (1.5 seconds)": "Pequeño (1,5 segundos)",

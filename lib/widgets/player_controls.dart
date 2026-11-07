@@ -17,12 +17,14 @@ import '../services/storage_service.dart';
 import '../services/subtitle_tracks.dart';
 import '../services/audio_track_preferences.dart';
 import '../services/catchup_session.dart';
+import '../services/vod_buffering.dart';
 import '../utils/time_format.dart';
 import '../utils/video_quality.dart';
 import 'audio_delay_adjuster.dart';
 import 'data_pool_card.dart';
 import 'epg_guide.dart';
 import 'gold_tag.dart';
+import 'live_buffer_picker.dart';
 import 'native_video_hole.dart';
 import 'rec_cue.dart';
 import 'player_bar_title.dart';
@@ -647,6 +649,16 @@ class PlayerControls extends StatelessWidget {
           showAudioDelayAdjuster(context);
         },
       ),
+      // Live buffer (Settings > Playback) from the player: the native player
+      // takes the new reserve at once, so a stalling channel can be tried
+      // with a bigger one without leaving it.
+      if (isLive && channel != null)
+        _LiveBufferButton(
+          controller: controller,
+          channel: channel!,
+          ownsPlayer: playback?.controller == controller,
+          onActivity: onActivity,
+        ),
       if (linkedChannel != null)
         _LinkedChannelButton(linkedChannel: linkedChannel!),
       if (isLive && onOpenMultiview != null)
@@ -2054,6 +2066,57 @@ class _SubtitleButtonState extends State<_SubtitleButton> {
 /// failover" the way there is for play/pause or skip — so this was the
 /// first button to get [_LabeledIconButton]'s on-focus label treatment;
 /// every other situational button in the secondary row has it now too.
+/// Options row: the live buffer (Settings > Playback > Live buffer). The
+/// native player takes a new reserve at once, so a channel that keeps
+/// stalling can be tried with a bigger one without leaving it.
+class _LiveBufferButton extends StatefulWidget {
+  const _LiveBufferButton({
+    required this.controller,
+    required this.channel,
+    required this.ownsPlayer,
+    this.onActivity,
+  });
+
+  final VideoPlayerHdrController controller;
+  final Channel channel;
+
+  /// The main player (PlaybackService's): only it has a live buffer.
+  final bool ownsPlayer;
+  final VoidCallback? onActivity;
+
+  @override
+  State<_LiveBufferButton> createState() => _LiveBufferButtonState();
+}
+
+class _LiveBufferButtonState extends State<_LiveBufferButton> {
+  int? _ms;
+
+  @override
+  Widget build(BuildContext context) {
+    int ms;
+    try {
+      ms = _ms ?? context.read<StorageService>().getLiveBufferMs();
+    } on ProviderNotFoundException {
+      ms = 0;
+    }
+    return _LabeledIconButton(
+      icon: Icons.hourglass_bottom,
+      label: tr('Buffer'),
+      detail: liveBufferShortName(ms),
+      onPressed: () async {
+        widget.onActivity?.call();
+        final picked = await pickLiveBuffer(context);
+        if (picked == null || !mounted) return;
+        setState(() => _ms = picked);
+        widget.onActivity?.call();
+        if (widget.ownsPlayer) {
+          await VodBuffering.configure(widget.controller, widget.channel);
+        }
+      },
+    );
+  }
+}
+
 class _LinkedChannelButton extends StatelessWidget {
   const _LinkedChannelButton({required this.linkedChannel});
 

@@ -2404,6 +2404,8 @@ const Map<String, String> kIt = {
   "No channels added in the last 14 days.":
       "Nessun canale aggiunto negli ultimi 14 giorni.",
   "Live buffer": "Buffer della diretta",
+  "Buffer": "Buffer",
+  "Gradual": "Progressivo",
   "Hide short dropouts on live channels":
       "Nasconde le brevi interruzioni sui canali live",
   "Small (1.5 seconds)": "Piccolo (1,5 secondi)",

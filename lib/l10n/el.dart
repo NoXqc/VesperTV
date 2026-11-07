@@ -2359,6 +2359,8 @@ const Map<String, String> kEl = {
   "No channels added in the last 14 days.":
       "Κανένα κανάλι δεν προστέθηκε τις τελευταίες 14 ημέρες.",
   "Live buffer": "Buffer ζωντανής μετάδοσης",
+  "Buffer": "Buffer",
+  "Gradual": "Σταδιακό",
   "Hide short dropouts on live channels":
       "Κρύβει τις σύντομες διακοπές στα ζωντανά κανάλια",
   "Small (1.5 seconds)": "Μικρό (1,5 δευτερόλεπτο)",

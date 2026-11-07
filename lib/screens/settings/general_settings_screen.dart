@@ -12,7 +12,6 @@ import '../../services/device_defaults.dart';
 import '../../services/playback_service.dart';
 import '../../services/recording_service.dart';
 import '../../services/storage_service.dart';
-import '../../services/vod_buffering.dart';
 import '../../services/subtitle_tracks.dart';
 import '../../utils/constants.dart';
 import '../../utils/tv_theme.dart';
@@ -20,6 +19,7 @@ import '../../widgets/audio_delay_adjuster.dart';
 import '../../widgets/goals_alert_overlay.dart';
 import '../../widgets/goal_overlay_probe_settings.dart';
 import '../../widgets/native_video_hole.dart';
+import '../../widgets/live_buffer_picker.dart';
 import '../../widgets/live_resume_hint.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_dialog_option.dart';
@@ -803,60 +803,17 @@ class _LiveBufferPicker extends StatefulWidget {
 }
 
 class _LiveBufferPickerState extends State<_LiveBufferPicker> {
-  static const _choices = [
-    (0, 'Off'),
-    // Native player: fast start, then plays at 96 % until a reserve covers
-    // the server's gaps (VideoPlayer.cushionTick).
-    (-1, 'Gradual (starts fast, builds up)'),
-    (1500, 'Small (1.5 seconds)'),
-    (4000, '4 seconds'),
-    (8000, '8 seconds'),
-    (12000, '12 seconds'),
-  ];
-
   @override
   Widget build(BuildContext context) {
-    final storage = context.read<StorageService>();
-    final current = storage.getLiveBufferMs();
-    // Windows (mpv) has no Gradual: it plays as Off there.
-    final choices = [
-      for (final c in _choices)
-        if (c.$1 >= 0 || !isDesktop) c
-    ];
-    final name = choices
-        .firstWhere((c) => c.$1 == current, orElse: () => choices.first)
-        .$2;
+    final current = context.read<StorageService>().getLiveBufferMs();
     return TvMenuTile(
       leading: const Icon(Icons.av_timer),
       title: tr('Live buffer'),
       subtitle: tr(
           '{size}. Live channels store this much before playing, so short dropouts from the server don\'t show. Bigger hides longer dropouts, but channels start later and play that much behind live. Applies from the next channel.',
-          {'size': tr(name)}),
+          {'size': tr(liveBufferName(current))}),
       onTap: () async {
-        final picked = await showDialog<int>(
-          context: context,
-          builder: (dialogContext) => SimpleDialog(
-            title: Text(tr('Live buffer')),
-            children: [
-              for (final (ms, label) in choices)
-                TvDialogOption(
-                  autofocus: ms == current,
-                  onPressed: () => Navigator.of(dialogContext).pop(ms),
-                  child: Row(children: [
-                    Icon(ms == current
-                        ? Icons.check_circle
-                        : Icons.circle_outlined),
-                    const SizedBox(width: 12),
-                    Text(tr(label)),
-                  ]),
-                ),
-            ],
-          ),
-        );
-        if (picked == null) return;
-        await storage.setLiveBufferMs(picked);
-        await VodBuffering.setLiveBufferDefault(picked);
-        if (mounted) setState(() {});
+        if (await pickLiveBuffer(context) != null && mounted) setState(() {});
       },
     );
   }

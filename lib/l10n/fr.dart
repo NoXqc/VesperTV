@@ -2410,6 +2410,8 @@ const Map<String, String> kFr = {
   "No channels added in the last 14 days.":
       "Aucune chaîne ajoutée ces 14 derniers jours.",
   "Live buffer": "Tampon du direct",
+  "Buffer": "Tampon",
+  "Gradual": "Progressif",
   "Hide short dropouts on live channels":
       "Masque les courtes coupures sur les chaînes en direct",
   "Small (1.5 seconds)": "Petit (1,5 seconde)",
