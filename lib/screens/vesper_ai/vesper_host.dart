@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 
@@ -21,6 +20,7 @@ import '../search_screen.dart';
 import '../series_detail_screen.dart';
 import '../settings/settings_menu_screen.dart';
 import '../sports_screen.dart';
+import '../../utils/desktop_platform.dart';
 
 /// [VesperHost] on the app's navigator: plays like picking a channel in the
 /// guide (full screen, both players), opens sections through the TV home's
@@ -46,7 +46,7 @@ class AppVesperHost implements VesperHost {
     final nav = _nav;
     // Over whatever is open (the panel included), like a fresh pick.
     nav.popUntil((r) => r.isFirst);
-    if (Platform.isWindows) {
+    if (isDesktop) {
       DesktopMiniPlayer.instance.clear();
       unawaited(nav.push(MaterialPageRoute(
           builder: (_) => DesktopPlayerScreen(channel: channel))));

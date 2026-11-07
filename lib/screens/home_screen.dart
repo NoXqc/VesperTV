@@ -1,7 +1,6 @@
 import '../widgets/glass_menu.dart';
 import '../utils/refined_finish.dart';
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -270,8 +269,7 @@ class _HomeScreenState extends State<HomeScreen> {
           arrived(HomeRowKind.games, await _gamesRow(storage, playlist, epg));
         }(),
       if (visible.contains(HomeRowKind.newMovies))
-        _newMoviesRow(playlist)
-            .then((r) => arrived(HomeRowKind.newMovies, r)),
+        _newMoviesRow(playlist).then((r) => arrived(HomeRowKind.newMovies, r)),
       if (visible.contains(HomeRowKind.newShows))
         _newShowsRow(playlist).then((r) => arrived(HomeRowKind.newShows, r)),
     ].map((f) => f.catchError((Object e, StackTrace st) {
@@ -549,8 +547,8 @@ class _HomeScreenState extends State<HomeScreen> {
             }
             final c = i.channel!;
             if (c.isLive) return _playChannel(ctx, c);
-            return Navigator.of(ctx).push(
-                MaterialPageRoute(builder: (_) => MovieDetailScreen(channel: c)));
+            return Navigator.of(ctx).push(MaterialPageRoute(
+                builder: (_) => MovieDetailScreen(channel: c)));
           },
         ),
     ]);
@@ -1030,8 +1028,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (hideProfiles &&
-                        (isDesktop || size.width >= 800))
+                    if (hideProfiles && (isDesktop || size.width >= 800))
                       Padding(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 20, vertical: 6),

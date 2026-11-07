@@ -5,8 +5,6 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/services.dart';
@@ -1630,8 +1628,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       context.read<AppPreferences>().recentChannelsGroup;
 
   bool get _showCatchupGroup =>
-      !isDesktopTarget &&
-      !context.read<AppPreferences>().hideCatchupGroup;
+      !isDesktopTarget && !context.read<AppPreferences>().hideCatchupGroup;
 
   /// [playlistId] is required for a real group selection (from a
   /// `_GroupRow`, which always has its own `M3uGroup.playlistId` on
@@ -4841,7 +4838,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// launch from a native Leanback/TV-UI-mode check), not `layoutMode`
   /// (a user-togglable preference a phone could have set to "TV" for
   /// other reasons while still only having touch input) or
-  /// `isDesktop` (doesn't distinguish Android TV from phone at
+  /// `Platform.isWindows` (doesn't distinguish Android TV from phone at
   /// all).
   Widget _buildTimelineFilterBar(Channel? channel) {
     final isTv = context.watch<AppPreferences>().isTelevision;
@@ -5206,10 +5203,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         // real TV/remote devices — that's the one case using
         // _TimelineVirtualKeyboard (see _buildTimelineFilterBar), which
         // needs real room for its key grid. Gated on isTelevision
-        // specifically, not isDesktop: a phone with Layout
+        // specifically, not Platform.isWindows: a phone with Layout
         // manually forced to "TV" still gets the plain TextField bar (see
         // _buildTimelineFilterBar) and must keep its normal layout too —
-        // reported directly, of the isDesktop-only version of
+        // reported directly, of the Platform.isWindows-only version of
         // this check: "it takes the whole screen (eliminating the mini
         // player)... doesn't happen on Formuler," because Windows's normal
         // preview row is ~50% of the window (flex-based, see below) and
@@ -6832,13 +6829,12 @@ class _GroupRowState extends State<_GroupRow> {
 /// bigger hero banner doesn't still read as tuned for a TV screen. Plain
 /// top-level getters, not `static const` like [PosterCard]'s own fields —
 /// those need to stay compile-time constants (used as default parameter
-/// values), which a `isDesktop` check can't be.
+/// values), which a `Platform.isWindows` check can't be.
 // Was 1.8 — reduced ~30% per direct feedback that the first pass at
 // this was too big.
 const double _windowsPosterScale = 1.26;
-double get _browsePosterWidth => isDesktop
-    ? PosterCard.width * _windowsPosterScale
-    : PosterCard.width;
+double get _browsePosterWidth =>
+    isDesktop ? PosterCard.width * _windowsPosterScale : PosterCard.width;
 double get _browsePosterHeight => isDesktop
     ? PosterCard.posterHeight * _windowsPosterScale
     : PosterCard.posterHeight;

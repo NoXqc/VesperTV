@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -93,8 +91,7 @@ void main() {
     expect(find.text('Tabs'), findsNothing);
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pumpAndSettle();
-    expect(
-        focusedLabel(), isDesktop ? 'Audio' : 'Background video');
+    expect(focusedLabel(), isDesktop ? 'Audio' : 'Background video');
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.pumpAndSettle();
     expect(focusedLabel(), 'Playback');

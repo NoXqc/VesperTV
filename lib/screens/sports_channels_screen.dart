@@ -1,7 +1,6 @@
 import '../widgets/glass_menu.dart';
 import '../utils/refined_finish.dart';
 import 'dart:async';
-import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1179,8 +1178,7 @@ class _ChannelsHero extends StatelessWidget {
     final c = channel;
     final now = c == null ? null : epg.getCurrentProgram(c.epgId);
     final next = c == null ? null : epg.getNextProgram(c.epgId);
-    final mini =
-        isDesktop ? DesktopMiniPlayer.instance.controller : null;
+    final mini = isDesktop ? DesktopMiniPlayer.instance.controller : null;
     String hm(DateTime t) => TimeFormat.hm.format(t.toLocal());
     return SizedBox(
       height: height,

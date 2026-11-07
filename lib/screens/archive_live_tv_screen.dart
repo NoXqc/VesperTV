@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -14,6 +13,7 @@ import '../services/desktop_mini_player.dart';
 import '../services/playback_service.dart';
 import 'desktop_player_screen.dart';
 import 'player_screen.dart';
+import '../utils/desktop_platform.dart';
 
 /// One row of Media Hub > Live TV: a TV add-on catalog, or one genre of it.
 class LiveTvRow {
@@ -33,8 +33,8 @@ List<LiveTvRow> liveTvRowsFor(
   if (catalog.genres.isEmpty || metas.length <= 30) return [all];
   return [
     for (final genre in catalog.genres)
-      if (metas.where((m) => m.genres.contains(genre)).toList()
-          case final list when list.isNotEmpty)
+      if (metas.where((m) => m.genres.contains(genre)).toList() case final list
+          when list.isNotEmpty)
         LiveTvRow(source, '${catalog.name} · $genre', list),
     all,
   ];
@@ -83,8 +83,7 @@ class _ArchiveLiveTvScreenState extends State<ArchiveLiveTvScreen> {
     if (current != null && Channel.isHubLiveId(current.rawId)) {
       unawaited(_playback.stop());
     }
-    if (_playback.zapList?.any((c) => Channel.isHubLiveId(c.rawId)) ??
-        false) {
+    if (_playback.zapList?.any((c) => Channel.isHubLiveId(c.rawId)) ?? false) {
       _playback.zapList = null;
     }
   }
@@ -131,8 +130,8 @@ class _ArchiveLiveTvScreenState extends State<ArchiveLiveTvScreen> {
       if (start < p.pixels) {
         c.jumpTo(start.clamp(0, p.maxScrollExtent));
       } else if (start + extent > p.pixels + p.viewportDimension) {
-        c.jumpTo((start + extent - p.viewportDimension)
-            .clamp(0, p.maxScrollExtent));
+        c.jumpTo(
+            (start + extent - p.viewportDimension).clamp(0, p.maxScrollExtent));
       }
     }
 
@@ -213,7 +212,7 @@ class _ArchiveLiveTvScreenState extends State<ArchiveLiveTvScreen> {
       );
       playback.zapList = channels;
       playback.resolveLive = service.resolveLive;
-      if (Platform.isWindows) {
+      if (isDesktop) {
         DesktopMiniPlayer.instance.clear();
         await Navigator.of(context).push(MaterialPageRoute(
             builder: (_) =>
@@ -278,9 +277,7 @@ class _ArchiveLiveTvScreenState extends State<ArchiveLiveTvScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
           child: Text(
-            '${row.title} · ${tr('{n} channels', {
-                  'n': row.metas.length
-                })}',
+            '${row.title} · ${tr('{n} channels', {'n': row.metas.length})}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
@@ -345,17 +342,15 @@ class _ArchiveLiveTvScreenState extends State<ArchiveLiveTvScreen> {
                     else
                       const Icon(Icons.live_tv,
                           color: Colors.white38, size: 36),
-                    if (_starting != null &&
-                        selected &&
-                        _starting!.isNotEmpty)
+                    if (_starting != null && selected && _starting!.isNotEmpty)
                       const ColoredBox(
                         color: Colors.black54,
                         child: Center(
                             child: SizedBox(
                                 width: 28,
                                 height: 28,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 3))),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 3))),
                       ),
                   ],
                 ),

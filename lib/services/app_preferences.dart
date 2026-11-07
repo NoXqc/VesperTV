@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 
@@ -14,6 +13,7 @@ import 'display_match.dart';
 import 'device_defaults.dart';
 import 'playback_service.dart';
 import 'storage_service.dart';
+import '../utils/desktop_platform.dart';
 
 /// App-wide UI/behavior preferences (theme, clock, layout mode, whether
 /// this device is allowed to play anything right now).
@@ -220,14 +220,14 @@ class AppPreferences extends ChangeNotifier {
     final ms = value.clamp(-AudioDelay.maxMs, AudioDelay.maxMs);
     _storage.setAudioDelayMs(ms);
     unawaited(PlaybackService.setAudioDelay(ms));
-    if (Platform.isWindows) DesktopAudio.set(delayMs: ms);
+    if (isDesktop) DesktopAudio.set(delayMs: ms);
     notifyListeners();
   }
 
   void setAudioPassthrough(bool value) {
     _storage.setAudioPassthrough(value);
     unawaited(PlaybackService.setAudioPassthrough(value));
-    if (Platform.isWindows) DesktopAudio.set(passthrough: value);
+    if (isDesktop) DesktopAudio.set(passthrough: value);
     notifyListeners();
   }
 
