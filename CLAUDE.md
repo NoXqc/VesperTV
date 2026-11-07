@@ -384,7 +384,8 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   and Choose a folder. `AppUpdateService.pickAsset`: Windows never takes `-macos.zip`. **Never attach
   a Mac zip to a release** until Windows installs have pickAsset. CI `.github/workflows/macos-build.yml`
   = unsigned artifact. Not signed/notarized. Details: `dev-notes/macos-desktop.md`.
-- **Claude, 2026-11-06 - release 1.0.59 (beta), +669 (latest):** owner said "commit push everything and cut a
+- **Claude, 2026-11-07 - release 1.0.60 (beta), +676 (latest):** owner said "/cutr". Android only; Windows stays 1.0.45. New version name because the updater compares tag vs versionName (a re-uploaded 1.0.59 never reaches 1.0.59 installs). Watch list by hand (button on IPTV + Media Hub pages, Movies/TV Shows row, Media Hub page with Movies + TV Shows rows, AI adds Media Hub titles), player Buffer button, Back on Updating Content opens the app (+ opt-in Update in the background), Sports Trak Guide layout / card size / source pick fix, Favourites sort (Codex), macOS PRs from gmtherien (not released; CI builds zip + DMG). Notes: dev-notes/releases/1.0.60.md. Next build > 676.
+- **Claude, 2026-11-06 - release 1.0.59 (beta), +669:** owner said "commit push everything and cut a
   release". Android only; Windows stays 1.0.45 (windows-parity is merged in main but its UI is untested and no zip
   was built). Vesper AI, player-bar pill, Codex EPG logos, big M3U, startup responsiveness, goal overturned.
   Relay (Vesper AI link, OAuth auto-approve) deployed on the VPS. Notes: dev-notes/releases/1.0.59.md. Next build > 669.
