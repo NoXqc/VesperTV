@@ -661,5 +661,5 @@ class AppConstants {
   /// box's time. A stored legacy value falls back to the default (see
   /// `StorageService.getRefreshInterval`).
   static const int defaultRefreshIntervalMinutes = 720;
-  static const List<int> refreshIntervalOptions = [360, 720, 1440];
+  static const List<int> refreshIntervalOptions = [180, 360, 720, 1440];
 }
