@@ -55,6 +55,22 @@ privacy).
     paths inside an imported M3U stop resolving after a relaunch unless
     security-scoped bookmarks are added.
 
+## Live reconnects (fixed 2026-11-07)
+
+A live channel showed "Reconnecting..." every 30-40 s on the Mac while
+Android played it cleanly. The app log showed three causes:
+
+- media_kit sets mpv's `network-timeout` to 5 s. That becomes ffmpeg's tcp
+  `timeout` and overrides our `rw_timeout` of 30 s, so a server that sends
+  live TS in bursts timed out (`tcp: ffurl_read returned -60`). The timeout
+  is now 30 s on every desktop player, Windows included.
+- `DesktopLiveRecovery` reopened the stream on any mpv error, including
+  "Cannot seek in this stream" on every live open. An error now reopens
+  only when playback hasn't moved 6 s later.
+- media_kit's `cache-on-disk` can't create its folder in the sandbox
+  ("Failed to create file cache"). It is off on macOS; the cache stays in
+  memory.
+
 ## Updater
 
 `AppUpdateService.pickAsset` picks the release asset per platform:
