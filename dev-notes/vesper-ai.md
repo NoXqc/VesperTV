@@ -168,6 +168,8 @@ fallback to channel B" from Claude, with an API doc the AI can read, and undo.
   connector session.
 - Windows: no voice; player/now_playing tools say "not on Windows yet".
 - No episode picking (series → show page), no Media Hub search tool yet.
-- Remote tips page (`docs/remote.html`) + help index not updated (Codex task).
-- Privacy note for site/README: with your own AI, titles/channel names the tools
-  return go to that AI provider; the relay only carries MCP traffic, keeps none.
+- Remote tips (`docs/remote.html`), help index, website and README documentation
+  prepared on `codex/vesper-ai-docs` (Codex, 2026-11-06; pending merge/publish).
+- Public privacy docs distinguish built-in parsing, direct Your AI requests and
+  relay/MCP traffic, including tool metadata, temporary in-memory relay queues,
+  provider/app policies and the device speech-service caveat.

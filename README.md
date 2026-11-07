@@ -69,6 +69,9 @@ Grab the latest release from the [Releases](../../releases) page or
 
 ## Features
 
+- **Vesper AI (Android 1.0.59+)**: type or speak commands, use your phone microphone,
+  and optionally connect your own AI provider or a compatible MCP app.
+  [Controls, setup and privacy](https://vespertv.app/remote.html#Vesper%20AI)
 - M3U and Xtream Codes playlist support, with an XMLTV EPG guide
 - **Catch-up TV on Android**: replay earlier programmes from the Timeline guide,
   watch from the start, pause/resume live TV and jump back to live — on channels
@@ -93,6 +96,43 @@ Grab the latest release from the [Releases](../../releases) page or
   syncing to free a slot, or an unused device frees it after 30 days. Reset removes the old
   encrypted server copy and device slots; every other device must be linked again. Save the
   new recovery code. [Sync guide](https://vespertv.app/remote.html#Sync)
+
+## Vesper AI
+
+Open **Vesper** in the side menu, the microphone in Search, or **Settings →
+Vesper AI → Talk to Vesper now**. Type or say "play TSN 1", "pause", "what's on
+TSN 1", "open the movies", "today's games" or "help". Built-in commands are
+free and parsed on your device, with no AI account or API key. They use the
+sources you already have; VesperTV supplies no channels or films.
+
+**Talk from my phone** shows a QR code. On the same Wi-Fi, type or use your
+phone keyboard's microphone. This also works around Fire TV keeping its Alexa
+button for the system. Remote voice support depends on the device and speech
+service; it is off by default under **Settings → Vesper AI**. The optional
+**Watch list** appears on Home; ask Vesper to add a title, then hold OK on a
+saved item to remove it.
+
+For more flexible requests, **Your AI** accepts Claude, an OpenAI-compatible
+service (including a local compatible server), or Gemini using your own model
+and API key where required. Provider usage charges may apply. **AI apps → Let
+AI apps control VesperTV** supplies a private MCP connector address for a
+compatible AI app. A Claude connector has been tested; other clients still need
+testing. Use one connector per TV and leave VesperTV open on that TV. **Ask on
+the TV first** defaults on for starting titles, hiding/showing groups and
+clearing the watch list; other tool actions can run without a dialog. Keep the
+address private; **Reset the address** invalidates the old link.
+
+**Privacy:** with Your AI set to None, typed commands are handled without an
+AI provider. When enabled, Your AI can handle unrecognized requests and failed
+built-in commands. With Your AI, your request, conversation and tool results
+(including channel/title names, guide listings, group names and watch-list
+notes) go directly to that provider, without the VesperTV relay. For linked
+MCP apps and the optional relay phone page, requests and tool replies pass
+through the relay. It holds that traffic temporarily in memory and does not
+save conversation history. Your provider or AI app applies its own data policies. Voice input
+uses the TV or phone speech service; it is not guaranteed to be processed
+locally. The current public Windows download remains **1.0.45**, without Vesper
+AI. [Full guide and current limits](https://vespertv.app/remote.html#Vesper%20AI).
 
 ## Setup
 

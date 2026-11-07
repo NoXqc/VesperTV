@@ -731,6 +731,7 @@ details .ans p + p{ margin-top:12px; }
       <a href="#requirements">What you need</a>
       <a href="#features">Features</a>
       <a href="#sports">Sports Trak</a>
+      <a href="#vesper-ai">Vesper AI</a>
       <a href="#media-hub">Media Hub</a>
       <a href="#tv">On the TV</a>
       <a href="#install">Install</a>
@@ -1064,7 +1065,7 @@ details .ans p + p{ margin-top:12px; }
         <p>
           Built by someone who got tired of IPTV apps that are slow, full of adverts, or
           quietly phoning home. The full list, grouped — none of it behind a paywall,
-          because there isn't one.
+          because there isn't one. <a href="#vesper-ai">Meet Vesper AI: free built-in commands, with optional AI you bring yourself.</a>
         </p>
       </div>
 
@@ -1383,6 +1384,52 @@ details .ans p + p{ margin-top:12px; }
           <figcaption>My Teams</figcaption>
         </figure>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- ==================== VESPER AI ==================== -->
+  <section class="sec" id="vesper-ai">
+    <div class="wrap split">
+      <div class="reveal">
+        <span class="eyebrow">Vesper AI · Android 1.0.59+</span>
+        <h2>Tell Vesper what you want to watch</h2>
+        <p style="color:var(--ink-2)">Open <b>Vesper</b> in the side menu or the microphone in Search.
+          Type a command, speak with a supported remote, or scan a QR code and use your phone keyboard's microphone.
+          Your playlists and guide provide the content.</p>
+        <ul class="feat-list">
+          <li><b>Everyday commands are free</b><span>Try “play TSN 1”, “pause”, “what's on TSN 1”,
+            “open the movies”, “today's games” or “help”. Built-in phrases are parsed on your device,
+            with no AI account or API key.</span></li>
+          <li><b>A phone works with Fire TV too</b><span>Choose Talk from my phone and scan the QR code.
+            On the same Wi-Fi, type or use your phone keyboard's microphone. Fire TV keeps its Alexa button
+            for the system; remote voice support on other boxes depends on the device.</span></li>
+          <li><b>A list for later</b><span>Ask Vesper to add an available title to your Watch list.
+            Find it on Home; hold OK on an item to remove it.</span></li>
+        </ul>
+        <p><a href="remote.html#Vesper%20AI">Vesper AI controls, setup and limits →</a></p>
+      </div>
+      <div class="reveal">
+        <h3>Use your own AI, if you want more</h3>
+        <p style="color:var(--ink-2)"><b>Settings → Vesper AI → Your AI</b> accepts Claude,
+          an OpenAI-compatible service or Gemini with your own model and API key where needed.
+          Your provider may charge for usage. Built-in commands remain available without one.</p>
+        <p style="color:var(--ink-2)"><b>AI apps</b> gives this TV a private MCP connector address
+          for a compatible AI app. A Claude connector has been tested; other clients still need testing.
+          Use one connector per TV and keep VesperTV open. With <b>Ask on the TV first</b> on (the default),
+          starting titles, hiding/showing groups and clearing the watch list wait for OK;
+          other tools can run without a dialog. Keep the address private; reset it to replace an old link.</p>
+        <h3 id="vesper-ai-privacy">What your AI receives</h3>
+        <p style="color:var(--ink-2)">With Your AI enabled, your request, conversation and tool results,
+          such as channel/title names, guide listings, group names and watch-list notes, go directly
+          to your chosen provider, without the VesperTV relay. Linked MCP apps and the relay phone page
+          send requests and replies through the relay. That traffic waits temporarily in memory;
+          the relay does not save conversation history. Your provider or AI app has its own data policies.</p>
+        <p style="color:var(--ink-3)">Voice recognition uses the TV or phone speech service and may need
+          the internet. Local command parsing does not mean speech stays on the device.
+          Vesper AI is in the Android release; the public Windows package remains 1.0.45.</p>
       </div>
     </div>
   </section>
@@ -1998,6 +2045,19 @@ details .ans p + p{ margin-top:12px; }
             <p>
               A profile is a separate viewer: its own favourites, watch history, Continue Watching, colours and Sports teams. Add and edit them in the profile cards (hold OK on one to edit), and give a profile a PIN to lock it, handy for kids. To get the "Who is watching?" screen every time the app opens, turn on <b>Settings → General → Startup → Launch with profiles selector</b>.
             </p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Does Vesper AI need a paid account or API key?</summary>
+          <div class="ans">
+            <p>No AI account or API key is needed for built-in commands such as “play TSN 1”, “pause”
+              or “open the movies”. Open Vesper in the side menu, type, or choose Talk from my phone.
+              Optional Your AI uses your own provider and may incur usage charges. Linking an AI app
+              uses that app's own account and MCP connector support.</p>
+            <p><a href="#vesper-ai-privacy">Read what your AI receives</a>, or open the
+              <a href="remote.html#Vesper%20AI">Vesper AI guide</a> for microphone setup, private links,
+              confirmation controls and current limits.</p>
           </div>
         </details>
 

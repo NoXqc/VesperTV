@@ -688,6 +688,86 @@
     "url": "https://vespertv.app/remote.html#Recordings"
   },
   {
+    "id": "cfda7cde95b5bb53",
+    "category": "Vesper AI",
+    "title": "Vesper AI",
+    "answer": "Vesper AI is the voice and typed-command assistant in Android 1.0.59+. Built-in commands are free, with no AI account or API key. Select the Vesper row in the side menu, the microphone in Search, or Talk to Vesper now in Settings. In the panel, choose Talk, type in Or type here, or choose Talk from my phone. Vesper shortcut in Settings shows or hides the menu shortcut. This is available in Android 1.0.59 and later; the public Windows download remains 1.0.45.",
+    "controls": "Open Vesper AI: menu Vesper · Search microphone · Settings → Vesper AI → Talk to Vesper now",
+    "url": "https://vespertv.app/remote.html#Vesper%20AI"
+  },
+  {
+    "id": "38510ae204d0cbb0",
+    "category": "Vesper AI",
+    "title": "Vesper AI without an API key",
+    "answer": "Built-in commands are free and parsed on your device: try \"play TSN 1\", \"mets RDS\", \"pause\", \"next channel\", \"what's on TSN 1\", \"when is the Simpsons on\", \"today's games\", \"put on the Habs game\", \"search for Dune\" or \"help\". The channel, programme or game must be available in your own sources and guide. Going back on live TV needs provider catch-up support. Leave Your AI set to None to use built-in commands only. Local command parsing does not make streaming, guide updates or voice recognition work offline.",
+    "controls": "Type or say: play TSN 1 · pause · go back 30 seconds · today's games · help",
+    "url": "https://vespertv.app/remote.html#Vesper%20AI"
+  },
+  {
+    "id": "532f2da3217a9ba6",
+    "category": "Vesper AI",
+    "title": "Talk to Vesper AI from your phone",
+    "answer": "Open Talk from my phone in the Vesper panel or Settings → Vesper AI. Scan the QR code with your phone and leave VesperTV open on the TV. For the same-Wi-Fi page, type or use the microphone on your phone's keyboard; that HTTP page has no browser microphone button. When AI apps are enabled, the QR page can use the internet relay instead; its own microphone button depends on browser support and microphone permission. Keep the phone link private. The same-Wi-Fi keyboard microphone is an alternative when the TV remote microphone is unavailable; the off-network relay phone path still needs real-device testing.",
+    "controls": "Talk from my phone → scan the QR code → type or use the phone keyboard microphone",
+    "url": "https://vespertv.app/remote.html#Vesper%20AI"
+  },
+  {
+    "id": "5a4b90de8236ddf2",
+    "category": "Vesper AI",
+    "title": "Vesper AI remote voice button",
+    "answer": "The remote voice-button option is off by default. Turn it on, or use Teach it your remote's button and press the button you want Vesper to learn. Android must deliver that key to the app, and the device needs a working speech-recognition service and microphone permission. Fire TV keeps its Alexa button for the system, so use Talk from my phone or type instead. Teaching cannot capture a key the system never sends. Remote microphone support has not been verified across TV boxes. Read replies aloud is a separate optional setting.",
+    "controls": "Settings → Vesper AI → Remote voice button opens Vesper → Teach it your remote's button",
+    "url": "https://vespertv.app/remote.html#Vesper%20AI"
+  },
+  {
+    "id": "1fa39c15324d7849",
+    "category": "Vesper AI",
+    "title": "Bring your own AI to Vesper",
+    "answer": "For requests beyond built-in phrases, choose Claude, OpenAI-compatible or Gemini under Your AI, enter the provider's model and API key, then Save and test. OpenAI-compatible services also use the Address field; a local compatible server can run without a key. Key from phone avoids typing a key with the remote. Vesper tries built-in commands first; an unrecognized request or failed built-in command can then go to your configured AI. API usage is billed by your chosen provider where applicable, separately from VesperTV. These provider integrations still need real-account testing; built-in commands remain available without them.",
+    "controls": "Settings → Vesper AI → Your AI → provider, model and API key → Save and test",
+    "url": "https://vespertv.app/remote.html#Vesper%20AI"
+  },
+  {
+    "id": "edb2bb413836e696",
+    "category": "Vesper AI",
+    "title": "Connect an AI app with MCP",
+    "answer": "Enable Let AI apps control VesperTV and copy this TV's private connector address into a compatible AI app's custom MCP connector. A Claude connector was tested; other clients, including ChatGPT, still need testing and must support custom MCP connections. Leave VesperTV open on that TV. Ask on the TV first is on by default: starting a channel or title, hiding/showing groups and clearing the watch list wait for confirmation. Read-only requests, player controls and individual list edits can run without a dialog. The address itself grants access: keep it private. Reset the address invalidates the old link; add the new address in your AI app. Disable Let AI apps control VesperTV to stop remote requests.",
+    "controls": "Settings → Vesper AI → AI apps → Let AI apps control VesperTV",
+    "url": "https://vespertv.app/remote.html#Vesper%20AI"
+  },
+  {
+    "id": "9096d9056f5f1def",
+    "category": "Vesper AI",
+    "title": "Vesper AI on several TVs",
+    "answer": "Each TV has its own connector address. Add a separate connector for each TV and name them clearly in your AI app, for example VesperTV Living room and VesperTV Bedroom. The link targets that one TV; Vesper does not yet offer a shared multi-TV link or choose a TV automatically. Keep the intended TV's VesperTV app open.",
+    "controls": "One private connector address per TV",
+    "url": "https://vespertv.app/remote.html#Vesper%20AI"
+  },
+  {
+    "id": "2dddcf174264347b",
+    "category": "Vesper AI",
+    "title": "Vesper AI watch list",
+    "answer": "Ask Vesper to \"add this to my watch list\", add an available title by name, or show your watch list. A linked AI app can also add available titles with a note, for example a list for Friday. Saved items appear in the Watch list row on Home for this viewer. Hold OK on a title there to remove it. This is VesperTV's own list, separate from Trakt or Simkl watchlists; it does not download video or add a new content source.",
+    "controls": "Say: add this to my watch list · show my watch list · Home → Watch list → Hold OK",
+    "url": "https://vespertv.app/remote.html#Vesper%20AI"
+  },
+  {
+    "id": "4d7d0101d74550d2",
+    "category": "Vesper AI",
+    "title": "Vesper AI privacy",
+    "answer": "With Your AI set to None, typed commands are handled without an AI provider. When enabled, Your AI can handle unrecognized requests and failed built-in commands. Your AI sends your request, conversation and tool results, such as channel/title names, programme listings, group names and watch-list notes, directly from the TV to your chosen AI provider. They do not pass through the VesperTV relay. A linked MCP app receives tool replies through the relay; the relay phone page also carries requests through that link. Relay requests and replies wait temporarily in memory, with no saved conversation history. Your AI provider or connected app has its own data policies. Voice recognition follows the TV or phone speech service's behavior; local command parsing is not a promise of local-only speech processing.",
+    "controls": "Built-in commands · Your AI · AI apps over the relay",
+    "url": "https://vespertv.app/remote.html#Vesper%20AI"
+  },
+  {
+    "id": "3bfeba4ea77344d2",
+    "category": "Vesper AI",
+    "title": "Vesper AI limits and Windows",
+    "answer": "Vesper acts on the sources and guide you already have. Its search/play tools cover your IPTV channels, movies and shows; Media Hub search through the AI tools and picking an episode by command are not implemented. A series opens its show page so you can choose the episode. Hidden content, restricted viewer permissions and Hide scores still apply. The public Windows package is 1.0.45 and does not include Vesper AI; the merged Windows code has not had real UI testing, and voice, player controls and now-playing support are not available there yet.",
+    "controls": "Your IPTV sources and guide · select episodes on the show page",
+    "url": "https://vespertv.app/remote.html#Vesper%20AI"
+  },
+  {
     "id": "fb8a10d73d9c9785",
     "category": "Settings",
     "title": "Use a channel logo from your EPG",
