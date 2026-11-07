@@ -161,6 +161,48 @@ void main() {
     hub.dispose();
   });
 
+  testWidgets('a resume that lost its stream keeps the list open with a note',
+      (tester) async {
+    final storage = await _storage();
+    final hub = ArchiveService(storage);
+    final session = ArchiveStreamSession(isCurrent: () => true);
+    session.addSource(_fast.key, _fast.name);
+    session.finish(_fast.key, [
+      const ArchiveStreamOption(
+          source: _fast,
+          stream: ArchiveStream(url: 'https://media.example/a.mkv', name: 'A')),
+      const ArchiveStreamOption(
+          source: _fast,
+          stream: ArchiveStream(url: 'https://media.example/b.mkv', name: 'B')),
+    ]);
+    final notice = ValueNotifier<String?>(null);
+    var asked = 0;
+    await tester.pumpWidget(MultiProvider(
+        providers: [
+          Provider.value(value: storage),
+          ChangeNotifierProvider.value(value: hub)
+        ],
+        child: MaterialApp(
+            home: Scaffold(
+                body: ArchiveStreamPicker(
+                    options: session.options,
+                    session: session,
+                    notice: notice,
+                    autoSelect: (_) async {
+                      asked++;
+                      notice.value = 'Pick one to resume.';
+                      return null;
+                    })))));
+    await tester.pumpAndSettle();
+    expect(asked, 1);
+    expect(find.text('Pick one to resume.'), findsOneWidget);
+    expect(find.byType(TvMenuTile), findsNWidgets(2));
+    await tester.pumpWidget(const SizedBox());
+    notice.dispose();
+    session.dispose();
+    hub.dispose();
+  });
+
   testWidgets(
       'discovery remote navigation crosses rows, opens credits and restores focus',
       (tester) async {

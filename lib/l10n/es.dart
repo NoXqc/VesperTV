@@ -1495,6 +1495,8 @@ const Map<String, String> kEs = {
   'Results for "{query}"': 'Resultados para «{query}»',
   'No results for "{query}"': 'Sin resultados para «{query}»',
   'Choose a stream': 'Elegir una fuente',
+  "Couldn't replay the stream you picked. Choose one to resume.":
+      "No se pudo reproducir la fuente que elegiste. Elige una para continuar.",
   'Stream {n}': 'Fuente {n}',
   // Transfer: Archive tab data
   // Media Hub tab (was Extras, before that Archive) + Multiview toggle

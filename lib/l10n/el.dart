@@ -1460,6 +1460,8 @@ const Map<String, String> kEl = {
   "Results for \"{query}\"": "Αποτελέσματα για «{query}»",
   "No results for \"{query}\"": "Κανένα αποτέλεσμα για «{query}»",
   "Choose a stream": "Επιλέξτε ροή",
+  "Couldn't replay the stream you picked. Choose one to resume.":
+      "Δεν ήταν δυνατή η αναπαραγωγή της ροής που επιλέξατε. Επιλέξτε μία για συνέχεια.",
   "Stream {n}": "Ροή {n}",
   "Watch tracking powered by Trakt and Simkl; VesperTV is not affiliated with or endorsed by either.":
       "Η παρακολούθηση γίνεται μέσω Trakt και Simkl· το VesperTV δεν συνδέεται ούτε εγκρίνεται από καμία από τις δύο.",

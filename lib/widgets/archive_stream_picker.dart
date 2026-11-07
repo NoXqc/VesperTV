@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../l10n/l10n.dart';
@@ -12,8 +13,16 @@ import 'tv_menu_tile.dart';
 
 class ArchiveStreamPicker extends StatefulWidget {
   const ArchiveStreamPicker(
-      {super.key, required this.options, this.session, this.autoSelect});
+      {super.key,
+      required this.options,
+      this.session,
+      this.autoSelect,
+      this.notice});
   final List<ArchiveStreamOption> options;
+
+  /// A line under the title, set while the list is open (resume couldn't
+  /// find the stream picked last time).
+  final ValueListenable<String?>? notice;
   final ArchiveStreamSession? session;
   final Future<ArchiveStreamOption?> Function(List<ArchiveStreamOption>)?
       autoSelect;
@@ -117,6 +126,18 @@ class _ArchiveStreamPickerState extends State<ArchiveStreamPicker> {
                                   await showArchivePlaybackSettings(context);
                                 }),
                           ])),
+                      if (widget.notice case final notice?)
+                        ValueListenableBuilder<String?>(
+                            valueListenable: notice,
+                            builder: (_, text, __) => text == null
+                                ? const SizedBox.shrink()
+                                : Padding(
+                                    padding:
+                                        const EdgeInsets.fromLTRB(20, 0, 20, 6),
+                                    child: Text(text,
+                                        style: const TextStyle(
+                                            fontSize: 15,
+                                            color: Color(0xFFFFC107))))),
                       if (session?.loading == true)
                         const LinearProgressIndicator(minHeight: 2),
                       if (session != null)

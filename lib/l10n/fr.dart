@@ -1502,6 +1502,8 @@ const Map<String, String> kFr = {
   'Results for "{query}"': 'Résultats pour « {query} »',
   'No results for "{query}"': 'Aucun résultat pour « {query} »',
   'Choose a stream': 'Choisir un flux',
+  "Couldn't replay the stream you picked. Choose one to resume.":
+      "Impossible de relancer le flux choisi. Choisissez-en un pour reprendre.",
   'Stream {n}': 'Flux {n}',
   // Transfer: Archive tab data
   // Media Hub tab (was Extras, before that Archive) + Multiview toggle

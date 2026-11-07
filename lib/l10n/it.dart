@@ -1500,6 +1500,8 @@ const Map<String, String> kIt = {
   'Results for "{query}"': 'Risultati per «{query}»',
   'No results for "{query}"': 'Nessun risultato per «{query}»',
   'Choose a stream': 'Scegli un flusso',
+  "Couldn't replay the stream you picked. Choose one to resume.":
+      "Impossibile riprodurre il flusso scelto. Scegline uno per riprendere.",
   'Stream {n}': 'Flusso {n}',
   // Transfer: Archive tab data
   // Media Hub tab (was Extras, before that Archive) + Multiview toggle

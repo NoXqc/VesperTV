@@ -1436,6 +1436,8 @@ const Map<String, String> kDe = {
   "Results for \"{query}\"": "Ergebnisse für „{query}“",
   "No results for \"{query}\"": "Keine Ergebnisse für „{query}“",
   "Choose a stream": "Stream wählen",
+  "Couldn't replay the stream you picked. Choose one to resume.":
+      "Der gewählte Stream konnte nicht erneut abgespielt werden. Wähle einen zum Fortsetzen.",
   "Stream {n}": "Stream {n}",
   "Watch tracking powered by Trakt and Simkl; VesperTV is not affiliated with or endorsed by either.":
       "Das Verfolgen des Gesehenen wird von Trakt und Simkl betrieben; VesperTV steht in keiner Verbindung zu ihnen und wird von keinem von beiden unterstützt.",

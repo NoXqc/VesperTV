@@ -20,15 +20,22 @@ enum ArchiveResumeReason {
   exactUrl,
   fileIdentity,
   description,
+  size,
 }
 
 class ArchiveResumeChoice {
   const ArchiveResumeChoice(this.options,
-      {this.picked, this.url, this.reason = ArchiveResumeReason.noChoice});
+      {this.picked,
+      this.url,
+      this.reason = ArchiveResumeReason.noChoice,
+      this.detail = ''});
   final List<ArchiveStreamOption> options;
   final ArchiveStreamOption? picked;
   final String? url;
   final ArchiveResumeReason reason;
+
+  /// How many options each fingerprint matched (Send log, no URLs/names).
+  final String detail;
 }
 
 /// A movie's selected stream, scoped like its progress to the active viewer.
@@ -149,6 +156,17 @@ class ArchiveResumeSource {
             saved['description'] != null &&
             _hash(_description(o)) == saved['description'])
         .toList();
+    // Last: the same byte count. A file keeps its size when an add-on
+    // rotates its links and rewrites its description (LOG-3NEYPN: a smaller
+    // pick came back as "unmatched" and the largest file played).
+    final savedBytes =
+        saved['bytes'] is num ? (saved['bytes'] as num).toInt() : 0;
+    int bytesOf(ArchiveStreamOption o) => saved['bytesExact'] == true
+        ? (o.stream.sizeBytes ?? 0)
+        : archiveStreamBytes(o);
+    final sized = savedBytes <= 0
+        ? const <ArchiveStreamOption>[]
+        : candidates.where((o) => bytesOf(o) == savedBytes).toList();
     // A quality/name shared by several files is not an exact selection.
     final picked = exact.length == 1
         ? exact.single
@@ -156,8 +174,18 @@ class ArchiveResumeSource {
             ? files.single
             : described.length == 1
                 ? described.single
-                : null;
-    if (picked == null) return fallback(ArchiveResumeReason.unmatched);
+                : sized.length == 1
+                    ? sized.single
+                    : null;
+    final detail = 'same=${sameSource.length} ok=${candidates.length} '
+        'url=${exact.length} file=${files.length}'
+        '${saved['file'] == null ? '(none)' : '(${saved['fileKind']})'} '
+        'desc=${described.length}${saved['description'] == null ? '(none)' : ''} '
+        'size=${sized.length}${savedBytes <= 0 ? '(none)' : saved['bytesExact'] == true ? '(exact)' : '(label)'}';
+    if (picked == null) {
+      return ArchiveResumeChoice(options,
+          reason: ArchiveResumeReason.unmatched, detail: detail);
+    }
     final url = await (_probe?.call(picked.stream.url) ??
         probeArchiveResumeUrl(picked.stream.url,
             headers: picked.stream.requestHeaders));
@@ -165,16 +193,20 @@ class ArchiveResumeSource {
     if (url == null) {
       return ArchiveResumeChoice(
           options.where((o) => !identical(o, picked)).toList(),
-          reason: ArchiveResumeReason.unavailable);
+          reason: ArchiveResumeReason.unavailable,
+          detail: detail);
     }
     return ArchiveResumeChoice(options,
         picked: picked,
         url: url,
+        detail: detail,
         reason: exact.length == 1
             ? ArchiveResumeReason.exactUrl
             : files.length == 1
                 ? ArchiveResumeReason.fileIdentity
-                : ArchiveResumeReason.description);
+                : described.length == 1
+                    ? ArchiveResumeReason.description
+                    : ArchiveResumeReason.size);
   }
 
   /// Enough to distinguish resume/fallback from a display error in Send log;
@@ -187,7 +219,8 @@ class ArchiveResumeSource {
         'play=${_hash(resolvedUrl).substring(0, 12)} '
         'sizeBytes=${archiveStreamBytes(selected)} '
         'hintBytes=${selected.stream.sizeBytes ?? 0} '
-        'labelBytes=${archiveStreamLabelBytes(selected)}');
+        'labelBytes=${archiveStreamLabelBytes(selected)}'
+        '${result.detail.isEmpty ? '' : ' match=[${result.detail}]'}');
   }
 }
 

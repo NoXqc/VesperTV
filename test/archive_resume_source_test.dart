@@ -189,4 +189,33 @@ void main() {
       expect(await probeArchiveResumeUrl('file:///movie'), isNull);
     });
   });
+
+  group('same byte count (LOG-3NEYPN)', () {
+    ArchiveStreamOption sized(String url, String desc, int bytes) =>
+        ArchiveStreamOption(
+            source: torbox,
+            stream: ArchiveStream(
+                url: url, name: '[TB] 1080p', title: desc, sizeBytes: bytes));
+    test('rotated link and rewritten description still find the file',
+        () async {
+      final small = sized('https://cdn/a?t=1', 'seeders 10', 2144385956);
+      await resume.remember(small);
+      final largest = sized('https://cdn/b?t=2', 'seeders 99', 13683116527);
+      final again = sized('https://cdn/a?t=3', 'seeders 11', 2144385956);
+      final result = await resume.restore([largest, again]);
+      expect(result.picked, same(again));
+      expect(result.reason, ArchiveResumeReason.size);
+      expect(result.detail, contains('size=1(exact)'));
+    });
+    test('two files of the same size are not a match', () async {
+      await resume.remember(sized('https://cdn/a?t=1', 'x', 8375186227));
+      final result = await resume.restore([
+        sized('https://cdn/c?t=2', 'y', 8375186227),
+        sized('https://cdn/d?t=2', 'z', 8375186227),
+      ]);
+      expect(result.picked, isNull);
+      expect(result.reason, ArchiveResumeReason.unmatched);
+      expect(result.detail, contains('size=2'));
+    });
+  });
 }

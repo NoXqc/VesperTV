@@ -2,6 +2,7 @@ import '../widgets/archive_discovery_panel.dart';
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -52,7 +53,8 @@ Future<ArchiveStreamOption?> pickArchiveStream(
         BuildContext context, List<ArchiveStreamOption> options,
         {ArchiveStreamSession? session,
         Future<ArchiveStreamOption?> Function(List<ArchiveStreamOption>)?
-            autoSelect}) =>
+            autoSelect,
+        ValueListenable<String?>? notice}) =>
     showModalBottomSheet<ArchiveStreamOption>(
         context: context,
         backgroundColor: const Color(0xFF1A1A1A),
@@ -60,7 +62,10 @@ Future<ArchiveStreamOption?> pickArchiveStream(
         constraints: BoxConstraints(
             maxHeight: MediaQuery.sizeOf(context).height * 0.8, maxWidth: 900),
         builder: (_) => ArchiveStreamPicker(
-            options: options, session: session, autoSelect: autoSelect));
+            options: options,
+            session: session,
+            autoSelect: autoSelect,
+            notice: notice));
 
 /// The option of [options] closest to [previous]: same source and same
 /// stream name, else the same source's first, else the first of all.
@@ -142,14 +147,28 @@ Future<void> playArchiveTitle(
           .id);
   final session = service.searchStreams(source, meta, episode: episode);
   ArchiveResumeChoice? savedChoice;
+  final notice = ValueNotifier<String?>(null);
   var picked = await pickArchiveStream(context, session.options,
-      session: session, autoSelect: (options) async {
+      session: session, notice: notice, autoSelect: (options) async {
     if (!resumeSource.isCurrent) return null;
     savedChoice = await resumeSource.restore(options);
     if (!resumeSource.isCurrent) return null;
     final usable = savedChoice!.options;
     for (final option in options) {
       if (!usable.contains(option)) session.exclude(option);
+    }
+    // Resuming a stream the user picked that can't be found again: ask,
+    // don't guess (the largest file looked like the app ignored the pick,
+    // LOG-3NEYPN; owner, 2026-11-07).
+    if (savedChoice!.picked == null &&
+        const {
+          ArchiveResumeReason.unmatched,
+          ArchiveResumeReason.unavailable,
+          ArchiveResumeReason.missingSource,
+        }.contains(savedChoice!.reason)) {
+      notice.value =
+          tr("Couldn't replay the stream you picked. Choose one to resume.");
+      return null;
     }
     final prefs = ArchivePlaybackPreferences.read(storage);
     return savedChoice!.picked ??
@@ -161,6 +180,7 @@ Future<void> playArchiveTitle(
             ? usable.single
             : null);
   });
+  notice.dispose();
   if (picked == null || !context.mounted || !resumeSource.isCurrent) return;
   var options = session.options;
   final restored = savedChoice ??
