@@ -336,7 +336,7 @@ class PhonePairingSession {
         final virtual = name.contains('docker') ||
             name.contains('veth') ||
             name.contains('vethernet') ||
-            name.contains('tun') ||
+            isVpnInterfaceName(name) ||
             name.contains('virtualbox') ||
             name.contains('vmware');
         for (final a in i.addresses) {
@@ -424,3 +424,26 @@ class PhonePairingSession {
 /// The device's private LAN IPv4 (see [PhonePairingSession]); shared with
 /// the device-to-device transfer.
 Future<InternetAddress?> privateLanIpv4() => PhonePairingSession._privateIpv4();
+
+/// A VPN's network adapter (tun0, ppp0, wg0, ipsec...): its address is
+/// never one a phone on the home Wi-Fi can reach.
+bool isVpnInterfaceName(String name) {
+  final n = name.toLowerCase();
+  return n.contains('tun') ||
+      RegExp(r'^(?:ppp|wg|ipsec|tap|nordlynx|proton|vpn)\d*').hasMatch(n);
+}
+
+/// True when this device sends its traffic through a VPN. Most IPTV users
+/// run one on the TV box (owner, 2026-11-07); it usually also catches the
+/// replies to a phone on the home Wi-Fi, so the same-Wi-Fi phone page
+/// can't load and the relay page is the one to offer.
+Future<bool> deviceOnVpn() async {
+  try {
+    // IPv4 only: Windows' Teredo "Tunneling" adapter is IPv6 and no VPN.
+    final interfaces = await NetworkInterface.list(
+        type: InternetAddressType.IPv4, includeLoopback: false);
+    return interfaces.any((i) => isVpnInterfaceName(i.name));
+  } catch (_) {
+    return false;
+  }
+}

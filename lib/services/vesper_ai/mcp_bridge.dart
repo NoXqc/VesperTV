@@ -56,7 +56,37 @@ class McpBridge {
 
   String? get phoneUrl {
     final s = _secret;
-    return s == null || !enabled ? null : '$kPairRelayBase/ai#$s';
+    return s == null || !(enabled || phoneLinkActive)
+        ? null
+        : '$kPairRelayBase/ai#$s';
+  }
+
+  /// Phone-only link: the relay phone page without AI apps turned on (a TV
+  /// on a VPN can't serve the same-Wi-Fi page, owner 2026-11-07). Only
+  /// `vesper/say` is answered in this mode; it ends an hour after the last
+  /// use, like the same-Wi-Fi server.
+  static const phoneIdleLimit = Duration(hours: 1);
+  DateTime? _phoneUntil;
+
+  bool get phoneLinkActive {
+    final until = _phoneUntil;
+    return until != null && DateTime.now().isBefore(until);
+  }
+
+  /// Starts (or extends) the phone-only link; returns the phone page URL.
+  Future<String?> startPhoneLink() async {
+    final storage = _storage;
+    if (storage == null) return null;
+    if (storage.getAiLinkSecret() == null) {
+      await storage.setAiLinkSecret(newSecret());
+    }
+    _phoneUntil = DateTime.now().add(phoneIdleLimit);
+    start();
+    return phoneUrl;
+  }
+
+  void _touchPhone() {
+    if (_phoneUntil != null) _phoneUntil = DateTime.now().add(phoneIdleLimit);
   }
 
   static String newSecret() {
@@ -73,7 +103,12 @@ class McpBridge {
       await storage.setAiLinkSecret(newSecret());
     }
     await storage.setAiLinkEnabled(on);
-    on ? start() : stop();
+    // Off with the phone-only link in use: it keeps polling until idle.
+    if (on || phoneLinkActive) {
+      start();
+    } else {
+      stop();
+    }
   }
 
   /// A new secret: every AI app / phone using the old address stops working.
@@ -82,7 +117,7 @@ class McpBridge {
     if (storage == null) return;
     await storage.setAiLinkSecret(newSecret());
     stop();
-    if (enabled) start();
+    if (enabled || phoneLinkActive) start();
   }
 
   void start() {
@@ -101,7 +136,7 @@ class McpBridge {
   /// radio awake); [resume] picks it up again.
   void pause() => stop();
   void resume() {
-    if (enabled) start();
+    if (enabled || phoneLinkActive) start();
   }
 
   Future<void> _loop(int gen) async {
@@ -109,6 +144,11 @@ class McpBridge {
     while (_running && gen == _generation) {
       final secret = _secret;
       if (secret == null) break;
+      if (!enabled && !phoneLinkActive) {
+        // The phone-only link went idle: stop polling the relay.
+        _running = false;
+        break;
+      }
       try {
         final res = await _client.get(Uri.parse('$kPairRelayBase/api/ai/poll'),
             headers: {
@@ -176,6 +216,16 @@ class McpBridge {
     final params = msg['params'] is Map
         ? (msg['params'] as Map).cast<String, Object?>()
         : const <String, Object?>{};
+    // Phone-only link (AI apps off): the phone page, nothing else.
+    if (!enabled && method != 'vesper/say') {
+      return {
+        'error': {
+          'code': -32000,
+          'message': 'AI apps are off on this TV. Turn them on in Settings > '
+              'Vesper AI > AI apps.'
+        }
+      };
+    }
     final box = VesperAi.instance.toolbox;
     if (box == null) {
       return {
@@ -222,6 +272,7 @@ class McpBridge {
           };
         }
         _log('${_clock()} phone');
+        _touchPhone();
         return {
           'result': {'reply': await askFromPhone(text)}
         };

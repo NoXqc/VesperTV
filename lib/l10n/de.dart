@@ -2814,4 +2814,8 @@ const Map<String, String> kDe = {
       "Die meisten Spiele auf dem Bildschirm, wenn du nah am Fernseher sitzt",
   "Changes the game cards in {tab} rows, See all and Live now. Large is the original size. Saved for this viewer.":
       "Ändert die Spielkarten in den Reihen von {tab}, Alle anzeigen und Jetzt live. Groß ist die ursprüngliche Größe. Für diesen Zuschauer gespeichert.",
+  "This TV is on a VPN, so this code goes through the internet.":
+      "Dieser Fernseher nutzt ein VPN, daher läuft dieser Code über das Internet.",
+  "Page does not open? A VPN on this TV can block it: use \"Phone not on this Wi-Fi?\" below.":
+      "Seite öffnet sich nicht? Ein VPN auf diesem Fernseher kann sie blockieren: Nutze unten „Handy nicht in diesem WLAN?“.",
 };

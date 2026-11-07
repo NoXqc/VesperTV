@@ -2924,4 +2924,8 @@ const Map<String, String> kFr = {
       "Le plus de matchs à l'écran, pour regarder près de la télé",
   "Changes the game cards in {tab} rows, See all and Live now. Large is the original size. Saved for this viewer.":
       "Change les cartes de match dans les rangées de {tab}, Tout voir et En direct. Grande est la taille d'origine. Enregistré pour ce spectateur.",
+  "This TV is on a VPN, so this code goes through the internet.":
+      "Cette télé est sur un VPN : ce code passe donc par Internet.",
+  "Page does not open? A VPN on this TV can block it: use \"Phone not on this Wi-Fi?\" below.":
+      "La page ne s'ouvre pas ? Un VPN sur cette télé peut la bloquer : utilisez « Téléphone pas sur ce Wi-Fi? » ci-dessous.",
 };

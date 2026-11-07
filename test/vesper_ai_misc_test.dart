@@ -1,6 +1,10 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:nox_iptv/services/phone_pairing_service.dart'
+    show isVpnInterfaceName, kPairRelayBase;
 import 'package:nox_iptv/services/storage_service.dart';
 import 'package:nox_iptv/services/vesper_ai/mcp_bridge.dart';
 import 'package:nox_iptv/utils/constants.dart';
@@ -62,6 +66,42 @@ void main() {
     final b = McpBridge.newSecret();
     expect(a, isNot(b));
     expect(RegExp(r'^[A-Za-z0-9_-]{43}$').hasMatch(a), isTrue);
+  });
+
+  test('phone-only link: relay phone page without AI apps, nothing else',
+      () async {
+    SharedPreferences.setMockInitialValues({});
+    final storage = StorageService();
+    await storage.init();
+    final bridge = McpBridge.instance;
+    // Never reach the real relay; a slow empty poll keeps the loop calm.
+    bridge.client = MockClient((_) async {
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      return http.Response('', 204);
+    });
+    bridge.attach(storage);
+    expect(bridge.enabled, isFalse);
+    expect(bridge.phoneUrl, isNull);
+    final url = await bridge.startPhoneLink();
+    expect(bridge.phoneLinkActive, isTrue);
+    expect(url, '$kPairRelayBase/ai#${storage.getAiLinkSecret()}');
+    // AI apps stay off: an AI app using the same link gets nothing.
+    for (final method in ['tools/list', 'tools/call']) {
+      final out = await bridge.handle({'method': method});
+      expect('${(out['error'] as Map)['message']}', contains('AI apps are off'),
+          reason: method);
+    }
+    expect(bridge.enabled, isFalse);
+    bridge.stop();
+  });
+
+  test('a VPN adapter is never the phone address and marks a VPN', () {
+    for (final n in ['tun0', 'ppp0', 'wg0', 'ipsec0', 'nordlynx', 'tap0']) {
+      expect(isVpnInterfaceName(n), isTrue, reason: n);
+    }
+    for (final n in ['wlan0', 'eth0', 'Wi-Fi', 'Ethernet 2']) {
+      expect(isVpnInterfaceName(n), isFalse, reason: n);
+    }
   });
 
   test('MCP requests before start-up and unknown methods answer errors',

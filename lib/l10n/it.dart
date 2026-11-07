@@ -2918,4 +2918,8 @@ const Map<String, String> kIt = {
       "Il maggior numero di partite sullo schermo, per guardare vicino alla TV",
   "Changes the game cards in {tab} rows, See all and Live now. Large is the original size. Saved for this viewer.":
       "Cambia le schede partita nelle righe di {tab}, Vedi tutto e In diretta. Grande è la dimensione originale. Salvato per questo spettatore.",
+  "This TV is on a VPN, so this code goes through the internet.":
+      "Questa TV è su una VPN, quindi questo codice passa da Internet.",
+  "Page does not open? A VPN on this TV can block it: use \"Phone not on this Wi-Fi?\" below.":
+      "La pagina non si apre? Una VPN su questa TV può bloccarla: usa «Telefono non su questa Wi-Fi?» qui sotto.",
 };

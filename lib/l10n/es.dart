@@ -2911,4 +2911,8 @@ const Map<String, String> kEs = {
       "El máximo de partidos en pantalla, para ver cerca de la TV",
   "Changes the game cards in {tab} rows, See all and Live now. Large is the original size. Saved for this viewer.":
       "Cambia las tarjetas de partido en las filas de {tab}, Ver todo y En vivo. Grande es el tamaño original. Guardado para este espectador.",
+  "This TV is on a VPN, so this code goes through the internet.":
+      "Este televisor está en una VPN, así que este código va por internet.",
+  "Page does not open? A VPN on this TV can block it: use \"Phone not on this Wi-Fi?\" below.":
+      "¿La página no se abre? Una VPN en este televisor puede bloquearla: usa «¿El teléfono no está en esta Wi-Fi?» abajo.",
 };

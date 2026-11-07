@@ -75,6 +75,15 @@ One tool layer, three front ends:
 - Any network: relay page `https://pair.vespertv.app/ai#<link>` (copy
   `tools/pair_relay/ai.html`, test keeps them identical) sends JSON-RPC
   `vesper/say` through the AI link; HTTPS → Web Speech mic button works.
+- **VPN on the TV** (owner, 2026-11-07: most IPTV users run one on the box, not the
+  phone): the VPN usually catches the replies to the phone, so the same-Wi-Fi page
+  never loads. `deviceOnVpn()` (`phone_pairing_service.dart`, IPv4 adapters named
+  tun/ppp/wg/ipsec/tap/nordlynx…, `isVpnInterfaceName`, also kept out of
+  `privateLanIpv4`) → the dialog opens on the relay code. That code no longer needs
+  AI apps: `McpBridge.startPhoneLink()` = phone-only link (secret created if needed,
+  polls while the app is shown, ends 1 h after the last `vesper/say`); with AI apps
+  off every other method answers "AI apps are off on this TV". Relay unchanged.
+  Not yet tried with a real VPN app on a box.
 
 ## AI apps over MCP (V3b)
 - `tools/pair_relay/ai_link.py` (+ `test_ai_link.py`, 6 tests): `POST /mcp/<secret>`

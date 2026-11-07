@@ -2873,4 +2873,8 @@ const Map<String, String> kEl = {
       "Οι περισσότεροι αγώνες στην οθόνη, για όσους κάθονται κοντά στην τηλεόραση",
   "Changes the game cards in {tab} rows, See all and Live now. Large is the original size. Saved for this viewer.":
       "Αλλάζει τις κάρτες αγώνων στις σειρές του {tab}, στο Όλα και στο Ζωντανά τώρα. Το Μεγάλο είναι το αρχικό μέγεθος. Αποθηκεύεται για αυτόν τον θεατή.",
+  "This TV is on a VPN, so this code goes through the internet.":
+      "Αυτή η τηλεόραση είναι σε VPN, οπότε αυτός ο κωδικός περνά μέσω διαδικτύου.",
+  "Page does not open? A VPN on this TV can block it: use \"Phone not on this Wi-Fi?\" below.":
+      "Η σελίδα δεν ανοίγει; Ένα VPN σε αυτή την τηλεόραση μπορεί να τη μπλοκάρει: χρησιμοποίησε το «Το κινητό δεν είναι σε αυτό το Wi-Fi;» παρακάτω.",
 };
