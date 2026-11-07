@@ -55,7 +55,8 @@ void main() {
         await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
     final port = reservation.port;
     await reservation.close();
-    relay = await Process.start('python', [
+    // macOS and Linux only ship python3.
+    relay = await Process.start(Platform.isWindows ? 'python' : 'python3', [
       'tools/pair_relay/relay.py'
     ], environment: {
       'PAIR_HOST': '127.0.0.1',
