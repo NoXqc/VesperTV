@@ -2857,4 +2857,8 @@ const Map<String, String> kEl = {
       "Αφαίρεση από τη λίστα",
   "An AI app wants to clear your watch list.":
       "Μια εφαρμογή AI θέλει να αδειάσει τη λίστα σου.",
+  "the app's own storage": "χώρο αποθήκευσης της εφαρμογής",
+  "Export a backup": "Εξαγωγή αντιγράφου ασφαλείας",
+  "Save a backup file anywhere on this Mac": "Αποθήκευση αρχείου αντιγράφου ασφαλείας οπουδήποτε σε αυτό το Mac",
+  "Backup exported.": "Το αντίγραφο ασφαλείας εξήχθη.",
 };

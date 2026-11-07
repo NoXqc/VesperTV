@@ -3,7 +3,6 @@ import '../widgets/detail_trailer.dart';
 import '../services/app_preferences.dart';
 import '../widgets/trailer_button.dart';
 import '../services/trailer_service.dart';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -17,6 +16,7 @@ import '../services/tracker_sync.dart';
 import '../widgets/cast_bubbles.dart';
 import '../widgets/detail_header.dart';
 import 'archive_playback.dart';
+import '../utils/desktop_platform.dart';
 
 /// An Archive movie's page: backdrop, poster, year/genres, description and
 /// Play. Built from the same `detail_header.dart` pieces as
@@ -142,7 +142,7 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
     // width (it was narrow-only, so wide windows had no way out).
     return CallbackShortcuts(
       bindings: {
-        if (Platform.isWindows)
+        if (isDesktop)
           const SingleActivator(LogicalKeyboardKey.escape): () =>
               Navigator.of(context).maybePop(),
       },
@@ -164,7 +164,7 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
                   padding: EdgeInsets.fromLTRB(
                       narrow ? 16 : 40, narrow ? 8 : 32, narrow ? 16 : 40, 32),
                   children: [
-                    if (narrow || Platform.isWindows)
+                    if (narrow || isDesktop)
                       Align(
                         alignment: Alignment.centerLeft,
                         child: ExcludeFocus(

@@ -1,8 +1,7 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
+import '../utils/desktop_platform.dart';
 
 /// Leaving the app (owner, 2026-11-05).
 ///
@@ -30,9 +29,10 @@ class AppExit {
 
   static bool _warmPending = false;
 
-  /// Tests run on Windows but exercise the Android path.
+  /// True on a computer (no warm exit there). Tests run on a computer but
+  /// exercise the Android path.
   @visibleForTesting
-  static bool isWindows = Platform.isWindows;
+  static bool isWindows = isDesktop;
 
   static Future<void> warm() async {
     if (isWindows) return full();

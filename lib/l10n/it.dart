@@ -2902,4 +2902,8 @@ const Map<String, String> kIt = {
       "Rimuovi dalla lista",
   "An AI app wants to clear your watch list.":
       "Un'app di IA vuole svuotare la tua lista.",
+  "the app's own storage": "memoria interna dell'app",
+  "Export a backup": "Esporta un backup",
+  "Save a backup file anywhere on this Mac": "Salva un file di backup ovunque su questo Mac",
+  "Backup exported.": "Backup esportato.",
 };

@@ -7,15 +7,16 @@ import '../models/media_file_info.dart';
 import '../services/desktop_mini_player.dart';
 import '../services/playback_service.dart';
 import 'youtube_player_screen.dart';
+import '../utils/desktop_platform.dart';
 
 Future<void> playYouTubeVideo(BuildContext context, String id, String title,
     {MediaFileInfo? mediaFileInfo}) async {
-  if (!Platform.isAndroid && !Platform.isWindows) {
+  if (!Platform.isAndroid && !isDesktop) {
     await launchUrl(YouTubeEmbedDocument(id).externalUrl,
         mode: LaunchMode.externalApplication);
     return;
   }
-  if (Platform.isWindows) {
+  if (isDesktop) {
     await DesktopMiniPlayer.instance.controller?.player.pause();
   } else {
     await context.read<PlaybackService?>()?.controller?.pause();

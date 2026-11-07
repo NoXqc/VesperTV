@@ -1,6 +1,5 @@
 import 'dart:async';
 import '../models/archive_library.dart';
-import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart'
@@ -30,6 +29,7 @@ import 'archive_detail_screen.dart';
 import 'archive_playback.dart';
 import 'settings/archive_sources_screen.dart';
 import 'settings/media_server_screen.dart';
+import '../utils/desktop_platform.dart';
 
 /// The Archive tab: classic, public-domain films and series from the
 /// user's own sources (Settings > Archive sources, any server speaking the
@@ -808,7 +808,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
       // back to the main UI). Same as SportsScreenFrame / SportsBackButton.
       child: CallbackShortcuts(
         bindings: {
-          if (Platform.isWindows)
+          if (isDesktop)
             const SingleActivator(LogicalKeyboardKey.escape): () =>
                 Navigator.of(context).maybePop(),
         },
@@ -936,7 +936,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
             SizedBox(
               height: 48,
               child: Row(children: [
-                if (Platform.isWindows)
+                if (isDesktop)
                   ExcludeFocus(
                     child: IconButton(
                       tooltip: tr('Back'),

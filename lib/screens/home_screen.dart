@@ -1,7 +1,6 @@
 import '../widgets/glass_menu.dart';
 import '../utils/refined_finish.dart';
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -38,6 +37,7 @@ import 'settings/profile_editor_screen.dart';
 import '../widgets/profile_card.dart';
 import 'sports_screen.dart';
 import '../services/vesper_ai/watch_list.dart';
+import '../utils/desktop_platform.dart';
 
 /// The Home page (top of the tabs column, or Settings > Startup > Open on:
 /// Home): the viewer's profiles strip, a hero for the focused card, then
@@ -269,8 +269,7 @@ class _HomeScreenState extends State<HomeScreen> {
           arrived(HomeRowKind.games, await _gamesRow(storage, playlist, epg));
         }(),
       if (visible.contains(HomeRowKind.newMovies))
-        _newMoviesRow(playlist)
-            .then((r) => arrived(HomeRowKind.newMovies, r)),
+        _newMoviesRow(playlist).then((r) => arrived(HomeRowKind.newMovies, r)),
       if (visible.contains(HomeRowKind.newShows))
         _newShowsRow(playlist).then((r) => arrived(HomeRowKind.newShows, r)),
     ].map((f) => f.catchError((Object e, StackTrace st) {
@@ -548,8 +547,8 @@ class _HomeScreenState extends State<HomeScreen> {
             }
             final c = i.channel!;
             if (c.isLive) return _playChannel(ctx, c);
-            return Navigator.of(ctx).push(
-                MaterialPageRoute(builder: (_) => MovieDetailScreen(channel: c)));
+            return Navigator.of(ctx).push(MaterialPageRoute(
+                builder: (_) => MovieDetailScreen(channel: c)));
           },
         ),
     ]);
@@ -647,7 +646,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Plays [c] full screen (Windows: its own player), like the live list.
   static Future<void> _playChannel(BuildContext context, Channel c) async {
-    if (Platform.isWindows) {
+    if (isDesktop) {
       DesktopMiniPlayer.instance.clear();
       await Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => DesktopPlayerScreen(channel: c)));
@@ -1029,13 +1028,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (hideProfiles &&
-                        (Platform.isWindows || size.width >= 800))
+                    if (hideProfiles && (isDesktop || size.width >= 800))
                       Padding(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 20, vertical: 6),
                         child: Row(children: [
-                          if (Platform.isWindows)
+                          if (isDesktop)
                             ExcludeFocus(
                                 child: IconButton(
                               tooltip: tr('Back'),
@@ -1693,7 +1691,7 @@ class _ProfilesStrip extends StatelessWidget {
         child: Padding(
             padding: EdgeInsets.fromLTRB(20, compact ? 6 : 14, 20, 0),
             child: Row(children: [
-              if (Platform.isWindows)
+              if (isDesktop)
                 ExcludeFocus(
                   child: IconButton(
                     tooltip: tr('Back'),

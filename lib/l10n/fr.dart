@@ -2908,4 +2908,8 @@ const Map<String, String> kFr = {
       "Retirer de la liste",
   "An AI app wants to clear your watch list.":
       "Une app d'IA veut vider votre liste à regarder.",
+  "the app's own storage": "le stockage de l'app",
+  "Export a backup": "Exporter une sauvegarde",
+  "Save a backup file anywhere on this Mac": "Enregistrer un fichier de sauvegarde n'importe où sur ce Mac",
+  "Backup exported.": "Sauvegarde exportée.",
 };

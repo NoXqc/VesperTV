@@ -50,6 +50,8 @@ dependencies:
   media_kit: ^1.1.11
   media_kit_video: ^1.2.5
   media_kit_libs_windows_video: ^1.0.10
+  # macOS desktop build: same media_kit (mpv) stack as Windows.
+  media_kit_libs_macos_video: ^1.1.4
   # Used directly (not just transitively through video_player_hdr) by
   # multiview_screen.dart, to reach our vendored video_player_android's
   # setAudioTrackTypeDisabled — see third_party/video_player_android's own

@@ -26,6 +26,7 @@ import '../../widgets/tv_dialog_option.dart';
 import '../../widgets/tv_menu_tile.dart';
 import '../../widgets/tv_switch_list_tile.dart';
 import '../../l10n/l10n.dart';
+import '../../utils/desktop_platform.dart';
 
 /// Small behaviour switches that don't belong to one feature's own screen —
 /// a home for future ones too (planned candidates: start-on tab, default
@@ -337,7 +338,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                           onChanged: (v) =>
                               context.read<AppPreferences>().setFastStartup(v),
                         ),
-                        if (!Platform.isWindows)
+                        if (!isDesktop)
                           Padding(
                             padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
                             child: Text(
@@ -448,7 +449,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                         onChanged: (v) =>
                             context.read<AppPreferences>().setHideRecordings(v),
                       ),
-                    if (!Platform.isWindows)
+                    if (!isDesktop)
                       TvSwitchListTile(
                         title: Text(tr('Hide Catch-up group')),
                         subtitle: Text(tr(
@@ -477,7 +478,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                           context.read<AppPreferences>().setHideMultiview(v),
                     ),
                   ]),
-                  if (!Platform.isWindows)
+                  if (!isDesktop)
                     _section('background', Icons.picture_in_picture_alt,
                         tr('Background video'),
                         children: [
@@ -530,7 +531,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                             ),
                         ]),
                   // Windows: the same settings through mpv (DesktopAudio).
-                  if (Platform.isAndroid || Platform.isWindows)
+                  if (Platform.isAndroid || isDesktop)
                     _section(
                         'audio', Icons.surround_sound_outlined, tr('Audio'),
                         children: [
@@ -626,7 +627,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                       children: [
                         TvSwitchListTile(
                           title: Text(tr('Data pool display')),
-                          subtitle: Text(Platform.isWindows
+                          subtitle: Text(isDesktop
                               ? tr(
                                   'Adds a Data pool button to the player bar (or press I) that opens a card with the stream\'s details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer, HDR and decoder.')
                               : tr(
@@ -636,7 +637,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                               context.read<AppPreferences>().setDataPool(v),
                         ),
                       ]),
-                  if (Platform.isAndroid || Platform.isWindows)
+                  if (Platform.isAndroid || isDesktop)
                     _section(
                         'catchup', Icons.history_toggle_off, tr('Catch-up'),
                         children: [
@@ -651,7 +652,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                             },
                           ),
                         ]),
-                  if (Platform.isAndroid || Platform.isWindows)
+                  if (Platform.isAndroid || isDesktop)
                     _section(
                         'skipintro', Icons.skip_next_outlined, tr('Skip intro'),
                         children: [
@@ -666,13 +667,13 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                             },
                           ),
                         ]),
-                  if (Platform.isAndroid || Platform.isWindows)
+                  if (Platform.isAndroid || isDesktop)
                     _section('upnext', Icons.queue_play_next, tr('Up Next'),
                         children: [_UpNextPicker()]),
-                  if (Platform.isAndroid || Platform.isWindows)
+                  if (Platform.isAndroid || isDesktop)
                     _section('livebuffer', Icons.av_timer, tr('Live buffer'),
                         children: [_LiveBufferPicker()]),
-                  if (Platform.isWindows)
+                  if (isDesktop)
                     _section('softvideo', Icons.memory, tr('Software video'),
                         children: [
                           TvSwitchListTile(
@@ -728,7 +729,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                               .setMixFavoritePlaylists(v),
                         ),
                       ]),
-                  if (!Platform.isWindows)
+                  if (!isDesktop)
                     _section('multiview', Icons.grid_view, tr('Multiview'),
                         children: [
                           TvSwitchListTile(
@@ -748,7 +749,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                         TvSwitchListTile(
                           title:
                               Text(tr('Show the "Hold > to resume" reminder')),
-                          subtitle: Text(Platform.isWindows
+                          subtitle: Text(isDesktop
                               ? tr(
                                   'The pill at the bottom while a channel plays in the background. Off: hidden.')
                               : tr(
@@ -811,7 +812,7 @@ class _LiveBufferPickerState extends State<_LiveBufferPicker> {
     // Windows (mpv) has no Gradual: it plays as Off there.
     final choices = [
       for (final c in _choices)
-        if (c.$1 >= 0 || !Platform.isWindows) c
+        if (c.$1 >= 0 || !isDesktop) c
     ];
     final name = choices
         .firstWhere((c) => c.$1 == current, orElse: () => choices.first)

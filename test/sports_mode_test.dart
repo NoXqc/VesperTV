@@ -46,6 +46,7 @@ import 'package:nox_iptv/widgets/sports_mode_toggle.dart';
 import 'package:nox_iptv/widgets/sports_mode_shell.dart';
 import 'package:nox_iptv/widgets/sports_league_rail.dart';
 import 'package:nox_iptv/widgets/sports_mode_live_panel.dart';
+import 'package:nox_iptv/utils/desktop_platform.dart';
 
 class _Storage extends StorageService {
   @override
@@ -1474,7 +1475,7 @@ void main() {
     expect(find.byType(TvHomeScreen), findsNothing);
     expect(find.text('Stay'), findsNothing);
     expect(getFocus(), 'sports-chip-mode:tv');
-    if (!Platform.isWindows) expect(playback.stops, greaterThan(0));
+    if (!isDesktop) expect(playback.stops, greaterThan(0));
     expect(tester.takeException(), isNull);
     await disposePage(tester);
   });

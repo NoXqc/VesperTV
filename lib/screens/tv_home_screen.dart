@@ -5,8 +5,6 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/services.dart';
@@ -78,6 +76,7 @@ import 'settings/check_updates_screen.dart';
 import 'settings/settings_menu_screen.dart';
 import '../l10n/l10n.dart';
 import '../services/vesper_ai/vesper_ai.dart';
+import '../utils/desktop_platform.dart';
 
 /// Directional D-pad focus movement between widgets (arrow keys via the
 /// default `FocusTraversalPolicy`) does *not* automatically scroll a newly
@@ -1629,8 +1628,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       context.read<AppPreferences>().recentChannelsGroup;
 
   bool get _showCatchupGroup =>
-      defaultTargetPlatform != TargetPlatform.windows &&
-      !context.read<AppPreferences>().hideCatchupGroup;
+      !isDesktopTarget && !context.read<AppPreferences>().hideCatchupGroup;
 
   /// [playlistId] is required for a real group selection (from a
   /// `_GroupRow`, which always has its own `M3uGroup.playlistId` on
@@ -2136,7 +2134,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       _phonePage = 1;
     }
     _startupSportsCovered = widget.startupSportsCovered &&
-        defaultTargetPlatform != TargetPlatform.windows &&
+        !isDesktopTarget &&
         context.read<AppPreferences>().hideVideoOnSports;
     _videoHiddenForSports = _startupSportsCovered;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -2614,7 +2612,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     // standalone screen/player instance, bypassing PlaybackService (and
     // therefore Continue Watching/resume/backup-server retry) entirely
     // rather than routing through the shared mobile player architecture.
-    if (Platform.isWindows) {
+    if (isDesktop) {
       // Abandon whatever's minimized first — reported directly as two
       // channels' audio playing at once otherwise: picking a channel
       // here is an unrelated, fresh selection, not a resume, so any
@@ -2671,7 +2669,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     if (!channel.hasCatchup) return _previewOrOpenChannel(channel);
     // The target platform (not dart:io), so Android tests on a Windows PC
     // take the Android path.
-    if (defaultTargetPlatform == TargetPlatform.windows) {
+    if (isDesktopTarget) {
       // One stream at a time: the preview's connection goes first.
       DesktopMiniPlayer.instance.clear();
       _catchupPreview = null;
@@ -2699,7 +2697,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
 
   Future<void> _previewOrOpenChannel(Channel channel) async {
     _catchupPreview = null;
-    if (Platform.isWindows) {
+    if (isDesktop) {
       final mini = DesktopMiniPlayer.instance;
       if (mini.channel.value?.id == channel.id) {
         final session = mini.take();
@@ -2847,7 +2845,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// controller, and the picture comes back on return.
   Future<void> _pushOverLiveVideo(Route<void> route) async {
     final hideVideo =
-        !Platform.isWindows && context.read<AppPreferences>().hideVideoOnSports;
+        !isDesktop && context.read<AppPreferences>().hideVideoOnSports;
     if (hideVideo) setState(() => _videoHiddenForSports = true);
     await Navigator.of(context).push(route);
     if (mounted && hideVideo) setState(() => _videoHiddenForSports = false);
@@ -3094,7 +3092,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   }
 
   void _closeApp() {
-    if (Platform.isWindows) {
+    if (isDesktop) {
       windowManager.close();
     } else {
       SystemNavigator.pop();
@@ -3185,7 +3183,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         // over a dark background instead of jumping when a channel starts.
         // Presentation follows Flutter's platform, so Android widget tests
         // can exercise the same hidden-column layout as a real foldable.
-        defaultTargetPlatform != TargetPlatform.windows;
+        !isDesktopTarget;
     _fullArt = isBrowseTab && _showWhatsNew && !_compact;
 
     return Theme(
@@ -3962,7 +3960,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             selected: false,
             collapsed: collapsed,
             onTap: () {
-              if (Platform.isWindows) {
+              if (isDesktop) {
                 DesktopMiniPlayer.instance.clear();
                 Navigator.of(context).push(MaterialPageRoute(
                     builder: (_) => const DesktopMultiviewScreen()));
@@ -4051,7 +4049,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         // window to the taskbar, Close quits normally via _closeApp
         // (windowManager.close: SystemNavigator.pop does nothing on
         // Windows) — neither touches playback or playlists.
-        if (Platform.isWindows) ...[
+        if (isDesktop) ...[
           _SelectableRow(
             icon: Icons.remove,
             label: tr('Minimize'),
@@ -4686,7 +4684,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// separately — this exact box, sitting right next to a working resume
   /// pill saying otherwise, reading as "the mini player doesn't work").
   Widget _buildTimelinePreviewBox(Channel? channel) {
-    if (Platform.isWindows) {
+    if (isDesktop) {
       // A real video feed, unlike the first pass at this box — unlike
       // `video_player_hdr`'s platform views (see `LiveResumeHint`'s own
       // doc comment for the real multi-consumer rendering bug that caused
@@ -5060,7 +5058,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                       // row is several times taller on a resizable desktop window.
                       // Target platform, not dart:io: same on a device, but tests
                       // then get the layout they ask for on any host OS.
-                      defaultTargetPlatform == TargetPlatform.windows
+                      isDesktopTarget
                           ? Expanded(
                               // flex 2:1 against the description panel's flex 1 below
                               // (was 2:3, i.e. 40% of the row) — requested directly:
@@ -5232,7 +5230,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                     Expanded(child: _fullVideoScrim(guide)),
                   ]
                 // Target platform, like the preview row's width above.
-                : defaultTargetPlatform == TargetPlatform.windows
+                : isDesktopTarget
                     ? [
                         // Android TV's fixed 160px preview row read as the right
                         // ratio there (reported directly), but on a much taller,
@@ -6835,15 +6833,14 @@ class _GroupRowState extends State<_GroupRow> {
 // Was 1.8 — reduced ~30% per direct feedback that the first pass at
 // this was too big.
 const double _windowsPosterScale = 1.26;
-double get _browsePosterWidth => Platform.isWindows
-    ? PosterCard.width * _windowsPosterScale
-    : PosterCard.width;
-double get _browsePosterHeight => Platform.isWindows
+double get _browsePosterWidth =>
+    isDesktop ? PosterCard.width * _windowsPosterScale : PosterCard.width;
+double get _browsePosterHeight => isDesktop
     ? PosterCard.posterHeight * _windowsPosterScale
     : PosterCard.posterHeight;
 double get _browseCardHeight =>
     _browsePosterHeight +
-    (Platform.isWindows
+    (isDesktop
         ? PosterCard.titleHeight * _windowsPosterScale
         : PosterCard.titleHeight);
 
@@ -7005,10 +7002,10 @@ class _BrowseHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final height = Platform.isWindows
+    final height = isDesktop
         ? (MediaQuery.of(context).size.height * 0.32).clamp(220.0, 480.0)
         : 210.0;
-    final big = Platform.isWindows;
+    final big = isDesktop;
     if (!big || (backdropUrl != null && backdropUrl!.isNotEmpty)) {
       // Fixed-height slot; the backdrop overflows it downward (painted
       // first, so the rows draw on top) and the title/description stay
@@ -7054,7 +7051,7 @@ class _BrowseHero extends StatelessWidget {
       // anything between, rather than a constant tuned for one specific
       // screen. Clamped so a very short or very tall window still gets
       // something reasonable at either end.
-      height: Platform.isWindows
+      height: isDesktop
           ? (MediaQuery.of(context).size.height * 0.32).clamp(220.0, 480.0)
           : 210,
       margin: const EdgeInsets.only(bottom: 18),

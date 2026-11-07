@@ -23,6 +23,7 @@ import '../widgets/hold_to_activate.dart';
 import '../widgets/settings_scaffold.dart';
 import '../widgets/sports_widgets.dart';
 import '../l10n/l10n.dart';
+import '../utils/desktop_platform.dart';
 
 /// "See all" beside Live now: every live game of the day as one dense row
 /// (clock + down & distance / outs, both teams, the top performers, the
@@ -255,7 +256,7 @@ class _SportsLiveListScreenState extends State<SportsLiveListScreen>
 
   Future<void> _watch(Channel channel, SportsGame g) async {
     await widget.onWatch(channel);
-    if (!mounted || Platform.isWindows) return;
+    if (!mounted || isDesktop) return;
     // Back from the player lands here: the stream would keep playing
     // unseen under the list.
     final playback = context.read<PlaybackService>();
@@ -355,7 +356,7 @@ class _SportsLiveListScreenState extends State<SportsLiveListScreen>
                               if (!_narrow)
                                 Expanded(
                                   child: Text(
-                                      Platform.isWindows
+                                      isDesktop
                                           ? tr('Click a game for its stats')
                                           : tr(
                                               'OK = stats and standings · ▶❚❚ = watch'),
@@ -905,7 +906,7 @@ class _SportsGameDetailsDialogState extends State<SportsGameDetailsDialog> {
     // Windows: a card of its own size beside the panel, not the TV's
     // "everything right of the panel" (far too big on a 4K monitor, owner
     // 2026-10-18): at most 980 wide and 88% high, centred vertically.
-    final desktopOver = over && Platform.isWindows;
+    final desktopOver = over && isDesktop;
     const desktopMaxWidth = 980.0;
     final pad = MediaQuery.paddingOf(context);
     final dialog = Dialog(

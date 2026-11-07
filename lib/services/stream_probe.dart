@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 
 import '../models/channel.dart';
 import 'playlist_edits.dart';
+import '../utils/desktop_platform.dart';
 
 /// Opt-in playlist-editor stream test: opens ONE stream for a few seconds
 /// and reads what it really is (resolution, frame rate, codec) without a
@@ -453,5 +454,4 @@ class _Bits {
 typedef ProbeGate = ({int? maxConnections, int? activeConnections});
 
 /// Where the probe can't run (a Windows desktop works too: plain HTTP).
-bool get streamProbeSupported =>
-    !kIsWeb && (Platform.isAndroid || Platform.isWindows);
+bool get streamProbeSupported => !kIsWeb && (Platform.isAndroid || isDesktop);

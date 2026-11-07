@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -9,6 +8,7 @@ import '../../widgets/mode_button.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_switch_list_tile.dart';
 import '../../l10n/l10n.dart';
+import '../../utils/desktop_platform.dart';
 
 /// Settings > Interface > Guide: the Live TV guide's layout (Live or
 /// Timeline, full-screen video/transparency, Expand, Compact). Was part of Theme.
@@ -63,7 +63,7 @@ class GuideSettingsScreen extends StatelessWidget {
                   // Android only for now — Windows' preview runs on its
                   // own media_kit player and isn't wired for this yet.
                   if (prefs.guideViewMode == 'timeline' &&
-                      defaultTargetPlatform != TargetPlatform.windows) ...[
+                      !isDesktopTarget) ...[
                     const SizedBox(height: 8),
                     TvSwitchListTile(
                       title: Text(tr('Full-screen video behind the guide')),
