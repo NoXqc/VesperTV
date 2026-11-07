@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../services/app_exit.dart';
 import '../services/app_preferences.dart';
 import '../services/playlist_manager.dart';
+import '../utils/desktop_platform.dart';
 import '../utils/tv_theme.dart';
 import '../widgets/mode_button.dart';
 import '../l10n/l10n.dart';
@@ -120,12 +122,21 @@ class CatalogSyncScreen extends StatelessWidget {
         colorScheme: buildPaletteColorScheme(palette, Brightness.dark),
         useMaterial3: true,
       ),
-      home: Scaffold(
-        backgroundColor: Colors.black,
-        body: CatalogSyncBody(
-          playlist: playlist,
-          footer: tr(
-              'This happens every few days to keep your catalog current — everyday launches open straight in.'),
+      // Back on a box: like the Home key (AppExit.warm), so the process and
+      // the sync survive. A plain Back finished the activity, and Fire OS
+      // then stopped the update (Fire TV user report; a Formuler kept going).
+      home: PopScope(
+        canPop: isDesktopTarget,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) AppExit.warm();
+        },
+        child: Scaffold(
+          backgroundColor: Colors.black,
+          body: CatalogSyncBody(
+            playlist: playlist,
+            footer: tr(
+                'This happens every few days to keep your catalog current — everyday launches open straight in.'),
+          ),
         ),
       ),
     );
