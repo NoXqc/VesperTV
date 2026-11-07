@@ -614,4 +614,10 @@ replacement**, in VesperTV's floating bubble style. Settings > Sports Trak > **G
   matched). Selected = card focus look (`sportsFocusSheen`, gold 2.5 border, glow). Under 640 px
   two-line rows. Lazy `ListView.builder` (fixed row/header heights, `_guideKeepVisible` jumpTo);
   in-page Column on phones / short Sports Mode screens. Test keys `guide-row-<key>` and
-  `guide-selected`. Tests: `sports_mode_test.dart` group "Guide layout" (12).
+  `guide-selected`. Tests: `sports_mode_test.dart` group "Guide layout" (15).
+- Density pass after the owner's +674 photo (2 games on the Formuler): no big matchup panel while
+  nothing plays (`_guideHidesHero`; it returns with the mini player on OK), rows 54 px / headers 30,
+  dark status pill + white channel text on the selected row (pink sheen hid them), and regular
+  Sports Trak gets Sports Mode's single tools row (`_guideTools`: day menu + Standings / My Teams /
+  Networks; zone 1 folds into zone 2, Left of `day:menu` = rail). 7 games on a 960x540 TV, 6 in
+  Sports Mode (test: at least 6).

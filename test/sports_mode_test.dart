@@ -1628,6 +1628,41 @@ void main() {
       await open(tester);
       expect(find.byKey(const ValueKey('sports-guide')), findsNothing);
       expect(find.byKey(const ValueKey('card-nhl:game100')), findsOneWidget);
+      // The day strip stays (Guide's single row is Guide only).
+      await press(tester, LogicalKeyboardKey.arrowRight);
+      expect(getFocus(), 'sports-chip-day:0');
+      await disposePage(tester);
+    });
+
+    testWidgets('regular Sports Trak: one row, day menu then the tools',
+        (tester) async {
+      await prefs.setSportsMode(false);
+      await storage.setSportsLayout('guide');
+      await open(tester);
+      expect(getFocus(), 'sports-chip-league:all');
+      await press(tester, LogicalKeyboardKey.arrowRight);
+      expect(getFocus(), 'sports-chip-day:menu');
+      await press(tester, LogicalKeyboardKey.arrowRight);
+      expect(getFocus(), 'sports-chip-standings');
+      await press(tester, LogicalKeyboardKey.arrowLeft);
+      expect(getFocus(), 'sports-chip-day:menu');
+      // Left of the day menu: the league rail.
+      await press(tester, LogicalKeyboardKey.arrowLeft);
+      expect(getFocus(), startsWith('sports-chip-league:'));
+      await press(tester, LogicalKeyboardKey.arrowRight);
+      expect(getFocus(), 'sports-chip-day:menu');
+      // Down: the list; Up from its first row: back on the row.
+      await press(tester, LogicalKeyboardKey.arrowDown);
+      expect(getFocus(), 'sports-guide');
+      await press(tester, LogicalKeyboardKey.arrowUp);
+      expect(getFocus(), 'sports-chip-day:menu');
+      // OK on the day menu opens the days, as in Sports Mode.
+      await press(tester, LogicalKeyboardKey.select);
+      await tester.pumpAndSettle();
+      expect(find.text('Tomorrow'), findsWidgets);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
       await disposePage(tester);
     });
 
@@ -1673,6 +1708,32 @@ void main() {
         await press(tester, LogicalKeyboardKey.arrowLeft);
         expect(getFocus(),
             startsWith(mode ? 'sports-chip-' : 'sports-chip-league:'));
+        expect(tester.takeException(), isNull);
+        await disposePage(tester);
+      });
+    }
+
+    for (final mode in [false, true]) {
+      testWidgets(
+          'many games at once on a TV, no big matchup until one plays '
+          '(mode=$mode)', (tester) async {
+        await prefs.setSportsMode(mode);
+        await storage.setSportsLayout('guide');
+        await open(tester);
+        await intoGuide(tester);
+        var onScreen = 0;
+        for (final key in [
+          'nhl:game100',
+          for (var i = 0; i < 18; i++) 'nhl:game$i',
+          'nhl:game200',
+        ]) {
+          final row = find.byKey(ValueKey('guide-row-$key'));
+          if (row.evaluate().isEmpty) continue;
+          final r = tester.getRect(row);
+          if (r.top >= 0 && r.bottom <= 540) onScreen++;
+        }
+        // Owner photo, 2026-11-07: the first Guide showed two.
+        expect(onScreen, greaterThanOrEqualTo(6));
         expect(tester.takeException(), isNull);
         await disposePage(tester);
       });

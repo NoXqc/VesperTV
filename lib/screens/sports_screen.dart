@@ -758,10 +758,17 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         final ctx = node.context;
         if (ctx != null) Scrollable.ensureVisible(ctx, alignment: 0.5);
       });
-    } else if (zone == 1) {
+    } else if (zone == 1 && !_guideTools) {
       _chipNode(_dayChipId).requestFocus();
-    } else if (zone == 2) {
-      _chipNode(_showStandingsChip ? 'standings' : 'myteams').requestFocus();
+    } else if (zone == 1 || zone == 2) {
+      // Guide: one tools row led by the day menu (zone 1 folds into it).
+      if (_guideTools) zone = 2;
+      _chipNode(_guideTools
+              ? 'day:menu'
+              : _showStandingsChip
+                  ? 'standings'
+                  : 'myteams')
+          .requestFocus();
     } else if (sections.isEmpty) {
       if (_modeActive && _chipNode('nextgame').context == null) {
         _focusZone(0, sections);
@@ -917,7 +924,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     if (_backToFeed(delta, _zone)) return;
     if (_headerChipStep(delta, sections)) return;
     var target = _zone + delta;
-    if (_modeActive && target == 1) target += delta;
+    if ((_modeActive || _guideTools) && target == 1) target += delta;
     if (_railLayout && target == 0) return;
     // Guide: one list for every section, back on the row it was on.
     if (_guideLayout && sections.isNotEmpty && target >= _firstRowZone) {
@@ -1018,7 +1025,10 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     }
     bool has(String id) => _chipNodes[id]?.hasFocus ?? false;
     final edge = has('day:-1') ||
-        has(_showStandingsChip ? 'standings' : 'myteams') ||
+        // Guide's single row starts with the day menu, not Standings.
+        (_guideTools
+            ? has('day:menu')
+            : has(_showStandingsChip ? 'standings' : 'myteams')) ||
         has('nextgame') ||
         has(_liveAllId) ||
         has(_mvOpenId) ||
@@ -1226,7 +1236,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     _setDay(offset);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        _chipNode(_modeActive ? 'day:menu' : 'day:$offset').requestFocus();
+        _chipNode(_modeActive || _guideTools ? 'day:menu' : 'day:$offset')
+            .requestFocus();
       }
     });
   }
@@ -1980,11 +1991,17 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final header = [
       _buildLeagueBar(mode: mode),
       const SizedBox(height: 8),
-      _buildDayBar(),
-      const SizedBox(height: 6),
-      _buildStandingsButton(),
+      // Guide: one row (day menu + tools), like Sports Mode; Cards: the day
+      // strip, then the tools row.
+      if (_guideTools)
+        _buildModeTools()
+      else ...[
+        _buildDayBar(),
+        const SizedBox(height: 6),
+        _buildStandingsButton(),
+      ],
       const SizedBox(height: 4),
-      if (hero != null) heroWidget(),
+      if (hero != null && !_guideHidesHero(preview, channelOnly)) heroWidget(),
     ];
     // Back while moving a league chip = "done", not leave Sports; Back while
     // the hero plays stops it first.
@@ -2181,6 +2198,17 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
 
   /// Settings > Sports Trak > Games layout = Guide (opt-in, per viewer).
   bool get _guideLayout => _storage.getSportsLayout() == 'guide';
+
+  /// Guide: the big matchup panel only while something plays in it (its
+  /// mini player). Otherwise the selected row already says the same and
+  /// the panel left room for two games on a TV (owner photo, 2026-11-07).
+  bool _guideHidesHero(SportsGame? preview, bool channelOnly) =>
+      _guideLayout && preview == null && !channelOnly;
+
+  /// Guide in regular Sports Trak: the day strip and the tools row become
+  /// Sports Mode's single row (day menu, Standings, My Teams, Networks), for
+  /// more games on screen (owner, 2026-11-07). Cards keeps both rows.
+  bool get _guideTools => _guideLayout && !_modeActive;
 
   /// Guide: moving through the leagues (rail, Sports Mode rail and bar)
   /// shows their games without OK, like a TV guide's groups (owner,
@@ -2579,9 +2607,11 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   /// Narrow screens (phones): two-line rows.
   bool _guideCompact(double width) => width < 640;
 
+  // Dense on purpose: the point of Guide is many games at once (owner,
+  // 2026-11-07: 72 px rows showed two games on the Formuler).
   double _guideRowExtent(bool compact) =>
-      (compact ? 84.0 : 72.0) * _guideTextScale;
-  double get _guideHeaderExtent => 40.0 * _guideTextScale;
+      (compact ? 70.0 : 54.0) * _guideTextScale;
+  double get _guideHeaderExtent => 30.0 * _guideTextScale;
   static const _guideTopPad = 6.0;
 
   SportsGame? get _guideGame {
@@ -3116,7 +3146,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                       const SizedBox(height: 4),
                       _buildModeTools(),
                       const SizedBox(height: 6),
-                      if (hero != null) hero(),
+                      if (hero != null &&
+                          !_guideHidesHero(preview, channelOnly))
+                        hero(),
                       _buildBody(sections, preview, inPage: true),
                     ]),
               )
@@ -3180,7 +3212,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
                           const SizedBox(height: 4),
                           _buildModeTools(),
                           const SizedBox(height: 6),
-                          if (hero != null) hero(),
+                          if (hero != null &&
+                              !_guideHidesHero(preview, channelOnly))
+                            hero(),
                           Expanded(child: _buildBody(sections, preview)),
                         ]);
                   }
@@ -4471,7 +4505,7 @@ class _GuideRow extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                    fontSize: compact ? 14 : 16,
+                    fontSize: 14.5,
                     fontWeight: FontWeight.w700,
                     color: lost ? Colors.white70 : Colors.white)),
           ),
@@ -4482,28 +4516,26 @@ class _GuideRow extends StatelessWidget {
     final matchup = g.isEventOnly
         ? Row(children: [
             SportsLogo(
-                url: g.league.logoUrl,
-                size: compact ? 22 : 28,
-                fallback: g.league.shortName),
+                url: g.league.logoUrl, size: 22, fallback: g.league.shortName),
             const SizedBox(width: 8),
             Expanded(
               child: Text(g.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                      fontSize: compact ? 14 : 16,
+                  style: const TextStyle(
+                      fontSize: 14.5,
                       fontWeight: FontWeight.w700,
                       color: Colors.white)),
             ),
           ])
         : Row(children: [
-            Flexible(child: team(g.first, logo: compact ? 22 : 28)),
+            Flexible(child: team(g.first, logo: 22)),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Text(tr(g.joiner),
-                  style: const TextStyle(fontSize: 13, color: Colors.white54)),
+                  style: const TextStyle(fontSize: 12, color: Colors.white54)),
             ),
-            Flexible(child: team(g.second, logo: compact ? 22 : 28)),
+            Flexible(child: team(g.second, logo: 22)),
           ]);
 
     final score = showScore && !g.isEventOnly
@@ -4516,17 +4548,23 @@ class _GuideRow extends StatelessWidget {
       GameState.post =>
         g.statusText.isEmpty ? tr('Final') : trSports(g.statusText),
     };
+    // On the selected row's bright sheen a dark pill keeps the text
+    // readable (owner photo: "End of 1st" vanished on the pink row).
     final status = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
       decoration: BoxDecoration(
-        color: live
-            ? Colors.redAccent.withValues(alpha: 0.14)
-            : Colors.white.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(14),
+        color: selected
+            ? Colors.black.withValues(alpha: 0.45)
+            : live
+                ? Colors.redAccent.withValues(alpha: 0.14)
+                : Colors.white.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
             color: live
-                ? Colors.redAccent.withValues(alpha: 0.5)
-                : Colors.white12),
+                ? Colors.redAccent.withValues(alpha: 0.6)
+                : selected
+                    ? Colors.white24
+                    : Colors.white12),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -4552,7 +4590,7 @@ class _GuideRow extends StatelessWidget {
                     TextSpan(
                         text: score,
                         style: const TextStyle(
-                            fontSize: 13.5,
+                            fontSize: 12.5,
                             fontWeight: FontWeight.w800,
                             color: Colors.white)),
                     const TextSpan(
@@ -4563,15 +4601,24 @@ class _GuideRow extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: live ? Colors.redAccent : Colors.white70)),
+                    color: live
+                        ? Colors.redAccent
+                        : selected
+                            ? Colors.white
+                            : Colors.white70)),
           ),
         ],
       ),
     );
 
     final matched = match != null;
+    final channelColor = selected
+        ? Colors.white
+        : matched
+            ? scheme.primary
+            : Colors.white38;
     final channelText = match?.channel.name ??
         (matching
             ? tr('Looking…')
@@ -4581,22 +4628,23 @@ class _GuideRow extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(matched ? Icons.live_tv : Icons.add_circle_outline,
-            size: 14, color: matched ? scheme.primary : Colors.white38),
+            size: 13, color: channelColor),
         const SizedBox(width: 6),
         Flexible(
           child: Text(channelText,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: matched ? FontWeight.w600 : FontWeight.w400,
-                  color: matched ? scheme.primary : Colors.white38)),
+                  fontSize: 12,
+                  fontWeight:
+                      matched || selected ? FontWeight.w700 : FontWeight.w400,
+                  color: channelColor)),
         ),
       ],
     );
 
     final leagueTag = Container(
-      padding: const EdgeInsets.fromLTRB(5, 3, 8, 3),
+      padding: const EdgeInsets.fromLTRB(4, 2, 7, 2),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.white24),
@@ -4605,14 +4653,14 @@ class _GuideRow extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           SportsLogo(
-              url: g.league.logoUrl, size: 16, fallback: g.league.shortName),
+              url: g.league.logoUrl, size: 14, fallback: g.league.shortName),
           const SizedBox(width: 5),
           Flexible(
             child: Text(g.league.shortName.toUpperCase(),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                    fontSize: 10.5,
+                    fontSize: 9.5,
                     letterSpacing: 0.6,
                     fontWeight: FontWeight.w700,
                     color: Colors.white70)),
@@ -4660,7 +4708,7 @@ class _GuideRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(children: [...badges, Expanded(child: matchup)]),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 5),
                   Row(children: [
                     Flexible(child: status),
                     const SizedBox(width: 8),
@@ -4694,10 +4742,10 @@ class _GuideRow extends StatelessWidget {
           ]);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       child: InkWell(
         canRequestFocus: false,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
         onTap: onTap,
         onLongPress: onLongPress,
         child: AnimatedContainer(
@@ -4713,7 +4761,7 @@ class _GuideRow extends StatelessWidget {
                         ? scheme.primary.withValues(alpha: 0.14)
                         : Colors.white.withValues(alpha: 0.06),
                 gradient: selected ? sportsFocusSheen(scheme) : null,
-                borderRadius: BorderRadius.circular(22),
+                borderRadius: BorderRadius.circular(18),
                 border: Border.all(
                     color: selected
                         ? scheme.primary
@@ -4725,7 +4773,7 @@ class _GuideRow extends StatelessWidget {
                     ? [
                         BoxShadow(
                             color: scheme.primary.withValues(alpha: 0.35),
-                            blurRadius: 16)
+                            blurRadius: 12)
                       ]
                     : null,
               ),
