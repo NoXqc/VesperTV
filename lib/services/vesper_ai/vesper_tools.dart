@@ -818,7 +818,9 @@ final List<VesperTool> vesperTools = [
         },
         'query': {
           'type': 'string',
-          'description': 'For search, group and hub.',
+          'description':
+              'For search, group and hub. For search: only the title words '
+                  '(every word must be in a title): "project x", never "project x movie".',
         },
       },
       'required': ['section'],

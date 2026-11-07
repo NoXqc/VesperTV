@@ -156,7 +156,12 @@ VesperCommand? parseVesperCommand(String spoken) {
   for (final verb in _searchVerbs) {
     final rest = _after(s, verb);
     if (rest != null && rest.isNotEmpty) {
-      return VesperCommand('open', {'section': 'search', 'query': rest});
+      // "search project x movie": every search word must be in a title, so
+      // "movie" hid the IPTV "EN - Project X - 2012" (owner, 2026-11-07).
+      // The kind word is dropped; a bare "search movie" stays as it is.
+      final (_, title) = _kindOf(rest);
+      return VesperCommand(
+          'open', {'section': 'search', 'query': title.isEmpty ? rest : title});
     }
   }
 
@@ -222,7 +227,8 @@ String _strip(String s) {
 
 (String?, String) _kindOf(String rest) {
   for (final e in _kindWords.entries) {
-    for (final w in e.value) {
+    // Longest first: "project x the movie" drops "the movie", not "movie".
+    for (final w in [...e.value]..sort((a, b) => b.length - a.length)) {
       if (rest.startsWith('$w ')) {
         return (e.key, _strip(rest.substring(w.length)));
       }

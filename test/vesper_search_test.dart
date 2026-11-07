@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nox_iptv/utils/title_search.dart';
 import 'package:nox_iptv/models/channel.dart';
 import 'package:nox_iptv/services/vesper_ai/vesper_ai.dart';
 import 'package:nox_iptv/services/vesper_ai/vesper_commands.dart';
@@ -80,6 +81,22 @@ void main() {
           {'section': 'search', 'query': 'cbs'});
       expect(p('show me all the movies')?.args, {'section': 'movies'});
       expect(p('play the all star game')?.tool, 'play_game');
+    });
+
+    test('search drops a movie/show word so IPTV titles match', () {
+      for (final s in [
+        'search project x movie',
+        'search for the movie project x',
+        'search project x the movie',
+        'cherche le film project x',
+      ]) {
+        expect(p(s)?.args, {'section': 'search', 'query': 'project x'},
+            reason: s);
+      }
+      expect(TitleSearch('project x').matches('EN - project X - 2012'), isTrue);
+      expect(p('search the simpsons show')?.args['query'], 'simpsons');
+      // Nothing but the kind word: kept.
+      expect(p('search movie')?.args['query'], 'movie');
     });
 
     test('which channels have a game: list them, never a team name', () {
