@@ -19,6 +19,7 @@ import 'package:nox_iptv/utils/route_observer.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player_hdr/video_player_hdr.dart';
+import 'package:video_player_platform_interface/video_player_platform_interface.dart';
 
 /// The Timeline guide's catch-up: Left into the past on a catch-up row,
 /// Back = back to now, OK on a past programme = catch-up.
@@ -92,6 +93,17 @@ class _Epg extends EpgService {
       });
 }
 
+/// Host-independent video view: `flutter test` registers the host's real
+/// video_player plugin (AVFoundation on macOS), whose view throws in tests.
+class _Platform extends VideoPlayerPlatform {
+  @override
+  Future<void> init() async {}
+  @override
+  Widget buildView(int id) => const SizedBox();
+  @override
+  Future<void> dispose(int id) async {}
+}
+
 class _FakePlayer extends VideoPlayerHdrController {
   _FakePlayer(String url) : super.networkUrl(Uri.parse(url));
   @override
@@ -124,6 +136,9 @@ void main() {
 
   setUp(() {
     opened.clear();
+    final previousPlatform = VideoPlayerPlatform.instance;
+    VideoPlayerPlatform.instance = _Platform();
+    addTearDown(() => VideoPlayerPlatform.instance = previousPlatform);
     final messenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     messenger.setMockMessageHandler(

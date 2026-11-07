@@ -84,7 +84,7 @@ class _TrailerButtonState extends State<TrailerButton> {
       if (Platform.isWindows) {
         await DesktopMiniPlayer.instance.controller?.player.pause();
       } else {
-        await context.read<PlaybackService>().controller?.pause();
+        await context.read<PlaybackService?>()?.controller?.pause();
       }
       bool opened;
       if (widget.open != null) {
