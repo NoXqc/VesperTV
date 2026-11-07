@@ -1665,6 +1665,9 @@ const Map<String, String> kEl = {
   "{group} deleted. Its channels are back in their groups.":
       "Η ομάδα {group} διαγράφηκε. Τα κανάλια της επέστρεψαν στις ομάδες τους.",
   // Fast startup
+  "Update in the background": "Ενημέρωση στο παρασκήνιο",
+  "When a content update is due, open on Live TV right away and update Movies and TV Shows behind it. They fill in over the next few minutes, and the remote can feel slower until it finishes. Applies from the next start.":
+      "Όταν πρέπει να ενημερωθεί το περιεχόμενο, ανοίγει αμέσως η Ζωντανή τηλεόραση και οι Ταινίες και οι Σειρές ενημερώνονται στο παρασκήνιο. Συμπληρώνονται τα επόμενα λεπτά και το τηλεχειριστήριο μπορεί να φαίνεται πιο αργό μέχρι να τελειώσει. Ισχύει από την επόμενη εκκίνηση.",
   "Fast startup": "Γρήγορη εκκίνηση",
   "Opens the app without waiting for Movies and TV Shows to load; they fill in a few seconds later. For fast devices — leave it off on an older box if the app closes by itself right after starting. Applies from the next start.":
       "Ανοίγει την εφαρμογή χωρίς να περιμένει να φορτώσουν οι Ταινίες και οι Σειρές· συμπληρώνονται λίγα δευτερόλεπτα αργότερα. Για γρήγορες συσκευές — αφήστε το κλειστό σε παλιότερο αποκωδικοποιητή αν η εφαρμογή κλείνει μόνη της αμέσως μετά την εκκίνηση. Ισχύει από την επόμενη εκκίνηση.",

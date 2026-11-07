@@ -1716,6 +1716,9 @@ const Map<String, String> kIt = {
   "{group} deleted. Its channels are back in their groups.":
       "{group} eliminato. I suoi canali tornano nei loro gruppi.",
   // Fast startup
+  "Update in the background": "Aggiorna in background",
+  "When a content update is due, open on Live TV right away and update Movies and TV Shows behind it. They fill in over the next few minutes, and the remote can feel slower until it finishes. Applies from the next start.":
+      "Quando è il momento di aggiornare i contenuti, apre subito la TV in diretta e aggiorna Film e Serie TV in background. Si completano nei prossimi minuti e il telecomando può risultare più lento fino alla fine. Si applica dal prossimo avvio.",
   "Fast startup": "Avvio rapido",
   "Opens the app without waiting for Movies and TV Shows to load; they fill in a few seconds later. For fast devices — leave it off on an older box if the app closes by itself right after starting. Applies from the next start.":
       "Apre l’app senza aspettare il caricamento di Film e Serie TV; si completano qualche secondo dopo. Per dispositivi veloci — lascialo disattivato su un box più vecchio se l’app si chiude da sola subito dopo l’avvio. Vale dal prossimo avvio.",

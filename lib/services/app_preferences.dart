@@ -362,6 +362,15 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Update in the background: see [AppConstants.keyBackgroundSync]. Read
+  /// once at launch, when a full catalog sync is due.
+  bool get backgroundSync => _storage.getBackgroundSync();
+
+  void setBackgroundSync(bool value) {
+    _storage.setBackgroundSync(value);
+    notifyListeners();
+  }
+
   /// Read once after the splash; changing it applies on the next launch.
   bool get launchWithProfiles => _storage.getLaunchWithProfiles();
 

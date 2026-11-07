@@ -808,9 +808,16 @@ class _NoxIptvAppState extends State<NoxIptvApp>
             _playlistManager.dueSyncIsAutomatic() || await _confirmAutoSync();
         if (confirmed) {
           didSync = true;
-          if (mounted) setState(() => _syncing = true);
-          await _playlistManager.runFullCatalogSync();
-          if (mounted) setState(() => _syncing = false);
+          if (_preferences.backgroundSync) {
+            // Opt-in (Settings > General > Startup): the app opens on Live
+            // TV now and the catalog fills in behind it, instead of the
+            // blocking screen (Fire TV user: Back there leaves the app).
+            unawaited(_playlistManager.runFullCatalogSync());
+          } else {
+            if (mounted) setState(() => _syncing = true);
+            await _playlistManager.runFullCatalogSync();
+            if (mounted) setState(() => _syncing = false);
+          }
         }
       }
 
