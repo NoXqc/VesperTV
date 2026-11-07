@@ -1501,6 +1501,7 @@ class StorageService {
     AppConstants.keyMatchScoreAlerts,
     _goalPhoneCheckpoint,
     AppConstants.keyAiDevicePrefix,
+    AppConstants.keySportsDbRounds,
   ];
 
   static const _goalPhoneCheckpoint = 'vesper_goal_phone_checkpoint';

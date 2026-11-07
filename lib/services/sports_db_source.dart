@@ -14,12 +14,13 @@ import '../models/sports.dart';
 /// a league's games with final scores, the next game, and the top 5 of the
 /// table (that's all it returns). No live minute, box score or full table —
 /// those need a paid key. A day is capped at [dayCap] games; a whole round
-/// isn't, so a capped day is completed from its rounds ([roundUrls]).
+/// isn't, so a capped day is completed from its rounds ([roundUrls]), or for
+/// boxing from the neighbouring card numbers ([cardRounds]).
 ///
 /// Rate limit (measured 2026-10-20): ~10 quick requests, then HTTP 429 with
 /// a `Retry-After` that grows on repeat (35 s, then 120 s). So every request
-/// goes through [get]'s bucket, a day is one request per league (not ESPN's
-/// three), and live days refresh every 2 minutes.
+/// goes through [get]'s bucket, a day is only the UTC dates it spans (not
+/// ESPN's three days), and live days refresh every 2 minutes.
 class SportsDbSource {
   static const _base = 'https://www.thesportsdb.com/api/v1/json/123';
 
@@ -93,6 +94,62 @@ class SportsDbSource {
     }
     return [for (final u in urls) Uri.parse(u)];
   }
+
+  /// A full day of a league that numbers every card as its own round
+  /// (boxing: round 1 = the season's first card, 2 the next; checked
+  /// 2026-11-07). Asking for the same day again returns the same [dayCap]
+  /// cards, and those rounds hold only themselves, so the missing cards are
+  /// found from the neighbouring round numbers instead. Null when the day
+  /// isn't full or its rounds are shared (team leagues: [roundUrls]).
+  static ({List<int> rounds, String season})? cardRounds(
+      SportsLeague league, String dayBody) {
+    if (league.kind != SportsKind.fight) return null;
+    final json = jsonDecode(dayBody);
+    final list = json is Map ? json['events'] : null;
+    if (list is! List || list.length < dayCap) return null;
+    final rounds = <int>{};
+    String? season;
+    for (final e in list) {
+      if (e is! Map) return null;
+      final round = int.tryParse(e['intRound']?.toString() ?? '');
+      final s = e['strSeason']?.toString() ?? '';
+      if (round == null || round <= 0 || s.isEmpty) return null;
+      if (!rounds.add(round)) return null; // shared round: not one per card
+      season ??= s;
+      if (s != season) return null;
+    }
+    return (rounds: rounds.toList()..sort(), season: season!);
+  }
+
+  static Uri roundUrl(SportsLeague league, int round, String season) =>
+      Uri.parse('$_base/eventsround.php?id=${league.sportsDbId}'
+          '&r=$round&s=${Uri.encodeQueryComponent(season)}');
+
+  /// The fields [parseSportsDbEvents] reads, so a saved round stays small
+  /// (an event is ~60 fields, ~3 KB, in the feed).
+  static String slimEvents(String body) {
+    final json = jsonDecode(body);
+    final list = json is Map ? json['events'] : null;
+    if (list is! List) return jsonEncode({'events': null});
+    return jsonEncode({
+      'events': [
+        for (final e in list)
+          if (e is Map)
+            {
+              for (final k in _keptFields)
+                if (e[k] != null) k: e[k],
+            }
+      ]
+    });
+  }
+
+  static const _keptFields = [
+    'idEvent', 'strEvent', 'strTimestamp', 'dateEvent', 'strTime', //
+    'strStatus', 'strPostponed', 'intRound', 'strSeason',
+    'strHomeTeam', 'strAwayTeam', 'idHomeTeam', 'idAwayTeam',
+    'strHomeTeamBadge', 'strAwayTeamBadge', 'intHomeScore', 'intAwayScore',
+    'strVenue', 'strCity', 'strCountry',
+  ];
 
   static Uri nextUrl(SportsLeague league) =>
       Uri.parse('$_base/eventsnextleague.php?id=${league.sportsDbId}');

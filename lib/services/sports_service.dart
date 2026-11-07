@@ -3,9 +3,11 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/sports.dart';
 import '../l10n/l10n.dart';
+import '../utils/constants.dart';
 import 'cfl_source.dart';
 import 'sports_db_source.dart';
 import 'storage_service.dart';
@@ -606,6 +608,10 @@ class SportsService {
   Future<List<SportsGame>> _completeCappedDay(SportsLeague league,
       DateTime date, String body, List<SportsGame> games) async {
     final byId = {for (final g in games) g.id: g};
+    if (SportsDbSource.cardRounds(league, body) case final cards?) {
+      await _completeCardDay(league, date, cards, byId);
+      return byId.values.toList()..sort((a, b) => a.start.compareTo(b.start));
+    }
     for (final url in SportsDbSource.roundUrls(league, body)) {
       try {
         final round = await _roundBody(league, url);
@@ -623,6 +629,143 @@ class SportsService {
       }
     }
     return byId.values.toList()..sort((a, b) => a.start.compareTo(b.start));
+  }
+
+  /// Most card-number lookups one full day may cost (rate limit).
+  static const _cardProbeBudget = 5;
+
+  /// A full boxing day ([SportsDbSource.cardRounds]): its cards are rounds
+  /// 7, 8, 9, so ask for the gaps between them, then 10, 11… while the card
+  /// is still on [date] (UTC), then 6, 5… the same way. A number that lands
+  /// on another day ends that direction.
+  Future<void> _completeCardDay(
+      SportsLeague league,
+      DateTime date,
+      ({List<int> rounds, String season}) cards,
+      Map<String, SportsGame> byId) async {
+    var budget = _cardProbeBudget;
+    bool onDate(SportsGame g) {
+      final s = g.start.toUtc();
+      return s.year == date.year && s.month == date.month && s.day == date.day;
+    }
+
+    /// Whether round [r] had a card on [date] (added to [byId]).
+    Future<bool> probe(int r) async {
+      budget--;
+      final body = await _cardRound(league, r, cards.season);
+      if (body == null) return false;
+      var hit = false;
+      for (final g in await compute(parseSportsDbEvents, (body, league))) {
+        if (!onDate(g)) continue;
+        hit = true;
+        byId.putIfAbsent(g.id, () => g);
+      }
+      return hit;
+    }
+
+    final first = cards.rounds.first, last = cards.rounds.last;
+    try {
+      for (var r = first + 1; r < last && budget > 0; r++) {
+        if (!cards.rounds.contains(r)) await probe(r);
+      }
+      for (var r = last + 1; budget > 0 && await probe(r); r++) {}
+      for (var r = first - 1; r > 0 && budget > 0 && await probe(r); r--) {}
+    } catch (e) {
+      debugPrint('SportsService: ${league.id} card rounds failed: $e');
+    }
+    await _saveCardRounds();
+  }
+
+  /// Card rounds by URL, kept on disk ([AppConstants.keySportsDbRounds]):
+  /// each card number is asked for once, not on every launch. `t` = when it
+  /// was fetched, `b` = the slimmed body.
+  Map<String, Map<String, Object?>>? _cardCache;
+  bool _cardCacheDirty = false;
+
+  Future<Map<String, Map<String, Object?>>>? _cardCacheLoad;
+
+  /// One read shared by days loading at the same time.
+  Future<Map<String, Map<String, Object?>>> _loadCardRounds() =>
+      _cardCacheLoad ??= _readCardRounds();
+
+  Future<Map<String, Map<String, Object?>>> _readCardRounds() async {
+    final cache = <String, Map<String, Object?>>{};
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw =
+          jsonDecode(prefs.getString(AppConstants.keySportsDbRounds) ?? '{}');
+      if (raw is Map) {
+        for (final MapEntry(:key, :value) in raw.entries) {
+          if (key is String &&
+              value is Map &&
+              value['t'] is int &&
+              value['b'] is String) {
+            cache[key] = {'t': value['t'], 'b': value['b']};
+          }
+        }
+      }
+    } catch (_) {/* No saved rounds: they're fetched again. */}
+    return _cardCache = cache;
+  }
+
+  /// How long a saved card round stays good: a card more than 12 h away
+  /// changes rarely; one that is close, live or just over refreshes like
+  /// a live day; long-finished cards and unknown numbers sit longer.
+  static Duration _cardTtl(String body, DateTime now, SportsLeague league) {
+    final starts = [
+      for (final g in parseSportsDbEvents((body, league))) g.start
+    ];
+    if (starts.isEmpty) return const Duration(hours: 6);
+    if (starts.every((s) => s.isAfter(now.add(const Duration(hours: 12))))) {
+      return const Duration(hours: 12);
+    }
+    if (starts
+        .every((s) => s.isBefore(now.subtract(const Duration(days: 1))))) {
+      return const Duration(days: 7);
+    }
+    return const Duration(minutes: 10);
+  }
+
+  Future<String?> _cardRound(
+      SportsLeague league, int round, String season) async {
+    final url = SportsDbSource.roundUrl(league, round, season).toString();
+    final cache = await _loadCardRounds();
+    final now = DateTime.now().toUtc();
+    final hit = cache[url];
+    if (hit != null) {
+      final body = hit['b'] as String;
+      final at =
+          DateTime.fromMillisecondsSinceEpoch(hit['t'] as int, isUtc: true);
+      if (now.difference(at) < _cardTtl(body, now, league)) return body;
+    }
+    final response = await _get(league, Uri.parse(url));
+    if (response.statusCode != 200) return hit?['b'] as String?;
+    final body = SportsDbSource.slimEvents(response.body);
+    cache[url] = {'t': now.millisecondsSinceEpoch, 'b': body};
+    _cardCacheDirty = true;
+    return body;
+  }
+
+  /// Writes the card rounds back, dropping ones a week old and keeping the
+  /// newest 60 (each ~0.5 KB).
+  Future<void> _saveCardRounds() async {
+    final cache = _cardCache;
+    if (cache == null || !_cardCacheDirty) return;
+    _cardCacheDirty = false;
+    final cutoff = DateTime.now()
+        .toUtc()
+        .subtract(const Duration(days: 7))
+        .millisecondsSinceEpoch;
+    cache.removeWhere((_, v) => (v['t'] as int) < cutoff);
+    final newest = cache.entries.toList()
+      ..sort((a, b) => (b.value['t'] as int).compareTo(a.value['t'] as int));
+    for (final e in newest.skip(60)) {
+      cache.remove(e.key);
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(AppConstants.keySportsDbRounds, jsonEncode(cache));
+    } catch (_) {/* Still cached for this session. */}
   }
 
   /// A round is fetched for each capped day around the one shown (see

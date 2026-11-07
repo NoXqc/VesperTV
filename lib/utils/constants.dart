@@ -314,6 +314,10 @@ class AppConstants {
   /// Last downloaded automatic per-device defaults list (DeviceDefaults).
   static const String keyDeviceDefaults = 'vesper_device_defaults';
 
+  /// TheSportsDB boxing cards found by round number (SportsService
+  /// `_cardRound`): a cache, never transferred or backed up.
+  static const String keySportsDbRounds = 'vesper_sportsdb_rounds';
+
   /// Settings > Playback > Audio: HDMI passthrough on the main player
   /// (device-only; AppPreferences.audioPassthrough).
   static const String keyAudioPassthrough = 'vesper_audio_passthrough';
