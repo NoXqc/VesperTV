@@ -39,7 +39,8 @@ import '../services/vesper_ai/vesper_ai.dart';
 /// content type is visible at once now, the same way a modern TV app's
 /// search results page reads.
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({super.key, required this.initialScope, this.initialQuery});
+  const SearchScreen(
+      {super.key, required this.initialScope, this.initialQuery});
 
   /// Searched at once (Vesper AI's "search for ...").
   final String? initialQuery;
@@ -150,7 +151,14 @@ class _SearchScreenState extends State<SearchScreen> {
     );
     final cached = _localMatches[category];
     if (cached != null && cached.$1 == signature) return cached.$2;
-    final found = all.where((c) => search.matches(c.name)).toList();
+    // Best matches first, playlist order within each: "TSN" lists the TSN
+    // channels before "Sportsnet", which only holds the letters (Vesper
+    // voice search report, 2026-11-06).
+    final ranked = <(int, int, Channel)>[
+      for (final (i, c) in all.indexed)
+        if (search.rank(c.name) case final r?) (r, i, c)
+    ]..sort((a, b) => a.$1 != b.$1 ? a.$1 - b.$1 : a.$2 - b.$2);
+    final found = [for (final r in ranked) r.$3];
     _localMatches[category] = (signature, found);
     return found;
   }

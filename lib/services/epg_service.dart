@@ -158,6 +158,11 @@ class EpgService extends ChangeNotifier {
   final Map<String, List<EpgProgram>> _full = {};
   Set<String> _withData = {};
 
+  /// Tests: the channels [hasPrograms] reports guide data for.
+  @visibleForTesting
+  void debugSetChannelsWithData(Set<String> ids) =>
+      _withData = {for (final id in ids) normalizeEpgId(id)};
+
   final Set<String> _pendingLoads = {};
   final Set<String> _inFlightLoads = {};
   bool _loadScheduled = false;

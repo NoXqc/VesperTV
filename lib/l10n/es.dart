@@ -2802,6 +2802,26 @@ const Map<String, String> kEs = {
       "Una app de IA quiere ocultar {count} grupos ({words}).",
   "An AI app wants to show {count} groups ({words}).":
       "Una app de IA quiere mostrar {count} grupos ({words}).",
+  "An AI app wants to edit your playlist: {what}.":
+      "Una app de IA quiere editar tu playlist: {what}.",
+  "An AI app wants to undo its playlist change: {what}.":
+      "Una app de IA quiere deshacer su cambio de playlist: {what}.",
+  "{n} channels hidden":
+      "{n} canales ocultos",
+  "{n} channels shown again":
+      "{n} canales visibles de nuevo",
+  "{n} channels renamed":
+      "{n} canales renombrados",
+  "fallback channels changed":
+      "canales de respaldo cambiados",
+  "rules changed":
+      "reglas cambiadas",
+  "settings changed":
+      "ajustes cambiados",
+  "Nothing found.":
+      "No se encontró nada.",
+  "No channel in your playlists carries {game}.":
+      "Ningún canal de tus playlists emite {game}.",
   "Main guide": "Guía principal",
   "Extra guide {number}": "Guía adicional {number}",
   "Use EPG logo": "Usar logo de la EPG",

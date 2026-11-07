@@ -346,6 +346,10 @@ class AppConstants {
   static const String keyAiPhoneToken = 'vesper_ai_dev_phone_token';
   static const String keyAiShortcut = 'vesper_ai_dev_shortcut';
 
+  /// What AI apps / Vesper changed in the playlist editor, for undo
+  /// (`AiEditLog`, per viewer). Device-only: the edits themselves sync.
+  static const String keyAiEditorUndo = 'vesper_ai_dev_editor_undo';
+
   /// The viewer's watch list (per profile; Vesper / AI apps fill it).
   static const String keyVesperWatchList = 'vesper_watchlist';
 

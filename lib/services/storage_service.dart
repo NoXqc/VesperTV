@@ -606,6 +606,12 @@ class StorageService {
   Future<void> setAiLinkEnabled(bool value) =>
       _prefs.setBool(AppConstants.keyAiLinkEnabled, value);
 
+  /// See [AppConstants.keyAiEditorUndo].
+  String? getAiEditorUndo() =>
+      _prefs.getString(_vk(AppConstants.keyAiEditorUndo));
+  Future<void> setAiEditorUndo(String json) =>
+      _prefs.setString(_vk(AppConstants.keyAiEditorUndo), json);
+
   bool getAiConfirmRemotePlay() =>
       _prefs.getBool(AppConstants.keyAiConfirmRemotePlay) ?? true;
   Future<void> setAiConfirmRemotePlay(bool value) =>

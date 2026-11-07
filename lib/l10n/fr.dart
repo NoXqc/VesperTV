@@ -2815,6 +2815,26 @@ const Map<String, String> kFr = {
       "Une app d'IA veut masquer {count} groupes ({words}).",
   "An AI app wants to show {count} groups ({words}).":
       "Une app d'IA veut afficher {count} groupes ({words}).",
+  "An AI app wants to edit your playlist: {what}.":
+      "Une app d'IA veut modifier votre playlist : {what}.",
+  "An AI app wants to undo its playlist change: {what}.":
+      "Une app d'IA veut annuler sa modification de playlist : {what}.",
+  "{n} channels hidden":
+      "{n} chaînes masquées",
+  "{n} channels shown again":
+      "{n} chaînes réaffichées",
+  "{n} channels renamed":
+      "{n} chaînes renommées",
+  "fallback channels changed":
+      "chaînes de secours modifiées",
+  "rules changed":
+      "règles modifiées",
+  "settings changed":
+      "réglages modifiés",
+  "Nothing found.":
+      "Rien trouvé.",
+  "No channel in your playlists carries {game}.":
+      "Aucune chaîne de vos playlists ne diffuse {game}.",
   "Main guide": "Guide principal",
   "Extra guide {number}": "Guide supplémentaire {number}",
   "Use EPG logo": "Utiliser le logo EPG",

@@ -95,6 +95,70 @@ One tool layer, three front ends:
   ChatGPT: developer-mode connector, no auth. Secret-in-URL = the credential;
   Reset makes a new one. Not checked yet: whether either app insists on OAuth.
 
+## Voice search tuning (Claude, 2026-11-06, unreleased; user report)
+"TSN 1" heard as "TSN one" found nothing and played Sportsnet One (the old
+`rankByName` used TitleSearch: every word *anywhere* in the joined name, and
+spor**tsn**et holds "tsn"); hidden channels still played; wanted all-TSN /
+CBS east+west lists, "open PPV", the English feed of a game.
+- `rankByName` (vesper_tools.dart): `spokenTokens` (fold, "tsn1" -> "tsn 1",
+  EN/FR/ES/IT/DE number words -> digits, "t s n" -> "tsn"), a leading
+  provider tag ("CA: ", "US| ", "[UK]") ignored for scoring, tiers exact /
+  starts / in a row / all words / word prefixes, then piece-of-word matches
+  only when nothing better matches. Cheap TitleSearch gate first (350k lists).
+- `_play` refuses a live channel no longer in `visibleChannels` (a ref from
+  an earlier search outlived Hide channel: the likely cause of the report).
+- Phrases (vesper_commands.dart): "show me all TSN" / "every CBS channel" /
+  "toutes les chaines TSN" -> search page (east+west words dropped); "open
+  PPV" / "go to the Live Events category" -> `open` section `group`
+  (`VesperToolbox.findLiveGroup` + `_groupSynonyms`, else the search page;
+  TV side `TvHomeScreen._openLiveGroup`, like a touch pick); "the English feed
+  of the Habs game" / "... in french" -> `play_game` `language`
+  (`vesperChannelLanguage`: RDS/TVA/FR tags = fr, country tags else) and
+  `list: true` for every feed.
+- Search page: Live TV (and M3U Movies/Shows) matches sorted by
+  `TitleSearch.rank`, playlist order within a rank (TSN before Sportsnet).
+- Game feeds: "which channels have the Habs game" / "quelle chaine passe le
+  match du Canadien" -> `play_game` `list: true`, bubble = first game's
+  channels (6 names max, each once, language marked when not the app's).
+  `VesperAi._feeds` remembers them 20 min: "play it on RDS" / "mets-le sur
+  RDS" (`play_feed`, not a tool) plays the best-named one, ties in list
+  order (= preferred copy), else the channel by name. Order = Sports Trak
+  `orderMatches` (saved pick, evidence, preferred playlist, countries,
+  quality; distinct copies first) then the asked language, or the viewer's
+  Preferred audio language (a saved pick stays first then). Questions
+  (what / which / is / quel...) never become a "play the X game" team.
+- Tests: `vesper_search_test.dart`, `vesper_voice_tools_test.dart`. Group
+  opening not checked on a box yet (focus lands like a touch pick).
+
+## Playlist editor tool + help (Claude, 2026-11-06, unreleased)
+Owner: "hide every channel without EPG, remove all CA affixes, add channel A as
+fallback to channel B" from Claude, with an API doc the AI can read, and undo.
+- `playlist_editor` (`vesper_ai/playlist_editor_tool.dart`, a `part` of
+  vesper_tools.dart): writes the same `PlaylistEdits` layer as the editor page
+  (`session.saveEdits`), never the provider list, live channels only. Actions:
+  list, find_channels (ids `playlistId::rawId`, search refs work too),
+  hide_no_guide (one-time snapshot; refused while the guide loads / none loaded,
+  a playlist with zero guide matches is skipped), hide_dead (existing probe
+  results only, never runs tests), hide/show_channels, add/remove_rule,
+  rename, rename_group, add/remove_fallback, set_option, undo. `preview: true`
+  on any change = effect counts + examples, nothing saved. A hide rule that
+  would hide a whole playlist is refused. AI apps confirm on the TV (localized
+  `{what}` built from counts); restricted viewers refused.
+- **Undo** (`services/playlist_edits_diff.dart`): every change stores an
+  `EditsDiff` (before/after per field; probes excluded) in `AiEditLog`
+  (30 newest, ~1.5 MB cap, key `vesper_ai_dev_editor_undo` per viewer,
+  device-only). `revert` only restores a part still as the AI left it, so a
+  later hand edit in the editor page is kept (reported as `kept`). The plan
+  re-runs after the TV confirm on the edits as they are then.
+- `vesper_help` (`vesper_ai/vesper_help.dart`): topics overview /
+  playlist_editor, served by the app so it matches the installed version.
+  The tool description, the in-app system prompt and the relay `INSTRUCTIONS`
+  point the AI to it. **Relay sentence not deployed** (tool descriptions alone
+  already say it). `test/playlist_editor_ai_test.dart` fails if an action is
+  missing from the manual, and checks the manual's CA-affix regex.
+- Not done: a persistent "no guide" rule (new channels), running stream tests
+  over MCP (connection limits), Movies/Shows.
+
 ## Not done / next
 - **Several TVs** (owner, 2026-11-06: test as is): today one connector per TV (each TV has its own link; name them
   "VesperTV Living room" etc. in the AI app). Parked idea: one shared link via Sync, TV names, relay routes by

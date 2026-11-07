@@ -51,7 +51,10 @@ import 'settings/media_server_screen.dart';
 /// of Movies / TV Shows keeps its own search and genre; Up from the first
 /// row reaches it. Search puts the results first.
 class ArchiveScreen extends StatefulWidget {
-  const ArchiveScreen({super.key});
+  const ArchiveScreen({super.key, this.initialQuery});
+
+  /// Vesper's "open Carrie in Media Hub": searched on opening.
+  final String? initialQuery;
 
   @override
   State<ArchiveScreen> createState() => _ArchiveScreenState();
@@ -124,7 +127,36 @@ class _ArchiveScreenState extends State<ArchiveScreen>
       if (!mounted) return;
       context.read<ArchiveService>().open();
       _firstRailNode.requestFocus();
+      final query = widget.initialQuery?.trim() ?? '';
+      if (query.isNotEmpty) unawaited(_searchFor(query));
     });
+  }
+
+  /// [initialQuery]: movies first, TV shows when no movie matches; focus on
+  /// the first result like the rail's Search.
+  Future<void> _searchFor(String query) async {
+    final service = context.read<ArchiveService>();
+    for (final type in ArchiveType.values) {
+      if (!mounted) return;
+      if (!service.canSearch(type)) continue;
+      _setType(type);
+      setState(() => _focusedRow = 0);
+      if (_scroll.hasClients) _scroll.jumpTo(0);
+      await service.search(type, query);
+      if (!mounted || _type != type) return;
+      final rows = service.rows(type);
+      if (rows.isNotEmpty &&
+          rows.first.isSearch &&
+          rows.first.items.isNotEmpty) {
+        _lastIndex[rows.first.key] = 0;
+        _rowScrolls[rows.first.key]?.jumpTo(0);
+        _focusRow(rows, 0);
+        return;
+      }
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(tr('No results for "{query}"', {'query': query}))));
   }
 
   @override
@@ -1036,8 +1068,8 @@ class _ArchiveScreenState extends State<ArchiveScreen>
         color: Colors.white24,
       );
 
-  void _openLiveTv() => Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const ArchiveLiveTvScreen()));
+  void _openLiveTv() => Navigator.of(context)
+      .push(MaterialPageRoute(builder: (_) => const ArchiveLiveTvScreen()));
 
   Future<void> _openTypeMenu() async {
     final picked = await showRollDownMenu<ArchiveType>(

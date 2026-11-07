@@ -83,6 +83,36 @@ VesperCommand? parseVesperCommand(String spoken) {
   final seek = _seek(s);
   if (seek != null) return seek;
 
+  // "which channels have the Habs game", "quelle chaine passe le match du
+  // Canadien": the bubble lists that game's channels ("play it on RDS"
+  // then picks one, see VesperAi).
+  for (final p in _feedQuestions) {
+    final team = _gameTeam(p.firstMatch(s)?.group(1) ?? '');
+    if (team.isNotEmpty) {
+      return VesperCommand('play_game', {'team': team, 'list': true});
+    }
+  }
+
+  // "find the English feed of the Habs game", "le match du Canadien en
+  // anglais": the game, on a channel in that language.
+  final (language, withoutLanguage) = _language(s);
+  if (language != null) {
+    for (final p in _gamePatterns) {
+      final team =
+          _strip(p.firstMatch(withoutLanguage)?.group(1)?.trim() ?? '');
+      if (team.isNotEmpty) {
+        return VesperCommand('play_game', {'team': team, 'language': language});
+      }
+    }
+  }
+
+  // "open Carrie in Media Hub", "find dune in movies": the search page
+  // (it has a Media Hub section) with just the title.
+  final scoped = _scopedTitle(s);
+  if (scoped != null) {
+    return VesperCommand('open', {'section': scoped.$1, 'query': scoped.$2});
+  }
+
   // "open the movies", "ouvre le guide", "go to sports"...
   for (final verb in _openVerbs) {
     final rest = _after(s, verb);
@@ -93,6 +123,33 @@ VesperCommand? parseVesperCommand(String spoken) {
   final bare = _section(s);
   if (bare != null && s.split(' ').length <= 3) {
     return VesperCommand('open', {'section': bare});
+  }
+
+  // "play it on RDS", "mets-le sur RDS": a channel of the game just listed
+  // (VesperAi remembers it), else that channel.
+  for (final p in _playItOn) {
+    final name = _strip(p.firstMatch(s)?.group(1)?.trim() ?? '');
+    if (name.isNotEmpty) return VesperCommand('play_feed', {'name': name});
+  }
+
+  // "show me all TSN", "every CBS channel", "toutes les chaines TSN": the
+  // search page lists every match to pick from (play picks just one).
+  final many = _listAll(s);
+  if (many != null) {
+    final section = _section(many);
+    if (section != null) return VesperCommand('open', {'section': section});
+    return VesperCommand('open', {'section': 'search', 'query': many});
+  }
+
+  // "open PPV", "go to the Live Events category": that live group (the
+  // tool falls back to the search page when no group has that name).
+  for (final verb in _openVerbs) {
+    final rest = _after(s, verb);
+    if (rest == null || rest.isEmpty) continue;
+    final group = _groupName(verb, rest);
+    if (group != null) {
+      return VesperCommand('open', {'section': 'group', 'query': group});
+    }
   }
 
   // "search for dune", "cherche dune" (the search page, with the words).
@@ -119,7 +176,13 @@ VesperCommand? parseVesperCommand(String spoken) {
     }
   }
 
-  // "put on the habs game", "le match du canadien".
+  // "put on the habs game", "le match du canadien". Never a question:
+  // "what are the habs feeds for tonight's game" is no team name.
+  if (RegExp(r'^(?:what|which|where|who|when|how|is|are|do|does|quel|quelle|'
+          r'quels|quelles|ou|est ce|que|cual|cuales|quale|quali|welche|wo) ')
+      .hasMatch(s)) {
+    return null;
+  }
   for (final p in _gamePatterns) {
     final team = _strip(p.firstMatch(s)?.group(1)?.trim() ?? '');
     if (team.isNotEmpty) {
@@ -177,6 +240,224 @@ String? _section(String rest) {
     if (e.value.contains(r)) return e.key;
   }
   return null;
+}
+
+/// The words after "all": null when [s] doesn't ask for every match.
+String? _listAll(String s) {
+  // "the all star game" is a game, not a list.
+  if (RegExp(r' (?:game|games|match)$').hasMatch(s)) return null;
+  for (final p in _listAllPatterns) {
+    final m = p.firstMatch(s);
+    if (m == null) continue;
+    var words = _strip(m.group(1)!.trim());
+    // "CBS west and east": both feeds = every CBS.
+    final parts = words.split(' ');
+    if (parts.contains('east') && parts.contains('west')) {
+      words = parts
+          .where((w) =>
+              !const {'east', 'west', 'and', 'et', 'y', 'e', 'und'}.contains(w))
+          .join(' ');
+    }
+    if (words.isNotEmpty) return words;
+  }
+  return null;
+}
+
+final _listAllPatterns = [
+  RegExp(r'^(?:show me|show|list|see|give me|find|search for|search|get)? ?'
+      r'(?:me )?(?:all|every|each)(?: of)? (?:the |my )?(.+?)'
+      r'(?: channels?| feeds?| options| versions| stations?)?$'),
+  RegExp(r'^(?:show me|show|list|find|search for|search)(?: me)? (?:the |my )?'
+      r'(.+?) (?:channels|feeds|options|versions|stations)$'),
+  RegExp(r'^(?:which|what) (.+?) channels?'
+      r'(?: are there| do i have| do we have| are on)?$'),
+  RegExp(r'^(?:montre moi|montre|affiche|trouve|cherche|liste)? ?(?:moi )?'
+      r'(?:toutes|tous) (?:les )?(?:chaines |canaux )?(.+?)(?: chaines)?$'),
+  RegExp(r'^(?:muestrame|muestra|busca|lista)? ?(?:me )?(?:todos|todas) '
+      r'(?:los |las )?(?:canales )?(.+)$'),
+  RegExp(r'^(?:mostrami|mostra|cerca|elenca)? ?(?:mi )?(?:tutti|tutte) '
+      r'(?:i |le )?(?:canali )?(.+)$'),
+  RegExp(r'^(?:zeig mir|zeig|zeige|suche|such|liste)? ?(?:mir )?alle '
+      r'(?:sender |kanale )?(.+)$'),
+];
+
+/// A team out of a feed question: "the habs", "tonight s habs" -> "habs".
+String _gameTeam(String raw) {
+  var t = ' ${raw.trim()} ';
+  for (final w in const [
+    'tonight s',
+    'tonights',
+    'tonight',
+    'today s',
+    'todays',
+    'today',
+    'ce soir',
+    'aujourd hui',
+    'stasera',
+    'oggi',
+    'esta noche',
+    'hoy',
+    'heute abend',
+    'heute',
+  ]) {
+    t = t.replaceAll(' $w ', ' ');
+  }
+  return _strip(t.trim());
+}
+
+const _channelWords = r'(?:channels?|feeds?|stations?|networks?)';
+const _gameWords = r'(?:game|match|matchup)';
+
+/// Questions asking which channels carry a game (group 1 = the team).
+final _feedQuestions = [
+  // "which channels have the habs game", "what channel is the habs game on"
+  RegExp('^(?:what|which) $_channelWords '
+      r'(?:is|are|has|have|carry|carries|show|shows|air|airs|got)? ?'
+      r'(?:showing |airing |carrying |playing )?(?:the )?(.+?) '
+      '$_gameWords(?: on| tonight| today)*\$'),
+  // "what are the montreal canadiens feeds for tonight's game"
+  RegExp(r'^(?:what|which) (?:are|is) (?:the )?(.+?) '
+      '$_channelWords (?:for|of) (?:the |tonight s |tonights |today s )?'
+      '$_gameWords(?: tonight| today)?\$'),
+  // "where can i watch the habs game", "where is the habs game on"
+  RegExp(r'^where (?:can i watch|can i see|is|s) (?:the )?(.+?) '
+      '$_gameWords(?: on| tonight| today)*\$'),
+  RegExp(r'^(?:sur )?(?:quel|quelle|quels|quelles) (?:chaine|chaines|poste|'
+      r'postes|canal|canaux) (?:a|ont|passe|passent|diffuse|diffusent|montre|'
+      r'montrent|est|joue|presente)? ?(?:le |ce )?match (?:des |du |de la |'
+      r'de l |de |d )?(.+)$'),
+  RegExp(r'^(?:que|cual|cuales|en que) canal(?:es)? (?:tiene|tienen|da|dan|'
+      r'pasa|pasan|transmite|transmiten|echa|echan)? ?(?:el )?partido (?:del |'
+      r'de los |de la |de )?(.+)$'),
+  RegExp(r'^(?:quale|quali|che|su che) canal[ei] (?:ha|hanno|da|danno|'
+      r'trasmette|trasmettono|fa|fanno)? ?(?:la )?partita (?:del |della |dei |'
+      r'di )?(.+)$'),
+  RegExp(r'^(?:welche|welcher|auf welchem) sender (?:zeigt|zeigen|hat|haben|'
+      r'ubertragt|ubertragen|bringt)? ?(?:das )?spiel (?:von |der |des )?(.+)$'),
+];
+
+/// "play it on rds": group 1 = the channel.
+final _playItOn = [
+  RegExp(r'^(?:play|put|watch|show|turn|switch|change) (?:it|that|this|'
+      r'that one|the game|the match|this game|that game) (?:on|to|over to) '
+      r'(.+)$'),
+  RegExp(r'^(?:mets|met|mettre|joue|regarde|passe|change) (?:le|la|ca|ce '
+      r'match|le match) (?:sur|a) (.+)$'),
+  RegExp(r'^(?:ponlo|ponla|pon el partido|ver el partido) (?:en) (.+)$'),
+  RegExp(r'^(?:mettilo|mettila|metti la partita|guarda la partita) '
+      r'(?:su|sul|sulla) (.+)$'),
+  RegExp(r'^(?:zeig es|spiel es|zeig das spiel|schalte das spiel) auf (.+)$'),
+];
+
+/// "open carrie in media hub" -> (hub, carrie): the Media Hub searches it
+/// itself; any other place ("in movies") is the search page. Null without
+/// a place.
+(String, String)? _scopedTitle(String s) {
+  final m = _scopeSuffix.firstMatch(s);
+  if (m == null) return null;
+  final head = m.group(1)!;
+  final section = const {'media hub', 'mediahub', 'hub'}.contains(m.group(2))
+      ? 'hub'
+      : 'search';
+  for (final verb in [..._searchVerbs, ..._openVerbs]) {
+    final rest = _after(head, verb);
+    if (rest == null) continue;
+    final title = _strip(rest);
+    // "open the guide in the hub" etc. stay what they were.
+    if (title.isEmpty || _section(title) != null) return null;
+    return (section, title);
+  }
+  return null;
+}
+
+final _scopeSuffix = RegExp(
+    r'^(.+?) (?:in|on|from|dans|sur|en|nel|nella|in der|im) '
+    r'(?:the |le |la |les |l |el |il |der |die |den )?(?:my )?'
+    r'(media hub|mediahub|hub|movies|movie|films|film|tv shows|shows|series|'
+    r'live tv|peliculas|pelicula|serie|serien)$');
+
+/// Group words: "the PPV category" names a group.
+const _groupWords = [
+  'category',
+  'categories',
+  'group',
+  'section',
+  'folder',
+  'categorie',
+  'groupe',
+  'categoria',
+  'grupo',
+  'gruppo',
+  'kategorie',
+  'gruppe',
+];
+
+/// Verbs that open a group by name even without a group word ("open PPV");
+/// "go to" / "switch to" stay channel / section verbs.
+const _openGroupVerbs = {
+  'open',
+  'ouvre',
+  'ouvrir',
+  'abre',
+  'apri',
+  'offne',
+  'oeffne',
+  'anoixe',
+};
+
+String? _groupName(String verb, String rest) {
+  var words = ' $rest ';
+  var named = false;
+  for (final w in _groupWords) {
+    if (words.contains(' $w ')) {
+      named = true;
+      words = words.replaceAll(' $w ', ' ');
+    }
+  }
+  // "the category of PPV", "la categorie des sports".
+  words = words.replaceAll(RegExp(r' (?:of|for|des|du|de|del|di|von) '), ' ');
+  // "open channel 5" is a channel ([_strip] drops the word "channel").
+  if (!named &&
+      RegExp(r'^(?:the |la |el |il )?'
+              r'(?:channel|chaine|canal|canale|sender|kanali) ')
+          .hasMatch(words.trim())) {
+    return null;
+  }
+  final name = _strip(words.trim());
+  if (name.isEmpty || int.tryParse(name) != null) return null;
+  if (named || _openGroupVerbs.contains(verb)) return name;
+  return null;
+}
+
+const _languageNames = {
+  'en': ['english', 'anglais', 'ingles', 'inglese', 'englisch'],
+  'fr': ['french', 'francais', 'frances', 'francese', 'franzosisch'],
+  'es': ['spanish', 'espagnol', 'espanol', 'spagnolo', 'spanisch'],
+};
+
+/// A feed language in [s] ("the english feed of", "in french", "en
+/// anglais") and [s] without it.
+(String?, String) _language(String s) {
+  for (final e in _languageNames.entries) {
+    for (final w in e.value) {
+      final feed = RegExp('(?:^| )(?:the |le |la |el |il |die |das )?$w '
+              '(?:feed|broadcast|version|stream|commentary|audio|call)'
+              '(?: (?:of|for|du|de|des|del|di|von))?(?= |\$)')
+          .firstMatch(s);
+      if (feed != null) {
+        final rest = '${s.substring(0, feed.start)} ${s.substring(feed.end)}'
+            .replaceAll(RegExp(r'\s+'), ' ')
+            .trim();
+        return (e.key, rest);
+      }
+      for (final p in const ['in', 'en', 'auf']) {
+        if (s.endsWith(' $p $w')) {
+          return (e.key, s.substring(0, s.length - p.length - w.length - 2));
+        }
+      }
+    }
+  }
+  return (null, s);
 }
 
 final _number = RegExp(r'(\d+)');

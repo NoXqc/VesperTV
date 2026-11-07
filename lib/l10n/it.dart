@@ -2809,6 +2809,26 @@ const Map<String, String> kIt = {
       "Un'app di IA vuole nascondere {count} gruppi ({words}).",
   "An AI app wants to show {count} groups ({words}).":
       "Un'app di IA vuole mostrare {count} gruppi ({words}).",
+  "An AI app wants to edit your playlist: {what}.":
+      "Un'app di IA vuole modificare la tua playlist: {what}.",
+  "An AI app wants to undo its playlist change: {what}.":
+      "Un'app di IA vuole annullare la sua modifica alla playlist: {what}.",
+  "{n} channels hidden":
+      "{n} canali nascosti",
+  "{n} channels shown again":
+      "{n} canali di nuovo visibili",
+  "{n} channels renamed":
+      "{n} canali rinominati",
+  "fallback channels changed":
+      "canali di riserva modificati",
+  "rules changed":
+      "regole modificate",
+  "settings changed":
+      "impostazioni modificate",
+  "Nothing found.":
+      "Nessun risultato.",
+  "No channel in your playlists carries {game}.":
+      "Nessun canale delle tue playlist trasmette {game}.",
   "Main guide": "Guida principale",
   "Extra guide {number}": "Guida aggiuntiva {number}",
   "Use EPG logo": "Usa logo EPG",

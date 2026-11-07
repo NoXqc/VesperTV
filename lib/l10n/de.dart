@@ -2705,6 +2705,26 @@ const Map<String, String> kDe = {
       "Eine KI-App möchte {count} Gruppen ausblenden ({words}).",
   "An AI app wants to show {count} groups ({words}).":
       "Eine KI-App möchte {count} Gruppen einblenden ({words}).",
+  "An AI app wants to edit your playlist: {what}.":
+      "Eine KI-App möchte deine Playlist bearbeiten: {what}.",
+  "An AI app wants to undo its playlist change: {what}.":
+      "Eine KI-App möchte ihre Playlist-Änderung rückgängig machen: {what}.",
+  "{n} channels hidden":
+      "{n} Sender ausgeblendet",
+  "{n} channels shown again":
+      "{n} Sender wieder eingeblendet",
+  "{n} channels renamed":
+      "{n} Sender umbenannt",
+  "fallback channels changed":
+      "Ersatzsender geändert",
+  "rules changed":
+      "Regeln geändert",
+  "settings changed":
+      "Einstellungen geändert",
+  "Nothing found.":
+      "Nichts gefunden.",
+  "No channel in your playlists carries {game}.":
+      "Kein Sender deiner Playlists zeigt {game}.",
   "Main guide": "Hauptprogrammführer",
   "Extra guide {number}": "Zusätzlicher Programmführer {number}",
   "Use EPG logo": "EPG-Logo verwenden",

@@ -172,12 +172,16 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         if (prefs.hideArchive) return false;
         _returnToTv = true;
         _parkLiveChannel();
-        Navigator.of(context)
-            .push(MaterialPageRoute(builder: (_) => const ArchiveScreen()));
+        Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => ArchiveScreen(initialQuery: query)));
         return true;
       case 'sports':
         if (prefs.hideSportsTrak) return false;
         unawaited(_openSports());
+        return true;
+      case 'group':
+        if (prefs.hideLiveTv || query == null) return false;
+        unawaited(_openLiveGroup(query));
         return true;
       case 'search':
         unawaited(_pushOverLiveVideo(MaterialPageRoute(
@@ -189,6 +193,23 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         return true;
     }
     return false;
+  }
+
+  /// Vesper's "open PPV": the TV tab on that live group ([title] as the
+  /// groups column names it), focus in its channels like a touch pick
+  /// (the remote's Back walks back to the groups as usual).
+  Future<void> _openLiveGroup(String title) async {
+    if (_tab != 'TV') _onTabChanged('TV', restoreLiveFocus: false);
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+    _onGroupSelected(title);
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+    if (!(_timelineGuideKey.currentState?.focusEntry() ?? false) &&
+        !_col2Scope.hasFocus) {
+      _col2Scope.requestFocus();
+    }
+    if (_focusDepth != 2) setState(() => _focusDepth = 2);
   }
 
   bool _retrying = false;

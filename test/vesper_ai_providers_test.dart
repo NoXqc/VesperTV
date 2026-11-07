@@ -279,10 +279,12 @@ void main() {
         vesperTools.map((t) => t.name).toSet(), hasLength(vesperTools.length));
   });
 
-  test('rankByName: exact, then prefix, then shorter', () {
+  test('rankByName: exact (provider tag ignored), whole words, then shorter',
+      () {
     final names = ['TSN 1 HD', 'CA: TSN 1', 'TSN 1', 'TSN 10', 'RDS'];
+    // "TSN 10" is a different channel: last (2026-11-06 voice report).
     expect(rankByName(names, 'tsn 1', (s) => s),
-        ['TSN 1', 'TSN 10', 'TSN 1 HD', 'CA: TSN 1']);
+        ['TSN 1', 'CA: TSN 1', 'TSN 1 HD', 'TSN 10']);
     expect(rankByName(names, '', (s) => s), isEmpty);
   });
 }

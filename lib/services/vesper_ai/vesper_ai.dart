@@ -108,8 +108,12 @@ class VesperAi {
     final ai = provider;
     final command = parseVesperCommand(spoken);
     if (command?.tool == 'help') return VesperReply(helpText(hasOwnAi));
+    if (command?.tool == 'play_feed') {
+      return _playFeed(box, '${command!.args['name']}');
+    }
     if (command != null) {
       final result = await box.call(command.tool, command.args);
+      _rememberFeeds(command.tool, command.args, result);
       if (!result.containsKey('error') || ai == null) {
         debugPrint('VesperAi: command ${command.tool} '
             '${result.containsKey('error') ? 'failed' : 'ok'}');
@@ -131,6 +135,52 @@ class VesperAi {
     return _askAi(ai, box, spoken);
   }
 
+  /// The channels of the game the viewer last asked about ("which channels
+  /// have the Habs game"): "play it on RDS" picks from them.
+  ({String game, List<(String, String)> channels, DateTime at})? _feeds;
+
+  void _rememberFeeds(
+      String tool, Map<String, Object?> args, Map<String, Object?> result) {
+    if (tool != 'play_game' || args['list'] != true) return;
+    final games = result['games'];
+    if (games is! List || games.isEmpty || games.first is! Map) return;
+    final game = games.first as Map;
+    final channels = <(String, String)>[
+      for (final c in (game['channels'] as List? ?? const []))
+        if (c is Map && c['ref'] is String && c['title'] is String)
+          (c['ref'] as String, c['title'] as String)
+    ];
+    _feeds = (game: '${game['game']}', channels: channels, at: DateTime.now());
+  }
+
+  /// "play it on RDS": RDS among the game's channels just listed (for 20
+  /// minutes), else the channel called that.
+  Future<VesperReply> _playFeed(VesperToolbox box, String name) async {
+    final feeds = _feeds;
+    if (feeds != null &&
+        DateTime.now().difference(feeds.at) < const Duration(minutes: 20)) {
+      // The best-named one; among equally good names the first in the
+      // list's order (the viewer's quality / country / language
+      // preferences): "TSN 2" is the preferred copy, not the shortest.
+      (String, String)? pick;
+      int? best;
+      for (final c in feeds.channels) {
+        final r = spokenRank(name, c.$2);
+        if (r != null && (best == null || r < best)) {
+          best = r;
+          pick = c;
+        }
+      }
+      if (pick != null) {
+        final r = await box.call('play', {'ref': pick.$1});
+        return describeResult(VesperCommand('play', {'name': name}),
+            r.containsKey('error') ? r : {...r, 'game': feeds.game});
+      }
+    }
+    final r = await box.call('play', {'name': name});
+    return describeResult(VesperCommand('play', {'name': name}), r);
+  }
+
   Future<VesperReply> _askAi(
       AiProvider ai, VesperToolbox box, String spoken) async {
     if (DateTime.now().difference(_lastAsked) > const Duration(minutes: 10)) {
@@ -148,6 +198,7 @@ class VesperAi {
           tools: box.tools.where((t) => t.name != 'show_message').toList(),
           runTool: (name, args) async {
         final result = await box.call(name, args);
+        _rememberFeeds(name, args, result);
         if (!result.containsKey('error') &&
             const {'play', 'play_game', 'open', 'player'}.contains(name)) {
           acted = true;
@@ -182,7 +233,18 @@ class VesperAi {
       'before you play when unsure, and pick the most fitting result '
       'yourself rather than asking which one. When the viewer asks to '
       'watch something, play it. After an action, say in a few words what '
-      'you did. If the playlists do not have something, say so.';
+      'you did. If the playlists do not have something, say so. When the '
+      'viewer asks for all / every / which channels of a name (all TSN, '
+      'CBS east and west), open the search page with that name so they '
+      'can pick. A category name (PPV, Pay Per View, Live Events) opens '
+      'that live group (open section group). For a game in a language '
+      '("the English feed"), use play_game with language. When asked which '
+      'channels carry a game, call play_game with list true and name the '
+      'channels in one line (the order already follows the '
+      'viewer quality, country and language preferences); when they then pick one '
+      '("play it on RDS"), play the ref of that channel. Spoken numbers '
+      'are fine in searches ("TSN one" finds TSN 1). Before editing a '
+      'playlist, read vesper_help topic "playlist_editor".';
 
   /// The words for a built-in command's result.
   @visibleForTesting
@@ -194,6 +256,8 @@ class VesperAi {
     }
     String? s(String key) => r[key] is String ? r[key] as String : null;
     switch (command.tool) {
+      case 'play_game' when r['games'] is List:
+        return VesperReply(_feedsText(r['games'] as List));
       case 'play':
       case 'play_game':
         final title = s('playing') ?? s('opened') ?? '';
@@ -319,6 +383,29 @@ class VesperAi {
         'yesterday' => tr('yesterday'),
         _ => '${day ?? ''}',
       };
+
+  /// "Canadiens at Maple Leafs: TSN 2 · Sportsnet One · RDS (FR)": the
+  /// first game's channels, each name once, the language when it isn't the
+  /// app's own.
+  static String _feedsText(List games) {
+    if (games.isEmpty || games.first is! Map) return tr('Nothing found.');
+    final game = games.first as Map;
+    final names = <String>[];
+    for (final c in (game['channels'] as List? ?? const [])) {
+      if (c is! Map || c['title'] is! String) continue;
+      final lang = c['language'];
+      final label = lang is String && lang != L10n.code
+          ? '${c['title']} (${lang.toUpperCase()})'
+          : c['title'] as String;
+      if (!names.contains(label)) names.add(label);
+      if (names.length == 6) break;
+    }
+    if (names.isEmpty) {
+      return tr('No channel in your playlists carries {game}.',
+          {'game': game['game']});
+    }
+    return '${game['game']}: ${names.join(' · ')}';
+  }
 
   static String _errorWords(VesperCommand c, Object? error) {
     final name = '${c.args['name'] ?? c.args['team'] ?? c.args['title'] ?? ''}';

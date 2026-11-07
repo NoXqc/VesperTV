@@ -53,7 +53,8 @@ INSTRUCTIONS = (
     "channels with a guide, movies, TV shows) and Sports Trak scores. These "
     "tools act on the viewer's TV right now: search before playing, keep "
     "messages on the TV short. Plays and changes may need the viewer to "
-    "press OK on the TV."
+    "press OK on the TV. Before cleaning up or editing a playlist, call "
+    "vesper_help with topic playlist_editor (rules, limits, undo)."
 )
 
 

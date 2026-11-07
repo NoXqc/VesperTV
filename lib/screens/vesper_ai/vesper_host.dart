@@ -75,7 +75,7 @@ class AppVesperHost implements VesperHost {
     // No TV home open (Sports Mode): open the page itself.
     Widget? page = switch (section) {
       'home' => const HomeScreen(),
-      'hub' when !prefs.hideArchive => const ArchiveScreen(),
+      'hub' when !prefs.hideArchive => ArchiveScreen(initialQuery: query),
       'sports' when !prefs.hideSportsTrak => const SportsScreen(),
       'search' => SearchScreen(initialScope: 'TV', initialQuery: query),
       'settings' => const SettingsMenuScreen(),

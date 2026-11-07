@@ -2764,6 +2764,26 @@ const Map<String, String> kEl = {
       "Μια εφαρμογή AI θέλει να κρύψει {count} ομάδες ({words}).",
   "An AI app wants to show {count} groups ({words}).":
       "Μια εφαρμογή AI θέλει να εμφανίσει {count} ομάδες ({words}).",
+  "An AI app wants to edit your playlist: {what}.":
+      "Μια εφαρμογή AI θέλει να επεξεργαστεί τη λίστα σας: {what}.",
+  "An AI app wants to undo its playlist change: {what}.":
+      "Μια εφαρμογή AI θέλει να αναιρέσει την αλλαγή της στη λίστα: {what}.",
+  "{n} channels hidden":
+      "{n} κανάλια κρύφτηκαν",
+  "{n} channels shown again":
+      "{n} κανάλια εμφανίζονται ξανά",
+  "{n} channels renamed":
+      "{n} κανάλια μετονομάστηκαν",
+  "fallback channels changed":
+      "τα εφεδρικά κανάλια άλλαξαν",
+  "rules changed":
+      "οι κανόνες άλλαξαν",
+  "settings changed":
+      "οι ρυθμίσεις άλλαξαν",
+  "Nothing found.":
+      "Δεν βρέθηκε τίποτα.",
+  "No channel in your playlists carries {game}.":
+      "Κανένα κανάλι στις λίστες σας δεν μεταδίδει {game}.",
   "Main guide": "Κύριος οδηγός",
   "Extra guide {number}": "Πρόσθετος οδηγός {number}",
   "Use EPG logo": "Χρήση λογότυπου EPG",

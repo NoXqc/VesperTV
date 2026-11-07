@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io' show Platform;
 
+import '../../l10n/l10n.dart';
 import '../../models/channel.dart';
 import '../../models/epg_program.dart';
 import '../../models/sports.dart';
@@ -9,11 +11,18 @@ import '../../utils/title_search.dart';
 import '../app_preferences.dart';
 import '../epg_service.dart';
 import '../playback_service.dart';
+import '../playlist_edits.dart';
+import '../playlist_edits_diff.dart';
 import '../playlist_manager.dart';
+import '../playlist_session.dart';
+import '../sports_channel_countries.dart';
 import '../sports_channel_matcher.dart';
 import '../sports_service.dart';
 import '../storage_service.dart';
 import 'watch_list.dart';
+
+part 'playlist_editor_tool.dart';
+part 'vesper_help.dart';
 
 /// Who asked: the viewer on the TV (voice / typing / phone microphone, or
 /// their own AI key acting for them) or an AI app linked over MCP from
@@ -250,34 +259,158 @@ class VesperToolbox {
   }
 
   bool get restrictedViewer => playlist.activeViewerRestricted;
+
+  /// Shown in Live TV for this viewer (hidden channels / groups, editor and
+  /// Combine playlists all count).
+  bool isVisibleLive(Channel c) =>
+      playlist.visibleChannels(category: 'tv').any((x) => x.id == c.id);
+
+  /// The live group best named by [query] ("PPV", "pay per view", "live
+  /// events"), or null.
+  String? findLiveGroup(String query) {
+    final titles = {
+      for (final g in playlist.tvGroups)
+        if (!g.isHidden &&
+            !playlist.hiddenGroupsFor(g.playlistId).contains(g.title))
+          g.title
+    }.toList();
+    for (final q in [query, ...?_groupSynonyms[TitleSearch.fold(query)]]) {
+      final best = rankByName(titles, q, (t) => t, limit: 1).firstOrNull;
+      if (best != null) return best;
+    }
+    return null;
+  }
 }
 
-/// [items] whose [name] matches every word of [query] (accent / case /
-/// separator folded, see [TitleSearch]), best first: exact, then the
-/// query at the start of the name, then shorter names.
+/// Group names people say differently from how providers write them.
+const _groupSynonyms = {
+  'pay per view': ['ppv'],
+  'pay per views': ['ppv'],
+  'ppv': ['pay per view'],
+  'live events': ['events', 'ppv'],
+  'events': ['live events', 'ppv'],
+  'paiement a la carte': ['ppv'],
+  'pago por evento': ['ppv'],
+};
+
+/// [items] whose [name] matches [query] as a viewer says it, best first:
+/// spoken numbers are digits ("TSN one" = "TSN 1", "Sportsnet 1" =
+/// "Sportsnet One"), spelled letters join ("T S N" = "TSN"), and whole
+/// words beat pieces of words ("TSN" never prefers "Sportsnet", which
+/// holds "tsn"). Within a tier, shorter names first. Matches on a piece
+/// of a word only are dropped when anything matches better.
 List<T> rankByName<T>(Iterable<T> items, String query, String Function(T) name,
     {int limit = 20}) {
-  final search = TitleSearch(query);
-  if (search.isEmpty) return const [];
+  final q = spokenTokens(query);
+  if (q.isEmpty) return const [];
+  // A cheap pass first (cached folds): the longest real word must be in
+  // the name somewhere. ~350k channels for a big multi-playlist setup.
+  final words = q.where((t) => !_isNumber(t)).toList()
+    ..sort((a, b) => b.length.compareTo(a.length));
+  final gate = words.isEmpty ? null : TitleSearch(words.first);
+  final loose = TitleSearch(query);
+  final spoken = TitleSearch(q.join(' '));
   final scored = <(int, int, T)>[];
   for (final item in items) {
     final n = name(item);
-    if (!search.matches(n)) continue;
-    final folded = TitleSearch.fold(n);
-    final score = folded == search.folded
-        ? 0
-        : folded.startsWith(search.folded)
-            ? 1
-            : folded.contains(search.folded)
-                ? 2
-                : 3;
+    if (gate != null && !gate.matches(n)) continue;
+    final score = _spokenScore(q, spokenTokens(n.replaceFirst(_tag, ''))) ??
+        (loose.matches(n) || spoken.matches(n) ? 5 : null);
+    if (score == null) continue;
     scored.add((score, n.length, item));
   }
+  if (scored.any((s) => s.$1 < 5)) scored.removeWhere((s) => s.$1 == 5);
   scored.sort((a, b) {
     final s = a.$1.compareTo(b.$1);
     return s != 0 ? s : a.$2.compareTo(b.$2);
   });
   return [for (final s in scored.take(limit)) s.$3];
+}
+
+/// How well [name] matches [query] as [rankByName] scores it (0 best, 5 a
+/// piece of a word only), null = no match.
+int? spokenRank(String query, String name) {
+  final q = spokenTokens(query);
+  if (q.isEmpty) return null;
+  return _spokenScore(q, spokenTokens(name.replaceFirst(_tag, ''))) ??
+      (TitleSearch(query).matches(name) ||
+              TitleSearch(q.join(' ')).matches(name)
+          ? 5
+          : null);
+}
+
+/// 0 same words, 1 starts with the query's words, 2 has them in a row,
+/// 3 has every word, 4 every word starts a word ("1" in "10"); null =
+/// not a whole-word match.
+int? _spokenScore(List<String> q, List<String> n) {
+  if (n.length < q.length) {
+    return q.every((t) => n.any((w) => w.startsWith(t))) ? 4 : null;
+  }
+  bool runAt(int i) {
+    for (var j = 0; j < q.length; j++) {
+      if (n[i + j] != q[j]) return false;
+    }
+    return true;
+  }
+
+  if (runAt(0)) return n.length == q.length ? 0 : 1;
+  for (var i = 1; i + q.length <= n.length; i++) {
+    if (runAt(i)) return 2;
+  }
+  if (q.every(n.contains)) return 3;
+  if (q.every((t) => n.any((w) => w.startsWith(t)))) return 4;
+  return null;
+}
+
+bool _isNumber(String t) => int.tryParse(t) != null;
+
+/// A leading provider tag ("CA: ", "US| ", "[UK] "): "CA: TSN 1" is
+/// exactly "TSN 1" for ranking.
+final _tag = RegExp(r'^\s*(?:[\[(][A-Za-z]{2,4}[\])]|[A-Za-z]{2,4}\s*[:|])\s*');
+
+/// Spoken numbers (EN / FR / ES / IT / DE) as digits.
+const _numberWords = {
+  'zero': '0', 'one': '1', 'two': '2', 'three': '3', 'four': '4', //
+  'five': '5', 'six': '6', 'seven': '7', 'eight': '8', 'nine': '9',
+  'ten': '10', 'eleven': '11', 'twelve': '12',
+  'un': '1', 'une': '1', 'deux': '2', 'trois': '3', 'quatre': '4',
+  'cinq': '5', 'sept': '7', 'huit': '8', 'neuf': '9', 'dix': '10',
+  'uno': '1', 'dos': '2', 'tres': '3', 'cuatro': '4', 'cinco': '5',
+  'seis': '6', 'siete': '7', 'ocho': '8', 'nueve': '9', 'diez': '10',
+  'due': '2', 'tre': '3', 'quattro': '4', 'cinque': '5', 'sei': '6',
+  'sette': '7', 'otto': '8', 'nove': '9', 'dieci': '10',
+  'eins': '1', 'zwei': '2', 'drei': '3', 'vier': '4', 'funf': '5',
+  'sechs': '6', 'sieben': '7', 'acht': '8', 'neun': '9', 'zehn': '10',
+};
+
+final Map<String, List<String>> _spokenCache = {};
+final _letterDigit = RegExp(r'(?<=[a-z])(?=\d)|(?<=\d)(?=[a-z])');
+
+/// [text]'s words as [rankByName] compares them: folded, "tsn1" split into
+/// "tsn 1", number words as digits, runs of single letters joined.
+List<String> spokenTokens(String text) {
+  final hit = _spokenCache[text];
+  if (hit != null) return hit;
+  final words = TitleSearch.fold(text)
+      .replaceAll(_letterDigit, ' ')
+      .split(' ')
+      .where((w) => w.isNotEmpty)
+      .map((w) => _numberWords[w] ?? w)
+      .toList();
+  final out = <String>[];
+  var letters = '';
+  for (final w in words) {
+    if (w.length == 1 && !_isNumber(w)) {
+      letters += w;
+      continue;
+    }
+    if (letters.isNotEmpty) out.add(letters);
+    letters = '';
+    out.add(w);
+  }
+  if (letters.isNotEmpty) out.add(letters);
+  if (_spokenCache.length >= 20000) _spokenCache.clear();
+  return _spokenCache[text] = out;
 }
 
 String _str(Map<String, Object?> args, String key) {
@@ -333,6 +466,12 @@ Future<Map<String, Object?>> _play(
     VesperToolbox box, Object item, VesperCaller caller) async {
   switch (item) {
     case Channel c:
+      // A ref from an earlier search outlives a Hide channel / hidden group
+      // (user report: hidden channels still played).
+      if (c.isLive && !box.isVisibleLive(c)) {
+        throw VesperToolError('${c.name} is hidden on this TV. Search again '
+            'for another channel.');
+      }
       await _confirmRemote(
           box, caller, 'An AI app wants to play {title}.', {'title': c.name});
       await box.host.playChannel(c);
@@ -653,8 +792,12 @@ final List<VesperTool> vesperTools = [
   VesperTool(
     name: 'open',
     description: 'Open a part of the app on the TV: tv (live channels), guide, '
-        'movies, series, home, hub (Media Hub), sports (Sports Trak), '
-        'search (with a query) or settings.',
+        'movies, series, home, hub (Media Hub; with a query it searches the '
+        'Media Hub for that title), sports (Sports Trak), '
+        'search (with a query; lists every match in the playlists and the '
+        'Media Hub for the viewer to pick), '
+        'group (a live TV category by name, e.g. "PPV" or "Live Events", '
+        'in query) or settings.',
     schema: {
       'type': 'object',
       'properties': {
@@ -669,15 +812,38 @@ final List<VesperTool> vesperTools = [
             'hub',
             'sports',
             'search',
+            'group',
             'settings',
           ],
         },
-        'query': {'type': 'string', 'description': 'For search.'},
+        'query': {
+          'type': 'string',
+          'description': 'For search, group and hub.',
+        },
       },
       'required': ['section'],
     },
     run: (box, args, caller) async {
       final section = _str(args, 'section');
+      if (section == 'group') {
+        final words = _str(args, 'query');
+        if (words.isEmpty) throw VesperToolError('Which group?');
+        await box.playlist.ensureLiveChannelsLoaded();
+        final title = box.findLiveGroup(words);
+        if (title != null &&
+            await box.host.openSection('group', query: title)) {
+          return {'opened': 'group', 'group': title};
+        }
+        // No such group: the search page with those words instead.
+        if (await box.host.openSection('search', query: words)) {
+          return {
+            'opened': 'search',
+            'note': 'No live group is called "$words"; the search page '
+                'shows the channels with those words.',
+          };
+        }
+        throw VesperToolError('No live group is called "$words".');
+      }
       final ok = await box.host.openSection(section,
           query: _str(args, 'query').isEmpty ? null : _str(args, 'query'));
       if (!ok) throw VesperToolError('$section is hidden or unavailable.');
@@ -821,7 +987,8 @@ final List<VesperTool> vesperTools = [
     description:
         'The groups (categories) of a tab: list them, or hide / show the '
         'groups whose name contains some words (e.g. hide every group with '
-        '"Turkish"). Hidden groups come back in Settings > Playlists.',
+        '"Turkish"). Hidden groups come back in Settings > Playlists. For '
+        'single channels, rules or renames use playlist_editor.',
     schema: {
       'type': 'object',
       'properties': {
@@ -898,6 +1065,7 @@ final List<VesperTool> vesperTools = [
       };
     },
   ),
+  _playlistEditorTool,
   VesperTool(
     name: 'sports_today',
     description:
@@ -939,26 +1107,64 @@ final List<VesperTool> vesperTools = [
     name: 'play_game',
     description:
         'Play the live (or next) game of a team today on the channel that '
-        'carries it.',
+        'carries it. language picks the feed ("en" for the English '
+        'broadcast, "fr" French, "es" Spanish...); list: true returns every '
+        'channel carrying it (with its language) instead of playing.',
     schema: {
       'type': 'object',
       'properties': {
         'team': {'type': 'string'},
+        'language': {
+          'type': 'string',
+          'description': 'Feed language code: en, fr, es, it, de, pt, el.',
+        },
+        'list': {'type': 'boolean'},
       },
       'required': ['team'],
     },
     run: (box, args, caller) async {
       final team = _str(args, 'team');
       if (team.isEmpty) throw VesperToolError('Which team?');
+      final asked = _str(args, 'language').toLowerCase();
+      // Not said: the viewer's preferred audio language (Settings >
+      // Playback > Audio), after a channel they saved for the game.
+      final language =
+          asked.isNotEmpty ? asked : box.storage.getPreferredAudioLanguage();
       final games = await _todaysGames(box, team);
       if (games.isEmpty) throw VesperToolError('No $team game today.');
       games.sort((a, b) => _stateRank(a).compareTo(_stateRank(b)));
-      final matched = await _gameChannels(box, games);
+      final matched = {
+        for (final e in (await _gameMatchList(box, games)).entries)
+          e.key: _inLanguage(e.value, language, keepPick: asked.isEmpty),
+      };
+      if (args['list'] == true) {
+        return {
+          'games': [
+            for (final g in games.take(3))
+              {
+                'game': g.title,
+                'channels': [
+                  for (final c in (matched[g] ?? const <Channel>[]).take(15))
+                    {
+                      ...box.describeChannel(c, withNow: false),
+                      if (vesperChannelLanguage(c) case final l?) 'language': l,
+                    }
+                ],
+              }
+          ],
+        };
+      }
       for (final g in games) {
-        final c = matched[g];
-        if (c == null) continue;
-        final result = await _play(box, c, caller);
-        return {...result, 'game': g.title};
+        final options = matched[g] ?? const <Channel>[];
+        if (options.isEmpty) continue;
+        final result = await _play(box, options.first, caller);
+        return {
+          ...result,
+          'game': g.title,
+          if (asked.isNotEmpty && vesperChannelLanguage(options.first) != asked)
+            'note': 'No channel in that language carries it; playing the '
+                'best match instead.',
+        };
       }
       throw VesperToolError(
           'No channel in the playlists carries ${games.first.title}.');
@@ -983,6 +1189,7 @@ final List<VesperTool> vesperTools = [
       return {'shown': true};
     },
   ),
+  _vesperHelpTool,
 ];
 
 int _stateRank(SportsGame g) => switch (g.state) {
@@ -1008,6 +1215,34 @@ Future<List<SportsGame>> _todaysGames(VesperToolbox box, String team) async {
 /// The best live channel per game (Sports Trak's own matching and saved
 /// picks).
 Future<Map<SportsGame, Channel>> _gameChannels(
+        VesperToolbox box, List<SportsGame> games) async =>
+    {
+      for (final e in (await _gameMatchList(box, games)).entries)
+        if (e.value.isNotEmpty) e.key: e.value.first.channel,
+    };
+
+/// [matches] with the ones in [language] first, otherwise in the same
+/// order; with [keepPick] a channel the viewer saved for the game stays
+/// first whatever its language.
+List<Channel> _inLanguage(List<ChannelMatch> matches, String language,
+    {required bool keepPick}) {
+  if (language.isEmpty) return [for (final m in matches) m.channel];
+  int tier(ChannelMatch m) => keepPick && m.reason == MatchReason.pick
+      ? 0
+      : vesperChannelLanguage(m.channel) == language
+          ? 1
+          : 2;
+  final indexed = [...matches.indexed]..sort((a, b) {
+      final t = tier(a.$2).compareTo(tier(b.$2));
+      return t != 0 ? t : a.$1.compareTo(b.$1);
+    });
+  return [for (final (_, m) in indexed) m.channel];
+}
+
+/// Every channel carrying each game, best first: the Sports Trak order
+/// (saved pick, game evidence, preferred playlist, preferred countries,
+/// highest quality; distinct channels before their copies).
+Future<Map<SportsGame, List<ChannelMatch>>> _gameMatchList(
     VesperToolbox box, List<SportsGame> games) async {
   if (games.isEmpty) return const {};
   await box.playlist.ensureLiveChannelsLoaded();
@@ -1016,15 +1251,39 @@ Future<Map<SportsGame, Channel>> _gameChannels(
   await matcher.prepare(live, hidden: box.playlist.hiddenLiveChannels());
   final picks = SportsChannelPicks.load(box.storage);
   final found = await matcher.matchDay(games.take(25).toList(), picks);
-  final out = <SportsGame, Channel>{};
+  final out = <SportsGame, List<ChannelMatch>>{};
   for (final g in games.take(25)) {
     final key = SportsChannelPicks.eventKey(g);
-    final best = picks
-        .orderMatches(found[key] ?? const [],
-            countries: picks.countryPreferences)
-        .firstOrNull
-        ?.channel;
-    if (best != null) out[g] = best;
+    out[g] = picks.orderMatches(found[key] ?? const [],
+        countries: picks.countryPreferences);
   }
   return out;
+}
+
+/// A live channel's language as its name / group / network says it
+/// ("FR| RDS" = fr, "US| ESPN" = en), null when it doesn't say. Canada
+/// counts as English unless the channel is French (RDS, TVA, "CA FR").
+String? vesperChannelLanguage(Channel c) {
+  final words = ' ${TitleSearch.fold('${c.name} ${c.group}')} ';
+  bool has(String pattern) => RegExp(' (?:$pattern) ').hasMatch(words);
+  if (has('fr|french|francais|vf|vff|cafr|qc|quebec|rds|rds2|tva|tva sports'
+      '|ca fr')) {
+    return 'fr';
+  }
+  if (has('es|spanish|espanol|deportes|tudn|univision|telemundo|latino'
+      '|latam|mx')) {
+    return 'es';
+  }
+  final country = SportsChannelCountries.infer(c);
+  return switch (country) {
+    'US' || 'UK' || 'CA' || 'IE' || 'AU' || 'NZ' => 'en',
+    'FR' => 'fr',
+    'ES' || 'MX' || 'AR' => 'es',
+    'IT' => 'it',
+    'DE' || 'AT' => 'de',
+    'PT' || 'BR' => 'pt',
+    'GR' || 'CY' => 'el',
+    'NL' => 'nl',
+    _ => has('en|eng|english') ? 'en' : null,
+  };
 }
