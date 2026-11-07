@@ -23,7 +23,11 @@ class LocalPlaylistFiles {
         !await file.exists()) {
       return null;
     }
-    if (!p.isWithin(dir, await file.resolveSymbolicLinks())) return null;
+    // Compare resolved paths on both sides: the folder itself may sit
+    // behind a link (macOS /var -> /private/var), which made every owned
+    // file look outside it. A link inside the folder still can't escape.
+    final realDir = await Directory(dir).resolveSymbolicLinks();
+    if (!p.isWithin(realDir, await file.resolveSymbolicLinks())) return null;
     return file;
   }
 

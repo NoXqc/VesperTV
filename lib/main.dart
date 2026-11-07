@@ -91,6 +91,7 @@ import 'services/vesper_ai/voice_key.dart';
 import 'screens/vesper_ai/vesper_bubble.dart';
 import 'screens/vesper_ai/vesper_host.dart';
 import 'screens/vesper_ai/vesper_panel.dart';
+import 'utils/desktop_platform.dart';
 
 @pragma('vm:entry-point')
 void sportsPhoneGoalMain() => sportsGoalBackgroundMain();
@@ -127,12 +128,15 @@ Future<void> _main() async {
   if (Platform.isWindows || Platform.isLinux) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
+  }
+  if (isDesktop || Platform.isLinux) {
     // Only ever used by DesktopPlayerScreen — see its own doc comment and
     // pubspec.yaml's media_kit comment. Every other platform keeps using
-    // video_player_hdr exclusively and never touches this at all.
+    // video_player_hdr exclusively and never touches this at all. macOS
+    // keeps plain sqflite (native there) but plays through media_kit too.
     MediaKit.ensureInitialized();
   }
-  if (Platform.isWindows) {
+  if (isDesktop) {
     // See pubspec.yaml's window_manager comment — maximizing a plain
     // window left the title bar and taskbar visible ("only like 98%"), so
     // the default is real full screen with no title bar, TV-style. Users
@@ -275,7 +279,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   /// app; picking a viewer rebuilds it on the TV root.
   Future<void> _returnToProfiles() async {
     if (!_ready || _profileSelection != null) return;
-    if (Platform.isWindows) {
+    if (isDesktop) {
       DesktopMiniPlayer.instance.clear();
     } else {
       await _playbackService.stop();
@@ -390,7 +394,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     // (clicking the taskbar icon), not something tied to any specific
     // screen, so this lives at the app root rather than wherever the
     // Minimize button happens to be.
-    if (Platform.isWindows) windowManager.addListener(this);
+    if (isDesktop) windowManager.addListener(this);
   }
 
   @override
@@ -412,13 +416,13 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     _episodeAlerts?.dispose();
     RecordingService.instance.prepareProgramme = null;
     _goalsAlerts?.dispose();
-    if (Platform.isWindows) windowManager.removeListener(this);
+    if (isDesktop) windowManager.removeListener(this);
     super.dispose();
   }
 
   @override
   void onWindowRestore() {
-    if (Platform.isWindows) DesktopWindow.onRestore();
+    if (isDesktop) DesktopWindow.onRestore();
   }
 
   @override
@@ -1095,7 +1099,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     // unfiltered search result would.
     for (final channel in _playlistManager.visibleChannels(category: 'tv')) {
       if (channel.id == lastId) {
-        if (Platform.isWindows) {
+        if (isDesktop) {
           if (fullscreen) {
             _navigatorKey.currentState?.push(MaterialPageRoute(
                 builder: (_) => DesktopPlayerScreen(channel: channel)));
@@ -1374,6 +1378,16 @@ class _NoxIptvAppState extends State<NoxIptvApp>
           scaffoldMessengerKey: _scaffoldMessengerKey,
           navigatorKey: _navigatorKey,
           navigatorObservers: [appRouteObserver],
+          // macOS: Esc (Flutter's DismissIntent) is Back when nothing
+          // closer handles it. Dialogs, menus and screens with their own
+          // Esc key handling still win; maybePop honours every PopScope.
+          actions: Platform.isMacOS
+              ? {
+                  ...WidgetsApp.defaultActions,
+                  DismissIntent: CallbackAction<DismissIntent>(
+                      onInvoke: (_) => _navigatorKey.currentState?.maybePop()),
+                }
+              : null,
           onGenerateInitialRoutes: (_) => _startupRoutes.generate(
             preferences: prefs,
             storage: _storage,
@@ -1401,7 +1415,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
               // Windows-only equivalent — see DesktopPlayerScreen's own
               // doc comment for why it's a separate widget/holder rather
               // than reusing LiveResumeHint/PlaybackService.
-              if (Platform.isWindows)
+              if (isDesktop)
                 DesktopLiveResumeHint(navigatorKey: _navigatorKey),
               GameReminderOverlay(onGameStarting: _offerStartingGame),
               const ProgrammeReminderOverlay(),

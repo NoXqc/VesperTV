@@ -72,10 +72,11 @@ import 'sports_my_teams_screen.dart';
 import 'sports_league_manager_screen.dart';
 import 'sports_standings_screen.dart';
 import '../l10n/l10n.dart';
+import '../utils/desktop_platform.dart';
 
 // Keep UI and playback routing on the same Flutter target. This also lets
 // Android widget tests on a Windows development PC exercise the TV path.
-bool get _desktopSports => defaultTargetPlatform == TargetPlatform.windows;
+bool get _desktopSports => isDesktopTarget;
 
 /// Sports: today's games across the user's leagues with logos, records,
 /// live scores and the IPTV channel each game is on (see

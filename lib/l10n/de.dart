@@ -2834,4 +2834,8 @@ const Map<String, String> kDe = {
       "OK: schauen  ·  Nochmal OK: Vollbild  ·  OK halten: Spielmenü",
   "Sort favourites": "Favoriten sortieren",
   "Revert to original order": "Ursprüngliche Reihenfolge wiederherstellen",
+  "the app's own storage": "App-Speicher",
+  "Export a backup": "Sicherung exportieren",
+  "Save a backup file anywhere on this Mac": "Eine Sicherungsdatei an einem beliebigen Ort auf diesem Mac speichern",
+  "Backup exported.": "Sicherung exportiert.",
 };

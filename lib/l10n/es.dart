@@ -2931,4 +2931,8 @@ const Map<String, String> kEs = {
       "OK: ver  ·  OK otra vez: pantalla completa  ·  Mantener OK: menú del partido",
   "Sort favourites": "Ordenar favoritos",
   "Revert to original order": "Restaurar el orden original",
+  "the app's own storage": "el almacenamiento de la app",
+  "Export a backup": "Exportar una copia",
+  "Save a backup file anywhere on this Mac": "Guardar un archivo de copia en cualquier lugar de este Mac",
+  "Backup exported.": "Copia exportada.",
 };

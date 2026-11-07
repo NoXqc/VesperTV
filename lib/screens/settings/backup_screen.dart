@@ -79,6 +79,18 @@ class _BackupScreenState extends State<BackupScreen> {
     await _refresh();
   }
 
+  Future<void> _exportToFile() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      if (await _backups.exportToFile()) _toast(tr('Backup exported.'));
+    } catch (e) {
+      _toast(tr('Backup failed: {error}', {'error': '$e'}));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _setAuto(bool value) async {
     if (value && !await _backups.ensurePermission(write: true)) {
       _toast(tr('VesperTV needs storage access to save backups.'));
@@ -192,7 +204,15 @@ class _BackupScreenState extends State<BackupScreen> {
               value: _auto,
               onChanged: _setAuto,
             ),
-            if (Platform.isAndroid)
+            if (Platform.isMacOS)
+              TvMenuTile(
+                icon: Icons.ios_share,
+                title: tr('Export a backup'),
+                subtitle: tr('Save a backup file anywhere on this Mac'),
+                enabled: !_busy,
+                onTap: _exportToFile,
+              ),
+            if (Platform.isAndroid || Platform.isMacOS)
               TvMenuTile(
                 icon: Icons.folder_open,
                 title: tr('Restore from a file'),

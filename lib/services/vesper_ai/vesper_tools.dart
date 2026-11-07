@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show Platform;
 
 import '../../l10n/l10n.dart';
 import '../../models/channel.dart';
@@ -20,6 +19,7 @@ import '../sports_channel_matcher.dart';
 import '../sports_service.dart';
 import '../storage_service.dart';
 import 'watch_list.dart';
+import '../../utils/desktop_platform.dart';
 
 part 'playlist_editor_tool.dart';
 part 'vesper_help.dart';
@@ -598,7 +598,7 @@ final List<VesperTool> vesperTools = [
         'programme on now and next, and whether it is paused.',
     schema: {'type': 'object', 'properties': {}},
     run: (box, args, caller) async {
-      if (Platform.isWindows) {
+      if (isDesktop) {
         throw VesperToolError('Not available on Windows yet.');
       }
       final c = box.playback.liveChannel;
@@ -649,7 +649,7 @@ final List<VesperTool> vesperTools = [
       'required': ['action'],
     },
     run: (box, args, caller) async {
-      if (Platform.isWindows) {
+      if (isDesktop) {
         throw VesperToolError('Not available on Windows yet.');
       }
       final playback = box.playback;

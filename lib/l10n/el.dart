@@ -2893,4 +2893,8 @@ const Map<String, String> kEl = {
       "OK: παρακολούθηση  ·  Ξανά OK: πλήρης οθόνη  ·  Κράτημα OK: μενού αγώνα",
   "Sort favourites": "Ταξινόμηση αγαπημένων",
   "Revert to original order": "Επαναφορά αρχικής σειράς",
+  "the app's own storage": "χώρο αποθήκευσης της εφαρμογής",
+  "Export a backup": "Εξαγωγή αντιγράφου ασφαλείας",
+  "Save a backup file anywhere on this Mac": "Αποθήκευση αρχείου αντιγράφου ασφαλείας οπουδήποτε σε αυτό το Mac",
+  "Backup exported.": "Το αντίγραφο ασφαλείας εξήχθη.",
 };

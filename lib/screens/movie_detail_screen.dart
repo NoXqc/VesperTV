@@ -3,7 +3,6 @@ import '../services/app_preferences.dart';
 import '../widgets/trailer_button.dart';
 import '../services/trailer_service.dart';
 import 'dart:async';
-import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -30,6 +29,7 @@ import '../widgets/detail_header.dart';
 import '../widgets/hold_to_activate.dart';
 import 'desktop_player_screen.dart';
 import 'player_screen.dart';
+import '../utils/desktop_platform.dart';
 
 /// A movie's detail page, in the same visual language as
 /// `SeriesDetailScreen` (shared pieces in `widgets/detail_header.dart`):
@@ -169,7 +169,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     // See TvHomeScreen._selectChannel's matching comment — Windows has no
     // PlaybackService-compatible player, so its standalone screen handles
     // the media_kit controller and VOD resume.
-    if (Platform.isWindows) {
+    if (isDesktop) {
       // Abandons any minimized live channel first, so it can't keep
       // playing audio in the background behind this unrelated movie.
       DesktopMiniPlayer.instance.clear();
@@ -183,8 +183,8 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     // this call — see TvHomeScreen._selectChannel for the full explanation.
     await context.read<PlaybackService>().play(channel);
     if (!mounted) return;
-    await Navigator.of(context).push(
-        PlayerPageRoute(builder: (_) => PlayerScreen(channel: channel)));
+    await Navigator.of(context)
+        .push(PlayerPageRoute(builder: (_) => PlayerScreen(channel: channel)));
     _refreshProgress();
   }
 
@@ -340,7 +340,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           child: SwallowHeldActivate(
             child: CallbackShortcuts(
               bindings: {
-                if (Platform.isWindows)
+                if (isDesktop)
                   const SingleActivator(LogicalKeyboardKey.escape): _goBack,
               },
               child: LayoutBuilder(builder: (context, c) {

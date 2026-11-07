@@ -2944,4 +2944,8 @@ const Map<String, String> kFr = {
       "OK : regarder  ·  OK encore : plein écran  ·  Maintenir OK : menu du match",
   "Sort favourites": "Trier les favoris",
   "Revert to original order": "Rétablir l’ordre initial",
+  "the app's own storage": "le stockage de l'app",
+  "Export a backup": "Exporter une sauvegarde",
+  "Save a backup file anywhere on this Mac": "Enregistrer un fichier de sauvegarde n'importe où sur ce Mac",
+  "Backup exported.": "Sauvegarde exportée.",
 };

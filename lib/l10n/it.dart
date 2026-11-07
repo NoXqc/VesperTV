@@ -2938,4 +2938,8 @@ const Map<String, String> kIt = {
       "OK: guarda  ·  OK di nuovo: schermo intero  ·  Tieni premuto OK: menu partita",
   "Sort favourites": "Ordina preferiti",
   "Revert to original order": "Ripristina l’ordine originale",
+  "the app's own storage": "memoria interna dell'app",
+  "Export a backup": "Esporta un backup",
+  "Save a backup file anywhere on this Mac": "Salva un file di backup ovunque su questo Mac",
+  "Backup exported.": "Backup esportato.",
 };

@@ -1,6 +1,5 @@
 import '../widgets/archive_discovery_panel.dart';
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -34,6 +33,7 @@ import 'desktop_player_screen.dart';
 import 'player_screen.dart';
 import 'series_detail_screen.dart';
 import 'youtube_playback.dart';
+import '../utils/desktop_platform.dart';
 
 /// Starting playback of Archive titles, shared by the movie page
 /// (`ArchiveDetailScreen`) and Archive shows, which open the regular
@@ -343,7 +343,7 @@ Future<void> playArchiveTitle(
 
   final hasQueue = queue != null && queue.isNotEmpty;
   // Same split as MovieDetailScreen._play: Windows has its own player.
-  if (Platform.isWindows) {
+  if (isDesktop) {
     DesktopMiniPlayer.instance.clear();
     await Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => DesktopPlayerScreen(

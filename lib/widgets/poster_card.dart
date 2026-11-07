@@ -1,5 +1,4 @@
 import '../utils/refined_finish.dart';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 
@@ -7,6 +6,7 @@ import '../l10n/l10n.dart';
 import '../utils/image_urls.dart';
 import 'hd_network_image.dart';
 import 'hold_to_activate.dart';
+import '../utils/desktop_platform.dart';
 
 /// One poster/backdrop tile in a browse row — scales and glows when
 /// focused, which is the standard "this is where the D-pad is" affordance
@@ -194,15 +194,14 @@ class _PosterCardState extends State<PosterCard> {
         // (onDoubleTap) is the only thing that still opens it. Remote/
         // touch (HoldToActivate below, and every other platform) is
         // untouched — same scoping as the Timeline guide fix.
-        onTap: Platform.isWindows
+        onTap: isDesktop
             ? _effectiveFocusNode.requestFocus
             : widget.tapToPreview
                 ? () => _focused
                     ? widget.onTap()
                     : _effectiveFocusNode.requestFocus()
                 : widget.onTap,
-        onDoubleTap:
-            Platform.isWindows || widget.tapToPreview ? widget.onTap : null,
+        onDoubleTap: isDesktop || widget.tapToPreview ? widget.onTap : null,
         onFocusChange: (f) {
           setState(() => _focused = f);
           if (f) widget.onFocusGained();

@@ -5,7 +5,6 @@ import '../widgets/trailer_button.dart';
 import '../widgets/next_episode_air_date.dart';
 import '../services/trailer_service.dart';
 import 'dart:async';
-import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -41,6 +40,7 @@ import '../widgets/tv_dialog_option.dart';
 import '../widgets/sports_widgets.dart' show SportsRowArrows;
 import 'desktop_player_screen.dart';
 import 'player_screen.dart';
+import '../utils/desktop_platform.dart';
 
 /// What the primary button plays: the episode to resume (saved position,
 /// not finished), else the one after the last finished, else the first.
@@ -402,7 +402,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     // See TvHomeScreen._selectChannel's matching comment — Windows has no
     // PlaybackService-compatible player at all, so this bypasses it via a
     // standalone screen; the queue is passed so Previous/Next still works.
-    if (Platform.isWindows) {
+    if (isDesktop) {
       // Abandons any minimized live channel first, so it can't keep
       // playing audio behind this unrelated episode.
       DesktopMiniPlayer.instance.clear();
@@ -888,7 +888,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
           child: SwallowHeldActivate(
             child: CallbackShortcuts(
               bindings: {
-                if (Platform.isWindows)
+                if (isDesktop)
                   const SingleActivator(LogicalKeyboardKey.escape): _goBack,
               },
               child: LayoutBuilder(builder: (context, c) {
@@ -1774,7 +1774,7 @@ class _EpisodeCardState extends State<_EpisodeCard> {
           // plot below the row), a click on the focused card plays — same
           // "look before you open" idea as PosterCard's Windows handling.
           onTap: () {
-            if (Platform.isWindows && !_focused) {
+            if (isDesktop && !_focused) {
               widget.focusNode.requestFocus();
             } else {
               widget.onTap();

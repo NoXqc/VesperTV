@@ -44,6 +44,7 @@ import 'sports_odds_settings_screen.dart';
 import 'sports_quality_settings_screen.dart';
 import 'playlist_editor_screen.dart';
 import 'vesper_ai_settings_screen.dart';
+import '../../utils/desktop_platform.dart';
 
 /// One destination row of a Settings category.
 class _Entry {
@@ -226,13 +227,13 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
           tr('Playback'),
           tr('Video, audio, subtitles, trailers and player behaviour.'),
           [
-            if (!Platform.isWindows)
+            if (!isDesktop)
               _general(
                   'background',
                   Icons.picture_in_picture_alt,
                   tr('Background video'),
                   tr('Fixes for the picture on some Fire TV sticks')),
-            if (Platform.isAndroid || Platform.isWindows)
+            if (Platform.isAndroid || isDesktop)
               _general('audio', Icons.surround_sound_outlined, tr('Audio'),
                   tr('Audio languages, subtitles and surround sound')),
             if (Platform.isAndroid)
@@ -245,27 +246,27 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
                 'datapool',
                 Icons.analytics_outlined,
                 tr('Data pool'),
-                Platform.isWindows
+                isDesktop
                     ? tr('Stream details from a button in the player bar')
                     : tr('Stream details when you press OK while watching')),
-            if (Platform.isAndroid || Platform.isWindows)
+            if (Platform.isAndroid || isDesktop)
               _general('catchup', Icons.history_toggle_off, tr('Catch-up'),
                   tr('What happens when a catch-up programme ends')),
-            if (Platform.isAndroid || Platform.isWindows)
+            if (Platform.isAndroid || isDesktop)
               _general('skipintro', Icons.skip_next_outlined, tr('Skip intro'),
                   tr('Skip intros and credits on TV show episodes')),
-            if (Platform.isAndroid || Platform.isWindows)
+            if (Platform.isAndroid || isDesktop)
               _general('upnext', Icons.queue_play_next, tr('Up Next'),
                   tr('When the next episode starts by itself')),
-            if (Platform.isAndroid || Platform.isWindows)
+            if (Platform.isAndroid || isDesktop)
               _general('livebuffer', Icons.av_timer, tr('Live buffer'),
                   tr('Hide short dropouts on live channels')),
-            if (Platform.isWindows)
+            if (isDesktop)
               _general('softvideo', Icons.memory, tr('Software video'),
                   tr('For PCs where video stays black')),
             _general('trailers', Icons.movie_outlined, tr('Trailers'),
                 tr('Play trailers automatically on movie and show pages')),
-            if (!Platform.isWindows)
+            if (!isDesktop)
               _general('multiview', Icons.grid_view, tr('Multiview'),
                   tr('The connections tip when opening Multiview')),
             _general('resume', Icons.play_circle_outline, tr('Resume reminder'),
