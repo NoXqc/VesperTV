@@ -302,6 +302,17 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   /// "a few times a week, not every launch" reasoning.
   bool _syncing = false;
 
+  /// Completed by Back on [CatalogSyncScreen]: stop waiting for the sync.
+  Completer<void>? _syncSkip;
+
+  void _skipSync() {
+    final skip = _syncSkip;
+    if (skip != null && !skip.isCompleted) {
+      debugPrint('CatalogSync: Back, updating in the background');
+      skip.complete();
+    }
+  }
+
   /// True while waiting on [CatalogSyncPromptScreen]'s Yes/No answer — a
   /// full sync is a multi-minute, server-round-trip-per-category action
   /// triggered automatically (a stale timestamp), not a direct user tap,
@@ -802,6 +813,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // untouched, so it asks again next launch instead of postponing
       // forever.
       var didSync = false;
+      // The sync runs behind the app (setting, or Back on its screen).
+      var syncBehind = false;
       if (_playlistManager.needsFullSync()) {
         // "Update automatically" on every due playlist: no question.
         final confirmed =
@@ -813,9 +826,16 @@ class _NoxIptvAppState extends State<NoxIptvApp>
             // TV now and the catalog fills in behind it, instead of the
             // blocking screen (Fire TV user: Back there leaves the app).
             unawaited(_playlistManager.runFullCatalogSync());
+            syncBehind = true;
           } else {
+            // Back on the update screen stops waiting: the app opens and
+            // the same sync finishes behind it (_skipSync).
+            final sync = _playlistManager.runFullCatalogSync();
+            final skip = _syncSkip = Completer<void>();
             if (mounted) setState(() => _syncing = true);
-            await _playlistManager.runFullCatalogSync();
+            await Future.any([sync, skip.future]);
+            syncBehind = skip.isCompleted;
+            _syncSkip = null;
             if (mounted) setState(() => _syncing = false);
           }
         }
@@ -875,8 +895,12 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // opening for the resumed channel, and the EPG parse all used to
       // run at once. The splash is time the user already expects to
       // spend; a half-populated UI that then falls over is not.
-      await _waitForCategoriesToSettle(
-          fast ? started.add(_fastSplashDuration) : null);
+      // Not for a sync running behind the app: its categories load for
+      // minutes, and the point was not to wait for them.
+      if (!syncBehind) {
+        await _waitForCategoriesToSettle(
+            fast ? started.add(_fastSplashDuration) : null);
+      }
 
       // A fixed floor on top of the real work above — on a very small
       // catalog (or M3U mode, which skips the pre-load entirely) that
@@ -1356,7 +1380,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     }
 
     if (_syncing) {
-      return CatalogSyncScreen(playlist: _playlistManager);
+      return CatalogSyncScreen(playlist: _playlistManager, onBack: _skipSync);
     }
 
     return Consumer<AppPreferences>(
