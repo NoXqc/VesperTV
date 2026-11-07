@@ -531,6 +531,11 @@ class StorageService {
   Future<void> setFastStartup(bool value) =>
       _prefs.setBool(AppConstants.keyFastStartup, value);
 
+  bool getBackgroundSync() =>
+      _prefs.getBool(AppConstants.keyBackgroundSync) ?? false;
+  Future<void> setBackgroundSync(bool value) =>
+      _prefs.setBool(AppConstants.keyBackgroundSync, value);
+
   String? getLiveGroupSort() => _prefs.getString(AppConstants.keyLiveGroupSort);
   Future<void> setLiveGroupSort(String value) =>
       _prefs.setString(AppConstants.keyLiveGroupSort, value);
@@ -1499,6 +1504,7 @@ class StorageService {
     AppConstants.keyStartSection,
     AppConstants.keyStartSectionPending,
     AppConstants.keyFastStartup,
+    AppConstants.keyBackgroundSync,
     AppConstants.keyLaunchWithProfiles,
     AppConstants.keyPlaylistEnabled,
     AppConstants.keyPinFailCount,

@@ -102,9 +102,13 @@ class CatalogSyncBody extends StatelessWidget {
 /// own MaterialApp/Scaffold because it renders from main.dart's bootstrap
 /// gate, before the app's real MaterialApp tree exists yet.
 class CatalogSyncScreen extends StatelessWidget {
-  const CatalogSyncScreen({super.key, required this.playlist});
+  const CatalogSyncScreen({super.key, required this.playlist, this.onBack});
 
   final PlaylistManager playlist;
+
+  /// Back (remote, Esc): leave this screen and open the app while the
+  /// update carries on behind it. Null = Back does what it always did.
+  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) {
@@ -120,12 +124,23 @@ class CatalogSyncScreen extends StatelessWidget {
         colorScheme: buildPaletteColorScheme(palette, Brightness.dark),
         useMaterial3: true,
       ),
-      home: Scaffold(
-        backgroundColor: Colors.black,
-        body: CatalogSyncBody(
-          playlist: playlist,
-          footer: tr(
-              'This happens every few days to keep your catalog current — everyday launches open straight in.'),
+      // Back opens the app and the update keeps going behind it (Fire TV
+      // user: Back here left the app, and Fire OS then stopped the update).
+      home: PopScope(
+        canPop: onBack == null,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) onBack?.call();
+        },
+        child: Scaffold(
+          backgroundColor: Colors.black,
+          body: CatalogSyncBody(
+            playlist: playlist,
+            footer: [
+              tr('This happens every few days to keep your catalog current — everyday launches open straight in.'),
+              if (onBack != null)
+                tr('Press Back to use the app now. Movies and TV Shows keep updating behind it.'),
+            ].join('\n'),
+          ),
         ),
       ),
     );

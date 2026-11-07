@@ -338,6 +338,15 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                           onChanged: (v) =>
                               context.read<AppPreferences>().setFastStartup(v),
                         ),
+                        TvSwitchListTile(
+                          title: Text(tr('Update in the background')),
+                          subtitle: Text(tr(
+                              'When a content update is due, open on Live TV right away and update Movies and TV Shows behind it. They fill in over the next few minutes, and the remote can feel slower until it finishes. Applies from the next start.')),
+                          value: context.watch<AppPreferences>().backgroundSync,
+                          onChanged: (v) => context
+                              .read<AppPreferences>()
+                              .setBackgroundSync(v),
+                        ),
                         if (!isDesktop)
                           Padding(
                             padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),

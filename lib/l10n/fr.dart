@@ -1720,6 +1720,11 @@ const Map<String, String> kFr = {
   "{group} deleted. Its channels are back in their groups.":
       "{group} supprimé. Ses chaînes sont revenues dans leurs groupes.",
   // Fast startup
+  "Press Back to use the app now. Movies and TV Shows keep updating behind it.":
+      "Appuyez sur Retour pour utiliser l’app maintenant. Les Films et Séries continuent de se mettre à jour en arrière-plan.",
+  "Update in the background": "Mise à jour en arrière-plan",
+  "When a content update is due, open on Live TV right away and update Movies and TV Shows behind it. They fill in over the next few minutes, and the remote can feel slower until it finishes. Applies from the next start.":
+      "Quand une mise à jour du contenu est due, ouvre directement la TV en direct et met à jour les Films et Séries en arrière-plan. Ils se remplissent au fil des prochaines minutes, et la télécommande peut sembler plus lente jusqu’à la fin. S’applique au prochain démarrage.",
   "Fast startup": "Démarrage rapide",
   "Opens the app without waiting for Movies and TV Shows to load; they fill in a few seconds later. For fast devices — leave it off on an older box if the app closes by itself right after starting. Applies from the next start.":
       "Ouvre l’app sans attendre le chargement des Films et Séries ; ils se remplissent quelques secondes plus tard. Pour les appareils rapides — laissez-le désactivé sur un boîtier plus ancien si l’app se ferme toute seule juste après le démarrage. S’applique au prochain démarrage.",

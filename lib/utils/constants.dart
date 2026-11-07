@@ -391,6 +391,11 @@ class AppConstants {
   /// pre-load. Device-only: the slow splash protects weak boxes (§10).
   static const String keyFastStartup = 'vesper_fast_startup';
 
+  /// Settings > General > Startup: Update in the background (opt-in,
+  /// device-only). A due full catalog sync runs behind the app instead of
+  /// behind the blocking "Updating Content" screen.
+  static const String keyBackgroundSync = 'vesper_background_sync';
+
   /// Device-wide opt-in: choose a viewer after the splash, before startup routes
   /// or automatic playback. Backups retain it; transfers keep the target choice.
   static const String keyLaunchWithProfiles = 'vesper_launch_with_profiles';
