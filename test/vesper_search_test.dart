@@ -102,6 +102,21 @@ void main() {
           {'team': 'montreal canadiens', 'list': true});
       expect(p('quelle chaîne passe le match du Canadien')?.args['team'],
           'canadien');
+      // A team playing, no "game" word.
+      for (final (s, team) in [
+        (
+          'What channel are the Montreal Canadiens playing tonight',
+          'montreal canadiens'
+        ),
+        ('what channel are the habs playing on', 'habs'),
+        ('what channel do the Leafs play on tonight', 'leafs'),
+        ('on which channel are the habs playing today', 'habs'),
+        ('sur quelle chaîne jouent les Canadiens ce soir', 'canadiens'),
+        ('à quel poste joue le Canadien', 'canadien'),
+      ]) {
+        expect(p(s)?.args, {'team': team, 'list': true}, reason: s);
+      }
+      expect(p('what channel is jeopardy on')?.args['list'], isNot(isTrue));
       // An odd question is no game to play.
       expect(p('is there a habs game'), isNull);
       expect(p('put on the habs game')?.args, {'team': 'habs'});

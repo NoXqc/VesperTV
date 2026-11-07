@@ -322,6 +322,17 @@ final _feedQuestions = [
   // "where can i watch the habs game", "where is the habs game on"
   RegExp(r'^where (?:can i watch|can i see|is|s) (?:the )?(.+?) '
       '$_gameWords(?: on| tonight| today)*\$'),
+  // No "game" word, a team playing (owner's phone, 2026-11-07): "what
+  // channel are the montreal canadiens playing tonight", "what channel do
+  // the habs play on", "on which channel are the habs playing today".
+  // Only with play/playing: "what channel is jeopardy on" is no team.
+  RegExp('^(?:on )?(?:what|which) $_channelWords '
+      r'(?:are|is|do|does|will) (?:the )?(.+?) (?:playing|play|plays|be playing)'
+      r'(?: on)?(?: tonight| today)*$'),
+  // "sur quelle chaine jouent les canadiens ce soir", "a quel poste joue
+  // le canadien" (folded: no accents; "ce soir" is dropped by _gameTeam).
+  RegExp(r'^(?:sur |a )?(?:quel|quelle|quels|quelles) (?:chaine|chaines|'
+      r'poste|postes|canal|canaux) (?:jouent|joue) (?:les |le |la |l )?(.+)$'),
   RegExp(r'^(?:sur )?(?:quel|quelle|quels|quelles) (?:chaine|chaines|poste|'
       r'postes|canal|canaux) (?:a|ont|passe|passent|diffuse|diffusent|montre|'
       r'montrent|est|joue|presente)? ?(?:le |ce )?match (?:des |du |de la |'
