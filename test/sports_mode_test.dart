@@ -14,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nox_iptv/l10n/l10n.dart';
 import 'package:nox_iptv/models/channel.dart';
 import 'package:nox_iptv/models/epg_program.dart';
+import 'package:nox_iptv/models/profile_copy.dart';
 import 'package:nox_iptv/models/sports.dart';
 import 'package:nox_iptv/screens/sports_screen.dart';
 import 'package:nox_iptv/screens/multiview_screen.dart';
@@ -1589,6 +1590,83 @@ void main() {
     expect(tester.takeException(), isNull);
     await disposePage(tester);
   });
+
+  test('game card size: Large by default, per viewer, copied with Sports',
+      () async {
+    expect(storage.getSportsCardSize(), 'large');
+    await storage.setSportsCardSize('small');
+    expect(storage.getSportsCardSize(), 'small');
+    expect(
+        storage
+            .exportForBackup()
+            .keys
+            .any((k) => k.contains('sports_card_size')),
+        true);
+    await storage.copyMainToViewer('copy', {ProfileCopy.sports},
+        restricted: false);
+    await storage.setActiveViewerId('other');
+    expect(storage.getSportsCardSize(), 'large');
+    await storage.setActiveViewerId('copy');
+    expect(storage.getSportsCardSize(), 'small');
+  });
+
+  for (final (size, scale) in [('medium', 0.85), ('small', 0.72)]) {
+    for (final mode in [false, true]) {
+      testWidgets(
+          '$size cards: rows scroll by the smaller card and keep focus on screen (mode=$mode)',
+          (tester) async {
+        await prefs.setSportsMode(mode);
+        await storage.setSportsCardSize(size);
+        await open(tester);
+        tester
+            .widget<InkWell>(find.byWidgetPredicate((w) =>
+                w is InkWell &&
+                w.focusNode?.debugLabel == 'sports-card-nhl:game0'))
+            .focusNode!
+            .requestFocus();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+        expect(getFocus(), 'sports-card-nhl:game0');
+        final first =
+            tester.getRect(find.byKey(const ValueKey('card-nhl:game0')));
+        // The item is the card plus its 12 px gap.
+        expect(first.width, closeTo(268 * scale + 12, 0.5));
+        for (var i = 0; i < 17; i++) {
+          await press(tester, LogicalKeyboardKey.arrowRight);
+          final key = 'nhl:game${i + 1}';
+          expect(getFocus(), 'sports-card-$key');
+          final rect = tester.getRect(find.byKey(ValueKey('card-$key')));
+          expect(rect.right, lessThanOrEqualTo(970), reason: key);
+          // Never under the league rail / left edge.
+          expect(rect.left, greaterThan(mode ? 60 : 0), reason: key);
+        }
+        await press(tester, LogicalKeyboardKey.arrowDown);
+        expect(getFocus(), 'sports-card-nhl:game200');
+        await press(tester, LogicalKeyboardKey.arrowUp);
+        expect(getFocus(), 'sports-card-nhl:game17');
+        expect(tester.takeException(), isNull);
+        await disposePage(tester);
+      });
+    }
+
+    for (final (label, view, text) in [
+      ('TV large text', const Size(960, 540), 1.3),
+      ('phone', const Size(390, 844), 1.0),
+      ('phone large text', const Size(390, 844), 1.3),
+    ]) {
+      testWidgets('$size cards fit without overflow: $label', (tester) async {
+        await storage.setSportsCardSize(size);
+        await open(tester, size: view, scale: text);
+        await tester.pump(const Duration(milliseconds: 500));
+        expect(tester.takeException(), isNull);
+        final card = find.byKey(const ValueKey('card-nhl:game0'));
+        if (card.evaluate().isNotEmpty) {
+          expect(tester.getRect(card).width, closeTo(268 * scale + 12, 0.5));
+        }
+        await disposePage(tester);
+      });
+    }
+  }
 
   testWidgets('loading and empty days retain working rail and header controls',
       (tester) async {

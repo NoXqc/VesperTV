@@ -2859,4 +2859,18 @@ const Map<String, String> kEl = {
       "Αφαίρεση από τη λίστα",
   "An AI app wants to clear your watch list.":
       "Μια εφαρμογή AI θέλει να αδειάσει τη λίστα σου.",
+  "Game card size":
+      "Μέγεθος καρτών αγώνων",
+  "Smaller cards for sitting closer to the TV":
+      "Μικρότερες κάρτες για όσους κάθονται πιο κοντά στην τηλεόραση",
+  "Medium":
+      "Μεσαίο",
+  "The original size, for watching from across the room":
+      "Το αρχικό μέγεθος, για παρακολούθηση από την άλλη άκρη του δωματίου",
+  "Smaller cards, more games on screen":
+      "Μικρότερες κάρτες, περισσότεροι αγώνες στην οθόνη",
+  "The most games on screen, for sitting close to the TV":
+      "Οι περισσότεροι αγώνες στην οθόνη, για όσους κάθονται κοντά στην τηλεόραση",
+  "Changes the game cards in {tab} rows, See all and Live now. Large is the original size. Saved for this viewer.":
+      "Αλλάζει τις κάρτες αγώνων στις σειρές του {tab}, στο Όλα και στο Ζωντανά τώρα. Το Μεγάλο είναι το αρχικό μέγεθος. Αποθηκεύεται για αυτόν τον θεατή.",
 };

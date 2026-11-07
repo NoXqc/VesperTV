@@ -35,6 +35,7 @@ import '../../widgets/sports_mode_toggle.dart';
 import '../../utils/constants.dart';
 import 'sports_country_settings_screen.dart';
 import 'sports_playlist_settings_screen.dart';
+import 'sports_card_size_settings_screen.dart';
 import 'sports_league_visibility_settings_screen.dart';
 import 'sports_auto_play_settings_screen.dart';
 import 'sports_phone_notifications_settings_screen.dart';
@@ -301,6 +302,11 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
                 tr('Hide leagues with no games'),
                 tr('Show only leagues with games on the selected day'),
                 (_) => const SportsLeagueVisibilitySettingsScreen()),
+            _Entry(
+                Icons.photo_size_select_large,
+                tr('Game card size'),
+                tr('Smaller cards for sitting closer to the TV'),
+                (_) => const SportsCardSizeSettingsScreen()),
             _Entry(
                 Icons.trending_up,
                 tr('Betting odds'),

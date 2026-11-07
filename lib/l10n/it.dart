@@ -2904,4 +2904,18 @@ const Map<String, String> kIt = {
       "Rimuovi dalla lista",
   "An AI app wants to clear your watch list.":
       "Un'app di IA vuole svuotare la tua lista.",
+  "Game card size":
+      "Dimensione delle schede partita",
+  "Smaller cards for sitting closer to the TV":
+      "Schede più piccole per guardare più vicino alla TV",
+  "Medium":
+      "Media",
+  "The original size, for watching from across the room":
+      "La dimensione originale, per guardare dall'altra parte della stanza",
+  "Smaller cards, more games on screen":
+      "Schede più piccole, più partite sullo schermo",
+  "The most games on screen, for sitting close to the TV":
+      "Il maggior numero di partite sullo schermo, per guardare vicino alla TV",
+  "Changes the game cards in {tab} rows, See all and Live now. Large is the original size. Saved for this viewer.":
+      "Cambia le schede partita nelle righe di {tab}, Vedi tutto e In diretta. Grande è la dimensione originale. Salvato per questo spettatore.",
 };

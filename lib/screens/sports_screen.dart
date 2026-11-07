@@ -14,6 +14,7 @@ import 'multiview_screen.dart';
 import 'desktop_multiview_screen.dart';
 import 'recordings_screen.dart';
 import 'settings/settings_menu_screen.dart';
+import 'settings/sports_card_size_settings_screen.dart';
 import 'settings/profiles_screen.dart';
 import '../services/game_reminders.dart';
 import '../widgets/game_reminder_menu_tile.dart';
@@ -838,7 +839,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     final index = sections[i].games.indexWhere((g) => _gameKey(g) == key);
     final c = _rowScrolls[s.id];
     if (index >= 0 && c != null && c.hasClients) {
-      c.jumpTo((index * (_GameCard.width + 12))
+      c.jumpTo((index * (_GameCard.widthOf(context) + 12))
           .clamp(c.position.minScrollExtent, c.position.maxScrollExtent));
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -862,7 +863,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         onMenu: (game, matches, watch) => _openGame(game, matches, watch),
         initialGames: _games,
         initialMatches: _matches,
-        cardWidth: _GameCard.width,
+        cardWidth: _GameCard.widthOf(context),
         cardBuilder: (game, match, matching, node, onFocus, onTap, onHold) =>
             _GameCard(
           focusNode: node,
@@ -3193,7 +3194,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         final mixed = _leagueFilter == null &&
             section.games
                 .any((game) => game.league.id != section.games.first.league.id);
-        var offset = index * (_GameCard.width + 12);
+        var offset = index * (_GameCard.widthOf(context) + 12);
         if (mixed) {
           for (var i = 0; i <= index; i++) {
             if (i == 0 ||
@@ -3315,7 +3316,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       final c = _rowScrolls[s.id];
       if (c != null && c.hasClients) {
         final p = c.position;
-        c.jumpTo((p.pixels + delta * (_GameCard.width + 12))
+        c.jumpTo((p.pixels + delta * (_GameCard.widthOf(context) + 12))
             .clamp(p.minScrollExtent, p.maxScrollExtent));
       }
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -3326,9 +3327,12 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   }
 
   Widget _buildSection(_Section s, SportsGame? preview) {
+    // Settings > Sports Trak > Game card size scales the card's box; the
+    // row and its scroll math use the same scaled size.
     final cardHeight = _GameCard.height *
         (MediaQuery.textScalerOf(context).scale(14) / 14)
             .clamp(1.0, double.infinity);
+    final cardScale = _GameCard.scaleOf(context);
     final rowKey = _rowKeys[s.id] ??= GlobalKey();
     final zoneIndex = _firstRowZone + _sections.indexWhere((x) => x.id == s.id);
     return Padding(
@@ -3400,10 +3404,10 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           ),
           const SizedBox(height: 8),
           SizedBox(
-            height: cardHeight + 18 + _HoldHint.height,
+            height: cardHeight * cardScale + 18 + _HoldHint.height,
             child: SportsRowArrows(
               controller: _rowScrolls[s.id] ??= ScrollController(),
-              arrowAreaHeight: cardHeight,
+              arrowAreaHeight: cardHeight * cardScale,
               child: Focus(
                 canRequestFocus: false,
                 skipTraversal: true,
@@ -3499,7 +3503,7 @@ class _LeagueDivider extends StatelessWidget {
     return ExcludeFocus(
       child: SizedBox(
         width: 64,
-        height: _GameCard.height,
+        height: _GameCard.height * _GameCard.scaleOf(context),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -3576,7 +3580,7 @@ class _SectionGridScreenState extends State<_SectionGridScreen> {
                   children: [
                     for (final (i, g) in widget.games.indexed)
                       SizedBox(
-                        width: _GameCard.width,
+                        width: _GameCard.widthOf(context),
                         child: widget.cardFor(
                             g, _nodes[i], () => Navigator.of(context).pop(g)),
                       ),
@@ -4613,6 +4617,15 @@ class _GameCard extends StatefulWidget {
   static const double width = 268;
   static const double height = 132;
 
+  /// Settings > Sports Trak > Game card size (1.0 = Large, the original).
+  static double scaleOf(BuildContext context) =>
+      SportsCardSizeSettingsScreen.scaleFor(
+          context.read<StorageService>().getSportsCardSize());
+
+  /// The card's on-screen width at the viewer's size: rows, See all and the
+  /// live list space and scroll by this.
+  static double widthOf(BuildContext context) => width * scaleOf(context);
+
   final double cardHeight;
   final FocusNode focusNode;
   final SportsGame game;
@@ -4638,6 +4651,22 @@ class _GameCard extends StatefulWidget {
 
 class _GameCardState extends State<_GameCard> {
   bool _focused = false;
+
+  /// Game card size: the card is laid out at its original size and drawn
+  /// smaller as one piece (text, logos, padding), so nothing inside can
+  /// overflow, and its box is the scaled size the rows' math uses.
+  Widget _scaled(Widget card) {
+    final scale = _GameCard.scaleOf(context);
+    if (scale == 1.0) return card;
+    return SizedBox(
+      width: _GameCard.width * scale,
+      height: widget.cardHeight * scale,
+      child: FittedBox(
+        alignment: Alignment.topLeft,
+        child: card,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -4733,7 +4762,7 @@ class _GameCardState extends State<_GameCard> {
                   scale: _focused ? 1.05 : 1.0,
                   duration: const Duration(milliseconds: 140),
                   curve: Curves.easeOut,
-                  child: Container(
+                  child: _scaled(Container(
                     width: _GameCard.width,
                     height: widget.cardHeight,
                     padding: const EdgeInsets.fromLTRB(12, 9, 12, 8),
@@ -4900,7 +4929,7 @@ class _GameCardState extends State<_GameCard> {
                         ),
                       ],
                     ),
-                  ),
+                  )),
                 ),
                 // Choosing games for Multiview: a check in the corner.
                 if (widget.checked != null)
@@ -4913,7 +4942,19 @@ class _GameCardState extends State<_GameCard> {
             ),
           ),
           const SizedBox(height: 6),
-          _HoldHint(visible: _focused),
+          // A smaller card keeps its hint to the card's width (a wider hint
+          // would widen the item and throw off the row's scroll math).
+          if (_GameCard.scaleOf(context) < 1.0)
+            SizedBox(
+              width: _GameCard.widthOf(context),
+              height: _HoldHint.height,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: _HoldHint(visible: _focused),
+              ),
+            )
+          else
+            _HoldHint(visible: _focused),
         ],
       ),
     );

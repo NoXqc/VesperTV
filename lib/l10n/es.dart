@@ -2897,4 +2897,18 @@ const Map<String, String> kEs = {
       "Quitar de mi lista",
   "An AI app wants to clear your watch list.":
       "Una app de IA quiere vaciar tu lista.",
+  "Game card size":
+      "Tamaño de las tarjetas de partido",
+  "Smaller cards for sitting closer to the TV":
+      "Tarjetas más pequeñas para ver más cerca de la TV",
+  "Medium":
+      "Mediano",
+  "The original size, for watching from across the room":
+      "El tamaño original, para ver desde el otro lado de la sala",
+  "Smaller cards, more games on screen":
+      "Tarjetas más pequeñas, más partidos en pantalla",
+  "The most games on screen, for sitting close to the TV":
+      "El máximo de partidos en pantalla, para ver cerca de la TV",
+  "Changes the game cards in {tab} rows, See all and Live now. Large is the original size. Saved for this viewer.":
+      "Cambia las tarjetas de partido en las filas de {tab}, Ver todo y En vivo. Grande es el tamaño original. Guardado para este espectador.",
 };

@@ -2800,4 +2800,18 @@ const Map<String, String> kDe = {
       "Von der Merkliste entfernen",
   "An AI app wants to clear your watch list.":
       "Eine KI-App möchte deine Merkliste leeren.",
+  "Game card size":
+      "Größe der Spielkarten",
+  "Smaller cards for sitting closer to the TV":
+      "Kleinere Karten, wenn du näher am Fernseher sitzt",
+  "Medium":
+      "Mittel",
+  "The original size, for watching from across the room":
+      "Die ursprüngliche Größe, zum Zuschauen von der anderen Seite des Raums",
+  "Smaller cards, more games on screen":
+      "Kleinere Karten, mehr Spiele auf dem Bildschirm",
+  "The most games on screen, for sitting close to the TV":
+      "Die meisten Spiele auf dem Bildschirm, wenn du nah am Fernseher sitzt",
+  "Changes the game cards in {tab} rows, See all and Live now. Large is the original size. Saved for this viewer.":
+      "Ändert die Spielkarten in den Reihen von {tab}, Alle anzeigen und Jetzt live. Groß ist die ursprüngliche Größe. Für diesen Zuschauer gespeichert.",
 };

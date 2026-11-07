@@ -600,6 +600,14 @@
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },
   {
+    "id": "e072f84243cd87f7",
+    "category": "Sports Trak",
+    "title": "Make the game cards smaller",
+    "answer": "Large is the original size, for watching from across the room. Medium and Small shrink the game cards so more games fit on screen, for viewers sitting closer to the TV. It changes the cards in the Sports Trak rows, See all and Live now; the remote moves through them the same way. Saved for this viewer and included in Backup, Transfer and copying Main's Sports settings.",
+    "controls": "Settings → Sports Trak → Game card size",
+    "url": "https://vespertv.app/remote.html#Sports%20Trak"
+  },
+  {
     "id": "25229cf68b172cb7",
     "category": "Sports Trak",
     "title": "Show betting odds",

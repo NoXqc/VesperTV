@@ -778,6 +778,16 @@ class StorageService {
   Future<void> setSportsHideEmptyLeagues(bool value) =>
       _prefs.setBool(_vk(AppConstants.keySportsHideEmptyLeagues), value);
 
+  /// Settings > Sports Trak > Game card size: 'large' (default, the
+  /// original cards), 'medium' or 'small', per viewer.
+  String getSportsCardSize() {
+    final v = _prefs.getString(_vk(AppConstants.keySportsCardSize));
+    return v == 'medium' || v == 'small' ? v! : 'large';
+  }
+
+  Future<void> setSportsCardSize(String value) =>
+      _prefs.setString(_vk(AppConstants.keySportsCardSize), value);
+
   /// Betting odds on Sports Trak game cards and stats (off by default, per
   /// viewer).
   bool getSportsShowOdds() =>
@@ -925,16 +935,14 @@ class StorageService {
   Future<void> setAutoTrailers(bool value) =>
       _prefs.setBool(AppConstants.keyAutoTrailers, value);
 
-  bool getGuideExpanded() =>
-      _guideBool(AppConstants.keyGuideExpanded) ?? false;
+  bool getGuideExpanded() => _guideBool(AppConstants.keyGuideExpanded) ?? false;
   Future<void> setGuideExpanded(bool value) =>
       _prefs.setBool(_vk(AppConstants.keyGuideExpanded), value);
   bool getExpandedBrowse() =>
       _prefs.getBool(AppConstants.keyExpandedBrowse) ?? false;
   Future<void> setExpandedBrowse(bool value) =>
       _prefs.setBool(AppConstants.keyExpandedBrowse, value);
-  bool getGuideCompact() =>
-      _guideBool(AppConstants.keyGuideCompact) ?? false;
+  bool getGuideCompact() => _guideBool(AppConstants.keyGuideCompact) ?? false;
   Future<void> setGuideCompact(bool value) =>
       _prefs.setBool(_vk(AppConstants.keyGuideCompact), value);
 

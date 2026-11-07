@@ -2910,4 +2910,18 @@ const Map<String, String> kFr = {
       "Retirer de la liste",
   "An AI app wants to clear your watch list.":
       "Une app d'IA veut vider votre liste à regarder.",
+  "Game card size":
+      "Taille des cartes de match",
+  "Smaller cards for sitting closer to the TV":
+      "Cartes plus petites pour regarder plus près de la télé",
+  "Medium":
+      "Moyenne",
+  "The original size, for watching from across the room":
+      "La taille d'origine, pour regarder de l'autre bout de la pièce",
+  "Smaller cards, more games on screen":
+      "Cartes plus petites, plus de matchs à l'écran",
+  "The most games on screen, for sitting close to the TV":
+      "Le plus de matchs à l'écran, pour regarder près de la télé",
+  "Changes the game cards in {tab} rows, See all and Live now. Large is the original size. Saved for this viewer.":
+      "Change les cartes de match dans les rangées de {tab}, Tout voir et En direct. Grande est la taille d'origine. Enregistré pour ce spectateur.",
 };
