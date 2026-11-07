@@ -173,10 +173,14 @@ class SportsService {
 
   static const _standingsBase = 'https://site.api.espn.com/apis/v2/sports';
 
-  /// A conference league's scoreboard filter ([SportsLeague.espnGroup]),
-  /// after [sep] (`?` or `&`); empty for every other league.
-  static String _groupQuery(SportsLeague league, String sep) =>
-      league.espnGroup == null ? '' : '${sep}groups=${league.espnGroup}';
+  /// A league's scoreboard filter ([SportsLeague.espnGroup], else
+  /// [SportsLeague.espnScoreboardGroup]), after [sep] (`?` or `&`); empty
+  /// for every other league.
+  static String _groupQuery(SportsLeague league, String sep) {
+    final group = league.espnGroup ?? league.espnScoreboardGroup;
+    return group == null ? '' : '${sep}groups=$group';
+  }
+
   final Map<String, (SportsStandings, DateTime)> _standingsCache = {};
   final Map<String, Future<SportsStandings?>> _standingsInFlight = {};
 

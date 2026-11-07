@@ -779,9 +779,10 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
               : null)
       : (s.games.length >= _seeAllMin ? 'seeall-${s.id}' : null);
 
-  /// Up from one of a row's first two cards reaches its header chip (it
-  /// sits above them); Down from the chip goes back to the row, Up to the
-  /// row (or header) above.
+  /// Up from any card in a row reaches its header chip (was only the first
+  /// two cards, the ones under it; owner 2026-11-06: a long row's chip was
+  /// out of reach). Down from the chip goes back to the card it came from
+  /// ([_lastCardInRow]), Up to the row (or header) above.
   bool _headerChipStep(int delta, List<_Section> sections) {
     for (final (i, s) in sections.indexed) {
       final id = _headerChipId(s);
@@ -796,7 +797,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       if (delta > 0 || _zone != zone) continue;
       final c =
           s.games.indexWhere((g) => _cardNodes[_gameKey(g)]?.hasFocus ?? false);
-      if (c < 0 || c > 1) return false;
+      if (c < 0) return false;
       _chipNode(id).requestFocus();
       _ensureRowVisible(s.id);
       return true;

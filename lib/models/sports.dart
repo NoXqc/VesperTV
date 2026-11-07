@@ -40,7 +40,15 @@ class SportsLeague {
     this.seriesPhrases = const [],
     this.homeTags = const [],
     this.espnGroup,
+    this.espnScoreboardGroup,
   });
+
+  /// ESPN `groups=` sent on scoreboard calls only (never standings) when
+  /// [espnGroup] is unset. College basketball's plain scoreboard lists only
+  /// ESPN's featured games: 9 of 72 men's (2 of 45 women's) on 2026-11-06;
+  /// "50" = all of Division I. College football's plain feed already lists
+  /// every FBS game; hockey/volleyball/baseball list everything.
+  final String? espnScoreboardGroup;
 
   /// ESPN conference id for a college conference league ("20" = Big Sky
   /// football, "5" = Big Sky basketball): its scoreboard and standings
@@ -1374,7 +1382,8 @@ const List<SportsLeague> kSportsLeagueBank = [
       shortName: 'NCAAM',
       logoUrl:
           'https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-basketball.png',
-      region: 'Basketball'),
+      region: 'Basketball',
+      espnScoreboardGroup: '50'),
   SportsLeague(
       id: 'basketball.womens-college-basketball',
       espnPath: 'basketball/womens-college-basketball',
@@ -1382,7 +1391,8 @@ const List<SportsLeague> kSportsLeagueBank = [
       shortName: 'NCAAW',
       logoUrl:
           'https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-basketball.png',
-      region: 'Basketball'),
+      region: 'Basketball',
+      espnScoreboardGroup: '50'),
   SportsLeague(
       id: 'baseball.college-baseball',
       espnPath: 'baseball/college-baseball',
