@@ -151,6 +151,23 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
   bool _feedHoldFired = false;
   final Stopwatch _feedHeld = Stopwatch();
   static const double _feedRowHeight = 58;
+
+  // Guide layout (Settings > Sports Trak > Games layout, opt-in; a user's
+  // mockup, owner 2026-11-07): the day's games as a TV guide-style list in
+  // place of the card rows. Like the feed: ONE focus node, the selected row
+  // drawn selected, its own arrows (no per-row nodes to lose).
+  final _guideNode = FocusNode(debugLabel: 'sports-guide');
+  final _guideScroll = ScrollController();
+  final Map<String, GlobalKey> _guideRowKeys = {};
+  String? _guideKey;
+  bool _guideSelectDown = false;
+  bool _guideHoldFired = false;
+  bool _guideRepeatSeen = false;
+  bool _guideTimerElapsed = false;
+  Timer? _guideHoldTimer;
+  Timer? _guideLeagueTimer;
+  bool? _guideWas;
+  bool _guideIsCompact = false;
   bool _exitPromptOpen = false;
   SportsService get _service => widget.service ?? SportsService.instance;
   bool get _modeActive => context.read<AppPreferences>().sportsMode;
@@ -315,6 +332,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     super.initState();
     _showResumeHint = LiveResumeHint.hideWhileMounted();
     FocusManager.instance.addListener(_rememberModeControlFocus);
+    FocusManager.instance.addListener(_followGuideLeague);
     // Sports Mode root: the remote's Guide button opens Live TV on its
     // guide, through the rail's own page path ([GuideKey]).
     if (widget.home) GuideKey.registerOpener(this, _openGuide);
@@ -400,6 +418,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     _previewSeq++;
     appRouteObserver.unsubscribe(this);
     FocusManager.instance.removeListener(_rememberModeControlFocus);
+    FocusManager.instance.removeListener(_followGuideLeague);
+    _guideLeagueTimer?.cancel();
+    _guideHoldTimer?.cancel();
     if (_desktopSports) {
       DesktopMiniPlayer.instance.channel.removeListener(_onMiniPlayerChanged);
     }
@@ -416,6 +437,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     }
     _feedNode.dispose();
     _feedScroll.dispose();
+    _guideNode.dispose();
+    _guideScroll.dispose();
     super.dispose();
   }
 
@@ -751,7 +774,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       final key = s.games.any((g) => _gameKey(g) == remembered)
           ? remembered!
           : _gameKey(s.games.first);
-      if (_modeActive) {
+      if (_guideLayout) {
+        _focusGuide(key);
+      } else if (_modeActive) {
         _focusModeCard(s, key);
       } else {
         _cardNode(key).requestFocus();
@@ -894,6 +919,11 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     var target = _zone + delta;
     if (_modeActive && target == 1) target += delta;
     if (_railLayout && target == 0) return;
+    // Guide: one list for every section, back on the row it was on.
+    if (_guideLayout && sections.isNotEmpty && target >= _firstRowZone) {
+      if (delta > 0) _focusGuide();
+      return;
+    }
     final rows = sections.isEmpty && _nextGame != null ? 1 : sections.length;
     if (target < 0 || target >= _firstRowZone + rows) return;
     _focusZone(target, sections);
@@ -1394,6 +1424,7 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       _gameKey(_previewGame!) == _gameKey(game);
 
   SportsGame? _focusedCardGame() {
+    if (_guideNode.hasFocus) return _guideGame;
     for (final g in _games) {
       if (_cardNodes[_gameKey(g)]?.hasFocus ?? false) return g;
     }
@@ -1900,6 +1931,19 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       onFullScreen: (channel) => _play(channel, keepPreview: true),
     );
     final sections = _sections;
+    // Games layout switched in Settings: the focused card (or the guide)
+    // is gone, so the same zone gets focus in the new layout.
+    final guide = _guideLayout;
+    if (_guideWas != null && _guideWas != guide) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !(ModalRoute.of(context)?.isCurrent ?? false)) return;
+        final p = FocusManager.instance.primaryFocus;
+        if (p == null || p.context == null || p is FocusScopeNode) {
+          _focusZone(_zone, _sections);
+        }
+      });
+    }
+    _guideWas = guide;
     final playback = context.watch<PlaybackService>();
     final preview = _livePreview(playback);
     // Sports Mode: a Live TV guide channel plays in the same big player.
@@ -2134,6 +2178,34 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
           ],
         _ => [],
       };
+
+  /// Settings > Sports Trak > Games layout = Guide (opt-in, per viewer).
+  bool get _guideLayout => _storage.getSportsLayout() == 'guide';
+
+  /// Guide: moving through the leagues (rail, Sports Mode rail and bar)
+  /// shows their games without OK, like a TV guide's groups (owner,
+  /// 2026-11-07). A short wait so fast scrolling doesn't load every league.
+  void _followGuideLeague() {
+    if (!mounted || !_guideLayout || _movingLeague != null) return;
+    String? focused;
+    for (final e in _chipNodes.entries) {
+      if (e.value.hasPrimaryFocus && e.key.startsWith('league:')) {
+        focused = e.key.substring('league:'.length);
+        break;
+      }
+    }
+    _guideLeagueTimer?.cancel();
+    if (focused == null) return;
+    final id = focused == 'all' ? null : focused;
+    if (id != null && sportsLeagueById(id) == null) return; // edit, scores...
+    _guideLeagueTimer = Timer(const Duration(milliseconds: 350), () {
+      if (!mounted || _movingLeague != null) return;
+      if (!(_chipNodes['league:$focused']?.hasPrimaryFocus ?? false)) return;
+      if (_leagueFilter == id) return;
+      _guideKey = null;
+      _setLeagueFilter(id);
+    });
+  }
 
   void _rememberModeControlFocus() {
     if (!mounted || !_modeActive) return;
@@ -2497,6 +2569,316 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     // the player, OK again goes full screen.
     if (key == LogicalKeyboardKey.arrowRight) return KeyEventResult.handled;
     return KeyEventResult.ignored;
+  }
+
+  // ------------------------------------------------------------ guide layout
+
+  double get _guideTextScale =>
+      (MediaQuery.textScalerOf(context).scale(14) / 14).clamp(1.0, 1.6);
+
+  /// Narrow screens (phones): two-line rows.
+  bool _guideCompact(double width) => width < 640;
+
+  double _guideRowExtent(bool compact) =>
+      (compact ? 84.0 : 72.0) * _guideTextScale;
+  double get _guideHeaderExtent => 40.0 * _guideTextScale;
+  static const _guideTopPad = 6.0;
+
+  SportsGame? get _guideGame {
+    final games = _feedGames;
+    if (games.isEmpty) return null;
+    return games.where((g) => _gameKey(g) == _guideKey).firstOrNull ??
+        games.first;
+  }
+
+  /// Focus the guide on [key] (else the remembered row, else the first).
+  void _focusGuide([String? key]) {
+    final games = _feedGames;
+    if (games.isEmpty) return;
+    bool known(String? k) => k != null && games.any((g) => _gameKey(g) == k);
+    final target = known(key)
+        ? key!
+        : known(_guideKey)
+            ? _guideKey!
+            : _gameKey(games.first);
+    _selectGuide(target);
+    _guideNode.requestFocus();
+  }
+
+  /// Selects a row: the hero shows that game (like focusing a card), and
+  /// the row is kept on screen with jumpTo (never animateTo, CLAUDE.md 10).
+  void _selectGuide(String key) {
+    final sections = _sections;
+    final r =
+        sections.indexWhere((s) => s.games.any((g) => _gameKey(g) == key));
+    if (r < 0) return;
+    final game = sections[r].games.firstWhere((g) => _gameKey(g) == key);
+    _zone = _firstRowZone + r;
+    _lastCardInRow[sections[r].id] = key;
+    setState(() => _guideKey = key);
+    if (_heroGame != game || _heroPick != null) _focusGame(game);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_guideScroll.hasClients) {
+        _guideKeepVisible(sections, key);
+      } else {
+        // In-page list (phones / short screens): the page scrolls.
+        final ctx = _guideRowKeys[key]?.currentContext;
+        if (ctx != null && ctx.mounted && !_touch) {
+          Scrollable.ensureVisible(ctx,
+              duration: Duration.zero, alignment: 0.3);
+        }
+      }
+    });
+  }
+
+  void _guideKeepVisible(List<_Section> sections, String key) {
+    final pos = _guideScroll.position;
+    final row = _guideRowExtent(_guideIsCompact);
+    var offset = _guideTopPad;
+    double? top;
+    for (final s in sections) {
+      final headerTop = offset;
+      offset += _guideHeaderExtent;
+      for (final (i, g) in s.games.indexed) {
+        if (_gameKey(g) == key) {
+          // A section's header comes along with its first row.
+          top = i == 0 ? headerTop : offset;
+          break;
+        }
+        offset += row;
+      }
+      if (top != null) break;
+    }
+    if (top == null) return;
+    final bottom = offset + row;
+    if (top < pos.pixels) {
+      _guideScroll.jumpTo(top.clamp(0.0, pos.maxScrollExtent));
+    } else if (bottom > pos.pixels + pos.viewportDimension) {
+      _guideScroll.jumpTo(
+          (bottom - pos.viewportDimension + 8).clamp(0.0, pos.maxScrollExtent));
+    }
+  }
+
+  /// OK on a row: the same as OK on its card (first press previews, the
+  /// next one is full screen; no channel = the game menu).
+  void _guideTap(SportsGame game) {
+    if (_mvPicks != null) {
+      _toggleMultiviewPick(game);
+    } else {
+      unawaited(_activateGame(game));
+    }
+  }
+
+  /// Hold OK on a row: the game menu, as on a card.
+  void _guideHold(SportsGame game) {
+    if (_mvPicks != null) {
+      unawaited(_openMultiviewPicks());
+    } else {
+      unawaited(_openGame(game));
+    }
+  }
+
+  KeyEventResult _onGuideKey(FocusNode _, KeyEvent event) {
+    final games = _feedGames;
+    final selected = _guideGame;
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.select ||
+        key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter ||
+        key == LogicalKeyboardKey.gameButtonA) {
+      // HoldToActivate's rule: tap on key-up; a hold needs 550 ms AND the
+      // remote's own repeats (a late key-up on a busy Fire Stick is no
+      // hold). A key-up without our key-down (focus just arrived) is
+      // ignored.
+      void fireHold() {
+        if (_guideHoldFired || !_guideSelectDown) return;
+        _guideHoldFired = true;
+        if (selected != null) _guideHold(selected);
+      }
+
+      if (event is KeyDownEvent) {
+        _guideSelectDown = true;
+        _guideHoldFired = false;
+        _guideRepeatSeen = false;
+        _guideTimerElapsed = false;
+        _guideHoldTimer?.cancel();
+        _guideHoldTimer = Timer(const Duration(milliseconds: 550), () {
+          _guideTimerElapsed = true;
+          if (_guideRepeatSeen) fireHold();
+        });
+      } else if (event is KeyRepeatEvent) {
+        if (_guideSelectDown) {
+          _guideRepeatSeen = true;
+          if (_guideTimerElapsed) fireHold();
+        }
+      } else if (event is KeyUpEvent) {
+        _guideHoldTimer?.cancel();
+        final tap = _guideSelectDown && !_guideHoldFired;
+        _guideSelectDown = false;
+        if (tap && selected != null) _guideTap(selected);
+      }
+      return KeyEventResult.handled;
+    }
+    if (event is KeyUpEvent) return KeyEventResult.ignored;
+    if (_movingLeague != null) return KeyEventResult.ignored;
+    final i = selected == null
+        ? -1
+        : games.indexWhere((g) => _gameKey(g) == _gameKey(selected));
+    if (key == LogicalKeyboardKey.arrowUp) {
+      if (i > 0) {
+        _selectGuide(_gameKey(games[i - 1]));
+      } else if (!_backToFeed(-1, _firstRowZone)) {
+        _focusZone(2, _sections);
+      }
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowDown) {
+      if (i >= 0 && i < games.length - 1) _selectGuide(_gameKey(games[i + 1]));
+      return KeyEventResult.handled;
+    }
+    // CH+/CH- and page keys: a page of rows at a time.
+    final pageUp =
+        key == LogicalKeyboardKey.channelUp || key == LogicalKeyboardKey.pageUp;
+    final pageDown = key == LogicalKeyboardKey.channelDown ||
+        key == LogicalKeyboardKey.pageDown;
+    if ((pageUp || pageDown) && i >= 0) {
+      final t = (i + (pageUp ? -6 : 6)).clamp(0, games.length - 1);
+      _selectGuide(_gameKey(games[t]));
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowLeft) {
+      if (_modeActive) {
+        _leftFromContent();
+      } else if (_railLayout) {
+        _focusRail();
+      }
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowRight) return KeyEventResult.handled;
+    return KeyEventResult.ignored;
+  }
+
+  Widget _buildGuide(List<_Section> sections, SportsGame? preview,
+      {bool inPage = false}) {
+    return LayoutBuilder(builder: (context, constraints) {
+      final compact = _guideCompact(constraints.maxWidth);
+      _guideIsCompact = compact; // for the scroll math in _guideKeepVisible
+      final rowExtent = _guideRowExtent(compact);
+      // Once per build: every row compares against it.
+      final allKeys = [
+        for (final s in sections)
+          for (final g in s.games) _gameKey(g)
+      ];
+      final selectedKey =
+          allKeys.contains(_guideKey) ? _guideKey : allKeys.firstOrNull;
+      Widget header(_Section s) => SizedBox(
+            height: _guideHeaderExtent,
+            child: Align(
+              alignment: Alignment.bottomLeft,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 0, 10, 6),
+                child: Text.rich(
+                  TextSpan(children: [
+                    TextSpan(
+                        text: s.label.toUpperCase(),
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            letterSpacing: 1.4,
+                            fontWeight: FontWeight.w800)),
+                    TextSpan(
+                        text: '   ${s.games.length}',
+                        style: const TextStyle(color: Colors.white54)),
+                  ]),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ),
+            ),
+          );
+      Widget row(SportsGame g) {
+        final key = _gameKey(g);
+        return SizedBox(
+          key: _guideRowKeys[key] ??= GlobalKey(),
+          height: rowExtent,
+          child: ListenableBuilder(
+            listenable: _guideNode,
+            builder: (context, _) => _GuideRow(
+              key: ValueKey('guide-row-$key'),
+              game: g,
+              compact: compact,
+              match: _matches[key]?.firstOrNull,
+              matching: _matching,
+              hideScores: _hideScores,
+              starred: _follows.involves(g),
+              previewing: preview != null && _gameKey(preview) == key,
+              selected: _guideNode.hasFocus && key == selectedKey,
+              checked: _mvPicks == null || g.state != GameState.live
+                  ? null
+                  : _mvPicks!.contains(key),
+              onTap: () {
+                _selectGuide(key);
+                _guideNode.requestFocus();
+                _guideTap(g);
+              },
+              onLongPress: () {
+                _selectGuide(key);
+                _guideHold(g);
+              },
+            ),
+          ),
+        );
+      }
+
+      final items = <Object>[
+        for (final s in sections) ...[s, ...s.games]
+      ];
+      Widget build(Object item) =>
+          item is _Section ? header(item) : row(item as SportsGame);
+      final list = inPage
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: _guideTopPad),
+                for (final item in items) build(item),
+              ],
+            )
+          : ListView.builder(
+              key: const ValueKey('sports-guide'),
+              controller: _guideScroll,
+              padding: const EdgeInsets.only(top: _guideTopPad, bottom: 24),
+              itemCount: items.length,
+              itemBuilder: (context, i) => build(items[i]),
+            );
+      return Focus(
+        focusNode: _guideNode,
+        onKeyEvent: _onGuideKey,
+        onFocusChange: (focused) {
+          if (focused && _guideKey == null) {
+            final first = _feedGames.firstOrNull;
+            if (first != null) _selectGuide(_gameKey(first));
+          }
+        },
+        child: inPage
+            ? list
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: list),
+                  if (!_touch)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 4, 10, 8),
+                      child: _KeyHintText(
+                          tr(
+                              'OK: watch  ·  OK again: full screen  ·  Hold OK: game menu'),
+                          style: const TextStyle(
+                              fontSize: 12, color: Colors.white54)),
+                    ),
+                ],
+              ),
+      );
+    });
   }
 
   /// Down past the feed: the card rows under a small hero.
@@ -2921,11 +3303,16 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       child: Row(
         children: [
           const SportsBackButton(),
-          Text(AppConstants.sportsTabName,
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.w800)),
+          // Flexible: a narrow screen with large text overflowed here.
+          Flexible(
+            child: Text(AppConstants.sportsTabName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.w800)),
+          ),
           const SizedBox(width: 16),
           Expanded(
             // Not a lazy ListView: Up from the day row focuses the selected
@@ -3122,6 +3509,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
       return ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 280),
           child: _buildBody(sections, preview, inPage: false));
+    }
+    if (_guideLayout && sections.isNotEmpty && !(_loading && _games.isEmpty)) {
+      return _buildGuide(sections, preview, inPage: inPage);
     }
     if (inPage) {
       return Padding(
@@ -4016,6 +4406,331 @@ class _FeedRow extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A Guide layout row: one game as a floating glass bubble (league tag,
+/// both teams, a status pill and a channel pill), drawn selected by the
+/// guide's single focus node, never focusable itself.
+class _GuideRow extends StatelessWidget {
+  const _GuideRow({
+    super.key,
+    required this.game,
+    required this.compact,
+    required this.match,
+    required this.matching,
+    required this.hideScores,
+    required this.starred,
+    required this.previewing,
+    required this.selected,
+    required this.checked,
+    required this.onTap,
+    required this.onLongPress,
+  });
+
+  final SportsGame game;
+  final bool compact;
+  final ChannelMatch? match;
+  final bool matching;
+  final bool hideScores;
+  final bool starred;
+  final bool previewing;
+  final bool selected;
+  final bool? checked;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final g = game;
+    final live = g.state == GameState.live;
+    final showScore = !hideScores && g.state != GameState.pre && !g.isEventOnly;
+
+    Widget team(SportsTeam t, {required double logo}) {
+      final mine = int.tryParse(t.score ?? '');
+      final other = int.tryParse(
+          (identical(t, g.first) ? g.second.score : g.first.score) ?? '');
+      final lost = g.state == GameState.post &&
+          t.score != 'W' &&
+          (mine == null || other == null || mine <= other);
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SportsLogo(
+              url: t.logoUrl,
+              size: logo,
+              fallback: t.abbreviation,
+              color: t.color),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(SportsRanks.name(g.league, t),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontSize: compact ? 14 : 16,
+                    fontWeight: FontWeight.w700,
+                    color: lost ? Colors.white70 : Colors.white)),
+          ),
+        ],
+      );
+    }
+
+    final matchup = g.isEventOnly
+        ? Row(children: [
+            SportsLogo(
+                url: g.league.logoUrl,
+                size: compact ? 22 : 28,
+                fallback: g.league.shortName),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(g.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontSize: compact ? 14 : 16,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white)),
+            ),
+          ])
+        : Row(children: [
+            Flexible(child: team(g.first, logo: compact ? 22 : 28)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Text(tr(g.joiner),
+                  style: const TextStyle(fontSize: 13, color: Colors.white54)),
+            ),
+            Flexible(child: team(g.second, logo: compact ? 22 : 28)),
+          ]);
+
+    final score = showScore && !g.isEventOnly
+        ? '${g.first.score ?? ''} - ${g.second.score ?? ''}'
+        : null;
+    final statusText = switch (g.state) {
+      GameState.pre => _preLabel(g),
+      GameState.live =>
+        g.statusText.isEmpty ? tr('LIVE') : trSports(g.statusText),
+      GameState.post =>
+        g.statusText.isEmpty ? tr('Final') : trSports(g.statusText),
+    };
+    final status = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: live
+            ? Colors.redAccent.withValues(alpha: 0.14)
+            : Colors.white.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+            color: live
+                ? Colors.redAccent.withValues(alpha: 0.5)
+                : Colors.white12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (live)
+            Container(
+              width: 7,
+              height: 7,
+              margin: const EdgeInsets.only(right: 6),
+              decoration: const BoxDecoration(
+                  shape: BoxShape.circle, color: Colors.redAccent),
+            )
+          else if (g.state == GameState.pre)
+            const Padding(
+              padding: EdgeInsets.only(right: 5),
+              child: Icon(Icons.schedule, size: 13, color: Colors.white54),
+            ),
+          // One text, so a long status shortens instead of overflowing.
+          Flexible(
+            child: Text.rich(
+                TextSpan(children: [
+                  if (score != null) ...[
+                    TextSpan(
+                        text: score,
+                        style: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white)),
+                    const TextSpan(
+                        text: '  ·  ', style: TextStyle(color: Colors.white38)),
+                  ],
+                  TextSpan(text: statusText),
+                ]),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: live ? Colors.redAccent : Colors.white70)),
+          ),
+        ],
+      ),
+    );
+
+    final matched = match != null;
+    final channelText = match?.channel.name ??
+        (matching
+            ? tr('Looking…')
+            : SportsChannelMatcher.sharedWhyNoMatch(g)?.card ??
+                tr('Pick a channel'));
+    final channel = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(matched ? Icons.live_tv : Icons.add_circle_outline,
+            size: 14, color: matched ? scheme.primary : Colors.white38),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(channelText,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: matched ? FontWeight.w600 : FontWeight.w400,
+                  color: matched ? scheme.primary : Colors.white38)),
+        ),
+      ],
+    );
+
+    final leagueTag = Container(
+      padding: const EdgeInsets.fromLTRB(5, 3, 8, 3),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white24),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SportsLogo(
+              url: g.league.logoUrl, size: 16, fallback: g.league.shortName),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(g.league.shortName.toUpperCase(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontSize: 10.5,
+                    letterSpacing: 0.6,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white70)),
+          ),
+        ],
+      ),
+    );
+
+    final badges = [
+      if (starred)
+        Padding(
+          padding: const EdgeInsets.only(right: 6),
+          child: Icon(Icons.star, size: 14, color: scheme.primary),
+        ),
+      if (previewing)
+        Container(
+          margin: const EdgeInsets.only(right: 6),
+          padding: const EdgeInsets.fromLTRB(4, 2, 7, 2),
+          decoration: BoxDecoration(
+            color: scheme.primary,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.play_arrow, size: 13, color: scheme.onPrimary),
+              const SizedBox(width: 2),
+              Text(tr('Watching').toUpperCase(),
+                  style: TextStyle(
+                      fontSize: 9.5,
+                      letterSpacing: 0.6,
+                      fontWeight: FontWeight.w800,
+                      color: scheme.onPrimary)),
+            ],
+          ),
+        ),
+      RecPill(game: g, small: true),
+    ];
+
+    final content = compact
+        ? Row(children: [
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [...badges, Expanded(child: matchup)]),
+                  const SizedBox(height: 6),
+                  Row(children: [
+                    Flexible(child: status),
+                    const SizedBox(width: 8),
+                    Expanded(child: channel),
+                  ]),
+                ],
+              ),
+            ),
+            if (checked != null) ...[
+              const SizedBox(width: 8),
+              _MultiviewCheck(checked: checked!),
+            ],
+          ])
+        : Row(children: [
+            ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 70, maxWidth: 110),
+                child: leagueTag),
+            const SizedBox(width: 12),
+            ...badges,
+            Expanded(flex: 5, child: matchup),
+            const SizedBox(width: 12),
+            Expanded(
+                flex: 3,
+                child: Align(alignment: Alignment.centerLeft, child: status)),
+            const SizedBox(width: 10),
+            Expanded(flex: 3, child: channel),
+            if (checked != null) ...[
+              const SizedBox(width: 8),
+              _MultiviewCheck(checked: checked!),
+            ],
+          ]);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      child: InkWell(
+        canRequestFocus: false,
+        borderRadius: BorderRadius.circular(22),
+        onTap: onTap,
+        onLongPress: onLongPress,
+        child: AnimatedContainer(
+          key: selected ? const ValueKey('guide-selected') : null,
+          duration: const Duration(milliseconds: 120),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: RefinedFinish.decorate(
+              context,
+              BoxDecoration(
+                color: selected
+                    ? null
+                    : previewing
+                        ? scheme.primary.withValues(alpha: 0.14)
+                        : Colors.white.withValues(alpha: 0.06),
+                gradient: selected ? sportsFocusSheen(scheme) : null,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                    color: selected
+                        ? scheme.primary
+                        : previewing
+                            ? scheme.primary.withValues(alpha: 0.6)
+                            : Colors.white10,
+                    width: selected ? 2.5 : (previewing ? 1.5 : 1)),
+                boxShadow: selected
+                    ? [
+                        BoxShadow(
+                            color: scheme.primary.withValues(alpha: 0.35),
+                            blurRadius: 16)
+                      ]
+                    : null,
+              ),
+              focused: selected),
+          child: content,
         ),
       ),
     );

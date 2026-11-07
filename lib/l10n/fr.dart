@@ -2928,4 +2928,18 @@ const Map<String, String> kFr = {
       "Cette télé est sur un VPN : ce code passe donc par Internet.",
   "Page does not open? A VPN on this TV can block it: use \"Phone not on this Wi-Fi?\" below.":
       "La page ne s'ouvre pas ? Un VPN sur cette télé peut la bloquer : utilisez « Téléphone pas sur ce Wi-Fi? » ci-dessous.",
+  "Games layout":
+      "Disposition des matchs",
+  "Game cards, or a TV guide-style list":
+      "Cartes de match, ou une liste façon guide télé",
+  "Cards":
+      "Cartes",
+  "Game cards in rows":
+      "Cartes de match en rangées",
+  "A TV guide-style list, one game per row":
+      "Une liste façon guide télé, un match par ligne",
+  "Guide lists the day's games under the matchup, one per row, with the league, the score or start time and the channel. Moving through the leagues on the left shows their games. OK watches, OK again is full screen, hold OK opens the game menu. Cards stays the default. Saved for this viewer.":
+      "Guide liste les matchs du jour sous l'affiche, un par ligne, avec la ligue, le score ou l'heure et la chaîne. Parcourir les ligues à gauche affiche leurs matchs. OK regarde, OK encore passe en plein écran, maintenir OK ouvre le menu du match. Cartes reste le choix par défaut. Enregistré pour ce spectateur.",
+  "OK: watch  ·  OK again: full screen  ·  Hold OK: game menu":
+      "OK : regarder  ·  OK encore : plein écran  ·  Maintenir OK : menu du match",
 };

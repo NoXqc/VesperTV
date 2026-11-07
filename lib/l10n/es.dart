@@ -2915,4 +2915,18 @@ const Map<String, String> kEs = {
       "Este televisor está en una VPN, así que este código va por internet.",
   "Page does not open? A VPN on this TV can block it: use \"Phone not on this Wi-Fi?\" below.":
       "¿La página no se abre? Una VPN en este televisor puede bloquearla: usa «¿El teléfono no está en esta Wi-Fi?» abajo.",
+  "Games layout":
+      "Diseño de los partidos",
+  "Game cards, or a TV guide-style list":
+      "Tarjetas de partido, o una lista tipo guía de TV",
+  "Cards":
+      "Tarjetas",
+  "Game cards in rows":
+      "Tarjetas de partido en filas",
+  "A TV guide-style list, one game per row":
+      "Una lista tipo guía de TV, un partido por fila",
+  "Guide lists the day's games under the matchup, one per row, with the league, the score or start time and the channel. Moving through the leagues on the left shows their games. OK watches, OK again is full screen, hold OK opens the game menu. Cards stays the default. Saved for this viewer.":
+      "Guía muestra los partidos del día bajo el enfrentamiento, uno por fila, con la liga, el marcador o la hora y el canal. Al recorrer las ligas de la izquierda se ven sus partidos. OK mira, OK otra vez pasa a pantalla completa, mantener OK abre el menú del partido. Tarjetas sigue siendo la opción predeterminada. Guardado para este espectador.",
+  "OK: watch  ·  OK again: full screen  ·  Hold OK: game menu":
+      "OK: ver  ·  OK otra vez: pantalla completa  ·  Mantener OK: menú del partido",
 };

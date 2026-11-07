@@ -600,6 +600,14 @@
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },
   {
+    "id": "00d95f6a5e8ad4f9",
+    "category": "Sports Trak",
+    "title": "Sports Trak as a TV guide-style list",
+    "answer": "Off by default: Cards stays the layout unless you choose Guide. Guide shows the day's games under the matchup, one per row: the league, both teams, the score or start time, and the matched channel. ▲ / ▼ move through every game (Live now, Later today, Final), CH+/CH- jump a page, ◀ goes to the leagues. Moving through the leagues shows their games without pressing OK. OK plays a game in the mini player, OK again is full screen, Hold OK opens the game menu (channel, sources, reminder, record, Multiview). Works in Sports Mode too. Saved for this viewer and included in Backup, Transfer and copying Main's Sports settings.",
+    "controls": "Settings → Sports Trak → Games layout → Guide",
+    "url": "https://vespertv.app/remote.html#Sports%20Trak"
+  },
+  {
     "id": "e072f84243cd87f7",
     "category": "Sports Trak",
     "title": "Make the game cards smaller",

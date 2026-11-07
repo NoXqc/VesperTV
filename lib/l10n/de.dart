@@ -2818,4 +2818,18 @@ const Map<String, String> kDe = {
       "Dieser Fernseher nutzt ein VPN, daher läuft dieser Code über das Internet.",
   "Page does not open? A VPN on this TV can block it: use \"Phone not on this Wi-Fi?\" below.":
       "Seite öffnet sich nicht? Ein VPN auf diesem Fernseher kann sie blockieren: Nutze unten „Handy nicht in diesem WLAN?“.",
+  "Games layout":
+      "Spiele-Layout",
+  "Game cards, or a TV guide-style list":
+      "Spielkarten oder eine Liste wie ein TV-Guide",
+  "Cards":
+      "Karten",
+  "Game cards in rows":
+      "Spielkarten in Reihen",
+  "A TV guide-style list, one game per row":
+      "Eine Liste wie ein TV-Guide, ein Spiel pro Zeile",
+  "Guide lists the day's games under the matchup, one per row, with the league, the score or start time and the channel. Moving through the leagues on the left shows their games. OK watches, OK again is full screen, hold OK opens the game menu. Cards stays the default. Saved for this viewer.":
+      "Guide zeigt die Spiele des Tages unter der Paarung, eins pro Zeile, mit Liga, Spielstand oder Anstoßzeit und Sender. Beim Durchgehen der Ligen links erscheinen ihre Spiele. OK schaut, nochmal OK geht in den Vollbildmodus, OK gedrückt halten öffnet das Spielmenü. Karten bleibt die Voreinstellung. Für diesen Zuschauer gespeichert.",
+  "OK: watch  ·  OK again: full screen  ·  Hold OK: game menu":
+      "OK: schauen  ·  Nochmal OK: Vollbild  ·  OK halten: Spielmenü",
 };

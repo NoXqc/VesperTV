@@ -590,3 +590,28 @@ League bank regions Rugby / Cricket / Darts (`kSportsLeagueBank`, test
 - `SportsLeague.homeFirst` (soccer, rugby, cricket read Home vs Away), `sport`, `isDarts`.
 - Darts times are per tournament day/session, not per match (owner, 2026-11-01): a timed PDC
   card keeps its time, but the guide search looks 12 h past it (`_guideWindow`).
+
+## Guide layout (opt-in, Claude 2026-11-07)
+A Discord user's mockup: Sports Trak as a TV guide-style list. Owner: an **opt-in switch, never a
+replacement**, in VesperTV's floating bubble style. Settings > Sports Trak > **Games layout**
+(Cards default / Guide, per viewer, `vesper_sports_layout`, copied with Main's Sports settings).
+- Only the card rows change: header, day/tools rows, hero and the league rail (regular TV/Windows
+  `_buildLeagueRail`, Sports Mode's own rail + bar) stay. `_buildBody` returns `_buildGuide` when
+  `_guideLayout` and there are games. Sports Mode's playing feed is untouched (it is already a list).
+- ONE focus node (`_guideNode`), selection = `_guideKey`, own keys (`_onGuideKey`): Up/Down rows
+  across all sections, Up from the first row = zone 2 (or back to the feed when browsing), CH+/-
+  and PgUp/PgDn = 6 rows, Left = rail (`_focusRail` / `_leftFromContent`), Right swallowed. OK/hold
+  follow `HoldToActivate`'s rule (550 ms timer AND a key repeat; key-up without our key-down
+  ignored); OK = `_activateGame` (preview, then full screen), hold = `_openGame`; Multiview picks
+  mode toggles/opens like cards. Play/Pause via `_focusedCardGame` (guide-aware).
+- `_focusZone` row zones focus the guide on the zone's remembered game (`_lastCardInRow`, so
+  notifications/initial game keys still land), `_moveZone` Down into the rows returns to the
+  row it was on. A layout switched in Settings re-focuses the zone if the focused card vanished.
+- Leagues follow the selector in Guide only: a FocusManager listener (`_followGuideLeague`) sees a
+  `league:<id>`/`league:all` chip/rail node focused, waits 350 ms, then `_setLeagueFilter`.
+- Rows: `_GuideRow` glass bubble (radius 22), league tag, star/WATCHING/REC, teams with logos,
+  status pill (score · period, red when live; clock + time before), channel pill (gold when
+  matched). Selected = card focus look (`sportsFocusSheen`, gold 2.5 border, glow). Under 640 px
+  two-line rows. Lazy `ListView.builder` (fixed row/header heights, `_guideKeepVisible` jumpTo);
+  in-page Column on phones / short Sports Mode screens. Test keys `guide-row-<key>` and
+  `guide-selected`. Tests: `sports_mode_test.dart` group "Guide layout" (12).

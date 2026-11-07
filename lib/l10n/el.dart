@@ -2877,4 +2877,18 @@ const Map<String, String> kEl = {
       "Αυτή η τηλεόραση είναι σε VPN, οπότε αυτός ο κωδικός περνά μέσω διαδικτύου.",
   "Page does not open? A VPN on this TV can block it: use \"Phone not on this Wi-Fi?\" below.":
       "Η σελίδα δεν ανοίγει; Ένα VPN σε αυτή την τηλεόραση μπορεί να τη μπλοκάρει: χρησιμοποίησε το «Το κινητό δεν είναι σε αυτό το Wi-Fi;» παρακάτω.",
+  "Games layout":
+      "Διάταξη αγώνων",
+  "Game cards, or a TV guide-style list":
+      "Κάρτες αγώνων ή λίστα σαν οδηγός τηλεόρασης",
+  "Cards":
+      "Κάρτες",
+  "Game cards in rows":
+      "Κάρτες αγώνων σε σειρές",
+  "A TV guide-style list, one game per row":
+      "Λίστα σαν οδηγός τηλεόρασης, ένας αγώνας ανά γραμμή",
+  "Guide lists the day's games under the matchup, one per row, with the league, the score or start time and the channel. Moving through the leagues on the left shows their games. OK watches, OK again is full screen, hold OK opens the game menu. Cards stays the default. Saved for this viewer.":
+      "Ο Οδηγός δείχνει τους αγώνες της ημέρας κάτω από την αναμέτρηση, έναν ανά γραμμή, με τη λίγκα, το σκορ ή την ώρα έναρξης και το κανάλι. Περνώντας από τις λίγκες αριστερά βλέπεις τους αγώνες τους. Το OK παίζει, ξανά OK για πλήρη οθόνη, κράτημα OK ανοίγει το μενού του αγώνα. Οι Κάρτες μένουν η προεπιλογή. Αποθηκεύεται για αυτόν τον θεατή.",
+  "OK: watch  ·  OK again: full screen  ·  Hold OK: game menu":
+      "OK: παρακολούθηση  ·  Ξανά OK: πλήρης οθόνη  ·  Κράτημα OK: μενού αγώνα",
 };

@@ -2922,4 +2922,18 @@ const Map<String, String> kIt = {
       "Questa TV è su una VPN, quindi questo codice passa da Internet.",
   "Page does not open? A VPN on this TV can block it: use \"Phone not on this Wi-Fi?\" below.":
       "La pagina non si apre? Una VPN su questa TV può bloccarla: usa «Telefono non su questa Wi-Fi?» qui sotto.",
+  "Games layout":
+      "Layout delle partite",
+  "Game cards, or a TV guide-style list":
+      "Schede partita, o un elenco stile guida TV",
+  "Cards":
+      "Schede",
+  "Game cards in rows":
+      "Schede partita in righe",
+  "A TV guide-style list, one game per row":
+      "Un elenco stile guida TV, una partita per riga",
+  "Guide lists the day's games under the matchup, one per row, with the league, the score or start time and the channel. Moving through the leagues on the left shows their games. OK watches, OK again is full screen, hold OK opens the game menu. Cards stays the default. Saved for this viewer.":
+      "Guida elenca le partite del giorno sotto il confronto, una per riga, con la lega, il punteggio o l'orario e il canale. Scorrendo le leghe a sinistra si vedono le loro partite. OK guarda, OK di nuovo va a schermo intero, tieni premuto OK apre il menu della partita. Schede resta l'impostazione predefinita. Salvato per questo spettatore.",
+  "OK: watch  ·  OK again: full screen  ·  Hold OK: game menu":
+      "OK: guarda  ·  OK di nuovo: schermo intero  ·  Tieni premuto OK: menu partita",
 };

@@ -1591,6 +1591,177 @@ void main() {
     await disposePage(tester);
   });
 
+  group('Guide layout', () {
+    Finder selectedIn(String key) => find.descendant(
+        of: find.byKey(ValueKey('guide-row-$key')),
+        matching: find.byKey(const ValueKey('guide-selected')));
+
+    void expectSelected(String key) =>
+        expect(selectedIn(key), findsOneWidget, reason: key);
+
+    Future<void> intoGuide(WidgetTester tester) async {
+      for (var i = 0; i < 4 && getFocus() != 'sports-guide'; i++) {
+        await press(
+            tester,
+            i == 0
+                ? LogicalKeyboardKey.arrowRight
+                : LogicalKeyboardKey.arrowDown);
+      }
+      expect(getFocus(), 'sports-guide');
+    }
+
+    test('opt-in: Cards by default, per viewer, copied with Sports', () async {
+      expect(storage.getSportsLayout(), 'cards');
+      await storage.setSportsLayout('guide');
+      expect(storage.getSportsLayout(), 'guide');
+      await storage.copyMainToViewer('copy', {ProfileCopy.sports},
+          restricted: false);
+      await storage.setActiveViewerId('other');
+      expect(storage.getSportsLayout(), 'cards');
+      await storage.setActiveViewerId('copy');
+      expect(storage.getSportsLayout(), 'guide');
+    });
+
+    testWidgets('Cards stays the default: no guide, card rows as before',
+        (tester) async {
+      await prefs.setSportsMode(false);
+      await open(tester);
+      expect(find.byKey(const ValueKey('sports-guide')), findsNothing);
+      expect(find.byKey(const ValueKey('card-nhl:game100')), findsOneWidget);
+      await disposePage(tester);
+    });
+
+    for (final mode in [false, true]) {
+      testWidgets(
+          'one list: Down/Up through every section, rows stay on screen, '
+          'Up from the top and Left leave it (mode=$mode)', (tester) async {
+        await prefs.setSportsMode(mode);
+        await storage.setSportsLayout('guide');
+        await open(tester);
+        expect(find.byKey(const ValueKey('card-nhl:game100')), findsNothing);
+        await intoGuide(tester);
+        expectSelected('nhl:game100'); // Live now comes first
+        final order = [
+          for (var i = 0; i < 18; i++) 'nhl:game$i',
+          'nhl:game200',
+        ];
+        for (final key in order) {
+          await press(tester, LogicalKeyboardKey.arrowDown);
+          expect(getFocus(), 'sports-guide');
+          expectSelected(key);
+          final rect = tester.getRect(find.byKey(ValueKey('guide-row-$key')));
+          expect(rect.bottom, lessThanOrEqualTo(541), reason: key);
+          expect(rect.top, greaterThanOrEqualTo(0), reason: key);
+        }
+        // Down at the end stays on the last row.
+        await press(tester, LogicalKeyboardKey.arrowDown);
+        expectSelected('nhl:game200');
+        for (var i = 0; i < order.length; i++) {
+          await press(tester, LogicalKeyboardKey.arrowUp);
+        }
+        expectSelected('nhl:game100');
+        await press(tester, LogicalKeyboardKey.arrowUp);
+        expect(getFocus(), isNot('sports-guide'));
+        expect(getFocus(), startsWith('sports-chip-'));
+        // Back down: the row it was on.
+        await press(tester, LogicalKeyboardKey.arrowDown);
+        if (getFocus() != 'sports-guide') {
+          await press(tester, LogicalKeyboardKey.arrowDown);
+        }
+        expect(getFocus(), 'sports-guide');
+        expectSelected('nhl:game100');
+        await press(tester, LogicalKeyboardKey.arrowLeft);
+        expect(getFocus(),
+            startsWith(mode ? 'sports-chip-' : 'sports-chip-league:'));
+        expect(tester.takeException(), isNull);
+        await disposePage(tester);
+      });
+    }
+
+    testWidgets('OK previews the matched game, hold OK opens its menu',
+        (tester) async {
+      await prefs.setSportsMode(false);
+      await storage.setSportsLayout('guide');
+      final games = await matchedGames();
+      await open(tester, games: games);
+      await intoGuide(tester);
+      expectSelected('nhl:game100');
+      // Hold OK (the remote's own repeats): the game menu, nothing plays.
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.select);
+      for (var i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.sendKeyRepeatEvent(LogicalKeyboardKey.select);
+      }
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.select);
+      await tester.pumpAndSettle();
+      expect(find.byType(Dialog), findsOneWidget);
+      expect(find.text('On 1 channel'), findsOneWidget);
+      expect(playback.plays, isEmpty);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      // Back on the list: OK previews in the hero.
+      expect(getFocus(), 'sports-guide');
+      await press(tester, LogicalKeyboardKey.select);
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(playback.plays.map((c) => c.id), ['p1::0']);
+      expect(tester.takeException(), isNull);
+      await disposePage(tester);
+    });
+
+    testWidgets('leagues follow the selector in Guide, not in Cards',
+        (tester) async {
+      await prefs.setSportsMode(false);
+      final feed = _Feed([
+        _game(100, GameState.live),
+        for (var i = 0; i < 4; i++) _game(i, GameState.pre),
+      ]);
+      await open(tester, feed: feed);
+      expect(getFocus(), 'sports-chip-league:all');
+      final before = feed.requests.length;
+      await press(tester, LogicalKeyboardKey.arrowDown);
+      expect(getFocus(), 'sports-chip-league:nhl');
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(feed.requests.length, before, reason: 'Cards: OK filters');
+      await disposePage(tester);
+
+      await storage.setSportsLayout('guide');
+      await open(tester, feed: feed);
+      expect(getFocus(), 'sports-chip-league:all');
+      await press(tester, LogicalKeyboardKey.arrowDown);
+      expect(getFocus(), 'sports-chip-league:nhl');
+      // Passing over a league quickly loads nothing.
+      await press(tester, LogicalKeyboardKey.arrowDown);
+      await press(tester, LogicalKeyboardKey.arrowUp);
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(feed.requests.last, ['nhl']);
+      await press(tester, LogicalKeyboardKey.arrowUp);
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(feed.requests.last.length, greaterThan(1), reason: 'All again');
+      expect(tester.takeException(), isNull);
+      await disposePage(tester);
+    });
+
+    for (final (label, view, text) in [
+      ('TV large text', const Size(960, 540), 1.3),
+      ('phone', const Size(390, 844), 1.0),
+      ('phone large text', const Size(390, 844), 1.3),
+    ]) {
+      for (final mode in [false, true]) {
+        testWidgets('fits without overflow: $label (mode=$mode)',
+            (tester) async {
+          await prefs.setSportsMode(mode);
+          await storage.setSportsLayout('guide');
+          await open(tester, size: view, scale: text);
+          await tester.pump(const Duration(milliseconds: 500));
+          expect(tester.takeException(), isNull);
+          expect(find.byKey(const ValueKey('guide-row-nhl:game100')),
+              findsOneWidget);
+          await disposePage(tester);
+        });
+      }
+    }
+  });
+
   test('game card size: Large by default, per viewer, copied with Sports',
       () async {
     expect(storage.getSportsCardSize(), 'large');

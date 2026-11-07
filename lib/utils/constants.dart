@@ -426,6 +426,7 @@ class AppConstants {
       'vesper_sports_hide_empty_leagues';
   static const String keySportsShowOdds = 'vesper_sports_show_odds';
   static const String keySportsCardSize = 'vesper_sports_card_size';
+  static const String keySportsLayout = 'vesper_sports_layout';
   static const String keySportsAutoPlay = 'vesper_sports_auto_play';
 
   /// Home page rows, per viewer: ordered row ids, a hidden row as `-id`

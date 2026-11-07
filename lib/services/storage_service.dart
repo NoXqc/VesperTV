@@ -788,6 +788,16 @@ class StorageService {
   Future<void> setSportsCardSize(String value) =>
       _prefs.setString(_vk(AppConstants.keySportsCardSize), value);
 
+  /// Settings > Sports Trak > Games layout: 'cards' (default) or 'guide'
+  /// (opt-in TV guide-style list), per viewer.
+  String getSportsLayout() =>
+      _prefs.getString(_vk(AppConstants.keySportsLayout)) == 'guide'
+          ? 'guide'
+          : 'cards';
+
+  Future<void> setSportsLayout(String value) =>
+      _prefs.setString(_vk(AppConstants.keySportsLayout), value);
+
   /// Betting odds on Sports Trak game cards and stats (off by default, per
   /// viewer).
   bool getSportsShowOdds() =>
