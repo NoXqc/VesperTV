@@ -763,7 +763,7 @@
     "id": "edb2bb413836e696",
     "category": "Vesper AI",
     "title": "Connect an AI app with MCP",
-    "answer": "Enable Let AI apps control VesperTV and copy this TV's private connector address into a compatible AI app's custom MCP connector. A Claude connector was tested; other clients, including ChatGPT, still need testing and must support custom MCP connections. Leave VesperTV open on that TV. Ask on the TV first is on by default: starting a channel or title, hiding/showing groups and clearing the watch list wait for confirmation. Read-only requests, player controls and individual list edits can run without a dialog. The address itself grants access: keep it private. Reset the address invalidates the old link; add the new address in your AI app. Disable Let AI apps control VesperTV to stop remote requests.",
+    "answer": "Enable Let AI apps control VesperTV and copy this TV's private connector address into a compatible AI app's custom MCP connector. A Claude connector was tested; other clients, including ChatGPT, still need testing and must support custom MCP connections. Leave VesperTV open on that TV. Ask on the TV first is on by default: starting a channel or title, hiding/showing groups, changing settings and clearing history or the watch list wait for confirmation. Read-only requests, player controls and individual list edits can run without a dialog. The address itself grants access: keep it private. Reset the address invalidates the old link; add the new address in your AI app. Disable Let AI apps control VesperTV to stop remote requests.",
     "controls": "Settings → Vesper AI → AI apps → Let AI apps control VesperTV",
     "url": "https://vespertv.app/remote.html#Vesper%20AI"
   },
@@ -773,6 +773,14 @@
     "title": "Vesper AI on several TVs",
     "answer": "Each TV has its own connector address. Add a separate connector for each TV and name them clearly in your AI app, for example VesperTV Living room and VesperTV Bedroom. The link targets that one TV; Vesper does not yet offer a shared multi-TV link or choose a TV automatically. Keep the intended TV's VesperTV app open.",
     "controls": "One private connector address per TV",
+    "url": "https://vespertv.app/remote.html#Vesper%20AI"
+  },
+  {
+    "id": "57fc667f00346ac1",
+    "category": "Vesper AI",
+    "title": "Change settings and clear history with an AI",
+    "answer": "Your AI and linked AI apps can read and change many settings: playback (skip intro, Up Next, live buffer, audio delay, subtitle size and languages, frame rate and resolution matching), startup, language and theme, the guide, which tabs show, and Sports Trak options. Several can change at once with one OK on the TV. They can also clear recent searches and channels, Continue Watching and saved progress, Media Hub Recently watched or the watch list, and reload the TV guide. Ask on the TV first, AI keys, the PIN, profiles and playlists are never changed this way. Kids profiles can read settings but not change them. Some startup settings apply the next time the app starts.",
+    "controls": "Ask your AI: turn off skip intro · hide the Movies tab · clear my watch history · update the guide",
     "url": "https://vespertv.app/remote.html#Vesper%20AI"
   },
   {

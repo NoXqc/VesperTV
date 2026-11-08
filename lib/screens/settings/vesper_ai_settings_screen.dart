@@ -367,7 +367,7 @@ class _VesperAiSettingsScreenState extends State<VesperAiSettingsScreen> {
               TvSwitchListTile(
                 title: Text(tr('Ask on the TV first')),
                 subtitle: Text(tr(
-                    'An AI app\'s play, hide or show waits for OK on the TV.')),
+                    'Playing, hiding, changing settings or clearing history from an AI app waits for OK on the TV.')),
                 value: _storage.getAiConfirmRemotePlay(),
                 onChanged: (v) async {
                   await _storage.setAiConfirmRemotePlay(v);

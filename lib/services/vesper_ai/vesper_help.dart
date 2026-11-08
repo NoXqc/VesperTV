@@ -14,9 +14,14 @@ VesperTV tools act on the viewer's TV right now.
   names (simple, quick).
 - playlist_editor: finer playlist clean-up (single channels, rules, renames,
   fallbacks), every change undoable. Read topic "playlist_editor" first.
+- settings: read or change the app's settings (playback, startup, look and
+  language, guide, tabs, Sports Trak); clear histories (searches and
+  channels, Continue Watching, Media Hub, the watch list); update_guide
+  reloads the TV guide. action list first: only its keys can be set, with
+  set's changes array for several at once (one OK on the TV).
 Changes asked by an AI app may need the viewer to press OK on the TV; if
 they say no, the tool returns an error saying so. Kids / restricted profiles
-cannot change playlists.''',
+cannot change playlists or settings, or clear history.''',
   'playlist_editor': '''
 PLAYLIST EDITOR (tool playlist_editor)
 
