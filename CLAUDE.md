@@ -395,6 +395,11 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   `AppExit.back`, warm exit; a computer still asks; tests: `test/warm_exit_helper.dart`). **Warm-return resume:**
   `_episodeNotificationOpened` was never reset, so after one notification tap no warm return resumed until a cold
   start; now reset in `AppExit.beforeWarm`, and Send log says `Resume: skipped (why)`. Not box-tested. Next build > 680.
+- **Claude, 2026-11-08 - release 1.0.62 (beta), +689 (latest):** owner said "cut it". Android only; Windows/Linux
+  stay 1.0.61. Wide cards (Settings > Interface > Tabs: 16:9 backdrop cards in TV home rows + Expand catalog,
+  `WideArtQueue`), Vesper AI game_channel / groups channels / sports quality + on_at_game_time, profiles + parental
+  tools (PIN only on the TV pad), "No game at this time" around name-only events. Notes: dev-notes/releases/1.0.62.md.
+  AI apps cache the tool list: reconnect the connector after new tools. Next build > 689.
 - **Claude, 2026-11-07 - event channels + guide speed (released in 1.0.61, +677; test APK +677 had 1-2 only):**
   (1) TV header "Updating..." stuck after a background update: `PlaylistSession.isLoading` is now derived (list load
   or on-screen row loads). (2) **Guide from channel names**: `services/channel_name_events.dart` reads
