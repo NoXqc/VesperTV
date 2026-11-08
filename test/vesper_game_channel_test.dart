@@ -146,6 +146,16 @@ void main() {
     expect(box.lookup(ref), isA<Channel>());
   });
 
+  test('channels say their picture quality, from the name or the group',
+      () async {
+    final r = await box.call('search', {'query': 'nba tv', 'kind': 'live'});
+    final nbaTv = (r['live'] as List).first as Map;
+    // "NBA TV" says nothing; its group "US| NBA LEAGUE PASS 4K" does.
+    expect(nbaTv['quality'], '4K', reason: '$nbaTv');
+    final tsn = await box.call('search', {'query': 'tsn 1', 'kind': 'live'});
+    expect(((tsn['live'] as List).first as Map).containsKey('quality'), isFalse);
+  });
+
   test('groups channels: an unknown group says so', () async {
     final r = await box.call(
         'groups', {'action': 'channels', 'tab': 'tv', 'group': 'cricket zone'});

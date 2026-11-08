@@ -133,6 +133,12 @@ matched_by:
   the league, a team's channel or a broadcaster matched, not the game. These
   are the ones worth checking.
 No channel = nothing matched.
+Each channel also has quality (8K / 4K / FHD / HD / SD from its name or
+group; quality_measured: the TV saw it play in 4K) and the guide's
+programme: on_at_game_time for a game that has not started (what that
+channel shows at the start time), on_now once it is live. A title there
+that names another game means the channel is not this game's.
+state is the GAME's: pre (not started), live, post (over).
 
 play_game team [list: true]: every channel Sports Trak found for a team's
 game today, best first, without playing when list is true.

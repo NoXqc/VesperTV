@@ -9,12 +9,14 @@ import '../../models/viewer_profile.dart';
 import '../../models/xtream_series.dart';
 import '../../utils/title_search.dart';
 import '../app_preferences.dart';
+import '../channel_copy_fallback.dart';
 import '../epg_service.dart';
 import '../playback_service.dart';
 import '../playlist_edits.dart';
 import '../playlist_edits_diff.dart';
 import '../playlist_manager.dart';
 import '../playlist_session.dart';
+import '../real_4k_channels.dart';
 import '../sports_channel_countries.dart';
 import '../sports_channel_matcher.dart';
 import '../sports_service.dart';
@@ -221,6 +223,7 @@ class VesperToolbox {
       if (_manyPlaylists) 'playlist': _playlistName(c.playlistId),
       if (now != null) 'on_now': now.title,
       if (c.hasCatchup) 'catch_up_days': c.catchupDays,
+      if (c.isLive) ..._quality(c),
     };
   }
 
@@ -1212,11 +1215,8 @@ final List<VesperTool> vesperTools = [
                 'score':
                     '${g.away.shortName} ${g.away.score ?? '-'}, ${g.home.shortName} ${g.home.score ?? '-'}',
               if (g.broadcasts.isNotEmpty) 'networks': g.broadcasts,
-              if (matched[g]?.firstOrNull case final m?) ...{
-                'channel': box.describeChannel(m.channel),
-                'matched_by': _matchedBy(m),
-                if (m.detail case final d? when d.isNotEmpty) 'evidence': d,
-              },
+              if (matched[g]?.firstOrNull case final m?)
+                'channel': _gameChannel(box, g, m),
             }
         ],
         if (games.length > 25)
@@ -1268,12 +1268,17 @@ final List<VesperTool> vesperTools = [
           'games': [
             for (final g in games.take(3))
               {
+                'ref': box.refFor(g),
                 'game': g.title,
+                'state': g.state.name,
+                'start': '${_day(g.start)} ${_clock(g.start)}',
                 'channels': [
-                  for (final c in (matched[g] ?? const <Channel>[]).take(15))
+                  for (final m
+                      in (matched[g] ?? const <ChannelMatch>[]).take(15))
                     {
-                      ...box.describeChannel(c, withNow: false),
-                      if (vesperChannelLanguage(c) case final l?) 'language': l,
+                      ..._gameChannel(box, g, m),
+                      if (vesperChannelLanguage(m.channel) case final l?)
+                        'language': l,
                     }
                 ],
               }
@@ -1281,13 +1286,14 @@ final List<VesperTool> vesperTools = [
         };
       }
       for (final g in games) {
-        final options = matched[g] ?? const <Channel>[];
+        final options = matched[g] ?? const <ChannelMatch>[];
         if (options.isEmpty) continue;
-        final result = await _play(box, options.first, caller);
+        final best = options.first.channel;
+        final result = await _play(box, best, caller);
         return {
           ...result,
           'game': g.title,
-          if (asked.isNotEmpty && vesperChannelLanguage(options.first) != asked)
+          if (asked.isNotEmpty && vesperChannelLanguage(best) != asked)
             'note': 'No channel in that language carries it; playing the '
                 'best match instead.',
         };
@@ -1387,9 +1393,9 @@ String _matchedBy(ChannelMatch m) => switch (m.reason) {
 /// [matches] with the ones in [language] first, otherwise in the same
 /// order; with [keepPick] a channel the viewer saved for the game stays
 /// first whatever its language.
-List<Channel> _inLanguage(List<ChannelMatch> matches, String language,
+List<ChannelMatch> _inLanguage(List<ChannelMatch> matches, String language,
     {required bool keepPick}) {
-  if (language.isEmpty) return [for (final m in matches) m.channel];
+  if (language.isEmpty) return matches;
   int tier(ChannelMatch m) => keepPick && m.reason == MatchReason.pick
       ? 0
       : vesperChannelLanguage(m.channel) == language
@@ -1399,7 +1405,59 @@ List<Channel> _inLanguage(List<ChannelMatch> matches, String language,
       final t = tier(a.$2).compareTo(tier(b.$2));
       return t != 0 ? t : a.$1.compareTo(b.$1);
     });
-  return [for (final (_, m) in indexed) m.channel];
+  return [for (final (_, m) in indexed) m];
+}
+
+/// A channel carrying [g], for the sports tools. Not describeChannel: its
+/// kind "live" (a live TV channel) read as the game being live, and its
+/// on_now is the wrong moment for a game that starts later (an AI app
+/// saw another game's title there). Here: the guide's programme at the
+/// game's start (or now, once it started), how the match was made and the
+/// picture quality.
+Map<String, Object?> _gameChannel(
+    VesperToolbox box, SportsGame g, ChannelMatch m) {
+  final c = m.channel;
+  final upcoming = g.state == GameState.pre;
+  final at = upcoming ? g.start : DateTime.now();
+  final around = box.epg
+      .programsBetween(c.epgId, at, at.add(const Duration(minutes: 1)));
+  final p = around
+          .where((p) => !p.start.isAfter(at) && p.stop.isAfter(at))
+          .firstOrNull ??
+      around.firstOrNull;
+  return {
+    'ref': box.refFor(c),
+    'title': c.name,
+    if (c.group.isNotEmpty) 'group': c.group,
+    if (box._manyPlaylists) 'playlist': box._playlistName(c.playlistId),
+    ..._quality(c),
+    'matched_by': _matchedBy(m),
+    if (m.detail case final d? when d.isNotEmpty) 'evidence': d,
+    if (p != null) (upcoming ? 'on_at_game_time' : 'on_now'): p.title,
+  };
+}
+
+/// The picture quality a live channel's name (else its group) says: 8K,
+/// 4K, FHD, HD or SD; nothing when neither says. quality_measured: the TV
+/// saw it decode at 2160p (Real 4K tag).
+Map<String, Object?> _quality(Channel c) {
+  var rank = ChannelCopyFallback.qualityRank(c.name);
+  if (rank == 2 && c.group.isNotEmpty) {
+    rank = ChannelCopyFallback.qualityRank(c.group);
+  }
+  final label = switch (rank) {
+    6 => '8K',
+    5 => '4K',
+    4 => 'FHD',
+    3 => 'HD',
+    1 => 'SD',
+    _ => null,
+  };
+  final measured = Real4kChannels.contains(c.id);
+  return {
+    if (measured) 'quality': '4K' else if (label != null) 'quality': label,
+    if (measured) 'quality_measured': true,
+  };
 }
 
 /// Every channel carrying each game, best first: the Sports Trak order
