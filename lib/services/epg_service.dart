@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:xml/xml_events.dart';
 
 import '../models/epg_program.dart';
+import 'channel_name_events.dart';
 import 'perf_diagnostics.dart';
 import '../utils/constants.dart';
 import 'epg_database.dart';
@@ -143,6 +144,51 @@ class EpgService extends ChangeNotifier {
       return false;
     }
     return _readCatchupDays();
+  }
+
+  /// Normalized EPG id -> the event a live channel's name announces
+  /// (`PlaylistManager.channelNameEventsByEpgId`). Added to that channel's
+  /// listings where the provider has nothing real ([mergeChannelNameEvent]):
+  /// event channels often have no guide at all (USA | NBA, 2026-11-07).
+  /// Read at most every [catchupRecheckEvery]; [hasPrograms] still means
+  /// the provider's own guide (EPG matching, the editor's no-guide cleanup).
+  Map<String, ChannelNameEvent> Function()? nameEventsProvider;
+  Map<String, ChannelNameEvent> _nameEvents = const {};
+  DateTime? _nameEventsReadAt;
+
+  /// id -> (listings it was merged into, merged result), so a guide row gets
+  /// the same list back on every build.
+  final Map<String, (List<EpgProgram>, List<EpgProgram>)> _merged = {};
+
+  void _readNameEventsIfStale() {
+    final provider = nameEventsProvider;
+    if (provider == null) return;
+    final now = DateTime.now();
+    final at = _nameEventsReadAt;
+    if (at != null && now.difference(at) < catchupRecheckEvery) return;
+    _nameEventsReadAt = now;
+    try {
+      final next = provider();
+      if (!identical(next, _nameEvents)) {
+        _nameEvents = next;
+        _merged.clear();
+      }
+    } catch (e) {
+      debugPrint('EpgService: channel name events unavailable: $e');
+    }
+  }
+
+  /// [programs] for [id] plus the event its channel name announces.
+  List<EpgProgram> _withNameEvent(String id, List<EpgProgram> programs) {
+    _readNameEventsIfStale();
+    final event = _nameEvents[id];
+    if (event == null) return programs;
+    final memo = _merged[id];
+    if (memo != null && identical(memo.$1, programs)) return memo.$2;
+    final merged = mergeChannelNameEvent(programs, event, id);
+    if (_merged.length >= _fullCacheLimit) _merged.clear();
+    _merged[id] = (programs, merged);
+    return merged;
   }
 
   /// Oldest programme end kept for [normalizedId] (ms since epoch).
@@ -300,6 +346,29 @@ class EpgService extends ChangeNotifier {
   void stopAutoRefresh() {
     _refreshTimer?.cancel();
     _refreshTimer = null;
+    _retryTimer?.cancel();
+    _retryTimer = null;
+  }
+
+  /// A failed refresh used to wait for the next interval tick (12 h by
+  /// default), so the guide stayed a day old: an onn 4K Pro went to standby
+  /// mid-refresh and the 10-minute limit failed it (LOG-RJQ6N6). Retried
+  /// after 15 min, then 30, 60, 120; a success resets it.
+  Timer? _retryTimer;
+  int _failedRefreshes = 0;
+
+  void _scheduleRetry({required bool failed}) {
+    _retryTimer?.cancel();
+    _retryTimer = null;
+    if (!failed) {
+      _failedRefreshes = 0;
+      return;
+    }
+    if (_sourcesProvider == null) return;
+    final minutes = 15 << _failedRefreshes.clamp(0, 3);
+    _failedRefreshes++;
+    debugPrint('EpgService: refresh failed, retry in $minutes min');
+    _retryTimer = Timer(Duration(minutes: minutes), refreshAll);
   }
 
   /// Refreshes every source [_sourcesProvider] currently returns, one at a
@@ -339,6 +408,7 @@ class EpgService extends ChangeNotifier {
             knownChannelIds: source.knownChannelIds);
         if (count != null) anySucceeded = true;
       }
+      _scheduleRetry(failed: !anySucceeded && sources.isNotEmpty);
       if (anySucceeded) {
         final now = DateTime.now();
         await _db.deleteEndedBefore(
@@ -722,11 +792,11 @@ class EpgService extends ChangeNotifier {
         .toLocal();
   }
 
-  List<EpgProgram>? _cached(String id) => _full[id] ?? _soon[id];
+  List<EpgProgram> _cached(String id) =>
+      _withNameEvent(id, _full[id] ?? _soon[id] ?? const []);
 
   EpgProgram? getCurrentProgram(String channelId) {
     final list = _cached(normalizeEpgId(channelId));
-    if (list == null) return null;
     final now = DateTime.now();
     for (final p in list) {
       if (p.isNowPlaying(now)) return p;
@@ -736,7 +806,6 @@ class EpgService extends ChangeNotifier {
 
   EpgProgram? getNextProgram(String channelId) {
     final list = _cached(normalizeEpgId(channelId));
-    if (list == null) return null;
     final now = DateTime.now();
     for (final p in list) {
       if (p.start.isAfter(now)) return p;
@@ -820,9 +889,9 @@ class EpgService extends ChangeNotifier {
     }
     final id = normalizeEpgId(channelId);
     final full = _full[id];
-    if (full != null) return full;
+    if (full != null) return _withNameEvent(id, full);
     if (!_withData.contains(id) && !_catchupDays.containsKey(id)) {
-      return _soon[id] ?? const [];
+      return _withNameEvent(id, _soon[id] ?? const []);
     }
     if (!_inFlightLoads.contains(id)) {
       _pendingLoads.add(id);
@@ -831,7 +900,7 @@ class EpgService extends ChangeNotifier {
         Timer.run(_loadPending);
       }
     }
-    return _soon[id] ?? const [];
+    return _withNameEvent(id, _soon[id] ?? const []);
   }
 
   Future<void> _loadPending() async {
@@ -876,6 +945,7 @@ class EpgService extends ChangeNotifier {
   @override
   void dispose() {
     _refreshTimer?.cancel();
+    _retryTimer?.cancel();
     _soonTimer?.cancel();
     guideRowsLoaded.dispose();
     super.dispose();

@@ -53,6 +53,19 @@ class EpgDatabase {
   Future<Database> _open(String path) => openDatabase(
         path,
         version: 2,
+        // Write-ahead log, as CatalogDatabase: a commit appends to one file
+        // instead of copying pages to a rollback journal and syncing both.
+        // A provider's guide refresh (~255k programmes) took 3.5 min on a
+        // Google TV Streamer, 0.5-3 s per 1000-row commit (LOG-QSG4PB).
+        // Optional: a failure keeps the old mode.
+        onConfigure: (db) async {
+          try {
+            await db.rawQuery('PRAGMA journal_mode=WAL');
+            await db.rawQuery('PRAGMA synchronous=NORMAL');
+          } catch (e) {
+            debugPrint('EpgDatabase: WAL skipped: $e');
+          }
+        },
         // The sports index is built lazily, outside cold-start guide loading.
         onUpgrade: (db, oldVersion, newVersion) async {},
         onCreate: (db, version) => createSchema(db),

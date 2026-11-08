@@ -14,6 +14,7 @@ import '../utils/channel_name_matching.dart';
 import '../utils/constants.dart';
 import '../utils/favorite_live_sort.dart';
 import 'catalog_database.dart';
+import 'channel_name_events.dart';
 import 'epg_service.dart';
 import 'live_stream_format.dart';
 import 'playlist_session.dart';
@@ -109,7 +110,41 @@ class PlaylistManager extends ChangeNotifier {
   @override
   void dispose() {
     _favoriteCatalogGeneration++;
+    _eventRefreshTimer?.cancel();
     super.dispose();
+  }
+
+  /// A live list with event channels older than this is fetched again
+  /// ([PlaylistSession.refreshLiveList]): their names carry the day's games.
+  static const eventListMaxAge = Duration(hours: 1);
+  Timer? _eventRefreshTimer;
+  Future<void>? _eventRefreshRun;
+
+  /// After startup: checks now and every 10 minutes. A TV box is rarely
+  /// cold-started (Back > Exit only hides the app), so a launch-time check
+  /// alone would almost never run there.
+  void startEventChannelRefresh() {
+    _eventRefreshTimer ??= Timer.periodic(const Duration(minutes: 10),
+        (_) => unawaited(refreshEventChannelsIfStale()));
+    unawaited(refreshEventChannelsIfStale());
+  }
+
+  /// One playlist at a time, only while the app is on screen (no downloads
+  /// for a box sitting in the background).
+  Future<void> refreshEventChannelsIfStale() => _eventRefreshRun ??=
+      _refreshEventChannels().whenComplete(() => _eventRefreshRun = null);
+
+  Future<void> _refreshEventChannels() async {
+    for (final s in _enabledSessionsSorted) {
+      final state = SchedulerBinding.instance.lifecycleState;
+      if (state != null && state != AppLifecycleState.resumed) return;
+      if (!s.isXtream ||
+          !s.liveListOlderThan(eventListMaxAge) ||
+          !s.hasEventChannels) {
+        continue;
+      }
+      await s.refreshLiveList();
+    }
   }
 
   /// See this class' own doc comment. Read live by every `PlaylistSession`
@@ -1581,15 +1616,18 @@ class PlaylistManager extends ChangeNotifier {
   DateTime? _catchupAt;
   Map<String, int> _catchupDays = const {};
 
+  /// Changes when an enabled playlist's live list or hidden state does.
+  String _liveListsKey() => [
+        for (final s in _sessions)
+          if (s.profile.enabled)
+            '${s.profile.id}:${identityHashCode(s.isXtream ? s.liveChannels : s.channels)}'
+                ':${(s.isXtream ? s.liveChannels : s.channels).length}'
+                ':${s.hiddenGroups.length}:${s.hiddenChannels.length}'
+                ':${s.editHidden.length}:${s.mergeHidden.length}'
+      ].join('|');
+
   Map<String, int> catchupDaysByEpgId() {
-    final key = [
-      for (final s in _sessions)
-        if (s.profile.enabled)
-          '${s.profile.id}:${identityHashCode(s.isXtream ? s.liveChannels : s.channels)}'
-              ':${(s.isXtream ? s.liveChannels : s.channels).length}'
-              ':${s.hiddenGroups.length}:${s.hiddenChannels.length}'
-              ':${s.editHidden.length}:${s.mergeHidden.length}'
-    ].join('|');
+    final key = _liveListsKey();
     final at = _catchupAt;
     if (key == _catchupKey &&
         at != null &&
@@ -1620,6 +1658,48 @@ class PlaylistManager extends ChangeNotifier {
       }
     }
     return out;
+  }
+
+  /// Normalized EPG id -> the event a visible live channel's own name
+  /// announces (`NBA 01: Nuggets vs. Pacers @ 7 Nov 04:58 PM ET`), for the
+  /// guide when the provider lists nothing (`EpgService.nameEventsProvider`).
+  /// Cached like [catchupDaysByEpgId]: the same identical map comes back
+  /// until a live list or hidden state changes, or 5 minutes pass.
+  String? _nameEventsKey;
+  DateTime? _nameEventsAt;
+  Map<String, ChannelNameEvent> _nameEvents = const {};
+
+  Map<String, ChannelNameEvent> channelNameEventsByEpgId() {
+    final key = _liveListsKey();
+    final at = _nameEventsAt;
+    if (key == _nameEventsKey &&
+        at != null &&
+        DateTime.now().difference(at) < const Duration(minutes: 5)) {
+      return _nameEvents;
+    }
+    _nameEvents = PerfDiagnostics.timedSync('nameEvents', () {
+      final now = DateTime.now();
+      final out = <String, ChannelNameEvent>{};
+      for (final session in _sessions) {
+        if (!session.profile.enabled) continue;
+        for (final c
+            in (session.isXtream ? session.liveChannels : session.channels)) {
+          if (!c.name.contains('@') ||
+              !c.isLive ||
+              session.hiddenGroups.contains(session.liveGroupOf(c)) ||
+              session.isLiveHidden(c.rawId)) {
+            continue;
+          }
+          final event = parseChannelNameEvent(c.name, now: now);
+          if (event == null) continue;
+          out.putIfAbsent(normalizeEpgId(c.epgId), () => event);
+        }
+      }
+      return out;
+    });
+    _nameEventsKey = key;
+    _nameEventsAt = DateTime.now();
+    return _nameEvents;
   }
 
   /// Ensures every enabled Xtream playlist's live channel list is loaded —
