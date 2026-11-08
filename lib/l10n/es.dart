@@ -2952,4 +2952,12 @@ const Map<String, String> kEs = {
   "Export a backup": "Exportar una copia",
   "Save a backup file anywhere on this Mac": "Guardar un archivo de copia en cualquier lugar de este Mac",
   "Backup exported.": "Copia exportada.",
+  "TV home screen":
+      "Pantalla de inicio de la TV",
+  "Show on the TV home screen":
+      "Mostrar en la pantalla de inicio de la TV",
+  "Continue watching and your Watch list in the launcher's Watch Next row, plus a row of your favourite channels. For Android TV launchers such as Projectivy.":
+      "Seguir viendo y Mi lista en la fila Watch Next del launcher, más una fila con tus canales favoritos. Para launchers de Android TV como Projectivy.",
+  "Continue watching and favourites on the TV launcher":
+      "Seguir viendo y favoritos en el launcher de la TV",
 };

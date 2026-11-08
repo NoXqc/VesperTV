@@ -92,6 +92,8 @@ kotlin {
 
 dependencies {
     implementation("androidx.work:work-runtime:2.10.5")
+    // Watch Next + the Favourites row on Android TV launchers (LauncherChannels.kt).
+    implementation("androidx.tvprovider:tvprovider:1.1.0")
     testImplementation("junit:junit:4.13.2")
 }
 

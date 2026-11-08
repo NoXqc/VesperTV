@@ -391,6 +391,19 @@ class AppConstants {
   /// pre-load. Device-only: the slow splash protects weak boxes (§10).
   static const String keyFastStartup = 'vesper_fast_startup';
 
+  /// Settings > Interface > TV home screen (Android TV, on by default):
+  /// Continue watching / Watch list in the launcher's Watch Next row and a
+  /// Favourite channels row (LauncherChannels). Device-only.
+  static const String keyLauncherRows = 'vesper_launcher_rows';
+
+  /// LauncherChannels' note of each card it sent: its position and when it
+  /// was last watched (Watch Next's order). Device-only.
+  static const String keyLauncherState = 'vesper_launcher_state';
+
+  /// Per viewer, device-only: the episode after the one last left in each
+  /// IPTV show (PlaybackService), for the launcher's next episode card.
+  static const String keyNextEpisodes = 'vesper_next_episodes';
+
   /// Settings > General > Startup: Update in the background (opt-in,
   /// device-only). A due full catalog sync runs behind the app instead of
   /// behind the blocking "Updating Content" screen.

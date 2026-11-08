@@ -3,10 +3,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:provider/provider.dart';
 
 import '../../utils/tv_theme.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_menu_tile.dart';
+import '../../services/app_preferences.dart';
 import '../../services/backup_service.dart';
 import '../../services/recording_service.dart';
 import 'backup_screen.dart';
@@ -220,6 +222,10 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
                 tr('Score alerts for My Teams on any screen')),
             _general('favourites', Icons.star_outline, tr('Favourites'),
                 tr('One list for every playlist, or one per playlist')),
+            if (Platform.isAndroid &&
+                context.read<AppPreferences>().isTelevision)
+              _general('tvhome', Icons.home_outlined, tr('TV home screen'),
+                  tr('Continue watching and favourites on the TV launcher')),
           ],
         ),
         _Category(
