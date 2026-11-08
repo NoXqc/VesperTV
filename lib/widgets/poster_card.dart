@@ -68,6 +68,14 @@ class PosterCard extends StatefulWidget {
   /// A wide card's width for [posterHeight]: 16:9 artwork.
   static const double wideCardWidth = posterHeight * 16 / 9;
 
+  /// Wide cards (Settings > Interface > Tabs) are this much taller than
+  /// the posters, and 16:9: the TV home rows and the Expand catalog grid.
+  static const double wideStyleScale = 1.1;
+  static const double wideStylePosterHeight = posterHeight * wideStyleScale;
+  static const double wideStyleWidth = wideStylePosterHeight * 16 / 9;
+  static const double wideStyleHeight =
+      wideStylePosterHeight + titleHeight * wideStyleScale;
+
   /// Touch: the first tap only focuses the card (the browse hero shows
   /// its description), a tap on the focused card or a double tap opens
   /// it — like Select-to-preview on the live list. Always on for Windows.

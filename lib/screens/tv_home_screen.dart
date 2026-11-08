@@ -7232,7 +7232,7 @@ const double _windowsPosterScale = 1.26;
 /// Settings > Interface > Tabs > Wide cards (16:9 backdrop cards, a little
 /// taller than the posters too). Set at the top of every TV home build.
 bool _wideBrowseCards = false;
-const double _wideCardScale = 1.1;
+const double _wideCardScale = PosterCard.wideStyleScale;
 
 double get _browseScale =>
     (isDesktop ? _windowsPosterScale : 1.0) *

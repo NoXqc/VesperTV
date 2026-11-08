@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../models/channel.dart';
 import '../models/xtream_series.dart';
+import '../services/app_preferences.dart';
 import '../services/catalog_database.dart';
 import '../services/playlist_manager.dart';
 import '../services/storage_service.dart';
@@ -352,18 +353,42 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
     );
   }
 
+  /// Settings > Interface > Tabs > Wide cards, as on the TV home rows (a
+  /// portrait phone keeps posters).
+  bool _wide(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    final portraitPhone = size.width < 600 && size.height > size.width;
+    return context.watch<AppPreferences>().wideCards && !portraitPhone;
+  }
+
   Widget _buildVodGrid(BuildContext context) {
     final playlist = context.watch<PlaylistManager>();
     final storage = context.read<StorageService>();
     final items = _sortedChannels(_vodItems);
+    final wide = _wide(context);
     return _posterGrid(
       items,
+      wide: wide,
       (c) => PosterCard(
         title: c.name,
         // TMDB's own poster, when enrichment has found one, over the
         // provider's — see `Channel.posterUrl`'s doc comment.
         imageUrl: c.posterUrl ?? c.logoUrl,
         rating: c.rating,
+        cardWidth: wide ? PosterCard.wideStyleWidth : PosterCard.width,
+        cardPosterHeight: wide
+            ? PosterCard.wideStylePosterHeight
+            : PosterCard.posterHeight,
+        wideStyle: wide,
+        backdropUrl: c.anyBackdropUrl,
+        artKey: c.id,
+        // The movie's get_vod_info brings its backdrop (saved for later).
+        loadBackdrop: wide && c.rawId.startsWith('xt_vod_')
+            ? () async {
+                await playlist.getHeroVodDescription(c);
+                return c.anyBackdropUrl;
+              }
+            : null,
         watched: storage.isFullyWatched(c.id),
         progressFraction: storage.getWatchedFraction(c.id),
         isFavorite: playlist.isChannelFavorited(c.id),
@@ -379,12 +404,27 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
   Widget _buildSeriesGrid(BuildContext context) {
     final playlist = context.watch<PlaylistManager>();
     final items = _sortedSeries(_seriesItems);
+    final wide = _wide(context);
     return _posterGrid(
       items,
+      wide: wide,
       (s) => PosterCard(
         title: s.name,
         imageUrl: s.posterUrl ?? s.coverUrl,
         rating: s.rating,
+        cardWidth: wide ? PosterCard.wideStyleWidth : PosterCard.width,
+        cardPosterHeight: wide
+            ? PosterCard.wideStylePosterHeight
+            : PosterCard.posterHeight,
+        wideStyle: wide,
+        backdropUrl: s.anyBackdropUrl,
+        artKey: s.id,
+        loadBackdrop: wide
+            ? () async {
+                await playlist.getHeroSeriesDescription(s);
+                return s.anyBackdropUrl;
+              }
+            : null,
         isFavorite: playlist.isSeriesFavorited(s.id),
         onToggleFavorite: () => _toggleSeriesFavoriteWithFeedback(playlist, s),
         onTap: () => Navigator.of(context).push(
@@ -429,15 +469,18 @@ class _GroupCatalogScreenState extends State<GroupCatalogScreen> {
   /// handles reliably on its own; the unbounded-search failure mode this
   /// app has repeatedly hit elsewhere is specifically about *many rows of
   /// differing length*, not a single regular grid like this one.
-  Widget _posterGrid<T>(List<T> items, Widget Function(T) posterBuilder) {
+  Widget _posterGrid<T>(List<T> items, Widget Function(T) posterBuilder,
+      {bool wide = false}) {
     if (items.isEmpty) {
       return Center(child: Text(tr('No items in this group.')));
     }
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(24, 4, 24, 24),
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: PosterCard.width + 12,
-        mainAxisExtent: PosterCard.height + 10,
+      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent:
+            (wide ? PosterCard.wideStyleWidth : PosterCard.width) + 12,
+        mainAxisExtent:
+            (wide ? PosterCard.wideStyleHeight : PosterCard.height) + 10,
         crossAxisSpacing: 8,
         mainAxisSpacing: 8,
       ),

@@ -325,4 +325,5 @@ filter) + dim. Visible cards without one ask `WideArtQueue` (utils/wide_art_queu
 screen, 2 at a time, newest first, cancelled when scrolled away, a miss never re-asked per session):
 movies = `getHeroVodDescription` (get_vod_info, backdrop saved to the catalog DB), shows =
 `getHeroSeriesDescription` (most panels already send it in get_series). M3U movies: poster style only.
-Not yet wide: Media Hub rows (fixed stride math + its own focused wide card), Expand catalog grid, Search.
+The Expand catalog grid follows it too (`GroupCatalogScreen._wide`, sizes `PosterCard.wideStyle*`).
+Not yet wide: Media Hub rows (fixed stride math + its own focused wide card), Search.
