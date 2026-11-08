@@ -2965,4 +2965,12 @@ const Map<String, String> kFr = {
   "Export a backup": "Exporter une sauvegarde",
   "Save a backup file anywhere on this Mac": "Enregistrer un fichier de sauvegarde n'importe où sur ce Mac",
   "Backup exported.": "Sauvegarde exportée.",
+  "TV home screen":
+      "Écran d'accueil de la TV",
+  "Show on the TV home screen":
+      "Afficher sur l'écran d'accueil de la TV",
+  "Continue watching and your Watch list in the launcher's Watch Next row, plus a row of your favourite channels. For Android TV launchers such as Projectivy.":
+      "Reprendre l'écoute et votre liste à regarder dans la rangée Watch Next du lanceur, plus une rangée de vos chaînes favorites. Pour les lanceurs Android TV comme Projectivy.",
+  "Continue watching and favourites on the TV launcher":
+      "Reprendre l'écoute et favoris sur le lanceur de la TV",
 };

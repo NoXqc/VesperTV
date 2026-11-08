@@ -28,6 +28,8 @@ import 'screens/startup_profile_screen.dart';
 import 'services/app_log.dart';
 import 'services/app_exit.dart';
 import 'services/startup_quiet.dart';
+import 'services/launcher_channels.dart';
+import 'screens/launcher_open.dart';
 import 'services/app_preferences.dart';
 import 'services/archive_posters.dart';
 import 'services/catalog_database.dart';
@@ -235,6 +237,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   late final CloudSyncService _cloudSync;
   AppLifecycleListener? _syncLifecycle;
   AppLifecycleListener? _vesperLifecycle;
+  AppLifecycleListener? _launcherLifecycle;
   bool _ready = false;
   Completer<void>? _profileSelection;
 
@@ -246,6 +249,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     if (selection != null && !selection.isCompleted) selection.complete();
     unawaited(_episodeBackground?.openPending());
     unawaited(_sportsNotifications?.openPending());
+    unawaited(LauncherChannels.instance.openPending());
   }
 
   /// Vesper AI (Settings > Vesper AI): the remote's voice button when it is
@@ -420,6 +424,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     HardwareKeyboard.instance.removeHandler(_onVoiceKey);
     _syncLifecycle?.dispose();
     _vesperLifecycle?.dispose();
+    _launcherLifecycle?.dispose();
     McpBridge.instance.stop();
     _gameReminders?.dispose();
     _programmeReminders?.dispose();
@@ -785,6 +790,28 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         onShow: McpBridge.instance.resume,
       );
 
+      // TV launcher rows (Settings > Interface > TV home screen): sent each
+      // time the app goes away, since that's when the launcher shows them.
+      LauncherChannels.instance
+        ..attach(
+            storage: _storage,
+            playback: _playbackService,
+            playlist: _playlistManager,
+            hub: _archiveService,
+            prefs: _preferences,
+            alerts: _episodeAlerts)
+        ..canOpen = (() =>
+            mounted &&
+            _ready &&
+            _profileSelection == null &&
+            _navigatorKey.currentState != null)
+        ..open = ((card) async {
+          final nav = _navigatorKey.currentState;
+          if (nav != null) await openLauncherCard(nav, card);
+        });
+      _launcherLifecycle =
+          AppLifecycleListener(onHide: LauncherChannels.instance.appHidden);
+
       // Restores category lists (small, fast regardless of catalog size —
       // see that method's doc comment for why live channels/category
       // *items* are no longer touched here). Awaited, unlike before: the
@@ -965,6 +992,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       WidgetsBinding.instance.addPostFrameCallback((_) {
         unawaited(_episodeBackground?.openPending());
         unawaited(_sportsNotifications?.openPending());
+        unawaited(LauncherChannels.instance.openPending());
       });
       WidgetsBinding.instance.scheduleFrame();
       // `_epgService.init()` was started during the splash (see above);
@@ -990,6 +1018,10 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       unawaited(() async {
         await _playbackService.init();
         PerfDiagnostics.mark('playbackInit');
+        // The launcher's rows as of now (the last session may have ended
+        // before it could send them), after the launch's busy seconds.
+        unawaited(StartupQuiet.after(const Duration(seconds: 20))
+            .then((_) => LauncherChannels.instance.publish()));
         await Future.wait([
           _autoResumeLastChannel(),
           PerfDiagnostics.task('epgInit', _epgService.init),
@@ -1115,7 +1147,10 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     if (Platform.isAndroid &&
         (await _episodeBackground?.pendingTap == true ||
             await _sportsNotifications?.pendingTap == true ||
-            _episodeNotificationOpened)) {
+            _episodeNotificationOpened ||
+            // Started from a card on the TV launcher: it opens that title.
+            await LauncherChannels.instance.hasPendingLink ||
+            LauncherChannels.instance.openedRecently)) {
       return;
     }
     // The sports home starts with its dashboard, never an unrelated stream.
@@ -1126,7 +1161,10 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     await PerfDiagnostics.task(
         'liveList', _playlistManager.ensureLiveChannelsLoaded);
     PerfDiagnostics.mark('liveList');
-    if (_episodeNotificationOpened) return;
+    if (_episodeNotificationOpened ||
+        LauncherChannels.instance.openedRecently) {
+      return;
+    }
     // Settings > General > Startup (both platforms): full screen (default),
     // or playing in the guide's preview box, or neither.
     // Another start section (Startup > Open on) wins over full screen: the

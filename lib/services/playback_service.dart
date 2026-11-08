@@ -1547,11 +1547,38 @@ class PlaybackService extends ChangeNotifier {
             WatchTracker.instance.stopped(ch.id, old.value.position, duration));
       }
     }
+    if (ch != null) _rememberNextEpisode(ch);
     controller = null;
     playingSince = null;
     initFuture = null;
     unawaited(WakelockPlus.disable());
     await old?.dispose();
+  }
+
+  /// An IPTV episode is left while its show's queue is set: the episode
+  /// after it is noted per show, so the TV launcher can offer it once this
+  /// one is watched (LauncherChannels' next episode card).
+  void _rememberNextEpisode(Channel ch) {
+    final queue = _upNextQueue;
+    if (queue == null ||
+        ch.isLive ||
+        ch.seriesId == null ||
+        ch.playlistId == ArchiveService.playlistId) {
+      return;
+    }
+    final index = queue.indexWhere((c) => c.id == ch.id);
+    if (index < 0 || index + 1 >= queue.length) return;
+    final next = queue[index + 1]
+      ..seriesId ??= ch.seriesId
+      ..seriesName ??= ch.seriesName
+      ..seriesCoverUrl ??= ch.seriesCoverUrl;
+    final key = '${ch.playlistId}:${ch.seriesId}';
+    final map = _storage.getNextEpisodes()..remove(key);
+    map[key] = {'after': ch.id, 'next': next.toJson()};
+    while (map.length > 30) {
+      map.remove(map.keys.first);
+    }
+    unawaited(_storage.setNextEpisodes(map));
   }
 
   @override

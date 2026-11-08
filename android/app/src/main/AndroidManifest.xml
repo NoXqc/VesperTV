@@ -79,6 +79,15 @@
                      silently and simply never appear or start. -->
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER"/>
             </intent-filter>
+            <!-- A card in the TV launcher's Watch Next row or our Favourites
+                 channel (LauncherChannels.kt). Cards name MainActivity
+                 already; this only helps a launcher that drops the
+                 component. Not BROWSABLE: web pages can't open it. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:scheme="vespertv" android:host="launcher"/>
+            </intent-filter>
             <!-- Vesper AI as the device's assistant (opt-in, set by the user:
                  adb shell settings put secure assistant
                  com.nox.nox_iptv/.MainActivity). See VoiceBridge.onIntent. -->
@@ -141,6 +150,8 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+        <!-- Android TV's TvProvider (LauncherChannels.kt). -->
+        <provider android:authorities="android.media.tv" />
         <intent>
             <action android:name="android.settings.action.MANAGE_OVERLAY_PERMISSION" />
         </intent>

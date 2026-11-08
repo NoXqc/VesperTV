@@ -2959,4 +2959,12 @@ const Map<String, String> kIt = {
   "Export a backup": "Esporta un backup",
   "Save a backup file anywhere on this Mac": "Salva un file di backup ovunque su questo Mac",
   "Backup exported.": "Backup esportato.",
+  "TV home screen":
+      "Schermata home della TV",
+  "Show on the TV home screen":
+      "Mostra nella schermata home della TV",
+  "Continue watching and your Watch list in the launcher's Watch Next row, plus a row of your favourite channels. For Android TV launchers such as Projectivy.":
+      "Continua a guardare e La mia lista nella riga Watch Next del launcher, più una riga con i tuoi canali preferiti. Per i launcher Android TV come Projectivy.",
+  "Continue watching and favourites on the TV launcher":
+      "Continua a guardare e preferiti nel launcher della TV",
 };

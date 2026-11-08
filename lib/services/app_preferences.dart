@@ -362,6 +362,14 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// TV home screen rows: see [AppConstants.keyLauncherRows].
+  bool get launcherRows => _storage.getLauncherRows();
+
+  void setLauncherRows(bool value) {
+    _storage.setLauncherRows(value);
+    notifyListeners();
+  }
+
   /// Update in the background: see [AppConstants.keyBackgroundSync]. Read
   /// once at launch, when a full catalog sync is due.
   bool get backgroundSync => _storage.getBackgroundSync();

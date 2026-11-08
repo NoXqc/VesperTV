@@ -528,6 +528,30 @@ class StorageService {
       _prefs.setBool(AppConstants.keyLaunchWithProfiles, value);
 
   bool getFastStartup() => _prefs.getBool(AppConstants.keyFastStartup) ?? true;
+
+  bool getLauncherRows() =>
+      _prefs.getBool(AppConstants.keyLauncherRows) ?? true;
+  Future<void> setLauncherRows(bool value) =>
+      _prefs.setBool(AppConstants.keyLauncherRows, value);
+  String? getLauncherState() => _prefs.getString(AppConstants.keyLauncherState);
+  Future<void> setLauncherState(String json) =>
+      _prefs.setString(AppConstants.keyLauncherState, json);
+
+  /// Show key (`playlistId:seriesId`) -> {after: episode id, next: the
+  /// following episode's channel JSON}. See [AppConstants.keyNextEpisodes].
+  Map<String, dynamic> getNextEpisodes() {
+    final raw = _prefs.getString(_vk(AppConstants.keyNextEpisodes));
+    if (raw == null) return {};
+    try {
+      final map = jsonDecode(raw);
+      return map is Map<String, dynamic> ? map : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> setNextEpisodes(Map<String, dynamic> map) =>
+      _prefs.setString(_vk(AppConstants.keyNextEpisodes), jsonEncode(map));
   Future<void> setFastStartup(bool value) =>
       _prefs.setBool(AppConstants.keyFastStartup, value);
 
@@ -1504,6 +1528,8 @@ class StorageService {
     AppConstants.keyStartSection,
     AppConstants.keyStartSectionPending,
     AppConstants.keyFastStartup,
+    AppConstants.keyLauncherRows,
+    AppConstants.keyLauncherState,
     AppConstants.keyBackgroundSync,
     AppConstants.keyLaunchWithProfiles,
     AppConstants.keyPlaylistEnabled,
@@ -1534,6 +1560,7 @@ class StorageService {
     _goalPhoneCheckpoint,
     AppConstants.keyAiDevicePrefix,
     AppConstants.keySportsDbRounds,
+    AppConstants.keyNextEpisodes,
   ];
 
   static const _goalPhoneCheckpoint = 'vesper_goal_phone_checkpoint';

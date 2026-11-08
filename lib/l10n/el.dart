@@ -2914,4 +2914,12 @@ const Map<String, String> kEl = {
   "Export a backup": "Εξαγωγή αντιγράφου ασφαλείας",
   "Save a backup file anywhere on this Mac": "Αποθήκευση αρχείου αντιγράφου ασφαλείας οπουδήποτε σε αυτό το Mac",
   "Backup exported.": "Το αντίγραφο ασφαλείας εξήχθη.",
+  "TV home screen":
+      "Αρχική οθόνη τηλεόρασης",
+  "Show on the TV home screen":
+      "Εμφάνιση στην αρχική οθόνη της τηλεόρασης",
+  "Continue watching and your Watch list in the launcher's Watch Next row, plus a row of your favourite channels. For Android TV launchers such as Projectivy.":
+      "Συνέχεια παρακολούθησης και η λίστα παρακολούθησής σας στη σειρά Watch Next του launcher, μαζί με μια σειρά με τα αγαπημένα σας κανάλια. Για launcher Android TV όπως το Projectivy.",
+  "Continue watching and favourites on the TV launcher":
+      "Συνέχεια παρακολούθησης και αγαπημένα στο launcher της τηλεόρασης",
 };
