@@ -120,10 +120,10 @@ const _league = SportsLeague(
     name: 'Hockey',
     shortName: 'NHL',
     logoUrl: '');
-SportsGame _game(int index, GameState state) => SportsGame(
+SportsGame _game(int index, GameState state, {DateTime? start}) => SportsGame(
       id: 'game$index',
       league: _league,
-      start: DateTime.now().add(Duration(minutes: index)),
+      start: start ?? DateTime.now().add(Duration(minutes: index)),
       state: state,
       statusText: state == GameState.live ? 'Live' : 'Scheduled',
       home: SportsTeam(
@@ -336,7 +336,9 @@ void main() {
         'notification opens the requested game without starting playback (mode=$mode)',
         (tester) async {
       await prefs.setSportsMode(mode);
-      final game = _game(101, GameState.live);
+      // Started now, not now + 101 min: late in the evening that lands on
+      // tomorrow, and _Feed only serves today's games.
+      final game = _game(101, GameState.live, start: DateTime.now());
       await open(tester,
           games: [_game(100, GameState.live), game],
           initialGameKey: 'nhl:game101',
