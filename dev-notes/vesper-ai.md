@@ -17,9 +17,28 @@ One tool layer, three front ends:
 
 - `lib/services/vesper_ai/vesper_tools.dart` — `VesperToolbox` + `vesperTools`:
   search, play, now_playing, player, guide, find_on_tv, open, favorites, recent,
-  groups (list/hide/show), sports_today, play_game, show_message. JSON-Schema
-  objects shared by all providers and MCP. Search hands out short refs
-  (`l12`, `m3`, `s7`) kept in memory. Respects visibleChannels / hidden groups /
+  groups (list/channels/hide/show), sports_today, play_game, game_channel,
+  show_message. JSON-Schema objects shared by all providers and MCP. Search
+  hands out short refs (`l12`, `m3`, `s7`; games `g4`) kept in memory.
+  **Game channels (2026-11-08, `game_channel_tool.dart`):** sports_today takes
+  league/day and returns game refs, ESPN networks and `matched_by` (viewer_pick /
+  guide / channel_name vs *_guess); groups action channels lists one live group
+  with now/next; game_channel saves `SportsChannelPicks.pickForGame` for up to 40
+  games with one TV confirm. Manual: vesper_help topic "sports" (never guess
+  between numbered feeds; web search, when the AI app has it, only gives the
+  network). In-app BYO-key providers have no web search. Open cards pick it up
+  on the next Sports Trak rematch.
+  **Profiles + parental (2026-11-08, `profiles_tool.dart`):** tools `profiles`
+  (list/switch/create/rename/delete) and `parental` (status/allow_groups/
+  block_groups/change_pin) over `VesperProfileControl` (app: `AppVesperProfiles`
+  in vesper_host.dart). Rules: the AI has the on-screen profile's power, never
+  more; on a kids profile every change needs the PIN on the TV; loosening (allow
+  groups, delete a kids profile, change PIN) asks the PIN from any profile; the
+  PIN only ever goes through the TV's own pad (2 min timeout, `promptForPin(
+  timeout:)`), no tool parameter holds it (a test checks), no remove-PIN /
+  unrestrict action. Kid allowlists of a non-active viewer:
+  `StorageService.get/setShownGroupsFor`. `switchTo(unlocked:)` skips the second
+  PIN pad. Manual: vesper_help topic "profiles". Respects visibleChannels / hidden groups /
   restricted viewers (groups refused) / Hide scores / hidden tabs.
 - `VesperHost` (`screens/vesper_ai/vesper_host.dart`): plays like a guide pick
   (popUntil first + PlayerScreen / DesktopPlayerScreen), opens sections through

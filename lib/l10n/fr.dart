@@ -2831,6 +2831,26 @@ const Map<String, String> kFr = {
       "Une app d'IA veut masquer {count} groupes ({words}).",
   "An AI app wants to show {count} groups ({words}).":
       "Une app d'IA veut afficher {count} groupes ({words}).",
+  "An AI app wants {game} to play on {channel} in {tab}.":
+      "Une app d'IA veut que {game} joue sur {channel} dans {tab}.",
+  "An AI app wants to set the channels of {count} games in {tab}.":
+      "Une app d'IA veut choisir la chaîne de {count} matchs dans {tab}.",
+  "An AI app wants to switch to the profile {name}.":
+      "Une app d'IA veut passer au profil {name}.",
+  "An AI app wants to create the kids profile {name}.":
+      "Une app d'IA veut créer le profil enfant {name}.",
+  "An AI app wants to create the profile {name}.":
+      "Une app d'IA veut créer le profil {name}.",
+  "An AI app wants to rename the profile {name} to {new}.":
+      "Une app d'IA veut renommer le profil {name} en {new}.",
+  "Delete the profile {name}? Its favourites and history are deleted too.":
+      "Supprimer le profil {name} ? Ses favoris et son historique seront aussi supprimés.",
+  "An AI app wants to let {name} see {count} groups ({words}).":
+      "Une app d'IA veut permettre à {name} de voir {count} groupes ({words}).",
+  "An AI app wants to block {count} groups ({words}) for {name}.":
+      "Une app d'IA veut bloquer {count} groupes ({words}) pour {name}.",
+  "An AI app wants to change the parental PIN.":
+      "Une app d'IA veut changer le NIP parental.",
   "An AI app wants to edit your playlist: {what}.":
       "Une app d'IA veut modifier votre playlist : {what}.",
   "An AI app wants to undo its playlist change: {what}.":

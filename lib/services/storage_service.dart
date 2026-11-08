@@ -1946,6 +1946,19 @@ class StorageService {
       _prefs.setStringList(
           _vkp(AppConstants.keyShownGroups, playlistId), groups.toList());
 
+  /// [getShownGroups] of any viewer, active or not (Vesper AI edits a kids
+  /// profile from a parent's).
+  Set<String> getShownGroupsFor(String viewerId, String playlistId) =>
+      (_prefs.getStringList(_vk('${AppConstants.keyShownGroups}_$playlistId',
+                  viewerId: viewerId)) ??
+              [])
+          .toSet();
+  Future<void> setShownGroupsFor(
+          String viewerId, String playlistId, Set<String> groups) =>
+      _prefs.setStringList(
+          _vk('${AppConstants.keyShownGroups}_$playlistId', viewerId: viewerId),
+          groups.toList());
+
   /// Removes every one of [viewerId]'s own keys — favorites, hidden/shown/
   /// favorited groups and hidden channels for every playlist, positions/
   /// durations, recent searches, and its last-channel id — in one sweep,

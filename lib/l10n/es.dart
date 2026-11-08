@@ -2818,6 +2818,26 @@ const Map<String, String> kEs = {
       "Una app de IA quiere ocultar {count} grupos ({words}).",
   "An AI app wants to show {count} groups ({words}).":
       "Una app de IA quiere mostrar {count} grupos ({words}).",
+  "An AI app wants {game} to play on {channel} in {tab}.":
+      "Una app de IA quiere que {game} se vea en {channel} en {tab}.",
+  "An AI app wants to set the channels of {count} games in {tab}.":
+      "Una app de IA quiere elegir el canal de {count} partidos en {tab}.",
+  "An AI app wants to switch to the profile {name}.":
+      "Una app de IA quiere cambiar al perfil {name}.",
+  "An AI app wants to create the kids profile {name}.":
+      "Una app de IA quiere crear el perfil infantil {name}.",
+  "An AI app wants to create the profile {name}.":
+      "Una app de IA quiere crear el perfil {name}.",
+  "An AI app wants to rename the profile {name} to {new}.":
+      "Una app de IA quiere cambiar el nombre del perfil {name} a {new}.",
+  "Delete the profile {name}? Its favourites and history are deleted too.":
+      "¿Eliminar el perfil {name}? También se eliminan sus favoritos y su historial.",
+  "An AI app wants to let {name} see {count} groups ({words}).":
+      "Una app de IA quiere que {name} vea {count} grupos ({words}).",
+  "An AI app wants to block {count} groups ({words}) for {name}.":
+      "Una app de IA quiere bloquear {count} grupos ({words}) para {name}.",
+  "An AI app wants to change the parental PIN.":
+      "Una app de IA quiere cambiar el PIN parental.",
   "An AI app wants to edit your playlist: {what}.":
       "Una app de IA quiere editar tu playlist: {what}.",
   "An AI app wants to undo its playlist change: {what}.":

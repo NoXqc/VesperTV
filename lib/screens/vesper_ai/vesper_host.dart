@@ -4,13 +4,17 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/l10n.dart';
 import '../../models/channel.dart';
+import '../../models/viewer_profile.dart';
 import '../../models/xtream_series.dart';
 import '../../services/app_preferences.dart';
 import '../../services/desktop_mini_player.dart';
 import '../../services/guide_key.dart';
+import '../../services/parental_pin.dart';
 import '../../services/playback_service.dart';
 import '../../services/vesper_ai/vesper_ai.dart';
 import '../../services/vesper_ai/vesper_tools.dart';
+import '../../services/viewer_profile_service.dart';
+import '../../widgets/pin_pad.dart';
 import '../../widgets/tv_dialog_option.dart';
 import '../archive_screen.dart';
 import '../desktop_player_screen.dart';
@@ -107,6 +111,53 @@ class AppVesperHost implements VesperHost {
   @override
   void showMessage(String text) =>
       VesperAi.instance.showBubble(text, from: tr('AI app'));
+}
+
+/// [VesperProfileControl] on the app's own profile service and PIN pad.
+class AppVesperProfiles implements VesperProfileControl {
+  AppVesperProfiles(
+      {required this.navigatorKey, required this.viewers, required this.pin});
+
+  final GlobalKey<NavigatorState> navigatorKey;
+  final ViewerProfileService viewers;
+  final ParentalPin pin;
+
+  /// Nobody at the TV for 2 minutes = cancelled.
+  static const _padTimeout = Duration(minutes: 2);
+
+  BuildContext get _context =>
+      navigatorKey.currentContext ??
+      (throw VesperToolError('The app is still starting.'));
+
+  @override
+  List<ViewerProfile> get profiles => viewers.profiles;
+  @override
+  ViewerProfile get active => viewers.active;
+  @override
+  bool get pinSet => pin.isSet;
+
+  @override
+  Future<bool> askPin() => promptForPin(_context, timeout: _padTimeout);
+  @override
+  Future<bool> newPin() => setupPinFlow(_context, timeout: _padTimeout);
+
+  @override
+  Future<bool> switchTo(String id, {bool unlocked = false}) {
+    // Over whatever is open (the Vesper panel included), like the
+    // profile cards: the home screen is rebuilt for the new viewer.
+    navigatorKey.currentState?.popUntil((r) => r.isFirst);
+    return viewers.switchTo(_context, id, unlocked: unlocked);
+  }
+
+  @override
+  Future<ViewerProfile> create(String name,
+          {required bool kid, required int colour}) =>
+      viewers.createProfile(name: name, colorIndex: colour, isRestricted: kid);
+  @override
+  Future<void> rename(String id, String name) =>
+      viewers.renameProfile(id, name);
+  @override
+  Future<bool> delete(String id) => viewers.deleteProfile(id);
 }
 
 class _ConfirmDialog extends StatelessWidget {
