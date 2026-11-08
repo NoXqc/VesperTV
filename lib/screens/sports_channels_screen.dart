@@ -1178,7 +1178,7 @@ class _ChannelsHero extends StatelessWidget {
     final c = channel;
     final now = c == null ? null : epg.getCurrentProgram(c.epgId);
     final next = c == null ? null : epg.getNextProgram(c.epgId);
-    final mini = isDesktop ? DesktopMiniPlayer.instance.controller : null;
+    final mini = usesMediaKit ? DesktopMiniPlayer.instance.controller : null;
     String hm(DateTime t) => TimeFormat.hm.format(t.toLocal());
     return SizedBox(
       height: height,

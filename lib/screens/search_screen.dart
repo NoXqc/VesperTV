@@ -404,7 +404,7 @@ class _SearchScreenState extends State<SearchScreen> {
     // Every other entry point (TvHomeScreen, movie/series detail) already
     // branches here; this one was missed, reported directly as "picking a
     // channel from search gives a playback error" on Windows specifically.
-    if (isDesktop) {
+    if (usesMediaKit) {
       DesktopMiniPlayer.instance.clear();
       Navigator.of(context).push(MaterialPageRoute(
           builder: (_) => DesktopPlayerScreen(channel: channel)));

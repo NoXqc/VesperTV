@@ -220,14 +220,14 @@ class AppPreferences extends ChangeNotifier {
     final ms = value.clamp(-AudioDelay.maxMs, AudioDelay.maxMs);
     _storage.setAudioDelayMs(ms);
     unawaited(PlaybackService.setAudioDelay(ms));
-    if (isDesktop) DesktopAudio.set(delayMs: ms);
+    if (usesMediaKit) DesktopAudio.set(delayMs: ms);
     notifyListeners();
   }
 
   void setAudioPassthrough(bool value) {
     _storage.setAudioPassthrough(value);
     unawaited(PlaybackService.setAudioPassthrough(value));
-    if (isDesktop) DesktopAudio.set(passthrough: value);
+    if (usesMediaKit) DesktopAudio.set(passthrough: value);
     notifyListeners();
   }
 

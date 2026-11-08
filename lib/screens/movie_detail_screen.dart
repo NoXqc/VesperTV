@@ -173,7 +173,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     // See TvHomeScreen._selectChannel's matching comment — Windows has no
     // PlaybackService-compatible player, so its standalone screen handles
     // the media_kit controller and VOD resume.
-    if (isDesktop) {
+    if (usesMediaKit) {
       // Abandons any minimized live channel first, so it can't keep
       // playing audio in the background behind this unrelated movie.
       DesktopMiniPlayer.instance.clear();

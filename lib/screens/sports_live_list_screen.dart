@@ -256,7 +256,7 @@ class _SportsLiveListScreenState extends State<SportsLiveListScreen>
 
   Future<void> _watch(Channel channel, SportsGame g) async {
     await widget.onWatch(channel);
-    if (!mounted || isDesktop) return;
+    if (!mounted || usesMediaKit) return;
     // Back from the player lands here: the stream would keep playing
     // unseen under the list.
     final playback = context.read<PlaybackService>();

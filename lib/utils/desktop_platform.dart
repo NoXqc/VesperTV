@@ -18,3 +18,21 @@ bool get isDesktop => Platform.isWindows || Platform.isMacOS;
 bool get isDesktopTarget =>
     defaultTargetPlatform == TargetPlatform.windows ||
     defaultTargetPlatform == TargetPlatform.macOS;
+
+/// True where playback goes through media_kit (mpv): the computers plus
+/// iPhone/iPad. Apple's own player (video_player's iOS backend, AVPlayer)
+/// can't open raw MPEG-TS live streams or MKV files, which most IPTV
+/// providers and Media Hub sources send, so iOS takes the desktop player
+/// stack (`DesktopPlayerScreen`, `DesktopMiniPlayer`, Multiview) while
+/// keeping the touch layout. Layout, window and mouse decisions stay on
+/// [isDesktop].
+bool get usesMediaKit => isDesktop || Platform.isIOS;
+
+/// [usesMediaKit] by Flutter's target platform, for the code paths that
+/// already follow [isDesktopTarget] so widget tests pick either stack.
+bool get usesMediaKitTarget =>
+    isDesktopTarget || defaultTargetPlatform == TargetPlatform.iOS;
+
+/// No system Back button or key here (a computer, an iPhone): screens that
+/// rely on it show their own back arrow.
+bool get needsBackArrow => isDesktop || Platform.isIOS;

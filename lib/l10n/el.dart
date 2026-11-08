@@ -1815,6 +1815,8 @@ const Map<String, String> kEl = {
       "Η πηγή σας έστειλε μήνυμα αντί για το βίντεο:",
   "Check your source or debrid account (plan limits, active downloads), or pick another stream.":
       "Ελέγξτε την πηγή ή τον λογαριασμό debrid (όρια πακέτου, ενεργές λήψεις) ή επιλέξτε άλλη ροή.",
+  "Check your source (plan limits, active downloads), or pick another stream.":
+      "Ελέγξτε την πηγή (όρια πακέτου, ενεργές λήψεις) ή επιλέξτε άλλη ροή.",
   // Media Hub: import add-ons (pasted links, Stremio)
   "Added to the Media Hub: {names}": "Προστέθηκε στο Media Hub: {names}",
   "Added to subtitle add-ons: {names}":

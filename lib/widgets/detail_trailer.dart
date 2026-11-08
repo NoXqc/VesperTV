@@ -163,7 +163,7 @@ class DetailTrailerState extends State<DetailTrailer>
         if (!mounted || generation != _generation) return;
       }
       if (uri == null) return;
-      if (isDesktop) {
+      if (usesMediaKit) {
         _pausing = DesktopMiniPlayer.instance.controller?.player.pause();
       } else {
         _pausing = context.read<PlaybackService?>()?.controller?.pause();
@@ -311,7 +311,7 @@ class _PreviewState extends State<_Preview> {
 
   Future<void> _initialize() async {
     try {
-      if (isDesktopTarget) {
+      if (usesMediaKitTarget) {
         final player = _windows = mk.Player();
         _windowsVideo = mv.VideoController(player);
         _completed = player.stream.completed.listen((done) {

@@ -1779,6 +1779,8 @@ const Map<String, String> kDe = {
       "Deine Quelle hat statt des Videos eine Nachricht gesendet:",
   "Check your source or debrid account (plan limits, active downloads), or pick another stream.":
       "Prüfe deine Quelle oder dein Debrid-Konto (Tarifgrenzen, aktive Downloads) oder wähle einen anderen Stream.",
+  "Check your source (plan limits, active downloads), or pick another stream.":
+      "Prüfe deine Quelle (Tarifgrenzen, aktive Downloads) oder wähle einen anderen Stream.",
   "Added to the Media Hub: {names}": "Zum Media Hub hinzugefügt: {names}",
   "Added to subtitle add-ons: {names}":
       "Zu den Untertitel-Add-ons hinzugefügt: {names}",

@@ -212,7 +212,7 @@ class _ArchiveLiveTvScreenState extends State<ArchiveLiveTvScreen> {
       );
       playback.zapList = channels;
       playback.resolveLive = service.resolveLive;
-      if (isDesktop) {
+      if (usesMediaKit) {
         DesktopMiniPlayer.instance.clear();
         await Navigator.of(context).push(MaterialPageRoute(
             builder: (_) =>

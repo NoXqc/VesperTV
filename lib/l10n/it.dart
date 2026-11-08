@@ -1868,6 +1868,8 @@ const Map<String, String> kIt = {
       "La tua sorgente ha inviato un messaggio invece del video:",
   "Check your source or debrid account (plan limits, active downloads), or pick another stream.":
       "Controlla la sorgente o l'account debrid (limiti del piano, download attivi) oppure scegli un altro flusso.",
+  "Check your source (plan limits, active downloads), or pick another stream.":
+      "Controlla la sorgente (limiti del piano, download attivi) oppure scegli un altro flusso.",
   // Media Hub: import add-ons (pasted links, Stremio)
   "Added to the Media Hub: {names}": "Aggiunto al Media Hub: {names}",
   "Added to subtitle add-ons: {names}":

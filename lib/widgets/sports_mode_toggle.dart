@@ -28,7 +28,7 @@ class _SportsModeToggleState extends State<SportsModeToggle> {
     try {
       // A new home must not leave an invisible preview using a connection.
       await context.read<PlaybackService>().stop();
-      if (isDesktop) DesktopMiniPlayer.instance.clear();
+      if (usesMediaKit) DesktopMiniPlayer.instance.clear();
       if (!mounted) return;
       await prefs.setSportsMode(value);
       if (navigator.mounted) navigator.popUntil((route) => route.isFirst);

@@ -347,7 +347,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                               .read<AppPreferences>()
                               .setBackgroundSync(v),
                         ),
-                        if (!isDesktop)
+                        if (!usesMediaKit)
                           Padding(
                             padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
                             child: Text(
@@ -458,7 +458,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                         onChanged: (v) =>
                             context.read<AppPreferences>().setHideRecordings(v),
                       ),
-                    if (!isDesktop)
+                    if (!usesMediaKit)
                       TvSwitchListTile(
                         title: Text(tr('Hide Catch-up group')),
                         subtitle: Text(tr(
@@ -487,7 +487,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                           context.read<AppPreferences>().setHideMultiview(v),
                     ),
                   ]),
-                  if (!isDesktop)
+                  if (!usesMediaKit)
                     _section('background', Icons.picture_in_picture_alt,
                         tr('Background video'),
                         children: [
@@ -540,7 +540,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                             ),
                         ]),
                   // Windows: the same settings through mpv (DesktopAudio).
-                  if (Platform.isAndroid || isDesktop)
+                  if (Platform.isAndroid || usesMediaKit)
                     _section(
                         'audio', Icons.surround_sound_outlined, tr('Audio'),
                         children: [
@@ -636,7 +636,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                       children: [
                         TvSwitchListTile(
                           title: Text(tr('Data pool display')),
-                          subtitle: Text(isDesktop
+                          subtitle: Text(usesMediaKit
                               ? tr(
                                   'Adds a Data pool button to the player bar (or press I) that opens a card with the stream\'s details: resolution, frame rate, codecs, bitrate, quality variants, audio tracks, buffer, HDR and decoder.')
                               : tr(
@@ -646,7 +646,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                               context.read<AppPreferences>().setDataPool(v),
                         ),
                       ]),
-                  if (Platform.isAndroid || isDesktop)
+                  if (Platform.isAndroid || usesMediaKit)
                     _section(
                         'catchup', Icons.history_toggle_off, tr('Catch-up'),
                         children: [
@@ -661,7 +661,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                             },
                           ),
                         ]),
-                  if (Platform.isAndroid || isDesktop)
+                  if (Platform.isAndroid || usesMediaKit)
                     _section(
                         'skipintro', Icons.skip_next_outlined, tr('Skip intro'),
                         children: [
@@ -676,10 +676,10 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                             },
                           ),
                         ]),
-                  if (Platform.isAndroid || isDesktop)
+                  if (Platform.isAndroid || usesMediaKit)
                     _section('upnext', Icons.queue_play_next, tr('Up Next'),
                         children: [_UpNextPicker()]),
-                  if (Platform.isAndroid || isDesktop)
+                  if (Platform.isAndroid || usesMediaKit)
                     _section('livebuffer', Icons.av_timer, tr('Live buffer'),
                         children: [_LiveBufferPicker()]),
                   if (isDesktop)
@@ -738,7 +738,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                               .setMixFavoritePlaylists(v),
                         ),
                       ]),
-                  if (!isDesktop)
+                  if (!usesMediaKit)
                     _section('multiview', Icons.grid_view, tr('Multiview'),
                         children: [
                           TvSwitchListTile(
@@ -758,7 +758,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                         TvSwitchListTile(
                           title:
                               Text(tr('Show the "Hold > to resume" reminder')),
-                          subtitle: Text(isDesktop
+                          subtitle: Text(usesMediaKit
                               ? tr(
                                   'The pill at the bottom while a channel plays in the background. Off: hidden.')
                               : tr(

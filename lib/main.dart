@@ -130,7 +130,7 @@ Future<void> _main() async {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
-  if (isDesktop || Platform.isLinux) {
+  if (usesMediaKit || Platform.isLinux) {
     // Only ever used by DesktopPlayerScreen — see its own doc comment and
     // pubspec.yaml's media_kit comment. Every other platform keeps using
     // video_player_hdr exclusively and never touches this at all. macOS
@@ -280,7 +280,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   /// app; picking a viewer rebuilds it on the TV root.
   Future<void> _returnToProfiles() async {
     if (!_ready || _profileSelection != null) return;
-    if (isDesktop) {
+    if (usesMediaKit) {
       DesktopMiniPlayer.instance.clear();
     } else {
       await _playbackService.stop();
@@ -1137,7 +1137,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     // unfiltered search result would.
     for (final channel in _playlistManager.visibleChannels(category: 'tv')) {
       if (channel.id == lastId) {
-        if (isDesktop) {
+        if (usesMediaKit) {
           if (fullscreen) {
             _navigatorKey.currentState?.push(MaterialPageRoute(
                 builder: (_) => DesktopPlayerScreen(channel: channel)));
@@ -1453,7 +1453,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
               // Windows-only equivalent — see DesktopPlayerScreen's own
               // doc comment for why it's a separate widget/holder rather
               // than reusing LiveResumeHint/PlaybackService.
-              if (isDesktop)
+              if (usesMediaKit)
                 DesktopLiveResumeHint(navigatorKey: _navigatorKey),
               GameReminderOverlay(onGameStarting: _offerStartingGame),
               const ProgrammeReminderOverlay(),

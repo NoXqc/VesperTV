@@ -1859,6 +1859,8 @@ const Map<String, String> kEs = {
       "Tu fuente envió un mensaje en lugar del video:",
   "Check your source or debrid account (plan limits, active downloads), or pick another stream.":
       "Revisa tu fuente o tu cuenta debrid (límites del plan, descargas activas) o elige otra transmisión.",
+  "Check your source (plan limits, active downloads), or pick another stream.":
+      "Revisa tu fuente (límites del plan, descargas activas) o elige otra transmisión.",
   // Media Hub: import add-ons (pasted links, Stremio)
   "Added to the Media Hub: {names}": "Añadido al Media Hub: {names}",
   "Added to subtitle add-ons: {names}":

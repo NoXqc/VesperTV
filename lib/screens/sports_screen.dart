@@ -76,7 +76,7 @@ import '../utils/desktop_platform.dart';
 
 // Keep UI and playback routing on the same Flutter target. This also lets
 // Android widget tests on a Windows development PC exercise the TV path.
-bool get _desktopSports => isDesktopTarget;
+bool get _desktopSports => usesMediaKitTarget;
 
 /// Sports: today's games across the user's leagues with logos, records,
 /// live scores and the IPTV channel each game is on (see

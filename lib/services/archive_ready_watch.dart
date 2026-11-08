@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import 'debrid_api.dart';
 import 'storage_service.dart';
+import '../utils/app_store.dart';
 
 /// Media Hub titles whose source answered Play with a short "being
 /// downloaded to your account" clip instead of the file (user report,
@@ -58,7 +59,8 @@ class ArchiveReadyWatch {
 
   void init(StorageService storage) {
     _storage = storage;
-    _debrid = DebridApi(storage);
+    // App Store builds keep no debrid keys: the stream link is asked again.
+    _debrid = appStoreBuild ? null : DebridApi(storage);
     try {
       final j = jsonDecode(storage.getArchiveReadyWatch() ?? '{}') as Map;
       ready.value = {...(j['ready'] as List? ?? const []).cast<String>()};

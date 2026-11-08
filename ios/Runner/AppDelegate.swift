@@ -1,3 +1,4 @@
+import AVFoundation
 import Flutter
 import UIKit
 
@@ -7,6 +8,9 @@ import UIKit
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    // A video player: sound plays with the silent switch on and keeps going
+    // behind the lock screen (UIBackgroundModes audio), like the Music app.
+    try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 

@@ -1871,6 +1871,8 @@ const Map<String, String> kFr = {
       "Votre source a envoyé un message au lieu de la vidéo :",
   "Check your source or debrid account (plan limits, active downloads), or pick another stream.":
       "Vérifiez votre source ou votre compte debrid (limites du forfait, téléchargements actifs), ou choisissez un autre flux.",
+  "Check your source (plan limits, active downloads), or pick another stream.":
+      "Vérifiez votre source (limites du forfait, téléchargements actifs), ou choisissez un autre flux.",
   // Media Hub: import add-ons (pasted links, Stremio)
   "Added to the Media Hub: {names}": "Ajouté au Media Hub : {names}",
   "Added to subtitle add-ons: {names}":

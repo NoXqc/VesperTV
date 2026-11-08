@@ -26,7 +26,7 @@ const _liveBufferChoices = [
 /// as Off there.
 List<(int, String)> liveBufferChoices() => [
       for (final c in _liveBufferChoices)
-        if (c.$1 >= 0 || !isDesktop) c
+        if (c.$1 >= 0 || !usesMediaKit) c
     ];
 
 /// The full (untranslated) name of [ms], for Settings.

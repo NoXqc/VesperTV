@@ -940,7 +940,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
             SizedBox(
               height: 48,
               child: Row(children: [
-                if (isDesktop)
+                if (needsBackArrow)
                   ExcludeFocus(
                     child: IconButton(
                       tooltip: tr('Back'),

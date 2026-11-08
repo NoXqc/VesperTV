@@ -604,7 +604,7 @@ final List<VesperTool> vesperTools = [
         'programme on now and next, and whether it is paused.',
     schema: {'type': 'object', 'properties': {}},
     run: (box, args, caller) async {
-      if (isDesktop) {
+      if (usesMediaKit) {
         throw VesperToolError('Not available on Windows yet.');
       }
       final c = box.playback.liveChannel;
@@ -655,7 +655,7 @@ final List<VesperTool> vesperTools = [
       'required': ['action'],
     },
     run: (box, args, caller) async {
-      if (isDesktop) {
+      if (usesMediaKit) {
         throw VesperToolError('Not available on Windows yet.');
       }
       final playback = box.playback;

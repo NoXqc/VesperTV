@@ -67,7 +67,7 @@ class _TrailerButtonState extends State<TrailerButton> {
       final canOpen = url != null &&
           (widget.available != null
               ? await widget.available!(url)
-              : (Platform.isAndroid || isDesktop) || await canLaunchUrl(url));
+              : (Platform.isAndroid || usesMediaKit) || await canLaunchUrl(url));
       if (mounted && generation == _generation) {
         setState(() => _url = canOpen ? url : null);
       }
@@ -81,7 +81,7 @@ class _TrailerButtonState extends State<TrailerButton> {
     try {
       await widget.beforeOpen?.call();
       if (!mounted) return;
-      if (isDesktop) {
+      if (usesMediaKit) {
         await DesktopMiniPlayer.instance.controller?.player.pause();
       } else {
         await context.read<PlaybackService?>()?.controller?.pause();
@@ -93,7 +93,7 @@ class _TrailerButtonState extends State<TrailerButton> {
         if (!mounted) return;
         await playYouTubeVideo(context, video, widget.request.title);
         opened = true;
-      } else if (isDesktop) {
+      } else if (usesMediaKit) {
         if (!mounted) return;
         await Navigator.of(context).push(MaterialPageRoute(
             builder: (_) => DesktopPlayerScreen(

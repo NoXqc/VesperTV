@@ -666,7 +666,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Plays [c] full screen (Windows: its own player), like the live list.
   static Future<void> _playChannel(BuildContext context, Channel c) async {
-    if (isDesktop) {
+    if (usesMediaKit) {
       DesktopMiniPlayer.instance.clear();
       await Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => DesktopPlayerScreen(channel: c)));
@@ -1053,7 +1053,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 20, vertical: 6),
                         child: Row(children: [
-                          if (isDesktop)
+                          if (needsBackArrow)
                             ExcludeFocus(
                                 child: IconButton(
                               tooltip: tr('Back'),
@@ -1711,7 +1711,7 @@ class _ProfilesStrip extends StatelessWidget {
         child: Padding(
             padding: EdgeInsets.fromLTRB(20, compact ? 6 : 14, 20, 0),
             child: Row(children: [
-              if (isDesktop)
+              if (needsBackArrow)
                 ExcludeFocus(
                   child: IconButton(
                     tooltip: tr('Back'),
