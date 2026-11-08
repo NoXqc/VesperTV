@@ -44,7 +44,8 @@ unknown bug across many files, and reviewing/merging Codex branches. When in dou
 ## 2. Start-here checklist for a clean session
 1. `git pull`, then `git status` (ignore the untracked `*-windows-x64.zip` and
    `third_party/video_player_android/pubspec.lock` — local artifacts).
-2. Machine facts (Windows PC): repo `C:\Users\aarse\NoXPlayer`; Flutter `C:\src\flutter`; JDK 17;
+2. Machine facts (Windows PC): repo `C:\Users\aarse\NoXPlayer`; Flutter `C:\src\flutter`; JDK 17
+   (JDK 21 for the native player tests: `C:\Program Files\Microsoft\jdk-21.0.13.21-hotspot`, not on PATH/JAVA_HOME);
    Android SDK `C:\Android\Sdk`; apksigner `C:\Android\Sdk\build-tools\36.0.0\apksigner.bat`;
    keystore `C:\Users\aarse\keystores\noxplayer-release.jks` via git-ignored `android\key.properties`
    (originals also on drive `E:\`). Files are CRLF here (autocrlf) — "LF will be replaced by CRLF"
@@ -382,6 +383,17 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   and Choose a folder. `AppUpdateService.pickAsset`: Windows never takes `-macos.zip`. **Never attach
   a Mac zip to a release** until Windows installs have pickAsset. CI `.github/workflows/macos-build.yml`
   = unsigned artifact. Not signed/notarized. Details: `dev-notes/macos-desktop.md`.
+- **Claude, 2026-11-08 - merged to local `main` for a Formuler test (+680, not pushed/released):** event-guide
+  (entry below), `claude/tv-channels` (Settings > Interface > TV home screen: Watch Next + a "Favourite channels" app
+  channel through TvProvider for Projectivy / Android TV; `services/launcher_channels.dart`, `LauncherChannels.kt`,
+  `dev-notes/launcher-channels.md`), Codex `codex/epg-3h` (3-hour EPG refresh) and `claude/focus-preview`:
+  **Preview on highlight** (Settings > Interface > Guide, opt-in per viewer, TV + computer): the live list / Timeline
+  channel plays after 0.8 s with no key, only when a nav key caused the highlight (`_noteKey` HardwareKeyboard handler
+  in `tv_home_screen`); History after 10 s (`PlaybackService.play(recordHistory: false)`); never over a recording's
+  only connection. **Back at the root leaves at once on Android** (TV home tabs, Sports Mode, Who's watching;
+  `AppExit.back`, warm exit; a computer still asks; tests: `test/warm_exit_helper.dart`). **Warm-return resume:**
+  `_episodeNotificationOpened` was never reset, so after one notification tap no warm return resumed until a cold
+  start; now reset in `AppExit.beforeWarm`, and Send log says `Resume: skipped (why)`. Not box-tested. Next build > 680.
 - **Claude, 2026-11-07 - event channels + guide speed (unreleased, +677; test APK +677 has 1-2 only):**
   (1) TV header "Updating..." stuck after a background update: `PlaylistSession.isLoading` is now derived (list load
   or on-screen row loads). (2) **Guide from channel names**: `services/channel_name_events.dart` reads
