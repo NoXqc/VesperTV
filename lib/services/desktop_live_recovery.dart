@@ -132,6 +132,10 @@ class DesktopLiveRecovery {
   }
 
   void _trouble(String reason) {
+    // A reconnect is starting: a pending error check would compare the
+    // reopened stream's position (a few s) with the old one and reconnect a
+    // stream that just recovered.
+    _errorCheck?.cancel();
     final channel = _channel;
     if (channel == null || (_retry?.isActive ?? false)) return;
     _attempt++;
