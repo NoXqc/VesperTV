@@ -268,6 +268,10 @@ Bug reports, suggestions/improvements, or general discussion — join the
 [Discord server](https://discord.gg/VPQ849NPV), or open an issue here on
 GitHub. Please also visit us at r/VesperTV
 
+VesperTV is free and always will be. If you'd like to help with the server and
+development costs, you can [donate on Liberapay](https://liberapay.com/NoXQc/donate)
+(optional, it unlocks nothing: everyone gets the same app).
+
 ## Credits
 
 - Movie and TV artwork and data may come from [TMDB](https://www.themoviedb.org/). This
