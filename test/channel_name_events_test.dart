@@ -150,6 +150,47 @@ void main() {
       expect(out.single.stop, event.stop.toLocal());
     });
 
+    test('a row without any guide: "No game at this time" around the game',
+        () {
+      // 4 h before the game (00:28 UTC), so the game is inside the window.
+      final now = DateTime.utc(2026, 11, 7, 20, 10);
+      final out =
+          mergeChannelNameEvent(const [], event, 'id', fillAround: now);
+      final game = out.singleWhere((e) => e.title == 'Nets vs. Hawks');
+      expect(game.start, event.start.toLocal());
+      expect(game.stop, event.stop.toLocal());
+      final fillers = out.where((e) => e.title != 'Nets vs. Hawks').toList();
+      expect(fillers.map((e) => e.title).toSet(), {noGameTitle});
+      expect(isFillerProgrammeTitle(noGameTitle), isTrue);
+      // Sorted, no gaps, no overlaps, from 6 h back to 30 h ahead.
+      for (var i = 1; i < out.length; i++) {
+        expect(out[i].start, out[i - 1].stop, reason: '$i');
+      }
+      final local = now.toLocal();
+      final hour = DateTime(local.year, local.month, local.day, local.hour);
+      expect(out.first.start, hour.subtract(const Duration(hours: 6)));
+      expect(out.last.stop, hour.add(const Duration(hours: 30)));
+      // One block before the game, one after it.
+      expect(out.map((e) => e.title).toList(),
+          [noGameTitle, 'Nets vs. Hawks', noGameTitle]);
+    });
+
+    test('the filled window misses the game: the game still shows', () {
+      final now = DateTime.utc(2026, 11, 5, 12);
+      final out =
+          mergeChannelNameEvent(const [], event, 'id', fillAround: now);
+      expect(out.where((e) => e.title == 'Nets vs. Hawks'), hasLength(1));
+      for (var i = 1; i < out.length; i++) {
+        expect(out[i].start.isBefore(out[i - 1].start), isFalse);
+      }
+    });
+
+    test('a guide from the provider is never filled', () {
+      final out = mergeChannelNameEvent([p('Signing Off', 8, 12)], event, 'id',
+          fillAround: DateTime.utc(2026, 11, 7, 20));
+      expect(out.map((e) => e.title), isNot(contains(noGameTitle)));
+    });
+
     test('keeps earlier fillers and cuts the one it covers', () {
       final out = mergeChannelNameEvent([
         p('Signing Off', 8, 12),
@@ -228,10 +269,13 @@ void main() {
 
       expect(epg.getCurrentProgram('BossSports.NBA.01')?.title,
           'Nuggets vs. Pacers');
-      expect(epg.getCurrentProgram('BossSports.NBA.02'), isNull);
+      // Before its game a channel without any guide says so.
+      expect(epg.getCurrentProgram('BossSports.NBA.02')?.title, noGameTitle);
       expect(epg.getNextProgram('BossSports.NBA.02')?.title, 'Nets vs. Hawks');
       final row = epg.getPrograms('BossSports.NBA.01');
-      expect(row.single.title, 'Nuggets vs. Pacers');
+      expect(row.where((p) => p.title == 'Nuggets vs. Pacers'), hasLength(1));
+      expect(row.where((p) => p.title != 'Nuggets vs. Pacers').map((p) => p.title),
+          everyElement(noGameTitle));
       expect(identical(epg.getPrograms('BossSports.NBA.01'), row), isTrue,
           reason: 'the same list on every build');
       expect(epg.hasPrograms('BossSports.NBA.01'), isFalse,

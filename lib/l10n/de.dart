@@ -31,6 +31,8 @@ const Map<String, String> kDe = {
   "Live TV guide layout, full-screen video, compact rows":
       "Layout des Live-TV-Guides, Vollbildvideo, kompakte Zeilen",
   "{n} titles": "{n} Titel",
+  "No game at this time":
+      "Kein Spiel zu dieser Zeit",
   "Wide cards":
       "Breite Karten",
   "Movies and TV Shows rows show bigger 16:9 cards with the backdrop. A title without one shows its poster until the provider sends it.":

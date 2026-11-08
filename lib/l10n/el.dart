@@ -34,6 +34,8 @@ const Map<String, String> kEl = {
   "Live TV guide layout, full-screen video, compact rows":
       "Διάταξη οδηγού, βίντεο πλήρους οθόνης, συμπαγείς γραμμές",
   "{n} titles": "{n} τίτλοι",
+  "No game at this time":
+      "Κανένας αγώνας αυτή την ώρα",
   "Wide cards":
       "Φαρδιές κάρτες",
   "Movies and TV Shows rows show bigger 16:9 cards with the backdrop. A title without one shows its poster until the provider sends it.":

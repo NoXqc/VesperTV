@@ -124,11 +124,18 @@ bool isFillerProgrammeTitle(String title) {
 
 /// [programs] (one channel, sorted, not overlapping) with [event] added,
 /// unless a real listing overlaps it: the provider's word wins. Fillers it
-/// overlaps are cut around it.
+/// overlaps are cut around it. With [fillAround] (now) and no listing at
+/// all from the provider, the rest of the row says "No game at this time",
+/// from 6 h before now to 30 h after it, instead of an empty row
+/// beside the game (owner, League Pass rows, 2026-11-08).
 List<EpgProgram> mergeChannelNameEvent(
-    List<EpgProgram> programs, ChannelNameEvent event, String channelId) {
+    List<EpgProgram> programs, ChannelNameEvent event, String channelId,
+    {DateTime? fillAround}) {
   final start = event.start.toLocal();
   final stop = event.stop.toLocal();
+  if (programs.isEmpty && fillAround != null) {
+    return _filledAround(event, channelId, fillAround);
+  }
   final out = <EpgProgram>[];
   for (final p in programs) {
     if (!p.start.isBefore(stop) || !p.stop.isAfter(start)) {
@@ -148,6 +155,36 @@ List<EpgProgram> mergeChannelNameEvent(
         stop: stop))
     ..sort((a, b) => a.start.compareTo(b.start));
   return out;
+}
+
+/// The text of the blocks around an event on a row without any guide. A
+/// provider-style placeholder ([isFillerProgrammeTitle] matches it), so
+/// game matching and the event merge treat it as empty.
+String get noGameTitle => tr('No game at this time');
+
+List<EpgProgram> _filledAround(
+    ChannelNameEvent event, String channelId, DateTime now) {
+  final start = event.start.toLocal();
+  final stop = event.stop.toLocal();
+  final local = now.toLocal();
+  final from = DateTime(local.year, local.month, local.day, local.hour)
+      .subtract(const Duration(hours: 6));
+  final to = from.add(const Duration(hours: 36));
+  final title = noGameTitle;
+  EpgProgram filler(DateTime a, DateTime b) =>
+      EpgProgram(channelId: channelId, title: title, start: a, stop: b);
+  // One block each side (not hourly ones): "next" before the game is then
+  // the game itself, as on the info card.
+  return [
+    if (start.isAfter(from)) filler(from, start.isBefore(to) ? start : to),
+    EpgProgram(
+        channelId: channelId,
+        title: event.title,
+        description: event.note,
+        start: start,
+        stop: stop),
+    if (stop.isBefore(to)) filler(stop.isAfter(from) ? stop : from, to),
+  ]..sort((a, b) => a.start.compareTo(b.start));
 }
 
 EpgProgram _retimed(EpgProgram p, DateTime start, DateTime stop) => EpgProgram(

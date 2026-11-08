@@ -185,7 +185,10 @@ class EpgService extends ChangeNotifier {
     if (event == null) return programs;
     final memo = _merged[id];
     if (memo != null && identical(memo.$1, programs)) return memo.$2;
-    final merged = mergeChannelNameEvent(programs, event, id);
+    // Memoized until the name events are re-read: the filled window's
+    // "now" moves on with them.
+    final merged =
+        mergeChannelNameEvent(programs, event, id, fillAround: DateTime.now());
     if (_merged.length >= _fullCacheLimit) _merged.clear();
     _merged[id] = (programs, merged);
     return merged;

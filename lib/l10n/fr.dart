@@ -33,6 +33,8 @@ const Map<String, String> kFr = {
   "Live TV guide layout, full-screen video, compact rows":
       "Disposition du guide, vidéo plein écran, lignes compactes",
   "{n} titles": "{n} titres",
+  "No game at this time":
+      "Pas de match à cette heure",
   "Wide cards":
       "Cartes larges",
   "Movies and TV Shows rows show bigger 16:9 cards with the backdrop. A title without one shows its poster until the provider sends it.":

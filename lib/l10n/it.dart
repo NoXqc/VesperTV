@@ -34,6 +34,8 @@ const Map<String, String> kIt = {
   "Live TV guide layout, full-screen video, compact rows":
       "Layout della guida, video a schermo intero, righe compatte",
   "{n} titles": "{n} titoli",
+  "No game at this time":
+      "Nessuna partita a quest'ora",
   "Wide cards":
       "Schede larghe",
   "Movies and TV Shows rows show bigger 16:9 cards with the backdrop. A title without one shows its poster until the provider sends it.":
