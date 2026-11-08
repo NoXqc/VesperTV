@@ -6,6 +6,7 @@ import 'package:window_manager/window_manager.dart';
 
 import '../utils/constants.dart';
 import '../utils/desktop_platform.dart';
+import 'app_exit.dart';
 
 /// Windows only: full screen (the default, TV-style, no title bar) or a
 /// normal resizable window with the system title bar — so it snaps to half
@@ -30,6 +31,10 @@ class DesktopWindow {
     _prefs = prefs;
     windowed.value = prefs.getBool(AppConstants.keyWindowsWindowed) ?? false;
     await windowManager.ensureInitialized();
+    // The window's close button asks first (onWindowClose -> AppExit.quit),
+    // so the players close before the window does.
+    await windowManager.setPreventClose(true);
+    windowManager.addListener(_QuitOnClose());
     final bounds = _savedBounds();
     final options = windowed.value
         ? WindowOptions(
@@ -144,4 +149,10 @@ class DesktopWindow {
     if (v[2]! < _minimumSize.width || v[3]! < _minimumSize.height) return null;
     return Rect.fromLTWH(v[0]!, v[1]!, v[2]!, v[3]!);
   }
+}
+
+/// The window's close button, while preventClose is on: quit properly.
+class _QuitOnClose with WindowListener {
+  @override
+  void onWindowClose() => unawaited(AppExit.quit());
 }

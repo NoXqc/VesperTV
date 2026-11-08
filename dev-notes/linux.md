@@ -45,3 +45,7 @@ that bundles libmpv: not done.
 - **Reconnect every 30-40 s.** The branch predated main's 5b360ce / 3e7b392 (30 s network timeout,
   no reopen on mpv's "Cannot seek in this stream" while playback moves): merged main.
 - `Cannot load libcuda.so.1` lines are mpv probing NVDEC on an AMD box: harmless.
+- **Segfault in libmpv on every close** (+676, KDE crash viewer photo): the window closed with players open,
+  the Dart VM went away and mpv's wakeup callback (a Dart NativeCallable) ran into freed memory. Fixed on main
+  (7599296): every player closes before the window (`AppExit.quit`, preventClose + onWindowClose). The user runs
+  the app in a distrobox (Ubuntu 24.04 container on SteamOS).

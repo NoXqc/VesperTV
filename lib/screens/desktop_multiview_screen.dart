@@ -210,7 +210,7 @@ class _DesktopMultiviewScreenState extends State<DesktopMultiviewScreen> {
     final cell = _cells[index];
     cell.completedSubscription?.cancel();
     DesktopLiveRecovery.disposePlayer(cell.player);
-    final player = Player();
+    final player = newDesktopPlayer();
     // See DesktopPlayerScreen's identical fix for the full story —
     // reconnect_streamed=1 is necessary (not optional) to recover from a
     // genuine dropped read on a live/non-seekable stream, which is exactly

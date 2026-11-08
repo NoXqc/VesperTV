@@ -313,7 +313,7 @@ class _PreviewState extends State<_Preview> {
   Future<void> _initialize() async {
     try {
       if (usesMediaKitTarget) {
-        final player = _windows = mk.Player();
+        final player = _windows = newDesktopPlayer();
         _windowsVideo = desktopVideoController(player);
         _completed = player.stream.completed.listen((done) {
           if (done && _closed == null) widget.onFinished();
@@ -377,7 +377,10 @@ class _PreviewState extends State<_Preview> {
     // A failed native create can leave the plugin's creation future pending.
     // Late initialization is already guarded by _closed; never hang Play on it.
     await _android?.dispose().timeout(const Duration(seconds: 3));
-    await _windows?.dispose().timeout(const Duration(seconds: 3));
+    final windows = _windows;
+    if (windows != null) {
+      await disposeDesktopPlayer(windows).timeout(const Duration(seconds: 3));
+    }
   }
 
   @override

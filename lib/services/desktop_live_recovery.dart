@@ -48,7 +48,7 @@ class DesktopLiveRecovery {
     _byPlayer[player]?.dispose();
     _byPlayer[player] = null;
     DesktopAudio.forget(player);
-    player.dispose();
+    unawaited(disposeDesktopPlayer(player));
   }
 
   /// Set by main.dart on Windows: a live channel's other copies, best
