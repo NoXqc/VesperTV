@@ -39,6 +39,10 @@ class AppPreferences extends ChangeNotifier {
   /// Fill the full-video Timeline area instead of limiting it to three rows.
   late bool guideExpanded;
   late bool guideCompact;
+
+  /// Live list / Timeline guide: the channel the remote stops on plays in
+  /// the preview (opt-in, per viewer like the other guide settings).
+  late bool guideFocusPreview;
   late bool expandedBrowse;
 
   /// Movies / TV Shows tabs (and their search results) hidden, each on its
@@ -404,6 +408,7 @@ class AppPreferences extends ChangeNotifier {
     guideFullVideo = _storage.getGuideFullVideo();
     guideExpanded = _storage.getGuideExpanded();
     guideCompact = _storage.getGuideCompact();
+    guideFocusPreview = _storage.getGuideFocusPreview();
     expandedBrowse = _storage.getExpandedBrowse();
     hideMovies = _storage.getHideMovies();
     hideShows = _storage.getHideShows();
@@ -454,6 +459,7 @@ class AppPreferences extends ChangeNotifier {
     guideFullVideo = _storage.getGuideFullVideo();
     guideExpanded = _storage.getGuideExpanded();
     guideCompact = _storage.getGuideCompact();
+    guideFocusPreview = _storage.getGuideFocusPreview();
     notifyListeners();
   }
 
@@ -518,6 +524,12 @@ class AppPreferences extends ChangeNotifier {
   void setGuideCompact(bool value) {
     guideCompact = value;
     _storage.setGuideCompact(value);
+    notifyListeners();
+  }
+
+  void setGuideFocusPreview(bool value) {
+    guideFocusPreview = value;
+    _storage.setGuideFocusPreview(value);
     notifyListeners();
   }
 

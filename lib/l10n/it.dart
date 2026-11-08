@@ -40,6 +40,9 @@ const Map<String, String> kIt = {
   "Compact guide": "Guida compatta",
   "Shorter Timeline rows so more channels fit in the same space.":
       "Righe più basse nella timeline per mostrare più canali.",
+  "Preview on highlight": "Anteprima alla selezione",
+  "The channel you stop on plays in the preview, without pressing OK. OK again opens it full screen.":
+      "Il canale su cui ti fermi va in onda nell'anteprima, senza premere OK. Premendo di nuovo OK si apre a schermo intero.",
   "Transparent popups": "Popup trasparenti",
   "Reminders and goal alerts lose their background and outline, keeping only the logo and text.":
       "Promemoria e avvisi gol perdono sfondo e contorno, mantenendo solo logo e testo.",

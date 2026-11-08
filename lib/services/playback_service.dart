@@ -436,7 +436,11 @@ class PlaybackService extends ChangeNotifier {
 
   final _nativeSwitchReleases = <VoidCallback>{};
 
-  Future<void> play(Channel channel) async {
+  /// [recordHistory] false: not added to [recentlyPlayed] (History) yet —
+  /// the TV guide's Preview on highlight plays every channel the remote
+  /// stops on and records it only once it has been watched a while
+  /// ([recordWatched]).
+  Future<void> play(Channel channel, {bool recordHistory = true}) async {
     if (channel.url.isEmpty && resolveLive != null) {
       final resolved = await resolveLive!(channel);
       if (resolved == null || resolved.url.isEmpty) {
@@ -449,7 +453,7 @@ class PlaybackService extends ChangeNotifier {
         !NativeVideoSurface.active ||
         textureVideo ||
         currentChannel?.id == channel.id) {
-      return _playChannel(channel);
+      return _playChannel(channel, recordHistory);
     }
     final release = NativeVideoSurface.retainForPlayerSwitch();
     _nativeSwitchReleases.add(release);
@@ -459,7 +463,7 @@ class PlaybackService extends ChangeNotifier {
     }
 
     try {
-      await _playChannel(channel);
+      await _playChannel(channel, recordHistory);
       final initializing = initFuture;
       if (initializing == null) {
         finish();
@@ -480,7 +484,8 @@ class PlaybackService extends ChangeNotifier {
     _nativeSwitchReleases.clear();
   }
 
-  Future<void> _playChannel(Channel channel) async {
+  Future<void> _playChannel(Channel channel,
+      [bool recordHistory = true]) async {
     if (channel.id != _copyFallbackFor) copyFallbackName = null;
     _announce(tr('Playing {name}', {'name': channel.name}));
     // A queued episode whose stream isn't known yet (Archive Next / auto-
@@ -537,7 +542,7 @@ class PlaybackService extends ChangeNotifier {
     final openUrl = await openUrlFor?.call(channel) ?? channel.url;
     if (gen != _playGen) return;
 
-    if (await _reuseNativeLive(channel, openUrl)) return;
+    if (await _reuseNativeLive(channel, openUrl, recordHistory)) return;
     if (gen != _playGen) return;
 
     // Before the teardown: it reads currentChannel for the old title's
@@ -564,7 +569,7 @@ class PlaybackService extends ChangeNotifier {
     // channel or a different one the user picked instead.
     pendingResumeChannel = null;
     notifyListeners();
-    unawaited(_recordRecentlyPlayed(channel));
+    if (recordHistory) unawaited(_recordRecentlyPlayed(channel));
 
     // Confirmed on real hardware as the cause of a live channel looking
     // "stuck paused": a live id can carry a *stale* saved position from
@@ -1023,7 +1028,8 @@ class PlaybackService extends ChangeNotifier {
   final _restartLoopListeners = Expando<VoidCallback>();
   int _nativeZapGeneration = 0;
 
-  Future<bool> _reuseNativeLive(Channel channel, String url) async {
+  Future<bool> _reuseNativeLive(Channel channel, String url,
+      [bool recordHistory = true]) async {
     final c = controller;
     final previous = currentChannel;
     if (!NativeVideoSurface.active ||
@@ -1074,7 +1080,7 @@ class PlaybackService extends ChangeNotifier {
       playingSince = DateTime.now();
       _autoAdvanceDismissed = false;
       _watchRestartLoop(c, channel);
-      unawaited(_recordRecentlyPlayed(channel));
+      if (recordHistory) unawaited(_recordRecentlyPlayed(channel));
       unawaited(_recordRealResolution(c, channel));
       unawaited(DisplayMatch.start(_storage, c,
           () => controller == c && currentChannel?.id == channel.id));

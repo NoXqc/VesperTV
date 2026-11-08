@@ -39,6 +39,9 @@ const Map<String, String> kFr = {
   "Compact guide": "Guide compact",
   "Shorter Timeline rows so more channels fit in the same space.":
       "Lignes de la grille plus courtes pour afficher plus de chaînes.",
+  "Preview on highlight": "Aperçu au survol",
+  "The channel you stop on plays in the preview, without pressing OK. OK again opens it full screen.":
+      "La chaîne sur laquelle vous vous arrêtez joue dans l'aperçu, sans appuyer sur OK. OK une deuxième fois l'ouvre en plein écran.",
   "Transparent popups": "Fenêtres transparentes",
   "Reminders and goal alerts lose their background and outline, keeping only the logo and text.":
       "Les rappels et alertes de but perdent leur fond et leur contour, il ne reste que le logo et le texte.",

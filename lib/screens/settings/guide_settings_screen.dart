@@ -50,6 +50,18 @@ class GuideSettingsScreen extends StatelessWidget {
                       ],
                     ],
                   ),
+                  // Remote and keyboard only: a touch screen has no
+                  // highlight to follow (a tap already previews).
+                  if (prefs.isTelevision || isDesktopTarget) ...[
+                    const SizedBox(height: 8),
+                    TvSwitchListTile(
+                      title: Text(tr('Preview on highlight')),
+                      subtitle: Text(tr(
+                          'The channel you stop on plays in the preview, without pressing OK. OK again opens it full screen.')),
+                      value: prefs.guideFocusPreview,
+                      onChanged: prefs.setGuideFocusPreview,
+                    ),
+                  ],
                   if (prefs.guideViewMode == 'timeline') ...[
                     const SizedBox(height: 8),
                     TvSwitchListTile(

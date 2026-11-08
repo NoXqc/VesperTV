@@ -527,6 +527,9 @@ class AppConstants {
 
   static const String keyGuideExpanded = 'vesper_guide_expanded';
   static const String keyGuideCompact = 'vesper_guide_compact';
+
+  /// Opt-in: the live channel the remote stops on plays in the preview.
+  static const String keyGuideFocusPreview = 'vesper_guide_focus_preview';
   static const String keyExpandedBrowse = 'vesper_expanded_browse';
 
   /// LEGACY global scalar — "enable/disable playlist" (freeing a

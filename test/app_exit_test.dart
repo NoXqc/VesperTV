@@ -35,4 +35,36 @@ void main() {
     AppExit.resumed();
     expect(events, ['stop', 'moveTaskToBack', 'resume']);
   });
+
+  test('Back at the root: Android leaves at once, never asks', () async {
+    AppExit.isWindows = false;
+    final events = <String>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(device, (call) async {
+      events.add(call.method);
+      return call.method == 'moveTaskToBack' ? true : null;
+    });
+    var asked = false;
+    await AppExit.back(() async => asked = true);
+    expect(asked, isFalse);
+    expect(events, ['moveTaskToBack']);
+  });
+
+  test('Back at the root on a computer asks first; Stay stays', () async {
+    AppExit.isWindows = true;
+    addTearDown(() => AppExit.isWindows = false);
+    final events = <String>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(device, (call) async {
+      events.add(call.method);
+      return true;
+    });
+    var asked = 0;
+    await AppExit.back(() async {
+      asked++;
+      return false; // Stay
+    });
+    expect(asked, 1);
+    expect(events, isEmpty, reason: 'no warm exit on a computer');
+  });
 }

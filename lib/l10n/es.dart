@@ -40,6 +40,9 @@ const Map<String, String> kEs = {
   "Compact guide": "Guía compacta",
   "Shorter Timeline rows so more channels fit in the same space.":
       "Filas más cortas en la línea de tiempo para ver más canales.",
+  "Preview on highlight": "Vista previa al resaltar",
+  "The channel you stop on plays in the preview, without pressing OK. OK again opens it full screen.":
+      "El canal en el que te detienes se reproduce en la vista previa, sin pulsar OK. OK otra vez lo abre en pantalla completa.",
   "Transparent popups": "Ventanas transparentes",
   "Reminders and goal alerts lose their background and outline, keeping only the logo and text.":
       "Los recordatorios y avisos de gol pierden el fondo y el contorno, y conservan solo el logo y el texto.",
