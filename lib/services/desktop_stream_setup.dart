@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
@@ -30,6 +32,15 @@ void configureDesktopStreamPlayer(Player player, String tag) {
   // on them and replayed the start burst (8125351). Same 30 s here.
   native.setProperty('demuxer-lavf-o',
       'reconnect=1,reconnect_at_eof=1,reconnect_streamed=1,reconnect_delay_max=5,rw_timeout=30000000');
+  // mpv's network-timeout (media_kit sets 5 s) becomes ffmpeg's tcp
+  // `timeout`, which overrides rw_timeout above: those bursty servers timed
+  // out after 5 s ("tcp: ffurl_read returned" -60 on macOS, -138 on
+  // Windows), then reconnected or ended every 30-40 s. Same 30 s.
+  native.setProperty('network-timeout', '30');
+  // media_kit turns on cache-on-disk; inside the macOS sandbox mpv can't
+  // create its cache folder ("Failed to create file cache"). The demuxer
+  // cache stays in memory (demuxer-max-bytes).
+  if (Platform.isMacOS) native.setProperty('cache-on-disk', 'no');
   native.setProperty('user-agent', kDesktopStreamUserAgent);
   player.stream.error.listen((e) => debugPrint('DesktopPlayer[$tag]: $e'));
   player.stream.log.listen((log) {
