@@ -106,12 +106,10 @@ unknown bug across many files, and reviewing/merging Codex branches. When in dou
 - `windows/runner/main.cpp`, `Runner.rc` — Windows runner (window title "VesperTV").
 
 ## 4. Build / check
-- Native Robolectric tests default to compile SDK 36 and need Java 21. Use a temporary
-  Gradle -Dorg.gradle.java.home path; do not change signing/build secrets. On release +449,
-  the extra native run completed 187 tests: 175 passed, 12 fixture failures across listener/
-  texture tests (all with the same unstubbed track return):
-  mocked getCurrentTracks() returns null (real ExoPlayer returns Tracks). Owner instructed
-  publish/announce; Flutter analyze 17 and all 515 Flutter tests passed. Native suite is NOT green.
+- Native Robolectric tests (vendored player) need Java 21: from `android/`,
+  `./gradlew :video_player_android:testDebugUnitTest -Dorg.gradle.java.home=<JDK 21>`.
+  All 233 pass since 2026-11-07 (fixtures now stub `getCurrentTracks()` with `Tracks.EMPTY`
+  and pick the event listener among VideoPlayer's three). Don't change signing/build secrets.
 - `flutter analyze` — baseline **16** info issues, none errors. `flutter test` — `test/device_transfer_test.dart` (real LAN sockets).
 - Android: `flutter build apk --release` → `build/app/outputs/flutter-apk/app-release.apk` (~68 MB).
 - Windows: **kill the running app first** (`Get-Process VesperTV | Stop-Process -Force`) or the link
@@ -543,9 +541,7 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   scroll; D-pad test asserts focus on screen + Up never scrolls down). New Settings > Media Hub >
   **Custom posters** (`ArchivePosters`, `vesper_archive_poster_pattern`, device-only):
   `{imdb_id}`/`{tmdb_id}`/`{type}` pattern; `ArchiveMeta.posterUrl` is now a getter over
-  `originalPosterUrl` (what toJson saves). APK only, Windows stays 1.0.45. Known flaky test:
-  `sports_schedule_test` "calendar: D-pad selects days" can fail in the full suite
-  (path_provider MissingPluginException after completion), passes alone. Next build > 524.
+  `originalPosterUrl` (what toJson saves). APK only, Windows stays 1.0.45. Next build > 524.
 - **Claude, 2026-10-29 — Android release 1.0.47+520:** Codex's Media Hub experience
   (all 6 Nuvio-plan priorities, dev-notes/media-hub-experience.md + Claude follow-ups: Windows
   headers/subtitles, 41 translations, movie page scroll-to-top), live player Right = last channel,
