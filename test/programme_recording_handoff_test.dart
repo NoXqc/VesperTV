@@ -13,7 +13,7 @@ class _Playback extends PlaybackService {
   _Playback(super.storage, super.playlistManager);
   final opened = <Channel>[];
   @override
-  Future<void> play(Channel channel) async {
+  Future<void> play(Channel channel, {bool recordHistory = true}) async {
     opened.add(channel);
     currentChannel = channel;
   }

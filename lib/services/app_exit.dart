@@ -34,6 +34,16 @@ class AppExit {
   @visibleForTesting
   static bool isWindows = isDesktop;
 
+  /// Back at the app's root (the TV home's tabs column, Sports Mode, Who's
+  /// watching). Android leaves at once with [warm]: reopening is instant,
+  /// so the old "Exit VesperTV?" prompt only cost a press (owner,
+  /// 2026-11-08). A computer has no warm exit and Back (Esc) would close
+  /// the window, so there [confirm] still asks first.
+  static Future<void> back(Future<bool> Function() confirm) async {
+    if (!isWindows) return warm();
+    if (await confirm()) await full();
+  }
+
   static Future<void> warm() async {
     if (isWindows) return full();
     try {

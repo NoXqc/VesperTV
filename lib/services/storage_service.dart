@@ -340,10 +340,11 @@ class StorageService {
   Future<void> setDesktopVolume(double value) =>
       _prefs.setDouble(AppConstants.keyDesktopVolume, value);
 
-  /// Windows: draw video without the GPU path (Settings > Playback >
-  /// Software video). Device-only.
+  /// A computer: draw video without the GPU path (Settings > Playback >
+  /// Software video). Device-only. On by default on Linux, where the GPU
+  /// path shows wrong colours (see `desktopSoftwareVideo`).
   bool getDesktopSoftwareVideo() =>
-      _prefs.getBool('vesper_desktop_software_video') ?? false;
+      _prefs.getBool('vesper_desktop_software_video') ?? Platform.isLinux;
   Future<void> setDesktopSoftwareVideo(bool value) =>
       _prefs.setBool('vesper_desktop_software_video', value);
 
@@ -528,6 +529,30 @@ class StorageService {
       _prefs.setBool(AppConstants.keyLaunchWithProfiles, value);
 
   bool getFastStartup() => _prefs.getBool(AppConstants.keyFastStartup) ?? true;
+
+  bool getLauncherRows() =>
+      _prefs.getBool(AppConstants.keyLauncherRows) ?? true;
+  Future<void> setLauncherRows(bool value) =>
+      _prefs.setBool(AppConstants.keyLauncherRows, value);
+  String? getLauncherState() => _prefs.getString(AppConstants.keyLauncherState);
+  Future<void> setLauncherState(String json) =>
+      _prefs.setString(AppConstants.keyLauncherState, json);
+
+  /// Show key (`playlistId:seriesId`) -> {after: episode id, next: the
+  /// following episode's channel JSON}. See [AppConstants.keyNextEpisodes].
+  Map<String, dynamic> getNextEpisodes() {
+    final raw = _prefs.getString(_vk(AppConstants.keyNextEpisodes));
+    if (raw == null) return {};
+    try {
+      final map = jsonDecode(raw);
+      return map is Map<String, dynamic> ? map : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> setNextEpisodes(Map<String, dynamic> map) =>
+      _prefs.setString(_vk(AppConstants.keyNextEpisodes), jsonEncode(map));
   Future<void> setFastStartup(bool value) =>
       _prefs.setBool(AppConstants.keyFastStartup, value);
 
@@ -960,6 +985,10 @@ class StorageService {
   bool getGuideCompact() => _guideBool(AppConstants.keyGuideCompact) ?? false;
   Future<void> setGuideCompact(bool value) =>
       _prefs.setBool(_vk(AppConstants.keyGuideCompact), value);
+  bool getGuideFocusPreview() =>
+      _guideBool(AppConstants.keyGuideFocusPreview) ?? false;
+  Future<void> setGuideFocusPreview(bool value) =>
+      _prefs.setBool(_vk(AppConstants.keyGuideFocusPreview), value);
 
   // --- Favorites (per viewer, shared across every playlist) -----------------
   // Favorites aren't namespaced by playlist (a favorited channel is just a
@@ -1504,6 +1533,8 @@ class StorageService {
     AppConstants.keyStartSection,
     AppConstants.keyStartSectionPending,
     AppConstants.keyFastStartup,
+    AppConstants.keyLauncherRows,
+    AppConstants.keyLauncherState,
     AppConstants.keyBackgroundSync,
     AppConstants.keyLaunchWithProfiles,
     AppConstants.keyPlaylistEnabled,
@@ -1534,6 +1565,7 @@ class StorageService {
     _goalPhoneCheckpoint,
     AppConstants.keyAiDevicePrefix,
     AppConstants.keySportsDbRounds,
+    AppConstants.keyNextEpisodes,
   ];
 
   static const _goalPhoneCheckpoint = 'vesper_goal_phone_checkpoint';

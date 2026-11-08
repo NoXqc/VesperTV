@@ -32,10 +32,10 @@ up on real boxes (weak CPUs, D-pad remotes, Fire OS quirks) — emulators/tests 
 Keep replies short; make routine calls yourself; **confirm before anything destructive or
 outward-facing** (deleting releases, force-pushes, posting). Only commit/release when asked.
 
-## 1b. Save Claude usage: offer Codex first (owner, 2026-11-04)
-The owner runs out of Claude usage; Codex has more room. **Before starting any task, say in one line
-whether Codex could do it instead** and offer a ready-to-paste Codex prompt (rules: `AGENTS.md`,
-`codex/<task>` branch, a HANDOFF block). Good for Codex: well-scoped features with a clear spec,
+## 1b. Codex scoping only when asked (owner, 2026-11-07)
+**Don't mention Codex or offer to hand a task to it** - the owner says when he wants something
+scoped for Codex (replaces the 2026-11-04 "offer Codex first" rule). When asked, write a
+ready-to-paste Codex prompt (rules: `AGENTS.md`, `codex/<task>` branch, a HANDOFF block). Good for Codex: well-scoped features with a clear spec,
 translations, docs/site/remote-guide updates, tests, reviews of a diff, diagnostics from a Send log
 when the area is known, mechanical refactors, building/checking a branch. Keep for Claude: releases,
 signing, VPS, Discord, native player/vendored plugin, cloud sync/relay design, root-causing an
@@ -44,7 +44,8 @@ unknown bug across many files, and reviewing/merging Codex branches. When in dou
 ## 2. Start-here checklist for a clean session
 1. `git pull`, then `git status` (ignore the untracked `*-windows-x64.zip` and
    `third_party/video_player_android/pubspec.lock` — local artifacts).
-2. Machine facts (Windows PC): repo `C:\Users\aarse\NoXPlayer`; Flutter `C:\src\flutter`; JDK 17;
+2. Machine facts (Windows PC): repo `C:\Users\aarse\NoXPlayer`; Flutter `C:\src\flutter`; JDK 17
+   (JDK 21 for the native player tests: `C:\Program Files\Microsoft\jdk-21.0.13.21-hotspot`, not on PATH/JAVA_HOME);
    Android SDK `C:\Android\Sdk`; apksigner `C:\Android\Sdk\build-tools\36.0.0\apksigner.bat`;
    keystore `C:\Users\aarse\keystores\noxplayer-release.jks` via git-ignored `android\key.properties`
    (originals also on drive `E:\`). Files are CRLF here (autocrlf) — "LF will be replaced by CRLF"
@@ -106,12 +107,10 @@ unknown bug across many files, and reviewing/merging Codex branches. When in dou
 - `windows/runner/main.cpp`, `Runner.rc` — Windows runner (window title "VesperTV").
 
 ## 4. Build / check
-- Native Robolectric tests default to compile SDK 36 and need Java 21. Use a temporary
-  Gradle -Dorg.gradle.java.home path; do not change signing/build secrets. On release +449,
-  the extra native run completed 187 tests: 175 passed, 12 fixture failures across listener/
-  texture tests (all with the same unstubbed track return):
-  mocked getCurrentTracks() returns null (real ExoPlayer returns Tracks). Owner instructed
-  publish/announce; Flutter analyze 17 and all 515 Flutter tests passed. Native suite is NOT green.
+- Native Robolectric tests (vendored player) need Java 21: from `android/`,
+  `./gradlew :video_player_android:testDebugUnitTest -Dorg.gradle.java.home=<JDK 21>`.
+  All 233 pass since 2026-11-07 (fixtures now stub `getCurrentTracks()` with `Tracks.EMPTY`
+  and pick the event listener among VideoPlayer's three). Don't change signing/build secrets.
 - `flutter analyze` — baseline **16** info issues, none errors. `flutter test` — `test/device_transfer_test.dart` (real LAN sockets).
 - Android: `flutter build apk --release` → `build/app/outputs/flutter-apk/app-release.apk` (~68 MB).
 - Windows: **kill the running app first** (`Get-Process VesperTV | Stop-Process -Force`) or the link
@@ -384,6 +383,31 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   and Choose a folder. `AppUpdateService.pickAsset`: Windows never takes `-macos.zip`. **Never attach
   a Mac zip to a release** until Windows installs have pickAsset. CI `.github/workflows/macos-build.yml`
   = unsigned artifact. Not signed/notarized. Details: `dev-notes/macos-desktop.md`.
+- **Claude, 2026-11-08 - release 1.0.61 (beta), +683 (latest):** owner said "/cutr". Android only; Windows stays 1.0.45. New version name because the updater compares tag vs versionName. Everything merged to local `main` since 1.0.60: event channels + guide speed (+677), TV launcher rows for Projectivy / Android TV (`claude/tv-channels`), Codex 3-hour EPG refresh, Preview on highlight + Back leaves at once + warm-resume fix (`claude/focus-preview`), resume after Who's watching (+682, another session), Vesper AI `settings` tool (`claude/ai-settings`: ~50 settings, clear history, update guide; `dev-notes/vesper-ai.md`), README rewrite. Not in it: Windows, macOS, iOS/Linux branches. Analyze 16, 1604 tests; native player suite not rerun (only its tests changed). Notes: dev-notes/releases/1.0.61.md. Next build > 683.
+- **Claude, 2026-11-08 - merged to local `main` for a Formuler test (+680, released in 1.0.61):** event-guide
+  (entry below), `claude/tv-channels` (Settings > Interface > TV home screen: Watch Next + a "Favourite channels" app
+  channel through TvProvider for Projectivy / Android TV; `services/launcher_channels.dart`, `LauncherChannels.kt`,
+  `dev-notes/launcher-channels.md`), Codex `codex/epg-3h` (3-hour EPG refresh) and `claude/focus-preview`:
+  **Preview on highlight** (Settings > Interface > Guide, opt-in per viewer, TV + computer): the live list / Timeline
+  channel plays after 0.8 s with no key, only when a nav key caused the highlight (`_noteKey` HardwareKeyboard handler
+  in `tv_home_screen`); History after 10 s (`PlaybackService.play(recordHistory: false)`); never over a recording's
+  only connection. **Back at the root leaves at once on Android** (TV home tabs, Sports Mode, Who's watching;
+  `AppExit.back`, warm exit; a computer still asks; tests: `test/warm_exit_helper.dart`). **Warm-return resume:**
+  `_episodeNotificationOpened` was never reset, so after one notification tap no warm return resumed until a cold
+  start; now reset in `AppExit.beforeWarm`, and Send log says `Resume: skipped (why)`. Not box-tested. Next build > 680.
+- **Claude, 2026-11-07 - event channels + guide speed (released in 1.0.61, +677; test APK +677 had 1-2 only):**
+  (1) TV header "Updating..." stuck after a background update: `PlaylistSession.isLoading` is now derived (list load
+  or on-screen row loads). (2) **Guide from channel names**: `services/channel_name_events.dart` reads
+  `NBA 01: Nuggets vs. Pacers @ 7 Nov 04:58 PM ET` (US/UK/EU DST, GMT+-N; no zone or date = skipped, 96 % of 3,666
+  real names read), `PlaylistManager.channelNameEventsByEpgId` -> `EpgService.nameEventsProvider`; 3 h block merged
+  only where the provider has nothing real (fillers like Signing Off cut around it); `hasPrograms` stays the
+  provider's guide. (3) Event channels are renamed daily but the saved Xtream live list only changed with a full
+  update (users saw yesterday's games): `refreshLiveList` when the list has event channels and is > 1 h old, after
+  startup + every 10 min in the foreground, one playlist at a time (`LiveRefresh:` log). (4) EPG DB WAL +
+  synchronous NORMAL (a 255k-programme refresh took 3.5 min on a Google TV Streamer, LOG-QSG4PB) and a failed
+  refresh retries after 15/30/60/120 min (standby mid-refresh hit the 10-min limit, LOG-RJQ6N6). (5) Match
+  resolution never picks below 1080p (onn 4K Pro at 720p scaled UI and video differently). Not box-tested.
+  Next build > 677.
 - **Claude, 2026-11-07 - release 1.0.60 (beta), +676 (latest):** owner said "/cutr". Android only; Windows stays 1.0.45. New version name because the updater compares tag vs versionName (a re-uploaded 1.0.59 never reaches 1.0.59 installs). Watch list by hand (button on IPTV + Media Hub pages, Movies/TV Shows row, Media Hub page with Movies + TV Shows rows, AI adds Media Hub titles), player Buffer button, Back on Updating Content opens the app (+ opt-in Update in the background), Sports Trak Guide layout / card size / source pick fix, Favourites sort (Codex), macOS PRs from gmtherien (not released; CI builds zip + DMG). Notes: dev-notes/releases/1.0.60.md. Next build > 676.
 - **Claude, 2026-11-06 - release 1.0.59 (beta), +669:** owner said "commit push everything and cut a
   release". Android only; Windows stays 1.0.45 (windows-parity is merged in main but its UI is untested and no zip
@@ -543,9 +567,7 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   scroll; D-pad test asserts focus on screen + Up never scrolls down). New Settings > Media Hub >
   **Custom posters** (`ArchivePosters`, `vesper_archive_poster_pattern`, device-only):
   `{imdb_id}`/`{tmdb_id}`/`{type}` pattern; `ArchiveMeta.posterUrl` is now a getter over
-  `originalPosterUrl` (what toJson saves). APK only, Windows stays 1.0.45. Known flaky test:
-  `sports_schedule_test` "calendar: D-pad selects days" can fail in the full suite
-  (path_provider MissingPluginException after completion), passes alone. Next build > 524.
+  `originalPosterUrl` (what toJson saves). APK only, Windows stays 1.0.45. Next build > 524.
 - **Claude, 2026-10-29 — Android release 1.0.47+520:** Codex's Media Hub experience
   (all 6 Nuvio-plan priorities, dev-notes/media-hub-experience.md + Claude follow-ups: Windows
   headers/subtitles, 41 translations, movie page scroll-to-top), live player Right = last channel,

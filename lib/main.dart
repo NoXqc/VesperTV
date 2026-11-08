@@ -28,6 +28,8 @@ import 'screens/startup_profile_screen.dart';
 import 'services/app_log.dart';
 import 'services/app_exit.dart';
 import 'services/startup_quiet.dart';
+import 'services/launcher_channels.dart';
+import 'screens/launcher_open.dart';
 import 'services/app_preferences.dart';
 import 'services/archive_posters.dart';
 import 'services/catalog_database.dart';
@@ -235,8 +237,19 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   late final CloudSyncService _cloudSync;
   AppLifecycleListener? _syncLifecycle;
   AppLifecycleListener? _vesperLifecycle;
+  AppLifecycleListener? _launcherLifecycle;
   bool _ready = false;
   Completer<void>? _profileSelection;
+
+  /// A warm return landed on Who's watching (with the startup selector on,
+  /// Back at the root goes there before leaving): the Startup resume
+  /// choice runs once a viewer is picked, like a cold start. Nothing ran it
+  /// before (owner, LOG-4HACGG).
+  bool _resumeAfterSelection = false;
+
+  /// Back at the root opened Who's watching from this viewer
+  /// ([_returnToProfiles]): picking them again resumes their channel.
+  String? _resumeIfViewer;
 
   Future<void> _finishProfileSelection() async {
     final selection = _profileSelection;
@@ -244,8 +257,18 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     // The application Navigator must exist before startup playback can push.
     await WidgetsBinding.instance.endOfFrame;
     if (selection != null && !selection.isCompleted) selection.complete();
+    final sameViewer = _resumeIfViewer != null &&
+        _resumeIfViewer == _storage.getActiveViewerId();
+    final resume = _resumeAfterSelection || sameViewer;
+    _resumeAfterSelection = false;
+    _resumeIfViewer = null;
+    if (resume && mounted) {
+      if (sameViewer) debugPrint('Resume: same viewer picked again');
+      unawaited(_autoResumeLastChannel());
+    }
     unawaited(_episodeBackground?.openPending());
     unawaited(_sportsNotifications?.openPending());
+    unawaited(LauncherChannels.instance.openPending());
   }
 
   /// Vesper AI (Settings > Vesper AI): the remote's voice button when it is
@@ -280,6 +303,9 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   /// app; picking a viewer rebuilds it on the TV root.
   Future<void> _returnToProfiles() async {
     if (!_ready || _profileSelection != null) return;
+    // Picking the same viewer again resumes their channel (Startup choice);
+    // another viewer starts fresh (owner, 2026-11-08).
+    _resumeIfViewer = _storage.getActiveViewerId();
     if (usesMediaKit) {
       DesktopMiniPlayer.instance.clear();
     } else {
@@ -420,6 +446,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     HardwareKeyboard.instance.removeHandler(_onVoiceKey);
     _syncLifecycle?.dispose();
     _vesperLifecycle?.dispose();
+    _launcherLifecycle?.dispose();
     McpBridge.instance.stop();
     _gameReminders?.dispose();
     _programmeReminders?.dispose();
@@ -643,6 +670,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       _playlistManager = PlaylistManager(_storage, _catalogDb);
       _epgService = EpgService(_storage)
         ..catchupDaysProvider = _playlistManager.catchupDaysByEpgId
+        ..nameEventsProvider = _playlistManager.channelNameEventsByEpgId
         ..beforeRefresh = _playlistManager.ensureLiveChannelsLoaded;
       // Started during the splash, not after it: it only opens the EPG
       // database and preloads now/next for every channel (a few thousand
@@ -745,11 +773,22 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // Back > Exit is a warm exit (AppExit): nothing keeps playing in the
       // background, and coming back runs the Startup resume choice again
       // (after Who's watching when that shows first).
-      AppExit.beforeWarm = _playbackService.stop;
+      AppExit.beforeWarm = () async {
+        // "A notification opened the app" covers that one launch only. The
+        // process outlives a warm exit, and this stayed set: after one
+        // notification tap, no warm return resumed the channel again
+        // until a cold start (owner, 2026-11-08).
+        _episodeNotificationOpened = false;
+        await _playbackService.stop();
+      };
       AppExit.afterWarm = () {
-        if (mounted && _ready && _profileSelection == null) {
-          unawaited(_autoResumeLastChannel());
+        if (!mounted || !_ready) return;
+        if (_profileSelection != null) {
+          _resumeAfterSelection = true;
+          debugPrint("Resume: after Who's watching");
+          return;
         }
+        unawaited(_autoResumeLastChannel());
       };
 
       // Vesper AI: one toolbox for the voice / typed commands, the viewer's
@@ -766,6 +805,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
               ? null
               : HubTitle(found.$1.manifestUrl, found.$2);
         },
+        clearHubHistory: _archiveService.clearHistory,
         host: AppVesperHost(
             navigatorKey: _navigatorKey,
             playback: _playbackService,
@@ -783,6 +823,28 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         onHide: McpBridge.instance.pause,
         onShow: McpBridge.instance.resume,
       );
+
+      // TV launcher rows (Settings > Interface > TV home screen): sent each
+      // time the app goes away, since that's when the launcher shows them.
+      LauncherChannels.instance
+        ..attach(
+            storage: _storage,
+            playback: _playbackService,
+            playlist: _playlistManager,
+            hub: _archiveService,
+            prefs: _preferences,
+            alerts: _episodeAlerts)
+        ..canOpen = (() =>
+            mounted &&
+            _ready &&
+            _profileSelection == null &&
+            _navigatorKey.currentState != null)
+        ..open = ((card) async {
+          final nav = _navigatorKey.currentState;
+          if (nav != null) await openLauncherCard(nav, card);
+        });
+      _launcherLifecycle =
+          AppLifecycleListener(onHide: LauncherChannels.instance.appHidden);
 
       // Restores category lists (small, fast regardless of catalog size —
       // see that method's doc comment for why live channels/category
@@ -964,6 +1026,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       WidgetsBinding.instance.addPostFrameCallback((_) {
         unawaited(_episodeBackground?.openPending());
         unawaited(_sportsNotifications?.openPending());
+        unawaited(LauncherChannels.instance.openPending());
       });
       WidgetsBinding.instance.scheduleFrame();
       // `_epgService.init()` was started during the splash (see above);
@@ -989,6 +1052,10 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       unawaited(() async {
         await _playbackService.init();
         PerfDiagnostics.mark('playbackInit');
+        // The launcher's rows as of now (the last session may have ended
+        // before it could send them), after the launch's busy seconds.
+        unawaited(StartupQuiet.after(const Duration(seconds: 20))
+            .then((_) => LauncherChannels.instance.publish()));
         await Future.wait([
           _autoResumeLastChannel(),
           PerfDiagnostics.task('epgInit', _epgService.init),
@@ -1002,6 +1069,11 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         // in-process weekly timer.
         await StartupQuiet.after(const Duration(seconds: 10));
         await _playlistManager.refreshWhatsNewTmdbIfDue();
+        // Event channels ("NBA 01: ... @ 7 Nov 04:58 PM ET") are renamed
+        // daily: their live list is fetched again when it's over an hour
+        // old, now and every 10 minutes while the app is on screen.
+        await StartupQuiet.after(const Duration(seconds: 14));
+        _playlistManager.startEventChannelRefresh();
       }());
     } catch (e) {
       // Surfaces any unexpected startup failure as a retryable screen
@@ -1106,21 +1178,33 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   /// this, resume-last-channel would silently find an empty list and do
   /// nothing on every Xtream launch.
   Future<void> _autoResumeLastChannel() async {
+    // Send log: why a launch or warm return did or didn't resume.
+    void skipped(String why) => debugPrint('Resume: skipped ($why)');
     if (Platform.isAndroid &&
         (await _episodeBackground?.pendingTap == true ||
             await _sportsNotifications?.pendingTap == true ||
-            _episodeNotificationOpened)) {
-      return;
+            _episodeNotificationOpened ||
+            // Started from a card on the TV launcher: it opens that title.
+            await LauncherChannels.instance.hasPendingLink ||
+            LauncherChannels.instance.openedRecently)) {
+      return skipped('a notification or launcher card opened the app');
     }
     // The sports home starts with its dashboard, never an unrelated stream.
-    if (_preferences.sportsMode || _preferences.hideLiveTv) return;
-    if (_playbackService.isPlayingSomething) return;
+    if (_preferences.sportsMode || _preferences.hideLiveTv) {
+      return skipped('sports mode or Live TV hidden');
+    }
+    if (_playbackService.isPlayingSomething) {
+      return skipped('already playing');
+    }
     final lastId = _storage.getLastChannelId();
-    if (lastId == null) return;
+    if (lastId == null) return skipped('no last channel');
     await PerfDiagnostics.task(
         'liveList', _playlistManager.ensureLiveChannelsLoaded);
     PerfDiagnostics.mark('liveList');
-    if (_episodeNotificationOpened) return;
+    if (_episodeNotificationOpened ||
+        LauncherChannels.instance.openedRecently) {
+      return skipped('a notification or launcher card opened the app');
+    }
     // Settings > General > Startup (both platforms): full screen (default),
     // or playing in the guide's preview box, or neither.
     // Another start section (Startup > Open on) wins over full screen: the
@@ -1137,6 +1221,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     // unfiltered search result would.
     for (final channel in _playlistManager.visibleChannels(category: 'tv')) {
       if (channel.id == lastId) {
+        debugPrint(
+            'Resume: ${fullscreen ? 'full screen' : inGuide ? 'in the guide' : 'pill only'}');
         if (usesMediaKit) {
           if (fullscreen) {
             _navigatorKey.currentState?.push(MaterialPageRoute(
@@ -1165,6 +1251,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         return;
       }
     }
+    skipped('last channel not in the live list');
   }
 
   /// The oldest last-full-sync timestamp among enabled Xtream playlists —

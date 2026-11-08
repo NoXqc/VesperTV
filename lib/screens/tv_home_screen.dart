@@ -2176,6 +2176,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     super.initState();
     GuideKey.register(this);
     FocusManager.instance.addListener(_scheduleFocusRecovery);
+    HardwareKeyboard.instance.addHandler(_noteKey);
     WatchList.instance.changes.addListener(_watchListChanged);
     _returnToTv = widget.startupBrowseCovered || widget.startupSportsCovered;
     final prefs = context.read<AppPreferences>();
@@ -2283,6 +2284,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   @override
   void dispose() {
     GuideKey.unregister(this);
+    HardwareKeyboard.instance.removeHandler(_noteKey);
+    _focusPreviewTimer?.cancel();
+    _focusPreviewHistory?.cancel();
     WatchList.instance.changes.removeListener(_watchListChanged);
     _returnBackGuard?.cancel();
     appRouteObserver.unsubscribe(this);
@@ -2756,7 +2760,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
 
   Future<void> _previewOrOpenChannel(Channel channel) async {
     _catchupPreview = null;
-    if (usesMediaKit) {
+    // The target platform (not dart:io), so Android tests on a Windows PC
+    // take the Android path, like _previewOrOpenCatchup.
+    if (usesMediaKitTarget) {
       final mini = DesktopMiniPlayer.instance;
       if (mini.channel.value?.id == channel.id) {
         final session = mini.take();
@@ -2790,6 +2796,14 @@ class _TvHomeScreenState extends State<TvHomeScreen>
           playback, (_) => PlayerScreen(channel: channel)));
       return;
     }
+    await _startPreview(channel);
+  }
+
+  /// Android: plays [channel] in the preview box (the first half of
+  /// [_previewOrOpenChannel], also used by Preview on highlight).
+  Future<void> _startPreview(Channel channel,
+      {bool recordHistory = true}) async {
+    final playback = context.read<PlaybackService>();
     // The plain Live list hands the playing row `_currentChannelFocusNode`
     // instead of its own internal node, so the row just pressed swaps nodes
     // the moment currentChannel changes and the D-pad cursor would drop
@@ -2812,7 +2826,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     }
 
     playback.addListener(refocus);
-    final future = playback.play(channel);
+    final future = playback.play(channel, recordHistory: recordHistory);
     _previewChannelId = channel.id;
     _previewFuture = future;
     try {
@@ -2824,6 +2838,120 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         _previewFuture = null;
       }
     }
+  }
+
+  // --- Preview on highlight (Settings > Interface > Guide, opt-in) ---------
+  // The live channel the remote stops on plays in the preview without OK;
+  // OK on it then goes full screen as usual. Only after a remote/keyboard
+  // move, and once the remote has been still on the channel for
+  // [_focusPreviewDelay]: holding Down past 40 channels opens one stream,
+  // not 40 (weak boxes, one-connection accounts), and focus that lands on a
+  // row by itself (Back from full screen, a group opening, a tab change)
+  // never changes what's playing.
+  static const _focusPreviewDelay = Duration(milliseconds: 800);
+
+  /// A highlight preview joins History only once it has been watched this
+  /// long: scrolling past 30 channels shouldn't fill it.
+  static const _focusPreviewHistoryAfter = Duration(seconds: 10);
+
+  static final _navKeys = {
+    LogicalKeyboardKey.arrowUp,
+    LogicalKeyboardKey.arrowDown,
+    LogicalKeyboardKey.arrowLeft,
+    LogicalKeyboardKey.arrowRight,
+    LogicalKeyboardKey.pageUp,
+    LogicalKeyboardKey.pageDown,
+    LogicalKeyboardKey.channelUp,
+    LogicalKeyboardKey.channelDown,
+  };
+  DateTime _lastKeyAt = DateTime(0);
+  DateTime _lastNavKeyAt = DateTime(0);
+  Timer? _focusPreviewTimer;
+  Timer? _focusPreviewHistory;
+
+  /// HardwareKeyboard handler: notes when keys go down, never handles one.
+  /// Runs before the focus system moves the cursor, so a highlight that a
+  /// key caused sees that key here already.
+  bool _noteKey(KeyEvent event) {
+    if (event is KeyUpEvent) return false;
+    final now = DateTime.now();
+    _lastKeyAt = now;
+    if (_navKeys.contains(event.logicalKey)) _lastNavKeyAt = now;
+    return false;
+  }
+
+  /// The live list / Timeline guide highlighted [channel] ([highlighted]
+  /// says whether it still is). Restarts the wait on every move.
+  void _scheduleFocusPreview(Channel channel, bool Function() highlighted) {
+    _focusPreviewTimer?.cancel();
+    _focusPreviewTimer = null;
+    if (!mounted || !context.read<AppPreferences>().guideFocusPreview) return;
+    final armedAt = DateTime.now();
+    if (armedAt.difference(_lastNavKeyAt) > const Duration(milliseconds: 500)) {
+      return;
+    }
+    _focusPreviewTimer = Timer(_focusPreviewDelay, () {
+      _focusPreviewTimer = null;
+      // Any key since (OK, Back, a move off the channels) = the remote
+      // didn't stay here; OK does its own preview / full screen.
+      if (_lastKeyAt.isAfter(armedAt)) return;
+      if (!mounted || !highlighted()) return;
+      unawaited(_focusPreview(channel));
+    });
+  }
+
+  Future<void> _focusPreview(Channel channel) async {
+    if (_movingChannel != null) return;
+    final route = ModalRoute.of(context);
+    if (route != null && !route.isCurrent) return;
+    if (!context.read<AppPreferences>().guideFocusPreview) return;
+    final playlist = context.read<PlaylistManager>();
+    // Browsing History itself: recording the channel again would only move
+    // it to the top of the list under the cursor.
+    final inHistory = _effectiveLiveGroup(playlist) == _recentGroupSentinel;
+    if (usesMediaKitTarget) {
+      final mini = DesktopMiniPlayer.instance;
+      if (mini.channel.value?.id == channel.id) return;
+      _catchupPreview = null;
+      mini.play(channel);
+      context.read<StorageService>().setLastChannelId(channel.id);
+      if (!inHistory) {
+        _recordAfterWatching(channel,
+            () => DesktopMiniPlayer.instance.channel.value?.id == channel.id);
+      }
+      return;
+    }
+    final playback = context.read<PlaybackService>();
+    if (playback.liveChannel?.id == channel.id ||
+        _previewChannelId == channel.id) {
+      return;
+    }
+    // A recording holds this account's only connection: OK asks Stop
+    // recording / Cancel first, a highlight never pops that up.
+    if (RecordingService.instance.conflictFor(channel, playlist.profiles) !=
+        null) {
+      return;
+    }
+    _catchupPreview = null;
+    playback.zapList = _currentLiveChannels(playlist);
+    if (!inHistory) {
+      _recordAfterWatching(
+          channel, () => playback.currentChannel?.id == channel.id);
+    }
+    await _startPreview(channel, recordHistory: false);
+  }
+
+  /// History for a highlight preview, once it has played
+  /// [_focusPreviewHistoryAfter] (still playing then, preview or full
+  /// screen).
+  void _recordAfterWatching(Channel channel, bool Function() stillPlaying) {
+    _focusPreviewHistory?.cancel();
+    _focusPreviewHistory = Timer(_focusPreviewHistoryAfter, () {
+      _focusPreviewHistory = null;
+      if (mounted && stillPlaying()) {
+        context.read<PlaybackService>().recordWatched(channel);
+      }
+    });
   }
 
   /// Right, once there's no further column to move into, jumps straight to
@@ -3006,36 +3134,42 @@ class _TvHomeScreenState extends State<TvHomeScreen>
 
   bool _exitPromptOpen = false;
 
-  /// Back from the tabs column: "Are you sure?" instead of closing at once.
-  /// Stay is focused by default so a stray extra Back/Select press can't
-  /// close the app by accident.
+  /// Back from the tabs column leaves the app ([AppExit.back]): on Android
+  /// at once with a warm exit, like the remote's Home key, so opening
+  /// VesperTV again is instant (owner, 2026-11-05 / 2026-11-08). A computer
+  /// still asks "Are you sure?" first (Esc would close the window); Stay is
+  /// focused there so a stray extra press can't close it by accident.
   Future<void> _confirmExit() async {
     if (_exitPromptOpen || (_returnBackGuard?.isActive ?? false)) return;
     if (ProfileGate.backToSelector()) return;
     _exitPromptOpen = true;
-    final exit = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(tr('Exit {appName}?', {'appName': AppConstants.appName})),
-        content: Text(tr('Are you sure you want to exit {appName}?',
-            {'appName': AppConstants.appName})),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(tr('Exit')),
+    try {
+      await AppExit.back(() async {
+        final exit = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(
+                tr('Exit {appName}?', {'appName': AppConstants.appName})),
+            content: Text(tr('Are you sure you want to exit {appName}?',
+                {'appName': AppConstants.appName})),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: Text(tr('Exit')),
+              ),
+              TextButton(
+                autofocus: true,
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: Text(tr('Stay')),
+              ),
+            ],
           ),
-          TextButton(
-            autofocus: true,
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(tr('Stay')),
-          ),
-        ],
-      ),
-    );
-    _exitPromptOpen = false;
-    // Warm (owner, 2026-11-05): like the remote's Home key, so opening
-    // VesperTV again is instant ([AppExit.warm]).
-    if (exit == true && mounted) unawaited(AppExit.warm());
+        );
+        return exit == true && mounted;
+      });
+    } finally {
+      _exitPromptOpen = false;
+    }
   }
 
   /// "History" row under Favourites: a popup of the last 10 live channels
@@ -3253,8 +3387,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       // and only exits the app from the tabs column (it used to exit
       // straight from anywhere, including deep inside the guide).
       child: PopScope(
-        // Never pops on its own: Back from the tabs column asks first
-        // (_confirmExit) instead of closing the app straight away.
+        // Never pops on its own: Back from the tabs column goes through
+        // _confirmExit (a warm exit on Android, a prompt on a computer).
         canPop: false,
         onPopInvokedWithResult: (didPop, _) {
           if (!didPop) _handleBack();
@@ -4741,6 +4875,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       _guideFocusedChannel = channel;
       _guideFocusedProgram = program;
     });
+    _scheduleFocusPreview(
+        channel, () => _guideFocusedChannel?.id == channel.id);
   }
 
   /// The small live-preview box both guide views use — the Timeline
@@ -5644,6 +5780,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       onFocusChange: (has) {
         if (has) {
           _liveListFocused.value = channel;
+          _scheduleFocusPreview(
+              channel, () => _liveListFocused.value?.id == channel.id);
         } else if (_liveListFocused.value?.id == channel.id) {
           _liveListFocused.value = null;
         }

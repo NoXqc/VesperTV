@@ -67,6 +67,7 @@ class MainActivity : FlutterActivity() {
     private val displayModes by lazy { DisplayModes(this) }
     private val overlayProbe by lazy { OverlayProbeBridge(this) }
     private val voiceBridge by lazy { VoiceBridge(this) }
+    private val launcherChannels by lazy { LauncherChannels(this) }
 
     /**
      * Native video surface (beta, Settings > Interface > Background video): Flutter starts
@@ -116,6 +117,7 @@ class MainActivity : FlutterActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         voiceBridge.onIntent(intent)
+        launcherChannels.onIntent(intent)
     }
 
     override fun onStart() {
@@ -148,6 +150,10 @@ class MainActivity : FlutterActivity() {
         // Vesper AI: speech recognizer, text-to-speech, assistant launch.
         voiceBridge.connect(flutterEngine.dartExecutor.binaryMessenger)
         voiceBridge.onIntent(intent)
+
+        // TV launcher rows (Watch Next, Favourites) and their cards' links.
+        launcherChannels.connect(flutterEngine.dartExecutor.binaryMessenger)
+        launcherChannels.onIntent(intent)
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "vespertv/goal_overlay_probe")
             .setMethodCallHandler(overlayProbe::handle)

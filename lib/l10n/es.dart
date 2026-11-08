@@ -40,6 +40,9 @@ const Map<String, String> kEs = {
   "Compact guide": "Guía compacta",
   "Shorter Timeline rows so more channels fit in the same space.":
       "Filas más cortas en la línea de tiempo para ver más canales.",
+  "Preview on highlight": "Vista previa al resaltar",
+  "The channel you stop on plays in the preview, without pressing OK. OK again opens it full screen.":
+      "El canal en el que te detienes se reproduce en la vista previa, sin pulsar OK. OK otra vez lo abre en pantalla completa.",
   "Transparent popups": "Ventanas transparentes",
   "Reminders and goal alerts lose their background and outline, keeping only the logo and text.":
       "Los recordatorios y avisos de gol pierden el fondo y el contorno, y conservan solo el logo y el texto.",
@@ -2793,8 +2796,8 @@ const Map<String, String> kEs = {
       "Mantén esta dirección en privado: quien la tenga puede controlar VesperTV mientras está abierto.",
   "Ask on the TV first":
       "Preguntar antes en la tele",
-  "An AI app's play, hide or show waits for OK on the TV.":
-      "Reproducir, ocultar o mostrar desde una app de IA espera OK en la tele.",
+  "Playing, hiding, changing settings or clearing history from an AI app waits for OK on the TV.":
+      "Reproducir, ocultar, cambiar ajustes o borrar el historial desde una app de IA espera OK en la tele.",
   "Reset the address":
       "Restablecer la dirección",
   "The old address stops working; add the new one":
@@ -2914,6 +2917,18 @@ const Map<String, String> kEs = {
       "Mi lista",
   "Remove from watch list":
       "Quitar de mi lista",
+  "turn on":
+      "activar",
+  "turn off":
+      "desactivar",
+  "Hide scores":
+      "Ocultar marcadores",
+  "Clear Media Hub history":
+      "Borrar historial de Media Hub",
+  "An AI app wants to change settings: {what}.":
+      "Una app de IA quiere cambiar ajustes: {what}.",
+  "An AI app wants to: {what}.":
+      "Una app de IA quiere: {what}.",
   "An AI app wants to clear your watch list.":
       "Una app de IA quiere vaciar tu lista.",
   "Game card size":
@@ -2954,4 +2969,12 @@ const Map<String, String> kEs = {
   "Export a backup": "Exportar una copia",
   "Save a backup file anywhere on this Mac": "Guardar un archivo de copia en cualquier lugar de este Mac",
   "Backup exported.": "Copia exportada.",
+  "TV home screen":
+      "Pantalla de inicio de la TV",
+  "Show on the TV home screen":
+      "Mostrar en la pantalla de inicio de la TV",
+  "Continue watching and your Watch list in the launcher's Watch Next row, plus a row of your favourite channels. For Android TV launchers such as Projectivy.":
+      "Seguir viendo y Mi lista en la fila Watch Next del launcher, más una fila con tus canales favoritos. Para launchers de Android TV como Projectivy.",
+  "Continue watching and favourites on the TV launcher":
+      "Seguir viendo y favoritos en el launcher de la TV",
 };

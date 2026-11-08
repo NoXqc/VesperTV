@@ -40,6 +40,9 @@ const Map<String, String> kEl = {
   "Compact guide": "Συμπαγής οδηγός",
   "Shorter Timeline rows so more channels fit in the same space.":
       "Πιο χαμηλές γραμμές στο χρονοδιάγραμμα για περισσότερα κανάλια.",
+  "Preview on highlight": "Προεπισκόπηση με επισήμανση",
+  "The channel you stop on plays in the preview, without pressing OK. OK again opens it full screen.":
+      "Το κανάλι στο οποίο σταματάτε παίζει στην προεπισκόπηση, χωρίς να πατήσετε OK. Με OK ξανά ανοίγει σε πλήρη οθόνη.",
   "Transparent popups": "Διάφανα αναδυόμενα",
   "Reminders and goal alerts lose their background and outline, keeping only the logo and text.":
       "Οι υπενθυμίσεις και οι ειδοποιήσεις γκολ χάνουν φόντο και περίγραμμα, κρατώντας μόνο το λογότυπο και το κείμενο.",
@@ -2755,8 +2758,8 @@ const Map<String, String> kEl = {
       "Κράτα αυτή τη διεύθυνση ιδιωτική: όποιος την έχει μπορεί να ελέγχει το VesperTV όσο είναι ανοιχτό.",
   "Ask on the TV first":
       "Ερώτηση πρώτα στην τηλεόραση",
-  "An AI app's play, hide or show waits for OK on the TV.":
-      "Η αναπαραγωγή, απόκρυψη ή εμφάνιση από εφαρμογή AI περιμένει OK στην τηλεόραση.",
+  "Playing, hiding, changing settings or clearing history from an AI app waits for OK on the TV.":
+      "Η αναπαραγωγή, απόκρυψη, αλλαγή ρυθμίσεων ή διαγραφή ιστορικού από εφαρμογή AI περιμένει OK στην τηλεόραση.",
   "Reset the address":
       "Επαναφορά διεύθυνσης",
   "The old address stops working; add the new one":
@@ -2876,6 +2879,18 @@ const Map<String, String> kEl = {
       "Λίστα παρακολούθησης",
   "Remove from watch list":
       "Αφαίρεση από τη λίστα",
+  "turn on":
+      "ενεργοποίηση",
+  "turn off":
+      "απενεργοποίηση",
+  "Hide scores":
+      "Απόκρυψη σκορ",
+  "Clear Media Hub history":
+      "Καθαρισμός ιστορικού Media Hub",
+  "An AI app wants to change settings: {what}.":
+      "Μια εφαρμογή AI θέλει να αλλάξει ρυθμίσεις: {what}.",
+  "An AI app wants to: {what}.":
+      "Μια εφαρμογή AI θέλει: {what}.",
   "An AI app wants to clear your watch list.":
       "Μια εφαρμογή AI θέλει να αδειάσει τη λίστα σου.",
   "Game card size":
@@ -2916,4 +2931,12 @@ const Map<String, String> kEl = {
   "Export a backup": "Εξαγωγή αντιγράφου ασφαλείας",
   "Save a backup file anywhere on this Mac": "Αποθήκευση αρχείου αντιγράφου ασφαλείας οπουδήποτε σε αυτό το Mac",
   "Backup exported.": "Το αντίγραφο ασφαλείας εξήχθη.",
+  "TV home screen":
+      "Αρχική οθόνη τηλεόρασης",
+  "Show on the TV home screen":
+      "Εμφάνιση στην αρχική οθόνη της τηλεόρασης",
+  "Continue watching and your Watch list in the launcher's Watch Next row, plus a row of your favourite channels. For Android TV launchers such as Projectivy.":
+      "Συνέχεια παρακολούθησης και η λίστα παρακολούθησής σας στη σειρά Watch Next του launcher, μαζί με μια σειρά με τα αγαπημένα σας κανάλια. Για launcher Android TV όπως το Projectivy.",
+  "Continue watching and favourites on the TV launcher":
+      "Συνέχεια παρακολούθησης και αγαπημένα στο launcher της τηλεόρασης",
 };

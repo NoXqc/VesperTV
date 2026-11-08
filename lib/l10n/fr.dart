@@ -39,6 +39,9 @@ const Map<String, String> kFr = {
   "Compact guide": "Guide compact",
   "Shorter Timeline rows so more channels fit in the same space.":
       "Lignes de la grille plus courtes pour afficher plus de chaînes.",
+  "Preview on highlight": "Aperçu au survol",
+  "The channel you stop on plays in the preview, without pressing OK. OK again opens it full screen.":
+      "La chaîne sur laquelle vous vous arrêtez joue dans l'aperçu, sans appuyer sur OK. OK une deuxième fois l'ouvre en plein écran.",
   "Transparent popups": "Fenêtres transparentes",
   "Reminders and goal alerts lose their background and outline, keeping only the logo and text.":
       "Les rappels et alertes de but perdent leur fond et leur contour, il ne reste que le logo et le texte.",
@@ -2806,8 +2809,8 @@ const Map<String, String> kFr = {
       "Gardez cette adresse privée : quiconque l'a peut contrôler VesperTV quand il est ouvert.",
   "Ask on the TV first":
       "Demander d'abord sur la télé",
-  "An AI app's play, hide or show waits for OK on the TV.":
-      "Une lecture, un masquage ou un affichage demandé par une app d'IA attend OK sur la télé.",
+  "Playing, hiding, changing settings or clearing history from an AI app waits for OK on the TV.":
+      "Une lecture, un masquage, un changement de réglage ou un effacement d'historique demandé par une app d'IA attend OK sur la télé.",
   "Reset the address":
       "Réinitialiser l'adresse",
   "The old address stops working; add the new one":
@@ -2927,6 +2930,18 @@ const Map<String, String> kFr = {
       "Liste à regarder",
   "Remove from watch list":
       "Retirer de la liste",
+  "turn on":
+      "activer",
+  "turn off":
+      "désactiver",
+  "Hide scores":
+      "Masquer les scores",
+  "Clear Media Hub history":
+      "Effacer l'historique Media Hub",
+  "An AI app wants to change settings: {what}.":
+      "Une app d'IA veut modifier des réglages : {what}.",
+  "An AI app wants to: {what}.":
+      "Une app d'IA veut : {what}.",
   "An AI app wants to clear your watch list.":
       "Une app d'IA veut vider votre liste à regarder.",
   "Game card size":
@@ -2967,4 +2982,12 @@ const Map<String, String> kFr = {
   "Export a backup": "Exporter une sauvegarde",
   "Save a backup file anywhere on this Mac": "Enregistrer un fichier de sauvegarde n'importe où sur ce Mac",
   "Backup exported.": "Sauvegarde exportée.",
+  "TV home screen":
+      "Écran d'accueil de la TV",
+  "Show on the TV home screen":
+      "Afficher sur l'écran d'accueil de la TV",
+  "Continue watching and your Watch list in the launcher's Watch Next row, plus a row of your favourite channels. For Android TV launchers such as Projectivy.":
+      "Reprendre l'écoute et votre liste à regarder dans la rangée Watch Next du lanceur, plus une rangée de vos chaînes favorites. Pour les lanceurs Android TV comme Projectivy.",
+  "Continue watching and favourites on the TV launcher":
+      "Reprendre l'écoute et favoris sur le lanceur de la TV",
 };

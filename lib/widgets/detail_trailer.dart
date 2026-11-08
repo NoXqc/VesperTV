@@ -11,6 +11,7 @@ import '../models/trailer.dart';
 import '../models/youtube_embed.dart';
 import '../services/archive_service.dart';
 import '../services/desktop_mini_player.dart';
+import '../services/desktop_stream_setup.dart';
 import '../services/playback_service.dart';
 import '../services/trailer_service.dart';
 import '../utils/route_observer.dart';
@@ -313,7 +314,7 @@ class _PreviewState extends State<_Preview> {
     try {
       if (usesMediaKitTarget) {
         final player = _windows = mk.Player();
-        _windowsVideo = mv.VideoController(player);
+        _windowsVideo = desktopVideoController(player);
         _completed = player.stream.completed.listen((done) {
           if (done && _closed == null) widget.onFinished();
         });

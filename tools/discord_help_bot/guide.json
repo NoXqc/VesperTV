@@ -40,6 +40,14 @@
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
   {
+    "id": "d5b260172234b167",
+    "category": "Live TV",
+    "title": "Preview without pressing OK",
+    "answer": "Off by default. When it is on, the channel you stop on with the arrows plays in the preview after a moment, in the Live list and the Timeline guide. Channels you scroll past are not opened, only the one you stay on. OK on it opens full screen. A previewed channel joins History once it has played for 10 seconds. While a recording uses the account's only connection, highlighting never interrupts it: press OK to choose.",
+    "controls": "Settings → Interface → Guide → Preview on highlight",
+    "url": "https://vespertv.app/remote.html#Live%20TV"
+  },
+  {
     "id": "ba9cc8950d070a30",
     "category": "Live TV",
     "title": "Search channels",
@@ -339,7 +347,7 @@
     "id": "fc418dd9a734ec36",
     "category": "Home",
     "title": "Back to Who's watching",
-    "answer": "With Settings > General > Startup > Launch with profiles selector enabled, leaving the TV or Sports Mode root stops playback and returns to Who's watching. In Sports Mode, first use Back to open the sidebar and stop its player. Back on Who's watching asks whether to exit, with Stay selected. With the startup selector off, the existing exit flow stays in place.",
+    "answer": "With Settings > General > Startup > Launch with profiles selector enabled, leaving the TV or Sports Mode root stops playback and returns to Who's watching. In Sports Mode, first use Back to open the sidebar and stop its player. Back on Who's watching leaves VesperTV at once (on a computer it asks first, with Stay selected). With the startup selector off, the existing exit flow stays in place.",
     "controls": "TV home / Sports Mode root · Back",
     "url": "https://vespertv.app/remote.html#Home"
   },
@@ -475,7 +483,7 @@
     "id": "ccbd8e49bc9e8850",
     "category": "Sports Trak",
     "title": "Sports Mode Back chain",
-    "answer": "From the sports page, Back opens the sidebar and keeps the player running. Back on the sidebar stops playback; another Back leaves the sports root. With Launch with profiles selector enabled, it returns to Who's watching; otherwise it asks to exit. If a Live TV panel is open, Back first closes its channel guide, then its groups panel. Back while reordering a league finishes the move. Regular Sports Trak keeps its existing Back behavior.",
+    "answer": "From the sports page, Back opens the sidebar and keeps the player running. Back on the sidebar stops playback; another Back leaves the sports root. With Launch with profiles selector enabled, it returns to Who's watching; otherwise it leaves VesperTV at once (on a computer it asks first). If a Live TV panel is open, Back first closes its channel guide, then its groups panel. Back while reordering a league finishes the move. Regular Sports Trak keeps its existing Back behavior.",
     "controls": "Sports Mode · Back on the page, then on the sidebar",
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },
@@ -755,7 +763,7 @@
     "id": "edb2bb413836e696",
     "category": "Vesper AI",
     "title": "Connect an AI app with MCP",
-    "answer": "Enable Let AI apps control VesperTV and copy this TV's private connector address into a compatible AI app's custom MCP connector. A Claude connector was tested; other clients, including ChatGPT, still need testing and must support custom MCP connections. Leave VesperTV open on that TV. Ask on the TV first is on by default: starting a channel or title, hiding/showing groups and clearing the watch list wait for confirmation. Read-only requests, player controls and individual list edits can run without a dialog. The address itself grants access: keep it private. Reset the address invalidates the old link; add the new address in your AI app. Disable Let AI apps control VesperTV to stop remote requests.",
+    "answer": "Enable Let AI apps control VesperTV and copy this TV's private connector address into a compatible AI app's custom MCP connector. A Claude connector was tested; other clients, including ChatGPT, still need testing and must support custom MCP connections. Leave VesperTV open on that TV. Ask on the TV first is on by default: starting a channel or title, hiding/showing groups, changing settings and clearing history or the watch list wait for confirmation. Read-only requests, player controls and individual list edits can run without a dialog. The address itself grants access: keep it private. Reset the address invalidates the old link; add the new address in your AI app. Disable Let AI apps control VesperTV to stop remote requests.",
     "controls": "Settings → Vesper AI → AI apps → Let AI apps control VesperTV",
     "url": "https://vespertv.app/remote.html#Vesper%20AI"
   },
@@ -765,6 +773,14 @@
     "title": "Vesper AI on several TVs",
     "answer": "Each TV has its own connector address. Add a separate connector for each TV and name them clearly in your AI app, for example VesperTV Living room and VesperTV Bedroom. The link targets that one TV; Vesper does not yet offer a shared multi-TV link or choose a TV automatically. Keep the intended TV's VesperTV app open.",
     "controls": "One private connector address per TV",
+    "url": "https://vespertv.app/remote.html#Vesper%20AI"
+  },
+  {
+    "id": "57fc667f00346ac1",
+    "category": "Vesper AI",
+    "title": "Change settings and clear history with an AI",
+    "answer": "Your AI and linked AI apps can read and change many settings: playback (skip intro, Up Next, live buffer, audio delay, subtitle size and languages, frame rate and resolution matching), startup, language and theme, the guide, which tabs show, and Sports Trak options. Several can change at once with one OK on the TV. They can also clear recent searches and channels, Continue Watching and saved progress, Media Hub Recently watched or the watch list, and reload the TV guide. Ask on the TV first, AI keys, the PIN, profiles and playlists are never changed this way. Kids profiles can read settings but not change them. Some startup settings apply the next time the app starts.",
+    "controls": "Ask your AI: turn off skip intro · hide the Movies tab · clear my watch history · update the guide",
     "url": "https://vespertv.app/remote.html#Vesper%20AI"
   },
   {

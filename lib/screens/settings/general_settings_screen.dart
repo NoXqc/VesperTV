@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -9,6 +10,7 @@ import '../../services/app_preferences.dart';
 import '../../services/audio_delay.dart';
 import '../../services/archive_service.dart';
 import '../../services/device_defaults.dart';
+import '../../services/launcher_channels.dart';
 import '../../services/playback_service.dart';
 import '../../services/recording_service.dart';
 import '../../services/storage_service.dart';
@@ -738,6 +740,23 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                               .setMixFavoritePlaylists(v),
                         ),
                       ]),
+                  if (Platform.isAndroid &&
+                      context.read<AppPreferences>().isTelevision)
+                    _section(
+                        'tvhome', Icons.home_outlined, tr('TV home screen'),
+                        children: [
+                          TvSwitchListTile(
+                            title: Text(tr('Show on the TV home screen')),
+                            subtitle: Text(tr(
+                                "Continue watching and your Watch list in the launcher's Watch Next row, plus a row of your favourite channels. For Android TV launchers such as Projectivy.")),
+                            value: context.watch<AppPreferences>().launcherRows,
+                            onChanged: (v) {
+                              context.read<AppPreferences>().setLauncherRows(v);
+                              unawaited(LauncherChannels.instance
+                                  .publish(force: true));
+                            },
+                          ),
+                        ]),
                   if (!usesMediaKit)
                     _section('multiview', Icons.grid_view, tr('Multiview'),
                         children: [

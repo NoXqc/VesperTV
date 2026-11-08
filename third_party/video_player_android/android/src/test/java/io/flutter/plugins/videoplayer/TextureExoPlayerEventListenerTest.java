@@ -7,6 +7,7 @@ package io.flutter.plugins.videoplayer;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -16,9 +17,11 @@ import androidx.media3.common.C;
 import androidx.media3.common.Format;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
+import androidx.media3.common.Tracks;
 import androidx.media3.common.VideoSize;
 import androidx.media3.exoplayer.ExoPlayer;
 import io.flutter.plugins.videoplayer.texture.TextureExoPlayerEventListener;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -41,6 +44,13 @@ public class TextureExoPlayerEventListenerTest {
   @Mock private VideoPlayerCallbacks mockCallbacks;
 
   @Rule public MockitoRule initRule = MockitoJUnit.rule();
+
+  @Before
+  public void setUp() {
+    // A real ExoPlayer never returns null tracks; the mock would, and the
+    // listener reads them when the video format is still unknown.
+    lenient().when(mockExoPlayer.getCurrentTracks()).thenReturn(Tracks.EMPTY);
+  }
 
   @Test
   public void

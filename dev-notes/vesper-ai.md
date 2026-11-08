@@ -168,6 +168,31 @@ fallback to channel B" from Claude, with an API doc the AI can read, and undo.
 - Not done: a persistent "no guide" rule (new channels), running stream tests
   over MCP (connection limits), Movies/Shows.
 
+## Settings tool (Claude, 2026-11-08, branch `claude/ai-settings`, unreleased)
+Owner: tell Claude over MCP to turn settings on or off and delete histories.
+- `settings` (`vesper_ai/settings_tool.dart`, a `part` of vesper_tools.dart):
+  actions list [section], get key, set key+value or `changes` [{key, value}]
+  (one TV confirm for all), clear what, update_guide (`EpgService.refreshAll`,
+  not awaited). 53 curated settings in `_aiSettings` (switch / choice /
+  number, each with its Settings title for the confirm and an `about` for the
+  model); Android-only ones are left out on a computer (`isDesktopTarget`).
+  Startup ones say "applies at the next app start".
+- **Never exposed (on purpose):** Ask on the TV first, AI keys / apps / voice
+  key, the PIN, profiles, playlists, layout mode and the video troubleshooting
+  switches (native surface, Compatibility video, green flicker fix). An AI
+  app must not be able to switch off its own confirmations.
+- clear: searches_and_channels / movies_and_shows (the two Settings > General >
+  History actions), media_hub (new `ArchiveService.clearHistory`, passed in as
+  `VesperToolbox.clearHubHistory`), watch_list, all_history (not the watch
+  list). Confirm text reuses the History titles.
+- AI apps confirm set and clear on the TV (localized "{setting}: turn on" /
+  choice names); Kids profiles can list but not set or clear. The Ask on the
+  TV first subtitle now names settings and history (5 languages).
+- `test/vesper_settings_tool_test.dart` (8 tests, incl. every TV text
+  translated in fr/de/es/it/el). Remote guide row + Discord guide.json rebuilt.
+- Not done: built-in (no-AI) phrases like "turn off skip intro"; clearing the
+  EPG / catalog cache; "update content" (the catalog sync has its own screen).
+
 ## Not done / next
 - **Several TVs** (owner, 2026-11-06: test as is): today one connector per TV (each TV has its own link; name them
   "VesperTV Living room" etc. in the AI app). Parked idea: one shared link via Sync, TV names, relay routes by

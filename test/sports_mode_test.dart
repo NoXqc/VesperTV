@@ -47,6 +47,7 @@ import 'package:nox_iptv/widgets/sports_mode_toggle.dart';
 import 'package:nox_iptv/widgets/sports_mode_shell.dart';
 import 'package:nox_iptv/widgets/sports_league_rail.dart';
 import 'package:nox_iptv/widgets/sports_mode_live_panel.dart';
+import 'warm_exit_helper.dart';
 import 'package:nox_iptv/utils/desktop_platform.dart';
 
 class _Storage extends StorageService {
@@ -85,7 +86,7 @@ class _Playback extends PlaybackService {
   final List<Channel> plays = [];
   Completer<void>? opening;
   @override
-  Future<void> play(Channel channel) async {
+  Future<void> play(Channel channel, {bool recordHistory = true}) async {
     plays.add(channel);
     await opening?.future;
     currentChannel = channel;
@@ -120,10 +121,10 @@ const _league = SportsLeague(
     name: 'Hockey',
     shortName: 'NHL',
     logoUrl: '');
-SportsGame _game(int index, GameState state) => SportsGame(
+SportsGame _game(int index, GameState state, {DateTime? start}) => SportsGame(
       id: 'game$index',
       league: _league,
-      start: DateTime.now().add(Duration(minutes: index)),
+      start: start ?? DateTime.now().add(Duration(minutes: index)),
       state: state,
       statusText: state == GameState.live ? 'Live' : 'Scheduled',
       home: SportsTeam(
@@ -184,6 +185,7 @@ void main() {
   late AppPreferences prefs;
   late _Playlist playlist;
   late _Playback playback;
+  late List<String> exits;
   final boundary = GlobalKey();
 
   setUpAll(() async {
@@ -200,6 +202,7 @@ void main() {
   });
 
   setUp(() async {
+    exits = recordWarmExits();
     L10n.code = 'en';
     SharedPreferences.setMockInitialValues({
       AppConstants.keySportsMode: true,
@@ -336,7 +339,9 @@ void main() {
         'notification opens the requested game without starting playback (mode=$mode)',
         (tester) async {
       await prefs.setSportsMode(mode);
-      final game = _game(101, GameState.live);
+      // Started now, not now + 101 min: late in the evening that lands on
+      // tomorrow, and _Feed only serves today's games.
+      final game = _game(101, GameState.live, start: DateTime.now());
       await open(tester,
           games: [_game(100, GameState.live), game],
           initialGameKey: 'nhl:game101',
@@ -873,6 +878,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byIcon(Icons.swap_vert), findsNothing);
     expect(find.text('Stay'), findsNothing);
+    expect(exits, isEmpty);
     await disposePage(tester);
   });
 
@@ -949,6 +955,7 @@ void main() {
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(find.text('Stay'), findsNothing);
+    expect(exits, isEmpty);
     await press(tester, LogicalKeyboardKey.arrowRight);
     expect(find.byKey(const ValueKey('sports-mode-rail')), findsNothing);
     await tester.binding.handlePopRoute();
@@ -956,6 +963,7 @@ void main() {
     expect(getFocus(), 'sports-chip-league:$college');
     expect(find.byKey(const ValueKey('sports-mode-rail')), findsOneWidget);
     expect(find.text('Stay'), findsNothing);
+    expect(exits, isEmpty);
     expect(storage.getSportsLeagues(), containsAll(['mlb', college]));
     await disposePage(tester);
   });
@@ -1294,11 +1302,12 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     expect(playback.stops, greaterThan(stops));
     expect(find.byKey(const ValueKey('sports-mode-player')), findsNothing);
-    // Back again quits (the exit prompt; Who's watching when that's on).
+    // Back again quits (a warm exit; Who's watching when that's on).
     await tester.binding.handlePopRoute();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text('Stay'), findsOneWidget);
+    expect(find.text('Stay'), findsNothing);
+    expect(exits, ['warm']);
     expect(tester.takeException(), isNull);
     await disposePage(tester);
   });
@@ -1424,6 +1433,7 @@ void main() {
     expect(find.byKey(const ValueKey('sports-live-panel')), findsNothing);
     expect(getFocus(), isNot('sports-chip-mode:tv'));
     expect(find.text('Stay'), findsNothing);
+    expect(exits, isEmpty);
     expect(tester.takeException(), isNull);
     await disposePage(tester);
   });
@@ -1453,6 +1463,7 @@ void main() {
     expect(find.byKey(const ValueKey('sports-live-panel')), findsNothing);
     expect(getFocus(), 'sports-chip-mode:tv');
     expect(find.text('Stay'), findsNothing);
+    expect(exits, isEmpty);
     expect(tester.takeException(), isNull);
     await disposePage(tester);
   });
@@ -1475,6 +1486,7 @@ void main() {
     }
     expect(find.byType(TvHomeScreen), findsNothing);
     expect(find.text('Stay'), findsNothing);
+    expect(exits, isEmpty);
     expect(getFocus(), 'sports-chip-mode:tv');
     if (!isDesktop) expect(playback.stops, greaterThan(0));
     expect(tester.takeException(), isNull);
@@ -1512,14 +1524,14 @@ void main() {
       expect(find.text(label), findsWidgets);
     }
     expect(find.text('Stay'), findsNothing);
+    expect(exits, isEmpty);
     await tester.binding.handlePopRoute(); // closes the menu
     await tester.pumpAndSettle();
-    await tester.binding.handlePopRoute(); // then asks to exit
+    await tester.binding.handlePopRoute(); // then leaves (warm exit)
     await tester.pumpAndSettle();
-    expect(find.text('Stay'), findsOneWidget);
+    expect(find.text('Stay'), findsNothing);
+    expect(exits, ['warm']);
     expect(tester.takeException(), isNull);
-    await tester.tap(find.text('Stay'));
-    await tester.pumpAndSettle();
     await disposePage(tester);
   });
 
@@ -1557,9 +1569,8 @@ void main() {
     expect(find.byKey(const ValueKey('sports-mode-rail')), findsOneWidget);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
-    expect(find.text('Stay'), findsOneWidget);
-    await tester.tap(find.text('Stay'));
-    await tester.pumpAndSettle();
+    expect(find.text('Stay'), findsNothing);
+    expect(exits, ['warm']);
     expect(prefs.sportsMode, isTrue);
     expect(tester.takeException(), isNull);
     await disposePage(tester);

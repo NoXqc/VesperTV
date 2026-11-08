@@ -1215,6 +1215,15 @@ class ArchiveService extends ChangeNotifier {
     _notify();
   }
 
+  /// Forgets every Recently watched title (both categories) of the active
+  /// viewer (Vesper AI's settings tool). Returns how many there were.
+  Future<int> clearHistory() async {
+    final count = _historyEntries().length;
+    await _storage.setArchiveHistoryJson(null);
+    _notify();
+    return count;
+  }
+
   final Expando<Set<String>> _registeredMetas = Expando();
   void registerIdentity(ArchiveSource source, ArchiveMeta meta,
       {ArchiveVideo? episode}) {

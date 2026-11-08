@@ -18,10 +18,14 @@ import '../sports_channel_countries.dart';
 import '../sports_channel_matcher.dart';
 import '../sports_service.dart';
 import '../storage_service.dart';
+import '../subtitle_tracks.dart';
+import '../vod_buffering.dart';
 import 'watch_list.dart';
+import '../../utils/constants.dart';
 import '../../utils/desktop_platform.dart';
 
 part 'playlist_editor_tool.dart';
+part 'settings_tool.dart';
 part 'vesper_help.dart';
 
 /// Who asked: the viewer on the TV (voice / typing / phone microphone, or
@@ -84,10 +88,15 @@ class VesperToolbox {
     required this.prefs,
     required this.host,
     this.findHubTitle,
+    this.clearHubHistory,
   });
 
   /// Media Hub search by title for the watch list (null = no Media Hub).
   final Future<HubTitle?> Function(String name)? findHubTitle;
+
+  /// Empties Media Hub's Recently watched; returns how many titles it held
+  /// (null = no Media Hub).
+  final Future<int> Function()? clearHubHistory;
 
   final PlaylistManager playlist;
   final PlaybackService playback;
@@ -1112,6 +1121,7 @@ final List<VesperTool> vesperTools = [
     },
   ),
   _playlistEditorTool,
+  _settingsTool,
   VesperTool(
     name: 'sports_today',
     description:

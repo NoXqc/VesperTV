@@ -37,6 +37,9 @@ const Map<String, String> kDe = {
   "Compact guide": "Kompakter Guide",
   "Shorter Timeline rows so more channels fit in the same space.":
       "Kürzere Timeline-Zeilen, damit mehr Sender auf den gleichen Platz passen.",
+  "Preview on highlight": "Vorschau beim Markieren",
+  "The channel you stop on plays in the preview, without pressing OK. OK again opens it full screen.":
+      "Der Sender, auf dem Sie stehen bleiben, läuft in der Vorschau, ohne OK zu drücken. Erneut OK öffnet ihn im Vollbild.",
   "Transparent popups": "Transparente Popups",
   "Reminders and goal alerts lose their background and outline, keeping only the logo and text.":
       "Erinnerungen und Toralarme verlieren Hintergrund und Rahmen, nur Logo und Text bleiben.",
@@ -2696,8 +2699,8 @@ const Map<String, String> kDe = {
       "Halte diese Adresse privat: Wer sie hat, kann VesperTV steuern, solange es offen ist.",
   "Ask on the TV first":
       "Zuerst am Fernseher fragen",
-  "An AI app's play, hide or show waits for OK on the TV.":
-      "Abspielen, Aus- oder Einblenden durch eine KI-App wartet auf OK am Fernseher.",
+  "Playing, hiding, changing settings or clearing history from an AI app waits for OK on the TV.":
+      "Abspielen, Ausblenden, Einstellungen ändern oder Verlauf leeren durch eine KI-App wartet auf OK am Fernseher.",
   "Reset the address":
       "Adresse zurücksetzen",
   "The old address stops working; add the new one":
@@ -2817,6 +2820,18 @@ const Map<String, String> kDe = {
       "Merkliste",
   "Remove from watch list":
       "Von der Merkliste entfernen",
+  "turn on":
+      "einschalten",
+  "turn off":
+      "ausschalten",
+  "Hide scores":
+      "Ergebnisse ausblenden",
+  "Clear Media Hub history":
+      "Media-Hub-Verlauf leeren",
+  "An AI app wants to change settings: {what}.":
+      "Eine KI-App möchte Einstellungen ändern: {what}.",
+  "An AI app wants to: {what}.":
+      "Eine KI-App möchte: {what}.",
   "An AI app wants to clear your watch list.":
       "Eine KI-App möchte deine Merkliste leeren.",
   "Game card size":
@@ -2857,4 +2872,12 @@ const Map<String, String> kDe = {
   "Export a backup": "Sicherung exportieren",
   "Save a backup file anywhere on this Mac": "Eine Sicherungsdatei an einem beliebigen Ort auf diesem Mac speichern",
   "Backup exported.": "Sicherung exportiert.",
+  "TV home screen":
+      "TV-Startbildschirm",
+  "Show on the TV home screen":
+      "Auf dem TV-Startbildschirm anzeigen",
+  "Continue watching and your Watch list in the launcher's Watch Next row, plus a row of your favourite channels. For Android TV launchers such as Projectivy.":
+      "Weiterschauen und deine Merkliste in der Watch-Next-Reihe des Launchers, dazu eine Reihe mit deinen Lieblingssendern. Für Android-TV-Launcher wie Projectivy.",
+  "Continue watching and favourites on the TV launcher":
+      "Weiterschauen und Favoriten im TV-Launcher",
 };

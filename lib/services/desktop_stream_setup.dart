@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
@@ -22,14 +24,24 @@ const kDesktopStreamUserAgent =
 void configureDesktopStreamPlayer(Player player, String tag) {
   final native = player.platform as NativePlayer;
   DesktopAudio.track(player, multiview: tag == 'multiview');
-  // Software video: decode on the CPU too (no GPU surfaces at all).
-  if (desktopSoftwareVideo) native.setProperty('hwdec', 'no');
+  // Software video: no GPU surfaces ([desktopSoftwareHwdec]).
+  final hwdec = desktopSoftwareHwdec;
+  if (hwdec != null) native.setProperty('hwdec', hwdec);
   // See DesktopPlayerScreen.initState for the reconnect story.
   // rw_timeout 30 s (was 15): some IPTV servers send live .ts in bursts
   // with 3-9.5 s gaps on a healthy line; Android's 8 s timeout reconnected
   // on them and replayed the start burst (8125351). Same 30 s here.
   native.setProperty('demuxer-lavf-o',
       'reconnect=1,reconnect_at_eof=1,reconnect_streamed=1,reconnect_delay_max=5,rw_timeout=30000000');
+  // mpv's network-timeout (media_kit sets 5 s) becomes ffmpeg's tcp
+  // `timeout`, which overrides rw_timeout above: those bursty servers timed
+  // out after 5 s ("tcp: ffurl_read returned" -60 on macOS, -138 on
+  // Windows), then reconnected or ended every 30-40 s. Same 30 s.
+  native.setProperty('network-timeout', '30');
+  // media_kit turns on cache-on-disk; inside the macOS sandbox mpv can't
+  // create its cache folder ("Failed to create file cache"). The demuxer
+  // cache stays in memory (demuxer-max-bytes).
+  if (Platform.isMacOS) native.setProperty('cache-on-disk', 'no');
   native.setProperty('user-agent', kDesktopStreamUserAgent);
   player.stream.error.listen((e) => debugPrint('DesktopPlayer[$tag]: $e'));
   player.stream.log.listen((log) {
@@ -66,10 +78,27 @@ Future<void> openDesktopStream(Player player, Channel channel,
 /// GPU video path stays black while the stream plays (decoder reports the
 /// picture, screen shows nothing): some HDR / two-GPU / driver setups.
 /// Applies to players created after the change.
+///
+/// On by default on Linux: there the app window draws with OpenGL ES while
+/// media_kit_video's GPU path sets mpv up for desktop OpenGL, so mpv's
+/// shaders don't compile ("GLSL 4.40 is not supported. Supported versions
+/// are: 1.00 ES ...") and every channel shows blue / wrong colours (Steam
+/// Machine, SteamOS, AMD, LOG-CUBM2E, 2026-11-08). The software path
+/// renders on the CPU (at most 1920x1080, media_kit_video's limit).
 bool desktopSoftwareVideo = false;
 
-/// Every Windows player's [VideoController] (full screen, mini player,
-/// Multiview, trailers).
+/// mpv's `hwdec` with Software video on, null = media_kit's default
+/// (`auto`). Windows decodes on the CPU too (its black-picture cases were
+/// GPU surfaces). Linux keeps GPU decoding, copied back to memory
+/// (`auto-copy`: VA-API on AMD / Intel), so a 4K HEVC channel isn't decoded
+/// by the CPU as well; the drawing alone moves there.
+String? get desktopSoftwareHwdec =>
+    !desktopSoftwareVideo ? null : (Platform.isLinux ? 'auto-copy' : 'no');
+
+/// Every computer player's [VideoController] (full screen, mini player,
+/// Multiview, trailers). media_kit_video sets `hwdec` itself when the
+/// controller is created, so the software choice goes in here too.
 VideoController desktopVideoController(Player player) => VideoController(player,
     configuration: VideoControllerConfiguration(
-        enableHardwareAcceleration: !desktopSoftwareVideo));
+        enableHardwareAcceleration: !desktopSoftwareVideo,
+        hwdec: desktopSoftwareHwdec));
