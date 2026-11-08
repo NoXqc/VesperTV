@@ -2776,6 +2776,26 @@ const Map<String, String> kEl = {
       "Μια εφαρμογή AI θέλει να κρύψει {count} ομάδες ({words}).",
   "An AI app wants to show {count} groups ({words}).":
       "Μια εφαρμογή AI θέλει να εμφανίσει {count} ομάδες ({words}).",
+  "An AI app wants {game} to play on {channel} in {tab}.":
+      "Μια εφαρμογή AI θέλει το {game} να παίζει στο {channel} στο {tab}.",
+  "An AI app wants to set the channels of {count} games in {tab}.":
+      "Μια εφαρμογή AI θέλει να ορίσει το κανάλι {count} αγώνων στο {tab}.",
+  "An AI app wants to switch to the profile {name}.":
+      "Μια εφαρμογή AI θέλει να αλλάξει στο προφίλ {name}.",
+  "An AI app wants to create the kids profile {name}.":
+      "Μια εφαρμογή AI θέλει να δημιουργήσει το παιδικό προφίλ {name}.",
+  "An AI app wants to create the profile {name}.":
+      "Μια εφαρμογή AI θέλει να δημιουργήσει το προφίλ {name}.",
+  "An AI app wants to rename the profile {name} to {new}.":
+      "Μια εφαρμογή AI θέλει να μετονομάσει το προφίλ {name} σε {new}.",
+  "Delete the profile {name}? Its favourites and history are deleted too.":
+      "Διαγραφή του προφίλ {name}; Θα διαγραφούν και τα αγαπημένα και το ιστορικό του.",
+  "An AI app wants to let {name} see {count} groups ({words}).":
+      "Μια εφαρμογή AI θέλει να επιτρέψει στο {name} να βλέπει {count} ομάδες ({words}).",
+  "An AI app wants to block {count} groups ({words}) for {name}.":
+      "Μια εφαρμογή AI θέλει να αποκλείσει {count} ομάδες ({words}) για το {name}.",
+  "An AI app wants to change the parental PIN.":
+      "Μια εφαρμογή AI θέλει να αλλάξει το γονικό PIN.",
   "An AI app wants to edit your playlist: {what}.":
       "Μια εφαρμογή AI θέλει να επεξεργαστεί τη λίστα σας: {what}.",
   "An AI app wants to undo its playlist change: {what}.":

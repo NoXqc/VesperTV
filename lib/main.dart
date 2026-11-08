@@ -809,6 +809,10 @@ class _NoxIptvAppState extends State<NoxIptvApp>
               : HubTitle(found.$1.manifestUrl, found.$2);
         },
         clearHubHistory: _archiveService.clearHistory,
+        profiles: AppVesperProfiles(
+            navigatorKey: _navigatorKey,
+            viewers: _viewerProfileService,
+            pin: _parentalPin),
         host: AppVesperHost(
             navigatorKey: _navigatorKey,
             playback: _playbackService,

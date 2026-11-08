@@ -36,23 +36,30 @@ const _numpadKeys = [
 
 /// Prompts for the parental PIN and returns true only on a correct entry —
 /// false on Back/cancel. Used wherever a restricted viewer needs to prove
-/// they're not the kid (leaving the profile, opening Settings).
-Future<bool> promptForPin(BuildContext context) async {
-  final result = await Navigator.of(context).push<bool>(
-    MaterialPageRoute(
-        builder: (_) => const _PinPadScreen(mode: _PinPadMode.verify)),
-  );
-  return result ?? false;
-}
+/// they're not the kid (leaving the profile, opening Settings). With
+/// [timeout] the pad closes as a cancel when nobody answers (Vesper AI asks
+/// from another room's phone).
+Future<bool> promptForPin(BuildContext context, {Duration? timeout}) =>
+    _pushPinPad(context, _PinPadMode.verify, timeout);
 
 /// Walks through "enter a new PIN, enter it again to confirm" (a mismatch
 /// restarts rather than erroring) and saves it. Returns true only if a PIN
 /// was actually set; false on cancel at either step.
-Future<bool> setupPinFlow(BuildContext context) async {
-  final result = await Navigator.of(context).push<bool>(
-    MaterialPageRoute(
-        builder: (_) => const _PinPadScreen(mode: _PinPadMode.setup)),
-  );
+Future<bool> setupPinFlow(BuildContext context, {Duration? timeout}) =>
+    _pushPinPad(context, _PinPadMode.setup, timeout);
+
+Future<bool> _pushPinPad(
+    BuildContext context, _PinPadMode mode, Duration? timeout) async {
+  final navigator = Navigator.of(context);
+  final route =
+      MaterialPageRoute<bool>(builder: (_) => _PinPadScreen(mode: mode));
+  final timer = timeout == null
+      ? null
+      : Timer(timeout, () {
+          if (route.isActive) navigator.removeRoute(route, false);
+        });
+  final result = await navigator.push<bool>(route);
+  timer?.cancel();
   return result ?? false;
 }
 
