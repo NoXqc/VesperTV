@@ -2756,8 +2756,8 @@ const Map<String, String> kEl = {
       "Κράτα αυτή τη διεύθυνση ιδιωτική: όποιος την έχει μπορεί να ελέγχει το VesperTV όσο είναι ανοιχτό.",
   "Ask on the TV first":
       "Ερώτηση πρώτα στην τηλεόραση",
-  "An AI app's play, hide or show waits for OK on the TV.":
-      "Η αναπαραγωγή, απόκρυψη ή εμφάνιση από εφαρμογή AI περιμένει OK στην τηλεόραση.",
+  "Playing, hiding, changing settings or clearing history from an AI app waits for OK on the TV.":
+      "Η αναπαραγωγή, απόκρυψη, αλλαγή ρυθμίσεων ή διαγραφή ιστορικού από εφαρμογή AI περιμένει OK στην τηλεόραση.",
   "Reset the address":
       "Επαναφορά διεύθυνσης",
   "The old address stops working; add the new one":
@@ -2877,6 +2877,18 @@ const Map<String, String> kEl = {
       "Λίστα παρακολούθησης",
   "Remove from watch list":
       "Αφαίρεση από τη λίστα",
+  "turn on":
+      "ενεργοποίηση",
+  "turn off":
+      "απενεργοποίηση",
+  "Hide scores":
+      "Απόκρυψη σκορ",
+  "Clear Media Hub history":
+      "Καθαρισμός ιστορικού Media Hub",
+  "An AI app wants to change settings: {what}.":
+      "Μια εφαρμογή AI θέλει να αλλάξει ρυθμίσεις: {what}.",
+  "An AI app wants to: {what}.":
+      "Μια εφαρμογή AI θέλει: {what}.",
   "An AI app wants to clear your watch list.":
       "Μια εφαρμογή AI θέλει να αδειάσει τη λίστα σου.",
   "Game card size":

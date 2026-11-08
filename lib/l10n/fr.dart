@@ -2807,8 +2807,8 @@ const Map<String, String> kFr = {
       "Gardez cette adresse privée : quiconque l'a peut contrôler VesperTV quand il est ouvert.",
   "Ask on the TV first":
       "Demander d'abord sur la télé",
-  "An AI app's play, hide or show waits for OK on the TV.":
-      "Une lecture, un masquage ou un affichage demandé par une app d'IA attend OK sur la télé.",
+  "Playing, hiding, changing settings or clearing history from an AI app waits for OK on the TV.":
+      "Une lecture, un masquage, un changement de réglage ou un effacement d'historique demandé par une app d'IA attend OK sur la télé.",
   "Reset the address":
       "Réinitialiser l'adresse",
   "The old address stops working; add the new one":
@@ -2928,6 +2928,18 @@ const Map<String, String> kFr = {
       "Liste à regarder",
   "Remove from watch list":
       "Retirer de la liste",
+  "turn on":
+      "activer",
+  "turn off":
+      "désactiver",
+  "Hide scores":
+      "Masquer les scores",
+  "Clear Media Hub history":
+      "Effacer l'historique Media Hub",
+  "An AI app wants to change settings: {what}.":
+      "Une app d'IA veut modifier des réglages : {what}.",
+  "An AI app wants to: {what}.":
+      "Une app d'IA veut : {what}.",
   "An AI app wants to clear your watch list.":
       "Une app d'IA veut vider votre liste à regarder.",
   "Game card size":

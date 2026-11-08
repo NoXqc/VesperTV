@@ -228,10 +228,15 @@ service (including a local compatible server), or Gemini using your own model
 and API key where required. Provider usage charges may apply. **AI apps → Let
 AI apps control VesperTV** supplies a private MCP connector address for a
 compatible AI app. A Claude connector has been tested; other clients still need
-testing. Use one connector per TV and leave VesperTV open on that TV. **Ask on
-the TV first** defaults on for starting titles, hiding/showing groups and
-clearing the watch list; other tool actions can run without a dialog. Keep the
-address private; **Reset the address** invalidates the old link.
+testing. Use one connector per TV and leave VesperTV open on that TV. Your AI
+and AI apps can also **change settings** (playback, startup, language and
+theme, the guide, tabs, Sports Trak), **clear history** (searches and channels,
+Continue Watching, Media Hub, the watch list) and reload the guide; the AI
+settings, PIN, profiles and playlists are never changed that way. **Ask on
+the TV first** defaults on for starting titles, hiding/showing groups,
+changing settings and clearing history or the watch list; other tool actions
+can run without a dialog. Keep the address private; **Reset the address**
+invalidates the old link.
 
 **Privacy:** with Your AI set to None, typed commands are handled without an
 AI provider. When enabled, Your AI can handle unrecognized requests and failed

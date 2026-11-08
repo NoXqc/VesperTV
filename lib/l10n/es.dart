@@ -2794,8 +2794,8 @@ const Map<String, String> kEs = {
       "Mantén esta dirección en privado: quien la tenga puede controlar VesperTV mientras está abierto.",
   "Ask on the TV first":
       "Preguntar antes en la tele",
-  "An AI app's play, hide or show waits for OK on the TV.":
-      "Reproducir, ocultar o mostrar desde una app de IA espera OK en la tele.",
+  "Playing, hiding, changing settings or clearing history from an AI app waits for OK on the TV.":
+      "Reproducir, ocultar, cambiar ajustes o borrar el historial desde una app de IA espera OK en la tele.",
   "Reset the address":
       "Restablecer la dirección",
   "The old address stops working; add the new one":
@@ -2915,6 +2915,18 @@ const Map<String, String> kEs = {
       "Mi lista",
   "Remove from watch list":
       "Quitar de mi lista",
+  "turn on":
+      "activar",
+  "turn off":
+      "desactivar",
+  "Hide scores":
+      "Ocultar marcadores",
+  "Clear Media Hub history":
+      "Borrar historial de Media Hub",
+  "An AI app wants to change settings: {what}.":
+      "Una app de IA quiere cambiar ajustes: {what}.",
+  "An AI app wants to: {what}.":
+      "Una app de IA quiere: {what}.",
   "An AI app wants to clear your watch list.":
       "Una app de IA quiere vaciar tu lista.",
   "Game card size":

@@ -2801,8 +2801,8 @@ const Map<String, String> kIt = {
       "Tieni privato questo indirizzo: chi lo ha può controllare VesperTV mentre è aperto.",
   "Ask on the TV first":
       "Chiedi prima sulla TV",
-  "An AI app's play, hide or show waits for OK on the TV.":
-      "Riproduci, nascondi o mostra da un'app di IA aspetta OK sulla TV.",
+  "Playing, hiding, changing settings or clearing history from an AI app waits for OK on the TV.":
+      "Riprodurre, nascondere, cambiare impostazioni o cancellare la cronologia da un'app di IA aspetta OK sulla TV.",
   "Reset the address":
       "Reimposta l'indirizzo",
   "The old address stops working; add the new one":
@@ -2922,6 +2922,18 @@ const Map<String, String> kIt = {
       "La mia lista",
   "Remove from watch list":
       "Rimuovi dalla lista",
+  "turn on":
+      "attivare",
+  "turn off":
+      "disattivare",
+  "Hide scores":
+      "Nascondi i punteggi",
+  "Clear Media Hub history":
+      "Cancella cronologia di Media Hub",
+  "An AI app wants to change settings: {what}.":
+      "Un'app di IA vuole cambiare impostazioni: {what}.",
+  "An AI app wants to: {what}.":
+      "Un'app di IA vuole: {what}.",
   "An AI app wants to clear your watch list.":
       "Un'app di IA vuole svuotare la tua lista.",
   "Game card size":
