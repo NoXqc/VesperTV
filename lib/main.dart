@@ -241,12 +241,31 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   bool _ready = false;
   Completer<void>? _profileSelection;
 
+  /// A warm return landed on Who's watching (with the startup selector on,
+  /// Back at the root goes there before leaving): the Startup resume
+  /// choice runs once a viewer is picked, like a cold start. Nothing ran it
+  /// before (owner, LOG-4HACGG).
+  bool _resumeAfterSelection = false;
+
+  /// Back at the root opened Who's watching from this viewer
+  /// ([_returnToProfiles]): picking them again resumes their channel.
+  String? _resumeIfViewer;
+
   Future<void> _finishProfileSelection() async {
     final selection = _profileSelection;
     setState(() => _profileSelection = null);
     // The application Navigator must exist before startup playback can push.
     await WidgetsBinding.instance.endOfFrame;
     if (selection != null && !selection.isCompleted) selection.complete();
+    final sameViewer = _resumeIfViewer != null &&
+        _resumeIfViewer == _storage.getActiveViewerId();
+    final resume = _resumeAfterSelection || sameViewer;
+    _resumeAfterSelection = false;
+    _resumeIfViewer = null;
+    if (resume && mounted) {
+      if (sameViewer) debugPrint('Resume: same viewer picked again');
+      unawaited(_autoResumeLastChannel());
+    }
     unawaited(_episodeBackground?.openPending());
     unawaited(_sportsNotifications?.openPending());
     unawaited(LauncherChannels.instance.openPending());
@@ -284,6 +303,9 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   /// app; picking a viewer rebuilds it on the TV root.
   Future<void> _returnToProfiles() async {
     if (!_ready || _profileSelection != null) return;
+    // Picking the same viewer again resumes their channel (Startup choice);
+    // another viewer starts fresh (owner, 2026-11-08).
+    _resumeIfViewer = _storage.getActiveViewerId();
     if (isDesktop) {
       DesktopMiniPlayer.instance.clear();
     } else {
@@ -760,9 +782,13 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         await _playbackService.stop();
       };
       AppExit.afterWarm = () {
-        if (mounted && _ready && _profileSelection == null) {
-          unawaited(_autoResumeLastChannel());
+        if (!mounted || !_ready) return;
+        if (_profileSelection != null) {
+          _resumeAfterSelection = true;
+          debugPrint("Resume: after Who's watching");
+          return;
         }
+        unawaited(_autoResumeLastChannel());
       };
 
       // Vesper AI: one toolbox for the voice / typed commands, the viewer's
