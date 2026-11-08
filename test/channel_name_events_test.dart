@@ -175,6 +175,32 @@ void main() {
       expect(out[2].start, event.stop.toLocal());
     });
 
+    test('provider placeholders count as empty, real titles do not', () {
+      for (final t in [
+        'Signing Off', 'NO EVENT', 'No Event Today', 'No Events Scheduled',
+        'No Programme Information', 'Off Air', 'To Be Announced', 'TBA',
+        'Stand by', 'No Title', //
+      ]) {
+        expect(isFillerProgrammeTitle(t), isTrue, reason: t);
+      }
+      for (final t in [
+        'NBA: Nets at Hawks',
+        'Live in 5 days: Everett Silvertips at Spokane',
+        'No Country for Old Men',
+        'Notorious',
+        'Signing Day Special',
+      ]) {
+        expect(isFillerProgrammeTitle(t), isFalse, reason: t);
+      }
+    });
+
+    test('the game wins over "No Event Today" that covers it', () {
+      final out =
+          mergeChannelNameEvent([p('No Event Today', 24, 28)], event, 'id');
+      expect(out.map((e) => e.title).toList(),
+          ['No Event Today', 'Nets vs. Hawks', 'No Event Today']);
+    });
+
     test("the provider's real listing wins", () {
       final real = [p('NBA: Nets at Hawks', 23, 27)];
       expect(identical(mergeChannelNameEvent(real, event, 'id'), real), isTrue);

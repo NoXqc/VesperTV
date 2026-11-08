@@ -110,17 +110,16 @@ ChannelNameEvent? parseChannelNameEvent(String name, {DateTime? now}) {
 }
 
 /// The provider's own placeholders: an event read from the name may cover
-/// them, never a real listing.
-const _fillerTitles = {
-  'signing off', 'sign off', 'off air', 'no event', 'no events', //
-  'no event scheduled', 'no information', 'no program information',
-  'no programme information', 'no program data', 'stand by', 'standby',
-  'to be announced', 'tba', 'tbd', 'no title',
-};
+/// them, never a real listing. Variants matter: the same provider listed
+/// "No Event Today" over that evening's League Pass games (2026-11-07).
+final _filler =
+    RegExp(r'^(?:no (?:events?|games?|programmes?|programs?|program data|'
+        r'information|info|title)\b.*|signing off\b.*|sign off|off air\b.*|'
+        r'stand ?by|to be announced|tba|tbd|n/a)$');
 
 bool isFillerProgrammeTitle(String title) {
   final t = title.trim().toLowerCase();
-  return _fillerTitles.contains(t) || t == tr('No Title').toLowerCase();
+  return _filler.hasMatch(t) || t == tr('No Title').toLowerCase();
 }
 
 /// [programs] (one channel, sorted, not overlapping) with [event] added,
