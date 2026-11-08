@@ -745,7 +745,14 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       // Back > Exit is a warm exit (AppExit): nothing keeps playing in the
       // background, and coming back runs the Startup resume choice again
       // (after Who's watching when that shows first).
-      AppExit.beforeWarm = _playbackService.stop;
+      AppExit.beforeWarm = () async {
+        // "A notification opened the app" covers that one launch only. The
+        // process outlives a warm exit, and this stayed set: after one
+        // notification tap, no warm return resumed the channel again
+        // until a cold start (owner, 2026-11-08).
+        _episodeNotificationOpened = false;
+        await _playbackService.stop();
+      };
       AppExit.afterWarm = () {
         if (mounted && _ready && _profileSelection == null) {
           unawaited(_autoResumeLastChannel());
@@ -1106,21 +1113,29 @@ class _NoxIptvAppState extends State<NoxIptvApp>
   /// this, resume-last-channel would silently find an empty list and do
   /// nothing on every Xtream launch.
   Future<void> _autoResumeLastChannel() async {
+    // Send log: why a launch or warm return did or didn't resume.
+    void skipped(String why) => debugPrint('Resume: skipped ($why)');
     if (Platform.isAndroid &&
         (await _episodeBackground?.pendingTap == true ||
             await _sportsNotifications?.pendingTap == true ||
             _episodeNotificationOpened)) {
-      return;
+      return skipped('a notification opened the app');
     }
     // The sports home starts with its dashboard, never an unrelated stream.
-    if (_preferences.sportsMode || _preferences.hideLiveTv) return;
-    if (_playbackService.isPlayingSomething) return;
+    if (_preferences.sportsMode || _preferences.hideLiveTv) {
+      return skipped('sports mode or Live TV hidden');
+    }
+    if (_playbackService.isPlayingSomething) {
+      return skipped('already playing');
+    }
     final lastId = _storage.getLastChannelId();
-    if (lastId == null) return;
+    if (lastId == null) return skipped('no last channel');
     await PerfDiagnostics.task(
         'liveList', _playlistManager.ensureLiveChannelsLoaded);
     PerfDiagnostics.mark('liveList');
-    if (_episodeNotificationOpened) return;
+    if (_episodeNotificationOpened) {
+      return skipped('a notification opened the app');
+    }
     // Settings > General > Startup (both platforms): full screen (default),
     // or playing in the guide's preview box, or neither.
     // Another start section (Startup > Open on) wins over full screen: the
@@ -1137,6 +1152,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     // unfiltered search result would.
     for (final channel in _playlistManager.visibleChannels(category: 'tv')) {
       if (channel.id == lastId) {
+        debugPrint(
+            'Resume: ${fullscreen ? 'full screen' : inGuide ? 'in the guide' : 'pill only'}');
         if (isDesktop) {
           if (fullscreen) {
             _navigatorKey.currentState?.push(MaterialPageRoute(
@@ -1165,6 +1182,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         return;
       }
     }
+    skipped('last channel not in the live list');
   }
 
   /// The oldest last-full-sync timestamp among enabled Xtream playlists —

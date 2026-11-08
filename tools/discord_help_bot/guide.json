@@ -40,6 +40,14 @@
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
   {
+    "id": "d5b260172234b167",
+    "category": "Live TV",
+    "title": "Preview without pressing OK",
+    "answer": "Off by default. When it is on, the channel you stop on with the arrows plays in the preview after a moment, in the Live list and the Timeline guide. Channels you scroll past are not opened, only the one you stay on. OK on it opens full screen. A previewed channel joins History once it has played for 10 seconds. While a recording uses the account's only connection, highlighting never interrupts it: press OK to choose.",
+    "controls": "Settings → Interface → Guide → Preview on highlight",
+    "url": "https://vespertv.app/remote.html#Live%20TV"
+  },
+  {
     "id": "ba9cc8950d070a30",
     "category": "Live TV",
     "title": "Search channels",
@@ -339,7 +347,7 @@
     "id": "fc418dd9a734ec36",
     "category": "Home",
     "title": "Back to Who's watching",
-    "answer": "With Settings > General > Startup > Launch with profiles selector enabled, leaving the TV or Sports Mode root stops playback and returns to Who's watching. In Sports Mode, first use Back to open the sidebar and stop its player. Back on Who's watching asks whether to exit, with Stay selected. With the startup selector off, the existing exit flow stays in place.",
+    "answer": "With Settings > General > Startup > Launch with profiles selector enabled, leaving the TV or Sports Mode root stops playback and returns to Who's watching. In Sports Mode, first use Back to open the sidebar and stop its player. Back on Who's watching leaves VesperTV at once (on a computer it asks first, with Stay selected). With the startup selector off, the existing exit flow stays in place.",
     "controls": "TV home / Sports Mode root · Back",
     "url": "https://vespertv.app/remote.html#Home"
   },
@@ -475,7 +483,7 @@
     "id": "ccbd8e49bc9e8850",
     "category": "Sports Trak",
     "title": "Sports Mode Back chain",
-    "answer": "From the sports page, Back opens the sidebar and keeps the player running. Back on the sidebar stops playback; another Back leaves the sports root. With Launch with profiles selector enabled, it returns to Who's watching; otherwise it asks to exit. If a Live TV panel is open, Back first closes its channel guide, then its groups panel. Back while reordering a league finishes the move. Regular Sports Trak keeps its existing Back behavior.",
+    "answer": "From the sports page, Back opens the sidebar and keeps the player running. Back on the sidebar stops playback; another Back leaves the sports root. With Launch with profiles selector enabled, it returns to Who's watching; otherwise it leaves VesperTV at once (on a computer it asks first). If a Live TV panel is open, Back first closes its channel guide, then its groups panel. Back while reordering a league finishes the move. Regular Sports Trak keeps its existing Back behavior.",
     "controls": "Sports Mode · Back on the page, then on the sidebar",
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },

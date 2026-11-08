@@ -40,6 +40,9 @@ const Map<String, String> kEl = {
   "Compact guide": "Συμπαγής οδηγός",
   "Shorter Timeline rows so more channels fit in the same space.":
       "Πιο χαμηλές γραμμές στο χρονοδιάγραμμα για περισσότερα κανάλια.",
+  "Preview on highlight": "Προεπισκόπηση με επισήμανση",
+  "The channel you stop on plays in the preview, without pressing OK. OK again opens it full screen.":
+      "Το κανάλι στο οποίο σταματάτε παίζει στην προεπισκόπηση, χωρίς να πατήσετε OK. Με OK ξανά ανοίγει σε πλήρη οθόνη.",
   "Transparent popups": "Διάφανα αναδυόμενα",
   "Reminders and goal alerts lose their background and outline, keeping only the logo and text.":
       "Οι υπενθυμίσεις και οι ειδοποιήσεις γκολ χάνουν φόντο και περίγραμμα, κρατώντας μόνο το λογότυπο και το κείμενο.",

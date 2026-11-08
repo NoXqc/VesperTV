@@ -37,6 +37,9 @@ const Map<String, String> kDe = {
   "Compact guide": "Kompakter Guide",
   "Shorter Timeline rows so more channels fit in the same space.":
       "Kürzere Timeline-Zeilen, damit mehr Sender auf den gleichen Platz passen.",
+  "Preview on highlight": "Vorschau beim Markieren",
+  "The channel you stop on plays in the preview, without pressing OK. OK again opens it full screen.":
+      "Der Sender, auf dem Sie stehen bleiben, läuft in der Vorschau, ohne OK zu drücken. Erneut OK öffnet ihn im Vollbild.",
   "Transparent popups": "Transparente Popups",
   "Reminders and goal alerts lose their background and outline, keeping only the logo and text.":
       "Erinnerungen und Toralarme verlieren Hintergrund und Rahmen, nur Logo und Text bleiben.",

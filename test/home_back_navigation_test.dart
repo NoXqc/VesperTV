@@ -17,6 +17,7 @@ import 'package:nox_iptv/utils/route_observer.dart';
 import 'package:nox_iptv/utils/constants.dart';
 import 'native_live_zap_test.dart' show ZapStorage;
 import 'wide_guide_back_test.dart' show GuidePlaylist, GuideEpg;
+import 'warm_exit_helper.dart';
 
 void main() {
   for (final startupHome in [false, true]) {
@@ -25,6 +26,7 @@ void main() {
         testWidgets(
             'Home Back returns to TV without Exit: startup=$startupHome hidden=$hidden, $back',
             (tester) async {
+          final exits = recordWarmExits();
           tester.view.physicalSize = const Size(1920, 1080);
           tester.view.devicePixelRatio = 1;
           addTearDown(tester.view.reset);
@@ -90,14 +92,14 @@ void main() {
           await tester.pumpAndSettle();
           expect(find.byType(HomeScreen), findsNothing);
           expect(find.byType(AlertDialog), findsNothing);
+          expect(exits, isEmpty, reason: 'Back from Home must not leave');
           expect(find.text('TV').hitTestable(), findsOneWidget);
-          // A deliberate later Back on TV still opens the existing Exit prompt.
+          // A deliberate later Back on TV leaves at once (warm exit).
           await tester.pump(const Duration(milliseconds: 750));
           await tester.binding.handlePopRoute();
           await tester.pumpAndSettle();
-          expect(find.byType(AlertDialog), findsOneWidget);
-          Navigator.of(tester.element(find.byType(AlertDialog))).pop(false);
-          await tester.pumpAndSettle();
+          expect(find.byType(AlertDialog), findsNothing);
+          expect(exits, ['warm']);
           await tester.pump(const Duration(seconds: 20));
           await tester.pumpWidget(const SizedBox());
           viewers.dispose();

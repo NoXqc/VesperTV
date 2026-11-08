@@ -960,6 +960,10 @@ class StorageService {
   bool getGuideCompact() => _guideBool(AppConstants.keyGuideCompact) ?? false;
   Future<void> setGuideCompact(bool value) =>
       _prefs.setBool(_vk(AppConstants.keyGuideCompact), value);
+  bool getGuideFocusPreview() =>
+      _guideBool(AppConstants.keyGuideFocusPreview) ?? false;
+  Future<void> setGuideFocusPreview(bool value) =>
+      _prefs.setBool(_vk(AppConstants.keyGuideFocusPreview), value);
 
   // --- Favorites (per viewer, shared across every playlist) -----------------
   // Favorites aren't namespaced by playlist (a favorited channel is just a

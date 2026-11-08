@@ -20,6 +20,10 @@ import 'package:nox_iptv/utils/constants.dart';
 import 'package:nox_iptv/utils/startup_routes.dart';
 import 'package:nox_iptv/utils/tv_theme.dart';
 import 'package:nox_iptv/widgets/profile_card.dart';
+import 'package:nox_iptv/services/app_exit.dart';
+import 'package:nox_iptv/utils/desktop_platform.dart';
+
+import 'warm_exit_helper.dart';
 
 class StartupStorage extends StorageService {
   @override
@@ -161,9 +165,30 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets(
-      'last viewer focused, Back asks to exit (Stay), same viewer can continue',
+  testWidgets('last viewer focused, Back leaves at once (warm exit)',
       (tester) async {
+    final exits = recordWarmExits();
+    final f = StartupFixture();
+    await f.init(active: 'p1');
+    addTearDown(f.dispose);
+    await tester.pumpWidget(f.picker());
+    await tester.pumpAndSettle();
+    expect(profileCard(tester, 'p1').focusNode.hasFocus, isTrue);
+    // Back never skips the selector: Android leaves the app (warm exit),
+    // no Exit prompt.
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(exits, ['warm']);
+    expect(find.text('Exit VesperTV?'), findsNothing);
+    expect(f.launches, 0);
+    expect(f.playback.stops, 0);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('computer: Back asks to exit (Stay), same viewer can continue',
+      (tester) async {
+    AppExit.isWindows = true;
+    addTearDown(() => AppExit.isWindows = isDesktop);
     final f = StartupFixture();
     await f.init(active: 'p1');
     addTearDown(f.dispose);
