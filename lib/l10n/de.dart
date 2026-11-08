@@ -31,6 +31,10 @@ const Map<String, String> kDe = {
   "Live TV guide layout, full-screen video, compact rows":
       "Layout des Live-TV-Guides, Vollbildvideo, kompakte Zeilen",
   "{n} titles": "{n} Titel",
+  "Wide cards":
+      "Breite Karten",
+  "Movies and TV Shows rows show bigger 16:9 cards with the backdrop. A title without one shows its poster until the provider sends it.":
+      "Die Reihen Filme und Serien zeigen größere 16:9-Karten mit dem Hintergrundbild. Ein Titel ohne Hintergrundbild zeigt sein Poster, bis der Anbieter eines sendet.",
   "Open groups as expanded catalog": "Gruppen als erweiterten Katalog öffnen",
   "Movies and TV Shows groups open the full poster grid instead of the rows.":
       "Gruppen von Filmen und Serien öffnen das vollständige Postergitter statt der Reihen.",

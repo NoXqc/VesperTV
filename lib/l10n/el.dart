@@ -34,6 +34,10 @@ const Map<String, String> kEl = {
   "Live TV guide layout, full-screen video, compact rows":
       "Διάταξη οδηγού, βίντεο πλήρους οθόνης, συμπαγείς γραμμές",
   "{n} titles": "{n} τίτλοι",
+  "Wide cards":
+      "Φαρδιές κάρτες",
+  "Movies and TV Shows rows show bigger 16:9 cards with the backdrop. A title without one shows its poster until the provider sends it.":
+      "Οι σειρές Ταινιών και Σειρών δείχνουν μεγαλύτερες κάρτες 16:9 με την εικόνα φόντου. Ένας τίτλος χωρίς φόντο δείχνει την αφίσα του μέχρι να το στείλει ο πάροχος.",
   "Open groups as expanded catalog": "Άνοιγμα ομάδων ως εκτεταμένος κατάλογος",
   "Movies and TV Shows groups open the full poster grid instead of the rows.":
       "Οι ομάδες Ταινιών και Σειρών ανοίγουν το πλήρες πλέγμα αφισών αντί για σειρές.",

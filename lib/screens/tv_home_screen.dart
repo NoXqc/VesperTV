@@ -2034,6 +2034,28 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     });
   }
 
+  /// Wide cards: a movie card's backdrop comes with its get_vod_info (the
+  /// hero's own request, saved for next time). M3U movies have none.
+  Future<String?> Function()? _movieBackdropLoader(Channel c) {
+    if (!_wideBrowseCards || !c.rawId.startsWith('xt_vod_')) return null;
+    final playlist = context.read<PlaylistManager>();
+    return () async {
+      await playlist.getHeroVodDescription(c);
+      return c.anyBackdropUrl;
+    };
+  }
+
+  /// Most panels send a show's backdrop with the list already; the rest
+  /// come with get_series_info, like the hero's.
+  Future<String?> Function()? _seriesBackdropLoader(XtreamSeries s) {
+    if (!_wideBrowseCards) return null;
+    final playlist = context.read<PlaylistManager>();
+    return () async {
+      await playlist.getHeroSeriesDescription(s);
+      return s.anyBackdropUrl;
+    };
+  }
+
   void _onColumnFocus(int depth) {
     if (_focusDepth != depth) setState(() => _focusDepth = depth);
   }
@@ -3331,6 +3353,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     final prefs = context.watch<AppPreferences>();
     final screen = MediaQuery.sizeOf(context);
     _compact = screen.width < 600 && screen.height > screen.width;
+    // Read by the browse size getters (top-level, like their Windows
+    // scale): a portrait phone keeps posters, they'd fill the screen.
+    _wideBrowseCards = prefs.wideCards && !_compact;
     // Turning the phone to portrait lands on the content page (what was
     // on the right in landscape); Back then walks to groups and tabs.
     if (!_compact) _phonePage = 2;
@@ -5840,6 +5865,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             progressFraction: storage.getWatchedFraction(c.id),
             cardWidth: _browsePosterWidth,
             cardPosterHeight: _browsePosterHeight,
+            wideStyle: _wideBrowseCards,
+            backdropUrl: asSeries ? null : c.anyBackdropUrl,
+            artKey: c.id,
+            loadBackdrop: asSeries ? null : _movieBackdropLoader(c),
             tapToPreview: _touchPreview,
             focusNode: index == 0 ? _continueWatchingFirstFocusNode : null,
             onTap: () => asSeries
@@ -6114,6 +6143,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
           progressFraction: storage.getWatchedFraction(c.id),
           cardWidth: _browsePosterWidth,
           cardPosterHeight: _browsePosterHeight,
+          wideStyle: _wideBrowseCards,
+          backdropUrl: c.anyBackdropUrl,
+          artKey: c.id,
+          loadBackdrop: _movieBackdropLoader(c),
           tapToPreview: _touchPreview,
           focusNode: x.focusNode,
           onToggleFavorite: () => _removeFromWatchList(i),
@@ -6149,6 +6182,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         progressFraction: storage.getWatchedFraction(c.id),
         cardWidth: _browsePosterWidth,
         cardPosterHeight: _browsePosterHeight,
+        wideStyle: _wideBrowseCards,
+        backdropUrl: c.anyBackdropUrl,
+        artKey: c.id,
+        loadBackdrop: _movieBackdropLoader(c),
         tapToPreview: _touchPreview,
         focusNode: x.focusNode,
         isFavorite: true,
@@ -6203,6 +6240,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                 progressFraction: storage.getWatchedFraction(c.id),
                 cardWidth: _browsePosterWidth,
                 cardPosterHeight: _browsePosterHeight,
+                wideStyle: _wideBrowseCards,
+                backdropUrl: c.anyBackdropUrl,
+                artKey: c.id,
+                loadBackdrop: _movieBackdropLoader(c),
                 tapToPreview: _touchPreview,
                 focusNode: index == 0
                     ? _firstPosterFocusNodeForGroup(
@@ -6301,6 +6342,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
           rating: s.rating,
           cardWidth: _browsePosterWidth,
           cardPosterHeight: _browsePosterHeight,
+          wideStyle: _wideBrowseCards,
+          backdropUrl: s.anyBackdropUrl,
+          artKey: s.id,
+          loadBackdrop: _seriesBackdropLoader(s),
           tapToPreview: _touchPreview,
           focusNode: x.focusNode,
           onToggleFavorite: () => _removeFromWatchList(i),
@@ -6336,6 +6381,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               rating: s.rating,
               cardWidth: _browsePosterWidth,
               cardPosterHeight: _browsePosterHeight,
+              wideStyle: _wideBrowseCards,
+              backdropUrl: s.anyBackdropUrl,
+              artKey: s.id,
+              loadBackdrop: _seriesBackdropLoader(s),
               tapToPreview: _touchPreview,
               focusNode: x.focusNode,
               isFavorite: true,
@@ -6366,6 +6415,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               imageUrl: c.logoUrl,
               cardWidth: _browsePosterWidth,
               cardPosterHeight: _browsePosterHeight,
+              wideStyle: _wideBrowseCards,
+              backdropUrl: c.anyBackdropUrl,
+              artKey: c.id,
+              loadBackdrop: _movieBackdropLoader(c),
               tapToPreview: _touchPreview,
               focusNode: x.focusNode,
               isFavorite: true,
@@ -6441,6 +6494,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             rating: s.rating,
             cardWidth: _browsePosterWidth,
             cardPosterHeight: _browsePosterHeight,
+            wideStyle: _wideBrowseCards,
+            backdropUrl: s.anyBackdropUrl,
+            artKey: s.id,
+            loadBackdrop: _seriesBackdropLoader(s),
             tapToPreview: _touchPreview,
             focusNode: index == 0
                 ? _firstPosterFocusNodeForGroup(group.playlistId, group.title)
@@ -7171,16 +7228,22 @@ class _GroupRowState extends State<_GroupRow> {
 // Was 1.8 — reduced ~30% per direct feedback that the first pass at
 // this was too big.
 const double _windowsPosterScale = 1.26;
-double get _browsePosterWidth =>
-    isDesktop ? PosterCard.width * _windowsPosterScale : PosterCard.width;
-double get _browsePosterHeight => isDesktop
-    ? PosterCard.posterHeight * _windowsPosterScale
-    : PosterCard.posterHeight;
+
+/// Settings > Interface > Tabs > Wide cards (16:9 backdrop cards, a little
+/// taller than the posters too). Set at the top of every TV home build.
+bool _wideBrowseCards = false;
+const double _wideCardScale = 1.1;
+
+double get _browseScale =>
+    (isDesktop ? _windowsPosterScale : 1.0) *
+    (_wideBrowseCards ? _wideCardScale : 1.0);
+double get _browsePosterWidth => _wideBrowseCards
+    ? _browsePosterHeight * 16 / 9
+    : PosterCard.width * _browseScale;
+double get _browsePosterHeight => PosterCard.posterHeight * _browseScale;
+// PosterCard scales its title row the same way (by height when wide).
 double get _browseCardHeight =>
-    _browsePosterHeight +
-    (isDesktop
-        ? PosterCard.titleHeight * _windowsPosterScale
-        : PosterCard.titleHeight);
+    _browsePosterHeight + PosterCard.titleHeight * _browseScale;
 
 /// [_CategoryRow]'s own section-title bar — a fixed height (not left to
 /// whatever `SectionLabel`'s text happens to measure out to) specifically

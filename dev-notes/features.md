@@ -314,3 +314,15 @@ The setting is shared like Media Hub sources, persists across restarts and
 travels with Media Hub data in backup/transfer. Toggling clears current search
 and genre filters and applies immediately; enabling refreshes catalog rows.
 Regression: `test/archive_cinemeta_catalog_test.dart`. Not built or box-tested.
+
+## Wide cards (2026-11-08, Claude, `claude/wide-cards`)
+Settings > Interface > Tabs > **Wide cards** (`AppPreferences.wideCards`, key `vesper_wide_cards`, device
+look, off by default; AI settings key `wide_cards`). TV home Movies / TV Shows rows (category, Continue
+Watching, watch list, favourites) become 16:9 cards 1.1x taller than posters (`_wideBrowseCards`,
+`_browseScale` in tv_home_screen.dart; portrait phones keep posters). `PosterCard.wideStyle`: the
+backdrop (`anyBackdropUrl`), else the poster on the left over a 24 px decode of itself (soft blur, no
+filter) + dim. Visible cards without one ask `WideArtQueue` (utils/wide_art_queue.dart: after 450 ms on
+screen, 2 at a time, newest first, cancelled when scrolled away, a miss never re-asked per session):
+movies = `getHeroVodDescription` (get_vod_info, backdrop saved to the catalog DB), shows =
+`getHeroSeriesDescription` (most panels already send it in get_series). M3U movies: poster style only.
+Not yet wide: Media Hub rows (fixed stride math + its own focused wide card), Expand catalog grid, Search.

@@ -400,6 +400,14 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                           context.read<AppPreferences>().setExpandedBrowse(v),
                     ),
                     TvSwitchListTile(
+                      title: Text(tr('Wide cards')),
+                      subtitle: Text(tr(
+                          'Movies and TV Shows rows show bigger 16:9 cards with the backdrop. A title without one shows its poster until the provider sends it.')),
+                      value: context.watch<AppPreferences>().wideCards,
+                      onChanged: (v) =>
+                          context.read<AppPreferences>().setWideCards(v),
+                    ),
+                    TvSwitchListTile(
                       title: Text(tr('Hide profiles')),
                       subtitle: Text(tr('Hides the profiles row on Home.')),
                       value: context.watch<AppPreferences>().hideProfiles,

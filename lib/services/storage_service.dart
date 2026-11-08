@@ -981,6 +981,9 @@ class StorageService {
       _prefs.getBool(AppConstants.keyExpandedBrowse) ?? false;
   Future<void> setExpandedBrowse(bool value) =>
       _prefs.setBool(AppConstants.keyExpandedBrowse, value);
+  bool getWideCards() => _prefs.getBool(AppConstants.keyWideCards) ?? false;
+  Future<void> setWideCards(bool value) =>
+      _prefs.setBool(AppConstants.keyWideCards, value);
   bool getGuideCompact() => _guideBool(AppConstants.keyGuideCompact) ?? false;
   Future<void> setGuideCompact(bool value) =>
       _prefs.setBool(_vk(AppConstants.keyGuideCompact), value);

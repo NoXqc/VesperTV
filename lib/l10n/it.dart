@@ -34,6 +34,10 @@ const Map<String, String> kIt = {
   "Live TV guide layout, full-screen video, compact rows":
       "Layout della guida, video a schermo intero, righe compatte",
   "{n} titles": "{n} titoli",
+  "Wide cards":
+      "Schede larghe",
+  "Movies and TV Shows rows show bigger 16:9 cards with the backdrop. A title without one shows its poster until the provider sends it.":
+      "Le righe di Film e Serie TV mostrano schede 16:9 più grandi con l'immagine di sfondo. Un titolo senza sfondo mostra la locandina finché il fornitore non lo invia.",
   "Open groups as expanded catalog": "Apri i gruppi come catalogo esteso",
   "Movies and TV Shows groups open the full poster grid instead of the rows.":
       "I gruppi Film e Serie TV aprono la griglia completa di locandine invece delle righe.",

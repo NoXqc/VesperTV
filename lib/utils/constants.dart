@@ -532,6 +532,9 @@ class AppConstants {
   static const String keyGuideFocusPreview = 'vesper_guide_focus_preview';
   static const String keyExpandedBrowse = 'vesper_expanded_browse';
 
+  /// Movies / TV Shows rows as 16:9 cards (backdrops), device-only look.
+  static const String keyWideCards = 'vesper_wide_cards';
+
   /// LEGACY global scalar — "enable/disable playlist" (freeing a
   /// provider's connection slot for another device without touching
   /// cached catalog/credentials). Per-playlist now, as

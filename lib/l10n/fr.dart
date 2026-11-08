@@ -33,6 +33,10 @@ const Map<String, String> kFr = {
   "Live TV guide layout, full-screen video, compact rows":
       "Disposition du guide, vidéo plein écran, lignes compactes",
   "{n} titles": "{n} titres",
+  "Wide cards":
+      "Cartes larges",
+  "Movies and TV Shows rows show bigger 16:9 cards with the backdrop. A title without one shows its poster until the provider sends it.":
+      "Les rangées Films et Séries affichent de plus grandes cartes 16:9 avec l'image de fond. Un titre sans image de fond montre son affiche jusqu'à ce que le fournisseur l'envoie.",
   "Open groups as expanded catalog": "Ouvrir les groupes en catalogue étendu",
   "Movies and TV Shows groups open the full poster grid instead of the rows.":
       "Les groupes Films et Séries s'ouvrent en grille d'affiches complète plutôt qu'en rangées.",

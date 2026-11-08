@@ -428,6 +428,13 @@ final List<_AiSetting> _aiSettings = [
       (b) => b.prefs.expandedBrowse,
       (b, on) => b.prefs.setExpandedBrowse(on)),
   _switch(
+      'wide_cards',
+      'tabs',
+      'Wide cards',
+      'Movies / TV Shows rows as bigger 16:9 backdrop cards.',
+      (b) => b.prefs.wideCards,
+      (b, on) => b.prefs.setWideCards(on)),
+  _switch(
       'hide_background_video',
       'tabs',
       'Hide the live picture behind other pages',
