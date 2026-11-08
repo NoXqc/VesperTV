@@ -781,6 +781,9 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         _episodeNotificationOpened = false;
         await _playbackService.stop();
       };
+      // A computer: every media_kit player closes before the window does
+      // (libmpv crashed on close with players still open, Linux).
+      AppExit.beforeQuit = disposeAllDesktopPlayers;
       AppExit.afterWarm = () {
         if (!mounted || !_ready) return;
         if (_profileSelection != null) {

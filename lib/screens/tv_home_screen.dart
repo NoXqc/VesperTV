@@ -3282,13 +3282,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         .showSnackBar(SnackBar(content: Text(tr('Favourites cleared.'))));
   }
 
-  void _closeApp() {
-    if (isDesktop) {
-      windowManager.close();
-    } else {
-      SystemNavigator.pop();
-    }
-  }
+  /// A computer closes its players before the window (AppExit.quit).
+  void _closeApp() => unawaited(AppExit.full());
 
   /// A window can't be minimized while it's *in* `fullScreen` mode at all
   /// — confirmed directly: a bare `windowManager.minimize()` call did

@@ -265,7 +265,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       _ownsPlayer = false;
       DesktopLiveRecovery.of(_player).watch(widget.channel);
     } else {
-      _player = Player();
+      _player = newDesktopPlayer();
       // Best-effort mpv/ffmpeg-level reconnect tuning for a live,
       // non-seekable TS stream — reconnect_streamed=1 is necessary for
       // mpv to even attempt recovering a genuinely dropped/reset read
