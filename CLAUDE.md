@@ -383,7 +383,8 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   and Choose a folder. `AppUpdateService.pickAsset`: Windows never takes `-macos.zip`. **Never attach
   a Mac zip to a release** until Windows installs have pickAsset. CI `.github/workflows/macos-build.yml`
   = unsigned artifact. Not signed/notarized. Details: `dev-notes/macos-desktop.md`.
-- **Claude, 2026-11-08 - merged to local `main` for a Formuler test (+680, not pushed/released):** event-guide
+- **Claude, 2026-11-08 - release 1.0.61 (beta), +683 (latest):** owner said "/cutr". Android only; Windows stays 1.0.45. New version name because the updater compares tag vs versionName. Everything merged to local `main` since 1.0.60: event channels + guide speed (+677), TV launcher rows for Projectivy / Android TV (`claude/tv-channels`), Codex 3-hour EPG refresh, Preview on highlight + Back leaves at once + warm-resume fix (`claude/focus-preview`), resume after Who's watching (+682, another session), Vesper AI `settings` tool (`claude/ai-settings`: ~50 settings, clear history, update guide; `dev-notes/vesper-ai.md`), README rewrite. Not in it: Windows, macOS, iOS/Linux branches. Analyze 16, 1604 tests; native player suite not rerun (only its tests changed). Notes: dev-notes/releases/1.0.61.md. Next build > 683.
+- **Claude, 2026-11-08 - merged to local `main` for a Formuler test (+680, released in 1.0.61):** event-guide
   (entry below), `claude/tv-channels` (Settings > Interface > TV home screen: Watch Next + a "Favourite channels" app
   channel through TvProvider for Projectivy / Android TV; `services/launcher_channels.dart`, `LauncherChannels.kt`,
   `dev-notes/launcher-channels.md`), Codex `codex/epg-3h` (3-hour EPG refresh) and `claude/focus-preview`:
@@ -394,7 +395,7 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   `AppExit.back`, warm exit; a computer still asks; tests: `test/warm_exit_helper.dart`). **Warm-return resume:**
   `_episodeNotificationOpened` was never reset, so after one notification tap no warm return resumed until a cold
   start; now reset in `AppExit.beforeWarm`, and Send log says `Resume: skipped (why)`. Not box-tested. Next build > 680.
-- **Claude, 2026-11-07 - event channels + guide speed (unreleased, +677; test APK +677 has 1-2 only):**
+- **Claude, 2026-11-07 - event channels + guide speed (released in 1.0.61, +677; test APK +677 had 1-2 only):**
   (1) TV header "Updating..." stuck after a background update: `PlaylistSession.isLoading` is now derived (list load
   or on-screen row loads). (2) **Guide from channel names**: `services/channel_name_events.dart` reads
   `NBA 01: Nuggets vs. Pacers @ 7 Nov 04:58 PM ET` (US/UK/EU DST, GMT+-N; no zone or date = skipped, 96 % of 3,666
