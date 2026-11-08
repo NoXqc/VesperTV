@@ -98,7 +98,8 @@ object DisplayModePicker {
     /**
      * [rate]: pick a refresh that is a whole multiple of the video's frame rate. [only5060]:
      * only switch between the 50 Hz and 60 Hz families (24p films stay on the current
-     * refresh). [resolution]: the smallest mode that holds the video (else the largest).
+     * refresh). [resolution]: the smallest mode of at least 1080p that holds the video
+     * (else the largest).
      * Returns the mode id to ask for, or null to leave the display alone.
      */
     fun pick(
@@ -106,8 +107,12 @@ object DisplayModePicker {
         rate: Boolean, only5060: Boolean, resolution: Boolean,
     ): Int? {
         if (modes.isEmpty() || (!rate && !resolution)) return null
-        // 1. Size.
+        // 1. Size. Never below 1080p: a 720p output on an onn 4K Pro left the interface
+        // and the video scaled differently (the picture at 2/3 of its box, LOG-RJQ6N6),
+        // and the TV upscales 720p / SD at least as well as a 720p mode does.
         val sizes = modes.map { it.width to it.height }.distinct()
+            .filter { it.first >= 1920 && it.second >= 1080 }
+            .ifEmpty { listOf(current.width to current.height) }
         val size = if (resolution && width > 0 && height > 0) {
             sizes.filter { it.first >= width * 0.95 && it.second >= height * 0.95 }
                 .minByOrNull { it.first * it.second }

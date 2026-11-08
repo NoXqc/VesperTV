@@ -643,6 +643,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       _playlistManager = PlaylistManager(_storage, _catalogDb);
       _epgService = EpgService(_storage)
         ..catchupDaysProvider = _playlistManager.catchupDaysByEpgId
+        ..nameEventsProvider = _playlistManager.channelNameEventsByEpgId
         ..beforeRefresh = _playlistManager.ensureLiveChannelsLoaded;
       // Started during the splash, not after it: it only opens the EPG
       // database and preloads now/next for every channel (a few thousand
@@ -1002,6 +1003,11 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         // in-process weekly timer.
         await StartupQuiet.after(const Duration(seconds: 10));
         await _playlistManager.refreshWhatsNewTmdbIfDue();
+        // Event channels ("NBA 01: ... @ 7 Nov 04:58 PM ET") are renamed
+        // daily: their live list is fetched again when it's over an hour
+        // old, now and every 10 minutes while the app is on screen.
+        await StartupQuiet.after(const Duration(seconds: 14));
+        _playlistManager.startEventChannelRefresh();
       }());
     } catch (e) {
       // Surfaces any unexpected startup failure as a retryable screen

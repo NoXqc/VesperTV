@@ -15,6 +15,7 @@ import '../models/xtream_series.dart';
 import '../utils/catalog_sort.dart';
 import '../utils/constants.dart';
 import 'catalog_database.dart';
+import 'channel_name_events.dart';
 import 'm3u_import.dart';
 import 'm3u_parser.dart';
 import 'storage_service.dart';
@@ -73,7 +74,18 @@ class PlaylistSession {
   /// directly.
   final VoidCallback onNotify;
 
-  bool isLoading = false;
+  /// A list load running ([loadFromUrl], [loadFromXtream]).
+  bool _listLoading = false;
+
+  /// [ensureCategoryLoaded] calls in flight.
+  int _categoryLoads = 0;
+
+  /// The header's "Updating…". Derived, never stored: the stored flag went
+  /// stale. A row load ending while the catalog warm-up still had a row in
+  /// [loadingCategoryNames] left it true, and the warm-up's own loads never
+  /// reset it, so "Updating…" stayed after a background update (owner,
+  /// 2026-11-07).
+  bool get isLoading => _listLoading || _categoryLoads > 0;
   String? error;
   DateTime? lastLoaded;
   String? loadingPhase;
@@ -713,7 +725,7 @@ class PlaylistSession {
   }
 
   Future<void> loadFromUrl(String url) async {
-    isLoading = true;
+    _listLoading = true;
     error = null;
     lastLoadSummary = null;
     loadingPhase = tr('Connecting to server...');
@@ -809,7 +821,7 @@ class PlaylistSession {
           '${(received / 1048576).toStringAsFixed(1)} MB received '
           '(${e.runtimeType})');
     } finally {
-      isLoading = false;
+      _listLoading = false;
       loadingPhase = null;
       onNotify();
     }
@@ -981,12 +993,16 @@ class PlaylistSession {
       if (path != null) {
         loaded = await compute(_readChannelsFile, path);
         PerfDiagnostics.mark('liveDecoded');
+        try {
+          liveListFetchedAt = await File(path).lastModified();
+        } catch (_) {}
       } else {
         final api = xtreamApi;
         if (api == null) return;
         final categoryNames = {for (final c in liveCategories) c.id: c.name};
         loaded = await api.getLiveStreams(categoryNames: categoryNames);
         _noteFetch(null);
+        liveListFetchedAt = DateTime.now();
         await storage.writeCacheFile(
           _cacheName(AppConstants.cacheFileLiveChannels),
           await compute(
@@ -1013,6 +1029,91 @@ class PlaylistSession {
       }
     } finally {
       onNotify();
+    }
+  }
+
+  /// When the live list on screen was fetched from the provider (the saved
+  /// copy's file time after a launch). Null until a list is loaded.
+  DateTime? liveListFetchedAt;
+
+  bool liveListOlderThan(Duration age) {
+    final at = liveListFetchedAt;
+    return at != null && DateTime.now().difference(at) >= age;
+  }
+
+  int? _eventScanFor;
+  bool _hasEventChannels = false;
+
+  /// Whether any live channel's name announces an event and its start time
+  /// (`NBA 01: Nuggets vs. Pacers @ 7 Nov 04:58 PM ET`): the provider
+  /// renames those every day. Rescanned only when the list changes.
+  bool get hasEventChannels {
+    final key = identityHashCode(liveChannels);
+    if (_eventScanFor != key) {
+      _eventScanFor = key;
+      _hasEventChannels = liveChannels.any(
+          (c) => c.name.contains('@') && parseChannelNameEvent(c.name) != null);
+    }
+    return _hasEventChannels;
+  }
+
+  /// Fetches the live categories and channels again and swaps them in, for
+  /// event channels: the saved list is otherwise replaced only by a full
+  /// update every few days, and showed yesterday's games (Google TV
+  /// Streamer user, 2026-11-07). Ids stay the same, so
+  /// favourites, edits and guide ids carry over. False when nothing
+  /// changed hands (no list yet, a full update running, server down,
+  /// error, empty answer).
+  Future<bool> refreshLiveList() async {
+    final api = xtreamApi;
+    if (!isXtream ||
+        api == null ||
+        liveChannels.isEmpty ||
+        _listLoading ||
+        isWarmingCatalog ||
+        serverDown) {
+      return false;
+    }
+    final watch = Stopwatch()..start();
+    try {
+      final categories = await api.getLiveCategories();
+      final names = {for (final c in categories) c.id: c.name};
+      final fresh = await api.getLiveStreams(categoryNames: names);
+      _noteFetch(null);
+      // A full update started meanwhile has the newer word.
+      if (fresh.isEmpty || _listLoading) return false;
+      final unique = Channel.withUniqueIds(fresh);
+      for (final channel in unique) {
+        channel.isFavorite = favoriteIds().contains(channel.id);
+        channel.epgIdOverride = epgIdOverrides[channel.rawId];
+      }
+      liveCategories = categories;
+      liveChannels = unique;
+      liveListFetchedAt = DateTime.now();
+      applyEdits();
+      _loadViewerScopedState();
+      debugPrint('LiveRefresh: playlist=${profile.id} n=${unique.length} '
+          'in ${watch.elapsedMilliseconds} ms');
+      onNotify();
+      try {
+        await storage.writeCacheFile(
+          _cacheName(AppConstants.cacheFileLiveCategories),
+          await compute(
+              _encodeJsonList, categories.map((c) => c.toJson()).toList()),
+        );
+        await storage.writeCacheFile(
+          _cacheName(AppConstants.cacheFileLiveChannels),
+          await compute(
+              _encodeJsonList, unique.map((c) => c.toJson()).toList()),
+        );
+      } catch (e) {
+        debugPrint('LiveRefresh: playlist=${profile.id} not saved: $e');
+      }
+      return true;
+    } catch (e) {
+      _noteFetch(e);
+      debugPrint('LiveRefresh: playlist=${profile.id} failed: $e');
+      return false;
     }
   }
 
@@ -1093,7 +1194,7 @@ class PlaylistSession {
   }
 
   Future<void> loadFromXtream() async {
-    isLoading = true;
+    _listLoading = true;
     error = null;
     lastLoadSummary = null;
     loadingPhase = tr('Connecting to server...');
@@ -1161,6 +1262,7 @@ class PlaylistSession {
         channel.epgIdOverride = epgIdOverrides[channel.rawId];
       }
       liveChannels = loadedLive;
+      liveListFetchedAt = DateTime.now();
       applyEdits();
       await storage.writeCacheFile(
         _cacheName(AppConstants.cacheFileLiveChannels),
@@ -1223,7 +1325,7 @@ class PlaylistSession {
       error = e.toString();
       debugPrint('PlaylistSession[${profile.id}] error: $e');
     } finally {
-      isLoading = false;
+      _listLoading = false;
       loadingPhase = null;
       onNotify();
     }
@@ -1283,7 +1385,7 @@ class PlaylistSession {
     // rows arrive through the throttled [_notifyCategoryLoaded].
     final first = loadingCategoryNames.isEmpty;
     loadingCategoryNames.add(key);
-    isLoading = true;
+    _categoryLoads++;
     if (first && _gentleLoads == 0) onNotify();
 
     try {
@@ -1348,7 +1450,7 @@ class PlaylistSession {
       _noteFetch(e);
     } finally {
       loadingCategoryNames.remove(key);
-      isLoading = loadingCategoryNames.isNotEmpty;
+      _categoryLoads--;
       _notifyCategoryLoaded();
     }
   }
