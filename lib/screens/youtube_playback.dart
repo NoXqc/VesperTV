@@ -11,7 +11,8 @@ import '../utils/desktop_platform.dart';
 
 Future<void> playYouTubeVideo(BuildContext context, String id, String title,
     {MediaFileInfo? mediaFileInfo}) async {
-  if (!Platform.isAndroid && !usesMediaKit) {
+  // Linux has no web view plugin: the browser plays it.
+  if (Platform.isLinux || (!Platform.isAndroid && !usesMediaKit)) {
     await launchUrl(YouTubeEmbedDocument(id).externalUrl,
         mode: LaunchMode.externalApplication);
     return;

@@ -11,7 +11,7 @@ Future<void> restartApp() async {
       // MainActivity queues a fresh launch, then ends this process.
       await const MethodChannel('com.nox.nox_iptv/device_type')
           .invokeMethod<bool>('restartApp');
-    } else if (Platform.isWindows) {
+    } else if (Platform.isWindows || Platform.isLinux) {
       await Process.start(Platform.resolvedExecutable, const [],
           mode: ProcessStartMode.detached);
     }
