@@ -383,7 +383,17 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
-- **Claude, 2026-11-09 - batch committed on main (+695, unreleased, not pushed):** **Home mini player** (owner
+- **Claude, 2026-11-09 - release 1.0.63 (beta), +698 (latest):** owner said "/cutr". Android only; Windows/Linux stay
+  1.0.61 (the Home mini player's Windows path was never run). New version name because the updater compares tag vs
+  versionName. Includes the +695 batch below (Home mini player, compact Settings, stream language ranking, MKV Atmos
+  labels, Vesper AI media_hub tool) plus: Media Hub **largest file = largest with the viewer's language**, alone or among
+  others (`ArchivePlaybackPreferences.languageTier` capped at 2) and it wins over Auto-play; Vesper AI `media_hub`
+  sources always lists best + `best_rule`, `settings` gains 5 `media_hub_*` keys, `favorites` move / order, new
+  `my_groups` tool (`vesper_ai/my_groups_tool.dart`: own live groups). Pushed to origin/main from
+  `claude/hub-largest-language`; local `main` in the main checkout was left alone (another session had uncommitted
+  Sports files there), so `git pull` it when that session is done. Analyze 16, 1675 tests; native suite not rerun
+  (nothing native changed since +695). Notes: dev-notes/releases/1.0.63.md. Next build > 698.
+- **Claude, 2026-11-09 - batch committed on main (+695, released in 1.0.63):** **Home mini player** (owner
   photo; approved on the Formuler +695): `home_screen.dart` `_MiniPlayer` at the hero's top right plays the live
   card the remote rests on (Preview-on-highlight rules: 0.8 s after an arrow key, History after 10 s, never over a
   recording's only connection); OK = full screen on the same stream (`PlayerGlideRoute.open`; Windows
