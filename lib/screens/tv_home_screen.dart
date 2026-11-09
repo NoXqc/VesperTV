@@ -241,6 +241,14 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   bool _compact = false;
   int _phonePage = 2;
 
+  /// A phone held sideways: the TV layout, but under 500 points tall. The
+  /// fixed TV sizes (16 px margins, the title bar, the 160 px preview row)
+  /// left room for one guide row on an iPhone 8 / Android phone in
+  /// landscape (owner's photos, 2026-11-09): tighter margins, a slim title
+  /// bar, a 100 px preview row and Compact guide rows there instead.
+  /// Refreshed every build; never on TV boxes or computers.
+  bool _shortScreen = false;
+
   /// Group identity is `(playlistId, title)` now that more than one
   /// playlist can exist (two providers can share a category name), but
   /// this field itself stays a bare title — every place that reads it
@@ -3411,6 +3419,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     final prefs = context.watch<AppPreferences>();
     final screen = MediaQuery.sizeOf(context);
     _compact = screen.width < 600 && screen.height > screen.width;
+    _shortScreen = _isShortPhoneScreen(context);
     // Read by the browse size getters (top-level, like their Windows
     // scale): a portrait phone keeps posters, they'd fill the screen.
     _wideBrowseCards = prefs.wideCards && !_compact;
@@ -3498,12 +3507,15 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               SafeArea(
                 // Full-video mode: the guide sits right down at the TV's
                 // bottom edge (owner's request) instead of 16px above it.
-                minimum: _fullVideo
-                    ? const EdgeInsets.fromLTRB(16, 16, 16, 4)
-                    : const EdgeInsets.all(16),
+                minimum: _shortScreen
+                    ? const EdgeInsets.fromLTRB(16, 4, 16, 4)
+                    : _fullVideo
+                        ? const EdgeInsets.fromLTRB(16, 16, 16, 4)
+                        : const EdgeInsets.all(16),
                 child: Column(
                   children: [
                     _TvTopBar(
+                        dense: _shortScreen,
                         // Wide phones/tablets (including unfolded phones) use
                         // columns too. Full-video mode hides passed columns
                         // completely, so touch users need a visible way back.
@@ -5338,7 +5350,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                   // the whole row narrower than that: give the video at
                   // most half the row there instead of overflowing.
                   final fixedPreviewWidth = constraints.maxWidth.isFinite
-                      ? (constraints.maxWidth / 2).clamp(0.0, 284.0)
+                      ? (constraints.maxWidth / 2)
+                          .clamp(0.0, _shortScreen ? 100 * 16 / 9 : 284.0)
                       : 284.0;
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -5557,7 +5570,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                             ),
                           ]
                         : [
-                            SizedBox(height: 160, child: previewRow),
+                            SizedBox(
+                                height: _shortScreen ? 100 : 160,
+                                child: previewRow),
                             const Divider(height: 12),
                             Expanded(child: _fullVideoScrim(guide)),
                           ],
@@ -8301,8 +8316,14 @@ class _WhatsNewCarouselState<T> extends State<_WhatsNewCarousel<T>>
 /// actually works with a remote.
 class _TvTopBar extends StatelessWidget {
   const _TvTopBar(
-      {required this.showClock, required this.isLoading, this.onBack});
+      {required this.showClock,
+      required this.isLoading,
+      this.onBack,
+      this.dense = false});
 
+  /// A phone held sideways ([_TvHomeScreenState._shortScreen]): no
+  /// vertical padding, a smaller back button and wordmark.
+  final bool dense;
   final bool showClock;
   final bool isLoading;
   final VoidCallback? onBack;
@@ -8318,13 +8339,14 @@ class _TvTopBar extends StatelessWidget {
     // changes nothing for them.
     final palette = context.watch<AppPreferences>().palette;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: dense ? 0 : 8),
       child: Row(
         children: [
           if (onBack != null)
             IconButton(
               tooltip: tr('Back'),
               onPressed: onBack,
+              visualDensity: dense ? VisualDensity.compact : null,
               icon: const Icon(Icons.arrow_back, color: Colors.white),
             ),
           // Shrinks (never overflows) with a phone's largest font.
@@ -8339,14 +8361,14 @@ class _TvTopBar extends StatelessWidget {
                   if (palette.highlight != null) palette.highlight!,
                   palette.secondary,
                 ]).createShader(bounds),
-                child: const Text(
+                child: Text(
                   AppConstants.appName,
                   // Was bumped to 64 thinking this was the launcher banner text
                   // — it wasn't, that's a separate Android TV banner asset.
                   // Back to the original in-app header size.
                   style: TextStyle(
                       color: Colors.white,
-                      fontSize: 22,
+                      fontSize: dense ? 18 : 22,
                       fontWeight: FontWeight.bold),
                 ),
               ),
@@ -9492,8 +9514,11 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
-    _rowHeight =
-        context.watch<AppPreferences>().guideCompact ? 48 : _normalRowHeight;
+    // A phone held sideways always gets the Compact guide's rows.
+    _rowHeight = context.watch<AppPreferences>().guideCompact ||
+            _isShortPhoneScreen(context)
+        ? 48
+        : _normalRowHeight;
     if (widget.channels.isEmpty) {
       return Center(child: Text(tr('No channels found.')));
     }
@@ -10729,4 +10754,14 @@ class _ProgramBlockState extends State<_ProgramBlock> {
       ),
     );
   }
+}
+
+/// A phone held sideways: not a TV box or a computer, landscape, under 500
+/// points tall. See [_TvHomeScreenState._shortScreen].
+bool _isShortPhoneScreen(BuildContext context) {
+  final size = MediaQuery.sizeOf(context);
+  return size.height < 500 &&
+      size.width > size.height &&
+      !context.read<AppPreferences>().isTelevision &&
+      !isDesktopTarget;
 }

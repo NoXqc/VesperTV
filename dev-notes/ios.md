@@ -61,6 +61,15 @@ preview it on a box:
   top bar back / title / Sources / Rotate, big play/pause and +-10 s in the middle, seek bar
   (seeks on release) + badges + buttons at the bottom, hides after 4 s, no volume slider.
   Computers keep the mouse bar. Not device-tested yet.
+- Background (Home / lock screen): `_IosBackgroundVideo` in `desktop_stream_setup.dart` turns every
+  open player's video track off on hidden/paused and gives it back on resumed. media_kit draws with
+  OpenGL ES (forbidden in the background): before this the sound stopped too and a 4K remux
+  stuttered after coming back (decoder dropped). No picture-in-picture: iOS PiP needs Apple's
+  player layer (AVSampleBufferDisplayLayer fed with mpv frames, like VLC) - not done.
+- Landscape phone guide (shared Dart, Android phones too): `_shortScreen` / `_isShortPhoneScreen` in
+  `tv_home_screen.dart` (landscape, under 500 pt, not TV/computer): 4 px vertical margins, dense
+  title bar, 100 pt preview row (16:9 box), Compact guide rows. Was 1 guide row on an iPhone 8 /
+  Android phone. **Cherry-pick to main** for Android phones.
 - Merged main (+695) on 2026-11-09: brings the desktop live reconnect fixes (`5b360ce`
   30 s network timeout + error check, `3e7b392`); `cache-on-disk no` now on iOS too (sandbox).
   Main's new player checks (Home mini player, Preview on highlight, Vesper AI media_hub /
