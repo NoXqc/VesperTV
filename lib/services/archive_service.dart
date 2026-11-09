@@ -1760,7 +1760,12 @@ class ArchiveService extends ChangeNotifier {
     final viewer = _storage.viewerGeneration;
     ArchiveMeta? full;
     try {
-      full = source.tracker != null || source.listOnly
+      // A metadata add-on (AIOMetadata…) answers in the language it is set
+      // to; Cinemeta only in English (user report, 2026-11-09).
+      if (source.listOnly && source.supportsImdb('meta', preview.type.wire)) {
+        full = await _listedMeta(source, preview);
+      }
+      full ??= source.tracker != null || source.listOnly
           ? await _api.fetchMeta(
               ArchiveCatalogProvider.baseUrl, preview.type, preview.id)
           : source.server != null
@@ -1792,6 +1797,27 @@ class ArchiveService extends ChangeNotifier {
       registerIdentity(source, full);
     }
     return full;
+  }
+
+  /// A list-only [source]'s own `/meta/` answer, kept only when the title
+  /// and its episodes are keyed on IMDb ids like Cinemeta's: stream-only
+  /// add-ons are asked with those ids and saved progress uses them. Null =
+  /// use Cinemeta, as before.
+  Future<ArchiveMeta?> _listedMeta(
+      ArchiveSource source, ArchiveMeta preview) async {
+    bool imdbKeyed(String id) => RegExp(r'^tt\d+(:|$)').hasMatch(id);
+    try {
+      final full =
+          await _api.fetchMeta(source.baseUrl, preview.type, preview.id);
+      if (full == null ||
+          !imdbKeyed(full.id) ||
+          full.videos.any((v) => !imdbKeyed(v.id))) {
+        return null;
+      }
+      return full;
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Check the selected recommendation against server libraries, including
