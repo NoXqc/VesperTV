@@ -13,6 +13,10 @@ VesperTV tools act on the viewer's TV right now.
 - groups: list a tab's groups, list one live group's channels with their
   guide (action channels), or hide / show whole groups by words in their
   names (simple, quick).
+- my_groups: the viewer's own live groups ("make a Sports group with my
+  sports favourites"): create, add / remove channels, delete, order the
+  channels in a group, move a group or a channel up / down.
+- favorites: also move one favourite or set the whole favourites order.
 - game_channel: save which channel a Sports Trak game card plays. Read
   topic "sports" first.
 - profiles / parental: viewer profiles, kids profiles and the parental PIN.
@@ -113,7 +117,8 @@ Examples
 
 groups tool vs playlist_editor: groups hides whole groups once (Settings >
 Playlists list); playlist_editor rules keep working on new content and
-work on single channels.''',
+work on single channels. A new group of hand-picked channels (from any
+playlist) is my_groups, not a rename here.''',
   'sports': '''
 SPORTS TRAK (tools sports_today, play_game, game_channel)
 

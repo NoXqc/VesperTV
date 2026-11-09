@@ -112,6 +112,9 @@ const Map<String, String> kEl = {
   "Loading recommendations…": "Φόρτωση προτάσεων…",
   "Looking for streams…": "Αναζήτηση ροών…",
   "Maximum quality": "Μέγιστη ποιότητα",
+  "Any language": "Οποιαδήποτε γλώσσα",
+  "Any quality": "Οποιαδήποτε ποιότητα",
+  "Media Hub audio language": "Γλώσσα ήχου Media Hub",
   "More like this": "Παρόμοια",
   "No compatible source for this title. Add a playback source in Media Hub settings.":
       "Καμία συμβατή πηγή για αυτόν τον τίτλο. Προσθέστε πηγή αναπαραγωγής στις ρυθμίσεις του Media Hub.",
@@ -2786,6 +2789,8 @@ const Map<String, String> kEl = {
       "Μια εφαρμογή AI θέλει να ανοίξει το {title}.",
   "An AI app wants to hide {count} groups ({words}).":
       "Μια εφαρμογή AI θέλει να κρύψει {count} ομάδες ({words}).",
+  "An AI app wants to delete your group {group}.":
+      "Μια εφαρμογή AI θέλει να διαγράψει την ομάδα σας {group}.",
   "An AI app wants to show {count} groups ({words}).":
       "Μια εφαρμογή AI θέλει να εμφανίσει {count} ομάδες ({words}).",
   "An AI app wants {game} to play on {channel} in {tab}.":

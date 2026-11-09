@@ -219,6 +219,74 @@ final List<_AiSetting> _aiSettings = [
       'Movie and show pages play their trailer behind the details.',
       (b) => b.prefs.autoTrailers,
       (b, on) => b.prefs.setAutoTrailers(on)),
+  // Media Hub playback (per viewer): which stream a title starts with
+  // (hubBestStream / archive_playback). Preferred source is left out: its
+  // choices are the viewer's sources.
+  _switch(
+      'media_hub_largest_file',
+      'playback',
+      'Automatically play the largest file',
+      'Media Hub: a title starts with its largest file among the streams '
+          'with the preferred audio language (alone or among others). '
+          'Resume keeps the stream picked before.',
+      (b) => b.storage.getArchiveAutoLargest(),
+      (b, on) => b.storage.setArchiveAutoLargest(on)),
+  _switch(
+      'media_hub_auto_play',
+      'playback',
+      'Auto-play preferred stream',
+      'Media Hub: a title starts with the best stream (language, preferred '
+          'source, highest quality within the limits) without asking; '
+          'media_hub_largest_file wins when on. Both off = the TV lists the '
+          'streams.',
+      (b) => _hubPlayback(b).autoPlay,
+      (b, on) => _setHubPlayback(b, autoPlay: on)),
+  _AiSetting(
+      'media_hub_language',
+      'playback',
+      'Media Hub audio language',
+      'Media Hub: only streams whose label has this language (alone or '
+          'among others; untagged counts as English); any = audio_language '
+          'only ranks them.',
+      choices: [
+        ('any', 'Any language'),
+        for (final code in const ['en', 'fr', 'es', 'de', 'it', 'pt'])
+          (code, languageName(code)),
+      ],
+      read: (b) {
+        final code = _hubPlayback(b).language;
+        return code.isEmpty ? 'any' : code;
+      },
+      write: (b, v) => _setHubPlayback(b, language: v == 'any' ? '' : '$v')),
+  _AiSetting('media_hub_max_quality', 'playback', 'Maximum quality',
+      'Media Hub: streams above this are skipped when starting a title.',
+      choices: const [
+        ('any', 'Any quality'),
+        ('720p', '720p'),
+        ('1080p', '1080p'),
+        ('4k', '4K'),
+      ],
+      read: (b) => switch (_hubPlayback(b).maxHeight) {
+            720 => '720p',
+            1080 => '1080p',
+            2160 => '4k',
+            _ => 'any',
+          },
+      write: (b, v) => _setHubPlayback(b,
+          maxHeight: switch (v) {
+            '720p' => 720,
+            '1080p' => 1080,
+            '4k' => 2160,
+            _ => 0,
+          })),
+  _switch(
+      'media_hub_prefer_sdr',
+      'playback',
+      'Prefer SDR',
+      'Media Hub: HDR / Dolby Vision streams are skipped when starting a '
+          'title.',
+      (b) => _hubPlayback(b).avoidHdr,
+      (b, on) => _setHubPlayback(b, avoidHdr: on)),
   // ---- startup
   _AiSetting('open_on', 'startup', 'Open on',
       'The part of the app it opens on after the splash.',
@@ -524,6 +592,22 @@ const _subtitleScales = {
   'extra_large': 1.5,
 };
 
+ArchivePlaybackPreferences _hubPlayback(VesperToolbox b) =>
+    ArchivePlaybackPreferences.read(b.storage);
+
+/// Saves the viewer's Media Hub playback choices with one of them changed.
+Future<void> _setHubPlayback(VesperToolbox b,
+    {bool? autoPlay, String? language, int? maxHeight, bool? avoidHdr}) {
+  final p = _hubPlayback(b);
+  return ArchivePlaybackPreferences(
+          autoPlay: autoPlay ?? p.autoPlay,
+          language: language ?? p.language,
+          maxHeight: maxHeight ?? p.maxHeight,
+          sourceKey: p.sourceKey,
+          avoidHdr: avoidHdr ?? p.avoidHdr)
+      .save(b.storage);
+}
+
 String _subtitleSizeKey(double scale) => _subtitleScales.entries
     .reduce(
         (a, b) => (a.value - scale).abs() <= (b.value - scale).abs() ? a : b)
@@ -631,12 +715,19 @@ Set<String> get vesperSettingTexts => {
       'turn off',
       for (final s in _aiSettings) ...[
         s.label,
-        if (!const ['language', 'audio_language', 'subtitle_language']
-            .contains(s.key))
+        if (!const [
+          'language',
+          'audio_language',
+          'subtitle_language',
+          'media_hub_language',
+          'media_hub_max_quality',
+        ].contains(s.key))
           for (final (_, name) in s.choices ?? const <(String, String)>[])
             if (name != AppConstants.sportsTabName) name,
       ],
       'Source default',
+      'Any language',
+      'Any quality',
       ..._clearNames.values,
     };
 

@@ -261,6 +261,37 @@ void main() {
     expect(hubNextStream([o[1]], 0), isNull);
   });
 
+  test('best is listed even past the first 25, with how it was picked',
+      () async {
+    // The Batman (owner, 2026-11-09): best was the 57th stream, and the
+    // largest one with English beside other languages lost to English-only.
+    await storage.setArchiveAutoLargest(true);
+    await storage.setPreferredAudioLanguage('en');
+    hub.options
+      ..clear()
+      ..addAll([
+        for (var i = 0; i < 30; i++)
+          _stream(_addon, 'Torrentio\n4k', 'Movie 2160p 🇷🇺 💾 ${90 + i} GB',
+              file: 'dub$i'),
+        _stream(_addon, 'Torrentio\n4k',
+            'Movie 2160p 🗣 English | Russian 💾 77.3 GB',
+            file: 'multi'),
+        _stream(_addon, 'Torrentio\n4k', 'Movie 2160p 💾 76.5 GB', file: 'en'),
+      ]);
+    final ref = ((await box.call(
+                'media_hub', {'action': 'search', 'query': 'carrie'}))['titles']
+            as List)
+        .single['ref'];
+    final r = await box.call('media_hub', {'action': 'sources', 'ref': ref});
+    final list = (r['sources'] as List).cast<Map>();
+    expect(list, hasLength(26));
+    expect(list.last['ref'], r['best']);
+    expect(list.last['size_gb'], 77.3);
+    expect(r['best_rule'], contains('largest file'));
+    expect(r['best_rule'], contains('en audio'));
+    expect(r['note'], contains('then best'));
+  });
+
   test('best follows the viewer\'s Media Hub playback limit', () async {
     await storage.setArchiveOptionsJson(
         'playback', jsonEncode({'maxHeight': 1080}));

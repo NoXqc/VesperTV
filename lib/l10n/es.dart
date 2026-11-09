@@ -112,6 +112,9 @@ const Map<String, String> kEs = {
   "Loading recommendations…": "Cargando recomendaciones…",
   "Looking for streams…": "Buscando flujos…",
   "Maximum quality": "Calidad máxima",
+  "Any language": "Cualquier idioma",
+  "Any quality": "Cualquier calidad",
+  "Media Hub audio language": "Idioma de audio de Media Hub",
   "More like this": "Más como este",
   "No compatible source for this title. Add a playback source in Media Hub settings.":
       "No hay ninguna fuente compatible para este título. Añade una fuente de reproducción en los ajustes de Media Hub.",
@@ -2824,6 +2827,8 @@ const Map<String, String> kEs = {
       "Una app de IA quiere abrir {title}.",
   "An AI app wants to hide {count} groups ({words}).":
       "Una app de IA quiere ocultar {count} grupos ({words}).",
+  "An AI app wants to delete your group {group}.":
+      "Una app de IA quiere eliminar tu grupo {group}.",
   "An AI app wants to show {count} groups ({words}).":
       "Una app de IA quiere mostrar {count} grupos ({words}).",
   "An AI app wants {game} to play on {channel} in {tab}.":

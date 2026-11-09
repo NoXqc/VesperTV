@@ -11,6 +11,7 @@ import 'package:nox_iptv/models/playlist_profile.dart';
 import 'package:nox_iptv/models/viewer_profile.dart';
 import 'package:nox_iptv/models/xtream_series.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
+import 'package:nox_iptv/services/archive_playback_preferences.dart';
 import 'package:nox_iptv/services/catalog_database.dart';
 import 'package:nox_iptv/services/epg_service.dart';
 import 'package:nox_iptv/services/playback_service.dart';
@@ -179,6 +180,36 @@ void main() {
         'settings', {'action': 'set', 'key': 'hide_movies', 'value': 'true'},
         caller: VesperCaller.remoteApp);
     expect(prefs.hideMovies, isTrue);
+  });
+
+  test('Media Hub playback settings: one changes, the others stay', () async {
+    await storage.setArchiveOptionsJson(
+        'playback', '{"source":"https://a.example/manifest.json"}');
+    final r = await box.call('settings', {
+      'action': 'set',
+      'changes': [
+        {'key': 'media_hub_largest_file', 'value': 'true'},
+        {'key': 'media_hub_max_quality', 'value': '4K'},
+        {'key': 'media_hub_language', 'value': 'English'},
+        {'key': 'media_hub_prefer_sdr', 'value': 'on'},
+      ],
+    });
+    expect(r['error'], isNull, reason: '$r');
+    expect(storage.getArchiveAutoLargest(), isTrue);
+    final saved = ArchivePlaybackPreferences.read(storage);
+    expect(saved.maxHeight, 2160);
+    expect(saved.language, 'en');
+    expect(saved.avoidHdr, isTrue);
+    expect(saved.autoPlay, isFalse);
+    expect(saved.sourceKey, 'https://a.example/manifest.json',
+        reason: 'not an AI setting, never lost');
+    final list = await box.call('settings', {'action': 'list'});
+    expect(setting(list, 'media_hub_language')['value'], 'en');
+    expect(setting(list, 'media_hub_max_quality')['value'], '4k');
+    await box.call('settings',
+        {'action': 'set', 'key': 'media_hub_language', 'value': 'any'});
+    expect(ArchivePlaybackPreferences.read(storage).language, isEmpty);
+    expect(ArchivePlaybackPreferences.read(storage).maxHeight, 2160);
   });
 
   test('only listed settings and values are accepted', () async {

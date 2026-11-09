@@ -112,6 +112,29 @@ ArchiveStreamOption? hubBestStream(
   return ranked.firstOrNull ?? fallback;
 }
 
+/// How [hubBestStream] picks, for the model to explain it (the pick was
+/// past the listed streams and a model said it couldn't tell why, owner
+/// 2026-11-09).
+String hubBestRule(StorageService storage) {
+  final prefs = ArchivePlaybackPreferences.read(storage);
+  return [
+    if (storage.getArchiveAutoLargest())
+      'largest file (Media Hub playback: Automatically play the largest file)'
+    else ...[
+      if (prefs.sourceKey.isNotEmpty) 'preferred source first',
+      'highest resolution, then the add-on\'s order',
+    ],
+    if (prefs.language.isNotEmpty)
+      'only streams with ${prefs.language} audio (alone or among others)'
+    else if (prefs.audioLanguage.isNotEmpty)
+      'streams with ${prefs.audioLanguage} audio (alone or among others) '
+          'before the rest',
+    if (prefs.maxHeight > 0) 'up to ${prefs.maxHeight}p',
+    if (prefs.avoidHdr) 'SDR only',
+    'ready links only',
+  ].join('; ');
+}
+
 /// The stream after [current] in [options] (wrapping; -1 = unknown, from
 /// the first), skipping links still downloading and trailers; null when
 /// there's no other.
@@ -264,7 +287,9 @@ final _mediaHubTool = VesperTool(
       'English; a multi-audio file can start in another language unless '
       'the viewer set a preferred audio language), size, ready (false = the provider is '
       'still downloading it: it will not play yet), which one is playing, '
-      'and best (the viewer\'s Media Hub playback settings and language). '
+      'and best (the viewer\'s Media Hub playback settings and language; '
+      'always in the list; best_rule says how it was picked, settings '
+      'media_hub_* change it). '
       'play: a title ref (best true starts the best '
       'stream; otherwise the app picks as usual or asks on the TV), a '
       'stream ref from sources, or a show with season and episode (a show '
@@ -364,6 +389,7 @@ final _mediaHubTool = VesperTool(
           final current =
               archiveCurrentStreamIndex(options, sources.current(playing.id));
           final best = hubBestStream(box.storage, options);
+          final bestAt = best == null ? -1 : options.indexOf(best);
           HubStream wrap(ArchiveStreamOption o) =>
               HubStream(o, channelId: playing.id);
           return {
@@ -372,11 +398,16 @@ final _mediaHubTool = VesperTool(
             'sources': [
               for (var i = 0; i < options.length && i < _hubStreamCap; i++)
                 _describeStream(box, wrap(options[i]), playing: i == current),
+              if (bestAt >= _hubStreamCap)
+                _describeStream(box, wrap(best!), playing: bestAt == current),
             ],
-            if (best != null) 'best': box.refFor(wrap(best)),
+            if (best != null) ...{
+              'best': box.refFor(wrap(best)),
+              'best_rule': hubBestRule(box.storage),
+            },
             if (options.length > _hubStreamCap)
               'note': '${options.length} streams; the first $_hubStreamCap '
-                  'are listed.',
+                  'are listed${bestAt >= _hubStreamCap ? ', then best' : ''}.',
           };
         }
         final (title, episode) = await _hubTarget(box, hub, args);
@@ -386,6 +417,7 @@ final _mediaHubTool = VesperTool(
         }
         final options = await hub.streams(title, episode: episode);
         final best = hubBestStream(box.storage, options);
+        final bestAt = best == null ? -1 : options.indexOf(best);
         HubStream wrap(ArchiveStreamOption o) =>
             HubStream(o, title: title, episode: episode);
         return {
@@ -394,13 +426,17 @@ final _mediaHubTool = VesperTool(
           'sources': [
             for (final o in options.take(_hubStreamCap))
               _describeStream(box, wrap(o)),
+            if (bestAt >= _hubStreamCap) _describeStream(box, wrap(best!)),
           ],
-          if (best != null) 'best': box.refFor(wrap(best)),
+          if (best != null) ...{
+            'best': box.refFor(wrap(best)),
+            'best_rule': hubBestRule(box.storage),
+          },
           if (options.isEmpty)
             'note': 'No source offers a playable stream for this right now.',
           if (options.length > _hubStreamCap)
             'note': '${options.length} streams; the first $_hubStreamCap '
-                'are listed.',
+                'are listed${bestAt >= _hubStreamCap ? ', then best' : ''}.',
         };
       case 'play':
         final picked = box.lookup(_str(args, 'ref'));

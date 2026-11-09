@@ -154,36 +154,38 @@ Future<void> playArchiveTitle(
   var picked = chosen ??
       await pickArchiveStream(context, session.options,
           session: session, notice: notice, autoSelect: (options) async {
-    if (!resumeSource.isCurrent) return null;
-    savedChoice = await resumeSource.restore(options);
-    if (!resumeSource.isCurrent) return null;
-    final usable = savedChoice!.options;
-    for (final option in options) {
-      if (!usable.contains(option)) session.exclude(option);
-    }
-    // Resuming a stream the user picked that can't be found again: ask,
-    // don't guess (the largest file looked like the app ignored the pick,
-    // LOG-3NEYPN; owner, 2026-11-07).
-    if (savedChoice!.picked == null &&
-        const {
-          ArchiveResumeReason.unmatched,
-          ArchiveResumeReason.unavailable,
-          ArchiveResumeReason.missingSource,
-        }.contains(savedChoice!.reason)) {
-      notice.value =
-          tr("Couldn't replay the stream you picked. Choose one to resume.");
-      return null;
-    }
-    final prefs = ArchivePlaybackPreferences.read(storage);
-    return savedChoice!.picked ??
-        (prefs.autoPlay ? prefs.ranked(usable).firstOrNull : null) ??
-        (storage.getArchiveAutoLargest()
-            ? largestArchiveStream(prefs.bestLanguage(prefs.ranked(usable)))
-            : null) ??
-        (usable.length == 1 && prefs.ranked(usable).isNotEmpty
-            ? usable.single
-            : null);
-  });
+        if (!resumeSource.isCurrent) return null;
+        savedChoice = await resumeSource.restore(options);
+        if (!resumeSource.isCurrent) return null;
+        final usable = savedChoice!.options;
+        for (final option in options) {
+          if (!usable.contains(option)) session.exclude(option);
+        }
+        // Resuming a stream the user picked that can't be found again: ask,
+        // don't guess (the largest file looked like the app ignored the pick,
+        // LOG-3NEYPN; owner, 2026-11-07).
+        if (savedChoice!.picked == null &&
+            const {
+              ArchiveResumeReason.unmatched,
+              ArchiveResumeReason.unavailable,
+              ArchiveResumeReason.missingSource,
+            }.contains(savedChoice!.reason)) {
+          notice.value = tr(
+              "Couldn't replay the stream you picked. Choose one to resume.");
+          return null;
+        }
+        final prefs = ArchivePlaybackPreferences.read(storage);
+        // Largest file before Auto-play: the narrower choice wins, as in
+        // hubBestStream (an AI app's "best").
+        return savedChoice!.picked ??
+            (storage.getArchiveAutoLargest()
+                ? largestArchiveStream(prefs.bestLanguage(prefs.ranked(usable)))
+                : null) ??
+            (prefs.autoPlay ? prefs.ranked(usable).firstOrNull : null) ??
+            (usable.length == 1 && prefs.ranked(usable).isNotEmpty
+                ? usable.single
+                : null);
+      });
   notice.dispose();
   if (picked == null || !context.mounted || !resumeSource.isCurrent) return;
   var options = session.options;
@@ -486,8 +488,8 @@ Future<void> openArchiveSeries(
             showFavorite: false,
             imdbId: preview.imdb,
             sourceLabel: source.name,
-            watchListItem: WatchListItem(
-                hub: HubTitle(source.manifestUrl, preview)),
+            watchListItem:
+                WatchListItem(hub: HubTitle(source.manifestUrl, preview)),
             followTarget: () => FollowedShow(
                 key: FollowedShow.hubKey(source.manifestUrl, preview.id),
                 title: preview.name,

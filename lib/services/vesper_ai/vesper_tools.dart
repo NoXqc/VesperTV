@@ -42,6 +42,7 @@ import '../../widgets/data_pool_card.dart';
 
 part 'game_channel_tool.dart';
 part 'media_hub_tool.dart';
+part 'my_groups_tool.dart';
 part 'player_tracks.dart';
 part 'playlist_editor_tool.dart';
 part 'profiles_tool.dart';
@@ -1016,34 +1017,123 @@ final List<VesperTool> vesperTools = [
   VesperTool(
     name: 'favorites',
     description:
-        'List the viewer\'s favourite live channels, or add / remove a '
-        'channel or movie (ref, or "current" for what is playing).',
+        'The viewer\'s favourite live channels, in the order the TV shows '
+        'them. list: all of them. add / remove: a channel or movie (ref, or '
+        '"current" for what is playing). move: one favourite channel (ref) '
+        'to top, bottom, up / down (steps) or a position. order: refs in '
+        'the order wanted (e.g. CP24, then the Canadian channels, then US, '
+        'then 24/7): they go first in that order, the others keep their '
+        'order after them; list all of them to set the whole order.',
     schema: {
       'type': 'object',
       'properties': {
         'action': {
           'type': 'string',
-          'enum': ['list', 'add', 'remove'],
+          'enum': ['list', 'add', 'remove', 'move', 'order'],
         },
         'ref': {'type': 'string'},
+        'to': {
+          'type': 'string',
+          'description': 'For move: top, bottom, up, down or a position '
+              'number (1 = first).',
+        },
+        'steps': {
+          'type': 'integer',
+          'description': 'For move up / down: how many places (default 1).',
+        },
+        'refs': {
+          'type': 'array',
+          'items': {'type': 'string'},
+          'description': 'For order: favourite channel refs from list, in '
+              'the new order.',
+        },
       },
       'required': ['action'],
     },
     run: (box, args, caller) async {
       final action = _str(args, 'action');
+      final mix = box.prefs.mixFavoritePlaylists;
       if (action == 'list') {
         await box.playlist.ensureLiveChannelsLoaded();
+        final all = box.playlist.orderedFavoriteLiveChannels(mixPlaylists: mix);
+        // All of them, so an order can cover every one; what's on now only
+        // for the first ones (it's long).
         return {
           'favorites': [
-            for (final c in box.playlist.orderedFavoriteLiveChannels().take(60))
-              box.describeChannel(c)
-          ]
+            for (final (i, c) in all.take(500).indexed)
+              box.describeChannel(c, withNow: i < 40)
+          ],
+          if (all.length > 500)
+            'note': '${all.length} favourites; the first 500 are listed.',
+        };
+      }
+      if (action == 'order') {
+        final refs = args['refs'];
+        if (refs is! List || refs.isEmpty) {
+          throw VesperToolError('Give refs: favourite channel refs from list, '
+              'in the order wanted.');
+        }
+        await box.playlist.ensureLiveChannelsLoaded();
+        final ids = <String>[];
+        final unknown = <String>[];
+        for (final r in refs) {
+          final c = box.lookup('$r');
+          if (c is Channel) {
+            ids.add(c.id);
+          } else {
+            unknown.add('$r');
+          }
+        }
+        final before = box.playlist
+            .orderedFavoriteLiveChannels(mixPlaylists: mix)
+            .map((c) => c.id)
+            .toSet();
+        final now = await box.playlist
+            .orderFavoriteLiveChannels(ids, mixPlaylists: mix);
+        return {
+          'order': [
+            for (final (i, c) in now.take(500).indexed) '${i + 1}. ${c.name}'
+          ],
+          if (unknown.isNotEmpty) 'unknown_refs': unknown,
+          if (ids.any((id) => !before.contains(id)))
+            'note': 'Some refs are not favourites and were skipped.',
         };
       }
       final ref = _str(args, 'ref');
       final Object? item = ref == 'current' || ref.isEmpty
           ? box.playback.liveChannel
           : box.lookup(ref);
+      if (action == 'move') {
+        if (item is! Channel) {
+          throw VesperToolError('Give a favourite channel ref from list.');
+        }
+        await box.playlist.ensureLiveChannelsLoaded();
+        final shown =
+            box.playlist.orderedFavoriteLiveChannels(mixPlaylists: mix);
+        final from = shown.indexWhere((c) => c.id == item.id);
+        if (from < 0) {
+          throw VesperToolError('${item.name} is not in the favourites.');
+        }
+        final to = _str(args, 'to').toLowerCase();
+        final steps = _int(args, 'steps', 1, min: 1, max: 10000);
+        final index = switch (to) {
+          'top' || 'first' => 0,
+          'bottom' || 'last' => shown.length - 1,
+          'up' || 'higher' => from - steps,
+          'down' || 'lower' => from + steps,
+          _ => (int.tryParse(to) ??
+                  (throw VesperToolError(
+                      'to: top, bottom, up, down or a position number.'))) -
+              1,
+        };
+        final placed = await box.playlist
+            .placeFavoriteLiveChannel(item, index, mixPlaylists: mix);
+        return {
+          'moved': item.name,
+          'position': (placed ?? from) + 1,
+          'of': shown.length,
+        };
+      }
       if (item is XtreamSeries) {
         final on = box.playlist.isSeriesFavorited(item.id);
         if (on != (action == 'add')) {
@@ -1190,7 +1280,8 @@ final List<VesperTool> vesperTools = [
         'every "NBA League Pass" channel), or hide / show the groups whose '
         'name contains some words (e.g. hide every group with "Turkish"). '
         'Hidden groups come back in Settings > Playlists. For single '
-        'channels, rules or renames use playlist_editor.',
+        'channels, rules or renames use playlist_editor; for the viewer\'s '
+        'own groups (new groups of picked channels) use my_groups.',
     schema: {
       'type': 'object',
       'properties': {
@@ -1272,6 +1363,7 @@ final List<VesperTool> vesperTools = [
       };
     },
   ),
+  _myGroupsTool,
   _playlistEditorTool,
   _settingsTool,
   _profilesTool,

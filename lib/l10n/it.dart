@@ -112,6 +112,9 @@ const Map<String, String> kIt = {
   "Loading recommendations…": "Caricamento consigli…",
   "Looking for streams…": "Ricerca flussi…",
   "Maximum quality": "Qualità massima",
+  "Any language": "Qualsiasi lingua",
+  "Any quality": "Qualsiasi qualità",
+  "Media Hub audio language": "Lingua audio di Media Hub",
   "More like this": "Altri simili",
   "No compatible source for this title. Add a playback source in Media Hub settings.":
       "Nessuna fonte compatibile per questo titolo. Aggiungi una fonte di riproduzione nelle impostazioni di Media Hub.",
@@ -2831,6 +2834,8 @@ const Map<String, String> kIt = {
       "Un'app di IA vuole aprire {title}.",
   "An AI app wants to hide {count} groups ({words}).":
       "Un'app di IA vuole nascondere {count} gruppi ({words}).",
+  "An AI app wants to delete your group {group}.":
+      "Un'app di IA vuole eliminare il tuo gruppo {group}.",
   "An AI app wants to show {count} groups ({words}).":
       "Un'app di IA vuole mostrare {count} gruppi ({words}).",
   "An AI app wants {game} to play on {channel} in {tab}.":

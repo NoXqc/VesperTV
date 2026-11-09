@@ -105,6 +105,9 @@ const Map<String, String> kDe = {
   "Loading recommendations…": "Empfehlungen werden geladen…",
   "Looking for streams…": "Suche nach Streams…",
   "Maximum quality": "Maximale Qualität",
+  "Any language": "Alle Sprachen",
+  "Any quality": "Jede Qualität",
+  "Media Hub audio language": "Media Hub-Audiosprache",
   "More like this": "Ähnliche Titel",
   "No compatible source for this title. Add a playback source in Media Hub settings.":
       "Keine kompatible Quelle für diesen Titel. Füge in den Media-Hub-Einstellungen eine Wiedergabequelle hinzu.",
@@ -2727,6 +2730,8 @@ const Map<String, String> kDe = {
       "Eine KI-App möchte {title} öffnen.",
   "An AI app wants to hide {count} groups ({words}).":
       "Eine KI-App möchte {count} Gruppen ausblenden ({words}).",
+  "An AI app wants to delete your group {group}.":
+      "Eine KI-App möchte deine Gruppe {group} löschen.",
   "An AI app wants to show {count} groups ({words}).":
       "Eine KI-App möchte {count} Gruppen einblenden ({words}).",
   "An AI app wants {game} to play on {channel} in {tab}.":

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import '../l10n/l10n.dart';
 import 'archive_service.dart';
 import 'archive_playback_sources.dart';
@@ -86,14 +87,18 @@ class ArchivePlaybackPreferences {
     return true;
   }
 
-  /// How well [o]'s label fits the viewer's language, 0..3
-  /// ([streamLanguageFit]); 1 for every stream when no language applies.
+  /// How well [o]'s label fits the viewer's language: 2 = it has it (only
+  /// that language or among others, see [streamLanguageFit]), 1 = maybe,
+  /// 0 = only other languages; 1 for every stream when no language
+  /// applies. Having it is enough: the player picks that audio track, so
+  /// an English + Russian remux counts like an English-only one (owner,
+  /// 2026-11-09: largest file = largest with English, not English only).
   int languageTier(ArchiveStreamOption o) {
     final text =
         archiveStreamLabel('${o.stream.name ?? ''} ${o.stream.title ?? ''}');
-    if (language.isNotEmpty) return streamLanguageFit(text, language);
+    if (language.isNotEmpty) return min(streamLanguageFit(text, language), 2);
     if (audioLanguage.isNotEmpty) {
-      return streamLanguageFit(text, audioLanguage);
+      return min(streamLanguageFit(text, audioLanguage), 2);
     }
     if (appLanguage.isNotEmpty) {
       return streamLanguageFit(text, appLanguage) == 0 ? 0 : 1;
@@ -133,8 +138,9 @@ class ArchivePlaybackPreferences {
     return result;
   }
 
-  /// The leading streams of [ranked] that fit the language best: "play the
-  /// largest file" picks among these, so a bigger dub never wins.
+  /// The leading streams of [ranked] that fit the language best (every
+  /// stream that has it): "play the largest file" picks among these, so a
+  /// bigger dub never wins.
   List<ArchiveStreamOption> bestLanguage(List<ArchiveStreamOption> ranked) {
     if (ranked.isEmpty) return ranked;
     final top = languageTier(ranked.first);

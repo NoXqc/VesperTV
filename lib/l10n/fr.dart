@@ -111,6 +111,9 @@ const Map<String, String> kFr = {
   "Loading recommendations…": "Chargement des recommandations…",
   "Looking for streams…": "Recherche de flux…",
   "Maximum quality": "Qualité maximale",
+  "Any language": "Toutes les langues",
+  "Any quality": "Toute qualité",
+  "Media Hub audio language": "Langue audio du Media Hub",
   "More like this": "Dans le même genre",
   "No compatible source for this title. Add a playback source in Media Hub settings.":
       "Aucune source compatible pour ce titre. Ajoutez une source de lecture dans les paramètres du Media Hub.",
@@ -2837,6 +2840,8 @@ const Map<String, String> kFr = {
       "Une app d'IA veut ouvrir {title}.",
   "An AI app wants to hide {count} groups ({words}).":
       "Une app d'IA veut masquer {count} groupes ({words}).",
+  "An AI app wants to delete your group {group}.":
+      "Une app d'IA veut supprimer votre groupe {group}.",
   "An AI app wants to show {count} groups ({words}).":
       "Une app d'IA veut afficher {count} groupes ({words}).",
   "An AI app wants {game} to play on {channel} in {tab}.":

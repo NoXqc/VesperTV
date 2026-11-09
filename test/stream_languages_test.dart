@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nox_iptv/models/archive_models.dart';
 import 'package:nox_iptv/services/archive_playback_preferences.dart';
 import 'package:nox_iptv/services/archive_service.dart';
+import 'package:nox_iptv/services/archive_stream_size.dart';
 import 'package:nox_iptv/services/stream_languages.dart';
 
 ArchiveStreamOption _option(String name, String title, {String key = 'a'}) =>
@@ -55,6 +56,19 @@ void main() {
       expect(prefs.ranked([dub, hd, english]), [english, hd, dub]);
       expect(
           prefs.bestLanguage(prefs.ranked([dub, hd, english])), [english, hd]);
+    });
+
+    test('a file with English among other languages counts as English', () {
+      // The Batman (owner, 2026-11-09): the largest file with English
+      // audio, not the largest English-only one.
+      final multi = _option('Torrentio\n4k DV',
+          'Avengers 2160p Remux 🗣 English | Russian | Ukrainian 💾 77.3 GB');
+      const prefs = ArchivePlaybackPreferences(audioLanguage: 'en');
+      final best = prefs.bestLanguage(prefs.ranked([english, dub, multi]));
+      expect(best, [english, multi]);
+      expect(largestArchiveStream(best), multi);
+      const filtered = ArchivePlaybackPreferences(language: 'en');
+      expect(filtered.ranked([dub, multi, english]), [multi, english]);
     });
 
     test('with no language set, the app language only demotes dubs', () {
