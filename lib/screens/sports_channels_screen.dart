@@ -1193,7 +1193,10 @@ class _ChannelsHero extends StatelessWidget {
                 color: Colors.black54,
                 child: previewing
                     ? (mini != null
-                        ? Video(controller: mini, controls: NoVideoControls)
+                        ? Video(
+                            controller: mini,
+                            controls: NoVideoControls,
+                            pauseUponEnteringBackgroundMode: mediaKitPausesInBackground)
                         : const VideoPlayerPane(
                             showEpgBar: false, showControls: false))
                     : Center(

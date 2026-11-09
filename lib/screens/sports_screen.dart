@@ -4839,7 +4839,9 @@ class _HeroVideo extends StatelessWidget {
                 : miniController != null
                     // Windows: media_kit renders the mini player's texture.
                     ? Video(
-                        controller: miniController, controls: NoVideoControls)
+                        controller: miniController,
+                        controls: NoVideoControls,
+                        pauseUponEnteringBackgroundMode: mediaKitPausesInBackground)
                     : VideoPlayerPane(
                         key: ValueKey(playingChannel.id),
                         showEpgBar: false,

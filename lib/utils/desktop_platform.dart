@@ -37,6 +37,12 @@ bool get usesMediaKitTarget =>
 /// touch layout instead of the computer's mouse bar.
 bool get isIosTarget => defaultTargetPlatform == TargetPlatform.iOS;
 
+/// media_kit's `Video` widget pauses its player when the app goes to the
+/// background and never resumes it. On an iPhone, Home or the lock screen
+/// then stopped every movie (owner, 2026-11-09): the app plays on in the
+/// background there (UIBackgroundModes audio). Computers keep the default.
+bool get mediaKitPausesInBackground => !isIosTarget;
+
 /// No system Back button or key here (a computer, an iPhone): screens that
 /// rely on it show their own back arrow.
 bool get needsBackArrow => isDesktop || Platform.isIOS;

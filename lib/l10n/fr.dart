@@ -3035,4 +3035,6 @@ const Map<String, String> kFr = {
       "Lecture en image dans l'image",
   "Watch here":
       "Regarder ici",
+  "VesperTV may not use the microphone. Allow Microphone and Speech Recognition in Settings > VesperTV, or type instead.":
+      "VesperTV n'a pas accès au micro. Autorisez Micro et Reconnaissance vocale dans Réglages > VesperTV, ou tapez plutôt.",
 };

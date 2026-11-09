@@ -3022,4 +3022,6 @@ const Map<String, String> kEs = {
       "Reproduciendo en imagen en imagen",
   "Watch here":
       "Ver aquí",
+  "VesperTV may not use the microphone. Allow Microphone and Speech Recognition in Settings > VesperTV, or type instead.":
+      "VesperTV no puede usar el micrófono. Permite Micrófono y Reconocimiento de voz en Ajustes > VesperTV, o escribe.",
 };

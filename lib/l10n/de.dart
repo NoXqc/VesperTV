@@ -2925,4 +2925,6 @@ const Map<String, String> kDe = {
       "Wird im Bild-in-Bild abgespielt",
   "Watch here":
       "Hier ansehen",
+  "VesperTV may not use the microphone. Allow Microphone and Speech Recognition in Settings > VesperTV, or type instead.":
+      "VesperTV darf das Mikrofon nicht verwenden. Erlaube Mikrofon und Spracherkennung unter Einstellungen > VesperTV oder tippe stattdessen.",
 };

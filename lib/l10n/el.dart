@@ -2984,4 +2984,6 @@ const Map<String, String> kEl = {
       "Αναπαραγωγή σε εικόνα σε εικόνα",
   "Watch here":
       "Παρακολούθηση εδώ",
+  "VesperTV may not use the microphone. Allow Microphone and Speech Recognition in Settings > VesperTV, or type instead.":
+      "Το VesperTV δεν μπορεί να χρησιμοποιήσει το μικρόφωνο. Επιτρέψτε Μικρόφωνο και Αναγνώριση ομιλίας στις Ρυθμίσεις > VesperTV ή πληκτρολογήστε.",
 };

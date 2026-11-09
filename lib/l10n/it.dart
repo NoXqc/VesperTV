@@ -3029,4 +3029,6 @@ const Map<String, String> kIt = {
       "In riproduzione in picture-in-picture",
   "Watch here":
       "Guarda qui",
+  "VesperTV may not use the microphone. Allow Microphone and Speech Recognition in Settings > VesperTV, or type instead.":
+      "VesperTV non può usare il microfono. Consenti Microfono e Riconoscimento vocale in Impostazioni > VesperTV, oppure scrivi.",
 };

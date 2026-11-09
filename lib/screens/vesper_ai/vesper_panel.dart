@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -35,6 +36,15 @@ Future<void> showVesperPanel(NavigatorState navigator,
 }
 
 /// The bottom card: what was heard, Vesper's answer, Talk / Type / Phone.
+/// iPhone: microphone and speech recognition are allowed in its own
+/// Settings app, not Android's.
+String _iosMicDenied() => tr(
+    'VesperTV may not use the microphone. Allow Microphone and Speech Recognition in Settings > VesperTV, or type instead.');
+
+extension on String {
+  String ifNotIos(String Function() ios) => Platform.isIOS ? ios() : this;
+}
+
 class VesperPanel extends StatefulWidget {
   const VesperPanel({super.key, this.listen = true, this.text});
 
@@ -107,7 +117,7 @@ class _VesperPanelState extends State<VesperPanel> {
       setState(() {
         _stage = _Stage.answered;
         _answer = tr(
-            'VesperTV may not use the microphone. Allow it in Android Settings > Apps > VesperTV, or type instead.');
+            'VesperTV may not use the microphone. Allow it in Android Settings > Apps > VesperTV, or type instead.').ifNotIos(_iosMicDenied);
       });
       return;
     }
@@ -137,7 +147,7 @@ class _VesperPanelState extends State<VesperPanel> {
               'nomatch' => tr('I did not hear anything.'),
               'network' => tr('Voice needs the internet.'),
               'permission' => tr(
-                  'VesperTV may not use the microphone. Allow it in Android Settings > Apps > VesperTV, or type instead.'),
+                  'VesperTV may not use the microphone. Allow it in Android Settings > Apps > VesperTV, or type instead.').ifNotIos(_iosMicDenied),
               'busy' => tr('The microphone is busy. Try again.'),
               _ => tr(
                   'Voice is not available on this device. Type, or talk from your phone.'),
@@ -218,7 +228,10 @@ class _VesperPanelState extends State<VesperPanel> {
     return Align(
       alignment: Alignment.bottomCenter,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(16, 16, 16, width < 600 ? 16 : 40),
+        // A pushed route without a Scaffold: nothing else makes room for
+        // the on-screen keyboard (it hid the typed text on an iPhone).
+        padding: EdgeInsets.fromLTRB(16, 16, 16,
+            (width < 600 ? 16 : 40) + MediaQuery.viewInsetsOf(context).bottom),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 760),
           child: ClipRRect(

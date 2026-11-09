@@ -65,6 +65,16 @@ preview it on a box:
   open player's video track off on hidden/paused and gives it back on resumed. media_kit draws with
   OpenGL ES (forbidden in the background): before this the sound stopped too and a 4K remux
   stuttered after coming back (decoder dropped).
+- **Keeps playing off screen (2026-11-09):** media_kit's `Video` widget pauses its player on
+  AppLifecycleState.paused and never resumes (movies stopped on Home; live looked fine). Every player
+  view passes `pauseUponEnteringBackgroundMode: mediaKitPausesInBackground` (false on iOS); trailers
+  keep the default.
+- **Voice commands (2026-11-09):** `VesperVoice` in AppDelegate.swift speaks Android's `vespertv/voice`
+  protocol (SFSpeechRecognizer + AVAudioEngine, AVSpeechSynthesizer for spoken replies); Dart
+  `VoiceInput` uses it on iOS too, so the mic opens straight to listening like Android. Stops 1.5 s
+  after the last new words (6 s if silent, 15 s max); audio session playAndRecord while listening,
+  back to playback/moviePlayback after. Info.plist NSMicrophone/NSSpeechRecognition texts. The Vesper
+  panel adds the keyboard inset (typed text was hidden under the keyboard).
 - **Picture-in-picture (owner chose the Apple-player handoff, 2026-11-09):** PiP button in the touch
   top bar. `_startPip` stops mpv (one provider connection), `IosPip.start` (`vespertv/pip`,
   `VesperPip` in `AppDelegate.swift`: AVPlayer on a 2x2 layer + AVPictureInPictureController)

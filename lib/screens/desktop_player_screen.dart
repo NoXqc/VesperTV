@@ -1516,6 +1516,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                     child: Video(
                         controller: _videoController,
                         controls: NoVideoControls,
+                        pauseUponEnteringBackgroundMode: mediaKitPausesInBackground,
                         // Settings: the player's Subtitles menu > size.
                         subtitleViewConfiguration: SubtitleViewConfiguration(
                             textScaler: TextScaler.linear(context

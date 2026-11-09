@@ -1645,7 +1645,10 @@ class _MiniPlayer extends StatelessWidget {
             name: channel.name,
             live: true,
             showName: channel.id != focusedChannelId,
-            video: Video(controller: controller, controls: NoVideoControls),
+            video: Video(
+                controller: controller,
+                controls: NoVideoControls,
+                pauseUponEnteringBackgroundMode: mediaKitPausesInBackground),
             onTap: () => _HomeScreenState._playChannel(context, channel),
           );
         },

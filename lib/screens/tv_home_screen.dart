@@ -5032,7 +5032,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                 fit: StackFit.expand,
                 children: [
                   if (controller != null)
-                    Video(controller: controller, controls: NoVideoControls)
+                    Video(
+                        controller: controller,
+                        controls: NoVideoControls,
+                        pauseUponEnteringBackgroundMode: mediaKitPausesInBackground)
                   else
                     const ColoredBox(color: Colors.black),
                   if (controller != null)
