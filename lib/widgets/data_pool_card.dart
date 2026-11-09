@@ -48,10 +48,16 @@ class DataPoolCard extends StatefulWidget {
 
   /// Dolby Atmos in a stream: E-AC-3 with object audio (JOC), which the
   /// player reads from the audio frames themselves (`eac3-joc`), or `ec+3`
-  /// in a manifest's codecs string. Never guessed from 5.1 / bitrate.
+  /// in a manifest's codecs string (MKV files get `ec+3` from the vendored
+  /// player's MatroskaAtmos after the same frame check), or TrueHD whose
+  /// first frame announces the 16-channel presentation (`truehd-atmos`,
+  /// MatroskaAtmos too). Never guessed from 7.1 / bitrate.
   static bool isAtmos(String? raw) {
     final c = raw?.toLowerCase() ?? '';
-    return c == 'eac3-joc' || c.endsWith('/eac3-joc') || c.startsWith('ec+3');
+    return c == 'eac3-joc' ||
+        c.endsWith('/eac3-joc') ||
+        c.startsWith('ec+3') ||
+        c == 'truehd-atmos';
   }
 
   static String? channelsName(int? n) => _DataPoolCardState._channels(n);
@@ -186,6 +192,7 @@ class _DataPoolCardState extends State<DataPoolCard> {
   /// "avc1.640028" -> "H.264"; unknown codecs pass through upper-cased.
   static String? _codec(String? raw) {
     if (raw == null || raw.isEmpty) return null;
+    if (raw.toLowerCase() == 'truehd-atmos') return 'TrueHD Atmos';
     if (DataPoolCard.isAtmos(raw)) return 'E-AC-3 Atmos';
     // A .ts stream reports a MIME type ("audio/eac3") instead of codecs.
     final c = raw.toLowerCase().replaceFirst(RegExp(r'^audio/'), '');

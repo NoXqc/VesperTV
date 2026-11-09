@@ -2027,6 +2027,10 @@ const Map<String, String> kEl = {
   "Hide profiles": "Απόκρυψη προφίλ",
   "Hides the profiles row on Home.":
       "Αποκρύπτει τη σειρά προφίλ στην αρχική σελίδα.",
+  "Mini player on Home": "Μίνι player στην αρχική",
+  "The live channel you stop on plays at the top right of Home. OK opens it full screen; Play/Pause or hold OK turns it off.":
+      "Το ζωντανό κανάλι όπου σταματάτε παίζει πάνω δεξιά στην αρχική σελίδα. Το OK το ανοίγει σε πλήρη οθόνη· το Αναπαραγωγή/Παύση ή το παρατεταμένο OK το σταματά.",
+  "Stop mini player": "Διακοπή μίνι player",
   "Preferred audio language": "Προτιμώμενη γλώσσα ήχου",
   "Preferred subtitle language": "Προτιμώμενη γλώσσα υποτίτλων",
   "Source default": "Προεπιλογή πηγής",
@@ -2634,6 +2638,8 @@ const Map<String, String> kEl = {
       "Αυτό το κανάλι δεν γυρίζει πίσω.",
   "Not available on Windows yet.":
       "Δεν είναι ακόμα διαθέσιμο στα Windows.",
+  "No next episode.": "Δεν υπάρχει επόμενο επεισόδιο.",
+  "No previous episode.": "Δεν υπάρχει προηγούμενο επεισόδιο.",
   "That did not work.":
       "Δεν λειτούργησε.",
   "Talk from my phone":
@@ -2883,8 +2889,8 @@ const Map<String, String> kEl = {
       "Τι να ρωτήσεις",
   "Without any AI (remote, typing or phone):":
       "Χωρίς AI (τηλεχειριστήριο, πληκτρολόγιο ή κινητό):",
-  "\"play TSN 1\" · \"mets RDS\" · \"pause\" · \"go back 30 seconds\" · \"next channel\" · \"back to live\" · \"what's on\" · \"what's on TSN 1\" · \"when is the Simpsons on\" · \"open the movies\" · \"search for Dune\" · \"put on the Habs game\" · \"today's games\" · \"add this to my watch list\" · \"my favourites\" · \"help\"":
-      "\"play TSN 1\" · \"pause\" · \"go back 30 seconds\" · \"next channel\" · \"back to live\" · \"what's on\" · \"when is the Simpsons on\" · \"open the movies\" · \"search for Dune\" · \"put on the Olympiacos game\" · \"today's games\" · \"add this to my watch list\" · \"my favourites\" · \"help\"",
+  "\"play TSN 1\" · \"mets RDS\" · \"pause\" · \"go back 30 seconds\" · \"next channel\" · \"next episode\" · \"back to live\" · \"what's on\" · \"what's on TSN 1\" · \"when is the Simpsons on\" · \"open the movies\" · \"search for Dune\" · \"put on the Habs game\" · \"today's games\" · \"add this to my watch list\" · \"my favourites\" · \"help\"":
+      "\"play TSN 1\" · \"pause\" · \"go back 30 seconds\" · \"next channel\" · \"next episode\" · \"back to live\" · \"what's on\" · \"when is the Simpsons on\" · \"open the movies\" · \"search for Dune\" · \"put on the Olympiacos game\" · \"today's games\" · \"add this to my watch list\" · \"my favourites\" · \"help\"",
   "With your AI, or from Claude / ChatGPT:":
       "Με τη δική σου AI ή από το Claude / ChatGPT:",
   "\"make me a movie night list for Friday\" (it goes on your watch list on Home) · \"hide every Turkish group\" · \"what crime shows do I have?\" · \"is the Leafs game on, and on which channel?\" · \"play the newest episode of something like Severance\" · \"pause the TV\" · \"tell the TV dinner is ready\"":

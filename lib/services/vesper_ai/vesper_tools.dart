@@ -1,14 +1,24 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/services.dart';
+import 'package:video_player_hdr/video_player_hdr.dart';
+
 import '../../l10n/l10n.dart';
+import '../../models/archive_models.dart';
 import '../../models/channel.dart';
 import '../../models/epg_program.dart';
 import '../../models/sports.dart';
 import '../../models/viewer_profile.dart';
 import '../../models/xtream_series.dart';
 import '../../utils/title_search.dart';
+import '../addon_service.dart';
 import '../app_preferences.dart';
+import '../archive_playback_preferences.dart';
+import '../archive_playback_sources.dart';
+import '../archive_service.dart';
+import '../archive_stream_size.dart';
+import '../audio_track_preferences.dart';
 import '../channel_copy_fallback.dart';
 import '../epg_service.dart';
 import '../playback_service.dart';
@@ -21,13 +31,18 @@ import '../sports_channel_countries.dart';
 import '../sports_channel_matcher.dart';
 import '../sports_service.dart';
 import '../storage_service.dart';
+import '../stream_languages.dart';
 import '../subtitle_tracks.dart';
 import '../vod_buffering.dart';
 import 'watch_list.dart';
 import '../../utils/constants.dart';
 import '../../utils/desktop_platform.dart';
+import '../../utils/video_hdr_report.dart';
+import '../../widgets/data_pool_card.dart';
 
 part 'game_channel_tool.dart';
+part 'media_hub_tool.dart';
+part 'player_tracks.dart';
 part 'playlist_editor_tool.dart';
 part 'profiles_tool.dart';
 part 'settings_tool.dart';
@@ -118,7 +133,11 @@ class VesperToolbox {
     this.findHubTitle,
     this.clearHubHistory,
     this.profiles,
+    this.hub,
   });
+
+  /// Media Hub for the media_hub tool (null = no Media Hub).
+  final VesperHub? hub;
 
   /// Viewer profiles + parental PIN (null = not available here).
   final VesperProfileControl? profiles;
@@ -149,6 +168,7 @@ class VesperToolbox {
       Channel c => '${c.isLive ? 'l' : 'm'}:${c.id}',
       XtreamSeries s => 's:${s.playlistId}:${s.id}',
       HubTitle h => 'h:${h.key}',
+      HubStream s => s.key,
       SportsGame g => 'g:${SportsChannelPicks.eventKey(g)}',
       _ => '$item',
     };
@@ -161,6 +181,7 @@ class VesperToolbox {
     final prefix = switch (item) {
       Channel c => c.isLive ? 'l' : 'm',
       HubTitle _ => 'h',
+      HubStream _ => 'o',
       SportsGame _ => 'g',
       _ => 's',
     };
@@ -649,8 +670,20 @@ final List<VesperTool> vesperTools = [
   VesperTool(
     name: 'now_playing',
     description: 'What the TV is playing right now: the channel or title, the '
-        'programme on now and next, and whether it is paused.',
-    schema: {'type': 'object', 'properties': {}},
+        'programme on now and next, whether it is paused and any error on '
+        'screen. quality true also measures how it plays (picture, HDR, '
+        'audio, downloaded bitrate, buffer, buffering, dropped frames; '
+        'takes 2 s). A Media Hub title also gives its stream (media_hub '
+        'sources lists the others).',
+    schema: {
+      'type': 'object',
+      'properties': {
+        'quality': {
+          'type': 'boolean',
+          'description': 'Measure picture, sound and bitrate too.',
+        },
+      },
+    },
     run: (box, args, caller) async {
       if (isDesktop) {
         throw VesperToolError('Not available on Windows yet.');
@@ -672,6 +705,19 @@ final List<VesperTool> vesperTools = [
         out['position_min'] = controller.value.position.inMinutes;
         out['length_min'] = controller.value.duration.inMinutes;
       }
+      final playing = box.playback.currentChannel;
+      final hubStream =
+          playing == null ? null : box.playback.hubSources?.current(playing.id);
+      if (playing != null && hubStream != null) {
+        out['stream'] = _describeStream(
+            box, HubStream(hubStream, channelId: playing.id),
+            playing: true);
+      }
+      if (args['quality'] == true) {
+        final quality = await _playingQuality(box);
+        if (quality.isNotEmpty) out['quality'] = quality;
+      }
+      if (box.playback.error case final error?) out['error_on_tv'] = error;
       return out;
     },
   ),
@@ -679,7 +725,15 @@ final List<VesperTool> vesperTools = [
     name: 'player',
     description:
         'Control the player: pause, resume, stop, go back or forward a '
-        'number of seconds, back to live, next / previous channel.',
+        'number of seconds (fast forward 2 minutes = seek 120, rewind 30 '
+        'seconds = seek -30), back to live, next / previous channel, next / '
+        'previous episode of the show playing. audio_tracks / subtitles '
+        'list what the playing file has; audio_track picks one by language '
+        '(code or name) or track number; subtitle picks a language, a '
+        'track number or "off" (not in the file: the first match from the '
+        'viewer\'s subtitle add-ons). Both are remembered for the rest of '
+        'the show, like a pick in the player. Prefer audio_track over '
+        'switching the Media Hub stream when the file has the language.',
     schema: {
       'type': 'object',
       'properties': {
@@ -693,7 +747,29 @@ final List<VesperTool> vesperTools = [
             'back_to_live',
             'channel_up',
             'channel_down',
+            'next_episode',
+            'previous_episode',
+            'audio_tracks',
+            'audio_track',
+            'subtitles',
+            'subtitle',
           ],
+        },
+        'language': {
+          'type': 'string',
+          'description': 'For audio_track / subtitle: a language code or '
+              'name ("en", "French"); subtitle also "off" or "cc" (live '
+              'closed captions).',
+        },
+        'track': {
+          'type': 'integer',
+          'description': 'For audio_track / subtitle: the track number from '
+              'audio_tracks / subtitles.',
+        },
+        'forced': {
+          'type': 'boolean',
+          'description': 'For subtitle: the forced track (foreign lines '
+              'only) instead of full subtitles.',
         },
         'seconds': {
           'type': 'integer',
@@ -746,9 +822,39 @@ final List<VesperTool> vesperTools = [
                   : target);
           await c.seekTo(clamped);
           return {'done': 'at ${clamped.inMinutes} min'};
+        case 'audio_tracks':
+          return _audioTracks(box, c!);
+        case 'audio_track':
+          return _setAudioTrack(box, c!, args);
+        case 'subtitles':
+          return _subtitles(box, c!);
+        case 'subtitle':
+          return _setSubtitles(box, c!, args);
+        case 'next_episode':
+        case 'previous_episode':
+          // The player's own Next / Previous episode buttons (IPTV and
+          // Media Hub shows): the queue the show's page set.
+          final episode = action == 'next_episode'
+              ? playback.nextUpChannel
+              : playback.previousUpChannel;
+          if (episode == null) {
+            throw VesperToolError(action == 'next_episode'
+                ? 'No next episode: this is the last one, or not a show.'
+                : 'No previous episode: this is the first one, or not a show.');
+          }
+          await playback.play(episode);
+          return {'playing': episode.name};
         case 'channel_up':
         case 'channel_down':
           final ch = playback.liveChannel;
+          // "Next" during a show means its next episode.
+          final episode = action == 'channel_up'
+              ? playback.nextUpChannel
+              : playback.previousUpChannel;
+          if ((ch == null || !ch.isLive) && episode != null) {
+            await playback.play(episode);
+            return {'playing': episode.name};
+          }
           if (ch == null || !ch.isLive) {
             throw VesperToolError('No live channel is playing.');
           }
@@ -770,6 +876,7 @@ final List<VesperTool> vesperTools = [
       throw VesperToolError('Unknown player action $action.');
     },
   ),
+  _mediaHubTool,
   VesperTool(
     name: 'guide',
     description:
@@ -1419,8 +1526,8 @@ Map<String, Object?> _gameChannel(
   final c = m.channel;
   final upcoming = g.state == GameState.pre;
   final at = upcoming ? g.start : DateTime.now();
-  final around = box.epg
-      .programsBetween(c.epgId, at, at.add(const Duration(minutes: 1)));
+  final around =
+      box.epg.programsBetween(c.epgId, at, at.add(const Duration(minutes: 1)));
   final p = around
           .where((p) => !p.start.isAfter(at) && p.stop.isAfter(at))
           .firstOrNull ??

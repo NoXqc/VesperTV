@@ -1569,20 +1569,13 @@ class _AudioTrackButtonState extends State<_AudioTrackButton> {
     _retry = Timer(const Duration(seconds: 3), _loadTracks);
   }
 
-  /// Placeholder codes broadcasters put on tracks: "MIS"/"MUL" as names
-  /// told nobody anything (TSN2's four tracks, owner photo 2026-10-26).
-  static const _noLanguage = {'und', 'mis', 'mul', 'zxx', 'qaa'};
+  static const _noLanguage = noTrackLanguage;
 
-  /// Track name, else its language, else "Audio n" — then codec and
-  /// channel layout, which is what tells two same-language tracks apart.
+  /// Language and track name ([audioTrackName]), else "Audio n" — then
+  /// codec and channel layout, which is what tells two same-language
+  /// tracks apart.
   String _trackLabel(VideoAudioTrack track, int index) {
-    final label = track.label?.trim() ?? '';
-    final language = track.language?.toLowerCase() ?? '';
-    final name = label.isNotEmpty
-        ? label
-        : language.isNotEmpty && !_noLanguage.contains(language)
-            ? languageName(language)
-            : '';
+    final name = audioTrackName(track.label, track.language);
     return [
       name.isNotEmpty ? name : tr('Audio {n}', {'n': index + 1}),
       DataPoolCard.codecName(track.codec),

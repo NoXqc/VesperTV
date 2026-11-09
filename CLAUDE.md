@@ -205,6 +205,14 @@ Unreleased: **`AudioPassthrough.java`** (MethodChannel `vespertv/audio`, `setPas
 HDMI passthrough: `PlatformViewVideoPlayer.buildAudioSink` gives `DefaultAudioSink.Builder(context)`
 when on (AC3/E-AC3 Atmos/DTS to the receiver, app volume no longer applies); otherwise the
 context-less sink above. Texture players (Multiview, Compatibility video) never pass through.
+Unreleased (2026-11-09): **`MatroskaAtmos.java`** (`HttpVideoAsset` wraps the extractors factory):
+MatroskaExtractor never flags Atmos (only TS frames and MP4's dec3 do), so Media Hub MKVs showed
+"E-AC-3 5.1". An MKV E-AC-3 track's first frame goes through `Ac3Util.parseAc3SyncframeInfo`; JOC
+= codecs `ec+3` (MIME stays `audio/eac3`, so decoding/passthrough don't change; Dart's `isAtmos`
+reads it). The format waits for that frame like the TS reader's. The wrapper must forward the
+factory's subtitle setters or MKV subtitles break. TrueHD too (owner, 2026-11-09): the first frame's
+major sync, 4+ substreams and substream_info bit 7 (16-channel presentation, as MediaInfo reads it)
+= codecs `truehd-atmos`, which `VideoPlayer.audioCodec` passes to Dart. `MatroskaAtmosTest` (12).
 **Recording (1.0.32) is NOT in this plugin** — it is app-side Kotlin (`RecorderService.kt`,
 `RecorderScheduler.kt` in `android/app/.../nox_iptv/`), so a plugin re-sync doesn't touch it.
 
@@ -375,6 +383,19 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-09 - batch committed on main (+695, unreleased, not pushed):** **Home mini player** (owner
+  photo; approved on the Formuler +695): `home_screen.dart` `_MiniPlayer` at the hero's top right plays the live
+  card the remote rests on (Preview-on-highlight rules: 0.8 s after an arrow key, History after 10 s, never over a
+  recording's only connection); OK = full screen on the same stream (`PlayerGlideRoute.open`; Windows
+  `DesktopMiniPlayer.take`); ⏯ on the playing card / Stop / hold OK > Stop mini player turns it off and it stays off
+  until ⏯ plays a card (`_miniOff`, app run). Settings > Interface > Tabs > Mini player on Home (per viewer, on by
+  default, not on phones); with it on Home no longer parks a live channel (`HomeScreen.showsMiniPlayer`). Home at a
+  cold start now fills its history/favourite rows when they load (`PlaybackService.historyLoads`,
+  `ensureLiveChannelsLoaded`). Windows path never run. Same commit: compact Settings on TV/computers
+  (`CompactMenus`), profiles selector switch moved to Settings > Profiles, Media Hub stream language ranking
+  (`stream_languages.dart`), TrueHD/E-AC-3 Atmos labels for MKVs (§9), audio pickers name the language, Vesper AI
+  `media_hub` tool + audio/subtitle + next/previous episode, remote FF/RW 10-row jumps. Analyze 16, 1667 Flutter +
+  245 native tests. Next build > 695.
 - **gmtherien (fork contributor), 2026-11-04 - macOS desktop (PR, unreleased):** macOS reuses the Windows
   media_kit stack. `lib/utils/desktop_platform.dart`: `isDesktop` (Windows or macOS, dart:io) and
   `isDesktopTarget` (same, target platform) replace the "computer" `Platform.isWindows` /

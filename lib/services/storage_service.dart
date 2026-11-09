@@ -761,6 +761,11 @@ class StorageService {
   Future<void> setHideProfiles(bool value) =>
       _prefs.setBool(_vk(AppConstants.keyHideProfiles), value);
 
+  bool getHomeMiniPlayer() =>
+      _prefs.getBool(_vk(AppConstants.keyHomeMiniPlayer)) ?? true;
+  Future<void> setHomeMiniPlayer(bool value) =>
+      _prefs.setBool(_vk(AppConstants.keyHomeMiniPlayer), value);
+
   /// Home page rows for the active viewer (see `HomeRows`).
   List<String>? getHomeRows() =>
       _prefs.getStringList(_vk(AppConstants.keyHomeRows));

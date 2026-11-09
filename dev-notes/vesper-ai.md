@@ -212,6 +212,35 @@ Owner: tell Claude over MCP to turn settings on or off and delete histories.
 - Not done: built-in (no-AI) phrases like "turn off skip intro"; clearing the
   EPG / catalog cache; "update content" (the catalog sync has its own screen).
 
+## Media Hub tool + playback (Claude, 2026-11-09, uncommitted on main)
+Discord request (Kal-el23): let ChatGPT check quality, pick the best link, switch sources, control playback.
+- `media_hub_tool.dart` (part of vesper_tools): actions search (title refs `h…`), episodes, sources (a title +
+  season/episode, or what is playing: source, `video` from `archiveStreamFormats`, `audio` from the labels
+  (`hubStreamAudio`), `size_gb`, `ready` (false = `[TB download]` / ⏳: plays a "being downloaded" clip), `playing`,
+  `best` = `hubBestStream`: the viewer's Media Hub playback prefs (`ArchivePlaybackPreferences.ranked`, largest
+  file when that's on), never a download/trailer), play (title ref; `best` true = best stream, else the app's usual
+  choice/picker; stream ref `o…`; show + season/episode with the aired episodes as the Next queue; a show alone
+  opens its page), switch (`next` / `best` / stream ref, same position via `PlaybackService.replaceStream`, which
+  the source drawer now uses too). Stream URLs never go to the model (they carry debrid keys).
+- `VesperHub` interface; app side `screens/vesper_ai/vesper_hub.dart` (`AppVesperHub`: `ArchiveService.searchRows`,
+  `meta`, `streams`, `playArchiveTitle(chosen:)`, `openArchiveSeries`). `PlaybackService.hubSources` = the full-screen
+  player's `ArchivePlaybackSources` (set/cleared by PlayerScreen). Play waits up to 20 s for the stream to start
+  (`mediaHubStartWait`).
+- now_playing: `stream` for a Media Hub title, `error_on_tv`, and `quality: true` = picture, HDR, audio, measured
+  bitrate (two StatsBridge samples 1.5 s apart), buffer, buffering, dropped frames (opt-in: the built-in "what's on"
+  stays instant).
+- player: next_episode / previous_episode (+ channel up/down during a show), built-in phrases in 5 languages.
+- player: audio_tracks / audio_track (language code or name, or track number; commentary skipped) and subtitles /
+  subtitle (language, track number, "off", "cc"; not in the file = first match from the subtitle add-ons, like the
+  picker's online languages). Same steps as the player's buttons, remembered for the show (AudioTrackPreferences,
+  rememberForSeries). `vesper_ai/player_tracks.dart`, `test/vesper_player_tracks_test.dart`. Android only (the
+  player tool says "not on Windows yet"). No built-in phrases yet. AI apps: reconnect the connector.
+- Media Hub picks streams in the viewer's language (`services/stream_languages.dart`; sources list `languages` /
+  `multi_audio`).
+- System prompt: Media Hub when asked or when the playlists lack a title; play best; buffering = switch next.
+- Tests: `test/vesper_media_hub_tool_test.dart` (8). Not device-tested; Android only for switch/quality (Windows
+  plays titles but has no switch). AI apps must reconnect the connector to see the new tool.
+
 ## Not done / next
 - **Several TVs** (owner, 2026-11-06: test as is): today one connector per TV (each TV has its own link; name them
   "VesperTV Living room" etc. in the AI app). Parked idea: one shared link via Sync, TV names, relay routes by
@@ -220,7 +249,7 @@ Owner: tell Claude over MCP to turn settings on or off and delete histories.
   Stick), SpeechRecognizer on the Formuler, relay deploy + a real Claude/ChatGPT
   connector session.
 - Windows: no voice; player/now_playing tools say "not on Windows yet".
-- No episode picking (series → show page), no Media Hub search tool yet.
+- No episode picking for IPTV shows (series → show page); Media Hub shows take season + episode (media_hub).
 - Remote tips (`docs/remote.html`), help index, website and README documentation
   prepared on `codex/vesper-ai-docs` (Codex, 2026-11-06; pending merge/publish).
 - Public privacy docs distinguish built-in parsing, direct Your AI requests and

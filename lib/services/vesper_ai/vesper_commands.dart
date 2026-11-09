@@ -39,6 +39,12 @@ VesperCommand? parseVesperCommand(String spoken) {
   if (_isOneOf(s, _stop)) {
     return const VesperCommand('player', {'action': 'stop'});
   }
+  if (_isOneOf(s, _nextEpisode)) {
+    return const VesperCommand('player', {'action': 'next_episode'});
+  }
+  if (_isOneOf(s, _previousEpisode)) {
+    return const VesperCommand('player', {'action': 'previous_episode'});
+  }
   if (_isOneOf(s, _channelUp)) {
     return const VesperCommand('player', {'action': 'channel_up'});
   }
@@ -523,6 +529,8 @@ const _words = {
 
 /// "go back 30 seconds", "recule de 2 minutes", "skip 10 minutes".
 VesperCommand? _seek(String s) {
+  // Typed "2min" / "30sec": the unit is a word of its own below.
+  s = s.replaceAllMapped(RegExp(r'(\d)([a-z])'), (m) => '${m[1]} ${m[2]}');
   int? sign;
   for (final w in _back) {
     if (s.startsWith('$w ') || s == w) sign = -1;
@@ -664,6 +672,34 @@ const _stop = [
   'stopp',
   'beenden',
   'stamata',
+];
+const _nextEpisode = [
+  'next episode',
+  'play the next episode',
+  'play next episode',
+  'skip to the next episode',
+  'episode suivant',
+  'l episode suivant',
+  'prochain episode',
+  'siguiente episodio',
+  'proximo episodio',
+  'episodio siguiente',
+  'prossimo episodio',
+  'episodio successivo',
+  'nachste folge',
+  'nachste episode',
+  'epomeno epeisodio',
+];
+const _previousEpisode = [
+  'previous episode',
+  'play the previous episode',
+  'episode precedent',
+  'l episode precedent',
+  'episodio anterior',
+  'episodio precedente',
+  'vorherige folge',
+  'vorherige episode',
+  'proigoumeno epeisodio',
 ];
 const _channelUp = [
   'next channel',

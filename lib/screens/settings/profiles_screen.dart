@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../l10n/l10n.dart';
+import '../../services/app_preferences.dart';
 import '../../services/viewer_profile_service.dart';
 import '../../utils/tv_theme.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_menu_tile.dart';
+import '../../widgets/tv_switch_list_tile.dart';
 import '../../widgets/profile_card.dart';
 import 'profile_editor_screen.dart';
 
@@ -13,6 +15,7 @@ class ProfilesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final viewers = context.watch<ViewerProfileService>();
+    final prefs = context.watch<AppPreferences>();
     return withTvThemeIfNeeded(
         context,
         (context) => SettingsScaffold(
@@ -43,6 +46,15 @@ class ProfilesScreen extends StatelessWidget {
                         MaterialPageRoute(
                             builder: (_) => const AddProfileScreen()));
                   }),
+              // Was in Settings > General > Startup (owner, 2026-11-09:
+              // it belongs with the profiles). Device-only.
+              TvSwitchListTile(
+                title: Text(tr('Launch with profiles selector')),
+                subtitle: Text(tr(
+                    'Choose a profile after the splash, before the app opens. Applies from the next start.')),
+                value: prefs.launchWithProfiles,
+                onChanged: prefs.setLaunchWithProfiles,
+              ),
             ]))));
   }
 }

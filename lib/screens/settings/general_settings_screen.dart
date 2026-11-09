@@ -287,17 +287,8 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                       ]),
                   _section('startup', Icons.power_settings_new, tr('Startup'),
                       children: [
-                        TvSwitchListTile(
-                          title: Text(tr('Launch with profiles selector')),
-                          subtitle: Text(tr(
-                              'Choose a profile after the splash, before the app opens. Applies from the next start.')),
-                          value: context
-                              .watch<AppPreferences>()
-                              .launchWithProfiles,
-                          onChanged: (value) => context
-                              .read<AppPreferences>()
-                              .setLaunchWithProfiles(value),
-                        ),
+                        // Launch with profiles selector lives in Settings >
+                        // Playlists & guide > Profiles (owner, 2026-11-09).
                         _StartSectionPicker(),
                         // At most one of the two is on; both off = nothing
                         // plays.
@@ -413,6 +404,14 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                       value: context.watch<AppPreferences>().hideProfiles,
                       onChanged: (v) =>
                           context.read<AppPreferences>().setHideProfiles(v),
+                    ),
+                    TvSwitchListTile(
+                      title: Text(tr('Mini player on Home')),
+                      subtitle: Text(tr(
+                          'The live channel you stop on plays at the top right of Home. OK opens it full screen; Play/Pause or hold OK turns it off.')),
+                      value: context.watch<AppPreferences>().homeMiniPlayer,
+                      onChanged: (v) =>
+                          context.read<AppPreferences>().setHomeMiniPlayer(v),
                     ),
                     TvSwitchListTile(
                       title: Text(tr('Show group counts')),

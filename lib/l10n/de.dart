@@ -1981,6 +1981,10 @@ const Map<String, String> kDe = {
   "Hide profiles": "Profile ausblenden",
   "Hides the profiles row on Home.":
       "Blendet die Profilzeile auf dem Start aus.",
+  "Mini player on Home": "Mini-Player auf dem Start",
+  "The live channel you stop on plays at the top right of Home. OK opens it full screen; Play/Pause or hold OK turns it off.":
+      "Der Live-Sender, auf dem du stehen bleibst, läuft oben rechts auf dem Start. OK öffnet ihn im Vollbild; Play/Pause oder OK gedrückt halten stoppt ihn.",
+  "Stop mini player": "Mini-Player stoppen",
   "Preferred audio language": "Bevorzugte Audiosprache",
   "Preferred subtitle language": "Bevorzugte Untertitelsprache",
   "Source default": "Standard der Quelle",
@@ -2575,6 +2579,8 @@ const Map<String, String> kDe = {
       "Dieser Sender lässt sich nicht zurückspulen.",
   "Not available on Windows yet.":
       "Unter Windows noch nicht verfügbar.",
+  "No next episode.": "Keine nächste Folge.",
+  "No previous episode.": "Keine vorherige Folge.",
   "That did not work.":
       "Das hat nicht geklappt.",
   "Talk from my phone":
@@ -2824,8 +2830,8 @@ const Map<String, String> kDe = {
       "Was du fragen kannst",
   "Without any AI (remote, typing or phone):":
       "Ohne KI (Fernbedienung, Tastatur oder Handy):",
-  "\"play TSN 1\" · \"mets RDS\" · \"pause\" · \"go back 30 seconds\" · \"next channel\" · \"back to live\" · \"what's on\" · \"what's on TSN 1\" · \"when is the Simpsons on\" · \"open the movies\" · \"search for Dune\" · \"put on the Habs game\" · \"today's games\" · \"add this to my watch list\" · \"my favourites\" · \"help\"":
-      "„spiel TSN 1“ · „pausieren“ · „zurück 30 Sekunden“ · „nächster Sender“ · „zurück zu live“ · „was läuft“ · „wann spielt Bayern“ · „öffne die Filme“ · „suche Dune“ · „das Spiel von Bayern“ · „Spiele heute“ · „zur Merkliste hinzufügen“ · „meine Favoriten“ · „Hilfe“",
+  "\"play TSN 1\" · \"mets RDS\" · \"pause\" · \"go back 30 seconds\" · \"next channel\" · \"next episode\" · \"back to live\" · \"what's on\" · \"what's on TSN 1\" · \"when is the Simpsons on\" · \"open the movies\" · \"search for Dune\" · \"put on the Habs game\" · \"today's games\" · \"add this to my watch list\" · \"my favourites\" · \"help\"":
+      "„spiel TSN 1“ · „pausieren“ · „zurück 30 Sekunden“ · „nächster Sender“ · „nächste Folge“ · „zurück zu live“ · „was läuft“ · „wann spielt Bayern“ · „öffne die Filme“ · „suche Dune“ · „das Spiel von Bayern“ · „Spiele heute“ · „zur Merkliste hinzufügen“ · „meine Favoriten“ · „Hilfe“",
   "With your AI, or from Claude / ChatGPT:":
       "Mit deiner KI oder aus Claude / ChatGPT:",
   "\"make me a movie night list for Friday\" (it goes on your watch list on Home) · \"hide every Turkish group\" · \"what crime shows do I have?\" · \"is the Leafs game on, and on which channel?\" · \"play the newest episode of something like Severance\" · \"pause the TV\" · \"tell the TV dinner is ready\"":

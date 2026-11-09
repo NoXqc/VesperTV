@@ -93,6 +93,7 @@ import 'services/vesper_ai/watch_list.dart';
 import 'services/vesper_ai/voice_key.dart';
 import 'screens/vesper_ai/vesper_bubble.dart';
 import 'screens/vesper_ai/vesper_host.dart';
+import 'screens/vesper_ai/vesper_hub.dart';
 import 'screens/vesper_ai/vesper_panel.dart';
 import 'utils/desktop_platform.dart';
 
@@ -809,6 +810,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
               : HubTitle(found.$1.manifestUrl, found.$2);
         },
         clearHubHistory: _archiveService.clearHistory,
+        hub: AppVesperHub(
+            navigatorKey: _navigatorKey, archive: _archiveService),
         profiles: AppVesperProfiles(
             navigatorKey: _navigatorKey,
             viewers: _viewerProfileService,

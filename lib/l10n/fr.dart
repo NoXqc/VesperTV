@@ -2081,6 +2081,10 @@ const Map<String, String> kFr = {
   "Hide profiles": "Masquer les profils",
   "Hides the profiles row on Home.":
       "Masque la rangée des profils sur l’accueil.",
+  "Mini player on Home": "Mini lecteur sur l’accueil",
+  "The live channel you stop on plays at the top right of Home. OK opens it full screen; Play/Pause or hold OK turns it off.":
+      "La chaîne en direct où vous vous arrêtez joue en haut à droite de l’accueil. OK l’ouvre en plein écran; Lecture/Pause ou OK maintenu l’arrête.",
+  "Stop mini player": "Arrêter le mini lecteur",
   "Preferred audio language": "Langue audio préférée",
   "Preferred subtitle language": "Langue de sous-titres préférée",
   "Source default": "Par défaut de la source",
@@ -2685,6 +2689,8 @@ const Map<String, String> kFr = {
       "Cette chaîne ne peut pas être reculée.",
   "Not available on Windows yet.":
       "Pas encore offert sur Windows.",
+  "No next episode.": "Pas d'épisode suivant.",
+  "No previous episode.": "Pas d'épisode précédent.",
   "That did not work.":
       "Ça n'a pas fonctionné.",
   "Talk from my phone":
@@ -2934,8 +2940,8 @@ const Map<String, String> kFr = {
       "Quoi demander",
   "Without any AI (remote, typing or phone):":
       "Sans IA (télécommande, clavier ou téléphone) :",
-  "\"play TSN 1\" · \"mets RDS\" · \"pause\" · \"go back 30 seconds\" · \"next channel\" · \"back to live\" · \"what's on\" · \"what's on TSN 1\" · \"when is the Simpsons on\" · \"open the movies\" · \"search for Dune\" · \"put on the Habs game\" · \"today's games\" · \"add this to my watch list\" · \"my favourites\" · \"help\"":
-      "« mets TSN 1 » · « pause » · « recule de 30 secondes » · « chaîne suivante » · « retour au direct » · « qu'est-ce qui joue » · « quand joue le Canadien » · « ouvre les films » · « cherche Dune » · « le match du Canadien » · « les matchs d'aujourd'hui » · « ajoute ça à ma liste » · « mes favoris » · « aide »",
+  "\"play TSN 1\" · \"mets RDS\" · \"pause\" · \"go back 30 seconds\" · \"next channel\" · \"next episode\" · \"back to live\" · \"what's on\" · \"what's on TSN 1\" · \"when is the Simpsons on\" · \"open the movies\" · \"search for Dune\" · \"put on the Habs game\" · \"today's games\" · \"add this to my watch list\" · \"my favourites\" · \"help\"":
+      "« mets TSN 1 » · « pause » · « recule de 30 secondes » · « chaîne suivante » · « épisode suivant » · « retour au direct » · « qu'est-ce qui joue » · « quand joue le Canadien » · « ouvre les films » · « cherche Dune » · « le match du Canadien » · « les matchs d'aujourd'hui » · « ajoute ça à ma liste » · « mes favoris » · « aide »",
   "With your AI, or from Claude / ChatGPT:":
       "Avec votre IA, ou depuis Claude / ChatGPT :",
   "\"make me a movie night list for Friday\" (it goes on your watch list on Home) · \"hide every Turkish group\" · \"what crime shows do I have?\" · \"is the Leafs game on, and on which channel?\" · \"play the newest episode of something like Severance\" · \"pause the TV\" · \"tell the TV dinner is ready\"":

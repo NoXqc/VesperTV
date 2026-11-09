@@ -457,7 +457,9 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
               : Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    SizedBox(width: 280, child: _buildRail(categories)),
+                    SizedBox(
+                        width: SettingsScaffold.compact ? 240 : 280,
+                        child: _buildRail(categories)),
                     const VerticalDivider(width: 1, color: Colors.white24),
                     Expanded(child: _buildPane(categories[_selected])),
                   ],
@@ -475,7 +477,7 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
           const SingleActivator(LogicalKeyboardKey.arrowRight): _enterPane,
         },
         child: ListView(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: 4),
           children: [
             for (var i = 0; i < categories.length; i++)
               // Focus follows the selector: the pane shows whichever
@@ -517,7 +519,7 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
         },
         child: ListView(
           key: ValueKey(c.title),
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
           children: [
             _PaneHeader(category: c),
             for (var i = 0; i < c.entries.length; i++)
@@ -544,23 +546,27 @@ class _PaneHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final compact = CompactMenus.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 8, 16),
+      padding: EdgeInsets.fromLTRB(8, 4, 8, compact ? 8 : 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(category.icon, size: 36, color: scheme.primary),
-          const SizedBox(width: 16),
+          Icon(category.icon, size: compact ? 26 : 36, color: scheme.primary),
+          SizedBox(width: compact ? 12 : 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(category.title,
-                    style: const TextStyle(
-                        fontSize: 22, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 6),
+                    style: TextStyle(
+                        fontSize: compact ? 18 : 22,
+                        fontWeight: FontWeight.w700)),
+                SizedBox(height: compact ? 2 : 6),
                 Text(category.description,
-                    style: const TextStyle(color: Colors.white70)),
+                    style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: compact ? 12.5 : null)),
               ],
             ),
           ),

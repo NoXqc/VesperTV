@@ -407,6 +407,13 @@ final List<_AiSetting> _aiSettings = [
       (b) => b.prefs.hideProfiles,
       (b, on) => b.prefs.setHideProfiles(on)),
   _switch(
+      'home_mini_player',
+      'tabs',
+      'Mini player on Home',
+      'The live channel highlighted on Home plays in a small player at the top right.',
+      (b) => b.prefs.homeMiniPlayer,
+      (b, on) => b.prefs.setHomeMiniPlayer(on)),
+  _switch(
       'show_group_counts',
       'tabs',
       'Show group counts',

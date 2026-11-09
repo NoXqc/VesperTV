@@ -130,6 +130,7 @@ void _track(Channel channel, ArchiveMeta meta, ArchiveVideo? episode) {
 /// there are several, and plays it. With [queue] (every episode, in order,
 /// as placeholders) and [videosById] (their [ArchiveVideo]s by channel id)
 /// the player's Next / auto-advance continue with the same source.
+/// [chosen] plays that stream without the list (Vesper AI's media_hub).
 Future<void> playArchiveTitle(
   BuildContext context, {
   required ArchiveSource source,
@@ -137,6 +138,7 @@ Future<void> playArchiveTitle(
   ArchiveVideo? episode,
   List<Channel>? queue,
   Map<String, ArchiveVideo> videosById = const {},
+  ArchiveStreamOption? chosen,
 }) async {
   final service = context.read<ArchiveService>();
   final playback = context.read<PlaybackService>();
@@ -149,8 +151,9 @@ Future<void> playArchiveTitle(
   final session = service.searchStreams(source, meta, episode: episode);
   ArchiveResumeChoice? savedChoice;
   final notice = ValueNotifier<String?>(null);
-  var picked = await pickArchiveStream(context, session.options,
-      session: session, notice: notice, autoSelect: (options) async {
+  var picked = chosen ??
+      await pickArchiveStream(context, session.options,
+          session: session, notice: notice, autoSelect: (options) async {
     if (!resumeSource.isCurrent) return null;
     savedChoice = await resumeSource.restore(options);
     if (!resumeSource.isCurrent) return null;
@@ -175,7 +178,7 @@ Future<void> playArchiveTitle(
     return savedChoice!.picked ??
         (prefs.autoPlay ? prefs.ranked(usable).firstOrNull : null) ??
         (storage.getArchiveAutoLargest()
-            ? largestArchiveStream(prefs.ranked(usable))
+            ? largestArchiveStream(prefs.bestLanguage(prefs.ranked(usable)))
             : null) ??
         (usable.length == 1 && prefs.ranked(usable).isNotEmpty
             ? usable.single
@@ -226,14 +229,16 @@ Future<void> playArchiveTitle(
               Uri.parse(resolvedUrl ?? first.stream.url)));
   resumeSource.traceChoice(restored, first,
       resolvedUrl: channel.url,
-      via: restored.picked != null
-          ? 'resume'
-          : storage.getArchiveAutoLargest() &&
-                  identical(largestArchiveStream(options), first)
-              ? 'largest'
-              : options.length == 1
-                  ? 'single'
-                  : 'picker');
+      via: identical(chosen, first)
+          ? 'ai'
+          : restored.picked != null
+              ? 'resume'
+              : storage.getArchiveAutoLargest() &&
+                      identical(largestArchiveStream(options), first)
+                  ? 'largest'
+                  : options.length == 1
+                      ? 'single'
+                      : 'picker');
   try {
     await resumeSource.remember(first);
   } catch (_) {/* Playback still works if preferences cannot be written. */}
@@ -269,7 +274,7 @@ Future<void> playArchiveTitle(
         }
       } else {
         o = storage.getArchiveAutoLargest()
-            ? largestArchiveStream(acceptable)
+            ? largestArchiveStream(prefs.bestLanguage(acceptable))
             : preferredArchiveStream(acceptable, picked);
       }
     }

@@ -117,6 +117,9 @@ void main() {
       await tester.pumpAndSettle();
       for (final label in ['Hide Live TV', 'Hide Sports Trak']) {
         await tester.ensureVisible(find.text(label));
+        // ensureVisible doesn't pump: a row that had to scroll (below a
+        // phone-sized screen) is only there after the next frame.
+        await tester.pump();
         await tester.tap(find.text(label));
         await tester.pumpAndSettle();
       }
@@ -137,6 +140,9 @@ void main() {
       await tester.pumpAndSettle();
       for (final label in ['Hide Live TV', 'Hide Sports Trak']) {
         await tester.ensureVisible(find.text(label));
+        // ensureVisible doesn't pump: a row that had to scroll (below a
+        // phone-sized screen) is only there after the next frame.
+        await tester.pump();
         await tester.tap(find.text(label));
         await tester.pumpAndSettle();
       }

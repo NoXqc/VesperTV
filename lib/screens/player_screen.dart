@@ -773,15 +773,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
       }
       await sources.remember(channel.id, selection.option);
       if (!mounted || _playback.currentChannel?.id != channel.id) return;
-      final wasPlaying = _playback.controller?.value.isPlaying ?? true;
       // Same title/episode ID, new URL: teardown saves its exact position
       // before the replacement controller reads the normal resume point.
-      await _playback.play(selection.channel);
-      final replacement = _playback.controller;
-      await _playback.initFuture;
-      if (!wasPlaying && mounted && _playback.controller == replacement) {
-        await replacement?.pause();
-      }
+      await _playback.replaceStream(selection.channel);
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -864,6 +858,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
   void initState() {
     super.initState();
     _playback = context.read<PlaybackService>();
+    // Vesper AI's media_hub tool switches streams through the same sources.
+    _playback.hubSources = widget.sources;
     _playback.play(widget.channel);
     // Read by LiveResumeHint — stops its hold-Right gesture from firing
     // again on top of an already-showing fullscreen view, and hides its
@@ -1500,6 +1496,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   void dispose() {
     _sourceBackGuard.dispose();
+    if (identical(_playback.hubSources, widget.sources)) {
+      _playback.hubSources = null;
+    }
     // Deferred a frame for the same reason `initState` defers the
     // opposite call — this runs mid-build for the frame that's tearing
     // down this route, not a safe time for another widget's `setState`

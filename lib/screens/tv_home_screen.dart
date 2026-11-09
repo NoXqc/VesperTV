@@ -1180,6 +1180,48 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         const SingleActivator(LogicalKeyboardKey.arrowRight): () {},
       };
 
+  /// Remote fast-forward / rewind in the groups column and the channel list:
+  /// 10 rows at a time (owner, 2026-11-09). Each row is one plain Down / Up
+  /// move a frame apart, so the list scrolls and builds exactly as for 10
+  /// presses; presses during a jump add to it. The Timeline guide jumps its
+  /// own way ([_TimelineGuideState.jumpVertical]).
+  static const _rowJump = 10;
+  int _pendingRowJump = 0;
+
+  Future<void> _jumpRows(int rows, {bool timeline = false}) async {
+    if (_focusDepth == 0 || _movingChannel != null || _movingGroupKey != null) {
+      return;
+    }
+    if (timeline) {
+      _timelineGuideKey.currentState?.jumpVertical(rows);
+      return;
+    }
+    final running = _pendingRowJump != 0;
+    _pendingRowJump += rows;
+    if (running) return;
+    while (_pendingRowJump != 0 && mounted) {
+      final step = _pendingRowJump.sign;
+      _pendingRowJump -= step;
+      final node = FocusManager.instance.primaryFocus;
+      if (node == null ||
+          !node.focusInDirection(
+              step > 0 ? TraversalDirection.down : TraversalDirection.up)) {
+        _pendingRowJump = 0;
+        break;
+      }
+      await WidgetsBinding.instance.endOfFrame;
+    }
+  }
+
+  Map<ShortcutActivator, VoidCallback> _rowJumpBindings(
+          {bool timeline = false}) =>
+      {
+        const SingleActivator(LogicalKeyboardKey.mediaFastForward): () =>
+            _jumpRows(_rowJump, timeline: timeline),
+        const SingleActivator(LogicalKeyboardKey.mediaRewind): () =>
+            _jumpRows(-_rowJump, timeline: timeline),
+      };
+
   Future<void> _moveChannelStep(int delta) async {
     final channel = _movingChannel;
     if (channel == null) return;
@@ -1468,7 +1510,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         if (mounted) _restoreLiveFocus();
       });
     }
-    if (_isBrowseTab(tab) || tab == 'Home') {
+    if (_isBrowseTab(tab) ||
+        (tab == 'Home' && !HomeScreen.showsMiniPlayer(context))) {
       unawaited(_parkLiveChannel(keepNativeSurface: _isBrowseTab(tab)));
     }
   }
@@ -2220,9 +2263,13 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       if (!mounted) return;
       // Preserve the browse pages' live-video parking without deferring
       // the selected screen's first paint or changing resume behavior.
+      // Home with its mini player keeps the channel (see _openHome).
+      final homeKeepsLive =
+          HomeScreen.showsMiniPlayer(context) &&
+              prefs.effectiveStartSection == 'home';
       if (_isBrowseTab(_initialTab) ||
-          _initialTab == 'Home' ||
-          widget.startupBrowseCovered) {
+          ((_initialTab == 'Home' || widget.startupBrowseCovered) &&
+              !homeKeepsLive)) {
         unawaited(
             _parkLiveChannel(keepNativeSurface: _isBrowseTab(_initialTab)));
       }
@@ -2883,6 +2930,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     LogicalKeyboardKey.pageDown,
     LogicalKeyboardKey.channelUp,
     LogicalKeyboardKey.channelDown,
+    // 10-row jumps in the groups / channel list ([_jumpRows]).
+    LogicalKeyboardKey.mediaFastForward,
+    LogicalKeyboardKey.mediaRewind,
   };
   DateTime _lastKeyAt = DateTime(0);
   DateTime _lastNavKeyAt = DateTime(0);
@@ -3062,7 +3112,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   bool _videoHiddenForSports = false;
 
   /// Home parks a background live channel like Media Hub: it's a browse
-  /// page, and its own cards start what plays next.
+  /// page, and its own cards start what plays next. With Home's mini player
+  /// on (Settings > Interface > Tabs) the channel keeps playing there
+  /// instead, opened like Sports Trak over a live channel.
   void _openHome() {
     if (_tab == 'Home') {
       setState(() => _phonePage = 1);
@@ -3071,9 +3123,13 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     }
     _returnToTv = true;
     _returnHomeToFavorites = true;
+    final route = MaterialPageRoute<void>(builder: (_) => const HomeScreen());
+    if (HomeScreen.showsMiniPlayer(context)) {
+      unawaited(_pushOverLiveVideo(route));
+      return;
+    }
     _parkLiveChannel();
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const HomeScreen()));
+    Navigator.of(context).push(route);
   }
 
   Future<void> _openSearch() => _pushOverLiveVideo(
@@ -3553,6 +3609,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                                                       LogicalKeyboardKey
                                                           .arrowRight):
                                                   _enterBrowseColumn,
+                                              ..._rowJumpBindings(),
                                             },
                                           _ =>
                                             <ShortcutActivator, VoidCallback>{
@@ -3662,6 +3719,12 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                                                     .currentState
                                                     ?.moveVertical(-1),
                                           },
+                                          // Fast-forward / rewind: 10 groups
+                                          // or channels at a time.
+                                          if (_focusDepth > 0)
+                                            ..._rowJumpBindings(
+                                                timeline: _focusDepth == 2 &&
+                                                    showTimelineGuide),
                                         },
                               child: _compact
                                   ? _buildPhoneColumns(
@@ -9289,6 +9352,15 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   /// [_trackFocus] and finds whichever block in the target row covers
   /// that same moment, so moving between rows stays on the same time
   /// column instead of following block geometry.
+  /// Remote fast-forward / rewind: [delta] channels at once, stopping at
+  /// the first / last one ([moveVertical] past the top leaves the guide).
+  void jumpVertical(int delta) {
+    final rowIndex = _focusedRowIndex;
+    if (rowIndex == null || widget.channels.isEmpty) return;
+    final target = (rowIndex + delta).clamp(0, widget.channels.length - 1);
+    if (target != rowIndex) moveVertical(target - rowIndex);
+  }
+
   void moveVertical(int delta) {
     final rowIndex = _focusedRowIndex;
     if (rowIndex == null) return;

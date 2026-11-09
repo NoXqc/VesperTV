@@ -71,20 +71,11 @@ class DesktopAudio {
           if (t.id != 'auto' && t.id != 'no' && !t.uri) t,
       ];
 
-  /// Placeholder codes broadcasters put on tracks (same as Android).
-  static const _noLanguage = {'und', 'mis', 'mul', 'zxx', 'qaa'};
-
-  /// Track name, else its language, else "Audio n", then codec and
-  /// channel layout (what tells two same-language tracks apart) - the
-  /// Android picker's labels.
+  /// Language and track name ([audioTrackName]), else "Audio n", then
+  /// codec and channel layout (what tells two same-language tracks apart)
+  /// - the Android picker's labels.
   static String label(AudioTrack track, int index) {
-    final title = track.title?.trim() ?? '';
-    final language = track.language?.toLowerCase() ?? '';
-    final name = title.isNotEmpty
-        ? title
-        : language.isNotEmpty && !_noLanguage.contains(language)
-            ? languageName(language)
-            : '';
+    final name = audioTrackName(track.title, track.language);
     return [
       name.isNotEmpty ? name : tr('Audio {n}', {'n': index + 1}),
       DataPoolCard.codecName(track.codec),

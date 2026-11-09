@@ -2076,6 +2076,10 @@ const Map<String, String> kIt = {
       "Impossibile importare questo file. Scegli una lista di canali M3U o un file TXT/JSON con collegamenti ai manifest di Media Hub.",
   "Hide profiles": "Nascondi profili",
   "Hides the profiles row on Home.": "Nasconde la riga dei profili nella Home.",
+  "Mini player on Home": "Mini player nella Home",
+  "The live channel you stop on plays at the top right of Home. OK opens it full screen; Play/Pause or hold OK turns it off.":
+      "Il canale live su cui ti fermi va in onda in alto a destra nella Home. OK lo apre a schermo intero; Play/Pausa o tenere premuto OK lo ferma.",
+  "Stop mini player": "Ferma il mini player",
   "Preferred audio language": "Lingua audio preferita",
   "Preferred subtitle language": "Lingua dei sottotitoli preferita",
   "Source default": "Predefinita della sorgente",
@@ -2679,6 +2683,8 @@ const Map<String, String> kIt = {
       "Questo canale non si può riavvolgere.",
   "Not available on Windows yet.":
       "Non ancora disponibile su Windows.",
+  "No next episode.": "Nessun episodio successivo.",
+  "No previous episode.": "Nessun episodio precedente.",
   "That did not work.":
       "Non ha funzionato.",
   "Talk from my phone":
@@ -2928,8 +2934,8 @@ const Map<String, String> kIt = {
       "Cosa chiedere",
   "Without any AI (remote, typing or phone):":
       "Senza IA (telecomando, tastiera o telefono):",
-  "\"play TSN 1\" · \"mets RDS\" · \"pause\" · \"go back 30 seconds\" · \"next channel\" · \"back to live\" · \"what's on\" · \"what's on TSN 1\" · \"when is the Simpsons on\" · \"open the movies\" · \"search for Dune\" · \"put on the Habs game\" · \"today's games\" · \"add this to my watch list\" · \"my favourites\" · \"help\"":
-      "«metti TSN 1» · «pausa» · «indietro 30 secondi» · «canale successivo» · «in diretta» · «cos'è questo» · «quando gioca la Juventus» · «apri i film» · «cerca Dune» · «metti la partita della Juventus» · «partite di oggi» · «aggiungi alla mia lista» · «i miei preferiti» · «aiuto»",
+  "\"play TSN 1\" · \"mets RDS\" · \"pause\" · \"go back 30 seconds\" · \"next channel\" · \"next episode\" · \"back to live\" · \"what's on\" · \"what's on TSN 1\" · \"when is the Simpsons on\" · \"open the movies\" · \"search for Dune\" · \"put on the Habs game\" · \"today's games\" · \"add this to my watch list\" · \"my favourites\" · \"help\"":
+      "«metti TSN 1» · «pausa» · «indietro 30 secondi» · «canale successivo» · «prossimo episodio» · «in diretta» · «cos'è questo» · «quando gioca la Juventus» · «apri i film» · «cerca Dune» · «metti la partita della Juventus» · «partite di oggi» · «aggiungi alla mia lista» · «i miei preferiti» · «aiuto»",
   "With your AI, or from Claude / ChatGPT:":
       "Con la tua IA, o da Claude / ChatGPT:",
   "\"make me a movie night list for Friday\" (it goes on your watch list on Home) · \"hide every Turkish group\" · \"what crime shows do I have?\" · \"is the Leafs game on, and on which channel?\" · \"play the newest episode of something like Severance\" · \"pause the TV\" · \"tell the TV dinner is ready\"":

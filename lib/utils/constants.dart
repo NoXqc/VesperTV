@@ -452,6 +452,9 @@ class AppConstants {
   /// (`HomeRows`). Null = never edited (the default order).
   static const String keyHomeRows = 'vesper_home_rows';
   static const String keyHideProfiles = 'vesper_hide_profiles';
+
+  /// Home's mini player (top right), per viewer; null = on.
+  static const String keyHomeMiniPlayer = 'vesper_home_mini_player';
   static const String keySportsAddedLeagues = 'vesper_sports_added_leagues';
   static const String keySportsHideScores = 'vesper_sports_hide_scores';
   static const String keySportsMode = 'vesper_sports_mode';
