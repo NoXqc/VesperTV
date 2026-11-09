@@ -2682,6 +2682,8 @@ const Map<String, String> kFr = {
       "hier",
   "I could not find \"{title}\" in your playlists.":
       "Je n'ai pas trouvé « {title} » dans vos listes.",
+  "I could not find \"{title}\" in Media Hub.":
+      "Je n'ai pas trouvé « {title} » dans Media Hub.",
   "No channel shows a {title} game today.":
       "Aucune chaîne ne présente un match de {title} aujourd'hui.",
   "I could not find the channel \"{title}\".":

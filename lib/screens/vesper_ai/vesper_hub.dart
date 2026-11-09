@@ -115,4 +115,11 @@ class AppVesperHub implements VesperHub {
     nav.popUntil((r) => r.isFirst);
     unawaited(openArchiveSeries(nav.context, source, show.meta));
   }
+
+  @override
+  List<(HubTitle, ArchiveVideo?)> continueWatching() => [
+        for (final type in ArchiveType.values)
+          for (final item in archive.continueWatching(type))
+            (HubTitle(item.source.manifestUrl, item.meta), item.episode),
+      ];
 }

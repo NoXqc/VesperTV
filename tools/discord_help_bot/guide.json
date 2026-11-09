@@ -747,8 +747,8 @@
     "id": "38510ae204d0cbb0",
     "category": "Vesper AI",
     "title": "Vesper AI without an API key",
-    "answer": "Built-in commands are free and parsed on your device: try \"play TSN 1\", \"mets RDS\", \"pause\", \"next channel\", \"next episode\", \"fast forward 2 minutes\", \"what's on TSN 1\", \"when is the Simpsons on\", \"today's games\", \"put on the Habs game\", \"search for Dune\" or \"help\". The channel, programme or game must be available in your own sources and guide. Going back on live TV needs provider catch-up support. Leave Your AI set to None to use built-in commands only. Local command parsing does not make streaming, guide updates or voice recognition work offline.",
-    "controls": "Type or say: play TSN 1 · pause · go back 30 seconds · today's games · help",
+    "answer": "Built-in commands are free and parsed on your device: try \"play TSN 1\", \"mets RDS\", \"pause\", \"next channel\", \"next episode\", \"fast forward 2 minutes\", \"what's on TSN 1\", \"when is the Simpsons on\", \"today's games\", \"put on the Habs game\", \"search for Dune\", \"continue watching Severance in Media Hub\" (picks up where you stopped, the right episode for a show) or \"help\". The channel, programme or game must be available in your own sources and guide. Going back on live TV needs provider catch-up support. Leave Your AI set to None to use built-in commands only. Local command parsing does not make streaming, guide updates or voice recognition work offline.",
+    "controls": "Type or say: play TSN 1 · pause · go back 30 seconds · today's games · continue watching Severance · help",
     "url": "https://vespertv.app/remote.html#Vesper%20AI"
   },
   {

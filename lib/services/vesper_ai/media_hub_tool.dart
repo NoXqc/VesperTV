@@ -29,6 +29,10 @@ abstract interface class VesperHub {
 
   /// The show's page, for the viewer to pick an episode.
   Future<void> openShow(HubTitle show);
+
+  /// The viewer's Continue watching (movies, then shows): a movie, or a
+  /// show with the episode to go on with, like Media Hub's own row.
+  List<(HubTitle, ArchiveVideo?)> continueWatching();
 }
 
 /// One stream handed out by the sources action: of a title (and episode),
@@ -293,7 +297,10 @@ final _mediaHubTool = VesperTool(
       'play: a title ref (best true starts the best '
       'stream; otherwise the app picks as usual or asks on the TV), a '
       'stream ref from sources, or a show with season and episode (a show '
-      'without them opens its page). switch: the playing title to another '
+      'without them opens its page). continue: the title in the viewer\'s '
+      'Continue watching whose name is query, from where it stopped (a '
+      'show: its episode in progress or the next one); a title not started '
+      'yet plays like play. switch: the playing title to another '
       'stream at the same position (a stream ref, "next" or "best"), e.g. '
       'when it buffers or fails; now_playing shows how it plays.',
   schema: {
@@ -301,7 +308,7 @@ final _mediaHubTool = VesperTool(
     'properties': {
       'action': {
         'type': 'string',
-        'enum': ['search', 'episodes', 'sources', 'play', 'switch'],
+        'enum': ['search', 'episodes', 'sources', 'play', 'continue', 'switch'],
       },
       'query': {
         'type': 'string',
@@ -493,6 +500,39 @@ final _mediaHubTool = VesperTool(
           if (option != null)
             'stream': _describeStream(
                 box, HubStream(option, title: title, episode: episode)),
+          ...await _awaitStart(box, id, before),
+        };
+      case 'continue':
+        final query = _str(args, 'query');
+        final going = hub.continueWatching();
+        final match = query.isEmpty
+            ? going.firstOrNull
+            : rankByName(going, query, (g) => g.$1.meta.name, limit: 1)
+                .firstOrNull;
+        if (match == null) {
+          if (query.isEmpty) {
+            throw VesperToolError('Nothing to continue in Media Hub.');
+          }
+          return box.call('media_hub', {'action': 'play', 'query': query},
+              caller: caller);
+        }
+        final (title, episode) = match;
+        if (title.meta.type == ArchiveType.series && episode == null) {
+          await _confirmRemote(box, caller, 'An AI app wants to open {title}.',
+              {'title': title.meta.name});
+          await hub.openShow(title);
+          return {'opened': title.meta.name, 'kind': 'series'};
+        }
+        final name = episode == null
+            ? title.meta.name
+            : '${title.meta.name} ${_episodeLabel(episode)}';
+        await _confirmRemote(
+            box, caller, 'An AI app wants to play {title}.', {'title': name});
+        final before = box.playback.controller;
+        final id = await hub.play(title, episode: episode);
+        return {
+          'playing': name,
+          'continued': true,
           ...await _awaitStart(box, id, before),
         };
       case 'switch':

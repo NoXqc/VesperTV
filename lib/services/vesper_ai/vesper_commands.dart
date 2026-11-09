@@ -112,6 +112,23 @@ VesperCommand? parseVesperCommand(String spoken) {
     }
   }
 
+  // "continue watching Spider-Man in Media Hub", "reprends Severance": Media
+  // Hub's Continue watching, from where it stopped (owner, 2026-11-09).
+  final going = _continueTitle(s);
+  if (going != null) {
+    return VesperCommand('media_hub', {'action': 'continue', 'query': going});
+  }
+  // "play Carrie in Media Hub": that title, not a channel named so.
+  final hubbed = _hubSuffix.firstMatch(s)?.group(1);
+  if (hubbed != null) {
+    for (final verb in _playVerbs) {
+      final title = _strip(_after(hubbed, verb) ?? '');
+      if (title.isNotEmpty) {
+        return VesperCommand('media_hub', {'action': 'play', 'query': title});
+      }
+    }
+  }
+
   // "open Carrie in Media Hub", "find dune in movies": the search page
   // (it has a Media Hub section) with just the title.
   final scoped = _scopedTitle(s);
@@ -392,6 +409,72 @@ final _playItOn = [
   }
   return null;
 }
+
+/// The title after a "continue watching" verb, "in Media Hub" or not; null
+/// when [s] isn't one ("continue" alone resumes the player, "resume
+/// playback" too).
+String? _continueTitle(String s) {
+  final head = _hubSuffix.firstMatch(s)?.group(1) ?? s;
+  // Longest first: "continuer de regarder dune" isn't "continuer" + the rest.
+  for (final verb in [..._continueVerbs]..sort((a, b) => b.length - a.length)) {
+    final title = _strip(_after(head, verb) ?? '');
+    if (title.isEmpty) continue;
+    if (_notATitle.contains(title) || _section(title) != null) return null;
+    return title;
+  }
+  return null;
+}
+
+final _hubSuffix = RegExp(
+    r'^(.+?) (?:in|on|from|dans|sur|en|nel|nella|in der|im|auf|apo) '
+    r'(?:the |le |la |l |el |il |der |dem |my )?(?:media hub|mediahub|hub)$');
+
+const _continueVerbs = [
+  'continue watching',
+  'keep watching',
+  'resume watching',
+  'finish watching',
+  'continue',
+  'resume',
+  'continue de regarder',
+  'continuer de regarder',
+  'continuer a regarder',
+  'reprends',
+  'reprendre',
+  'continuer',
+  'sigue viendo',
+  'seguir viendo',
+  'continuar viendo',
+  'reanudar',
+  'continuar',
+  'continua a guardare',
+  'continua guardare',
+  'riprendi',
+  'riprendere',
+  'schau weiter',
+  'weiter schauen',
+  'weiterschauen',
+  'synecheia',
+];
+
+/// What follows those verbs when they mean the player, not a title.
+const _notATitle = {
+  'playback',
+  'playing',
+  'watching',
+  'video',
+  'the video',
+  'it',
+  'this',
+  'that',
+  'la lecture',
+  'lecture',
+  'la video',
+  'ca',
+  'la reproduccion',
+  'la riproduzione',
+  'die wiedergabe',
+};
 
 final _scopeSuffix = RegExp(
     r'^(.+?) (?:in|on|from|dans|sur|en|nel|nella|in der|im) '

@@ -2676,6 +2676,8 @@ const Map<String, String> kIt = {
       "ieri",
   "I could not find \"{title}\" in your playlists.":
       "Non ho trovato «{title}» nelle tue playlist.",
+  "I could not find \"{title}\" in Media Hub.":
+      "Non ho trovato «{title}» in Media Hub.",
   "No channel shows a {title} game today.":
       "Nessun canale trasmette una partita di {title} oggi.",
   "I could not find the channel \"{title}\".":

@@ -293,6 +293,12 @@ class VesperAi {
             acted: true);
       case 'open':
         return const VesperReply('', acted: true);
+      case 'media_hub' when s('playing') != null:
+        return VesperReply(tr('Playing {title}', {'title': s('playing')}),
+            acted: true);
+      case 'media_hub' when s('opened') != null:
+        return VesperReply(tr('Opened {title}', {'title': s('opened')}),
+            acted: true);
       case 'now_playing':
         final title = s('title');
         if (title == null) return VesperReply(tr('Nothing is playing.'));
@@ -412,8 +418,13 @@ class VesperAi {
   }
 
   static String _errorWords(VesperCommand c, Object? error) {
-    final name = '${c.args['name'] ?? c.args['team'] ?? c.args['title'] ?? ''}';
+    final name =
+        '${c.args['name'] ?? c.args['team'] ?? c.args['title'] ?? c.args['query'] ?? ''}';
     return switch (c.tool) {
+      'media_hub' when '$error'.contains('hidden') =>
+        tr('That section is hidden.'),
+      'media_hub' =>
+        tr('I could not find "{title}" in Media Hub.', {'title': name}),
       'play' =>
         tr('I could not find "{title}" in your playlists.', {'title': name}),
       'play_game' =>

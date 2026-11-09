@@ -2572,6 +2572,8 @@ const Map<String, String> kDe = {
       "gestern",
   "I could not find \"{title}\" in your playlists.":
       "„{title}“ ist nicht in deinen Playlists.",
+  "I could not find \"{title}\" in Media Hub.":
+      "„{title}“ ist nicht in Media Hub.",
   "No channel shows a {title} game today.":
       "Kein Sender zeigt heute ein Spiel von {title}.",
   "I could not find the channel \"{title}\".":

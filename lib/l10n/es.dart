@@ -2669,6 +2669,8 @@ const Map<String, String> kEs = {
       "ayer",
   "I could not find \"{title}\" in your playlists.":
       "No encontré «{title}» en tus listas.",
+  "I could not find \"{title}\" in Media Hub.":
+      "No encontré «{title}» en Media Hub.",
   "No channel shows a {title} game today.":
       "Ningún canal emite un partido de {title} hoy.",
   "I could not find the channel \"{title}\".":

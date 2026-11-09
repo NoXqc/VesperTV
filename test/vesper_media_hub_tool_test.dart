@@ -122,6 +122,11 @@ class _Hub implements VesperHub {
 
   @override
   Future<void> openShow(HubTitle show) async => opened = show;
+
+  List<(HubTitle, ArchiveVideo?)> going = const [];
+
+  @override
+  List<(HubTitle, ArchiveVideo?)> continueWatching() => going;
 }
 
 void main() {
@@ -235,6 +240,31 @@ void main() {
         .call('media_hub', {'action': 'episodes', 'query': 'severance'});
     expect(r['seasons'], [1, 2]);
     expect((r['episodes'] as List).single, containsPair('episode', 3));
+  });
+
+  test('continue plays the title in Continue watching, a show at its episode',
+      () async {
+    hub.going = [(hub.movie, null), (hub.show, _Hub.episodes[1])];
+    var r = await box
+        .call('media_hub', {'action': 'continue', 'query': 'severance'});
+    expect(r['playing'], contains('Severance'));
+    expect(hub.played.last.$1, hub.show);
+    expect(hub.played.last.$2, _Hub.episodes[1]);
+    expect(hub.played.last.$3, isNull, reason: 'the stream picked last time');
+    r = await box.call('media_hub', {'action': 'continue', 'query': 'Carrie'});
+    expect(r['playing'], 'Carrie');
+    expect(hub.played.last.$2, isNull);
+  });
+
+  test('continue on a title not started plays it like play', () async {
+    final r =
+        await box.call('media_hub', {'action': 'continue', 'query': 'carrie'});
+    expect(r['playing'], 'Carrie');
+    expect(hub.played.single.$1, hub.movie);
+    expect(
+        (await box.call('media_hub', {'action': 'continue', 'query': 'zzz'}))
+            .containsKey('error'),
+        isTrue);
   });
 
   test('an AI app asks on the TV before playing', () async {

@@ -127,6 +127,32 @@ void main() {
     });
   });
 
+  test('continue watching / play a title in Media Hub', () {
+    Map<String, Object?>? hub(String s) {
+      final c = p(s);
+      return c?.tool == 'media_hub' ? c!.args : null;
+    }
+
+    const spider = {'action': 'continue', 'query': 'spider man'};
+    expect(hub('continue watching Spider-Man in mediahub'), spider);
+    expect(hub('Continue watching Spider-Man in Media Hub'), spider);
+    expect(hub('keep watching spider-man'), spider);
+    expect(hub('resume Spider-Man'), spider);
+    expect(hub('continue de regarder Spider-Man'), spider);
+    expect(hub('reprends Spider-Man dans le Media Hub'), spider);
+    expect(hub('sigue viendo Spider-Man'), spider);
+    expect(
+        hub('play Carrie in Media Hub'), {'action': 'play', 'query': 'carrie'});
+    // The player and sections keep their meaning.
+    expect(p('continue')?.args, {'action': 'resume'});
+    expect(hub('resume playback'), isNull);
+    expect(hub('continue watching'), isNull);
+    expect(p('open media hub')?.args, {'section': 'hub'});
+    expect(p('open Carrie in Media Hub')?.args,
+        {'section': 'hub', 'query': 'carrie'});
+    expect(p('play TSN 1')?.tool, 'play');
+  });
+
   test('help and the watch list', () {
     expect(p('what can you do?')?.tool, 'help');
     expect(p('aide')?.tool, 'help');

@@ -2631,6 +2631,8 @@ const Map<String, String> kEl = {
       "χθες",
   "I could not find \"{title}\" in your playlists.":
       "Δεν βρήκα το «{title}» στις λίστες σου.",
+  "I could not find \"{title}\" in Media Hub.":
+      "Δεν βρήκα το «{title}» στο Media Hub.",
   "No channel shows a {title} game today.":
       "Κανένα κανάλι δεν δείχνει αγώνα της {title} σήμερα.",
   "I could not find the channel \"{title}\".":
