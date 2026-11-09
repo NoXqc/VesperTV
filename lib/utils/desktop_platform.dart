@@ -33,6 +33,10 @@ bool get usesMediaKit => isDesktop || Platform.isIOS;
 bool get usesMediaKitTarget =>
     isDesktopTarget || defaultTargetPlatform == TargetPlatform.iOS;
 
+/// iPhone / iPad by Flutter's target platform: the media_kit player with a
+/// touch layout instead of the computer's mouse bar.
+bool get isIosTarget => defaultTargetPlatform == TargetPlatform.iOS;
+
 /// No system Back button or key here (a computer, an iPhone): screens that
 /// rely on it show their own back arrow.
 bool get needsBackArrow => isDesktop || Platform.isIOS;

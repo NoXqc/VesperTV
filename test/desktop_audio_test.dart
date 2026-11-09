@@ -6,13 +6,13 @@ import 'package:nox_iptv/services/desktop_audio.dart';
 /// Windows audio tracks (media_kit / mpv): the Android picker's labels and
 /// the same remembered choice (language + label, never a track id).
 void main() {
-  test('labels: name, else language, else Audio n, plus codec and layout', () {
+  test('labels: language and name, else Audio n, plus codec and layout', () {
     expect(
         DesktopAudio.label(
             const AudioTrack('1', 'Commentary', 'eng',
                 codec: 'eac3', channelscount: 6),
             0),
-        'Commentary · E-AC-3 · 5.1');
+        'English (Commentary) · E-AC-3 · 5.1');
     expect(
         DesktopAudio.label(
             const AudioTrack('2', null, 'fre', codec: 'aac', channelscount: 2),

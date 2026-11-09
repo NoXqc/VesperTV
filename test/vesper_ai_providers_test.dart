@@ -244,6 +244,19 @@ void main() {
             {'error': 'This live channel cannot be rewound.'}).text,
         'This channel cannot be rewound.');
     expect(
+        r('player', {'action': 'next_episode'}, {'playing': 'S01E02'}).text,
+        'Playing S01E02');
+    expect(
+        r('player', {'action': 'next_episode'}, {
+          'error': 'No next episode: this is the last one, or not a show.'
+        }).text,
+        'No next episode.');
+    expect(
+        r('player', {'action': 'previous_episode'}, {
+          'error': 'No previous episode: this is the first one, or not a show.'
+        }).text,
+        'No previous episode.');
+    expect(
         r('now_playing', const {}, {
           'title': 'TSN 1',
           'on_now': {'title': 'SportsCentre'},

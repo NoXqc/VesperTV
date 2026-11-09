@@ -1181,6 +1181,48 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         const SingleActivator(LogicalKeyboardKey.arrowRight): () {},
       };
 
+  /// Remote fast-forward / rewind in the groups column and the channel list:
+  /// 10 rows at a time (owner, 2026-11-09). Each row is one plain Down / Up
+  /// move a frame apart, so the list scrolls and builds exactly as for 10
+  /// presses; presses during a jump add to it. The Timeline guide jumps its
+  /// own way ([_TimelineGuideState.jumpVertical]).
+  static const _rowJump = 10;
+  int _pendingRowJump = 0;
+
+  Future<void> _jumpRows(int rows, {bool timeline = false}) async {
+    if (_focusDepth == 0 || _movingChannel != null || _movingGroupKey != null) {
+      return;
+    }
+    if (timeline) {
+      _timelineGuideKey.currentState?.jumpVertical(rows);
+      return;
+    }
+    final running = _pendingRowJump != 0;
+    _pendingRowJump += rows;
+    if (running) return;
+    while (_pendingRowJump != 0 && mounted) {
+      final step = _pendingRowJump.sign;
+      _pendingRowJump -= step;
+      final node = FocusManager.instance.primaryFocus;
+      if (node == null ||
+          !node.focusInDirection(
+              step > 0 ? TraversalDirection.down : TraversalDirection.up)) {
+        _pendingRowJump = 0;
+        break;
+      }
+      await WidgetsBinding.instance.endOfFrame;
+    }
+  }
+
+  Map<ShortcutActivator, VoidCallback> _rowJumpBindings(
+          {bool timeline = false}) =>
+      {
+        const SingleActivator(LogicalKeyboardKey.mediaFastForward): () =>
+            _jumpRows(_rowJump, timeline: timeline),
+        const SingleActivator(LogicalKeyboardKey.mediaRewind): () =>
+            _jumpRows(-_rowJump, timeline: timeline),
+      };
+
   Future<void> _moveChannelStep(int delta) async {
     final channel = _movingChannel;
     if (channel == null) return;
@@ -1469,7 +1511,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         if (mounted) _restoreLiveFocus();
       });
     }
-    if (_isBrowseTab(tab) || tab == 'Home') {
+    if (_isBrowseTab(tab) ||
+        (tab == 'Home' && !HomeScreen.showsMiniPlayer(context))) {
       unawaited(_parkLiveChannel(keepNativeSurface: _isBrowseTab(tab)));
     }
   }
@@ -2035,6 +2078,28 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     });
   }
 
+  /// Wide cards: a movie card's backdrop comes with its get_vod_info (the
+  /// hero's own request, saved for next time). M3U movies have none.
+  Future<String?> Function()? _movieBackdropLoader(Channel c) {
+    if (!_wideBrowseCards || !c.rawId.startsWith('xt_vod_')) return null;
+    final playlist = context.read<PlaylistManager>();
+    return () async {
+      await playlist.getHeroVodDescription(c);
+      return c.anyBackdropUrl;
+    };
+  }
+
+  /// Most panels send a show's backdrop with the list already; the rest
+  /// come with get_series_info, like the hero's.
+  Future<String?> Function()? _seriesBackdropLoader(XtreamSeries s) {
+    if (!_wideBrowseCards) return null;
+    final playlist = context.read<PlaylistManager>();
+    return () async {
+      await playlist.getHeroSeriesDescription(s);
+      return s.anyBackdropUrl;
+    };
+  }
+
   void _onColumnFocus(int depth) {
     if (_focusDepth != depth) setState(() => _focusDepth = depth);
   }
@@ -2176,6 +2241,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     super.initState();
     GuideKey.register(this);
     FocusManager.instance.addListener(_scheduleFocusRecovery);
+    HardwareKeyboard.instance.addHandler(_noteKey);
     WatchList.instance.changes.addListener(_watchListChanged);
     _returnToTv = widget.startupBrowseCovered || widget.startupSportsCovered;
     final prefs = context.read<AppPreferences>();
@@ -2198,9 +2264,13 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       if (!mounted) return;
       // Preserve the browse pages' live-video parking without deferring
       // the selected screen's first paint or changing resume behavior.
+      // Home with its mini player keeps the channel (see _openHome).
+      final homeKeepsLive =
+          HomeScreen.showsMiniPlayer(context) &&
+              prefs.effectiveStartSection == 'home';
       if (_isBrowseTab(_initialTab) ||
-          _initialTab == 'Home' ||
-          widget.startupBrowseCovered) {
+          ((_initialTab == 'Home' || widget.startupBrowseCovered) &&
+              !homeKeepsLive)) {
         unawaited(
             _parkLiveChannel(keepNativeSurface: _isBrowseTab(_initialTab)));
       }
@@ -2283,6 +2353,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   @override
   void dispose() {
     GuideKey.unregister(this);
+    HardwareKeyboard.instance.removeHandler(_noteKey);
+    _focusPreviewTimer?.cancel();
+    _focusPreviewHistory?.cancel();
     WatchList.instance.changes.removeListener(_watchListChanged);
     _returnBackGuard?.cancel();
     appRouteObserver.unsubscribe(this);
@@ -2756,7 +2829,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
 
   Future<void> _previewOrOpenChannel(Channel channel) async {
     _catchupPreview = null;
-    if (usesMediaKit) {
+    // The target platform (not dart:io), so Android tests on a Windows PC
+    // take the Android path, like _previewOrOpenCatchup.
+    if (usesMediaKitTarget) {
       final mini = DesktopMiniPlayer.instance;
       if (mini.channel.value?.id == channel.id) {
         final session = mini.take();
@@ -2790,6 +2865,14 @@ class _TvHomeScreenState extends State<TvHomeScreen>
           playback, (_) => PlayerScreen(channel: channel)));
       return;
     }
+    await _startPreview(channel);
+  }
+
+  /// Android: plays [channel] in the preview box (the first half of
+  /// [_previewOrOpenChannel], also used by Preview on highlight).
+  Future<void> _startPreview(Channel channel,
+      {bool recordHistory = true}) async {
+    final playback = context.read<PlaybackService>();
     // The plain Live list hands the playing row `_currentChannelFocusNode`
     // instead of its own internal node, so the row just pressed swaps nodes
     // the moment currentChannel changes and the D-pad cursor would drop
@@ -2812,7 +2895,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     }
 
     playback.addListener(refocus);
-    final future = playback.play(channel);
+    final future = playback.play(channel, recordHistory: recordHistory);
     _previewChannelId = channel.id;
     _previewFuture = future;
     try {
@@ -2824,6 +2907,123 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         _previewFuture = null;
       }
     }
+  }
+
+  // --- Preview on highlight (Settings > Interface > Guide, opt-in) ---------
+  // The live channel the remote stops on plays in the preview without OK;
+  // OK on it then goes full screen as usual. Only after a remote/keyboard
+  // move, and once the remote has been still on the channel for
+  // [_focusPreviewDelay]: holding Down past 40 channels opens one stream,
+  // not 40 (weak boxes, one-connection accounts), and focus that lands on a
+  // row by itself (Back from full screen, a group opening, a tab change)
+  // never changes what's playing.
+  static const _focusPreviewDelay = Duration(milliseconds: 800);
+
+  /// A highlight preview joins History only once it has been watched this
+  /// long: scrolling past 30 channels shouldn't fill it.
+  static const _focusPreviewHistoryAfter = Duration(seconds: 10);
+
+  static final _navKeys = {
+    LogicalKeyboardKey.arrowUp,
+    LogicalKeyboardKey.arrowDown,
+    LogicalKeyboardKey.arrowLeft,
+    LogicalKeyboardKey.arrowRight,
+    LogicalKeyboardKey.pageUp,
+    LogicalKeyboardKey.pageDown,
+    LogicalKeyboardKey.channelUp,
+    LogicalKeyboardKey.channelDown,
+    // 10-row jumps in the groups / channel list ([_jumpRows]).
+    LogicalKeyboardKey.mediaFastForward,
+    LogicalKeyboardKey.mediaRewind,
+  };
+  DateTime _lastKeyAt = DateTime(0);
+  DateTime _lastNavKeyAt = DateTime(0);
+  Timer? _focusPreviewTimer;
+  Timer? _focusPreviewHistory;
+
+  /// HardwareKeyboard handler: notes when keys go down, never handles one.
+  /// Runs before the focus system moves the cursor, so a highlight that a
+  /// key caused sees that key here already.
+  bool _noteKey(KeyEvent event) {
+    if (event is KeyUpEvent) return false;
+    final now = DateTime.now();
+    _lastKeyAt = now;
+    if (_navKeys.contains(event.logicalKey)) _lastNavKeyAt = now;
+    return false;
+  }
+
+  /// The live list / Timeline guide highlighted [channel] ([highlighted]
+  /// says whether it still is). Restarts the wait on every move.
+  void _scheduleFocusPreview(Channel channel, bool Function() highlighted) {
+    _focusPreviewTimer?.cancel();
+    _focusPreviewTimer = null;
+    if (!mounted || !context.read<AppPreferences>().guideFocusPreview) return;
+    final armedAt = DateTime.now();
+    if (armedAt.difference(_lastNavKeyAt) > const Duration(milliseconds: 500)) {
+      return;
+    }
+    _focusPreviewTimer = Timer(_focusPreviewDelay, () {
+      _focusPreviewTimer = null;
+      // Any key since (OK, Back, a move off the channels) = the remote
+      // didn't stay here; OK does its own preview / full screen.
+      if (_lastKeyAt.isAfter(armedAt)) return;
+      if (!mounted || !highlighted()) return;
+      unawaited(_focusPreview(channel));
+    });
+  }
+
+  Future<void> _focusPreview(Channel channel) async {
+    if (_movingChannel != null) return;
+    final route = ModalRoute.of(context);
+    if (route != null && !route.isCurrent) return;
+    if (!context.read<AppPreferences>().guideFocusPreview) return;
+    final playlist = context.read<PlaylistManager>();
+    // Browsing History itself: recording the channel again would only move
+    // it to the top of the list under the cursor.
+    final inHistory = _effectiveLiveGroup(playlist) == _recentGroupSentinel;
+    if (usesMediaKitTarget) {
+      final mini = DesktopMiniPlayer.instance;
+      if (mini.channel.value?.id == channel.id) return;
+      _catchupPreview = null;
+      mini.play(channel);
+      context.read<StorageService>().setLastChannelId(channel.id);
+      if (!inHistory) {
+        _recordAfterWatching(channel,
+            () => DesktopMiniPlayer.instance.channel.value?.id == channel.id);
+      }
+      return;
+    }
+    final playback = context.read<PlaybackService>();
+    if (playback.liveChannel?.id == channel.id ||
+        _previewChannelId == channel.id) {
+      return;
+    }
+    // A recording holds this account's only connection: OK asks Stop
+    // recording / Cancel first, a highlight never pops that up.
+    if (RecordingService.instance.conflictFor(channel, playlist.profiles) !=
+        null) {
+      return;
+    }
+    _catchupPreview = null;
+    playback.zapList = _currentLiveChannels(playlist);
+    if (!inHistory) {
+      _recordAfterWatching(
+          channel, () => playback.currentChannel?.id == channel.id);
+    }
+    await _startPreview(channel, recordHistory: false);
+  }
+
+  /// History for a highlight preview, once it has played
+  /// [_focusPreviewHistoryAfter] (still playing then, preview or full
+  /// screen).
+  void _recordAfterWatching(Channel channel, bool Function() stillPlaying) {
+    _focusPreviewHistory?.cancel();
+    _focusPreviewHistory = Timer(_focusPreviewHistoryAfter, () {
+      _focusPreviewHistory = null;
+      if (mounted && stillPlaying()) {
+        context.read<PlaybackService>().recordWatched(channel);
+      }
+    });
   }
 
   /// Right, once there's no further column to move into, jumps straight to
@@ -2914,7 +3114,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   bool _videoHiddenForSports = false;
 
   /// Home parks a background live channel like Media Hub: it's a browse
-  /// page, and its own cards start what plays next.
+  /// page, and its own cards start what plays next. With Home's mini player
+  /// on (Settings > Interface > Tabs) the channel keeps playing there
+  /// instead, opened like Sports Trak over a live channel.
   void _openHome() {
     if (_tab == 'Home') {
       setState(() => _phonePage = 1);
@@ -2923,9 +3125,13 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     }
     _returnToTv = true;
     _returnHomeToFavorites = true;
+    final route = MaterialPageRoute<void>(builder: (_) => const HomeScreen());
+    if (HomeScreen.showsMiniPlayer(context)) {
+      unawaited(_pushOverLiveVideo(route));
+      return;
+    }
     _parkLiveChannel();
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const HomeScreen()));
+    Navigator.of(context).push(route);
   }
 
   Future<void> _openSearch() => _pushOverLiveVideo(
@@ -3006,36 +3212,42 @@ class _TvHomeScreenState extends State<TvHomeScreen>
 
   bool _exitPromptOpen = false;
 
-  /// Back from the tabs column: "Are you sure?" instead of closing at once.
-  /// Stay is focused by default so a stray extra Back/Select press can't
-  /// close the app by accident.
+  /// Back from the tabs column leaves the app ([AppExit.back]): on Android
+  /// at once with a warm exit, like the remote's Home key, so opening
+  /// VesperTV again is instant (owner, 2026-11-05 / 2026-11-08). A computer
+  /// still asks "Are you sure?" first (Esc would close the window); Stay is
+  /// focused there so a stray extra press can't close it by accident.
   Future<void> _confirmExit() async {
     if (_exitPromptOpen || (_returnBackGuard?.isActive ?? false)) return;
     if (ProfileGate.backToSelector()) return;
     _exitPromptOpen = true;
-    final exit = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(tr('Exit {appName}?', {'appName': AppConstants.appName})),
-        content: Text(tr('Are you sure you want to exit {appName}?',
-            {'appName': AppConstants.appName})),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(tr('Exit')),
+    try {
+      await AppExit.back(() async {
+        final exit = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(
+                tr('Exit {appName}?', {'appName': AppConstants.appName})),
+            content: Text(tr('Are you sure you want to exit {appName}?',
+                {'appName': AppConstants.appName})),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: Text(tr('Exit')),
+              ),
+              TextButton(
+                autofocus: true,
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: Text(tr('Stay')),
+              ),
+            ],
           ),
-          TextButton(
-            autofocus: true,
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(tr('Stay')),
-          ),
-        ],
-      ),
-    );
-    _exitPromptOpen = false;
-    // Warm (owner, 2026-11-05): like the remote's Home key, so opening
-    // VesperTV again is instant ([AppExit.warm]).
-    if (exit == true && mounted) unawaited(AppExit.warm());
+        );
+        return exit == true && mounted;
+      });
+    } finally {
+      _exitPromptOpen = false;
+    }
   }
 
   /// "History" row under Favourites: a popup of the last 10 live channels
@@ -3150,13 +3362,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         .showSnackBar(SnackBar(content: Text(tr('Favourites cleared.'))));
   }
 
-  void _closeApp() {
-    if (isDesktop) {
-      windowManager.close();
-    } else {
-      SystemNavigator.pop();
-    }
-  }
+  /// A computer closes its players before the window (AppExit.quit).
+  void _closeApp() => unawaited(AppExit.full());
 
   /// A window can't be minimized while it's *in* `fullScreen` mode at all
   /// — confirmed directly: a bare `windowManager.minimize()` call did
@@ -3204,6 +3411,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     final prefs = context.watch<AppPreferences>();
     final screen = MediaQuery.sizeOf(context);
     _compact = screen.width < 600 && screen.height > screen.width;
+    // Read by the browse size getters (top-level, like their Windows
+    // scale): a portrait phone keeps posters, they'd fill the screen.
+    _wideBrowseCards = prefs.wideCards && !_compact;
     // Turning the phone to portrait lands on the content page (what was
     // on the right in landscape); Back then walks to groups and tabs.
     if (!_compact) _phonePage = 2;
@@ -3253,8 +3463,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       // and only exits the app from the tabs column (it used to exit
       // straight from anywhere, including deep inside the guide).
       child: PopScope(
-        // Never pops on its own: Back from the tabs column asks first
-        // (_confirmExit) instead of closing the app straight away.
+        // Never pops on its own: Back from the tabs column goes through
+        // _confirmExit (a warm exit on Android, a prompt on a computer).
         canPop: false,
         onPopInvokedWithResult: (didPop, _) {
           if (!didPop) _handleBack();
@@ -3401,6 +3611,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                                                       LogicalKeyboardKey
                                                           .arrowRight):
                                                   _enterBrowseColumn,
+                                              ..._rowJumpBindings(),
                                             },
                                           _ =>
                                             <ShortcutActivator, VoidCallback>{
@@ -3510,6 +3721,12 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                                                     .currentState
                                                     ?.moveVertical(-1),
                                           },
+                                          // Fast-forward / rewind: 10 groups
+                                          // or channels at a time.
+                                          if (_focusDepth > 0)
+                                            ..._rowJumpBindings(
+                                                timeline: _focusDepth == 2 &&
+                                                    showTimelineGuide),
                                         },
                               child: _compact
                                   ? _buildPhoneColumns(
@@ -4741,6 +4958,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       _guideFocusedChannel = channel;
       _guideFocusedProgram = program;
     });
+    _scheduleFocusPreview(
+        channel, () => _guideFocusedChannel?.id == channel.id);
   }
 
   /// The small live-preview box both guide views use — the Timeline
@@ -5644,6 +5863,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       onFocusChange: (has) {
         if (has) {
           _liveListFocused.value = channel;
+          _scheduleFocusPreview(
+              channel, () => _liveListFocused.value?.id == channel.id);
         } else if (_liveListFocused.value?.id == channel.id) {
           _liveListFocused.value = null;
         }
@@ -5711,6 +5932,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             progressFraction: storage.getWatchedFraction(c.id),
             cardWidth: _browsePosterWidth,
             cardPosterHeight: _browsePosterHeight,
+            wideStyle: _wideBrowseCards,
+            backdropUrl: asSeries ? null : c.anyBackdropUrl,
+            artKey: c.id,
+            loadBackdrop: asSeries ? null : _movieBackdropLoader(c),
             tapToPreview: _touchPreview,
             focusNode: index == 0 ? _continueWatchingFirstFocusNode : null,
             onTap: () => asSeries
@@ -5985,6 +6210,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
           progressFraction: storage.getWatchedFraction(c.id),
           cardWidth: _browsePosterWidth,
           cardPosterHeight: _browsePosterHeight,
+          wideStyle: _wideBrowseCards,
+          backdropUrl: c.anyBackdropUrl,
+          artKey: c.id,
+          loadBackdrop: _movieBackdropLoader(c),
           tapToPreview: _touchPreview,
           focusNode: x.focusNode,
           onToggleFavorite: () => _removeFromWatchList(i),
@@ -6020,6 +6249,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         progressFraction: storage.getWatchedFraction(c.id),
         cardWidth: _browsePosterWidth,
         cardPosterHeight: _browsePosterHeight,
+        wideStyle: _wideBrowseCards,
+        backdropUrl: c.anyBackdropUrl,
+        artKey: c.id,
+        loadBackdrop: _movieBackdropLoader(c),
         tapToPreview: _touchPreview,
         focusNode: x.focusNode,
         isFavorite: true,
@@ -6074,6 +6307,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                 progressFraction: storage.getWatchedFraction(c.id),
                 cardWidth: _browsePosterWidth,
                 cardPosterHeight: _browsePosterHeight,
+                wideStyle: _wideBrowseCards,
+                backdropUrl: c.anyBackdropUrl,
+                artKey: c.id,
+                loadBackdrop: _movieBackdropLoader(c),
                 tapToPreview: _touchPreview,
                 focusNode: index == 0
                     ? _firstPosterFocusNodeForGroup(
@@ -6172,6 +6409,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
           rating: s.rating,
           cardWidth: _browsePosterWidth,
           cardPosterHeight: _browsePosterHeight,
+          wideStyle: _wideBrowseCards,
+          backdropUrl: s.anyBackdropUrl,
+          artKey: s.id,
+          loadBackdrop: _seriesBackdropLoader(s),
           tapToPreview: _touchPreview,
           focusNode: x.focusNode,
           onToggleFavorite: () => _removeFromWatchList(i),
@@ -6207,6 +6448,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               rating: s.rating,
               cardWidth: _browsePosterWidth,
               cardPosterHeight: _browsePosterHeight,
+              wideStyle: _wideBrowseCards,
+              backdropUrl: s.anyBackdropUrl,
+              artKey: s.id,
+              loadBackdrop: _seriesBackdropLoader(s),
               tapToPreview: _touchPreview,
               focusNode: x.focusNode,
               isFavorite: true,
@@ -6237,6 +6482,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               imageUrl: c.logoUrl,
               cardWidth: _browsePosterWidth,
               cardPosterHeight: _browsePosterHeight,
+              wideStyle: _wideBrowseCards,
+              backdropUrl: c.anyBackdropUrl,
+              artKey: c.id,
+              loadBackdrop: _movieBackdropLoader(c),
               tapToPreview: _touchPreview,
               focusNode: x.focusNode,
               isFavorite: true,
@@ -6312,6 +6561,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             rating: s.rating,
             cardWidth: _browsePosterWidth,
             cardPosterHeight: _browsePosterHeight,
+            wideStyle: _wideBrowseCards,
+            backdropUrl: s.anyBackdropUrl,
+            artKey: s.id,
+            loadBackdrop: _seriesBackdropLoader(s),
             tapToPreview: _touchPreview,
             focusNode: index == 0
                 ? _firstPosterFocusNodeForGroup(group.playlistId, group.title)
@@ -7042,16 +7295,22 @@ class _GroupRowState extends State<_GroupRow> {
 // Was 1.8 — reduced ~30% per direct feedback that the first pass at
 // this was too big.
 const double _windowsPosterScale = 1.26;
-double get _browsePosterWidth =>
-    isDesktop ? PosterCard.width * _windowsPosterScale : PosterCard.width;
-double get _browsePosterHeight => isDesktop
-    ? PosterCard.posterHeight * _windowsPosterScale
-    : PosterCard.posterHeight;
+
+/// Settings > Interface > Tabs > Wide cards (16:9 backdrop cards, a little
+/// taller than the posters too). Set at the top of every TV home build.
+bool _wideBrowseCards = false;
+const double _wideCardScale = PosterCard.wideStyleScale;
+
+double get _browseScale =>
+    (isDesktop ? _windowsPosterScale : 1.0) *
+    (_wideBrowseCards ? _wideCardScale : 1.0);
+double get _browsePosterWidth => _wideBrowseCards
+    ? _browsePosterHeight * 16 / 9
+    : PosterCard.width * _browseScale;
+double get _browsePosterHeight => PosterCard.posterHeight * _browseScale;
+// PosterCard scales its title row the same way (by height when wide).
 double get _browseCardHeight =>
-    _browsePosterHeight +
-    (isDesktop
-        ? PosterCard.titleHeight * _windowsPosterScale
-        : PosterCard.titleHeight);
+    _browsePosterHeight + PosterCard.titleHeight * _browseScale;
 
 /// [_CategoryRow]'s own section-title bar — a fixed height (not left to
 /// whatever `SectionLabel`'s text happens to measure out to) specifically
@@ -9097,6 +9356,15 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   /// [_trackFocus] and finds whichever block in the target row covers
   /// that same moment, so moving between rows stays on the same time
   /// column instead of following block geometry.
+  /// Remote fast-forward / rewind: [delta] channels at once, stopping at
+  /// the first / last one ([moveVertical] past the top leaves the guide).
+  void jumpVertical(int delta) {
+    final rowIndex = _focusedRowIndex;
+    if (rowIndex == null || widget.channels.isEmpty) return;
+    final target = (rowIndex + delta).clamp(0, widget.channels.length - 1);
+    if (target != rowIndex) moveVertical(target - rowIndex);
+  }
+
   void moveVertical(int delta) {
     final rowIndex = _focusedRowIndex;
     if (rowIndex == null) return;

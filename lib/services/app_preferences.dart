@@ -39,7 +39,15 @@ class AppPreferences extends ChangeNotifier {
   /// Fill the full-video Timeline area instead of limiting it to three rows.
   late bool guideExpanded;
   late bool guideCompact;
+
+  /// Live list / Timeline guide: the channel the remote stops on plays in
+  /// the preview (opt-in, per viewer like the other guide settings).
+  late bool guideFocusPreview;
   late bool expandedBrowse;
+
+  /// Movies / TV Shows rows as 16:9 backdrop cards (Settings > Interface >
+  /// Tabs > Wide cards).
+  late bool wideCards;
 
   /// Movies / TV Shows tabs (and their search results) hidden, each on its
   /// own switch (Settings > General > Tabs).
@@ -69,6 +77,16 @@ class AppPreferences extends ChangeNotifier {
 
   void setHideProfiles(bool value) {
     _storage.setHideProfiles(value);
+    notifyListeners();
+  }
+
+  /// Home's mini player: the live channel the remote stops on plays at the
+  /// top right, and a channel playing when Home opens keeps playing there
+  /// (off = Home parks it, as before). Per viewer, on by default.
+  bool get homeMiniPlayer => _storage.getHomeMiniPlayer();
+
+  void setHomeMiniPlayer(bool value) {
+    _storage.setHomeMiniPlayer(value);
     notifyListeners();
   }
 
@@ -362,6 +380,14 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// TV home screen rows: see [AppConstants.keyLauncherRows].
+  bool get launcherRows => _storage.getLauncherRows();
+
+  void setLauncherRows(bool value) {
+    _storage.setLauncherRows(value);
+    notifyListeners();
+  }
+
   /// Update in the background: see [AppConstants.keyBackgroundSync]. Read
   /// once at launch, when a full catalog sync is due.
   bool get backgroundSync => _storage.getBackgroundSync();
@@ -396,7 +422,9 @@ class AppPreferences extends ChangeNotifier {
     guideFullVideo = _storage.getGuideFullVideo();
     guideExpanded = _storage.getGuideExpanded();
     guideCompact = _storage.getGuideCompact();
+    guideFocusPreview = _storage.getGuideFocusPreview();
     expandedBrowse = _storage.getExpandedBrowse();
+    wideCards = _storage.getWideCards();
     hideMovies = _storage.getHideMovies();
     hideShows = _storage.getHideShows();
     hideLiveTv = _storage.getHideLiveTv();
@@ -446,6 +474,7 @@ class AppPreferences extends ChangeNotifier {
     guideFullVideo = _storage.getGuideFullVideo();
     guideExpanded = _storage.getGuideExpanded();
     guideCompact = _storage.getGuideCompact();
+    guideFocusPreview = _storage.getGuideFocusPreview();
     notifyListeners();
   }
 
@@ -507,9 +536,21 @@ class AppPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setWideCards(bool value) {
+    wideCards = value;
+    _storage.setWideCards(value);
+    notifyListeners();
+  }
+
   void setGuideCompact(bool value) {
     guideCompact = value;
     _storage.setGuideCompact(value);
+    notifyListeners();
+  }
+
+  void setGuideFocusPreview(bool value) {
+    guideFocusPreview = value;
+    _storage.setGuideFocusPreview(value);
     notifyListeners();
   }
 

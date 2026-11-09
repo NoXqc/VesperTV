@@ -105,7 +105,8 @@ final class HttpVideoAsset extends VideoAsset {
       http = () -> new LiveReconnectDataSource(initialFactory.createDataSource(), stats);
     }
     DataSource.Factory dataSourceFactory = new DefaultDataSource.Factory(context, http);
-    return new DefaultMediaSourceFactory(dataSourceFactory, liveCaptionExtractors());
+    return new DefaultMediaSourceFactory(
+        dataSourceFactory, MatroskaAtmos.wrap(liveCaptionExtractors()));
   }
 
   /**

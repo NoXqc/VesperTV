@@ -528,6 +528,30 @@ class StorageService {
       _prefs.setBool(AppConstants.keyLaunchWithProfiles, value);
 
   bool getFastStartup() => _prefs.getBool(AppConstants.keyFastStartup) ?? true;
+
+  bool getLauncherRows() =>
+      _prefs.getBool(AppConstants.keyLauncherRows) ?? true;
+  Future<void> setLauncherRows(bool value) =>
+      _prefs.setBool(AppConstants.keyLauncherRows, value);
+  String? getLauncherState() => _prefs.getString(AppConstants.keyLauncherState);
+  Future<void> setLauncherState(String json) =>
+      _prefs.setString(AppConstants.keyLauncherState, json);
+
+  /// Show key (`playlistId:seriesId`) -> {after: episode id, next: the
+  /// following episode's channel JSON}. See [AppConstants.keyNextEpisodes].
+  Map<String, dynamic> getNextEpisodes() {
+    final raw = _prefs.getString(_vk(AppConstants.keyNextEpisodes));
+    if (raw == null) return {};
+    try {
+      final map = jsonDecode(raw);
+      return map is Map<String, dynamic> ? map : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> setNextEpisodes(Map<String, dynamic> map) =>
+      _prefs.setString(_vk(AppConstants.keyNextEpisodes), jsonEncode(map));
   Future<void> setFastStartup(bool value) =>
       _prefs.setBool(AppConstants.keyFastStartup, value);
 
@@ -736,6 +760,11 @@ class StorageService {
       _prefs.getBool(_vk(AppConstants.keyHideProfiles)) ?? false;
   Future<void> setHideProfiles(bool value) =>
       _prefs.setBool(_vk(AppConstants.keyHideProfiles), value);
+
+  bool getHomeMiniPlayer() =>
+      _prefs.getBool(_vk(AppConstants.keyHomeMiniPlayer)) ?? true;
+  Future<void> setHomeMiniPlayer(bool value) =>
+      _prefs.setBool(_vk(AppConstants.keyHomeMiniPlayer), value);
 
   /// Home page rows for the active viewer (see `HomeRows`).
   List<String>? getHomeRows() =>
@@ -957,9 +986,16 @@ class StorageService {
       _prefs.getBool(AppConstants.keyExpandedBrowse) ?? false;
   Future<void> setExpandedBrowse(bool value) =>
       _prefs.setBool(AppConstants.keyExpandedBrowse, value);
+  bool getWideCards() => _prefs.getBool(AppConstants.keyWideCards) ?? false;
+  Future<void> setWideCards(bool value) =>
+      _prefs.setBool(AppConstants.keyWideCards, value);
   bool getGuideCompact() => _guideBool(AppConstants.keyGuideCompact) ?? false;
   Future<void> setGuideCompact(bool value) =>
       _prefs.setBool(_vk(AppConstants.keyGuideCompact), value);
+  bool getGuideFocusPreview() =>
+      _guideBool(AppConstants.keyGuideFocusPreview) ?? false;
+  Future<void> setGuideFocusPreview(bool value) =>
+      _prefs.setBool(_vk(AppConstants.keyGuideFocusPreview), value);
 
   // --- Favorites (per viewer, shared across every playlist) -----------------
   // Favorites aren't namespaced by playlist (a favorited channel is just a
@@ -1504,6 +1540,8 @@ class StorageService {
     AppConstants.keyStartSection,
     AppConstants.keyStartSectionPending,
     AppConstants.keyFastStartup,
+    AppConstants.keyLauncherRows,
+    AppConstants.keyLauncherState,
     AppConstants.keyBackgroundSync,
     AppConstants.keyLaunchWithProfiles,
     AppConstants.keyPlaylistEnabled,
@@ -1534,6 +1572,7 @@ class StorageService {
     _goalPhoneCheckpoint,
     AppConstants.keyAiDevicePrefix,
     AppConstants.keySportsDbRounds,
+    AppConstants.keyNextEpisodes,
   ];
 
   static const _goalPhoneCheckpoint = 'vesper_goal_phone_checkpoint';
@@ -1911,6 +1950,19 @@ class StorageService {
   Future<void> setShownGroups(String playlistId, Set<String> groups) =>
       _prefs.setStringList(
           _vkp(AppConstants.keyShownGroups, playlistId), groups.toList());
+
+  /// [getShownGroups] of any viewer, active or not (Vesper AI edits a kids
+  /// profile from a parent's).
+  Set<String> getShownGroupsFor(String viewerId, String playlistId) =>
+      (_prefs.getStringList(_vk('${AppConstants.keyShownGroups}_$playlistId',
+                  viewerId: viewerId)) ??
+              [])
+          .toSet();
+  Future<void> setShownGroupsFor(
+          String viewerId, String playlistId, Set<String> groups) =>
+      _prefs.setStringList(
+          _vk('${AppConstants.keyShownGroups}_$playlistId', viewerId: viewerId),
+          groups.toList());
 
   /// Removes every one of [viewerId]'s own keys — favorites, hidden/shown/
   /// favorited groups and hidden channels for every playlist, positions/

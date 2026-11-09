@@ -40,11 +40,27 @@
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
   {
+    "id": "d5b260172234b167",
+    "category": "Live TV",
+    "title": "Preview without pressing OK",
+    "answer": "Off by default. When it is on, the channel you stop on with the arrows plays in the preview after a moment, in the Live list and the Timeline guide. Channels you scroll past are not opened, only the one you stay on. OK on it opens full screen. A previewed channel joins History once it has played for 10 seconds. While a recording uses the account's only connection, highlighting never interrupts it: press OK to choose.",
+    "controls": "Settings → Interface → Guide → Preview on highlight",
+    "url": "https://vespertv.app/remote.html#Live%20TV"
+  },
+  {
     "id": "ba9cc8950d070a30",
     "category": "Live TV",
     "title": "Search channels",
     "answer": "Open Search from the side menu and enter the channel name. Matching channels appear in the Live TV row. Move to a channel and press OK to play it. Search also shows matching movies, TV shows and Media Hub titles in separate rows.",
     "controls": "Search (magnifying glass) in the side menu",
+    "url": "https://vespertv.app/remote.html#Live%20TV"
+  },
+  {
+    "id": "9913ba0b42e9125a",
+    "category": "Live TV",
+    "title": "Jump 10 groups or channels",
+    "answer": "In the groups column, the channel list and the Timeline guide, Fast-forward moves down 10 rows and Rewind moves up 10. It stops at the first or last one. Movies and TV Shows categories too.",
+    "controls": "Remote ⏪ Rewind / ⏩ Fast-forward",
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
   {
@@ -324,7 +340,15 @@
     "category": "Home",
     "title": "Choose a profile at startup",
     "answer": "Turn this on, then fully close and reopen VesperTV. After the splash, use the arrows and OK, or tap a profile, to open the app in that profile. The last-used profile starts focused. Photos appear when set; leaving a restricted profile still needs the PIN. The switch is off by default and applies to this device.",
-    "controls": "Settings > General > Startup > Launch with profiles selector",
+    "controls": "Settings > Playlists & guide > Profiles > Launch with profiles selector",
+    "url": "https://vespertv.app/remote.html#Home"
+  },
+  {
+    "id": "8b1446377f0dda91",
+    "category": "Home",
+    "title": "Home mini player",
+    "answer": "Stop on a live channel card (Favourite channels, Recent channels, a game on now) for a moment and it plays in the mini player at the top right of Home. OK on the card opens it full screen with the same stream; Back returns to Home with it still playing. To turn it off without leaving Home, press ⏯ on the card that is playing (or Stop), or hold OK on any card and choose Stop mini player. It then stays off while you browse, until ⏯ on a channel card plays that one right away. A channel already playing when you open Home keeps playing there. Opening a movie or show stops it. Turn it off in Settings > Interface > Tabs > Mini player on Home (per profile); Home then stops the channel as before. TVs, boxes and computers only (not phones).",
+    "controls": "Home · rest on a channel card",
     "url": "https://vespertv.app/remote.html#Home"
   },
   {
@@ -339,7 +363,7 @@
     "id": "fc418dd9a734ec36",
     "category": "Home",
     "title": "Back to Who's watching",
-    "answer": "With Settings > General > Startup > Launch with profiles selector enabled, leaving the TV or Sports Mode root stops playback and returns to Who's watching. In Sports Mode, first use Back to open the sidebar and stop its player. Back on Who's watching asks whether to exit, with Stay selected. With the startup selector off, the existing exit flow stays in place.",
+    "answer": "With Settings > Playlists & guide > Profiles > Launch with profiles selector enabled, leaving the TV or Sports Mode root stops playback and returns to Who's watching. In Sports Mode, first use Back to open the sidebar and stop its player. Back on Who's watching leaves VesperTV at once (on a computer it asks first, with Stay selected). With the startup selector off, the existing exit flow stays in place.",
     "controls": "TV home / Sports Mode root · Back",
     "url": "https://vespertv.app/remote.html#Home"
   },
@@ -475,7 +499,7 @@
     "id": "ccbd8e49bc9e8850",
     "category": "Sports Trak",
     "title": "Sports Mode Back chain",
-    "answer": "From the sports page, Back opens the sidebar and keeps the player running. Back on the sidebar stops playback; another Back leaves the sports root. With Launch with profiles selector enabled, it returns to Who's watching; otherwise it asks to exit. If a Live TV panel is open, Back first closes its channel guide, then its groups panel. Back while reordering a league finishes the move. Regular Sports Trak keeps its existing Back behavior.",
+    "answer": "From the sports page, Back opens the sidebar and keeps the player running. Back on the sidebar stops playback; another Back leaves the sports root. With Launch with profiles selector enabled, it returns to Who's watching; otherwise it leaves VesperTV at once (on a computer it asks first). If a Live TV panel is open, Back first closes its channel guide, then its groups panel. Back while reordering a league finishes the move. Regular Sports Trak keeps its existing Back behavior.",
     "controls": "Sports Mode · Back on the page, then on the sidebar",
     "url": "https://vespertv.app/remote.html#Sports%20Trak"
   },
@@ -723,7 +747,7 @@
     "id": "38510ae204d0cbb0",
     "category": "Vesper AI",
     "title": "Vesper AI without an API key",
-    "answer": "Built-in commands are free and parsed on your device: try \"play TSN 1\", \"mets RDS\", \"pause\", \"next channel\", \"what's on TSN 1\", \"when is the Simpsons on\", \"today's games\", \"put on the Habs game\", \"search for Dune\" or \"help\". The channel, programme or game must be available in your own sources and guide. Going back on live TV needs provider catch-up support. Leave Your AI set to None to use built-in commands only. Local command parsing does not make streaming, guide updates or voice recognition work offline.",
+    "answer": "Built-in commands are free and parsed on your device: try \"play TSN 1\", \"mets RDS\", \"pause\", \"next channel\", \"next episode\", \"fast forward 2 minutes\", \"what's on TSN 1\", \"when is the Simpsons on\", \"today's games\", \"put on the Habs game\", \"search for Dune\" or \"help\". The channel, programme or game must be available in your own sources and guide. Going back on live TV needs provider catch-up support. Leave Your AI set to None to use built-in commands only. Local command parsing does not make streaming, guide updates or voice recognition work offline.",
     "controls": "Type or say: play TSN 1 · pause · go back 30 seconds · today's games · help",
     "url": "https://vespertv.app/remote.html#Vesper%20AI"
   },
@@ -755,7 +779,7 @@
     "id": "edb2bb413836e696",
     "category": "Vesper AI",
     "title": "Connect an AI app with MCP",
-    "answer": "Enable Let AI apps control VesperTV and copy this TV's private connector address into a compatible AI app's custom MCP connector. A Claude connector was tested; other clients, including ChatGPT, still need testing and must support custom MCP connections. Leave VesperTV open on that TV. Ask on the TV first is on by default: starting a channel or title, hiding/showing groups and clearing the watch list wait for confirmation. Read-only requests, player controls and individual list edits can run without a dialog. The address itself grants access: keep it private. Reset the address invalidates the old link; add the new address in your AI app. Disable Let AI apps control VesperTV to stop remote requests.",
+    "answer": "Enable Let AI apps control VesperTV and copy this TV's private connector address into a compatible AI app's custom MCP connector. A Claude connector was tested; other clients, including ChatGPT, still need testing and must support custom MCP connections. Leave VesperTV open on that TV. Ask on the TV first is on by default: starting a channel or title, hiding/showing groups, changing settings and clearing history or the watch list wait for confirmation. Read-only requests, player controls and individual list edits can run without a dialog. The address itself grants access: keep it private. Reset the address invalidates the old link; add the new address in your AI app. Disable Let AI apps control VesperTV to stop remote requests.",
     "controls": "Settings → Vesper AI → AI apps → Let AI apps control VesperTV",
     "url": "https://vespertv.app/remote.html#Vesper%20AI"
   },
@@ -765,6 +789,14 @@
     "title": "Vesper AI on several TVs",
     "answer": "Each TV has its own connector address. Add a separate connector for each TV and name them clearly in your AI app, for example VesperTV Living room and VesperTV Bedroom. The link targets that one TV; Vesper does not yet offer a shared multi-TV link or choose a TV automatically. Keep the intended TV's VesperTV app open.",
     "controls": "One private connector address per TV",
+    "url": "https://vespertv.app/remote.html#Vesper%20AI"
+  },
+  {
+    "id": "57fc667f00346ac1",
+    "category": "Vesper AI",
+    "title": "Change settings and clear history with an AI",
+    "answer": "Your AI and linked AI apps can read and change many settings: playback (skip intro, Up Next, live buffer, audio delay, subtitle size and languages, frame rate and resolution matching), startup, language and theme, the guide, which tabs show, and Sports Trak options. Several can change at once with one OK on the TV. They can also clear recent searches and channels, Continue Watching and saved progress, Media Hub Recently watched or the watch list, and reload the TV guide. Ask on the TV first, AI keys, the PIN, profiles and playlists are never changed this way. Kids profiles can read settings but not change them. Some startup settings apply the next time the app starts.",
+    "controls": "Ask your AI: turn off skip intro · hide the Movies tab · clear my watch history · update the guide",
     "url": "https://vespertv.app/remote.html#Vesper%20AI"
   },
   {

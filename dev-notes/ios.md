@@ -55,8 +55,16 @@ preview it on a box:
 - Android-only features stay off on iOS (they check `Platform.isAndroid`): recording, native
   video surface, PiP, Match frame rate, Backup & restore, phone notifications, voice input.
   Some Android channel calls may log `MissingPluginException` in Send log: harmless, list them.
-- The full-screen player is the desktop one (mouse-first bar); touch works but it was laid
-  out for a PC. A touch-sized bar is the likely next step.
+- Full-screen player: `DesktopPlayerScreen` with a touch layout on iOS (`_touch` =
+  `isIosTarget`, 2026-11-09, after the owner's iPhone 8 showed the PC bar squeezed into a
+  portrait phone): landscape on open on a phone (also with the rotation lock on) + Rotate,
+  top bar back / title / Sources / Rotate, big play/pause and +-10 s in the middle, seek bar
+  (seeks on release) + badges + buttons at the bottom, hides after 4 s, no volume slider.
+  Computers keep the mouse bar. Not device-tested yet.
+- Merged main (+695) on 2026-11-09: brings the desktop live reconnect fixes (`5b360ce`
+  30 s network timeout + error check, `3e7b392`); `cache-on-disk no` now on iOS too (sandbox).
+  Main's new player checks (Home mini player, Preview on highlight, Vesper AI media_hub /
+  settings tools) use `usesMediaKit(Target)`; layout-only `isDesktop` checks stay.
 - `kDesktopStreamUserAgent` still says "VesperTV Windows".
 - Store listing, privacy labels, review demo content, GPL exception
   (dev-notes/apple-platforms.md on the owner's checkout) — before any App Store upload.

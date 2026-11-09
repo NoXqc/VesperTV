@@ -2,7 +2,10 @@ import '../utils/refined_finish.dart';
 import 'package:flutter/material.dart';
 
 import 'tv_app_bar_button.dart';
+import 'tv_menu_tile.dart';
 import '../l10n/l10n.dart';
+import '../services/device_memory_service.dart';
+import '../utils/desktop_platform.dart';
 
 /// Every Settings-family screen's background used to be whatever flat,
 /// near-black surface `ThemeData.scaffoldBackgroundColor` happened to
@@ -39,6 +42,9 @@ class SettingsScaffold extends StatelessWidget {
   /// kept optional since most Settings screens don't.
   final PreferredSizeWidget? bottom;
 
+  /// Compact rows on this device (a TV box or a computer).
+  static bool get compact => DeviceTypeService.television || isDesktopTarget;
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -72,7 +78,12 @@ class SettingsScaffold extends StatelessWidget {
             actions: actions,
             bottom: bottom,
           ),
-          body: body,
+          // TV boxes and computers: compact rows (CompactMenus). Phones
+          // keep Material's touch sizes.
+          body: compact
+              ? CompactMenus(
+                  child: CompactMenus.listTheme(context, child: body))
+              : body,
         ),
       ],
     );

@@ -27,6 +27,7 @@ import 'archive_ready_watch.dart';
 import 'device_memory_service.dart';
 import 'display_match.dart';
 import 'archive_service.dart';
+import 'archive_playback_sources.dart';
 import 'watch_tracker.dart';
 import 'vod_buffering.dart';
 import 'live_stream_format.dart';
@@ -247,6 +248,22 @@ class PlaybackService extends ChangeNotifier {
   Future<Channel?> Function(Channel)? _upNextResolver;
   bool _resolvingQueued = false;
 
+  /// The Media Hub streams of the title the full-screen player shows (its
+  /// source drawer's), for Vesper AI; null for anything else. Set by
+  /// PlayerScreen.
+  ArchivePlaybackSources? hubSources;
+
+  /// Same title or episode, another of its streams (the source drawer,
+  /// Vesper AI): teardown saves the position and the new player resumes
+  /// there; a paused title stays paused.
+  Future<void> replaceStream(Channel replacement) async {
+    final wasPlaying = controller?.value.isPlaying ?? true;
+    await play(replacement);
+    final player = controller;
+    await initFuture;
+    if (!wasPlaying && controller == player) await player?.pause();
+  }
+
   void setUpNextQueue(List<Channel>? queue,
       {Future<Channel?> Function(Channel)? resolve}) {
     _upNextQueue = queue;
@@ -300,7 +317,19 @@ class PlaybackService extends ChangeNotifier {
 
   bool get isPlayingSomething => currentChannel != null;
 
+  /// Bumped (with a notify) each time the viewer's history has been read
+  /// from disk ([init], [reloadForViewer]). The launch reads it after the UI
+  /// shows, so Home opened at launch fills its history rows only then
+  /// (owner, 2026-11-09: no channel rows until a trip to the TV tab).
+  int historyLoads = 0;
+
   Future<void> init() async {
+    await _readHistory();
+    historyLoads++;
+    notifyListeners();
+  }
+
+  Future<void> _readHistory() async {
     final raw = await _storage.readCacheFile(_recentlyPlayedCacheKeyForViewer);
     if (raw == null) {
       _recentlyPlayed = [];
@@ -436,7 +465,11 @@ class PlaybackService extends ChangeNotifier {
 
   final _nativeSwitchReleases = <VoidCallback>{};
 
-  Future<void> play(Channel channel) async {
+  /// [recordHistory] false: not added to [recentlyPlayed] (History) yet —
+  /// the TV guide's Preview on highlight plays every channel the remote
+  /// stops on and records it only once it has been watched a while
+  /// ([recordWatched]).
+  Future<void> play(Channel channel, {bool recordHistory = true}) async {
     if (channel.url.isEmpty && resolveLive != null) {
       final resolved = await resolveLive!(channel);
       if (resolved == null || resolved.url.isEmpty) {
@@ -449,7 +482,7 @@ class PlaybackService extends ChangeNotifier {
         !NativeVideoSurface.active ||
         textureVideo ||
         currentChannel?.id == channel.id) {
-      return _playChannel(channel);
+      return _playChannel(channel, recordHistory);
     }
     final release = NativeVideoSurface.retainForPlayerSwitch();
     _nativeSwitchReleases.add(release);
@@ -459,7 +492,7 @@ class PlaybackService extends ChangeNotifier {
     }
 
     try {
-      await _playChannel(channel);
+      await _playChannel(channel, recordHistory);
       final initializing = initFuture;
       if (initializing == null) {
         finish();
@@ -480,7 +513,8 @@ class PlaybackService extends ChangeNotifier {
     _nativeSwitchReleases.clear();
   }
 
-  Future<void> _playChannel(Channel channel) async {
+  Future<void> _playChannel(Channel channel,
+      [bool recordHistory = true]) async {
     if (channel.id != _copyFallbackFor) copyFallbackName = null;
     _announce(tr('Playing {name}', {'name': channel.name}));
     // A queued episode whose stream isn't known yet (Archive Next / auto-
@@ -537,7 +571,7 @@ class PlaybackService extends ChangeNotifier {
     final openUrl = await openUrlFor?.call(channel) ?? channel.url;
     if (gen != _playGen) return;
 
-    if (await _reuseNativeLive(channel, openUrl)) return;
+    if (await _reuseNativeLive(channel, openUrl, recordHistory)) return;
     if (gen != _playGen) return;
 
     // Before the teardown: it reads currentChannel for the old title's
@@ -564,7 +598,7 @@ class PlaybackService extends ChangeNotifier {
     // channel or a different one the user picked instead.
     pendingResumeChannel = null;
     notifyListeners();
-    unawaited(_recordRecentlyPlayed(channel));
+    if (recordHistory) unawaited(_recordRecentlyPlayed(channel));
 
     // Confirmed on real hardware as the cause of a live channel looking
     // "stuck paused": a live id can carry a *stale* saved position from
@@ -1023,7 +1057,8 @@ class PlaybackService extends ChangeNotifier {
   final _restartLoopListeners = Expando<VoidCallback>();
   int _nativeZapGeneration = 0;
 
-  Future<bool> _reuseNativeLive(Channel channel, String url) async {
+  Future<bool> _reuseNativeLive(Channel channel, String url,
+      [bool recordHistory = true]) async {
     final c = controller;
     final previous = currentChannel;
     if (!NativeVideoSurface.active ||
@@ -1074,7 +1109,7 @@ class PlaybackService extends ChangeNotifier {
       playingSince = DateTime.now();
       _autoAdvanceDismissed = false;
       _watchRestartLoop(c, channel);
-      unawaited(_recordRecentlyPlayed(channel));
+      if (recordHistory) unawaited(_recordRecentlyPlayed(channel));
       unawaited(_recordRealResolution(c, channel));
       unawaited(DisplayMatch.start(_storage, c,
           () => controller == c && currentChannel?.id == channel.id));
@@ -1547,11 +1582,38 @@ class PlaybackService extends ChangeNotifier {
             WatchTracker.instance.stopped(ch.id, old.value.position, duration));
       }
     }
+    if (ch != null) _rememberNextEpisode(ch);
     controller = null;
     playingSince = null;
     initFuture = null;
     unawaited(WakelockPlus.disable());
     await old?.dispose();
+  }
+
+  /// An IPTV episode is left while its show's queue is set: the episode
+  /// after it is noted per show, so the TV launcher can offer it once this
+  /// one is watched (LauncherChannels' next episode card).
+  void _rememberNextEpisode(Channel ch) {
+    final queue = _upNextQueue;
+    if (queue == null ||
+        ch.isLive ||
+        ch.seriesId == null ||
+        ch.playlistId == ArchiveService.playlistId) {
+      return;
+    }
+    final index = queue.indexWhere((c) => c.id == ch.id);
+    if (index < 0 || index + 1 >= queue.length) return;
+    final next = queue[index + 1]
+      ..seriesId ??= ch.seriesId
+      ..seriesName ??= ch.seriesName
+      ..seriesCoverUrl ??= ch.seriesCoverUrl;
+    final key = '${ch.playlistId}:${ch.seriesId}';
+    final map = _storage.getNextEpisodes()..remove(key);
+    map[key] = {'after': ch.id, 'next': next.toJson()};
+    while (map.length > 30) {
+      map.remove(map.keys.first);
+    }
+    unawaited(_storage.setNextEpisodes(map));
   }
 
   @override

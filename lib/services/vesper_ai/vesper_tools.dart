@@ -1,27 +1,51 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/services.dart';
+import 'package:video_player_hdr/video_player_hdr.dart';
+
 import '../../l10n/l10n.dart';
+import '../../models/archive_models.dart';
 import '../../models/channel.dart';
 import '../../models/epg_program.dart';
 import '../../models/sports.dart';
+import '../../models/viewer_profile.dart';
 import '../../models/xtream_series.dart';
 import '../../utils/title_search.dart';
+import '../addon_service.dart';
 import '../app_preferences.dart';
+import '../archive_playback_preferences.dart';
+import '../archive_playback_sources.dart';
+import '../archive_service.dart';
+import '../archive_stream_size.dart';
+import '../audio_track_preferences.dart';
+import '../channel_copy_fallback.dart';
 import '../epg_service.dart';
 import '../playback_service.dart';
 import '../playlist_edits.dart';
 import '../playlist_edits_diff.dart';
 import '../playlist_manager.dart';
 import '../playlist_session.dart';
+import '../real_4k_channels.dart';
 import '../sports_channel_countries.dart';
 import '../sports_channel_matcher.dart';
 import '../sports_service.dart';
 import '../storage_service.dart';
+import '../stream_languages.dart';
+import '../subtitle_tracks.dart';
+import '../vod_buffering.dart';
 import 'watch_list.dart';
+import '../../utils/constants.dart';
 import '../../utils/desktop_platform.dart';
+import '../../utils/video_hdr_report.dart';
+import '../../widgets/data_pool_card.dart';
 
+part 'game_channel_tool.dart';
+part 'media_hub_tool.dart';
+part 'player_tracks.dart';
 part 'playlist_editor_tool.dart';
+part 'profiles_tool.dart';
+part 'settings_tool.dart';
 part 'vesper_help.dart';
 
 /// Who asked: the viewer on the TV (voice / typing / phone microphone, or
@@ -46,6 +70,29 @@ abstract interface class VesperHost {
 
   /// A short line on the TV (an AI app talking to the viewer).
   void showMessage(String text);
+}
+
+/// Viewer profiles and the parental PIN for the profiles / parental tools
+/// (the app's is in vesper_host.dart). The PIN is only ever typed on the
+/// TV's own pad: nothing here takes or returns its digits.
+abstract interface class VesperProfileControl {
+  List<ViewerProfile> get profiles;
+  ViewerProfile get active;
+  bool get pinSet;
+
+  /// The PIN pad on the TV: true only on the right PIN (false on Back, a
+  /// lockout, or nobody answering in time).
+  Future<bool> askPin();
+
+  /// "Enter a new PIN, then again" on the TV: true once saved.
+  Future<bool> newPin();
+
+  /// [unlocked]: the PIN was already entered for this request.
+  Future<bool> switchTo(String id, {bool unlocked = false});
+  Future<ViewerProfile> create(String name,
+      {required bool kid, required int colour});
+  Future<void> rename(String id, String name);
+  Future<bool> delete(String id);
 }
 
 /// A failure the model / viewer should read: said back as is.
@@ -84,10 +131,23 @@ class VesperToolbox {
     required this.prefs,
     required this.host,
     this.findHubTitle,
+    this.clearHubHistory,
+    this.profiles,
+    this.hub,
   });
+
+  /// Media Hub for the media_hub tool (null = no Media Hub).
+  final VesperHub? hub;
+
+  /// Viewer profiles + parental PIN (null = not available here).
+  final VesperProfileControl? profiles;
 
   /// Media Hub search by title for the watch list (null = no Media Hub).
   final Future<HubTitle?> Function(String name)? findHubTitle;
+
+  /// Empties Media Hub's Recently watched; returns how many titles it held
+  /// (null = no Media Hub).
+  final Future<int> Function()? clearHubHistory;
 
   final PlaylistManager playlist;
   final PlaybackService playback;
@@ -108,13 +168,21 @@ class VesperToolbox {
       Channel c => '${c.isLive ? 'l' : 'm'}:${c.id}',
       XtreamSeries s => 's:${s.playlistId}:${s.id}',
       HubTitle h => 'h:${h.key}',
+      HubStream s => s.key,
+      SportsGame g => 'g:${SportsChannelPicks.eventKey(g)}',
       _ => '$item',
     };
     final existing = _refOf[key];
-    if (existing != null) return existing;
+    if (existing != null) {
+      // A game is fetched again with a newer score: same ref, latest copy.
+      if (item is SportsGame) _refs[existing] = item;
+      return existing;
+    }
     final prefix = switch (item) {
       Channel c => c.isLive ? 'l' : 'm',
       HubTitle _ => 'h',
+      HubStream _ => 'o',
+      SportsGame _ => 'g',
       _ => 's',
     };
     final ref = '$prefix${_nextRef++}';
@@ -176,6 +244,7 @@ class VesperToolbox {
       if (_manyPlaylists) 'playlist': _playlistName(c.playlistId),
       if (now != null) 'on_now': now.title,
       if (c.hasCatchup) 'catch_up_days': c.catchupDays,
+      if (c.isLive) ..._quality(c),
     };
   }
 
@@ -601,8 +670,20 @@ final List<VesperTool> vesperTools = [
   VesperTool(
     name: 'now_playing',
     description: 'What the TV is playing right now: the channel or title, the '
-        'programme on now and next, and whether it is paused.',
-    schema: {'type': 'object', 'properties': {}},
+        'programme on now and next, whether it is paused and any error on '
+        'screen. quality true also measures how it plays (picture, HDR, '
+        'audio, downloaded bitrate, buffer, buffering, dropped frames; '
+        'takes 2 s). A Media Hub title also gives its stream (media_hub '
+        'sources lists the others).',
+    schema: {
+      'type': 'object',
+      'properties': {
+        'quality': {
+          'type': 'boolean',
+          'description': 'Measure picture, sound and bitrate too.',
+        },
+      },
+    },
     run: (box, args, caller) async {
       if (usesMediaKit) {
         throw VesperToolError('Not available on Windows yet.');
@@ -624,6 +705,19 @@ final List<VesperTool> vesperTools = [
         out['position_min'] = controller.value.position.inMinutes;
         out['length_min'] = controller.value.duration.inMinutes;
       }
+      final playing = box.playback.currentChannel;
+      final hubStream =
+          playing == null ? null : box.playback.hubSources?.current(playing.id);
+      if (playing != null && hubStream != null) {
+        out['stream'] = _describeStream(
+            box, HubStream(hubStream, channelId: playing.id),
+            playing: true);
+      }
+      if (args['quality'] == true) {
+        final quality = await _playingQuality(box);
+        if (quality.isNotEmpty) out['quality'] = quality;
+      }
+      if (box.playback.error case final error?) out['error_on_tv'] = error;
       return out;
     },
   ),
@@ -631,7 +725,15 @@ final List<VesperTool> vesperTools = [
     name: 'player',
     description:
         'Control the player: pause, resume, stop, go back or forward a '
-        'number of seconds, back to live, next / previous channel.',
+        'number of seconds (fast forward 2 minutes = seek 120, rewind 30 '
+        'seconds = seek -30), back to live, next / previous channel, next / '
+        'previous episode of the show playing. audio_tracks / subtitles '
+        'list what the playing file has; audio_track picks one by language '
+        '(code or name) or track number; subtitle picks a language, a '
+        'track number or "off" (not in the file: the first match from the '
+        'viewer\'s subtitle add-ons). Both are remembered for the rest of '
+        'the show, like a pick in the player. Prefer audio_track over '
+        'switching the Media Hub stream when the file has the language.',
     schema: {
       'type': 'object',
       'properties': {
@@ -645,7 +747,29 @@ final List<VesperTool> vesperTools = [
             'back_to_live',
             'channel_up',
             'channel_down',
+            'next_episode',
+            'previous_episode',
+            'audio_tracks',
+            'audio_track',
+            'subtitles',
+            'subtitle',
           ],
+        },
+        'language': {
+          'type': 'string',
+          'description': 'For audio_track / subtitle: a language code or '
+              'name ("en", "French"); subtitle also "off" or "cc" (live '
+              'closed captions).',
+        },
+        'track': {
+          'type': 'integer',
+          'description': 'For audio_track / subtitle: the track number from '
+              'audio_tracks / subtitles.',
+        },
+        'forced': {
+          'type': 'boolean',
+          'description': 'For subtitle: the forced track (foreign lines '
+              'only) instead of full subtitles.',
         },
         'seconds': {
           'type': 'integer',
@@ -698,9 +822,39 @@ final List<VesperTool> vesperTools = [
                   : target);
           await c.seekTo(clamped);
           return {'done': 'at ${clamped.inMinutes} min'};
+        case 'audio_tracks':
+          return _audioTracks(box, c!);
+        case 'audio_track':
+          return _setAudioTrack(box, c!, args);
+        case 'subtitles':
+          return _subtitles(box, c!);
+        case 'subtitle':
+          return _setSubtitles(box, c!, args);
+        case 'next_episode':
+        case 'previous_episode':
+          // The player's own Next / Previous episode buttons (IPTV and
+          // Media Hub shows): the queue the show's page set.
+          final episode = action == 'next_episode'
+              ? playback.nextUpChannel
+              : playback.previousUpChannel;
+          if (episode == null) {
+            throw VesperToolError(action == 'next_episode'
+                ? 'No next episode: this is the last one, or not a show.'
+                : 'No previous episode: this is the first one, or not a show.');
+          }
+          await playback.play(episode);
+          return {'playing': episode.name};
         case 'channel_up':
         case 'channel_down':
           final ch = playback.liveChannel;
+          // "Next" during a show means its next episode.
+          final episode = action == 'channel_up'
+              ? playback.nextUpChannel
+              : playback.previousUpChannel;
+          if ((ch == null || !ch.isLive) && episode != null) {
+            await playback.play(episode);
+            return {'playing': episode.name};
+          }
           if (ch == null || !ch.isLive) {
             throw VesperToolError('No live channel is playing.');
           }
@@ -722,6 +876,7 @@ final List<VesperTool> vesperTools = [
       throw VesperToolError('Unknown player action $action.');
     },
   ),
+  _mediaHubTool,
   VesperTool(
     name: 'guide',
     description:
@@ -966,12 +1121,11 @@ final List<VesperTool> vesperTools = [
       if (action == 'remove' && ref.isEmpty && name.isNotEmpty) {
         final want = name.toLowerCase();
         final saved = list.load(box.storage);
-        final hit = saved
-                .where((i) => i.title.toLowerCase() == want)
-                .firstOrNull ??
-            saved
-                .where((i) => i.title.toLowerCase().contains(want))
-                .firstOrNull;
+        final hit =
+            saved.where((i) => i.title.toLowerCase() == want).firstOrNull ??
+                saved
+                    .where((i) => i.title.toLowerCase().contains(want))
+                    .firstOrNull;
         if (hit != null) {
           await list.remove(box.storage, hit.id);
           return {'removed': true, 'title': hit.title};
@@ -1031,16 +1185,18 @@ final List<VesperTool> vesperTools = [
   VesperTool(
     name: 'groups',
     description:
-        'The groups (categories) of a tab: list them, or hide / show the '
-        'groups whose name contains some words (e.g. hide every group with '
-        '"Turkish"). Hidden groups come back in Settings > Playlists. For '
-        'single channels, rules or renames use playlist_editor.',
+        'The groups (categories) of a tab: list them, list the live channels '
+        'of one group with their guide now / next (action channels, e.g. '
+        'every "NBA League Pass" channel), or hide / show the groups whose '
+        'name contains some words (e.g. hide every group with "Turkish"). '
+        'Hidden groups come back in Settings > Playlists. For single '
+        'channels, rules or renames use playlist_editor.',
     schema: {
       'type': 'object',
       'properties': {
         'action': {
           'type': 'string',
-          'enum': ['list', 'hide', 'show'],
+          'enum': ['list', 'channels', 'hide', 'show'],
         },
         'tab': {
           'type': 'string',
@@ -1050,12 +1206,17 @@ final List<VesperTool> vesperTools = [
           'type': 'string',
           'description': 'For hide / show: words the group names contain.',
         },
+        'group': {
+          'type': 'string',
+          'description': 'For channels: the group\'s name (tab tv).',
+        },
       },
       'required': ['action', 'tab'],
     },
     run: (box, args, caller) async {
       final action = _str(args, 'action');
       final tab = _str(args, 'tab');
+      if (action == 'channels') return _groupChannels(box, _str(args, 'group'));
       final groups = switch (tab) {
         'movies' => box.playlist.vodGroups,
         'series' => box.playlist.seriesGroups,
@@ -1112,27 +1273,46 @@ final List<VesperTool> vesperTools = [
     },
   ),
   _playlistEditorTool,
+  _settingsTool,
+  _profilesTool,
+  _parentalTool,
   VesperTool(
     name: 'sports_today',
     description:
-        'Today\'s games in the viewer\'s Sports Trak leagues (optionally one '
-        'team): status, start time, score, and a channel ref when a live '
-        'channel carries the game.',
+        'The games of a day (default today) in the viewer\'s Sports Trak '
+        'leagues, optionally one league ("NBA") or team: a game ref, status, '
+        'start time, score, the TV networks the league lists, and the '
+        'channel Sports Trak matched (matched_by says how sure). To fix or '
+        'fill a game\'s channel use game_channel; read vesper_help topic '
+        '"sports" first.',
     schema: {
       'type': 'object',
       'properties': {
         'team': {'type': 'string', 'description': 'Team name or city.'},
+        'league': {
+          'type': 'string',
+          'description': 'League name or short name ("NBA", "Premier '
+              'League").',
+        },
+        'day': {
+          'type': 'string',
+          'description': '"today" (default), "tomorrow", "yesterday" or '
+              'YYYY-MM-DD.',
+        },
       },
     },
     run: (box, args, caller) async {
       final team = _str(args, 'team');
-      final games = await _todaysGames(box, team);
+      final day = _sportsDay(_str(args, 'day'));
+      final games =
+          await _todaysGames(box, team, league: _str(args, 'league'), day: day);
       final hideScores = box.prefs.sportsHideScores;
-      final matched = await _gameChannels(box, games);
+      final matched = await _gameMatchList(box, games);
       return {
         'games': [
           for (final g in games.take(25))
             {
+              'ref': box.refFor(g),
               'game': g.title,
               'league': g.league.name,
               'state': g.state.name,
@@ -1141,14 +1321,21 @@ final List<VesperTool> vesperTools = [
               if (!hideScores && g.state != GameState.pre)
                 'score':
                     '${g.away.shortName} ${g.away.score ?? '-'}, ${g.home.shortName} ${g.home.score ?? '-'}',
-              if (matched[g] case final c?) 'channel': box.describeChannel(c),
+              if (g.broadcasts.isNotEmpty) 'networks': g.broadcasts,
+              if (matched[g]?.firstOrNull case final m?)
+                'channel': _gameChannel(box, g, m),
             }
         ],
-        if (games.isEmpty) 'note': 'No games today in the viewer\'s leagues.',
+        if (games.length > 25)
+          'note_more': '${games.length} games in all; '
+              'ask for one league or team.',
+        if (games.isEmpty)
+          'note': 'No games that day in the viewer\'s leagues.',
         if (hideScores) 'note_scores': 'The viewer hides scores.',
       };
     },
   ),
+  _gameChannelTool,
   VesperTool(
     name: 'play_game',
     description:
@@ -1188,12 +1375,17 @@ final List<VesperTool> vesperTools = [
           'games': [
             for (final g in games.take(3))
               {
+                'ref': box.refFor(g),
                 'game': g.title,
+                'state': g.state.name,
+                'start': '${_day(g.start)} ${_clock(g.start)}',
                 'channels': [
-                  for (final c in (matched[g] ?? const <Channel>[]).take(15))
+                  for (final m
+                      in (matched[g] ?? const <ChannelMatch>[]).take(15))
                     {
-                      ...box.describeChannel(c, withNow: false),
-                      if (vesperChannelLanguage(c) case final l?) 'language': l,
+                      ..._gameChannel(box, g, m),
+                      if (vesperChannelLanguage(m.channel) case final l?)
+                        'language': l,
                     }
                 ],
               }
@@ -1201,13 +1393,14 @@ final List<VesperTool> vesperTools = [
         };
       }
       for (final g in games) {
-        final options = matched[g] ?? const <Channel>[];
+        final options = matched[g] ?? const <ChannelMatch>[];
         if (options.isEmpty) continue;
-        final result = await _play(box, options.first, caller);
+        final best = options.first.channel;
+        final result = await _play(box, best, caller);
         return {
           ...result,
           'game': g.title,
-          if (asked.isNotEmpty && vesperChannelLanguage(options.first) != asked)
+          if (asked.isNotEmpty && vesperChannelLanguage(best) != asked)
             'note': 'No channel in that language carries it; playing the '
                 'best match instead.',
         };
@@ -1244,11 +1437,34 @@ int _stateRank(SportsGame g) => switch (g.state) {
       GameState.post => 2,
     };
 
-Future<List<SportsGame>> _todaysGames(VesperToolbox box, String team) async {
-  final leagues = savedSportsLeagues(box.storage);
+Future<List<SportsGame>> _todaysGames(VesperToolbox box, String team,
+    {String league = '', DateTime? day}) async {
+  var leagues = savedSportsLeagues(box.storage);
   if (leagues.isEmpty) return const [];
+  if (league.isNotEmpty) {
+    final want = TitleSearch.fold(league);
+    final exact = [
+      for (final l in leagues)
+        if (TitleSearch.fold(l.shortName) == want ||
+            TitleSearch.fold(l.name) == want ||
+            TitleSearch.fold(l.id) == want)
+          l
+    ];
+    final search = TitleSearch(league);
+    leagues = exact.isNotEmpty
+        ? exact
+        : [
+            for (final l in leagues)
+              if (search.matches(l.name) || search.matches(l.shortName)) l
+          ];
+    if (leagues.isEmpty) {
+      throw VesperToolError('$league is not in the viewer\'s Sports Trak '
+          'leagues (${savedSportsLeagues(box.storage).map((l) => l.shortName).join(', ')}). '
+          'The viewer adds leagues in Sports Trak > Edit leagues.');
+    }
+  }
   final games =
-      await SportsService.instance.gamesForDay(leagues, DateTime.now());
+      await SportsService.instance.gamesForDay(leagues, day ?? DateTime.now());
   if (team.isEmpty) return games;
   final search = TitleSearch(team);
   bool hit(SportsTeam t) =>
@@ -1258,21 +1474,35 @@ Future<List<SportsGame>> _todaysGames(VesperToolbox box, String team) async {
   return games.where((g) => hit(g.home) || hit(g.away)).toList();
 }
 
-/// The best live channel per game (Sports Trak's own matching and saved
-/// picks).
-Future<Map<SportsGame, Channel>> _gameChannels(
-        VesperToolbox box, List<SportsGame> games) async =>
-    {
-      for (final e in (await _gameMatchList(box, games)).entries)
-        if (e.value.isNotEmpty) e.key: e.value.first.channel,
+/// "today" / "tomorrow" / "yesterday" / YYYY-MM-DD as a local day (empty
+/// or unreadable = today).
+DateTime _sportsDay(String said) {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  return switch (said.toLowerCase()) {
+    'tomorrow' => today.add(const Duration(days: 1)),
+    'yesterday' => today.subtract(const Duration(days: 1)),
+    _ => DateTime.tryParse(said) ?? today,
+  };
+}
+
+/// How sure Sports Trak's match is, in words a model reads: only "pick",
+/// "guide" and "channel_name" name the game itself; the guesses only name
+/// the team's or the broadcaster's channel.
+String _matchedBy(ChannelMatch m) => switch (m.reason) {
+      MatchReason.pick => 'viewer_pick',
+      MatchReason.guide => m.gameEvidence ? 'guide' : 'guide_series_guess',
+      MatchReason.name => m.gameEvidence ? 'channel_name' : 'name_guess',
+      MatchReason.teamChannel => 'team_channel_guess',
+      MatchReason.network => 'network_guess',
     };
 
 /// [matches] with the ones in [language] first, otherwise in the same
 /// order; with [keepPick] a channel the viewer saved for the game stays
 /// first whatever its language.
-List<Channel> _inLanguage(List<ChannelMatch> matches, String language,
+List<ChannelMatch> _inLanguage(List<ChannelMatch> matches, String language,
     {required bool keepPick}) {
-  if (language.isEmpty) return [for (final m in matches) m.channel];
+  if (language.isEmpty) return matches;
   int tier(ChannelMatch m) => keepPick && m.reason == MatchReason.pick
       ? 0
       : vesperChannelLanguage(m.channel) == language
@@ -1282,7 +1512,59 @@ List<Channel> _inLanguage(List<ChannelMatch> matches, String language,
       final t = tier(a.$2).compareTo(tier(b.$2));
       return t != 0 ? t : a.$1.compareTo(b.$1);
     });
-  return [for (final (_, m) in indexed) m.channel];
+  return [for (final (_, m) in indexed) m];
+}
+
+/// A channel carrying [g], for the sports tools. Not describeChannel: its
+/// kind "live" (a live TV channel) read as the game being live, and its
+/// on_now is the wrong moment for a game that starts later (an AI app
+/// saw another game's title there). Here: the guide's programme at the
+/// game's start (or now, once it started), how the match was made and the
+/// picture quality.
+Map<String, Object?> _gameChannel(
+    VesperToolbox box, SportsGame g, ChannelMatch m) {
+  final c = m.channel;
+  final upcoming = g.state == GameState.pre;
+  final at = upcoming ? g.start : DateTime.now();
+  final around =
+      box.epg.programsBetween(c.epgId, at, at.add(const Duration(minutes: 1)));
+  final p = around
+          .where((p) => !p.start.isAfter(at) && p.stop.isAfter(at))
+          .firstOrNull ??
+      around.firstOrNull;
+  return {
+    'ref': box.refFor(c),
+    'title': c.name,
+    if (c.group.isNotEmpty) 'group': c.group,
+    if (box._manyPlaylists) 'playlist': box._playlistName(c.playlistId),
+    ..._quality(c),
+    'matched_by': _matchedBy(m),
+    if (m.detail case final d? when d.isNotEmpty) 'evidence': d,
+    if (p != null) (upcoming ? 'on_at_game_time' : 'on_now'): p.title,
+  };
+}
+
+/// The picture quality a live channel's name (else its group) says: 8K,
+/// 4K, FHD, HD or SD; nothing when neither says. quality_measured: the TV
+/// saw it decode at 2160p (Real 4K tag).
+Map<String, Object?> _quality(Channel c) {
+  var rank = ChannelCopyFallback.qualityRank(c.name);
+  if (rank == 2 && c.group.isNotEmpty) {
+    rank = ChannelCopyFallback.qualityRank(c.group);
+  }
+  final label = switch (rank) {
+    6 => '8K',
+    5 => '4K',
+    4 => 'FHD',
+    3 => 'HD',
+    1 => 'SD',
+    _ => null,
+  };
+  final measured = Real4kChannels.contains(c.id);
+  return {
+    if (measured) 'quality': '4K' else if (label != null) 'quality': label,
+    if (measured) 'quality_measured': true,
+  };
 }
 
 /// Every channel carrying each game, best first: the Sports Trak order

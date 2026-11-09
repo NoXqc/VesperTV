@@ -39,6 +39,37 @@ void main() {
       expect(p('skip 2 minutes')?.args['seconds'], 120);
       expect(p('recule de 5 minutes')?.args['seconds'], -300);
       expect(p('go back')?.args['seconds'], -30);
+      expect(p('fast forward 2 minutes')?.args['seconds'], 120);
+      expect(p('rewind 30 seconds')?.args['seconds'], -30);
+      // Typed without a space.
+      expect(p('fast forward 2min')?.args['seconds'], 120);
+      expect(p('rewind 30sec')?.args['seconds'], -30);
+    });
+
+    test('next / previous episode', () {
+      for (final s in [
+        'next episode',
+        'Play the next episode',
+        'épisode suivant',
+        "l'épisode suivant",
+        'siguiente episodio',
+        'prossimo episodio',
+        'nächste Folge',
+        'epomeno epeisodio',
+      ]) {
+        expect(p(s)?.args, {'action': 'next_episode'}, reason: s);
+      }
+      for (final s in [
+        'previous episode',
+        'épisode précédent',
+        'episodio anterior',
+        'vorherige Folge',
+      ]) {
+        expect(p(s)?.args, {'action': 'previous_episode'}, reason: s);
+      }
+      // A bare "next" stays channel up (the tool plays the next episode
+      // when a show is playing).
+      expect(p('next')?.args['action'], 'channel_up');
     });
   });
 

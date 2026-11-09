@@ -4,6 +4,39 @@ import 'package:flutter/material.dart';
 
 import '../utils/tv_theme.dart';
 
+/// Smaller menu rows below this widget: every Settings page on a TV box or
+/// a computer (SettingsScaffold). Owner, 2026-11-09: the Settings rows were
+/// so big that a category's six entries filled the TV; more fit at once
+/// now, long pages still scroll. Comes with a compact [ListTileTheme] for
+/// the plain switches and rows on those pages. Pickers and dialogs opened
+/// from Settings are their own routes and keep the normal size.
+class CompactMenus extends InheritedWidget {
+  const CompactMenus({super.key, required super.child});
+
+  static bool of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<CompactMenus>() != null;
+
+  /// The compact list rows: tighter height and padding, 15 / 12.5 text.
+  static Widget listTheme(BuildContext context, {required Widget child}) {
+    final theme = Theme.of(context);
+    return ListTileTheme.merge(
+      visualDensity: const VisualDensity(horizontal: -2, vertical: -3),
+      minVerticalPadding: 4,
+      horizontalTitleGap: 12,
+      minLeadingWidth: 32,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+      titleTextStyle: theme.textTheme.bodyLarge
+          ?.copyWith(fontSize: 15, color: theme.colorScheme.onSurface),
+      subtitleTextStyle: theme.textTheme.bodyMedium
+          ?.copyWith(fontSize: 12.5, color: theme.colorScheme.onSurfaceVariant),
+      child: child,
+    );
+  }
+
+  @override
+  bool updateShouldNotify(CompactMenus oldWidget) => false;
+}
+
 /// A focus-obvious `ListTile` for a menu-style destination row (an icon, a
 /// title, an optional subtitle, a chevron) — originally private to
 /// `SettingsMenuScreen`, pulled out here once a second screen
@@ -98,6 +131,7 @@ class _TvMenuTileState extends State<TvMenuTile> {
     // (see `buildPaletteColorScheme`), so no palette-specific branching
     // is needed here at all.
     final focusForeground = scheme.primary;
+    final compact = CompactMenus.of(context);
     return Container(
       // Always present (even with an empty shadow list) rather than
       // conditionally wrapped — MinimalGlassFocus's own doc comment just
@@ -168,7 +202,8 @@ class _TvMenuTileState extends State<TvMenuTile> {
                 // own doc comment for why (Habs: white contour/text,
                 // blue icons).
                 foregroundColor: scheme.tertiary,
-                child: Icon(widget.icon),
+                radius: compact ? 15 : null,
+                child: Icon(widget.icon, size: compact ? 18 : null),
               ),
           title: Text(widget.title,
               maxLines: widget.titleMaxLines,
@@ -186,6 +221,7 @@ class _TvMenuTileState extends State<TvMenuTile> {
                 ),
           trailing: widget.trailing ??
               Icon(Icons.chevron_right,
+                  size: compact ? 20 : null,
                   color: _focused ? scheme.tertiary : null),
           onTap: widget.enabled ? widget.onTap : null,
         ),

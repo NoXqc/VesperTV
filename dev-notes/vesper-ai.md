@@ -17,9 +17,28 @@ One tool layer, three front ends:
 
 - `lib/services/vesper_ai/vesper_tools.dart` — `VesperToolbox` + `vesperTools`:
   search, play, now_playing, player, guide, find_on_tv, open, favorites, recent,
-  groups (list/hide/show), sports_today, play_game, show_message. JSON-Schema
-  objects shared by all providers and MCP. Search hands out short refs
-  (`l12`, `m3`, `s7`) kept in memory. Respects visibleChannels / hidden groups /
+  groups (list/channels/hide/show), sports_today, play_game, game_channel,
+  show_message. JSON-Schema objects shared by all providers and MCP. Search
+  hands out short refs (`l12`, `m3`, `s7`; games `g4`) kept in memory.
+  **Game channels (2026-11-08, `game_channel_tool.dart`):** sports_today takes
+  league/day and returns game refs, ESPN networks and `matched_by` (viewer_pick /
+  guide / channel_name vs *_guess); groups action channels lists one live group
+  with now/next; game_channel saves `SportsChannelPicks.pickForGame` for up to 40
+  games with one TV confirm. Manual: vesper_help topic "sports" (never guess
+  between numbered feeds; web search, when the AI app has it, only gives the
+  network). In-app BYO-key providers have no web search. Open cards pick it up
+  on the next Sports Trak rematch.
+  **Profiles + parental (2026-11-08, `profiles_tool.dart`):** tools `profiles`
+  (list/switch/create/rename/delete) and `parental` (status/allow_groups/
+  block_groups/change_pin) over `VesperProfileControl` (app: `AppVesperProfiles`
+  in vesper_host.dart). Rules: the AI has the on-screen profile's power, never
+  more; on a kids profile every change needs the PIN on the TV; loosening (allow
+  groups, delete a kids profile, change PIN) asks the PIN from any profile; the
+  PIN only ever goes through the TV's own pad (2 min timeout, `promptForPin(
+  timeout:)`), no tool parameter holds it (a test checks), no remove-PIN /
+  unrestrict action. Kid allowlists of a non-active viewer:
+  `StorageService.get/setShownGroupsFor`. `switchTo(unlocked:)` skips the second
+  PIN pad. Manual: vesper_help topic "profiles". Respects visibleChannels / hidden groups /
   restricted viewers (groups refused) / Hide scores / hidden tabs.
 - `VesperHost` (`screens/vesper_ai/vesper_host.dart`): plays like a guide pick
   (popUntil first + PlayerScreen / DesktopPlayerScreen), opens sections through
@@ -168,6 +187,60 @@ fallback to channel B" from Claude, with an API doc the AI can read, and undo.
 - Not done: a persistent "no guide" rule (new channels), running stream tests
   over MCP (connection limits), Movies/Shows.
 
+## Settings tool (Claude, 2026-11-08, branch `claude/ai-settings`, unreleased)
+Owner: tell Claude over MCP to turn settings on or off and delete histories.
+- `settings` (`vesper_ai/settings_tool.dart`, a `part` of vesper_tools.dart):
+  actions list [section], get key, set key+value or `changes` [{key, value}]
+  (one TV confirm for all), clear what, update_guide (`EpgService.refreshAll`,
+  not awaited). 53 curated settings in `_aiSettings` (switch / choice /
+  number, each with its Settings title for the confirm and an `about` for the
+  model); Android-only ones are left out on a computer (`isDesktopTarget`).
+  Startup ones say "applies at the next app start".
+- **Never exposed (on purpose):** Ask on the TV first, AI keys / apps / voice
+  key, the PIN, profiles, playlists, layout mode and the video troubleshooting
+  switches (native surface, Compatibility video, green flicker fix). An AI
+  app must not be able to switch off its own confirmations.
+- clear: searches_and_channels / movies_and_shows (the two Settings > General >
+  History actions), media_hub (new `ArchiveService.clearHistory`, passed in as
+  `VesperToolbox.clearHubHistory`), watch_list, all_history (not the watch
+  list). Confirm text reuses the History titles.
+- AI apps confirm set and clear on the TV (localized "{setting}: turn on" /
+  choice names); Kids profiles can list but not set or clear. The Ask on the
+  TV first subtitle now names settings and history (5 languages).
+- `test/vesper_settings_tool_test.dart` (8 tests, incl. every TV text
+  translated in fr/de/es/it/el). Remote guide row + Discord guide.json rebuilt.
+- Not done: built-in (no-AI) phrases like "turn off skip intro"; clearing the
+  EPG / catalog cache; "update content" (the catalog sync has its own screen).
+
+## Media Hub tool + playback (Claude, 2026-11-09, uncommitted on main)
+Discord request (Kal-el23): let ChatGPT check quality, pick the best link, switch sources, control playback.
+- `media_hub_tool.dart` (part of vesper_tools): actions search (title refs `h…`), episodes, sources (a title +
+  season/episode, or what is playing: source, `video` from `archiveStreamFormats`, `audio` from the labels
+  (`hubStreamAudio`), `size_gb`, `ready` (false = `[TB download]` / ⏳: plays a "being downloaded" clip), `playing`,
+  `best` = `hubBestStream`: the viewer's Media Hub playback prefs (`ArchivePlaybackPreferences.ranked`, largest
+  file when that's on), never a download/trailer), play (title ref; `best` true = best stream, else the app's usual
+  choice/picker; stream ref `o…`; show + season/episode with the aired episodes as the Next queue; a show alone
+  opens its page), switch (`next` / `best` / stream ref, same position via `PlaybackService.replaceStream`, which
+  the source drawer now uses too). Stream URLs never go to the model (they carry debrid keys).
+- `VesperHub` interface; app side `screens/vesper_ai/vesper_hub.dart` (`AppVesperHub`: `ArchiveService.searchRows`,
+  `meta`, `streams`, `playArchiveTitle(chosen:)`, `openArchiveSeries`). `PlaybackService.hubSources` = the full-screen
+  player's `ArchivePlaybackSources` (set/cleared by PlayerScreen). Play waits up to 20 s for the stream to start
+  (`mediaHubStartWait`).
+- now_playing: `stream` for a Media Hub title, `error_on_tv`, and `quality: true` = picture, HDR, audio, measured
+  bitrate (two StatsBridge samples 1.5 s apart), buffer, buffering, dropped frames (opt-in: the built-in "what's on"
+  stays instant).
+- player: next_episode / previous_episode (+ channel up/down during a show), built-in phrases in 5 languages.
+- player: audio_tracks / audio_track (language code or name, or track number; commentary skipped) and subtitles /
+  subtitle (language, track number, "off", "cc"; not in the file = first match from the subtitle add-ons, like the
+  picker's online languages). Same steps as the player's buttons, remembered for the show (AudioTrackPreferences,
+  rememberForSeries). `vesper_ai/player_tracks.dart`, `test/vesper_player_tracks_test.dart`. Android only (the
+  player tool says "not on Windows yet"). No built-in phrases yet. AI apps: reconnect the connector.
+- Media Hub picks streams in the viewer's language (`services/stream_languages.dart`; sources list `languages` /
+  `multi_audio`).
+- System prompt: Media Hub when asked or when the playlists lack a title; play best; buffering = switch next.
+- Tests: `test/vesper_media_hub_tool_test.dart` (8). Not device-tested; Android only for switch/quality (Windows
+  plays titles but has no switch). AI apps must reconnect the connector to see the new tool.
+
 ## Not done / next
 - **Several TVs** (owner, 2026-11-06: test as is): today one connector per TV (each TV has its own link; name them
   "VesperTV Living room" etc. in the AI app). Parked idea: one shared link via Sync, TV names, relay routes by
@@ -176,7 +249,7 @@ fallback to channel B" from Claude, with an API doc the AI can read, and undo.
   Stick), SpeechRecognizer on the Formuler, relay deploy + a real Claude/ChatGPT
   connector session.
 - Windows: no voice; player/now_playing tools say "not on Windows yet".
-- No episode picking (series → show page), no Media Hub search tool yet.
+- No episode picking for IPTV shows (series → show page); Media Hub shows take season + episode (media_hub).
 - Remote tips (`docs/remote.html`), help index, website and README documentation
   prepared on `codex/vesper-ai-docs` (Codex, 2026-11-06; pending merge/publish).
 - Public privacy docs distinguish built-in parsing, direct Your AI requests and

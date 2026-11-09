@@ -2419,30 +2419,36 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     if (mounted && _liveOpen) _livePanel.currentState?.focusLast();
   }
 
+  /// Sports Mode root Back leaves the app like the TV home's
+  /// ([AppExit.back]: warm on Android, asks first on a computer).
   Future<void> _confirmModeExit() async {
     if (_exitPromptOpen) return;
     if (ProfileGate.backToSelector()) return;
     _exitPromptOpen = true;
-    final exit = await showDialog<bool>(
-        context: context,
-        builder: (dialog) => AlertDialog(
-              title: Text(
-                  tr('Exit {appName}?', {'appName': AppConstants.appName})),
-              content: Text(tr('Are you sure you want to exit {appName}?',
-                  {'appName': AppConstants.appName})),
-              actions: [
-                TextButton(
-                    onPressed: () => Navigator.of(dialog).pop(true),
-                    child: Text(tr('Exit'))),
-                TextButton(
-                    autofocus: true,
-                    onPressed: () => Navigator.of(dialog).pop(false),
-                    child: Text(tr('Stay'))),
-              ],
-            ));
-    _exitPromptOpen = false;
-    // Warm, like the TV home's Back > Exit ([AppExit.warm]).
-    if (exit == true && mounted) await AppExit.warm();
+    try {
+      await AppExit.back(() async {
+        final exit = await showDialog<bool>(
+            context: context,
+            builder: (dialog) => AlertDialog(
+                  title: Text(
+                      tr('Exit {appName}?', {'appName': AppConstants.appName})),
+                  content: Text(tr('Are you sure you want to exit {appName}?',
+                      {'appName': AppConstants.appName})),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.of(dialog).pop(true),
+                        child: Text(tr('Exit'))),
+                    TextButton(
+                        autofocus: true,
+                        onPressed: () => Navigator.of(dialog).pop(false),
+                        child: Text(tr('Stay'))),
+                  ],
+                ));
+        return exit == true && mounted;
+      });
+    } finally {
+      _exitPromptOpen = false;
+    }
   }
 
   bool get _previewOn => _livePreview(context.read<PlaybackService>()) != null;

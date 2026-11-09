@@ -39,6 +39,7 @@ import '../services/desktop_live_recovery.dart';
 import '../widgets/desktop_reconnecting_badge.dart';
 import '../widgets/skip_segment_button.dart';
 import '../services/skip_segments.dart';
+import '../utils/desktop_platform.dart';
 
 /// A deliberately standalone, Windows-only playback screen — see
 /// `pubspec.yaml`'s media_kit comment for why this exists at all:
@@ -128,6 +129,15 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   late final VideoController _videoController;
   late Channel _currentChannel;
   bool _controlsVisible = true;
+
+  /// iPhone / iPad: the touch layout ([_touchControls]), landscape on a
+  /// phone, controls that hide by themselves.
+  bool get _touch => isIosTarget;
+  Timer? _touchHide;
+
+  /// Touch seek bar: where the thumb is while a finger drags it (the seek
+  /// happens on release, not on every move).
+  double? _dragMs;
   final _fileInfoRequests = ValueNotifier<int>(0);
 
   /// [PlayerSidePanel] (Last channels / My Teams / Live now) on a live
@@ -265,7 +275,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       _ownsPlayer = false;
       DesktopLiveRecovery.of(_player).watch(widget.channel);
     } else {
-      _player = Player();
+      _player = newDesktopPlayer();
       // Best-effort mpv/ffmpeg-level reconnect tuning for a live,
       // non-seekable TS stream — reconnect_streamed=1 is necessary for
       // mpv to even attempt recovering a genuinely dropped/reset read
@@ -329,6 +339,42 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     _completedSubscription = _player.stream.completed.listen((completed) {
       if (completed && mounted && !_isLive) _resumeAfterCut();
     });
+    if (_touch) {
+      // Full screen: no status bar. A phone turns sideways, also with its
+      // rotation lock on (owner's iPhone 8: the player stayed portrait);
+      // Rotate in the top bar goes back. Released in dispose.
+      unawaited(
+          SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky));
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || MediaQuery.sizeOf(context).shortestSide >= 600) return;
+        unawaited(SystemChrome.setPreferredOrientations([
+          DeviceOrientation.landscapeLeft,
+          DeviceOrientation.landscapeRight
+        ]));
+      });
+      _armTouchHide();
+    }
+  }
+
+  /// Touch: the controls hide 4 s after the last touch while playing.
+  void _armTouchHide() {
+    _touchHide?.cancel();
+    if (!_touch || !_controlsVisible) return;
+    _touchHide = Timer(const Duration(seconds: 4), () {
+      if (!mounted || !_player.state.playing || _sourceDrawerOpen) return;
+      if (_dragMs != null) return;
+      setState(() => _controlsVisible = false);
+    });
+  }
+
+  /// Touch: landscape <-> portrait, whatever the rotation lock says (the
+  /// Android phone player's Rotate button).
+  Future<void> _toggleRotation() async {
+    final toLandscape =
+        MediaQuery.orientationOf(context) == Orientation.portrait;
+    await SystemChrome.setPreferredOrientations(toLandscape
+        ? [DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]
+        : [DeviceOrientation.portraitUp]);
   }
 
   int _cutRetries = 0;
@@ -442,6 +488,12 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
 
   @override
   void dispose() {
+    _touchHide?.cancel();
+    if (_touch) {
+      // The rest of the app turns freely again (with the lock on: portrait).
+      unawaited(SystemChrome.setPreferredOrientations([]));
+      unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
+    }
     _sourceBackGuard.dispose();
     _fileInfoRequests.dispose();
     _progressTimer?.cancel();
@@ -933,6 +985,297 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     );
   }
 
+  /// iPhone / iPad. The computer bar squeezed into a portrait phone was a
+  /// strip of tiny overlapping buttons (owner's iPhone 8, 2026-11-09), and
+  /// Sources only opened with the Right key. Touch gets a phone layout:
+  /// back, title, Sources and Rotate on top; big play/pause and +-10 s in
+  /// the middle; seek bar, badges and the other buttons at full touch size
+  /// along the bottom. No volume slider: the phone has its own buttons.
+  List<Widget> _touchControls(PlaylistManager playlist) {
+    final seekable = !_isLive || _inCatchup;
+    final playlistName = _isLive
+        ? playlist.playlistNameFor(_currentChannel.playlistId).trim()
+        : '';
+    // Any touch on the controls keeps them up another 4 s.
+    Widget keepUp(Widget child) =>
+        Listener(onPointerDown: (_) => _armTouchHide(), child: child);
+    final info = Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        DesktopQualityBadges(
+            key: ValueKey('badges-${_currentChannel.id}'), player: _player),
+        if (playlistName.isNotEmpty) GoldTag(label: playlistName),
+        // Its Align would take a whole line of the Wrap.
+        if (_isLive && !_inCatchup)
+          IntrinsicWidth(
+              child: _LiveRemainingLabel(channelId: _currentChannel.epgId)),
+      ],
+    );
+    final buttons = SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      reverse: true,
+      child: Row(
+          mainAxisSize: MainAxisSize.min, children: _touchButtons(playlist)),
+    );
+    return [
+      Positioned(
+        top: 0,
+        left: 0,
+        right: 0,
+        child: keepUp(Container(
+          padding: const EdgeInsets.fromLTRB(4, 4, 8, 24),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Colors.black.withValues(alpha: 0.7), Colors.transparent],
+            ),
+          ),
+          child: SafeArea(
+            bottom: false,
+            child: Row(
+              children: [
+                IconButton(
+                  tooltip: tr('Back'),
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: _handleBack,
+                ),
+                Expanded(
+                  child: PlayerBarTitle(
+                    title: _currentChannel.name,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ),
+                if (widget.sources != null)
+                  IconButton(
+                    tooltip: tr('Sources'),
+                    icon: const Icon(Icons.swap_horiz, color: Colors.white),
+                    onPressed: _openSources,
+                  ),
+                IconButton(
+                  tooltip: tr('Rotate'),
+                  icon: const Icon(Icons.screen_rotation, color: Colors.white),
+                  onPressed: _toggleRotation,
+                ),
+              ],
+            ),
+          ),
+        )),
+      ),
+      Center(
+        child: keepUp(StreamBuilder<bool>(
+          stream: _player.stream.playing,
+          initialData: _player.state.playing,
+          builder: (context, snapshot) {
+            final playing = snapshot.data ?? false;
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (seekable) ...[
+                  _TouchRoundButton(
+                    icon: Icons.replay_10,
+                    size: 32,
+                    tooltip: tr('Back 10 seconds'),
+                    onPressed: () => _skip(const Duration(seconds: -10)),
+                  ),
+                  const SizedBox(width: 40),
+                ],
+                _TouchRoundButton(
+                  icon: playing ? Icons.pause : Icons.play_arrow,
+                  size: 48,
+                  tooltip: playing ? tr('Pause') : tr('Play'),
+                  onPressed: () => _togglePlay(playing),
+                ),
+                if (seekable) ...[
+                  const SizedBox(width: 40),
+                  _TouchRoundButton(
+                    icon: Icons.forward_10,
+                    size: 32,
+                    tooltip: tr('Forward 10 seconds'),
+                    onPressed: () => _skip(const Duration(seconds: 10)),
+                  ),
+                ],
+              ],
+            );
+          },
+        )),
+      ),
+      Positioned(
+        left: 0,
+        right: 0,
+        bottom: 0,
+        child: keepUp(Container(
+          padding: const EdgeInsets.fromLTRB(12, 32, 8, 4),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.bottomCenter,
+              end: Alignment.topCenter,
+              colors: [Colors.black.withValues(alpha: 0.8), Colors.transparent],
+            ),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (_inCatchup) _catchupBar(),
+                if (!_isLive) _touchSeekBar(),
+                LayoutBuilder(
+                  // Landscape: badges and buttons share a row. Portrait:
+                  // the buttons get their own row.
+                  builder: (context, box) => box.maxWidth >= 560
+                      ? Row(children: [
+                          Expanded(child: info),
+                          Flexible(child: buttons),
+                        ])
+                      : Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            info,
+                            Align(
+                                alignment: Alignment.centerRight,
+                                child: buttons),
+                          ],
+                        ),
+                ),
+              ],
+            ),
+          ),
+        )),
+      ),
+      if (_isLive && !_inCatchup && !_panelOpen)
+        Positioned(
+          left: 0,
+          top: 0,
+          bottom: 0,
+          child: Center(child: PlayerSidePanelTab(onTap: _openPanel)),
+        ),
+    ];
+  }
+
+  /// Touch: the bottom row's buttons (play/pause and +-10 s are in the
+  /// middle of the screen).
+  List<Widget> _touchButtons(PlaylistManager playlist) => [
+        if (_isLive && !_inCatchup)
+          IconButton(
+            icon: const Icon(Icons.history, color: Colors.white),
+            tooltip: tr('Recall — go back to a recent channel'),
+            onPressed: _openRecallPicker,
+          ),
+        IconButton(
+          icon: Icon(
+            _currentChannel.isFavorite ? Icons.star : Icons.star_border,
+            color: _currentChannel.isFavorite ? Colors.amber : Colors.white,
+          ),
+          tooltip: _currentChannel.isFavorite
+              ? tr('Remove from favorites')
+              : tr('Add to favorites'),
+          onPressed: () {
+            playlist.toggleFavorite(_currentChannel);
+            setState(() {});
+          },
+        ),
+        if (_inCatchup)
+          TextButton.icon(
+            icon: const Icon(Icons.fiber_manual_record,
+                color: Colors.redAccent, size: 14),
+            label:
+                Text(tr('LIVE'), style: const TextStyle(color: Colors.white)),
+            onPressed: () => unawaited(_catchupCtl.backToLive()),
+          ),
+        if (_isLive && !_inCatchup)
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            tooltip: tr('Reload channel'),
+            onPressed: _reload,
+          ),
+        if (_previousEpisode != null)
+          IconButton(
+            icon: const Icon(Icons.skip_previous, color: Colors.white),
+            tooltip: tr('Previous episode'),
+            onPressed: () => _switchTo(_previousEpisode!),
+          ),
+        if (_nextEpisode != null)
+          IconButton(
+            icon: const Icon(Icons.skip_next, color: Colors.white),
+            tooltip: tr('Next episode'),
+            onPressed: () => _switchTo(_nextEpisode!),
+          ),
+        if (context.watch<AppPreferences>().dataPool)
+          IconButton(
+            icon: Icon(Icons.analytics_outlined,
+                color: _dataPoolOpen ? Colors.amber : Colors.white),
+            tooltip: tr('Data pool'),
+            onPressed: _toggleDataPool,
+          ),
+        DesktopAudioButton(
+            key: ValueKey('audio-${_currentChannel.id}'),
+            player: _player,
+            channel: _currentChannel),
+        if (!_isLive)
+          DesktopSubtitleButton(
+              key: ValueKey(_currentChannel.id),
+              player: _player,
+              channel: _currentChannel),
+      ];
+
+  /// Touch: elapsed | seek bar | length. Dragging moves the thumb; the
+  /// seek happens on release (one seek, not one per finger move).
+  Widget _touchSeekBar() {
+    return StreamBuilder<Duration>(
+      stream: _player.stream.position,
+      initialData: _player.state.position,
+      builder: (context, snapshot) {
+        final position = snapshot.data ?? Duration.zero;
+        final duration = _player.state.duration;
+        final known = duration.inMilliseconds > 0;
+        final max = known ? duration.inMilliseconds.toDouble() : 1.0;
+        final value = (_dragMs ?? position.inMilliseconds.toDouble())
+            .clamp(0.0, max)
+            .toDouble();
+        const time = TextStyle(color: Colors.white70, fontSize: 13);
+        return Row(
+          children: [
+            Text(_formatDuration(Duration(milliseconds: value.round())),
+                style: time),
+            Expanded(
+              child: SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  trackHeight: 3,
+                  thumbShape:
+                      const RoundSliderThumbShape(enabledThumbRadius: 8),
+                  overlayShape:
+                      const RoundSliderOverlayShape(overlayRadius: 18),
+                ),
+                child: Slider(
+                  value: value,
+                  max: max,
+                  onChanged: known ? (v) => setState(() => _dragMs = v) : null,
+                  onChangeEnd: known
+                      ? (v) {
+                          setState(() => _dragMs = null);
+                          unawaited(
+                              _player.seek(Duration(milliseconds: v.round())));
+                          _armTouchHide();
+                        }
+                      : null,
+                ),
+              ),
+            ),
+            Text(_formatDuration(duration), style: time),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final playlist = context.watch<PlaylistManager>();
@@ -1002,6 +1345,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                 _fileInfoRequests.value++;
               }
               setState(() => _controlsVisible = !_controlsVisible);
+              _armTouchHide();
             },
             child: Stack(
               fit: StackFit.expand,
@@ -1041,7 +1385,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                     onSkip: _skipSegment,
                   );
                 }),
-                if (_controlsVisible) ...[
+                if (_controlsVisible && _touch) ..._touchControls(playlist),
+                if (_controlsVisible && !_touch) ...[
                   Positioned(
                     top: 0,
                     left: 0,
@@ -1103,7 +1448,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                     left: 16,
                     right: 16,
                     // Above the player bar while it shows.
-                    bottom: _controlsVisible ? 120 : 16,
+                    bottom: _controlsVisible ? (_touch ? 170 : 120) : 16,
                     child: Center(
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 980),
@@ -1123,7 +1468,9 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                   MediaFileInfoOverlay(
                       key: ValueKey('file-info-${_currentChannel.id}'),
                       info: info,
-                      requests: _fileInfoRequests),
+                      requests: _fileInfoRequests,
+                      // Touch: below the top bar's Sources / Rotate.
+                      top: _touch ? 64 : 16),
                 if (_panelOpen)
                   Positioned(
                     left: 0,
@@ -1250,6 +1597,39 @@ class _DesktopVolume extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// Touch: a big round button in the middle of the video (play/pause,
+/// +-10 s), on a dark disc so it reads on bright pictures.
+class _TouchRoundButton extends StatelessWidget {
+  const _TouchRoundButton({
+    required this.icon,
+    required this.size,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final double size;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.black.withValues(alpha: 0.35),
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: IconButton(
+        tooltip: tooltip,
+        iconSize: size,
+        padding: EdgeInsets.all(size * 0.3),
+        color: Colors.white,
+        icon: Icon(icon),
+        onPressed: onPressed,
+      ),
     );
   }
 }

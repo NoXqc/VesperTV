@@ -1,6 +1,6 @@
 import 'dart:async';
 
-/// With Settings > General > Startup > "Launch with profiles selector" on,
+/// With Settings > Playlists & guide > Profiles > "Launch with profiles selector" on,
 /// Back at the app's root returns to Who's watching instead of asking to
 /// exit; Back there asks to exit (owner, 2026-10-29). Off = unchanged.
 /// The app root (main.dart) registers how the selector is shown.

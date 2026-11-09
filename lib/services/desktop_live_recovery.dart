@@ -30,7 +30,7 @@ class DesktopLiveRecovery {
       player.stream.completed.listen((done) {
         if (done) _trouble('ended');
       }),
-      player.stream.error.listen((_) => _trouble('error')),
+      player.stream.error.listen((_) => _onError()),
       player.stream.buffering.listen(_onBuffering),
       player.stream.position.listen(_onPosition),
     ];
@@ -48,7 +48,7 @@ class DesktopLiveRecovery {
     _byPlayer[player]?.dispose();
     _byPlayer[player] = null;
     DesktopAudio.forget(player);
-    player.dispose();
+    unawaited(disposeDesktopPlayer(player));
   }
 
   /// Set by main.dart on Windows: a live channel's other copies, best
@@ -68,6 +68,7 @@ class DesktopLiveRecovery {
   int _attempt = 0;
   Timer? _retry;
   Timer? _bufferingTimer;
+  Timer? _errorCheck;
   DateTime? _reopenedAt;
   bool _recovering = false;
 
@@ -79,6 +80,7 @@ class DesktopLiveRecovery {
   void watch(Channel? channel) {
     _retry?.cancel();
     _bufferingTimer?.cancel();
+    _errorCheck?.cancel();
     _attempt = 0;
     _recovering = false;
     _channel = channel != null && channel.isLive && !channel.transientPlayback
@@ -99,6 +101,23 @@ class DesktopLiveRecovery {
     });
   }
 
+  /// mpv reports many errors it gets past by itself: "Cannot seek in this
+  /// stream" on every live open, a TCP read error its own reconnect
+  /// handles, a corrupt frame. Reopening on each one showed
+  /// "Reconnecting..." every 30-40 s on a stream that was still playing
+  /// (macOS, 2026-11-07). Reopen only when playback hasn't moved 6 s later.
+  void _onError() {
+    if (_channel == null || _recovering || (_errorCheck?.isActive ?? false)) {
+      return;
+    }
+    final at = player.state.position;
+    _errorCheck = Timer(const Duration(seconds: 6), () {
+      if (_channel == null || _recovering) return;
+      if (player.state.position > at && !player.state.completed) return;
+      _trouble('error');
+    });
+  }
+
   void _onPosition(Duration position) {
     if (!_recovering || _reopenedAt == null) return;
     if (position < const Duration(seconds: 1)) return;
@@ -113,6 +132,10 @@ class DesktopLiveRecovery {
   }
 
   void _trouble(String reason) {
+    // A reconnect is starting: a pending error check would compare the
+    // reopened stream's position (a few s) with the old one and reconnect a
+    // stream that just recovered.
+    _errorCheck?.cancel();
     final channel = _channel;
     if (channel == null || (_retry?.isActive ?? false)) return;
     _attempt++;
@@ -154,6 +177,7 @@ class DesktopLiveRecovery {
   void dispose() {
     _retry?.cancel();
     _bufferingTimer?.cancel();
+    _errorCheck?.cancel();
     for (final s in _subs) {
       s.cancel();
     }

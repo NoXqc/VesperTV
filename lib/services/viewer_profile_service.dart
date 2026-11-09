@@ -157,11 +157,13 @@ class ViewerProfileService extends ChangeNotifier {
   ///
   /// Returns false if a required PIN check failed/was cancelled, or if
   /// [targetId] isn't an id this service actually has — the switch never
-  /// happened in either case.
-  Future<bool> switchTo(BuildContext context, String targetId) async {
+  /// happened in either case. [unlocked]: the caller already had the PIN
+  /// entered for this request (Vesper AI asks it with a timeout).
+  Future<bool> switchTo(BuildContext context, String targetId,
+      {bool unlocked = false}) async {
     if (targetId == _activeId) return true;
     if (!_profiles.any((p) => p.id == targetId)) return false;
-    if (active.isRestricted) {
+    if (active.isRestricted && !unlocked) {
       final unlocked = await promptForPin(context);
       if (!unlocked) return false;
     }

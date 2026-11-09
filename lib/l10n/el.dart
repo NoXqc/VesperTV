@@ -34,12 +34,21 @@ const Map<String, String> kEl = {
   "Live TV guide layout, full-screen video, compact rows":
       "Διάταξη οδηγού, βίντεο πλήρους οθόνης, συμπαγείς γραμμές",
   "{n} titles": "{n} τίτλοι",
+  "No game at this time":
+      "Κανένας αγώνας αυτή την ώρα",
+  "Wide cards":
+      "Φαρδιές κάρτες",
+  "Movies and TV Shows rows show bigger 16:9 cards with the backdrop. A title without one shows its poster until the provider sends it.":
+      "Οι σειρές Ταινιών και Σειρών δείχνουν μεγαλύτερες κάρτες 16:9 με την εικόνα φόντου. Ένας τίτλος χωρίς φόντο δείχνει την αφίσα του μέχρι να το στείλει ο πάροχος.",
   "Open groups as expanded catalog": "Άνοιγμα ομάδων ως εκτεταμένος κατάλογος",
   "Movies and TV Shows groups open the full poster grid instead of the rows.":
       "Οι ομάδες Ταινιών και Σειρών ανοίγουν το πλήρες πλέγμα αφισών αντί για σειρές.",
   "Compact guide": "Συμπαγής οδηγός",
   "Shorter Timeline rows so more channels fit in the same space.":
       "Πιο χαμηλές γραμμές στο χρονοδιάγραμμα για περισσότερα κανάλια.",
+  "Preview on highlight": "Προεπισκόπηση με επισήμανση",
+  "The channel you stop on plays in the preview, without pressing OK. OK again opens it full screen.":
+      "Το κανάλι στο οποίο σταματάτε παίζει στην προεπισκόπηση, χωρίς να πατήσετε OK. Με OK ξανά ανοίγει σε πλήρη οθόνη.",
   "Transparent popups": "Διάφανα αναδυόμενα",
   "Reminders and goal alerts lose their background and outline, keeping only the logo and text.":
       "Οι υπενθυμίσεις και οι ειδοποιήσεις γκολ χάνουν φόντο και περίγραμμα, κρατώντας μόνο το λογότυπο και το κείμενο.",
@@ -2020,6 +2029,10 @@ const Map<String, String> kEl = {
   "Hide profiles": "Απόκρυψη προφίλ",
   "Hides the profiles row on Home.":
       "Αποκρύπτει τη σειρά προφίλ στην αρχική σελίδα.",
+  "Mini player on Home": "Μίνι player στην αρχική",
+  "The live channel you stop on plays at the top right of Home. OK opens it full screen; Play/Pause or hold OK turns it off.":
+      "Το ζωντανό κανάλι όπου σταματάτε παίζει πάνω δεξιά στην αρχική σελίδα. Το OK το ανοίγει σε πλήρη οθόνη· το Αναπαραγωγή/Παύση ή το παρατεταμένο OK το σταματά.",
+  "Stop mini player": "Διακοπή μίνι player",
   "Preferred audio language": "Προτιμώμενη γλώσσα ήχου",
   "Preferred subtitle language": "Προτιμώμενη γλώσσα υποτίτλων",
   "Source default": "Προεπιλογή πηγής",
@@ -2627,6 +2640,8 @@ const Map<String, String> kEl = {
       "Αυτό το κανάλι δεν γυρίζει πίσω.",
   "Not available on Windows yet.":
       "Δεν είναι ακόμα διαθέσιμο στα Windows.",
+  "No next episode.": "Δεν υπάρχει επόμενο επεισόδιο.",
+  "No previous episode.": "Δεν υπάρχει προηγούμενο επεισόδιο.",
   "That did not work.":
       "Δεν λειτούργησε.",
   "Talk from my phone":
@@ -2755,8 +2770,8 @@ const Map<String, String> kEl = {
       "Κράτα αυτή τη διεύθυνση ιδιωτική: όποιος την έχει μπορεί να ελέγχει το VesperTV όσο είναι ανοιχτό.",
   "Ask on the TV first":
       "Ερώτηση πρώτα στην τηλεόραση",
-  "An AI app's play, hide or show waits for OK on the TV.":
-      "Η αναπαραγωγή, απόκρυψη ή εμφάνιση από εφαρμογή AI περιμένει OK στην τηλεόραση.",
+  "Playing, hiding, changing settings or clearing history from an AI app waits for OK on the TV.":
+      "Η αναπαραγωγή, απόκρυψη, αλλαγή ρυθμίσεων ή διαγραφή ιστορικού από εφαρμογή AI περιμένει OK στην τηλεόραση.",
   "Reset the address":
       "Επαναφορά διεύθυνσης",
   "The old address stops working; add the new one":
@@ -2775,6 +2790,26 @@ const Map<String, String> kEl = {
       "Μια εφαρμογή AI θέλει να κρύψει {count} ομάδες ({words}).",
   "An AI app wants to show {count} groups ({words}).":
       "Μια εφαρμογή AI θέλει να εμφανίσει {count} ομάδες ({words}).",
+  "An AI app wants {game} to play on {channel} in {tab}.":
+      "Μια εφαρμογή AI θέλει το {game} να παίζει στο {channel} στο {tab}.",
+  "An AI app wants to set the channels of {count} games in {tab}.":
+      "Μια εφαρμογή AI θέλει να ορίσει το κανάλι {count} αγώνων στο {tab}.",
+  "An AI app wants to switch to the profile {name}.":
+      "Μια εφαρμογή AI θέλει να αλλάξει στο προφίλ {name}.",
+  "An AI app wants to create the kids profile {name}.":
+      "Μια εφαρμογή AI θέλει να δημιουργήσει το παιδικό προφίλ {name}.",
+  "An AI app wants to create the profile {name}.":
+      "Μια εφαρμογή AI θέλει να δημιουργήσει το προφίλ {name}.",
+  "An AI app wants to rename the profile {name} to {new}.":
+      "Μια εφαρμογή AI θέλει να μετονομάσει το προφίλ {name} σε {new}.",
+  "Delete the profile {name}? Its favourites and history are deleted too.":
+      "Διαγραφή του προφίλ {name}; Θα διαγραφούν και τα αγαπημένα και το ιστορικό του.",
+  "An AI app wants to let {name} see {count} groups ({words}).":
+      "Μια εφαρμογή AI θέλει να επιτρέψει στο {name} να βλέπει {count} ομάδες ({words}).",
+  "An AI app wants to block {count} groups ({words}) for {name}.":
+      "Μια εφαρμογή AI θέλει να αποκλείσει {count} ομάδες ({words}) για το {name}.",
+  "An AI app wants to change the parental PIN.":
+      "Μια εφαρμογή AI θέλει να αλλάξει το γονικό PIN.",
   "An AI app wants to edit your playlist: {what}.":
       "Μια εφαρμογή AI θέλει να επεξεργαστεί τη λίστα σας: {what}.",
   "An AI app wants to undo its playlist change: {what}.":
@@ -2856,8 +2891,8 @@ const Map<String, String> kEl = {
       "Τι να ρωτήσεις",
   "Without any AI (remote, typing or phone):":
       "Χωρίς AI (τηλεχειριστήριο, πληκτρολόγιο ή κινητό):",
-  "\"play TSN 1\" · \"mets RDS\" · \"pause\" · \"go back 30 seconds\" · \"next channel\" · \"back to live\" · \"what's on\" · \"what's on TSN 1\" · \"when is the Simpsons on\" · \"open the movies\" · \"search for Dune\" · \"put on the Habs game\" · \"today's games\" · \"add this to my watch list\" · \"my favourites\" · \"help\"":
-      "\"play TSN 1\" · \"pause\" · \"go back 30 seconds\" · \"next channel\" · \"back to live\" · \"what's on\" · \"when is the Simpsons on\" · \"open the movies\" · \"search for Dune\" · \"put on the Olympiacos game\" · \"today's games\" · \"add this to my watch list\" · \"my favourites\" · \"help\"",
+  "\"play TSN 1\" · \"mets RDS\" · \"pause\" · \"go back 30 seconds\" · \"next channel\" · \"next episode\" · \"back to live\" · \"what's on\" · \"what's on TSN 1\" · \"when is the Simpsons on\" · \"open the movies\" · \"search for Dune\" · \"put on the Habs game\" · \"today's games\" · \"add this to my watch list\" · \"my favourites\" · \"help\"":
+      "\"play TSN 1\" · \"pause\" · \"go back 30 seconds\" · \"next channel\" · \"next episode\" · \"back to live\" · \"what's on\" · \"when is the Simpsons on\" · \"open the movies\" · \"search for Dune\" · \"put on the Olympiacos game\" · \"today's games\" · \"add this to my watch list\" · \"my favourites\" · \"help\"",
   "With your AI, or from Claude / ChatGPT:":
       "Με τη δική σου AI ή από το Claude / ChatGPT:",
   "\"make me a movie night list for Friday\" (it goes on your watch list on Home) · \"hide every Turkish group\" · \"what crime shows do I have?\" · \"is the Leafs game on, and on which channel?\" · \"play the newest episode of something like Severance\" · \"pause the TV\" · \"tell the TV dinner is ready\"":
@@ -2876,6 +2911,18 @@ const Map<String, String> kEl = {
       "Λίστα παρακολούθησης",
   "Remove from watch list":
       "Αφαίρεση από τη λίστα",
+  "turn on":
+      "ενεργοποίηση",
+  "turn off":
+      "απενεργοποίηση",
+  "Hide scores":
+      "Απόκρυψη σκορ",
+  "Clear Media Hub history":
+      "Καθαρισμός ιστορικού Media Hub",
+  "An AI app wants to change settings: {what}.":
+      "Μια εφαρμογή AI θέλει να αλλάξει ρυθμίσεις: {what}.",
+  "An AI app wants to: {what}.":
+      "Μια εφαρμογή AI θέλει: {what}.",
   "An AI app wants to clear your watch list.":
       "Μια εφαρμογή AI θέλει να αδειάσει τη λίστα σου.",
   "Game card size":
@@ -2916,4 +2963,12 @@ const Map<String, String> kEl = {
   "Export a backup": "Εξαγωγή αντιγράφου ασφαλείας",
   "Save a backup file anywhere on this Mac": "Αποθήκευση αρχείου αντιγράφου ασφαλείας οπουδήποτε σε αυτό το Mac",
   "Backup exported.": "Το αντίγραφο ασφαλείας εξήχθη.",
+  "TV home screen":
+      "Αρχική οθόνη τηλεόρασης",
+  "Show on the TV home screen":
+      "Εμφάνιση στην αρχική οθόνη της τηλεόρασης",
+  "Continue watching and your Watch list in the launcher's Watch Next row, plus a row of your favourite channels. For Android TV launchers such as Projectivy.":
+      "Συνέχεια παρακολούθησης και η λίστα παρακολούθησής σας στη σειρά Watch Next του launcher, μαζί με μια σειρά με τα αγαπημένα σας κανάλια. Για launcher Android TV όπως το Projectivy.",
+  "Continue watching and favourites on the TV launcher":
+      "Συνέχεια παρακολούθησης και αγαπημένα στο launcher της τηλεόρασης",
 };

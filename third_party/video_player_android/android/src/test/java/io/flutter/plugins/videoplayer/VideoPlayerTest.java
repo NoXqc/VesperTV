@@ -93,6 +93,9 @@ public final class VideoPlayerTest {
   @Before
   public void setUp() {
     fakeVideoAsset = new FakeVideoAsset(FAKE_ASSET_URL);
+    // A real ExoPlayer never returns null tracks; the mock would, and the
+    // listener reads them when the video format is still unknown.
+    lenient().when(mockExoPlayer.getCurrentTracks()).thenReturn(Tracks.EMPTY);
   }
 
   private VideoPlayer createVideoPlayer() {
@@ -265,8 +268,10 @@ public final class VideoPlayerTest {
     when(mockExoPlayer.getVideoFormat())
         .thenReturn(
             new Format.Builder().setWidth(300).setHeight(200).setRotationDegrees(0).build());
-    verify(mockExoPlayer).addListener(listenerCaptor.capture());
-    Player.Listener listener = listenerCaptor.getValue();
+    // VideoPlayer also registers its live queue and stall counter: the
+    // event listener is the first one.
+    verify(mockExoPlayer, atLeastOnce()).addListener(listenerCaptor.capture());
+    Player.Listener listener = listenerCaptor.getAllValues().get(0);
 
     // Trigger an event that would trigger onInitialized.
     listener.onPlaybackStateChanged(Player.STATE_READY);

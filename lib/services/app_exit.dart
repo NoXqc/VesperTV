@@ -34,6 +34,16 @@ class AppExit {
   @visibleForTesting
   static bool isWindows = isDesktop;
 
+  /// Back at the app's root (the TV home's tabs column, Sports Mode, Who's
+  /// watching). Android leaves at once with [warm]: reopening is instant,
+  /// so the old "Exit VesperTV?" prompt only cost a press (owner,
+  /// 2026-11-08). A computer has no warm exit and Back (Esc) would close
+  /// the window, so there [confirm] still asks first.
+  static Future<void> back(Future<bool> Function() confirm) async {
+    if (!isWindows) return warm();
+    if (await confirm()) await full();
+  }
+
   static Future<void> warm() async {
     if (isWindows) return full();
     try {
@@ -56,11 +66,38 @@ class AppExit {
 
   static Future<void> full() async {
     if (isWindows) {
-      await windowManager.close();
+      await quit();
     } else {
       await SystemNavigator.pop();
     }
   }
+
+  /// Set by the app root on a computer: stops and disposes every media_kit
+  /// player (`disposeAllDesktopPlayers`) before the window closes.
+  static Future<void> Function()? beforeQuit;
+
+  static bool _quitting = false;
+
+  /// A computer quits: the players first ([beforeQuit], at most 5 s), then
+  /// the window. The window's own close button (title bar, Alt+F4, the
+  /// Steam / desktop close) comes here too: DesktopWindow sets
+  /// preventClose, so window_manager reports the close instead of closing.
+  /// Closing with players still open crashed libmpv on Linux (see
+  /// `disposeAllDesktopPlayers`).
+  static Future<void> quit() async {
+    if (_quitting) return;
+    _quitting = true;
+    try {
+      await beforeQuit?.call().timeout(const Duration(seconds: 5));
+    } catch (e) {
+      debugPrint('AppExit: closing players failed: $e');
+    }
+    // destroy, not close: close would only report the close again.
+    await windowManager.destroy();
+  }
+
+  @visibleForTesting
+  static void resetQuit() => _quitting = false;
 
   /// The app is on screen again (AppLifecycleState.resumed).
   static void resumed() {

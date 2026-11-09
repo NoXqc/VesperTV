@@ -34,12 +34,21 @@ const Map<String, String> kIt = {
   "Live TV guide layout, full-screen video, compact rows":
       "Layout della guida, video a schermo intero, righe compatte",
   "{n} titles": "{n} titoli",
+  "No game at this time":
+      "Nessuna partita a quest'ora",
+  "Wide cards":
+      "Schede larghe",
+  "Movies and TV Shows rows show bigger 16:9 cards with the backdrop. A title without one shows its poster until the provider sends it.":
+      "Le righe di Film e Serie TV mostrano schede 16:9 più grandi con l'immagine di sfondo. Un titolo senza sfondo mostra la locandina finché il fornitore non lo invia.",
   "Open groups as expanded catalog": "Apri i gruppi come catalogo esteso",
   "Movies and TV Shows groups open the full poster grid instead of the rows.":
       "I gruppi Film e Serie TV aprono la griglia completa di locandine invece delle righe.",
   "Compact guide": "Guida compatta",
   "Shorter Timeline rows so more channels fit in the same space.":
       "Righe più basse nella timeline per mostrare più canali.",
+  "Preview on highlight": "Anteprima alla selezione",
+  "The channel you stop on plays in the preview, without pressing OK. OK again opens it full screen.":
+      "Il canale su cui ti fermi va in onda nell'anteprima, senza premere OK. Premendo di nuovo OK si apre a schermo intero.",
   "Transparent popups": "Popup trasparenti",
   "Reminders and goal alerts lose their background and outline, keeping only the logo and text.":
       "Promemoria e avvisi gol perdono sfondo e contorno, mantenendo solo logo e testo.",
@@ -2069,6 +2078,10 @@ const Map<String, String> kIt = {
       "Impossibile importare questo file. Scegli una lista di canali M3U o un file TXT/JSON con collegamenti ai manifest di Media Hub.",
   "Hide profiles": "Nascondi profili",
   "Hides the profiles row on Home.": "Nasconde la riga dei profili nella Home.",
+  "Mini player on Home": "Mini player nella Home",
+  "The live channel you stop on plays at the top right of Home. OK opens it full screen; Play/Pause or hold OK turns it off.":
+      "Il canale live su cui ti fermi va in onda in alto a destra nella Home. OK lo apre a schermo intero; Play/Pausa o tenere premuto OK lo ferma.",
+  "Stop mini player": "Ferma il mini player",
   "Preferred audio language": "Lingua audio preferita",
   "Preferred subtitle language": "Lingua dei sottotitoli preferita",
   "Source default": "Predefinita della sorgente",
@@ -2672,6 +2685,8 @@ const Map<String, String> kIt = {
       "Questo canale non si può riavvolgere.",
   "Not available on Windows yet.":
       "Non ancora disponibile su Windows.",
+  "No next episode.": "Nessun episodio successivo.",
+  "No previous episode.": "Nessun episodio precedente.",
   "That did not work.":
       "Non ha funzionato.",
   "Talk from my phone":
@@ -2800,8 +2815,8 @@ const Map<String, String> kIt = {
       "Tieni privato questo indirizzo: chi lo ha può controllare VesperTV mentre è aperto.",
   "Ask on the TV first":
       "Chiedi prima sulla TV",
-  "An AI app's play, hide or show waits for OK on the TV.":
-      "Riproduci, nascondi o mostra da un'app di IA aspetta OK sulla TV.",
+  "Playing, hiding, changing settings or clearing history from an AI app waits for OK on the TV.":
+      "Riprodurre, nascondere, cambiare impostazioni o cancellare la cronologia da un'app di IA aspetta OK sulla TV.",
   "Reset the address":
       "Reimposta l'indirizzo",
   "The old address stops working; add the new one":
@@ -2820,6 +2835,26 @@ const Map<String, String> kIt = {
       "Un'app di IA vuole nascondere {count} gruppi ({words}).",
   "An AI app wants to show {count} groups ({words}).":
       "Un'app di IA vuole mostrare {count} gruppi ({words}).",
+  "An AI app wants {game} to play on {channel} in {tab}.":
+      "Un'app di IA vuole che {game} vada su {channel} in {tab}.",
+  "An AI app wants to set the channels of {count} games in {tab}.":
+      "Un'app di IA vuole scegliere il canale di {count} partite in {tab}.",
+  "An AI app wants to switch to the profile {name}.":
+      "Un'app di IA vuole passare al profilo {name}.",
+  "An AI app wants to create the kids profile {name}.":
+      "Un'app di IA vuole creare il profilo bambini {name}.",
+  "An AI app wants to create the profile {name}.":
+      "Un'app di IA vuole creare il profilo {name}.",
+  "An AI app wants to rename the profile {name} to {new}.":
+      "Un'app di IA vuole rinominare il profilo {name} in {new}.",
+  "Delete the profile {name}? Its favourites and history are deleted too.":
+      "Eliminare il profilo {name}? Anche i suoi preferiti e la cronologia verranno eliminati.",
+  "An AI app wants to let {name} see {count} groups ({words}).":
+      "Un'app di IA vuole consentire a {name} di vedere {count} gruppi ({words}).",
+  "An AI app wants to block {count} groups ({words}) for {name}.":
+      "Un'app di IA vuole bloccare {count} gruppi ({words}) per {name}.",
+  "An AI app wants to change the parental PIN.":
+      "Un'app di IA vuole cambiare il PIN parentale.",
   "An AI app wants to edit your playlist: {what}.":
       "Un'app di IA vuole modificare la tua playlist: {what}.",
   "An AI app wants to undo its playlist change: {what}.":
@@ -2901,8 +2936,8 @@ const Map<String, String> kIt = {
       "Cosa chiedere",
   "Without any AI (remote, typing or phone):":
       "Senza IA (telecomando, tastiera o telefono):",
-  "\"play TSN 1\" · \"mets RDS\" · \"pause\" · \"go back 30 seconds\" · \"next channel\" · \"back to live\" · \"what's on\" · \"what's on TSN 1\" · \"when is the Simpsons on\" · \"open the movies\" · \"search for Dune\" · \"put on the Habs game\" · \"today's games\" · \"add this to my watch list\" · \"my favourites\" · \"help\"":
-      "«metti TSN 1» · «pausa» · «indietro 30 secondi» · «canale successivo» · «in diretta» · «cos'è questo» · «quando gioca la Juventus» · «apri i film» · «cerca Dune» · «metti la partita della Juventus» · «partite di oggi» · «aggiungi alla mia lista» · «i miei preferiti» · «aiuto»",
+  "\"play TSN 1\" · \"mets RDS\" · \"pause\" · \"go back 30 seconds\" · \"next channel\" · \"next episode\" · \"back to live\" · \"what's on\" · \"what's on TSN 1\" · \"when is the Simpsons on\" · \"open the movies\" · \"search for Dune\" · \"put on the Habs game\" · \"today's games\" · \"add this to my watch list\" · \"my favourites\" · \"help\"":
+      "«metti TSN 1» · «pausa» · «indietro 30 secondi» · «canale successivo» · «prossimo episodio» · «in diretta» · «cos'è questo» · «quando gioca la Juventus» · «apri i film» · «cerca Dune» · «metti la partita della Juventus» · «partite di oggi» · «aggiungi alla mia lista» · «i miei preferiti» · «aiuto»",
   "With your AI, or from Claude / ChatGPT:":
       "Con la tua IA, o da Claude / ChatGPT:",
   "\"make me a movie night list for Friday\" (it goes on your watch list on Home) · \"hide every Turkish group\" · \"what crime shows do I have?\" · \"is the Leafs game on, and on which channel?\" · \"play the newest episode of something like Severance\" · \"pause the TV\" · \"tell the TV dinner is ready\"":
@@ -2921,6 +2956,18 @@ const Map<String, String> kIt = {
       "La mia lista",
   "Remove from watch list":
       "Rimuovi dalla lista",
+  "turn on":
+      "attivare",
+  "turn off":
+      "disattivare",
+  "Hide scores":
+      "Nascondi i punteggi",
+  "Clear Media Hub history":
+      "Cancella cronologia di Media Hub",
+  "An AI app wants to change settings: {what}.":
+      "Un'app di IA vuole cambiare impostazioni: {what}.",
+  "An AI app wants to: {what}.":
+      "Un'app di IA vuole: {what}.",
   "An AI app wants to clear your watch list.":
       "Un'app di IA vuole svuotare la tua lista.",
   "Game card size":
@@ -2961,4 +3008,12 @@ const Map<String, String> kIt = {
   "Export a backup": "Esporta un backup",
   "Save a backup file anywhere on this Mac": "Salva un file di backup ovunque su questo Mac",
   "Backup exported.": "Backup esportato.",
+  "TV home screen":
+      "Schermata home della TV",
+  "Show on the TV home screen":
+      "Mostra nella schermata home della TV",
+  "Continue watching and your Watch list in the launcher's Watch Next row, plus a row of your favourite channels. For Android TV launchers such as Projectivy.":
+      "Continua a guardare e La mia lista nella riga Watch Next del launcher, più una riga con i tuoi canali preferiti. Per i launcher Android TV come Projectivy.",
+  "Continue watching and favourites on the TV launcher":
+      "Continua a guardare e preferiti nel launcher della TV",
 };

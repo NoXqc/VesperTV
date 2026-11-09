@@ -1,9 +1,12 @@
 import '../utils/refined_finish.dart';
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
 import '../utils/image_urls.dart';
+import '../utils/wide_art_queue.dart';
 import 'hd_network_image.dart';
 import 'hold_to_activate.dart';
 import '../utils/desktop_platform.dart';
@@ -37,7 +40,22 @@ class PosterCard extends StatefulWidget {
     this.wideWidth,
     this.wideImageUrl,
     this.wideLogoUrl,
+    this.wideStyle = false,
+    this.backdropUrl,
+    this.artKey,
+    this.loadBackdrop,
   });
+
+  /// Settings > Interface > Tabs > Wide cards: every card is 16:9 (the
+  /// caller passes a 16:9 [cardWidth]) and shows [backdropUrl]. Without
+  /// one yet, the poster sits on the left over a soft, dimmed copy of
+  /// itself, and [loadBackdrop] (keyed by [artKey], run through
+  /// [WideArtQueue] once the card has been on screen a moment) may bring
+  /// one.
+  final bool wideStyle;
+  final String? backdropUrl;
+  final String? artKey;
+  final Future<String?> Function()? loadBackdrop;
 
   /// Media Hub's focused card (Nuvio style): set by the caller while this
   /// card is the focused one, the artwork grows to this width and shows
@@ -49,6 +67,14 @@ class PosterCard extends StatefulWidget {
 
   /// A wide card's width for [posterHeight]: 16:9 artwork.
   static const double wideCardWidth = posterHeight * 16 / 9;
+
+  /// Wide cards (Settings > Interface > Tabs) are this much taller than
+  /// the posters, and 16:9: the TV home rows and the Expand catalog grid.
+  static const double wideStyleScale = 1.1;
+  static const double wideStylePosterHeight = posterHeight * wideStyleScale;
+  static const double wideStyleWidth = wideStylePosterHeight * 16 / 9;
+  static const double wideStyleHeight =
+      wideStylePosterHeight + titleHeight * wideStyleScale;
 
   /// Touch: the first tap only focuses the card (the browse hero shows
   /// its description), a tap on the focused card or a double tap opens
@@ -143,8 +169,60 @@ class _PosterCardState extends State<PosterCard> {
   FocusNode get _effectiveFocusNode =>
       widget.focusNode ?? (_ownedFocusNode ??= FocusNode());
 
+  /// A wide card's backdrop that arrived after it was built.
+  String? _loadedBackdrop;
+  Timer? _artTimer;
+  String? _askedKey;
+
+  String? get _backdrop {
+    final given = widget.backdropUrl;
+    if (given != null && given.isNotEmpty) return given;
+    return _loadedBackdrop;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _askForArt();
+  }
+
+  @override
+  void didUpdateWidget(PosterCard old) {
+    super.didUpdateWidget(old);
+    if (old.artKey != widget.artKey || old.wideStyle != widget.wideStyle) {
+      _dropArtRequest();
+      _loadedBackdrop = null;
+      _askForArt();
+    }
+  }
+
+  void _askForArt() {
+    final key = widget.artKey;
+    final load = widget.loadBackdrop;
+    if (!widget.wideStyle || key == null || load == null) return;
+    if (_backdrop != null) return;
+    _artTimer = Timer(WideArtQueue.dwell, () {
+      _askedKey = key;
+      WideArtQueue.instance.request(key, load)?.then((url) {
+        if (!mounted || widget.artKey != key) return;
+        if (url != null && url.isNotEmpty) {
+          setState(() => _loadedBackdrop = url);
+        }
+      });
+    });
+  }
+
+  void _dropArtRequest() {
+    _artTimer?.cancel();
+    _artTimer = null;
+    final key = _askedKey;
+    if (key != null) WideArtQueue.instance.cancel(key);
+    _askedKey = null;
+  }
+
   @override
   void dispose() {
+    _dropArtRequest();
     _ownedFocusNode?.dispose();
     super.dispose();
   }
@@ -154,8 +232,12 @@ class _PosterCardState extends State<PosterCard> {
     final scheme = Theme.of(context).colorScheme;
     final wide = widget.wideWidth != null;
     final cardWidth = widget.wideWidth ?? widget.cardWidth;
-    final imageUrl =
-        wide ? (widget.wideImageUrl ?? widget.imageUrl) : widget.imageUrl;
+    final wideBackdrop = widget.wideStyle ? _backdrop : null;
+    // Wide cards without a backdrop yet: the poster beside the title area.
+    final posterBeside = widget.wideStyle && wideBackdrop == null;
+    final imageUrl = wide
+        ? (widget.wideImageUrl ?? widget.imageUrl)
+        : (wideBackdrop ?? widget.imageUrl);
     final hasImage = imageUrl != null && imageUrl.isNotEmpty;
     final logoUrl = wide ? widget.wideLogoUrl : null;
     final showProgress = !widget.watched && widget.progressFraction != null;
@@ -166,7 +248,10 @@ class _PosterCardState extends State<PosterCard> {
     // TvHomeScreen's `_browsePosterWidth`/`_browseCardHeight`), or a
     // fixed 30px/11pt title underneath a ~1.8x taller poster reads as a
     // mismatched sliver of mostly-blank space under tiny text.
-    final scale = widget.cardWidth / PosterCard.width;
+    // A wide card is wider for the same height: scale by the height.
+    final scale = widget.wideStyle
+        ? widget.cardPosterHeight / PosterCard.posterHeight
+        : widget.cardWidth / PosterCard.width;
     final titleHeight = PosterCard.titleHeight * scale;
     final sourceHeight =
         widget.sourceLabel == null ? 0.0 : PosterCard.sourceHeight * scale;
@@ -212,7 +297,7 @@ class _PosterCardState extends State<PosterCard> {
           // as noticeably weaker; this restores a similarly visible glow.
           // A wide card zooms less: 10 % of its width ran over both
           // neighbours.
-          scale: _focused ? (wide ? 1.04 : 1.10) : 1.0,
+          scale: _focused ? (wide || widget.wideStyle ? 1.04 : 1.10) : 1.0,
           duration: const Duration(milliseconds: 150),
           curve: Curves.easeOut,
           child: SizedBox(
@@ -259,13 +344,44 @@ class _PosterCardState extends State<PosterCard> {
                   clipBehavior: Clip.antiAlias,
                   child: Stack(
                     children: [
-                      if (hasImage)
+                      if (hasImage && posterBeside) ...[
+                        // A tiny decode stretched over the card reads as a
+                        // soft blur without a blur filter's cost.
+                        Positioned.fill(
+                          child: HdNetworkImage(
+                            url: imageUrl,
+                            kind: ImageKind.poster,
+                            fit: BoxFit.cover,
+                            decodeWidth: 24,
+                            errorWidget: (_) => const SizedBox.shrink(),
+                          ),
+                        ),
+                        const Positioned.fill(
+                          child: ColoredBox(color: Color(0x99000000)),
+                        ),
+                        Positioned(
+                          left: 0,
+                          top: 0,
+                          bottom: 0,
+                          width: widget.cardPosterHeight * 0.68,
+                          child: HdNetworkImage(
+                            url: imageUrl,
+                            kind: ImageKind.poster,
+                            fit: BoxFit.cover,
+                            decodeWidth: HdNetworkImage.cardDecodeWidth(
+                                context, widget.cardPosterHeight * 0.68),
+                            fadeInDuration: const Duration(milliseconds: 250),
+                            errorWidget: (_) => const _PosterFallbackIcon(),
+                          ),
+                        ),
+                      ] else if (hasImage)
                         Positioned.fill(
                           child: HdNetworkImage(
                             // Keyed: the wide card swaps poster -> backdrop.
                             key: ValueKey(imageUrl),
                             url: imageUrl,
-                            kind: wide && widget.wideImageUrl != null
+                            kind: (wide && widget.wideImageUrl != null) ||
+                                    wideBackdrop != null
                                 ? ImageKind.backdrop
                                 : ImageKind.poster,
                             fit: widget.fit,

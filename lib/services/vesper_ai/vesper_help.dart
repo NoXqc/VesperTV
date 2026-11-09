@@ -10,13 +10,23 @@ const vesperHelpTopics = <String, String>{
 VesperTV tools act on the viewer's TV right now.
 - search / play / guide / now_playing / player / open / recent / favorites /
   watchlist / sports_today / play_game / show_message: watching.
-- groups: list a tab's groups, or hide / show whole groups by words in their
+- groups: list a tab's groups, list one live group's channels with their
+  guide (action channels), or hide / show whole groups by words in their
   names (simple, quick).
+- game_channel: save which channel a Sports Trak game card plays. Read
+  topic "sports" first.
+- profiles / parental: viewer profiles, kids profiles and the parental PIN.
+  Read topic "profiles" first.
 - playlist_editor: finer playlist clean-up (single channels, rules, renames,
   fallbacks), every change undoable. Read topic "playlist_editor" first.
+- settings: read or change the app's settings (playback, startup, look and
+  language, guide, tabs, Sports Trak); clear histories (searches and
+  channels, Continue Watching, Media Hub, the watch list); update_guide
+  reloads the TV guide. action list first: only its keys can be set, with
+  set's changes array for several at once (one OK on the TV).
 Changes asked by an AI app may need the viewer to press OK on the TV; if
 they say no, the tool returns an error saying so. Kids / restricted profiles
-cannot change playlists.''',
+cannot change playlists or settings, or clear history.''',
   'playlist_editor': '''
 PLAYLIST EDITOR (tool playlist_editor)
 
@@ -104,13 +114,113 @@ Examples
 groups tool vs playlist_editor: groups hides whole groups once (Settings >
 Playlists list); playlist_editor rules keep working on new content and
 work on single channels.''',
+  'sports': '''
+SPORTS TRAK (tools sports_today, play_game, game_channel)
+
+Sports Trak shows the games of the leagues the viewer added (Sports Trak >
+Edit leagues; a league that is not there cannot be asked for). Each card
+plays the channel Sports Trak matched to it, or the one the viewer (or you,
+with game_channel) picked.
+
+sports_today [league] [team] [day]: games with a ref ("g4"), start time
+(the TV's local time), state, networks (the TV networks the league lists,
+e.g. "ESPN", "TNT", "NBA TV", "MSGB") and the matched channel with
+matched_by:
+- viewer_pick: the viewer chose it. Never replace it unless they ask.
+- guide / channel_name: the guide or the channel's name names this game
+  (evidence says what it read). Usually right.
+- guide_series_guess, name_guess, team_channel_guess, network_guess: only
+  the league, a team's channel or a broadcaster matched, not the game. These
+  are the ones worth checking.
+No channel = nothing matched.
+Each channel also has quality (8K / 4K / FHD / HD / SD from its name or
+group; quality_measured: the TV saw it play in 4K) and the guide's
+programme: on_at_game_time for a game that has not started (what that
+channel shows at the start time), on_now once it is live. A title there
+that names another game means the channel is not this game's.
+state is the GAME's: pre (not started), live, post (over).
+
+play_game team [list: true]: every channel Sports Trak found for a team's
+game today, best first, without playing when list is true.
+
+groups action channels group "<name>": the live channels of one group with
+the guide's now / next (title, day, start, end). Use it for a provider's
+event group ("NBA League Pass", "NHL Center Ice", "PPV"). Event channels
+are often renamed with the game ("NBA 03: Celtics vs. Knicks @ 7:30 PM
+ET"); Sports Trak reads those names, so they are usually matched already.
+
+game_channel picks [{game, channel}] (at most 40, one OK on the TV): saves
+the channel for those games, like the viewer's own pick. It lasts about a
+week. Rules:
+1. Only pick a channel whose name, group or guide (now / next, at the game's
+   time) names that game or both teams, or a channel of a network the game
+   lists (networks) when the viewer has it.
+2. Feeds named only by a number ("NBA LP 07") with no guide say nothing
+   about the game: do not guess. Say which games stay unmatched instead.
+3. A web search (if you have one) can tell which network shows a game; it
+   cannot tell which numbered feed of the viewer's provider carries it.
+4. Times in the guide and in sports_today are the TV's local time; channel
+   names often say ET.
+5. Tell the viewer what you saved and what you could not match.
+
+Example "match every NBA game tonight with League Pass":
+sports_today league "NBA" -> groups action channels group "NBA League Pass"
+-> for each game without a viewer_pick / guide / channel_name match, find
+the feed whose name or guide names both teams -> game_channel with those
+picks -> report.''',
+  'profiles': '''
+PROFILES AND PARENTAL CONTROLS (tools profiles, parental)
+
+Each viewer profile has its own favourites, history, hidden groups and
+Sports Trak teams. Main always exists and cannot be deleted. A kids profile
+(kids: true, fixed when created) sees ONLY the groups allowed to it: a new
+kids profile sees nothing until groups are allowed. One parental PIN (4
+digits) guards every kids profile.
+
+The PIN: you never see, ask for, say or type it. When it is needed the TV
+shows its own PIN pad and the viewer types it there (2 minutes, then it is
+cancelled). Never ask the viewer to tell you the PIN. There is no way to
+remove the PIN or to turn a kids profile into a normal one.
+
+When the TV asks for the PIN:
+- On a kids profile (the one on screen): every change, switching away
+  included.
+- From any profile: allowing groups to a kids profile, deleting a kids
+  profile, changing the PIN.
+- Not for: listing, switching INTO a kids profile, blocking groups from a
+  parent's profile, creating a normal profile from a parent's.
+If the PIN is not entered, the tool says nothing changed: tell the viewer.
+
+profiles
+- list: the profiles (kids, main, active) and pin_set.
+- switch profile: the TV changes viewer (what plays stops).
+- create name [kids]: a kids profile needs a PIN; when none is set the TV
+  asks for a new one. Then allow groups to it (parental allow_groups).
+- rename profile name.
+- delete profile: never Main or the one on screen; always asked on the TV.
+
+parental
+- status: pin_set, each kids profile and its allowed groups.
+- allow_groups profile contains [tab] [preview]: allows the groups whose
+  names hold contains (e.g. "Kids", "Disney", "Cartoon") to that kids
+  profile. Run with preview: true first and show the viewer the list: a
+  word can catch adult groups ("Adult Cartoons", "XXX Disney" names exist).
+  Leave out anything that looks adult.
+- block_groups profile contains [tab] [preview]: takes groups back.
+- change_pin: the TV asks the current PIN, then a new one twice.
+
+Example "make a profile for Emma that only sees the kids channels":
+profiles create name "Emma" kids true -> parental allow_groups profile
+"Emma" contains "kids" preview true -> show the list, drop doubtful ones by
+using more precise words -> allow_groups without preview (PIN on the TV).''',
 };
 
 final _vesperHelpTool = VesperTool(
   name: 'vesper_help',
   description: 'The manual for VesperTV\'s tools: what they can do, their '
       'rules and limits, with examples. Topics: "overview", '
-      '"playlist_editor". Read "playlist_editor" before using that tool.',
+      '"playlist_editor", "sports", "profiles". Read the topic before '
+      'playlist_editor, game_channel, profiles or parental.',
   schema: {
     'type': 'object',
     'properties': {

@@ -233,7 +233,11 @@ class VesperAi {
       'before you play when unsure, and pick the most fitting result '
       'yourself rather than asking which one. When the viewer asks to '
       'watch something, play it. After an action, say in a few words what '
-      'you did. If the playlists do not have something, say so. When the '
+      'you did. If the playlists do not have something, say so. Media Hub '
+      '(media_hub) holds the movies and shows of the viewer\'s add-ons and '
+      'media servers: look there when asked to, or when the playlists do '
+      'not have a title; play with best true. When a Media Hub title '
+      'buffers or fails, media_hub switch next. When the '
       'viewer asks for all / every / which channels of a name (all TSN, '
       'CBS east and west), open the search page with that name so they '
       'can pick. A category name (PPV, Pay Per View, Live Events) opens '
@@ -425,6 +429,10 @@ class VesperAi {
         tr('This channel cannot be rewound.'),
       'player' when '$error'.contains('Windows') =>
         tr('Not available on Windows yet.'),
+      'player' when '$error'.contains('next episode') =>
+        tr('No next episode.'),
+      'player' when '$error'.contains('previous episode') =>
+        tr('No previous episode.'),
       'player' => tr('Nothing is playing.'),
       _ => tr('That did not work.'),
     };

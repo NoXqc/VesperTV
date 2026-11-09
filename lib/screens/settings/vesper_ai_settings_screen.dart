@@ -367,7 +367,7 @@ class _VesperAiSettingsScreenState extends State<VesperAiSettingsScreen> {
               TvSwitchListTile(
                 title: Text(tr('Ask on the TV first')),
                 subtitle: Text(tr(
-                    'An AI app\'s play, hide or show waits for OK on the TV.')),
+                    'Playing, hiding, changing settings or clearing history from an AI app waits for OK on the TV.')),
                 value: _storage.getAiConfirmRemotePlay(),
                 onChanged: (v) async {
                   await _storage.setAiConfirmRemotePlay(v);
@@ -463,7 +463,7 @@ class _VesperAiSettingsScreenState extends State<VesperAiSettingsScreen> {
             _heading(Icons.lightbulb_outline, tr('Things to ask')),
             _note(tr('Without any AI (remote, typing or phone):')),
             _note(tr(
-                '"play TSN 1" · "mets RDS" · "pause" · "go back 30 seconds" · "next channel" · "back to live" · "what\'s on" · "what\'s on TSN 1" · "when is the Simpsons on" · "open the movies" · "search for Dune" · "put on the Habs game" · "today\'s games" · "add this to my watch list" · "my favourites" · "help"')),
+                '"play TSN 1" · "mets RDS" · "pause" · "go back 30 seconds" · "next channel" · "next episode" · "back to live" · "what\'s on" · "what\'s on TSN 1" · "when is the Simpsons on" · "open the movies" · "search for Dune" · "put on the Habs game" · "today\'s games" · "add this to my watch list" · "my favourites" · "help"')),
             _note(tr('With your AI, or from Claude / ChatGPT:')),
             _note(tr(
                 '"make me a movie night list for Friday" (it goes on your watch list on Home) · "hide every Turkish group" · "what crime shows do I have?" · "is the Leafs game on, and on which channel?" · "play the newest episode of something like Severance" · "pause the TV" · "tell the TV dinner is ready"')),

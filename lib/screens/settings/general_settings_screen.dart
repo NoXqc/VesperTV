@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -9,6 +10,7 @@ import '../../services/app_preferences.dart';
 import '../../services/audio_delay.dart';
 import '../../services/archive_service.dart';
 import '../../services/device_defaults.dart';
+import '../../services/launcher_channels.dart';
 import '../../services/playback_service.dart';
 import '../../services/recording_service.dart';
 import '../../services/storage_service.dart';
@@ -285,17 +287,8 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                       ]),
                   _section('startup', Icons.power_settings_new, tr('Startup'),
                       children: [
-                        TvSwitchListTile(
-                          title: Text(tr('Launch with profiles selector')),
-                          subtitle: Text(tr(
-                              'Choose a profile after the splash, before the app opens. Applies from the next start.')),
-                          value: context
-                              .watch<AppPreferences>()
-                              .launchWithProfiles,
-                          onChanged: (value) => context
-                              .read<AppPreferences>()
-                              .setLaunchWithProfiles(value),
-                        ),
+                        // Launch with profiles selector lives in Settings >
+                        // Playlists & guide > Profiles (owner, 2026-11-09).
                         _StartSectionPicker(),
                         // At most one of the two is on; both off = nothing
                         // plays.
@@ -398,11 +391,27 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                           context.read<AppPreferences>().setExpandedBrowse(v),
                     ),
                     TvSwitchListTile(
+                      title: Text(tr('Wide cards')),
+                      subtitle: Text(tr(
+                          'Movies and TV Shows rows show bigger 16:9 cards with the backdrop. A title without one shows its poster until the provider sends it.')),
+                      value: context.watch<AppPreferences>().wideCards,
+                      onChanged: (v) =>
+                          context.read<AppPreferences>().setWideCards(v),
+                    ),
+                    TvSwitchListTile(
                       title: Text(tr('Hide profiles')),
                       subtitle: Text(tr('Hides the profiles row on Home.')),
                       value: context.watch<AppPreferences>().hideProfiles,
                       onChanged: (v) =>
                           context.read<AppPreferences>().setHideProfiles(v),
+                    ),
+                    TvSwitchListTile(
+                      title: Text(tr('Mini player on Home')),
+                      subtitle: Text(tr(
+                          'The live channel you stop on plays at the top right of Home. OK opens it full screen; Play/Pause or hold OK turns it off.')),
+                      value: context.watch<AppPreferences>().homeMiniPlayer,
+                      onChanged: (v) =>
+                          context.read<AppPreferences>().setHomeMiniPlayer(v),
                     ),
                     TvSwitchListTile(
                       title: Text(tr('Show group counts')),
@@ -738,6 +747,23 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                               .setMixFavoritePlaylists(v),
                         ),
                       ]),
+                  if (Platform.isAndroid &&
+                      context.read<AppPreferences>().isTelevision)
+                    _section(
+                        'tvhome', Icons.home_outlined, tr('TV home screen'),
+                        children: [
+                          TvSwitchListTile(
+                            title: Text(tr('Show on the TV home screen')),
+                            subtitle: Text(tr(
+                                "Continue watching and your Watch list in the launcher's Watch Next row, plus a row of your favourite channels. For Android TV launchers such as Projectivy.")),
+                            value: context.watch<AppPreferences>().launcherRows,
+                            onChanged: (v) {
+                              context.read<AppPreferences>().setLauncherRows(v);
+                              unawaited(LauncherChannels.instance
+                                  .publish(force: true));
+                            },
+                          ),
+                        ]),
                   if (!usesMediaKit)
                     _section('multiview', Icons.grid_view, tr('Multiview'),
                         children: [

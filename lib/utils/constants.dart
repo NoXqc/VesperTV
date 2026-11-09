@@ -391,6 +391,19 @@ class AppConstants {
   /// pre-load. Device-only: the slow splash protects weak boxes (§10).
   static const String keyFastStartup = 'vesper_fast_startup';
 
+  /// Settings > Interface > TV home screen (Android TV, on by default):
+  /// Continue watching / Watch list in the launcher's Watch Next row and a
+  /// Favourite channels row (LauncherChannels). Device-only.
+  static const String keyLauncherRows = 'vesper_launcher_rows';
+
+  /// LauncherChannels' note of each card it sent: its position and when it
+  /// was last watched (Watch Next's order). Device-only.
+  static const String keyLauncherState = 'vesper_launcher_state';
+
+  /// Per viewer, device-only: the episode after the one last left in each
+  /// IPTV show (PlaybackService), for the launcher's next episode card.
+  static const String keyNextEpisodes = 'vesper_next_episodes';
+
   /// Settings > General > Startup: Update in the background (opt-in,
   /// device-only). A due full catalog sync runs behind the app instead of
   /// behind the blocking "Updating Content" screen.
@@ -439,6 +452,9 @@ class AppConstants {
   /// (`HomeRows`). Null = never edited (the default order).
   static const String keyHomeRows = 'vesper_home_rows';
   static const String keyHideProfiles = 'vesper_hide_profiles';
+
+  /// Home's mini player (top right), per viewer; null = on.
+  static const String keyHomeMiniPlayer = 'vesper_home_mini_player';
   static const String keySportsAddedLeagues = 'vesper_sports_added_leagues';
   static const String keySportsHideScores = 'vesper_sports_hide_scores';
   static const String keySportsMode = 'vesper_sports_mode';
@@ -514,7 +530,13 @@ class AppConstants {
 
   static const String keyGuideExpanded = 'vesper_guide_expanded';
   static const String keyGuideCompact = 'vesper_guide_compact';
+
+  /// Opt-in: the live channel the remote stops on plays in the preview.
+  static const String keyGuideFocusPreview = 'vesper_guide_focus_preview';
   static const String keyExpandedBrowse = 'vesper_expanded_browse';
+
+  /// Movies / TV Shows rows as 16:9 cards (backdrops), device-only look.
+  static const String keyWideCards = 'vesper_wide_cards';
 
   /// LEGACY global scalar — "enable/disable playlist" (freeing a
   /// provider's connection slot for another device without touching
@@ -661,5 +683,5 @@ class AppConstants {
   /// box's time. A stored legacy value falls back to the default (see
   /// `StorageService.getRefreshInterval`).
   static const int defaultRefreshIntervalMinutes = 720;
-  static const List<int> refreshIntervalOptions = [360, 720, 1440];
+  static const List<int> refreshIntervalOptions = [180, 360, 720, 1440];
 }

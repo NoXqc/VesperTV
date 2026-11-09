@@ -98,35 +98,40 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
   }
 
   /// Back here (at launch, or after Back from the app's root returned to
-  /// this screen) asks to exit; Stay is focused like the app's own prompt.
+  /// this screen) leaves the app like the TV home's ([AppExit.back]: warm
+  /// on Android, asks first on a computer, Stay focused).
   bool _exitPromptOpen = false;
 
   Future<void> _confirmExit() async {
     if (_busy || _exitPromptOpen) return;
     _exitPromptOpen = true;
-    final exit = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(tr('Exit {appName}?', {'appName': AppConstants.appName})),
-        content: Text(tr('Are you sure you want to exit {appName}?',
-            {'appName': AppConstants.appName})),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(tr('Exit')),
+    try {
+      await AppExit.back(() async {
+        final exit = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title:
+                Text(tr('Exit {appName}?', {'appName': AppConstants.appName})),
+            content: Text(tr('Are you sure you want to exit {appName}?',
+                {'appName': AppConstants.appName})),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: Text(tr('Exit')),
+              ),
+              TextButton(
+                autofocus: true,
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: Text(tr('Stay')),
+              ),
+            ],
           ),
-          TextButton(
-            autofocus: true,
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(tr('Stay')),
-          ),
-        ],
-      ),
-    );
-    _exitPromptOpen = false;
-    if (exit != true || !mounted) return;
-    // Warm, like the TV home's Back > Exit ([AppExit.warm]).
-    await AppExit.warm();
+        );
+        return exit == true && mounted;
+      });
+    } finally {
+      _exitPromptOpen = false;
+    }
   }
 
   Widget _profileGrid(
