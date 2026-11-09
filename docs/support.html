@@ -52,7 +52,23 @@ ul.keeps li b{color:var(--ink)}
 .promise{margin:36px 0;padding:18px 20px;border-left:3px solid var(--gold);background:var(--panel);border-radius:0 12px 12px 0;color:var(--ink-2)}
 .promise b{color:var(--ink)}
 footer{border-top:1px solid var(--hair);margin-top:48px;padding:20px 0 32px;color:var(--ink-3);font-size:14px}
-@media (max-width:560px){header nav{display:none}}
+/* Donate card: one-tap amounts that open Liberapay already filled in. */
+.way.give{grid-column:1/-1;padding:24px}
+.give-title{display:flex;align-items:center;gap:10px}
+.give-title svg{flex:none;filter:drop-shadow(0 0 10px rgba(240,199,94,.45))}
+.amounts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:0 0 14px}
+.amt{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:78px;
+  padding:12px 8px;border-radius:14px;border:1px solid var(--hair-2);background:var(--panel-2);
+  color:var(--ink);text-decoration:none;transition:border-color .15s,transform .15s,box-shadow .15s}
+.amt b{font:800 26px/1 'Bricolage Grotesque',sans-serif;letter-spacing:-.01em}
+.amt span{font-size:13px;color:var(--ink-3)}
+.amt:hover,.amt:focus-visible{border-color:var(--gold);transform:translateY(-2px);outline:none;
+  box-shadow:0 6px 22px rgba(212,160,23,.18)}
+.amt.pop{background:linear-gradient(180deg,var(--gold-lift),var(--gold));color:#1a1206;border-color:transparent}
+.amt.pop span{color:#4a3508}
+.amt.other b{font-size:17px;line-height:1.2}
+.fine{font-size:13px;color:var(--ink-3);margin:0}
+@media (max-width:560px){header nav{display:none}.amounts{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
@@ -82,11 +98,25 @@ footer{border-top:1px solid var(--hair);margin-top:48px;padding:20px 0 32px;colo
     evenings, you can help keep them running.</p>
 
   <div class="ways">
-    <div class="way star">
-      <b>Liberapay</b>
-      <p>A non-profit donation platform for open-source projects. Give once or every week,
-        month or year, by card or PayPal. Liberapay takes no fee, and you can stop at any time.</p>
-      <a class="btn gold" href="https://liberapay.com/NoXQc/donate">Donate on Liberapay</a>
+    <div class="way star give">
+      <b class="give-title">
+        <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true">
+          <defs><linearGradient id="hg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE28C"/><stop offset="1" stop-color="#C48412"/></linearGradient></defs>
+          <path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.2 3 4.5 6.6 4.5c2.1 0 3.7 1.2 5.4 3.2 1.7-2 3.3-3.2 5.4-3.2 3.6 0 5.7 3.7 4.2 7.2C19.5 16.4 12 21 12 21z" fill="url(#hg)"/>
+        </svg>
+        Donate on Liberapay
+      </b>
+      <p>Pick an amount and finish on Liberapay, a non-profit platform for open-source projects.
+        Pay by card or PayPal.</p>
+      <div class="amounts">
+        <a class="amt" href="https://liberapay.com/NoXQc/donate?currency=USD&amp;amount=3&amp;period=monthly"><b>$3</b><span>per month</span></a>
+        <a class="amt pop" href="https://liberapay.com/NoXQc/donate?currency=USD&amp;amount=5&amp;period=monthly"><b>$5</b><span>per month</span></a>
+        <a class="amt" href="https://liberapay.com/NoXQc/donate?currency=USD&amp;amount=10&amp;period=monthly"><b>$10</b><span>per month</span></a>
+        <a class="amt other" href="https://liberapay.com/NoXQc/donate"><b>Other amount</b><span>or currency</span></a>
+      </div>
+      <p class="fine">Amounts are in US dollars. Liberapay donations repeat, but you can stop at any
+        time, even right after the first payment, so a one-time gift works too. Liberapay takes
+        no cut; only the card or PayPal fee applies.</p>
     </div>
     <div class="way">
       <b>Not ready to give?</b>
