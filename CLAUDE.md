@@ -383,6 +383,13 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-09 - phone player in the iPhone player's look (main, unreleased, not pushed):** owner photos
+  (iPhone touch player vs Android phone bar). `PlayerControls.touchLayout` (PlayerScreen passes `_touch`): no title,
+  no transport in the bar; elapsed | seek | length, badges left + buttons right (portrait: buttons on their own line).
+  `PlayerTouchTransport` = big round -10 / play-pause / +10 in the middle with the bars (live: play-pause). Touch top
+  bar: fade instead of the black band, title + clock + compact EPG line, **Sources** for Media Hub (touch had no Right
+  key). TV boxes unchanged (remote bar + options row). `test/player_touch_layout_test.dart`. iOS side lives on
+  `claude/appstore-build` (`DesktopPlayerScreen` touch layout, PiP, background audio; dev-notes/ios.md there).
 - **Claude, 2026-11-09 - release 1.0.63 (beta), +698 (latest):** owner said "/cutr". Android only; Windows/Linux stay
   1.0.61 (the Home mini player's Windows path was never run). New version name because the updater compares tag vs
   versionName. Includes the +695 batch below (Home mini player, compact Settings, stream language ranking, MKV Atmos
