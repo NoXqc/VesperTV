@@ -39,6 +39,7 @@ import '../services/desktop_live_recovery.dart';
 import '../widgets/desktop_reconnecting_badge.dart';
 import '../widgets/skip_segment_button.dart';
 import '../services/skip_segments.dart';
+import '../services/ios_pip.dart';
 import '../utils/desktop_platform.dart';
 
 /// A deliberately standalone, Windows-only playback screen — see
@@ -133,6 +134,14 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   /// iPhone / iPad: the touch layout ([_touchControls]), landscape on a
   /// phone, controls that hide by themselves.
   bool get _touch => isIosTarget;
+
+  /// iOS picture-in-picture is on: mpv is stopped and Apple's player has
+  /// the stream (see [_startPip]).
+  bool _inPip = false;
+  bool _pipStarting = false;
+
+  /// The movie's length when PiP started (mpv's is gone once stopped).
+  Duration _pipDuration = Duration.zero;
   Timer? _touchHide;
 
   /// Touch seek bar: where the thumb is while a finger drags it (the seek
@@ -337,9 +346,11 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     // Live: DesktopLiveRecovery (waits, retries, copies). A movie or
     // episode that ends early was a cut stream: continue at the position.
     _completedSubscription = _player.stream.completed.listen((completed) {
-      if (completed && mounted && !_isLive) _resumeAfterCut();
+      // mpv is stopped on purpose while Apple's player has the stream.
+      if (completed && mounted && !_isLive && !_inPip) _resumeAfterCut();
     });
     if (_touch) {
+      IosPip.onStopped = _onPipStopped;
       // Full screen: no status bar. A phone turns sideways, also with its
       // rotation lock on (owner's iPhone 8: the player stayed portrait);
       // Rotate in the top bar goes back. Released in dispose.
@@ -354,6 +365,133 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
       });
       _armTouchHide();
     }
+  }
+
+  /// iOS picture-in-picture. iOS only floats Apple's own player, so the
+  /// stream moves there: mpv stops first (one provider connection), then
+  /// [IosPip] opens the same link in an AVPlayer and floats it. MKV and
+  /// raw TS can't go there ([IosPip.urlFor] is null): a message instead.
+  /// If Apple's player can't open it, mpv comes back at the same spot.
+  Future<void> _startPip() async {
+    if (_inPip || _pipStarting) return;
+    final channel = _currentChannel;
+    final url = IosPip.urlFor(channel);
+    if (url == null) {
+      _pipMessage(tr(
+          "Picture-in-picture isn't available for this stream. It works with live channels from Xtream playlists and MP4 files."));
+      return;
+    }
+    final live = _isLive;
+    final position = live ? Duration.zero : _player.state.position;
+    _pipDuration = _player.state.duration;
+    _saveProgress();
+    setState(() {
+      _pipStarting = true;
+      _controlsVisible = false;
+    });
+    // No reconnects, no progress saves at 0 while mpv is stopped.
+    ++_openGeneration;
+    _progressReady = false;
+    DesktopLiveRecovery.of(_player).stop();
+    await _player.stop();
+    final error = await IosPip.start(
+      url: url,
+      live: live,
+      position: position.inMilliseconds / 1000,
+      // A source's own headers (Media Hub) win over our User-Agent.
+      headers: {'User-Agent': kDesktopStreamUserAgent, ...channel.httpHeaders},
+    );
+    if (!mounted) return;
+    if (error == null) {
+      debugPrint('IosPip: started (${live ? 'live' : 'vod'})');
+      setState(() {
+        _pipStarting = false;
+        _inPip = true;
+      });
+      return;
+    }
+    debugPrint('IosPip: start failed: $error');
+    setState(() => _pipStarting = false);
+    _pipMessage(tr("Picture-in-picture couldn't open this stream."));
+    unawaited(_openMedia(channel, start: live ? null : position));
+  }
+
+  /// The PiP window closed. Restore (its "back to the app" button): mpv
+  /// takes over again where Apple's player got to. X: stop watching.
+  void _onPipStopped(bool restore, double seconds) {
+    if (!mounted || !_inPip) return;
+    setState(() => _inPip = false);
+    final at =
+        _isLive ? null : Duration(milliseconds: (seconds * 1000).round());
+    debugPrint('IosPip: stopped (${restore ? 'restore' : 'closed'})');
+    if (restore) {
+      unawaited(_openMedia(_currentChannel, start: at));
+      _armTouchHide();
+      return;
+    }
+    if (at != null && _pipDuration > Duration.zero) {
+      unawaited(_progress.save(_currentChannel, at, _pipDuration));
+    }
+    if (ModalRoute.of(context)?.isCurrent ?? false) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  /// "Watch here" on the player while PiP floats: back to mpv.
+  Future<void> _endPip() async {
+    if (!_inPip) return;
+    final seconds = await IosPip.stop();
+    if (!mounted || !_inPip) return;
+    _onPipStopped(true, seconds);
+  }
+
+  void _pipMessage(String text) {
+    ScaffoldMessenger.maybeOf(context)
+        ?.showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  /// What the player shows while PiP has the stream.
+  Widget _pipNotice() {
+    return Stack(children: [
+      Positioned(
+        top: 0,
+        left: 0,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(4),
+            child: IconButton(
+              tooltip: tr('Back'),
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: _handleBack,
+            ),
+          ),
+        ),
+      ),
+      Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.picture_in_picture_alt,
+                color: Colors.white70, size: 48),
+            const SizedBox(height: 12),
+            Text(
+              _pipStarting
+                  ? tr('Opening picture-in-picture…')
+                  : tr('Playing in picture-in-picture'),
+              style: const TextStyle(color: Colors.white70, fontSize: 16),
+            ),
+            if (_inPip) ...[
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: _endPip,
+                style: OutlinedButton.styleFrom(foregroundColor: Colors.white),
+                child: Text(tr('Watch here')),
+              ),
+            ],
+          ],
+        ),
+      ),
+    ]);
   }
 
   /// Touch: the controls hide 4 s after the last touch while playing.
@@ -490,6 +628,8 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   void dispose() {
     _touchHide?.cancel();
     if (_touch) {
+      if (_inPip || _pipStarting) unawaited(IosPip.stop());
+      if (IosPip.onStopped == _onPipStopped) IosPip.onStopped = null;
       // The rest of the app turns freely again (with the lock on: portrait).
       unawaited(SystemChrome.setPreferredOrientations([]));
       unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
@@ -519,6 +659,12 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   /// [dispose] tears its `Player` down the same way it always has.
   void _handleBack() {
     if (_sourceBackGuard.blocksBack) return;
+    // Apple's player has the stream: mpv is stopped, nothing to hand to
+    // the mini player. Closing the screen ends PiP (dispose).
+    if (_inPip || _pipStarting) {
+      Navigator.of(context).pop();
+      return;
+    }
     // A catch-up stream isn't the live channel: never minimized as it.
     if (_inCatchup) {
       _catchupPlayer?.dispose();
@@ -1057,6 +1203,13 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                     icon: const Icon(Icons.swap_horiz, color: Colors.white),
                     onPressed: _openSources,
                   ),
+                if (IosPip.available && !_inCatchup)
+                  IconButton(
+                    tooltip: tr('Picture-in-picture'),
+                    icon: const Icon(Icons.picture_in_picture_alt,
+                        color: Colors.white),
+                    onPressed: _startPip,
+                  ),
                 IconButton(
                   tooltip: tr('Rotate'),
                   icon: const Icon(Icons.screen_rotation, color: Colors.white),
@@ -1370,6 +1523,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                                 .subtitleScale)))),
                 DesktopReconnectingBadge(
                     recovery: DesktopLiveRecovery.of(_player)),
+                if (_inPip || _pipStarting) _pipNotice(),
                 Builder(builder: (context) {
                   final storage = context.read<StorageService>();
                   _segments.attachDesktop(_player, _currentChannel.id,
@@ -1385,7 +1539,10 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                     onSkip: _skipSegment,
                   );
                 }),
-                if (_controlsVisible && _touch) ..._touchControls(playlist),
+                // While PiP has the stream, mpv is stopped: its controls
+                // would do nothing ([_pipNotice] has Back and Watch here).
+                if (_controlsVisible && _touch && !_inPip && !_pipStarting)
+                  ..._touchControls(playlist),
                 if (_controlsVisible && !_touch) ...[
                   Positioned(
                     top: 0,

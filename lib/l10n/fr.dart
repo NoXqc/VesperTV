@@ -3022,4 +3022,17 @@ const Map<String, String> kFr = {
       "Reprendre l'écoute et votre liste à regarder dans la rangée Watch Next du lanceur, plus une rangée de vos chaînes favorites. Pour les lanceurs Android TV comme Projectivy.",
   "Continue watching and favourites on the TV launcher":
       "Reprendre l'écoute et favoris sur le lanceur de la TV",
+  // iPhone picture-in-picture (2026-11-09).
+  "Picture-in-picture":
+      "Image dans l'image",
+  "Picture-in-picture isn't available for this stream. It works with live channels from Xtream playlists and MP4 files.":
+      "L'image dans l'image n'est pas disponible pour ce flux. Elle fonctionne avec les chaînes en direct des listes Xtream et les fichiers MP4.",
+  "Picture-in-picture couldn't open this stream.":
+      "L'image dans l'image n'a pas pu ouvrir ce flux.",
+  "Opening picture-in-picture…":
+      "Ouverture de l'image dans l'image…",
+  "Playing in picture-in-picture":
+      "Lecture en image dans l'image",
+  "Watch here":
+      "Regarder ici",
 };

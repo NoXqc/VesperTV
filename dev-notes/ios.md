@@ -64,8 +64,17 @@ preview it on a box:
 - Background (Home / lock screen): `_IosBackgroundVideo` in `desktop_stream_setup.dart` turns every
   open player's video track off on hidden/paused and gives it back on resumed. media_kit draws with
   OpenGL ES (forbidden in the background): before this the sound stopped too and a 4K remux
-  stuttered after coming back (decoder dropped). No picture-in-picture: iOS PiP needs Apple's
-  player layer (AVSampleBufferDisplayLayer fed with mpv frames, like VLC) - not done.
+  stuttered after coming back (decoder dropped).
+- **Picture-in-picture (owner chose the Apple-player handoff, 2026-11-09):** PiP button in the touch
+  top bar. `_startPip` stops mpv (one provider connection), `IosPip.start` (`vespertv/pip`,
+  `VesperPip` in `AppDelegate.swift`: AVPlayer on a 2x2 layer + AVPictureInPictureController)
+  opens the same link and floats it. Restore button = mpv again at AVPlayer's position; X = stop
+  watching (progress saved, screen closes); "Watch here" on the player = restore from the app.
+  `IosPip.linkFor`: Xtream live `.ts` / short links -> `/live/u/p/id.m3u8`, other raw TS and
+  MKV/AVI/WebM/FLV/WMV refused (message), MP4/unknown tried (failure = mpv back). Not automatic on
+  Home (needs the AVPlayer already playing; the provider allows one connection). Full mpv PiP
+  (frames into AVSampleBufferDisplayLayer) rejected: GPU is off-limits in the background, CPU
+  rendering 4K on an iPhone 8 can't keep up. Not device-tested yet.
 - Landscape phone guide (shared Dart, Android phones too): `_shortScreen` / `_isShortPhoneScreen` in
   `tv_home_screen.dart` (landscape, under 500 pt, not TV/computer): 4 px vertical margins, dense
   title bar, 100 pt preview row (16:9 box), Compact guide rows. Was 1 guide row on an iPhone 8 /

@@ -3016,4 +3016,17 @@ const Map<String, String> kIt = {
       "Continua a guardare e La mia lista nella riga Watch Next del launcher, più una riga con i tuoi canali preferiti. Per i launcher Android TV come Projectivy.",
   "Continue watching and favourites on the TV launcher":
       "Continua a guardare e preferiti nel launcher della TV",
+  // iPhone picture-in-picture (2026-11-09).
+  "Picture-in-picture":
+      "Picture-in-picture",
+  "Picture-in-picture isn't available for this stream. It works with live channels from Xtream playlists and MP4 files.":
+      "Il picture-in-picture non è disponibile per questo flusso. Funziona con i canali live delle playlist Xtream e i file MP4.",
+  "Picture-in-picture couldn't open this stream.":
+      "Il picture-in-picture non è riuscito ad aprire questo flusso.",
+  "Opening picture-in-picture…":
+      "Apertura del picture-in-picture…",
+  "Playing in picture-in-picture":
+      "In riproduzione in picture-in-picture",
+  "Watch here":
+      "Guarda qui",
 };

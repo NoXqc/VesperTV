@@ -2912,4 +2912,17 @@ const Map<String, String> kDe = {
       "Weiterschauen und deine Merkliste in der Watch-Next-Reihe des Launchers, dazu eine Reihe mit deinen Lieblingssendern. Für Android-TV-Launcher wie Projectivy.",
   "Continue watching and favourites on the TV launcher":
       "Weiterschauen und Favoriten im TV-Launcher",
+  // iPhone picture-in-picture (2026-11-09).
+  "Picture-in-picture":
+      "Bild-in-Bild",
+  "Picture-in-picture isn't available for this stream. It works with live channels from Xtream playlists and MP4 files.":
+      "Bild-in-Bild ist für diesen Stream nicht verfügbar. Es funktioniert mit Live-Sendern aus Xtream-Playlists und MP4-Dateien.",
+  "Picture-in-picture couldn't open this stream.":
+      "Bild-in-Bild konnte diesen Stream nicht öffnen.",
+  "Opening picture-in-picture…":
+      "Bild-in-Bild wird geöffnet…",
+  "Playing in picture-in-picture":
+      "Wird im Bild-in-Bild abgespielt",
+  "Watch here":
+      "Hier ansehen",
 };

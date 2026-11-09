@@ -2971,4 +2971,17 @@ const Map<String, String> kEl = {
       "Συνέχεια παρακολούθησης και η λίστα παρακολούθησής σας στη σειρά Watch Next του launcher, μαζί με μια σειρά με τα αγαπημένα σας κανάλια. Για launcher Android TV όπως το Projectivy.",
   "Continue watching and favourites on the TV launcher":
       "Συνέχεια παρακολούθησης και αγαπημένα στο launcher της τηλεόρασης",
+  // iPhone picture-in-picture (2026-11-09).
+  "Picture-in-picture":
+      "Εικόνα σε εικόνα",
+  "Picture-in-picture isn't available for this stream. It works with live channels from Xtream playlists and MP4 files.":
+      "Η εικόνα σε εικόνα δεν είναι διαθέσιμη για αυτή τη ροή. Λειτουργεί με ζωντανά κανάλια από λίστες Xtream και αρχεία MP4.",
+  "Picture-in-picture couldn't open this stream.":
+      "Η εικόνα σε εικόνα δεν μπόρεσε να ανοίξει αυτή τη ροή.",
+  "Opening picture-in-picture…":
+      "Άνοιγμα εικόνας σε εικόνα…",
+  "Playing in picture-in-picture":
+      "Αναπαραγωγή σε εικόνα σε εικόνα",
+  "Watch here":
+      "Παρακολούθηση εδώ",
 };
