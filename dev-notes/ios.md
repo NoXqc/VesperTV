@@ -11,6 +11,31 @@ iPhone 16), built in the cloud because this PC has no Mac. Not App Store-ready y
 `claude/appstore-build`, or by hand (Actions > iOS build > Run workflow). Release only: a
 debug build can't start without Xcode attached.
 
+## TestFlight (paid account, 2026-11-10)
+
+The owner joined the Apple Developer Program (account holder). Bundle ID **`app.vespertv.player`**
+(registered as an explicit App ID, no capabilities); the project uses it and is **iPhone only**
+(`TARGETED_DEVICE_FAMILY = 1`; an iPad build would need iPad screenshots and iPad review).
+`com.nox.noxIptv.9947N9` in Identifiers is Sideloadly's own, ignore it. A sideloaded build with
+the old id is a separate app on the phone (its data doesn't carry over).
+
+- **Secrets** (GitHub > Settings > Secrets and variables > Actions): `APP_STORE_CONNECT_KEY_ID`,
+  `APP_STORE_CONNECT_ISSUER_ID`, `APP_STORE_CONNECT_API_KEY` (the whole text of the `.p8`,
+  BEGIN/END lines included) and `APPLE_TEAM_ID` (developer.apple.com > Membership details). The key:
+  App Store Connect > Users and Access > Integrations > App Store Connect API > Team Keys, **Admin**
+  access (Xcode creates the distribution certificate and profile through it), downloadable once.
+- **Run:** Actions > iOS build > Run workflow, branch `claude/appstore-build`, tick
+  *Sign and upload to TestFlight*. `flutter build ios --config-only`, then `xcodebuild archive` +
+  `-exportArchive` with `ios/ExportOptions.plist` (`app-store-connect`, `destination upload`) and
+  `-allowProvisioningUpdates` + the API key. No Mac, no fastlane.
+- **Build number:** pubspec's `+N`; App Store Connect refuses a number it already has for that
+  version, so bump it like an Android build.
+- **After the upload** (processing takes ~5-30 min): TestFlight shows "Missing Compliance" until the
+  encryption question is answered in App Store Connect (the app uses HTTPS and encrypts Sync /
+  Transfer data itself). Then add internal testers (App Store Connect users, up to 100, no review);
+  they install from the TestFlight app. Builds expire after 90 days.
+- Not tried yet: the first run (secrets not added).
+
 ## Install from Windows (free Apple ID)
 
 1. Install iTunes and iCloud from Apple's site (not the Microsoft Store versions), then

@@ -1,14 +1,21 @@
-# iPhone/iPad build: an unsigned VesperTV .ipa as a workflow artifact, for
-# testing without owning a Mac. Sign and install it from Windows with
-# Sideloadly or AltStore and a free Apple ID (the install expires after
-# 7 days; reinstall to renew). Steps: dev-notes/ios.md.
-#
-# Not for the App Store: that needs the paid Apple Developer Program, a
-# signed archive and an upload, none of which happens here.
+# iPhone build, two ways:
+# - On a push (and by hand): an unsigned VesperTV .ipa as a workflow artifact,
+#   for sideloading from Windows with Sideloadly (dev-notes/ios.md).
+# - By hand with "testflight" ticked: a signed build uploaded to App Store
+#   Connect for TestFlight. Needs four repository secrets (dev-notes/ios.md,
+#   TestFlight): APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID,
+#   APP_STORE_CONNECT_API_KEY (the .p8 file's text) and APPLE_TEAM_ID.
+#   No Mac needed: Xcode creates the certificate and profile itself through
+#   the API key (-allowProvisioningUpdates).
 name: iOS build
 
 on:
   workflow_dispatch:
+    inputs:
+      testflight:
+        description: Sign and upload to TestFlight
+        type: boolean
+        default: false
   push:
     branches: [main, claude/appstore-build]
 
@@ -25,7 +32,10 @@ jobs:
           cache: true
       - run: flutter --version
       - run: flutter pub get
+
+      # ---- Unsigned .ipa (sideloading) --------------------------------------
       - name: Build iOS (release, unsigned)
+        if: ${{ !inputs.testflight }}
         # CocoaPods is preinstalled on the runner; flutter runs pod install.
         # Release, not debug: a debug build only starts from Xcode.
         run: flutter build ios --release --no-codesign 2>&1 | tee build-ios.log; exit ${PIPESTATUS[0]}
@@ -33,6 +43,7 @@ jobs:
         env:
           LANG: en_US.UTF-8
       - name: Package the .ipa
+        if: ${{ !inputs.testflight }}
         # An .ipa is a zip of Payload/<App>.app; the sideloading tool signs it.
         run: |
           version="$(grep '^version:' pubspec.yaml | awk '{print $2}')"
@@ -41,9 +52,50 @@ jobs:
           zip -qry "VesperTV-${version/+/-}-ios-unsigned.ipa" Payload
           ls -l *.ipa
       - uses: actions/upload-artifact@v4
+        if: ${{ !inputs.testflight }}
         with:
           name: VesperTV-ios
           path: VesperTV-*-ios-unsigned.ipa
+
+      # ---- Signed upload (TestFlight) ----------------------------------------
+      # Each upload needs a build number App Store Connect hasn't seen for
+      # this version: the +N in pubspec.yaml (bump it like for Android).
+      - name: Signed archive and upload to App Store Connect
+        if: ${{ inputs.testflight }}
+        shell: bash
+        env:
+          LANG: en_US.UTF-8
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          ASC_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -o pipefail
+          for v in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY TEAM_ID; do
+            [ -n "${!v}" ] || { echo "Missing secret for $v (dev-notes/ios.md, TestFlight)"; exit 1; }
+          done
+          key="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s\n' "$ASC_KEY" > "$key"
+          auth=(-allowProvisioningUpdates
+                -authenticationKeyPath "$key"
+                -authenticationKeyID "$ASC_KEY_ID"
+                -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+          # Flutter's generated settings + pod install, without building.
+          flutter build ios --release --config-only 2>&1 | tee build-ios.log
+          xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner \
+            -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/VesperTV.xcarchive" \
+            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            "${auth[@]}" archive 2>&1 | tee -a build-ios.log
+          cp ios/ExportOptions.plist "$RUNNER_TEMP/ExportOptions.plist"
+          plutil -replace teamID -string "$TEAM_ID" "$RUNNER_TEMP/ExportOptions.plist"
+          # destination=upload: the export sends the build to App Store Connect.
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/VesperTV.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export" \
+            "${auth[@]}" 2>&1 | tee -a build-ios.log
+          rm -f "$key"
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
