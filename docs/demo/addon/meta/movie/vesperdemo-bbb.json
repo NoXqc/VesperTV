@@ -1,0 +1,16 @@
+{
+ "meta": {
+  "id": "vesperdemo-bbb",
+  "type": "movie",
+  "name": "Big Buck Bunny",
+  "poster": "https://vespertv.app/demo/art/bbb.jpg",
+  "background": "https://vespertv.app/demo/art/bg-bbb.jpg",
+  "description": "A giant, gentle rabbit takes revenge on three bullying rodents in a comedy from the Blender Institute.",
+  "releaseInfo": "2008",
+  "runtime": "10 min",
+  "genres": [
+   "Animation",
+   "Comedy"
+  ]
+ }
+}

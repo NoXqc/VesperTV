@@ -1,0 +1,16 @@
+{
+ "meta": {
+  "id": "vesperdemo-ed",
+  "type": "movie",
+  "name": "Elephants Dream",
+  "poster": "https://vespertv.app/demo/art/ed.jpg",
+  "background": "https://vespertv.app/demo/art/bg-ed.jpg",
+  "description": "Two men explore a strange, endless machine, and disagree about what it is. The first open movie.",
+  "releaseInfo": "2006",
+  "runtime": "11 min",
+  "genres": [
+   "Animation",
+   "Science Fiction"
+  ]
+ }
+}

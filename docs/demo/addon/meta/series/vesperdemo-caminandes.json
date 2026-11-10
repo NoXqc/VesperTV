@@ -1,0 +1,45 @@
+{
+ "meta": {
+  "id": "vesperdemo-caminandes",
+  "type": "series",
+  "name": "Caminandes",
+  "poster": "https://vespertv.app/demo/art/cam1.jpg",
+  "background": "https://vespertv.app/demo/art/bg-cam1.jpg",
+  "description": "Koro the llama wants the grass on the other side of the road.",
+  "releaseInfo": "2013",
+  "runtime": "2 min",
+  "genres": [
+   "Animation",
+   "Comedy"
+  ],
+  "videos": [
+   {
+    "id": "vesperdemo-caminandes-1-1",
+    "title": "Llama Drama",
+    "season": 1,
+    "episode": 1,
+    "released": "2013-01-01T00:00:00.000Z",
+    "thumbnail": "https://vespertv.app/demo/art/bg-cam1.jpg",
+    "overview": "Koro the llama wants the grass on the other side of the road."
+   },
+   {
+    "id": "vesperdemo-caminandes-1-2",
+    "title": "Gran Dillama",
+    "season": 1,
+    "episode": 2,
+    "released": "2013-01-01T00:00:00.000Z",
+    "thumbnail": "https://vespertv.app/demo/art/bg-cam2.jpg",
+    "overview": "Koro tries to get past an electric fence to the grass beyond."
+   },
+   {
+    "id": "vesperdemo-caminandes-1-3",
+    "title": "Llamigos",
+    "season": 1,
+    "episode": 3,
+    "released": "2016-01-01T00:00:00.000Z",
+    "thumbnail": "https://vespertv.app/demo/art/bg-cam3.jpg",
+    "overview": "In winter, Koro meets a penguin with an appetite for berries."
+   }
+  ]
+ }
+}

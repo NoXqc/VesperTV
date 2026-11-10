@@ -1,0 +1,16 @@
+{
+ "meta": {
+  "id": "vesperdemo-sintel",
+  "type": "movie",
+  "name": "Sintel",
+  "poster": "https://vespertv.app/demo/art/sintel.jpg",
+  "background": "https://vespertv.app/demo/art/bg-sintel.jpg",
+  "description": "A lonely young woman searches the world for the baby dragon she raised and lost.",
+  "releaseInfo": "2010",
+  "runtime": "15 min",
+  "genres": [
+   "Animation",
+   "Fantasy"
+  ]
+ }
+}
