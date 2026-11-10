@@ -158,8 +158,9 @@ GENRES = {
 
 # Live channels: (id, name, group, stream, programmes in rotation).
 CHANNELS = [
-    ('vesper.one', 'Vesper One', 'Vesper Demo',
-     'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8',
+    # (Unified Streaming's test stream burns a bitrate overlay and its logo
+    # into the picture: unusable for screenshots.)
+    ('vesper.one', 'Vesper One', 'Vesper Demo', FILMS['tos']['stream'],
      ['tos', 'cosmos', 'sintel', 'ed']),
     ('vesper.cinema', 'Vesper Cinema', 'Vesper Demo', FILMS['sintel']['stream'],
      ['sintel', 'ed', 'tos', 'cosmos']),
