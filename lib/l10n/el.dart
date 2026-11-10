@@ -1726,6 +1726,7 @@ const Map<String, String> kEl = {
   "Recording now": "Εγγράφεται τώρα",
   "Recorded": "Εγγεγραμμένα",
   "{used} of {cap} GB used": "{used} από {cap} GB σε χρήση",
+  "{size} in the network folder": "{size} στον φάκελο δικτύου",
   "REC · {size}": "REC · {size}",
   "Waiting for a channel": "Αναμονή για κανάλι",
   "Interrupted · {size}": "Διακόπηκε · {size}",

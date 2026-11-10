@@ -205,6 +205,8 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
     final downloads = all.where((r) => r.isDownload && finished(r)).toList();
     final done = all.where((r) => !r.isDownload && finished(r)).toList();
     final auto = _service.autoTeam;
+    final networkBytes =
+        all.fold<int>(0, (s, r) => r.onNetwork ? s + r.bytes : s);
     var first = true;
     Widget section(String title, List<RecordingEntry> list) {
       final autofocus = first;
@@ -280,10 +282,16 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
             if (done.isNotEmpty) section(tr('Recorded'), done),
             if (all.isNotEmpty)
               Text(
-                tr('{used} of {cap} GB used', {
-                  'used': _size(_service.usedBytes),
-                  'cap': _service.settings.capGb,
-                }),
+                [
+                  tr('{used} of {cap} GB used', {
+                    'used': _size(_service.usedBytes),
+                    'cap': _service.settings.capGb,
+                  }),
+                  // The cap is this device's; the share has its own disk.
+                  if (networkBytes > 0)
+                    tr('{size} in the network folder',
+                        {'size': _size(networkBytes)}),
+                ].join(' · '),
                 style: const TextStyle(color: Colors.white38, fontSize: 12),
               ),
           ],
@@ -360,6 +368,7 @@ class _DownloadCardState extends State<_DownloadCard> {
     final active = r.state == RecState.recording;
     final bad = r.state == RecState.failed || r.state == RecState.missed;
     final progress = r.progress;
+    final poster = (r.poster?.isEmpty ?? true) ? null : r.poster;
     return Padding(
       padding: const EdgeInsets.only(right: 12, top: 4, bottom: 8),
       child: HoldToActivate(
@@ -370,6 +379,9 @@ class _DownloadCardState extends State<_DownloadCard> {
           borderRadius: BorderRadius.circular(16),
           onTap: widget.onTap,
           onLongPress: widget.onHold,
+          // The border + glow is the focus look (InkWell's grey highlight
+          // showed around the unscaled card).
+          focusColor: Colors.transparent,
           onFocusChange: (f) => setState(() => _focused = f),
           child: AnimatedScale(
             scale: _focused ? 1.05 : 1.0,
@@ -378,10 +390,18 @@ class _DownloadCardState extends State<_DownloadCard> {
             child: Container(
               width: _RecordingCard.width,
               height: _RecordingCard.height,
-              padding: const EdgeInsets.all(9),
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
-                color: _focused ? null : Colors.white.withValues(alpha: 0.07),
-                gradient: _focused ? sportsFocusSheen(scheme) : null,
+                // With a poster, the card is the poster's own colours (a soft
+                // copy behind a dark scrim), not the Sports Trak sheen: that
+                // turned the whole card a flat gold block (owner photo,
+                // 2026-11-10).
+                color: poster == null
+                    ? (_focused ? null : Colors.white.withValues(alpha: 0.07))
+                    : Colors.black,
+                gradient: poster == null && _focused
+                    ? sportsFocusSheen(scheme)
+                    : null,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                     color: _focused ? scheme.primary : Colors.white10,
@@ -394,83 +414,118 @@ class _DownloadCardState extends State<_DownloadCard> {
                       ]
                     : null,
               ),
-              child: Row(children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: SizedBox(
-                    width: 76,
-                    height: double.infinity,
-                    child: r.poster == null
-                        ? Container(
-                            color: Colors.white10,
-                            child: const Icon(Icons.movie_outlined,
-                                color: Colors.white38))
-                        : HdNetworkImage(
-                            url: r.poster!,
-                            kind: ImageKind.poster,
-                            decodeWidth: 160,
-                            fit: BoxFit.cover,
-                            errorWidget: (_) =>
-                                Container(color: Colors.white10)),
+              child: Stack(children: [
+                if (poster != null) ...[
+                  // A tiny decode stretched over the card reads as a blur
+                  // without a blur filter's cost (PosterCard does the same).
+                  Positioned.fill(
+                    child: HdNetworkImage(
+                      url: poster,
+                      kind: ImageKind.poster,
+                      fit: BoxFit.cover,
+                      decodeWidth: 24,
+                      errorWidget: (_) => const SizedBox.shrink(),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (r.league.isNotEmpty)
-                        Text(r.league.toUpperCase(),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                fontSize: 10.5,
-                                letterSpacing: 1,
-                                color: Colors.white54)),
-                      Text(r.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 14.5,
-                              height: 1.2,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white)),
-                      const Spacer(),
-                      if (progress != null && !r.complete) ...[
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(2),
-                          child: LinearProgressIndicator(
-                            value: progress,
-                            minHeight: 4,
-                            backgroundColor: Colors.white12,
-                            color: active ? scheme.primary : Colors.white38,
-                          ),
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                          colors: [
+                            Colors.black.withValues(alpha: 0.45),
+                            Colors.black.withValues(alpha: 0.78),
+                          ],
                         ),
-                        const SizedBox(height: 5),
-                      ],
-                      Row(children: [
-                        Icon(
-                            r.complete
-                                ? Icons.download_done_rounded
-                                : active
-                                    ? Icons.downloading_rounded
-                                    : Icons.download_rounded,
-                            size: 14,
-                            color: bad ? Colors.redAccent : Colors.white60),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(widget.status,
-                              maxLines: 1,
+                      ),
+                    ),
+                  ),
+                ],
+                Padding(
+                  padding: const EdgeInsets.all(9),
+                  child: Row(children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: SizedBox(
+                        width: 76,
+                        height: double.infinity,
+                        child: poster == null
+                            ? Container(
+                                color: Colors.white10,
+                                child: const Icon(Icons.movie_outlined,
+                                    color: Colors.white38))
+                            : HdNetworkImage(
+                                url: poster,
+                                kind: ImageKind.poster,
+                                decodeWidth: 160,
+                                fit: BoxFit.cover,
+                                errorWidget: (_) =>
+                                    Container(color: Colors.white10)),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (r.league.isNotEmpty)
+                            Text(r.league.toUpperCase(),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontSize: 10.5,
+                                    letterSpacing: 1,
+                                    color: Colors.white54)),
+                          Text(r.title,
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 14.5,
+                                  height: 1.2,
                                   fontWeight: FontWeight.w700,
-                                  color:
-                                      bad ? Colors.redAccent : Colors.white70)),
-                        ),
-                      ]),
-                    ],
-                  ),
+                                  color: _focused
+                                      ? scheme.primary
+                                      : Colors.white)),
+                          const Spacer(),
+                          if (progress != null && !r.complete) ...[
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(2),
+                              child: LinearProgressIndicator(
+                                value: progress,
+                                minHeight: 4,
+                                backgroundColor: Colors.white12,
+                                color: active ? scheme.primary : Colors.white38,
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                          ],
+                          Row(children: [
+                            Icon(
+                                r.complete
+                                    ? Icons.download_done_rounded
+                                    : active
+                                        ? Icons.downloading_rounded
+                                        : Icons.download_rounded,
+                                size: 14,
+                                color: bad ? Colors.redAccent : Colors.white60),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(widget.status,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: bad
+                                          ? Colors.redAccent
+                                          : Colors.white70)),
+                            ),
+                          ]),
+                        ],
+                      ),
+                    ),
+                  ]),
                 ),
               ]),
             ),

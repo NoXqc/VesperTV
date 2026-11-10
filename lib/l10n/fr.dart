@@ -1779,6 +1779,7 @@ const Map<String, String> kFr = {
   "Recording now": "En cours d'enregistrement",
   "Recorded": "Enregistrés",
   "{used} of {cap} GB used": "{used} utilisés sur {cap} Go",
+  "{size} in the network folder": "{size} dans le dossier réseau",
   "REC · {size}": "ENR · {size}",
   "Waiting for a channel": "En attente d'une chaîne",
   "Interrupted · {size}": "Interrompu · {size}",

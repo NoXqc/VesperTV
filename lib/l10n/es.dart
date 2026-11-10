@@ -1771,6 +1771,7 @@ const Map<String, String> kEs = {
   "Recording now": "Grabando ahora",
   "Recorded": "Grabados",
   "{used} of {cap} GB used": "{used} usados de {cap} GB",
+  "{size} in the network folder": "{size} en la carpeta de red",
   "REC · {size}": "GRAB · {size}",
   "Waiting for a channel": "Esperando un canal",
   "Interrupted · {size}": "Interrumpida · {size}",

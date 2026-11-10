@@ -1777,6 +1777,7 @@ const Map<String, String> kIt = {
   "Recording now": "In registrazione",
   "Recorded": "Registrati",
   "{used} of {cap} GB used": "{used} usati su {cap} GB",
+  "{size} in the network folder": "{size} nella cartella di rete",
   "REC · {size}": "REG · {size}",
   "Waiting for a channel": "In attesa di un canale",
   "Interrupted · {size}": "Interrotta · {size}",

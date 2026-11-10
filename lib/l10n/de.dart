@@ -1694,6 +1694,7 @@ const Map<String, String> kDe = {
   "Recording now": "Wird gerade aufgenommen",
   "Recorded": "Aufgenommen",
   "{used} of {cap} GB used": "{used} von {cap} GB belegt",
+  "{size} in the network folder": "{size} im Netzwerkordner",
   "REC · {size}": "REC · {size}",
   "Waiting for a channel": "Warten auf einen Sender",
   "Interrupted · {size}": "Unterbrochen · {size}",
