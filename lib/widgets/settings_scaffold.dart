@@ -80,10 +80,19 @@ class SettingsScaffold extends StatelessWidget {
           ),
           // TV boxes and computers: compact rows (CompactMenus). Phones
           // keep Material's touch sizes.
-          body: compact
-              ? CompactMenus(
-                  child: CompactMenus.listTheme(context, child: body))
-              : body,
+          //
+          // SafeArea: Android 15 draws apps behind the navigation bar, and a
+          // ListView with its own padding doesn't add that space itself, so a
+          // page's last row stayed under the Back/Home buttons (user photo,
+          // Settings > Playback > Resume reminder, 2026-11-09). No inset on
+          // a TV box, so nothing changes there.
+          body: SafeArea(
+            top: false,
+            child: compact
+                ? CompactMenus(
+                    child: CompactMenus.listTheme(context, child: body))
+                : body,
+          ),
         ),
       ],
     );
