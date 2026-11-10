@@ -455,6 +455,11 @@ class AppConstants {
 
   /// Home's mini player (top right), per viewer; null = on.
   static const String keyHomeMiniPlayer = 'vesper_home_mini_player';
+
+  /// Per viewer, null = off: Who's watching shows this viewer's Home
+  /// wallpaper while their card is highlighted. Not transferred (the
+  /// wallpaper file never is).
+  static const String keyWallpaperOnProfiles = 'vesper_wallpaper_on_profiles';
   static const String keySportsAddedLeagues = 'vesper_sports_added_leagues';
   static const String keySportsHideScores = 'vesper_sports_hide_scores';
   static const String keySportsMode = 'vesper_sports_mode';

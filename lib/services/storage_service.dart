@@ -761,6 +761,13 @@ class StorageService {
   Future<void> setHideProfiles(bool value) =>
       _prefs.setBool(_vk(AppConstants.keyHideProfiles), value);
 
+  bool getWallpaperOnProfiles({String? viewerId}) =>
+      _prefs.getBool(
+          _vk(AppConstants.keyWallpaperOnProfiles, viewerId: viewerId)) ??
+      false;
+  Future<void> setWallpaperOnProfiles(bool value) =>
+      _prefs.setBool(_vk(AppConstants.keyWallpaperOnProfiles), value);
+
   bool getHomeMiniPlayer() =>
       _prefs.getBool(_vk(AppConstants.keyHomeMiniPlayer)) ?? true;
   Future<void> setHomeMiniPlayer(bool value) =>
@@ -1573,6 +1580,8 @@ class StorageService {
     AppConstants.keyAiDevicePrefix,
     AppConstants.keySportsDbRounds,
     AppConstants.keyNextEpisodes,
+    // Every viewer's copy: the wallpaper file itself never transfers.
+    AppConstants.keyWallpaperOnProfiles,
   ];
 
   static const _goalPhoneCheckpoint = 'vesper_goal_phone_checkpoint';

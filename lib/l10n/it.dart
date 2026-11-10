@@ -146,6 +146,9 @@ const Map<String, String> kIt = {
   "Open full Live TV": "Apri TV in diretta completa",
   // Startup profile selector.
   "Launch with profiles selector": "Avvia con il selettore dei profili",
+  'Also behind "Who is watching?"': 'Anche dietro «Chi sta guardando?»',
+  'Shows while your profile is highlighted. Needs Launch with profiles selector (Settings > Profiles).':
+      'Appare quando il tuo profilo è evidenziato. Richiede Avvia con il selettore dei profili (Impostazioni > Profili).',
   "Choose a profile after the splash, before the app opens. Applies from the next start.":
       "Scegli un profilo dopo la schermata iniziale, prima di aprire l’app. Si applica dal prossimo avvio.",
   "Who is watching?": "Chi sta guardando?",
@@ -512,6 +515,7 @@ const Map<String, String> kIt = {
   'this team': "questa squadra",
   'My Teams': "Le mie squadre",
   'Last channels': "Ultimi canali",
+  'No other source found for this game.': "Nessun'altra fonte trovata per questa partita.",
   '◀ ▶ tabs  ·  OK to watch  ·  Back to close':
       "◀ ▶ schede  ·  OK per guardare  ·  Indietro per chiudere",
   'None of your teams play today.': "Nessuna delle tue squadre gioca oggi.",

@@ -383,6 +383,16 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-10 - +707 player drawer "This game" + wallpaper behind Who's watching (main, pushed, not released):**
+  Left in the full-screen live player (`PlayerSidePanel`, Android + Windows) gets a first tab **This game** when the
+  playing channel shows one of the viewer's live / about-to-start games (`gameOnChannel` in sports_channel_matcher:
+  exact channel > quality copy (`channelCopyKey`), then pick > evidence > live > score). Sources = Sports Trak's list
+  (`SportsChannelLists.mergeAddedSources`, shared with `_rematch`), WATCHING tag, OK = switch + save as the game's pick.
+  Panel stays 400 wide (owner: the stats pop-up opens to its right). Test APK +707 on the /dl/ link (owner testing).
+  Home wallpaper page: switch "Also behind \"Who is watching?\"" (per viewer, `keyWallpaperOnProfiles`, not
+  transferred); the startup selector crossfades to the highlighted viewer's wallpaper. Not built yet. Site + README
+  refreshed the same day (Linux card, new screenshots, "Next release" tags: `dev-notes/branding-and-site.md`).
+  Next build > 707.
 - **Claude, 2026-11-10 - Home live channel look + Home wallpaper (test +704, merged to main, not released):** Discord
   idea (Kal-el23). Focused live card: logo large + LIVE, programme title, channel + times, guide description
   (`_LiveHero`); glow in the logo's colours (`services/logo_colors.dart`), theme colour for white/grey logos.

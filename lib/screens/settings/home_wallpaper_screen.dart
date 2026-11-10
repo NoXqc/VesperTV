@@ -6,14 +6,18 @@ import 'package:provider/provider.dart';
 import '../../l10n/l10n.dart';
 import '../../services/home_wallpaper.dart';
 import '../../services/phone_pairing_service.dart';
+import '../../services/storage_service.dart';
 import '../../services/viewer_profile_service.dart';
 import '../../widgets/profile_photo_actions.dart';
 import '../../widgets/settings_scaffold.dart';
+import '../../widgets/tv_switch_list_tile.dart';
 
 /// Settings > General > Home wallpaper: the viewer's own picture behind
 /// Home (see [HomeWallpaper]). A preview of the current one, then the
 /// profile-photo buttons: from the phone (QR, Wi-Fi), Choose a photo on a
-/// computer / phone, Remove.
+/// computer / phone, Remove. With a picture set, a switch also shows it
+/// behind Who's watching while this viewer's card is highlighted (owner,
+/// 2026-11-10).
 class HomeWallpaperScreen extends StatefulWidget {
   const HomeWallpaperScreen({super.key});
 
@@ -24,8 +28,9 @@ class HomeWallpaperScreen extends StatefulWidget {
 class _HomeWallpaperScreenState extends State<HomeWallpaperScreen> {
   Uint8List? _current;
   final _first = FocusNode(debugLabel: 'wallpaper first');
-  late final String _viewer =
-      context.read<ViewerProfileService>().active.id;
+  late final String _viewer = context.read<ViewerProfileService>().active.id;
+  late final StorageService _storage = context.read<StorageService>();
+  late bool _onProfiles = _storage.getWallpaperOnProfiles();
 
   @override
   void initState() {
@@ -98,6 +103,19 @@ class _HomeWallpaperScreenState extends State<HomeWallpaperScreen> {
               if (mounted) _first.requestFocus();
             },
           ),
+          if (current != null) ...[
+            const SizedBox(height: 16),
+            TvSwitchListTile(
+              title: Text(tr('Also behind "Who is watching?"')),
+              subtitle: Text(tr(
+                  'Shows while your profile is highlighted. Needs Launch with profiles selector (Settings > Profiles).')),
+              value: _onProfiles,
+              onChanged: (value) {
+                setState(() => _onProfiles = value);
+                _storage.setWallpaperOnProfiles(value);
+              },
+            ),
+          ],
         ],
       ),
     );

@@ -32,5 +32,10 @@ banner". Not done (offered, not chosen): a banner picture per channel, guide pro
 - `_Backdrop` order: team game -> its game backdrop; card art -> the art; else wallpaper if set;
   else a live channel's glow; else nothing. The wallpaper gets lighter gradients than art (left 70 %
   black fading out by 60 % width, bottom dark for the rows).
+- **Also behind "Who is watching?"** (owner, 2026-11-10): switch on the Home wallpaper page (only with
+  a picture set), per viewer, off by default, `keyWallpaperOnProfiles` (skipped by Transfer, like the
+  file). `StartupProfileScreen` loads the wallpapers of viewers who turned it on and crossfades to the
+  highlighted card's (450 ms, 45 % black scrim under the frosted panel); others = the plain background.
+  Test in `test/startup_profile_test.dart`.
 
 Tests: `test/home_look_test.dart`. Not device-tested at first.

@@ -145,6 +145,9 @@ const Map<String, String> kFr = {
   "Open full Live TV": "Ouvrir Télé en direct complète",
   // Startup profile selector.
   "Launch with profiles selector": "Lancer avec le sélecteur de profils",
+  'Also behind "Who is watching?"': 'Aussi derrière « Qui regarde? »',
+  'Shows while your profile is highlighted. Needs Launch with profiles selector (Settings > Profiles).':
+      "S'affiche quand votre profil est sélectionné. Nécessite Lancer avec le sélecteur de profils (Paramètres > Profils).",
   "Choose a profile after the splash, before the app opens. Applies from the next start.":
       "Choisissez un profil après l’écran de démarrage, avant l’ouverture de l’application. S’applique au prochain démarrage.",
   "Who is watching?": "Qui regarde?",
@@ -516,6 +519,7 @@ const Map<String, String> kFr = {
   'this team': "cette équipe",
   'My Teams': "Mes équipes",
   'Last channels': "Dernières chaînes",
+  'No other source found for this game.': "Aucune autre source trouvée pour ce match.",
   '◀ ▶ tabs  ·  OK to watch  ·  Back to close':
       "◀ ▶ onglets  ·  OK pour regarder  ·  Retour pour fermer",
   'None of your teams play today.':

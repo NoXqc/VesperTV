@@ -146,6 +146,9 @@ const Map<String, String> kEl = {
   "Open full Live TV": "Άνοιγμα πλήρους Live TV",
   // Startup profile selector.
   "Launch with profiles selector": "Εκκίνηση με επιλογή προφίλ",
+  'Also behind "Who is watching?"': 'Και πίσω από το «Ποιος παρακολουθεί;»',
+  'Shows while your profile is highlighted. Needs Launch with profiles selector (Settings > Profiles).':
+      'Εμφανίζεται όταν το προφίλ σας είναι επιλεγμένο. Χρειάζεται την Εκκίνηση με επιλογή προφίλ (Ρυθμίσεις > Προφίλ).',
   "Choose a profile after the splash, before the app opens. Applies from the next start.":
       "Επιλέξτε προφίλ μετά την οθόνη εκκίνησης, πριν ανοίξει η εφαρμογή. Ισχύει από την επόμενη εκκίνηση.",
   "Who is watching?": "Ποιος παρακολουθεί;",
@@ -504,6 +507,7 @@ const Map<String, String> kEl = {
   "this team": "αυτή η ομάδα",
   "My Teams": "Οι ομάδες μου",
   "Last channels": "Τελευταία κανάλια",
+  "No other source found for this game.": "Δεν βρέθηκε άλλη πηγή για αυτόν τον αγώνα.",
   "◀ ▶ tabs  ·  OK to watch  ·  Back to close":
       "◀ ▶ καρτέλες  ·  OK για προβολή  ·  Πίσω για κλείσιμο",
   "None of your teams play today.":

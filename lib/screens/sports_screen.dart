@@ -543,22 +543,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     _picks = SportsChannelPicks.load(_storage);
     final matches = await _matcher.matchDay(_games, _picks);
     if (!mounted || myToken != _loadToken) return;
-    final sourceStore = SportsChannelLists(context.read<StorageService>());
-    final countries = _picks.countryPreferences;
-    for (final game in _games) {
-      final saved = sourceStore.sourcesFor(game, _gameKey(game));
-      if (saved.isEmpty) continue;
-      matches[_gameKey(game)] = [
-        for (final c in live.where((c) => saved.contains(c.id)).take(8))
-          ChannelMatch(c, MatchReason.pick,
-              _picks.channelIdFor(game) == c.id ? 1000 : 950,
-              detail: tr('Your added source')),
-        for (final m in matches[_gameKey(game)] ?? <ChannelMatch>[])
-          if (!saved.contains(m.channel.id)) m,
-      ]..sort((a, b) => b.score.compareTo(a.score));
-      matches[_gameKey(game)] =
-          _picks.orderMatches(matches[_gameKey(game)]!, countries: countries);
-    }
+    SportsChannelLists(context.read<StorageService>())
+        .mergeAddedSources(_games, matches, live, _picks);
     setState(() {
       _redZoneChoices = _findRedZones(live);
       _redZone = _redZoneChoices

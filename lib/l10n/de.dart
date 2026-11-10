@@ -137,6 +137,9 @@ const Map<String, String> kDe = {
       "Klicken: hier ansehen · Halten: Sender wählen",
   "Open full Live TV": "Vollständiges Live-TV öffnen",
   "Launch with profiles selector": "Mit Profilauswahl starten",
+  'Also behind "Who is watching?"': 'Auch hinter „Wer schaut zu?“',
+  'Shows while your profile is highlighted. Needs Launch with profiles selector (Settings > Profiles).':
+      'Erscheint, während dein Profil markiert ist. Benötigt Mit Profilauswahl starten (Einstellungen > Profile).',
   "Choose a profile after the splash, before the app opens. Applies from the next start.":
       "Wähle nach dem Startbildschirm ein Profil, bevor die App sich öffnet. Gilt ab dem nächsten Start.",
   "Who is watching?": "Wer schaut zu?",
@@ -488,6 +491,7 @@ const Map<String, String> kDe = {
   "this team": "dieses Team",
   "My Teams": "Meine Teams",
   "Last channels": "Letzte Sender",
+  "No other source found for this game.": "Keine andere Quelle für dieses Spiel gefunden.",
   "◀ ▶ tabs  ·  OK to watch  ·  Back to close":
       "◀ ▶ Tabs  ·  OK zum Ansehen  ·  Zurück zum Schließen",
   "None of your teams play today.": "Heute spielt keines deiner Teams.",
