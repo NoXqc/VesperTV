@@ -72,7 +72,7 @@ Grab the latest release from the [Releases](../../releases) page or
   <img src="docs/assets/shot-playlist-editor-dupes.jpg" width="49%" alt="Playlist editor Duplicates tab: keep the best copy of each channel, the others become fallbacks">
 </p>
 
-### Downloads and the network folder (next release)
+### Downloads and the network folder
 
 <p align="center">
   <img src="docs/assets/shot-downloads.jpg" width="49%" alt="Recording and download settings: margins, space, a download speed limit, a suggested overnight start, and where to save">
@@ -131,9 +131,9 @@ Grab the latest release from the [Releases](../../releases) page or
 - **Catch-up TV on Android**: replay earlier programmes from the Timeline guide,
   watch from the start, pause/resume live TV and jump back to live — on channels
   where your provider offers catch-up. [Controls and setup](https://vespertv.app/remote.html#Live%20TV)
-- **Recording (Android):** record a live channel or a Sports Trak game, schedule from the
-  Channel schedule (or set a reminder), auto-record a team, to the box's storage or USB/SD
-  (or, in the next release, a network folder).
+- **Recording (Android):** record a live channel or a Sports Trak game, a show that is on later
+  (hold OK on it in the Timeline guide) or a whole **series** (every airing of a show, or
+  skipping repeats), auto-record a team, to the box's storage or USB/SD or a network folder.
 - **Your channels, your way:** favourite channels and groups (across playlists, your own order
   or A-Z), your own groups, move and rename channels, hide groups and channels, sort groups,
   Recent channels, and an opt-in **Recently added** group.
@@ -155,7 +155,7 @@ Grab the latest release from the [Releases](../../releases) page or
 - **Multiview:** two, four, or 1 + 3 with Swap mode, with **Live now** (games on right now and
   every channel found for each) and **Sports** shortcuts in the channel picker.
 - **Side panel** (Left in the full-screen live player): Last channels, My Teams and Live now.
-  Next release: a **This game** tab lists every other channel showing the game you're watching.
+  A **This game** tab lists every other channel showing the game you're watching.
 - Phone picture-in-picture and a touch lock.
 
 ### Movies and TV shows
@@ -166,7 +166,7 @@ Grab the latest release from the [Releases](../../releases) page or
 - **Notify me** on a show: a **New episodes** row on Home and an Android notification, even with
   the app closed.
 - Continue watching, Watch list rows, mark a whole season watched, and the next episode's air date.
-- **Downloads (next release, Android):** download a movie, an episode or a whole season to watch
+- **Downloads (Android):** download a movie, an episode or a whole season to watch
   offline. It suggests tonight at 2:00, at a speed that looks like someone watching, and saves to
   the box or to a **network folder** (a shared folder on a computer or NAS), where a tablet can
   copy it before a trip.
@@ -198,8 +198,9 @@ or AI apps. [See below](#vesper-ai).
   groups you allow. Each keeps its own favourites, history, Media Hub, colours and guide layout.
   Optional **Who's watching** at launch.
 - **Home:** Continue watching, Recent channels, New episodes, Watch list and today's games,
-  with a small player for live channels on TV boxes. Next release: a bigger live channel card and
-  your own Home wallpaper (optionally behind Who's watching too).
+  with a small player for live channels on TV boxes. A bigger live channel card and your own
+  Home wallpaper (optionally behind Who's watching too). **Compact UI** makes the tabs, groups and
+  channel rows smaller, per profile.
 - **Open on** the tab you choose, resume the last channel, fast startup, and catalog updates on
   your schedule (every hour to every few days), optionally in the background.
 

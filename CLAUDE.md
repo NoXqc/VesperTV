@@ -383,11 +383,18 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
-- **Claude, 2026-11-10 - Compact UI (same branch, test +709):** Settings > Interface > Tabs > Compact UI (owner: some
+- **Claude, 2026-11-10 - release 1.0.64 (beta), +710 (latest):** owner said "merge and commit the last branches then
+  cutr". Android only; Windows stays 1.0.61, Linux 1.0.63 (+702). Everything merged to main since 1.0.63: record a show
+  to come + series recording, Compact UI (both below), downloads + network folder (+699..+702), Home live card + wallpaper
+  (+704, +706 mini player keys, +707 wallpaper behind Who's watching), player drawer "This game", phone player in the
+  iPhone's look, QMJHL, event channels sharing one EPG id, hub title pages from a metadata add-on, Vesper audio/subtitle
+  phrases, Back from Home fix. `claude/windows-parity-2` is merged but not shipped (no Windows build). Site/README
+  "Next release" tags removed. Analyze 16, 1779 tests. Notes: dev-notes/releases/1.0.64.md. Next build > 710.
+- **Claude, 2026-11-10 - Compact UI (released in 1.0.64):** Settings > Interface > Tabs > Compact UI (owner: some
   apps use a smaller UI). Per profile (`vesper_compact_ui` via `_vk`, no fallback to Main's value: a new profile
   starts off). TV home only: slim top bar, tabs 136 / groups 220 wide, tighter rows + smaller text, Timeline rows 40
   with one-line titles, channel column 136. Top-level `_compactUi` set each build. `dev-notes/compact-ui.md`.
-- **Claude, 2026-11-10 - record a show to come + series recording (`claude/series-recording`, not committed, test +709):**
+- **Claude, 2026-11-10 - record a show to come + series recording (`claude/series-recording`, released in 1.0.64):**
   owner: no way to record an upcoming programme from Live TV, nor a series. Android only. Timeline hold OK on a
   future block = **Record this show** (focused, first) + **Record series…** (Every airing / Skip repeats = same guide
   description); also on a show on now (records it at once), the plain list, and the player's Channel schedule dialog.
