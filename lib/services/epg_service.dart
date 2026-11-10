@@ -156,21 +156,29 @@ class EpgService extends ChangeNotifier {
   Map<String, ChannelNameEvent> _nameEvents = const {};
   DateTime? _nameEventsReadAt;
 
+  /// Normalized EPG ids of idle event slots (`TSN+ 07: NO EVENT`,
+  /// `PlaylistManager.idleEventChannelEpgIds`): without any provider
+  /// listing their row says "No game at this time" ([noGameRow]).
+  Set<String> Function()? idleEventIdsProvider;
+  Set<String> _idleEventIds = const {};
+
   /// id -> (listings it was merged into, merged result), so a guide row gets
   /// the same list back on every build.
   final Map<String, (List<EpgProgram>, List<EpgProgram>)> _merged = {};
 
   void _readNameEventsIfStale() {
     final provider = nameEventsProvider;
-    if (provider == null) return;
+    if (provider == null && idleEventIdsProvider == null) return;
     final now = DateTime.now();
     final at = _nameEventsReadAt;
     if (at != null && now.difference(at) < catchupRecheckEvery) return;
     _nameEventsReadAt = now;
     try {
-      final next = provider();
-      if (!identical(next, _nameEvents)) {
+      final next = provider?.call() ?? const <String, ChannelNameEvent>{};
+      final idle = idleEventIdsProvider?.call() ?? const <String>{};
+      if (!identical(next, _nameEvents) || !identical(idle, _idleEventIds)) {
         _nameEvents = next;
+        _idleEventIds = idle;
         _merged.clear();
       }
     } catch (e) {
@@ -178,14 +186,22 @@ class EpgService extends ChangeNotifier {
     }
   }
 
-  /// [programs] for [id] plus the event its channel name announces.
+  /// [programs] for [id] plus the event its channel name announces, or a
+  /// "No game at this time" row for an idle event slot without a guide.
   List<EpgProgram> _withNameEvent(String id, List<EpgProgram> programs) {
     _readNameEventsIfStale();
     final event = _nameEvents[id];
-    if (event == null) return programs;
+    if (event == null && (programs.isNotEmpty || !_idleEventIds.contains(id))) {
+      return programs;
+    }
     final memo = _merged[id];
     if (memo != null && identical(memo.$1, programs)) return memo.$2;
-    final merged = mergeChannelNameEvent(programs, event, id);
+    // Memoized until the name events are re-read: the filled window's
+    // "now" moves on with them.
+    final merged = event == null
+        ? noGameRow(id, DateTime.now())
+        : mergeChannelNameEvent(programs, event, id,
+            fillAround: DateTime.now());
     if (_merged.length >= _fullCacheLimit) _merged.clear();
     _merged[id] = (programs, merged);
     return merged;

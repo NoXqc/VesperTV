@@ -39,6 +39,37 @@ void main() {
       expect(p('skip 2 minutes')?.args['seconds'], 120);
       expect(p('recule de 5 minutes')?.args['seconds'], -300);
       expect(p('go back')?.args['seconds'], -30);
+      expect(p('fast forward 2 minutes')?.args['seconds'], 120);
+      expect(p('rewind 30 seconds')?.args['seconds'], -30);
+      // Typed without a space.
+      expect(p('fast forward 2min')?.args['seconds'], 120);
+      expect(p('rewind 30sec')?.args['seconds'], -30);
+    });
+
+    test('next / previous episode', () {
+      for (final s in [
+        'next episode',
+        'Play the next episode',
+        'épisode suivant',
+        "l'épisode suivant",
+        'siguiente episodio',
+        'prossimo episodio',
+        'nächste Folge',
+        'epomeno epeisodio',
+      ]) {
+        expect(p(s)?.args, {'action': 'next_episode'}, reason: s);
+      }
+      for (final s in [
+        'previous episode',
+        'épisode précédent',
+        'episodio anterior',
+        'vorherige Folge',
+      ]) {
+        expect(p(s)?.args, {'action': 'previous_episode'}, reason: s);
+      }
+      // A bare "next" stays channel up (the tool plays the next episode
+      // when a show is playing).
+      expect(p('next')?.args['action'], 'channel_up');
     });
   });
 
@@ -94,6 +125,32 @@ void main() {
       expect(p('my favourites')?.args, {'action': 'list'});
       expect(p("today's games")?.tool, 'sports_today');
     });
+  });
+
+  test('continue watching / play a title in Media Hub', () {
+    Map<String, Object?>? hub(String s) {
+      final c = p(s);
+      return c?.tool == 'media_hub' ? c!.args : null;
+    }
+
+    const spider = {'action': 'continue', 'query': 'spider man'};
+    expect(hub('continue watching Spider-Man in mediahub'), spider);
+    expect(hub('Continue watching Spider-Man in Media Hub'), spider);
+    expect(hub('keep watching spider-man'), spider);
+    expect(hub('resume Spider-Man'), spider);
+    expect(hub('continue de regarder Spider-Man'), spider);
+    expect(hub('reprends Spider-Man dans le Media Hub'), spider);
+    expect(hub('sigue viendo Spider-Man'), spider);
+    expect(
+        hub('play Carrie in Media Hub'), {'action': 'play', 'query': 'carrie'});
+    // The player and sections keep their meaning.
+    expect(p('continue')?.args, {'action': 'resume'});
+    expect(hub('resume playback'), isNull);
+    expect(hub('continue watching'), isNull);
+    expect(p('open media hub')?.args, {'section': 'hub'});
+    expect(p('open Carrie in Media Hub')?.args,
+        {'section': 'hub', 'query': 'carrie'});
+    expect(p('play TSN 1')?.tool, 'play');
   });
 
   test('help and the watch list', () {

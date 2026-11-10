@@ -27,6 +27,7 @@ import 'archive_ready_watch.dart';
 import 'device_memory_service.dart';
 import 'display_match.dart';
 import 'archive_service.dart';
+import 'archive_playback_sources.dart';
 import 'watch_tracker.dart';
 import 'vod_buffering.dart';
 import 'live_stream_format.dart';
@@ -247,6 +248,22 @@ class PlaybackService extends ChangeNotifier {
   Future<Channel?> Function(Channel)? _upNextResolver;
   bool _resolvingQueued = false;
 
+  /// The Media Hub streams of the title the full-screen player shows (its
+  /// source drawer's), for Vesper AI; null for anything else. Set by
+  /// PlayerScreen.
+  ArchivePlaybackSources? hubSources;
+
+  /// Same title or episode, another of its streams (the source drawer,
+  /// Vesper AI): teardown saves the position and the new player resumes
+  /// there; a paused title stays paused.
+  Future<void> replaceStream(Channel replacement) async {
+    final wasPlaying = controller?.value.isPlaying ?? true;
+    await play(replacement);
+    final player = controller;
+    await initFuture;
+    if (!wasPlaying && controller == player) await player?.pause();
+  }
+
   void setUpNextQueue(List<Channel>? queue,
       {Future<Channel?> Function(Channel)? resolve}) {
     _upNextQueue = queue;
@@ -300,7 +317,19 @@ class PlaybackService extends ChangeNotifier {
 
   bool get isPlayingSomething => currentChannel != null;
 
+  /// Bumped (with a notify) each time the viewer's history has been read
+  /// from disk ([init], [reloadForViewer]). The launch reads it after the UI
+  /// shows, so Home opened at launch fills its history rows only then
+  /// (owner, 2026-11-09: no channel rows until a trip to the TV tab).
+  int historyLoads = 0;
+
   Future<void> init() async {
+    await _readHistory();
+    historyLoads++;
+    notifyListeners();
+  }
+
+  Future<void> _readHistory() async {
     final raw = await _storage.readCacheFile(_recentlyPlayedCacheKeyForViewer);
     if (raw == null) {
       _recentlyPlayed = [];

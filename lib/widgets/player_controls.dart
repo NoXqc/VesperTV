@@ -453,7 +453,15 @@ class PlayerControls extends StatelessWidget {
     this.leadingOptions = const [],
     this.trailingOptions = const [],
     this.insetForSystemBars = false,
+    this.touchLayout = false,
   });
+
+  /// Phones / tablets, full-screen player (the iPhone player's look, owner
+  /// 2026-11-09): no title (it's in the top bar) and no transport (big
+  /// round buttons in the middle of the picture, [PlayerTouchTransport]).
+  /// The bar keeps elapsed | seek bar | length, then the badges and the
+  /// other buttons at full touch size. TV boxes keep the one-row bar.
+  final bool touchLayout;
 
   /// The full-screen player's bar: kept clear of the system navigation bar
   /// and cutouts (it sat under a phone's 3-button bar, Pixel 10 Pro XL), and
@@ -814,6 +822,7 @@ class PlayerControls extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (optionsRow) return _buildOptionsRow(context);
+    if (touchLayout) return _buildTouchBar(context);
     final inset = insetForSystemBars
         ? MediaQuery.viewPaddingOf(context)
         : EdgeInsets.zero;
@@ -1042,6 +1051,153 @@ class PlayerControls extends StatelessWidget {
     );
   }
 
+  /// [touchLayout]: the phone bar. Badges on the left, buttons on the
+  /// right (a sideways-scrolling row when they don't fit); portrait puts
+  /// the buttons on their own line.
+  Widget _buildTouchBar(BuildContext context) {
+    final inset = insetForSystemBars
+        ? MediaQuery.viewPaddingOf(context)
+        : EdgeInsets.zero;
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.bottomCenter,
+          end: Alignment.topCenter,
+          colors: [Colors.black.withValues(alpha: 0.8), Colors.transparent],
+        ),
+      ),
+      padding: EdgeInsets.fromLTRB(
+          12 + inset.left, 28, 8 + inset.right, 4 + inset.bottom),
+      child: ValueListenableBuilder<VideoPlayerHdrValue>(
+        valueListenable: controller,
+        builder: (context, value, _) {
+          final position = value.position;
+          final duration = value.duration;
+          final showSeek = !isLive && duration.inMilliseconds > 0;
+          PlaybackService? playback;
+          try {
+            playback = context.watch<PlaybackService>();
+          } on ProviderNotFoundException {
+            playback = null;
+          }
+          final session = playback?.catchup;
+          final catchup = session != null &&
+                  channel != null &&
+                  session.channel.id == channel!.id
+              ? session
+              : null;
+          final ownsPlayer =
+              playback != null && playback.controller == controller;
+          const time = TextStyle(color: Colors.white70, fontSize: 13);
+          final info = Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              if (catchup != null) ...[
+                GoldTag(label: tr('Catch-up').toUpperCase()),
+                Text(_catchupTitle(context, catchup, position),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white, fontSize: 13)),
+              ],
+              if (channel != null && isLive) RecPill(channel: channel),
+              _QualityBadge(controller: controller),
+              _AudioChannelBadge(controller: controller),
+              if (catchup != null)
+                _CatchupClock(session: catchup, position: position)
+              else if (isLive)
+                _LiveRemainingLabel(channelId: channelId),
+            ],
+          );
+          final buttons = SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            reverse: true,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (onToggleFavorite != null)
+                  IconButton(
+                    icon: Icon(
+                      isFavorite == true ? Icons.star : Icons.star_border,
+                      color: isFavorite == true ? Colors.amber : Colors.white,
+                    ),
+                    tooltip: isFavorite == true
+                        ? tr('Remove from favorites')
+                        : tr('Add to favorites'),
+                    onPressed: onToggleFavorite,
+                  ),
+                if (onPrevious != null)
+                  IconButton(
+                    icon: const Icon(Icons.skip_previous, color: Colors.white),
+                    tooltip: tr('Previous episode'),
+                    onPressed: onPrevious,
+                  ),
+                if (catchup != null) ...[
+                  ..._catchupLeading(context, playback!, catchup),
+                  ..._catchupTrailing(context, playback, catchup),
+                ],
+                if (onNext != null)
+                  IconButton(
+                    icon: const Icon(Icons.skip_next, color: Colors.white),
+                    tooltip: tr('Next episode'),
+                    onPressed: onNext,
+                  ),
+                if (onToggleMore != null && showActions)
+                  ..._actionButtons(context, playback),
+              ],
+            ),
+          );
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (isLive && catchup == null && ownsPlayer && channel != null)
+                _LiveTimeline(
+                  channel: channel!,
+                  epgId: channelId,
+                  playback: playback,
+                  onActivity: onActivity,
+                ),
+              if (showSeek)
+                Row(children: [
+                  Text(_formatDuration(position), style: time),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _ScrubBar(
+                      controller: controller,
+                      position: position,
+                      duration: duration,
+                      onActivity: onActivity,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(_formatDuration(duration), style: time),
+                ]),
+              LayoutBuilder(
+                builder: (context, box) => box.maxWidth >= 600
+                    ? Row(children: [
+                        Expanded(child: info),
+                        Flexible(flex: 2, child: buttons),
+                      ])
+                    : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const SizedBox(height: 4),
+                          info,
+                          Align(
+                              alignment: Alignment.centerRight, child: buttons),
+                        ],
+                      ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   /// "Programme · Channel" at the catch-up playhead (the channel alone
   /// when the guide has no listing then).
   String _catchupTitle(
@@ -1107,6 +1263,99 @@ class PlayerControls extends StatelessWidget {
           playback.backToLive();
         }),
       ];
+}
+
+/// Phones / tablets: the full-screen player's big round transport in the
+/// middle of the picture (the iPhone player's look, owner 2026-11-09):
+/// -10 / play-pause / +10 on movies, episodes and catch-up, play-pause
+/// alone on live. Holding -10 / +10 seeks faster, like the bar's.
+class PlayerTouchTransport extends StatelessWidget {
+  const PlayerTouchTransport({
+    super.key,
+    required this.controller,
+    required this.isLive,
+    this.onActivity,
+  });
+
+  final VideoPlayerHdrController controller;
+  final bool isLive;
+  final VoidCallback? onActivity;
+
+  static Widget _disc(Widget child) => DecoratedBox(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.black.withValues(alpha: 0.35),
+        ),
+        child: child,
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    PlaybackService? playback;
+    try {
+      playback = context.watch<PlaybackService>();
+    } on ProviderNotFoundException {
+      playback = null;
+    }
+    final ownsPlayer = playback != null && playback.controller == controller;
+    return ValueListenableBuilder<VideoPlayerHdrValue>(
+      valueListenable: controller,
+      builder: (context, value, _) {
+        final position = value.position;
+        final duration = value.duration;
+        final showSeek = !isLive && duration.inMilliseconds > 0;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (showSeek) ...[
+              _disc(_SkipButton(
+                icon: Icons.replay_10,
+                iconSize: 34,
+                onSeek: (amount) {
+                  onActivity?.call();
+                  final target = position - amount;
+                  controller
+                      .seekTo(target < Duration.zero ? Duration.zero : target);
+                },
+              )),
+              const SizedBox(width: 40),
+            ],
+            _disc(IconButton(
+              iconSize: 48,
+              padding: const EdgeInsets.all(14),
+              color: Colors.white,
+              tooltip: value.isPlaying ? tr('Pause') : tr('Play'),
+              icon: Icon(value.isPlaying ? Icons.pause : Icons.play_arrow),
+              // The service's toggle: pausing a live channel with
+              // catch-up is a timeshift.
+              onPressed: () {
+                onActivity?.call();
+                if (ownsPlayer) {
+                  playback!.togglePlayPause();
+                } else if (value.isPlaying) {
+                  controller.pause();
+                } else {
+                  controller.play();
+                }
+              },
+            )),
+            if (showSeek) ...[
+              const SizedBox(width: 40),
+              _disc(_SkipButton(
+                icon: Icons.forward_10,
+                iconSize: 34,
+                onSeek: (amount) {
+                  onActivity?.call();
+                  final target = position + amount;
+                  controller.seekTo(target > duration ? duration : target);
+                },
+              )),
+            ],
+          ],
+        );
+      },
+    );
+  }
 }
 
 /// Catch-up's gold Back to live: the way out of the past, always visible.
@@ -1572,20 +1821,13 @@ class _AudioTrackButtonState extends State<_AudioTrackButton> {
     _retry = Timer(const Duration(seconds: 3), _loadTracks);
   }
 
-  /// Placeholder codes broadcasters put on tracks: "MIS"/"MUL" as names
-  /// told nobody anything (TSN2's four tracks, owner photo 2026-10-26).
-  static const _noLanguage = {'und', 'mis', 'mul', 'zxx', 'qaa'};
+  static const _noLanguage = noTrackLanguage;
 
-  /// Track name, else its language, else "Audio n" — then codec and
-  /// channel layout, which is what tells two same-language tracks apart.
+  /// Language and track name ([audioTrackName]), else "Audio n" — then
+  /// codec and channel layout, which is what tells two same-language
+  /// tracks apart.
   String _trackLabel(VideoAudioTrack track, int index) {
-    final label = track.label?.trim() ?? '';
-    final language = track.language?.toLowerCase() ?? '';
-    final name = label.isNotEmpty
-        ? label
-        : language.isNotEmpty && !_noLanguage.contains(language)
-            ? languageName(language)
-            : '';
+    final name = audioTrackName(track.label, track.language);
     return [
       name.isNotEmpty ? name : tr('Audio {n}', {'n': index + 1}),
       DataPoolCard.codecName(track.codec),
@@ -2813,9 +3055,13 @@ class _LiveTimelineState extends State<_LiveTimeline> {
 }
 
 class _SkipButton extends StatefulWidget {
-  const _SkipButton({required this.icon, required this.onSeek});
+  const _SkipButton(
+      {required this.icon, required this.onSeek, this.iconSize = 28});
 
   final IconData icon;
+
+  /// 28 in the bar; bigger in [PlayerTouchTransport].
+  final double iconSize;
 
   /// Called once with a 10-second amount for a normal tap/click, or
   /// repeatedly with a growing amount for as long as it's held.
@@ -2963,7 +3209,8 @@ class _SkipButtonState extends State<_SkipButton> {
           // — see `buildPaletteColorScheme`'s own doc comment for why
           // (Habs: white contour, blue icons).
           child: Icon(widget.icon,
-              color: _focused ? scheme.tertiary : Colors.white, size: 28),
+              color: _focused ? scheme.tertiary : Colors.white,
+              size: widget.iconSize),
         ),
       ),
     );

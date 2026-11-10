@@ -490,11 +490,14 @@ public abstract class VideoPlayer implements VideoPlayerInstanceApi {
    * VesperTV: the audio track's codec for Dart. A .ts stream has no codecs
    * string, so fall back to the sample MIME type; Dolby Atmos (E-AC-3 JOC,
    * detected by ExoPlayer from the frame header) and TrueHD are named
-   * explicitly so the player can show an ATMOS / TrueHD badge.
+   * explicitly so the player can show an ATMOS / TrueHD badge. TrueHD Atmos
+   * comes from MatroskaAtmos's frame check ("truehd-atmos").
    */
   private static String audioCodec(Format format) {
     if (MimeTypes.AUDIO_E_AC3_JOC.equals(format.sampleMimeType)) return "eac3-joc";
-    if (MimeTypes.AUDIO_TRUEHD.equals(format.sampleMimeType)) return "truehd";
+    if (MimeTypes.AUDIO_TRUEHD.equals(format.sampleMimeType)) {
+      return MatroskaAtmos.TRUEHD_ATMOS_CODECS.equals(format.codecs) ? "truehd-atmos" : "truehd";
+    }
     if (format.codecs != null) return format.codecs;
     return format.sampleMimeType;
   }

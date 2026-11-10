@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nox_iptv/models/viewer_profile.dart';
 import 'package:nox_iptv/screens/settings/general_settings_screen.dart';
+import 'package:nox_iptv/screens/settings/profiles_screen.dart';
 import 'package:nox_iptv/screens/startup_profile_screen.dart';
 import 'package:nox_iptv/services/profile_gate.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
@@ -148,13 +149,17 @@ void main() {
     expect(reopened.getLaunchWithProfiles(), isTrue);
   });
 
-  testWidgets('Startup settings toggle is opt-in and persists on tap',
+  testWidgets('Profiles settings toggle is opt-in and persists on tap',
       (tester) async {
     final f = StartupFixture();
     await f.init();
     addTearDown(f.dispose);
+    // Not under Startup any more: Settings > Playlists & guide > Profiles.
     await tester
         .pumpWidget(f.wrap(const GeneralSettingsScreen(sections: {'startup'})));
+    expect(find.text('Launch with profiles selector'), findsNothing);
+    await tester.pumpWidget(f.wrap(const ProfilesScreen()));
+    await tester.pumpAndSettle();
     expect(f.prefs.launchWithProfiles, isFalse);
     await tester.tap(find.text('Launch with profiles selector'));
     await tester.pumpAndSettle();

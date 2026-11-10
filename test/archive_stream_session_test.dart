@@ -217,8 +217,7 @@ void main() {
     expect(link.totalBytes, 100);
   });
 
-  test(
-      'preferences do not auto-select an unknown language or unsuitable format',
+  test('preferences do not auto-select another language or unsuitable format',
       () {
     ArchiveStreamOption option(String label) => ArchiveStreamOption(
         source: _source(0),
@@ -232,6 +231,12 @@ void main() {
     ];
     const prefs = ArchivePlaybackPreferences(
         autoPlay: true, language: 'en', maxHeight: 1080, avoidHdr: true);
-    expect(prefs.ranked(options).map((o) => o.stream.name), ['1080p English']);
+    // An untagged release counts as English (they rarely say it).
+    expect(prefs.ranked(options).map((o) => o.stream.name),
+        ['1080p English', '720p']);
+    // An unknown language is never taken as another requested one.
+    const french = ArchivePlaybackPreferences(
+        autoPlay: true, language: 'fr', maxHeight: 1080, avoidHdr: true);
+    expect(french.ranked(options).map((o) => o.stream.name), ['1080p French']);
   });
 }

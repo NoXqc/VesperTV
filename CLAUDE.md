@@ -205,6 +205,14 @@ Unreleased: **`AudioPassthrough.java`** (MethodChannel `vespertv/audio`, `setPas
 HDMI passthrough: `PlatformViewVideoPlayer.buildAudioSink` gives `DefaultAudioSink.Builder(context)`
 when on (AC3/E-AC3 Atmos/DTS to the receiver, app volume no longer applies); otherwise the
 context-less sink above. Texture players (Multiview, Compatibility video) never pass through.
+Unreleased (2026-11-09): **`MatroskaAtmos.java`** (`HttpVideoAsset` wraps the extractors factory):
+MatroskaExtractor never flags Atmos (only TS frames and MP4's dec3 do), so Media Hub MKVs showed
+"E-AC-3 5.1". An MKV E-AC-3 track's first frame goes through `Ac3Util.parseAc3SyncframeInfo`; JOC
+= codecs `ec+3` (MIME stays `audio/eac3`, so decoding/passthrough don't change; Dart's `isAtmos`
+reads it). The format waits for that frame like the TS reader's. The wrapper must forward the
+factory's subtitle setters or MKV subtitles break. TrueHD too (owner, 2026-11-09): the first frame's
+major sync, 4+ substreams and substream_info bit 7 (16-channel presentation, as MediaInfo reads it)
+= codecs `truehd-atmos`, which `VideoPlayer.audioCodec` passes to Dart. `MatroskaAtmosTest` (12).
 **Recording (1.0.32) is NOT in this plugin** — it is app-side Kotlin (`RecorderService.kt`,
 `RecorderScheduler.kt` in `android/app/.../nox_iptv/`), so a plugin re-sync doesn't touch it.
 
@@ -375,6 +383,68 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-10 - +702 (main 75a905f, pushed, not released): copy from the network folder** (owner: box downloads
+  overnight, tablet copies them before a trip). Finished network files get `.vespertv/<file>.json` details; Recordings >
+  On the network folder lists the share; OK = Copy to this device (a download from `smb://`, no speed/connection
+  limit) or Play from it; Settings > Network folder > Save only. Details: dev-notes/downloads.md. Not device-tested;
+  APK `…/dl/767QiZBxaOhL/VesperTV-test-702.apk` (Formuler still unreachable). Next build > 702.
+- **Claude, 2026-11-10 - test +701 (main fec820a, pushed, not released):** owner confirmed the downloads path: Tonight
+  at 2:00 saved 72 Hours (4.46 GB MKV) to the SMB share, played and seeked from it. +701 adds: Recordings download
+  card = the poster's own colours (was the Sports Trak sheen, a flat gold block) + network-folder size in the footer;
+  tennis skips ESPN's summary (HTTP 400) and any 4xx summary isn't retried (stays null: goal alerts rely on it);
+  landscape phone guide + Vesper keyboard inset ported from the iOS branch; built-in audio/subtitle voice phrases
+  (`_tracks`, dev-notes/vesper-ai.md). Analyze 16, 1722 tests. Formuler didn't answer on 10.0.0.46: APK on
+  `pair.vespertv.app/dl/767QiZBxaOhL/VesperTV-test-701.apk`. Next build > 701.
+- **Claude, 2026-11-09 - merged on local main (3f49f15, pushed 2026-11-10, not released):** QMJHL league
+  (31d26cc), guide fix below (f1f64f2), `claude/phone-safe-area` (Settings `SafeArea(top: false)`, Android 15 nav
+  bar) and `claude/downloads` (entry below). Analyze 16, 1713 tests. Next build > 700.
+- **Claude, 2026-11-09 - event channels sharing one EPG id (f1f64f2):** a provider gives `tsn4mel` to 61 event
+  channels (TSN+ 05-45, ESPN+ 49, Disney+ Events 49…): every row showed that id's guide or the first name's game
+  (name events are keyed by EPG id). `Channel.epgId` = own `rawId` when `epgKey` is set (id shared) and the
+  provider name is an event channel's (`isEventChannelName`: `… @ date time zone` or a numbered idle slot);
+  network copies (ESPN 4K/HD) keep sharing, overrides win. Idle slots (`TSN+ 07: NO EVENT`) without a guide get
+  "No game at this time" across the row (`EpgService.idleEventIdsProvider`, cheap `mayBeIdleEventChannelName`
+  pre-filter: ~350k names per pass). Event channels now count as "no guide" (editor, Auto-Pair), like unique ones.
+  `test/event_channel_epg_test.dart`. Not box-tested.
+- **Claude, 2026-11-09 - Downloads + network folder (`claude/downloads`, test +699, merged 3f49f15, not released):** owner
+  asked for offline watching. Download button on IPTV/Media Hub movie pages and show pages (episode or season),
+  sheet warns (provider connection, Wi-Fi, providers that forbid it) and suggests **Tonight at 2:00** (Left/Right
+  change it). Native `Downloader.kt` (one at a time, Range resume, survives reboot via the recorder scheduler,
+  speed limit Like watching/10/25/50/none, 5 Mbit/s while anything plays, waits while the player/Multiview/a
+  recording uses the account's last connection). **Network folder** (SMB, `NetworkFolder.kt`, smbj 0.14.0) for
+  recordings and downloads, played back through a 127.0.0.1 Range server. Not device-tested. Details and test
+  checklist: `dev-notes/downloads.md`. Owner tested +699 ("works well"); +700 adds From phone to the
+  network folder. Next build > 700.
+- **Claude, 2026-11-09 - phone player in the iPhone player's look (main, unreleased, not pushed):** owner photos
+  (iPhone touch player vs Android phone bar). `PlayerControls.touchLayout` (PlayerScreen passes `_touch`): no title,
+  no transport in the bar; elapsed | seek | length, badges left + buttons right (portrait: buttons on their own line).
+  `PlayerTouchTransport` = big round -10 / play-pause / +10 in the middle with the bars (live: play-pause). Touch top
+  bar: fade instead of the black band, title + clock + compact EPG line, **Sources** for Media Hub (touch had no Right
+  key). TV boxes unchanged (remote bar + options row). `test/player_touch_layout_test.dart`. iOS side lives on
+  `claude/appstore-build` (`DesktopPlayerScreen` touch layout, PiP, background audio; dev-notes/ios.md there).
+- **Claude, 2026-11-09 - release 1.0.63 (beta), +698 (latest):** owner said "/cutr". Android only; Windows/Linux stay
+  1.0.61 (the Home mini player's Windows path was never run). New version name because the updater compares tag vs
+  versionName. Includes the +695 batch below (Home mini player, compact Settings, stream language ranking, MKV Atmos
+  labels, Vesper AI media_hub tool) plus: Media Hub **largest file = largest with the viewer's language**, alone or among
+  others (`ArchivePlaybackPreferences.languageTier` capped at 2) and it wins over Auto-play; Vesper AI `media_hub`
+  sources always lists best + `best_rule`, `settings` gains 5 `media_hub_*` keys, `favorites` move / order, new
+  `my_groups` tool (`vesper_ai/my_groups_tool.dart`: own live groups). Pushed to origin/main from
+  `claude/hub-largest-language`; local `main` in the main checkout was left alone (another session had uncommitted
+  Sports files there), so `git pull` it when that session is done. Analyze 16, 1675 tests; native suite not rerun
+  (nothing native changed since +695). Notes: dev-notes/releases/1.0.63.md. Next build > 698.
+- **Claude, 2026-11-09 - batch committed on main (+695, released in 1.0.63):** **Home mini player** (owner
+  photo; approved on the Formuler +695): `home_screen.dart` `_MiniPlayer` at the hero's top right plays the live
+  card the remote rests on (Preview-on-highlight rules: 0.8 s after an arrow key, History after 10 s, never over a
+  recording's only connection); OK = full screen on the same stream (`PlayerGlideRoute.open`; Windows
+  `DesktopMiniPlayer.take`); ⏯ on the playing card / Stop / hold OK > Stop mini player turns it off and it stays off
+  until ⏯ plays a card (`_miniOff`, app run). Settings > Interface > Tabs > Mini player on Home (per viewer, on by
+  default, not on phones); with it on Home no longer parks a live channel (`HomeScreen.showsMiniPlayer`). Home at a
+  cold start now fills its history/favourite rows when they load (`PlaybackService.historyLoads`,
+  `ensureLiveChannelsLoaded`). Windows path never run. Same commit: compact Settings on TV/computers
+  (`CompactMenus`), profiles selector switch moved to Settings > Profiles, Media Hub stream language ranking
+  (`stream_languages.dart`), TrueHD/E-AC-3 Atmos labels for MKVs (§9), audio pickers name the language, Vesper AI
+  `media_hub` tool + audio/subtitle + next/previous episode, remote FF/RW 10-row jumps. Analyze 16, 1667 Flutter +
+  245 native tests. Next build > 695.
 - **gmtherien (fork contributor), 2026-11-04 - macOS desktop (PR, unreleased):** macOS reuses the Windows
   media_kit stack. `lib/utils/desktop_platform.dart`: `isDesktop` (Windows or macOS, dart:io) and
   `isDesktopTarget` (same, target platform) replace the "computer" `Platform.isWindows` /
@@ -383,7 +453,7 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   and Choose a folder. `AppUpdateService.pickAsset`: Windows never takes `-macos.zip`. **Never attach
   a Mac zip to a release** until Windows installs have pickAsset. CI `.github/workflows/macos-build.yml`
   = unsigned artifact. Not signed/notarized. Details: `dev-notes/macos-desktop.md`.
-- **Claude, 2026-11-08 - release 1.0.61 (beta), +683 (latest):** owner said "/cutr". Android only; Windows stays 1.0.45. New version name because the updater compares tag vs versionName. Everything merged to local `main` since 1.0.60: event channels + guide speed (+677), TV launcher rows for Projectivy / Android TV (`claude/tv-channels`), Codex 3-hour EPG refresh, Preview on highlight + Back leaves at once + warm-resume fix (`claude/focus-preview`), resume after Who's watching (+682, another session), Vesper AI `settings` tool (`claude/ai-settings`: ~50 settings, clear history, update guide; `dev-notes/vesper-ai.md`), README rewrite. Not in it: Windows, macOS, iOS/Linux branches. Analyze 16, 1604 tests; native player suite not rerun (only its tests changed). Notes: dev-notes/releases/1.0.61.md. Next build > 683.
+- **Claude, 2026-11-08 - release 1.0.61 (beta), +683 (latest):** owner said "/cutr". Android first; the same day the owner had **Windows** (zip built from 7599296: every media_kit player closes before the window, `AppExit.quit`; tag moved there) and the first **Linux** build (beta, `VesperTV-1.0.61-683-linux-x64.tar.gz` from `claude/linux-build` 2620c66, works on a Steam Deck in an Ubuntu 24.04 distrobox; Software video on by default there, `dev-notes/linux.md` on that branch) added to the release. Site/README Windows links now point at 1.0.61. New version name because the updater compares tag vs versionName. Everything merged to local `main` since 1.0.60: event channels + guide speed (+677), TV launcher rows for Projectivy / Android TV (`claude/tv-channels`), Codex 3-hour EPG refresh, Preview on highlight + Back leaves at once + warm-resume fix (`claude/focus-preview`), resume after Who's watching (+682, another session), Vesper AI `settings` tool (`claude/ai-settings`: ~50 settings, clear history, update guide; `dev-notes/vesper-ai.md`), README rewrite. Not in it: Windows, macOS, iOS/Linux branches. Analyze 16, 1604 tests; native player suite not rerun (only its tests changed). Notes: dev-notes/releases/1.0.61.md. Next build > 683.
 - **Claude, 2026-11-08 - merged to local `main` for a Formuler test (+680, released in 1.0.61):** event-guide
   (entry below), `claude/tv-channels` (Settings > Interface > TV home screen: Watch Next + a "Favourite channels" app
   channel through TvProvider for Projectivy / Android TV; `services/launcher_channels.dart`, `LauncherChannels.kt`,
@@ -395,6 +465,11 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   `AppExit.back`, warm exit; a computer still asks; tests: `test/warm_exit_helper.dart`). **Warm-return resume:**
   `_episodeNotificationOpened` was never reset, so after one notification tap no warm return resumed until a cold
   start; now reset in `AppExit.beforeWarm`, and Send log says `Resume: skipped (why)`. Not box-tested. Next build > 680.
+- **Claude, 2026-11-08 - release 1.0.62 (beta), +689 (latest):** owner said "cut it". Android only; Windows/Linux
+  stay 1.0.61. Wide cards (Settings > Interface > Tabs: 16:9 backdrop cards in TV home rows + Expand catalog,
+  `WideArtQueue`), Vesper AI game_channel / groups channels / sports quality + on_at_game_time, profiles + parental
+  tools (PIN only on the TV pad), "No game at this time" around name-only events. Notes: dev-notes/releases/1.0.62.md.
+  AI apps cache the tool list: reconnect the connector after new tools. Next build > 689.
 - **Claude, 2026-11-07 - event channels + guide speed (released in 1.0.61, +677; test APK +677 had 1-2 only):**
   (1) TV header "Updating..." stuck after a background update: `PlaylistSession.isLoading` is now derived (list load
   or on-screen row loads). (2) **Guide from channel names**: `services/channel_name_events.dart` reads

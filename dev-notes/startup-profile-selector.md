@@ -4,7 +4,7 @@ Branch: `codex/startup-profile-selector`, based on published +492 (`eaed570`).
 Claude's uncommitted +493 Sports Menu/provider-error changes remain in the owner's
 checkout. This feature does not include or modify those changes.
 
-Settings > General > Startup > **Launch with profiles selector** is off by default.
+Settings > Playlists & guide > Profiles > **Launch with profiles selector** (moved from General > Startup, 2026-11-09) is off by default.
 It is shared by every viewer on this device, retained by backups, and excluded
 from device transfers so the receiving device keeps its own startup choice.
 It applies on the next cold launch, even with only the Main profile.

@@ -2,6 +2,7 @@ import '../utils/refined_finish.dart';
 import 'package:flutter/material.dart';
 
 import '../utils/tv_theme.dart';
+import 'tv_menu_tile.dart';
 
 /// A `SwitchListTile` with an obvious solid-fill focus highlight — see
 /// `SettingsMenuScreen`'s `_MenuTile` for why the stock widget's own
@@ -40,8 +41,10 @@ class _TvSwitchListTileState extends State<TvSwitchListTile> {
     // to white (see `buildPaletteColorScheme`), so no palette-specific
     // branching is needed here at all.
     final focusForeground = scheme.primary;
+    // Settings on a TV box / computer: tighter rows (CompactMenus).
+    final compact = CompactMenus.of(context);
     return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3),
+        padding: EdgeInsets.symmetric(vertical: compact ? 2 : 3),
         child: Container(
           // Always present (even with an empty shadow list) rather than
           // conditionally wrapped — MinimalGlassFocus's own doc comment below
@@ -90,8 +93,11 @@ class _TvSwitchListTileState extends State<TvSwitchListTile> {
             child: SwitchListTile(
               focusNode: widget.focusNode,
               // Inset from the focus outline: flush text touched the border.
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              contentPadding: compact
+                  ? const EdgeInsets.symmetric(horizontal: 12, vertical: 0)
+                  : const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              materialTapTargetSize:
+                  compact ? MaterialTapTargetSize.shrinkWrap : null,
               onFocusChange: (f) => setState(() => _focused = f),
               title: DefaultTextStyle.merge(
                 style: TextStyle(color: _focused ? focusForeground : null),

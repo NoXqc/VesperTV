@@ -56,6 +56,14 @@
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
   {
+    "id": "9913ba0b42e9125a",
+    "category": "Live TV",
+    "title": "Jump 10 groups or channels",
+    "answer": "In the groups column, the channel list and the Timeline guide, Fast-forward moves down 10 rows and Rewind moves up 10. It stops at the first or last one. Movies and TV Shows categories too.",
+    "controls": "Remote ⏪ Rewind / ⏩ Fast-forward",
+    "url": "https://vespertv.app/remote.html#Live%20TV"
+  },
+  {
     "id": "ad2f3fe6d3ade9fd",
     "category": "Live TV",
     "title": "Channel menu",
@@ -332,7 +340,15 @@
     "category": "Home",
     "title": "Choose a profile at startup",
     "answer": "Turn this on, then fully close and reopen VesperTV. After the splash, use the arrows and OK, or tap a profile, to open the app in that profile. The last-used profile starts focused. Photos appear when set; leaving a restricted profile still needs the PIN. The switch is off by default and applies to this device.",
-    "controls": "Settings > General > Startup > Launch with profiles selector",
+    "controls": "Settings > Playlists & guide > Profiles > Launch with profiles selector",
+    "url": "https://vespertv.app/remote.html#Home"
+  },
+  {
+    "id": "8b1446377f0dda91",
+    "category": "Home",
+    "title": "Home mini player",
+    "answer": "Stop on a live channel card (Favourite channels, Recent channels, a game on now) for a moment and it plays in the mini player at the top right of Home. OK on the card opens it full screen with the same stream; Back returns to Home with it still playing. To turn it off without leaving Home, press ⏯ on the card that is playing (or Stop), or hold OK on any card and choose Stop mini player. It then stays off while you browse, until ⏯ on a channel card plays that one right away. A channel already playing when you open Home keeps playing there. Opening a movie or show stops it. Turn it off in Settings > Interface > Tabs > Mini player on Home (per profile); Home then stops the channel as before. TVs, boxes and computers only (not phones).",
+    "controls": "Home · rest on a channel card",
     "url": "https://vespertv.app/remote.html#Home"
   },
   {
@@ -347,7 +363,7 @@
     "id": "fc418dd9a734ec36",
     "category": "Home",
     "title": "Back to Who's watching",
-    "answer": "With Settings > General > Startup > Launch with profiles selector enabled, leaving the TV or Sports Mode root stops playback and returns to Who's watching. In Sports Mode, first use Back to open the sidebar and stop its player. Back on Who's watching leaves VesperTV at once (on a computer it asks first, with Stay selected). With the startup selector off, the existing exit flow stays in place.",
+    "answer": "With Settings > Playlists & guide > Profiles > Launch with profiles selector enabled, leaving the TV or Sports Mode root stops playback and returns to Who's watching. In Sports Mode, first use Back to open the sidebar and stop its player. Back on Who's watching leaves VesperTV at once (on a computer it asks first, with Stay selected). With the startup selector off, the existing exit flow stays in place.",
     "controls": "TV home / Sports Mode root · Back",
     "url": "https://vespertv.app/remote.html#Home"
   },
@@ -720,6 +736,30 @@
     "url": "https://vespertv.app/remote.html#Recordings"
   },
   {
+    "id": "64445a41cbb5b9e3",
+    "category": "Recordings",
+    "title": "Download to watch offline",
+    "answer": "On a movie page, or on a show page for the highlighted episode or a whole season. The first choice is Tonight at 2:00: press Left / Right to change the time, OK to set it. Download now starts at once. On an account with one connection, a download waits while you watch and continues afterwards. Downloads run one at a time, survive a restart and show here with their progress.",
+    "controls": "Download on a movie or show page",
+    "url": "https://vespertv.app/remote.html#Recordings"
+  },
+  {
+    "id": "afd02af4fa39eb07",
+    "category": "Recordings",
+    "title": "Play it, or its menu",
+    "answer": "A finished download plays. Otherwise OK opens Play what's downloaded, Resume download, Download now, Stop download and Delete download.",
+    "controls": "OK on a download",
+    "url": "https://vespertv.app/remote.html#Recordings"
+  },
+  {
+    "id": "dc8a64337840009d",
+    "category": "Recordings",
+    "title": "Speed, start time, where files go",
+    "answer": "Speed limit: Like watching (about the video's own bitrate, the safest with providers), 10 / 25 / 50 Mbit/s or No limit; downloads always slow down while you watch. Save to this device, a USB drive / SD card, or a network folder: a shared folder on a computer or NAS (\\\\computer\\folder, user name and password; From phone lets you type them on your phone, same Wi-Fi). Recordings can go there too.",
+    "controls": "Settings → Recordings",
+    "url": "https://vespertv.app/remote.html#Recordings"
+  },
+  {
     "id": "cfda7cde95b5bb53",
     "category": "Vesper AI",
     "title": "Vesper AI",
@@ -731,8 +771,8 @@
     "id": "38510ae204d0cbb0",
     "category": "Vesper AI",
     "title": "Vesper AI without an API key",
-    "answer": "Built-in commands are free and parsed on your device: try \"play TSN 1\", \"mets RDS\", \"pause\", \"next channel\", \"what's on TSN 1\", \"when is the Simpsons on\", \"today's games\", \"put on the Habs game\", \"search for Dune\" or \"help\". The channel, programme or game must be available in your own sources and guide. Going back on live TV needs provider catch-up support. Leave Your AI set to None to use built-in commands only. Local command parsing does not make streaming, guide updates or voice recognition work offline.",
-    "controls": "Type or say: play TSN 1 · pause · go back 30 seconds · today's games · help",
+    "answer": "Built-in commands are free and parsed on your device: try \"play TSN 1\", \"mets RDS\", \"pause\", \"next channel\", \"next episode\", \"fast forward 2 minutes\", \"what's on TSN 1\", \"when is the Simpsons on\", \"today's games\", \"put on the Habs game\", \"search for Dune\", \"continue watching Severance in Media Hub\" (picks up where you stopped, the right episode for a show) or \"help\". The channel, programme or game must be available in your own sources and guide. Going back on live TV needs provider catch-up support. Leave Your AI set to None to use built-in commands only. Local command parsing does not make streaming, guide updates or voice recognition work offline.",
+    "controls": "Type or say: play TSN 1 · pause · go back 30 seconds · today's games · continue watching Severance · help",
     "url": "https://vespertv.app/remote.html#Vesper%20AI"
   },
   {

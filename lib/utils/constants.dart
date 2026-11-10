@@ -452,6 +452,9 @@ class AppConstants {
   /// (`HomeRows`). Null = never edited (the default order).
   static const String keyHomeRows = 'vesper_home_rows';
   static const String keyHideProfiles = 'vesper_hide_profiles';
+
+  /// Home's mini player (top right), per viewer; null = on.
+  static const String keyHomeMiniPlayer = 'vesper_home_mini_player';
   static const String keySportsAddedLeagues = 'vesper_sports_added_leagues';
   static const String keySportsHideScores = 'vesper_sports_hide_scores';
   static const String keySportsMode = 'vesper_sports_mode';
@@ -531,6 +534,9 @@ class AppConstants {
   /// Opt-in: the live channel the remote stops on plays in the preview.
   static const String keyGuideFocusPreview = 'vesper_guide_focus_preview';
   static const String keyExpandedBrowse = 'vesper_expanded_browse';
+
+  /// Movies / TV Shows rows as 16:9 cards (backdrops), device-only look.
+  static const String keyWideCards = 'vesper_wide_cards';
 
   /// LEGACY global scalar — "enable/disable playlist" (freeing a
   /// provider's connection slot for another device without touching

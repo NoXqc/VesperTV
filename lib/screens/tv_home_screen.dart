@@ -241,6 +241,14 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   bool _compact = false;
   int _phonePage = 2;
 
+  /// A phone held sideways: the TV layout, but under 500 points tall. The
+  /// fixed TV sizes (16 px margins, the title bar, the 160 px preview row)
+  /// left room for one guide row on an iPhone 8 / Android phone in
+  /// landscape (owner's photos, 2026-11-09): tighter margins, a slim title
+  /// bar, a 100 px preview row and Compact guide rows there instead.
+  /// Refreshed every build; never on TV boxes or computers.
+  bool _shortScreen = false;
+
   /// Group identity is `(playlistId, title)` now that more than one
   /// playlist can exist (two providers can share a category name), but
   /// this field itself stays a bare title — every place that reads it
@@ -1181,6 +1189,48 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         const SingleActivator(LogicalKeyboardKey.arrowRight): () {},
       };
 
+  /// Remote fast-forward / rewind in the groups column and the channel list:
+  /// 10 rows at a time (owner, 2026-11-09). Each row is one plain Down / Up
+  /// move a frame apart, so the list scrolls and builds exactly as for 10
+  /// presses; presses during a jump add to it. The Timeline guide jumps its
+  /// own way ([_TimelineGuideState.jumpVertical]).
+  static const _rowJump = 10;
+  int _pendingRowJump = 0;
+
+  Future<void> _jumpRows(int rows, {bool timeline = false}) async {
+    if (_focusDepth == 0 || _movingChannel != null || _movingGroupKey != null) {
+      return;
+    }
+    if (timeline) {
+      _timelineGuideKey.currentState?.jumpVertical(rows);
+      return;
+    }
+    final running = _pendingRowJump != 0;
+    _pendingRowJump += rows;
+    if (running) return;
+    while (_pendingRowJump != 0 && mounted) {
+      final step = _pendingRowJump.sign;
+      _pendingRowJump -= step;
+      final node = FocusManager.instance.primaryFocus;
+      if (node == null ||
+          !node.focusInDirection(
+              step > 0 ? TraversalDirection.down : TraversalDirection.up)) {
+        _pendingRowJump = 0;
+        break;
+      }
+      await WidgetsBinding.instance.endOfFrame;
+    }
+  }
+
+  Map<ShortcutActivator, VoidCallback> _rowJumpBindings(
+          {bool timeline = false}) =>
+      {
+        const SingleActivator(LogicalKeyboardKey.mediaFastForward): () =>
+            _jumpRows(_rowJump, timeline: timeline),
+        const SingleActivator(LogicalKeyboardKey.mediaRewind): () =>
+            _jumpRows(-_rowJump, timeline: timeline),
+      };
+
   Future<void> _moveChannelStep(int delta) async {
     final channel = _movingChannel;
     if (channel == null) return;
@@ -1469,7 +1519,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         if (mounted) _restoreLiveFocus();
       });
     }
-    if (_isBrowseTab(tab) || tab == 'Home') {
+    if (_isBrowseTab(tab) ||
+        (tab == 'Home' && !HomeScreen.showsMiniPlayer(context))) {
       unawaited(_parkLiveChannel(keepNativeSurface: _isBrowseTab(tab)));
     }
   }
@@ -2035,6 +2086,28 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     });
   }
 
+  /// Wide cards: a movie card's backdrop comes with its get_vod_info (the
+  /// hero's own request, saved for next time). M3U movies have none.
+  Future<String?> Function()? _movieBackdropLoader(Channel c) {
+    if (!_wideBrowseCards || !c.rawId.startsWith('xt_vod_')) return null;
+    final playlist = context.read<PlaylistManager>();
+    return () async {
+      await playlist.getHeroVodDescription(c);
+      return c.anyBackdropUrl;
+    };
+  }
+
+  /// Most panels send a show's backdrop with the list already; the rest
+  /// come with get_series_info, like the hero's.
+  Future<String?> Function()? _seriesBackdropLoader(XtreamSeries s) {
+    if (!_wideBrowseCards) return null;
+    final playlist = context.read<PlaylistManager>();
+    return () async {
+      await playlist.getHeroSeriesDescription(s);
+      return s.anyBackdropUrl;
+    };
+  }
+
   void _onColumnFocus(int depth) {
     if (_focusDepth != depth) setState(() => _focusDepth = depth);
   }
@@ -2199,9 +2272,13 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       if (!mounted) return;
       // Preserve the browse pages' live-video parking without deferring
       // the selected screen's first paint or changing resume behavior.
+      // Home with its mini player keeps the channel (see _openHome).
+      final homeKeepsLive =
+          HomeScreen.showsMiniPlayer(context) &&
+              prefs.effectiveStartSection == 'home';
       if (_isBrowseTab(_initialTab) ||
-          _initialTab == 'Home' ||
-          widget.startupBrowseCovered) {
+          ((_initialTab == 'Home' || widget.startupBrowseCovered) &&
+              !homeKeepsLive)) {
         unawaited(
             _parkLiveChannel(keepNativeSurface: _isBrowseTab(_initialTab)));
       }
@@ -2863,6 +2940,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     LogicalKeyboardKey.pageDown,
     LogicalKeyboardKey.channelUp,
     LogicalKeyboardKey.channelDown,
+    // 10-row jumps in the groups / channel list ([_jumpRows]).
+    LogicalKeyboardKey.mediaFastForward,
+    LogicalKeyboardKey.mediaRewind,
   };
   DateTime _lastKeyAt = DateTime(0);
   DateTime _lastNavKeyAt = DateTime(0);
@@ -3042,7 +3122,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   bool _videoHiddenForSports = false;
 
   /// Home parks a background live channel like Media Hub: it's a browse
-  /// page, and its own cards start what plays next.
+  /// page, and its own cards start what plays next. With Home's mini player
+  /// on (Settings > Interface > Tabs) the channel keeps playing there
+  /// instead, opened like Sports Trak over a live channel.
   void _openHome() {
     if (_tab == 'Home') {
       setState(() => _phonePage = 1);
@@ -3051,9 +3133,13 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     }
     _returnToTv = true;
     _returnHomeToFavorites = true;
+    final route = MaterialPageRoute<void>(builder: (_) => const HomeScreen());
+    if (HomeScreen.showsMiniPlayer(context)) {
+      unawaited(_pushOverLiveVideo(route));
+      return;
+    }
     _parkLiveChannel();
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const HomeScreen()));
+    Navigator.of(context).push(route);
   }
 
   Future<void> _openSearch() => _pushOverLiveVideo(
@@ -3333,6 +3419,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     final prefs = context.watch<AppPreferences>();
     final screen = MediaQuery.sizeOf(context);
     _compact = screen.width < 600 && screen.height > screen.width;
+    _shortScreen = _isShortPhoneScreen(context);
+    // Read by the browse size getters (top-level, like their Windows
+    // scale): a portrait phone keeps posters, they'd fill the screen.
+    _wideBrowseCards = prefs.wideCards && !_compact;
     // Turning the phone to portrait lands on the content page (what was
     // on the right in landscape); Back then walks to groups and tabs.
     if (!_compact) _phonePage = 2;
@@ -3417,12 +3507,15 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               SafeArea(
                 // Full-video mode: the guide sits right down at the TV's
                 // bottom edge (owner's request) instead of 16px above it.
-                minimum: _fullVideo
-                    ? const EdgeInsets.fromLTRB(16, 16, 16, 4)
-                    : const EdgeInsets.all(16),
+                minimum: _shortScreen
+                    ? const EdgeInsets.fromLTRB(16, 4, 16, 4)
+                    : _fullVideo
+                        ? const EdgeInsets.fromLTRB(16, 16, 16, 4)
+                        : const EdgeInsets.all(16),
                 child: Column(
                   children: [
                     _TvTopBar(
+                        dense: _shortScreen,
                         // Wide phones/tablets (including unfolded phones) use
                         // columns too. Full-video mode hides passed columns
                         // completely, so touch users need a visible way back.
@@ -3530,6 +3623,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                                                       LogicalKeyboardKey
                                                           .arrowRight):
                                                   _enterBrowseColumn,
+                                              ..._rowJumpBindings(),
                                             },
                                           _ =>
                                             <ShortcutActivator, VoidCallback>{
@@ -3639,6 +3733,12 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                                                     .currentState
                                                     ?.moveVertical(-1),
                                           },
+                                          // Fast-forward / rewind: 10 groups
+                                          // or channels at a time.
+                                          if (_focusDepth > 0)
+                                            ..._rowJumpBindings(
+                                                timeline: _focusDepth == 2 &&
+                                                    showTimelineGuide),
                                         },
                               child: _compact
                                   ? _buildPhoneColumns(
@@ -5250,7 +5350,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                   // the whole row narrower than that: give the video at
                   // most half the row there instead of overflowing.
                   final fixedPreviewWidth = constraints.maxWidth.isFinite
-                      ? (constraints.maxWidth / 2).clamp(0.0, 284.0)
+                      ? (constraints.maxWidth / 2)
+                          .clamp(0.0, _shortScreen ? 100 * 16 / 9 : 284.0)
                       : 284.0;
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -5469,7 +5570,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                             ),
                           ]
                         : [
-                            SizedBox(height: 160, child: previewRow),
+                            SizedBox(
+                                height: _shortScreen ? 100 : 160,
+                                child: previewRow),
                             const Divider(height: 12),
                             Expanded(child: _fullVideoScrim(guide)),
                           ],
@@ -5844,6 +5947,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             progressFraction: storage.getWatchedFraction(c.id),
             cardWidth: _browsePosterWidth,
             cardPosterHeight: _browsePosterHeight,
+            wideStyle: _wideBrowseCards,
+            backdropUrl: asSeries ? null : c.anyBackdropUrl,
+            artKey: c.id,
+            loadBackdrop: asSeries ? null : _movieBackdropLoader(c),
             tapToPreview: _touchPreview,
             focusNode: index == 0 ? _continueWatchingFirstFocusNode : null,
             onTap: () => asSeries
@@ -6118,6 +6225,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
           progressFraction: storage.getWatchedFraction(c.id),
           cardWidth: _browsePosterWidth,
           cardPosterHeight: _browsePosterHeight,
+          wideStyle: _wideBrowseCards,
+          backdropUrl: c.anyBackdropUrl,
+          artKey: c.id,
+          loadBackdrop: _movieBackdropLoader(c),
           tapToPreview: _touchPreview,
           focusNode: x.focusNode,
           onToggleFavorite: () => _removeFromWatchList(i),
@@ -6153,6 +6264,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         progressFraction: storage.getWatchedFraction(c.id),
         cardWidth: _browsePosterWidth,
         cardPosterHeight: _browsePosterHeight,
+        wideStyle: _wideBrowseCards,
+        backdropUrl: c.anyBackdropUrl,
+        artKey: c.id,
+        loadBackdrop: _movieBackdropLoader(c),
         tapToPreview: _touchPreview,
         focusNode: x.focusNode,
         isFavorite: true,
@@ -6207,6 +6322,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                 progressFraction: storage.getWatchedFraction(c.id),
                 cardWidth: _browsePosterWidth,
                 cardPosterHeight: _browsePosterHeight,
+                wideStyle: _wideBrowseCards,
+                backdropUrl: c.anyBackdropUrl,
+                artKey: c.id,
+                loadBackdrop: _movieBackdropLoader(c),
                 tapToPreview: _touchPreview,
                 focusNode: index == 0
                     ? _firstPosterFocusNodeForGroup(
@@ -6305,6 +6424,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
           rating: s.rating,
           cardWidth: _browsePosterWidth,
           cardPosterHeight: _browsePosterHeight,
+          wideStyle: _wideBrowseCards,
+          backdropUrl: s.anyBackdropUrl,
+          artKey: s.id,
+          loadBackdrop: _seriesBackdropLoader(s),
           tapToPreview: _touchPreview,
           focusNode: x.focusNode,
           onToggleFavorite: () => _removeFromWatchList(i),
@@ -6340,6 +6463,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               rating: s.rating,
               cardWidth: _browsePosterWidth,
               cardPosterHeight: _browsePosterHeight,
+              wideStyle: _wideBrowseCards,
+              backdropUrl: s.anyBackdropUrl,
+              artKey: s.id,
+              loadBackdrop: _seriesBackdropLoader(s),
               tapToPreview: _touchPreview,
               focusNode: x.focusNode,
               isFavorite: true,
@@ -6370,6 +6497,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               imageUrl: c.logoUrl,
               cardWidth: _browsePosterWidth,
               cardPosterHeight: _browsePosterHeight,
+              wideStyle: _wideBrowseCards,
+              backdropUrl: c.anyBackdropUrl,
+              artKey: c.id,
+              loadBackdrop: _movieBackdropLoader(c),
               tapToPreview: _touchPreview,
               focusNode: x.focusNode,
               isFavorite: true,
@@ -6445,6 +6576,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             rating: s.rating,
             cardWidth: _browsePosterWidth,
             cardPosterHeight: _browsePosterHeight,
+            wideStyle: _wideBrowseCards,
+            backdropUrl: s.anyBackdropUrl,
+            artKey: s.id,
+            loadBackdrop: _seriesBackdropLoader(s),
             tapToPreview: _touchPreview,
             focusNode: index == 0
                 ? _firstPosterFocusNodeForGroup(group.playlistId, group.title)
@@ -7175,16 +7310,22 @@ class _GroupRowState extends State<_GroupRow> {
 // Was 1.8 — reduced ~30% per direct feedback that the first pass at
 // this was too big.
 const double _windowsPosterScale = 1.26;
-double get _browsePosterWidth =>
-    isDesktop ? PosterCard.width * _windowsPosterScale : PosterCard.width;
-double get _browsePosterHeight => isDesktop
-    ? PosterCard.posterHeight * _windowsPosterScale
-    : PosterCard.posterHeight;
+
+/// Settings > Interface > Tabs > Wide cards (16:9 backdrop cards, a little
+/// taller than the posters too). Set at the top of every TV home build.
+bool _wideBrowseCards = false;
+const double _wideCardScale = PosterCard.wideStyleScale;
+
+double get _browseScale =>
+    (isDesktop ? _windowsPosterScale : 1.0) *
+    (_wideBrowseCards ? _wideCardScale : 1.0);
+double get _browsePosterWidth => _wideBrowseCards
+    ? _browsePosterHeight * 16 / 9
+    : PosterCard.width * _browseScale;
+double get _browsePosterHeight => PosterCard.posterHeight * _browseScale;
+// PosterCard scales its title row the same way (by height when wide).
 double get _browseCardHeight =>
-    _browsePosterHeight +
-    (isDesktop
-        ? PosterCard.titleHeight * _windowsPosterScale
-        : PosterCard.titleHeight);
+    _browsePosterHeight + PosterCard.titleHeight * _browseScale;
 
 /// [_CategoryRow]'s own section-title bar — a fixed height (not left to
 /// whatever `SectionLabel`'s text happens to measure out to) specifically
@@ -8175,8 +8316,14 @@ class _WhatsNewCarouselState<T> extends State<_WhatsNewCarousel<T>>
 /// actually works with a remote.
 class _TvTopBar extends StatelessWidget {
   const _TvTopBar(
-      {required this.showClock, required this.isLoading, this.onBack});
+      {required this.showClock,
+      required this.isLoading,
+      this.onBack,
+      this.dense = false});
 
+  /// A phone held sideways ([_TvHomeScreenState._shortScreen]): no
+  /// vertical padding, a smaller back button and wordmark.
+  final bool dense;
   final bool showClock;
   final bool isLoading;
   final VoidCallback? onBack;
@@ -8192,13 +8339,14 @@ class _TvTopBar extends StatelessWidget {
     // changes nothing for them.
     final palette = context.watch<AppPreferences>().palette;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: dense ? 0 : 8),
       child: Row(
         children: [
           if (onBack != null)
             IconButton(
               tooltip: tr('Back'),
               onPressed: onBack,
+              visualDensity: dense ? VisualDensity.compact : null,
               icon: const Icon(Icons.arrow_back, color: Colors.white),
             ),
           // Shrinks (never overflows) with a phone's largest font.
@@ -8213,14 +8361,14 @@ class _TvTopBar extends StatelessWidget {
                   if (palette.highlight != null) palette.highlight!,
                   palette.secondary,
                 ]).createShader(bounds),
-                child: const Text(
+                child: Text(
                   AppConstants.appName,
                   // Was bumped to 64 thinking this was the launcher banner text
                   // — it wasn't, that's a separate Android TV banner asset.
                   // Back to the original in-app header size.
                   style: TextStyle(
                       color: Colors.white,
-                      fontSize: 22,
+                      fontSize: dense ? 18 : 22,
                       fontWeight: FontWeight.bold),
                 ),
               ),
@@ -9230,6 +9378,15 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   /// [_trackFocus] and finds whichever block in the target row covers
   /// that same moment, so moving between rows stays on the same time
   /// column instead of following block geometry.
+  /// Remote fast-forward / rewind: [delta] channels at once, stopping at
+  /// the first / last one ([moveVertical] past the top leaves the guide).
+  void jumpVertical(int delta) {
+    final rowIndex = _focusedRowIndex;
+    if (rowIndex == null || widget.channels.isEmpty) return;
+    final target = (rowIndex + delta).clamp(0, widget.channels.length - 1);
+    if (target != rowIndex) moveVertical(target - rowIndex);
+  }
+
   void moveVertical(int delta) {
     final rowIndex = _focusedRowIndex;
     if (rowIndex == null) return;
@@ -9357,8 +9514,11 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
-    _rowHeight =
-        context.watch<AppPreferences>().guideCompact ? 48 : _normalRowHeight;
+    // A phone held sideways always gets the Compact guide's rows.
+    _rowHeight = context.watch<AppPreferences>().guideCompact ||
+            _isShortPhoneScreen(context)
+        ? 48
+        : _normalRowHeight;
     if (widget.channels.isEmpty) {
       return Center(child: Text(tr('No channels found.')));
     }
@@ -10594,4 +10754,14 @@ class _ProgramBlockState extends State<_ProgramBlock> {
       ),
     );
   }
+}
+
+/// A phone held sideways: not a TV box or a computer, landscape, under 500
+/// points tall. See [_TvHomeScreenState._shortScreen].
+bool _isShortPhoneScreen(BuildContext context) {
+  final size = MediaQuery.sizeOf(context);
+  return size.height < 500 &&
+      size.width > size.height &&
+      !context.read<AppPreferences>().isTelevision &&
+      !isDesktopTarget;
 }

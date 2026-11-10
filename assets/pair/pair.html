@@ -114,6 +114,25 @@
     </form>
   </section>
 
+  <section id="smb-view" hidden>
+    <h1>Network folder for <span>VesperTV</span></h1>
+    <p class="lead">Where recordings and downloads go: a shared folder on a computer or NAS. The details go straight to your TV.</p>
+    <form id="smb-form" autocomplete="off" novalidate>
+      <label for="smb-share">Shared folder</label>
+      <input id="smb-share" name="server" autocapitalize="off" spellcheck="false" maxlength="500" placeholder="\\192.168.1.20\Media">
+      <div class="hint">\\computer\folder, or 192.168.1.20/Media.</div>
+      <label for="smb-folder">Folder inside it (made if missing)</label>
+      <input id="smb-folder" name="name" autocapitalize="off" spellcheck="false" maxlength="80" value="VesperTV">
+      <label for="smb-username">User name</label>
+      <input id="smb-username" name="username" autocapitalize="off" spellcheck="false" maxlength="200">
+      <label for="smb-password">Password</label>
+      <input id="smb-password" name="password" type="password" autocapitalize="off" spellcheck="false" maxlength="200">
+      <div class="hint">Leave both blank for a guest share.</div>
+      <button class="send" id="smb-send" type="submit">Send to TV</button>
+      <div class="msg" id="smb-msg"></div>
+    </form>
+  </section>
+
   <section id="photo-view" hidden>
     <h1>Add a profile photo to <span>VesperTV</span></h1>
     <p class="lead">Choose a photo. A square preview is resized on this phone and sent only over your Wi-Fi.</p>
@@ -145,12 +164,14 @@
   var linkKind = parts[parts.length - 1] === "link";
   var serverKind = parts[parts.length - 1] === "server";
   var photoKind = parts[parts.length - 1] === "photo";
+  // "smb" (Settings > Recordings > Network folder): Wi-Fi only.
+  var smbKind = parts[parts.length - 1] === "smb";
   // "key" (TMDB API key) and "poster" (Custom posters pattern): the link
   // box, worded for them; both still send {"mode":"link"}.
   var keyKind = parts[parts.length - 1] === "key";
   var posterKind = parts[parts.length - 1] === "poster";
   if (keyKind || posterKind) linkKind = true;
-  if (linkKind || serverKind || photoKind) parts.pop();
+  if (linkKind || serverKind || photoKind || smbKind) parts.pop();
   var relay = parts.length === 2 && parts[0].length >= 16 && parts[1].length >= 40;
   if (photoKind) {
     relay = false;
@@ -197,6 +218,12 @@
     $("server-view").hidden = false;
     document.title = "VesperTV · Sign in to your server";
   }
+  if (smbKind) {
+    relay = false;
+    $("form-view").hidden = true;
+    $("smb-view").hidden = false;
+    document.title = "VesperTV · Network folder";
+  }
 
   function setMode(m) {
     mode = m;
@@ -209,7 +236,7 @@
   $("tab-m3u").onclick = function () { setMode("m3u"); };
 
   function show(text, kind) {
-    var el = $(photoKind ? "photo-msg" : linkKind ? "link-msg" : serverKind ? "server-msg" : "msg");
+    var el = $(photoKind ? "photo-msg" : smbKind ? "smb-msg" : linkKind ? "link-msg" : serverKind ? "server-msg" : "msg");
     el.textContent = text;
     el.className = "msg " + (kind || "");
     el.style.display = "block";
@@ -279,11 +306,18 @@
     return data;
   }
 
+  function collectSmb() {
+    var v = function (id) { return $(id).value.trim(); };
+    var data = { v: 1, mode: "smb", server: v("smb-share"), name: v("smb-folder"), username: v("smb-username"), password: $("smb-password").value };
+    if (!data.server) return "Fill in the shared folder.";
+    return data;
+  }
+
   async function submit(e) {
     e.preventDefault();
-    var data = photoKind ? (photoData ? {mode:"photo", mime:"image/jpeg", photo:photoData} : "Choose a photo first.") : linkKind ? collectLink() : serverKind ? collectServer() : collect();
+    var data = photoKind ? (photoData ? {mode:"photo", mime:"image/jpeg", photo:photoData} : "Choose a photo first.") : smbKind ? collectSmb() : linkKind ? collectLink() : serverKind ? collectServer() : collect();
     if (typeof data === "string") { show(data, "err"); return; }
-    var btn = $(photoKind ? "photo-send" : linkKind ? "link-send" : serverKind ? "server-send" : "send");
+    var btn = $(photoKind ? "photo-send" : smbKind ? "smb-send" : linkKind ? "link-send" : serverKind ? "server-send" : "send");
     btn.disabled = true; btn.textContent = "Sending…";
     try {
       var json = JSON.stringify(data);
@@ -291,12 +325,14 @@
       $("form-view").hidden = true;
       $("link-view").hidden = true;
       $("server-view").hidden = true;
+      $("smb-view").hidden = true;
       $("photo-view").hidden = true;
       if (photoKind) $("done-hint").textContent = "Your photo is on the TV. You can close this page.";
       if (linkKind) $("done-hint").textContent = keyKind || posterKind
         ? "Check it there, then press Save. You can close this page."
         : "Check it there, then press Add. You can close this page.";
       if (serverKind) $("done-hint").textContent = "Check the details there, then press Connect. You can close this page.";
+      if (smbKind) $("done-hint").textContent = "Check the details there, then press Save and use it. You can close this page.";
       $("done-view").style.display = "block";
     } catch (err) {
       show(err && err.message ? err.message : "Something went wrong. Try again.", "err");
@@ -306,6 +342,7 @@
   $("form").addEventListener("submit", submit);
   $("link-form").addEventListener("submit", submit);
   $("server-form").addEventListener("submit", submit);
+  $("smb-form").addEventListener("submit", submit);
   $("photo-form").addEventListener("submit", submit);
 })();
 </script>

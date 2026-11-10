@@ -762,6 +762,11 @@ class StorageService {
   Future<void> setHideProfiles(bool value) =>
       _prefs.setBool(_vk(AppConstants.keyHideProfiles), value);
 
+  bool getHomeMiniPlayer() =>
+      _prefs.getBool(_vk(AppConstants.keyHomeMiniPlayer)) ?? true;
+  Future<void> setHomeMiniPlayer(bool value) =>
+      _prefs.setBool(_vk(AppConstants.keyHomeMiniPlayer), value);
+
   /// Home page rows for the active viewer (see `HomeRows`).
   List<String>? getHomeRows() =>
       _prefs.getStringList(_vk(AppConstants.keyHomeRows));
@@ -982,6 +987,9 @@ class StorageService {
       _prefs.getBool(AppConstants.keyExpandedBrowse) ?? false;
   Future<void> setExpandedBrowse(bool value) =>
       _prefs.setBool(AppConstants.keyExpandedBrowse, value);
+  bool getWideCards() => _prefs.getBool(AppConstants.keyWideCards) ?? false;
+  Future<void> setWideCards(bool value) =>
+      _prefs.setBool(AppConstants.keyWideCards, value);
   bool getGuideCompact() => _guideBool(AppConstants.keyGuideCompact) ?? false;
   Future<void> setGuideCompact(bool value) =>
       _prefs.setBool(_vk(AppConstants.keyGuideCompact), value);
@@ -1943,6 +1951,19 @@ class StorageService {
   Future<void> setShownGroups(String playlistId, Set<String> groups) =>
       _prefs.setStringList(
           _vkp(AppConstants.keyShownGroups, playlistId), groups.toList());
+
+  /// [getShownGroups] of any viewer, active or not (Vesper AI edits a kids
+  /// profile from a parent's).
+  Set<String> getShownGroupsFor(String viewerId, String playlistId) =>
+      (_prefs.getStringList(_vk('${AppConstants.keyShownGroups}_$playlistId',
+                  viewerId: viewerId)) ??
+              [])
+          .toSet();
+  Future<void> setShownGroupsFor(
+          String viewerId, String playlistId, Set<String> groups) =>
+      _prefs.setStringList(
+          _vk('${AppConstants.keyShownGroups}_$playlistId', viewerId: viewerId),
+          groups.toList());
 
   /// Removes every one of [viewerId]'s own keys — favorites, hidden/shown/
   /// favorited groups and hidden channels for every playlist, positions/

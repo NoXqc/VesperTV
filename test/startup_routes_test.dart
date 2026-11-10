@@ -205,11 +205,23 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  for (final page in ['home', 'hub', 'movies', 'series', 'sports']) {
-    testWidgets('real TV root starts on $page without a TV-first transition',
-        (tester) async {
+  // Home's mini player (on by default) keeps the live channel playing;
+  // with it off Home parks it like the browse pages.
+  for (final (page, mini) in [
+    ('home', true),
+    ('home', false),
+    ('hub', true),
+    ('movies', true),
+    ('series', true),
+    ('sports', true),
+  ]) {
+    testWidgets(
+        'real TV root starts on $page${mini ? '' : ' (no mini player)'} '
+        'without a TV-first transition', (tester) async {
       await storage.setStartSection(page);
       prefs.setHideVideoOnSports(true);
+      prefs.setHomeMiniPlayer(mini);
+      final keepsLive = page == 'sports' || (page == 'home' && mini);
       tester.view.physicalSize = const Size(1920, 1080);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
@@ -262,8 +274,8 @@ void main() {
                 : 'No recently added shows yet'),
             findsOneWidget);
       }
-      expect(playback.stopCalls, page == 'sports' ? 0 : 1);
-      if (page != 'sports') {
+      expect(playback.stopCalls, keepsLive ? 0 : 1);
+      if (!keepsLive) {
         expect(playback.pendingResumeChannel?.id, playlist.live.id);
       }
       await tester.pump(const Duration(seconds: 4));

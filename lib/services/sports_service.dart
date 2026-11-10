@@ -441,6 +441,9 @@ class SportsService {
   final Map<String, (SportsGameSummary, DateTime)> _summaryCache = {};
   final Map<String, Future<SportsGameSummary?>> _summaryInFlight = {};
 
+  /// When ESPN last answered a game's summary with a 4xx (it has none).
+  final Map<String, DateTime> _summaryRefused = {};
+
   /// One game's box score, leaders, injuries and its teams' standings (the
   /// live list's detail pop-up). One call per opened game, cached 30 s
   /// while it's live. Null when ESPN can't be reached and nothing is cached.
@@ -451,15 +454,26 @@ class SportsService {
         (game.league.isCfl && game.statusText == 'Score unavailable')) {
       return _tableSummary(game);
     }
+    // ESPN's summary answers HTTP 400 for every tennis match (LOG-CRVBP7):
+    // no request, the pop-up says there are no stats for tennis.
+    if (game.league.kind == SportsKind.tennis) {
+      return Future.value(const SportsGameSummary());
+    }
     final key = '${game.league.id}|${game.id}';
     final cached = _summaryCache[key];
+    final window = game.state == GameState.live
+        ? const Duration(seconds: 30)
+        : const Duration(minutes: 10);
     if (!fresh &&
         cached != null &&
-        DateTime.now().difference(cached.$2) <
-            (game.state == GameState.live
-                ? const Duration(seconds: 30)
-                : const Duration(minutes: 10))) {
+        DateTime.now().difference(cached.$2) < window) {
       return Future.value(cached.$1);
+    }
+    final refused = _summaryRefused[key];
+    if (!fresh &&
+        refused != null &&
+        DateTime.now().difference(refused) < window) {
+      return Future.value(cached?.$1);
     }
     return _summaryInFlight[key] ??= () async {
       if (game.league.isCfl) {
@@ -499,8 +513,18 @@ class SportsService {
         try {
           final response =
               await _client.get(url).timeout(const Duration(seconds: 6));
-          if (response.statusCode != 200) {
-            throw Exception('HTTP ${response.statusCode}');
+          final status = response.statusCode;
+          if (status >= 400 && status < 500) {
+            // ESPN has no summary for this game: asking again gets the same
+            // answer. Still null (a goal alert then stops waiting for a
+            // scorer), and not asked again within the cache window.
+            debugPrint('SportsService: ${game.league.id} summary ${game.id}: '
+                'HTTP $status, not retried');
+            _summaryRefused[key] = DateTime.now();
+            return _summaryCache[key]?.$1;
+          }
+          if (status != 200) {
+            throw Exception('HTTP $status');
           }
           final httpMs = watch.elapsedMilliseconds;
           // ~400 KB of JSON: parsed off the UI isolate.

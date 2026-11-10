@@ -218,7 +218,10 @@ class _VesperPanelState extends State<VesperPanel> {
     return Align(
       alignment: Alignment.bottomCenter,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(16, 16, 16, width < 600 ? 16 : 40),
+        // A pushed route without a Scaffold: nothing else makes room for
+        // the on-screen keyboard (it hid the typed text on a phone).
+        padding: EdgeInsets.fromLTRB(16, 16, 16,
+            (width < 600 ? 16 : 40) + MediaQuery.viewInsetsOf(context).bottom),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 760),
           child: ClipRRect(

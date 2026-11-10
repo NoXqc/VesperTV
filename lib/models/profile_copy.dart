@@ -40,6 +40,7 @@ const profileCopyKeys = <ProfileCopy, Set<String>>{
   ProfileCopy.home: {
     AppConstants.keyHomeRows,
     AppConstants.keyHideProfiles,
+    AppConstants.keyHomeMiniPlayer,
     AppConstants.keyGuideViewMode,
     AppConstants.keyGuideFullVideo,
     AppConstants.keyGuideTransparency,

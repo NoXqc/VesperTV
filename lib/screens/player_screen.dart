@@ -27,6 +27,7 @@ import '../widgets/live_channel_info_card.dart';
 import '../widgets/native_video_hole.dart';
 import '../widgets/data_pool_card.dart';
 import '../widgets/epg_guide.dart';
+import '../widgets/player_bar_title.dart';
 import '../widgets/player_controls.dart';
 import '../widgets/skip_segment_button.dart';
 import '../widgets/watch_game_button.dart';
@@ -773,15 +774,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
       }
       await sources.remember(channel.id, selection.option);
       if (!mounted || _playback.currentChannel?.id != channel.id) return;
-      final wasPlaying = _playback.controller?.value.isPlaying ?? true;
       // Same title/episode ID, new URL: teardown saves its exact position
       // before the replacement controller reads the normal resume point.
-      await _playback.play(selection.channel);
-      final replacement = _playback.controller;
-      await _playback.initFuture;
-      if (!wasPlaying && mounted && _playback.controller == replacement) {
-        await replacement?.pause();
-      }
+      await _playback.replaceStream(selection.channel);
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -864,6 +859,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
   void initState() {
     super.initState();
     _playback = context.read<PlaybackService>();
+    // Vesper AI's media_hub tool switches streams through the same sources.
+    _playback.hubSources = widget.sources;
     _playback.play(widget.channel);
     // Read by LiveResumeHint — stops its hold-Right gesture from firing
     // again on top of an already-showing fullscreen view, and hides its
@@ -1500,6 +1497,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   void dispose() {
     _sourceBackGuard.dispose();
+    if (identical(_playback.hubSources, widget.sources)) {
+      _playback.hubSources = null;
+    }
     // Deferred a frame for the same reason `initState` defers the
     // opposite call — this runs mid-build for the frame that's tearing
     // down this route, not a safe time for another widget's `setState`
@@ -1795,10 +1795,22 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                   child: FocusTraversalGroup(
                                     child: FocusScope(
                                       node: _topScope,
+                                      // A fade, not a band (the iPhone
+                                      // player's look, owner 2026-11-09).
                                       child: Container(
-                                        color: Colors.black54,
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 4, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment.topCenter,
+                                            end: Alignment.bottomCenter,
+                                            colors: [
+                                              Colors.black
+                                                  .withValues(alpha: 0.7),
+                                              Colors.transparent,
+                                            ],
+                                          ),
+                                        ),
+                                        padding: const EdgeInsets.fromLTRB(
+                                            4, 4, 4, 20),
                                         child: SafeArea(
                                           bottom: false,
                                           child: Row(
@@ -1809,28 +1821,55 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                                 onPressed: () =>
                                                     Navigator.of(context).pop(),
                                               ),
+                                              // The title and the clock
+                                              // (moved up from the bar on
+                                              // touch), live: the programme
+                                              // on now under it.
                                               Expanded(
-                                                child: _searchScope == 'TV'
-                                                    ? EpgGuide(
-                                                        // epgId (rawId, or a
-                                                        // manual override), not
-                                                        // the composite `id` —
-                                                        // see PlaylistManager
-                                                        // .knownChannelIdsFor's
-                                                        // doc comment.
-                                                        channelId:
-                                                            channel.epgId,
-                                                        at: catchupAt)
-                                                    : Text(
-                                                        channel.name,
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
+                                                child: Column(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    PlayerBarTitle(
+                                                      title: channel.name,
+                                                      style: const TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 16,
+                                                          fontWeight:
+                                                              FontWeight.w600),
+                                                    ),
+                                                    if (channel.isLive ||
+                                                        catchupAt != null)
+                                                      DefaultTextStyle.merge(
                                                         style: const TextStyle(
                                                             color:
-                                                                Colors.white),
+                                                                Colors.white70),
+                                                        // epgId (rawId, or a
+                                                        // manual override),
+                                                        // not the composite
+                                                        // `id` — see
+                                                        // PlaylistManager
+                                                        // .knownChannelIdsFor.
+                                                        child: EpgGuide(
+                                                            channelId:
+                                                                channel.epgId,
+                                                            compact: true,
+                                                            at: catchupAt),
                                                       ),
+                                                  ],
+                                                ),
                                               ),
+                                              // Media Hub: other files of
+                                              // this title (a remote uses
+                                              // Right; touch has no key).
+                                              if (widget.sources != null)
+                                                _TopBarIconButton(
+                                                  icon: Icons.swap_horiz,
+                                                  tooltip: tr('Sources'),
+                                                  onPressed: _openSources,
+                                                ),
                                               _TopBarIconButton(
                                                 icon: Icons.search,
                                                 tooltip: tr('Search'),
@@ -1998,10 +2037,34 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                             () => _moreVisible = !_moreVisible),
                                         playFocusNode: _playFocus,
                                         showActions: _touch,
+                                        touchLayout: _touch,
                                         onOpenMultiview: channel.isLive &&
                                                 !prefs.hideMultiview
                                             ? () => _openMultiview(channel)
                                             : null,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                          // Touch: big round play/pause and -10 / +10 in
+                          // the middle of the picture, with the bars (the
+                          // iPhone player's look, owner 2026-11-09).
+                          if (controller != null && _touch && !touchLocked)
+                            Positioned.fill(
+                              child: IgnorePointer(
+                                ignoring: !_bottomVisible,
+                                child: ExcludeFocus(
+                                  child: AnimatedOpacity(
+                                    opacity: _bottomVisible ? 1 : 0,
+                                    duration: const Duration(milliseconds: 200),
+                                    child: Center(
+                                      child: PlayerTouchTransport(
+                                        controller: controller,
+                                        isLive: channel.isLive,
+                                        onActivity: _resetHideTimer,
                                       ),
                                     ),
                                   ),

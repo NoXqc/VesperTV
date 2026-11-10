@@ -45,6 +45,10 @@ class AppPreferences extends ChangeNotifier {
   late bool guideFocusPreview;
   late bool expandedBrowse;
 
+  /// Movies / TV Shows rows as 16:9 backdrop cards (Settings > Interface >
+  /// Tabs > Wide cards).
+  late bool wideCards;
+
   /// Movies / TV Shows tabs (and their search results) hidden, each on its
   /// own switch (Settings > General > Tabs).
   late bool hideMovies;
@@ -73,6 +77,16 @@ class AppPreferences extends ChangeNotifier {
 
   void setHideProfiles(bool value) {
     _storage.setHideProfiles(value);
+    notifyListeners();
+  }
+
+  /// Home's mini player: the live channel the remote stops on plays at the
+  /// top right, and a channel playing when Home opens keeps playing there
+  /// (off = Home parks it, as before). Per viewer, on by default.
+  bool get homeMiniPlayer => _storage.getHomeMiniPlayer();
+
+  void setHomeMiniPlayer(bool value) {
+    _storage.setHomeMiniPlayer(value);
     notifyListeners();
   }
 
@@ -410,6 +424,7 @@ class AppPreferences extends ChangeNotifier {
     guideCompact = _storage.getGuideCompact();
     guideFocusPreview = _storage.getGuideFocusPreview();
     expandedBrowse = _storage.getExpandedBrowse();
+    wideCards = _storage.getWideCards();
     hideMovies = _storage.getHideMovies();
     hideShows = _storage.getHideShows();
     hideLiveTv = _storage.getHideLiveTv();
@@ -518,6 +533,12 @@ class AppPreferences extends ChangeNotifier {
   void setExpandedBrowse(bool value) {
     expandedBrowse = value;
     _storage.setExpandedBrowse(value);
+    notifyListeners();
+  }
+
+  void setWideCards(bool value) {
+    wideCards = value;
+    _storage.setWideCards(value);
     notifyListeners();
   }
 

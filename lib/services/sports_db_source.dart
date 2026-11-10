@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/sports.dart';
+import 'sports_channel_matcher.dart' show sportsNormalize;
 
 /// TheSportsDB (thesportsdb.com) — the second scores source, for leagues
 /// ESPN doesn't cover ([SportsLeague.sportsDbId]). [SportsService] routes
@@ -231,7 +232,7 @@ SportsGame? _parseEvent(Map<String, dynamic> e, SportsLeague league) {
     return SportsTeam(
       id: (e['id${side}Team'] ?? name).toString(),
       name: name,
-      shortName: sportsDbShortName(name),
+      shortName: sportsDbTeamShortName(name, league),
       abbreviation: '',
       logoUrl: e['str${side}TeamBadge']?.toString(),
       score: score('int${side}Score'),
@@ -334,6 +335,31 @@ String sportsDbShortName(String name) {
       .join(' ');
   return short.length >= 4 ? short : name;
 }
+
+/// [sportsDbShortName], except QMJHL teams go by their nickname
+/// ("Remparts", "Sea Dogs"), like ESPN's NHL cards: the feed's names are
+/// English ("Quebec Remparts") while French guides put the city after
+/// ("Remparts de Québec"), and the nickname is in both. A team not in
+/// the list keeps its full name.
+String sportsDbTeamShortName(String name, SportsLeague league) {
+  if (league.id == 'hockey.qmjhl') {
+    final folded = sportsNormalize(name);
+    for (final nick in _qmjhlNicknames) {
+      if (!folded.endsWith(sportsNormalize(nick))) continue;
+      final words = name.trim().split(RegExp(r'\s+'));
+      final n = nick.split(' ').length;
+      if (words.length > n) return words.sublist(words.length - n).join(' ');
+    }
+  }
+  return sportsDbShortName(name);
+}
+
+const _qmjhlNicknames = [
+  'Armada', 'Cataractes', 'Drakkar', 'Eagles', 'Foreurs', 'Huskies', //
+  'Islanders', 'Mooseheads', 'Océanic', 'Olympiques', 'Phoenix',
+  'Regiment', 'Remparts', 'Saguenéens', 'Sea Dogs', 'Tigres', 'Titan',
+  'Voltigeurs', 'Wildcats',
+];
 
 const _clubWords = {
   'ac', 'as', 'bc', 'bk', 'cf', 'fc', 'kb', 'kk', 'sc', 'sk', //

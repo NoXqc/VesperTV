@@ -72,8 +72,12 @@ object RecorderScheduler {
             val startAt = item.optLong("startAt")
             val endAt = item.optLong("endAt")
             if (endAt in 1..now) continue
+            val download = item.optString("kind") == "download"
             if (startAt <= now) {
                 RecorderService.start(context, item)
+                // A download stays listed until it finishes, so a reboot
+                // or a killed process resumes it (see [remove]).
+                if (download) keep.put(item)
                 continue
             }
             keep.put(item)
@@ -95,9 +99,21 @@ object RecorderScheduler {
             val item = items.getJSONObject(i)
             if (item.optString("id") == id) {
                 RecorderService.start(context, item)
+                if (item.optString("kind") == "download") keep.put(item)
             } else {
                 keep.put(item)
             }
+        }
+        save(context, keep)
+    }
+
+    /** A download that finished (or was stopped): not resumed again. */
+    fun remove(context: Context, id: String) {
+        val items = load(context)
+        val keep = JSONArray()
+        for (i in 0 until items.length()) {
+            val item = items.getJSONObject(i)
+            if (item.optString("id") != id) keep.put(item)
         }
         save(context, keep)
     }
@@ -138,8 +154,86 @@ class RecorderBridge(private val activity: Activity) {
                     result.success(null)
                 }
                 "active" -> result.success(
-                    RecorderService.active.values.map { mapOf("id" to it.id, "bytes" to it.bytes) }
+                    RecorderService.active.values.map { mapOf("id" to it.id, "bytes" to it.bytes) } +
+                        RecorderService.downloads.values.map {
+                            mapOf("id" to it.id, "bytes" to it.bytes, "total" to it.total, "state" to it.state)
+                        }
                 )
+                "policy" -> {
+                    call.argument<String>("speed")?.let { DownloadPolicy.setSpeed(ctx, it) }
+                    call.argument<Map<String, Int>>("streams")?.let { DownloadPolicy.setStreams(it) }
+                    result.success(null)
+                }
+                // The player is about to open [account]: give its connection
+                // back first (max ~4 s), so the provider doesn't see two.
+                "yield" -> {
+                    val account = call.argument<String>("account") ?: ""
+                    Thread {
+                        val until = System.currentTimeMillis() + 4000
+                        while (System.currentTimeMillis() < until &&
+                            RecorderService.downloads.values.any {
+                                it.account == account && it.state == "downloading"
+                            }
+                        ) {
+                            Thread.sleep(150)
+                        }
+                        activity.runOnUiThread { result.success(null) }
+                    }.start()
+                }
+                "networkFolder" -> {
+                    val raw = call.argument<String>("config")
+                    NetworkFolder.save(ctx, raw?.let { NetworkFolder.fromJson(JSONObject(it)) })
+                    result.success(null)
+                }
+                "testNetworkFolder" -> {
+                    val config = NetworkFolder.fromJson(JSONObject(call.argument<String>("config") ?: "{}"))
+                    if (config == null) {
+                        result.success(mapOf("ok" to false, "error" to "Address and shared folder are needed"))
+                    } else {
+                        Thread {
+                            val r = NetworkFolder.test(ctx, config)
+                            activity.runOnUiThread { result.success(r) }
+                        }.start()
+                    }
+                }
+                "deleteFile" -> {
+                    val path = call.argument<String>("path") ?: ""
+                    Thread {
+                        val ok = try {
+                            NetworkFolder.delete(ctx, path)
+                            true
+                        } catch (e: Throwable) {
+                            Log.w(RecorderService.TAG, "delete failed: ${e.javaClass.simpleName}")
+                            false
+                        }
+                        activity.runOnUiThread { result.success(ok) }
+                    }.start()
+                }
+                "networkList" -> Thread {
+                    // {"files": [...]} or {"error": "reason in plain words"}.
+                    val r: Map<String, Any> = try {
+                        mapOf("files" to NetworkFolder.list(ctx))
+                    } catch (e: Throwable) {
+                        Log.w(RecorderService.TAG, "list failed: ${e.javaClass.simpleName}")
+                        mapOf("error" to NetworkFolder.describe(e))
+                    }
+                    activity.runOnUiThread { result.success(r) }
+                }.start()
+                "networkWriteText" -> {
+                    val path = call.argument<String>("path") ?: ""
+                    val text = call.argument<String>("text") ?: ""
+                    Thread {
+                        val ok = try {
+                            NetworkFolder.writeText(ctx, path, text)
+                            true
+                        } catch (e: Throwable) {
+                            Log.w(RecorderService.TAG, "write failed: ${e.javaClass.simpleName}")
+                            false
+                        }
+                        activity.runOnUiThread { result.success(ok) }
+                    }.start()
+                }
+                "playUrl" -> result.success(NetworkFolder.playUrl(ctx, call.argument<String>("path") ?: ""))
                 "teePort" -> result.success(LiveTee.port())
                 "storage" -> {
                     // App storage first, then every external volume the app

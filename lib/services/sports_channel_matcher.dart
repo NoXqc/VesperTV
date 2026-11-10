@@ -659,6 +659,8 @@ const Map<String, List<String>> _groupSports = {
   'nhl': ['hockey'],
   'ahl': ['hockey'],
   'echl': ['hockey'],
+  'qmjhl': ['hockey'],
+  'lhjmq': ['hockey'],
   'baseball': ['baseball'],
   'mlb': ['baseball'],
   'nfl': ['football'],
@@ -880,7 +882,7 @@ class SportsChannelMatcher {
 
   /// Name phrases a channel or programme title may use for [t] — nickname
   /// and full name. City names alone are skipped (two New York teams).
-  static List<String> _teamPhrases(SportsTeam t) {
+  static List<String> _teamPhrases(SportsTeam t, [SportsLeague? league]) {
     final out = <String>{};
     for (final s in [t.shortName, t.name]) {
       final n = sportsNormalize(s);
@@ -888,6 +890,16 @@ class SportsChannelMatcher {
       // A Greek club: how a transliterated Greek title spells it (short
       // ones like "aek" included — they're whole words).
       if (greekTeamFor(n) case final greek?) out.addAll(greek.phrases);
+    }
+    // One team per city (QMJHL): the city alone too — "Quebec Remparts"
+    // minus "Remparts". Only when the short name is the name's last words.
+    if (league != null && league.cityNames) {
+      final name = sportsNormalize(t.name);
+      final nick = sportsNormalize(t.shortName);
+      if (nick.trim().isNotEmpty && name != nick && name.endsWith(nick)) {
+        final city = '${name.substring(0, name.length - nick.length)} ';
+        if (city.trim().length >= 4) out.add(city);
+      }
     }
     return out.toList();
   }
@@ -931,7 +943,7 @@ class SportsChannelMatcher {
     }
     switch (g.league.kind) {
       case SportsKind.team:
-        return [_teamPhrases(g.home), _teamPhrases(g.away)];
+        return [_teamPhrases(g.home, g.league), _teamPhrases(g.away, g.league)];
       case SportsKind.fight:
       case SportsKind.tennis:
         return [_fighterPhrases(g.home), _fighterPhrases(g.away)];
@@ -1084,9 +1096,21 @@ class SportsChannelMatcher {
   }
 
   /// A date written in an event channel's name ("Oct 13", "13 Oct",
-  /// "2026-10-13"), or null. Lets yesterday's leftover event channels — and the
+  /// "2026-10-13", or a weekday + day without a month: "Fri 7th"), or
+  /// null. Lets yesterday's leftover event channels — and the
   /// next meeting of the same two teams — be told apart from today's.
-  static ({int month, int day})? _dateInName(String norm) {
+  static ({int? month, int day})? _dateInName(String norm) {
+    // "Sat 8th Nov 3:00 PM" first: "Nov 3" would read the hour as the day
+    // (the owner's provider names CFL games that way). An ordinal is a day.
+    final ordinal = RegExp(
+            r' (\d{1,2})(?:st|nd|rd|th) (jan|feb|mar|apr|may|jun|jul|aug|sept?|oct|nov|dec)[a-z]* ')
+        .firstMatch(norm);
+    if (ordinal != null) {
+      return (
+        month: _months[ordinal.group(2)]!,
+        day: int.parse(ordinal.group(1)!)
+      );
+    }
     final m1 = RegExp(
             r' (jan|feb|mar|apr|may|jun|jul|aug|sept?|oct|nov|dec)[a-z]* (\d{1,2})(?:st|nd|rd|th)? ')
         .firstMatch(norm);
@@ -1108,15 +1132,27 @@ class SportsChannelMatcher {
         return (month: month, day: day);
       }
     }
+    // "| Fri 7th 12:00AM" (QMJHL event channels, owner's provider,
+    // 2026-11-09): the day of the month only. The weekday isn't checked —
+    // the provider's can be off by one from the calendar.
+    final m4 = RegExp(
+            r' (?:mon|tue|wed|thu|fri|sat|sun)[a-z]* (\d{1,2})(?:st|nd|rd|th) ')
+        .firstMatch(norm);
+    if (m4 != null) {
+      final day = int.parse(m4.group(1)!);
+      if (day >= 1 && day <= 31) return (month: null, day: day);
+    }
     return null;
   }
 
-  static bool _dateFits(({int month, int day}) d, DateTime startUtc) {
+  static bool _dateFits(({int? month, int day}) d, DateTime startUtc) {
     // The name's date may be the provider's local date, Eastern time, or
     // Europe's next day for an evening game — any of start-1d..start+1d.
     for (final offset in const [-1, 0, 1]) {
       final day = startUtc.add(Duration(days: offset));
-      if (day.month == d.month && day.day == d.day) return true;
+      if ((d.month == null || day.month == d.month) && day.day == d.day) {
+        return true;
+      }
     }
     return false;
   }

@@ -7,6 +7,7 @@ import 'package:video_player_hdr/video_player_hdr.dart';
 import '../models/channel.dart';
 import 'addon_service.dart';
 import 'storage_service.dart';
+import 'stream_languages.dart';
 
 /// Display name for a subtitle/audio language code ("fr-CA" → "Français
 /// (CA)"), in that language — how pickers usually list them.
@@ -100,6 +101,29 @@ String languageName(String? code) {
   };
   final base = names[parts.first.toLowerCase()] ?? parts.first.toUpperCase();
   return parts.length > 1 ? '$base (${parts.sublist(1).join('-')})' : base;
+}
+
+/// Placeholder language codes broadcasters put on tracks: "MIS"/"MUL" as
+/// names told nobody anything (TSN2's four tracks, owner photo 2026-10-26).
+const noTrackLanguage = {'und', 'mis', 'mul', 'zxx', 'qaa'};
+
+/// An audio track's name in a picker: its language, with the track's own
+/// name after it when that says something else ("English (Original)",
+/// "English (Commentary)"; owner, 2026-11-09: English tracks named only
+/// "Original" didn't say they were English). One of the two when the other
+/// is missing or already names the language; '' when neither is known.
+String audioTrackName(String? label, String? language) {
+  final name = label?.trim() ?? '';
+  final code = language?.trim().toLowerCase() ?? '';
+  final lang =
+      code.isEmpty || noTrackLanguage.contains(code) ? '' : languageName(code);
+  if (lang.isEmpty) return name;
+  if (name.isEmpty) return lang;
+  if (namesLanguage(name, code) ||
+      name.toLowerCase().contains(lang.toLowerCase())) {
+    return name;
+  }
+  return '$lang ($name)';
 }
 
 /// The languages offered as a preferred audio/subtitle language.

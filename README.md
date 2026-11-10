@@ -13,10 +13,11 @@ sticks, phones and Windows 10/11 PCs:
 - **Vesper AI**: type or speak what you want to watch
 
 No ads, no tracking, no account. VesperTV ships no content: you bring the sources.
-Built and tested on Android TV boxes (Formuler), Fire TV sticks, phones and Windows.
+Built and tested on Android TV boxes (Formuler), Fire TV sticks, phones and Windows. It also runs on
+Linux, including the **Steam Deck**.
 
-> **Android gets new features first.** The Windows download is still **1.0.45**,
-> so anything added after 1.0.45 is Android-only for now.
+> **Android gets new features first.** Windows caught up in **1.0.61**, and 1.0.61 is also the first
+> Linux build (beta).
 
 ## Download
 
@@ -27,7 +28,12 @@ Grab the latest release from the [Releases](../../releases) page or
   directly or side-loaded with [Downloader](https://amzn.to/2GYuEz9) — code **1760256** (or type `vespertv.app/apk`).
   Later updates install from **Settings > Check for updates**.
 - **Windows 10/11 (64-bit)**: `VesperTV-windows-x64.zip` from the
-  [1.0.45 release](../../releases/tag/1.0.45) — unzip, then run `VesperTV.exe`.
+  [latest release](../../releases/latest) — unzip, then run `VesperTV.exe`.
+- **Linux (beta, x64)**: `VesperTV-1.0.61-683-linux-x64.tar.gz` from the
+  [1.0.61 release](../../releases/tag/1.0.61). **Works on the Steam Deck** (SteamOS) and on
+  Ubuntu 24.04+ / Linux Mint 22+. It needs the system libmpv (`sudo apt install libmpv2`); on a
+  Steam Deck, run it in Desktop Mode inside an Ubuntu 24.04 [distrobox](https://distrobox.it/).
+  Extract, then run `./vespertv`. No automatic updates on Linux yet.
 - **macOS (community build, unsigned)**: built automatically from `main` by the
   [macOS build](../../actions/workflows/macos-build.yml) workflow — open the latest
   run and download `VesperTV-macos-dmg` (needs a GitHub sign-in). It is not signed
@@ -76,7 +82,7 @@ Grab the latest release from the [Releases](../../releases) page or
 
 - **Scores & schedule** for NHL, NFL, NBA, MLB, WNBA, college football, MLS, Premier League,
   Champions League, LaLiga, Bundesliga, Serie A and Ligue 1 — plus a League manager with 70+
-  more (college basketball, hockey and soccer, AHL, ECHL, CFL, rugby, cricket, PDC darts,
+  more (college basketball, hockey and soccer, AHL, ECHL, QMJHL, CFL, rugby, cricket, PDC darts,
   golf, tennis, UFC, boxing, WWE, AEW, F1, NASCAR…) — live scores, records, a day strip from
   yesterday to next week, and a spoiler switch that hides every score.
 - **Finds the channel for you:** each game is matched to a channel in *your* playlist (event
@@ -247,8 +253,7 @@ MCP apps and the optional relay phone page, requests and tool replies pass
 through the relay. It holds that traffic temporarily in memory and does not
 save conversation history. Your provider or AI app applies its own data policies. Voice input
 uses the TV or phone speech service; it is not guaranteed to be processed
-locally. The current public Windows download remains **1.0.45**, without Vesper
-AI. [Full guide and current limits](https://vespertv.app/remote.html#Vesper%20AI).
+locally. [Full guide and current limits](https://vespertv.app/remote.html#Vesper%20AI).
 
 ## Setup
 
@@ -262,6 +267,10 @@ Media Hub (Settings > Media Hub sources, or **Connect Jellyfin / Emby / Plex**).
 Bug reports, suggestions/improvements, or general discussion — join the
 [Discord server](https://discord.gg/VPQ849NPV), or open an issue here on
 GitHub. Please also visit us at r/VesperTV
+
+VesperTV is free and always will be. If you'd like to help with the server and
+development costs, you can [donate on Liberapay](https://liberapay.com/NoXQc/donate)
+(optional, it unlocks nothing: everyone gets the same app).
 
 ## Credits
 

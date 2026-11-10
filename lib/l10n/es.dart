@@ -34,6 +34,12 @@ const Map<String, String> kEs = {
   "Live TV guide layout, full-screen video, compact rows":
       "Diseño de la guía, vídeo a pantalla completa, filas compactas",
   "{n} titles": "{n} títulos",
+  "No game at this time":
+      "No hay partido a esta hora",
+  "Wide cards":
+      "Tarjetas anchas",
+  "Movies and TV Shows rows show bigger 16:9 cards with the backdrop. A title without one shows its poster until the provider sends it.":
+      "Las filas de Películas y Series muestran tarjetas 16:9 más grandes con la imagen de fondo. Un título sin ella muestra su póster hasta que el proveedor la envíe.",
   "Open groups as expanded catalog": "Abrir grupos como catálogo ampliado",
   "Movies and TV Shows groups open the full poster grid instead of the rows.":
       "Los grupos de Películas y Series abren la cuadrícula completa de carteles en lugar de las filas.",
@@ -106,6 +112,9 @@ const Map<String, String> kEs = {
   "Loading recommendations…": "Cargando recomendaciones…",
   "Looking for streams…": "Buscando flujos…",
   "Maximum quality": "Calidad máxima",
+  "Any language": "Cualquier idioma",
+  "Any quality": "Cualquier calidad",
+  "Media Hub audio language": "Idioma de audio de Media Hub",
   "More like this": "Más como este",
   "No compatible source for this title. Add a playback source in Media Hub settings.":
       "No hay ninguna fuente compatible para este título. Añade una fuente de reproducción en los ajustes de Media Hub.",
@@ -1434,6 +1443,7 @@ const Map<String, String> kEs = {
   'Pitching': "Pitcheo",
   'Players': "Jugadores",
   'No stats for this game yet.': "Aún no hay estadísticas de este partido.",
+  "No stats for tennis matches.": "No hay estadísticas para los partidos de tenis.",
   'Top performers': "Mejores jugadores",
   'Injuries': "Lesiones",
   'Goals': "Goles",
@@ -1762,6 +1772,31 @@ const Map<String, String> kEs = {
   "Recording now": "Grabando ahora",
   "Recorded": "Grabados",
   "{used} of {cap} GB used": "{used} usados de {cap} GB",
+  "{size} in the network folder": "{size} en la carpeta de red",
+  "Copy to this device":
+      "Copiar a este dispositivo",
+  "{size}, to watch without the network":
+      "{size}, para ver sin red",
+  "Play from the network folder":
+      "Reproducir desde la carpeta de red",
+  "Copying to this device. It shows under Downloading.":
+      "Copiando a este dispositivo. Aparece en Descargando.",
+  "On the network folder":
+      "En la carpeta de red",
+  "Looking in the network folder…":
+      "Buscando en la carpeta de red…",
+  "The network folder can't be reached: {reason}":
+      "No se puede acceder a la carpeta de red: {reason}",
+  "Nothing new there. Downloads and recordings that another device saves there show up here.":
+      "Nada nuevo. Las descargas y grabaciones que otro dispositivo guarde allí aparecen aquí.",
+  "Save only":
+      "Solo guardar",
+  "Saved. Its files show in Recordings; this device keeps saving to itself.":
+      "Guardado. Sus archivos aparecen en Grabaciones; este dispositivo sigue guardando en sí mismo.",
+  "Taking a tablet on a trip? Set up the same folder on it with Save only, then copy what the TV saved there: Recordings > On the network folder.":
+      "¿Una tableta de viaje? Configura en ella la misma carpeta con Solo guardar y copia lo que la TV guardó allí: Grabaciones > En la carpeta de red.",
+  "The file is no longer in the network folder":
+      "El archivo ya no está en la carpeta de red",
   "REC · {size}": "GRAB · {size}",
   "Waiting for a channel": "Esperando un canal",
   "Interrupted · {size}": "Interrumpida · {size}",
@@ -2063,6 +2098,10 @@ const Map<String, String> kEs = {
       "No se pudo importar este archivo. Elige una lista de canales M3U o un archivo TXT/JSON con enlaces de manifiestos de Media Hub.",
   "Hide profiles": "Ocultar perfiles",
   "Hides the profiles row on Home.": "Oculta la fila de perfiles en Inicio.",
+  "Mini player on Home": "Minirreproductor en Inicio",
+  "The live channel you stop on plays at the top right of Home. OK opens it full screen; Play/Pause or hold OK turns it off.":
+      "El canal en directo en el que te detienes se reproduce arriba a la derecha de Inicio. OK lo abre a pantalla completa; Reproducir/Pausa o mantener OK lo detiene.",
+  "Stop mini player": "Detener el minirreproductor",
   "Preferred audio language": "Idioma de audio preferido",
   "Preferred subtitle language": "Idioma de subtítulos preferido",
   "Source default": "Predeterminado de la fuente",
@@ -2658,6 +2697,8 @@ const Map<String, String> kEs = {
       "ayer",
   "I could not find \"{title}\" in your playlists.":
       "No encontré «{title}» en tus listas.",
+  "I could not find \"{title}\" in Media Hub.":
+      "No encontré «{title}» en Media Hub.",
   "No channel shows a {title} game today.":
       "Ningún canal emite un partido de {title} hoy.",
   "I could not find the channel \"{title}\".":
@@ -2668,6 +2709,13 @@ const Map<String, String> kEs = {
       "Este canal no se puede retroceder.",
   "Not available on Windows yet.":
       "Aún no disponible en Windows.",
+  "No next episode.": "No hay episodio siguiente.",
+  "No previous episode.": "No hay episodio anterior.",
+  "No subtitles in this file.": "No hay subtítulos en este archivo.",
+  "This stream has no audio tracks to choose from.": "Esta transmisión no tiene pistas de audio para elegir.",
+  "That language is not in this stream.": "Ese idioma no está en esta transmisión.",
+  "This channel has no closed captions.": "Este canal no tiene subtítulos ocultos.",
+  "No subtitles in that language.": "No hay subtítulos en ese idioma.",
   "That did not work.":
       "No ha funcionado.",
   "Talk from my phone":
@@ -2814,8 +2862,30 @@ const Map<String, String> kEs = {
       "Una app de IA quiere abrir {title}.",
   "An AI app wants to hide {count} groups ({words}).":
       "Una app de IA quiere ocultar {count} grupos ({words}).",
+  "An AI app wants to delete your group {group}.":
+      "Una app de IA quiere eliminar tu grupo {group}.",
   "An AI app wants to show {count} groups ({words}).":
       "Una app de IA quiere mostrar {count} grupos ({words}).",
+  "An AI app wants {game} to play on {channel} in {tab}.":
+      "Una app de IA quiere que {game} se vea en {channel} en {tab}.",
+  "An AI app wants to set the channels of {count} games in {tab}.":
+      "Una app de IA quiere elegir el canal de {count} partidos en {tab}.",
+  "An AI app wants to switch to the profile {name}.":
+      "Una app de IA quiere cambiar al perfil {name}.",
+  "An AI app wants to create the kids profile {name}.":
+      "Una app de IA quiere crear el perfil infantil {name}.",
+  "An AI app wants to create the profile {name}.":
+      "Una app de IA quiere crear el perfil {name}.",
+  "An AI app wants to rename the profile {name} to {new}.":
+      "Una app de IA quiere cambiar el nombre del perfil {name} a {new}.",
+  "Delete the profile {name}? Its favourites and history are deleted too.":
+      "¿Eliminar el perfil {name}? También se eliminan sus favoritos y su historial.",
+  "An AI app wants to let {name} see {count} groups ({words}).":
+      "Una app de IA quiere que {name} vea {count} grupos ({words}).",
+  "An AI app wants to block {count} groups ({words}) for {name}.":
+      "Una app de IA quiere bloquear {count} grupos ({words}) para {name}.",
+  "An AI app wants to change the parental PIN.":
+      "Una app de IA quiere cambiar el PIN parental.",
   "An AI app wants to edit your playlist: {what}.":
       "Una app de IA quiere editar tu playlist: {what}.",
   "An AI app wants to undo its playlist change: {what}.":
@@ -2897,8 +2967,8 @@ const Map<String, String> kEs = {
       "Qué preguntar",
   "Without any AI (remote, typing or phone):":
       "Sin IA (mando, teclado o teléfono):",
-  "\"play TSN 1\" · \"mets RDS\" · \"pause\" · \"go back 30 seconds\" · \"next channel\" · \"back to live\" · \"what's on\" · \"what's on TSN 1\" · \"when is the Simpsons on\" · \"open the movies\" · \"search for Dune\" · \"put on the Habs game\" · \"today's games\" · \"add this to my watch list\" · \"my favourites\" · \"help\"":
-      "«pon TSN 1» · «pausa» · «retrocede 30 segundos» · «canal siguiente» · «en directo» · «qué es esto» · «cuándo juega el Madrid» · «abre las películas» · «busca Dune» · «pon el partido del Madrid» · «partidos de hoy» · «añadir a mi lista» · «mis favoritos» · «ayuda»",
+  "\"play TSN 1\" · \"mets RDS\" · \"pause\" · \"go back 30 seconds\" · \"next channel\" · \"next episode\" · \"back to live\" · \"what's on\" · \"what's on TSN 1\" · \"when is the Simpsons on\" · \"open the movies\" · \"search for Dune\" · \"put on the Habs game\" · \"today's games\" · \"add this to my watch list\" · \"my favourites\" · \"help\"":
+      "«pon TSN 1» · «pausa» · «retrocede 30 segundos» · «canal siguiente» · «siguiente episodio» · «en directo» · «qué es esto» · «cuándo juega el Madrid» · «abre las películas» · «busca Dune» · «pon el partido del Madrid» · «partidos de hoy» · «añadir a mi lista» · «mis favoritos» · «ayuda»",
   "With your AI, or from Claude / ChatGPT:":
       "Con tu IA, o desde Claude / ChatGPT:",
   "\"make me a movie night list for Friday\" (it goes on your watch list on Home) · \"hide every Turkish group\" · \"what crime shows do I have?\" · \"is the Leafs game on, and on which channel?\" · \"play the newest episode of something like Severance\" · \"pause the TV\" · \"tell the TV dinner is ready\"":
@@ -2977,4 +3047,177 @@ const Map<String, String> kEs = {
       "Seguir viendo y Mi lista en la fila Watch Next del launcher, más una fila con tus canales favoritos. Para launchers de Android TV como Projectivy.",
   "Continue watching and favourites on the TV launcher":
       "Seguir viendo y favoritos en el launcher de la TV",
+  // Downloads and the network folder (recording_service.dart).
+  "Like watching":
+      "Como al ver",
+  "No limit":
+      "Sin límite",
+  "{n} Mbit/s":
+      "{n} Mbit/s",
+  "Tonight at {time}":
+      "Esta noche a las {time}",
+  "Today at {time}":
+      "Hoy a las {time}",
+  "Tomorrow at {time}":
+      "Mañana a las {time}",
+  "Download set for {when}. It shows in Recordings.":
+      "Descarga programada: {when}. Aparece en Grabaciones.",
+  "Downloading. It shows in Recordings.":
+      "Descargando. Aparece en Grabaciones.",
+  "About {size}":
+      "Unos {size}",
+  "about {time} at your speed limit ({speed})":
+      "unos {time} con su límite de velocidad ({speed})",
+  "Network folder":
+      "Carpeta de red",
+  "{free} free":
+      "{free} libres",
+  "Download \"{title}\"":
+      "Descargar «{title}»",
+  "Download {n} episodes":
+      "Descargar {n} episodios",
+  "A download uses one connection to your provider. On an account with only one, it waits while you watch. It can slow your stream on Wi-Fi, and some providers don't allow downloads.":
+      "Una descarga usa una conexión de su proveedor. En una cuenta con solo una, espera mientras usted mira. Puede ralentizar su transmisión por Wi-Fi, y algunos proveedores no permiten descargas.",
+  "It can slow what you watch on Wi-Fi while it runs.":
+      "Mientras corre, puede ralentizar lo que ve por Wi-Fi.",
+  "Best: download overnight.":
+      "Lo mejor: descargar de noche.",
+  "Saves to {where}":
+      "Se guarda en: {where}",
+  "◀ ▶ change the time":
+      "◀ ▶ cambiar la hora",
+  "Tap the arrows to change the time":
+      "Toque las flechas para cambiar la hora",
+  "Download now":
+      "Descargar ahora",
+  "Waits while you watch, if your account has one connection":
+      "Espera mientras mira, si su cuenta tiene una conexión",
+  "Download":
+      "Descargar",
+  "Download at {time}":
+      "Descarga a las {time}",
+  "Waiting to download":
+      "Esperando para descargar",
+  "Downloading {pct}%":
+      "Descargando {pct} %",
+  "Downloading {size}":
+      "Descargando {size}",
+  "Downloaded":
+      "Descargado",
+  "Download stopped":
+      "Descarga detenida",
+  "Play what's downloaded":
+      "Reproducir lo descargado",
+  "{done} of {total}":
+      "{done} de {total}",
+  "Resume download":
+      "Reanudar descarga",
+  "Instead of {time}":
+      "En vez de a las {time}",
+  "Cancel download":
+      "Cancelar descarga",
+  "Stop download":
+      "Detener descarga",
+  "Keeps what has been downloaded":
+      "Conserva lo ya descargado",
+  "Delete download":
+      "Eliminar descarga",
+  "Not enough storage space":
+      "No hay suficiente espacio",
+  "Bigger than the space left for recordings":
+      "Más grande que el espacio que queda para grabaciones",
+  "The source sent a short clip, not the file. Try again later or pick another stream.":
+      "La fuente envió un clip corto, no el archivo. Inténtelo más tarde o elija otra transmisión.",
+  "This stream is a playlist (HLS), not a file. It can't be downloaded.":
+      "Esta transmisión es una lista (HLS), no un archivo. No se puede descargar.",
+  "Connecting…":
+      "Conectando…",
+  "Connected. {free} free.":
+      "Conectado. {free} libres.",
+  "Connected.":
+      "Conectado.",
+  "Couldn't use this folder: {reason}":
+      "No se pudo usar esta carpeta: {reason}",
+  "Saved. Recordings and downloads go to the network folder.":
+      "Guardado. Las grabaciones y descargas van a la carpeta de red.",
+  "Record and download to a shared folder on a computer or NAS on your network, instead of this device. On Windows: right-click a folder > Properties > Sharing.":
+      "Grabe y descargue en una carpeta compartida de un ordenador o NAS de su red, en lugar de este dispositivo. En Windows: clic derecho en una carpeta > Propiedades > Compartir.",
+  "The user name and password stay on this device. Wi-Fi carries the video twice (in, then to the folder), so a wired connection or overnight downloads work best.":
+      "El usuario y la contraseña se quedan en este dispositivo. El Wi-Fi lleva el vídeo dos veces (entrada y luego a la carpeta), así que una conexión por cable o las descargas de noche funcionan mejor.",
+  "Shared folder":
+      "Carpeta compartida",
+  "Folder inside it (made if missing)":
+      "Carpeta dentro (se crea si falta)",
+  "User name (empty for a guest share)":
+      "Usuario (vacío para un recurso de invitado)",
+  "Test":
+      "Probar",
+  "Save and use it":
+      "Guardar y usarla",
+  "Network folders don't work on this device":
+      "Las carpetas de red no funcionan en este dispositivo",
+  "Wrong user name or password, or no access to this folder":
+      "Usuario o contraseña incorrectos, o sin acceso a esta carpeta",
+  "No shared folder with that name":
+      "No hay carpeta compartida con ese nombre",
+  "The computer didn't answer":
+      "El ordenador no respondió",
+  "Address not found":
+      "Dirección no encontrada",
+  "Can't reach the computer (is it on, and sharing turned on?)":
+      "No se puede llegar al ordenador (¿está encendido y con el uso compartido activado?)",
+  "Address and shared folder are needed":
+      "Se necesitan la dirección y la carpeta compartida",
+  "About the video's own bitrate: to the provider it looks like someone watching. The safest choice.":
+      "Más o menos la tasa de bits del vídeo: para el proveedor parece alguien mirando. La opción más segura.",
+  "As fast as the source sends. Some providers don't allow this.":
+      "Tan rápido como envíe la fuente. Algunos proveedores no lo permiten.",
+  "At most this speed.":
+      "Como máximo esta velocidad.",
+  "Downloads":
+      "Descargas",
+  "Speed limit: {speed}":
+      "Límite de velocidad: {speed}",
+  "Always slower while you watch something.":
+      "Siempre más lento mientras mira algo.",
+  "Suggested start: {time}":
+      "Inicio sugerido: {time}",
+  "What Download offers first: overnight, while nobody watches":
+      "Lo que Descargar ofrece primero: de noche, cuando nadie mira",
+  "Save recordings and downloads to":
+      "Guardar grabaciones y descargas en",
+  "Set up a network folder":
+      "Configurar una carpeta de red",
+  "Network folder settings":
+      "Ajustes de la carpeta de red",
+  "A shared folder on a computer or NAS (SMB)":
+      "Una carpeta compartida en un ordenador o NAS (SMB)",
+  "Downloads: the Download button on a movie or show page.":
+      "Descargas: el botón Descargar en la página de una película o serie.",
+  "Downloading":
+      "Descargando",
+  "Waiting":
+      "En espera",
+  "Waits for a free connection":
+      "Espera una conexión libre",
+  "Waiting its turn":
+      "Esperando su turno",
+  "Downloaded · {size}":
+      "Descargado · {size}",
+  "Interrupted · {pct}":
+      "Interrumpida · {pct}",
+  "Stopped · {pct}":
+      "Detenida · {pct}",
+  "This episode: {code}":
+      "Este episodio: {code}",
+  "{season}: all {n} episodes":
+      "{season}: los {n} episodios",
+  "{season}: the {n} not downloaded yet":
+      "{season}: los {n} aún sin descargar",
+  "{n} without a downloadable stream, left out.":
+      "{n} sin transmisión descargable, omitidos.",
+  "Typing a folder address and password with a remote is painful. Scan this code with your phone camera and fill them in there — they appear here for you to check and save.":
+      "Escribir la dirección de una carpeta y una contraseña con el mando es pesado. Escanee este código con la cámara del teléfono y rellénelos allí — aparecen aquí para que los revise y guarde.",
+  "Check the details here, then press Save and use it.":
+      "Revise los datos aquí y pulse Guardar y usarla.",
 };

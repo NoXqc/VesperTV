@@ -38,7 +38,12 @@ enum PairingKind {
   apiKey,
 
   /// [link] for a poster-service pattern (Custom posters, Save not Add).
-  poster;
+  poster,
+
+  /// Settings > Recordings > Network folder: the shared folder, the folder
+  /// inside it, user name and password ([PairingResult.server] / [name] /
+  /// [username] / [password]).
+  networkFolder;
 
   bool get isWifiOnly => this != playlist;
 
@@ -51,6 +56,7 @@ enum PairingKind {
         link || apiKey || poster => 'link',
         mediaServer => 'server',
         photo => 'photo',
+        networkFolder => 'smb',
       };
 }
 
@@ -69,7 +75,9 @@ class PairingResult {
   });
 
   /// 'xtream', 'm3u', 'link' or 'server' (Jellyfin / Emby: [server],
-  /// [username], [password]; the password may be empty).
+  /// [username], [password]; the password may be empty), or 'smb' (the
+  /// network folder: [server] = \\computer\share, [name] = the folder
+  /// inside it; user and password may be empty for a guest share).
   final String mode;
 
   /// Set when [mode] is 'link'.
@@ -123,6 +131,7 @@ class PairingResult {
       link: s('link', 4000),
     );
     if (mode == 'link') return r.link.isNotEmpty ? r : null;
+    if (mode == 'smb') return r.server.isNotEmpty ? r : null;
     if (mode == 'server') {
       return r.server.isNotEmpty && r.username.isNotEmpty ? r : null;
     }
@@ -169,6 +178,7 @@ class PhonePairingSession {
         PairingKind.photo => 'photo',
         PairingKind.apiKey => 'key',
         PairingKind.poster => 'poster',
+        PairingKind.networkFolder => 'smb',
       };
 
   bool _accepts(PairingResult r) => kind.mode == null
