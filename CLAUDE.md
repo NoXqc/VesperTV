@@ -383,7 +383,18 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
-- **Claude, 2026-11-09 - Downloads + network folder (`claude/downloads`, test +699, not merged/released):** owner
+- **Claude, 2026-11-09 - merged on local main (3f49f15, not pushed/released/built; owner tests later):** QMJHL league
+  (31d26cc), guide fix below (f1f64f2), `claude/phone-safe-area` (Settings `SafeArea(top: false)`, Android 15 nav
+  bar) and `claude/downloads` (entry below). Analyze 16, 1713 tests. Next build > 700.
+- **Claude, 2026-11-09 - event channels sharing one EPG id (f1f64f2):** a provider gives `tsn4mel` to 61 event
+  channels (TSN+ 05-45, ESPN+ 49, Disney+ Events 49…): every row showed that id's guide or the first name's game
+  (name events are keyed by EPG id). `Channel.epgId` = own `rawId` when `epgKey` is set (id shared) and the
+  provider name is an event channel's (`isEventChannelName`: `… @ date time zone` or a numbered idle slot);
+  network copies (ESPN 4K/HD) keep sharing, overrides win. Idle slots (`TSN+ 07: NO EVENT`) without a guide get
+  "No game at this time" across the row (`EpgService.idleEventIdsProvider`, cheap `mayBeIdleEventChannelName`
+  pre-filter: ~350k names per pass). Event channels now count as "no guide" (editor, Auto-Pair), like unique ones.
+  `test/event_channel_epg_test.dart`. Not box-tested.
+- **Claude, 2026-11-09 - Downloads + network folder (`claude/downloads`, test +699, merged 3f49f15, not released):** owner
   asked for offline watching. Download button on IPTV/Media Hub movie pages and show pages (episode or season),
   sheet warns (provider connection, Wi-Fi, providers that forbid it) and suggests **Tonight at 2:00** (Left/Right
   change it). Native `Downloader.kt` (one at a time, Range resume, survives reboot via the recorder scheduler,
