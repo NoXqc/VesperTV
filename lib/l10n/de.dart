@@ -1796,8 +1796,8 @@ const Map<String, String> kDe = {
       "VesperTV ist kostenlos und bleibt es: keine Werbung, kein Tracking, keine kostenpflichtigen Funktionen. Die Support-Seite zeigt, wie du Server, Website und Entwicklung unterstützen kannst.",
   "Supporting is a thank-you, never a paywall: everyone gets the same app.":
       "Unterstützung ist ein Dankeschön, niemals eine Bezahlschranke: Alle bekommen dieselbe App.",
-  "Language and clock, what plays when the app starts, Fast startup, clearing your history, and remote tips.":
-      "Sprache und Uhr, was beim Start der App läuft, Schnellstart, das Löschen deines Verlaufs und Tipps zur Fernbedienung.",
+  "Language and clock, what plays when the app starts, Fast startup, your Home wallpaper, clearing your history, and remote tips.":
+      "Sprache und Uhr, was beim Start der App läuft, Schnellstart, dein Start-Hintergrundbild, das Löschen deines Verlaufs und Tipps zur Fernbedienung.",
   "Remote tips": "Tipps zur Fernbedienung",
   "Every hold menu and shortcut, on your phone":
       "Jedes Haltemenü und jede Abkürzung, auf deinem Handy",
@@ -3121,4 +3121,14 @@ const Map<String, String> kDe = {
       "Eine Ordneradresse und ein Passwort mit der Fernbedienung zu tippen ist mühsam. Scannen Sie diesen Code mit der Handykamera und geben Sie sie dort ein — sie erscheinen hier zum Prüfen und Speichern.",
   "Check the details here, then press Save and use it.":
       "Prüfen Sie die Angaben hier und drücken Sie dann Speichern und verwenden.",
+  "Home wallpaper":
+      "Start-Hintergrundbild",
+  "Shows behind Home when the card you are on has no picture of its own, instead of the live channels' colours.":
+      "Erscheint hinter dem Start, wenn die gewählte Karte kein eigenes Bild hat, statt der Farben der Live-Sender.",
+  "Could not read the picture. Choose a JPEG or PNG under 15 MB.":
+      "Das Bild konnte nicht gelesen werden. Wähle ein JPEG oder PNG unter 15 MB.",
+  "On: your picture shows behind Home.":
+      "An: Dein Bild erscheint hinter dem Start.",
+  "A picture of your own behind Home.":
+      "Ein eigenes Bild hinter dem Start.",
 };

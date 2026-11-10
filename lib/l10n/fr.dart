@@ -1885,8 +1885,8 @@ const Map<String, String> kFr = {
   "Supporting is a thank-you, never a paywall: everyone gets the same app.":
       "Soutenir est un merci, jamais un accès payant : tout le monde a la même application.",
   // Settings > General > Remote tips
-  "Language and clock, what plays when the app starts, Fast startup, clearing your history, and remote tips.":
-      "Langue et horloge, ce qui joue au démarrage, Démarrage rapide, l'effacement de l'historique et les astuces télécommande.",
+  "Language and clock, what plays when the app starts, Fast startup, your Home wallpaper, clearing your history, and remote tips.":
+      "Langue et horloge, ce qui joue au démarrage, Démarrage rapide, votre fond d’écran de l’accueil, l'effacement de l'historique et les astuces télécommande.",
   "Remote tips": "Astuces télécommande",
   "Every hold menu and shortcut, on your phone":
       "Chaque menu « maintenir » et raccourci, sur votre téléphone",
@@ -3231,4 +3231,14 @@ const Map<String, String> kFr = {
       "Taper l'adresse d'un dossier et un mot de passe avec une télécommande, c'est pénible. Scannez ce code avec la caméra de votre téléphone et remplissez-les là-bas — ils apparaissent ici pour que vous les vérifiiez et les enregistriez.",
   "Check the details here, then press Save and use it.":
       "Vérifiez les détails ici, puis appuyez sur Enregistrer et l'utiliser.",
+  "Home wallpaper":
+      "Fond d’écran de l’accueil",
+  "Shows behind Home when the card you are on has no picture of its own, instead of the live channels' colours.":
+      "S’affiche derrière l’accueil quand la carte sélectionnée n’a pas d’image à elle, à la place des couleurs des chaînes en direct.",
+  "Could not read the picture. Choose a JPEG or PNG under 15 MB.":
+      "Impossible de lire l’image. Choisissez un JPEG ou un PNG de moins de 15 Mo.",
+  "On: your picture shows behind Home.":
+      "Activé : votre image s’affiche derrière l’accueil.",
+  "A picture of your own behind Home.":
+      "Une image à vous derrière l’accueil.",
 };

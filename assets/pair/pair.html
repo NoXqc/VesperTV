@@ -164,6 +164,9 @@
   var linkKind = parts[parts.length - 1] === "link";
   var serverKind = parts[parts.length - 1] === "server";
   var photoKind = parts[parts.length - 1] === "photo";
+  // "wallpaper" (Home wallpaper): the photo form, a 16:9 picture at 1920x1080.
+  var wallKind = parts[parts.length - 1] === "wallpaper";
+  if (wallKind) photoKind = true;
   // "smb" (Settings > Recordings > Network folder): Wi-Fi only.
   var smbKind = parts[parts.length - 1] === "smb";
   // "key" (TMDB API key) and "poster" (Custom posters pattern): the link
@@ -178,6 +181,12 @@
     $("form-view").hidden = true;
     $("photo-view").hidden = false;
     document.title = "VesperTV · Profile photo";
+    if (wallKind) {
+      $("photo-view").querySelector("h1").innerHTML = "Add a Home wallpaper to <span>VesperTV</span>";
+      $("photo-view").querySelector(".lead").textContent = "Choose a picture. It is cropped to the TV's shape, resized on this phone and sent only over your Wi-Fi.";
+      $("photo-preview").width = 1920; $("photo-preview").height = 1080;
+      document.title = "VesperTV · Home wallpaper";
+    }
   }
   var photoData = null, photoGeneration = 0;
   $("photo-file").onchange = function () {
@@ -189,11 +198,18 @@
     image.onload = function () {
       URL.revokeObjectURL(url);
       if (generation !== photoGeneration) return;
-      var side = Math.min(image.naturalWidth, image.naturalHeight), canvas = $("photo-preview");
+      var canvas = $("photo-preview"), cw = canvas.width, ch = canvas.height;
+      var nw = image.naturalWidth, nh = image.naturalHeight;
+      // Centre crop to the canvas shape (square photo, 16:9 wallpaper).
+      var sw = nw, sh = nh;
+      if (nw * ch > nh * cw) sw = nh * cw / ch; else sh = nw * ch / cw;
       var ctx = canvas.getContext("2d");
-      ctx.fillStyle = "black"; ctx.fillRect(0, 0, 512, 512);
-      ctx.drawImage(image, (image.naturalWidth-side)/2, (image.naturalHeight-side)/2, side, side, 0, 0, 512, 512);
-      photoData = canvas.toDataURL("image/jpeg", 0.85).split(",")[1];
+      ctx.fillStyle = "black"; ctx.fillRect(0, 0, cw, ch);
+      ctx.drawImage(image, (nw-sw)/2, (nh-sh)/2, sw, sh, 0, 0, cw, ch);
+      // The TV takes at most 2 MB: lower the quality until it fits.
+      var q = 0.85;
+      photoData = canvas.toDataURL("image/jpeg", q).split(",")[1];
+      while (photoData.length > 2700000 && q > 0.4) { q -= 0.15; photoData = canvas.toDataURL("image/jpeg", q).split(",")[1]; }
       canvas.hidden = false; $("photo-send").disabled = false;
     };
     image.onerror = function () { URL.revokeObjectURL(url); show("Could not read this photo. Try JPEG or PNG.", "err"); };
@@ -327,7 +343,7 @@
       $("server-view").hidden = true;
       $("smb-view").hidden = true;
       $("photo-view").hidden = true;
-      if (photoKind) $("done-hint").textContent = "Your photo is on the TV. You can close this page.";
+      if (photoKind) $("done-hint").textContent = wallKind ? "Your wallpaper is on the TV. You can close this page." : "Your photo is on the TV. You can close this page.";
       if (linkKind) $("done-hint").textContent = keyKind || posterKind
         ? "Check it there, then press Save. You can close this page."
         : "Check it there, then press Add. You can close this page.";

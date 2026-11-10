@@ -1829,8 +1829,8 @@ const Map<String, String> kEl = {
   "Supporting is a thank-you, never a paywall: everyone gets the same app.":
       "Η υποστήριξη είναι ένα ευχαριστώ, ποτέ πληρωμή για πρόσβαση: όλοι έχουν την ίδια εφαρμογή.",
   // Settings > General > Remote tips
-  "Language and clock, what plays when the app starts, Fast startup, clearing your history, and remote tips.":
-      "Γλώσσα και ρολόι, τι παίζει στην εκκίνηση, Γρήγορη εκκίνηση, διαγραφή ιστορικού και συμβουλές τηλεχειριστηρίου.",
+  "Language and clock, what plays when the app starts, Fast startup, your Home wallpaper, clearing your history, and remote tips.":
+      "Γλώσσα και ρολόι, τι παίζει στην εκκίνηση, Γρήγορη εκκίνηση, η ταπετσαρία της αρχικής σας, διαγραφή ιστορικού και συμβουλές τηλεχειριστηρίου.",
   "Remote tips": "Συμβουλές τηλεχειριστηρίου",
   "Every hold menu and shortcut, on your phone":
       "Κάθε μενού παρατεταμένου πατήματος και συντόμευση, στο κινητό σας",
@@ -3180,4 +3180,14 @@ const Map<String, String> kEl = {
       "Η πληκτρολόγηση διεύθυνσης φακέλου και κωδικού με το τηλεχειριστήριο είναι κουραστική. Σαρώστε αυτόν τον κωδικό με την κάμερα του τηλεφώνου σας και συμπληρώστε τα εκεί — εμφανίζονται εδώ για έλεγχο και αποθήκευση.",
   "Check the details here, then press Save and use it.":
       "Ελέγξτε τα στοιχεία εδώ και πατήστε Αποθήκευση και χρήση.",
+  "Home wallpaper":
+      "Ταπετσαρία αρχικής",
+  "Shows behind Home when the card you are on has no picture of its own, instead of the live channels' colours.":
+      "Εμφανίζεται πίσω από την αρχική όταν η κάρτα που επιλέξατε δεν έχει δική της εικόνα, αντί για τα χρώματα των ζωντανών καναλιών.",
+  "Could not read the picture. Choose a JPEG or PNG under 15 MB.":
+      "Δεν ήταν δυνατή η ανάγνωση της εικόνας. Επιλέξτε JPEG ή PNG κάτω από 15 MB.",
+  "On: your picture shows behind Home.":
+      "Ενεργό: η εικόνα σας εμφανίζεται πίσω από την αρχική.",
+  "A picture of your own behind Home.":
+      "Μια δική σας εικόνα πίσω από την αρχική.",
 };

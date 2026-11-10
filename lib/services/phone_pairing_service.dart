@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'home_wallpaper.dart';
 import 'profile_photos.dart';
 
 import 'package:cryptography/cryptography.dart';
@@ -34,6 +35,10 @@ enum PairingKind {
   mediaServer,
   photo,
 
+  /// [photo] for Home's wallpaper: the phone sends a 1920x1080 picture
+  /// (16:9, not the square profile crop); same 'photo' payload.
+  wallpaper,
+
   /// [link] with the phone page worded for an API key (TMDB).
   apiKey,
 
@@ -55,7 +60,7 @@ enum PairingKind {
         playlist => null,
         link || apiKey || poster => 'link',
         mediaServer => 'server',
-        photo => 'photo',
+        photo || wallpaper => 'photo',
         networkFolder => 'smb',
       };
 }
@@ -176,6 +181,7 @@ class PhonePairingSession {
         PairingKind.link => 'link',
         PairingKind.mediaServer => 'server',
         PairingKind.photo => 'photo',
+        PairingKind.wallpaper => 'wallpaper',
         PairingKind.apiKey => 'key',
         PairingKind.poster => 'poster',
         PairingKind.networkFolder => 'smb',
@@ -282,7 +288,10 @@ class PhonePairingSession {
         return;
       }
       final body = await _readLimited(
-          req, kind == PairingKind.photo ? 2800000 : 16 * 1024);
+          req,
+          kind == PairingKind.photo || kind == PairingKind.wallpaper
+              ? 2800000
+              : 16 * 1024);
       final result = body == null ? null : _decodeResult(body);
       if (result == null || !_accepts(result)) {
         res.statusCode = HttpStatus.badRequest;
@@ -290,7 +299,11 @@ class PhonePairingSession {
       }
       if (result.photo case final photo?) {
         try {
-          await compute(ProfilePhotos.normalize, photo);
+          await compute(
+              kind == PairingKind.wallpaper
+                  ? HomeWallpaper.normalize
+                  : ProfilePhotos.normalize,
+              photo);
         } catch (_) {
           res.statusCode = HttpStatus.badRequest;
           return;

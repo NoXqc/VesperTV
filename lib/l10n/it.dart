@@ -1882,8 +1882,8 @@ const Map<String, String> kIt = {
   "Supporting is a thank-you, never a paywall: everyone gets the same app.":
       "Sostenere è un grazie, mai un accesso a pagamento: tutti hanno la stessa app.",
   // Settings > General > Remote tips
-  "Language and clock, what plays when the app starts, Fast startup, clearing your history, and remote tips.":
-      "Lingua e orologio, cosa parte all'avvio, Avvio rapido, cancellare la cronologia e i trucchi del telecomando.",
+  "Language and clock, what plays when the app starts, Fast startup, your Home wallpaper, clearing your history, and remote tips.":
+      "Lingua e orologio, cosa parte all'avvio, Avvio rapido, il tuo sfondo della Home, cancellare la cronologia e i trucchi del telecomando.",
   "Remote tips": "Trucchi telecomando",
   "Every hold menu and shortcut, on your phone":
       "Ogni menu a pressione lunga e scorciatoia, sul tuo telefono",
@@ -3225,4 +3225,14 @@ const Map<String, String> kIt = {
       "Digitare l'indirizzo di una cartella e una password con il telecomando è scomodo. Scansiona questo codice con la fotocamera del telefono e inseriscili lì — compaiono qui per controllarli e salvarli.",
   "Check the details here, then press Save and use it.":
       "Controlla i dati qui, poi premi Salva e usala.",
+  "Home wallpaper":
+      "Sfondo della Home",
+  "Shows behind Home when the card you are on has no picture of its own, instead of the live channels' colours.":
+      "Appare dietro la Home quando la scheda selezionata non ha un’immagine propria, al posto dei colori dei canali in diretta.",
+  "Could not read the picture. Choose a JPEG or PNG under 15 MB.":
+      "Impossibile leggere l’immagine. Scegli un JPEG o PNG sotto i 15 MB.",
+  "On: your picture shows behind Home.":
+      "Attivo: la tua immagine appare dietro la Home.",
+  "A picture of your own behind Home.":
+      "Un’immagine tua dietro la Home.",
 };

@@ -1873,8 +1873,8 @@ const Map<String, String> kEs = {
   "Supporting is a thank-you, never a paywall: everyone gets the same app.":
       "Apoyar es un agradecimiento, nunca un muro de pago: todos tienen la misma aplicación.",
   // Settings > General > Remote tips
-  "Language and clock, what plays when the app starts, Fast startup, clearing your history, and remote tips.":
-      "Idioma y reloj, qué se reproduce al iniciar, Inicio rápido, borrar el historial y trucos del control remoto.",
+  "Language and clock, what plays when the app starts, Fast startup, your Home wallpaper, clearing your history, and remote tips.":
+      "Idioma y reloj, qué se reproduce al iniciar, Inicio rápido, tu fondo de Inicio, borrar el historial y trucos del control remoto.",
   "Remote tips": "Trucos del control",
   "Every hold menu and shortcut, on your phone":
       "Cada menú de mantener pulsado y atajo, en tu teléfono",
@@ -3218,4 +3218,14 @@ const Map<String, String> kEs = {
       "Escribir la dirección de una carpeta y una contraseña con el mando es pesado. Escanee este código con la cámara del teléfono y rellénelos allí — aparecen aquí para que los revise y guarde.",
   "Check the details here, then press Save and use it.":
       "Revise los datos aquí y pulse Guardar y usarla.",
+  "Home wallpaper":
+      "Fondo de Inicio",
+  "Shows behind Home when the card you are on has no picture of its own, instead of the live channels' colours.":
+      "Se muestra detrás de Inicio cuando la tarjeta seleccionada no tiene imagen propia, en lugar de los colores de los canales en directo.",
+  "Could not read the picture. Choose a JPEG or PNG under 15 MB.":
+      "No se pudo leer la imagen. Elige un JPEG o PNG de menos de 15 MB.",
+  "On: your picture shows behind Home.":
+      "Activado: tu imagen se muestra detrás de Inicio.",
+  "A picture of your own behind Home.":
+      "Una imagen tuya detrás de Inicio.",
 };

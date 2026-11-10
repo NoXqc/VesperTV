@@ -383,6 +383,13 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-10 - Home live channel look + Home wallpaper (test +704, merged to main, not released):** Discord
+  idea (Kal-el23). Focused live card: logo large + LIVE, programme title, channel + times, guide description
+  (`_LiveHero`); glow in the logo's colours (`services/logo_colors.dart`), theme colour for white/grey logos.
+  **Settings > General > Home wallpaper** (per viewer, a file: never transferred; From phone = `PairingKind.wallpaper`,
+  1920x1080 crop in pair.html) supersedes the glow (owner); art and game backdrops keep their own. Mini player got a
+  2 px light frame + shadow. Owner-tested +703/+704 on the Formuler ("Very nice", "Sits nice"). Details:
+  `dev-notes/home-look.md`. Next build > 704.
 - **Claude, 2026-11-10 - +702 (main 75a905f, pushed, not released): copy from the network folder** (owner: box downloads
   overnight, tablet copies them before a trip). Finished network files get `.vespertv/<file>.json` details; Recordings >
   On the network folder lists the share; OK = Copy to this device (a download from `smb://`, no speed/connection
