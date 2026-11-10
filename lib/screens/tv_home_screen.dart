@@ -18,6 +18,7 @@ import '../models/epg_program.dart';
 import '../models/m3u_group.dart';
 import '../models/xtream_series.dart';
 import '../services/app_preferences.dart';
+import '../services/back_press_swallow.dart';
 import '../services/perf_diagnostics.dart';
 import '../services/startup_quiet.dart';
 import '../services/app_exit.dart';
@@ -2431,6 +2432,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       // Some TV remotes deliver both a Back key and a platform pop, or a
       // trailing repeat. Home has already consumed that press by closing;
       // its tail must not immediately open the root's Exit confirmation.
+      // A Back still held (a long press) is swallowed until its release:
+      // Android turned its repeats + release into a second Back after the
+      // 700 ms below (BackPressSwallow).
+      BackPressSwallow.restOfPress();
       _returnBackGuard?.cancel();
       _returnBackGuard = Timer(const Duration(milliseconds: 700), () {
         _returnBackGuard = null;
