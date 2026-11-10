@@ -39,6 +39,9 @@ class DesktopMiniPlayer {
   /// supports multiple simultaneous `Video` widgets on one controller.
   VideoController? get controller => _controller;
 
+  /// The session's player (Vesper AI's [DesktopPlayerControl]).
+  Player? get player => _player;
+
   /// Re-opens a live preview that reports `completed` — same app-level
   /// safety net as `DesktopPlayerScreen`'s own, since mpv's reconnect
   /// options don't catch every way a live stream ends. Only set for a

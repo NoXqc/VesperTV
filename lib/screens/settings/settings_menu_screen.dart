@@ -392,6 +392,12 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
                   Icons.fiber_smart_record_outlined,
                   tr('Recordings'),
                   tr('Margins, space and where recordings are saved'),
+                  (_) => const RecordingSettingsScreen())
+            else if (RecordingService.downloadsSupported)
+              _Entry(
+                  Icons.download_outlined,
+                  tr('Downloads'),
+                  tr('Speed, space and where downloads are saved'),
                   (_) => const RecordingSettingsScreen()),
             _Entry(
                 Icons.bug_report_outlined,

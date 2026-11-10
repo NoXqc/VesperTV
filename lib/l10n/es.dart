@@ -3232,4 +3232,24 @@ const Map<String, String> kEs = {
       "Activado: tu imagen se muestra detrás de Inicio.",
   "A picture of your own behind Home.":
       "Una imagen tuya detrás de Inicio.",
+  "Hide Downloads":
+      "Ocultar descargas",
+  "Removes the Downloads tab.":
+      "Quita la pestaña Descargas.",
+  "Speed, space and where downloads are saved":
+      "Velocidad, espacio y dónde se guardan las descargas",
+  "Space for downloads: {gb} GB":
+      "Espacio para descargas: {gb} GB",
+  "{used} used. Downloads stop when this is full or the drive has less than 1 GB left.":
+      "{used} usados. Las descargas se detienen cuando está lleno o al disco le queda menos de 1 GB.",
+  "Save downloads to":
+      "Guardar las descargas en",
+  "This computer":
+      "Este ordenador",
+  "Download set for {when}. It shows in Downloads.":
+      "Descarga programada {when}. Aparece en Descargas.",
+  "Downloading. It shows in Downloads.":
+      "Descargando. Aparece en Descargas.",
+  "VesperTV has to be open then (minimized is fine).":
+      "VesperTV tiene que estar abierto entonces (minimizado vale).",
 };

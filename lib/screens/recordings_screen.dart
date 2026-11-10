@@ -99,8 +99,10 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
     );
   }
 
-  Future<void> _push(Channel c) => Navigator.of(context)
-      .push(PlayerPageRoute(builder: (_) => PlayerScreen(channel: c)));
+  Future<void> _push(Channel c) => RecordingService.supported
+      ? Navigator.of(context)
+          .push(PlayerPageRoute(builder: (_) => PlayerScreen(channel: c)))
+      : playDownloadChannel(context, c);
 
   Future<void> _menu(RecordingEntry r) async {
     if (r.isDownload) return downloadMenu(context, r);
@@ -271,7 +273,8 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
     return withTvThemeIfNeeded(
       context,
       (context) => SettingsScaffold(
-        title: tr('Recordings'),
+        // Windows has downloads only.
+        title: RecordingService.supported ? tr('Recordings') : tr('Downloads'),
         body: ListView(
           padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
           children: [

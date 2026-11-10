@@ -3239,4 +3239,24 @@ const Map<String, String> kIt = {
       "Attivo: la tua immagine appare dietro la Home.",
   "A picture of your own behind Home.":
       "Un’immagine tua dietro la Home.",
+  "Hide Downloads":
+      "Nascondi download",
+  "Removes the Downloads tab.":
+      "Rimuove la scheda Download.",
+  "Speed, space and where downloads are saved":
+      "Velocità, spazio e dove vengono salvati i download",
+  "Space for downloads: {gb} GB":
+      "Spazio per i download: {gb} GB",
+  "{used} used. Downloads stop when this is full or the drive has less than 1 GB left.":
+      "{used} usati. I download si fermano quando è pieno o il disco ha meno di 1 GB libero.",
+  "Save downloads to":
+      "Salva i download in",
+  "This computer":
+      "Questo computer",
+  "Download set for {when}. It shows in Downloads.":
+      "Download programmato {when}. Compare in Download.",
+  "Downloading. It shows in Downloads.":
+      "Download in corso. Compare in Download.",
+  "VesperTV has to be open then (minimized is fine).":
+      "VesperTV deve essere aperto a quell'ora (anche ridotto a icona).",
 };

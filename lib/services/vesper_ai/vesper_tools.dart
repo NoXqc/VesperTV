@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/services.dart';
+import 'package:media_kit/media_kit.dart' as mk;
 import 'package:video_player_hdr/video_player_hdr.dart';
 
 import '../../l10n/l10n.dart';
@@ -20,6 +21,8 @@ import '../archive_service.dart';
 import '../archive_stream_size.dart';
 import '../audio_track_preferences.dart';
 import '../channel_copy_fallback.dart';
+import '../desktop_audio.dart';
+import '../desktop_player_control.dart';
 import '../epg_service.dart';
 import '../playback_service.dart';
 import '../playlist_edits.dart';
@@ -39,7 +42,10 @@ import '../../utils/constants.dart';
 import '../../utils/desktop_platform.dart';
 import '../../utils/video_hdr_report.dart';
 import '../../widgets/data_pool_card.dart';
+import '../../widgets/desktop_data_pool_card.dart';
+import '../../widgets/desktop_subtitles.dart';
 
+part 'desktop_player_tools.dart';
 part 'game_channel_tool.dart';
 part 'media_hub_tool.dart';
 part 'my_groups_tool.dart';
@@ -686,9 +692,7 @@ final List<VesperTool> vesperTools = [
       },
     },
     run: (box, args, caller) async {
-      if (isDesktop) {
-        throw VesperToolError('Not available on Windows yet.');
-      }
+      if (isDesktop) return _desktopNowPlaying(box, args);
       final c = box.playback.liveChannel;
       if (c == null) return {'playing': null};
       final controller = box.playback.controller;
@@ -780,9 +784,7 @@ final List<VesperTool> vesperTools = [
       'required': ['action'],
     },
     run: (box, args, caller) async {
-      if (isDesktop) {
-        throw VesperToolError('Not available on Windows yet.');
-      }
+      if (isDesktop) return _desktopPlayer(box, args);
       final playback = box.playback;
       final c = playback.controller;
       final action = _str(args, 'action');
