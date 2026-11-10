@@ -383,7 +383,14 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
-- **Claude, 2026-11-09 - merged on local main (3f49f15, not pushed/released/built; owner tests later):** QMJHL league
+- **Claude, 2026-11-10 - test +701 (main fec820a, pushed, not released):** owner confirmed the downloads path: Tonight
+  at 2:00 saved 72 Hours (4.46 GB MKV) to the SMB share, played and seeked from it. +701 adds: Recordings download
+  card = the poster's own colours (was the Sports Trak sheen, a flat gold block) + network-folder size in the footer;
+  tennis skips ESPN's summary (HTTP 400) and any 4xx summary isn't retried (stays null: goal alerts rely on it);
+  landscape phone guide + Vesper keyboard inset ported from the iOS branch; built-in audio/subtitle voice phrases
+  (`_tracks`, dev-notes/vesper-ai.md). Analyze 16, 1722 tests. Formuler didn't answer on 10.0.0.46: APK on
+  `pair.vespertv.app/dl/767QiZBxaOhL/VesperTV-test-701.apk`. Next build > 701.
+- **Claude, 2026-11-09 - merged on local main (3f49f15, pushed 2026-11-10, not released):** QMJHL league
   (31d26cc), guide fix below (f1f64f2), `claude/phone-safe-area` (Settings `SafeArea(top: false)`, Android 15 nav
   bar) and `claude/downloads` (entry below). Analyze 16, 1713 tests. Next build > 700.
 - **Claude, 2026-11-09 - event channels sharing one EPG id (f1f64f2):** a provider gives `tsn4mel` to 61 event
