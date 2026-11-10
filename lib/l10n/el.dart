@@ -3190,4 +3190,24 @@ const Map<String, String> kEl = {
       "Ενεργό: η εικόνα σας εμφανίζεται πίσω από την αρχική.",
   "A picture of your own behind Home.":
       "Μια δική σας εικόνα πίσω από την αρχική.",
+  "Hide Downloads":
+      "Απόκρυψη λήψεων",
+  "Removes the Downloads tab.":
+      "Αφαιρεί την καρτέλα Λήψεις.",
+  "Speed, space and where downloads are saved":
+      "Ταχύτητα, χώρος και πού αποθηκεύονται οι λήψεις",
+  "Space for downloads: {gb} GB":
+      "Χώρος για λήψεις: {gb} GB",
+  "{used} used. Downloads stop when this is full or the drive has less than 1 GB left.":
+      "{used} σε χρήση. Οι λήψεις σταματούν όταν γεμίσει ή ο δίσκος έχει λιγότερο από 1 GB ελεύθερο.",
+  "Save downloads to":
+      "Αποθήκευση λήψεων σε",
+  "This computer":
+      "Αυτός ο υπολογιστής",
+  "Download set for {when}. It shows in Downloads.":
+      "Η λήψη ορίστηκε {when}. Εμφανίζεται στις Λήψεις.",
+  "Downloading. It shows in Downloads.":
+      "Γίνεται λήψη. Εμφανίζεται στις Λήψεις.",
+  "VesperTV has to be open then (minimized is fine).":
+      "Το VesperTV πρέπει να είναι ανοιχτό τότε (ελαχιστοποιημένο αρκεί).",
 };

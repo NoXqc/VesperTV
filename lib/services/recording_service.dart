@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'desktop_recorder.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -30,6 +31,7 @@ class RecordingService extends ChangeNotifier {
       Future<Directory> Function()? supportDirectory,
       DateTime Function()? now})
       : _platformSupported = platformSupported,
+        _desktop = platformSupported == null && Platform.isWindows,
         _supportDirectory = supportDirectory ?? getApplicationSupportDirectory,
         _now = now ?? DateTime.now;
   static final instance = RecordingService._();
@@ -41,13 +43,60 @@ class RecordingService extends ChangeNotifier {
             supportDirectory: () async => directory,
             now: now);
   final bool? _platformSupported;
+
+  /// Downloads run in Dart ([DesktopRecorder]) instead of Android's
+  /// native recorder. Tests (platformSupported set) keep the Android path.
+  final bool _desktop;
   final Future<Directory> Function() _supportDirectory;
   final DateTime Function() _now;
+  /// Recording works here (the programme Record button): Android.
   bool get available => _platformSupported ?? supported;
+
+  /// The service runs: downloads too (Windows has those, not recording).
+  bool get _running => _platformSupported ?? downloadsSupported;
 
   static const _channel = MethodChannel('vespertv/recorder');
 
+  /// Recording (sports games, channels, programmes): Android only.
   static bool get supported => Platform.isAndroid;
+
+  /// Downloads and the network folder: Android, and Windows through
+  /// [DesktopRecorder] (owner, 2026-11-10: Windows up to par).
+  static bool get downloadsSupported =>
+      debugDownloadsSupported ?? (Platform.isAndroid || Platform.isWindows);
+
+  /// Tests: the suite runs on Windows hosts, where downloads are on; the
+  /// screens' tests were tuned without them (test/flutter_test_config.dart).
+  @visibleForTesting
+  static bool? debugDownloadsSupported;
+
+  /// The recorder: Android's native side, or [DesktopRecorder] on
+  /// Windows (same methods and replies, downloads only).
+  Future<T?> _invoke<T>(String method, [Object? args]) async {
+    if (_desktop) {
+      return await DesktopRecorder.instance.invoke(method, _args(args)) as T?;
+    }
+    return _channel.invokeMethod<T>(method, args);
+  }
+
+  Future<List<T>?> _invokeList<T>(String method, [Object? args]) async {
+    if (_desktop) {
+      final r = await DesktopRecorder.instance.invoke(method, _args(args));
+      return r is List ? r.cast<T>() : null;
+    }
+    return _channel.invokeListMethod<T>(method, args);
+  }
+
+  Future<Map<K, V>?> _invokeMap<K, V>(String method, [Object? args]) async {
+    if (_desktop) {
+      final r = await DesktopRecorder.instance.invoke(method, _args(args));
+      return r is Map ? r.cast<K, V>() : null;
+    }
+    return _channel.invokeMapMethod<K, V>(method, args);
+  }
+
+  static Map<String, Object?> _args(Object? a) =>
+      a is Map ? {for (final e in a.entries) '${e.key}': e.value} : const {};
 
   /// Paths in the network folder start with this (NetworkFolder.kt).
   static const networkScheme = 'smb://';
@@ -76,7 +125,7 @@ class RecordingService extends ChangeNotifier {
   AutoTeam? get autoTeam => _autoTeam;
 
   Future<void> init() async {
-    if (_ready || !available) return;
+    if (_ready || !_running) return;
     _ready = true;
     try {
       final dir = await _supportDirectory();
@@ -205,7 +254,7 @@ class RecordingService extends ChangeNotifier {
     final network = settings.network;
     final vols = <RecordingVolume>[];
     try {
-      final list = await _channel.invokeListMethod<Map>('storage') ?? const [];
+      final list = await _invokeList<Map>('storage') ?? const [];
       vols.addAll([
         for (final m in list)
           RecordingVolume(
@@ -268,9 +317,9 @@ class RecordingService extends ChangeNotifier {
   // ------------------------------------------------------ network folder
 
   Future<void> _sendNetworkFolder() async {
-    if (!available) return;
+    if (!_running) return;
     try {
-      await _channel.invokeMethod('networkFolder', {
+      await _invoke('networkFolder', {
         'config': settings.network == null
             ? null
             : jsonEncode(settings.network!.toJson()),
@@ -286,7 +335,7 @@ class RecordingService extends ChangeNotifier {
   Future<({int? free, int? total, String? error})> testNetworkFolder(
       NetworkFolderConfig config) async {
     try {
-      final r = await _channel.invokeMapMethod<String, dynamic>(
+      final r = await _invokeMap<String, dynamic>(
           'testNetworkFolder', {'config': jsonEncode(config.toJson())});
       if (r?['ok'] == true) {
         return (
@@ -305,7 +354,9 @@ class RecordingService extends ChangeNotifier {
   /// in app storage for one in the network folder (Dart can't read a
   /// network share).
   String statusPathOf(RecordingEntry r) {
-    if (!r.onNetwork) return '${r.path}.status';
+    // Windows keeps them in app storage too: downloads land in the
+    // user's own Videos folder.
+    if (!r.onNetwork && !_desktop) return '${r.path}.status';
     final dir = _file?.parent.path ?? '';
     return '$dir/recording_status/${r.id}.status';
   }
@@ -317,8 +368,7 @@ class RecordingService extends ChangeNotifier {
     if (Channel.isRecordingId(channel.rawId)) {
       if (!channel.url.startsWith(networkScheme)) return null;
       try {
-        return await _channel
-            .invokeMethod<String>('playUrl', {'path': channel.url});
+        return await _invoke<String>('playUrl', {'path': channel.url});
       } catch (_) {
         return null;
       }
@@ -546,7 +596,7 @@ class RecordingService extends ChangeNotifier {
       rethrow;
     }
     // It may have started while its menu was open. Stop that exact ID too.
-    await _channel.invokeMethod<void>('stop', {'id': entry.id});
+    await _invoke<void>('stop', {'id': entry.id});
     notifyListeners();
   }
 
@@ -615,7 +665,7 @@ class RecordingService extends ChangeNotifier {
     final until = DateTime.now().add(timeout);
     while (DateTime.now().isBefore(until)) {
       try {
-        final list = await _channel.invokeListMethod<Map>('active') ?? const [];
+        final list = await _invokeList<Map>('active') ?? const [];
         final mine = list.where((m) => m['id'] == r.id).firstOrNull;
         if (mine != null && ((mine['bytes'] as num?) ?? 0) > 0) return true;
       } catch (_) {}
@@ -641,7 +691,7 @@ class RecordingService extends ChangeNotifier {
         r.state == RecState.queued ||
         (r.isDownload && r.state == RecState.interrupted)) {
       try {
-        await _channel.invokeMethod('stop', {'id': r.id});
+        await _invoke('stop', {'id': r.id});
       } catch (_) {}
       r.state = RecState.stopped;
     } else if (r.state == RecState.scheduled || r.state == RecState.waiting) {
@@ -665,7 +715,7 @@ class RecordingService extends ChangeNotifier {
     if (r.onNetwork) {
       for (final p in [r.path, networkDetailsPath(r.path)]) {
         try {
-          await _channel.invokeMethod<bool>('deleteFile', {'path': p});
+          await _invoke<bool>('deleteFile', {'path': p});
         } catch (_) {}
       }
     }
@@ -691,7 +741,7 @@ class RecordingService extends ChangeNotifier {
   /// those already due). Returns false when Android only allowed inexact
   /// alarms.
   Future<bool> _push({bool strict = false}) async {
-    if (!available) return true;
+    if (!_running) return true;
     final now = _now();
     final cap = settings.capGb * 1024 * 1024 * 1024;
     final room = cap - usedBytes;
@@ -746,8 +796,7 @@ class RecordingService extends ChangeNotifier {
     debugPrint('RecordingService: ${due.length} recording(s) sent to the '
         'scheduler');
     try {
-      exactSchedule = await _channel
-              .invokeMethod<bool>('schedule', {'items': jsonEncode(due)}) ??
+      exactSchedule = await _invoke<bool>('schedule', {'items': jsonEncode(due)}) ??
           true;
       _armProgrammeStart();
       return exactSchedule;
@@ -760,10 +809,10 @@ class RecordingService extends ChangeNotifier {
 
   /// Reads each recording's `.status` and the native running list.
   Future<void> refreshStatus() async {
-    if (!available) return;
+    if (!_running) return;
     Set<String> running = const {};
     try {
-      final list = await _channel.invokeListMethod<Map>('active') ?? const [];
+      final list = await _invokeList<Map>('active') ?? const [];
       running = {for (final m in list) m['id'] as String};
     } catch (_) {}
     var changed = false;
@@ -839,7 +888,7 @@ class RecordingService extends ChangeNotifier {
   /// (saved before details existed, or the native write failed): written
   /// now, once each.
   Future<void> _saveMissingDetails() async {
-    if (_savingDetails || !available) return;
+    if (_savingDetails || !_running) return;
     _savingDetails = true;
     var changed = false;
     try {
@@ -849,7 +898,7 @@ class RecordingService extends ChangeNotifier {
             : (r.state == RecState.done || r.state == RecState.stopped) &&
                 r.bytes > 0;
         if (!r.onNetwork || r.detailsSaved || !finished) continue;
-        final ok = await _channel.invokeMethod<bool>('networkWriteText', {
+        final ok = await _invoke<bool>('networkWriteText', {
               'path': networkDetailsPath(r.path),
               'text': jsonEncode(detailsOf(r)),
             }) ??
@@ -869,12 +918,11 @@ class RecordingService extends ChangeNotifier {
 
   /// The network folder's videos ([NetworkFile]), or why it can't be read.
   Future<({List<NetworkFile> files, String? error})> networkFiles() async {
-    if (!available || settings.network == null) {
+    if (!_running || settings.network == null) {
       return (files: const <NetworkFile>[], error: null);
     }
     try {
-      final r = await _channel
-          .invokeMapMethod<String, dynamic>('networkList')
+      final r = await _invokeMap<String, dynamic>('networkList')
           .timeout(const Duration(seconds: 60));
       if (r?['error'] case final String e) {
         return (files: const <NetworkFile>[], error: e);
@@ -955,7 +1003,7 @@ class RecordingService extends ChangeNotifier {
 
   Future<String?> teeUrl(RecordingEntry r) async {
     try {
-      final port = await _channel.invokeMethod<int>('teePort');
+      final port = await _invoke<int>('teePort');
       return port == null ? null : 'http://127.0.0.1:$port/rec/${r.id}.ts';
     } catch (_) {
       return null;
@@ -998,7 +1046,7 @@ class RecordingService extends ChangeNotifier {
   /// now. Titles already downloaded or queued are left as they are.
   Future<List<RecordingEntry>> download(List<DownloadItem> items,
       {DateTime? at, bool toDevice = false}) async {
-    if (!available) throw UnsupportedError('Downloads require Android');
+    if (!_running) throw UnsupportedError('Downloads require Android');
     await init();
     final vol = toDevice ? await _deviceVolume() : await currentVolume();
     final start = at ?? _now();
@@ -1099,13 +1147,13 @@ class RecordingService extends ChangeNotifier {
   }
 
   Future<void> _sendPolicy({bool force = false}) async {
-    if (!available) return;
+    if (!_running) return;
     final streams = _streams;
     final key = '${settings.downloadSpeed}|$streams';
     if (!force && key == _sentPolicy) return;
     _sentPolicy = key;
     try {
-      await _channel.invokeMethod(
+      await _invoke(
           'policy', {'speed': settings.downloadSpeed, 'streams': streams});
     } catch (_) {}
   }
@@ -1114,7 +1162,7 @@ class RecordingService extends ChangeNotifier {
   /// last free connection lets go of it first (the provider would kick
   /// one of the two). Quick when nothing is downloading from it.
   Future<void> yieldConnection(Channel channel) async {
-    if (!available || channel.playlistId.isEmpty) return;
+    if (!_running || channel.playlistId.isEmpty) return;
     final download = _items
         .where((r) =>
             r.isDownload &&
@@ -1136,7 +1184,7 @@ class RecordingService extends ChangeNotifier {
     _mainAccount = channel.playlistId;
     await _sendPolicy();
     try {
-      await _channel.invokeMethod('yield',
+      await _invoke('yield',
           {'account': channel.playlistId}).timeout(const Duration(seconds: 6));
     } catch (_) {}
     // The provider needs a moment to free the connection.
@@ -1285,7 +1333,7 @@ class RecordingService extends ChangeNotifier {
   /// "Recording…" notification can show.
   Future<void> askNotifications() async {
     try {
-      await _channel.invokeMethod('askNotifications');
+      await _invoke('askNotifications');
     } catch (_) {}
   }
 }

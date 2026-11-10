@@ -38,6 +38,9 @@ import '../services/desktop_stream_setup.dart';
 import '../services/desktop_live_recovery.dart';
 import '../widgets/desktop_reconnecting_badge.dart';
 import '../widgets/skip_segment_button.dart';
+import '../widgets/watch_game_button.dart';
+import '../services/watch_game_offer.dart';
+import '../services/desktop_player_control.dart';
 import '../services/skip_segments.dart';
 
 /// A deliberately standalone, Windows-only playback screen — see
@@ -257,6 +260,9 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
   void initState() {
     super.initState();
     _currentChannel = widget.channel;
+    DesktopPlayerControl.register(_control);
+    WatchGameOffer.current.addListener(_onWatchOfferChanged);
+    _armWatchTimer();
     _progress = DesktopVodProgress(context.read<StorageService>());
     _history = context.read<PlaybackService>();
     if (widget.existingPlayer != null && widget.existingController != null) {
@@ -335,6 +341,60 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
 
   /// Skip intro / recap / credits (IntroDB), same watcher as Android.
   final _segments = SkipSegmentWatcher();
+
+  // --- Watch game pill (Settings > Sports Trak > Watch game button) ------
+  // Android's rules: a reminded game started; shown 10 s when it arrives,
+  // then only while the player bar shows; a click switches, it never
+  // switches by itself.
+  final _watchFocus = FocusNode(debugLabel: 'desktop-watch-game');
+  DateTime? _watchShownUntil;
+  Timer? _watchTimer;
+
+  WatchGameOffer? get _watchOffer {
+    final offer = WatchGameOffer.current.value;
+    if (offer == null || offer.expired) return null;
+    if (offer.channel.id == _currentChannel.id) return null;
+    final fresh = _watchShownUntil != null &&
+        DateTime.now().isBefore(_watchShownUntil!);
+    return fresh || _controlsVisible ? offer : null;
+  }
+
+  void _onWatchOfferChanged() {
+    if (!mounted) return;
+    _armWatchTimer();
+    setState(() {});
+  }
+
+  /// Once per game: 10 s on screen when the offer arrives.
+  void _armWatchTimer() {
+    _watchTimer?.cancel();
+    final offer = WatchGameOffer.current.value;
+    if (offer != null && !offer.announced) {
+      offer.announced = true;
+      const shown = Duration(seconds: 10);
+      _watchShownUntil = DateTime.now().add(shown);
+      _watchTimer = Timer(shown, () {
+        if (mounted) setState(() {});
+      });
+    }
+  }
+
+  /// What Vesper AI drives while this screen is open.
+  late final _control = _ScreenControl(this);
+
+  /// Vesper AI's "stop": closes the player without handing a live channel
+  /// to the mini player.
+  void _stopAndClose() {
+    if (!mounted) return;
+    _catchupPlayer?.dispose();
+    Navigator.of(context).pop();
+  }
+
+  void _watchGame(WatchGameOffer offer) {
+    WatchGameOffer.current.value = null;
+    debugPrint('DesktopPlayer: Watch game -> ${offer.channel.name}');
+    unawaited(_switchTo(offer.channel));
+  }
 
   void _skipSegment(SkipSegment segment) {
     final next = _nextEpisode;
@@ -454,6 +514,10 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
     _heightSubscription?.cancel();
     _catchupPlayer?.dispose();
     _segments.dispose();
+    DesktopPlayerControl.unregister(_control);
+    WatchGameOffer.current.removeListener(_onWatchOfferChanged);
+    _watchTimer?.cancel();
+    _watchFocus.dispose();
     _rootFocus.dispose();
     if (!_handedOffToMiniPlayer) DesktopLiveRecovery.of(_player).stop();
     if (_ownsPlayer && !_handedOffToMiniPlayer) {
@@ -1041,6 +1105,14 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                     onSkip: _skipSegment,
                   );
                 }),
+                WatchGameButton(
+                  offer: _watchOffer,
+                  // Above the player bar while it shows.
+                  bottom: _controlsVisible ? 120 : 28,
+                  showUpHint: false,
+                  onWatch: _watchGame,
+                  focusNode: _watchFocus,
+                ),
                 if (_controlsVisible) ...[
                   Positioned(
                     top: 0,
@@ -1251,5 +1323,66 @@ class _DesktopVolume extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+/// [DesktopPlayerControl] for the full-screen player: the same steps as its
+/// own buttons (pause keeps the live timeshift rule, seek and Back to live
+/// work inside catch-up, a stream switch keeps the position).
+class _ScreenControl extends DesktopPlayerControl {
+  _ScreenControl(this.s);
+  final _DesktopPlayerScreenState s;
+
+  @override
+  Channel get channel => s._currentChannel;
+  @override
+  Player get player => s._player;
+  @override
+  bool get fullScreen => true;
+  @override
+  bool get inCatchup => s._inCatchup;
+  @override
+  Channel? get nextEpisode => s._nextEpisode;
+  @override
+  Channel? get previousEpisode => s._previousEpisode;
+  @override
+  ArchivePlaybackSources? get sources => s.widget.sources;
+
+  @override
+  Future<void> pause() async {
+    if (s._player.state.playing) s._togglePlay(true);
+  }
+
+  @override
+  Future<void> resume() async {
+    if (!s._player.state.playing) s._togglePlay(false);
+  }
+
+  @override
+  Future<void> stop() async => s._stopAndClose();
+
+  @override
+  Future<void> seekBy(Duration amount) async => s._skip(amount);
+
+  @override
+  Future<bool> catchupFrom(DateTime at) async {
+    if (!s.mounted || !s._currentChannel.hasCatchup) return false;
+    await s._startCatchup(at);
+    return s._inCatchup;
+  }
+
+  @override
+  Future<void> backToLive() async {
+    if (s._inCatchup) await s._catchupCtl.backToLive();
+  }
+
+  @override
+  Future<void> playOther(Channel channel) => s._switchTo(channel);
+
+  @override
+  Future<void> replaceStream(Channel replacement) {
+    final state = s._player.state;
+    return s._switchTo(replacement,
+        start: state.position, play: state.playing);
   }
 }

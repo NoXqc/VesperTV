@@ -4292,11 +4292,16 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             ),
           if (!context.watch<AppPreferences>().hideArchive)
             _archiveRow(collapsed),
-          if (RecordingService.supported &&
+          if (RecordingService.downloadsSupported &&
               !context.watch<AppPreferences>().hideRecordings)
             _SelectableRow(
-              icon: Icons.fiber_smart_record_outlined,
-              label: tr('Recordings'),
+              // Windows: downloads only.
+              icon: RecordingService.supported
+                  ? Icons.fiber_smart_record_outlined
+                  : Icons.download_outlined,
+              label: RecordingService.supported
+                  ? tr('Recordings')
+                  : tr('Downloads'),
               selected: false,
               collapsed: collapsed,
               onTap: () => Navigator.of(context).push(

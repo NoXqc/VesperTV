@@ -3241,4 +3241,24 @@ const Map<String, String> kFr = {
       "Activé : votre image s’affiche derrière l’accueil.",
   "A picture of your own behind Home.":
       "Une image à vous derrière l’accueil.",
+  "Hide Downloads":
+      "Masquer les téléchargements",
+  "Removes the Downloads tab.":
+      "Retire l’onglet Téléchargements.",
+  "Speed, space and where downloads are saved":
+      "Vitesse, espace et dossier des téléchargements",
+  "Space for downloads: {gb} GB":
+      "Espace pour les téléchargements : {gb} Go",
+  "{used} used. Downloads stop when this is full or the drive has less than 1 GB left.":
+      "{used} utilisés. Les téléchargements s’arrêtent quand c’est plein ou que le disque a moins de 1 Go libre.",
+  "Save downloads to":
+      "Enregistrer les téléchargements dans",
+  "This computer":
+      "Cet ordinateur",
+  "Download set for {when}. It shows in Downloads.":
+      "Téléchargement prévu {when}. Il apparaît dans Téléchargements.",
+  "Downloading. It shows in Downloads.":
+      "Téléchargement en cours. Il apparaît dans Téléchargements.",
+  "VesperTV has to be open then (minimized is fine).":
+      "VesperTV doit alors être ouvert (réduit, ça va).",
 };

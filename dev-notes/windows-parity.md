@@ -14,6 +14,9 @@ owner has tested it.
 | 3 | Catch-up | done, owner test pending (`claude/windows-parity`) |
 | 4 | Toast notifications while the app runs | **not doing it for now** (owner, 2026-11-06: a toast plugin adds a Start-menu shortcut / registry entry) |
 | 5 | Multiview 1+3 and Swap | done, owner test pending (`claude/windows-parity`) |
+| 6 | Watch game pill in the Windows player | done, owner test pending (`claude/windows-parity-2`) |
+| 7 | Vesper AI drives the Windows player (now_playing, player, Media Hub switch) | done, owner test pending (`claude/windows-parity-2`) |
+| 8 | Downloads + network folder on Windows | done, owner test pending (`claude/windows-parity-2`) |
 
 ## Why
 Public Windows is still **1.0.45**; Android is 1.0.58 (+632 public, +659 local). Every release
@@ -174,3 +177,61 @@ Original plan:
 Per phase: code + tests + translations, analyze 16, full tests green, a short owner test list, and
 a HANDOFF block saying exactly what was and wasn't verified (nobody ran the Windows UI unless the
 owner did).
+
+## Round 2 (2026-11-10, owner: "Bring windows up to par with android version")
+Windows last caught up at 7599296 (1.0.61). Audit of the 37 commits since: shared Dart except four
+gaps. Branch `claude/windows-parity-2` (worktree `C:\Users\aarse\VesperTV-claude-winparity2`).
+
+### Phase 6: Watch game pill
+`DesktopPlayerScreen`: `WatchGameButton` (same widget, mouse click; Android's rules: 10 s when the
+offer arrives, then only with the bar; never switches by itself) -> `_switchTo(offer.channel)`.
+Send log: `DesktopPlayer: Watch game -> <channel>`.
+
+### Phase 7: Vesper AI on the Windows player
+`services/desktop_player_control.dart` (`DesktopPlayerControl`): the full-screen player registers
+itself (`_ScreenControl` in desktop_player_screen.dart: pause keeps the live timeshift rule, seek /
+Back to live inside catch-up, a stream switch keeps the position); without one, the mini player
+(`DesktopMiniPlayer.player` getter added). `vesper_ai/desktop_player_tools.dart` (part of
+vesper_tools): `now_playing` (+ quality from mpv, `DesktopStreamStats`), `player` (pause, resume,
+stop, seek, catch-up rewind, back to live, next/previous episode, channel up/down, audio tracks,
+subtitles incl. add-on downloads), Media Hub `sources` / `switch` / start wait. No live CC on
+Windows. Same answer shapes as Android. Test: `test/desktop_player_control_test.dart` (registry).
+
+### Phase 8: Downloads + network folder
+`services/desktop_recorder.dart` (`DesktopRecorder`) answers RecordingService's recorder calls in
+Dart, with the same methods, replies and `.status` files as Downloader.kt / NetworkFolder.kt: one at
+a time, Range resume, 416 = complete, 200 on a Range = start over, page / HLS / under-5-MB clip
+refused, 404/410 fatal, 40 failures in a row = failed, speed limit and 5 Mbit/s while anything
+plays, waits while the app uses the account's last connection (`yield` closes the connection).
+Files go to `%USERPROFILE%\Videos\VesperTV` (their `.status` files in app support, `statusPathOf`);
+free space via kernel32 `GetDiskFreeSpaceExW` (`ffi` is now a direct dependency). The network
+folder is the Windows share: `smb://host/share/...` <-> `\\host\share\...`; a user name signs in
+with `net use ... /persistent:no` (1219 = already signed in, fine); errors from Win32 codes
+(5, 53, 67, 86/1326, 64/121). Runs only while VesperTV is open (minimized counts): the sheet says
+so; a due download starts at the next launch (RecordingService.init re-pushes interrupted ones).
+
+RecordingService: `supported` = recording (Android), `downloadsSupported` = Android or Windows,
+`available` stays "recording works" (the programme Record button), `_running` guards the service;
+the backend is chosen per instance (`_desktop`; tests keep the Android channel mocks).
+`debugDownloadsSupported = false` in test/flutter_test_config.dart (screen tests were tuned on
+Windows hosts without Download buttons). Windows UI: tab and Settings entry named **Downloads**,
+Settings page without recording margins / USB note, "This computer (<path>)", Hide Downloads.
+Playing a download: `playDownloadChannel` (DesktopPlayerScreen); `openDesktopStream` plays a
+recording id's file (or UNC path) and otherwise calls `yieldConnection` first, and reports every
+network player's account (`_streamAccounts` -> `multiviewChanged`). Tests:
+`test/desktop_recorder_test.dart` (real local HTTP server: full, resume, page, 404, connection
+wait, stop).
+
+### Not verified (nobody ran the Windows UI)
+Watch game pill click, every AI action on a real mpv player, a real provider download, a real
+share (`net use`, UNC playback in mpv), Home mini player OK / Play-Pause and wallpaper on Windows.
+
+### Owner checklist (round 2)
+1. Home: a live card, OK = mini player, OK again = full screen, Play/Pause = off; a wallpaper from
+   Settings > General (Choose a photo).
+2. A movie page > Download > Download now: the Downloads tab shows progress; play it when done.
+3. Settings > Downloads > Set up a network folder (`\\PC\share`, user/password if needed) > Test;
+   Downloads tab > On the network folder lists the box's files; Copy / Play from it.
+4. Vesper AI (typed): "pause", "skip 2 minutes", "English audio", "French subtitles", "what's
+   playing", full screen and with the mini player.
+5. A reminded game starting while watching: the Watch game pill; click it.

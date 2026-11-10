@@ -459,10 +459,14 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                       onChanged: (v) =>
                           context.read<AppPreferences>().setHideArchive(v),
                     ),
-                    if (RecordingService.supported)
+                    if (RecordingService.downloadsSupported)
                       TvSwitchListTile(
-                        title: Text(tr('Hide Recordings')),
-                        subtitle: Text(tr('Removes the Recordings tab.')),
+                        title: Text(RecordingService.supported
+                            ? tr('Hide Recordings')
+                            : tr('Hide Downloads')),
+                        subtitle: Text(RecordingService.supported
+                            ? tr('Removes the Recordings tab.')
+                            : tr('Removes the Downloads tab.')),
                         value: context.watch<AppPreferences>().hideRecordings,
                         onChanged: (v) =>
                             context.read<AppPreferences>().setHideRecordings(v),

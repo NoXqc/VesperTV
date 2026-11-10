@@ -3131,4 +3131,24 @@ const Map<String, String> kDe = {
       "An: Dein Bild erscheint hinter dem Start.",
   "A picture of your own behind Home.":
       "Ein eigenes Bild hinter dem Start.",
+  "Hide Downloads":
+      "Downloads ausblenden",
+  "Removes the Downloads tab.":
+      "Entfernt den Tab Downloads.",
+  "Speed, space and where downloads are saved":
+      "Tempo, Platz und Speicherort der Downloads",
+  "Space for downloads: {gb} GB":
+      "Platz für Downloads: {gb} GB",
+  "{used} used. Downloads stop when this is full or the drive has less than 1 GB left.":
+      "{used} belegt. Downloads stoppen, wenn er voll ist oder das Laufwerk weniger als 1 GB frei hat.",
+  "Save downloads to":
+      "Downloads speichern unter",
+  "This computer":
+      "Dieser Computer",
+  "Download set for {when}. It shows in Downloads.":
+      "Download geplant: {when}. Er erscheint unter Downloads.",
+  "Downloading. It shows in Downloads.":
+      "Wird heruntergeladen. Er erscheint unter Downloads.",
+  "VesperTV has to be open then (minimized is fine).":
+      "VesperTV muss dann geöffnet sein (minimiert reicht).",
 };

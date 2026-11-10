@@ -7,6 +7,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 
 import '../models/channel.dart';
 import 'desktop_audio.dart';
+import 'recording_service.dart';
 import 'live_stream_format.dart';
 import 'vod_buffering.dart';
 
@@ -22,9 +23,22 @@ Player newDesktopPlayer() {
   return player;
 }
 
+/// Every player streaming from the network, by provider account: a
+/// download waits while the app uses its account's last connection and
+/// slows down while anything plays ([RecordingService.multiviewChanged]
+/// takes the whole list on Windows).
+final Map<Player, String> _streamAccounts = {};
+
+void _reportStreams() {
+  if (!RecordingService.downloadsSupported) return;
+  RecordingService.instance
+      .multiviewChanged(_streamAccounts.values.toList());
+}
+
 /// Disposes [player] once: a screen closing after quitting already
 /// disposed it does nothing (media_kit throws on a second dispose).
 Future<void> disposeDesktopPlayer(Player player) {
+  if (_streamAccounts.remove(player) != null) _reportStreams();
   if (!_openPlayers.remove(player)) return Future.value();
   return player.dispose();
 }
@@ -99,6 +113,19 @@ void configureDesktopStreamPlayer(Player player, String tag) {
 Future<void> openDesktopStream(Player player, Channel channel,
     {Duration? start, bool play = true}) async {
   final native = player.platform as NativePlayer;
+  // A download plays from its file (the network folder's through
+  // Windows' own share path); anything else from the network first asks
+  // a download on the same account to give its connection back.
+  final downloaded = Channel.isRecordingId(channel.rawId);
+  var url = channel.url;
+  if (downloaded) {
+    url = await RecordingService.instance.playbackUrl(channel) ?? url;
+    if (_streamAccounts.remove(player) != null) _reportStreams();
+  } else {
+    await RecordingService.instance.yieldConnection(channel);
+    _streamAccounts[player] = channel.playlistId;
+    _reportStreams();
+  }
   final live = channel.isLive && !channel.transientPlayback;
   final ms = live ? VodBuffering.liveBufferMs : 0;
   await native.setProperty('cache-pause-initial', ms > 0 ? 'yes' : 'no');
@@ -107,7 +134,7 @@ Future<void> openDesktopStream(Player player, Channel channel,
         'cache-pause-wait', (ms / 1000).toStringAsFixed(1));
   }
   await player.open(
-      Media(live ? LiveStreamFormat.urlFor(channel.url) : channel.url,
+      Media(live ? LiveStreamFormat.urlFor(url) : url,
           start: start,
           httpHeaders:
               channel.httpHeaders.isEmpty ? null : channel.httpHeaders),

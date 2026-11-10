@@ -1076,9 +1076,12 @@ class _NoxIptvAppState extends State<NoxIptvApp>
           .then((_) => BackupService(_storage).maybeAutoBackup()));
       // Recordings: states of anything that ran while the app was closed,
       // then the auto-recorded team's next games (needs the guide).
-      if (RecordingService.supported) {
+      // Windows: downloads only (DesktopRecorder), resumed here.
+      if (RecordingService.downloadsSupported) {
         unawaited(StartupQuiet.after(const Duration(seconds: 4))
             .then((_) => RecordingService.instance.init()));
+      }
+      if (RecordingService.supported) {
         unawaited(Future<void>.delayed(const Duration(seconds: 60))
             .then((_) => _refreshAutoRecordings()));
       }
