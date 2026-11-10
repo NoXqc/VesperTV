@@ -40,6 +40,8 @@ import '../widgets/tv_dialog_option.dart';
 import '../widgets/sports_widgets.dart' show SportsRowArrows;
 import '../services/vesper_ai/watch_list.dart';
 import '../widgets/watch_list_button.dart';
+import '../widgets/download_sheet.dart';
+import '../services/recording_service.dart';
 import 'desktop_player_screen.dart';
 import 'player_screen.dart';
 import '../utils/desktop_platform.dart';
@@ -77,7 +79,13 @@ class SeriesDetailScreen extends StatefulWidget {
     this.castDiscovery,
     this.followTarget,
     this.watchListItem,
+    this.downloadEpisodes,
   });
+
+  /// Media Hub shows: makes the download items for these episodes (their
+  /// streams are only known once picked). IPTV episodes have their links.
+  final Future<List<DownloadItem>?> Function(
+      BuildContext context, List<Channel> episodes)? downloadEpisodes;
 
   /// The Watch list button's entry for a Media Hub show (its source + meta).
   /// IPTV shows build theirs from [series]; null with [loadEpisodes] set =
@@ -152,10 +160,14 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   final _favNode = FocusNode(debugLabel: 'series-fav');
   final _notifyNode = FocusNode(debugLabel: 'series-notify');
   final _watchListNode = FocusNode(debugLabel: 'series-watch-list');
+  final _downloadNode = FocusNode(debugLabel: 'series-download');
+  bool _preparingDownload = false;
 
   WatchListItem? get _watchListItem =>
       widget.watchListItem ??
-      (widget.loadEpisodes == null ? WatchListItem(series: widget.series) : null);
+      (widget.loadEpisodes == null
+          ? WatchListItem(series: widget.series)
+          : null);
   final _castNode = FocusNode(debugLabel: 'series-cast');
   bool _showCast = false;
   final Map<int, FocusNode> _seasonNodes = {};
@@ -312,6 +324,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
       _favNode,
       _notifyNode,
       _watchListNode,
+      _downloadNode,
       _castNode,
       ..._seasonNodes.values,
       ..._episodeNodes.values,
@@ -519,6 +532,108 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
             wasWatched ? tr('Marked as unwatched') : tr('Marked as watched')),
         duration: const Duration(seconds: 2),
       ));
+  }
+
+  bool get _canDownload =>
+      downloadsAvailable && _loaded && _allEpisodes.isNotEmpty;
+
+  /// The episode the Download menu offers: the highlighted one of the
+  /// open season, else the next one to watch.
+  Channel? _downloadTarget() {
+    final season = _season;
+    if (season != null) {
+      final list = _episodesOf(season);
+      final i = _highlight[season];
+      if (i != null && i >= 0 && i < list.length) return list[i];
+    }
+    return _nextUp()?.episode;
+  }
+
+  /// Download: this episode, or the season (one after the other, in order).
+  /// Episodes already downloaded or queued are left as they are.
+  Future<void> _downloadMenu() async {
+    if (_preparingDownload) return;
+    final rs = RecordingService.instance;
+    await rs.init();
+    if (!mounted) return;
+    final episode = _downloadTarget();
+    final season = episode == null ? _season : _seasonOfEpisode[episode.id];
+    final seasonEpisodes =
+        season == null ? const <Channel>[] : _episodesOf(season);
+    final already = episode == null ? null : rs.downloadFor(episode.id);
+    final missing =
+        seasonEpisodes.where((e) => rs.downloadFor(e.id) == null).toList();
+    final choice = await showGlassMenu<String>(
+        context: context,
+        builder: (ctx) =>
+            GlassMenuDialog(title: Text(tr('Download')), children: [
+              if (episode != null)
+                TvDialogOption(
+                    autofocus: true,
+                    onPressed: () => Navigator.pop(ctx, 'episode'),
+                    child: Text(already != null
+                        ? '${_episodeCode(episode)} · ${downloadButtonLook(already).$2}'
+                        : tr('This episode: {code}',
+                            {'code': _episodeCode(episode)}))),
+              if (season != null && missing.isNotEmpty)
+                TvDialogOption(
+                    autofocus: episode == null,
+                    onPressed: () => Navigator.pop(ctx, 'season'),
+                    child: Text(missing.length == seasonEpisodes.length
+                        ? tr('{season}: all {n} episodes', {
+                            'season': _seasonLabel(season),
+                            'n': missing.length
+                          })
+                        : tr('{season}: the {n} not downloaded yet', {
+                            'season': _seasonLabel(season),
+                            'n': missing.length
+                          }))),
+              TvDialogOption(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(tr('Cancel'))),
+            ]));
+    if (!mounted || choice == null) return;
+    if (choice == 'episode' && already != null) {
+      await downloadMenu(context, already);
+      return;
+    }
+    final episodes = choice == 'season' ? missing : [episode!];
+    setState(() => _preparingDownload = true);
+    try {
+      final custom = widget.downloadEpisodes;
+      final items = custom != null
+          ? await custom(context, episodes)
+          : _iptvDownloadItems(episodes);
+      if (items == null || items.isEmpty || !mounted) return;
+      await confirmDownload(context, items);
+    } finally {
+      if (mounted) setState(() => _preparingDownload = false);
+    }
+  }
+
+  List<DownloadItem> _iptvDownloadItems(List<Channel> episodes) {
+    final profile = context
+        .read<PlaylistManager>()
+        .profiles
+        .where((p) => p.id == widget.series.playlistId)
+        .firstOrNull;
+    return [
+      for (final e in episodes)
+        DownloadItem(
+          sourceId: e.id,
+          title: [
+            _episodeCode(e),
+            if (_episodeTitle(e) case final t?) t,
+          ].join(' · '),
+          group: widget.series.name,
+          url: e.url,
+          headers: e.httpHeaders,
+          playlistId: e.playlistId,
+          maxConnections: profile?.maxConnections ?? 1,
+          poster: _posterUrl,
+          durationSec: _details?.episodes[e.id]?.durationSeconds ?? 0,
+        ),
+    ];
   }
 
   void _goBack() {
@@ -1125,6 +1240,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
       if (widget.showFavorite) _favNode,
       if (follow != null) _notifyNode,
       if (watchItem != null) _watchListNode,
+      if (_canDownload) _downloadNode,
       if (_castNames.isNotEmpty || _canCast) _castNode,
     ];
     void move(int delta) {
@@ -1202,6 +1318,16 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
           item: watchItem,
           focusNode: _watchListNode,
           scale: s,
+          onFocused: _revealTop,
+        ),
+      if (_canDownload)
+        DetailPillButton(
+          focusNode: _downloadNode,
+          icon:
+              _preparingDownload ? Icons.hourglass_top : Icons.download_rounded,
+          label: tr('Download'),
+          scale: s,
+          onPressed: _downloadMenu,
           onFocused: _revealTop,
         ),
       if (_castNames.isNotEmpty || _canCast)

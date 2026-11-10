@@ -15,6 +15,7 @@ import '../services/storage_service.dart';
 import '../services/tracker_sync.dart';
 import '../widgets/cast_bubbles.dart';
 import '../widgets/detail_header.dart';
+import '../widgets/download_sheet.dart';
 import '../widgets/watch_list_button.dart';
 import '../services/vesper_ai/watch_list.dart';
 import 'archive_playback.dart';
@@ -56,6 +57,7 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
   final _discoveryNode = FocusNode(debugLabel: 'archive-discovery');
   final _castNode = FocusNode(debugLabel: 'archive-cast');
   final _watchListNode = FocusNode(debugLabel: 'archive-watch-list');
+  final _downloadNode = FocusNode(debugLabel: 'archive-download');
   final _pageScroll = ScrollController();
   bool _showCast = false;
 
@@ -98,6 +100,7 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
     _restartNode.dispose();
     _castNode.dispose();
     _watchListNode.dispose();
+    _downloadNode.dispose();
     _discoveryNode.dispose();
     _pageScroll.dispose();
     super.dispose();
@@ -311,11 +314,18 @@ class _ArchiveDetailScreenState extends State<ArchiveDetailScreen> {
               onPressed: () => _play(restart: true),
             ),
           WatchListButton(
-            item: WatchListItem(
-                hub: HubTitle(widget.source.manifestUrl, meta)),
+            item: WatchListItem(hub: HubTitle(widget.source.manifestUrl, meta)),
             focusNode: _watchListNode,
             scale: 1,
           ),
+          if (downloadsAvailable)
+            DownloadButton(
+              sourceId: movieId,
+              focusNode: _downloadNode,
+              scale: 1,
+              build: (context) => archiveDownloadItems(context,
+                  source: widget.source, meta: _meta),
+            ),
           if (meta.cast.isNotEmpty)
             DetailPillButton(
               focusNode: _castNode,

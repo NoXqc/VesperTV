@@ -3014,4 +3014,177 @@ const Map<String, String> kEs = {
       "Seguir viendo y Mi lista en la fila Watch Next del launcher, más una fila con tus canales favoritos. Para launchers de Android TV como Projectivy.",
   "Continue watching and favourites on the TV launcher":
       "Seguir viendo y favoritos en el launcher de la TV",
+  // Downloads and the network folder (recording_service.dart).
+  "Like watching":
+      "Como al ver",
+  "No limit":
+      "Sin límite",
+  "{n} Mbit/s":
+      "{n} Mbit/s",
+  "Tonight at {time}":
+      "Esta noche a las {time}",
+  "Today at {time}":
+      "Hoy a las {time}",
+  "Tomorrow at {time}":
+      "Mañana a las {time}",
+  "Download set for {when}. It shows in Recordings.":
+      "Descarga programada: {when}. Aparece en Grabaciones.",
+  "Downloading. It shows in Recordings.":
+      "Descargando. Aparece en Grabaciones.",
+  "About {size}":
+      "Unos {size}",
+  "about {time} at your speed limit ({speed})":
+      "unos {time} con su límite de velocidad ({speed})",
+  "Network folder":
+      "Carpeta de red",
+  "{free} free":
+      "{free} libres",
+  "Download \"{title}\"":
+      "Descargar «{title}»",
+  "Download {n} episodes":
+      "Descargar {n} episodios",
+  "A download uses one connection to your provider. On an account with only one, it waits while you watch. It can slow your stream on Wi-Fi, and some providers don't allow downloads.":
+      "Una descarga usa una conexión de su proveedor. En una cuenta con solo una, espera mientras usted mira. Puede ralentizar su transmisión por Wi-Fi, y algunos proveedores no permiten descargas.",
+  "It can slow what you watch on Wi-Fi while it runs.":
+      "Mientras corre, puede ralentizar lo que ve por Wi-Fi.",
+  "Best: download overnight.":
+      "Lo mejor: descargar de noche.",
+  "Saves to {where}":
+      "Se guarda en: {where}",
+  "◀ ▶ change the time":
+      "◀ ▶ cambiar la hora",
+  "Tap the arrows to change the time":
+      "Toque las flechas para cambiar la hora",
+  "Download now":
+      "Descargar ahora",
+  "Waits while you watch, if your account has one connection":
+      "Espera mientras mira, si su cuenta tiene una conexión",
+  "Download":
+      "Descargar",
+  "Download at {time}":
+      "Descarga a las {time}",
+  "Waiting to download":
+      "Esperando para descargar",
+  "Downloading {pct}%":
+      "Descargando {pct} %",
+  "Downloading {size}":
+      "Descargando {size}",
+  "Downloaded":
+      "Descargado",
+  "Download stopped":
+      "Descarga detenida",
+  "Play what's downloaded":
+      "Reproducir lo descargado",
+  "{done} of {total}":
+      "{done} de {total}",
+  "Resume download":
+      "Reanudar descarga",
+  "Instead of {time}":
+      "En vez de a las {time}",
+  "Cancel download":
+      "Cancelar descarga",
+  "Stop download":
+      "Detener descarga",
+  "Keeps what has been downloaded":
+      "Conserva lo ya descargado",
+  "Delete download":
+      "Eliminar descarga",
+  "Not enough storage space":
+      "No hay suficiente espacio",
+  "Bigger than the space left for recordings":
+      "Más grande que el espacio que queda para grabaciones",
+  "The source sent a short clip, not the file. Try again later or pick another stream.":
+      "La fuente envió un clip corto, no el archivo. Inténtelo más tarde o elija otra transmisión.",
+  "This stream is a playlist (HLS), not a file. It can't be downloaded.":
+      "Esta transmisión es una lista (HLS), no un archivo. No se puede descargar.",
+  "Connecting…":
+      "Conectando…",
+  "Connected. {free} free.":
+      "Conectado. {free} libres.",
+  "Connected.":
+      "Conectado.",
+  "Couldn't use this folder: {reason}":
+      "No se pudo usar esta carpeta: {reason}",
+  "Saved. Recordings and downloads go to the network folder.":
+      "Guardado. Las grabaciones y descargas van a la carpeta de red.",
+  "Record and download to a shared folder on a computer or NAS on your network, instead of this device. On Windows: right-click a folder > Properties > Sharing.":
+      "Grabe y descargue en una carpeta compartida de un ordenador o NAS de su red, en lugar de este dispositivo. En Windows: clic derecho en una carpeta > Propiedades > Compartir.",
+  "The user name and password stay on this device. Wi-Fi carries the video twice (in, then to the folder), so a wired connection or overnight downloads work best.":
+      "El usuario y la contraseña se quedan en este dispositivo. El Wi-Fi lleva el vídeo dos veces (entrada y luego a la carpeta), así que una conexión por cable o las descargas de noche funcionan mejor.",
+  "Shared folder":
+      "Carpeta compartida",
+  "Folder inside it (made if missing)":
+      "Carpeta dentro (se crea si falta)",
+  "User name (empty for a guest share)":
+      "Usuario (vacío para un recurso de invitado)",
+  "Test":
+      "Probar",
+  "Save and use it":
+      "Guardar y usarla",
+  "Network folders don't work on this device":
+      "Las carpetas de red no funcionan en este dispositivo",
+  "Wrong user name or password, or no access to this folder":
+      "Usuario o contraseña incorrectos, o sin acceso a esta carpeta",
+  "No shared folder with that name":
+      "No hay carpeta compartida con ese nombre",
+  "The computer didn't answer":
+      "El ordenador no respondió",
+  "Address not found":
+      "Dirección no encontrada",
+  "Can't reach the computer (is it on, and sharing turned on?)":
+      "No se puede llegar al ordenador (¿está encendido y con el uso compartido activado?)",
+  "Address and shared folder are needed":
+      "Se necesitan la dirección y la carpeta compartida",
+  "About the video's own bitrate: to the provider it looks like someone watching. The safest choice.":
+      "Más o menos la tasa de bits del vídeo: para el proveedor parece alguien mirando. La opción más segura.",
+  "As fast as the source sends. Some providers don't allow this.":
+      "Tan rápido como envíe la fuente. Algunos proveedores no lo permiten.",
+  "At most this speed.":
+      "Como máximo esta velocidad.",
+  "Downloads":
+      "Descargas",
+  "Speed limit: {speed}":
+      "Límite de velocidad: {speed}",
+  "Always slower while you watch something.":
+      "Siempre más lento mientras mira algo.",
+  "Suggested start: {time}":
+      "Inicio sugerido: {time}",
+  "What Download offers first: overnight, while nobody watches":
+      "Lo que Descargar ofrece primero: de noche, cuando nadie mira",
+  "Save recordings and downloads to":
+      "Guardar grabaciones y descargas en",
+  "Set up a network folder":
+      "Configurar una carpeta de red",
+  "Network folder settings":
+      "Ajustes de la carpeta de red",
+  "A shared folder on a computer or NAS (SMB)":
+      "Una carpeta compartida en un ordenador o NAS (SMB)",
+  "Downloads: the Download button on a movie or show page.":
+      "Descargas: el botón Descargar en la página de una película o serie.",
+  "Downloading":
+      "Descargando",
+  "Waiting":
+      "En espera",
+  "Waits for a free connection":
+      "Espera una conexión libre",
+  "Waiting its turn":
+      "Esperando su turno",
+  "Downloaded · {size}":
+      "Descargado · {size}",
+  "Interrupted · {pct}":
+      "Interrumpida · {pct}",
+  "Stopped · {pct}":
+      "Detenida · {pct}",
+  "This episode: {code}":
+      "Este episodio: {code}",
+  "{season}: all {n} episodes":
+      "{season}: los {n} episodios",
+  "{season}: the {n} not downloaded yet":
+      "{season}: los {n} aún sin descargar",
+  "{n} without a downloadable stream, left out.":
+      "{n} sin transmisión descargable, omitidos.",
+  "Typing a folder address and password with a remote is painful. Scan this code with your phone camera and fill them in there — they appear here for you to check and save.":
+      "Escribir la dirección de una carpeta y una contraseña con el mando es pesado. Escanee este código con la cámara del teléfono y rellénelos allí — aparecen aquí para que los revise y guarde.",
+  "Check the details here, then press Save and use it.":
+      "Revise los datos aquí y pulse Guardar y usarla.",
 };

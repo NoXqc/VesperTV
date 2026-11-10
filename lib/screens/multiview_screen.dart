@@ -14,6 +14,7 @@ import '../services/multiview_sports.dart';
 import '../services/playback_service.dart'
     show PlaybackService, learnHlsHost, streamController, unlearnHlsUrl;
 import '../services/playlist_manager.dart';
+import '../services/recording_service.dart';
 import '../services/real_4k_channels.dart';
 import '../services/storage_service.dart';
 import '../services/subtitle_tracks.dart';
@@ -758,6 +759,7 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
         cell.channel = channel;
         cell.controller = newController;
       });
+      _reportTiles();
     } catch (e) {
       unawaited(newController.dispose());
       // A `.ts` that was really HLS (see learnHlsHost): once more as HLS;
@@ -1116,8 +1118,21 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
     if (mounted) Navigator.of(context).pop(back);
   }
 
+  /// Each tile holds one provider connection: downloads on the same
+  /// account wait (RecordingService.multiviewChanged).
+  void _reportTiles() {
+    if (!RecordingService.supported) return;
+    RecordingService.instance.multiviewChanged([
+      for (final c in _cells)
+        if (c.controller != null && c.channel != null) c.channel!.playlistId,
+    ]);
+  }
+
   @override
   void dispose() {
+    if (RecordingService.supported) {
+      RecordingService.instance.multiviewChanged(const []);
+    }
     _statsTimer?.cancel();
     _headerTimer?.cancel();
     _headerScope.removeListener(_onHeaderFocus);

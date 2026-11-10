@@ -486,9 +486,30 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     return true;
   }
 
-  Future<String?> _recordingTapUrl(Channel channel) async {
-    final rec = RecordingService.instance.recordingOf(channel);
-    return rec == null ? null : RecordingService.instance.teeUrl(rec);
+  /// A download using this account's last connection lets go first.
+  Future<bool> _confirmOpen(Channel channel) async {
+    if (!await _confirmOverRecording(channel)) return false;
+    await RecordingService.instance.yieldConnection(channel);
+    return true;
+  }
+
+  Future<String?> _recordingTapUrl(Channel channel) =>
+      RecordingService.instance.playbackUrl(channel);
+
+  /// Downloads slow down while something plays from the network, and give
+  /// the player its account's connection (RecordingService.playerChanged).
+  void _reportPlayback() {
+    final c = _playbackService.currentChannel;
+    final rs = RecordingService.instance;
+    final network = c != null &&
+        !Channel.isRecordingId(c.rawId) &&
+        c.url.startsWith('http') &&
+        rs.recordingOf(c) == null;
+    final account =
+        c != null && _playlistManager.profiles.any((p) => p.id == c.playlistId)
+            ? c.playlistId
+            : '';
+    rs.playerChanged(playing: network, account: account);
   }
 
   Future<void> _prepareProgrammeRecording(RecordingEntry entry) async {
@@ -700,7 +721,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
       _playbackService = PlaybackService(_storage, _playlistManager)
         ..catchupGuide = ((live) => _epgService.getPrograms(live.epgId));
       if (RecordingService.supported) {
-        PlaybackService.confirmOpen = _confirmOverRecording;
+        PlaybackService.confirmOpen = _confirmOpen;
+        _playbackService.addListener(_reportPlayback);
         PlaybackService.openUrlFor = _recordingTapUrl;
         RecordingService.instance.prepareProgramme = _prepareProgrammeRecording;
       }
@@ -811,8 +833,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
               : HubTitle(found.$1.manifestUrl, found.$2);
         },
         clearHubHistory: _archiveService.clearHistory,
-        hub: AppVesperHub(
-            navigatorKey: _navigatorKey, archive: _archiveService),
+        hub:
+            AppVesperHub(navigatorKey: _navigatorKey, archive: _archiveService),
         profiles: AppVesperProfiles(
             navigatorKey: _navigatorKey,
             viewers: _viewerProfileService,
@@ -822,9 +844,9 @@ class _NoxIptvAppState extends State<NoxIptvApp>
             playback: _playbackService,
             prefs: _preferences),
       ));
-      VesperAi.instance.openPanelHandler =
-          ({bool listen = true, String? text}) =>
-              _openVesper(listen: listen, text: text);
+      VesperAi.instance.openPanelHandler = (
+              {bool listen = true, String? text}) =>
+          _openVesper(listen: listen, text: text);
       VoiceInput.instance
         ..speakReplies = _storage.getAiSpeakReplies
         ..onAssist = _openVesper
@@ -1551,8 +1573,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
               // Windows-only equivalent — see DesktopPlayerScreen's own
               // doc comment for why it's a separate widget/holder rather
               // than reusing LiveResumeHint/PlaybackService.
-              if (isDesktop)
-                DesktopLiveResumeHint(navigatorKey: _navigatorKey),
+              if (isDesktop) DesktopLiveResumeHint(navigatorKey: _navigatorKey),
               GameReminderOverlay(onGameStarting: _offerStartingGame),
               const ProgrammeReminderOverlay(),
               const GoalsAlertOverlay(),

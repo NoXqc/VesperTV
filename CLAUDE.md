@@ -383,6 +383,15 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-09 - Downloads + network folder (`claude/downloads`, test +699, not merged/released):** owner
+  asked for offline watching. Download button on IPTV/Media Hub movie pages and show pages (episode or season),
+  sheet warns (provider connection, Wi-Fi, providers that forbid it) and suggests **Tonight at 2:00** (Left/Right
+  change it). Native `Downloader.kt` (one at a time, Range resume, survives reboot via the recorder scheduler,
+  speed limit Like watching/10/25/50/none, 5 Mbit/s while anything plays, waits while the player/Multiview/a
+  recording uses the account's last connection). **Network folder** (SMB, `NetworkFolder.kt`, smbj 0.14.0) for
+  recordings and downloads, played back through a 127.0.0.1 Range server. Not device-tested. Details and test
+  checklist: `dev-notes/downloads.md`. Owner tested +699 ("works well"); +700 adds From phone to the
+  network folder. Next build > 700.
 - **Claude, 2026-11-09 - phone player in the iPhone player's look (main, unreleased, not pushed):** owner photos
   (iPhone touch player vs Android phone bar). `PlayerControls.touchLayout` (PlayerScreen passes `_touch`): no title,
   no transport in the bar; elapsed | seek | length, badges left + buttons right (portrait: buttons on their own line).
