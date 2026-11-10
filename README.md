@@ -82,7 +82,7 @@ Grab the latest release from the [Releases](../../releases) page or
 
 - **Scores & schedule** for NHL, NFL, NBA, MLB, WNBA, college football, MLS, Premier League,
   Champions League, LaLiga, Bundesliga, Serie A and Ligue 1 — plus a League manager with 70+
-  more (college basketball, hockey and soccer, AHL, ECHL, CFL, rugby, cricket, PDC darts,
+  more (college basketball, hockey and soccer, AHL, ECHL, QMJHL, CFL, rugby, cricket, PDC darts,
   golf, tennis, UFC, boxing, WWE, AEW, F1, NASCAR…) — live scores, records, a day strip from
   yesterday to next week, and a spoiler switch that hides every score.
 - **Finds the channel for you:** each game is matched to a channel in *your* playlist (event

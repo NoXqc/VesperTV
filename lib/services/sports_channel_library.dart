@@ -233,10 +233,12 @@ class SportsChannelLibrary {
       'Sport': sports.isEmpty ? ['Unknown'] : sports,
       'League': [
         for (final token in (RegExp(
-                r'\b(NFL|NBA|WNBA|NHL|MLB|MLS|CFL|AHL|ECHL|ATP|WTA|PGA|F1)\b')
+                r'\b(NFL|NBA|WNBA|NHL|MLB|MLS|CFL|AHL|ECHL|QMJHL|LHJMQ|ATP|WTA|PGA|F1)\b')
             .allMatches(text)))
           for (final l in [...kSportsLeagues, ...kSportsLeagueBank])
-            if (l.shortName.toUpperCase() == token.group(1)) l.id
+            if (l.shortName.toUpperCase() ==
+                (token.group(1) == 'LHJMQ' ? 'QMJHL' : token.group(1)))
+              l.id
       ],
     };
   }

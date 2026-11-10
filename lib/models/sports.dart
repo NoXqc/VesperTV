@@ -41,7 +41,15 @@ class SportsLeague {
     this.homeTags = const [],
     this.espnGroup,
     this.espnScoreboardGroup,
+    this.cityNames = false,
   });
+
+  /// One team per city: event channels may name a game by the cities
+  /// alone ("QMJHL 05: Cape Breton @ Quebec", owner's provider,
+  /// 2026-11-09), so the channel matcher accepts the city (the team's name
+  /// without its nickname) as well as the team. Never for leagues with
+  /// two teams in a city (New York, Los Angeles).
+  final bool cityNames;
 
   /// ESPN `groups=` sent on scoreboard calls only (never standings) when
   /// [espnGroup] is unset. College basketball's plain scoreboard lists only
@@ -1464,6 +1472,23 @@ const List<SportsLeague> kSportsLeagueBank = [
           'https://r2.thesportsdb.com/images/media/league/badge/im9a7w1783325344.png',
       region: 'Hockey',
       hasStandings: false),
+  // QMJHL / LHJMQ (owner request, 2026-11-09): not on ESPN either.
+  // TheSportsDB 5161, checked 2026-11-09: weekly rounds of ~19 games (a
+  // capped day loads its round), finals as FT / AOT, no table on the free
+  // key. Teams show by nickname (sportsDbTeamShortName) so French guide
+  // titles ("Remparts de Québec") match the English feed names.
+  SportsLeague(
+      id: 'hockey.qmjhl',
+      espnPath: 'hockey/qmjhl',
+      sportsDbId: '5161',
+      name: 'QMJHL / LHJMQ',
+      shortName: 'QMJHL',
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/8jqk3a1786013896.png',
+      region: 'Hockey',
+      hasStandings: false,
+      homeTags: ['ca'],
+      cityNames: true),
   SportsLeague(
       id: 'australian-football.afl',
       espnPath: 'australian-football/afl',
