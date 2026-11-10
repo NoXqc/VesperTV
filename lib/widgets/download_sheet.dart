@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../l10n/l10n.dart';
 import '../screens/player_screen.dart';
 import '../services/device_memory_service.dart';
+import '../services/network_files.dart';
 import '../services/playback_service.dart';
 import '../services/recording_service.dart';
 import '../utils/time_format.dart';
@@ -448,4 +449,51 @@ Future<void> playDownload(BuildContext context, RecordingEntry r) async {
   if (!context.mounted) return;
   await Navigator.of(context)
       .push(PlayerPageRoute(builder: (_) => PlayerScreen(channel: channel)));
+}
+
+/// A video in the network folder that another device saved: copy it to
+/// this device (offline: a trip, the car) or play it from the share.
+Future<void> networkFileMenu(BuildContext context, NetworkFile f) async {
+  final action = await showGlassMenu<String>(
+    context: context,
+    builder: (context) => SwallowHeldActivate(
+      child: GlassMenuDialog(
+        title: Text(f.group.isEmpty ? f.title : '${f.group} · ${f.title}',
+            maxLines: 2, overflow: TextOverflow.ellipsis),
+        content: SizedBox(
+          width: 460,
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            TvMenuTile(
+              autofocus: true,
+              icon: Icons.download_for_offline_outlined,
+              title: tr('Copy to this device'),
+              subtitle: tr('{size}, to watch without the network',
+                  {'size': _size(f.size)}),
+              onTap: () => Navigator.of(context).pop('copy'),
+            ),
+            TvMenuTile(
+              icon: Icons.play_arrow,
+              title: tr('Play from the network folder'),
+              onTap: () => Navigator.of(context).pop('play'),
+            ),
+          ]),
+        ),
+      ),
+    ),
+  );
+  if (!context.mounted) return;
+  switch (action) {
+    case 'copy':
+      await RecordingService.instance.copyToDevice(f);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content:
+              Text(tr('Copying to this device. It shows under Downloading.'))));
+    case 'play':
+      final channel = f.toChannel();
+      await context.read<PlaybackService>().play(channel);
+      if (!context.mounted) return;
+      await Navigator.of(context).push(
+          PlayerPageRoute(builder: (_) => PlayerScreen(channel: channel)));
+  }
 }

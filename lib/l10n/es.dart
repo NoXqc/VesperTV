@@ -1773,6 +1773,30 @@ const Map<String, String> kEs = {
   "Recorded": "Grabados",
   "{used} of {cap} GB used": "{used} usados de {cap} GB",
   "{size} in the network folder": "{size} en la carpeta de red",
+  "Copy to this device":
+      "Copiar a este dispositivo",
+  "{size}, to watch without the network":
+      "{size}, para ver sin red",
+  "Play from the network folder":
+      "Reproducir desde la carpeta de red",
+  "Copying to this device. It shows under Downloading.":
+      "Copiando a este dispositivo. Aparece en Descargando.",
+  "On the network folder":
+      "En la carpeta de red",
+  "Looking in the network folder…":
+      "Buscando en la carpeta de red…",
+  "The network folder can't be reached: {reason}":
+      "No se puede acceder a la carpeta de red: {reason}",
+  "Nothing new there. Downloads and recordings that another device saves there show up here.":
+      "Nada nuevo. Las descargas y grabaciones que otro dispositivo guarde allí aparecen aquí.",
+  "Save only":
+      "Solo guardar",
+  "Saved. Its files show in Recordings; this device keeps saving to itself.":
+      "Guardado. Sus archivos aparecen en Grabaciones; este dispositivo sigue guardando en sí mismo.",
+  "Taking a tablet on a trip? Set up the same folder on it with Save only, then copy what the TV saved there: Recordings > On the network folder.":
+      "¿Una tableta de viaje? Configura en ella la misma carpeta con Solo guardar y copia lo que la TV guardó allí: Grabaciones > En la carpeta de red.",
+  "The file is no longer in the network folder":
+      "El archivo ya no está en la carpeta de red",
   "REC · {size}": "GRAB · {size}",
   "Waiting for a channel": "Esperando un canal",
   "Interrupted · {size}": "Interrumpida · {size}",

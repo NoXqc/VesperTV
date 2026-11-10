@@ -10,6 +10,7 @@ import '../models/channel.dart';
 import '../models/epg_program.dart';
 import '../models/playlist_profile.dart';
 import '../models/sports.dart';
+import 'network_files.dart';
 import 'playback_service.dart';
 import 'sports_channel_matcher.dart';
 import 'sports_service.dart';
@@ -232,6 +233,14 @@ class RecordingService extends ChangeNotifier {
   /// App storage's Recordings folder: where a network recording goes when
   /// the network folder can't be reached as it starts.
   String? _devicePath;
+
+  /// The chosen folder when it's on this device (USB / SD too), else app
+  /// storage: where a copy from the network folder goes.
+  Future<RecordingVolume?> _deviceVolume() async {
+    final vols = (await volumes()).where((v) => !v.network);
+    return vols.where((v) => v.path == settings.folder).firstOrNull ??
+        vols.firstOrNull;
+  }
 
   /// The chosen folder when it's still mounted, else app storage.
   Future<RecordingVolume?> currentVolume() async {
@@ -654,9 +663,11 @@ class RecordingService extends ChangeNotifier {
       await stop(r);
     }
     if (r.onNetwork) {
-      try {
-        await _channel.invokeMethod<bool>('deleteFile', {'path': r.path});
-      } catch (_) {}
+      for (final p in [r.path, networkDetailsPath(r.path)]) {
+        try {
+          await _channel.invokeMethod<bool>('deleteFile', {'path': p});
+        } catch (_) {}
+      }
     }
     for (final p in [if (!r.onNetwork) r.path, statusPathOf(r)]) {
       try {
@@ -729,6 +740,7 @@ class RecordingService extends ChangeNotifier {
               'maxConnections': r.maxConnections,
               'durationSec': r.durationSec,
             },
+            if (r.onNetwork) 'details': jsonEncode(detailsOf(r)),
           },
     ];
     debugPrint('RecordingService: ${due.length} recording(s) sent to the '
@@ -797,6 +809,119 @@ class RecordingService extends ChangeNotifier {
       await _save();
       notifyListeners();
     }
+    unawaited(_saveMissingDetails());
+  }
+
+  // ------------------------------------- the network folder, other devices
+
+  /// What another device browsing the network folder shows for [r]: the
+  /// file's `.vespertv/<name>.json` ([networkDetailsPath]).
+  static Map<String, dynamic> detailsOf(RecordingEntry r) => {
+        'v': 1,
+        'kind': r.isDownload
+            ? 'download'
+            : r.isChannel
+                ? 'channel'
+                : 'game',
+        'title': r.isChannel && r.program.isNotEmpty ? r.program : r.title,
+        if (r.league.isNotEmpty) 'group': r.league,
+        if (r.isChannel && r.channelName.isNotEmpty) 'group': r.channelName,
+        if (r.poster != null) 'poster': r.poster,
+        if (!r.isDownload && (r.logo ?? r.channelLogo) != null)
+          'logo': r.logo ?? r.channelLogo,
+        if (r.durationSec > 0) 'durationSec': r.durationSec,
+        'date': r.gameStart.millisecondsSinceEpoch,
+      };
+
+  bool _savingDetails = false;
+
+  /// Finished files in the network folder without their details file yet
+  /// (saved before details existed, or the native write failed): written
+  /// now, once each.
+  Future<void> _saveMissingDetails() async {
+    if (_savingDetails || !available) return;
+    _savingDetails = true;
+    var changed = false;
+    try {
+      for (final r in [..._items]) {
+        final finished = r.isDownload
+            ? r.complete
+            : (r.state == RecState.done || r.state == RecState.stopped) &&
+                r.bytes > 0;
+        if (!r.onNetwork || r.detailsSaved || !finished) continue;
+        final ok = await _channel.invokeMethod<bool>('networkWriteText', {
+              'path': networkDetailsPath(r.path),
+              'text': jsonEncode(detailsOf(r)),
+            }) ??
+            false;
+        // The share is away: try again next time.
+        if (!ok) break;
+        r.detailsSaved = true;
+        changed = true;
+      }
+    } catch (e) {
+      debugPrint('RecordingService: details not saved: ${e.runtimeType}');
+    } finally {
+      _savingDetails = false;
+    }
+    if (changed) await _save();
+  }
+
+  /// The network folder's videos ([NetworkFile]), or why it can't be read.
+  Future<({List<NetworkFile> files, String? error})> networkFiles() async {
+    if (!available || settings.network == null) {
+      return (files: const <NetworkFile>[], error: null);
+    }
+    try {
+      final r = await _channel
+          .invokeMapMethod<String, dynamic>('networkList')
+          .timeout(const Duration(seconds: 60));
+      if (r?['error'] case final String e) {
+        return (files: const <NetworkFile>[], error: e);
+      }
+      final list = jsonDecode('${r?['files'] ?? '[]'}') as List;
+      return (
+        files: [
+          for (final m in list)
+            if (m is Map) NetworkFile.fromJson(m),
+        ].whereType<NetworkFile>().toList(),
+        error: null
+      );
+    } catch (e) {
+      return (files: const <NetworkFile>[], error: '${e.runtimeType}');
+    }
+  }
+
+  /// The share's videos worth offering here: see [networkFilesToShow].
+  List<NetworkFile> networkFilesToOffer(List<NetworkFile> all) =>
+      networkFilesToShow(all, ownPaths: {
+        for (final r in _items)
+          if (r.onNetwork && r.state != RecState.cancelled) r.path
+      }, copiedFrom: {
+        for (final r in _items)
+          if (r.isDownload &&
+              r.url.startsWith(networkScheme) &&
+              r.state != RecState.cancelled)
+            r.url
+      });
+
+  /// Copies [file] from the network folder to this device (never back to
+  /// the share, whatever Save to says): a download like any other, run
+  /// now, one at a time, resumed if the share drops.
+  Future<RecordingEntry?> copyToDevice(NetworkFile file) async {
+    final added = await download([
+      DownloadItem(
+        sourceId: 'net:${file.path}',
+        title: file.title,
+        group: file.group,
+        url: file.path,
+        poster: file.poster,
+        durationSec: file.durationSec,
+        totalBytes: file.size,
+        fileExtension: file.extension,
+      ),
+    ], toDevice: true);
+    return added.firstOrNull;
   }
 
   // --------------------------------------------------- connection check
@@ -872,10 +997,10 @@ class RecordingService extends ChangeNotifier {
   /// Queues [items] (one at a time, in this order) to start at [at], or
   /// now. Titles already downloaded or queued are left as they are.
   Future<List<RecordingEntry>> download(List<DownloadItem> items,
-      {DateTime? at}) async {
+      {DateTime? at, bool toDevice = false}) async {
     if (!available) throw UnsupportedError('Downloads require Android');
     await init();
-    final vol = await currentVolume();
+    final vol = toDevice ? await _deviceVolume() : await currentVolume();
     final start = at ?? _now();
     final added = <RecordingEntry>[];
     var n = 0;
@@ -1238,6 +1363,7 @@ class RecordingEntry {
     this.headers = const {},
     this.maxConnections = 0,
     this.note = '',
+    this.detailsSaved = false,
   });
 
   final String id;
@@ -1297,6 +1423,10 @@ class RecordingEntry {
   /// 'connection' (the account's connection is in use).
   String note;
 
+  /// A file in the network folder: its details file for other devices is
+  /// written ([RecordingService.detailsOf]).
+  bool detailsSaved;
+
   bool get isDownload => kind == 'download';
 
   /// A plain channel recording (no game behind it).
@@ -1349,6 +1479,7 @@ class RecordingEntry {
         if (headers.isNotEmpty) 'headers': headers,
         if (maxConnections > 0) 'maxConnections': maxConnections,
         if (note.isNotEmpty) 'note': note,
+        if (detailsSaved) 'detailsSaved': true,
       };
 
   factory RecordingEntry.fromJson(Map<String, dynamic> m) {
@@ -1393,6 +1524,7 @@ class RecordingEntry {
       },
       maxConnections: (m['maxConnections'] as num?)?.toInt() ?? 0,
       note: m['note'] as String? ?? '',
+      detailsSaved: m['detailsSaved'] == true,
     );
   }
 }
@@ -1410,6 +1542,7 @@ class DownloadItem {
     this.poster,
     this.durationSec = 0,
     this.totalBytes = 0,
+    this.fileExtension,
   });
 
   /// The title's channel id (IPTV `playlist::xt_vod_…`, Media Hub
@@ -1429,8 +1562,12 @@ class DownloadItem {
   final int durationSec;
   final int totalBytes;
 
+  /// Known from a file name (a copy from the network folder).
+  final String? fileExtension;
+
   /// The file's extension from its link (`.mkv`, `.mp4`…), else `ts`.
   String get extension {
+    if (fileExtension case final String e when e.isNotEmpty) return e;
     final path = Uri.tryParse(url)?.path ?? '';
     final m = RegExp(r'\.([A-Za-z0-9]{2,4})$').firstMatch(path);
     final ext = m?.group(1)?.toLowerCase();

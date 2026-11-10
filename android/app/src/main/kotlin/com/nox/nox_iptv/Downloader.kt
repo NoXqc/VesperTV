@@ -62,6 +62,8 @@ object DownloadPolicy {
 
     /** Bytes per second for [d]; Long.MAX_VALUE = no limit. */
     fun rate(d: Download): Long {
+        // A copy from the network folder: the home network, no provider.
+        if (d.fromNetwork) return Long.MAX_VALUE
         var r = when (speed) {
             "none" -> Long.MAX_VALUE
             "10" -> 1_250_000L
@@ -116,6 +118,12 @@ class Download(
     private val headers: Map<String, String> = item.optJSONObject("headers")?.let { h ->
         h.keys().asSequence().associateWith { h.optString(it) }
     } ?: emptyMap()
+
+    /** Title, poster… written beside a finished file in the network folder. */
+    private val details: String? = item.optString("details", "").ifEmpty { null }
+
+    /** Copying a file from the network folder to this device. */
+    val fromNetwork = NetworkFolder.isSmb(url)
 
     @Volatile var bytes = 0L
     @Volatile var total = 0L
@@ -183,7 +191,8 @@ class Download(
             } catch (e: Throwable) {
                 if (stopReason != null) break
                 error = when {
-                    NetworkFolder.isSmb(path) && e !is IOException -> NetworkFolder.describe(e)
+                    (NetworkFolder.isSmb(path) || fromNetwork) && e !is IOException ->
+                        NetworkFolder.describe(e)
                     e is IOException && !e.message.isNullOrBlank() -> e.message!!
                     else -> e.toString()
                 }
@@ -203,6 +212,7 @@ class Download(
         }
         if (stopReason != null && state != "done" && state != "failed") state = stopReason!!
         writeStatus()
+        if (state == "done") NetworkFolder.writeDetails(context, path, details)
         onDone(this)
     }
 
@@ -247,12 +257,46 @@ class Download(
         throw IOException("too many redirects")
     }
 
+    /**
+     * A file in the network folder to this device: read from where the
+     * copy stopped. The share going away (left home, PC asleep) is a drop,
+     * retried like one.
+     */
+    private fun copyFromNetwork(target: RecTarget): Boolean {
+        var (input, size) = try {
+            NetworkFolder.input(context, url, bytes)
+        } catch (e: java.io.FileNotFoundException) {
+            throw Fatal("The file is no longer in the network folder")
+        }
+        var append = bytes > 0
+        if (bytes > size) {
+            // A different file under the same name: start over.
+            input.close()
+            bytes = 0
+            append = false
+            input = NetworkFolder.input(context, url, 0).first
+        }
+        total = size
+        input.use { stream ->
+            if (bytes >= total) return true
+            val free = target.freeBytes()
+            if (maxBytes in 1 until total) throw Fatal("Bigger than the space left for recordings")
+            if (free != Long.MAX_VALUE && free - (total - bytes) < minFreeBytes) {
+                throw Fatal("Not enough storage space")
+            }
+            target.open(append).use { out -> pump(stream, out, target) }
+        }
+        if (bytes < total) throw IOException("copy cut short")
+        return true
+    }
+
     /** One connection's worth; true when the whole file is written. */
     private fun transfer(target: RecTarget): Boolean {
         bytes = try { target.length() } catch (e: IOException) { throw e } catch (e: Throwable) {
             throw IOException(NetworkFolder.describe(e))
         }
         if (total > 0 && bytes >= total) return true
+        if (fromNetwork) return copyFromNetwork(target)
         val c = open(bytes)
         conn = c
         try {
@@ -304,7 +348,7 @@ class Download(
                 val free = target.freeBytes()
                 if (free != Long.MAX_VALUE && free - left < minFreeBytes) throw Fatal("Not enough storage space")
             }
-            target.open(append).use { out -> pump(c, out, target) }
+            target.open(append).use { out -> pump(c.inputStream, out, target) }
             if (total > 0 && bytes < total) throw IOException("connection closed early")
             return true
         } finally {
@@ -313,9 +357,8 @@ class Download(
         }
     }
 
-    private fun pump(c: HttpURLConnection, out: OutputStream, target: RecTarget) {
-        val input = c.inputStream
-        val buf = ByteArray(64 * 1024)
+    private fun pump(input: java.io.InputStream, out: OutputStream, target: RecTarget) {
+        val buf = ByteArray(if (fromNetwork) 1024 * 1024 else 64 * 1024)
         var windowStart = System.currentTimeMillis()
         var windowBytes = 0L
         var rate = DownloadPolicy.rate(this)

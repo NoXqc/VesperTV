@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../l10n/l10n.dart';
 import '../models/channel.dart';
+import '../services/network_files.dart';
 import '../services/recording_service.dart';
 import '../utils/constants.dart';
 import '../utils/time_format.dart';
@@ -35,11 +36,32 @@ class RecordingsScreen extends StatefulWidget {
 class _RecordingsScreenState extends State<RecordingsScreen> {
   final _service = RecordingService.instance;
 
+  /// The network folder's videos (other devices' downloads and
+  /// recordings): copied here for watching offline, or played from there.
+  List<NetworkFile> _netFiles = const [];
+  String? _netError;
+  bool _netLoading = false;
+
   @override
   void initState() {
     super.initState();
     _service.addListener(_changed);
-    unawaited(_service.init().then((_) => _service.refreshStatus()));
+    unawaited(_service.init().then((_) async {
+      await _service.refreshStatus();
+      await _loadNetwork();
+    }));
+  }
+
+  Future<void> _loadNetwork() async {
+    if (_service.settings.network == null) return;
+    setState(() => _netLoading = true);
+    final r = await _service.networkFiles();
+    if (!mounted) return;
+    setState(() {
+      _netLoading = false;
+      _netFiles = r.files;
+      _netError = r.error;
+    });
   }
 
   @override
@@ -205,6 +227,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
     final downloads = all.where((r) => r.isDownload && finished(r)).toList();
     final done = all.where((r) => !r.isDownload && finished(r)).toList();
     final auto = _service.autoTeam;
+    final offered = _service.networkFilesToOffer(_netFiles);
     final networkBytes =
         all.fold<int>(0, (s, r) => r.onNetwork ? s + r.bytes : s);
     var first = true;
@@ -265,7 +288,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
                       style: const TextStyle(color: Colors.white70)),
                 ]),
               ),
-            if (all.isEmpty)
+            if (all.isEmpty && offered.isEmpty && !_netLoading)
               Padding(
                 padding: const EdgeInsets.only(top: 40),
                 child: Text(
@@ -280,6 +303,8 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
             if (upcoming.isNotEmpty) section(tr('Scheduled'), upcoming),
             if (downloads.isNotEmpty) section(tr('Downloads'), downloads),
             if (done.isNotEmpty) section(tr('Recorded'), done),
+            if (_service.settings.network != null)
+              _networkSection(offered, autofocus: first),
             if (all.isNotEmpty)
               Text(
                 [
@@ -299,6 +324,70 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
       ),
     );
   }
+
+  /// "Network folder": what other devices saved there. OK = Copy to this
+  /// device / Play from the network folder.
+  Widget _networkSection(List<NetworkFile> files, {required bool autofocus}) {
+    Widget note(String text) => Padding(
+          padding: const EdgeInsets.only(top: 2, bottom: 6),
+          child: Text(text,
+              style: const TextStyle(color: Colors.white38, fontSize: 12)),
+        );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(tr('On the network folder').toUpperCase(),
+              style: const TextStyle(
+                  fontSize: 12, letterSpacing: 1.2, color: Colors.white54)),
+          const SizedBox(height: 8),
+          if (_netLoading && files.isEmpty)
+            note(tr('Looking in the network folder…'))
+          else if (_netError != null)
+            note(tr("The network folder can't be reached: {reason}",
+                {'reason': tr(_netError!)}))
+          else if (files.isEmpty)
+            note(tr(
+                'Nothing new there. Downloads and recordings that another device saves there show up here.'))
+          else
+            Wrap(children: [
+              for (var i = 0; i < files.length; i++)
+                _DownloadCard(
+                  entry: _displayEntry(files[i]),
+                  autofocus: autofocus && i == 0,
+                  status: _size(files[i].size),
+                  icon: Icons.folder_shared_outlined,
+                  onTap: () => networkFileMenu(context, files[i]),
+                  onHold: () => networkFileMenu(context, files[i]),
+                ),
+            ]),
+        ],
+      ),
+    );
+  }
+
+  /// A network file drawn like a download card (poster, title, show).
+  static RecordingEntry _displayEntry(NetworkFile f) => RecordingEntry(
+        id: f.path,
+        title: f.title,
+        league: f.group,
+        gameKey: '',
+        leagueId: '',
+        gameStart: f.modified,
+        startAt: f.modified,
+        endAt: f.modified,
+        channelId: '',
+        channelName: '',
+        playlistId: '',
+        url: '',
+        path: f.path,
+        kind: 'download',
+        poster: f.poster,
+        state: RecState.done,
+        bytes: f.size,
+        totalBytes: f.size,
+      );
 
   String _status(RecordingEntry r) {
     if (r.isDownload) return _downloadStatus(r);
@@ -346,6 +435,7 @@ class _DownloadCard extends StatefulWidget {
     required this.onTap,
     required this.onHold,
     this.autofocus = false,
+    this.icon,
   });
 
   final RecordingEntry entry;
@@ -353,6 +443,9 @@ class _DownloadCard extends StatefulWidget {
   final VoidCallback onTap;
   final VoidCallback onHold;
   final bool autofocus;
+
+  /// Instead of the download state's icon (a file in the network folder).
+  final IconData? icon;
 
   @override
   State<_DownloadCard> createState() => _DownloadCardState();
@@ -502,11 +595,12 @@ class _DownloadCardState extends State<_DownloadCard> {
                           ],
                           Row(children: [
                             Icon(
-                                r.complete
-                                    ? Icons.download_done_rounded
-                                    : active
-                                        ? Icons.downloading_rounded
-                                        : Icons.download_rounded,
+                                widget.icon ??
+                                    (r.complete
+                                        ? Icons.download_done_rounded
+                                        : active
+                                            ? Icons.downloading_rounded
+                                            : Icons.download_rounded),
                                 size: 14,
                                 color: bad ? Colors.redAccent : Colors.white60),
                             const SizedBox(width: 4),

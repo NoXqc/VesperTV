@@ -1779,6 +1779,30 @@ const Map<String, String> kIt = {
   "Recorded": "Registrati",
   "{used} of {cap} GB used": "{used} usati su {cap} GB",
   "{size} in the network folder": "{size} nella cartella di rete",
+  "Copy to this device":
+      "Copia su questo dispositivo",
+  "{size}, to watch without the network":
+      "{size}, da guardare senza rete",
+  "Play from the network folder":
+      "Riproduci dalla cartella di rete",
+  "Copying to this device. It shows under Downloading.":
+      "Copia su questo dispositivo in corso. Appare in Download in corso.",
+  "On the network folder":
+      "Nella cartella di rete",
+  "Looking in the network folder…":
+      "Ricerca nella cartella di rete…",
+  "The network folder can't be reached: {reason}":
+      "Impossibile raggiungere la cartella di rete: {reason}",
+  "Nothing new there. Downloads and recordings that another device saves there show up here.":
+      "Niente di nuovo. I download e le registrazioni salvati lì da un altro dispositivo appaiono qui.",
+  "Save only":
+      "Salva soltanto",
+  "Saved. Its files show in Recordings; this device keeps saving to itself.":
+      "Salvato. I suoi file appaiono in Registrazioni; questo dispositivo continua a salvare su se stesso.",
+  "Taking a tablet on a trip? Set up the same folder on it with Save only, then copy what the TV saved there: Recordings > On the network folder.":
+      "Un tablet in viaggio? Imposta su di esso la stessa cartella con Salva soltanto, poi copia ciò che la TV vi ha salvato: Registrazioni > Nella cartella di rete.",
+  "The file is no longer in the network folder":
+      "Il file non è più nella cartella di rete",
   "REC · {size}": "REG · {size}",
   "Waiting for a channel": "In attesa di un canale",
   "Interrupted · {size}": "Interrotta · {size}",

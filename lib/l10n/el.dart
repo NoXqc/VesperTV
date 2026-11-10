@@ -1728,6 +1728,30 @@ const Map<String, String> kEl = {
   "Recorded": "Εγγεγραμμένα",
   "{used} of {cap} GB used": "{used} από {cap} GB σε χρήση",
   "{size} in the network folder": "{size} στον φάκελο δικτύου",
+  "Copy to this device":
+      "Αντιγραφή σε αυτή τη συσκευή",
+  "{size}, to watch without the network":
+      "{size}, για προβολή χωρίς δίκτυο",
+  "Play from the network folder":
+      "Αναπαραγωγή από τον φάκελο δικτύου",
+  "Copying to this device. It shows under Downloading.":
+      "Αντιγραφή σε αυτή τη συσκευή. Εμφανίζεται στην ενότητα «Γίνεται λήψη».",
+  "On the network folder":
+      "Στον φάκελο δικτύου",
+  "Looking in the network folder…":
+      "Αναζήτηση στον φάκελο δικτύου…",
+  "The network folder can't be reached: {reason}":
+      "Ο φάκελος δικτύου δεν είναι προσβάσιμος: {reason}",
+  "Nothing new there. Downloads and recordings that another device saves there show up here.":
+      "Τίποτα νέο. Οι λήψεις και οι εγγραφές που αποθηκεύει εκεί άλλη συσκευή εμφανίζονται εδώ.",
+  "Save only":
+      "Μόνο αποθήκευση",
+  "Saved. Its files show in Recordings; this device keeps saving to itself.":
+      "Αποθηκεύτηκε. Τα αρχεία του εμφανίζονται στις Εγγραφές· αυτή η συσκευή συνεχίζει να αποθηκεύει στον εαυτό της.",
+  "Taking a tablet on a trip? Set up the same folder on it with Save only, then copy what the TV saved there: Recordings > On the network folder.":
+      "Tablet σε ταξίδι; Ρυθμίστε τον ίδιο φάκελο με Μόνο αποθήκευση και αντιγράψτε ό,τι αποθήκευσε εκεί η TV: Εγγραφές > Στον φάκελο δικτύου.",
+  "The file is no longer in the network folder":
+      "Το αρχείο δεν υπάρχει πια στον φάκελο δικτύου",
   "REC · {size}": "REC · {size}",
   "Waiting for a channel": "Αναμονή για κανάλι",
   "Interrupted · {size}": "Διακόπηκε · {size}",

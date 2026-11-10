@@ -1696,6 +1696,30 @@ const Map<String, String> kDe = {
   "Recorded": "Aufgenommen",
   "{used} of {cap} GB used": "{used} von {cap} GB belegt",
   "{size} in the network folder": "{size} im Netzwerkordner",
+  "Copy to this device":
+      "Auf dieses Gerät kopieren",
+  "{size}, to watch without the network":
+      "{size}, zum Ansehen ohne Netzwerk",
+  "Play from the network folder":
+      "Aus dem Netzwerkordner abspielen",
+  "Copying to this device. It shows under Downloading.":
+      "Wird auf dieses Gerät kopiert. Erscheint unter Wird heruntergeladen.",
+  "On the network folder":
+      "Im Netzwerkordner",
+  "Looking in the network folder…":
+      "Suche im Netzwerkordner…",
+  "The network folder can't be reached: {reason}":
+      "Der Netzwerkordner ist nicht erreichbar: {reason}",
+  "Nothing new there. Downloads and recordings that another device saves there show up here.":
+      "Nichts Neues. Downloads und Aufnahmen, die ein anderes Gerät dort speichert, erscheinen hier.",
+  "Save only":
+      "Nur speichern",
+  "Saved. Its files show in Recordings; this device keeps saving to itself.":
+      "Gespeichert. Seine Dateien erscheinen unter Aufnahmen; dieses Gerät speichert weiter auf sich selbst.",
+  "Taking a tablet on a trip? Set up the same folder on it with Save only, then copy what the TV saved there: Recordings > On the network folder.":
+      "Ein Tablet auf Reisen? Dort denselben Ordner mit Nur speichern einrichten, dann kopieren, was der Fernseher dort gespeichert hat: Aufnahmen > Im Netzwerkordner.",
+  "The file is no longer in the network folder":
+      "Die Datei ist nicht mehr im Netzwerkordner",
   "REC · {size}": "REC · {size}",
   "Waiting for a channel": "Warten auf einen Sender",
   "Interrupted · {size}": "Unterbrochen · {size}",

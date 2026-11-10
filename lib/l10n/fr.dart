@@ -1781,6 +1781,30 @@ const Map<String, String> kFr = {
   "Recorded": "Enregistrés",
   "{used} of {cap} GB used": "{used} utilisés sur {cap} Go",
   "{size} in the network folder": "{size} dans le dossier réseau",
+  "Copy to this device":
+      "Copier sur cet appareil",
+  "{size}, to watch without the network":
+      "{size}, pour regarder sans réseau",
+  "Play from the network folder":
+      "Lire depuis le dossier réseau",
+  "Copying to this device. It shows under Downloading.":
+      "Copie vers cet appareil. Elle s'affiche sous Téléchargement en cours.",
+  "On the network folder":
+      "Dans le dossier réseau",
+  "Looking in the network folder…":
+      "Recherche dans le dossier réseau…",
+  "The network folder can't be reached: {reason}":
+      "Le dossier réseau est inaccessible : {reason}",
+  "Nothing new there. Downloads and recordings that another device saves there show up here.":
+      "Rien de nouveau. Les téléchargements et enregistrements qu'un autre appareil y enregistre s'affichent ici.",
+  "Save only":
+      "Enregistrer seulement",
+  "Saved. Its files show in Recordings; this device keeps saving to itself.":
+      "Enregistré. Ses fichiers s'affichent dans Enregistrements; cet appareil continue d'enregistrer sur lui-même.",
+  "Taking a tablet on a trip? Set up the same folder on it with Save only, then copy what the TV saved there: Recordings > On the network folder.":
+      "Une tablette en voyage? Configurez-y le même dossier avec Enregistrer seulement, puis copiez ce que la TV y a enregistré : Enregistrements > Dans le dossier réseau.",
+  "The file is no longer in the network folder":
+      "Le fichier n'est plus dans le dossier réseau",
   "REC · {size}": "ENR · {size}",
   "Waiting for a channel": "En attente d'une chaîne",
   "Interrupted · {size}": "Interrompu · {size}",
