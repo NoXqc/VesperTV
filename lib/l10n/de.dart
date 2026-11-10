@@ -1382,6 +1382,7 @@ const Map<String, String> kDe = {
   "Pitching": "Werfen",
   "Players": "Spieler",
   "No stats for this game yet.": "Noch keine Statistiken für dieses Spiel.",
+  "No stats for tennis matches.": "Keine Statistiken für Tennismatches.",
   "Top performers": "Beste Spieler",
   "Injuries": "Verletzungen",
   "Goals": "Tore",

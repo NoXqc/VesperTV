@@ -1448,6 +1448,7 @@ const Map<String, String> kFr = {
   'Pitching': "Lanceurs",
   'Players': "Joueurs",
   'No stats for this game yet.': "Pas encore de stats pour ce match.",
+  "No stats for tennis matches.": "Pas de stats pour les matchs de tennis.",
   'Top performers': "Meilleurs joueurs",
   'Injuries': "Blessures",
   'Goals': "Buts",

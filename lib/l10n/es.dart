@@ -1443,6 +1443,7 @@ const Map<String, String> kEs = {
   'Pitching': "Pitcheo",
   'Players': "Jugadores",
   'No stats for this game yet.': "Aún no hay estadísticas de este partido.",
+  "No stats for tennis matches.": "No hay estadísticas para los partidos de tenis.",
   'Top performers': "Mejores jugadores",
   'Injuries': "Lesiones",
   'Goals': "Goles",

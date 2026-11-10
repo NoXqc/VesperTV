@@ -451,6 +451,11 @@ class SportsService {
         (game.league.isCfl && game.statusText == 'Score unavailable')) {
       return _tableSummary(game);
     }
+    // ESPN's summary answers HTTP 400 for every tennis match (LOG-CRVBP7):
+    // no request, the pop-up says there are no stats for tennis.
+    if (game.league.kind == SportsKind.tennis) {
+      return Future.value(const SportsGameSummary());
+    }
     final key = '${game.league.id}|${game.id}';
     final cached = _summaryCache[key];
     if (!fresh &&
@@ -499,8 +504,20 @@ class SportsService {
         try {
           final response =
               await _client.get(url).timeout(const Duration(seconds: 6));
-          if (response.statusCode != 200) {
-            throw Exception('HTTP ${response.statusCode}');
+          final status = response.statusCode;
+          if (status >= 400 && status < 500) {
+            // ESPN has no summary for this game: asking again gets the same
+            // answer. Empty (not null) so the pop-up doesn't retry a second
+            // later; cached like any summary so it isn't asked every refresh.
+            debugPrint('SportsService: ${game.league.id} summary ${game.id}: '
+                'HTTP $status, not retried');
+            final previous = _summaryCache[key]?.$1;
+            final summary = previous ?? const SportsGameSummary();
+            _summaryCache[key] = (summary, DateTime.now());
+            return summary;
+          }
+          if (status != 200) {
+            throw Exception('HTTP $status');
           }
           final httpMs = watch.elapsedMilliseconds;
           // ~400 KB of JSON: parsed off the UI isolate.

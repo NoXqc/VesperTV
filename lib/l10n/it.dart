@@ -1446,6 +1446,7 @@ const Map<String, String> kIt = {
   'Players': "Giocatori",
   'No stats for this game yet.':
       "Ancora nessuna statistica per questa partita.",
+  "No stats for tennis matches.": "Nessuna statistica per le partite di tennis.",
   'Top performers': "Migliori giocatori",
   'Injuries': "Infortuni",
   'Goals': "Gol",

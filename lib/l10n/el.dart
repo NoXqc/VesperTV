@@ -1405,6 +1405,7 @@ const Map<String, String> kEl = {
   "Players": "Παίκτες",
   "No stats for this game yet.":
       "Δεν υπάρχουν ακόμη στατιστικά για αυτό το παιχνίδι.",
+  "No stats for tennis matches.": "Δεν υπάρχουν στατιστικά για αγώνες τένις.",
   "Top performers": "Κορυφαίοι",
   "Injuries": "Τραυματισμοί",
   "Goals": "Γκολ",
