@@ -1668,6 +1668,7 @@ class PlaylistManager extends ChangeNotifier {
   String? _nameEventsKey;
   DateTime? _nameEventsAt;
   Map<String, ChannelNameEvent> _nameEvents = const {};
+  Set<String> _idleEventIds = const {};
 
   Map<String, ChannelNameEvent> channelNameEventsByEpgId() {
     final key = _liveListsKey();
@@ -1677,6 +1678,7 @@ class PlaylistManager extends ChangeNotifier {
         DateTime.now().difference(at) < const Duration(minutes: 5)) {
       return _nameEvents;
     }
+    final idle = <String>{};
     _nameEvents = PerfDiagnostics.timedSync('nameEvents', () {
       final now = DateTime.now();
       final out = <String, ChannelNameEvent>{};
@@ -1684,22 +1686,39 @@ class PlaylistManager extends ChangeNotifier {
         if (!session.profile.enabled) continue;
         for (final c
             in (session.isXtream ? session.liveChannels : session.channels)) {
-          if (!c.name.contains('@') ||
-              !c.isLive ||
+          final name = c.name;
+          final hasAt = name.contains('@');
+          if (!hasAt && !mayBeIdleEventChannelName(name)) continue;
+          if (!c.isLive ||
               session.hiddenGroups.contains(session.liveGroupOf(c)) ||
               session.isLiveHidden(c.rawId)) {
             continue;
           }
-          final event = parseChannelNameEvent(c.name, now: now);
-          if (event == null) continue;
-          out.putIfAbsent(normalizeEpgId(c.epgId), () => event);
+          final event = hasAt ? parseChannelNameEvent(name, now: now) : null;
+          if (event != null) {
+            out.putIfAbsent(normalizeEpgId(c.epgId), () => event);
+          } else if (isIdleEventChannelName(name)) {
+            idle.add(normalizeEpgId(c.epgId));
+          }
         }
       }
       return out;
     });
+    // Kept identical while unchanged: EpgService drops its merged rows
+    // whenever a new set comes back.
+    if (!setEquals(idle, _idleEventIds)) _idleEventIds = idle;
     _nameEventsKey = key;
     _nameEventsAt = DateTime.now();
     return _nameEvents;
+  }
+
+  /// Normalized EPG ids of visible idle event slots (`TSN+ 07: NO EVENT`):
+  /// their guide row says "No game at this time" when the provider lists
+  /// nothing (`EpgService.idleEventIdsProvider`). Same pass and cache as
+  /// [channelNameEventsByEpgId].
+  Set<String> idleEventChannelEpgIds() {
+    channelNameEventsByEpgId();
+    return _idleEventIds;
   }
 
   /// Ensures every enabled Xtream playlist's live channel list is loaded —

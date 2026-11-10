@@ -1,6 +1,7 @@
 import 'media_subtitle.dart';
 import 'catchup.dart';
 import 'media_file_info.dart';
+import '../services/channel_name_events.dart' show isEventChannelName;
 
 /// A manual cross-playlist link — see
 /// `AppConstants.keyChannelLinks`'s doc comment. Identifies another
@@ -253,7 +254,18 @@ class Channel {
   /// The id every EPG lookup call site uses — see [epgIdOverride]'s doc
   /// comment. Never [rawId] directly from an EPG-lookup call site; that
   /// would bypass a manual assignment.
-  String get epgId => epgIdOverride ?? epgKey ?? rawId;
+  ///
+  /// An event channel ([isEventChannelName]) whose provider EPG id is shared
+  /// ([epgKey] set) uses its own [rawId]: a provider gives `tsn4mel` to TSN+
+  /// 05-45, ESPN+ 49, Disney+ Events 49… (61 channels, 2026-11-09), so every
+  /// one showed that id's guide ("LaLiga Football") or the first name's game
+  /// (`Disney+ Events 49: Simpson (IA) vs. Western Illinois @ …`) instead of
+  /// its own. Copies of a network (ESPN 4K / HD / FHD) still share theirs.
+  String get epgId =>
+      epgIdOverride ?? (epgKey != null && _ownGuide ? rawId : epgKey) ?? rawId;
+
+  /// From the provider's own name: an event in it, not a network.
+  late final bool _ownGuide = isEventChannelName(sourceName);
 
   /// The provider's own EPG id (`epg_channel_id`/`tvg-id`) when [rawId] is
   /// not it — set by [withUniqueIds] for channels that shared one. Null =

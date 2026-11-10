@@ -109,6 +109,84 @@ ChannelNameEvent? parseChannelNameEvent(String name, {DateTime? now}) {
       note: note == null || note.isEmpty ? null : note);
 }
 
+/// Whether [name] is an event channel's: it announces an event
+/// ([parseChannelNameEvent]) or is a numbered slot with nothing on
+/// (`TSN+ 07: NO EVENT`, `CA - TSN+ 07 : `). Such a channel is about its
+/// name, not a network: an EPG id the provider gives it and other channels
+/// too is a placeholder (`Channel.epgId`).
+bool isEventChannelName(String name) {
+  final n = name.trim();
+  if (n.contains('@') && parseChannelNameEvent(n) != null) return true;
+  return isIdleEventChannelName(n);
+}
+
+/// A numbered event slot with nothing on: `TSN+ 07: NO EVENT`,
+/// `CA - TSN+ 07 : `. Its guide row says "No game at this time" when the
+/// provider lists nothing ([noGameRow]; owner, 2026-11-09).
+bool isIdleEventChannelName(String name) {
+  final n = name.trim();
+  final m = _numberedPrefix.firstMatch(n);
+  if (m == null) return false;
+  final rest = n.substring(m.end).trim();
+  return rest.isEmpty || _filler.hasMatch(rest.toLowerCase());
+}
+
+/// A cheap first look for [isIdleEventChannelName] (true for every name it
+/// accepts): the guide scans every live name, ~350k on big playlists.
+bool mayBeIdleEventChannelName(String name) {
+  final t = name.trimRight();
+  // The first ':' or '|' must follow a number ("TSN+ 07:"; "US: ESPN" no).
+  var sep = 0;
+  while (sep < t.length) {
+    final c = t.codeUnitAt(sep);
+    if (c == 0x3A || c == 0x7C) break;
+    sep++;
+  }
+  if (sep == 0 || sep == t.length) return false;
+  var j = sep - 1;
+  while (j >= 0 && _isSpace(t.codeUnitAt(j))) {
+    j--;
+  }
+  if (j < 0) return false;
+  final digit = t.codeUnitAt(j);
+  if (digit < 0x30 || digit > 0x39) return false;
+  final last = t.codeUnitAt(t.length - 1);
+  if (last == 0x3A || last == 0x7C) return true; // nothing after the slot
+  return _fillerWord.hasMatch(t.substring(sep + 1));
+}
+
+/// What RegExp's `\s` matches, so the quick look stays a superset.
+bool _isSpace(int c) =>
+    c == 0x20 ||
+    (c >= 0x09 && c <= 0x0D) ||
+    c == 0xA0 ||
+    c == 0x1680 ||
+    (c >= 0x2000 && c <= 0x200A) ||
+    c == 0x2028 ||
+    c == 0x2029 ||
+    c == 0x202F ||
+    c == 0x205F ||
+    c == 0x3000 ||
+    c == 0xFEFF;
+
+final _fillerWord =
+    RegExp(r'no |off|stand|announced|tb[ad]$|n/a$', caseSensitive: false);
+
+/// A whole row of "No game at this time" (the same 36 h window as the
+/// blocks around a game) for an idle event slot without any guide.
+List<EpgProgram> noGameRow(String channelId, DateTime now) {
+  final local = now.toLocal();
+  final from = DateTime(local.year, local.month, local.day, local.hour)
+      .subtract(const Duration(hours: 6));
+  return [
+    EpgProgram(
+        channelId: channelId,
+        title: noGameTitle,
+        start: from,
+        stop: from.add(const Duration(hours: 36))),
+  ];
+}
+
 /// The provider's own placeholders: an event read from the name may cover
 /// them, never a real listing. Variants matter: the same provider listed
 /// "No Event Today" over that evening's League Pass games (2026-11-07).
