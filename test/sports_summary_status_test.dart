@@ -38,19 +38,20 @@ void main() {
     expect(requests, 0);
   });
 
-  test('a 4xx summary is not retried and is cached as empty', () async {
+  test('a 4xx summary is not retried nor asked again soon', () async {
     var requests = 0;
     final service = SportsService.forTesting(MockClient((_) async {
       requests++;
       return http.Response('{"code":400}', 400);
     }));
     final game = _game(_nhl);
-    final first = await service.gameSummary(game);
-    expect(first, isNotNull, reason: 'empty, so the pop-up stops retrying');
-    expect(first!.isEmpty, isTrue);
+    // Null: a goal alert stops waiting for a scorer.
+    expect(await service.gameSummary(game), isNull);
     expect(requests, 1, reason: 'no second try after a 4xx');
-    await service.gameSummary(game);
-    expect(requests, 1, reason: 'cached until the live refresh window ends');
+    expect(await service.gameSummary(game), isNull);
+    expect(requests, 1, reason: 'not asked again in the refresh window');
+    await service.gameSummary(game, fresh: true);
+    expect(requests, 2, reason: 'fresh (goal alerts) still asks');
   });
 
   test('a 5xx is still retried once', () async {

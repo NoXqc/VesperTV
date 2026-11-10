@@ -441,6 +441,9 @@ class SportsService {
   final Map<String, (SportsGameSummary, DateTime)> _summaryCache = {};
   final Map<String, Future<SportsGameSummary?>> _summaryInFlight = {};
 
+  /// When ESPN last answered a game's summary with a 4xx (it has none).
+  final Map<String, DateTime> _summaryRefused = {};
+
   /// One game's box score, leaders, injuries and its teams' standings (the
   /// live list's detail pop-up). One call per opened game, cached 30 s
   /// while it's live. Null when ESPN can't be reached and nothing is cached.
@@ -458,13 +461,19 @@ class SportsService {
     }
     final key = '${game.league.id}|${game.id}';
     final cached = _summaryCache[key];
+    final window = game.state == GameState.live
+        ? const Duration(seconds: 30)
+        : const Duration(minutes: 10);
     if (!fresh &&
         cached != null &&
-        DateTime.now().difference(cached.$2) <
-            (game.state == GameState.live
-                ? const Duration(seconds: 30)
-                : const Duration(minutes: 10))) {
+        DateTime.now().difference(cached.$2) < window) {
       return Future.value(cached.$1);
+    }
+    final refused = _summaryRefused[key];
+    if (!fresh &&
+        refused != null &&
+        DateTime.now().difference(refused) < window) {
+      return Future.value(cached?.$1);
     }
     return _summaryInFlight[key] ??= () async {
       if (game.league.isCfl) {
@@ -507,14 +516,12 @@ class SportsService {
           final status = response.statusCode;
           if (status >= 400 && status < 500) {
             // ESPN has no summary for this game: asking again gets the same
-            // answer. Empty (not null) so the pop-up doesn't retry a second
-            // later; cached like any summary so it isn't asked every refresh.
+            // answer. Still null (a goal alert then stops waiting for a
+            // scorer), and not asked again within the cache window.
             debugPrint('SportsService: ${game.league.id} summary ${game.id}: '
                 'HTTP $status, not retried');
-            final previous = _summaryCache[key]?.$1;
-            final summary = previous ?? const SportsGameSummary();
-            _summaryCache[key] = (summary, DateTime.now());
-            return summary;
+            _summaryRefused[key] = DateTime.now();
+            return _summaryCache[key]?.$1;
           }
           if (status != 200) {
             throw Exception('HTTP $status');
