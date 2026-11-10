@@ -47,8 +47,8 @@ const Map<String, String> kEl = {
   "Shorter Timeline rows so more channels fit in the same space.":
       "Πιο χαμηλές γραμμές στο χρονοδιάγραμμα για περισσότερα κανάλια.",
   "Preview on highlight": "Προεπισκόπηση με επισήμανση",
-  "The channel you stop on plays in the preview, without pressing OK. OK again opens it full screen.":
-      "Το κανάλι στο οποίο σταματάτε παίζει στην προεπισκόπηση, χωρίς να πατήσετε OK. Με OK ξανά ανοίγει σε πλήρη οθόνη.",
+  "The channel you stop on plays in the preview and in Home's mini player, without pressing OK. OK again opens it full screen.":
+      "Το κανάλι στο οποίο σταματάτε παίζει στην προεπισκόπηση και στο μίνι player της αρχικής, χωρίς να πατήσετε OK. Με OK ξανά ανοίγει σε πλήρη οθόνη.",
   "Transparent popups": "Διάφανα αναδυόμενα",
   "Reminders and goal alerts lose their background and outline, keeping only the logo and text.":
       "Οι υπενθυμίσεις και οι ειδοποιήσεις γκολ χάνουν φόντο και περίγραμμα, κρατώντας μόνο το λογότυπο και το κείμενο.",
@@ -2057,8 +2057,8 @@ const Map<String, String> kEl = {
   "Hides the profiles row on Home.":
       "Αποκρύπτει τη σειρά προφίλ στην αρχική σελίδα.",
   "Mini player on Home": "Μίνι player στην αρχική",
-  "The live channel you stop on plays at the top right of Home. OK opens it full screen; Play/Pause or hold OK turns it off.":
-      "Το ζωντανό κανάλι όπου σταματάτε παίζει πάνω δεξιά στην αρχική σελίδα. Το OK το ανοίγει σε πλήρη οθόνη· το Αναπαραγωγή/Παύση ή το παρατεταμένο OK το σταματά.",
+  "OK on a live card plays it at the top right of Home, OK again opens it full screen (with Preview on highlight on, the card you stop on plays by itself). Play/Pause or hold OK turns it off.":
+      "Το OK σε μια ζωντανή κάρτα την παίζει πάνω δεξιά στην αρχική, το OK ξανά την ανοίγει σε πλήρη οθόνη (με την Προεπισκόπηση με επισήμανση ενεργή, η κάρτα όπου σταματάτε παίζει μόνη της). Το Αναπαραγωγή/Παύση ή το παρατεταμένο OK τη σταματά.",
   "Stop mini player": "Διακοπή μίνι player",
   "Preferred audio language": "Προτιμώμενη γλώσσα ήχου",
   "Preferred subtitle language": "Προτιμώμενη γλώσσα υποτίτλων",

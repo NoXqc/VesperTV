@@ -389,7 +389,10 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   **Settings > General > Home wallpaper** (per viewer, a file: never transferred; From phone = `PairingKind.wallpaper`,
   1920x1080 crop in pair.html) supersedes the glow (owner); art and game backdrops keep their own. Mini player got a
   2 px light frame + shadow. Owner-tested +703/+704 on the Formuler ("Very nice", "Sits nice"). Details:
-  `dev-notes/home-look.md`. Next build > 704.
+  `dev-notes/home-look.md`. **+706 Home mini player keys** (owner, like the guide): OK on a live card = mini player,
+  OK on the playing card = full screen, Play/Pause = off (plays the card only when nothing plays); resting on a card
+  plays only with Preview on highlight on (`_scheduleMini`). No mini player / recording conflict = full screen.
+  Next build > 706.
 - **Claude, 2026-11-10 - +702 (main 75a905f, pushed, not released): copy from the network folder** (owner: box downloads
   overnight, tablet copies them before a trip). Finished network files get `.vespertv/<file>.json` details; Recordings >
   On the network folder lists the share; OK = Copy to this device (a download from `smb://`, no speed/connection

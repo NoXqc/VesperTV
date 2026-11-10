@@ -47,8 +47,8 @@ const Map<String, String> kEs = {
   "Shorter Timeline rows so more channels fit in the same space.":
       "Filas más cortas en la línea de tiempo para ver más canales.",
   "Preview on highlight": "Vista previa al resaltar",
-  "The channel you stop on plays in the preview, without pressing OK. OK again opens it full screen.":
-      "El canal en el que te detienes se reproduce en la vista previa, sin pulsar OK. OK otra vez lo abre en pantalla completa.",
+  "The channel you stop on plays in the preview and in Home's mini player, without pressing OK. OK again opens it full screen.":
+      "El canal en el que te detienes se reproduce en la vista previa y en el minirreproductor de Inicio, sin pulsar OK. OK otra vez lo abre en pantalla completa.",
   "Transparent popups": "Ventanas transparentes",
   "Reminders and goal alerts lose their background and outline, keeping only the logo and text.":
       "Los recordatorios y avisos de gol pierden el fondo y el contorno, y conservan solo el logo y el texto.",
@@ -2097,8 +2097,8 @@ const Map<String, String> kEs = {
   "Hide profiles": "Ocultar perfiles",
   "Hides the profiles row on Home.": "Oculta la fila de perfiles en Inicio.",
   "Mini player on Home": "Minirreproductor en Inicio",
-  "The live channel you stop on plays at the top right of Home. OK opens it full screen; Play/Pause or hold OK turns it off.":
-      "El canal en directo en el que te detienes se reproduce arriba a la derecha de Inicio. OK lo abre a pantalla completa; Reproducir/Pausa o mantener OK lo detiene.",
+  "OK on a live card plays it at the top right of Home, OK again opens it full screen (with Preview on highlight on, the card you stop on plays by itself). Play/Pause or hold OK turns it off.":
+      "OK en una tarjeta en directo la reproduce arriba a la derecha de Inicio, OK otra vez la abre a pantalla completa (con Vista previa al resaltar activada, la tarjeta en la que te detienes se reproduce sola). Reproducir/Pausa o mantener OK la detiene.",
   "Stop mini player": "Detener el minirreproductor",
   "Preferred audio language": "Idioma de audio preferido",
   "Preferred subtitle language": "Idioma de subtítulos preferido",

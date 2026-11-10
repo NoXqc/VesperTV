@@ -44,8 +44,8 @@ const Map<String, String> kDe = {
   "Shorter Timeline rows so more channels fit in the same space.":
       "Kürzere Timeline-Zeilen, damit mehr Sender auf den gleichen Platz passen.",
   "Preview on highlight": "Vorschau beim Markieren",
-  "The channel you stop on plays in the preview, without pressing OK. OK again opens it full screen.":
-      "Der Sender, auf dem Sie stehen bleiben, läuft in der Vorschau, ohne OK zu drücken. Erneut OK öffnet ihn im Vollbild.",
+  "The channel you stop on plays in the preview and in Home's mini player, without pressing OK. OK again opens it full screen.":
+      "Der Sender, auf dem Sie stehen bleiben, läuft in der Vorschau und im Mini-Player auf dem Start, ohne OK zu drücken. Erneut OK öffnet ihn im Vollbild.",
   "Transparent popups": "Transparente Popups",
   "Reminders and goal alerts lose their background and outline, keeping only the logo and text.":
       "Erinnerungen und Toralarme verlieren Hintergrund und Rahmen, nur Logo und Text bleiben.",
@@ -2011,8 +2011,8 @@ const Map<String, String> kDe = {
   "Hides the profiles row on Home.":
       "Blendet die Profilzeile auf dem Start aus.",
   "Mini player on Home": "Mini-Player auf dem Start",
-  "The live channel you stop on plays at the top right of Home. OK opens it full screen; Play/Pause or hold OK turns it off.":
-      "Der Live-Sender, auf dem du stehen bleibst, läuft oben rechts auf dem Start. OK öffnet ihn im Vollbild; Play/Pause oder OK gedrückt halten stoppt ihn.",
+  "OK on a live card plays it at the top right of Home, OK again opens it full screen (with Preview on highlight on, the card you stop on plays by itself). Play/Pause or hold OK turns it off.":
+      "OK auf einer Live-Karte spielt sie oben rechts auf dem Start, erneut OK öffnet sie im Vollbild (mit Vorschau beim Markieren an läuft die Karte, auf der du stehen bleibst, von selbst). Play/Pause oder OK gedrückt halten stoppt sie.",
   "Stop mini player": "Mini-Player stoppen",
   "Preferred audio language": "Bevorzugte Audiosprache",
   "Preferred subtitle language": "Bevorzugte Untertitelsprache",

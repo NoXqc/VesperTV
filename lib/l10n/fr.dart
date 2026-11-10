@@ -46,8 +46,8 @@ const Map<String, String> kFr = {
   "Shorter Timeline rows so more channels fit in the same space.":
       "Lignes de la grille plus courtes pour afficher plus de chaînes.",
   "Preview on highlight": "Aperçu au survol",
-  "The channel you stop on plays in the preview, without pressing OK. OK again opens it full screen.":
-      "La chaîne sur laquelle vous vous arrêtez joue dans l'aperçu, sans appuyer sur OK. OK une deuxième fois l'ouvre en plein écran.",
+  "The channel you stop on plays in the preview and in Home's mini player, without pressing OK. OK again opens it full screen.":
+      "La chaîne sur laquelle vous vous arrêtez joue dans l'aperçu et dans le mini lecteur de l’accueil, sans appuyer sur OK. OK une deuxième fois l'ouvre en plein écran.",
   "Transparent popups": "Fenêtres transparentes",
   "Reminders and goal alerts lose their background and outline, keeping only the logo and text.":
       "Les rappels et alertes de but perdent leur fond et leur contour, il ne reste que le logo et le texte.",
@@ -2111,8 +2111,8 @@ const Map<String, String> kFr = {
   "Hides the profiles row on Home.":
       "Masque la rangée des profils sur l’accueil.",
   "Mini player on Home": "Mini lecteur sur l’accueil",
-  "The live channel you stop on plays at the top right of Home. OK opens it full screen; Play/Pause or hold OK turns it off.":
-      "La chaîne en direct où vous vous arrêtez joue en haut à droite de l’accueil. OK l’ouvre en plein écran; Lecture/Pause ou OK maintenu l’arrête.",
+  "OK on a live card plays it at the top right of Home, OK again opens it full screen (with Preview on highlight on, the card you stop on plays by itself). Play/Pause or hold OK turns it off.":
+      "OK sur une carte en direct la lance en haut à droite de l’accueil, OK une deuxième fois l’ouvre en plein écran (avec Aperçu au survol activé, la carte où vous vous arrêtez joue toute seule). Lecture/Pause ou OK maintenu l’arrête.",
   "Stop mini player": "Arrêter le mini lecteur",
   "Preferred audio language": "Langue audio préférée",
   "Preferred subtitle language": "Langue de sous-titres préférée",

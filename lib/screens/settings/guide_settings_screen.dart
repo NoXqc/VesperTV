@@ -57,7 +57,7 @@ class GuideSettingsScreen extends StatelessWidget {
                     TvSwitchListTile(
                       title: Text(tr('Preview on highlight')),
                       subtitle: Text(tr(
-                          'The channel you stop on plays in the preview, without pressing OK. OK again opens it full screen.')),
+                          "The channel you stop on plays in the preview and in Home's mini player, without pressing OK. OK again opens it full screen.")),
                       value: prefs.guideFocusPreview,
                       onChanged: prefs.setGuideFocusPreview,
                     ),

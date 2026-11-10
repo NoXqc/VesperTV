@@ -408,7 +408,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                     TvSwitchListTile(
                       title: Text(tr('Mini player on Home')),
                       subtitle: Text(tr(
-                          'The live channel you stop on plays at the top right of Home. OK opens it full screen; Play/Pause or hold OK turns it off.')),
+                          'OK on a live card plays it at the top right of Home, OK again opens it full screen (with Preview on highlight on, the card you stop on plays by itself). Play/Pause or hold OK turns it off.')),
                       value: context.watch<AppPreferences>().homeMiniPlayer,
                       onChanged: (v) =>
                           context.read<AppPreferences>().setHomeMiniPlayer(v),

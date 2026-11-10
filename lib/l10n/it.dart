@@ -47,8 +47,8 @@ const Map<String, String> kIt = {
   "Shorter Timeline rows so more channels fit in the same space.":
       "Righe più basse nella timeline per mostrare più canali.",
   "Preview on highlight": "Anteprima alla selezione",
-  "The channel you stop on plays in the preview, without pressing OK. OK again opens it full screen.":
-      "Il canale su cui ti fermi va in onda nell'anteprima, senza premere OK. Premendo di nuovo OK si apre a schermo intero.",
+  "The channel you stop on plays in the preview and in Home's mini player, without pressing OK. OK again opens it full screen.":
+      "Il canale su cui ti fermi va in onda nell'anteprima e nel mini player della Home, senza premere OK. Premendo di nuovo OK si apre a schermo intero.",
   "Transparent popups": "Popup trasparenti",
   "Reminders and goal alerts lose their background and outline, keeping only the logo and text.":
       "Promemoria e avvisi gol perdono sfondo e contorno, mantenendo solo logo e testo.",
@@ -2106,8 +2106,8 @@ const Map<String, String> kIt = {
   "Hide profiles": "Nascondi profili",
   "Hides the profiles row on Home.": "Nasconde la riga dei profili nella Home.",
   "Mini player on Home": "Mini player nella Home",
-  "The live channel you stop on plays at the top right of Home. OK opens it full screen; Play/Pause or hold OK turns it off.":
-      "Il canale live su cui ti fermi va in onda in alto a destra nella Home. OK lo apre a schermo intero; Play/Pausa o tenere premuto OK lo ferma.",
+  "OK on a live card plays it at the top right of Home, OK again opens it full screen (with Preview on highlight on, the card you stop on plays by itself). Play/Pause or hold OK turns it off.":
+      "OK su una scheda live la avvia in alto a destra nella Home, OK di nuovo la apre a schermo intero (con Anteprima alla selezione attiva, la scheda su cui ti fermi parte da sola). Play/Pausa o tenere premuto OK la ferma.",
   "Stop mini player": "Ferma il mini player",
   "Preferred audio language": "Lingua audio preferita",
   "Preferred subtitle language": "Lingua dei sottotitoli preferita",

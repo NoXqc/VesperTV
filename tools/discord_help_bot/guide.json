@@ -347,8 +347,8 @@
     "id": "8b1446377f0dda91",
     "category": "Home",
     "title": "Home mini player",
-    "answer": "Stop on a live channel card (Favourite channels, Recent channels, a game on now) for a moment and it plays in the mini player at the top right of Home. OK on the card opens it full screen with the same stream; Back returns to Home with it still playing. To turn it off without leaving Home, press ⏯ on the card that is playing (or Stop), or hold OK on any card and choose Stop mini player. It then stays off while you browse, until ⏯ on a channel card plays that one right away. A channel already playing when you open Home keeps playing there. Opening a movie or show stops it. Turn it off in Settings > Interface > Tabs > Mini player on Home (per profile); Home then stops the channel as before. TVs, boxes and computers only (not phones).",
-    "controls": "Home · rest on a channel card",
+    "answer": "Press OK on a live channel card (Favourite channels, Recent channels, a game on now) and it plays in the mini player at the top right of Home. OK again on the playing card opens it full screen with the same stream; Back returns to Home with it still playing. With Settings > Interface > Guide > Preview on highlight on, stopping on a card for a moment plays it by itself. To turn it off without leaving Home, press ⏯ (or Stop), or hold OK on any card and choose Stop mini player. It then stays off while you browse, until OK (or ⏯ ) on a channel card plays one again. A channel already playing when you open Home keeps playing there. Opening a movie or show stops it. Turn it off in Settings > Interface > Tabs > Mini player on Home (per profile); Home then stops the channel as before. TVs, boxes and computers only (not phones).",
+    "controls": "Home · OK on a channel card",
     "url": "https://vespertv.app/remote.html#Home"
   },
   {

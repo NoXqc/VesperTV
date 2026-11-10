@@ -205,7 +205,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Timer? _miniHistory;
 
   /// Turned off (Play/Pause, Stop, hold OK > Stop mini player): resting on
-  /// a card plays nothing until Play/Pause plays one (owner, 2026-11-09: it
+  /// a card plays nothing until OK or Play/Pause plays one (owner, 2026-11-09: it
   /// came back on the next highlight). Kept for the app run, across Home
   /// visits; a channel playing in it again (back from full screen, from
   /// the TV tab) turns it back on.
@@ -810,12 +810,19 @@ class _HomeScreenState extends State<HomeScreen> {
     return false;
   }
 
-  /// [item] took the focus: restarts the mini player's wait.
+  /// [item] took the focus: restarts the mini player's wait. Only with
+  /// Settings > Interface > Guide > Preview on highlight on (owner,
+  /// 2026-11-10: a user with it off still got previews while scrolling
+  /// Home); off, OK (or Play/Pause) on a card plays it.
   void _scheduleMini(_HomeItem item) {
     _miniTimer?.cancel();
     _miniTimer = null;
     final channel = item.preview;
-    if (channel == null || !HomeScreen.showsMiniPlayer(context)) return;
+    if (channel == null ||
+        !HomeScreen.showsMiniPlayer(context) ||
+        !context.read<AppPreferences>().guideFocusPreview) {
+      return;
+    }
     final armedAt = DateTime.now();
     if (armedAt.difference(_lastNavKeyAt) > const Duration(milliseconds: 500)) {
       return;
@@ -833,29 +840,32 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Future<void> _miniPlay(Channel channel) async {
+  /// Plays [channel] in the mini player; false when it can't (a recording
+  /// holds the account's only connection, or Home is covered).
+  Future<bool> _miniPlay(Channel channel) async {
     final route = ModalRoute.of(context);
-    if (route != null && !route.isCurrent) return;
+    if (route != null && !route.isCurrent) return false;
     final playback = context.read<PlaybackService>();
     if (isDesktopTarget) {
       final mini = DesktopMiniPlayer.instance;
-      if (mini.channel.value?.id == channel.id) return;
+      if (mini.channel.value?.id == channel.id) return true;
       mini.play(channel);
       unawaited(context.read<StorageService>().setLastChannelId(channel.id));
       _recordAfterWatching(playback, channel,
           () => DesktopMiniPlayer.instance.channel.value?.id == channel.id);
-      return;
+      return true;
     }
-    if (playback.liveChannel?.id == channel.id) return;
+    if (playback.liveChannel?.id == channel.id) return true;
     // A recording holds this account's only connection: OK asks Stop
     // recording / Cancel first, a highlight never pops that up.
     final profiles = context.read<PlaylistManager>().profiles;
     if (RecordingService.instance.conflictFor(channel, profiles) != null) {
-      return;
+      return false;
     }
     _recordAfterWatching(
         playback, channel, () => playback.currentChannel?.id == channel.id);
     await playback.play(channel, recordHistory: false);
+    return true;
   }
 
   /// History for a mini player play once it has played [_miniHistoryAfter]
@@ -876,18 +886,18 @@ class _HomeScreenState extends State<HomeScreen> {
     LogicalKeyboardKey.mediaStop,
   };
 
-  /// The remote's Play/Pause, like Sports Trak's hero (owner, 2026-11-09:
-  /// a way to turn the mini player off that isn't Back, which leaves
-  /// Home): on the card the mini player plays, or on a card with no
-  /// channel, it stops it; on another live card it plays that one at once.
-  /// Stop always stops.
+  /// The remote's Play/Pause (owner, 2026-11-09: a way to turn the mini
+  /// player off that isn't Back, which leaves Home): turns it off
+  /// whatever card the remote is on (owner, 2026-11-10: OK plays a card,
+  /// Play/Pause turns it off). With nothing playing, it plays the live card
+  /// the remote is on. Stop always stops.
   void _onPlayKey(LogicalKeyboardKey key) {
     _miniTimer?.cancel();
     _miniTimer = null;
     final card = _inProfiles ? null : _focused?.preview;
     if (key != LogicalKeyboardKey.mediaStop &&
         card != null &&
-        card.id != _miniChannelId()) {
+        _miniChannelId() == null) {
       _miniOff = false;
       unawaited(_miniPlay(card));
     } else {
@@ -907,7 +917,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// Turns the mini player off: its channel stops and highlights stay
-  /// quiet until Play/Pause plays a card ([_miniOff]).
+  /// quiet until OK or Play/Pause plays a card ([_miniOff]).
   Future<void> _stopMini() async {
     _miniOff = true;
     _miniHistory?.cancel();
@@ -941,6 +951,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _open(_HomeItem item) async {
     _miniTimer?.cancel();
+    // OK on a live card plays it in the mini player, OK on the card it
+    // plays opens it full screen, like the TV guide's preview (owner,
+    // 2026-11-10). No mini player (phones, switched off) = full screen.
+    final channel = item.preview;
+    if (channel != null &&
+        HomeScreen.showsMiniPlayer(context) &&
+        _miniChannelId() != channel.id) {
+      _miniOff = false;
+      // A recording on the account's only connection: full screen asks.
+      if (await _miniPlay(channel)) return;
+      if (!mounted) return;
+    }
     if (item.preview == null && item.game == null) await _parkMini();
     if (!mounted) return;
     await item.open(context);
