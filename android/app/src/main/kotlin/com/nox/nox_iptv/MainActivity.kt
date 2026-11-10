@@ -134,6 +134,10 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onDestroy() {
+        // The player is gone with the activity: downloads mustn't keep
+        // waiting for a connection it no longer holds (a full exit while
+        // a one-connection account was playing).
+        DownloadPolicy.clearStreams()
         localImportStore.close()
         voiceBridge.dispose()
         super.onDestroy()

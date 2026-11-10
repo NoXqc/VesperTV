@@ -2917,4 +2917,177 @@ const Map<String, String> kDe = {
       "Weiterschauen und deine Merkliste in der Watch-Next-Reihe des Launchers, dazu eine Reihe mit deinen Lieblingssendern. Für Android-TV-Launcher wie Projectivy.",
   "Continue watching and favourites on the TV launcher":
       "Weiterschauen und Favoriten im TV-Launcher",
+  // Downloads and the network folder (recording_service.dart).
+  "Like watching":
+      "Wie beim Ansehen",
+  "No limit":
+      "Kein Limit",
+  "{n} Mbit/s":
+      "{n} Mbit/s",
+  "Tonight at {time}":
+      "Heute Nacht um {time}",
+  "Today at {time}":
+      "Heute um {time}",
+  "Tomorrow at {time}":
+      "Morgen um {time}",
+  "Download set for {when}. It shows in Recordings.":
+      "Download geplant: {when}. Er erscheint unter Aufnahmen.",
+  "Downloading. It shows in Recordings.":
+      "Wird heruntergeladen. Er erscheint unter Aufnahmen.",
+  "About {size}":
+      "Etwa {size}",
+  "about {time} at your speed limit ({speed})":
+      "etwa {time} mit Ihrem Tempolimit ({speed})",
+  "Network folder":
+      "Netzwerkordner",
+  "{free} free":
+      "{free} frei",
+  "Download \"{title}\"":
+      "„{title}“ herunterladen",
+  "Download {n} episodes":
+      "{n} Folgen herunterladen",
+  "A download uses one connection to your provider. On an account with only one, it waits while you watch. It can slow your stream on Wi-Fi, and some providers don't allow downloads.":
+      "Ein Download nutzt eine Verbindung zu Ihrem Anbieter. Bei einem Konto mit nur einer wartet er, während Sie schauen. Über WLAN kann er Ihren Stream bremsen, und manche Anbieter erlauben keine Downloads.",
+  "It can slow what you watch on Wi-Fi while it runs.":
+      "Während er läuft, kann er über WLAN bremsen, was Sie schauen.",
+  "Best: download overnight.":
+      "Am besten: über Nacht herunterladen.",
+  "Saves to {where}":
+      "Speichert auf: {where}",
+  "◀ ▶ change the time":
+      "◀ ▶ Uhrzeit ändern",
+  "Tap the arrows to change the time":
+      "Pfeile antippen, um die Uhrzeit zu ändern",
+  "Download now":
+      "Jetzt herunterladen",
+  "Waits while you watch, if your account has one connection":
+      "Wartet, während Sie schauen, wenn Ihr Konto eine Verbindung hat",
+  "Download":
+      "Herunterladen",
+  "Download at {time}":
+      "Download um {time}",
+  "Waiting to download":
+      "Wartet auf Download",
+  "Downloading {pct}%":
+      "Lädt herunter {pct} %",
+  "Downloading {size}":
+      "Lädt herunter {size}",
+  "Downloaded":
+      "Heruntergeladen",
+  "Download stopped":
+      "Download gestoppt",
+  "Play what's downloaded":
+      "Bisher Geladenes abspielen",
+  "{done} of {total}":
+      "{done} von {total}",
+  "Resume download":
+      "Download fortsetzen",
+  "Instead of {time}":
+      "Statt um {time}",
+  "Cancel download":
+      "Download abbrechen",
+  "Stop download":
+      "Download stoppen",
+  "Keeps what has been downloaded":
+      "Behält das bereits Geladene",
+  "Delete download":
+      "Download löschen",
+  "Not enough storage space":
+      "Nicht genug Speicherplatz",
+  "Bigger than the space left for recordings":
+      "Größer als der für Aufnahmen verbleibende Platz",
+  "The source sent a short clip, not the file. Try again later or pick another stream.":
+      "Die Quelle hat einen kurzen Clip statt der Datei geschickt. Später erneut versuchen oder einen anderen Stream wählen.",
+  "This stream is a playlist (HLS), not a file. It can't be downloaded.":
+      "Dieser Stream ist eine Playlist (HLS), keine Datei. Er kann nicht heruntergeladen werden.",
+  "Connecting…":
+      "Verbinde…",
+  "Connected. {free} free.":
+      "Verbunden. {free} frei.",
+  "Connected.":
+      "Verbunden.",
+  "Couldn't use this folder: {reason}":
+      "Dieser Ordner lässt sich nicht nutzen: {reason}",
+  "Saved. Recordings and downloads go to the network folder.":
+      "Gespeichert. Aufnahmen und Downloads landen im Netzwerkordner.",
+  "Record and download to a shared folder on a computer or NAS on your network, instead of this device. On Windows: right-click a folder > Properties > Sharing.":
+      "Aufnehmen und herunterladen in einen freigegebenen Ordner auf einem Computer oder NAS in Ihrem Netzwerk statt auf dieses Gerät. Unter Windows: Rechtsklick auf einen Ordner > Eigenschaften > Freigabe.",
+  "The user name and password stay on this device. Wi-Fi carries the video twice (in, then to the folder), so a wired connection or overnight downloads work best.":
+      "Benutzername und Passwort bleiben auf diesem Gerät. Das WLAN überträgt das Video zweimal (herein, dann zum Ordner), daher funktionieren ein Kabel oder Downloads über Nacht am besten.",
+  "Shared folder":
+      "Freigegebener Ordner",
+  "Folder inside it (made if missing)":
+      "Ordner darin (wird bei Bedarf angelegt)",
+  "User name (empty for a guest share)":
+      "Benutzername (leer für Gastfreigabe)",
+  "Test":
+      "Testen",
+  "Save and use it":
+      "Speichern und verwenden",
+  "Network folders don't work on this device":
+      "Netzwerkordner funktionieren auf diesem Gerät nicht",
+  "Wrong user name or password, or no access to this folder":
+      "Falscher Benutzername oder falsches Passwort, oder kein Zugriff auf diesen Ordner",
+  "No shared folder with that name":
+      "Kein freigegebener Ordner mit diesem Namen",
+  "The computer didn't answer":
+      "Der Computer hat nicht geantwortet",
+  "Address not found":
+      "Adresse nicht gefunden",
+  "Can't reach the computer (is it on, and sharing turned on?)":
+      "Computer nicht erreichbar (ist er an und die Freigabe aktiviert?)",
+  "Address and shared folder are needed":
+      "Adresse und freigegebener Ordner sind nötig",
+  "About the video's own bitrate: to the provider it looks like someone watching. The safest choice.":
+      "Etwa die eigene Bitrate des Videos: Für den Anbieter sieht es aus, als würde jemand schauen. Die sicherste Wahl.",
+  "As fast as the source sends. Some providers don't allow this.":
+      "So schnell, wie die Quelle sendet. Manche Anbieter erlauben das nicht.",
+  "At most this speed.":
+      "Höchstens dieses Tempo.",
+  "Downloads":
+      "Downloads",
+  "Speed limit: {speed}":
+      "Tempolimit: {speed}",
+  "Always slower while you watch something.":
+      "Immer langsamer, während Sie etwas schauen.",
+  "Suggested start: {time}":
+      "Vorgeschlagener Start: {time}",
+  "What Download offers first: overnight, while nobody watches":
+      "Was Herunterladen zuerst anbietet: über Nacht, wenn niemand schaut",
+  "Save recordings and downloads to":
+      "Aufnahmen und Downloads speichern auf",
+  "Set up a network folder":
+      "Netzwerkordner einrichten",
+  "Network folder settings":
+      "Netzwerkordner-Einstellungen",
+  "A shared folder on a computer or NAS (SMB)":
+      "Ein freigegebener Ordner auf einem Computer oder NAS (SMB)",
+  "Downloads: the Download button on a movie or show page.":
+      "Downloads: die Schaltfläche Herunterladen auf der Seite eines Films oder einer Serie.",
+  "Downloading":
+      "Wird heruntergeladen",
+  "Waiting":
+      "Wartet",
+  "Waits for a free connection":
+      "Wartet auf eine freie Verbindung",
+  "Waiting its turn":
+      "Wartet, bis er dran ist",
+  "Downloaded · {size}":
+      "Heruntergeladen · {size}",
+  "Interrupted · {pct}":
+      "Unterbrochen · {pct}",
+  "Stopped · {pct}":
+      "Gestoppt · {pct}",
+  "This episode: {code}":
+      "Diese Folge: {code}",
+  "{season}: all {n} episodes":
+      "{season}: alle {n} Folgen",
+  "{season}: the {n} not downloaded yet":
+      "{season}: die {n} noch nicht geladenen",
+  "{n} without a downloadable stream, left out.":
+      "{n} ohne herunterladbaren Stream, ausgelassen.",
+  "Typing a folder address and password with a remote is painful. Scan this code with your phone camera and fill them in there — they appear here for you to check and save.":
+      "Eine Ordneradresse und ein Passwort mit der Fernbedienung zu tippen ist mühsam. Scannen Sie diesen Code mit der Handykamera und geben Sie sie dort ein — sie erscheinen hier zum Prüfen und Speichern.",
+  "Check the details here, then press Save and use it.":
+      "Prüfen Sie die Angaben hier und drücken Sie dann Speichern und verwenden.",
 };

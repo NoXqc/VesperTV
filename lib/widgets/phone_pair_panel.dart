@@ -142,6 +142,7 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
     final isKey = widget.kind == PairingKind.apiKey;
     final saves = isKey || widget.kind == PairingKind.poster;
     final isServer = widget.kind == PairingKind.mediaServer;
+    final isFolder = widget.kind == PairingKind.networkFolder;
     final isPhoto = widget.kind == PairingKind.photo;
     final wifiOnly = widget.kind.isWifiOnly;
     return Column(
@@ -164,8 +165,11 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
                           : isServer
                               ? tr(
                                   'Typing a server address and password with a remote is painful. Scan this code with your phone camera and sign in there — the details appear here for you to check and connect.')
-                              : tr(
-                                  'Typing a long password with a remote is painful. Scan this code with your phone camera and fill in the form there — it appears here for you to check and add.'),
+                              : isFolder
+                                  ? tr(
+                                      'Typing a folder address and password with a remote is painful. Scan this code with your phone camera and fill them in there — they appear here for you to check and save.')
+                                  : tr(
+                                      'Typing a long password with a remote is painful. Scan this code with your phone camera and fill in the form there — it appears here for you to check and add.'),
           style: muted,
         ),
         const SizedBox(height: 16),
@@ -212,8 +216,11 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
                                           : isServer
                                               ? tr(
                                                   'Check the details here, then press Connect.')
-                                              : tr(
-                                                  'Check the details here, then press Add Playlist.')),
+                                              : isFolder
+                                                  ? tr(
+                                                      'Check the details here, then press Save and use it.')
+                                                  : tr(
+                                                      'Check the details here, then press Add Playlist.')),
                           const SizedBox(height: 12),
                           if (!_starting && !_expired)
                             Row(

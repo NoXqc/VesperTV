@@ -10,14 +10,17 @@ import '../services/recording_service.dart';
 import '../utils/constants.dart';
 import '../utils/time_format.dart';
 import '../utils/tv_theme.dart';
+import '../widgets/download_sheet.dart';
 import '../widgets/hold_to_activate.dart';
+import '../widgets/hd_network_image.dart';
+import '../utils/image_urls.dart';
 import '../widgets/settings_scaffold.dart';
 import '../widgets/sports_widgets.dart';
 import '../widgets/tv_menu_tile.dart';
 import 'player_screen.dart';
 
-/// The Recordings tab (Android): what's recording, what's scheduled, and
-/// what's been recorded. A game shows as a Sports Trak style card with
+/// The Recordings tab (Android): what's recording or downloading, what's
+/// scheduled, and what's been recorded or downloaded. A game shows as a Sports Trak style card with
 /// both teams (never the score); a channel recording as a card with the
 /// channel's logo and the guide programme that was on. OK = play (a
 /// recording in progress plays live through the recorder's tap), hold
@@ -50,6 +53,9 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
   }
 
   Future<void> _open(RecordingEntry r) async {
+    if (r.isDownload) {
+      return r.complete ? playDownload(context, r) : downloadMenu(context, r);
+    }
     if (r.state == RecState.recording) {
       // Live, from the recorder's tap (PlaybackService.openUrlFor).
       return _push(_liveChannel(r));
@@ -75,6 +81,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
       .push(PlayerPageRoute(builder: (_) => PlayerScreen(channel: c)));
 
   Future<void> _menu(RecordingEntry r) async {
+    if (r.isDownload) return downloadMenu(context, r);
     final action = await showGlassMenu<String>(
       context: context,
       builder: (context) => SwallowHeldActivate(
@@ -175,18 +182,28 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
   Widget build(BuildContext context) {
     final all =
         _service.items.where((r) => r.state != RecState.cancelled).toList();
-    final now = all.where((r) => r.state == RecState.recording).toList();
+    final now = all
+        .where((r) => !r.isDownload && r.state == RecState.recording)
+        .toList();
+    // Oldest start first: the order the recorder takes them in.
+    final downloading = all
+        .where((r) =>
+            r.isDownload &&
+            (r.state == RecState.recording || r.state == RecState.queued))
+        .toList()
+      ..sort((a, b) => a.startAt.compareTo(b.startAt));
     final upcoming = all
         .where(
             (r) => r.state == RecState.scheduled || r.state == RecState.waiting)
         .toList()
       ..sort((a, b) => a.startAt.compareTo(b.startAt));
-    final done = all
-        .where((r) =>
-            r.state != RecState.recording &&
-            r.state != RecState.scheduled &&
-            r.state != RecState.waiting)
-        .toList();
+    bool finished(RecordingEntry r) =>
+        r.state != RecState.recording &&
+        r.state != RecState.queued &&
+        r.state != RecState.scheduled &&
+        r.state != RecState.waiting;
+    final downloads = all.where((r) => r.isDownload && finished(r)).toList();
+    final done = all.where((r) => !r.isDownload && finished(r)).toList();
     final auto = _service.autoTeam;
     var first = true;
     Widget section(String title, List<RecordingEntry> list) {
@@ -204,13 +221,21 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
             Wrap(
               children: [
                 for (var i = 0; i < list.length; i++)
-                  _RecordingCard(
-                    entry: list[i],
-                    autofocus: autofocus && i == 0,
-                    status: _status(list[i]),
-                    onTap: () => _open(list[i]),
-                    onHold: () => _menu(list[i]),
-                  ),
+                  list[i].isDownload
+                      ? _DownloadCard(
+                          entry: list[i],
+                          autofocus: autofocus && i == 0,
+                          status: _status(list[i]),
+                          onTap: () => _open(list[i]),
+                          onHold: () => _menu(list[i]),
+                        )
+                      : _RecordingCard(
+                          entry: list[i],
+                          autofocus: autofocus && i == 0,
+                          status: _status(list[i]),
+                          onTap: () => _open(list[i]),
+                          onHold: () => _menu(list[i]),
+                        ),
               ],
             ),
           ],
@@ -242,13 +267,16 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
               Padding(
                 padding: const EdgeInsets.only(top: 40),
                 child: Text(
-                  tr('Nothing recorded yet. Hold OK on a game in {tab} and pick Record, or hold OK on a live channel.',
-                      {'tab': AppConstants.sportsTabName}),
+                  '${tr('Nothing recorded yet. Hold OK on a game in {tab} and pick Record, or hold OK on a live channel.', {
+                        'tab': AppConstants.sportsTabName
+                      })}\n${tr('Downloads: the Download button on a movie or show page.')}',
                   style: const TextStyle(color: Colors.white60, fontSize: 16),
                 ),
               ),
             if (now.isNotEmpty) section(tr('Recording now'), now),
+            if (downloading.isNotEmpty) section(tr('Downloading'), downloading),
             if (upcoming.isNotEmpty) section(tr('Scheduled'), upcoming),
+            if (downloads.isNotEmpty) section(tr('Downloads'), downloads),
             if (done.isNotEmpty) section(tr('Recorded'), done),
             if (all.isNotEmpty)
               Text(
@@ -264,19 +292,193 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
     );
   }
 
-  String _status(RecordingEntry r) => switch (r.state) {
-        RecState.recording => tr('REC · {size}', {'size': _size(r.bytes)}),
-        RecState.scheduled => _when(r),
-        RecState.waiting => tr('Waiting for a channel'),
-        RecState.done ||
-        RecState.stopped =>
-          '${DateFormat('EEE d MMM').format(r.gameStart)} · ${_size(r.bytes)}',
-        RecState.interrupted =>
-          tr('Interrupted · {size}', {'size': _size(r.bytes)}),
-        RecState.missed => tr('Missed'),
+  String _status(RecordingEntry r) {
+    if (r.isDownload) return _downloadStatus(r);
+    return switch (r.state) {
+      RecState.recording => tr('REC · {size}', {'size': _size(r.bytes)}),
+      RecState.queued => tr('Waiting'),
+      RecState.scheduled => _when(r),
+      RecState.waiting => tr('Waiting for a channel'),
+      RecState.done ||
+      RecState.stopped =>
+        '${DateFormat('EEE d MMM').format(r.gameStart)} · ${_size(r.bytes)}',
+      RecState.interrupted =>
+        tr('Interrupted · {size}', {'size': _size(r.bytes)}),
+      RecState.missed => tr('Missed'),
+      RecState.failed => tr('Failed'),
+      RecState.cancelled => '',
+    };
+  }
+
+  String _percent(RecordingEntry r) =>
+      r.progress == null ? _size(r.bytes) : '${(r.progress! * 100).floor()}%';
+
+  String _downloadStatus(RecordingEntry r) => switch (r.state) {
+        RecState.recording => r.progress == null
+            ? _size(r.bytes)
+            : '${_percent(r)} · ${_size(r.bytes)} / ${_size(r.totalBytes)}',
+        RecState.queued => r.note == 'connection'
+            ? tr('Waits for a free connection')
+            : tr('Waiting its turn'),
+        RecState.scheduled => downloadStartLabel(r.startAt, DateTime.now()),
+        RecState.done when r.complete =>
+          tr('Downloaded · {size}', {'size': _size(r.bytes)}),
+        RecState.interrupted => tr('Interrupted · {pct}', {'pct': _percent(r)}),
         RecState.failed => tr('Failed'),
-        RecState.cancelled => '',
+        RecState.missed => tr('Missed'),
+        _ => tr('Stopped · {pct}', {'pct': _percent(r)}),
       };
+}
+
+/// A download in the Recordings tab: poster, title, how far it got.
+class _DownloadCard extends StatefulWidget {
+  const _DownloadCard({
+    required this.entry,
+    required this.status,
+    required this.onTap,
+    required this.onHold,
+    this.autofocus = false,
+  });
+
+  final RecordingEntry entry;
+  final String status;
+  final VoidCallback onTap;
+  final VoidCallback onHold;
+  final bool autofocus;
+
+  @override
+  State<_DownloadCard> createState() => _DownloadCardState();
+}
+
+class _DownloadCardState extends State<_DownloadCard> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final r = widget.entry;
+    final active = r.state == RecState.recording;
+    final bad = r.state == RecState.failed || r.state == RecState.missed;
+    final progress = r.progress;
+    return Padding(
+      padding: const EdgeInsets.only(right: 12, top: 4, bottom: 8),
+      child: HoldToActivate(
+        onTap: widget.onTap,
+        onHold: widget.onHold,
+        child: InkWell(
+          autofocus: widget.autofocus,
+          borderRadius: BorderRadius.circular(16),
+          onTap: widget.onTap,
+          onLongPress: widget.onHold,
+          onFocusChange: (f) => setState(() => _focused = f),
+          child: AnimatedScale(
+            scale: _focused ? 1.05 : 1.0,
+            duration: const Duration(milliseconds: 140),
+            curve: Curves.easeOut,
+            child: Container(
+              width: _RecordingCard.width,
+              height: _RecordingCard.height,
+              padding: const EdgeInsets.all(9),
+              decoration: BoxDecoration(
+                color: _focused ? null : Colors.white.withValues(alpha: 0.07),
+                gradient: _focused ? sportsFocusSheen(scheme) : null,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                    color: _focused ? scheme.primary : Colors.white10,
+                    width: _focused ? 2.5 : 1),
+                boxShadow: _focused
+                    ? [
+                        BoxShadow(
+                            color: scheme.primary.withValues(alpha: 0.35),
+                            blurRadius: 16)
+                      ]
+                    : null,
+              ),
+              child: Row(children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: SizedBox(
+                    width: 76,
+                    height: double.infinity,
+                    child: r.poster == null
+                        ? Container(
+                            color: Colors.white10,
+                            child: const Icon(Icons.movie_outlined,
+                                color: Colors.white38))
+                        : HdNetworkImage(
+                            url: r.poster!,
+                            kind: ImageKind.poster,
+                            decodeWidth: 160,
+                            fit: BoxFit.cover,
+                            errorWidget: (_) =>
+                                Container(color: Colors.white10)),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (r.league.isNotEmpty)
+                        Text(r.league.toUpperCase(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 10.5,
+                                letterSpacing: 1,
+                                color: Colors.white54)),
+                      Text(r.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 14.5,
+                              height: 1.2,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white)),
+                      const Spacer(),
+                      if (progress != null && !r.complete) ...[
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(2),
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            minHeight: 4,
+                            backgroundColor: Colors.white12,
+                            color: active ? scheme.primary : Colors.white38,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                      ],
+                      Row(children: [
+                        Icon(
+                            r.complete
+                                ? Icons.download_done_rounded
+                                : active
+                                    ? Icons.downloading_rounded
+                                    : Icons.download_rounded,
+                            size: 14,
+                            color: bad ? Colors.redAccent : Colors.white60),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(widget.status,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color:
+                                      bad ? Colors.redAccent : Colors.white70)),
+                        ),
+                      ]),
+                    ],
+                  ),
+                ),
+              ]),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _RecordingCard extends StatefulWidget {

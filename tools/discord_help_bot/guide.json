@@ -736,6 +736,30 @@
     "url": "https://vespertv.app/remote.html#Recordings"
   },
   {
+    "id": "64445a41cbb5b9e3",
+    "category": "Recordings",
+    "title": "Download to watch offline",
+    "answer": "On a movie page, or on a show page for the highlighted episode or a whole season. The first choice is Tonight at 2:00: press Left / Right to change the time, OK to set it. Download now starts at once. On an account with one connection, a download waits while you watch and continues afterwards. Downloads run one at a time, survive a restart and show here with their progress.",
+    "controls": "Download on a movie or show page",
+    "url": "https://vespertv.app/remote.html#Recordings"
+  },
+  {
+    "id": "afd02af4fa39eb07",
+    "category": "Recordings",
+    "title": "Play it, or its menu",
+    "answer": "A finished download plays. Otherwise OK opens Play what's downloaded, Resume download, Download now, Stop download and Delete download.",
+    "controls": "OK on a download",
+    "url": "https://vespertv.app/remote.html#Recordings"
+  },
+  {
+    "id": "dc8a64337840009d",
+    "category": "Recordings",
+    "title": "Speed, start time, where files go",
+    "answer": "Speed limit: Like watching (about the video's own bitrate, the safest with providers), 10 / 25 / 50 Mbit/s or No limit; downloads always slow down while you watch. Save to this device, a USB drive / SD card, or a network folder: a shared folder on a computer or NAS (\\\\computer\\folder, user name and password; From phone lets you type them on your phone, same Wi-Fi). Recordings can go there too.",
+    "controls": "Settings → Recordings",
+    "url": "https://vespertv.app/remote.html#Recordings"
+  },
+  {
     "id": "cfda7cde95b5bb53",
     "category": "Vesper AI",
     "title": "Vesper AI",
