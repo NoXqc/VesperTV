@@ -16,8 +16,8 @@ No ads, no tracking, no account. VesperTV ships no content: you bring the source
 Built and tested on Android TV boxes (Formuler), Fire TV sticks, phones and Windows. It also runs on
 Linux, including the **Steam Deck**.
 
-> **Android gets new features first.** Windows caught up in **1.0.61**, and 1.0.61 is also the first
-> Linux build (beta).
+> **Android gets new features first.** Windows caught up in **1.0.61**; the Linux build (beta) is on
+> **1.0.63**.
 
 ## Download
 
@@ -29,8 +29,8 @@ Grab the latest release from the [Releases](../../releases) page or
   Later updates install from **Settings > Check for updates**.
 - **Windows 10/11 (64-bit)**: `VesperTV-windows-x64.zip` from the
   [latest release](../../releases/latest) — unzip, then run `VesperTV.exe`.
-- **Linux (beta, x64)**: `VesperTV-1.0.61-683-linux-x64.tar.gz` from the
-  [1.0.61 release](../../releases/tag/1.0.61). **Works on the Steam Deck** (SteamOS) and on
+- **Linux (beta, x64)**: `VesperTV-1.0.63-702-linux-x64.tar.gz` from the
+  [1.0.63 release](../../releases/tag/1.0.63). **Works on the Steam Deck** (SteamOS) and on
   Ubuntu 24.04+ / Linux Mint 22+. It needs the system libmpv (`sudo apt install libmpv2`); on a
   Steam Deck, run it in Desktop Mode inside an Ubuntu 24.04 [distrobox](https://distrobox.it/).
   Extract, then run `./vespertv`. No automatic updates on Linux yet.
