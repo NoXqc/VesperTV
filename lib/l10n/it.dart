@@ -3259,4 +3259,50 @@ const Map<String, String> kIt = {
       "Download in corso. Compare in Download.",
   "VesperTV has to be open then (minimized is fine).":
       "VesperTV deve essere aperto a quell'ora (anche ridotto a icona).",
+  // Series recording (2026-11-10).
+  "Record this show":
+      "Registra questo programma",
+  "Record series…":
+      "Registra la serie…",
+  "Record series":
+      "Registra la serie",
+  "Every showing of {title} on this channel":
+      "Ogni messa in onda di {title} su questo canale",
+  "Every showing of {title} on {channel}":
+      "Ogni messa in onda di {title} su {channel}",
+  "Stop series recording":
+      "Interrompi la registrazione della serie",
+  "Series recording stopped. Recordings made stay.":
+      "Registrazione della serie interrotta. Le registrazioni fatte restano.",
+  "Recordings made stay.":
+      "Le registrazioni fatte restano.",
+  "Cancels {count} scheduled. Recordings made stay.":
+      "Annulla {count} programmate. Le registrazioni fatte restano.",
+  "Every airing":
+      "Ogni messa in onda",
+  "Skip repeats":
+      "Salta le repliche",
+  "Not an episode it already has (same guide description)":
+      "Non un episodio già registrato (stessa descrizione nella guida)",
+  "Series recording on. Airings are added as the guide lists them.":
+      "Registrazione serie attiva. Le messe in onda si aggiungono quando la guida le mostra.",
+  "Series recording on: {count} scheduled":
+      "Registrazione serie attiva: {count} programmate",
+  "{count} skipped (no free connection)":
+      "{count} saltate (nessuna connessione libera)",
+  "Series recordings":
+      "Serie registrate",
+  "Waiting for the guide":
+      "In attesa della guida",
+  "{count} scheduled":
+      "{count} programmate",
+  "Next: {when}":
+      "Prossima: {when}",
+  "No repeats":
+      "Senza repliche",
+  // Compact UI (2026-11-10).
+  "Compact UI":
+      "Interfaccia compatta",
+  "Smaller tabs, groups and channel rows so more fit on screen. Just for this profile.":
+      "Schede, gruppi e righe dei canali più piccoli per vederne di più sullo schermo. Solo per questo profilo.",
 };

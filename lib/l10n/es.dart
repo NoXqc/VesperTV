@@ -3252,4 +3252,50 @@ const Map<String, String> kEs = {
       "Descargando. Aparece en Descargas.",
   "VesperTV has to be open then (minimized is fine).":
       "VesperTV tiene que estar abierto entonces (minimizado vale).",
+  // Series recording (2026-11-10).
+  "Record this show":
+      "Grabar este programa",
+  "Record series…":
+      "Grabar la serie…",
+  "Record series":
+      "Grabar la serie",
+  "Every showing of {title} on this channel":
+      "Cada emisión de {title} en este canal",
+  "Every showing of {title} on {channel}":
+      "Cada emisión de {title} en {channel}",
+  "Stop series recording":
+      "Dejar de grabar la serie",
+  "Series recording stopped. Recordings made stay.":
+      "Grabación de la serie detenida. Las grabaciones hechas se conservan.",
+  "Recordings made stay.":
+      "Las grabaciones hechas se conservan.",
+  "Cancels {count} scheduled. Recordings made stay.":
+      "Cancela {count} programada(s). Las grabaciones hechas se conservan.",
+  "Every airing":
+      "Cada emisión",
+  "Skip repeats":
+      "Omitir repeticiones",
+  "Not an episode it already has (same guide description)":
+      "No un episodio que ya tiene (misma descripción en la guía)",
+  "Series recording on. Airings are added as the guide lists them.":
+      "Grabación de serie activada. Las emisiones se añaden cuando la guía las muestra.",
+  "Series recording on: {count} scheduled":
+      "Grabación de serie activada: {count} programada(s)",
+  "{count} skipped (no free connection)":
+      "{count} omitida(s) (sin conexión libre)",
+  "Series recordings":
+      "Series grabadas",
+  "Waiting for the guide":
+      "Esperando la guía",
+  "{count} scheduled":
+      "{count} programada(s)",
+  "Next: {when}":
+      "Próxima: {when}",
+  "No repeats":
+      "Sin repeticiones",
+  // Compact UI (2026-11-10).
+  "Compact UI":
+      "Interfaz compacta",
+  "Smaller tabs, groups and channel rows so more fit on screen. Just for this profile.":
+      "Pestañas, grupos y filas de canales más pequeños para ver más en pantalla. Solo para este perfil.",
 };

@@ -66,6 +66,34 @@ class _Recorder extends RecordingService {
     items.remove(entry);
     notifyListeners();
   }
+
+  SeriesRule? rule;
+  bool? skipRepeats;
+  List<EpgProgram> guide = const [];
+  @override
+  SeriesRule? seriesFor(Channel channel, String title) => rule;
+  @override
+  Future<({SeriesRule rule, int added, int conflicts})> addSeries(
+      Channel channel, EpgProgram programme, List<EpgProgram> upcoming,
+      {bool skipRepeats = false, int maxConnections = 1}) async {
+    this.skipRepeats = skipRepeats;
+    guide = upcoming;
+    rule = SeriesRule(
+        id: 's1',
+        title: programme.title,
+        channelId: channel.id,
+        channelName: channel.name,
+        playlistId: channel.playlistId,
+        created: DateTime.now());
+    notifyListeners();
+    return (rule: rule!, added: 3, conflicts: 1);
+  }
+
+  @override
+  Future<void> stopSeries(SeriesRule rule) async {
+    this.rule = null;
+    notifyListeners();
+  }
 }
 
 void main() {
@@ -82,7 +110,9 @@ void main() {
   });
   tearDown(() => {reminders.dispose(), recordings.dispose()});
   Future<void> pump(WidgetTester tester,
-      {double width = 960, double scale = 1}) async {
+      {double width = 960,
+      double scale = 1,
+      Future<List<EpgProgram>> Function()? upcoming}) async {
     reminders = ProgrammeReminders(storage);
     tester.view.physicalSize = Size(width, 540);
     tester.view.devicePixelRatio = 1;
@@ -100,7 +130,8 @@ void main() {
                             channel: programmeChannel,
                             programme: show,
                             reminders: reminders,
-                            recordings: recordings)))))));
+                            recordings: recordings,
+                            upcoming: upcoming)))))));
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
   }
@@ -133,6 +164,44 @@ void main() {
     await press(tester, LogicalKeyboardKey.arrowDown);
     await press(tester, LogicalKeyboardKey.select);
     expect(recordings.items, isEmpty);
+    await tester.pumpWidget(const SizedBox());
+  });
+  testWidgets(
+      'Record series: D-pad to it, pick skip repeats, reopen to stop it',
+      (tester) async {
+    final later = programme(DateTime.now().add(const Duration(days: 1)));
+    await pump(tester, upcoming: () async => [later]);
+    expect(find.text('Record series…'), findsOneWidget);
+    await press(tester, LogicalKeyboardKey.arrowDown);
+    await press(tester, LogicalKeyboardKey.arrowDown);
+    await press(tester, LogicalKeyboardKey.select);
+    // The choice: every airing first, Back returns to the menu.
+    expect(find.text('Every airing'), findsOneWidget);
+    await press(tester, LogicalKeyboardKey.escape);
+    expect(find.text('Every airing'), findsNothing);
+    expect(find.text('Record series…'), findsOneWidget);
+    expect(recordings.rule, isNull);
+    await press(tester, LogicalKeyboardKey.select);
+    await press(tester, LogicalKeyboardKey.arrowDown);
+    await press(tester, LogicalKeyboardKey.select);
+    expect(recordings.skipRepeats, isTrue);
+    expect(recordings.guide, [later]);
+    expect(find.text('Record series…'), findsNothing);
+    expect(
+        find.text(
+            'Series recording on: 3 scheduled · 1 skipped (no free connection)'),
+        findsOneWidget);
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    expect(find.text('Stop series recording'), findsOneWidget);
+    await tester.tap(find.text('Stop series recording'));
+    await tester.pumpAndSettle();
+    expect(recordings.rule, isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+  testWidgets('no guide lookup given: no Record series', (tester) async {
+    await pump(tester);
+    expect(find.text('Record series…'), findsNothing);
     await tester.pumpWidget(const SizedBox());
   });
   testWidgets(

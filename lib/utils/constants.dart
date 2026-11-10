@@ -536,6 +536,10 @@ class AppConstants {
   static const String keyGuideExpanded = 'vesper_guide_expanded';
   static const String keyGuideCompact = 'vesper_guide_compact';
 
+  /// Settings > Interface > Tabs > Compact UI: smaller tabs, groups and
+  /// channel rows in the TV home (per viewer, like the guide layout).
+  static const String keyCompactUi = 'vesper_compact_ui';
+
   /// Opt-in: the live channel the remote stops on plays in the preview.
   static const String keyGuideFocusPreview = 'vesper_guide_focus_preview';
   static const String keyExpandedBrowse = 'vesper_expanded_browse';

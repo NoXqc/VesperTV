@@ -422,6 +422,13 @@ final List<_AiSetting> _aiSettings = [
       (b) => b.prefs.guideExpanded,
       (b, on) => b.prefs.setGuideExpanded(on)),
   // ---- tabs
+  _switch(
+      'compact_ui',
+      'tabs',
+      'Compact UI',
+      'Smaller tabs, groups and channel rows: more fit on screen.',
+      (b) => b.prefs.compactUi,
+      (b, on) => b.prefs.setCompactUi(on)),
   _switch('hide_live_tv', 'tabs', 'Hide Live TV', 'Hides the TV tab.',
       (b) => b.prefs.hideLiveTv, (b, on) => b.prefs.setHideLiveTv(on)),
   _switch('hide_movies', 'tabs', 'Hide Movies', 'Hides the Movies tab.',

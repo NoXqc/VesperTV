@@ -3265,4 +3265,50 @@ const Map<String, String> kFr = {
       "Téléchargement en cours. Il apparaît dans Téléchargements.",
   "VesperTV has to be open then (minimized is fine).":
       "VesperTV doit alors être ouvert (réduit, ça va).",
+  // Series recording (2026-11-10).
+  "Record this show":
+      "Enregistrer cette émission",
+  "Record series…":
+      "Enregistrer la série…",
+  "Record series":
+      "Enregistrer la série",
+  "Every showing of {title} on this channel":
+      "Chaque diffusion de {title} sur cette chaîne",
+  "Every showing of {title} on {channel}":
+      "Chaque diffusion de {title} sur {channel}",
+  "Stop series recording":
+      "Arrêter l'enregistrement de la série",
+  "Series recording stopped. Recordings made stay.":
+      "Enregistrement de la série arrêté. Les enregistrements faits restent.",
+  "Recordings made stay.":
+      "Les enregistrements faits restent.",
+  "Cancels {count} scheduled. Recordings made stay.":
+      "Annule {count} prévu(s). Les enregistrements faits restent.",
+  "Every airing":
+      "Chaque diffusion",
+  "Skip repeats":
+      "Sauter les reprises",
+  "Not an episode it already has (same guide description)":
+      "Pas un épisode déjà enregistré (même description dans le guide)",
+  "Series recording on. Airings are added as the guide lists them.":
+      "Série enregistrée. Les diffusions s'ajoutent à mesure que le guide les affiche.",
+  "Series recording on: {count} scheduled":
+      "Série enregistrée : {count} prévu(s)",
+  "{count} skipped (no free connection)":
+      "{count} sauté(s) (aucune connexion libre)",
+  "Series recordings":
+      "Séries enregistrées",
+  "Waiting for the guide":
+      "En attente du guide",
+  "{count} scheduled":
+      "{count} prévu(s)",
+  "Next: {when}":
+      "Prochain : {when}",
+  "No repeats":
+      "Sans reprises",
+  // Compact UI (2026-11-10).
+  "Compact UI":
+      "Interface compacte",
+  "Smaller tabs, groups and channel rows so more fit on screen. Just for this profile.":
+      "Onglets, groupes et rangées de chaînes plus petits pour en voir plus à l'écran. Pour ce profil seulement.",
 };

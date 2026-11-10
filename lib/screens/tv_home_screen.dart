@@ -29,6 +29,7 @@ import '../services/desktop_window.dart';
 import '../services/desktop_mini_player.dart';
 import '../services/epg_service.dart';
 import '../services/recording_service.dart';
+import '../widgets/programme_actions.dart';
 import 'recordings_screen.dart';
 import '../services/playback_service.dart';
 import '../services/guide_key.dart';
@@ -916,6 +917,22 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     final onNow = RecordingService.supported
         ? context.read<EpgService>().getCurrentProgram(channel.epgId)
         : null;
+    // A future programme held in the Timeline guide: record it (or cancel
+    // it). Series: every airing of the held programme (any time), else of
+    // the one on now (the plain list has no programme to hold).
+    final recordings = RecordingService.instance;
+    final recordable = RecordingService.supported &&
+        channel.isLive &&
+        !channel.transientPlayback;
+    final upcoming =
+        recordable && held != null && held.start.isAfter(nowTime) ? held : null;
+    final upcomingEntry = upcoming == null
+        ? null
+        : recordings.entryForProgramme(channel, upcoming);
+    final seriesSource = recordable ? held ?? onNow : null;
+    final seriesRule = seriesSource == null
+        ? null
+        : recordings.seriesFor(channel, seriesSource.title);
     final showEnds = onNow == null
         ? tr('No guide for this channel: stops after 2 hours')
         : tr('{title} · stops at {time}', {
@@ -938,12 +955,41 @@ class _TvHomeScreenState extends State<TvHomeScreen>
           ],
         );
 
+    Widget? seriesOption(BuildContext context) => seriesSource == null
+        ? null
+        : TvDialogOption(
+            onPressed: () => Navigator.of(context)
+                .pop(seriesRule == null ? 'series' : 'stopSeries'),
+            child: seriesRule == null
+                ? twoLines(
+                    tr('Record series…'),
+                    tr('Every showing of {title} on this channel',
+                        {'title': seriesSource.title}))
+                : twoLines(tr('Stop series recording'), seriesRule.title),
+          );
+
     final choice = await showGlassMenu<String>(
       context: context,
       builder: (context) => GlassMenuDialog(
         maxWidth: 360,
         title: Text(channel.name, maxLines: 1, overflow: TextOverflow.ellipsis),
         children: [
+          // Held on a show to come: what that hold was for, first.
+          if (upcoming != null) ...[
+            TvDialogOption(
+              autofocus: true,
+              onPressed: () => Navigator.of(context).pop(
+                  upcomingEntry == null ? 'recordUpcoming' : 'cancelUpcoming'),
+              child: twoLines(
+                  upcomingEntry == null
+                      ? tr('Record this show')
+                      : upcomingEntry.state == RecState.recording
+                          ? tr('Stop recording')
+                          : tr('Cancel recording'),
+                  '${upcoming.title} · ${TimeFormat.dayTime(upcoming.start)}'),
+            ),
+            if (seriesOption(context) case final option?) option,
+          ],
           if (inCatchup)
             TvDialogOption(
               onPressed: () => Navigator.of(context).pop('live'),
@@ -955,7 +1001,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               child: twoLines(tr('Watch from the start'), onAir.title),
             ),
           TvDialogOption(
-            autofocus: true,
+            autofocus: upcoming == null,
             onPressed: () => Navigator.of(context).pop('favorite'),
             child: Text(isFavorited
                 ? tr('Remove from Favourites')
@@ -1011,6 +1057,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                   tr('Keeps going across shows (4 hours at most)')),
             ),
           ],
+          if (upcoming == null)
+            if (seriesOption(context) case final option?) option,
           TvDialogOption(
             onPressed: () => Navigator.of(context).pop(),
             child: Text(tr('Cancel')),
@@ -1032,6 +1080,20 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         await _recordChannel(channel, recording);
       case 'recordChannel':
         await _recordChannel(channel, null, untilStopped: true);
+      case 'recordUpcoming':
+        if (upcoming != null) await _recordUpcoming(channel, upcoming);
+      case 'cancelUpcoming':
+        if (upcomingEntry != null) await _cancelUpcoming(upcomingEntry);
+      case 'series':
+        if (seriesSource != null) await _recordSeries(channel, seriesSource);
+      case 'stopSeries':
+        if (seriesRule != null) {
+          await recordings.stopSeries(seriesRule);
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content:
+                  Text(tr('Series recording stopped. Recordings made stay.'))));
+        }
       case 'group':
         await _moveChannelToGroup(channel);
       case 'rename':
@@ -1118,22 +1180,24 @@ class _TvHomeScreenState extends State<TvHomeScreen>
 
   /// Hold OK on a channel → Record: from now to the end of the guide's
   /// current programme (2 h without a guide), or stops [running].
-  Future<void> _recordChannel(Channel channel, RecordingEntry? running,
-      {bool untilStopped = false}) async {
+  /// [announce] false: no "Recording …" message (the caller shows one).
+  /// Returns whether a recording started.
+  Future<bool> _recordChannel(Channel channel, RecordingEntry? running,
+      {bool untilStopped = false, bool announce = true}) async {
     final service = RecordingService.instance;
     final messenger = ScaffoldMessenger.of(context);
     if (running != null) {
       await service.stop(running);
       messenger.showSnackBar(SnackBar(content: Text(tr('Recording stopped'))));
-      return;
+      return false;
     }
     await service.askNotifications();
     if (!await service.hasRoom()) {
       messenger.showSnackBar(
           SnackBar(content: Text(tr('Not enough free space to record'))));
-      return;
+      return false;
     }
-    if (!mounted) return;
+    if (!mounted) return false;
     final now = context.read<EpgService>().getCurrentProgram(channel.epgId);
     await service.handOver(
         channel,
@@ -1142,9 +1206,67 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             program: now?.title ?? '',
             until: now?.stop.toLocal(),
             untilStopped: untilStopped));
-    messenger.showSnackBar(SnackBar(
-        content: Text(
-            tr('Recording {title}', {'title': now?.title ?? channel.name}))));
+    if (announce) {
+      messenger.showSnackBar(SnackBar(
+          content: Text(
+              tr('Recording {title}', {'title': now?.title ?? channel.name}))));
+    }
+    return true;
+  }
+
+  int _maxConnectionsFor(Channel channel) =>
+      context
+          .read<PlaylistManager>()
+          .profiles
+          .where((p) => p.id == channel.playlistId)
+          .firstOrNull
+          ?.maxConnections ??
+      1;
+
+  /// Hold OK on a show to come in the Timeline guide > Record this show.
+  Future<void> _recordUpcoming(Channel channel, EpgProgram programme) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final message = await recordUpcomingProgramme(
+        RecordingService.instance, channel, programme,
+        maxConnections: _maxConnectionsFor(channel));
+    messenger.showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _cancelUpcoming(RecordingEntry entry) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await RecordingService.instance.cancelProgramme(entry);
+      messenger.showSnackBar(SnackBar(
+          content: Text(entry.state == RecState.stopped
+              ? tr('Recording stopped')
+              : tr('Recording cancelled'))));
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(
+          content: Text(tr(
+              'Could not schedule recording. Check recording storage and try again.'))));
+    }
+  }
+
+  /// Hold OK on a programme > Record series…: every airing on this channel;
+  /// the one on now records at once too.
+  Future<void> _recordSeries(Channel channel, EpgProgram programme) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final service = RecordingService.instance;
+    final epg = context.read<EpgService>();
+    var message = await recordSeriesFlow(context,
+        recordings: service,
+        upcoming: () => epg.upcomingPrograms(channel.epgId),
+        channel: channel,
+        programme: programme,
+        maxConnections: _maxConnectionsFor(channel));
+    if (message == null || !mounted) return;
+    if (programme.isNowPlaying(DateTime.now()) &&
+        service.recordingOf(channel) == null &&
+        await _recordChannel(channel, null, announce: false)) {
+      message =
+          '${tr('Recording {title}', {'title': programme.title})} · $message';
+    }
+    messenger.showSnackBar(SnackBar(content: Text(message)));
   }
 
   /// Hold OK on a channel → "Move to group…": into one of the viewer's
@@ -1404,7 +1526,10 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// A starting estimate only — rows can grow to two lines for a long
   /// channel name — refined by `Scrollable.ensureVisible` once the target
   /// row is close enough to the viewport to have actually been built.
-  static const double _liveRowHeightEstimate = 72;
+  static double get _liveRowHeightEstimate => _compactUi ? 52 : 72;
+
+  /// The live list's channel logo (smaller in Compact UI).
+  static double get _liveLogoSize => _compactUi ? 32 : 40;
 
   /// Keeps a whole row's header visible when D-pad focus lands on one of
   /// its cards, not just the card itself — Flutter's own default
@@ -2273,9 +2398,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       // Preserve the browse pages' live-video parking without deferring
       // the selected screen's first paint or changing resume behavior.
       // Home with its mini player keeps the channel (see _openHome).
-      final homeKeepsLive =
-          HomeScreen.showsMiniPlayer(context) &&
-              prefs.effectiveStartSection == 'home';
+      final homeKeepsLive = HomeScreen.showsMiniPlayer(context) &&
+          prefs.effectiveStartSection == 'home';
       if (_isBrowseTab(_initialTab) ||
           ((_initialTab == 'Home' || widget.startupBrowseCovered) &&
               !homeKeepsLive)) {
@@ -3237,8 +3361,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         final exit = await showDialog<bool>(
           context: context,
           builder: (dialogContext) => AlertDialog(
-            title: Text(
-                tr('Exit {appName}?', {'appName': AppConstants.appName})),
+            title:
+                Text(tr('Exit {appName}?', {'appName': AppConstants.appName})),
             content: Text(tr('Are you sure you want to exit {appName}?',
                 {'appName': AppConstants.appName})),
             actions: [
@@ -3426,6 +3550,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     // Read by the browse size getters (top-level, like their Windows
     // scale): a portrait phone keeps posters, they'd fill the screen.
     _wideBrowseCards = prefs.wideCards && !_compact;
+    _compactUi = prefs.compactUi;
     // Turning the phone to portrait lands on the content page (what was
     // on the right in landscape); Back then walks to groups and tabs.
     if (!_compact) _phonePage = 2;
@@ -3518,7 +3643,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                 child: Column(
                   children: [
                     _TvTopBar(
-                        dense: _shortScreen,
+                        dense: _shortScreen || _compactUi,
                         // Wide phones/tablets (including unfolded phones) use
                         // columns too. Full-video mode hides passed columns
                         // completely, so touch users need a visible way back.
@@ -3752,7 +3877,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                                       children: [
                                         _collapsible(
                                           depth: 0,
-                                          expandedWidth: 160,
+                                          expandedWidth: _compactUi ? 136 : 160,
                                           child: _fullVideoScrim(_tabsScope(
                                               collapsed: _focusDepth > 0)),
                                         ),
@@ -3767,7 +3892,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                                         else ...[
                                           _collapsible(
                                             depth: 1,
-                                            expandedWidth: 260,
+                                            expandedWidth:
+                                                _compactUi ? 220 : 260,
                                             child: _fullVideoScrim(_groupsScope(
                                                 playlist, isBrowseTab,
                                                 collapsed: _focusDepth > 1)),
@@ -4583,7 +4709,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     final rowBox = _playlistsRowFocusNode.context?.findRenderObject();
     final rowHeight =
         rowBox is RenderBox && rowBox.hasSize ? rowBox.size.height : 44.0;
-    const dividerHeight = 50.0;
+    final dividerHeight = _compactUi ? 40.0 : 50.0;
     if (_groupsScroll.hasClients) {
       final estimate =
           rowsBefore * rowHeight + dividersBefore * dividerHeight - rowHeight;
@@ -5571,7 +5697,14 @@ class _TvHomeScreenState extends State<TvHomeScreen>
                                   1 +
                                   // Same height in Compact guide: shorter
                                   // rows fit 4 channels instead of 3.
-                                  3 * _TimelineGuideState._normalRowHeight,
+                                  // Compact UI: 5 whole rows (4.8 left
+                                  // half a row showing).
+                                  (_compactUi
+                                      ? 5 *
+                                          _TimelineGuideState
+                                              ._compactUiRowHeight
+                                      : 3 *
+                                          _TimelineGuideState._normalRowHeight),
                               child: _fullVideoScrim(guide),
                             ),
                           ]
@@ -5826,16 +5959,18 @@ class _TvHomeScreenState extends State<TvHomeScreen>
             isMoving ? _endChannelMove() : _previewOrOpenChannel(channel),
         onLongPress: () => _toggleFavoriteWithFeedback(context, channel),
         leading: SizedBox(
-          width: 40,
-          height: 40,
+          width: _liveLogoSize,
+          height: _liveLogoSize,
           child: (channel.logoUrl != null && channel.logoUrl!.isNotEmpty)
               ? CachedNetworkImage(
                   imageUrl: channel.logoUrl!,
                   fit: BoxFit.contain,
                   memCacheWidth:
-                      (40 * MediaQuery.of(context).devicePixelRatio).round(),
+                      (_liveLogoSize * MediaQuery.of(context).devicePixelRatio)
+                          .round(),
                   memCacheHeight:
-                      (40 * MediaQuery.of(context).devicePixelRatio).round(),
+                      (_liveLogoSize * MediaQuery.of(context).devicePixelRatio)
+                          .round(),
                   errorWidget: (_, __, ___) => const Icon(Icons.tv))
               : const Icon(Icons.tv),
         ),
@@ -6035,8 +6170,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
   /// This tab's titles on the viewer's watch list (Movies: IPTV movies,
   /// TV Shows: IPTV shows), newest first.
   List<WatchListItem> _watchListFor(String tab) => [
-        for (final i
-            in WatchList.instance.load(context.read<StorageService>()))
+        for (final i in WatchList.instance.load(context.read<StorageService>()))
           if (tab == 'Movies'
               ? i.channel != null && !i.channel!.isLive
               : i.series != null)
@@ -6045,8 +6179,7 @@ class _TvHomeScreenState extends State<TvHomeScreen>
 
   /// Hold OK on a card in the Watch list row: off the list.
   Future<void> _removeFromWatchList(WatchListItem item) async {
-    await WatchList.instance
-        .remove(context.read<StorageService>(), item.id);
+    await WatchList.instance.remove(context.read<StorageService>(), item.id);
     if (!mounted) return;
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
       content: Text(tr('Removed from watch list')),
@@ -6215,9 +6348,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     final continueRow = _showFavorites
         ? null
         : _buildContinueWatchingRow(idPrefix: 'xt_vod_', onTap: _openMovie);
-    final watchItems = _showFavorites
-        ? const <WatchListItem>[]
-        : _watchListFor('Movies');
+    final watchItems =
+        _showFavorites ? const <WatchListItem>[] : _watchListFor('Movies');
     final watchRow = _buildWatchListRow<WatchListItem>(
       items: watchItems,
       rowIndex: continueRow != null ? 1 : 0,
@@ -6418,9 +6550,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       if (continueRow != null) null,
     ];
     final watchRow = _buildWatchListRow<WatchListItem>(
-      items: _showFavorites
-          ? const <WatchListItem>[]
-          : _watchListFor('TV Shows'),
+      items:
+          _showFavorites ? const <WatchListItem>[] : _watchListFor('TV Shows'),
       rowIndex: rows.length,
       card: (i, x) {
         final s = i.series!;
@@ -6747,11 +6878,14 @@ class _SelectableRowState extends State<_SelectableRow> {
     // contour/text, blue icons).
     final iconColor =
         (_focused || isPlaying) ? scheme.tertiary : Colors.white70;
-    final leadingWidget =
-        widget.leading ?? Icon(widget.icon, color: iconColor, size: 20);
+    final leadingWidget = widget.leading ??
+        Icon(widget.icon, color: iconColor, size: _compactUi ? 18 : 20);
+    // Compact UI: one size smaller than the row's own (14 = body text).
+    final fontSize = _compactUi ? (widget.fontSize ?? 14) - 1 : widget.fontSize;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding:
+          EdgeInsets.symmetric(horizontal: 8, vertical: _compactUi ? 1.5 : 3),
       child: Container(
         // Always present (even with an empty shadow list) rather than
         // conditionally wrapped — MinimalGlassFocus's own doc comment just
@@ -6832,8 +6966,8 @@ class _SelectableRowState extends State<_SelectableRow> {
                 if (f) _ensureVisible(context);
               },
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: EdgeInsets.symmetric(
+                    horizontal: 12, vertical: _compactUi ? 6 : 10),
                 child: widget.collapsed
                     ? Center(
                         child: Stack(
@@ -6873,7 +7007,7 @@ class _SelectableRowState extends State<_SelectableRow> {
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
                                           color: foregroundColor,
-                                          fontSize: widget.fontSize,
+                                          fontSize: fontSize,
                                           fontWeight: (_focused || isPlaying)
                                               ? FontWeight.bold
                                               : FontWeight.normal,
@@ -6939,7 +7073,8 @@ class _PlaylistDividerRow extends StatelessWidget {
     }
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 16, 8, 6),
+      padding:
+          EdgeInsets.fromLTRB(8, _compactUi ? 10 : 16, 8, _compactUi ? 4 : 6),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
@@ -7148,11 +7283,13 @@ class _GroupRowState extends State<_GroupRow> {
     // contour/text, blue icons).
     final iconColor = highlighted ? scheme.tertiary : Colors.white70;
 
+    // Compact UI: one size smaller (see _SelectableRow).
+    final fontSize = _compactUi ? (widget.fontSize ?? 14) - 1 : widget.fontSize;
     final iconWidget = Stack(
       clipBehavior: Clip.none,
       children: [
         Icon(widget.moving ? Icons.swap_vert : widget.icon,
-            color: iconColor, size: 20),
+            color: iconColor, size: _compactUi ? 18 : 20),
         if (widget.isFavorited)
           Positioned(
             right: -4,
@@ -7166,7 +7303,8 @@ class _GroupRowState extends State<_GroupRow> {
     return Opacity(
       opacity: widget.isPendingHide ? 0.4 : 1.0,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        padding:
+            EdgeInsets.symmetric(horizontal: 8, vertical: _compactUi ? 1.5 : 3),
         child: Focus(
           focusNode: _focusNode,
           onKeyEvent: _handleKeyEvent,
@@ -7234,8 +7372,8 @@ class _GroupRowState extends State<_GroupRow> {
                                 : BorderSide.none,
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10),
+                    padding: EdgeInsets.symmetric(
+                        horizontal: 12, vertical: _compactUi ? 6 : 10),
                     child: widget.collapsed
                         ? Center(child: iconWidget)
                         : Row(
@@ -7249,7 +7387,7 @@ class _GroupRowState extends State<_GroupRow> {
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     color: foregroundColor,
-                                    fontSize: widget.fontSize,
+                                    fontSize: fontSize,
                                     fontWeight: highlighted
                                         ? FontWeight.bold
                                         : FontWeight.normal,
@@ -7265,7 +7403,7 @@ class _GroupRowState extends State<_GroupRow> {
                                     color: highlighted
                                         ? foregroundColor
                                         : Colors.white54,
-                                    fontSize: (widget.fontSize ?? 14) * 0.85,
+                                    fontSize: (fontSize ?? 14) * 0.85,
                                   ),
                                 ),
                               ],
@@ -7321,6 +7459,13 @@ const double _windowsPosterScale = 1.26;
 /// taller than the posters too). Set at the top of every TV home build.
 bool _wideBrowseCards = false;
 const double _wideCardScale = PosterCard.wideStyleScale;
+
+/// Settings > Interface > Tabs > Compact UI (per viewer; owner, 2026-11-10:
+/// some apps use a smaller UI and users like that). Tighter tab, group and
+/// channel rows, narrower tabs/groups/guide channel columns, the slim top
+/// bar and 40 px Timeline rows. Set at the top of every TV home build, like
+/// [_wideBrowseCards].
+bool _compactUi = false;
 
 double get _browseScale =>
     (isDesktop ? _windowsPosterScale : 1.0) *
@@ -8791,10 +8936,14 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   static const Duration _windowBefore = Duration(hours: 1);
   static const Duration _windowAfter = Duration(hours: 5);
 
-  /// 64 normally, shorter with Theme > Compact guide (set each build).
+  /// 64 normally, shorter with Theme > Compact guide, shorter again with
+  /// Compact UI (set each build).
   static double _rowHeight = _normalRowHeight;
   static const double _normalRowHeight = 64;
-  static const double _channelColumnWidth = 160;
+  static const double _compactUiRowHeight = 40;
+
+  /// Narrower with Compact UI (set each build).
+  static double _channelColumnWidth = 160;
   static const double _rulerHeight = 32;
 
   /// How often the "now" line (and every row's now/later styling) redraws
@@ -9521,10 +9670,13 @@ class _TimelineGuideState extends State<_TimelineGuide> with RouteAware {
   @override
   Widget build(BuildContext context) {
     // A phone held sideways always gets the Compact guide's rows.
-    _rowHeight = context.watch<AppPreferences>().guideCompact ||
-            _isShortPhoneScreen(context)
-        ? 48
-        : _normalRowHeight;
+    final prefs = context.watch<AppPreferences>();
+    _rowHeight = prefs.compactUi
+        ? _compactUiRowHeight
+        : prefs.guideCompact || _isShortPhoneScreen(context)
+            ? 48
+            : _normalRowHeight;
+    _channelColumnWidth = prefs.compactUi ? 136 : 160;
     if (widget.channels.isEmpty) {
       return Center(child: Text(tr('No channels found.')));
     }
@@ -10049,15 +10201,19 @@ class _ChannelLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tag = playlistTag;
+    // Compact UI: smaller logo and name; one line under a playlist tag
+    // (the 40 px row has no room for two).
+    final logo = _compactUi ? 24.0 : 32.0;
     final row = SizedBox(
       height: _TimelineGuideState._rowHeight,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(8, tag == null ? 0 : 12, 8, 0),
+        padding: EdgeInsets.fromLTRB(
+            8, tag == null ? 0 : (_compactUi ? 11 : 12), 8, 0),
         child: Row(
           children: [
             SizedBox(
-              width: 32,
-              height: 32,
+              width: logo,
+              height: logo,
               child: (channel.logoUrl != null && channel.logoUrl!.isNotEmpty)
                   ? CachedNetworkImage(
                       imageUrl: channel.logoUrl!,
@@ -10065,13 +10221,14 @@ class _ChannelLabel extends StatelessWidget {
                       errorWidget: (_, __, ___) => const Icon(Icons.tv))
                   : const Icon(Icons.tv),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: _compactUi ? 6 : 8),
             Expanded(
               child: Text(
                 channel.name,
-                maxLines: 2,
+                maxLines: _compactUi && tag != null ? 1 : 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white, fontSize: 13),
+                style: TextStyle(
+                    color: Colors.white, fontSize: _compactUi ? 12 : 13),
               ),
             ),
             if (moving) const Icon(Icons.swap_vert, color: Colors.amber),
@@ -10311,6 +10468,7 @@ class _TimelineRow extends StatelessWidget {
               bottom: 4,
               child: _ProgramBlock(
                 program: program,
+                channel: channel,
                 isNow: program.isNowPlaying(now),
                 ended: !program.stop.isAfter(now),
                 replayable: replayable(program),
@@ -10473,10 +10631,14 @@ class _ProgramBlock extends StatefulWidget {
       this.ended = false,
       this.replayable = false,
       this.onFocusedDispose,
+      this.channel,
       this.translucent = false});
 
   /// Disposed while focused (see [_TimelineRow.onFocusedBlockGone]).
   final VoidCallback? onFocusedDispose;
+
+  /// The row's channel: a red dot on a programme scheduled to record.
+  final Channel? channel;
 
   final bool translucent;
 
@@ -10714,7 +10876,8 @@ class _ProgramBlockState extends State<_ProgramBlock> {
                         (scrollX - widget.blockLeft).clamp(0.0, maxInset);
                     final title = Text(
                       widget.program?.title ?? widget.placeholderLabel ?? '',
-                      maxLines: 2,
+                      // Compact UI's 40 px row holds one line.
+                      maxLines: _compactUi ? 1 : 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                           color: _focused
@@ -10735,21 +10898,32 @@ class _ProgramBlockState extends State<_ProgramBlock> {
                                 ]
                               : null),
                     );
+                    // The marks only where they fit beside some title (a
+                    // few-minute block at the window's edge is narrow).
+                    final fits = widget.blockWidth - inset >= 56;
+                    final replay = widget.replayable && fits;
+                    final rec = fits &&
+                        RecordingService.supported &&
+                        !widget.ended &&
+                        widget.channel != null &&
+                        widget.program != null;
                     return Padding(
                       padding: EdgeInsets.fromLTRB(6 + inset, 2, 6, 2),
-                      // The mark only where it fits beside some title (a
-                      // few-minute block at the window's edge is narrow).
-                      child:
-                          widget.replayable && widget.blockWidth - inset >= 56
-                              ? Row(children: [
-                                  const Padding(
-                                    padding: EdgeInsets.only(right: 4),
-                                    child: Icon(Icons.history,
-                                        size: 13, color: Colors.amber),
-                                  ),
-                                  Expanded(child: title),
-                                ])
-                              : title,
+                      child: replay || rec
+                          ? Row(children: [
+                              if (rec)
+                                _ProgrammeRecMark(
+                                    channel: widget.channel!,
+                                    program: widget.program!),
+                              if (replay)
+                                const Padding(
+                                  padding: EdgeInsets.only(right: 4),
+                                  child: Icon(Icons.history,
+                                      size: 13, color: Colors.amber),
+                                ),
+                              Expanded(child: title),
+                            ])
+                          : title,
                     );
                   },
                 ),
@@ -10760,6 +10934,30 @@ class _ProgramBlockState extends State<_ProgramBlock> {
       ),
     );
   }
+}
+
+/// A red dot before a Timeline programme that is scheduled to record (or
+/// recording): hold OK on it > Record this show / Record series.
+class _ProgrammeRecMark extends StatelessWidget {
+  const _ProgrammeRecMark({required this.channel, required this.program});
+  final Channel channel;
+  final EpgProgram program;
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+        listenable: RecordingService.instance,
+        builder: (context, _) =>
+            RecordingService.instance.entryForProgramme(channel, program) ==
+                    null
+                ? const SizedBox.shrink()
+                : Container(
+                    width: 8,
+                    height: 8,
+                    margin: const EdgeInsets.only(right: 5),
+                    decoration: const BoxDecoration(
+                        shape: BoxShape.circle, color: Colors.redAccent),
+                  ),
+      );
 }
 
 /// A phone held sideways: not a TV box or a computer, landscape, under 500

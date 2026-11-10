@@ -64,10 +64,18 @@
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
   {
+    "id": "d67cd1412cd274f6",
+    "category": "Live TV",
+    "title": "Record a show later, or the whole series",
+    "answer": "Move right in the Timeline guide to a programme that hasn't started and hold OK. Record this show is at the top of the menu: it records from the guide's start to end time, even with the app closed (leave the box powered). A red dot on the programme shows it is set; hold OK on it again to cancel. Record series… records every showing of that title on this channel: Every airing, or Skip repeats (leaves out an episode it already has, judged by the guide's description). New showings are added each time the guide updates, so open VesperTV now and then. A showing that would need a second connection your account doesn't have is skipped. Record series… is also in the menu of a show on now (it records that one at once) or a past one, and in the player's Channel schedule. Stop series recording is in the same menu, or in Recordings.",
+    "controls": "Android · Timeline · Hold OK on a show to come",
+    "url": "https://vespertv.app/remote.html#Live%20TV"
+  },
+  {
     "id": "ad2f3fe6d3ade9fd",
     "category": "Live TV",
     "title": "Channel menu",
-    "answer": "Add to / Remove from Favourites, Hide this channel, Move Up / Down (your own order inside the group or Favourites), Move to group…, Remove from a group, and Record on Android. To reorder Favourites in the list or Timeline guide, hold OK on a channel, choose Move Up / Down, use ↑ / ↓, then OK or Back to finish. Each viewer's manual order is saved across playlists. Sort favourites can temporarily show an alphabetical order without erasing it. Clear the guide's search filter before moving a channel.",
+    "answer": "Add to / Remove from Favourites, Hide this channel, Move Up / Down (your own order inside the group or Favourites), Move to group…, Remove from a group, and on Android Record (until the show ends, or until you stop it) and Record series…. To reorder Favourites in the list or Timeline guide, hold OK on a channel, choose Move Up / Down, use ↑ / ↓, then OK or Back to finish. Each viewer's manual order is saved across playlists. Sort favourites can temporarily show an alphabetical order without erasing it. Clear the guide's search filter before moving a channel.",
     "controls": "Hold OK on a channel",
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
@@ -733,6 +741,14 @@
     "title": "Recording menu",
     "answer": "While it records: Watch live, Play from the start, Stop recording (keeps it), Cancel recording.",
     "controls": "Hold OK on a recording",
+    "url": "https://vespertv.app/remote.html#Recordings"
+  },
+  {
+    "id": "ffaba34d412bc206",
+    "category": "Recordings",
+    "title": "Stop series recording",
+    "answer": "Series recordings show their channel, title, how many showings are scheduled and the next one. Stop series recording cancels the scheduled showings; recordings already made stay. To skip a single showing, cancel it under Scheduled (marked with the repeat icon): the series won't add it back.",
+    "controls": "OK on a series",
     "url": "https://vespertv.app/remote.html#Recordings"
   },
   {

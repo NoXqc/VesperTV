@@ -5,9 +5,13 @@ import '../models/epg_program.dart';
 import '../services/programme_reminders.dart';
 import '../services/recording_service.dart';
 import '../utils/time_format.dart';
+import 'glass_menu.dart';
 import 'hold_to_activate.dart';
+import 'tv_dialog_option.dart';
 import 'tv_menu_tile.dart';
 
+/// [upcoming]: the channel's programmes to come (`EpgService
+/// .upcomingPrograms`), for Record series; null hides it.
 Future<void> showProgrammeActions(
   BuildContext context, {
   required Channel channel,
@@ -15,6 +19,7 @@ Future<void> showProgrammeActions(
   required ProgrammeReminders reminders,
   required RecordingService recordings,
   int maxConnections = 1,
+  Future<List<EpgProgram>> Function()? upcoming,
 }) =>
     showDialog<void>(
         context: context,
@@ -23,7 +28,129 @@ Future<void> showProgrammeActions(
             programme: programme,
             reminders: reminders,
             recordings: recordings,
-            maxConnections: maxConnections));
+            maxConnections: maxConnections,
+            upcoming: upcoming));
+
+/// Schedules one show to come; returns what to tell the viewer (also when
+/// it couldn't: no free connection, no storage).
+Future<String> recordUpcomingProgramme(
+    RecordingService recordings, Channel channel, EpgProgram programme,
+    {int maxConnections = 1}) async {
+  final conflict =
+      recordings.programmeConflict(channel, programme, maxConnections);
+  if (conflict != null) {
+    return tr('Overlaps {title}. Your playlist has no free recording connection.',
+        {'title': conflict.title});
+  }
+  try {
+    await recordings.askNotifications();
+    if (!await recordings.hasRoom()) throw StateError('No recording storage');
+    await recordings.recordProgramme(channel, programme,
+        maxConnections: maxConnections);
+  } catch (_) {
+    return tr(
+        'Could not schedule recording. Check recording storage and try again.');
+  }
+  return recordings.exactSchedule
+      ? tr('{title} will be recorded', {'title': programme.title})
+      : tr(
+          'Recording scheduled. Android may delay the start without exact alarm access.');
+}
+
+/// Record series: every airing (false) or skipping repeats (true); null =
+/// the viewer backed out.
+Future<bool?> showSeriesChoice(BuildContext context,
+    {required String title, required String channelName}) {
+  Widget twoLines(String title, String detail) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title),
+          const SizedBox(height: 2),
+          Text(detail,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.normal,
+                  color: Colors.white60)),
+        ],
+      );
+  return showGlassMenu<bool>(
+    context: context,
+    builder: (context) => GlassMenuDialog(
+      maxWidth: 420,
+      title: Text(tr('Record series'),
+          maxLines: 1, overflow: TextOverflow.ellipsis),
+      children: [
+        TvDialogOption(
+          key: const ValueKey('series-every'),
+          autofocus: true,
+          onPressed: () => Navigator.of(context).pop(false),
+          child: twoLines(
+              tr('Every airing'),
+              tr('Every showing of {title} on {channel}',
+                  {'title': title, 'channel': channelName})),
+        ),
+        TvDialogOption(
+          key: const ValueKey('series-skip-repeats'),
+          onPressed: () => Navigator.of(context).pop(true),
+          child: twoLines(tr('Skip repeats'),
+              tr('Not an episode it already has (same guide description)')),
+        ),
+        TvDialogOption(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(tr('Cancel')),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Record series… : asks every airing / skip repeats, then sets it. Returns
+/// what to tell the viewer, null when they backed out.
+Future<String?> recordSeriesFlow(BuildContext context,
+    {required RecordingService recordings,
+    required Future<List<EpgProgram>> Function() upcoming,
+    required Channel channel,
+    required EpgProgram programme,
+    int maxConnections = 1}) async {
+  final skipRepeats = await showSeriesChoice(context,
+      title: programme.title, channelName: channel.name);
+  if (skipRepeats == null) return null;
+  return addSeriesRecording(recordings,
+      upcoming: upcoming,
+      channel: channel,
+      programme: programme,
+      skipRepeats: skipRepeats,
+      maxConnections: maxConnections);
+}
+
+/// Sets the series (after [showSeriesChoice]); returns what to tell the
+/// viewer, also when it couldn't be saved.
+Future<String> addSeriesRecording(RecordingService recordings,
+    {required Future<List<EpgProgram>> Function() upcoming,
+    required Channel channel,
+    required EpgProgram programme,
+    required bool skipRepeats,
+    int maxConnections = 1}) async {
+  try {
+    await recordings.askNotifications();
+    final r = await recordings.addSeries(channel, programme, await upcoming(),
+        skipRepeats: skipRepeats, maxConnections: maxConnections);
+    return seriesAddedMessage(r.added, r.conflicts);
+  } catch (_) {
+    return tr(
+        'Could not schedule recording. Check recording storage and try again.');
+  }
+}
+
+String seriesAddedMessage(int added, int conflicts) => [
+      added == 0
+          ? tr('Series recording on. Airings are added as the guide lists them.')
+          : tr('Series recording on: {count} scheduled', {'count': '$added'}),
+      if (conflicts > 0)
+        tr('{count} skipped (no free connection)', {'count': '$conflicts'}),
+    ].join(' · ');
 
 class _ProgrammeActions extends StatefulWidget {
   const _ProgrammeActions(
@@ -31,12 +158,14 @@ class _ProgrammeActions extends StatefulWidget {
       required this.programme,
       required this.reminders,
       required this.recordings,
-      required this.maxConnections});
+      required this.maxConnections,
+      this.upcoming});
   final Channel channel;
   final EpgProgram programme;
   final ProgrammeReminders reminders;
   final RecordingService recordings;
   final int maxConnections;
+  final Future<List<EpgProgram>> Function()? upcoming;
   @override
   State<_ProgrammeActions> createState() => _ProgrammeActionsState();
 }
@@ -90,6 +219,9 @@ class _ProgrammeActionsState extends State<_ProgrammeActions> {
                               p.start.isAfter(widget.reminders.now());
                           final conflict = widget.recordings.programmeConflict(
                               widget.channel, p, widget.maxConnections);
+                          final series =
+                              widget.recordings.seriesFor(widget.channel, p.title);
+                          final upcomingOf = widget.upcoming;
                           return Column(
                               mainAxisSize: MainAxisSize.min,
                               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -173,6 +305,49 @@ class _ProgrammeActionsState extends State<_ProgrammeActions> {
                                                 : tr(
                                                     'Recording scheduled. Android may delay the start without exact alarm access.');
                                           }, tr('Could not schedule recording. Check recording storage and try again.'))),
+                                if (widget.recordings.available &&
+                                    upcomingOf != null)
+                                  TvMenuTile(
+                                      key: const ValueKey('programme-series'),
+                                      enabled: !_busy,
+                                      icon: series == null
+                                          ? Icons.event_repeat
+                                          : Icons.event_busy,
+                                      title: series == null
+                                          ? tr('Record series…')
+                                          : tr('Stop series recording'),
+                                      subtitle: series == null
+                                          ? tr('Every showing of {title} on this channel',
+                                              {'title': p.title})
+                                          : tr('Recordings made stay.'),
+                                      onTap: () async {
+                                        if (_busy) return;
+                                        if (series != null) {
+                                          return _run(() async {
+                                            await widget.recordings
+                                                .stopSeries(series);
+                                            return tr(
+                                                'Series recording stopped. Recordings made stay.');
+                                          }, tr('Could not schedule recording. Check recording storage and try again.'));
+                                        }
+                                        // The choice first: busy would take
+                                        // the focus off this tile meanwhile.
+                                        final skip = await showSeriesChoice(
+                                            context,
+                                            title: p.title,
+                                            channelName: widget.channel.name);
+                                        if (skip == null || !mounted) return;
+                                        await _run(
+                                            () => addSeriesRecording(
+                                                widget.recordings,
+                                                upcoming: upcomingOf,
+                                                channel: widget.channel,
+                                                programme: p,
+                                                skipRepeats: skip,
+                                                maxConnections:
+                                                    widget.maxConnections),
+                                            tr('Could not schedule recording. Check recording storage and try again.'));
+                                      }),
                                 if (_error != null)
                                   Padding(
                                       padding: const EdgeInsets.all(8),

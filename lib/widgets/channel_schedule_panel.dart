@@ -151,6 +151,7 @@ class _ChannelSchedulePanelState extends State<ChannelSchedulePanel> {
     if (_menuOpen) return;
     _menuOpen = true;
     final recordings = widget.recordings ?? RecordingService.instance;
+    final epg = context.read<EpgService>();
     final profile = context
         .read<PlaylistManager>()
         .profiles
@@ -164,7 +165,8 @@ class _ChannelSchedulePanelState extends State<ChannelSchedulePanel> {
           programme: programme,
           reminders: context.read<ProgrammeReminders>(),
           recordings: recordings,
-          maxConnections: profile?.maxConnections ?? 1);
+          maxConnections: profile?.maxConnections ?? 1,
+          upcoming: () => epg.upcomingPrograms(widget.channel.epgId));
     } finally {
       _menuOpen = false;
       if (mounted) _focus.requestFocus();

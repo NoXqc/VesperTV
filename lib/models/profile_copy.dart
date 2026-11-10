@@ -46,6 +46,7 @@ const profileCopyKeys = <ProfileCopy, Set<String>>{
     AppConstants.keyGuideTransparency,
     AppConstants.keyGuideExpanded,
     AppConstants.keyGuideCompact,
+    AppConstants.keyCompactUi,
   },
 };
 const profileCopyPrefixes = <ProfileCopy, Set<String>>{

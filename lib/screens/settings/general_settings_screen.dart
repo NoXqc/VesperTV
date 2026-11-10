@@ -383,6 +383,14 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                       ]),
                   _section('tabs', Icons.tab_outlined, tr('Tabs'), children: [
                     TvSwitchListTile(
+                      title: Text(tr('Compact UI')),
+                      subtitle: Text(tr(
+                          'Smaller tabs, groups and channel rows so more fit on screen. Just for this profile.')),
+                      value: context.watch<AppPreferences>().compactUi,
+                      onChanged: (v) =>
+                          context.read<AppPreferences>().setCompactUi(v),
+                    ),
+                    TvSwitchListTile(
                       title: Text(tr('Open groups as expanded catalog')),
                       subtitle: Text(tr(
                           'Movies and TV Shows groups open the full poster grid instead of the rows.')),

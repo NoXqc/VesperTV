@@ -185,6 +185,50 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
     }
   }
 
+  Future<void> _seriesMenu(SeriesRule rule) async {
+    final scheduled = _service.scheduledCount(rule);
+    final action = await showGlassMenu<String>(
+      context: context,
+      builder: (context) => SwallowHeldActivate(
+        child: GlassMenuDialog(
+          title: Text(rule.title, maxLines: 2, overflow: TextOverflow.ellipsis),
+          content: SizedBox(
+            width: 460,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TvMenuTile(
+                  autofocus: true,
+                  icon: Icons.event_busy,
+                  title: tr('Stop series recording'),
+                  subtitle: scheduled == 0
+                      ? tr('Recordings made stay.')
+                      : tr('Cancels {count} scheduled. Recordings made stay.',
+                          {'count': '$scheduled'}),
+                  onTap: () => Navigator.of(context).pop('stop'),
+                ),
+                TvMenuTile(
+                  icon: Icons.close,
+                  title: tr('Close'),
+                  onTap: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (!mounted || action != 'stop') return;
+    await _service.stopSeries(rule);
+  }
+
+  String _seriesStatus(SeriesRule rule) {
+    final next = _service.nextOf(rule);
+    final count = _service.scheduledCount(rule);
+    if (next == null) return tr('Waiting for the guide');
+    return '${tr('{count} scheduled', {'count': '$count'})} · ${tr('Next: {when}', {'when': _when(next)})}';
+  }
+
   static String _size(int bytes) {
     if (bytes >= 1024 * 1024 * 1024) {
       return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
@@ -229,6 +273,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
     final downloads = all.where((r) => r.isDownload && finished(r)).toList();
     final done = all.where((r) => !r.isDownload && finished(r)).toList();
     final auto = _service.autoTeam;
+    final series = _service.series;
     final offered = _service.networkFilesToOffer(_netFiles);
     final networkBytes =
         all.fold<int>(0, (s, r) => r.onNetwork ? s + r.bytes : s);
@@ -270,6 +315,34 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
       );
     }
 
+    Widget seriesSection() {
+      final autofocus = first;
+      first = false;
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(tr('Series recordings').toUpperCase(),
+                style: const TextStyle(
+                    fontSize: 12,
+                    letterSpacing: 1.2,
+                    color: Colors.white54)),
+            const SizedBox(height: 8),
+            Wrap(children: [
+              for (var i = 0; i < series.length; i++)
+                _SeriesCard(
+                  rule: series[i],
+                  status: _seriesStatus(series[i]),
+                  autofocus: autofocus && i == 0,
+                  onTap: () => _seriesMenu(series[i]),
+                ),
+            ]),
+          ],
+        ),
+      );
+    }
+
     return withTvThemeIfNeeded(
       context,
       (context) => SettingsScaffold(
@@ -291,7 +364,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
                       style: const TextStyle(color: Colors.white70)),
                 ]),
               ),
-            if (all.isEmpty && offered.isEmpty && !_netLoading)
+            if (all.isEmpty && series.isEmpty && offered.isEmpty && !_netLoading)
               Padding(
                 padding: const EdgeInsets.only(top: 40),
                 child: Text(
@@ -304,6 +377,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
             if (now.isNotEmpty) section(tr('Recording now'), now),
             if (downloading.isNotEmpty) section(tr('Downloading'), downloading),
             if (upcoming.isNotEmpty) section(tr('Scheduled'), upcoming),
+            if (series.isNotEmpty) seriesSection(),
             if (downloads.isNotEmpty) section(tr('Downloads'), downloads),
             if (done.isNotEmpty) section(tr('Recorded'), done),
             if (_service.settings.network != null)
@@ -776,6 +850,12 @@ class _RecordingCardState extends State<_RecordingCard> {
                               color: Colors.white54)),
                     ),
                     const SizedBox(width: 6),
+                    if (r.seriesId.isNotEmpty)
+                      const Padding(
+                        padding: EdgeInsets.only(right: 4),
+                        child: Icon(Icons.event_repeat,
+                            size: 13, color: Colors.white54),
+                      ),
                     if (rec)
                       Container(
                         width: 8,
@@ -801,6 +881,125 @@ class _RecordingCardState extends State<_RecordingCard> {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                             fontSize: 11.5, color: Colors.white54)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One series recording (hold OK on a guide programme > Record series):
+/// same size as a recording card, OK = Stop series recording.
+class _SeriesCard extends StatefulWidget {
+  const _SeriesCard({
+    required this.rule,
+    required this.status,
+    required this.onTap,
+    this.autofocus = false,
+  });
+
+  final SeriesRule rule;
+  final String status;
+  final VoidCallback onTap;
+  final bool autofocus;
+
+  @override
+  State<_SeriesCard> createState() => _SeriesCardState();
+}
+
+class _SeriesCardState extends State<_SeriesCard> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final rule = widget.rule;
+    return Padding(
+      padding: const EdgeInsets.only(right: 12, top: 4, bottom: 8),
+      child: HoldToActivate(
+        onTap: widget.onTap,
+        onHold: widget.onTap,
+        child: InkWell(
+          autofocus: widget.autofocus,
+          borderRadius: BorderRadius.circular(16),
+          onTap: widget.onTap,
+          onLongPress: widget.onTap,
+          onFocusChange: (f) => setState(() => _focused = f),
+          child: AnimatedScale(
+            scale: _focused ? 1.05 : 1.0,
+            duration: const Duration(milliseconds: 140),
+            curve: Curves.easeOut,
+            child: Container(
+              width: _RecordingCard.width,
+              height: _RecordingCard.height,
+              padding: const EdgeInsets.fromLTRB(12, 9, 12, 8),
+              decoration: BoxDecoration(
+                color: _focused ? null : Colors.white.withValues(alpha: 0.07),
+                gradient: _focused ? sportsFocusSheen(scheme) : null,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                    color: _focused ? scheme.primary : Colors.white10,
+                    width: _focused ? 2.5 : 1),
+                boxShadow: _focused
+                    ? [
+                        BoxShadow(
+                            color: scheme.primary.withValues(alpha: 0.35),
+                            blurRadius: 16)
+                      ]
+                    : null,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Flexible(
+                      child: Text(rule.channelName.toUpperCase(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 11,
+                              letterSpacing: 1,
+                              color: Colors.white54)),
+                    ),
+                    const SizedBox(width: 6),
+                    Icon(Icons.event_repeat, size: 15, color: scheme.primary),
+                    if (rule.skipRepeats) ...[
+                      const SizedBox(width: 4),
+                      Text(tr('No repeats'),
+                          style: const TextStyle(
+                              fontSize: 11, color: Colors.white60)),
+                    ],
+                  ]),
+                  const Spacer(),
+                  Row(children: [
+                    SportsLogo(
+                        url: rule.channelLogo,
+                        size: 44,
+                        fallback: rule.channelName.isEmpty
+                            ? 'TV'
+                            : rule.channelName.substring(0, 1),
+                        color: null),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(rule.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 15,
+                              height: 1.2,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white)),
+                    ),
+                  ]),
+                  const Spacer(),
+                  Text(widget.status,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style:
+                          const TextStyle(fontSize: 11.5, color: Colors.white70)),
                 ],
               ),
             ),

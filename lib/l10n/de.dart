@@ -3155,4 +3155,50 @@ const Map<String, String> kDe = {
       "Wird heruntergeladen. Er erscheint unter Downloads.",
   "VesperTV has to be open then (minimized is fine).":
       "VesperTV muss dann geöffnet sein (minimiert reicht).",
+  // Series recording (2026-11-10).
+  "Record this show":
+      "Diese Sendung aufnehmen",
+  "Record series…":
+      "Serie aufnehmen…",
+  "Record series":
+      "Serie aufnehmen",
+  "Every showing of {title} on this channel":
+      "Jede Ausstrahlung von {title} auf diesem Sender",
+  "Every showing of {title} on {channel}":
+      "Jede Ausstrahlung von {title} auf {channel}",
+  "Stop series recording":
+      "Serienaufnahme beenden",
+  "Series recording stopped. Recordings made stay.":
+      "Serienaufnahme beendet. Bereits gemachte Aufnahmen bleiben.",
+  "Recordings made stay.":
+      "Bereits gemachte Aufnahmen bleiben.",
+  "Cancels {count} scheduled. Recordings made stay.":
+      "Storniert {count} geplante. Bereits gemachte Aufnahmen bleiben.",
+  "Every airing":
+      "Jede Ausstrahlung",
+  "Skip repeats":
+      "Wiederholungen überspringen",
+  "Not an episode it already has (same guide description)":
+      "Keine Folge, die schon da ist (gleiche Beschreibung im Guide)",
+  "Series recording on. Airings are added as the guide lists them.":
+      "Serienaufnahme an. Ausstrahlungen kommen dazu, sobald der Guide sie zeigt.",
+  "Series recording on: {count} scheduled":
+      "Serienaufnahme an: {count} geplant",
+  "{count} skipped (no free connection)":
+      "{count} übersprungen (keine freie Verbindung)",
+  "Series recordings":
+      "Serienaufnahmen",
+  "Waiting for the guide":
+      "Wartet auf den Guide",
+  "{count} scheduled":
+      "{count} geplant",
+  "Next: {when}":
+      "Nächste: {when}",
+  "No repeats":
+      "Ohne Wiederholungen",
+  // Compact UI (2026-11-10).
+  "Compact UI":
+      "Kompakte Oberfläche",
+  "Smaller tabs, groups and channel rows so more fit on screen. Just for this profile.":
+      "Kleinere Tabs, Gruppen und Senderzeilen, damit mehr auf den Bildschirm passt. Nur für dieses Profil.",
 };

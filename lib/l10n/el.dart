@@ -3214,4 +3214,50 @@ const Map<String, String> kEl = {
       "Γίνεται λήψη. Εμφανίζεται στις Λήψεις.",
   "VesperTV has to be open then (minimized is fine).":
       "Το VesperTV πρέπει να είναι ανοιχτό τότε (ελαχιστοποιημένο αρκεί).",
+  // Series recording (2026-11-10).
+  "Record this show":
+      "Εγγραφή αυτής της εκπομπής",
+  "Record series…":
+      "Εγγραφή σειράς…",
+  "Record series":
+      "Εγγραφή σειράς",
+  "Every showing of {title} on this channel":
+      "Κάθε προβολή του {title} σε αυτό το κανάλι",
+  "Every showing of {title} on {channel}":
+      "Κάθε προβολή του {title} στο {channel}",
+  "Stop series recording":
+      "Διακοπή εγγραφής σειράς",
+  "Series recording stopped. Recordings made stay.":
+      "Η εγγραφή σειράς σταμάτησε. Οι εγγραφές που έγιναν μένουν.",
+  "Recordings made stay.":
+      "Οι εγγραφές που έγιναν μένουν.",
+  "Cancels {count} scheduled. Recordings made stay.":
+      "Ακυρώνει {count} προγραμματισμένες. Οι εγγραφές που έγιναν μένουν.",
+  "Every airing":
+      "Κάθε προβολή",
+  "Skip repeats":
+      "Παράλειψη επαναλήψεων",
+  "Not an episode it already has (same guide description)":
+      "Όχι επεισόδιο που υπάρχει ήδη (ίδια περιγραφή στον οδηγό)",
+  "Series recording on. Airings are added as the guide lists them.":
+      "Εγγραφή σειράς ενεργή. Οι προβολές προστίθενται όταν εμφανίζονται στον οδηγό.",
+  "Series recording on: {count} scheduled":
+      "Εγγραφή σειράς ενεργή: {count} προγραμματισμένες",
+  "{count} skipped (no free connection)":
+      "{count} παραλείφθηκαν (καμία ελεύθερη σύνδεση)",
+  "Series recordings":
+      "Εγγραφές σειρών",
+  "Waiting for the guide":
+      "Αναμονή για τον οδηγό",
+  "{count} scheduled":
+      "{count} προγραμματισμένες",
+  "Next: {when}":
+      "Επόμενη: {when}",
+  "No repeats":
+      "Χωρίς επαναλήψεις",
+  // Compact UI (2026-11-10).
+  "Compact UI":
+      "Συμπαγής εμφάνιση",
+  "Smaller tabs, groups and channel rows so more fit on screen. Just for this profile.":
+      "Μικρότερες καρτέλες, ομάδες και σειρές καναλιών, ώστε να χωρούν περισσότερα στην οθόνη. Μόνο για αυτό το προφίλ.",
 };
