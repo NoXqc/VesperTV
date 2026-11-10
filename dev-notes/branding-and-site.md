@@ -34,3 +34,8 @@ Read when touching icons, the site, the carousel or screenshots.
   Formuler via `adb screencap` (1920×1080) in Dark / Gold, the **"Hold to resume" pill blurred out**
   (Pillow: crop box (740,902)-(1180,1064), Gaussian blur 30, brightness ×0.5, feathered paste), then
   resized to 1600×900. Retake them after any big UI change.
+- **Unreleased features on the site** (2026-11-10): marked `<i class="tag">Next release</i>` in the
+  feature list and "(next release)" in carousel captions (Downloads, Network folder). Remove both when
+  that release ships. The Linux build is linked by its exact file name (`releases/download/1.0.63/
+  VesperTV-1.0.63-702-linux-x64.tar.gz`, hero, motto and Install card 05): update all three on a new
+  Linux build. Carousel slides are numbered `N of M` with one dot each: rebuild both when adding one.
