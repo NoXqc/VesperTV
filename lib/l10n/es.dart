@@ -2685,6 +2685,11 @@ const Map<String, String> kEs = {
       "Aún no disponible en Windows.",
   "No next episode.": "No hay episodio siguiente.",
   "No previous episode.": "No hay episodio anterior.",
+  "No subtitles in this file.": "No hay subtítulos en este archivo.",
+  "This stream has no audio tracks to choose from.": "Esta transmisión no tiene pistas de audio para elegir.",
+  "That language is not in this stream.": "Ese idioma no está en esta transmisión.",
+  "This channel has no closed captions.": "Este canal no tiene subtítulos ocultos.",
+  "No subtitles in that language.": "No hay subtítulos en ese idioma.",
   "That did not work.":
       "No ha funcionado.",
   "Talk from my phone":

@@ -2698,6 +2698,11 @@ const Map<String, String> kFr = {
       "Pas encore offert sur Windows.",
   "No next episode.": "Pas d'épisode suivant.",
   "No previous episode.": "Pas d'épisode précédent.",
+  "No subtitles in this file.": "Pas de sous-titres dans ce fichier.",
+  "This stream has no audio tracks to choose from.": "Ce flux n'a pas de pistes audio à choisir.",
+  "That language is not in this stream.": "Cette langue n'est pas dans ce flux.",
+  "This channel has no closed captions.": "Cette chaîne n'a pas de sous-titres codés.",
+  "No subtitles in that language.": "Pas de sous-titres dans cette langue.",
   "That did not work.":
       "Ça n'a pas fonctionné.",
   "Talk from my phone":

@@ -89,6 +89,9 @@ VesperCommand? parseVesperCommand(String spoken) {
   final seek = _seek(s);
   if (seek != null) return seek;
 
+  final tracks = _tracks(s);
+  if (tracks != null) return tracks;
+
   // "which channels have the Habs game", "quelle chaine passe le match du
   // Canadien": the bubble lists that game's channels ("play it on RDS"
   // then picks one, see VesperAi).
@@ -231,6 +234,151 @@ VesperCommand? parseVesperCommand(String spoken) {
 }
 
 bool _isOneOf(String s, List<String> phrases) => phrases.contains(s);
+
+/// "subtitles off", "French subtitles", "sous-titres en anglais", "audio in
+/// Spanish", "Untertitel aus", "which audio tracks": the player tool's
+/// audio / subtitle actions. Every word has to be one of the words below
+/// (or one language), so a title or a game ("the English feed of the Habs
+/// game") never lands here.
+VesperCommand? _tracks(String s) {
+  final words = s.split(' ');
+  if (words.length > 9) return null;
+  var subtitle = false, audio = false, soundOnly = true;
+  var off = false, on = false, cc = false;
+  String? language;
+  for (final w in words) {
+    if (_subtitleWords.contains(w)) {
+      subtitle = true;
+    } else if (_ccWords.contains(w)) {
+      subtitle = true;
+      cc = true;
+    } else if (_audioWords.contains(w)) {
+      audio = true;
+      if (!_soundWords.contains(w)) soundOnly = false;
+    } else if (_offWords.contains(w)) {
+      off = true;
+    } else if (_onWords.contains(w)) {
+      on = true;
+    } else if (!_trackFillers.contains(w)) {
+      final code = _spokenLanguages[w];
+      if (code == null || (language != null && language != code)) return null;
+      language = code;
+    }
+  }
+  if (subtitle == audio) return null;
+  if (subtitle) {
+    final pick = off ? 'off' : language ?? (cc ? 'cc' : null);
+    if (pick == null) {
+      return const VesperCommand('player', {'action': 'subtitles'});
+    }
+    return VesperCommand('player', {'action': 'subtitle', 'language': pick});
+  }
+  if (off) return null; // "turn off the sound" is mute, not a track.
+  if (language != null) {
+    return VesperCommand(
+        'player', {'action': 'audio_track', 'language': language});
+  }
+  // "turn the sound on" is volume; "change the audio" lists the tracks.
+  if (soundOnly && on) return null;
+  return const VesperCommand('player', {'action': 'audio_tracks'});
+}
+
+const _subtitleWords = {
+  'subtitle', 'subtitles', 'subs', 'captions', 'caption', //
+  'titre', 'titres', 'soustitre', 'soustitres',
+  'subtitulo', 'subtitulos',
+  'sottotitolo', 'sottotitoli',
+  'untertitel', 'untertiteln',
+  'ypotitloi', 'ypotitlous', 'υποτιτλοι', 'υποτιτλουσ',
+};
+
+/// Closed captions: a live channel's CC track.
+const _ccWords = {'cc', 'closed'};
+
+const _audioWords = {
+  'audio', 'sound', 'dub', 'dubbed', 'dubbing', 'version', //
+  'son', 'doublage', 'voix',
+  'doblaje', 'doppiaggio',
+  'ton', 'tonspur', 'synchronisation',
+  'ichos', 'ηχοσ',
+};
+
+/// [_audioWords] that can also mean the volume.
+const _soundWords = {'sound', 'son', 'ton', 'ichos', 'ηχοσ'};
+
+const _offWords = {
+  'off', 'no', 'none', 'without', 'disable', 'hide', 'remove', //
+  'pas', 'sans', 'enleve', 'enlever', 'retire', 'retirer', 'desactive',
+  'desactiver', 'coupe', 'couper', 'ferme', 'fermer', 'cache', 'cacher',
+  'sin', 'quita', 'quitar', 'desactiva', 'desactivar', 'apaga', 'apagar',
+  'oculta',
+  'senza', 'togli', 'togliere', 'disattiva', 'disattivare', 'spegni',
+  'nascondi',
+  'aus', 'ausschalten', 'keine', 'kein', 'ohne', 'deaktivieren',
+  'entfernen', 'ausblenden',
+  'kleise', 'xoris', 'κλεισε', 'χωρισ',
+};
+
+const _onWords = {
+  'on', 'turn', 'put', 'switch', 'change', 'set', 'enable', 'show', //
+  'activate', 'use', 'start', 'give', 'me',
+  'mets', 'met', 'mettre', 'active', 'activer', 'affiche', 'afficher',
+  'changer', 'passe', 'passer', 'donne', 'moi',
+  'pon', 'poner', 'cambia', 'cambiar', 'activa', 'activar', 'muestra',
+  'metti', 'mettere', 'attiva', 'attivare', 'mostra',
+  'an', 'ein', 'einschalten', 'zeige', 'zeig', 'wechsle', 'wechseln',
+  'stelle', 'stell', 'aktiviere', 'aktivieren',
+  'vale', 'anoixe', 'allaxe', 'βαλε', 'ανοιξε', 'αλλαξε',
+};
+
+/// Articles, prepositions, question words and "track": allowed, mean
+/// nothing here.
+const _trackFillers = {
+  'the', 'to', 'in', 'into', 'a', 'my', 'with', 'which', 'what', 'list', //
+  'available', 'are', 'there', 'is', 'track', 'tracks', 'for', 'this',
+  'en', 'au', 'aux', 'le', 'la', 'les', 'l', 'des', 'de', 'du', 'sur', 'dans',
+  'avec', 'quels', 'quelles', 'quel', 'quelle', 'sont', 'disponibles',
+  'piste', 'pistes', 'sous', 'ces', 'ce', 'y', 't', 'il',
+  'el', 'los', 'las', 'al', 'con', 'que', 'cuales', 'hay', 'pista',
+  'pistas', 'disponible', 'por',
+  'i', 'gli', 'lo', 'di', 'della', 'quali', 'ci', 'sono', 'traccia',
+  'tracce', 'disponibili',
+  'die', 'der', 'das', 'den', 'auf', 'zu', 'mit', 'welche', 'welcher',
+  'gibt', 'es', 'spur', 'spuren', 'verfugbar', 'verfugbare',
+  'sta', 'ta', 'tous', 'me', 'oi', 'poioi', 'στα', 'τα', 'τουσ', 'με', 'οι',
+  'ποιοι',
+};
+
+/// Language names as spoken in the app's languages, to a track code.
+const _spokenLanguages = {
+  // Feminine forms: "la version française", "la versión inglesa".
+  'anglaise': 'en', 'inglesa': 'en', 'francaise': 'fr', 'francesa': 'fr',
+  'espagnole': 'es', 'espanola': 'es', 'spagnola': 'es', 'italienne': 'it',
+  'italiana': 'it', 'allemande': 'de', 'alemana': 'de', 'tedesca': 'de',
+  'grecque': 'el', 'griega': 'el', 'greca': 'el', 'portugaise': 'pt',
+  'portuguesa': 'pt',
+  'english': 'en', 'anglais': 'en', 'ingles': 'en', 'inglese': 'en', //
+  'englisch': 'en', 'englische': 'en', 'englischen': 'en',
+  'englischer': 'en', 'anglika': 'en', 'αγγλικα': 'en',
+  'french': 'fr', 'francais': 'fr', 'frances': 'fr', 'francese': 'fr',
+  'franzosisch': 'fr', 'franzosische': 'fr', 'franzosischen': 'fr',
+  'franzosischer': 'fr', 'gallika': 'fr', 'γαλλικα': 'fr',
+  'spanish': 'es', 'espagnol': 'es', 'espanol': 'es', 'castellano': 'es',
+  'spagnolo': 'es', 'spanisch': 'es', 'spanische': 'es',
+  'spanischen': 'es', 'spanischer': 'es', 'ispanika': 'es',
+  'ισπανικα': 'es',
+  'italian': 'it', 'italien': 'it', 'italiano': 'it',
+  'italienisch': 'it', 'italienische': 'it', 'italienischen': 'it',
+  'italienischer': 'it', 'italika': 'it', 'ιταλικα': 'it',
+  'german': 'de', 'allemand': 'de', 'aleman': 'de', 'tedesco': 'de',
+  'deutsch': 'de', 'deutsche': 'de', 'deutschen': 'de', 'deutscher': 'de',
+  'germanika': 'de', 'γερμανικα': 'de',
+  'greek': 'el', 'grec': 'el', 'griego': 'el', 'greco': 'el',
+  'griechisch': 'el', 'griechische': 'el', 'griechischen': 'el',
+  'griechischer': 'el', 'ellinika': 'el', 'ελληνικα': 'el',
+  'portuguese': 'pt', 'portugais': 'pt', 'portugues': 'pt',
+  'portoghese': 'pt', 'portugiesisch': 'pt', 'portugiesische': 'pt',
+};
 
 /// What follows [verb] at the start of [s], or null.
 String? _after(String s, String verb) {

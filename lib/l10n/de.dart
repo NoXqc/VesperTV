@@ -2588,6 +2588,11 @@ const Map<String, String> kDe = {
       "Unter Windows noch nicht verfügbar.",
   "No next episode.": "Keine nächste Folge.",
   "No previous episode.": "Keine vorherige Folge.",
+  "No subtitles in this file.": "Keine Untertitel in dieser Datei.",
+  "This stream has no audio tracks to choose from.": "Dieser Stream hat keine Tonspuren zur Auswahl.",
+  "That language is not in this stream.": "Diese Sprache gibt es in diesem Stream nicht.",
+  "This channel has no closed captions.": "Dieser Sender hat keine Untertitel für Hörgeschädigte.",
+  "No subtitles in that language.": "Keine Untertitel in dieser Sprache.",
   "That did not work.":
       "Das hat nicht geklappt.",
   "Talk from my phone":

@@ -2692,6 +2692,11 @@ const Map<String, String> kIt = {
       "Non ancora disponibile su Windows.",
   "No next episode.": "Nessun episodio successivo.",
   "No previous episode.": "Nessun episodio precedente.",
+  "No subtitles in this file.": "Nessun sottotitolo in questo file.",
+  "This stream has no audio tracks to choose from.": "Questo flusso non ha tracce audio da scegliere.",
+  "That language is not in this stream.": "Quella lingua non è in questo flusso.",
+  "This channel has no closed captions.": "Questo canale non ha sottotitoli per non udenti.",
+  "No subtitles in that language.": "Nessun sottotitolo in quella lingua.",
   "That did not work.":
       "Non ha funzionato.",
   "Talk from my phone":

@@ -234,7 +234,11 @@ Discord request (Kal-el23): let ChatGPT check quality, pick the best link, switc
   subtitle (language, track number, "off", "cc"; not in the file = first match from the subtitle add-ons, like the
   picker's online languages). Same steps as the player's buttons, remembered for the show (AudioTrackPreferences,
   rememberForSeries). `vesper_ai/player_tracks.dart`, `test/vesper_player_tracks_test.dart`. Android only (the
-  player tool says "not on Windows yet"). No built-in phrases yet. AI apps: reconnect the connector.
+  player tool says "not on Windows yet"). Built-in phrases since 2026-11-10 (`_tracks` in vesper_commands.dart,
+  6 languages: "subtitles off", "French subtitles", "sous-titres en anglais", "audio in Spanish", "which audio
+  tracks", "Untertitel aus"): every word must be a track/on/off/filler word or one language, so titles and game
+  feeds never land there; "turn off the sound" stays volume. `test/vesper_track_phrases_test.dart`.
+  AI apps: reconnect the connector.
 - Media Hub picks streams in the viewer's language (`services/stream_languages.dart`; sources list `languages` /
   `multi_audio`).
 - System prompt: Media Hub when asked or when the playlists lack a title; play best; buffering = switch next.

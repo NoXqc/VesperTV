@@ -2647,6 +2647,11 @@ const Map<String, String> kEl = {
       "Δεν είναι ακόμα διαθέσιμο στα Windows.",
   "No next episode.": "Δεν υπάρχει επόμενο επεισόδιο.",
   "No previous episode.": "Δεν υπάρχει προηγούμενο επεισόδιο.",
+  "No subtitles in this file.": "Δεν υπάρχουν υπότιτλοι σε αυτό το αρχείο.",
+  "This stream has no audio tracks to choose from.": "Αυτή η ροή δεν έχει κομμάτια ήχου για επιλογή.",
+  "That language is not in this stream.": "Αυτή η γλώσσα δεν υπάρχει σε αυτή τη ροή.",
+  "This channel has no closed captions.": "Αυτό το κανάλι δεν έχει κλειστούς υπότιτλους.",
+  "No subtitles in that language.": "Δεν υπάρχουν υπότιτλοι σε αυτή τη γλώσσα.",
   "That did not work.":
       "Δεν λειτούργησε.",
   "Talk from my phone":
