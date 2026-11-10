@@ -1,0 +1,74 @@
+{
+ "metas": [
+  {
+   "id": "vesperdemo-tos",
+   "type": "movie",
+   "name": "Tears of Steel",
+   "poster": "https://vespertv.app/demo/art/tos.jpg",
+   "background": "https://vespertv.app/demo/art/bg-tos.jpg",
+   "description": "In a future Amsterdam, a group of scientists tries to save the world from robots by restaging a breakup that went wrong.",
+   "releaseInfo": "2012",
+   "runtime": "12 min",
+   "genres": [
+    "Science Fiction",
+    "Action"
+   ]
+  },
+  {
+   "id": "vesperdemo-sintel",
+   "type": "movie",
+   "name": "Sintel",
+   "poster": "https://vespertv.app/demo/art/sintel.jpg",
+   "background": "https://vespertv.app/demo/art/bg-sintel.jpg",
+   "description": "A lonely young woman searches the world for the baby dragon she raised and lost.",
+   "releaseInfo": "2010",
+   "runtime": "15 min",
+   "genres": [
+    "Animation",
+    "Fantasy"
+   ]
+  },
+  {
+   "id": "vesperdemo-cosmos",
+   "type": "movie",
+   "name": "Cosmos Laundromat",
+   "poster": "https://vespertv.app/demo/art/cosmos.jpg",
+   "background": "https://vespertv.app/demo/art/bg-cosmos.jpg",
+   "description": "On a desolate island, a suicidal sheep meets a mysterious salesman who offers him the gift of a lifetime.",
+   "releaseInfo": "2015",
+   "runtime": "12 min",
+   "genres": [
+    "Animation",
+    "Drama"
+   ]
+  },
+  {
+   "id": "vesperdemo-bbb",
+   "type": "movie",
+   "name": "Big Buck Bunny",
+   "poster": "https://vespertv.app/demo/art/bbb.jpg",
+   "background": "https://vespertv.app/demo/art/bg-bbb.jpg",
+   "description": "A giant, gentle rabbit takes revenge on three bullying rodents in a comedy from the Blender Institute.",
+   "releaseInfo": "2008",
+   "runtime": "10 min",
+   "genres": [
+    "Animation",
+    "Comedy"
+   ]
+  },
+  {
+   "id": "vesperdemo-ed",
+   "type": "movie",
+   "name": "Elephants Dream",
+   "poster": "https://vespertv.app/demo/art/ed.jpg",
+   "background": "https://vespertv.app/demo/art/bg-ed.jpg",
+   "description": "Two men explore a strange, endless machine, and disagree about what it is. The first open movie.",
+   "releaseInfo": "2006",
+   "runtime": "11 min",
+   "genres": [
+    "Animation",
+    "Science Fiction"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,16 @@
+{
+ "meta": {
+  "id": "vesperdemo-caligari",
+  "type": "movie",
+  "name": "The Cabinet of Dr. Caligari",
+  "poster": "https://vespertv.app/demo/art/caligari.jpg",
+  "background": "https://vespertv.app/demo/art/bg-caligari.jpg",
+  "description": "A hypnotist and his sleepwalker arrive at a town fair, and a series of murders begins. Silent, German expressionist.",
+  "releaseInfo": "1920",
+  "runtime": "51 min",
+  "genres": [
+   "Horror",
+   "Silent"
+  ]
+ }
+}

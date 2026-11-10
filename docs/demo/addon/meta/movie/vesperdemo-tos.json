@@ -1,0 +1,16 @@
+{
+ "meta": {
+  "id": "vesperdemo-tos",
+  "type": "movie",
+  "name": "Tears of Steel",
+  "poster": "https://vespertv.app/demo/art/tos.jpg",
+  "background": "https://vespertv.app/demo/art/bg-tos.jpg",
+  "description": "In a future Amsterdam, a group of scientists tries to save the world from robots by restaging a breakup that went wrong.",
+  "releaseInfo": "2012",
+  "runtime": "12 min",
+  "genres": [
+   "Science Fiction",
+   "Action"
+  ]
+ }
+}

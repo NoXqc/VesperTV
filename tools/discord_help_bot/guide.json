@@ -459,7 +459,7 @@
     "id": "01e8da6092162e2d",
     "category": "Media Hub",
     "title": "Your source finished fetching it",
-    "answer": "If a title played a short \"being downloaded\" video, press Back and carry on. The poster gets a Ready tag when the full file is there. Optional: add your debrid key in Settings › Media Hub › Debrid accounts for an exact check.",
+    "answer": "If a title played a short \"being downloaded\" video, press Back and carry on. The poster gets a Ready tag when the full file is there.",
     "controls": "Gold Ready tag",
     "url": "https://vespertv.app/remote.html#Media%20Hub"
   },

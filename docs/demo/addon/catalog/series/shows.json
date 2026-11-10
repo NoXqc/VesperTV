@@ -1,0 +1,32 @@
+{
+ "metas": [
+  {
+   "id": "vesperdemo-caminandes",
+   "type": "series",
+   "name": "Caminandes",
+   "poster": "https://vespertv.app/demo/art/cam1.jpg",
+   "background": "https://vespertv.app/demo/art/bg-cam1.jpg",
+   "description": "Koro the llama wants the grass on the other side of the road.",
+   "releaseInfo": "2013",
+   "runtime": "2 min",
+   "genres": [
+    "Animation",
+    "Comedy"
+   ]
+  },
+  {
+   "id": "vesperdemo-open-movie-collection",
+   "type": "series",
+   "name": "Open Movie Collection",
+   "poster": "https://vespertv.app/demo/art/ed.jpg",
+   "background": "https://vespertv.app/demo/art/bg-ed.jpg",
+   "description": "Blender's open movies, one per episode: the films that started open animation.",
+   "releaseInfo": "2006",
+   "runtime": "11 min",
+   "genres": [
+    "Animation",
+    "Science Fiction"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,46 @@
+{
+ "metas": [
+  {
+   "id": "vesperdemo-nosferatu",
+   "type": "movie",
+   "name": "Nosferatu",
+   "poster": "https://vespertv.app/demo/art/nosferatu.jpg",
+   "background": "https://vespertv.app/demo/art/bg-nosferatu.jpg",
+   "description": "F. W. Murnau's silent classic: an estate agent travels to the castle of the mysterious Count Orlok.",
+   "releaseInfo": "1922",
+   "runtime": "94 min",
+   "genres": [
+    "Horror",
+    "Silent"
+   ]
+  },
+  {
+   "id": "vesperdemo-caligari",
+   "type": "movie",
+   "name": "The Cabinet of Dr. Caligari",
+   "poster": "https://vespertv.app/demo/art/caligari.jpg",
+   "background": "https://vespertv.app/demo/art/bg-caligari.jpg",
+   "description": "A hypnotist and his sleepwalker arrive at a town fair, and a series of murders begins. Silent, German expressionist.",
+   "releaseInfo": "1920",
+   "runtime": "51 min",
+   "genres": [
+    "Horror",
+    "Silent"
+   ]
+  },
+  {
+   "id": "vesperdemo-train",
+   "type": "movie",
+   "name": "The Great Train Robbery",
+   "poster": "https://vespertv.app/demo/art/train.jpg",
+   "background": "https://vespertv.app/demo/art/bg-train.jpg",
+   "description": "Edwin S. Porter's early western: bandits hold up a train and a posse rides after them.",
+   "releaseInfo": "1903",
+   "runtime": "12 min",
+   "genres": [
+    "Western",
+    "Silent"
+   ]
+  }
+ ]
+}

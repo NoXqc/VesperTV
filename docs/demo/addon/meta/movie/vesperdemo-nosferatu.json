@@ -1,0 +1,16 @@
+{
+ "meta": {
+  "id": "vesperdemo-nosferatu",
+  "type": "movie",
+  "name": "Nosferatu",
+  "poster": "https://vespertv.app/demo/art/nosferatu.jpg",
+  "background": "https://vespertv.app/demo/art/bg-nosferatu.jpg",
+  "description": "F. W. Murnau's silent classic: an estate agent travels to the castle of the mysterious Count Orlok.",
+  "releaseInfo": "1922",
+  "runtime": "94 min",
+  "genres": [
+   "Horror",
+   "Silent"
+  ]
+ }
+}
