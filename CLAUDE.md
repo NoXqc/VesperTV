@@ -383,6 +383,11 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-10 - +702 (main 75a905f, pushed, not released): copy from the network folder** (owner: box downloads
+  overnight, tablet copies them before a trip). Finished network files get `.vespertv/<file>.json` details; Recordings >
+  On the network folder lists the share; OK = Copy to this device (a download from `smb://`, no speed/connection
+  limit) or Play from it; Settings > Network folder > Save only. Details: dev-notes/downloads.md. Not device-tested;
+  APK `…/dl/767QiZBxaOhL/VesperTV-test-702.apk` (Formuler still unreachable). Next build > 702.
 - **Claude, 2026-11-10 - test +701 (main fec820a, pushed, not released):** owner confirmed the downloads path: Tonight
   at 2:00 saved 72 Hours (4.46 GB MKV) to the SMB share, played and seeked from it. +701 adds: Recordings download
   card = the poster's own colours (was the Sports Trak sheen, a flat gold block) + network-folder size in the footer;
