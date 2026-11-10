@@ -27,7 +27,9 @@ import '../widgets/iptv_cast_panel.dart';
 import '../services/archive_discovery_service.dart';
 import '../widgets/detail_header.dart';
 import '../widgets/hold_to_activate.dart';
+import '../widgets/download_sheet.dart';
 import '../widgets/watch_list_button.dart';
+import '../services/recording_service.dart';
 import '../services/vesper_ai/watch_list.dart';
 import 'desktop_player_screen.dart';
 import 'player_screen.dart';
@@ -80,6 +82,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   final _restartNode = FocusNode(debugLabel: 'movie-restart');
   final _favNode = FocusNode(debugLabel: 'movie-fav');
   final _watchListNode = FocusNode(debugLabel: 'movie-watch-list');
+  final _downloadNode = FocusNode(debugLabel: 'movie-download');
   final _castNode = FocusNode(debugLabel: 'movie-cast');
   final _castPortraitNode = FocusNode(debugLabel: 'movie-cast-portraits');
   bool get _canCast =>
@@ -139,6 +142,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       _restartNode,
       _favNode,
       _watchListNode,
+      _downloadNode,
       _castNode,
       _castPortraitNode
     ]) {
@@ -203,6 +207,26 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           : tr('Removed from Favorites')),
       duration: const Duration(seconds: 2),
     ));
+  }
+
+  /// The movie as a download: the provider's own link, its account's
+  /// connection limit (unknown = one, like Multiview and recordings).
+  DownloadItem _downloadItem(Channel movie) {
+    final profile = context
+        .read<PlaylistManager>()
+        .profiles
+        .where((p) => p.id == movie.playlistId)
+        .firstOrNull;
+    return DownloadItem(
+      sourceId: movie.id,
+      title: _title,
+      url: movie.url,
+      headers: movie.httpHeaders,
+      playlistId: movie.playlistId,
+      maxConnections: profile?.maxConnections ?? 1,
+      poster: _posterUrl,
+      durationSec: _details?.durationSeconds ?? 0,
+    );
   }
 
   void _goBack() {
@@ -565,6 +589,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       if (resume) _restartNode,
       _favNode,
       _watchListNode,
+      if (downloadsAvailable) _downloadNode,
       if (_castNames.isNotEmpty || _canCast) _castNode,
     ];
     void move(int delta) {
@@ -625,6 +650,14 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
           scale: s,
           onFocused: _revealTop,
         ),
+        if (downloadsAvailable)
+          DownloadButton(
+            sourceId: current.id,
+            focusNode: _downloadNode,
+            scale: s,
+            onFocused: _revealTop,
+            build: (_) async => [_downloadItem(current)],
+          ),
         if (_castNames.isNotEmpty || _canCast)
           DetailPillButton(
             focusNode: _castNode,

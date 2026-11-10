@@ -121,6 +121,36 @@ void main() {
     await storage.importForBackup(backup);
     expect(ids(), ['b::Same', 'a::Same']);
   });
+  test('an AI app puts one favourite anywhere, the others keep their order',
+      () async {
+    playlist.favorites = [
+      for (final n in ['CNN', 'TSN', 'CP24', 'RDS Info']) ch('a', n)
+    ];
+    final rds = playlist.favorites.last;
+    expect(await playlist.placeFavoriteLiveChannel(rds, 0), 0);
+    expect(ids(), ['a::RDS Info', 'a::CNN', 'a::TSN', 'a::CP24']);
+    expect(await playlist.placeFavoriteLiveChannel(rds, 99), 3);
+    expect(ids(), ['a::CNN', 'a::TSN', 'a::CP24', 'a::RDS Info']);
+    expect(await playlist.placeFavoriteLiveChannel(rds, 1), 1);
+    expect(ids(), ['a::CNN', 'a::RDS Info', 'a::TSN', 'a::CP24']);
+    expect(await playlist.placeFavoriteLiveChannel(ch('x', 'Gone'), 0), isNull);
+  });
+
+  test('an AI app orders favourites: listed first, the rest after', () async {
+    playlist.favorites = [
+      for (final n in ['CNN', 'TSN', 'Seinfeld 24/7', 'CP24', 'Fox']) ch('a', n)
+    ];
+    await storage.setFavoriteLiveOrder(
+        ['a::CNN', 'hidden::missing', 'a::TSN', 'a::Seinfeld 24/7']);
+    final now = await playlist
+        .orderFavoriteLiveChannels(['a::CP24', 'a::TSN', 'nope::x', 'a::CP24']);
+    expect(now.map((c) => c.id),
+        ['a::CP24', 'a::TSN', 'a::CNN', 'a::Seinfeld 24/7', 'a::Fox']);
+    expect(ids(), now.map((c) => c.id));
+    // A hidden playlist's favourite keeps its saved slot.
+    expect(storage.getFavoriteLiveOrder()[1], 'hidden::missing');
+  });
+
   test(
       'A-Z and Z-A span playlists and favourite groups without destroying original order',
       () async {

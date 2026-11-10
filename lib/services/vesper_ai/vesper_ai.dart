@@ -282,17 +282,34 @@ class VesperAi {
           return VesperReply(tr('Playing {title}', {'title': playing}),
               acted: true);
         }
+        final action = command.args['action'];
+        if (action == 'audio_tracks' || action == 'subtitles') {
+          return VesperReply(_trackList(action == 'subtitles', r));
+        }
+        final done = s('done') ?? '';
         return VesperReply(
-            switch (command.args['action']) {
+            switch (action) {
               'pause' => tr('Paused'),
               'resume' => tr('Playing'),
               'stop' => tr('Stopped'),
               'back_to_live' => tr('Back to live'),
+              'audio_track' when done.startsWith('audio: ') =>
+                '${tr('Audio')}: ${done.substring(7)}',
+              'subtitle' when done == 'subtitles off' =>
+                '${tr('Subtitles')}: ${tr('Off')}',
+              'subtitle' when done.startsWith('subtitles: ') =>
+                '${tr('Subtitles')}: ${done.substring(11)}',
               _ => tr('Done'),
             },
             acted: true);
       case 'open':
         return const VesperReply('', acted: true);
+      case 'media_hub' when s('playing') != null:
+        return VesperReply(tr('Playing {title}', {'title': s('playing')}),
+            acted: true);
+      case 'media_hub' when s('opened') != null:
+        return VesperReply(tr('Opened {title}', {'title': s('opened')}),
+            acted: true);
       case 'now_playing':
         final title = s('title');
         if (title == null) return VesperReply(tr('Nothing is playing.'));
@@ -411,9 +428,40 @@ class VesperAi {
     return '${game['game']}: ${names.join(' · ')}';
   }
 
+  /// "which subtitles / audio tracks": the names, the playing one first
+  /// marked, in one line.
+  static String _trackList(bool subtitles, Map<String, Object?> r) {
+    final tracks = [
+      for (final t in (r['tracks'] as List?) ?? const [])
+        if (t is Map && t['name'] is String)
+          (t['playing'] == true || t['showing'] == true)
+              ? '▶ ${t['name']}'
+              : '${t['name']}',
+    ];
+    if (subtitles) {
+      final online = r['showing_online'];
+      final names = [
+        if (online is String) '▶ $online',
+        ...tracks,
+        if (r['off'] == true) '▶ ${tr('Off')}',
+      ];
+      return tracks.isEmpty && online == null
+          ? tr('No subtitles in this file.')
+          : '${tr('Subtitles')}: ${names.join(' · ')}';
+    }
+    return tracks.isEmpty
+        ? tr('This stream has no audio tracks to choose from.')
+        : '${tr('Audio tracks')}: ${tracks.join(' · ')}';
+  }
+
   static String _errorWords(VesperCommand c, Object? error) {
-    final name = '${c.args['name'] ?? c.args['team'] ?? c.args['title'] ?? ''}';
+    final name =
+        '${c.args['name'] ?? c.args['team'] ?? c.args['title'] ?? c.args['query'] ?? ''}';
     return switch (c.tool) {
+      'media_hub' when '$error'.contains('hidden') =>
+        tr('That section is hidden.'),
+      'media_hub' =>
+        tr('I could not find "{title}" in Media Hub.', {'title': name}),
       'play' =>
         tr('I could not find "{title}" in your playlists.', {'title': name}),
       'play_game' =>
@@ -429,10 +477,17 @@ class VesperAi {
         tr('This channel cannot be rewound.'),
       'player' when '$error'.contains('Windows') =>
         tr('Not available on Windows yet.'),
-      'player' when '$error'.contains('next episode') =>
-        tr('No next episode.'),
+      'player' when '$error'.contains('next episode') => tr('No next episode.'),
       'player' when '$error'.contains('previous episode') =>
         tr('No previous episode.'),
+      'player' when '$error'.contains('no audio tracks') =>
+        tr('This stream has no audio tracks to choose from.'),
+      'player' when '$error'.contains('audio in this stream') =>
+        tr('That language is not in this stream.'),
+      'player' when '$error'.contains('no closed captions') =>
+        tr('This channel has no closed captions.'),
+      'player' when '$error'.contains('subtitle') =>
+        tr('No subtitles in that language.'),
       'player' => tr('Nothing is playing.'),
       _ => tr('That did not work.'),
     };

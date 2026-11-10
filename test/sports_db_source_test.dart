@@ -125,6 +125,41 @@ void main() {
     expect(sportsDbShortName('FC Ae'), 'FC Ae');
   });
 
+  test('QMJHL: TheSportsDB, nicknames for French guides, OT final', () {
+    final qmjhl = sportsLeagueById('hockey.qmjhl')!;
+    expect(qmjhl.sportsDbId, '5161');
+    expect(qmjhl.homeTags, ['ca']);
+    expect(sportsDbTeamShortName('Quebec Remparts', qmjhl), 'Remparts');
+    expect(sportsDbTeamShortName('Rimouski Océanic', qmjhl), 'Océanic');
+    expect(sportsDbTeamShortName('Saint John Sea Dogs', qmjhl), 'Sea Dogs');
+    expect(sportsDbTeamShortName("Val-d'Or Foreurs", qmjhl), 'Foreurs');
+    // Unknown team: the full name. Other leagues: unchanged.
+    expect(
+        sportsDbTeamShortName('Montreal Juniors', qmjhl), 'Montreal Juniors');
+    expect(
+        sportsDbTeamShortName('Laval Rocket', sportsLeagueById('hockey.ahl')!),
+        'Laval Rocket');
+
+    final games = parseSportsDbEvents((
+      jsonEncode({
+        'events': [
+          {
+            ...event('AOT', home: '2', away: '3'),
+            'strHomeTeam': 'Rimouski Océanic',
+            'strAwayTeam': 'Quebec Remparts',
+          }
+        ]
+      }),
+      qmjhl
+    ));
+    final g = games.single;
+    expect(g.state, GameState.post);
+    expect(g.statusText, 'Final/OT');
+    expect(g.home.shortName, 'Océanic');
+    expect(g.away.shortName, 'Remparts');
+    expect(g.home.name, 'Rimouski Océanic');
+  });
+
   test('a day at the free-key cap asks for its rounds', () {
     final euroleague = sportsLeagueById('basketball.euroleague')!;
     String day(int n, {String round = '8'}) => jsonEncode({

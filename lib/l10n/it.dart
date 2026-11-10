@@ -112,6 +112,9 @@ const Map<String, String> kIt = {
   "Loading recommendations…": "Caricamento consigli…",
   "Looking for streams…": "Ricerca flussi…",
   "Maximum quality": "Qualità massima",
+  "Any language": "Qualsiasi lingua",
+  "Any quality": "Qualsiasi qualità",
+  "Media Hub audio language": "Lingua audio di Media Hub",
   "More like this": "Altri simili",
   "No compatible source for this title. Add a playback source in Media Hub settings.":
       "Nessuna fonte compatibile per questo titolo. Aggiungi una fonte di riproduzione nelle impostazioni di Media Hub.",
@@ -1443,6 +1446,7 @@ const Map<String, String> kIt = {
   'Players': "Giocatori",
   'No stats for this game yet.':
       "Ancora nessuna statistica per questa partita.",
+  "No stats for tennis matches.": "Nessuna statistica per le partite di tennis.",
   'Top performers': "Migliori giocatori",
   'Injuries': "Infortuni",
   'Goals': "Gol",
@@ -1774,6 +1778,7 @@ const Map<String, String> kIt = {
   "Recording now": "In registrazione",
   "Recorded": "Registrati",
   "{used} of {cap} GB used": "{used} usati su {cap} GB",
+  "{size} in the network folder": "{size} nella cartella di rete",
   "REC · {size}": "REG · {size}",
   "Waiting for a channel": "In attesa di un canale",
   "Interrupted · {size}": "Interrotta · {size}",
@@ -2675,6 +2680,8 @@ const Map<String, String> kIt = {
       "ieri",
   "I could not find \"{title}\" in your playlists.":
       "Non ho trovato «{title}» nelle tue playlist.",
+  "I could not find \"{title}\" in Media Hub.":
+      "Non ho trovato «{title}» in Media Hub.",
   "No channel shows a {title} game today.":
       "Nessun canale trasmette una partita di {title} oggi.",
   "I could not find the channel \"{title}\".":
@@ -2687,6 +2694,11 @@ const Map<String, String> kIt = {
       "Non ancora disponibile su Windows.",
   "No next episode.": "Nessun episodio successivo.",
   "No previous episode.": "Nessun episodio precedente.",
+  "No subtitles in this file.": "Nessun sottotitolo in questo file.",
+  "This stream has no audio tracks to choose from.": "Questo flusso non ha tracce audio da scegliere.",
+  "That language is not in this stream.": "Quella lingua non è in questo flusso.",
+  "This channel has no closed captions.": "Questo canale non ha sottotitoli per non udenti.",
+  "No subtitles in that language.": "Nessun sottotitolo in quella lingua.",
   "That did not work.":
       "Non ha funzionato.",
   "Talk from my phone":
@@ -2833,6 +2845,8 @@ const Map<String, String> kIt = {
       "Un'app di IA vuole aprire {title}.",
   "An AI app wants to hide {count} groups ({words}).":
       "Un'app di IA vuole nascondere {count} gruppi ({words}).",
+  "An AI app wants to delete your group {group}.":
+      "Un'app di IA vuole eliminare il tuo gruppo {group}.",
   "An AI app wants to show {count} groups ({words}).":
       "Un'app di IA vuole mostrare {count} gruppi ({words}).",
   "An AI app wants {game} to play on {channel} in {tab}.":
@@ -3031,4 +3045,177 @@ const Map<String, String> kIt = {
       "Guarda qui",
   "VesperTV may not use the microphone. Allow Microphone and Speech Recognition in Settings > VesperTV, or type instead.":
       "VesperTV non può usare il microfono. Consenti Microfono e Riconoscimento vocale in Impostazioni > VesperTV, oppure scrivi.",
+  // Downloads and the network folder (recording_service.dart).
+  "Like watching":
+      "Come in visione",
+  "No limit":
+      "Nessun limite",
+  "{n} Mbit/s":
+      "{n} Mbit/s",
+  "Tonight at {time}":
+      "Stanotte alle {time}",
+  "Today at {time}":
+      "Oggi alle {time}",
+  "Tomorrow at {time}":
+      "Domani alle {time}",
+  "Download set for {when}. It shows in Recordings.":
+      "Download programmato: {when}. Compare in Registrazioni.",
+  "Downloading. It shows in Recordings.":
+      "Download in corso. Compare in Registrazioni.",
+  "About {size}":
+      "Circa {size}",
+  "about {time} at your speed limit ({speed})":
+      "circa {time} con il tuo limite di velocità ({speed})",
+  "Network folder":
+      "Cartella di rete",
+  "{free} free":
+      "{free} liberi",
+  "Download \"{title}\"":
+      "Scarica «{title}»",
+  "Download {n} episodes":
+      "Scarica {n} episodi",
+  "A download uses one connection to your provider. On an account with only one, it waits while you watch. It can slow your stream on Wi-Fi, and some providers don't allow downloads.":
+      "Un download usa una connessione del tuo provider. Su un account con una sola, aspetta mentre guardi. Può rallentare lo streaming in Wi-Fi, e alcuni provider non permettono i download.",
+  "It can slow what you watch on Wi-Fi while it runs.":
+      "Mentre è in corso può rallentare ciò che guardi in Wi-Fi.",
+  "Best: download overnight.":
+      "Meglio: scaricare di notte.",
+  "Saves to {where}":
+      "Salva su: {where}",
+  "◀ ▶ change the time":
+      "◀ ▶ cambia l'ora",
+  "Tap the arrows to change the time":
+      "Tocca le frecce per cambiare l'ora",
+  "Download now":
+      "Scarica ora",
+  "Waits while you watch, if your account has one connection":
+      "Aspetta mentre guardi, se il tuo account ha una connessione",
+  "Download":
+      "Scarica",
+  "Download at {time}":
+      "Download alle {time}",
+  "Waiting to download":
+      "In attesa di download",
+  "Downloading {pct}%":
+      "Download {pct}%",
+  "Downloading {size}":
+      "Download {size}",
+  "Downloaded":
+      "Scaricato",
+  "Download stopped":
+      "Download interrotto",
+  "Play what's downloaded":
+      "Riproduci la parte scaricata",
+  "{done} of {total}":
+      "{done} di {total}",
+  "Resume download":
+      "Riprendi il download",
+  "Instead of {time}":
+      "Invece che alle {time}",
+  "Cancel download":
+      "Annulla il download",
+  "Stop download":
+      "Interrompi il download",
+  "Keeps what has been downloaded":
+      "Conserva la parte già scaricata",
+  "Delete download":
+      "Elimina il download",
+  "Not enough storage space":
+      "Spazio di archiviazione insufficiente",
+  "Bigger than the space left for recordings":
+      "Più grande dello spazio rimasto per le registrazioni",
+  "The source sent a short clip, not the file. Try again later or pick another stream.":
+      "La fonte ha inviato una breve clip, non il file. Riprova più tardi o scegli un altro stream.",
+  "This stream is a playlist (HLS), not a file. It can't be downloaded.":
+      "Questo stream è una playlist (HLS), non un file. Non si può scaricare.",
+  "Connecting…":
+      "Connessione…",
+  "Connected. {free} free.":
+      "Connesso. {free} liberi.",
+  "Connected.":
+      "Connesso.",
+  "Couldn't use this folder: {reason}":
+      "Impossibile usare questa cartella: {reason}",
+  "Saved. Recordings and downloads go to the network folder.":
+      "Salvato. Registrazioni e download vanno nella cartella di rete.",
+  "Record and download to a shared folder on a computer or NAS on your network, instead of this device. On Windows: right-click a folder > Properties > Sharing.":
+      "Registra e scarica in una cartella condivisa su un computer o NAS della tua rete, invece che su questo dispositivo. Su Windows: clic destro su una cartella > Proprietà > Condivisione.",
+  "The user name and password stay on this device. Wi-Fi carries the video twice (in, then to the folder), so a wired connection or overnight downloads work best.":
+      "Nome utente e password restano su questo dispositivo. Il Wi-Fi trasporta il video due volte (in entrata, poi verso la cartella), quindi una connessione via cavo o i download notturni funzionano meglio.",
+  "Shared folder":
+      "Cartella condivisa",
+  "Folder inside it (made if missing)":
+      "Cartella al suo interno (creata se manca)",
+  "User name (empty for a guest share)":
+      "Nome utente (vuoto per una condivisione ospite)",
+  "Test":
+      "Prova",
+  "Save and use it":
+      "Salva e usala",
+  "Network folders don't work on this device":
+      "Le cartelle di rete non funzionano su questo dispositivo",
+  "Wrong user name or password, or no access to this folder":
+      "Nome utente o password errati, o nessun accesso a questa cartella",
+  "No shared folder with that name":
+      "Nessuna cartella condivisa con quel nome",
+  "The computer didn't answer":
+      "Il computer non ha risposto",
+  "Address not found":
+      "Indirizzo non trovato",
+  "Can't reach the computer (is it on, and sharing turned on?)":
+      "Impossibile raggiungere il computer (è acceso, con la condivisione attiva?)",
+  "Address and shared folder are needed":
+      "Servono l'indirizzo e la cartella condivisa",
+  "About the video's own bitrate: to the provider it looks like someone watching. The safest choice.":
+      "Circa il bitrate del video: per il provider sembra qualcuno che guarda. La scelta più sicura.",
+  "As fast as the source sends. Some providers don't allow this.":
+      "Veloce quanto invia la fonte. Alcuni provider non lo permettono.",
+  "At most this speed.":
+      "Al massimo questa velocità.",
+  "Downloads":
+      "Download",
+  "Speed limit: {speed}":
+      "Limite di velocità: {speed}",
+  "Always slower while you watch something.":
+      "Sempre più lento mentre guardi qualcosa.",
+  "Suggested start: {time}":
+      "Inizio suggerito: {time}",
+  "What Download offers first: overnight, while nobody watches":
+      "Cosa propone per primo Scarica: di notte, quando nessuno guarda",
+  "Save recordings and downloads to":
+      "Salva registrazioni e download su",
+  "Set up a network folder":
+      "Configura una cartella di rete",
+  "Network folder settings":
+      "Impostazioni della cartella di rete",
+  "A shared folder on a computer or NAS (SMB)":
+      "Una cartella condivisa su un computer o NAS (SMB)",
+  "Downloads: the Download button on a movie or show page.":
+      "Download: il pulsante Scarica nella pagina di un film o di una serie.",
+  "Downloading":
+      "Download in corso",
+  "Waiting":
+      "In attesa",
+  "Waits for a free connection":
+      "Aspetta una connessione libera",
+  "Waiting its turn":
+      "In attesa del suo turno",
+  "Downloaded · {size}":
+      "Scaricato · {size}",
+  "Interrupted · {pct}":
+      "Interrotto · {pct}",
+  "Stopped · {pct}":
+      "Fermato · {pct}",
+  "This episode: {code}":
+      "Questo episodio: {code}",
+  "{season}: all {n} episodes":
+      "{season}: tutti i {n} episodi",
+  "{season}: the {n} not downloaded yet":
+      "{season}: i {n} non ancora scaricati",
+  "{n} without a downloadable stream, left out.":
+      "{n} senza stream scaricabile, esclusi.",
+  "Typing a folder address and password with a remote is painful. Scan this code with your phone camera and fill them in there — they appear here for you to check and save.":
+      "Digitare l'indirizzo di una cartella e una password con il telecomando è scomodo. Scansiona questo codice con la fotocamera del telefono e inseriscili lì — compaiono qui per controllarli e salvarli.",
+  "Check the details here, then press Save and use it.":
+      "Controlla i dati qui, poi premi Salva e usala.",
 };

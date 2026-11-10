@@ -15,7 +15,6 @@ import android.os.PowerManager
 import android.util.Log
 import org.json.JSONObject
 import java.io.File
-import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.HttpURLConnection
@@ -67,12 +66,22 @@ class RecorderService : Service() {
             }
         }
 
+        /** Movie / episode downloads by id, queued ones too (Downloader.kt). */
+        val downloads = ConcurrentHashMap<String, Download>()
+
         fun stop(context: Context, id: String) {
-            if (!active.containsKey(id)) return
+            if (!active.containsKey(id) && !downloads.containsKey(id)) return
             context.startService(
                 Intent(context, RecorderService::class.java)
                     .setAction(ACTION_STOP).putExtra("id", id)
             )
+        }
+
+        /** Downloads run one at a time, oldest start time first. */
+        fun turnOf(d: Download): Boolean {
+            val first = downloads.values.filter { !it.finished }
+                .minWithOrNull(compareBy<Download>({ it.startAt }, { it.id }))
+            return first == null || first.id == d.id
         }
     }
 
@@ -93,24 +102,33 @@ class RecorderService : Service() {
                     Log.e(TAG, "bad start item: $e")
                 }
             }
-            ACTION_STOP -> intent.getStringExtra("id")?.let { active[it]?.stop("stopped") }
+            ACTION_STOP -> intent.getStringExtra("id")?.let {
+                active[it]?.stop("stopped")
+                downloads[it]?.stop("stopped")
+            }
         }
-        if (active.isEmpty()) finish()
+        if (active.isEmpty() && downloads.isEmpty()) finish()
         return START_NOT_STICKY
     }
 
     private fun begin(item: JSONObject) {
         val id = item.getString("id")
-        if (active.containsKey(id)) return
+        if (active.containsKey(id) || downloads.containsKey(id)) return
+        if (item.optString("kind") == "download") return beginDownload(item)
         val endAt = item.optLong("endAt", 0L)
         if (endAt in 1..System.currentTimeMillis()) {
             Log.i(TAG, "$id: end time already passed, not starting")
             return
         }
+        val path = item.getString("path")
         val rec = Recording(
+            context = applicationContext,
             id = id,
             url = item.getString("url"),
-            file = File(item.getString("path")),
+            path = path,
+            statusPath = item.optString("statusPath", "$path.status"),
+            fallbackPath = item.optString("fallbackPath", "").ifEmpty { null },
+            account = item.optString("account", ""),
             endAt = endAt,
             title = item.optString("title", "Recording"),
             minFreeBytes = item.optLong("minFreeBytes", 1L shl 30),
@@ -119,13 +137,33 @@ class RecorderService : Service() {
                 active.remove(r.id)
                 LiveTee.close(r.id)
                 updateNotification()
-                if (active.isEmpty()) finish()
+                if (active.isEmpty() && downloads.isEmpty()) finish()
             },
         )
         active[id] = rec
         acquireLocks()
         updateNotification()
         rec.thread.start()
+    }
+
+    private fun beginDownload(item: JSONObject) {
+        DownloadPolicy.load(applicationContext)
+        val d = Download(
+            applicationContext, item,
+            onChange = { updateNotification() },
+            onDone = { d ->
+                downloads.remove(d.id)
+                // Finished for good: a reboot mustn't start it again. An
+                // interrupted one stays scheduled and resumes.
+                if (d.finished) RecorderScheduler.remove(applicationContext, d.id)
+                updateNotification()
+                if (active.isEmpty() && downloads.isEmpty()) finish()
+            },
+        )
+        downloads[d.id] = d
+        acquireLocks()
+        updateNotification()
+        d.thread.start()
     }
 
     private fun goForeground() {
@@ -149,11 +187,20 @@ class RecorderService : Service() {
             )
         }
         val titles = active.values.map { it.title }
-        val text = when (titles.size) {
-            0 -> "Starting…"
-            1 -> titles[0]
-            else -> "${titles.size} recordings"
+        val loading = downloads.values.filter { it.state == "downloading" }
+        val waiting = downloads.values.count { !it.finished } - loading.size
+        val parts = mutableListOf<String>()
+        when (titles.size) {
+            0 -> {}
+            1 -> parts.add(titles[0])
+            else -> parts.add("${titles.size} recordings")
         }
+        for (d in loading) {
+            parts.add(if (d.total > 0) "${d.title} · ${d.bytes * 100 / d.total}%" else d.title)
+        }
+        if (waiting > 0) parts.add("$waiting waiting")
+        val text = if (parts.isEmpty()) "Starting…" else parts.joinToString(" · ")
+        val heading = if (titles.isEmpty() && downloads.isNotEmpty()) "VesperTV · Downloading" else "VesperTV · Recording"
         val open = packageManager.getLaunchIntentForPackage(packageName)?.let {
             PendingIntent.getActivity(
                 this, 0, it,
@@ -163,7 +210,7 @@ class RecorderService : Service() {
         @Suppress("DEPRECATION")
         val b = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
             Notification.Builder(this, CHANNEL_ID) else Notification.Builder(this)
-        return b.setContentTitle("VesperTV · Recording")
+        return b.setContentTitle(heading)
             .setContentText(text)
             .setSmallIcon(android.R.drawable.presence_video_online)
             .setOngoing(true)
@@ -172,7 +219,7 @@ class RecorderService : Service() {
     }
 
     private fun updateNotification() {
-        if (active.isEmpty()) return
+        if (active.isEmpty() && downloads.isEmpty()) return
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.notify(NOTIFICATION_ID, buildNotification())
     }
@@ -211,21 +258,28 @@ class RecorderService : Service() {
     override fun onDestroy() {
         // Killed with recordings still running (low memory, force stop).
         for (r in active.values) r.stop("interrupted")
+        for (d in downloads.values) d.stop("interrupted")
         super.onDestroy()
     }
 }
 
-/** One recording: its own thread, writes [file] and `[file].status`. */
+/** One recording: its own thread, writes [target] and its `.status` file. */
 class Recording(
+    private val context: Context,
     val id: String,
     val url: String,
-    val file: File,
+    path: String,
+    private val statusPath: String,
+    private val fallbackPath: String?,
+    val account: String,
     val endAt: Long,
     val title: String,
     private val minFreeBytes: Long,
     private val maxBytes: Long,
     private val onDone: (Recording) -> Unit,
 ) {
+    /** Where it's written; the device fallback when the network folder fails. */
+    @Volatile var target: RecTarget = RecTarget.of(context, path)
     @Volatile var bytes = 0L
     @Volatile private var stopReason: String? = null
     @Volatile private var conn: HttpURLConnection? = null
@@ -255,13 +309,30 @@ class Recording(
         return false
     }
 
+    /**
+     * The file to append to. A network folder that can't be reached when
+     * the game starts: record on the device instead (when Dart gave a
+     * fallback) rather than lose the game.
+     */
+    private fun openTarget(): OutputStream {
+        try {
+            bytes = target.length()
+            return target.open(true)
+        } catch (e: Throwable) {
+            val fallback = fallbackPath ?: throw e
+            error = "Network folder: " + NetworkFolder.describe(e) + " - recorded on this device"
+            Log.w(RecorderService.TAG, "$id: network folder failed, recording on the device: ${e.javaClass.simpleName}")
+            target = FileTarget(fallback)
+            bytes = target.length()
+            return target.open(true)
+        }
+    }
+
     private fun run() {
-        file.parentFile?.mkdirs()
         writeStatus("recording")
         var failures = 0
         try {
-            FileOutputStream(file, true).use { out ->
-                bytes = file.length()
+            openTarget().use { out ->
                 while (!shouldStop()) {
                     try {
                         copyOnce(out)
@@ -288,8 +359,8 @@ class Recording(
                     }
                 }
             }
-        } catch (e: Exception) {
-            error = e.toString()
+        } catch (e: Throwable) {
+            error = if (NetworkFolder.isSmb(target.path)) NetworkFolder.describe(e) else e.toString()
             if (stopReason == null) stopReason = "failed"
         }
         val reason = stopReason ?: "done"
@@ -369,7 +440,7 @@ class Recording(
         val now = System.currentTimeMillis()
         if (now - lastStatusAt > 5000) {
             lastStatusAt = now
-            if (file.parentFile?.usableSpace ?: Long.MAX_VALUE < minFreeBytes) {
+            if (target.freeBytes() < minFreeBytes) {
                 stopReason = "full"
                 error = "Storage almost full"
             }
@@ -457,8 +528,11 @@ class Recording(
                 .put("updatedAt", now)
                 .put("error", error)
             if (state != "recording") o.put("endedAt", now)
-            val f = File(file.path + ".status")
-            val tmp = File(file.path + ".status.tmp")
+            // Where it really went (the device fallback, see openTarget).
+            o.put("path", target.path)
+            val f = File(statusPath)
+            f.parentFile?.mkdirs()
+            val tmp = File("$statusPath.tmp")
             tmp.writeText(o.toString())
             tmp.renameTo(f)
         } catch (e: Exception) {

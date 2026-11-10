@@ -383,7 +383,44 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
-- **Claude, 2026-11-09 - batch committed on main (+695, unreleased, not pushed):** **Home mini player** (owner
+- **Claude, 2026-11-09 - merged on local main (3f49f15, not pushed/released/built; owner tests later):** QMJHL league
+  (31d26cc), guide fix below (f1f64f2), `claude/phone-safe-area` (Settings `SafeArea(top: false)`, Android 15 nav
+  bar) and `claude/downloads` (entry below). Analyze 16, 1713 tests. Next build > 700.
+- **Claude, 2026-11-09 - event channels sharing one EPG id (f1f64f2):** a provider gives `tsn4mel` to 61 event
+  channels (TSN+ 05-45, ESPN+ 49, Disney+ Events 49…): every row showed that id's guide or the first name's game
+  (name events are keyed by EPG id). `Channel.epgId` = own `rawId` when `epgKey` is set (id shared) and the
+  provider name is an event channel's (`isEventChannelName`: `… @ date time zone` or a numbered idle slot);
+  network copies (ESPN 4K/HD) keep sharing, overrides win. Idle slots (`TSN+ 07: NO EVENT`) without a guide get
+  "No game at this time" across the row (`EpgService.idleEventIdsProvider`, cheap `mayBeIdleEventChannelName`
+  pre-filter: ~350k names per pass). Event channels now count as "no guide" (editor, Auto-Pair), like unique ones.
+  `test/event_channel_epg_test.dart`. Not box-tested.
+- **Claude, 2026-11-09 - Downloads + network folder (`claude/downloads`, test +699, merged 3f49f15, not released):** owner
+  asked for offline watching. Download button on IPTV/Media Hub movie pages and show pages (episode or season),
+  sheet warns (provider connection, Wi-Fi, providers that forbid it) and suggests **Tonight at 2:00** (Left/Right
+  change it). Native `Downloader.kt` (one at a time, Range resume, survives reboot via the recorder scheduler,
+  speed limit Like watching/10/25/50/none, 5 Mbit/s while anything plays, waits while the player/Multiview/a
+  recording uses the account's last connection). **Network folder** (SMB, `NetworkFolder.kt`, smbj 0.14.0) for
+  recordings and downloads, played back through a 127.0.0.1 Range server. Not device-tested. Details and test
+  checklist: `dev-notes/downloads.md`. Owner tested +699 ("works well"); +700 adds From phone to the
+  network folder. Next build > 700.
+- **Claude, 2026-11-09 - phone player in the iPhone player's look (main, unreleased, not pushed):** owner photos
+  (iPhone touch player vs Android phone bar). `PlayerControls.touchLayout` (PlayerScreen passes `_touch`): no title,
+  no transport in the bar; elapsed | seek | length, badges left + buttons right (portrait: buttons on their own line).
+  `PlayerTouchTransport` = big round -10 / play-pause / +10 in the middle with the bars (live: play-pause). Touch top
+  bar: fade instead of the black band, title + clock + compact EPG line, **Sources** for Media Hub (touch had no Right
+  key). TV boxes unchanged (remote bar + options row). `test/player_touch_layout_test.dart`. iOS side lives on
+  `claude/appstore-build` (`DesktopPlayerScreen` touch layout, PiP, background audio; dev-notes/ios.md there).
+- **Claude, 2026-11-09 - release 1.0.63 (beta), +698 (latest):** owner said "/cutr". Android only; Windows/Linux stay
+  1.0.61 (the Home mini player's Windows path was never run). New version name because the updater compares tag vs
+  versionName. Includes the +695 batch below (Home mini player, compact Settings, stream language ranking, MKV Atmos
+  labels, Vesper AI media_hub tool) plus: Media Hub **largest file = largest with the viewer's language**, alone or among
+  others (`ArchivePlaybackPreferences.languageTier` capped at 2) and it wins over Auto-play; Vesper AI `media_hub`
+  sources always lists best + `best_rule`, `settings` gains 5 `media_hub_*` keys, `favorites` move / order, new
+  `my_groups` tool (`vesper_ai/my_groups_tool.dart`: own live groups). Pushed to origin/main from
+  `claude/hub-largest-language`; local `main` in the main checkout was left alone (another session had uncommitted
+  Sports files there), so `git pull` it when that session is done. Analyze 16, 1675 tests; native suite not rerun
+  (nothing native changed since +695). Notes: dev-notes/releases/1.0.63.md. Next build > 698.
+- **Claude, 2026-11-09 - batch committed on main (+695, released in 1.0.63):** **Home mini player** (owner
   photo; approved on the Formuler +695): `home_screen.dart` `_MiniPlayer` at the hero's top right plays the live
   card the remote rests on (Preview-on-highlight rules: 0.8 s after an arrow key, History after 10 s, never over a
   recording's only connection); OK = full screen on the same stream (`PlayerGlideRoute.open`; Windows

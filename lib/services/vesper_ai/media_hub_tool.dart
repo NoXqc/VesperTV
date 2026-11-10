@@ -29,6 +29,10 @@ abstract interface class VesperHub {
 
   /// The show's page, for the viewer to pick an episode.
   Future<void> openShow(HubTitle show);
+
+  /// The viewer's Continue watching (movies, then shows): a movie, or a
+  /// show with the episode to go on with, like Media Hub's own row.
+  List<(HubTitle, ArchiveVideo?)> continueWatching();
 }
 
 /// One stream handed out by the sources action: of a title (and episode),
@@ -110,6 +114,29 @@ ArchiveStreamOption? hubBestStream(
         fallback;
   }
   return ranked.firstOrNull ?? fallback;
+}
+
+/// How [hubBestStream] picks, for the model to explain it (the pick was
+/// past the listed streams and a model said it couldn't tell why, owner
+/// 2026-11-09).
+String hubBestRule(StorageService storage) {
+  final prefs = ArchivePlaybackPreferences.read(storage);
+  return [
+    if (storage.getArchiveAutoLargest())
+      'largest file (Media Hub playback: Automatically play the largest file)'
+    else ...[
+      if (prefs.sourceKey.isNotEmpty) 'preferred source first',
+      'highest resolution, then the add-on\'s order',
+    ],
+    if (prefs.language.isNotEmpty)
+      'only streams with ${prefs.language} audio (alone or among others)'
+    else if (prefs.audioLanguage.isNotEmpty)
+      'streams with ${prefs.audioLanguage} audio (alone or among others) '
+          'before the rest',
+    if (prefs.maxHeight > 0) 'up to ${prefs.maxHeight}p',
+    if (prefs.avoidHdr) 'SDR only',
+    'ready links only',
+  ].join('; ');
 }
 
 /// The stream after [current] in [options] (wrapping; -1 = unknown, from
@@ -264,11 +291,16 @@ final _mediaHubTool = VesperTool(
       'English; a multi-audio file can start in another language unless '
       'the viewer set a preferred audio language), size, ready (false = the provider is '
       'still downloading it: it will not play yet), which one is playing, '
-      'and best (the viewer\'s Media Hub playback settings and language). '
+      'and best (the viewer\'s Media Hub playback settings and language; '
+      'always in the list; best_rule says how it was picked, settings '
+      'media_hub_* change it). '
       'play: a title ref (best true starts the best '
       'stream; otherwise the app picks as usual or asks on the TV), a '
       'stream ref from sources, or a show with season and episode (a show '
-      'without them opens its page). switch: the playing title to another '
+      'without them opens its page). continue: the title in the viewer\'s '
+      'Continue watching whose name is query, from where it stopped (a '
+      'show: its episode in progress or the next one); a title not started '
+      'yet plays like play. switch: the playing title to another '
       'stream at the same position (a stream ref, "next" or "best"), e.g. '
       'when it buffers or fails; now_playing shows how it plays.',
   schema: {
@@ -276,7 +308,7 @@ final _mediaHubTool = VesperTool(
     'properties': {
       'action': {
         'type': 'string',
-        'enum': ['search', 'episodes', 'sources', 'play', 'switch'],
+        'enum': ['search', 'episodes', 'sources', 'play', 'continue', 'switch'],
       },
       'query': {
         'type': 'string',
@@ -364,6 +396,7 @@ final _mediaHubTool = VesperTool(
           final current =
               archiveCurrentStreamIndex(options, sources.current(playing.id));
           final best = hubBestStream(box.storage, options);
+          final bestAt = best == null ? -1 : options.indexOf(best);
           HubStream wrap(ArchiveStreamOption o) =>
               HubStream(o, channelId: playing.id);
           return {
@@ -372,11 +405,16 @@ final _mediaHubTool = VesperTool(
             'sources': [
               for (var i = 0; i < options.length && i < _hubStreamCap; i++)
                 _describeStream(box, wrap(options[i]), playing: i == current),
+              if (bestAt >= _hubStreamCap)
+                _describeStream(box, wrap(best!), playing: bestAt == current),
             ],
-            if (best != null) 'best': box.refFor(wrap(best)),
+            if (best != null) ...{
+              'best': box.refFor(wrap(best)),
+              'best_rule': hubBestRule(box.storage),
+            },
             if (options.length > _hubStreamCap)
               'note': '${options.length} streams; the first $_hubStreamCap '
-                  'are listed.',
+                  'are listed${bestAt >= _hubStreamCap ? ', then best' : ''}.',
           };
         }
         final (title, episode) = await _hubTarget(box, hub, args);
@@ -386,6 +424,7 @@ final _mediaHubTool = VesperTool(
         }
         final options = await hub.streams(title, episode: episode);
         final best = hubBestStream(box.storage, options);
+        final bestAt = best == null ? -1 : options.indexOf(best);
         HubStream wrap(ArchiveStreamOption o) =>
             HubStream(o, title: title, episode: episode);
         return {
@@ -394,13 +433,17 @@ final _mediaHubTool = VesperTool(
           'sources': [
             for (final o in options.take(_hubStreamCap))
               _describeStream(box, wrap(o)),
+            if (bestAt >= _hubStreamCap) _describeStream(box, wrap(best!)),
           ],
-          if (best != null) 'best': box.refFor(wrap(best)),
+          if (best != null) ...{
+            'best': box.refFor(wrap(best)),
+            'best_rule': hubBestRule(box.storage),
+          },
           if (options.isEmpty)
             'note': 'No source offers a playable stream for this right now.',
           if (options.length > _hubStreamCap)
             'note': '${options.length} streams; the first $_hubStreamCap '
-                'are listed.',
+                'are listed${bestAt >= _hubStreamCap ? ', then best' : ''}.',
         };
       case 'play':
         final picked = box.lookup(_str(args, 'ref'));
@@ -457,6 +500,39 @@ final _mediaHubTool = VesperTool(
           if (option != null)
             'stream': _describeStream(
                 box, HubStream(option, title: title, episode: episode)),
+          ...await _awaitStart(box, id, before),
+        };
+      case 'continue':
+        final query = _str(args, 'query');
+        final going = hub.continueWatching();
+        final match = query.isEmpty
+            ? going.firstOrNull
+            : rankByName(going, query, (g) => g.$1.meta.name, limit: 1)
+                .firstOrNull;
+        if (match == null) {
+          if (query.isEmpty) {
+            throw VesperToolError('Nothing to continue in Media Hub.');
+          }
+          return box.call('media_hub', {'action': 'play', 'query': query},
+              caller: caller);
+        }
+        final (title, episode) = match;
+        if (title.meta.type == ArchiveType.series && episode == null) {
+          await _confirmRemote(box, caller, 'An AI app wants to open {title}.',
+              {'title': title.meta.name});
+          await hub.openShow(title);
+          return {'opened': title.meta.name, 'kind': 'series'};
+        }
+        final name = episode == null
+            ? title.meta.name
+            : '${title.meta.name} ${_episodeLabel(episode)}';
+        await _confirmRemote(
+            box, caller, 'An AI app wants to play {title}.', {'title': name});
+        final before = box.playback.controller;
+        final id = await hub.play(title, episode: episode);
+        return {
+          'playing': name,
+          'continued': true,
           ...await _awaitStart(box, id, before),
         };
       case 'switch':

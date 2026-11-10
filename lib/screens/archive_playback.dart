@@ -20,6 +20,7 @@ import '../services/archive_stream_size.dart';
 import '../services/storage_service.dart';
 import '../services/desktop_mini_player.dart';
 import '../services/playback_service.dart';
+import '../services/recording_service.dart';
 import '../services/tracker_api.dart';
 import '../services/archive_ready_watch.dart';
 import '../services/stream_resolver.dart';
@@ -154,36 +155,38 @@ Future<void> playArchiveTitle(
   var picked = chosen ??
       await pickArchiveStream(context, session.options,
           session: session, notice: notice, autoSelect: (options) async {
-    if (!resumeSource.isCurrent) return null;
-    savedChoice = await resumeSource.restore(options);
-    if (!resumeSource.isCurrent) return null;
-    final usable = savedChoice!.options;
-    for (final option in options) {
-      if (!usable.contains(option)) session.exclude(option);
-    }
-    // Resuming a stream the user picked that can't be found again: ask,
-    // don't guess (the largest file looked like the app ignored the pick,
-    // LOG-3NEYPN; owner, 2026-11-07).
-    if (savedChoice!.picked == null &&
-        const {
-          ArchiveResumeReason.unmatched,
-          ArchiveResumeReason.unavailable,
-          ArchiveResumeReason.missingSource,
-        }.contains(savedChoice!.reason)) {
-      notice.value =
-          tr("Couldn't replay the stream you picked. Choose one to resume.");
-      return null;
-    }
-    final prefs = ArchivePlaybackPreferences.read(storage);
-    return savedChoice!.picked ??
-        (prefs.autoPlay ? prefs.ranked(usable).firstOrNull : null) ??
-        (storage.getArchiveAutoLargest()
-            ? largestArchiveStream(prefs.bestLanguage(prefs.ranked(usable)))
-            : null) ??
-        (usable.length == 1 && prefs.ranked(usable).isNotEmpty
-            ? usable.single
-            : null);
-  });
+        if (!resumeSource.isCurrent) return null;
+        savedChoice = await resumeSource.restore(options);
+        if (!resumeSource.isCurrent) return null;
+        final usable = savedChoice!.options;
+        for (final option in options) {
+          if (!usable.contains(option)) session.exclude(option);
+        }
+        // Resuming a stream the user picked that can't be found again: ask,
+        // don't guess (the largest file looked like the app ignored the pick,
+        // LOG-3NEYPN; owner, 2026-11-07).
+        if (savedChoice!.picked == null &&
+            const {
+              ArchiveResumeReason.unmatched,
+              ArchiveResumeReason.unavailable,
+              ArchiveResumeReason.missingSource,
+            }.contains(savedChoice!.reason)) {
+          notice.value = tr(
+              "Couldn't replay the stream you picked. Choose one to resume.");
+          return null;
+        }
+        final prefs = ArchivePlaybackPreferences.read(storage);
+        // Largest file before Auto-play: the narrower choice wins, as in
+        // hubBestStream (an AI app's "best").
+        return savedChoice!.picked ??
+            (storage.getArchiveAutoLargest()
+                ? largestArchiveStream(prefs.bestLanguage(prefs.ranked(usable)))
+                : null) ??
+            (prefs.autoPlay ? prefs.ranked(usable).firstOrNull : null) ??
+            (usable.length == 1 && prefs.ranked(usable).isNotEmpty
+                ? usable.single
+                : null);
+      });
   notice.dispose();
   if (picked == null || !context.mounted || !resumeSource.isCurrent) return;
   var options = session.options;
@@ -370,6 +373,92 @@ Future<void> playArchiveTitle(
   }
 }
 
+/// Download (Android): the stream is chosen like Play's, minus the saved
+/// resume pick — Largest file, Auto-play or a single stream choose by
+/// themselves, else the list asks. Episodes after the first keep to its
+/// source and quality, like Up Next. The add-on's own link is kept (not
+/// where it redirects): a debrid link expires, the add-on hands out a
+/// fresh one when the download starts. Null when the list was dismissed.
+Future<List<DownloadItem>?> archiveDownloadItems(
+  BuildContext context, {
+  required ArchiveSource source,
+  required ArchiveMeta meta,
+  List<ArchiveVideo> episodes = const [],
+}) async {
+  final service = context.read<ArchiveService>();
+  final storage = context.read<StorageService>();
+  final prefs = ArchivePlaybackPreferences.read(storage);
+  final runtime =
+      int.tryParse(RegExp(r'\d+').firstMatch(meta.runtime ?? '')?[0] ?? '');
+  ArchiveStreamOption? automatic(List<ArchiveStreamOption> options) {
+    final usable = prefs.ranked(options);
+    return (storage.getArchiveAutoLargest()
+            ? largestArchiveStream(prefs.bestLanguage(usable))
+            : null) ??
+        (prefs.autoPlay ? usable.firstOrNull : null) ??
+        (options.length == 1 && usable.isNotEmpty ? options.single : null);
+  }
+
+  String two(int n) => n.toString().padLeft(2, '0');
+  final items = <DownloadItem>[];
+  ArchiveStreamOption? first;
+  var skipped = 0;
+  for (final video in episodes.isEmpty ? <ArchiveVideo?>[null] : episodes) {
+    ArchiveStreamOption? o;
+    if (first == null) {
+      final session = service.searchStreams(source, meta, episode: video);
+      o = await pickArchiveStream(context, session.options,
+          session: session, autoSelect: (options) async => automatic(options));
+      if (o == null || !context.mounted) return null;
+      first = o;
+    } else {
+      final next = await service.streams(source, meta, episode: video);
+      final acceptable = prefs.ranked(next);
+      final group = first.stream.bingeGroup;
+      o = (group != null && group.isNotEmpty
+              ? acceptable
+                  .where((v) =>
+                      v.source.key == first!.source.key &&
+                      v.stream.bingeGroup == group)
+                  .firstOrNull
+              : null) ??
+          (storage.getArchiveAutoLargest()
+              ? largestArchiveStream(prefs.bestLanguage(acceptable))
+              : null) ??
+          (acceptable.isEmpty
+              ? null
+              : preferredArchiveStream(acceptable, first));
+      if (!context.mounted) return null;
+    }
+    if (o == null || o.stream.ytId != null || o.stream.url.isEmpty) {
+      skipped++;
+      continue;
+    }
+    final id = service
+        .channelFor(source, meta, const ArchiveStream(), episode: video)
+        .id;
+    items.add(DownloadItem(
+      sourceId: id,
+      title: video == null
+          ? meta.name
+          : 'S${two(video.season)}E${two(video.episode)}'
+              '${video.title.isEmpty ? '' : ' · ${video.title}'}',
+      group: video == null ? '' : meta.name,
+      url: o.stream.url,
+      headers: o.stream.requestHeaders,
+      poster: meta.posterUrl,
+      durationSec: (runtime ?? 0) * 60,
+      totalBytes: archiveMediaFileInfo(o).sizeBytes ?? 0,
+    ));
+  }
+  if (skipped > 0 && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(tr(
+            '{n} without a downloadable stream, left out.', {'n': skipped}))));
+  }
+  return items;
+}
+
 Future<void> openArchiveContinuation(
     BuildContext context, ArchiveContinueItem item) async {
   if (item.upcoming ||
@@ -483,11 +572,19 @@ Future<void> openArchiveSeries(
             ),
             loadEpisodes: load,
             playEpisode: play,
+            downloadEpisodes: (context, episodes) => archiveDownloadItems(
+                context,
+                source: source,
+                meta: meta,
+                episodes: [
+                  for (final e in episodes)
+                    if (videosById[e.id] case final v?) v,
+                ]),
             showFavorite: false,
             imdbId: preview.imdb,
             sourceLabel: source.name,
-            watchListItem: WatchListItem(
-                hub: HubTitle(source.manifestUrl, preview)),
+            watchListItem:
+                WatchListItem(hub: HubTitle(source.manifestUrl, preview)),
             followTarget: () => FollowedShow(
                 key: FollowedShow.hubKey(source.manifestUrl, preview.id),
                 title: preview.name,

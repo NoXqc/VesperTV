@@ -112,6 +112,9 @@ const Map<String, String> kEl = {
   "Loading recommendations…": "Φόρτωση προτάσεων…",
   "Looking for streams…": "Αναζήτηση ροών…",
   "Maximum quality": "Μέγιστη ποιότητα",
+  "Any language": "Οποιαδήποτε γλώσσα",
+  "Any quality": "Οποιαδήποτε ποιότητα",
+  "Media Hub audio language": "Γλώσσα ήχου Media Hub",
   "More like this": "Παρόμοια",
   "No compatible source for this title. Add a playback source in Media Hub settings.":
       "Καμία συμβατή πηγή για αυτόν τον τίτλο. Προσθέστε πηγή αναπαραγωγής στις ρυθμίσεις του Media Hub.",
@@ -1402,6 +1405,7 @@ const Map<String, String> kEl = {
   "Players": "Παίκτες",
   "No stats for this game yet.":
       "Δεν υπάρχουν ακόμη στατιστικά για αυτό το παιχνίδι.",
+  "No stats for tennis matches.": "Δεν υπάρχουν στατιστικά για αγώνες τένις.",
   "Top performers": "Κορυφαίοι",
   "Injuries": "Τραυματισμοί",
   "Goals": "Γκολ",
@@ -1723,6 +1727,7 @@ const Map<String, String> kEl = {
   "Recording now": "Εγγράφεται τώρα",
   "Recorded": "Εγγεγραμμένα",
   "{used} of {cap} GB used": "{used} από {cap} GB σε χρήση",
+  "{size} in the network folder": "{size} στον φάκελο δικτύου",
   "REC · {size}": "REC · {size}",
   "Waiting for a channel": "Αναμονή για κανάλι",
   "Interrupted · {size}": "Διακόπηκε · {size}",
@@ -2630,6 +2635,8 @@ const Map<String, String> kEl = {
       "χθες",
   "I could not find \"{title}\" in your playlists.":
       "Δεν βρήκα το «{title}» στις λίστες σου.",
+  "I could not find \"{title}\" in Media Hub.":
+      "Δεν βρήκα το «{title}» στο Media Hub.",
   "No channel shows a {title} game today.":
       "Κανένα κανάλι δεν δείχνει αγώνα της {title} σήμερα.",
   "I could not find the channel \"{title}\".":
@@ -2642,6 +2649,11 @@ const Map<String, String> kEl = {
       "Δεν είναι ακόμα διαθέσιμο στα Windows.",
   "No next episode.": "Δεν υπάρχει επόμενο επεισόδιο.",
   "No previous episode.": "Δεν υπάρχει προηγούμενο επεισόδιο.",
+  "No subtitles in this file.": "Δεν υπάρχουν υπότιτλοι σε αυτό το αρχείο.",
+  "This stream has no audio tracks to choose from.": "Αυτή η ροή δεν έχει κομμάτια ήχου για επιλογή.",
+  "That language is not in this stream.": "Αυτή η γλώσσα δεν υπάρχει σε αυτή τη ροή.",
+  "This channel has no closed captions.": "Αυτό το κανάλι δεν έχει κλειστούς υπότιτλους.",
+  "No subtitles in that language.": "Δεν υπάρχουν υπότιτλοι σε αυτή τη γλώσσα.",
   "That did not work.":
       "Δεν λειτούργησε.",
   "Talk from my phone":
@@ -2788,6 +2800,8 @@ const Map<String, String> kEl = {
       "Μια εφαρμογή AI θέλει να ανοίξει το {title}.",
   "An AI app wants to hide {count} groups ({words}).":
       "Μια εφαρμογή AI θέλει να κρύψει {count} ομάδες ({words}).",
+  "An AI app wants to delete your group {group}.":
+      "Μια εφαρμογή AI θέλει να διαγράψει την ομάδα σας {group}.",
   "An AI app wants to show {count} groups ({words}).":
       "Μια εφαρμογή AI θέλει να εμφανίσει {count} ομάδες ({words}).",
   "An AI app wants {game} to play on {channel} in {tab}.":
@@ -2986,4 +3000,177 @@ const Map<String, String> kEl = {
       "Παρακολούθηση εδώ",
   "VesperTV may not use the microphone. Allow Microphone and Speech Recognition in Settings > VesperTV, or type instead.":
       "Το VesperTV δεν μπορεί να χρησιμοποιήσει το μικρόφωνο. Επιτρέψτε Μικρόφωνο και Αναγνώριση ομιλίας στις Ρυθμίσεις > VesperTV ή πληκτρολογήστε.",
+  // Downloads and the network folder (recording_service.dart).
+  "Like watching":
+      "Όπως στην προβολή",
+  "No limit":
+      "Χωρίς όριο",
+  "{n} Mbit/s":
+      "{n} Mbit/s",
+  "Tonight at {time}":
+      "Απόψε στις {time}",
+  "Today at {time}":
+      "Σήμερα στις {time}",
+  "Tomorrow at {time}":
+      "Αύριο στις {time}",
+  "Download set for {when}. It shows in Recordings.":
+      "Η λήψη ορίστηκε: {when}. Εμφανίζεται στις Εγγραφές.",
+  "Downloading. It shows in Recordings.":
+      "Γίνεται λήψη. Εμφανίζεται στις Εγγραφές.",
+  "About {size}":
+      "Περίπου {size}",
+  "about {time} at your speed limit ({speed})":
+      "περίπου {time} με το όριο ταχύτητάς σας ({speed})",
+  "Network folder":
+      "Φάκελος δικτύου",
+  "{free} free":
+      "{free} ελεύθερα",
+  "Download \"{title}\"":
+      "Λήψη «{title}»",
+  "Download {n} episodes":
+      "Λήψη {n} επεισοδίων",
+  "A download uses one connection to your provider. On an account with only one, it waits while you watch. It can slow your stream on Wi-Fi, and some providers don't allow downloads.":
+      "Μια λήψη χρησιμοποιεί μία σύνδεση στον πάροχό σας. Σε λογαριασμό με μόνο μία, περιμένει όσο παρακολουθείτε. Μπορεί να καθυστερήσει τη ροή σας στο Wi-Fi, και κάποιοι πάροχοι δεν επιτρέπουν λήψεις.",
+  "It can slow what you watch on Wi-Fi while it runs.":
+      "Όσο τρέχει, μπορεί να καθυστερήσει ό,τι παρακολουθείτε στο Wi-Fi.",
+  "Best: download overnight.":
+      "Καλύτερα: λήψη τη νύχτα.",
+  "Saves to {where}":
+      "Αποθήκευση σε: {where}",
+  "◀ ▶ change the time":
+      "◀ ▶ αλλαγή ώρας",
+  "Tap the arrows to change the time":
+      "Πατήστε τα βέλη για αλλαγή ώρας",
+  "Download now":
+      "Λήψη τώρα",
+  "Waits while you watch, if your account has one connection":
+      "Περιμένει όσο παρακολουθείτε, αν ο λογαριασμός σας έχει μία σύνδεση",
+  "Download":
+      "Λήψη",
+  "Download at {time}":
+      "Λήψη στις {time}",
+  "Waiting to download":
+      "Αναμονή λήψης",
+  "Downloading {pct}%":
+      "Λήψη {pct}%",
+  "Downloading {size}":
+      "Λήψη {size}",
+  "Downloaded":
+      "Ολοκληρώθηκε η λήψη",
+  "Download stopped":
+      "Η λήψη σταμάτησε",
+  "Play what's downloaded":
+      "Αναπαραγωγή όσων έχουν ληφθεί",
+  "{done} of {total}":
+      "{done} από {total}",
+  "Resume download":
+      "Συνέχιση λήψης",
+  "Instead of {time}":
+      "Αντί για {time}",
+  "Cancel download":
+      "Ακύρωση λήψης",
+  "Stop download":
+      "Διακοπή λήψης",
+  "Keeps what has been downloaded":
+      "Κρατά όσα έχουν ήδη ληφθεί",
+  "Delete download":
+      "Διαγραφή λήψης",
+  "Not enough storage space":
+      "Δεν υπάρχει αρκετός χώρος",
+  "Bigger than the space left for recordings":
+      "Μεγαλύτερο από τον χώρο που απομένει για εγγραφές",
+  "The source sent a short clip, not the file. Try again later or pick another stream.":
+      "Η πηγή έστειλε ένα σύντομο κλιπ, όχι το αρχείο. Δοκιμάστε αργότερα ή επιλέξτε άλλη ροή.",
+  "This stream is a playlist (HLS), not a file. It can't be downloaded.":
+      "Αυτή η ροή είναι λίστα αναπαραγωγής (HLS), όχι αρχείο. Δεν μπορεί να ληφθεί.",
+  "Connecting…":
+      "Σύνδεση…",
+  "Connected. {free} free.":
+      "Συνδέθηκε. {free} ελεύθερα.",
+  "Connected.":
+      "Συνδέθηκε.",
+  "Couldn't use this folder: {reason}":
+      "Δεν ήταν δυνατή η χρήση του φακέλου: {reason}",
+  "Saved. Recordings and downloads go to the network folder.":
+      "Αποθηκεύτηκε. Οι εγγραφές και οι λήψεις πηγαίνουν στον φάκελο δικτύου.",
+  "Record and download to a shared folder on a computer or NAS on your network, instead of this device. On Windows: right-click a folder > Properties > Sharing.":
+      "Εγγραφή και λήψη σε κοινόχρηστο φάκελο σε υπολογιστή ή NAS του δικτύου σας, αντί για αυτή τη συσκευή. Στα Windows: δεξί κλικ σε φάκελο > Ιδιότητες > Κοινή χρήση.",
+  "The user name and password stay on this device. Wi-Fi carries the video twice (in, then to the folder), so a wired connection or overnight downloads work best.":
+      "Το όνομα χρήστη και ο κωδικός μένουν σε αυτή τη συσκευή. Το Wi-Fi μεταφέρει το βίντεο δύο φορές (εισερχόμενο, μετά προς τον φάκελο), γι' αυτό η ενσύρματη σύνδεση ή οι νυχτερινές λήψεις λειτουργούν καλύτερα.",
+  "Shared folder":
+      "Κοινόχρηστος φάκελος",
+  "Folder inside it (made if missing)":
+      "Φάκελος μέσα σε αυτόν (δημιουργείται αν λείπει)",
+  "User name (empty for a guest share)":
+      "Όνομα χρήστη (κενό για κοινή χρήση επισκέπτη)",
+  "Test":
+      "Δοκιμή",
+  "Save and use it":
+      "Αποθήκευση και χρήση",
+  "Network folders don't work on this device":
+      "Οι φάκελοι δικτύου δεν λειτουργούν σε αυτή τη συσκευή",
+  "Wrong user name or password, or no access to this folder":
+      "Λάθος όνομα χρήστη ή κωδικός, ή χωρίς πρόσβαση σε αυτόν τον φάκελο",
+  "No shared folder with that name":
+      "Δεν υπάρχει κοινόχρηστος φάκελος με αυτό το όνομα",
+  "The computer didn't answer":
+      "Ο υπολογιστής δεν απάντησε",
+  "Address not found":
+      "Η διεύθυνση δεν βρέθηκε",
+  "Can't reach the computer (is it on, and sharing turned on?)":
+      "Ο υπολογιστής δεν είναι προσβάσιμος (είναι ανοιχτός και με ενεργή κοινή χρήση;)",
+  "Address and shared folder are needed":
+      "Απαιτούνται διεύθυνση και κοινόχρηστος φάκελος",
+  "About the video's own bitrate: to the provider it looks like someone watching. The safest choice.":
+      "Περίπου ο ρυθμός bit του ίδιου του βίντεο: για τον πάροχο μοιάζει με κάποιον που παρακολουθεί. Η πιο ασφαλής επιλογή.",
+  "As fast as the source sends. Some providers don't allow this.":
+      "Όσο γρήγορα στέλνει η πηγή. Κάποιοι πάροχοι δεν το επιτρέπουν.",
+  "At most this speed.":
+      "Το πολύ αυτή η ταχύτητα.",
+  "Downloads":
+      "Λήψεις",
+  "Speed limit: {speed}":
+      "Όριο ταχύτητας: {speed}",
+  "Always slower while you watch something.":
+      "Πάντα πιο αργά όσο παρακολουθείτε κάτι.",
+  "Suggested start: {time}":
+      "Προτεινόμενη έναρξη: {time}",
+  "What Download offers first: overnight, while nobody watches":
+      "Τι προτείνει πρώτα η Λήψη: τη νύχτα, όταν δεν βλέπει κανείς",
+  "Save recordings and downloads to":
+      "Αποθήκευση εγγραφών και λήψεων σε",
+  "Set up a network folder":
+      "Ρύθμιση φακέλου δικτύου",
+  "Network folder settings":
+      "Ρυθμίσεις φακέλου δικτύου",
+  "A shared folder on a computer or NAS (SMB)":
+      "Κοινόχρηστος φάκελος σε υπολογιστή ή NAS (SMB)",
+  "Downloads: the Download button on a movie or show page.":
+      "Λήψεις: το κουμπί Λήψη στη σελίδα μιας ταινίας ή σειράς.",
+  "Downloading":
+      "Γίνεται λήψη",
+  "Waiting":
+      "Σε αναμονή",
+  "Waits for a free connection":
+      "Περιμένει ελεύθερη σύνδεση",
+  "Waiting its turn":
+      "Περιμένει τη σειρά του",
+  "Downloaded · {size}":
+      "Ολοκληρώθηκε · {size}",
+  "Interrupted · {pct}":
+      "Διακόπηκε · {pct}",
+  "Stopped · {pct}":
+      "Σταμάτησε · {pct}",
+  "This episode: {code}":
+      "Αυτό το επεισόδιο: {code}",
+  "{season}: all {n} episodes":
+      "{season}: και τα {n} επεισόδια",
+  "{season}: the {n} not downloaded yet":
+      "{season}: τα {n} που δεν έχουν ληφθεί",
+  "{n} without a downloadable stream, left out.":
+      "{n} χωρίς ροή για λήψη, παραλείφθηκαν.",
+  "Typing a folder address and password with a remote is painful. Scan this code with your phone camera and fill them in there — they appear here for you to check and save.":
+      "Η πληκτρολόγηση διεύθυνσης φακέλου και κωδικού με το τηλεχειριστήριο είναι κουραστική. Σαρώστε αυτόν τον κωδικό με την κάμερα του τηλεφώνου σας και συμπληρώστε τα εκεί — εμφανίζονται εδώ για έλεγχο και αποθήκευση.",
+  "Check the details here, then press Save and use it.":
+      "Ελέγξτε τα στοιχεία εδώ και πατήστε Αποθήκευση και χρήση.",
 };

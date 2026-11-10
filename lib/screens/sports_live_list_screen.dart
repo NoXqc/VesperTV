@@ -1319,7 +1319,10 @@ class _SummaryBody extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.all(24),
         child: Center(
-          child: Text(tr('No stats for this game yet.'),
+          child: Text(
+              g.league.kind == SportsKind.tennis
+                  ? tr('No stats for tennis matches.')
+                  : tr('No stats for this game yet.'),
               style: const TextStyle(color: Colors.white54)),
         ),
       );

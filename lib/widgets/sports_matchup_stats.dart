@@ -275,7 +275,11 @@ class _SportsMatchupStatsState extends State<SportsMatchupStats>
               ? [
                   (
                     tr('Key stats'),
-                    _loading ? '' : tr('No stats for this game yet.')
+                    _loading
+                        ? ''
+                        : widget.game.league.kind == SportsKind.tennis
+                            ? tr('No stats for tennis matches.')
+                            : tr('No stats for this game yet.')
                   )
                 ]
               : details;

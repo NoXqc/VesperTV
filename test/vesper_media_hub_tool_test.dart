@@ -122,6 +122,11 @@ class _Hub implements VesperHub {
 
   @override
   Future<void> openShow(HubTitle show) async => opened = show;
+
+  List<(HubTitle, ArchiveVideo?)> going = const [];
+
+  @override
+  List<(HubTitle, ArchiveVideo?)> continueWatching() => going;
 }
 
 void main() {
@@ -237,6 +242,31 @@ void main() {
     expect((r['episodes'] as List).single, containsPair('episode', 3));
   });
 
+  test('continue plays the title in Continue watching, a show at its episode',
+      () async {
+    hub.going = [(hub.movie, null), (hub.show, _Hub.episodes[1])];
+    var r = await box
+        .call('media_hub', {'action': 'continue', 'query': 'severance'});
+    expect(r['playing'], contains('Severance'));
+    expect(hub.played.last.$1, hub.show);
+    expect(hub.played.last.$2, _Hub.episodes[1]);
+    expect(hub.played.last.$3, isNull, reason: 'the stream picked last time');
+    r = await box.call('media_hub', {'action': 'continue', 'query': 'Carrie'});
+    expect(r['playing'], 'Carrie');
+    expect(hub.played.last.$2, isNull);
+  });
+
+  test('continue on a title not started plays it like play', () async {
+    final r =
+        await box.call('media_hub', {'action': 'continue', 'query': 'carrie'});
+    expect(r['playing'], 'Carrie');
+    expect(hub.played.single.$1, hub.movie);
+    expect(
+        (await box.call('media_hub', {'action': 'continue', 'query': 'zzz'}))
+            .containsKey('error'),
+        isTrue);
+  });
+
   test('an AI app asks on the TV before playing', () async {
     await storage.setAiConfirmRemotePlay(true);
     await box.call('media_hub', {'action': 'play', 'query': 'carrie'},
@@ -259,6 +289,37 @@ void main() {
     expect(hubNextStream(o, 1), same(o[2]));
     expect(hubNextStream(o, 2), same(o[1]), reason: 'o[0] is downloading');
     expect(hubNextStream([o[1]], 0), isNull);
+  });
+
+  test('best is listed even past the first 25, with how it was picked',
+      () async {
+    // The Batman (owner, 2026-11-09): best was the 57th stream, and the
+    // largest one with English beside other languages lost to English-only.
+    await storage.setArchiveAutoLargest(true);
+    await storage.setPreferredAudioLanguage('en');
+    hub.options
+      ..clear()
+      ..addAll([
+        for (var i = 0; i < 30; i++)
+          _stream(_addon, 'Torrentio\n4k', 'Movie 2160p 🇷🇺 💾 ${90 + i} GB',
+              file: 'dub$i'),
+        _stream(_addon, 'Torrentio\n4k',
+            'Movie 2160p 🗣 English | Russian 💾 77.3 GB',
+            file: 'multi'),
+        _stream(_addon, 'Torrentio\n4k', 'Movie 2160p 💾 76.5 GB', file: 'en'),
+      ]);
+    final ref = ((await box.call(
+                'media_hub', {'action': 'search', 'query': 'carrie'}))['titles']
+            as List)
+        .single['ref'];
+    final r = await box.call('media_hub', {'action': 'sources', 'ref': ref});
+    final list = (r['sources'] as List).cast<Map>();
+    expect(list, hasLength(26));
+    expect(list.last['ref'], r['best']);
+    expect(list.last['size_gb'], 77.3);
+    expect(r['best_rule'], contains('largest file'));
+    expect(r['best_rule'], contains('en audio'));
+    expect(r['note'], contains('then best'));
   });
 
   test('best follows the viewer\'s Media Hub playback limit', () async {

@@ -234,12 +234,43 @@ Discord request (Kal-el23): let ChatGPT check quality, pick the best link, switc
   subtitle (language, track number, "off", "cc"; not in the file = first match from the subtitle add-ons, like the
   picker's online languages). Same steps as the player's buttons, remembered for the show (AudioTrackPreferences,
   rememberForSeries). `vesper_ai/player_tracks.dart`, `test/vesper_player_tracks_test.dart`. Android only (the
-  player tool says "not on Windows yet"). No built-in phrases yet. AI apps: reconnect the connector.
+  player tool says "not on Windows yet"). Built-in phrases since 2026-11-10 (`_tracks` in vesper_commands.dart,
+  6 languages: "subtitles off", "French subtitles", "sous-titres en anglais", "audio in Spanish", "which audio
+  tracks", "Untertitel aus"): every word must be a track/on/off/filler word or one language, so titles and game
+  feeds never land there; "turn off the sound" stays volume. `test/vesper_track_phrases_test.dart`.
+  AI apps: reconnect the connector.
 - Media Hub picks streams in the viewer's language (`services/stream_languages.dart`; sources list `languages` /
   `multi_audio`).
 - System prompt: Media Hub when asked or when the playlists lack a title; play best; buffering = switch next.
 - Tests: `test/vesper_media_hub_tool_test.dart` (8). Not device-tested; Android only for switch/quality (Windows
   plays titles but has no switch). AI apps must reconnect the connector to see the new tool.
+
+## Largest file with English, Media Hub playback settings, favourites order (Claude, 2026-11-09, +696)
+Owner, via Haiku in the Claude app: The Batman started the 76.5 GB file, not the 77.3 GB / 112 GB ones.
+- Cause: Preferred audio language = en, and "largest file" only took the best language tier, where English-only
+  (fit 3) beat English + Russian + Ukrainian (fit 2). Owner: largest file = largest **with** English, not English
+  only. `ArchivePlaybackPreferences.languageTier` now caps at 2 ("has it"), so ranking and largest treat both the
+  same; dubs (0) and "maybe" (1) still go after. `streamLanguageFit` itself unchanged.
+- The pick was the 57th of 964 streams and `sources` lists 25, so the model got a `best` ref with no entry and
+  couldn't explain it. `sources` now appends best when it's past the cap, plus `best_rule` (`hubBestRule`).
+- TV start order: Largest file now wins over Auto-play preferred stream when both are on (was the reverse in
+  `archive_playback.dart`, while the AI's `hubBestStream` already did largest first).
+- `settings`: `media_hub_largest_file`, `media_hub_auto_play`, `media_hub_language`, `media_hub_max_quality`,
+  `media_hub_prefer_sdr` (per viewer; `_setHubPlayback` keeps the preferred source, which has no AI setting: its
+  choices are the viewer's sources). New strings Any language / Any quality / Media Hub audio language (5 langs).
+- `favorites`: list = every favourite (500 cap; on_now for the first 40) in the TV's order (honours Mix playlists);
+  `move` (ref, to top/bottom/up/down + steps/position) via `PlaylistManager.placeFavoriteLiveChannel`; `order` (refs
+  first in that order, the rest after) via `orderFavoriteLiveChannels`. Both write the same per-viewer
+  `vesper_favorite_live_order` as hold OK > Move Up/Down (hidden playlists' ids keep their slots) and reset the
+  A-Z sort to original. AI apps must reconnect the connector to see move / order.
+- `my_groups` (+697, `vesper_ai/my_groups_tool.dart`; owner: "create a sports group and add all the sports channels
+  from my favorites"): the viewer's own groups (`UserGroups`, hold OK > Move to group…): list, create, add (refs;
+  made if new, unique vs provider titles; channels leave their provider group, stay favourites), remove, delete
+  (remote apps confirm on the TV), order (`PlaylistManager.orderUserGroupChannels`), move a group or a channel
+  inside its group (own group = every playlist; provider group = its playlist, `PlaylistManager.moveChannel`).
+  Help overview + groups description point to it. `test/vesper_my_groups_tool_test.dart` (3).
+- Reconnect gotcha: the relay answers tools/list from its saved copy while the TV app is closed (an install
+  closes it), so reconnect with VesperTV open, then start a new chat.
 
 ## Not done / next
 - **Several TVs** (owner, 2026-11-06: test as is): today one connector per TV (each TV has its own link; name them

@@ -1668,6 +1668,7 @@ class PlaylistManager extends ChangeNotifier {
   String? _nameEventsKey;
   DateTime? _nameEventsAt;
   Map<String, ChannelNameEvent> _nameEvents = const {};
+  Set<String> _idleEventIds = const {};
 
   Map<String, ChannelNameEvent> channelNameEventsByEpgId() {
     final key = _liveListsKey();
@@ -1677,6 +1678,7 @@ class PlaylistManager extends ChangeNotifier {
         DateTime.now().difference(at) < const Duration(minutes: 5)) {
       return _nameEvents;
     }
+    final idle = <String>{};
     _nameEvents = PerfDiagnostics.timedSync('nameEvents', () {
       final now = DateTime.now();
       final out = <String, ChannelNameEvent>{};
@@ -1684,22 +1686,39 @@ class PlaylistManager extends ChangeNotifier {
         if (!session.profile.enabled) continue;
         for (final c
             in (session.isXtream ? session.liveChannels : session.channels)) {
-          if (!c.name.contains('@') ||
-              !c.isLive ||
+          final name = c.name;
+          final hasAt = name.contains('@');
+          if (!hasAt && !mayBeIdleEventChannelName(name)) continue;
+          if (!c.isLive ||
               session.hiddenGroups.contains(session.liveGroupOf(c)) ||
               session.isLiveHidden(c.rawId)) {
             continue;
           }
-          final event = parseChannelNameEvent(c.name, now: now);
-          if (event == null) continue;
-          out.putIfAbsent(normalizeEpgId(c.epgId), () => event);
+          final event = hasAt ? parseChannelNameEvent(name, now: now) : null;
+          if (event != null) {
+            out.putIfAbsent(normalizeEpgId(c.epgId), () => event);
+          } else if (isIdleEventChannelName(name)) {
+            idle.add(normalizeEpgId(c.epgId));
+          }
         }
       }
       return out;
     });
+    // Kept identical while unchanged: EpgService drops its merged rows
+    // whenever a new set comes back.
+    if (!setEquals(idle, _idleEventIds)) _idleEventIds = idle;
     _nameEventsKey = key;
     _nameEventsAt = DateTime.now();
     return _nameEvents;
+  }
+
+  /// Normalized EPG ids of visible idle event slots (`TSN+ 07: NO EVENT`):
+  /// their guide row says "No game at this time" when the provider lists
+  /// nothing (`EpgService.idleEventIdsProvider`). Same pass and cache as
+  /// [channelNameEventsByEpgId].
+  Set<String> idleEventChannelEpgIds() {
+    channelNameEventsByEpgId();
+    return _idleEventIds;
   }
 
   /// Ensures every enabled Xtream playlist's live channel list is loaded —
@@ -1845,6 +1864,61 @@ class PlaylistManager extends ChangeNotifier {
         viewerId: viewer);
     notifyListeners();
     return to;
+  }
+
+  /// Put one visible favourite at [index] of the shown list (0 = top), the
+  /// others keeping their order: an AI app's "move RDS Info to the top"
+  /// (owner, 2026-11-09). Returns the new index.
+  Future<int?> placeFavoriteLiveChannel(Channel channel, int index,
+      {bool mixPlaylists = false}) async {
+    final shown = orderedFavoriteLiveChannels(mixPlaylists: mixPlaylists);
+    final from = shown.indexWhere((c) => c.id == channel.id);
+    if (from < 0) return null;
+    final to = index.clamp(0, shown.length - 1);
+    if (from == to) return to;
+    await _saveFavoriteLiveSequence(shown.map((c) => c.id).toList()
+      ..removeAt(from)
+      ..insert(to, channel.id));
+    return to;
+  }
+
+  /// The visible favourites with [first] (ids) at the top in that order and
+  /// the rest after them in their current order: an AI app's "CP24 first,
+  /// then my Canadian channels, then US..." (owner, 2026-11-09). Ids that
+  /// aren't shown favourites are skipped. Returns the new list.
+  Future<List<Channel>> orderFavoriteLiveChannels(List<String> first,
+      {bool mixPlaylists = false}) async {
+    final shown = orderedFavoriteLiveChannels(mixPlaylists: mixPlaylists);
+    final known = {for (final c in shown) c.id};
+    final lead = [
+      for (final id in first.toSet())
+        if (known.contains(id)) id
+    ];
+    final leading = lead.toSet();
+    await _saveFavoriteLiveSequence([
+      ...lead,
+      for (final c in shown)
+        if (!leading.contains(c.id)) c.id
+    ]);
+    return orderedFavoriteLiveChannels(mixPlaylists: mixPlaylists);
+  }
+
+  /// Saves [ids] (every shown favourite, in their new order) as the manual
+  /// order. Unavailable ids keep their saved slots, as in
+  /// [moveFavoriteLiveChannel].
+  Future<void> _saveFavoriteLiveSequence(List<String> ids) async {
+    final viewer = _storage.getActiveViewerId();
+    final visible = ids.toSet();
+    var next = 0;
+    final order = [
+      for (final id in _storage.getFavoriteLiveOrder().toSet())
+        if (visible.contains(id)) ids[next++] else id
+    ];
+    order.addAll(ids.skip(next));
+    await _storage.setFavoriteLiveOrder(order, viewerId: viewer);
+    await _storage.setFavoriteLiveSort(FavoriteLiveSort.original.name,
+        viewerId: viewer);
+    notifyListeners();
   }
 
   List<Channel> get favoriteLiveChannels =>
@@ -2253,6 +2327,27 @@ class PlaylistManager extends ChangeNotifier {
   Future<void> deleteUserGroup(String title) {
     _myGroups.delete(title);
     return _saveMyGroups();
+  }
+
+  /// Own group [title]'s channels with [first] (ids) at the top in that
+  /// order and the rest after them in their current order (an AI app's
+  /// "order my Sports group"). Returns the new list.
+  Future<List<Channel>> orderUserGroupChannels(
+      String title, List<String> first) async {
+    final shown = visibleChannels(groupTitle: title, category: 'tv');
+    final known = {for (final c in shown) c.id};
+    final lead = [
+      for (final id in first.toSet())
+        if (known.contains(id)) id
+    ];
+    final leading = lead.toSet();
+    _myGroups.order[title] = [
+      ...lead,
+      for (final c in shown)
+        if (!leading.contains(c.id)) c.id
+    ];
+    await _saveMyGroups();
+    return visibleChannels(groupTitle: title, category: 'tv');
   }
 
   /// Hold OK on an own group > Move Up / Down / Move to Top.
