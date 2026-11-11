@@ -2061,7 +2061,9 @@ class PlaylistSession {
   /// live group after every notify). A live group can also gain channels
   /// from an editor rename (same title from another group) or an own-group
   /// move, which keep every live entry. Moves only go to own groups, whose
-  /// names never equal a provider group's, so a provider group gains none.
+  /// names never equal a provider group's, so a provider group gains none
+  /// here; what the editor moved or copied into a provider group is added
+  /// by `PlaylistManager._withPlaced`.
   Iterable<Channel> _m3uGroupEntries(String groupTitle, String category) {
     final bucket = _m3uList.groupsOf[category]?[groupTitle];
     if (category != 'tv') return bucket ?? const [];

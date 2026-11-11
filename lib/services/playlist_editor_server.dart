@@ -19,6 +19,7 @@ import 'playlist_session.dart';
 import 'real_4k_channels.dart';
 import 'storage_service.dart';
 import 'stream_probe.dart';
+import 'user_groups.dart' show GroupRef;
 
 /// The playlist editor's local web server (Settings > Playlist editor):
 /// a phone (QR) or a PC (typed address + 6-digit code) on the same network
@@ -264,6 +265,58 @@ class PlaylistEditorServer extends ChangeNotifier {
           ],
           'shown': shown,
         };
+      case ('GET', '/api/groupdest'):
+        // Where Move / Copy can put channels: the viewer's own groups and
+        // the playlists; `to=<playlist id>` lists that playlist's groups.
+        // A kid profile can use it too (the editor sits behind the parent
+        // PIN), but its allowlist still decides what shows: `restricted`
+        // lets the page say so.
+        final s = _session(q['pl']);
+        if (s == null) return null;
+        final to = q['to'];
+        if (to != null) {
+          final t = _session(to);
+          if (t == null || !t.profile.enabled) return null;
+          // Xtream live lists load on first need.
+          await t.ensureLiveChannelsLoaded();
+          return {
+            'groups': [
+              for (final g in t.tvGroups)
+                {
+                  't': g.title,
+                  'n': _playlists.liveGroupCount(to, g.title),
+                  if (t.hiddenGroups.contains(g.title)) 'h': 1,
+                }
+            ]
+          };
+        }
+        return {
+          'restricted': s.isRestrictedViewer(),
+          'own': [
+            for (final g in _playlists.userGroups)
+              {'t': g, 'n': _playlists.liveGroupCount(null, g)}
+          ],
+          'playlists': [
+            for (final p in _playlists.profiles)
+              if (p.enabled && _playlists.editorSession(p.id) != null)
+                {'id': p.id, 'name': p.name}
+          ],
+        };
+      case ('POST', '/api/place'):
+        return _place(_session(q['pl']), body);
+      case ('POST', '/api/unplace'):
+        final s = _session(q['pl']);
+        if (s == null || body is! Map) return null;
+        final ids = _stringSet(body['ids']);
+        final n = await _playlists.unplaceChannels([
+          for (final c in s.allLiveChannels)
+            if (ids.contains(c.rawId)) c
+        ]);
+        if (n > 0) {
+          lastChange = s.profile.name;
+          notifyListeners();
+        }
+        return {'changed': n, 'placements': _placementsJson(s)};
       case ('POST', '/api/groups'):
         final s = _session(q['pl']);
         if (s == null || body is! Map) return null;
@@ -401,6 +454,73 @@ class PlaylistEditorServer extends ChangeNotifier {
   PlaylistSession? _session(String? id) =>
       id == null ? null : _playlists.editorSession(id);
 
+  static Set<String> _stringSet(Object? list) => {
+        if (list is List)
+          for (final x in list)
+            if (x is String) x
+      };
+
+  /// Move / Copy to a group. Body: `ids` (rawIds of [s]), `mode`
+  /// (`move` | `copy`) and `to`: `{own: title}`, `{newOwn: name}` or
+  /// `{playlist: id, group: title}`. Applied at once (not part of the
+  /// editor's Save), for the active viewer.
+  Future<Object?> _place(PlaylistSession? s, Object? body) async {
+    if (s == null || body is! Map) return null;
+    final ids = _stringSet(body['ids']);
+    if (ids.isEmpty) return {'error': 'Select channels first.'};
+    final to = body['to'];
+    if (to is! Map) return {'error': 'Pick a group.'};
+    GroupRef? dest;
+    if (to['own'] is String) {
+      final title = to['own'] as String;
+      if (!_playlists.userGroups.contains(title)) {
+        return {'error': 'That group no longer exists.'};
+      }
+      dest = GroupRef.own(title);
+    } else if (to['newOwn'] is String) {
+      var name = (to['newOwn'] as String).trim();
+      if (name.isEmpty) return {'error': 'Type a name for the new group.'};
+      if (name.length > 120) name = name.substring(0, 120);
+      dest = GroupRef.own(await _playlists.createUserGroup(name));
+    } else if (to['playlist'] is String && to['group'] is String) {
+      final t = _session(to['playlist'] as String);
+      final group = to['group'] as String;
+      if (t == null ||
+          !t.profile.enabled ||
+          !t.tvGroups.any((g) => g.title == group)) {
+        return {'error': 'That group no longer exists.'};
+      }
+      dest = GroupRef.provider(t.profile.id, group);
+    }
+    if (dest == null) return {'error': 'Pick a group.'};
+    final copy = body['mode'] == 'copy';
+    final result = await _playlists.placeChannels([
+      for (final c in s.allLiveChannels)
+        if (ids.contains(c.rawId)) c
+    ], dest, copy: copy);
+    if (result.changed > 0) {
+      lastChange = s.profile.name;
+      notifyListeners();
+    }
+    return {
+      'changed': result.changed,
+      'skipped': result.skipped,
+      'group': _playlists.placementLabel(dest, fromPlaylistId: s.profile.id),
+      'placements': _placementsJson(s),
+    };
+  }
+
+  /// rawId -> where the channel was moved (`mv`) / groups that also show
+  /// it (`cp`), for the channels of [s] that were moved or copied.
+  Map<String, Object?> _placementsJson(PlaylistSession s) => {
+        for (final c in s.allLiveChannels)
+          if (_playlists.placementOf(c) case final p?)
+            c.rawId: {
+              if (p.moved != null) 'mv': p.moved,
+              if (p.copies.isNotEmpty) 'cp': p.copies,
+            }
+      };
+
   Map<String, Object?> _channelsJson(PlaylistSession s) {
     final e = s.edits;
     return {
@@ -416,6 +536,10 @@ class PlaylistEditorServer extends ChangeNotifier {
             if (s.hiddenChannels.contains(c.rawId)) 'th': 1,
             if (s.editHidden.contains(c.rawId)) 'eh': 1,
             if (s.hiddenGroups.contains(s.liveGroupOf(c))) 'gh': 1,
+            if (_playlists.placementOf(c) case final p?) ...{
+              if (p.moved != null) 'mv': p.moved,
+              if (p.copies.isNotEmpty) 'cp': p.copies,
+            },
             'k': channelCopyKey(c.name),
             if (c.epgIdOverride != null) 'eo': c.epgIdOverride,
             'q': e.copyRank(c),

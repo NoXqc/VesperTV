@@ -40,6 +40,16 @@ img.logo{width:36px;height:24px;object-fit:contain;background:#000;border-radius
 .hidden-row td{opacity:.55}
 #gdResults .grow{min-width:140px;overflow-wrap:anywhere}
 #gdSource{max-width:100%}
+button.mv{border-color:var(--gold);color:var(--gold)}
+button.cp{border-color:var(--green);color:var(--green)}
+button.cp.go{background:var(--green);color:#111;border-color:var(--green);font-weight:600}
+#mvModal.copy .card{border-color:var(--green)}
+#mvModal:not(.copy) .card{border-color:var(--gold)}
+#mvList{max-height:42vh;overflow:auto;border:1px solid var(--line);border-radius:8px;margin:8px 0}
+label.opt{display:flex;gap:10px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line);cursor:pointer}
+label.opt:last-child{border-bottom:0}
+label.opt:has(input:checked){background:#d8b25a22}
+#mvModal.copy label.opt:has(input:checked){background:#6cc48a22}
 @media (max-width:700px){.wide{display:none}td,th{padding:5px 3px}}
 </style>
 </head>
@@ -80,7 +90,7 @@ img.logo{width:36px;height:24px;object-fit:contain;background:#000;border-radius
       <p>Everything here changes only what <b>this TV</b> shows. Your provider's playlist is never modified, and your changes are applied again every time the playlist updates. Pick the playlist at the top, make changes, then press <b>Save to TV</b> (bottom right) or the save button of the tab.</p>
     </div>
     <div class="card"><h3 style="margin-top:0">Channels</h3>
-      <p>Search or filter (hidden, renamed, copies, no guide, dead...). Type over a name to rename it. Tick channels, then use the bottom bar: <b>Hide</b>, <b>Show</b>, <b>Reset name</b>, <b>Set logo</b>. <b>Fallbacks</b> on a row: channels to play, in your order, if this one fails (from any playlist).</p></div>
+      <p>Search or filter (hidden, renamed, copies, no guide, dead...). Type over a name to rename it. Tick channels, then use the bottom bar: <b>Hide</b>, <b>Show</b>, <b>Reset name</b>, <b>Set logo</b>, <b>Move to group</b> (the channels leave their group and show only in the one you pick), <b>Copy to group</b> (they stay where they are and also show in the one you pick) and <b>Reset group</b> (back in their own groups, copies removed). The destination can be one of your own custom groups (new or existing) or a group of any playlist; it is applied on the TV at once, without Save. <b>Fallbacks</b> on a row: channels to play, in your order, if this one fails (from any playlist).</p></div>
     <div class="card"><h3 style="margin-top:0">Groups</h3>
       <p><b>Rename</b> a group by typing its new name. <b>Merge</b>: tick two or more groups, press <b>Merge selected</b> and give the new group a name (typing the same name on several groups does the same). <b>Move</b> groups with the arrows and <b>hide</b> them with the box. Press <b>Save groups</b>.</p></div>
     <div class="card"><h3 style="margin-top:0">Duplicates &amp; cleanup</h3>
@@ -181,11 +191,25 @@ img.logo{width:36px;height:24px;object-fit:contain;background:#000;border-radius
 <div class="bar" id="chanBar">
   <span id="selMsg" class="dim">0 selected</span>
   <button id="bHide">Hide</button><button id="bShow">Show</button><button id="bReset">Reset name</button><button id="bLogo">Set logo…</button>
+  <button id="bMove" class="mv" title="They leave their group and show only in the one you pick">Move to group…</button><button id="bCopy" class="cp" title="They stay in their group and also show in the one you pick">Copy to group…</button><button id="bPut" title="Back in their own groups, copies removed">Reset group</button>
   <span class="grow"></span>
   <span id="dirty" class="dim"></span>
   <button class="gold" id="save">Save to TV</button>
 </div>
 </div>
+
+<div class="modal" id="mvModal"><div class="card">
+  <h3 style="margin-top:0" id="mvTitle">Move channels to…</h3>
+  <p id="mvExplain"></p>
+  <div class="row"><label for="mvWhere" class="dim">Where</label><select id="mvWhere" class="grow"></select></div>
+  <input id="mvQ" placeholder="Search groups" style="width:100%">
+  <div id="mvList"></div>
+  <div class="row" id="mvNewRow"><input id="mvNew" placeholder="…or type a new group name" class="grow" maxlength="120"></div>
+  <p class="dim">My custom groups are your own groups on the TV (they can hold channels from any playlist). Playlists list that playlist's own groups. This is applied on the TV right away: no need to press Save to TV.</p>
+  <p id="mvKid" class="dim" style="display:none">Kids profile: a channel from a group this profile is not allowed to see stays hidden, wherever you put it. Allow its group for the profile first.</p>
+  <p id="mvMsg" class="dim"></p>
+  <div class="row"><button id="mvCancel">Cancel</button><span class="grow"></span><button id="mvGo">Move here</button></div>
+</div></div>
 
 <div class="modal" id="fbModal"><div class="card">
   <h3 style="margin-top:0">Fallback channels for <span id="fbFor" style="color:var(--gold)"></span></h3>
@@ -284,6 +308,8 @@ function info(c) {
   if (c.th) t.push('<span class="tag">hidden on TV</span>');
   if (c.gh) t.push('<span class="tag">group hidden</span>');
   if (c.eh) t.push('<span class="tag r">hidden by editor</span>');
+  if (c.mv) t.push(`<span class="tag g" title="Moved: shown only in this group on the TV">moved to ${esc(c.mv)}</span>`);
+  for (const g of c.cp || []) t.push(`<span class="tag ok" title="Copy: also shown in this group on the TV">copy in ${esc(g)}</span>`);
   if (c.p) t.push(`<span class="tag ${c.p.startsWith('dead') ? 'r' : 'ok'}">${esc(c.p)}</span>`);
   if (c.eo) t.push(`<button class="tag g" data-guide="${esc(c.r)}" title="Linked guide channel: ${esc(c.eo)}">guide linked</button>`);
   else if (c.ne) t.push(`<button class="tag" data-guide="${esc(c.r)}" title="Link a guide channel or add a guide">no guide · add</button>`);
@@ -399,6 +425,90 @@ $('bHide').onclick = () => bulk(r => { if (!edits.hidden.includes(r)) edits.hidd
 $('bShow').onclick = () => bulk(r => { edits.hidden = edits.hidden.filter(x => x !== r); });
 $('bReset').onclick = () => bulk(r => { delete edits.names[r]; delete edits.logos[r]; });
 $('bLogo').onclick = () => { const u = prompt('Logo image address (https://…). Empty = provider logo.'); if (u === null) return; bulk(r => { if (u.trim()) edits.logos[r] = u.trim(); else delete edits.logos[r]; }); };
+// ---- Move / Copy to a group (applied on the TV at once, not part of Save) ----
+const mv = {mode: 'move', own: [], groups: [], pick: null, epoch: 0};
+function placedMsg(r, copy) {
+  const n = r.changed, what = n === 1 ? '1 channel' : n + ' channels';
+  return (n ? (copy ? 'Copied ' : 'Moved ') + what + ' to ' + r.group + ' (on the TV now).' : 'Nothing changed.') +
+    (r.skipped ? ' ' + r.skipped + ' already there.' : '');
+}
+function applyPlacements(map) {
+  for (const c of data.channels) { delete c.mv; delete c.cp; const p = map[c.r]; if (p) { if (p.mv) c.mv = p.mv; if (p.cp) c.cp = p.cp; } }
+  renderChannels();
+}
+function updateMvGo() { $('mvGo').disabled = !(mv.pick !== null || (!$('mvWhere').value && $('mvNew').value.trim())); }
+function renderMvList() {
+  const custom = !$('mvWhere').value, q = $('mvQ').value.trim().toLowerCase();
+  const rows = (custom ? mv.own : mv.groups).filter(g => !q || g.t.toLowerCase().includes(q));
+  $('mvNewRow').style.display = custom ? '' : 'none';
+  $('mvList').innerHTML = rows.map(g => `<label class="opt"><input type="radio" name="mvpick" data-t="${esc(g.t)}" ${g.t === mv.pick ? 'checked' : ''}>
+    <span class="grow">${esc(g.t)}</span><span class="dim">${g.h ? 'hidden · ' : ''}${g.n} ch</span></label>`).join('') ||
+    `<p class="dim" style="padding:8px 10px">${custom ? 'No custom groups yet: type a name below to make one.' : 'No groups here.'}</p>`;
+  updateMvGo();
+}
+async function loadMvGroups() {
+  const w = $('mvWhere').value, epoch = ++mv.epoch;
+  mv.pick = null; $('mvMsg').textContent = '';
+  if (!w) { renderMvList(); return; }
+  $('mvList').innerHTML = '<p class="dim" style="padding:8px 10px">Loading…</p>'; updateMvGo();
+  try {
+    const d = await api('/api/groupdest?pl=' + encodeURIComponent(pl) + '&to=' + encodeURIComponent(w));
+    if (epoch !== mv.epoch) return;
+    mv.groups = d.groups || []; renderMvList();
+  } catch (e) { if (epoch === mv.epoch) { mv.groups = []; $('mvList').innerHTML = ''; $('mvMsg').textContent = 'Could not load that playlist\'s groups.'; } }
+}
+async function openMove(mode) {
+  if (!sel.size) { alert('Select channels first (tick the boxes).'); return; }
+  const copy = mode === 'copy', n = sel.size;
+  mv.mode = mode; mv.pick = null; $('mvNew').value = ''; $('mvQ').value = ''; $('mvMsg').textContent = '';
+  $('mvModal').classList.toggle('copy', copy);
+  $('mvTitle').textContent = (copy ? 'Copy ' : 'Move ') + (n === 1 ? '1 channel' : n + ' channels') + ' to…';
+  $('mvExplain').innerHTML = copy
+    ? '<b>Copy</b>: the channels <b>stay in their current group</b> and are <b>also shown</b> in the group you pick.'
+    : '<b>Move</b>: the channels <b>leave their current group</b> and are shown <b>only</b> in the group you pick.';
+  $('mvGo').textContent = copy ? 'Copy here' : 'Move here';
+  $('mvGo').className = copy ? 'cp go' : 'gold';
+  $('mvGo').disabled = true; $('mvList').innerHTML = '<p class="dim" style="padding:8px 10px">Loading…</p>';
+  $('mvModal').style.display = 'flex';
+  try {
+    const d = await api('/api/groupdest?pl=' + encodeURIComponent(pl));
+    $('mvKid').style.display = d.restricted ? '' : 'none';
+    mv.own = d.own || [];
+    $('mvWhere').innerHTML = '<option value="">My custom groups</option>' +
+      d.playlists.map(p => `<option value="${esc(p.id)}">${esc(p.name)}${p.id === pl ? ' (this playlist)' : ''}</option>`).join('');
+    $('mvWhere').value = d.playlists.some(p => p.id === pl) ? pl : '';
+    await loadMvGroups();
+  } catch (e) { $('mvModal').style.display = 'none'; if (e.message !== 'auth' && e.message !== 'viewer') alert('Could not reach the TV: ' + e.message); }
+}
+$('bMove').onclick = () => openMove('move');
+$('bCopy').onclick = () => openMove('copy');
+$('mvCancel').onclick = () => { $('mvModal').style.display = 'none'; };
+$('mvWhere').onchange = loadMvGroups;
+$('mvQ').oninput = renderMvList;
+$('mvNew').oninput = () => { if ($('mvNew').value.trim()) { mv.pick = null; renderMvList(); } else updateMvGo(); };
+$('mvList').addEventListener('change', e => { const t = e.target.dataset.t; if (t === undefined) return; mv.pick = t; $('mvNew').value = ''; updateMvGo(); });
+$('mvGo').onclick = async () => {
+  const w = $('mvWhere').value, name = $('mvNew').value.trim(), copy = mv.mode === 'copy';
+  const to = !w ? (name ? {newOwn: name} : mv.pick !== null ? {own: mv.pick} : null) : (mv.pick !== null ? {playlist: w, group: mv.pick} : null);
+  if (!to) { $('mvMsg').textContent = 'Pick a group.'; return; }
+  $('mvGo').disabled = true; $('mvMsg').textContent = copy ? 'Copying…' : 'Moving…';
+  try {
+    const r = await api('/api/place?pl=' + encodeURIComponent(pl), {ids: [...sel], mode: mv.mode, to});
+    if (r.error) { $('mvMsg').textContent = r.error; updateMvGo(); return; }
+    $('mvModal').style.display = 'none'; sel.clear(); applyPlacements(r.placements || {});
+    $('status').textContent = placedMsg(r, copy);
+  } catch (e) { $('mvMsg').textContent = 'Failed: ' + e.message; updateMvGo(); }
+};
+$('bPut').onclick = async () => {
+  if (!sel.size) { alert('Select channels first (tick the boxes).'); return; }
+  if (!confirm('Put ' + sel.size + ' channel(s) back in their own groups and remove their copies?')) return;
+  try {
+    const r = await api('/api/unplace?pl=' + encodeURIComponent(pl), {ids: [...sel]});
+    if (r.error) { alert(r.error); return; }
+    sel.clear(); applyPlacements(r.placements || {});
+    $('status').textContent = r.changed ? r.changed + ' channel(s) back in their own groups.' : 'Nothing to put back.';
+  } catch (e) { if (e.message !== 'auth' && e.message !== 'viewer') alert('Failed: ' + e.message); }
+};
 for (const id of ['lower', 'sep', 'cf']) $(id).onchange = () => setDirty(true);
 $('addRename').onclick = () => { edits.rules.push({type: 'replace', find: '', replace: ''}); renderRules(); setDirty(true); };
 $('addHide').onclick = () => { edits.rules.push({type: 'hide', find: ''}); renderRules(); setDirty(true); };

@@ -187,6 +187,14 @@ class _SyncPlaylistRemap {
     return syncValuesEqual(raw, changed) ? value : {...value, 'v': changed};
   }
 
+  /// A `UserGroups` group reference: only a provider group (`p:<playlist
+  /// id>` + NUL + title) holds a playlist id; own groups (`o:`) stay as is.
+  String _groupRef(String raw) {
+    final at = raw.indexOf('\u0000');
+    if (!raw.startsWith('p:') || at < 3) return raw;
+    return 'p:${playlist(raw.substring(2, at))}${raw.substring(at)}';
+  }
+
   Object? _mapKeys(Object? data) => data is Map
       ? {for (final e in data.entries) composite(e.key as String): e.value}
       : data;
@@ -241,11 +249,37 @@ class _SyncPlaylistRemap {
       return {
         ...data,
         'moves': _mapKeys(data['moves']),
+        // Editor Move / Copy: channel ids as keys, playlist ids inside the
+        // provider-group references (`p:<playlist id>\u0000<title>`).
+        if (data['pmoves'] is Map)
+          'pmoves': {
+            for (final e in (data['pmoves'] as Map).entries)
+              composite(e.key as String):
+                  e.value is String ? _groupRef(e.value as String) : e.value,
+          },
+        if (data['copies'] is Map)
+          'copies': {
+            for (final e in (data['copies'] as Map).entries)
+              composite(e.key as String): e.value is List
+                  ? [
+                      for (final r in e.value as List)
+                        r is String ? _groupRef(r) : r
+                    ]
+                  : e.value,
+          },
         if (data['order'] is Map)
           'order': {
             for (final e in (data['order'] as Map).entries)
               e.key: _list(e.value),
-          }
+          },
+        // A provider group's order (Move Up / Down after a Move / Copy):
+        // a group reference as the key, channel ids inside.
+        if (data['porder'] is Map)
+          'porder': {
+            for (final e in (data['porder'] as Map).entries)
+              (e.key is String ? _groupRef(e.key as String) : e.key):
+                  _list(e.value),
+          },
       };
     }
     if (bare.startsWith('${AppConstants.keyPlaylistEdits}_')) {

@@ -75,7 +75,7 @@
     "id": "ad2f3fe6d3ade9fd",
     "category": "Live TV",
     "title": "Channel menu",
-    "answer": "Add to / Remove from Favourites, Hide this channel, Move Up / Down (your own order inside the group or Favourites), Move to group…, Remove from a group, and on Android Record (until the show ends, or until you stop it) and Record series…. To reorder Favourites in the list or Timeline guide, hold OK on a channel, choose Move Up / Down, use ↑ / ↓, then OK or Back to finish. Each viewer's manual order is saved across playlists. Sort favourites can temporarily show an alphabetical order without erasing it. Clear the guide's search filter before moving a channel.",
+    "answer": "Add to / Remove from Favourites, Hide this channel, Move Up / Down (your own order inside the group or Favourites), Move to group…, Remove from a group (also a copy the playlist editor put in a group), and on Android Record (until the show ends, or until you stop it) and Record series…. To reorder Favourites in the list or Timeline guide, hold OK on a channel, choose Move Up / Down, use ↑ / ↓, then OK or Back to finish. Each viewer's manual order is saved across playlists. Sort favourites can temporarily show an alphabetical order without erasing it. Clear the guide's search filter before moving a channel.",
     "controls": "Hold OK on a channel",
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
@@ -862,6 +862,14 @@
     "answer": "Vesper acts on the sources and guide you already have. Its search/play tools cover your IPTV channels, movies and shows; Media Hub search through the AI tools and picking an episode by command are not implemented. A series opens its show page so you can choose the episode. Hidden content, restricted viewer permissions and Hide scores still apply. Windows 1.0.61 and the Linux beta include Vesper AI, but voice, player controls and now-playing support are not available there yet.",
     "controls": "Your IPTV sources and guide · select episodes on the show page",
     "url": "https://vespertv.app/remote.html#Vesper%20AI"
+  },
+  {
+    "id": "7b2c12df5f9339e9",
+    "category": "Settings",
+    "title": "Move or copy channels to a group",
+    "answer": "Open the editor on your phone or PC, tick channels and use the bottom bar. Move to group: the channels leave their group and show only in the group you pick. Copy to group: they stay where they are and also show in the group you pick. The group can be one of your own custom groups (pick one or type a new name) or a group of any playlist. It is applied on the TV at once, without Save to TV. Reset group puts the ticked channels back in their own groups and removes their copies. On the TV, hold OK on a copy and choose Remove from group, or Move Up / Down to place it in the group it was copied into. Search and Multiview follow the group you picked: a channel moved into a hidden group is left out. On a Kids profile, a channel from a group the profile is not allowed to see stays hidden wherever you put it.",
+    "controls": "Settings → Playlists & guide → Playlist editor → Channels",
+    "url": "https://vespertv.app/remote.html#Settings"
   },
   {
     "id": "fb8a10d73d9c9785",

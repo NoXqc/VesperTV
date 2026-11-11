@@ -885,10 +885,16 @@ class _TvHomeScreenState extends State<TvHomeScreen>
     // Favourites has its own order across groups/playlists. Filtered rows
     // cannot move because their neighbours differ from the full list.
     final group = _effectiveLiveGroup(playlist);
+    // A copy the editor put in the group being browsed (the channel itself
+    // lives in another group): it moves there too, and hold OK can take it
+    // out again.
+    final copyGroup =
+        group != null && playlist.isCopyIn(channel, group) ? group : null;
     final canMove = !isHidden &&
         _timelineFilterQuery.trim().isEmpty &&
         (group == _favoritesGroupSentinel ||
-            group == playlist.liveGroupOf(channel));
+            group == playlist.liveGroupOf(channel) ||
+            copyGroup != null);
     final inMyGroup = playlist.isUserGroup(playlist.liveGroupOf(channel));
     final recording = RecordingService.supported
         ? RecordingService.instance.recordingOf(channel)
@@ -1041,6 +1047,11 @@ class _TvHomeScreenState extends State<TvHomeScreen>
               child: Text(tr('Remove from {group}',
                   {'group': playlist.liveGroupOf(channel)})),
             ),
+          if (copyGroup != null)
+            TvDialogOption(
+              onPressed: () => Navigator.of(context).pop('uncopy'),
+              child: Text(tr('Remove from {group}', {'group': copyGroup})),
+            ),
           if (RecordingService.supported && recording != null)
             TvDialogOption(
               onPressed: () => Navigator.of(context).pop('record'),
@@ -1101,6 +1112,9 @@ class _TvHomeScreenState extends State<TvHomeScreen>
         if (name != null && mounted) await _renameChannel(channel, name);
       case 'resetName':
         await _renameChannel(channel, '');
+      case 'uncopy':
+        final from = _effectiveLiveGroup(playlist);
+        if (from != null) await playlist.removeCopyFrom(channel, from);
       case 'ungroup':
         await playlist.moveChannelToGroup(channel, null);
         if (!mounted) return;
@@ -1361,7 +1375,8 @@ class _TvHomeScreenState extends State<TvHomeScreen>
       await playlist.moveFavoriteLiveChannel(channel, delta,
           mixPlaylists: _mixFavorites);
     } else {
-      await playlist.moveChannel(channel, delta);
+      await playlist.moveChannel(channel, delta,
+          inGroup: _effectiveLiveGroup(playlist));
     }
     if (!mounted) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
