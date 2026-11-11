@@ -2864,6 +2864,12 @@ const Map<String, String> kDe = {
       "Zuletzt",
   "Start over":
       "Von vorn",
+  "Stretched": "Gestreckt",
+  "Crop": "Zuschneiden",
+  "Fit height": "Höhe anpassen",
+  "Fit width": "Breite anpassen",
+  "Slight zoom": "Leichter Zoom",
+  "Cinema zoom": "Kino-Zoom",
   "Fit":
       "Einpassen",
   "Fill":

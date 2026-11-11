@@ -2974,6 +2974,12 @@ const Map<String, String> kFr = {
       "Récents",
   "Start over":
       "Depuis le début",
+  "Stretched": "Étiré",
+  "Crop": "Recadré",
+  "Fit height": "Ajuster la hauteur",
+  "Fit width": "Ajuster la largeur",
+  "Slight zoom": "Léger zoom",
+  "Cinema zoom": "Zoom cinéma",
   "Fit":
       "Ajuster",
   "Fill":

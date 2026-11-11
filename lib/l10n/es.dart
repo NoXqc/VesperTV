@@ -2961,6 +2961,12 @@ const Map<String, String> kEs = {
       "Recientes",
   "Start over":
       "Desde el inicio",
+  "Stretched": "Estirado",
+  "Crop": "Recortado",
+  "Fit height": "Ajustar alto",
+  "Fit width": "Ajustar ancho",
+  "Slight zoom": "Zoom ligero",
+  "Cinema zoom": "Zoom cine",
   "Fit":
       "Ajustar",
   "Fill":
