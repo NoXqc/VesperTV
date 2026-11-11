@@ -3500,4 +3500,60 @@ const Map<String, String> kIt = {
       "OK li mostra",
   "Tap to show them":
       "Tocca per mostrarli",
+  "Collections":
+      "Raccolte",
+  "Rows of tiles on the Media Hub tab, like Nuvio: each tile opens a page of catalogs from your add-ons.":
+      "File di riquadri nella scheda Media Hub, come Nuvio: ogni riquadro apre una pagina di cataloghi dei tuoi componenti aggiuntivi.",
+  "Add from a link":
+      "Aggiungi da un link",
+  "A Nuvio collections file (.json)":
+      "Un file di raccolte di Nuvio (.json)",
+  "Tiles need their catalogs in your add-ons (AIOMetadata with the same catalogs). Missing ones are left out.":
+      "I riquadri hanno bisogno dei loro cataloghi nei tuoi componenti aggiuntivi (AIOMetadata con gli stessi cataloghi). Quelli mancanti vengono omessi.",
+  "Send the file link from your phone":
+      "Invia il link del file dal telefono",
+  "Community pack: Nuvio Perfect Collections":
+      "Pacchetto della community: Nuvio Perfect Collections",
+  "Streaming, genres, studios, decades… made for the AIOMetadata catalogs of the same setup":
+      "Streaming, generi, studi, decenni… fatto per i cataloghi AIOMetadata della stessa configurazione",
+  "By luckynumb3rs (stremio-perfect-setup). Its tiles show once your AIOMetadata has the same catalogs.":
+      "Di luckynumb3rs (stremio-perfect-setup). I suoi riquadri appaiono quando il tuo AIOMetadata ha gli stessi cataloghi.",
+  "Hide their catalogs from the rows":
+      "Nascondi i loro cataloghi dalle file",
+  "A catalog in a collection shows only on its tile's page":
+      "Un catalogo in una raccolta appare solo nella pagina del suo riquadro",
+  "{found} of {n} tiles found in your add-ons":
+      "{found} riquadri su {n} trovati nei tuoi componenti aggiuntivi",
+  "None of its catalogs are in your add-ons: add the AIOMetadata setup it was made for.":
+      "Nessuno dei suoi cataloghi è nei tuoi componenti aggiuntivi: aggiungi la configurazione AIOMetadata per cui è stata fatta.",
+  "OK for its options: on or off, Home, order, update, remove.":
+      "OK per le sue opzioni: attiva o disattiva, Home, ordine, aggiorna, rimuovi.",
+  "Turn on":
+      "Attiva",
+  "Update from its link":
+      "Aggiorna dal suo link",
+  "{n} collections added. They show on the Media Hub tab.":
+      "{n} raccolte aggiunte. Appaiono nella scheda Media Hub.",
+  "No collections in that file.":
+      "Nessuna raccolta in quel file.",
+  "Collections file link":
+      "Link del file di raccolte",
+  "Rows of tiles, like Nuvio":
+      "File di riquadri, come Nuvio",
+  "This tile's catalogs aren't in your add-ons. Add the add-on its collection was made for (AIOMetadata) with the same catalogs.":
+      "I cataloghi di questo riquadro non sono nei tuoi componenti aggiuntivi. Aggiungi il componente per cui è stata fatta la sua raccolta (AIOMetadata) con gli stessi cataloghi.",
+  "{n} catalogs":
+      "{n} cataloghi",
+  "Show on Home":
+      "Mostra nella Home",
+  "Remove from Home":
+      "Togli dalla Home",
+  "On Home":
+      "Nella Home",
+  "Turn off this collection":
+      "Disattiva questa raccolta",
+  "{name} is off. Settings > Media Hub sources > Collections turns it back on.":
+      "{name} è disattivata. Impostazioni > Fonti Media Hub > Raccolte la riattiva.",
+  "Streaming is on. Turn on the other collections here when you want them.":
+      "Streaming è attiva. Attiva qui le altre raccolte quando le vuoi.",
 };

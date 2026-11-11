@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 
 import '../l10n/l10n.dart';
 import '../models/archive_models.dart';
+import '../models/hub_collection.dart';
 import '../services/archive_ready_watch.dart';
 import '../services/archive_service.dart';
 import '../services/archive_stream_session.dart';
@@ -17,6 +18,8 @@ import '../utils/route_observer.dart';
 import '../widgets/detail_header.dart';
 import '../widgets/hd_network_image.dart';
 import '../widgets/archive_row_settings.dart';
+import '../widgets/collection_tile.dart';
+import '../widgets/trimmed_logo.dart';
 import '../widgets/hold_to_activate.dart';
 import '../widgets/live_resume_hint.dart';
 import '../widgets/poster_card.dart';
@@ -29,10 +32,12 @@ import 'archive_watch_list_screen.dart';
 import 'archive_catalog_screen.dart';
 import 'archive_detail_screen.dart';
 import 'archive_playback.dart';
+import 'hub_folder_screen.dart';
 import 'settings/archive_sources_screen.dart';
 import 'settings/media_server_screen.dart';
 import '../utils/desktop_platform.dart';
 import '../widgets/glass_menu.dart';
+import '../widgets/tv_dialog_option.dart';
 
 /// The Archive tab: classic, public-domain films and series from the
 /// user's own sources (Settings > Archive sources, any server speaking the
@@ -120,6 +125,110 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     await context.read<StorageService?>()?.setHubHiddenRows(_hiddenRows);
   }
 
+  /// The tab's rows: the service's, with the collections' tile rows after
+  /// search and Continue watching (Nuvio's home), and the catalogs those
+  /// tiles open left out of the list with their switch on (less clutter).
+  List<ArchiveRow> _rowsOf(ArchiveService service, [ArchiveType? type]) {
+    final rows = service.rows(type ?? _type);
+    final tiles = service.collectionRows(type ?? _type);
+    if (tiles.isEmpty) return rows;
+    final hide = service.collectionsHideRows
+        ? service.collectionRowKeys()
+        : const <String>{};
+    var at = rows.indexWhere((r) => !r.isSearch && r.continuations == null);
+    if (at < 0) at = rows.length;
+    return [
+      ...rows.take(at),
+      ...tiles,
+      for (final row in rows.skip(at))
+        if (!hide.contains(row.key)) row,
+    ];
+  }
+
+  /// The focused tile (the hero names its collection instead of a year).
+  HubFolder? _focusedFolder;
+
+  /// Opens a collection tile's page.
+  Future<void> _openFolder(ArchiveRow row, int i) async {
+    await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => HubFolderScreen(
+            folder: row.folders[i], collection: row.collection?.label)));
+    _refreshHistoryProgress();
+  }
+
+  /// Hold OK on a tile: turn its collection off (it leaves the tab; Settings
+  /// > Media Hub sources > Collections turns it back on), or Home.
+  Future<void> _tileMenu(ArchiveRow row) async {
+    final collection = row.collection;
+    if (collection == null) return;
+    final service = context.read<ArchiveService>();
+    final choice = await showGlassMenu<String>(
+      context: context,
+      builder: (dialogContext) => SwallowHeldActivate(
+        child: GlassMenuDialog(
+          title: Text(collection.label),
+          children: [
+            TvDialogOption(
+              autofocus: true,
+              onPressed: () => Navigator.of(dialogContext).pop('off'),
+              child: Text(tr('Turn off this collection')),
+            ),
+            TvDialogOption(
+              onPressed: () => Navigator.of(dialogContext).pop('home'),
+              child: Text(collection.onHome
+                  ? tr('Remove from Home')
+                  : tr('Show on Home')),
+            ),
+            TvDialogOption(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(tr('Cancel')),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || choice == null) return;
+    if (choice == 'home') {
+      await service.setCollectionOnHome(collection.id, !collection.onHome);
+      return;
+    }
+    final r = _focusedRow;
+    await service.setCollectionEnabled(collection.id, false);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(tr(
+            '{name} is off. Settings > Media Hub sources > Collections turns it back on.',
+            {'name': collection.label}))));
+    // The row is gone: the remote lands on the row that took its place.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final rows = _rowsOf(context.read<ArchiveService>());
+      if (rows.isNotEmpty) _focusRow(rows, r.clamp(0, rows.length - 1));
+    });
+  }
+
+  /// Where tile [i] of a tile row starts (tiles can differ in width).
+  static double _tileStart(ArchiveRow row, int i) {
+    var x = 0.0;
+    for (var k = 0; k < i && k < row.folders.length; k++) {
+      x += CollectionTile.slotOf(row.folders[k].shape);
+    }
+    return x;
+  }
+
+  final Map<String, (List<HubFolder>, ItemExtentBuilder)> _tileExtents = {};
+
+  /// One extent builder per tile row (see [_extentBuilder]).
+  ItemExtentBuilder _tileExtentBuilder(ArchiveRow row) {
+    final cached = _tileExtents[row.key];
+    if (cached != null && identical(cached.$1, row.folders)) return cached.$2;
+    final folders = row.folders;
+    double? builder(int i, SliverLayoutDimensions _) =>
+        i < folders.length ? CollectionTile.slotOf(folders[i].shape) : null;
+    _tileExtents[row.key] = (folders, builder);
+    return builder;
+  }
+
   /// Up from a row with an eye lands on its eye first.
   void _focusEye(List<ArchiveRow> rows, int r) {
     final row = rows[r];
@@ -182,7 +291,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
       if (_scroll.hasClients) _scroll.jumpTo(0);
       await service.search(type, query);
       if (!mounted || _type != type) return;
-      final rows = service.rows(type);
+      final rows = _rowsOf(service, type);
       if (rows.isNotEmpty &&
           rows.first.isSearch &&
           rows.first.items.isNotEmpty) {
@@ -355,7 +464,8 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   /// Validate identity again: a refreshed row may reuse the same index/node.
   int? _wideIndex(ArchiveRow row) {
     final expanded = _expandedCard;
-    if (!_canPreview ||
+    if (row.collection != null ||
+        !_canPreview ||
         !_contentScope.hasFocus ||
         expanded == null ||
         expanded.$1 != row.key ||
@@ -387,7 +497,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   void _resumeWidePreview() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_canPreview) return;
-      final rows = context.read<ArchiveService>().rows(_type);
+      final rows = _rowsOf(context.read<ArchiveService>());
       final r = rows.indexWhere((row) => row.key == _focusedRowKey);
       if (r < 0) return;
       final row = rows[r];
@@ -406,7 +516,9 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     final type = _type;
     final id = row.items[i].id;
     final node = _node(row.key, i);
-    if (!_canPreview || !(row.items[i].backgroundUrl?.isNotEmpty ?? false)) {
+    if (row.collection != null ||
+        !_canPreview ||
+        !(row.items[i].backgroundUrl?.isNotEmpty ?? false)) {
       return;
     }
     _widePreviewTimer = Timer(const Duration(seconds: 2), () {
@@ -419,7 +531,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
           !node.hasFocus) {
         return;
       }
-      final rows = context.read<ArchiveService>().rows(type);
+      final rows = _rowsOf(context.read<ArchiveService>(), type);
       final r = rows.indexWhere((item) => item.key == row.key);
       if (r < 0 ||
           i >= rows[r].items.length ||
@@ -469,7 +581,11 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     final c = _rowScrolls[row.key];
     if (c != null && c.hasClients && i < row.items.length) {
       final pos = c.position;
-      final start = _rowPadding + i * _cardExtent;
+      final tiles = row.collection != null;
+      final slot =
+          tiles ? CollectionTile.slotOf(row.folders[i].shape) : _cardExtent;
+      final start =
+          _rowPadding + (tiles ? _tileStart(row, i) : i * _cardExtent);
       if (_wideCards) {
         // Move the row from the selector's position, showing the upcoming
         // titles immediately. At the actual end, retain the natural clamp.
@@ -477,11 +593,10 @@ class _ArchiveScreenState extends State<ArchiveScreen>
       } else {
         // Narrow/touch rows retain their existing minimal-reveal behavior.
         double? to;
-        if (start - _cardExtent < pos.pixels) {
-          to = start - _cardExtent;
-        } else if (start + _cardExtent * 2 >
-            pos.pixels + pos.viewportDimension) {
-          to = start + _cardExtent * 2 - pos.viewportDimension;
+        if (start - slot < pos.pixels) {
+          to = start - slot;
+        } else if (start + slot * 2 > pos.pixels + pos.viewportDimension) {
+          to = start + slot * 2 - pos.viewportDimension;
         }
         if (to != null) c.jumpTo(to.clamp(0.0, pos.maxScrollExtent));
       }
@@ -620,7 +735,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
         ModalRoute.of(context)?.isCurrent != true) {
       return;
     }
-    final rows = service.rows(type);
+    final rows = _rowsOf(service, type);
     if (rows.isNotEmpty && rows.first.isSearch) {
       _lastIndex[rows.first.key] = 0;
       _rowScrolls[rows.first.key]?.jumpTo(0);
@@ -847,7 +962,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   @override
   Widget build(BuildContext context) {
     final service = context.watch<ArchiveService>();
-    final rows = service.rows(_type);
+    final rows = _rowsOf(service);
     final keptRow = rows.indexWhere((row) => row.key == _focusedRowKey);
     if (keptRow >= 0 && _contentScope.hasFocus) _focusedRow = keptRow;
     final narrow = MediaQuery.sizeOf(context).width < 700;
@@ -1225,7 +1340,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   /// results (the lit Search button stands for those).
   List<int> _barRows(List<ArchiveRow> rows) => [
         for (var r = 0; r < rows.length; r++)
-          if (!rows[r].isSearch) r,
+          if (!rows[r].isSearch && rows[r].collection == null) r,
       ];
 
   /// Hold OK (or long-press) on a row's jump button: a small menu rolls
@@ -1357,7 +1472,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   /// first button).
   void _focusBar() {
     final service = context.read<ArchiveService>();
-    final rows = service.rows(_type);
+    final rows = _rowsOf(service);
     final nodes = _barNodes(service, rows);
     if (nodes.isEmpty) return;
     final r = _focusedRow;
@@ -1754,15 +1869,44 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _HeroTitle(
-                              key: ValueKey(focused.id),
-                              meta: focused,
-                              height: narrow || short ? 36 : 64),
+                          if (_focusedFolder?.logoUrl case final logo?)
+                            SizedBox(
+                              height: narrow || short ? 36 : 64,
+                              child: Align(
+                                alignment: Alignment.bottomLeft,
+                                child: TrimmedLogo(
+                                  key: ValueKey(logo),
+                                  url: logo,
+                                  height: narrow || short ? 36 : 64,
+                                  maxWidth: 360,
+                                  tint: TrimmedLogo.brandColor(focused.name),
+                                  fallback: Text(focused.name,
+                                      style: const TextStyle(
+                                          fontSize: 30,
+                                          fontWeight: FontWeight.w700)),
+                                ),
+                              ),
+                            )
+                          else
+                            _HeroTitle(
+                                key: ValueKey(focused.id),
+                                meta: focused,
+                                height: narrow || short ? 36 : 64),
                           const SizedBox(height: 8),
-                          _HeroInfoLine(
-                              meta: focused,
-                              sourceLabel: _focusedLabel,
-                              imdbRating: !_focusedFromServer),
+                          if (_focusedFolder case final folder?)
+                            Text(
+                                '${_focusedLabel ?? ''} · ${tr('{n} catalogs', {
+                                      'n': folder.sources.length
+                                    })}',
+                                style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white))
+                          else
+                            _HeroInfoLine(
+                                meta: focused,
+                                sourceLabel: _focusedLabel,
+                                imdbRating: !_focusedFromServer),
                           const SizedBox(height: 8),
                           if (focused.description != null && !short)
                             Flexible(
@@ -1867,7 +2011,47 @@ class _ArchiveScreenState extends State<ArchiveScreen>
             ),
           ),
         ),
-        if (!_rowHidden(row))
+        if (row.collection != null)
+          SizedBox(
+            height: PosterCard.height + 16,
+            child: ListView.builder(
+              controller: _rowScroll(row.key),
+              scrollDirection: Axis.horizontal,
+              // Room above: the focused tile grows and its top edge was cut
+              // by the row (owner photo, 2026-11-11).
+              padding: const EdgeInsets.fromLTRB(_rowPadding, 6, _rowPadding, 0),
+              itemExtentBuilder: _tileExtentBuilder(row),
+              scrollCacheExtent: const ScrollCacheExtent.pixels(_cardExtent * 5),
+              itemCount: row.folders.length,
+              itemBuilder: (_, i) => Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: CollectionTile(
+                  key: ValueKey('collection-tile-${row.key}-$i'),
+                  folder: row.folders[i],
+                  focusNode: _node(row.key, i),
+                  // A phone has no focus: every tile on screen plays.
+                  animate: !(context.read<AppPreferences?>()?.isTelevision ??
+                          false) &&
+                      _narrow,
+                  onTap: () => _openFolder(row, i),
+                  onHold: () => _tileMenu(row),
+                  onFocusGained: () {
+                    _focusedRowKey = row.key;
+                    _lastIndex[row.key] = i;
+                    setState(() {
+                      _focusedRow = r;
+                      _focused = row.items[i];
+                      _focusedFolder = row.folders[i];
+                      _focusedLabel = row.collection!.label;
+                      _focusedFromServer = false;
+                    });
+                    _revealFocusedAfterLayout(row, i);
+                  },
+                ),
+              ),
+            ),
+          )
+        else if (!_rowHidden(row))
         SizedBox(
           height: PosterCard.height + 16,
           child: ListView.builder(
@@ -1949,6 +2133,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                       setState(() {
                         _focusedRow = r;
                         _focused = meta;
+                        _focusedFolder = null;
                         _focusedLabel = row.labelAt(i);
                         _focusedFromServer = row.sourceAt(i).server != null;
                       });

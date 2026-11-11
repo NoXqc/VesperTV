@@ -3396,4 +3396,60 @@ const Map<String, String> kDe = {
       "OK zeigt sie",
   "Tap to show them":
       "Tippen zum Zeigen",
+  "Collections":
+      "Sammlungen",
+  "Rows of tiles on the Media Hub tab, like Nuvio: each tile opens a page of catalogs from your add-ons.":
+      "Kachelreihen im Media-Hub-Tab, wie bei Nuvio: Jede Kachel öffnet eine Seite mit Katalogen aus deinen Add-ons.",
+  "Add from a link":
+      "Über einen Link hinzufügen",
+  "A Nuvio collections file (.json)":
+      "Eine Nuvio-Sammlungsdatei (.json)",
+  "Tiles need their catalogs in your add-ons (AIOMetadata with the same catalogs). Missing ones are left out.":
+      "Kacheln brauchen ihre Kataloge in deinen Add-ons (AIOMetadata mit denselben Katalogen). Fehlende werden ausgelassen.",
+  "Send the file link from your phone":
+      "Sende den Dateilink von deinem Handy",
+  "Community pack: Nuvio Perfect Collections":
+      "Community-Paket: Nuvio Perfect Collections",
+  "Streaming, genres, studios, decades… made for the AIOMetadata catalogs of the same setup":
+      "Streaming, Genres, Studios, Jahrzehnte… gemacht für die AIOMetadata-Kataloge desselben Setups",
+  "By luckynumb3rs (stremio-perfect-setup). Its tiles show once your AIOMetadata has the same catalogs.":
+      "Von luckynumb3rs (stremio-perfect-setup). Seine Kacheln erscheinen, sobald dein AIOMetadata dieselben Kataloge hat.",
+  "Hide their catalogs from the rows":
+      "Ihre Kataloge aus den Reihen ausblenden",
+  "A catalog in a collection shows only on its tile's page":
+      "Ein Katalog in einer Sammlung erscheint nur auf der Seite seiner Kachel",
+  "{found} of {n} tiles found in your add-ons":
+      "{found} von {n} Kacheln in deinen Add-ons gefunden",
+  "None of its catalogs are in your add-ons: add the AIOMetadata setup it was made for.":
+      "Keiner ihrer Kataloge ist in deinen Add-ons: Füge das AIOMetadata-Setup hinzu, für das sie gemacht wurde.",
+  "OK for its options: on or off, Home, order, update, remove.":
+      "OK für ihre Optionen: an oder aus, Startseite, Reihenfolge, aktualisieren, entfernen.",
+  "Turn on":
+      "Einschalten",
+  "Update from its link":
+      "Über ihren Link aktualisieren",
+  "{n} collections added. They show on the Media Hub tab.":
+      "{n} Sammlungen hinzugefügt. Sie erscheinen im Media-Hub-Tab.",
+  "No collections in that file.":
+      "Keine Sammlungen in dieser Datei.",
+  "Collections file link":
+      "Link zur Sammlungsdatei",
+  "Rows of tiles, like Nuvio":
+      "Kachelreihen, wie bei Nuvio",
+  "This tile's catalogs aren't in your add-ons. Add the add-on its collection was made for (AIOMetadata) with the same catalogs.":
+      "Die Kataloge dieser Kachel sind nicht in deinen Add-ons. Füge das Add-on hinzu, für das ihre Sammlung gemacht wurde (AIOMetadata), mit denselben Katalogen.",
+  "{n} catalogs":
+      "{n} Kataloge",
+  "Show on Home":
+      "Auf der Startseite zeigen",
+  "Remove from Home":
+      "Von der Startseite entfernen",
+  "On Home":
+      "Auf der Startseite",
+  "Turn off this collection":
+      "Diese Sammlung ausschalten",
+  "{name} is off. Settings > Media Hub sources > Collections turns it back on.":
+      "{name} ist aus. Einstellungen > Media-Hub-Quellen > Sammlungen schaltet sie wieder ein.",
+  "Streaming is on. Turn on the other collections here when you want them.":
+      "Streaming ist an. Schalte die anderen Sammlungen hier ein, wenn du sie willst.",
 };

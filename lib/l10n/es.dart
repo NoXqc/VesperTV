@@ -3493,4 +3493,60 @@ const Map<String, String> kEs = {
       "OK los muestra",
   "Tap to show them":
       "Toca para mostrarlos",
+  "Collections":
+      "Colecciones",
+  "Rows of tiles on the Media Hub tab, like Nuvio: each tile opens a page of catalogs from your add-ons.":
+      "Filas de mosaicos en la pestaña Media Hub, como Nuvio: cada mosaico abre una página de catálogos de tus complementos.",
+  "Add from a link":
+      "Añadir desde un enlace",
+  "A Nuvio collections file (.json)":
+      "Un archivo de colecciones de Nuvio (.json)",
+  "Tiles need their catalogs in your add-ons (AIOMetadata with the same catalogs). Missing ones are left out.":
+      "Los mosaicos necesitan sus catálogos en tus complementos (AIOMetadata con los mismos catálogos). Los que faltan se omiten.",
+  "Send the file link from your phone":
+      "Envía el enlace del archivo desde tu teléfono",
+  "Community pack: Nuvio Perfect Collections":
+      "Paquete de la comunidad: Nuvio Perfect Collections",
+  "Streaming, genres, studios, decades… made for the AIOMetadata catalogs of the same setup":
+      "Streaming, géneros, estudios, décadas… hecho para los catálogos de AIOMetadata de la misma configuración",
+  "By luckynumb3rs (stremio-perfect-setup). Its tiles show once your AIOMetadata has the same catalogs.":
+      "De luckynumb3rs (stremio-perfect-setup). Sus mosaicos aparecen cuando tu AIOMetadata tiene los mismos catálogos.",
+  "Hide their catalogs from the rows":
+      "Ocultar sus catálogos de las filas",
+  "A catalog in a collection shows only on its tile's page":
+      "Un catálogo de una colección solo aparece en la página de su mosaico",
+  "{found} of {n} tiles found in your add-ons":
+      "{found} de {n} mosaicos encontrados en tus complementos",
+  "None of its catalogs are in your add-ons: add the AIOMetadata setup it was made for.":
+      "Ninguno de sus catálogos está en tus complementos: añade la configuración de AIOMetadata para la que se hizo.",
+  "OK for its options: on or off, Home, order, update, remove.":
+      "OK para sus opciones: activar o desactivar, Inicio, orden, actualizar, quitar.",
+  "Turn on":
+      "Activar",
+  "Update from its link":
+      "Actualizar desde su enlace",
+  "{n} collections added. They show on the Media Hub tab.":
+      "{n} colecciones añadidas. Aparecen en la pestaña Media Hub.",
+  "No collections in that file.":
+      "No hay colecciones en ese archivo.",
+  "Collections file link":
+      "Enlace del archivo de colecciones",
+  "Rows of tiles, like Nuvio":
+      "Filas de mosaicos, como Nuvio",
+  "This tile's catalogs aren't in your add-ons. Add the add-on its collection was made for (AIOMetadata) with the same catalogs.":
+      "Los catálogos de este mosaico no están en tus complementos. Añade el complemento para el que se hizo su colección (AIOMetadata) con los mismos catálogos.",
+  "{n} catalogs":
+      "{n} catálogos",
+  "Show on Home":
+      "Mostrar en Inicio",
+  "Remove from Home":
+      "Quitar de Inicio",
+  "On Home":
+      "En Inicio",
+  "Turn off this collection":
+      "Desactivar esta colección",
+  "{name} is off. Settings > Media Hub sources > Collections turns it back on.":
+      "{name} está desactivada. Ajustes > Fuentes de Media Hub > Colecciones la vuelve a activar.",
+  "Streaming is on. Turn on the other collections here when you want them.":
+      "Streaming está activada. Activa las otras colecciones aquí cuando las quieras.",
 };

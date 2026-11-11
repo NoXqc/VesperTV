@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 
 import '../l10n/l10n.dart';
 import '../models/archive_models.dart';
+import '../models/hub_collection.dart';
 import '../models/channel.dart';
 import '../models/epg_program.dart';
 import '../models/sports.dart';
@@ -34,12 +35,14 @@ import '../services/viewer_profile_service.dart';
 import '../utils/image_urls.dart';
 import '../utils/time_format.dart';
 import '../widgets/hd_network_image.dart';
+import '../widgets/trimmed_logo.dart';
 import '../widgets/hold_to_activate.dart';
 import '../widgets/player_controls.dart' show VideoPlayerPane;
 import '../widgets/tv_dialog_option.dart';
 import '../widgets/video_tap_layer.dart';
 import 'archive_detail_screen.dart';
 import 'archive_playback.dart';
+import 'hub_folder_screen.dart';
 import 'desktop_player_screen.dart';
 import 'movie_detail_screen.dart';
 import 'player_screen.dart';
@@ -96,9 +99,19 @@ class _HomeItem {
     this.preview,
     this.logoUrl,
     this.programme,
+    this.focusImageUrl,
+    this.titleLogoUrl,
   });
 
   final String key;
+
+  /// A collection tile's title logo: the hero shows it instead of the name
+  /// (owner, 2026-11-11: the NETFLIX wordmark, not "Netflix" in text).
+  final String? titleLogoUrl;
+
+  /// A collection tile's animated picture, played while the card is
+  /// focused (Nuvio's "focus GIF").
+  final String? focusImageUrl;
 
   /// The live channel the mini player plays when the remote stops on this
   /// card (a channel, or a game's first matched channel).
@@ -132,10 +145,18 @@ class _HomeItem {
 enum _CardShape { poster, wide }
 
 class _HomeRow {
-  const _HomeRow(this.kind, this.shape, this.items);
+  _HomeRow(this.kind, this.shape, this.items, {String? id, this.title})
+      : id = id ?? kind.id;
   final HomeRowKind kind;
   final _CardShape shape;
   final List<_HomeItem> items;
+
+  /// Unique on the page: the kind's id, or `collection|<id>` for each
+  /// collection row (several rows of [HomeRowKind.collections]).
+  final String id;
+
+  /// A collection's own name (not translated); else the kind's title.
+  final String? title;
 }
 
 class _HomeScreenState extends State<HomeScreen> {
@@ -155,7 +176,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _inProfiles = false;
   int _profileIndex = 0;
   int _row = 0;
-  final Map<HomeRowKind, int> _cardIndex = {};
+  final Map<String, int> _cardIndex = {};
   _HomeItem? _focused;
 
   /// Fades the page out and back in around a profile switch.
@@ -166,9 +187,9 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _userMoved = false;
 
   final _pageScroll = ScrollController();
-  final Map<HomeRowKind, ScrollController> _rowScrolls = {};
+  final Map<String, ScrollController> _rowScrolls = {};
   final Map<String, FocusNode> _nodes = {};
-  final Map<HomeRowKind, GlobalKey> _rowKeys = {};
+  final Map<String, GlobalKey> _rowKeys = {};
   final List<FocusNode> _profileNodes = [];
   final _addProfileNode = FocusNode(debugLabel: 'home add profile');
   final _emptyFocus = FocusNode(debugLabel: 'home empty');
@@ -240,6 +261,8 @@ class _HomeScreenState extends State<HomeScreen> {
     WatchList.instance.changes.addListener(_watchListChanged);
     HomeWallpaper.instance.changes.addListener(_loadWallpaper);
     unawaited(_loadWallpaper());
+    _hub = context.read<ArchiveService?>()?..addListener(_hubChanged);
+    _hubSig = _homeCollectionsSig();
     unawaited(_load(focusFirst: true));
     if (_rowsConfig.visible.contains(HomeRowKind.continueWatching)) {
       unawaited(
@@ -278,6 +301,7 @@ class _HomeScreenState extends State<HomeScreen> {
     WatchList.instance.changes.removeListener(_watchListChanged);
     HomeWallpaper.instance.changes.removeListener(_loadWallpaper);
     _episodeAlerts?.removeListener(_episodesChanged);
+    _hub?.removeListener(_hubChanged);
     _hubProgressRefresh?.cancel();
     _pageScroll.dispose();
     for (final c in _rowScrolls.values) {
@@ -308,14 +332,70 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) unawaited(_load(focusFirst: !_userMoved));
   }
 
-  FocusNode _node(HomeRowKind kind, int i) =>
-      _nodes.putIfAbsent('${kind.id}#$i', () => FocusNode());
+  FocusNode _node(String rowId, int i) =>
+      _nodes.putIfAbsent('$rowId#$i', () => FocusNode());
 
-  ScrollController _rowScroll(HomeRowKind kind) =>
-      _rowScrolls.putIfAbsent(kind, ScrollController.new);
+  ScrollController _rowScroll(String rowId) =>
+      _rowScrolls.putIfAbsent(rowId, ScrollController.new);
 
-  GlobalKey _rowKey(HomeRowKind kind) =>
-      _rowKeys.putIfAbsent(kind, GlobalKey.new);
+  GlobalKey _rowKey(String rowId) =>
+      _rowKeys.putIfAbsent(rowId, GlobalKey.new);
+
+  /// The collections chosen for Home, one row each (Settings > Media Hub
+  /// sources > Collections > Show on Home). Read at every load: no fetch.
+  List<_HomeRow> _collectionRows() {
+    final hub = context.read<ArchiveService?>();
+    if (hub == null) return const [];
+    return [
+      for (final (c, folders) in hub.homeCollections())
+        _HomeRow(
+          HomeRowKind.collections,
+          folders.first.shape == HubTileShape.landscape
+              ? _CardShape.wide
+              : _CardShape.poster,
+          [
+            for (final f in folders)
+              _HomeItem(
+                key: 'col:${c.id}:${f.id}',
+                title: f.title,
+                subtitle: c.label,
+                description: tr('{n} catalogs', {'n': f.sources.length}),
+                imageUrl: f.coverUrl,
+                backdropUrl: f.backdropUrl,
+                focusImageUrl: f.focusUrl,
+                titleLogoUrl: f.logoUrl,
+                open: (ctx) => Navigator.of(ctx).push(MaterialPageRoute(
+                    builder: (_) =>
+                        HubFolderScreen(folder: f, collection: c.label))),
+              ),
+          ],
+          id: 'collection|${c.id}',
+          title: c.label,
+        ),
+    ];
+  }
+
+  /// What the Home collection rows show, to reload only when it changes
+  /// (the Media Hub notifies on every catalog it loads).
+  String _homeCollectionsSig() {
+    final hub = context.read<ArchiveService?>();
+    if (hub == null) return '';
+    return [
+      for (final (c, folders) in hub.homeCollections())
+        '${c.id}:${folders.map((f) => f.id).join(',')}'
+    ].join('|');
+  }
+
+  ArchiveService? _hub;
+  String _hubSig = '';
+
+  void _hubChanged() {
+    if (!mounted || _loading) return;
+    final sig = _homeCollectionsSig();
+    if (sig == _hubSig) return;
+    _hubSig = sig;
+    unawaited(_load());
+  }
 
   // ---------------------------------------------------------------- data --
 
@@ -385,19 +465,29 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted || id != _loadId) return;
     final hadFocus = _rows.isNotEmpty;
     final previous =
-        _rows.isEmpty ? null : _rows[_row.clamp(0, _rows.length - 1)].kind;
+        _rows.isEmpty ? null : _rows[_row.clamp(0, _rows.length - 1)].id;
     setState(() {
       _rows = [
         for (final k in _rowsConfig.visible)
-          if (byKind[k] case final r? when r.items.isNotEmpty) r,
+          if (k == HomeRowKind.collections)
+            ..._collectionRows()
+          else if (byKind[k] case final r? when r.items.isNotEmpty)
+            r,
       ];
       _loading = !done;
       // Keep the selector on the same row when a slower row appears above.
       final keep =
-          previous == null ? -1 : _rows.indexWhere((r) => r.kind == previous);
+          previous == null ? -1 : _rows.indexWhere((r) => r.id == previous);
       _row = keep >= 0
           ? keep
           : _row.clamp(0, _rows.isEmpty ? 0 : _rows.length - 1);
+      // A collection tile taken off Home leaves the hero.
+      if (_focused?.key.startsWith('col:') ?? false) {
+        final key = _focused!.key;
+        if (!_rows.any((r) => r.items.any((it) => it.key == key))) {
+          _focused = null;
+        }
+      }
       if (_focused == null && _rows.isNotEmpty) {
         _focused = _rows[_row].items.first;
       }
@@ -413,7 +503,7 @@ class _HomeScreenState extends State<HomeScreen> {
       // yet (the launch, see below): the first row takes it once it comes.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && (!_inProfiles || !_userMoved)) {
-          _focusCard(_row, _cardIndex[_rows[_row].kind] ?? 0);
+          _focusCard(_row, _cardIndex[_rows[_row].id] ?? 0);
         }
       });
     } else if (focusFirst && _rows.isEmpty && !_inProfiles) {
@@ -807,7 +897,71 @@ class _HomeScreenState extends State<HomeScreen> {
     final now = DateTime.now();
     _lastKeyAt = now;
     if (_navKeys.contains(event.logicalKey)) _lastNavKeyAt = now;
+    // Focus left on the page itself (no card): no key reaches _onKey and
+    // the remote looks dead (owner, 2026-11-11, back from a collection).
+    // The first arrow / OK puts it back on the card.
+    if (event is KeyDownEvent &&
+        (_navKeys.contains(event.logicalKey) ||
+            event.logicalKey == LogicalKeyboardKey.select ||
+            event.logicalKey == LogicalKeyboardKey.enter) &&
+        mounted &&
+        ModalRoute.of(context)?.isCurrent == true &&
+        !_focusOnHome()) {
+      _restoreFocus();
+      return true;
+    }
     return false;
+  }
+
+  /// The selector's row and card from the card that really has the focus
+  /// (nodes are keyed `rowId#index`): the arrows always move from there.
+  void _syncFromFocus() {
+    for (final e in _nodes.entries) {
+      if (!e.value.hasPrimaryFocus) continue;
+      final hash = e.key.lastIndexOf('#');
+      final id = e.key.substring(0, hash);
+      final i = int.tryParse(e.key.substring(hash + 1));
+      final r = _rows.indexWhere((x) => x.id == id);
+      if (r >= 0 && i != null) {
+        _row = r;
+        _cardIndex[id] = i;
+        _inProfiles = false;
+      }
+      return;
+    }
+  }
+
+  /// The remote's focus is on one of this page's cards or profiles.
+  bool _focusOnHome() {
+    final f = FocusManager.instance.primaryFocus;
+    if (f == null || f is FocusScopeNode || f == _emptyFocus) {
+      return f == _emptyFocus && _rows.isEmpty;
+    }
+    final ctx = f.context;
+    return ctx != null &&
+        ctx.mounted &&
+        ctx.findAncestorStateOfType<_HomeScreenState>() == this;
+  }
+
+  /// The card the selector was on (or the profiles strip).
+  void _restoreFocus() {
+    if (!mounted) return;
+    if (_inProfiles || _rows.isEmpty) {
+      _focusProfiles(_inProfiles ? _profileIndex : null);
+    } else {
+      final r = _row.clamp(0, _rows.length - 1);
+      _focusCard(r, _cardIndex[_rows[r].id] ?? 0);
+    }
+  }
+
+  /// Back on Home from a page it opened: Flutter's own focus restoration
+  /// can leave the focus on the page's scope instead of the card.
+  void _refocusAfterReturn() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
+      if (!_focusOnHome()) _restoreFocus();
+    });
+    WidgetsBinding.instance.scheduleFrame();
   }
 
   /// [item] took the focus: restarts the mini player's wait. Only with
@@ -968,7 +1122,10 @@ class _HomeScreenState extends State<HomeScreen> {
     await item.open(context);
     // Back on Home: what was watched moves to the front of its rows.
     if (mounted) {
-      unawaited(_load());
+      _refocusAfterReturn();
+      unawaited(_load().then((_) {
+        if (mounted) _refocusAfterReturn();
+      }));
       _hubProgressRefresh?.cancel();
       _hubProgressRefresh = Timer(const Duration(milliseconds: 600), () {
         if (mounted) unawaited(_load());
@@ -988,7 +1145,7 @@ class _HomeScreenState extends State<HomeScreen> {
     i = i.clamp(0, row.items.length - 1);
     _row = r;
     _inProfiles = false;
-    final c = _rowScrolls[row.kind];
+    final c = _rowScrolls[row.id];
     if (c != null && c.hasClients) {
       final pos = c.position;
       final ext = _extent(row.shape);
@@ -1001,11 +1158,11 @@ class _HomeScreenState extends State<HomeScreen> {
       }
       if (to != null) c.jumpTo(to.clamp(0.0, pos.maxScrollExtent));
     }
-    final ctx = _rowKey(row.kind).currentContext;
+    final ctx = _rowKey(row.id).currentContext;
     if (ctx != null) {
       Scrollable.ensureVisible(ctx, alignment: 0.0, duration: Duration.zero);
     }
-    _focusWhenBuilt(_node(row.kind, i));
+    _focusWhenBuilt(_node(row.id, i));
   }
 
   void _focusWhenBuilt(FocusNode node, [int framesLeft = 4]) {
@@ -1024,7 +1181,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (_rows.isEmpty) {
         _emptyFocus.requestFocus();
       } else {
-        _focusCard(0, _cardIndex[_rows.first.kind] ?? 0);
+        _focusCard(0, _cardIndex[_rows.first.id] ?? 0);
       }
       return;
     }
@@ -1086,7 +1243,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
       if (key == LogicalKeyboardKey.arrowDown) {
         if (_rows.isNotEmpty) {
-          _focusCard(0, _cardIndex[_rows.first.kind] ?? 0);
+          _focusCard(0, _cardIndex[_rows.first.id] ?? 0);
         }
         return KeyEventResult.handled;
       }
@@ -1105,17 +1262,18 @@ class _HomeScreenState extends State<HomeScreen> {
       }
       return KeyEventResult.ignored;
     }
+    _syncFromFocus();
     final row = _rows[_row.clamp(0, _rows.length - 1)];
-    final i = _cardIndex[row.kind] ?? 0;
+    final i = _cardIndex[row.id] ?? 0;
     if (key == LogicalKeyboardKey.arrowDown) {
       if (_row < _rows.length - 1) {
-        _focusCard(_row + 1, _cardIndex[_rows[_row + 1].kind] ?? 0);
+        _focusCard(_row + 1, _cardIndex[_rows[_row + 1].id] ?? 0);
       }
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowUp) {
       if (_row > 0) {
-        _focusCard(_row - 1, _cardIndex[_rows[_row - 1].kind] ?? 0);
+        _focusCard(_row - 1, _cardIndex[_rows[_row - 1].id] ?? 0);
       } else {
         _focusProfiles();
       }
@@ -1183,7 +1341,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ---------------------------------------------------------- row editing --
 
-  Future<void> _rowMenu(HomeRowKind kind, [_HomeItem? item]) async {
+  Future<void> _rowMenu(HomeRowKind kind,
+      [_HomeItem? item, _HomeRow? homeRow]) async {
     final storage = context.read<StorageService>();
     final viewer = storage.getActiveViewerId();
     final shown = _rowsConfig.visible;
@@ -1196,8 +1355,14 @@ class _HomeScreenState extends State<HomeScreen> {
     final choice = await showGlassMenu<String>(
       context: context,
       builder: (context) => GlassMenuDialog(
-        title: Text(tr(kind.title)),
+        title: Text(homeRow?.title ?? tr(kind.title)),
         children: [
+          if (kind == HomeRowKind.collections && homeRow != null)
+            TvDialogOption(
+              autofocus: !stopMini,
+              onPressed: () => Navigator.of(context).pop('unhome'),
+              child: Text(tr('Remove from Home')),
+            ),
           if (stopMini)
             TvDialogOption(
               autofocus: true,
@@ -1246,6 +1411,17 @@ class _HomeScreenState extends State<HomeScreen> {
       await _stopMini();
       return;
     }
+    if (choice == 'unhome') {
+      final id = homeRow?.id.substring('collection|'.length);
+      if (id != null) {
+        await context.read<ArchiveService>().setCollectionOnHome(id, false);
+      }
+      if (!mounted) return;
+      _focused = null;
+      await _load();
+      if (mounted && _rows.isNotEmpty) _focusCard(0, 0);
+      return;
+    }
     if (choice == 'remove') {
       await item?.removeFromHistory?.call();
       if (!mounted || storage.getActiveViewerId() != viewer) return;
@@ -1258,8 +1434,9 @@ class _HomeScreenState extends State<HomeScreen> {
         if (_rows.isEmpty) {
           _focusProfiles();
         } else {
-          final row = _rows.indexWhere((r) => r.kind == kind);
-          _focusCard(row < 0 ? 0 : row, _cardIndex[kind] ?? 0);
+          final id = homeRow?.id ?? kind.id;
+          final row = _rows.indexWhere((r) => r.id == id);
+          _focusCard(row < 0 ? 0 : row, _cardIndex[id] ?? 0);
         }
       });
       return;
@@ -1316,7 +1493,8 @@ class _HomeScreenState extends State<HomeScreen> {
     await _load();
     if (!mounted || _rows.isEmpty) return;
     final r = keep == null ? 0 : _rows.indexWhere((x) => x.kind == keep);
-    _focusCard(r < 0 ? 0 : r, keep == null ? 0 : (_cardIndex[keep] ?? 0));
+    _focusCard(
+        r < 0 ? 0 : r, keep == null || r < 0 ? 0 : (_cardIndex[_rows[r].id] ?? 0));
   }
 
   // --------------------------------------------------------------- build --
@@ -1455,7 +1633,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final h = poster ? _posterH : _wideH;
     final active = !_inProfiles && r == _row;
     return Column(
-      key: _rowKey(row.kind),
+      key: _rowKey(row.id),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
@@ -1467,14 +1645,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.2,
                 color: active ? scheme.primary : Colors.white),
-            child: Text(tr(row.kind.title)),
+            child: Text(row.title ?? tr(row.kind.title)),
           ),
         ),
         SizedBox(
           // Room for the focused card's zoom and its title underneath.
           height: h + 48,
           child: ListView.builder(
-            controller: _rowScroll(row.kind),
+            controller: _rowScroll(row.id),
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: _sidePad - 8),
             itemExtent: w + _gap,
@@ -1489,21 +1667,32 @@ class _HomeScreenState extends State<HomeScreen> {
                   width: w,
                   height: h,
                   poster: poster,
-                  focusNode: _node(row.kind, i),
+                  focusNode: _node(row.id, i),
                   onTap: () => _open(item),
-                  onHold: () => _rowMenu(row.kind, item),
+                  onHold: () => _rowMenu(row.kind, item, row),
                   onFocus: () {
-                    _cardIndex[row.kind] = i;
-                    _scheduleMini(item);
-                    if (identical(_focused, item) &&
-                        _row == r &&
+                    // The row's place now, by its id: a card can still hold
+                    // an older build's index (Home under a page isn't laid
+                    // out, and Back restores the focus before it is), and
+                    // Left / Right then moved in the row under it (owner's
+                    // photo, +726: row 2 New episodes, focus on Disney).
+                    final now = _rows.indexWhere((x) => x.id == row.id);
+                    final at = now >= 0 ? now : r;
+                    final current =
+                        now >= 0 && i < _rows[now].items.length
+                            ? _rows[now].items[i]
+                            : item;
+                    _cardIndex[row.id] = i;
+                    _scheduleMini(current);
+                    if (identical(_focused, current) &&
+                        _row == at &&
                         !_inProfiles) {
                       return;
                     }
                     setState(() {
-                      _row = r;
+                      _row = at;
                       _inProfiles = false;
-                      _focused = item;
+                      _focused = current;
                     });
                   },
                 ),
@@ -1766,14 +1955,17 @@ class _Hero extends StatelessWidget {
                           padding: EdgeInsets.only(bottom: 10),
                           child: _LivePill(),
                         ),
-                      Text(item.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 28,
-                              height: 1.1,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white)),
+                      if (item.titleLogoUrl case final logo?)
+                        TrimmedLogo(
+                          key: ValueKey(logo),
+                          url: logo,
+                          height: 64,
+                          maxWidth: 320,
+                          tint: TrimmedLogo.brandColor(item.title),
+                          fallback: _HeroName(item.title),
+                        )
+                      else
+                        _HeroName(item.title),
                       if (item.game?.statusText.isNotEmpty ?? false)
                         Padding(
                           padding: const EdgeInsets.only(top: 6),
@@ -1818,6 +2010,22 @@ class _Hero extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The hero's title in text (no logo, or it failed).
+class _HeroName extends StatelessWidget {
+  const _HeroName(this.name);
+  final String name;
+
+  @override
+  Widget build(BuildContext context) => Text(name,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      style: const TextStyle(
+          fontSize: 28,
+          height: 1.1,
+          fontWeight: FontWeight.w700,
+          color: Colors.white));
 }
 
 /// The hero for a live channel (owner, 2026-11-10, Discord idea): its logo
@@ -2248,6 +2456,16 @@ class _HomeCardState extends State<_HomeCard> {
         clipBehavior: Clip.antiAlias,
         child: Stack(fit: StackFit.expand, children: [
           art,
+          if (_focused && item.focusImageUrl != null)
+            HdNetworkImage(
+              key: ValueKey(item.focusImageUrl),
+              url: item.focusImageUrl!,
+              kind: ImageKind.backdrop,
+              decodeWidth: (widget.width * 2).round(),
+              fit: BoxFit.cover,
+              fadeInDuration: const Duration(milliseconds: 200),
+              errorWidget: (_) => const SizedBox.shrink(),
+            ),
           if (item.live) const Positioned(left: 8, top: 8, child: _LivePill()),
           if (item.tag case final tag?)
             Positioned(

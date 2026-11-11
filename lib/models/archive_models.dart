@@ -28,6 +28,16 @@ enum ArchiveType {
   static ArchiveType? fromWire(String? s) => switch (s) {
         'movie' => ArchiveType.movie,
         'series' => ArchiveType.series,
+        _ => aliasOf(s),
+      };
+
+  /// Another name an add-on gives a standard type: AIOMetadata's display
+  /// type writes "movies" (owner, 2026-11-11: movie tiles listed under
+  /// Other / shows). Read as that type, never as a custom one.
+  static ArchiveType? aliasOf(String? s) =>
+      switch (s?.trim().toLowerCase()) {
+        'movies' => ArchiveType.movie,
+        'shows' || 'tv shows' => ArchiveType.series,
         _ => null,
       };
 
@@ -56,18 +66,36 @@ class ArchiveCatalog {
     this.genres = const [],
     this.years = const [],
     this.wireType,
+    this.homeHidden = false,
+    this.requestType,
   });
 
   final ArchiveType type;
   final String id;
   final String name;
 
+  /// The add-on's own name for [type] when it uses another one ("movies",
+  /// [ArchiveType.aliasOf]): sent in `/catalog/` requests only, so the
+  /// add-on gets the type its manifest declared.
+  final String? requestType;
+
+  /// Not for the home screen: the add-on requires a genre to list it, as
+  /// AIOMetadata does for catalogs set to "not in home" (Stremio's board
+  /// skips them). Never a Media Hub row; a collection tile can still show
+  /// it (requested without a genre, which such add-ons answer like Nuvio's
+  /// `genre: None`).
+  final bool homeHidden;
+
   /// The source's own type string when it isn't [type]'s (a custom type
   /// browsed under Movies, see [ArchiveType.bucketFor]); null otherwise.
   final String? wireType;
 
-  /// The type sent in `/catalog/{type}/…` requests.
+  /// The catalog's type for its titles and keys: [wireType] for a custom
+  /// one, else movie / series.
   String get wire => wireType ?? type.wire;
+
+  /// The type sent in `/catalog/{type}/…` requests.
+  String get requestWire => wireType ?? requestType ?? type.wire;
 
   /// Fixed extra arguments sent with every page, e.g. `{genre: 2026}` for
   /// the provider's "New" row (its `year` catalog requires a year).
@@ -104,6 +132,8 @@ class ArchiveCatalog {
               genres: genres,
               years: years,
               wireType: wireType,
+              homeHidden: homeHidden,
+              requestType: requestType,
             );
 
   /// [id] plus [extra]: unique per row, used for cache rows and row keys.
@@ -122,6 +152,8 @@ class ArchiveCatalog {
         if (searchOnly) 'searchOnly': true,
         if (genres.isNotEmpty) 'genres': genres,
         if (years.isNotEmpty) 'years': years,
+        if (homeHidden) 'homeHidden': true,
+        if (requestType != null) 'requestType': requestType,
       };
 
   /// Reads both a manifest entry (`extra: [{name: search}, …]`) and the
@@ -129,6 +161,7 @@ class ArchiveCatalog {
   static ArchiveCatalog? fromJson(Map<String, dynamic> j) {
     final wire = j['type']?.toString().trim();
     final type = ArchiveType.bucketFor(wire);
+    final alias = ArchiveType.aliasOf(wire) != null;
     final id = j['id']?.toString();
     if (type == null || id == null || id.isEmpty) return null;
     final fixed = j['fixedExtra'];
@@ -164,7 +197,12 @@ class ArchiveCatalog {
         })
           if (RegExp(r'^\d{4}$').hasMatch(g)) g,
       ],
-      wireType: wire == type.wire ? null : wire,
+      wireType: wire == type.wire || alias ? null : wire,
+      requestType: alias ? wire : j['requestType']?.toString(),
+      homeHidden: j['homeHidden'] == true ||
+          extras.any((e) =>
+              e is Map && e['name'] == 'genre' && e['isRequired'] == true) ||
+          (j['extraRequired'] as List? ?? const []).contains('genre'),
     );
   }
 }
@@ -360,6 +398,7 @@ class ArchiveSource {
     this.description = '',
     this.logoUrl,
     this.version,
+    this.addonId,
     this.catalogs = const [],
     this.catalogProviderUrl,
     this.enabled = true,
@@ -380,6 +419,10 @@ class ArchiveSource {
   /// The manifest's `version` (Settings > Media Hub sources shows it).
   /// Sources saved before it was read get it at their next manifest refresh.
   final String? version;
+
+  /// The manifest's `id` ("aio-metadata"): what a Nuvio collection names
+  /// an add-on by. Like [version], read again at the next manifest refresh.
+  final String? addonId;
   final List<ArchiveCatalog> catalogs;
 
   /// Older saved manifests omitted search-only catalogs; recheck them once.
@@ -511,6 +554,7 @@ class ArchiveSource {
         description: description,
         logoUrl: logoUrl,
         version: version,
+        addonId: addonId,
         catalogs: catalogs ?? this.catalogs,
         catalogProviderUrl: catalogProviderUrl,
         enabled: enabled ?? this.enabled,
@@ -529,6 +573,7 @@ class ArchiveSource {
         'description': description,
         'logo': logoUrl,
         if (version != null) 'version': version,
+        if (addonId != null) 'addonId': addonId,
         'catalogs': [for (final c in catalogs) c.toJson()],
         if (catalogProviderUrl != null) 'catalogProvider': catalogProviderUrl,
         'enabled': enabled,
@@ -556,6 +601,7 @@ class ArchiveSource {
       description: (j['description'] as String?) ?? '',
       logoUrl: j['logo'] as String?,
       version: j['version'] is String ? j['version'] as String : null,
+      addonId: j['addonId'] is String ? j['addonId'] as String : null,
       // A stream-only source's rows are re-derived from its types, so new
       // provider rows (and next year's "New") reach sources added earlier.
       // (A tracker's rows are its own lists — kept as stored.)
@@ -701,7 +747,11 @@ class ArchiveMeta {
     return ArchiveMeta(
       id: id,
       type: type,
-      wireType: wire == null || wire == type.wire ? null : wire,
+      wireType: wire == null ||
+              wire == type.wire ||
+              ArchiveType.aliasOf(wire) != null
+          ? null
+          : wire,
       imdbId: _str(j['imdb_id']),
       trailers: TrailerLinks.fromMetadata(j),
       trailerStreams: ArchiveStream.trailersFromMetadata(j),

@@ -3506,4 +3506,60 @@ const Map<String, String> kFr = {
       "OK les affiche",
   "Tap to show them":
       "Touchez pour les afficher",
+  "Collections":
+      "Collections",
+  "Rows of tiles on the Media Hub tab, like Nuvio: each tile opens a page of catalogs from your add-ons.":
+      "Des rangées de tuiles dans l'onglet Media Hub, comme Nuvio : chaque tuile ouvre une page de catalogues de vos modules.",
+  "Add from a link":
+      "Ajouter à partir d'un lien",
+  "A Nuvio collections file (.json)":
+      "Un fichier de collections Nuvio (.json)",
+  "Tiles need their catalogs in your add-ons (AIOMetadata with the same catalogs). Missing ones are left out.":
+      "Les tuiles ont besoin de leurs catalogues dans vos modules (AIOMetadata avec les mêmes catalogues). Celles qui manquent sont omises.",
+  "Send the file link from your phone":
+      "Envoyez le lien du fichier à partir de votre téléphone",
+  "Community pack: Nuvio Perfect Collections":
+      "Pack communautaire : Nuvio Perfect Collections",
+  "Streaming, genres, studios, decades… made for the AIOMetadata catalogs of the same setup":
+      "Streaming, genres, studios, décennies… fait pour les catalogues AIOMetadata de la même configuration",
+  "By luckynumb3rs (stremio-perfect-setup). Its tiles show once your AIOMetadata has the same catalogs.":
+      "Par luckynumb3rs (stremio-perfect-setup). Ses tuiles s'affichent quand votre AIOMetadata a les mêmes catalogues.",
+  "Hide their catalogs from the rows":
+      "Masquer leurs catalogues des rangées",
+  "A catalog in a collection shows only on its tile's page":
+      "Un catalogue dans une collection s'affiche seulement sur la page de sa tuile",
+  "{found} of {n} tiles found in your add-ons":
+      "{found} tuiles sur {n} trouvées dans vos modules",
+  "None of its catalogs are in your add-ons: add the AIOMetadata setup it was made for.":
+      "Aucun de ses catalogues n'est dans vos modules : ajoutez la configuration AIOMetadata pour laquelle elle a été faite.",
+  "OK for its options: on or off, Home, order, update, remove.":
+      "OK pour ses options : activer ou désactiver, Accueil, ordre, mise à jour, retrait.",
+  "Turn on":
+      "Activer",
+  "Update from its link":
+      "Mettre à jour à partir de son lien",
+  "{n} collections added. They show on the Media Hub tab.":
+      "{n} collections ajoutées. Elles s'affichent dans l'onglet Media Hub.",
+  "No collections in that file.":
+      "Aucune collection dans ce fichier.",
+  "Collections file link":
+      "Lien du fichier de collections",
+  "Rows of tiles, like Nuvio":
+      "Des rangées de tuiles, comme Nuvio",
+  "This tile's catalogs aren't in your add-ons. Add the add-on its collection was made for (AIOMetadata) with the same catalogs.":
+      "Les catalogues de cette tuile ne sont pas dans vos modules. Ajoutez le module pour lequel sa collection a été faite (AIOMetadata) avec les mêmes catalogues.",
+  "{n} catalogs":
+      "{n} catalogues",
+  "Show on Home":
+      "Afficher sur Accueil",
+  "Remove from Home":
+      "Retirer de l'Accueil",
+  "On Home":
+      "Sur Accueil",
+  "Turn off this collection":
+      "Désactiver cette collection",
+  "{name} is off. Settings > Media Hub sources > Collections turns it back on.":
+      "{name} est désactivée. Paramètres > Sources Media Hub > Collections la réactive.",
+  "Streaming is on. Turn on the other collections here when you want them.":
+      "Streaming est activée. Activez les autres collections ici quand vous les voulez.",
 };

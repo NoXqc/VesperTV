@@ -424,6 +424,22 @@
     "url": "https://vespertv.app/remote.html#Media%20Hub"
   },
   {
+    "id": "023592f47e1d1ea5",
+    "category": "Media Hub",
+    "title": "Collections: tiles that open a page of catalogs",
+    "answer": "Like Nuvio. Each tile (Netflix, Disney+, Horror…) opens its own page: one row per catalog, movies and shows together; Up / Down change row, Back returns. The focused tile plays its moving picture. The catalogs come from your own add-ons (AIOMetadata), so a tile shows only when your add-on has its catalogs, and those catalogs leave the Media Hub rows (Settings can keep them).",
+    "controls": "Media Hub → a row of tiles (Streaming, Genres…) → OK",
+    "url": "https://vespertv.app/remote.html#Media%20Hub"
+  },
+  {
+    "id": "c7e57284184bd721",
+    "category": "Media Hub",
+    "title": "Import a Nuvio collections file",
+    "answer": "Add from a link (a Nuvio collections .json), From phone, or the community pack Nuvio Perfect Collections; a .json pasted in Add a source or on the Manage from phone page works too. OK on a collection: turn it on or off, Show on Home (its tiles also get a row on Home, under Continue Watching; hold OK on a tile there = Remove from Home), move it, update it from its link or remove it. The tiles need the AIOMetadata catalogs the file was made for: import that AIOMetadata setup too.",
+    "controls": "Media Hub sources → Collections",
+    "url": "https://vespertv.app/remote.html#Media%20Hub"
+  },
+  {
     "id": "241f7f16fec28d02",
     "category": "Media Hub",
     "title": "Manage your sources from your phone",

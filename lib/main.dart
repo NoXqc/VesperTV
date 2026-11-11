@@ -873,6 +873,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         clearHubHistory: _archiveService.clearHistory,
         hub:
             AppVesperHub(navigatorKey: _navigatorKey, archive: _archiveService),
+        archive: _archiveService,
         profiles: AppVesperProfiles(
             navigatorKey: _navigatorKey,
             viewers: _viewerProfileService,

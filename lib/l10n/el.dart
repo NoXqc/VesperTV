@@ -3455,4 +3455,60 @@ const Map<String, String> kEl = {
       "Το OK τους εμφανίζει",
   "Tap to show them":
       "Πάτα για να εμφανιστούν",
+  "Collections":
+      "Συλλογές",
+  "Rows of tiles on the Media Hub tab, like Nuvio: each tile opens a page of catalogs from your add-ons.":
+      "Σειρές από πλακίδια στην καρτέλα Media Hub, όπως στο Nuvio: κάθε πλακίδιο ανοίγει μια σελίδα με καταλόγους από τα πρόσθετά σας.",
+  "Add from a link":
+      "Προσθήκη από σύνδεσμο",
+  "A Nuvio collections file (.json)":
+      "Ένα αρχείο συλλογών του Nuvio (.json)",
+  "Tiles need their catalogs in your add-ons (AIOMetadata with the same catalogs). Missing ones are left out.":
+      "Τα πλακίδια χρειάζονται τους καταλόγους τους στα πρόσθετά σας (AIOMetadata με τους ίδιους καταλόγους). Όσα λείπουν παραλείπονται.",
+  "Send the file link from your phone":
+      "Στείλτε τον σύνδεσμο του αρχείου από το τηλέφωνό σας",
+  "Community pack: Nuvio Perfect Collections":
+      "Πακέτο της κοινότητας: Nuvio Perfect Collections",
+  "Streaming, genres, studios, decades… made for the AIOMetadata catalogs of the same setup":
+      "Streaming, είδη, στούντιο, δεκαετίες… φτιαγμένο για τους καταλόγους AIOMetadata της ίδιας ρύθμισης",
+  "By luckynumb3rs (stremio-perfect-setup). Its tiles show once your AIOMetadata has the same catalogs.":
+      "Από τον luckynumb3rs (stremio-perfect-setup). Τα πλακίδιά του εμφανίζονται όταν το AIOMetadata σας έχει τους ίδιους καταλόγους.",
+  "Hide their catalogs from the rows":
+      "Απόκρυψη των καταλόγων τους από τις σειρές",
+  "A catalog in a collection shows only on its tile's page":
+      "Ένας κατάλογος μιας συλλογής εμφανίζεται μόνο στη σελίδα του πλακιδίου του",
+  "{found} of {n} tiles found in your add-ons":
+      "{found} από {n} πλακίδια βρέθηκαν στα πρόσθετά σας",
+  "None of its catalogs are in your add-ons: add the AIOMetadata setup it was made for.":
+      "Κανένας από τους καταλόγους της δεν είναι στα πρόσθετά σας: προσθέστε τη ρύθμιση AIOMetadata για την οποία φτιάχτηκε.",
+  "OK for its options: on or off, Home, order, update, remove.":
+      "OK για τις επιλογές της: ενεργοποίηση ή απενεργοποίηση, Αρχική, σειρά, ενημέρωση, αφαίρεση.",
+  "Turn on":
+      "Ενεργοποίηση",
+  "Update from its link":
+      "Ενημέρωση από τον σύνδεσμό της",
+  "{n} collections added. They show on the Media Hub tab.":
+      "Προστέθηκαν {n} συλλογές. Εμφανίζονται στην καρτέλα Media Hub.",
+  "No collections in that file.":
+      "Δεν υπάρχουν συλλογές σε αυτό το αρχείο.",
+  "Collections file link":
+      "Σύνδεσμος αρχείου συλλογών",
+  "Rows of tiles, like Nuvio":
+      "Σειρές από πλακίδια, όπως στο Nuvio",
+  "This tile's catalogs aren't in your add-ons. Add the add-on its collection was made for (AIOMetadata) with the same catalogs.":
+      "Οι κατάλογοι αυτού του πλακιδίου δεν είναι στα πρόσθετά σας. Προσθέστε το πρόσθετο για το οποίο φτιάχτηκε η συλλογή του (AIOMetadata) με τους ίδιους καταλόγους.",
+  "{n} catalogs":
+      "{n} κατάλογοι",
+  "Show on Home":
+      "Εμφάνιση στην Αρχική",
+  "Remove from Home":
+      "Αφαίρεση από την Αρχική",
+  "On Home":
+      "Στην Αρχική",
+  "Turn off this collection":
+      "Απενεργοποίηση αυτής της συλλογής",
+  "{name} is off. Settings > Media Hub sources > Collections turns it back on.":
+      "Η συλλογή {name} είναι απενεργοποιημένη. Ρυθμίσεις > Πηγές Media Hub > Συλλογές την ενεργοποιεί ξανά.",
+  "Streaming is on. Turn on the other collections here when you want them.":
+      "Το Streaming είναι ενεργό. Ενεργοποιήστε τις άλλες συλλογές εδώ όταν τις θέλετε.",
 };

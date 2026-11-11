@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 
 import '../models/archive_models.dart';
+import '../models/hub_collection.dart';
+import 'archive_api_service.dart' show ArchiveApiException;
 import 'addon_import.dart';
 import 'addon_service.dart';
 import 'archive_service.dart';
@@ -220,8 +222,27 @@ class HubRemote {
           'result': {'url': url}
         };
       case 'hub/add':
-        final links = AddonImporter.linksIn('${params['links'] ?? ''}');
+        final text = '${params['links'] ?? ''}';
+        final links = AddonImporter.linksIn(text);
         if (links.isEmpty) {
+          // A Nuvio collections file: its tiles go to the Media Hub tab.
+          final file =
+              RegExp(r'https?://\S+\.json(\?\S*)?').firstMatch(text)?[0];
+          if (file != null && HubCollection.isFileLink(file)) {
+            try {
+              final n = await archive.importCollections(file);
+              return {
+                'result': {
+                  ..._list(archive, addons),
+                  'summary': 'Added $n collections to the Media Hub tab.',
+                }
+              };
+            } on ArchiveApiException {
+              return _error('No collections in that file.');
+            } catch (_) {
+              return _error("That link didn't answer.");
+            }
+          }
           return _error('Paste a link that ends with manifest.json.');
         }
         if (links.length > 40) return _error('40 links at a time, at most.');

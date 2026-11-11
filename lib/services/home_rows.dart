@@ -9,7 +9,10 @@ enum HomeRowKind {
   recentChannels('recent', 'Recent channels'),
   favourites('favourites', 'Favourite channels'),
   newMovies('new_movies', 'New movies'),
-  newShows('new_shows', 'New TV shows');
+  newShows('new_shows', 'New TV shows'),
+
+  /// The Media Hub collections chosen for Home: one row per collection.
+  collections('collections', 'Collections');
 
   const HomeRowKind(this.id, this.title);
 
@@ -55,6 +58,11 @@ class HomeRows {
         order.insert((ne >= 0 ? ne : cw) + 1, k);
       } else if (k == HomeRowKind.newEpisodes && cw >= 0) {
         order.insert(cw + 1, k);
+      } else if (k == HomeRowKind.collections && cw >= 0) {
+        // Like Nuvio: the tiles under Continue Watching (and its rows).
+        final wl = order.indexOf(HomeRowKind.watchList);
+        final after = [cw, ne, wl].reduce((a, b) => a > b ? a : b);
+        order.insert(after + 1, k);
       } else {
         order.add(k);
       }

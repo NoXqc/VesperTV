@@ -6,6 +6,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../l10n/l10n.dart';
 import '../../models/archive_models.dart';
+import '../../models/hub_collection.dart';
 import '../../services/addon_import.dart';
 import '../../services/addon_service.dart';
 import '../../services/app_preferences.dart';
@@ -22,6 +23,7 @@ import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_menu_tile.dart' show CompactMenus;
 import '../../widgets/tv_text_field_gate.dart';
 import 'addons_screen.dart';
+import 'hub_collections_pane.dart';
 import 'media_server_screen.dart';
 import 'phone_link_screen.dart';
 import 'settings_catalog.dart' show SettingsCategory;
@@ -31,7 +33,19 @@ import 'stremio_import_screen.dart';
 import 'trackers_screen.dart';
 
 /// What the rail picks: a way to add, a filter of the list, or a tool.
-enum _Pane { add, all, streams, catalogs, servers, live, subtitles, phone, rows, advanced }
+enum _Pane {
+  add,
+  all,
+  streams,
+  catalogs,
+  servers,
+  live,
+  subtitles,
+  collections,
+  phone,
+  rows,
+  advanced
+}
 
 /// Settings > Media Hub sources (owner, 2026-11-11: like Stremio's and
 /// Nuvio's add-on pages, in the glass of the new Settings). Left, a rail:
@@ -225,6 +239,8 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
         (_Pane.servers, Icons.dns_outlined, tr('Media servers')),
       if (count(_Pane.live) > 0) (_Pane.live, Icons.live_tv, tr('Live TV')),
       (_Pane.subtitles, Icons.subtitles_outlined, tr('Subtitles')),
+      (_Pane.collections, Icons.dashboard_customize_outlined,
+          tr('Collections')),
       (_Pane.phone, Icons.phonelink, tr('Manage from phone')),
       (_Pane.rows, Icons.view_agenda_outlined, tr('Customize Media Hub')),
       (_Pane.advanced, Icons.tune, tr('Advanced')),
@@ -249,7 +265,7 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               for (final (p, icon, title) in items) ...[
-                if (p == _Pane.all || p == _Pane.phone) divider,
+                if (p == _Pane.all || p == _Pane.collections) divider,
                 _railEntry(p, icon, title,
                     _isFilter(p) ? entries.where((e) => _inFilter(p, e)).length : null),
               ],
@@ -301,6 +317,7 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
             setState(() => _selected = _Pane.phone);
             _railNode(_Pane.phone).requestFocus();
           }),
+      _Pane.collections => HubCollectionsPane(help: _help),
       _Pane.phone => _phonePane(),
       _Pane.rows => _rowsPane(),
       _Pane.advanced => _advancedPane(entries),
@@ -634,6 +651,16 @@ class _ArchiveSourcesScreenState extends State<ArchiveSourcesScreen> {
             onOptions: () => _openOptions(e),
           ),
         const SizedBox(height: 8),
+        SettingRow(
+          icon: Icons.dashboard_customize_outlined,
+          title: tr('Collections'),
+          subtitle: tr('Rows of tiles, like Nuvio'),
+          trailing: const SettingValue(),
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => SettingsScaffold(
+                  title: tr('Collections'),
+                  body: const HubCollectionsPane()))),
+        ),
         for (final (type, label) in [
           (ArchiveType.movie, tr('Movies')),
           (ArchiveType.series, tr('TV Shows')),
@@ -1303,6 +1330,23 @@ class _AddSourceState extends State<_AddSource> {
     final service = context.read<ArchiveService>();
     final storage = context.read<StorageService>();
     setState(() => _adding = true);
+    // A Nuvio collections file (a .json that isn't a manifest) pasted here.
+    if (links.isEmpty && HubCollection.isFileLink(url)) {
+      String message;
+      try {
+        message = tr('{n} collections added. They show on the Media Hub tab.',
+            {'n': await service.importCollections(url)});
+        _link.clear();
+      } on ArchiveApiException {
+        message = tr('No collections in that file.');
+      } catch (_) {
+        message = tr("Couldn't reach that link.");
+      }
+      if (!mounted) return;
+      setState(() => _adding = false);
+      messenger.showSnackBar(SnackBar(content: Text(message)));
+      return;
+    }
     String? error;
     ArchiveSource? added;
     try {
