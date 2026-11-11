@@ -383,6 +383,14 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-11 - release 1.0.65 (beta), +732 (latest):** owner said "check all branches, merge and /cutr".
+  Android only; Windows stays 1.0.61, Linux 1.0.63 (+702). Merged into main: `claude/hub-collections` (Media Hub
+  collections + the Settings revamp it stacks on: glass Settings rows, Media Hub sources list + Manage from phone (relay
+  /hub, already deployed), Countries, row eye), `claude/video-fit` (picture modes), main's editor Move / Copy, EuroCup /
+  BCL + ESPN backoff, Xtream bare host, phone league move bar, and another session's 4K badge thresholds (IMAX ratio).
+  New Vesper AI tools `collections` and `hub_rows`; `movies` / `shows` catalog types read as movie / series
+  (`ArchiveType.aliasOf`). Not merged: appstore/linux/macOS PR branches, debrid, tunneling, native-surface-prepare,
+  network-cards. Analyze 16, 1886 tests. Notes: dev-notes/releases/1.0.65.md, dev-notes/hub-collections.md. Next build > 732.
 - **Claude, 2026-11-11 - playlist editor Move / Copy to group (main, uncommitted, not released):** owner: tick
   several channels in the editor and change their group; Move and Copy clearly different; destination = a custom
   (own) group or a group of any playlist. Editor Channels bar: Move to group… / Copy to group… / Reset group, applied on
