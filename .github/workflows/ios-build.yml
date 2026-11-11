@@ -81,7 +81,7 @@ jobs:
                 -authenticationKeyID "$ASC_KEY_ID"
                 -authenticationKeyIssuerID "$ASC_ISSUER_ID")
           # Flutter's generated settings + pod install, without building.
-          flutter build ios --release --config-only 2>&1 | tee build-ios.log
+          flutter build ios --release --config-only --no-codesign 2>&1 | tee build-ios.log
           xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner \
             -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/VesperTV.xcarchive" \
