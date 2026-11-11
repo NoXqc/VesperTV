@@ -143,7 +143,8 @@ Grab the latest release from the [Releases](../../releases) page or
 
 - **TV controls:** OK shows the player bar with the channel's info card and a programme timeline;
   Down opens a row of options (channel list, schedule, recall, watch from the start, reload,
-  audio, subtitles, audio sync, buffer, Multiview, sources, stream info, fill screen, search).
+  audio, subtitles, audio sync, buffer, Multiview, sources, stream info, search, and a picture
+  button that cycles Fit, Stretched, Crop, Fit height, Fit width, Slight zoom and Cinema zoom).
   With nothing on screen, Up/Down change channel; Right flips to the last channel.
 - **Audio sync** (±5 s), optional surround/Dolby Atmos passthrough, preferred audio and subtitle
   languages, subtitle sizes and live closed captions.

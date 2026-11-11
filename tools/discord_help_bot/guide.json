@@ -283,8 +283,16 @@
     "id": "5f71da8ddda39a6a",
     "category": "Full screen",
     "title": "More options",
-    "answer": "Down from the player bar swaps it for a row of options: Channels list, Stream info, Recall, Watch from the start, Reload channel, Audio track, Subtitles, Audio sync, linked channel, Multiview, Sources, Fill screen and Search. Left / Right move along it, OK picks one, Up or Back returns to the player bar. Phones keep these buttons in the player bar.",
+    "answer": "Down from the player bar swaps it for a row of options: Channels list, Stream info, Recall, Watch from the start, Reload channel, Audio track, Subtitles, Audio sync, linked channel, Multiview, Sources, Picture and Search. Left / Right move along it, OK picks one, Up or Back returns to the player bar. Phones keep these buttons in the player bar.",
     "controls": "OK then ▼ TV",
+    "url": "https://vespertv.app/remote.html#Full%20screen"
+  },
+  {
+    "id": "de81a069e57db471",
+    "category": "Full screen",
+    "title": "Change how the picture fills the screen",
+    "answer": "Each press of the picture button (it shows the current mode, Fit at first) moves to the next one and names it at the top of the screen: Fit (black bars), Stretched (fills the screen, shapes change), Crop (fills the screen, edges cut), Fit height, Fit width, Slight zoom (loses thin borders) and Cinema zoom (a wide film shown with black bars inside the picture fills the screen). After Cinema zoom it returns to Fit. The choice is remembered on this device for every channel, movie and episode. On a phone it is the top bar's button; anything but Fit also hides the phone's status bars.",
+    "controls": "Options row → Picture (Fit)",
     "url": "https://vespertv.app/remote.html#Full%20screen"
   },
   {

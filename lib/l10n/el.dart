@@ -2908,6 +2908,12 @@ const Map<String, String> kEl = {
       "Πρόσφατα",
   "Start over":
       "Από την αρχή",
+  "Stretched": "Τεντωμένο",
+  "Crop": "Περικοπή",
+  "Fit height": "Προσαρμογή ύψους",
+  "Fit width": "Προσαρμογή πλάτους",
+  "Slight zoom": "Ελαφρύ ζουμ",
+  "Cinema zoom": "Ζουμ σινεμά",
   "Fit":
       "Προσαρμογή",
   "Fill":

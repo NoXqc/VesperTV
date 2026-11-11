@@ -513,6 +513,7 @@ class AppConstants {
   /// edges) instead of fitting it with black bars — the player's ⛶ button.
   /// This device only (a phone and a TV want different things).
   static const String keyVideoFill = 'vesper_video_fill';
+  static const String keyVideoFit = 'vesper_video_fit';
 
   /// 24-hour (default) vs 12-hour times everywhere — `utils/time_format.dart`.
   static const String keyTime24h = 'vesper_time_24h';

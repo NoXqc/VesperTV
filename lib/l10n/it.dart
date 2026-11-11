@@ -2953,6 +2953,12 @@ const Map<String, String> kIt = {
       "Recenti",
   "Start over":
       "Dall'inizio",
+  "Stretched": "Allungato",
+  "Crop": "Ritaglia",
+  "Fit height": "Adatta altezza",
+  "Fit width": "Adatta larghezza",
+  "Slight zoom": "Zoom leggero",
+  "Cinema zoom": "Zoom cinema",
   "Fit":
       "Adatta",
   "Fill":

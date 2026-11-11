@@ -499,6 +499,17 @@ class StorageService {
   Future<void> setVideoFill(bool value) =>
       _prefs.setBool(AppConstants.keyVideoFill, value);
 
+  /// The player's picture mode (`VideoFit.name`); before it existed, the
+  /// Fill switch above (on = crop).
+  String getVideoFit() =>
+      _prefs.getString(AppConstants.keyVideoFit) ??
+      (getVideoFill() ? 'crop' : 'fit');
+  Future<void> setVideoFit(String value) async {
+    await _prefs.setString(AppConstants.keyVideoFit, value);
+    // Older builds (a downgrade) still read the switch.
+    await setVideoFill(value != 'fit');
+  }
+
   /// Null = never set by the user (AppPreferences uses the device default).
   bool? getHideVideoOnSports() =>
       _prefs.getBool(AppConstants.keyHideVideoOnSports);
@@ -1537,6 +1548,7 @@ class StorageService {
     AppConstants.keyDesktopVolume,
     AppConstants.keyDesktopMuted,
     AppConstants.keyVideoFill,
+    AppConstants.keyVideoFit,
     AppConstants.keyAutoTrailers,
     AppConstants.keyHideVideoOnSports,
     AppConstants.keyCompatVideo,
