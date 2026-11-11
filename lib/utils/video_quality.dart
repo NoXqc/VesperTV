@@ -11,11 +11,14 @@
 /// [width] counts too: a film is usually wider than 16:9, so a 4K movie is
 /// 3840x1600 and a 1080p one 1920x800 - by height alone they read lower
 /// (user report, 2026-10-21: a 4K Media Hub stream showed HD).
-/// The width bars sit a little under the nominal 3840/1920/1280 for crops.
+/// Both bars sit under the nominal sizes for crops: a 4K IMAX-ratio film
+/// (1.50:1) is 3236x2156, a few lines short of 2160 and far from 3840 wide
+/// (owner's photo, 2026-11-11: showed FHD). A 1080p picture never reaches
+/// 2000 lines or 3600 columns, so a crop can't promote it.
 String? qualityLabelForTrack({required int height, int? width}) {
   final w = width ?? 0;
-  if (height >= 2160 || w >= 3800) return '4K';
-  if (height >= 1080 || w >= 1900) return 'FHD';
-  if (height >= 720 || w >= 1260) return 'HD';
+  if (height >= 2000 || w >= 3600) return '4K';
+  if (height >= 1040 || w >= 1800) return 'FHD';
+  if (height >= 700 || w >= 1200) return 'HD';
   return null;
 }

@@ -22,6 +22,17 @@ void main() {
     expect(qualityLabelForTrack(height: 360, width: 864), isNull);
   });
 
+  test('crops a few lines short of the nominal size keep their badge', () {
+    // 4K IMAX-ratio (1.50:1) Dolby Vision film, owner's photo 2026-11-11.
+    expect(qualityLabelForTrack(height: 2156, width: 3236), '4K');
+    expect(qualityLabelForTrack(height: 2076, width: 3840), '4K');
+    expect(qualityLabelForTrack(height: 1076, width: 1616), 'FHD');
+    expect(qualityLabelForTrack(height: 716, width: 1076), 'HD');
+    // QHD stays FHD; 1080p never reaches 4K.
+    expect(qualityLabelForTrack(height: 1440, width: 2560), 'FHD');
+    expect(qualityLabelForTrack(height: 1080, width: 1920), 'FHD');
+  });
+
   test('no width reported: height alone, as before', () {
     expect(qualityLabelForTrack(height: 2160), '4K');
     expect(qualityLabelForTrack(height: 1600), 'FHD');
