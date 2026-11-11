@@ -24,7 +24,8 @@ import 'package:nox_iptv/screens/sports_live_list_screen.dart';
 import 'package:nox_iptv/screens/sports_my_teams_screen.dart';
 import 'package:nox_iptv/screens/sports_league_manager_screen.dart';
 import 'package:nox_iptv/screens/sports_channels_screen.dart';
-import 'package:nox_iptv/screens/settings/sports_quality_settings_screen.dart';
+import 'package:nox_iptv/screens/settings/settings_menu_screen.dart';
+import 'package:nox_iptv/widgets/setting_row.dart';
 import 'package:nox_iptv/screens/tv_home_screen.dart';
 import 'package:nox_iptv/widgets/sports_widgets.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
@@ -1157,9 +1158,13 @@ void main() {
     expect(find.text('Home 0 vs Away 0 4K'), findsWidgets);
     Navigator.of(tester.element(find.byType(SportsScreen))).push(
         MaterialPageRoute<void>(
-            builder: (_) => const SportsQualitySettingsScreen()));
+            builder: (_) =>
+                const SettingsCategoryScreen(categoryId: 'sports')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(Switch));
+    final quality = find.widgetWithText(SettingRow, 'Prefer highest quality');
+    await tester.scrollUntilVisible(quality, 200,
+        scrollable: find.byType(Scrollable).last);
+    await tester.tap(quality);
     await tester.pumpAndSettle();
     expect(storage.getSportsPreferQuality(), isFalse);
     await tester.binding.handlePopRoute();

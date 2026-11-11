@@ -26,6 +26,9 @@ import '../utils/desktop_platform.dart';
 class AppPreferences extends ChangeNotifier {
   AppPreferences(this._storage);
 
+  /// For Settings rows that save straight to storage.
+  StorageService get storage => _storage;
+
   final StorageService _storage;
 
   late bool showClock;

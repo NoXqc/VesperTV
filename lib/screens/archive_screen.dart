@@ -23,6 +23,7 @@ import '../widgets/poster_card.dart';
 import '../widgets/roll_down_menu.dart';
 import '../widgets/tv_text_field_gate.dart';
 import '../services/app_preferences.dart';
+import '../services/storage_service.dart';
 import 'archive_live_tv_screen.dart';
 import 'archive_watch_list_screen.dart';
 import 'archive_catalog_screen.dart';
@@ -31,6 +32,7 @@ import 'archive_playback.dart';
 import 'settings/archive_sources_screen.dart';
 import 'settings/media_server_screen.dart';
 import '../utils/desktop_platform.dart';
+import '../widgets/glass_menu.dart';
 
 /// The Archive tab: classic, public-domain films and series from the
 /// user's own sources (Settings > Archive sources, any server speaking the
@@ -92,6 +94,40 @@ class _ArchiveScreenState extends State<ArchiveScreen>
 
   /// Last focused card index per row, so Up/Down lands where you were.
   final Map<String, int> _lastIndex = {};
+
+  /// Continue watching / Recently watched folded away with the eye beside
+  /// their title (owner, 2026-11-11, like the groups' playlists), per
+  /// viewer. A hidden row is just its title line: the eye and how many
+  /// titles it holds.
+  late final Set<String> _hiddenRows =
+      context.read<StorageService?>()?.getHubHiddenRows() ?? <String>{};
+  final Map<String, FocusNode> _eyeNodes = {};
+
+  FocusNode _eyeNode(String key) => _eyeNodes.putIfAbsent(
+      key, () => FocusNode(debugLabel: 'archive-row-eye'));
+
+  static bool _hasEye(ArchiveRow row) =>
+      row.continuations != null || row.isHistory;
+
+  bool _rowHidden(ArchiveRow row) =>
+      _hasEye(row) && _hiddenRows.contains(row.key);
+
+  Future<void> _toggleRowHidden(ArchiveRow row) async {
+    setState(() {
+      if (!_hiddenRows.remove(row.key)) _hiddenRows.add(row.key);
+      _lastIndex[row.key] = 0;
+    });
+    await context.read<StorageService?>()?.setHubHiddenRows(_hiddenRows);
+  }
+
+  /// Up from a row with an eye lands on its eye first.
+  void _focusEye(List<ArchiveRow> rows, int r) {
+    final row = rows[r];
+    setState(() => _focusedRow = r);
+    final ctx = _rowKey(row.key).currentContext;
+    if (ctx != null) Scrollable.ensureVisible(ctx, alignment: 0.05);
+    _focusWhenBuilt(_eyeNode(row.key));
+  }
   final Map<String, GlobalKey> _rowKeys = {};
   final Map<String, ScrollController> _rowScrolls = {};
 
@@ -256,6 +292,9 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     for (final n in _barRowNodes.values) {
       n.dispose();
     }
+    for (final n in _eyeNodes.values) {
+      n.dispose();
+    }
     _railScope.dispose();
     _contentScope.dispose();
     _firstRailNode.dispose();
@@ -282,6 +321,10 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   double get _rowHeaderHeight =>
       MediaQuery.textScalerOf(context).scale(15) * 1.3 + 20;
   double get _rowExtent => _rowHeaderHeight + PosterCard.height + 16;
+
+  /// A hidden row is only its title line (owner, 2026-11-11: less clutter).
+  double _extentOf(ArchiveRow row) =>
+      _rowHidden(row) ? _rowHeaderHeight + 6 : _rowExtent;
 
   GlobalKey _rowKey(String key) => _rowKeys.putIfAbsent(key, GlobalKey.new);
 
@@ -648,11 +691,11 @@ class _ArchiveScreenState extends State<ArchiveScreen>
             animation: service,
             builder: (_, child) =>
                 SimpleDialog(title: Text(tr('Search sources')), children: [
-                  SimpleDialogOption(
+                  GlassFocusFrame(child: SimpleDialogOption(
                       onPressed: () => Navigator.pop(ctx, ''),
-                      child: Text(tr('All sources'))),
+                      child: Text(tr('All sources')))),
                   for (final entry in service.searchStates(_type).entries)
-                    SimpleDialogOption(
+                    GlassFocusFrame(child: SimpleDialogOption(
                         onPressed: () => Navigator.pop(ctx, entry.key),
                         child: Text(
                             '${service.searchSourceNames(_type)[entry.key] ?? ''} · ${switch (entry.value) {
@@ -660,7 +703,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                           ArchiveSourceStatus.ready => tr('Results'),
                           ArchiveSourceStatus.empty => tr('No results'),
                           ArchiveSourceStatus.failed => tr('Unavailable'),
-                        }}'))
+                        }}')))
                 ])));
     if (!mounted || picked == null) return;
     service.selectSearchSource(_type, picked.isEmpty ? null : picked);
@@ -698,8 +741,17 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     } else if (_scroll.hasClients) {
       // Lazy rows have no context yet. Materialize the destination first,
       // including long jumps from the catalog buttons in the floating bar.
-      _scroll.jumpTo(
-          (r * _rowExtent).clamp(0.0, _scroll.position.maxScrollExtent));
+      var offset = 0.0;
+      for (var k = 0; k < r; k++) {
+        offset += _extentOf(rows[k]);
+      }
+      _scroll.jumpTo(offset.clamp(0.0, _scroll.position.maxScrollExtent));
+    }
+    // A hidden row has only its eye to land on.
+    if (_rowHidden(row)) {
+      _focusWhenBuilt(_eyeNode(row.key));
+      WidgetsBinding.instance.scheduleFrame();
+      return;
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focusCard(row, i);
@@ -716,14 +768,22 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     }
     if (rows.isEmpty) return KeyEventResult.ignored;
     final row = rows[_focusedRow.clamp(0, rows.length - 1)];
-    final i = _lastIndex[row.key] ?? 0;
+    final hidden = _rowHidden(row);
+    final onEye = _eyeNodes[row.key]?.hasFocus ?? false;
+    final i = hidden ? 0 : _lastIndex[row.key] ?? 0;
     final key = event.logicalKey;
     if (key == LogicalKeyboardKey.arrowDown) {
-      if (_focusedRow < rows.length - 1) _focusRow(rows, _focusedRow + 1);
+      if (onEye && !hidden) {
+        _focusRow(rows, _focusedRow);
+      } else if (_focusedRow < rows.length - 1) {
+        _focusRow(rows, _focusedRow + 1);
+      }
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowUp) {
-      if (_focusedRow > 0) {
+      if (!onEye && _hasEye(row)) {
+        _focusEye(rows, _focusedRow);
+      } else if (_focusedRow > 0) {
         _focusRow(rows, _focusedRow - 1);
       } else {
         _focusBar();
@@ -731,11 +791,13 @@ class _ArchiveScreenState extends State<ArchiveScreen>
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowRight) {
-      if (i < row.items.length - 1) _focusCard(row, i + 1);
+      if (!onEye && !hidden && i < row.items.length - 1) {
+        _focusCard(row, i + 1);
+      }
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowLeft) {
-      if (i > 0) {
+      if (i > 0 && !onEye) {
         _focusCard(row, i - 1);
       } else {
         _railScope.requestFocus();
@@ -1435,12 +1497,12 @@ class _ArchiveScreenState extends State<ArchiveScreen>
             shrinkWrap: true,
             children: [
               for (var i = 0; i < items.length; i++)
-                ListTile(
+                GlassFocusFrame(child: ListTile(
                   leading: Icon(items[i].$1),
                   title: Text(items[i].$2),
                   trailing: items[i].$3 ? const Icon(Icons.check) : null,
                   onTap: () => Navigator.of(sheet).pop(i),
-                ),
+                )),
             ],
           ),
         ),
@@ -1723,7 +1785,8 @@ class _ArchiveScreenState extends State<ArchiveScreen>
               child: ListView.builder(
                 controller: _scroll,
                 padding: const EdgeInsets.only(bottom: 40),
-                itemExtent: _rowExtent,
+                itemExtentBuilder: (i, _) =>
+                    i < rows.length ? _extentOf(rows[i]) : null,
                 scrollCacheExtent: ScrollCacheExtent.pixels(_rowExtent),
                 itemCount: rows.length,
                 findChildIndexCallback: (key) {
@@ -1751,18 +1814,60 @@ class _ArchiveScreenState extends State<ArchiveScreen>
         SizedBox(
           height: _rowHeaderHeight,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 14, 24, 6),
-            child: Text(_rowTitle(service, row),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: r == _focusedRow && _contentScope.hasFocus
-                        ? scheme.primary
-                        : Colors.white)),
+            padding: _hasEye(row)
+                ? const EdgeInsets.fromLTRB(24, 6, 24, 2)
+                : const EdgeInsets.fromLTRB(24, 14, 24, 6),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Flexible(
+                  child: Padding(
+                    padding: EdgeInsets.only(bottom: _hasEye(row) ? 4 : 0),
+                    child: Text(_rowTitle(service, row),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: r == _focusedRow && _contentScope.hasFocus
+                                ? scheme.primary
+                                : Colors.white)),
+                  ),
+                ),
+                if (_hasEye(row)) ...[
+                  const SizedBox(width: 10),
+                  _RowEye(
+                    key: ValueKey('archive-eye-${row.key}'),
+                    node: _eyeNode(row.key),
+                    hidden: _rowHidden(row),
+                    onTap: () => _toggleRowHidden(row),
+                    onFocus: () => setState(() {
+                      _focusedRow = r;
+                      _focusedRowKey = row.key;
+                    }),
+                  ),
+                  if (_rowHidden(row)) ...[
+                    const SizedBox(width: 10),
+                    Flexible(
+                      child: Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text(
+                          key: ValueKey('archive-hidden-${row.key}'),
+                          '${tr('{n} titles', {'n': row.items.length})} · '
+                          '${context.read<AppPreferences?>()?.isTelevision ?? false ? tr('OK shows them') : tr('Tap to show them')}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 13, color: Colors.white60)),
+                    ),
+                    ),
+                  ],
+                ],
+              ],
+            ),
           ),
         ),
+        if (!_rowHidden(row))
         SizedBox(
           height: PosterCard.height + 16,
           child: ListView.builder(
@@ -1856,6 +1961,72 @@ class _ArchiveScreenState extends State<ArchiveScreen>
           ),
         ),
       ],
+    );
+  }
+}
+
+/// The eye beside Continue watching / Recently watched: OK (or a tap)
+/// hides or shows the row's titles.
+class _RowEye extends StatefulWidget {
+  const _RowEye({
+    super.key,
+    required this.node,
+    required this.hidden,
+    required this.onTap,
+    required this.onFocus,
+  });
+
+  final FocusNode node;
+  final bool hidden;
+  final VoidCallback onTap;
+  final VoidCallback onFocus;
+
+  @override
+  State<_RowEye> createState() => _RowEyeState();
+}
+
+class _RowEyeState extends State<_RowEye> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      label: widget.hidden ? tr('Show this row') : tr('Hide this row'),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          focusNode: widget.node,
+          focusColor: Colors.transparent,
+          customBorder: const CircleBorder(),
+          onTap: widget.onTap,
+          onFocusChange: (f) {
+            setState(() => _focused = f);
+            if (f) widget.onFocus();
+          },
+          child: Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.black.withValues(alpha: 0.35),
+              border: Border.all(
+                  color: _focused ? scheme.primary : Colors.white24, width: 2),
+            ),
+            child: Icon(
+                widget.hidden
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
+                size: 17,
+                color: _focused
+                    ? scheme.primary
+                    : widget.hidden
+                        ? Colors.white54
+                        : Colors.white),
+          ),
+        ),
+      ),
     );
   }
 }

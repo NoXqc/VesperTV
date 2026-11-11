@@ -8,6 +8,7 @@ import 'package:nox_iptv/screens/settings/settings_menu_screen.dart';
 import 'package:nox_iptv/screens/settings/sports_country_settings_screen.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
 import 'package:nox_iptv/services/storage_service.dart';
+import 'package:nox_iptv/widgets/setting_row.dart';
 import 'package:nox_iptv/widgets/tv_menu_tile.dart';
 
 void main() {
@@ -31,20 +32,25 @@ void main() {
           child: MaterialApp(
               theme: ThemeData.dark(), home: const SettingsMenuScreen())));
       await tester.pumpAndSettle();
-      final category = find.widgetWithText(TvMenuTile, 'Sports Trak');
+      final category = find.widgetWithText(SettingRow, 'Sports Trak');
       await tester.ensureVisible(category);
       await tester.tap(category);
       await tester.pumpAndSettle();
+      final entry =
+          find.widgetWithText(SettingRow, 'Preferred channel countries');
       if (size.width >= 700) {
-        // Sports Mode is the first row, countries the second.
+        // Sports Mode, then the four Games rows, then countries.
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
         await tester.pumpAndSettle();
-        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
-        await tester.pumpAndSettle();
+        for (var i = 0; i < 5; i++) {
+          await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+          await tester.pumpAndSettle();
+        }
         await tester.sendKeyEvent(LogicalKeyboardKey.select);
       } else {
-        await tester.tap(
-            find.widgetWithText(TvMenuTile, 'Preferred channel countries'));
+        await tester.scrollUntilVisible(entry, 120,
+            scrollable: find.byType(Scrollable).last);
+        await tester.tap(entry);
       }
       await tester.pumpAndSettle();
       expect(find.byType(SportsCountrySettingsScreen), findsOneWidget);

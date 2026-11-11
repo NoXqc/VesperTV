@@ -173,6 +173,8 @@ class _CheckUpdatesScreenState extends State<CheckUpdatesScreen> {
         (context) => SettingsScaffold(
               title: tr('Check for Updates'),
               body: ListView(
+          // Sized to its rows: a floating panel hugs them.
+          shrinkWrap: true,
                 padding: const EdgeInsets.all(16),
                 children: [
                   Text(

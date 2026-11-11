@@ -5,7 +5,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:nox_iptv/screens/settings/theme_screen.dart';
+import 'package:nox_iptv/screens/settings/settings_menu_screen.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
 import 'package:nox_iptv/services/storage_service.dart';
 import 'package:nox_iptv/utils/constants.dart';
@@ -80,7 +80,7 @@ void main() {
         child: Consumer<AppPreferences>(builder: (_, value, __) {
           return MaterialApp(
             theme: RefinedFinish.apply(ThemeData.dark(), value.refinedFinish),
-            home: const ThemeScreen(),
+            home: const SettingsCategoryScreen(categoryId: 'appearance'),
           );
         })));
     final label = find.text('Refined finish');

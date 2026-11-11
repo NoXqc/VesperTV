@@ -41,7 +41,8 @@ import '../widgets/skip_segment_button.dart';
 import '../widgets/watch_game_button.dart';
 import '../services/watch_game_offer.dart';
 import '../services/desktop_player_control.dart';
-import '../services/skip_segments.dart';
+import '../services/skip_segments.dart';
+import '../widgets/glass_menu.dart';
 
 /// A deliberately standalone, Windows-only playback screen — see
 /// `pubspec.yaml`'s media_kit comment for why this exists at all:
@@ -712,7 +713,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                   ),
                 )
               else
-                ...history.map((c) => ListTile(
+                ...history.map((c) => GlassFocusFrame(child: ListTile(
                       dense: true,
                       leading:
                           const Icon(Icons.tv, color: Colors.white54, size: 20),
@@ -722,7 +723,7 @@ class _DesktopPlayerScreenState extends State<DesktopPlayerScreen> {
                           style: const TextStyle(
                               color: Colors.white, fontSize: 14)),
                       onTap: () => Navigator.of(sheetContext).pop(c),
-                    )),
+                    ))),
             ],
           ),
         ),

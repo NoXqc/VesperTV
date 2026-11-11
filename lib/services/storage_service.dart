@@ -1005,6 +1005,14 @@ class StorageService {
       _prefs.getBool(_vk(AppConstants.keyCompactUi)) ?? false;
   Future<void> setCompactUi(bool value) =>
       _prefs.setBool(_vk(AppConstants.keyCompactUi), value);
+
+  /// Media Hub rows hidden with their eye (row keys), per viewer.
+  Set<String> getHubHiddenRows() =>
+      (_prefs.getStringList(_vk(AppConstants.keyHubHiddenRows)) ?? const [])
+          .toSet();
+  Future<void> setHubHiddenRows(Set<String> keys) =>
+      _prefs.setStringList(_vk(AppConstants.keyHubHiddenRows), keys.toList());
+
   bool getGuideFocusPreview() =>
       _guideBool(AppConstants.keyGuideFocusPreview) ?? false;
   Future<void> setGuideFocusPreview(bool value) =>

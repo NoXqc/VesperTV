@@ -142,6 +142,8 @@ class _TmdbSettingsScreenState extends State<TmdbSettingsScreen> {
     return SettingsScaffold(
       title: tr('TMDB (Release Dates)'),
       body: ListView(
+          // Sized to its rows: a floating panel hugs them.
+          shrinkWrap: true,
         padding: const EdgeInsets.all(16),
         children: [
           Text(

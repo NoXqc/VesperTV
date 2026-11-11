@@ -21,6 +21,8 @@ class CommunityScreen extends StatelessWidget {
     return SettingsScaffold(
       title: tr('Discord'),
       body: ListView(
+          // Sized to its rows: a floating panel hugs them.
+          shrinkWrap: true,
         padding: const EdgeInsets.all(16),
         children: [
           Text(tr(

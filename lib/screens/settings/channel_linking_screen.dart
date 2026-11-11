@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../models/channel.dart';
 import '../../services/playlist_manager.dart';
+import '../../widgets/glass_menu.dart';
 import '../../widgets/auto_pair_flow.dart';
 import '../../widgets/settings_scaffold.dart';
 import '../../widgets/tv_text_field_gate.dart';
@@ -218,7 +219,7 @@ class _ChannelLinkingScreenState extends State<ChannelLinkingScreen> {
                       });
                       isError = false;
                     }
-                    return ListTile(
+                    return GlassFocusFrame(child: ListTile(
                       focusNode: i == 0 ? _firstResultFocus : null,
                       title: Text(channel.name,
                           maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -250,7 +251,7 @@ class _ChannelLinkingScreenState extends State<ChannelLinkingScreen> {
                                 ));
                               }
                             },
-                    );
+                    ));
                   },
                 ),
         ),
@@ -298,6 +299,8 @@ class _PickLinkedChannelScreenState extends State<_PickLinkedChannelScreen> {
             .toList();
 
     return SettingsScaffold(
+          // A multi-pane tool: the glass panel spans the screen.
+          wide: true,
       title: tr('Link "{name}"', {'name': widget.source.name}),
       body: Column(
         children: [
@@ -328,13 +331,13 @@ class _PickLinkedChannelScreenState extends State<_PickLinkedChannelScreen> {
                     itemCount: filtered.length,
                     itemBuilder: (context, i) {
                       final channel = filtered[i];
-                      return ListTile(
+                      return GlassFocusFrame(child: ListTile(
                         title: Text(channel.name,
                             maxLines: 1, overflow: TextOverflow.ellipsis),
                         subtitle:
                             Text(playlist.playlistNameFor(channel.playlistId)),
                         onTap: () => Navigator.of(context).pop(channel),
-                      );
+                      ));
                     },
                   ),
           ),

@@ -78,6 +78,8 @@ class _SendLogScreenState extends State<SendLogScreen> {
       (context) => SettingsScaffold(
         title: tr('Send log'),
         body: ListView(
+          // Sized to its rows: a floating panel hugs them.
+          shrinkWrap: true,
           padding: const EdgeInsets.all(16),
           children: [
             Text(

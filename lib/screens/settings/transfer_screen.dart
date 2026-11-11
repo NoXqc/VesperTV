@@ -154,7 +154,7 @@ class _SendScreenState extends State<_SendScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-                tr('On the other device, open Settings > Transfer to another device > Receive, and enter:'),
+                tr('On the other device, open Settings > Backup & devices > Transfer to another device > Receive, and enter:'),
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white70, fontSize: 16)),
             const SizedBox(height: 20),
@@ -407,7 +407,7 @@ class _CloudSendScreenState extends State<_CloudSendScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-                tr('On the other device, open Settings > Transfer to another device > Receive, and enter:'),
+                tr('On the other device, open Settings > Backup & devices > Transfer to another device > Receive, and enter:'),
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white70, fontSize: 16)),
             const SizedBox(height: 20),

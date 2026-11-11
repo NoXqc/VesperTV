@@ -43,6 +43,8 @@ class _PlaylistPriorityScreenState extends State<PlaylistPriorityScreen> {
     return withTvThemeIfNeeded(
         context,
         (context) => SettingsScaffold(
+          // A multi-pane tool: the glass panel spans the screen.
+          wide: true,
               title: tr('Playlist Priority'),
               body: ListView(
                 padding: const EdgeInsets.all(16),

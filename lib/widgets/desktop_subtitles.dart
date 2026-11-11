@@ -277,7 +277,7 @@ class _DesktopSubtitleButtonState extends State<DesktopSubtitleButton> {
               selected: false,
               icon: Icons.cloud_download_outlined,
               title: tr('Search online subtitles'),
-              subtitle: tr('From your add-ons (Settings > Add-ons)'),
+              subtitle: tr('From your add-ons (Settings > Playlists & sources > Online subtitles)'),
               result: 'online'),
         _option(sheet,
             selected: false,

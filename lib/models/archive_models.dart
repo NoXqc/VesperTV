@@ -359,6 +359,7 @@ class ArchiveSource {
     required this.name,
     this.description = '',
     this.logoUrl,
+    this.version,
     this.catalogs = const [],
     this.catalogProviderUrl,
     this.enabled = true,
@@ -375,6 +376,10 @@ class ArchiveSource {
   final String name;
   final String description;
   final String? logoUrl;
+
+  /// The manifest's `version` (Settings > Media Hub sources shows it).
+  /// Sources saved before it was read get it at their next manifest refresh.
+  final String? version;
   final List<ArchiveCatalog> catalogs;
 
   /// Older saved manifests omitted search-only catalogs; recheck them once.
@@ -505,6 +510,7 @@ class ArchiveSource {
         name: name,
         description: description,
         logoUrl: logoUrl,
+        version: version,
         catalogs: catalogs ?? this.catalogs,
         catalogProviderUrl: catalogProviderUrl,
         enabled: enabled ?? this.enabled,
@@ -522,6 +528,7 @@ class ArchiveSource {
         'name': name,
         'description': description,
         'logo': logoUrl,
+        if (version != null) 'version': version,
         'catalogs': [for (final c in catalogs) c.toJson()],
         if (catalogProviderUrl != null) 'catalogProvider': catalogProviderUrl,
         'enabled': enabled,
@@ -548,6 +555,7 @@ class ArchiveSource {
       name: (j['name'] as String?) ?? j['url'] as String,
       description: (j['description'] as String?) ?? '',
       logoUrl: j['logo'] as String?,
+      version: j['version'] is String ? j['version'] as String : null,
       // A stream-only source's rows are re-derived from its types, so new
       // provider rows (and next year's "New") reach sources added earlier.
       // (A tracker's rows are its own lists — kept as stored.)

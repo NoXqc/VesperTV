@@ -13,7 +13,8 @@ import 'package:nox_iptv/services/playback_service.dart';
 import 'package:nox_iptv/services/playlist_manager.dart';
 import 'package:nox_iptv/services/storage_service.dart';
 import 'package:nox_iptv/services/viewer_profile_service.dart';
-import 'package:nox_iptv/screens/settings/general_settings_screen.dart';
+import 'package:nox_iptv/screens/settings/settings_menu_screen.dart';
+import 'package:nox_iptv/widgets/setting_row.dart';
 import 'package:nox_iptv/widgets/game_reminder_overlay.dart';
 import 'package:nox_iptv/widgets/goals_alert_overlay.dart';
 import 'package:nox_iptv/widgets/game_score_alert_menu_tile.dart';
@@ -344,16 +345,17 @@ void main() {
   });
 
   testWidgets(
-      'Interface Goals alert toggle is off by default and persists opt-in',
+      'Sports Trak Goals alert toggle is off by default and persists opt-in',
       (tester) async {
     await setup();
     await storage.setGoalsAlert(false);
     await mount(tester,
-        page: const GeneralSettingsScreen(
-            sections: {'goals'}, title: 'Goals alert'));
+        page: const SettingsCategoryScreen(categoryId: 'sports'));
     expect(storage.getGoalsAlert(), isFalse);
-    expect(find.byType(Switch), findsNWidgets(2));
-    await tester.tap(find.byType(Switch).first);
+    final row = find.widgetWithText(SettingRow, 'Goals alert');
+    await tester.scrollUntilVisible(row, 200,
+        scrollable: find.byType(Scrollable).last);
+    await tester.tap(row);
     await tester.pump();
     expect(storage.getGoalsAlert(), isTrue);
     final reopened = StorageService();

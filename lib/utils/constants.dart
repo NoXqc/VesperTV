@@ -539,6 +539,9 @@ class AppConstants {
   /// Settings > Interface > Tabs > Compact UI: smaller tabs, groups and
   /// channel rows in the TV home (per viewer, like the guide layout).
   static const String keyCompactUi = 'vesper_compact_ui';
+  /// Media Hub rows folded away with their eye (Continue watching,
+  /// Recently watched), per viewer.
+  static const String keyHubHiddenRows = 'vesper_hub_hidden_rows';
 
   /// Opt-in: the live channel the remote stops on plays in the preview.
   static const String keyGuideFocusPreview = 'vesper_guide_focus_preview';

@@ -1281,7 +1281,7 @@ final List<VesperTool> vesperTools = [
         'of one group with their guide now / next (action channels, e.g. '
         'every "NBA League Pass" channel), or hide / show the groups whose '
         'name contains some words (e.g. hide every group with "Turkish"). '
-        'Hidden groups come back in Settings > Playlists. For single '
+        'Hidden groups come back in Settings > Playlists & sources > Playlist Manager. For single '
         'channels, rules or renames use playlist_editor; for the viewer\'s '
         'own groups (new groups of picked channels) use my_groups.',
     schema: {

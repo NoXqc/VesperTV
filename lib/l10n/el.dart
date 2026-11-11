@@ -147,8 +147,8 @@ const Map<String, String> kEl = {
   // Startup profile selector.
   "Launch with profiles selector": "Εκκίνηση με επιλογή προφίλ",
   'Also behind "Who is watching?"': 'Και πίσω από το «Ποιος παρακολουθεί;»',
-  'Shows while your profile is highlighted. Needs Launch with profiles selector (Settings > Profiles).':
-      'Εμφανίζεται όταν το προφίλ σας είναι επιλεγμένο. Χρειάζεται την Εκκίνηση με επιλογή προφίλ (Ρυθμίσεις > Προφίλ).',
+  'Shows while your profile is highlighted. Needs Launch with profiles selector (Settings > Profiles & startup).':
+      'Εμφανίζεται όταν το προφίλ σας είναι επιλεγμένο. Χρειάζεται την Εκκίνηση με επιλογή προφίλ (Ρυθμίσεις > Προφίλ και εκκίνηση).',
   "Choose a profile after the splash, before the app opens. Applies from the next start.":
       "Επιλέξτε προφίλ μετά την οθόνη εκκίνησης, πριν ανοίξει η εφαρμογή. Ισχύει από την επόμενη εκκίνηση.",
   "Who is watching?": "Ποιος παρακολουθεί;",
@@ -407,8 +407,8 @@ const Map<String, String> kEl = {
   "Forced": "Υποχρεωτικοί",
   "Online": "Online",
   "Search online subtitles": "Αναζήτηση υποτίτλων online",
-  "From your add-ons (Settings > Add-ons)":
-      "Από τα πρόσθετά σας (Ρυθμίσεις > Πρόσθετα)",
+  "From your add-ons (Settings > Playlists & sources > Online subtitles)":
+      "Από τα πρόσθετά σας (Ρυθμίσεις > Λίστες και πηγές > Υπότιτλοι online)",
   "Online subtitles": "Υπότιτλοι online",
   "No subtitles found for this title.":
       "Δεν βρέθηκαν υπότιτλοι για αυτόν τον τίτλο.",
@@ -1019,6 +1019,13 @@ const Map<String, String> kEl = {
   "No categories yet — load a playlist first.":
       "Δεν υπάρχουν ακόμη κατηγορίες — φορτώστε πρώτα μια λίστα.",
   'Search groups (starts with)': 'Αναζήτηση ομάδων (αρχίζει με)',
+  "Countries": "Χώρες",
+  "Countries and prefixes": "Χώρες και προθέματα",
+  "Found at the start of the group names. Select one to show or hide all its groups at once.": "Βρέθηκαν στην αρχή των ονομάτων των ομάδων. Επιλέξτε μία για να εμφανίσετε ή να κρύψετε όλες τις ομάδες της μαζί.",
+  "1 group": "1 ομάδα",
+  "{count} groups": "{count} ομάδες",
+  "{shown} of {total} shown": "{shown} από {total} εμφανίζονται",
+  "Groups without a country": "Ομάδες χωρίς χώρα",
   '{shown} of {total} groups': '{shown} από {total} ομάδες',
   'Show results': 'Εμφάνιση αποτελεσμάτων',
   'Hide results': 'Απόκρυψη αποτελεσμάτων',
@@ -1318,8 +1325,8 @@ const Map<String, String> kEl = {
       "Στάλθηκε! Ολοκληρώστε στην άλλη συσκευή.",
   "This code has expired. Go back and start again.":
       "Αυτός ο κωδικός έληξε. Επιστρέψτε και ξεκινήστε ξανά.",
-  "On the other device, open Settings > Transfer to another device > Receive, and enter:":
-      "Στην άλλη συσκευή, ανοίξτε Ρυθμίσεις > Μεταφορά σε άλλη συσκευή > Λήψη και εισαγάγετε:",
+  "On the other device, open Settings > Backup & devices > Transfer to another device > Receive, and enter:":
+      "Στην άλλη συσκευή, ανοίξτε Ρυθμίσεις > Αντίγραφα και συσκευές > Μεταφορά σε άλλη συσκευή > Λήψη και εισαγάγετε:",
   "This device: {address} · the code works once, for 10 minutes":
       "Αυτή η συσκευή: {address} · ο κωδικός λειτουργεί μία φορά, για 10 λεπτά",
   "Couldn't find the other device. Check the code, and that both devices are on the same Wi-Fi with the code still showing.":
@@ -1482,6 +1489,8 @@ const Map<String, String> kEl = {
   "Stream {n}": "Ροή {n}",
   "Watch tracking powered by Trakt and Simkl; VesperTV is not affiliated with or endorsed by either.":
       "Η παρακολούθηση γίνεται μέσω Trakt και Simkl· το VesperTV δεν συνδέεται ούτε εγκρίνεται από καμία από τις δύο.",
+  "Sports scores, schedules and standings come from ESPN's and TheSportsDB's public data; VesperTV is not affiliated with or endorsed by either.":
+      "Τα αθλητικά σκορ, τα προγράμματα και οι βαθμολογίες προέρχονται από τα δημόσια δεδομένα του ESPN και του TheSportsDB· το VesperTV δεν συνδέεται ούτε εγκρίνεται από κανένα από τα δύο.",
   "Powered by Trakt (trakt.tv) and Simkl (simkl.com).":
       "Με την υποστήριξη του Trakt (trakt.tv) και του Simkl (simkl.com).",
   "VesperTV is not affiliated with or endorsed by Trakt or Simkl.":
@@ -2478,8 +2487,8 @@ const Map<String, String> kEl = {
   "Recovery code": "Κωδικός ανάκτησης",
   "Save this code. It's the only way back in if you lose all your devices. We can't recover it.":
       "Αποθηκεύστε αυτόν τον κωδικό. Είναι ο μόνος τρόπος να αποκτήσετε ξανά πρόσβαση αν χάσετε όλες τις συσκευές σας. Δεν μπορούμε να τον ανακτήσουμε.",
-  "On the other device, open Settings > Device & data > Sync > I have a code.":
-      "Στην άλλη συσκευή, ανοίξτε Ρυθμίσεις > Συσκευή και δεδομένα > Συγχρονισμός > Έχω κωδικό.",
+  "On the other device, open Settings > Backup & devices > Sync > I have a code.":
+      "Στην άλλη συσκευή, ανοίξτε Ρυθμίσεις > Αντίγραφα και συσκευές > Συγχρονισμός > Έχω κωδικό.",
   "Expires in {time}": "Λήγει σε {time}",
   "I saved my recovery code": "Αποθήκευσα τον κωδικό ανάκτησης",
   "Enter your 26-character recovery code":
@@ -3260,4 +3269,190 @@ const Map<String, String> kEl = {
       "Συμπαγής εμφάνιση",
   "Smaller tabs, groups and channel rows so more fit on screen. Just for this profile.":
       "Μικρότερες καρτέλες, ομάδες και σειρές καναλιών, ώστε να χωρούν περισσότερα στην οθόνη. Μόνο για αυτό το προφίλ.",
+  // Settings rework (2026-11-10).
+  "Playlists & sources":
+      "Λίστες και πηγές",
+  "Where your channels, movies and shows come from.":
+      "Από πού έρχονται τα κανάλια, οι ταινίες και οι σειρές σας.",
+  "TV guide (EPG)":
+      "Οδηγός TV (EPG)",
+  "Appearance":
+      "Εμφάνιση",
+  "Colours, language, Home, tabs and how lists look.":
+      "Χρώματα, γλώσσα, Αρχική, καρτέλες και εμφάνιση λιστών.",
+  "Look":
+      "Στυλ",
+  "The colour of the focus outline, the selected tab and badges. Each profile has its own.":
+      "Το χρώμα του περιγράμματος επιλογής, της επιλεγμένης καρτέλας και των σημάτων. Κάθε προφίλ έχει το δικό του.",
+  "Language and clock":
+      "Γλώσσα και ώρα",
+  "A picture of your own behind Home and Settings, just for this profile.":
+      "Μια δική σας εικόνα πίσω από την Αρχική και τις Ρυθμίσεις, μόνο για αυτό το προφίλ.",
+  "Profiles row on Home":
+      "Σειρά προφίλ στην Αρχική",
+  "The profile cards at the top of Home.":
+      "Οι κάρτες προφίλ στο πάνω μέρος της Αρχικής.",
+  "Catch-up group":
+      "Ομάδα Catch-up",
+  "The TV tab's Catch-up row (every channel you can replay).":
+      "Η γραμμή Catch-up της καρτέλας TV (όλα τα κανάλια με επανάληψη).",
+  "Movies & TV Shows":
+      "Ταινίες και σειρές",
+  "Audio & subtitles":
+      "Ήχος και υπότιτλοι",
+  "On TV show episodes, the Up Next card counts down and the next episode starts by itself. Never: no countdown; the episode plays to its end.":
+      "Στα επεισόδια σειρών, η κάρτα Επόμενο μετρά αντίστροφα και το επόμενο επεισόδιο ξεκινά μόνο του. Ποτέ: χωρίς αντίστροφη μέτρηση, το επεισόδιο παίζει ως το τέλος.",
+  "Profiles & startup":
+      "Προφίλ και εκκίνηση",
+  "Who is watching, and what happens when the app opens.":
+      "Ποιος βλέπει και τι γίνεται όταν ανοίγει η εφαρμογή.",
+  "Resume last channel":
+      "Συνέχιση τελευταίου καναλιού",
+  "What plays after the splash.":
+      "Τι παίζει μετά την οθόνη εκκίνησης.",
+  "What plays after the splash. Off: nothing plays at startup (a \"Hold > to resume\" reminder instead).":
+      "Τι παίζει μετά την οθόνη εκκίνησης. Ανενεργό: τίποτα δεν παίζει στην εκκίνηση (αντί γι' αυτό, υπενθύμιση «Κρατήστε > για συνέχεια»).",
+  "With the guide open":
+      "Με ανοιχτό τον οδηγό",
+  "Recordings & downloads":
+      "Εγγραφές και λήψεις",
+  "Backup & devices":
+      "Αντίγραφα και συσκευές",
+  "Help":
+      "Βοήθεια",
+  "Tips, support and how to reach us.":
+      "Συμβουλές, υποστήριξη και πώς να μας βρείτε.",
+  "Advanced":
+      "Για προχωρημένους",
+  "Fixes for some devices and extra tools. Most people never need these.":
+      "Διορθώσεις για ορισμένες συσκευές και επιπλέον εργαλεία. Οι περισσότεροι δεν τα χρειάζονται ποτέ.",
+  "Device fixes":
+      "Διορθώσεις συσκευής",
+  "Hide the picture behind other pages":
+      "Απόκρυψη εικόνας πίσω από άλλες σελίδες",
+  "Info and tips":
+      "Πληροφορίες και συμβουλές",
+  "Keys and services":
+      "Κλειδιά και υπηρεσίες",
+  "Start here":
+      "Ξεκινήστε εδώ",
+  "An M3U link or an Xtream Codes login":
+      "Ένας σύνδεσμος M3U ή ένα λογαριασμός Xtream Codes",
+  "Start early":
+      "Έναρξη νωρίτερα",
+  "Keep recording":
+      "Συνέχιση εγγραφής",
+  "Speed limit":
+      "Όριο ταχύτητας",
+  "Suggested start":
+      "Προτεινόμενη έναρξη",
+  "Storage":
+      "Αποθήκευση",
+  "Space for recordings":
+      "Χώρος για εγγραφές",
+  "Space for downloads":
+      "Χώρος για λήψεις",
+  "{min} min":
+      "{min} λεπτά",
+  "Search settings":
+      "Αναζήτηση ρυθμίσεων",
+  "Type a word, like subtitles, clock or Atmos. OK on a result changes it right there.":
+      "Πληκτρολογήστε μια λέξη, όπως υπότιτλοι, ώρα ή Atmos. Το OK σε ένα αποτέλεσμα το αλλάζει επί τόπου.",
+  "No setting matches \"{query}\".":
+      "Καμία ρύθμιση δεν ταιριάζει με «{query}».",
+  // Media Hub sources as one list, Manage from phone, row eye (2026-11-11).
+  "Streams":
+      "Ροές",
+  "Media servers":
+      "Διακομιστές πολυμέσων",
+  "Manage from phone":
+      "Διαχείριση από το κινητό",
+  "{n} sources · {on} on":
+      "{n} πηγές · {on} ενεργές",
+  "No sources here yet. Add one with Add a source.":
+      "Καμία πηγή εδώ ακόμα. Πρόσθεσε μία από την Προσθήκη πηγής.",
+  "Add, remove, turn on or off and copy links from your phone.":
+      "Πρόσθεσε, αφαίρεσε, ενεργοποίησε ή απενεργοποίησε και αντίγραψε συνδέσμους από το κινητό.",
+  "Show the code":
+      "Εμφάνιση κωδικού",
+  "Scan it with your phone's camera":
+      "Σάρωσέ τον με την κάμερα του κινητού",
+  "Your phone gets this TV's list of sources: add, remove, turn on or off, copy a link. From any network.":
+      "Το κινητό σου παίρνει τη λίστα πηγών αυτής της τηλεόρασης: προσθήκη, αφαίρεση, ενεργοποίηση, αντιγραφή συνδέσμου. Από οποιοδήποτε δίκτυο.",
+  "Not available right now. Try again in a moment.":
+      "Μη διαθέσιμο τώρα. Δοκίμασε ξανά σε λίγο.",
+  "Scan with your phone's camera.":
+      "Σάρωσε με την κάμερα του κινητού.",
+  "Works from any network while VesperTV is open, for an hour after its last use. On and Under Other are for the profile in use here.":
+      "Λειτουργεί από οποιοδήποτε δίκτυο όσο είναι ανοιχτό το VesperTV, για μία ώρα μετά την τελευταία χρήση. Το Ενεργή και το Στα Άλλα ισχύουν για το προφίλ σε χρήση εδώ.",
+  "Order, rename, pin or hide its rows":
+      "Σειρά, μετονομασία, καρφίτσωμα ή απόκρυψη σειρών",
+  "The rows of the Media Hub tab. Hiding a row keeps its source.":
+      "Οι σειρές της καρτέλας Media Hub. Η απόκρυψη σειράς κρατά την πηγή της.",
+  "Refresh Media Hub":
+      "Ανανέωση Media Hub",
+  "Reads every add-on again: new catalogs, logos, versions":
+      "Ξαναδιαβάζει κάθε πρόσθετο: νέοι κατάλογοι, λογότυπα, εκδόσεις",
+  "Media Hub refreshed.":
+      "Το Media Hub ανανεώθηκε.",
+  "A link, Stremio, a media server or Trakt / Simkl":
+      "Σύνδεσμος, Stremio, διακομιστής ή Trakt / Simkl",
+  "Catalogs":
+      "Κατάλογοι",
+  "Lists":
+      "Λίστες",
+  "Built in":
+      "Ενσωματωμένη",
+  "Under Other":
+      "Στα Άλλα",
+  "On. OK turns it off, Right for its options.":
+      "Ενεργή. Το OK την απενεργοποιεί, Δεξιά για επιλογές.",
+  "Off. OK turns it on, Right for its options.":
+      "Ανενεργή. Το OK την ενεργοποιεί, Δεξιά για επιλογές.",
+  "On for this profile. OK turns it off, Right for its options.":
+      "Ενεργή για αυτό το προφίλ. Το OK την απενεργοποιεί, Δεξιά για επιλογές.",
+  "Off for this profile. OK turns it on, Right for its options.":
+      "Ανενεργή για αυτό το προφίλ. Το OK την ενεργοποιεί, Δεξιά για επιλογές.",
+  "Options for {name}: Show under Other, TV add-on, its link and Remove.":
+      "Επιλογές για {name}: Εμφάνιση στα Άλλα, πρόσθετο TV, σύνδεσμος και Αφαίρεση.",
+  "This removes it from this device.":
+      "Θα αφαιρεθεί από αυτή τη συσκευή.",
+  "On this device":
+      "Σε αυτή τη συσκευή",
+  "Just for this profile":
+      "Μόνο για αυτό το προφίλ",
+  "Its channels in Media Hub > Live TV":
+      "Τα κανάλια του στο Media Hub > Ζωντανή TV",
+  "See and copy its link":
+      "Δες και αντίγραψε τον σύνδεσμο",
+  "From this device":
+      "Από αυτή τη συσκευή",
+  "For every profile on this device":
+      "Για όλα τα προφίλ αυτής της συσκευής",
+  "Scan, paste the link on your phone":
+      "Σάρωσε και επικόλλησε τον σύνδεσμο στο κινητό",
+  "Your whole list on your phone":
+      "Όλη η λίστα σου στο κινητό",
+  "Sign in once, pick your add-ons":
+      "Σύνδεση μία φορά, διάλεξε πρόσθετα",
+  "Your own media server":
+      "Ο δικός σου διακομιστής",
+  "Your lists in the Media Hub":
+      "Οι λίστες σου στο Media Hub",
+  "OpenSubtitles, or any subtitle add-on":
+      "OpenSubtitles ή οποιοδήποτε πρόσθετο υποτίτλων",
+  "An add-on link ends with manifest.json.":
+      "Ο σύνδεσμος πρόσθετου τελειώνει σε manifest.json.",
+  "Checks the link, then adds it":
+      "Ελέγχει τον σύνδεσμο και τον προσθέτει",
+  "Other ways":
+      "Άλλοι τρόποι",
+  "Show this row":
+      "Εμφάνιση αυτής της σειράς",
+  "Hidden":
+      "Κρυφή",
+  "OK shows them":
+      "Το OK τους εμφανίζει",
+  "Tap to show them":
+      "Πάτα για να εμφανιστούν",
 };

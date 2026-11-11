@@ -147,8 +147,8 @@ const Map<String, String> kIt = {
   // Startup profile selector.
   "Launch with profiles selector": "Avvia con il selettore dei profili",
   'Also behind "Who is watching?"': 'Anche dietro «Chi sta guardando?»',
-  'Shows while your profile is highlighted. Needs Launch with profiles selector (Settings > Profiles).':
-      'Appare quando il tuo profilo è evidenziato. Richiede Avvia con il selettore dei profili (Impostazioni > Profili).',
+  'Shows while your profile is highlighted. Needs Launch with profiles selector (Settings > Profiles & startup).':
+      'Appare quando il tuo profilo è evidenziato. Richiede Avvia con il selettore dei profili (Impostazioni > Profili e avvio).',
   "Choose a profile after the splash, before the app opens. Applies from the next start.":
       "Scegli un profilo dopo la schermata iniziale, prima di aprire l’app. Si applica dal prossimo avvio.",
   "Who is watching?": "Chi sta guardando?",
@@ -413,8 +413,8 @@ const Map<String, String> kIt = {
   'Forced': "Forzati",
   'Online': 'Online',
   'Search online subtitles': 'Cerca sottotitoli online',
-  'From your add-ons (Settings > Add-ons)':
-      'Dai tuoi componenti (Impostazioni > Componenti aggiuntivi)',
+  'From your add-ons (Settings > Playlists & sources > Online subtitles)':
+      'Dai tuoi componenti (Impostazioni > Playlist e sorgenti > Sottotitoli online)',
   'Online subtitles': 'Sottotitoli online',
   'No subtitles found for this title.':
       'Nessun sottotitolo trovato per questo titolo.',
@@ -1043,6 +1043,13 @@ const Map<String, String> kIt = {
   'No categories yet — load a playlist first.':
       "Nessuna categoria: prima carica una lista.",
   'Search groups (starts with)': 'Cerca gruppi (inizia con)',
+  "Countries": "Paesi",
+  "Countries and prefixes": "Paesi e prefissi",
+  "Found at the start of the group names. Select one to show or hide all its groups at once.": "Trovati all'inizio dei nomi dei gruppi. Scegline uno per mostrare o nascondere tutti i suoi gruppi in una volta.",
+  "1 group": "1 gruppo",
+  "{count} groups": "{count} gruppi",
+  "{shown} of {total} shown": "{shown} di {total} visibili",
+  "Groups without a country": "Gruppi senza paese",
   '{shown} of {total} groups': '{shown} di {total} gruppi',
   'Show results': 'Mostra risultati',
   'Hide results': 'Nascondi risultati',
@@ -1358,8 +1365,8 @@ const Map<String, String> kIt = {
       "Inviato! Completa sull'altro dispositivo.",
   'This code has expired. Go back and start again.':
       "Questo codice è scaduto. Torna indietro e ricomincia.",
-  'On the other device, open Settings > Transfer to another device > Receive, and enter:':
-      "Sull'altro dispositivo, apri Impostazioni > Trasferisci su un altro dispositivo > Ricevi e inserisci:",
+  'On the other device, open Settings > Backup & devices > Transfer to another device > Receive, and enter:':
+      "Sull'altro dispositivo, apri Impostazioni > Backup e dispositivi > Trasferisci su un altro dispositivo > Ricevi e inserisci:",
   'This device: {address} · the code works once, for 10 minutes':
       "Questo dispositivo: {address} · il codice vale una volta, per 10 minuti",
   'Couldn\'t find the other device. Check the code, and that both devices are on the same Wi-Fi with the code still showing.':
@@ -1525,6 +1532,8 @@ const Map<String, String> kIt = {
   // Trakt & Simkl (trackers_screen.dart, tracker rows)
   'Watch tracking powered by Trakt and Simkl; VesperTV is not affiliated with or endorsed by either.':
       "Tracciamento della visione fornito da Trakt e Simkl; VesperTV non è affiliato né approvato da nessuno dei due.",
+  "Sports scores, schedules and standings come from ESPN's and TheSportsDB's public data; VesperTV is not affiliated with or endorsed by either.":
+      "Risultati, calendari e classifiche sportive provengono dai dati pubblici di ESPN e TheSportsDB; VesperTV non è affiliato né approvato da nessuno dei due.",
   'Powered by Trakt (trakt.tv) and Simkl (simkl.com).':
       "Basato su Trakt (trakt.tv) e Simkl (simkl.com).",
   'VesperTV is not affiliated with or endorsed by Trakt or Simkl.':
@@ -2524,8 +2533,8 @@ const Map<String, String> kIt = {
   "Recovery code": "Codice di recupero",
   "Save this code. It's the only way back in if you lose all your devices. We can't recover it.":
       "Conserva questo codice. È l’unico modo per recuperare l’accesso se perdi tutti i dispositivi. Non possiamo recuperarlo.",
-  "On the other device, open Settings > Device & data > Sync > I have a code.":
-      "Sull’altro dispositivo, apri Impostazioni > Dispositivo e dati > Sincronizzazione > Ho un codice.",
+  "On the other device, open Settings > Backup & devices > Sync > I have a code.":
+      "Sull’altro dispositivo, apri Impostazioni > Backup e dispositivi > Sincronizzazione > Ho un codice.",
   "Expires in {time}": "Scade tra {time}",
   "I saved my recovery code": "Ho salvato il mio codice di recupero",
   "Enter your 26-character recovery code":
@@ -3305,4 +3314,190 @@ const Map<String, String> kIt = {
       "Interfaccia compatta",
   "Smaller tabs, groups and channel rows so more fit on screen. Just for this profile.":
       "Schede, gruppi e righe dei canali più piccoli per vederne di più sullo schermo. Solo per questo profilo.",
+  // Settings rework (2026-11-10).
+  "Playlists & sources":
+      "Playlist e sorgenti",
+  "Where your channels, movies and shows come from.":
+      "Da dove arrivano i tuoi canali, film e serie.",
+  "TV guide (EPG)":
+      "Guida TV (EPG)",
+  "Appearance":
+      "Aspetto",
+  "Colours, language, Home, tabs and how lists look.":
+      "Colori, lingua, Home, schede e aspetto degli elenchi.",
+  "Look":
+      "Stile",
+  "The colour of the focus outline, the selected tab and badges. Each profile has its own.":
+      "Il colore del contorno di selezione, della scheda scelta e dei badge. Ogni profilo ha il suo.",
+  "Language and clock":
+      "Lingua e ora",
+  "A picture of your own behind Home and Settings, just for this profile.":
+      "Un'immagine tua dietro Home e Impostazioni, solo per questo profilo.",
+  "Profiles row on Home":
+      "Riga dei profili in Home",
+  "The profile cards at the top of Home.":
+      "Le schede dei profili in cima alla Home.",
+  "Catch-up group":
+      "Gruppo Replay",
+  "The TV tab's Catch-up row (every channel you can replay).":
+      "La riga Replay della scheda TV (tutti i canali da rivedere).",
+  "Movies & TV Shows":
+      "Film e serie TV",
+  "Audio & subtitles":
+      "Audio e sottotitoli",
+  "On TV show episodes, the Up Next card counts down and the next episode starts by itself. Never: no countdown; the episode plays to its end.":
+      "Negli episodi delle serie, la scheda Prossimo fa il conto alla rovescia e l'episodio successivo parte da solo. Mai: nessun conto alla rovescia, l'episodio va fino alla fine.",
+  "Profiles & startup":
+      "Profili e avvio",
+  "Who is watching, and what happens when the app opens.":
+      "Chi sta guardando e cosa succede all'apertura dell'app.",
+  "Resume last channel":
+      "Riprendi l'ultimo canale",
+  "What plays after the splash.":
+      "Cosa parte dopo la schermata iniziale.",
+  "What plays after the splash. Off: nothing plays at startup (a \"Hold > to resume\" reminder instead).":
+      "Cosa parte dopo la schermata iniziale. Disattivato: all'avvio non parte nulla (al suo posto un promemoria «Tieni premuto > per riprendere»).",
+  "With the guide open":
+      "Con la guida aperta",
+  "Recordings & downloads":
+      "Registrazioni e download",
+  "Backup & devices":
+      "Backup e dispositivi",
+  "Help":
+      "Aiuto",
+  "Tips, support and how to reach us.":
+      "Consigli, supporto e come contattarci.",
+  "Advanced":
+      "Avanzate",
+  "Fixes for some devices and extra tools. Most people never need these.":
+      "Correzioni per alcuni dispositivi e strumenti extra. Alla maggior parte delle persone non servono mai.",
+  "Device fixes":
+      "Correzioni dispositivo",
+  "Hide the picture behind other pages":
+      "Nascondi l'immagine dietro le altre pagine",
+  "Info and tips":
+      "Info e consigli",
+  "Keys and services":
+      "Chiavi e servizi",
+  "Start here":
+      "Per iniziare",
+  "An M3U link or an Xtream Codes login":
+      "Un link M3U o un accesso Xtream Codes",
+  "Start early":
+      "Inizia prima",
+  "Keep recording":
+      "Continua a registrare",
+  "Speed limit":
+      "Limite di velocità",
+  "Suggested start":
+      "Inizio suggerito",
+  "Storage":
+      "Spazio",
+  "Space for recordings":
+      "Spazio per le registrazioni",
+  "Space for downloads":
+      "Spazio per i download",
+  "{min} min":
+      "{min} min",
+  "Search settings":
+      "Cerca impostazioni",
+  "Type a word, like subtitles, clock or Atmos. OK on a result changes it right there.":
+      "Scrivi una parola, come sottotitoli, ora o Atmos. OK su un risultato lo cambia lì.",
+  "No setting matches \"{query}\".":
+      "Nessuna impostazione corrisponde a «{query}».",
+  // Media Hub sources as one list, Manage from phone, row eye (2026-11-11).
+  "Streams":
+      "Stream",
+  "Media servers":
+      "Server multimediali",
+  "Manage from phone":
+      "Gestisci dal telefono",
+  "{n} sources · {on} on":
+      "{n} fonti · {on} attive",
+  "No sources here yet. Add one with Add a source.":
+      "Ancora nessuna fonte qui. Aggiungine una con Aggiungi una fonte.",
+  "Add, remove, turn on or off and copy links from your phone.":
+      "Aggiungi, rimuovi, attiva o disattiva e copia link dal telefono.",
+  "Show the code":
+      "Mostra il codice",
+  "Scan it with your phone's camera":
+      "Scansionalo con la fotocamera del telefono",
+  "Your phone gets this TV's list of sources: add, remove, turn on or off, copy a link. From any network.":
+      "Il telefono riceve l’elenco delle fonti di questa TV: aggiungi, rimuovi, attiva o disattiva, copia un link. Da qualsiasi rete.",
+  "Not available right now. Try again in a moment.":
+      "Non disponibile ora. Riprova tra un momento.",
+  "Scan with your phone's camera.":
+      "Scansiona con la fotocamera del telefono.",
+  "Works from any network while VesperTV is open, for an hour after its last use. On and Under Other are for the profile in use here.":
+      "Funziona da qualsiasi rete con VesperTV aperto, per un’ora dall’ultimo uso. Attiva e In Altro valgono per il profilo in uso qui.",
+  "Order, rename, pin or hide its rows":
+      "Ordina, rinomina, fissa o nascondi le righe",
+  "The rows of the Media Hub tab. Hiding a row keeps its source.":
+      "Le righe della scheda Media Hub. Nascondere una riga mantiene la sua fonte.",
+  "Refresh Media Hub":
+      "Aggiorna il Media Hub",
+  "Reads every add-on again: new catalogs, logos, versions":
+      "Rilegge ogni componente: nuovi cataloghi, loghi, versioni",
+  "Media Hub refreshed.":
+      "Media Hub aggiornato.",
+  "A link, Stremio, a media server or Trakt / Simkl":
+      "Un link, Stremio, un server o Trakt / Simkl",
+  "Catalogs":
+      "Cataloghi",
+  "Lists":
+      "Liste",
+  "Built in":
+      "Integrata",
+  "Under Other":
+      "In Altro",
+  "On. OK turns it off, Right for its options.":
+      "Attiva. OK la disattiva, Destra per le opzioni.",
+  "Off. OK turns it on, Right for its options.":
+      "Disattiva. OK la attiva, Destra per le opzioni.",
+  "On for this profile. OK turns it off, Right for its options.":
+      "Attiva per questo profilo. OK la disattiva, Destra per le opzioni.",
+  "Off for this profile. OK turns it on, Right for its options.":
+      "Disattiva per questo profilo. OK la attiva, Destra per le opzioni.",
+  "Options for {name}: Show under Other, TV add-on, its link and Remove.":
+      "Opzioni di {name}: Mostra in Altro, componente TV, il link e Rimuovi.",
+  "This removes it from this device.":
+      "Verrà rimossa da questo dispositivo.",
+  "On this device":
+      "Su questo dispositivo",
+  "Just for this profile":
+      "Solo per questo profilo",
+  "Its channels in Media Hub > Live TV":
+      "I suoi canali in Media Hub > TV in diretta",
+  "See and copy its link":
+      "Vedi e copia il link",
+  "From this device":
+      "Da questo dispositivo",
+  "For every profile on this device":
+      "Per tutti i profili di questo dispositivo",
+  "Scan, paste the link on your phone":
+      "Scansiona e incolla il link sul telefono",
+  "Your whole list on your phone":
+      "Tutta la lista sul telefono",
+  "Sign in once, pick your add-ons":
+      "Accedi una volta, scegli i componenti",
+  "Your own media server":
+      "Il tuo server multimediale",
+  "Your lists in the Media Hub":
+      "Le tue liste nel Media Hub",
+  "OpenSubtitles, or any subtitle add-on":
+      "OpenSubtitles o qualsiasi componente di sottotitoli",
+  "An add-on link ends with manifest.json.":
+      "Un link di componente finisce con manifest.json.",
+  "Checks the link, then adds it":
+      "Controlla il link, poi lo aggiunge",
+  "Other ways":
+      "Altri modi",
+  "Show this row":
+      "Mostra questa riga",
+  "Hidden":
+      "Nascosta",
+  "OK shows them":
+      "OK li mostra",
+  "Tap to show them":
+      "Tocca per mostrarli",
 };

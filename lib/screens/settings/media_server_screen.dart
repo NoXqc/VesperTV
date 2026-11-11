@@ -174,6 +174,8 @@ class _MediaServerScreenState extends State<MediaServerScreen> {
     return SettingsScaffold(
       title: tr('Connect Jellyfin / Emby / Plex'),
       body: ListView(
+          // Sized to its rows: a floating panel hugs them.
+          shrinkWrap: true,
         padding: const EdgeInsets.all(16),
         children: [
           TvMenuTile(

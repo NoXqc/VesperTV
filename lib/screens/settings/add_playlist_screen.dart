@@ -838,6 +838,8 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
     return withTvThemeIfNeeded(
         context,
         (context) => SettingsScaffold(
+          // A multi-pane tool: the glass panel spans the screen.
+          wide: true,
             title: _editingProfile != null
                 ? tr('Edit Playlist')
                 : tr('Add Playlist'),

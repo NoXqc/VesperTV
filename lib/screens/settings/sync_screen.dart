@@ -406,7 +406,7 @@ class _SyncCodeScreenState extends State<_SyncCodeScreen> {
                 ? tr(
                     'Save this code. It\'s the only way back in if you lose all your devices. We can\'t recover it.')
                 : tr(
-                    'On the other device, open Settings > Device & data > Sync > I have a code.')),
+                    'On the other device, open Settings > Backup & devices > Sync > I have a code.')),
             if (link != null) ...[
               const SizedBox(height: 12),
               Text(

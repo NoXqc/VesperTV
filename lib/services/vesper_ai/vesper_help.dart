@@ -35,7 +35,7 @@ cannot change playlists or settings, or clear history.''',
 PLAYLIST EDITOR (tool playlist_editor)
 
 What it edits: the TV's editor layer over each playlist (the same one as
-Settings > Playlists & guide > Playlist editor on the TV and its phone/PC
+Settings > Playlists & sources > Playlist editor on the TV and its phone/PC
 page). The provider's playlist is never changed. Live TV channels only (not
 movies / shows). Edits are per viewer profile.
 

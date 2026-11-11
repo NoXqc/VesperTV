@@ -14,7 +14,6 @@ import 'multiview_screen.dart';
 import 'desktop_multiview_screen.dart';
 import 'recordings_screen.dart';
 import 'settings/settings_menu_screen.dart';
-import 'settings/sports_card_size_settings_screen.dart';
 import 'settings/profiles_screen.dart';
 import '../services/game_reminders.dart';
 import '../widgets/game_reminder_menu_tile.dart';
@@ -5380,10 +5379,14 @@ class _GameCard extends StatefulWidget {
   static const double width = 268;
   static const double height = 132;
 
-  /// Settings > Sports Trak > Game card size (1.0 = Large, the original).
+  /// Settings > Sports Trak > Game card size (1.0 = Large, the original;
+  /// Medium and Small fit more games for viewers sitting closer).
   static double scaleOf(BuildContext context) =>
-      SportsCardSizeSettingsScreen.scaleFor(
-          context.read<StorageService>().getSportsCardSize());
+      switch (context.read<StorageService>().getSportsCardSize()) {
+        'medium' => 0.85,
+        'small' => 0.72,
+        _ => 1.0,
+      };
 
   /// The card's on-screen width at the viewer's size: rows, See all and the
   /// live list space and scroll by this.
@@ -6237,6 +6240,8 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
         child: withTvThemeIfNeeded(
       context,
       (context) => SettingsScaffold(
+          // A multi-pane tool: the glass panel spans the screen.
+          wide: true,
         title: tr('Pick the channel for {title}', {'title': widget.game.title}),
         body: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),

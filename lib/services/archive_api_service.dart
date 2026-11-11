@@ -81,6 +81,12 @@ class ArchiveApiService {
   /// schema relies on it for episodes, so only encode what has to be.
   static String _seg(String s) => Uri.encodeComponent(s).replaceAll('%3A', ':');
 
+  /// The manifest's `version`, when it gives a short one ("1.2.0").
+  static String? _version(Map j) {
+    final v = j['version']?.toString().trim() ?? '';
+    return v.isEmpty || v.length > 24 ? null : v;
+  }
+
   /// Fetches and checks a manifest — this is the "does the connection
   /// work" test. A source either serves its own catalogs (any type, any id
   /// scheme: custom types are browsed under Movies, see
@@ -161,6 +167,7 @@ class ArchiveApiService {
             : Uri.parse(url).host,
         description: j['description']?.toString() ?? '',
         logoUrl: j['logo']?.toString(),
+        version: _version(j),
         catalogs: lists,
         listOnly: true,
         imdbResources: imdbResources,
@@ -209,6 +216,7 @@ class ArchiveApiService {
           : Uri.parse(url).host,
       description: j['description']?.toString() ?? '',
       logoUrl: j['logo']?.toString(),
+      version: _version(j),
       catalogs: catalogs,
       catalogProviderUrl: providerUrl,
       imdbResources: imdbResources,

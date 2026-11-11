@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nox_iptv/screens/home_screen.dart';
-import 'package:nox_iptv/screens/settings/general_settings_screen.dart';
+import 'package:nox_iptv/screens/settings/settings_menu_screen.dart';
+import 'package:nox_iptv/widgets/setting_row.dart';
 import 'package:nox_iptv/screens/tv_home_screen.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
 import 'package:nox_iptv/services/archive_service.dart';
@@ -113,14 +114,15 @@ void main() {
       final navigator = tester.state<NavigatorState>(find.byType(Navigator));
       navigator.push(MaterialPageRoute<void>(
           builder: (_) =>
-              const GeneralSettingsScreen(sections: {'tabs'}, title: 'Tabs')));
+              const SettingsCategoryScreen(categoryId: 'appearance')));
       await tester.pumpAndSettle();
-      for (final label in ['Hide Live TV', 'Hide Sports Trak']) {
-        await tester.ensureVisible(find.text(label));
+      // The Tabs rows are named after the tab: OK shows / hides it.
+      for (final label in ['Live TV', 'Sports Trak']) {
+        await tester.ensureVisible(find.widgetWithText(SettingRow, label));
         // ensureVisible doesn't pump: a row that had to scroll (below a
         // phone-sized screen) is only there after the next frame.
         await tester.pump();
-        await tester.tap(find.text(label));
+        await tester.tap(find.widgetWithText(SettingRow, label));
         await tester.pumpAndSettle();
       }
       navigator.pop();
@@ -136,14 +138,15 @@ void main() {
       expect(find.text('Test group'), findsNothing);
       navigator.push(MaterialPageRoute<void>(
           builder: (_) =>
-              const GeneralSettingsScreen(sections: {'tabs'}, title: 'Tabs')));
+              const SettingsCategoryScreen(categoryId: 'appearance')));
       await tester.pumpAndSettle();
-      for (final label in ['Hide Live TV', 'Hide Sports Trak']) {
-        await tester.ensureVisible(find.text(label));
+      // The Tabs rows are named after the tab: OK shows / hides it.
+      for (final label in ['Live TV', 'Sports Trak']) {
+        await tester.ensureVisible(find.widgetWithText(SettingRow, label));
         // ensureVisible doesn't pump: a row that had to scroll (below a
         // phone-sized screen) is only there after the next frame.
         await tester.pump();
-        await tester.tap(find.text(label));
+        await tester.tap(find.widgetWithText(SettingRow, label));
         await tester.pumpAndSettle();
       }
       navigator.pop();

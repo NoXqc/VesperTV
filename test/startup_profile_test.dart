@@ -8,7 +8,7 @@ import 'package:image/image.dart' as img;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nox_iptv/models/viewer_profile.dart';
-import 'package:nox_iptv/screens/settings/general_settings_screen.dart';
+import 'package:nox_iptv/screens/settings/settings_menu_screen.dart';
 import 'package:nox_iptv/screens/settings/profiles_screen.dart';
 import 'package:nox_iptv/screens/startup_profile_screen.dart';
 import 'package:nox_iptv/services/profile_gate.dart';
@@ -160,10 +160,7 @@ void main() {
     final f = StartupFixture();
     await f.init();
     addTearDown(f.dispose);
-    // Not under Startup any more: Settings > Playlists & guide > Profiles.
-    await tester
-        .pumpWidget(f.wrap(const GeneralSettingsScreen(sections: {'startup'})));
-    expect(find.text('Launch with profiles selector'), findsNothing);
+    // On the Profiles page and in Settings > Profiles & startup.
     await tester.pumpWidget(f.wrap(const ProfilesScreen()));
     await tester.pumpAndSettle();
     expect(f.prefs.launchWithProfiles, isFalse);
@@ -173,6 +170,12 @@ void main() {
     await tester.tap(find.text('Launch with profiles selector'));
     await tester.pumpAndSettle();
     expect(f.prefs.launchWithProfiles, isFalse);
+    await tester.pumpWidget(
+        f.wrap(const SettingsCategoryScreen(categoryId: 'profiles')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Launch with profiles selector'));
+    await tester.pumpAndSettle();
+    expect(f.prefs.launchWithProfiles, isTrue);
     await tester.pumpWidget(const SizedBox());
   });
 

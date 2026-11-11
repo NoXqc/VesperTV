@@ -140,7 +140,9 @@ class _TvMenuTileState extends State<TvMenuTile> {
       // hardware.
       decoration: GlassMenuSurface.of(context)
           ? GlassMenuSurface.rowDecoration(context,
-              focused: _focused, radius: 8)
+              focused: _focused,
+              radius: 8,
+              quiet: GlassMenuSurface.quietRows(context))
           : RefinedFinish.decorate(
               context,
               BoxDecoration(
@@ -187,6 +189,9 @@ class _TvMenuTileState extends State<TvMenuTile> {
           focusNode: widget.focusNode,
           autofocus: widget.autofocus,
           enabled: widget.enabled,
+          // On glass the row's outline shows focus: no theme wash under it.
+          focusColor:
+              GlassMenuSurface.of(context) ? Colors.transparent : null,
           onFocusChange: (f) {
             setState(() => _focused = f);
             if (f) _revealSoon();

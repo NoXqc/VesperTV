@@ -2,6 +2,7 @@ import '../utils/refined_finish.dart';
 import 'package:flutter/material.dart';
 
 import '../utils/tv_theme.dart';
+import 'glass_menu.dart';
 import 'tv_menu_tile.dart';
 
 /// A `SwitchListTile` with an obvious solid-fill focus highlight — see
@@ -43,6 +44,7 @@ class _TvSwitchListTileState extends State<TvSwitchListTile> {
     final focusForeground = scheme.primary;
     // Settings on a TV box / computer: tighter rows (CompactMenus).
     final compact = CompactMenus.of(context);
+    final glass = GlassMenuSurface.of(context);
     return Padding(
         padding: EdgeInsets.symmetric(vertical: compact ? 2 : 3),
         child: Container(
@@ -50,7 +52,13 @@ class _TvSwitchListTileState extends State<TvSwitchListTile> {
           // conditionally wrapped — MinimalGlassFocus's own doc comment below
           // has the full story on why changing a focus widget's ancestor
           // shape between builds corrupts its FocusNode on real hardware.
-          decoration: RefinedFinish.decorate(
+          // Settings pages (glass): the glass outline, like TvMenuTile.
+          decoration: glass
+              ? GlassMenuSurface.rowDecoration(context,
+                  focused: _focused,
+                  radius: 8,
+                  quiet: GlassMenuSurface.quietRows(context))
+              : RefinedFinish.decorate(
               context,
               BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
@@ -88,7 +96,7 @@ class _TvSwitchListTileState extends State<TvSwitchListTile> {
           // The stable wrapper adds focus blur only for the opt-in glass finish.
           // Its interactive child keeps the same slot when the finish changes.
           child: MinimalGlassFocus(
-            active: RefinedFinish.of(context) && _focused,
+            active: !glass && RefinedFinish.of(context) && _focused,
             borderRadius: 8,
             child: SwitchListTile(
               focusNode: widget.focusNode,

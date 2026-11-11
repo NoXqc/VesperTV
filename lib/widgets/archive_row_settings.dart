@@ -5,7 +5,8 @@ import '../l10n/l10n.dart';
 import '../models/archive_models.dart';
 import '../services/archive_service.dart';
 import 'archive_playback_settings.dart';
-import 'tv_text_field_gate.dart';
+import 'tv_text_field_gate.dart';
+import 'glass_menu.dart';
 
 Future<void> renameArchiveRow(BuildContext context, ArchiveRow row) async {
   final service = context.read<ArchiveService>();
@@ -93,8 +94,8 @@ class _ArchiveRowSettings extends StatelessWidget {
               itemCount: rows.length,
               itemBuilder: (_, i) {
                 final row = rows[i];
-                return ListTile(
-                    key: ValueKey(row.key),
+                return GlassFocusFrame(key: ValueKey(row.key), child: ListTile(
+                    
                     title: Text(row.title),
                     subtitle: Text(row.sourceLabel ?? row.source.name),
                     leading: IconButton(
@@ -133,7 +134,7 @@ class _ArchiveRowSettings extends StatelessWidget {
                           tooltip: tr('Rename row'),
                           icon: const Icon(Icons.edit_outlined),
                           onPressed: () => renameArchiveRow(context, row)),
-                    ]));
+                    ])));
               })),
     ]));
   }

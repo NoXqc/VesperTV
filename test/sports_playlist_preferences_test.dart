@@ -10,12 +10,11 @@ import 'package:nox_iptv/models/playlist_profile.dart';
 import 'package:nox_iptv/models/profile_copy.dart';
 import 'package:nox_iptv/models/sports.dart';
 import 'package:nox_iptv/screens/settings/settings_menu_screen.dart';
-import 'package:nox_iptv/screens/settings/sports_playlist_settings_screen.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
 import 'package:nox_iptv/services/epg_service.dart';
 import 'package:nox_iptv/services/sports_channel_matcher.dart';
 import 'package:nox_iptv/services/storage_service.dart';
-import 'package:nox_iptv/widgets/tv_menu_tile.dart';
+import 'package:nox_iptv/widgets/setting_row.dart';
 import 'handoff_sports_regression_test.dart' show game;
 
 Channel feed(String playlist, String id, String name) => Channel(
@@ -244,29 +243,30 @@ void main() {
           child: MaterialApp(
               theme: ThemeData.dark(), home: const SettingsMenuScreen())));
       await tester.pumpAndSettle();
-      final category = find.widgetWithText(TvMenuTile, 'Sports Trak');
+      final category = find.widgetWithText(SettingRow, 'Sports Trak');
       await tester.ensureVisible(category);
       await tester.tap(category);
       await tester.pumpAndSettle();
-      final entry = find.widgetWithText(TvMenuTile, 'Preferred playlist');
-      await tester.ensureVisible(entry);
+      // A choice in the Settings list now (2026-11-10): it rolls down
+      // beside the row, the current pick focused.
+      final entry = find.widgetWithText(SettingRow, 'Preferred playlist');
+      await tester.scrollUntilVisible(entry, 120,
+          scrollable: find.byType(Scrollable).last);
       await tester.tap(entry);
       await tester.pumpAndSettle();
-      expect(find.byType(SportsPlaylistSettingsScreen), findsOneWidget);
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
       await tester.sendKeyEvent(LogicalKeyboardKey.select);
       await tester.pumpAndSettle();
       expect(storage.getSportsPreferredPlaylist(), 'a');
-      final focus = FocusManager.instance.primaryFocus;
-      expect(focus?.context?.findAncestorWidgetOfExactType<TvMenuTile>()?.key,
-          const ValueKey('sports-playlist-a'));
+      expect(
+          find.descendant(of: entry, matching: find.text('Provider a')),
+          findsOneWidget);
+      await tester.tap(entry);
+      await tester.pumpAndSettle();
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
       await tester.sendKeyEvent(LogicalKeyboardKey.select);
       await tester.pumpAndSettle();
       expect(storage.getSportsPreferredPlaylist(), null);
-      await tester.binding.handlePopRoute();
-      await tester.pumpAndSettle();
-      expect(find.byType(SportsPlaylistSettingsScreen), findsNothing);
       expect(tester.takeException(), null);
       await tester.pumpWidget(const SizedBox());
       prefs.dispose();
@@ -286,33 +286,47 @@ void main() {
       await storage
           .setPlaylists([profile('disabled', enabled: false), profile('a')]);
       await storage.setSportsPreferredPlaylist('disabled');
-      await tester.pumpWidget(Provider.value(
-          value: storage,
+      final prefs = AppPreferences(storage);
+      await prefs.init();
+      addTearDown(prefs.dispose);
+      await tester.pumpWidget(MultiProvider(
+          providers: [
+            Provider.value(value: storage),
+            ChangeNotifierProvider.value(value: prefs)
+          ],
           child: MaterialApp(
               theme: ThemeData.dark(),
               home: const MediaQuery(
                   data: MediaQueryData(
                       size: Size(390, 760), textScaler: TextScaler.linear(1.4)),
-                  child: SportsPlaylistSettingsScreen()))));
+                  child: SettingsCategoryScreen(categoryId: 'sports')))));
       await tester.pumpAndSettle();
+      final row = find.byKey(const ValueKey('setting-sports_playlist'));
+      await tester.scrollUntilVisible(row, 160,
+          scrollable: find.byType(Scrollable).last);
+      // On a phone the row shows its explanation: why it is not used.
       expect(
-          find.text(tr(
-              'Your preferred playlist is unavailable or disabled. Other matching playlists will be used.')),
+          find.descendant(
+              of: row,
+              matching: find.text(tr(
+                  'Your preferred playlist is unavailable or disabled. Other matching playlists will be used.'))),
           findsOneWidget);
-      final disabled = find.byKey(const ValueKey('sports-playlist-disabled'));
-      await tester.scrollUntilVisible(disabled, 160);
-      expect(tester.widget<TvMenuTile>(disabled).enabled, false);
-      final a = find.byKey(const ValueKey('sports-playlist-a'));
-      await tester.scrollUntilVisible(a, 160);
-      await tester.ensureVisible(a);
+      await tester.tap(row);
       await tester.pumpAndSettle();
-      await tester.tap(a);
+      // The disabled playlist shows (it is the saved one) but dimmed;
+      // only enabled ones are offered otherwise.
+      expect(find.text('Provider disabled'), findsWidgets);
+      await tester.tap(find.text('Provider a').last);
       await tester.pumpAndSettle();
       expect(storage.getSportsPreferredPlaylist(), 'a');
+      // A viewer switch under the open page: the old row can't write.
       await storage.setActiveViewerId('other');
-      await tester.tap(a);
+      await tester.tap(row);
       await tester.pumpAndSettle();
-      expect(storage.getSportsPreferredPlaylist(), null);
+      await tester.tap(find.text(tr('No playlist preference')).last);
+      await tester.pumpAndSettle();
+      await storage.setActiveViewerId('main');
+      expect(storage.getSportsPreferredPlaylist(), 'a');
       expect(tester.takeException(), null);
       await tester.pumpWidget(const SizedBox());
     });
