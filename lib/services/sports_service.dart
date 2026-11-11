@@ -9,6 +9,7 @@ import '../models/sports.dart';
 import '../l10n/l10n.dart';
 import '../utils/constants.dart';
 import 'cfl_source.dart';
+import 'espn_backoff.dart';
 import 'sports_db_source.dart';
 import 'storage_service.dart';
 
@@ -46,14 +47,28 @@ SportsLeague? favoriteSportsLeague(StorageService storage) {
 /// the whole app session with a freshness window that depends on what the
 /// day holds (live games refresh every minute, finished days rarely).
 class SportsService {
-  SportsService._() : _client = http.Client();
+  SportsService._()
+      : _client = http.Client(),
+        _espn = EspnBackoff();
   @visibleForTesting
-  SportsService.forTesting(this._client);
+  SportsService.forTesting(this._client, {EspnBackoff? backoff})
+      : _espn = backoff ?? EspnBackoff();
   static final SportsService instance = SportsService._();
 
   static const _base = 'https://site.api.espn.com/apis/site/v2/sports';
 
   final http.Client _client;
+
+  /// Every ESPN request goes through this: a 429 / 403 pauses them all for
+  /// a while (see [EspnBackoff]) and the screens keep their cached scores.
+  final EspnBackoff _espn;
+
+  /// What the Sports screen says when a day has no games to show: the
+  /// provider's pause, or a plain failed load.
+  String _failureText(Object e) => e is EspnBackoffException
+      ? tr(
+          'The scores provider asked us to slow down. Scores will be back in a few minutes.')
+      : tr('Some scores could not be loaded. Check the connection.');
   late final CflSource _cfl = CflSource(_client);
   final Map<String, _CacheEntry> _cache = {};
   final Map<String, Future<List<SportsGame>>> _inFlight = {};
@@ -187,11 +202,12 @@ class SportsService {
     return !localDay.isBefore(first) && !localDay.isAfter(last);
   }
 
-  /// TheSportsDB leagues go through its rate-limit bucket.
+  /// TheSportsDB leagues go through its rate-limit bucket, ESPN's through
+  /// [_espn].
   Future<http.Response> _get(SportsLeague league, Uri url) =>
       league.sportsDbId != null
           ? SportsDbSource.get(_client, url)
-          : _client.get(url).timeout(const Duration(seconds: 15));
+          : _espn.get(_client, url);
 
   /// Set when the most recent load had at least one failed request.
   String? lastError;
@@ -302,11 +318,8 @@ class SportsService {
     final base = '$_base/${league.espnPath}/teams/$teamId/schedule';
     try {
       final responses = await Future.wait([
-        _client.get(Uri.parse(base)).timeout(const Duration(seconds: 15)),
-        if (league.soccer)
-          _client
-              .get(Uri.parse('$base?fixture=true'))
-              .timeout(const Duration(seconds: 15)),
+        _espn.get(_client, Uri.parse(base)),
+        if (league.soccer) _espn.get(_client, Uri.parse('$base?fixture=true')),
       ]);
       for (final r in responses) {
         if (r.statusCode != 200) throw Exception('HTTP ${r.statusCode}');
@@ -346,7 +359,7 @@ class SportsService {
     try {
       final responses = await Future.wait([
         for (final url in [base, '$base?fixture=true'])
-          _client.get(Uri.parse(url)).timeout(const Duration(seconds: 15)),
+          _espn.get(_client, Uri.parse(url)),
       ]);
       for (final r in responses) {
         if (r.statusCode != 200) throw Exception('HTTP ${r.statusCode}');
@@ -511,8 +524,11 @@ class SportsService {
       for (var attempt = 1; attempt <= 2; attempt++) {
         final watch = Stopwatch()..start();
         try {
-          final response =
-              await _client.get(url).timeout(const Duration(seconds: 6));
+          // A 429 / 403 never comes back as a response: it pauses ESPN
+          // requests (see [EspnBackoff]) and lands in the catch below, so it
+          // is never mistaken for "ESPN has no summary for this game".
+          final response = await _espn.get(_client, url,
+              timeout: const Duration(seconds: 6));
           final status = response.statusCode;
           if (status >= 400 && status < 500) {
             // ESPN has no summary for this game: asking again gets the same
@@ -538,6 +554,9 @@ class SportsService {
         } catch (e) {
           debugPrint('SportsService: ${game.league.id} summary ${game.id} '
               'try $attempt after ${watch.elapsedMilliseconds}ms: $e');
+          // Paused by ESPN: a second try would only be turned away too. The
+          // game isn't marked refused, so it's asked again after the pause.
+          if (e is EspnBackoffException) break;
         }
       }
       return _summaryCache[key]?.$1;
@@ -841,7 +860,7 @@ class SportsService {
     } catch (e) {
       debugPrint('SportsService: ${league.id} ${_espnDate(date)} failed: $e');
       _failedScheduleKeys.add(key);
-      lastError = tr('Some scores could not be loaded. Check the connection.');
+      lastError = _failureText(e);
       return _cache[key]?.games ?? const [];
     }
   }

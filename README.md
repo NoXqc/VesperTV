@@ -216,7 +216,8 @@ or AI apps. [See below](#vesper-ai).
   **Backup & restore** (it can also import M3U files and add-on lists from USB).
 - **Playlist editor (test flight):** clean up your playlists from your phone or PC — rename
   channels, change logos, rules that survive updates (remove `US| ` from every name, hide `PPV`),
-  hide lower-quality copies, rename / merge / reorder groups, fallback channels, link channels to
+  hide lower-quality copies, rename / merge / reorder groups, move or copy channels to another
+  group (yours or any playlist's), fallback channels, link channels to
   the guide, combine playlists, and an optional stream test. Your provider's playlist is never
   changed, and every change can be undone.
 - **From phone:** type keys, links and server logins on your phone instead of the remote.
@@ -298,7 +299,9 @@ development costs, you can [donate on Liberapay](https://liberapay.com/NoXQc/don
 - Watch tracking is powered by [Trakt](https://trakt.tv) and [Simkl](https://simkl.com).
   VesperTV is not affiliated with or endorsed by either.
 - Sports scores and schedules come from ESPN's public data and [TheSportsDB](https://www.thesportsdb.com/).
-- Skip intro / credits timings come from [IntroDB](https://introdb.app).
+  VesperTV is not affiliated with or endorsed by ESPN, TheSportsDB, or any league or team shown.
+- Skip intro / credits timings come from [IntroDB](https://introdb.app); VesperTV is not
+  affiliated with or endorsed by IntroDB.
 - The macOS build was contributed by [gmtherien](https://github.com/gmtherien).
 
 ## License and trademarks

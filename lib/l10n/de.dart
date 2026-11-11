@@ -1067,6 +1067,8 @@ const Map<String, String> kDe = {
   "TV Shows order": "Reihenfolge Serien",
   "Move up": "Nach oben",
   "Move down": "Nach unten",
+  "Move left": "Nach links",
+  "Move right": "Nach rechts",
   "Playlist added": "Playlist hinzugefügt",
   "This playlist is disabled on this device — enable it in Settings > Playlist Manager to watch.":
       "Diese Playlist ist auf diesem Gerät deaktiviert – aktiviere sie unter Einstellungen > Playlist-Manager, um zu schauen.",
@@ -1462,6 +1464,10 @@ const Map<String, String> kDe = {
       "Betrieben von Trakt (trakt.tv) und Simkl (simkl.com).",
   "VesperTV is not affiliated with or endorsed by Trakt or Simkl.":
       "VesperTV steht in keiner Verbindung zu Trakt oder Simkl und wird von ihnen nicht unterstützt.",
+  "Sports data from ESPN and TheSportsDB, skip intro timings from IntroDB. VesperTV is not affiliated with or endorsed by them, or by any league or team shown.":
+      "Sportdaten von ESPN und TheSportsDB, Zeiten zum Überspringen des Intros von IntroDB. VesperTV steht in keiner Verbindung zu ihnen oder zu angezeigten Ligen und Teams und wird von ihnen nicht unterstützt.",
+  "The scores provider asked us to slow down. Scores will be back in a few minutes.":
+      "Der Ergebnisanbieter hat uns gebeten, langsamer abzufragen. Die Ergebnisse sind in ein paar Minuten wieder da.",
   "Trakt & Simkl": "Trakt und Simkl",
   "Track what you watch, lists in the Media Hub":
       "Verfolge, was du siehst, Listen im Media Hub",

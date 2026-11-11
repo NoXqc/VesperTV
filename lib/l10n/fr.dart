@@ -1121,6 +1121,8 @@ const Map<String, String> kFr = {
   'TV Shows order': "Ordre Séries",
   'Move up': "Monter",
   'Move down': "Descendre",
+  'Move left': "Déplacer à gauche",
+  'Move right': "Déplacer à droite",
   'Playlist added': "Liste ajoutée",
   'This playlist is disabled on this device — enable it in Settings > Playlist Manager to watch.':
       "Cette liste est désactivée sur cet appareil — activez-la dans Paramètres > Gestion des listes pour regarder.",
@@ -1531,6 +1533,10 @@ const Map<String, String> kFr = {
       "Fourni par Trakt (trakt.tv) et Simkl (simkl.com).",
   'VesperTV is not affiliated with or endorsed by Trakt or Simkl.':
       "VesperTV n'est ni affilié à Trakt ou Simkl, ni approuvé par eux.",
+  'Sports data from ESPN and TheSportsDB, skip intro timings from IntroDB. VesperTV is not affiliated with or endorsed by them, or by any league or team shown.':
+      "Données sportives d'ESPN et de TheSportsDB, repères pour passer l'intro d'IntroDB. VesperTV n'est ni affilié à ces services ni aux ligues ou équipes affichées, ni approuvé par eux.",
+  'The scores provider asked us to slow down. Scores will be back in a few minutes.':
+      "Le fournisseur des scores nous a demandé de ralentir. Les scores reviendront dans quelques minutes.",
   'Trakt & Simkl': 'Trakt et Simkl',
   'Track what you watch, lists in the Media Hub':
       'Suivi de ce que vous regardez, listes dans le Media Hub',
