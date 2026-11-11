@@ -180,6 +180,13 @@ void main() {
         'moves': {'local::live_1': 'local::title'},
         'order': {
           'local::title': ['local::live_1']
+        },
+        'pmoves': {'local::live_1': 'p:local\u0000local::Sport'},
+        'copies': {
+          'local::live_2': ['o:local::title', 'p:local\u0000News']
+        },
+        'porder': {
+          'p:local\u0000local::Sport': ['local::live_1', 'other::live_9']
         }
       }),
       'nox_channel_links_local': json({
@@ -242,6 +249,14 @@ void main() {
     expect(read('nox_my_groups')['moves'], {'remote::live_1': 'local::title'});
     expect(read('nox_my_groups')['order'], {
       'local::title': ['remote::live_1']
+    });
+    expect(read('nox_my_groups')['pmoves'],
+        {'remote::live_1': 'p:remote\u0000local::Sport'});
+    expect(read('nox_my_groups')['copies'], {
+      'remote::live_2': ['o:local::title', 'p:remote\u0000News']
+    });
+    expect(read('nox_my_groups')['porder'], {
+      'p:remote\u0000local::Sport': ['remote::live_1', 'other::live_9']
     });
     expect(read('nox_channel_links_remote')['raw1'],
         {'playlistId': 'remote', 'rawId': 'local::raw'});

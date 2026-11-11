@@ -71,6 +71,7 @@ class PlaylistManager extends ChangeNotifier {
     PerfDiagnostics.notifies++;
     // Anything changed (channels loaded, hidden, moved): count again.
     _liveCounts = null;
+    _placedCache = null;
     _visibleCache.clear();
     if (SchedulerBinding.instance.schedulerPhase ==
         SchedulerPhase.persistentCallbacks) {
@@ -1492,18 +1493,30 @@ class PlaylistManager extends ChangeNotifier {
   List<Channel> _visibleChannels(
       {String? playlistId, String? groupTitle, required String category}) {
     if (playlistId != null) {
-      return _sessionFor(playlistId)
-              ?.visibleChannels(groupTitle: groupTitle, category: category) ??
-          const [];
+      final s = _sessionFor(playlistId);
+      final own =
+          s?.visibleChannels(groupTitle: groupTitle, category: category) ??
+              const <Channel>[];
+      if (s == null || category != 'tv') return own;
+      return groupTitle != null
+          ? _withPlaced(own, GroupRef.provider(playlistId, groupTitle))
+          : _flatPlaced(s, own);
     }
     // The tab's own playlist priority (Live TV can differ from the base
     // order): Multiview's picker and Search list playlists like the tab.
+    final live = groupTitle != null && category == 'tv';
     final all = _enabledSessionsSortedFor(category)
-        .expand((s) =>
-            s.visibleChannels(groupTitle: groupTitle, category: category))
+        .expand((s) => live
+            ? _withPlaced(
+                s.visibleChannels(groupTitle: groupTitle, category: category),
+                GroupRef.provider(s.profile.id, groupTitle))
+            : groupTitle == null && category == 'tv'
+                ? _flatPlaced(s, s.visibleChannels(category: category))
+                : s.visibleChannels(groupTitle: groupTitle, category: category))
         .toList();
-    return groupTitle != null && category == 'tv' && isUserGroup(groupTitle)
-        ? _myGroups.ordered(groupTitle, all)
+    return live && isUserGroup(groupTitle)
+        ? _myGroups.ordered(
+            groupTitle, _withPlaced(all, GroupRef.own(groupTitle)))
         : all;
   }
 
@@ -1513,8 +1526,8 @@ class PlaylistManager extends ChangeNotifier {
   /// every TV home build, a scan of every live channel each time.
   List<Channel> catchupLiveChannels() =>
       List.of(_visibleCache['catchup'] ??= _enabledSessionsSortedFor('tv')
-          .expand((s) =>
-              s.visibleChannels(category: 'tv').where((c) => c.hasCatchup))
+          .expand((s) => _flatPlaced(s, s.visibleChannels(category: 'tv'))
+              .where((c) => c.hasCatchup))
           .toList());
 
   /// Live channels hidden by the viewer, across enabled playlists — see
@@ -2197,12 +2210,26 @@ class PlaylistManager extends ChangeNotifier {
       Future.value(null);
 
   /// See [PlaylistSession.moveChannel]; in one of the viewer's own groups
-  /// the order spans every playlist, so it's kept by [UserGroups].
-  Future<int?> moveChannel(Channel channel, int delta) async {
-    final group = liveGroupOf(channel);
+  /// the order spans every playlist, so it's kept by [UserGroups], and so
+  /// is a provider group's once the editor moved or copied channels into
+  /// it. [inGroup] = the group being browsed (a copy is listed in a group
+  /// that isn't its own); its own group when null.
+  Future<int?> moveChannel(Channel channel, int delta,
+      {String? inGroup}) async {
+    final group = inGroup ?? liveGroupOf(channel);
     if (_myGroups.contains(group)) {
       final to = _myGroups.moveChannel(group, channel.id, delta,
           visibleChannels(groupTitle: group, category: 'tv'));
+      if (to != null) await _saveMyGroups();
+      return to;
+    }
+    if (_placedGroupOf(channel, group) case final ref?) {
+      final to = _myGroups.moveChannelIn(
+          ref,
+          channel.id,
+          delta,
+          visibleChannels(
+              playlistId: ref.playlistId, groupTitle: group, category: 'tv'));
       if (to != null) await _saveMyGroups();
       return to;
     }
@@ -2210,11 +2237,258 @@ class PlaylistManager extends ChangeNotifier {
         ?.moveChannel(group, channel.rawId, delta);
   }
 
+  /// The provider group titled [title] that lists [c], when it keeps its
+  /// order in [UserGroups] (see [UserGroups.ordersHere]): the one [c] was
+  /// moved or copied into, else its own playlist's.
+  GroupRef? _placedGroupOf(Channel c, String title) {
+    if (!_myGroups.hasPlacements && _myGroups.porder.isEmpty) return null;
+    final to = _myGroups.providerMoveOf(c.id);
+    if (to != null && to.title == title && isPlaylistEnabled(to.playlistId!)) {
+      return to;
+    }
+    for (final r in _myGroups.copiesOf(c.id)) {
+      if (!r.isOwn && r.title == title) return r;
+    }
+    final home = GroupRef.provider(c.playlistId, title);
+    return _myGroups.ordersHere(home) ? home : null;
+  }
+
   // --- The viewer's own groups (see UserGroups) --------------------------
 
   final UserGroups _myGroups = UserGroups();
 
-  String? _myGroupOf(Channel c) => _myGroups.groupOf(c.id);
+  /// A channel's group when the viewer put it somewhere else: an own group,
+  /// or the provider group the editor moved it into (that group's title in
+  /// its own playlist; a title no group has when it went to another
+  /// playlist, which lists it through [_withPlaced]). Null = where the
+  /// provider has it. A destination playlist that is gone or off sends
+  /// the channel home.
+  ///
+  /// On a kid (restricted) profile nothing leaves a group its allowlist
+  /// hides: moving a channel can't show it.
+  String? _myGroupOf(Channel c) {
+    final own = _myGroups.groupOf(c.id);
+    final to = own == null && _myGroups.pmoves.isNotEmpty
+        ? _myGroups.providerMoveOf(c.id)
+        : null;
+    if (own == null && to == null) return null;
+    if (_activeViewerRestricted && _nativeHidden(c)) return null;
+    if (own != null) return own;
+    if (!isPlaylistEnabled(to!.playlistId!)) return null;
+    return to.playlistId == c.playlistId
+        ? to.title
+        : '\u0000${to.playlistId}\u0000${to.title}';
+  }
+
+  /// Whether the group the provider has [c] in is hidden for the viewer
+  /// (a kid profile's allowlist may name it by either title).
+  bool _nativeHidden(Channel c) {
+    final s = _sessionFor(c.playlistId);
+    if (s == null) return true;
+    return s.hiddenGroups.contains(c.group) ||
+        s.hiddenGroups.contains(s.edits.groupTitle(c.group));
+  }
+
+  /// Whether a placed channel may be listed: not hidden on the TV, and on
+  /// a kid profile only from a group it is allowed to see.
+  bool _placedVisible(Channel c) {
+    final s = _sessionFor(c.playlistId);
+    if (s == null || s.isLiveHidden(c.rawId)) return false;
+    return !_activeViewerRestricted || !_nativeHidden(c);
+  }
+
+  /// Whether destination [r] shows its channels: an own group that exists
+  /// or a provider group of an enabled playlist that isn't hidden.
+  bool _groupShown(GroupRef r) {
+    if (r.isOwn) return _myGroups.contains(r.title);
+    final s = _sessionFor(r.playlistId!);
+    return s != null && s.profile.enabled && !s.hiddenGroups.contains(r.title);
+  }
+
+  // --- Move / Copy into a group (playlist editor) -----------------------
+
+  Map<String, Channel>? _placedCache;
+
+  /// The live channels with a provider move or a copy, by [Channel.id]:
+  /// one pass over their playlists, cleared on every [notifyListeners].
+  Map<String, Channel> _placedChannels() => _placedCache ??= () {
+        final want = <String, Set<String>>{};
+        for (final id in _myGroups.placedIds) {
+          final at = id.indexOf('::');
+          if (at <= 0) continue;
+          (want[id.substring(0, at)] ??= {}).add(id.substring(at + 2));
+        }
+        final out = <String, Channel>{};
+        for (final e in want.entries) {
+          final s = _sessionFor(e.key);
+          if (s == null || !s.profile.enabled) continue;
+          for (final c in s.allLiveChannels) {
+            if (e.value.contains(c.rawId)) out[c.id] = c;
+          }
+        }
+        return out;
+      }();
+
+  /// [base] (a group's own channels) plus what the editor moved or copied
+  /// into [ref], not listed twice and without hidden channels; a provider
+  /// group in the order the user gave it here ([UserGroups.porder]).
+  List<Channel> _withPlaced(List<Channel> base, GroupRef ref) {
+    if (!_myGroups.hasPlacements && _myGroups.porder.isEmpty) return base;
+    final ids = _myGroups.idsInto(ref);
+    var all = base;
+    if (ids.isNotEmpty) {
+      final placed = _placedChannels();
+      final seen = {for (final c in base) c.id};
+      final extra = [
+        for (final id in ids)
+          if (placed[id] case final c?)
+            if (seen.add(id) && _placedVisible(c)) c
+      ];
+      if (extra.isNotEmpty) all = [...base, ...extra];
+    }
+    return ref.isOwn ? all : _myGroups.orderedIn(ref, all);
+  }
+
+  /// [list] (session [s]'s flat live list: Search, Multiview, Catch-up)
+  /// after the editor's Move / Copy: a channel moved into another
+  /// playlist's hidden group leaves it, one copied out of a hidden group
+  /// into a shown one joins it (not on a kid profile).
+  List<Channel> _flatPlaced(PlaylistSession s, List<Channel> list) {
+    if (!_myGroups.hasPlacements) return list;
+    Set<String>? drop;
+    final add = <Channel>[];
+    for (final c in _placedChannels().values) {
+      if (c.playlistId != s.profile.id || s.isLiveHidden(c.rawId)) continue;
+      final shownCopy = _myGroups.copiesOf(c.id).any(_groupShown);
+      if (s.hiddenGroups.contains(s.liveGroupOf(c))) {
+        if (shownCopy && !_activeViewerRestricted) add.add(c);
+        continue;
+      }
+      // Moved into another playlist ([_myGroupOf]'s NUL title, no group of
+      // this one), so the session can't tell that group is hidden.
+      final to = _myGroups.providerMoveOf(c.id);
+      if (to != null &&
+          s.liveGroupOf(c).startsWith('\u0000') &&
+          !_groupShown(to) &&
+          !shownCopy) {
+        (drop ??= {}).add(c.id);
+      }
+    }
+    if (drop == null && add.isEmpty) return list;
+    return [
+      for (final c in list)
+        if (drop == null || !drop.contains(c.id)) c,
+      ...add,
+    ];
+  }
+
+  /// Where the provider has [c] (under the title the TV shows).
+  GroupRef _nativeRef(Channel c) => GroupRef.provider(c.playlistId,
+      _sessionFor(c.playlistId)?.edits.groupTitle(c.group) ?? c.group);
+
+  /// Put [channels] into [dest] — an own group (it must exist) or a
+  /// provider group of an enabled playlist. [copy] false = move (they
+  /// leave their group and show only in [dest]; moving one back to its
+  /// provider group puts it back), true = copy (they stay where they are
+  /// and [dest] shows them too). `skipped` = already there.
+  Future<({int changed, int skipped})> placeChannels(
+      Iterable<Channel> channels, GroupRef dest,
+      {required bool copy}) async {
+    if (dest.isOwn
+        ? !_myGroups.contains(dest.title)
+        : !isPlaylistEnabled(dest.playlistId!)) {
+      throw StateError('That group is not available.');
+    }
+    var changed = 0, skipped = 0;
+    for (final c in channels) {
+      _placeOne(c, dest, copy: copy) ? changed++ : skipped++;
+    }
+    if (changed > 0) await _saveMyGroups();
+    return (changed: changed, skipped: skipped);
+  }
+
+  bool _placeOne(Channel c, GroupRef dest, {required bool copy}) {
+    final native = _nativeRef(c);
+    final ownMove = _myGroups.groupOf(c.id);
+    // Where it lives now, copies aside.
+    final home = ownMove != null
+        ? GroupRef.own(ownMove)
+        : _myGroups.providerMoveOf(c.id) ?? native;
+    if (copy) {
+      if (home == dest || _myGroups.copiesOf(c.id).contains(dest)) {
+        return false;
+      }
+      _myGroups.addCopy(c.id, dest);
+      return true;
+    }
+    if (home == dest) return false;
+    if (dest == native) {
+      _myGroups.move(c.id, null); // back where the provider has it
+      _myGroups.removeCopy(c.id, dest);
+    } else if (dest.isOwn) {
+      _myGroups.move(c.id, dest.title);
+    } else {
+      _myGroups.moveToProvider(c.id, dest);
+    }
+    return true;
+  }
+
+  /// Back in their own groups, copies removed. Returns how many changed.
+  Future<int> unplaceChannels(Iterable<Channel> channels) async {
+    var n = 0;
+    for (final c in channels) {
+      if (_myGroups.groupOf(c.id) == null &&
+          !_myGroups.pmoves.containsKey(c.id) &&
+          !_myGroups.copies.containsKey(c.id)) {
+        continue;
+      }
+      _myGroups.clearPlacement(c.id);
+      n++;
+    }
+    if (n > 0) await _saveMyGroups();
+    return n;
+  }
+
+  /// A destination's name for the editor's tags: its title, with the
+  /// playlist in front when it is not [fromPlaylistId]'s, "(my group)" for
+  /// an own group.
+  String placementLabel(GroupRef r, {String? fromPlaylistId}) => r.isOwn
+      ? '${r.title} (my group)'
+      : r.playlistId == fromPlaylistId
+          ? r.title
+          : '${playlistNameFor(r.playlistId!)} › ${r.title}';
+
+  /// Where [c] was moved to and the groups that also show it, as names;
+  /// null when it is where the provider has it.
+  ({String? moved, List<String> copies})? placementOf(Channel c) {
+    final ownMove = _myGroups.groupOf(c.id);
+    final to = ownMove != null
+        ? GroupRef.own(ownMove)
+        : _myGroups.providerMoveOf(c.id);
+    final copies = _myGroups.copiesOf(c.id);
+    if (to == null && copies.isEmpty) return null;
+    return (
+      moved:
+          to == null ? null : placementLabel(to, fromPlaylistId: c.playlistId),
+      copies: [
+        for (final r in copies) placementLabel(r, fromPlaylistId: c.playlistId)
+      ],
+    );
+  }
+
+  /// Whether group [title] (own or a provider's; the TV picks groups by
+  /// title) shows [c] as a copy: the TV's Move Up / Down and "Remove from"
+  /// there.
+  bool isCopyIn(Channel c, String title) =>
+      _myGroups.copiesOf(c.id).any((r) => r.title == title);
+
+  /// Takes [c]'s copy out of group [title].
+  Future<void> removeCopyFrom(Channel c, String title) {
+    for (final r in _myGroups.copiesOf(c.id)) {
+      if (r.title == title) _myGroups.removeCopy(c.id, r);
+    }
+    return _saveMyGroups();
+  }
 
   Future<void> _saveMyGroups() async {
     await _storage.setMyGroups(_myGroups.toJson());
@@ -2236,12 +2510,21 @@ class PlaylistManager extends ChangeNotifier {
     final counts = _liveCounts ??= () {
       final out = <String, int>{};
       for (final s in _enabledSessionsSortedFor('tv')) {
-        for (final c in s.visibleChannels(category: 'tv')) {
+        for (final c in _flatPlaced(s, s.visibleChannels(category: 'tv'))) {
           final own = _myGroups.groupOf(c.id);
+          final to = own == null ? _myGroups.providerMoveOf(c.id) : null;
           final key = own != null
               ? _countKey(null, own)
-              : _countKey(s.profile.id, c.group);
+              : to != null
+                  ? _countKey(to.playlistId, to.title)
+                  : _countKey(s.profile.id, c.group);
           out[key] = (out[key] ?? 0) + 1;
+          if (_myGroups.copies.isNotEmpty) {
+            for (final r in _myGroups.copiesOf(c.id)) {
+              final k = _countKey(r.playlistId, r.title);
+              out[k] = (out[k] ?? 0) + 1;
+            }
+          }
         }
       }
       return out;
@@ -2304,8 +2587,14 @@ class PlaylistManager extends ChangeNotifier {
 
   /// A live channel's group as shown: the viewer's own group it was moved
   /// into, else the provider's.
-  String liveGroupOf(Channel channel) =>
-      _myGroups.groupOf(channel.id) ?? channel.group;
+  String liveGroupOf(Channel channel) {
+    final own = _myGroups.groupOf(channel.id);
+    if (own != null) return own;
+    final to = _myGroups.providerMoveOf(channel.id);
+    return to != null && isPlaylistEnabled(to.playlistId!)
+        ? to.title
+        : channel.group;
+  }
 
   /// Into the viewer's own group [title] (created if new), or back to its
   /// provider group when [title] is null (Remove from group).
