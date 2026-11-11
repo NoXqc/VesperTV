@@ -26,7 +26,8 @@ import '../widgets/roll_down_menu.dart';
 import '../widgets/sports_mode_live_panel.dart';
 import '../widgets/tv_menu_tile.dart';
 import '../widgets/tv_text_field_gate.dart';
-import '../l10n/l10n.dart';
+import '../l10n/l10n.dart';
+import '../widgets/glass_menu.dart';
 
 /// TV-remote-first multiview grid — several live channels playing at
 /// once, one with audio focus at a time. Same idea/UX as
@@ -617,14 +618,14 @@ class _MultiviewScreenState extends State<MultiviewScreen> {
                   style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),
                 const SizedBox(height: 12),
-                CheckboxListTile(
+                GlassFocusFrame(child: CheckboxListTile(
                   value: dontShow,
                   onChanged: (v) => setDialogState(() => dontShow = v ?? false),
                   controlAffinity: ListTileControlAffinity.leading,
                   contentPadding: EdgeInsets.zero,
                   title: Text(tr('Don\'t show this again'),
                       style: const TextStyle(color: Colors.white)),
-                ),
+                )),
               ],
             ),
           ),

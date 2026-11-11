@@ -15,7 +15,8 @@ import '../widgets/auto_hide_overlay.dart';
 import '../widgets/game_channel_chooser.dart';
 import '../l10n/l10n.dart';
 import '../services/desktop_stream_setup.dart';
-import '../services/desktop_live_recovery.dart';
+import '../services/desktop_live_recovery.dart';
+import '../widgets/glass_menu.dart';
 import 'multiview_screen.dart' show swapRotation;
 
 /// Windows-only: a grid of simultaneously-playing live channels —
@@ -738,7 +739,7 @@ class _ChannelPickerDialogState extends State<_ChannelPickerDialog> {
                                 : null;
                         if (row != null) {
                           final n = row.matches.length;
-                          return ListTile(
+                          return GlassFocusFrame(child: ListTile(
                             leading: const Icon(Icons.sports_score,
                                 color: Colors.white54),
                             title: Text(MultiviewSports.label(row.game),
@@ -762,9 +763,9 @@ class _ChannelPickerDialogState extends State<_ChannelPickerDialog> {
                                 navigator.pop(picked);
                               }
                             },
-                          );
+                          ));
                         }
-                        return ListTile(
+                        return GlassFocusFrame(child: ListTile(
                           leading: (c.logoUrl != null && c.logoUrl!.isNotEmpty)
                               ? Image.network(c.logoUrl!,
                                   width: 32,
@@ -776,7 +777,7 @@ class _ChannelPickerDialogState extends State<_ChannelPickerDialog> {
                           title: Text(c.name,
                               style: const TextStyle(color: Colors.white)),
                           onTap: () => Navigator.of(context).pop(c),
-                        );
+                        ));
                       },
                     ),
             ),

@@ -191,7 +191,7 @@ class _SportsChannelPickerState extends State<SportsChannelPicker> {
                     child: Text(tr('Clear results'))),
               ]),
               if (widget.allowRules)
-                CheckboxListTile(
+                GlassFocusFrame(child: CheckboxListTile(
                     title: Text(tr('Keep this list updated')),
                     value: _updated,
                     onChanged: (v) => setState(() {
@@ -199,7 +199,7 @@ class _SportsChannelPickerState extends State<SportsChannelPicker> {
                           if (_updated) {
                             _selected.addAll(results.map((c) => c.id));
                           }
-                        })),
+                        }))),
             ])),
         Expanded(
             child: results.isEmpty
@@ -428,7 +428,7 @@ Future<Map<String, List<String>>?> showSportsChannelFilters(
                                                                     final value =
                                                                         visible[
                                                                             i];
-                                                                    return CheckboxListTile(
+                                                                    return GlassFocusFrame(child: CheckboxListTile(
                                                                         title: Text(
                                                                             '${label(value)} (${counts[dimension]?[value] ?? 0})'),
                                                                         value: selected[dimension]?.contains(value) ??
@@ -437,7 +437,7 @@ Future<Map<String, List<String>>?> showSportsChannelFilters(
                                                                             change(() {
                                                                               final values = selected[dimension] ??= [];
                                                                               on == true ? values.add(value) : values.remove(value);
-                                                                            }));
+                                                                            })));
                                                                   })),
                                                     ])),
                                                 actions: [

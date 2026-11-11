@@ -10,6 +10,7 @@ import '../../services/playback_service.dart';
 import '../../services/playlist_editor_server.dart';
 import '../../services/playlist_manager.dart';
 import '../../services/storage_service.dart';
+import '../../widgets/glass_menu.dart';
 import '../../widgets/settings_scaffold.dart';
 
 /// Settings > Playlists & guide > Playlist editor: opens the local editor
@@ -72,6 +73,8 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
     return SettingsScaffold(
       title: tr('Playlist editor (Test flight)'),
       body: ListView(
+          // Sized to its rows: a floating panel hugs them.
+          shrinkWrap: true,
         controller: _scroll,
         padding: const EdgeInsets.all(16),
         children: [
@@ -147,7 +150,7 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
             onFocusChange: (focused) {
               if (focused && _scroll.hasClients) _scroll.jumpTo(0);
             },
-            child: SwitchListTile(
+            child: GlassFocusFrame(child: SwitchListTile(
               autofocus: true,
               title: Text(tr('Switch to another copy when a channel fails')),
               subtitle: Text(tr(
@@ -157,13 +160,13 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
                 await storage.setCopyFallback(v);
                 setState(() {});
               },
-            ),
+            )),
           ),
           for (final p in playlists.profiles)
             if (playlists.editorSession(p.id) case final s?) ...[
               const SizedBox(height: 8),
               Text(p.name, style: Theme.of(context).textTheme.titleMedium),
-              SwitchListTile(
+              GlassFocusFrame(child: SwitchListTile(
                 title: Text(tr('Hide lower-quality copies')),
                 subtitle: Text(tr(
                     'Only the best copy of each channel is listed; the others stay as automatic fallbacks.')),
@@ -173,8 +176,8 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
                   s.saveEdits(s.edits);
                   setState(() {});
                 },
-              ),
-              SwitchListTile(
+              )),
+              GlassFocusFrame(child: SwitchListTile(
                 title: Text(tr('Hide separator rows')),
                 subtitle: Text(tr('Rows like ##### SPORTS #####')),
                 value: s.edits.hideSeparators,
@@ -183,7 +186,7 @@ class _PlaylistEditorScreenState extends State<PlaylistEditorScreen> {
                   s.saveEdits(s.edits);
                   setState(() {});
                 },
-              ),
+              )),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(

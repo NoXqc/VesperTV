@@ -3,7 +3,8 @@ import 'package:provider/provider.dart';
 import '../l10n/l10n.dart';
 import '../services/archive_playback_preferences.dart';
 import '../services/archive_service.dart';
-import '../services/storage_service.dart';
+import '../services/storage_service.dart';
+import 'glass_menu.dart';
 
 Future<void> showArchivePlaybackSettings(BuildContext context) async {
   final storage = context.read<StorageService>();
@@ -28,11 +29,11 @@ Future<void> showArchivePlaybackSettings(BuildContext context) async {
                     child: SingleChildScrollView(
                         child:
                             Column(mainAxisSize: MainAxisSize.min, children: [
-                      SwitchListTile(
+                      GlassFocusFrame(child: SwitchListTile(
                           autofocus: true,
                           title: Text(tr('Auto-play preferred stream')),
                           value: auto,
-                          onChanged: (v) => update(() => auto = v)),
+                          onChanged: (v) => update(() => auto = v))),
                       DropdownButtonFormField<String>(
                           initialValue: source,
                           isExpanded: true,
@@ -81,10 +82,10 @@ Future<void> showArchivePlaybackSettings(BuildContext context) async {
                                   value: e.key, child: Text(tr(e.value)))
                           ],
                           onChanged: (v) => update(() => height = v ?? 0)),
-                      SwitchListTile(
+                      GlassFocusFrame(child: SwitchListTile(
                           title: Text(tr('Prefer SDR')),
                           value: hdr,
-                          onChanged: (v) => update(() => hdr = v)),
+                          onChanged: (v) => update(() => hdr = v))),
                       Text(
                           tr('If no stream matches, choose one manually. Format and language information comes from your sources.'),
                           style: Theme.of(ctx).textTheme.bodySmall),

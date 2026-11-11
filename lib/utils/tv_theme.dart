@@ -240,7 +240,11 @@ Widget withTvThemeIfNeeded(BuildContext context, WidgetBuilder builder) {
           // as-is by consuming widgets, not further blended — so this needs
           // to already be a sensible overlay alpha itself, not the solid
           // palette color, or it'd paint over the label text entirely.
-          focusColor: scheme.primary.withValues(alpha: 0.45),
+          // A light glass sheen, not the palette colour: primary at 45 %
+          // read as a muddy "pastel selector" (owner, 2026-11-10). The gold
+          // focus outline comes from the rows themselves (TvMenuTile,
+          // GlassFocusFrame) and the button styles below.
+          focusColor: Colors.white.withValues(alpha: 0.16),
           // Still reported as "not obvious enough" even with the focusColor
           // boost above — that overlay is a translucent tint blended *under*
           // a button's own label/border, which stays subtle regardless of

@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 
 import '../l10n/l10n.dart';
 import '../models/archive_models.dart';
+import '../models/hub_collection.dart';
 import '../services/archive_ready_watch.dart';
 import '../services/archive_service.dart';
 import '../services/archive_stream_session.dart';
@@ -17,20 +18,26 @@ import '../utils/route_observer.dart';
 import '../widgets/detail_header.dart';
 import '../widgets/hd_network_image.dart';
 import '../widgets/archive_row_settings.dart';
+import '../widgets/collection_tile.dart';
+import '../widgets/trimmed_logo.dart';
 import '../widgets/hold_to_activate.dart';
 import '../widgets/live_resume_hint.dart';
 import '../widgets/poster_card.dart';
 import '../widgets/roll_down_menu.dart';
 import '../widgets/tv_text_field_gate.dart';
 import '../services/app_preferences.dart';
+import '../services/storage_service.dart';
 import 'archive_live_tv_screen.dart';
 import 'archive_watch_list_screen.dart';
 import 'archive_catalog_screen.dart';
 import 'archive_detail_screen.dart';
 import 'archive_playback.dart';
+import 'hub_folder_screen.dart';
 import 'settings/archive_sources_screen.dart';
 import 'settings/media_server_screen.dart';
 import '../utils/desktop_platform.dart';
+import '../widgets/glass_menu.dart';
+import '../widgets/tv_dialog_option.dart';
 
 /// The Archive tab: classic, public-domain films and series from the
 /// user's own sources (Settings > Archive sources, any server speaking the
@@ -92,6 +99,144 @@ class _ArchiveScreenState extends State<ArchiveScreen>
 
   /// Last focused card index per row, so Up/Down lands where you were.
   final Map<String, int> _lastIndex = {};
+
+  /// Continue watching / Recently watched folded away with the eye beside
+  /// their title (owner, 2026-11-11, like the groups' playlists), per
+  /// viewer. A hidden row is just its title line: the eye and how many
+  /// titles it holds.
+  late final Set<String> _hiddenRows =
+      context.read<StorageService?>()?.getHubHiddenRows() ?? <String>{};
+  final Map<String, FocusNode> _eyeNodes = {};
+
+  FocusNode _eyeNode(String key) => _eyeNodes.putIfAbsent(
+      key, () => FocusNode(debugLabel: 'archive-row-eye'));
+
+  static bool _hasEye(ArchiveRow row) =>
+      row.continuations != null || row.isHistory;
+
+  bool _rowHidden(ArchiveRow row) =>
+      _hasEye(row) && _hiddenRows.contains(row.key);
+
+  Future<void> _toggleRowHidden(ArchiveRow row) async {
+    setState(() {
+      if (!_hiddenRows.remove(row.key)) _hiddenRows.add(row.key);
+      _lastIndex[row.key] = 0;
+    });
+    await context.read<StorageService?>()?.setHubHiddenRows(_hiddenRows);
+  }
+
+  /// The tab's rows: the service's, with the collections' tile rows after
+  /// search and Continue watching (Nuvio's home), and the catalogs those
+  /// tiles open left out of the list with their switch on (less clutter).
+  List<ArchiveRow> _rowsOf(ArchiveService service, [ArchiveType? type]) {
+    final rows = service.rows(type ?? _type);
+    final tiles = service.collectionRows(type ?? _type);
+    if (tiles.isEmpty) return rows;
+    final hide = service.collectionsHideRows
+        ? service.collectionRowKeys()
+        : const <String>{};
+    var at = rows.indexWhere((r) => !r.isSearch && r.continuations == null);
+    if (at < 0) at = rows.length;
+    return [
+      ...rows.take(at),
+      ...tiles,
+      for (final row in rows.skip(at))
+        if (!hide.contains(row.key)) row,
+    ];
+  }
+
+  /// The focused tile (the hero names its collection instead of a year).
+  HubFolder? _focusedFolder;
+
+  /// Opens a collection tile's page.
+  Future<void> _openFolder(ArchiveRow row, int i) async {
+    await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => HubFolderScreen(
+            folder: row.folders[i], collection: row.collection?.label)));
+    _refreshHistoryProgress();
+  }
+
+  /// Hold OK on a tile: turn its collection off (it leaves the tab; Settings
+  /// > Media Hub sources > Collections turns it back on), or Home.
+  Future<void> _tileMenu(ArchiveRow row) async {
+    final collection = row.collection;
+    if (collection == null) return;
+    final service = context.read<ArchiveService>();
+    final choice = await showGlassMenu<String>(
+      context: context,
+      builder: (dialogContext) => SwallowHeldActivate(
+        child: GlassMenuDialog(
+          title: Text(collection.label),
+          children: [
+            TvDialogOption(
+              autofocus: true,
+              onPressed: () => Navigator.of(dialogContext).pop('off'),
+              child: Text(tr('Turn off this collection')),
+            ),
+            TvDialogOption(
+              onPressed: () => Navigator.of(dialogContext).pop('home'),
+              child: Text(collection.onHome
+                  ? tr('Remove from Home')
+                  : tr('Show on Home')),
+            ),
+            TvDialogOption(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(tr('Cancel')),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || choice == null) return;
+    if (choice == 'home') {
+      await service.setCollectionOnHome(collection.id, !collection.onHome);
+      return;
+    }
+    final r = _focusedRow;
+    await service.setCollectionEnabled(collection.id, false);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(tr(
+            '{name} is off. Settings > Media Hub sources > Collections turns it back on.',
+            {'name': collection.label}))));
+    // The row is gone: the remote lands on the row that took its place.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final rows = _rowsOf(context.read<ArchiveService>());
+      if (rows.isNotEmpty) _focusRow(rows, r.clamp(0, rows.length - 1));
+    });
+  }
+
+  /// Where tile [i] of a tile row starts (tiles can differ in width).
+  static double _tileStart(ArchiveRow row, int i) {
+    var x = 0.0;
+    for (var k = 0; k < i && k < row.folders.length; k++) {
+      x += CollectionTile.slotOf(row.folders[k].shape);
+    }
+    return x;
+  }
+
+  final Map<String, (List<HubFolder>, ItemExtentBuilder)> _tileExtents = {};
+
+  /// One extent builder per tile row (see [_extentBuilder]).
+  ItemExtentBuilder _tileExtentBuilder(ArchiveRow row) {
+    final cached = _tileExtents[row.key];
+    if (cached != null && identical(cached.$1, row.folders)) return cached.$2;
+    final folders = row.folders;
+    double? builder(int i, SliverLayoutDimensions _) =>
+        i < folders.length ? CollectionTile.slotOf(folders[i].shape) : null;
+    _tileExtents[row.key] = (folders, builder);
+    return builder;
+  }
+
+  /// Up from a row with an eye lands on its eye first.
+  void _focusEye(List<ArchiveRow> rows, int r) {
+    final row = rows[r];
+    setState(() => _focusedRow = r);
+    final ctx = _rowKey(row.key).currentContext;
+    if (ctx != null) Scrollable.ensureVisible(ctx, alignment: 0.05);
+    _focusWhenBuilt(_eyeNode(row.key));
+  }
   final Map<String, GlobalKey> _rowKeys = {};
   final Map<String, ScrollController> _rowScrolls = {};
 
@@ -146,7 +291,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
       if (_scroll.hasClients) _scroll.jumpTo(0);
       await service.search(type, query);
       if (!mounted || _type != type) return;
-      final rows = service.rows(type);
+      final rows = _rowsOf(service, type);
       if (rows.isNotEmpty &&
           rows.first.isSearch &&
           rows.first.items.isNotEmpty) {
@@ -256,6 +401,9 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     for (final n in _barRowNodes.values) {
       n.dispose();
     }
+    for (final n in _eyeNodes.values) {
+      n.dispose();
+    }
     _railScope.dispose();
     _contentScope.dispose();
     _firstRailNode.dispose();
@@ -282,6 +430,10 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   double get _rowHeaderHeight =>
       MediaQuery.textScalerOf(context).scale(15) * 1.3 + 20;
   double get _rowExtent => _rowHeaderHeight + PosterCard.height + 16;
+
+  /// A hidden row is only its title line (owner, 2026-11-11: less clutter).
+  double _extentOf(ArchiveRow row) =>
+      _rowHidden(row) ? _rowHeaderHeight + 6 : _rowExtent;
 
   GlobalKey _rowKey(String key) => _rowKeys.putIfAbsent(key, GlobalKey.new);
 
@@ -312,7 +464,8 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   /// Validate identity again: a refreshed row may reuse the same index/node.
   int? _wideIndex(ArchiveRow row) {
     final expanded = _expandedCard;
-    if (!_canPreview ||
+    if (row.collection != null ||
+        !_canPreview ||
         !_contentScope.hasFocus ||
         expanded == null ||
         expanded.$1 != row.key ||
@@ -344,7 +497,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   void _resumeWidePreview() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_canPreview) return;
-      final rows = context.read<ArchiveService>().rows(_type);
+      final rows = _rowsOf(context.read<ArchiveService>());
       final r = rows.indexWhere((row) => row.key == _focusedRowKey);
       if (r < 0) return;
       final row = rows[r];
@@ -363,7 +516,9 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     final type = _type;
     final id = row.items[i].id;
     final node = _node(row.key, i);
-    if (!_canPreview || !(row.items[i].backgroundUrl?.isNotEmpty ?? false)) {
+    if (row.collection != null ||
+        !_canPreview ||
+        !(row.items[i].backgroundUrl?.isNotEmpty ?? false)) {
       return;
     }
     _widePreviewTimer = Timer(const Duration(seconds: 2), () {
@@ -376,7 +531,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
           !node.hasFocus) {
         return;
       }
-      final rows = context.read<ArchiveService>().rows(type);
+      final rows = _rowsOf(context.read<ArchiveService>(), type);
       final r = rows.indexWhere((item) => item.key == row.key);
       if (r < 0 ||
           i >= rows[r].items.length ||
@@ -426,7 +581,11 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     final c = _rowScrolls[row.key];
     if (c != null && c.hasClients && i < row.items.length) {
       final pos = c.position;
-      final start = _rowPadding + i * _cardExtent;
+      final tiles = row.collection != null;
+      final slot =
+          tiles ? CollectionTile.slotOf(row.folders[i].shape) : _cardExtent;
+      final start =
+          _rowPadding + (tiles ? _tileStart(row, i) : i * _cardExtent);
       if (_wideCards) {
         // Move the row from the selector's position, showing the upcoming
         // titles immediately. At the actual end, retain the natural clamp.
@@ -434,11 +593,10 @@ class _ArchiveScreenState extends State<ArchiveScreen>
       } else {
         // Narrow/touch rows retain their existing minimal-reveal behavior.
         double? to;
-        if (start - _cardExtent < pos.pixels) {
-          to = start - _cardExtent;
-        } else if (start + _cardExtent * 2 >
-            pos.pixels + pos.viewportDimension) {
-          to = start + _cardExtent * 2 - pos.viewportDimension;
+        if (start - slot < pos.pixels) {
+          to = start - slot;
+        } else if (start + slot * 2 > pos.pixels + pos.viewportDimension) {
+          to = start + slot * 2 - pos.viewportDimension;
         }
         if (to != null) c.jumpTo(to.clamp(0.0, pos.maxScrollExtent));
       }
@@ -577,7 +735,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
         ModalRoute.of(context)?.isCurrent != true) {
       return;
     }
-    final rows = service.rows(type);
+    final rows = _rowsOf(service, type);
     if (rows.isNotEmpty && rows.first.isSearch) {
       _lastIndex[rows.first.key] = 0;
       _rowScrolls[rows.first.key]?.jumpTo(0);
@@ -648,11 +806,11 @@ class _ArchiveScreenState extends State<ArchiveScreen>
             animation: service,
             builder: (_, child) =>
                 SimpleDialog(title: Text(tr('Search sources')), children: [
-                  SimpleDialogOption(
+                  GlassFocusFrame(child: SimpleDialogOption(
                       onPressed: () => Navigator.pop(ctx, ''),
-                      child: Text(tr('All sources'))),
+                      child: Text(tr('All sources')))),
                   for (final entry in service.searchStates(_type).entries)
-                    SimpleDialogOption(
+                    GlassFocusFrame(child: SimpleDialogOption(
                         onPressed: () => Navigator.pop(ctx, entry.key),
                         child: Text(
                             '${service.searchSourceNames(_type)[entry.key] ?? ''} · ${switch (entry.value) {
@@ -660,7 +818,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                           ArchiveSourceStatus.ready => tr('Results'),
                           ArchiveSourceStatus.empty => tr('No results'),
                           ArchiveSourceStatus.failed => tr('Unavailable'),
-                        }}'))
+                        }}')))
                 ])));
     if (!mounted || picked == null) return;
     service.selectSearchSource(_type, picked.isEmpty ? null : picked);
@@ -698,8 +856,17 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     } else if (_scroll.hasClients) {
       // Lazy rows have no context yet. Materialize the destination first,
       // including long jumps from the catalog buttons in the floating bar.
-      _scroll.jumpTo(
-          (r * _rowExtent).clamp(0.0, _scroll.position.maxScrollExtent));
+      var offset = 0.0;
+      for (var k = 0; k < r; k++) {
+        offset += _extentOf(rows[k]);
+      }
+      _scroll.jumpTo(offset.clamp(0.0, _scroll.position.maxScrollExtent));
+    }
+    // A hidden row has only its eye to land on.
+    if (_rowHidden(row)) {
+      _focusWhenBuilt(_eyeNode(row.key));
+      WidgetsBinding.instance.scheduleFrame();
+      return;
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focusCard(row, i);
@@ -716,14 +883,22 @@ class _ArchiveScreenState extends State<ArchiveScreen>
     }
     if (rows.isEmpty) return KeyEventResult.ignored;
     final row = rows[_focusedRow.clamp(0, rows.length - 1)];
-    final i = _lastIndex[row.key] ?? 0;
+    final hidden = _rowHidden(row);
+    final onEye = _eyeNodes[row.key]?.hasFocus ?? false;
+    final i = hidden ? 0 : _lastIndex[row.key] ?? 0;
     final key = event.logicalKey;
     if (key == LogicalKeyboardKey.arrowDown) {
-      if (_focusedRow < rows.length - 1) _focusRow(rows, _focusedRow + 1);
+      if (onEye && !hidden) {
+        _focusRow(rows, _focusedRow);
+      } else if (_focusedRow < rows.length - 1) {
+        _focusRow(rows, _focusedRow + 1);
+      }
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowUp) {
-      if (_focusedRow > 0) {
+      if (!onEye && _hasEye(row)) {
+        _focusEye(rows, _focusedRow);
+      } else if (_focusedRow > 0) {
         _focusRow(rows, _focusedRow - 1);
       } else {
         _focusBar();
@@ -731,11 +906,13 @@ class _ArchiveScreenState extends State<ArchiveScreen>
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowRight) {
-      if (i < row.items.length - 1) _focusCard(row, i + 1);
+      if (!onEye && !hidden && i < row.items.length - 1) {
+        _focusCard(row, i + 1);
+      }
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowLeft) {
-      if (i > 0) {
+      if (i > 0 && !onEye) {
         _focusCard(row, i - 1);
       } else {
         _railScope.requestFocus();
@@ -785,7 +962,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   @override
   Widget build(BuildContext context) {
     final service = context.watch<ArchiveService>();
-    final rows = service.rows(_type);
+    final rows = _rowsOf(service);
     final keptRow = rows.indexWhere((row) => row.key == _focusedRowKey);
     if (keptRow >= 0 && _contentScope.hasFocus) _focusedRow = keptRow;
     final narrow = MediaQuery.sizeOf(context).width < 700;
@@ -1163,7 +1340,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   /// results (the lit Search button stands for those).
   List<int> _barRows(List<ArchiveRow> rows) => [
         for (var r = 0; r < rows.length; r++)
-          if (!rows[r].isSearch) r,
+          if (!rows[r].isSearch && rows[r].collection == null) r,
       ];
 
   /// Hold OK (or long-press) on a row's jump button: a small menu rolls
@@ -1295,7 +1472,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
   /// first button).
   void _focusBar() {
     final service = context.read<ArchiveService>();
-    final rows = service.rows(_type);
+    final rows = _rowsOf(service);
     final nodes = _barNodes(service, rows);
     if (nodes.isEmpty) return;
     final r = _focusedRow;
@@ -1435,12 +1612,12 @@ class _ArchiveScreenState extends State<ArchiveScreen>
             shrinkWrap: true,
             children: [
               for (var i = 0; i < items.length; i++)
-                ListTile(
+                GlassFocusFrame(child: ListTile(
                   leading: Icon(items[i].$1),
                   title: Text(items[i].$2),
                   trailing: items[i].$3 ? const Icon(Icons.check) : null,
                   onTap: () => Navigator.of(sheet).pop(i),
-                ),
+                )),
             ],
           ),
         ),
@@ -1692,15 +1869,44 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _HeroTitle(
-                              key: ValueKey(focused.id),
-                              meta: focused,
-                              height: narrow || short ? 36 : 64),
+                          if (_focusedFolder?.logoUrl case final logo?)
+                            SizedBox(
+                              height: narrow || short ? 36 : 64,
+                              child: Align(
+                                alignment: Alignment.bottomLeft,
+                                child: TrimmedLogo(
+                                  key: ValueKey(logo),
+                                  url: logo,
+                                  height: narrow || short ? 36 : 64,
+                                  maxWidth: 360,
+                                  tint: TrimmedLogo.brandColor(focused.name),
+                                  fallback: Text(focused.name,
+                                      style: const TextStyle(
+                                          fontSize: 30,
+                                          fontWeight: FontWeight.w700)),
+                                ),
+                              ),
+                            )
+                          else
+                            _HeroTitle(
+                                key: ValueKey(focused.id),
+                                meta: focused,
+                                height: narrow || short ? 36 : 64),
                           const SizedBox(height: 8),
-                          _HeroInfoLine(
-                              meta: focused,
-                              sourceLabel: _focusedLabel,
-                              imdbRating: !_focusedFromServer),
+                          if (_focusedFolder case final folder?)
+                            Text(
+                                '${_focusedLabel ?? ''} · ${tr('{n} catalogs', {
+                                      'n': folder.sources.length
+                                    })}',
+                                style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white))
+                          else
+                            _HeroInfoLine(
+                                meta: focused,
+                                sourceLabel: _focusedLabel,
+                                imdbRating: !_focusedFromServer),
                           const SizedBox(height: 8),
                           if (focused.description != null && !short)
                             Flexible(
@@ -1723,7 +1929,8 @@ class _ArchiveScreenState extends State<ArchiveScreen>
               child: ListView.builder(
                 controller: _scroll,
                 padding: const EdgeInsets.only(bottom: 40),
-                itemExtent: _rowExtent,
+                itemExtentBuilder: (i, _) =>
+                    i < rows.length ? _extentOf(rows[i]) : null,
                 scrollCacheExtent: ScrollCacheExtent.pixels(_rowExtent),
                 itemCount: rows.length,
                 findChildIndexCallback: (key) {
@@ -1751,18 +1958,100 @@ class _ArchiveScreenState extends State<ArchiveScreen>
         SizedBox(
           height: _rowHeaderHeight,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 14, 24, 6),
-            child: Text(_rowTitle(service, row),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: r == _focusedRow && _contentScope.hasFocus
-                        ? scheme.primary
-                        : Colors.white)),
+            padding: _hasEye(row)
+                ? const EdgeInsets.fromLTRB(24, 6, 24, 2)
+                : const EdgeInsets.fromLTRB(24, 14, 24, 6),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Flexible(
+                  child: Padding(
+                    padding: EdgeInsets.only(bottom: _hasEye(row) ? 4 : 0),
+                    child: Text(_rowTitle(service, row),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: r == _focusedRow && _contentScope.hasFocus
+                                ? scheme.primary
+                                : Colors.white)),
+                  ),
+                ),
+                if (_hasEye(row)) ...[
+                  const SizedBox(width: 10),
+                  _RowEye(
+                    key: ValueKey('archive-eye-${row.key}'),
+                    node: _eyeNode(row.key),
+                    hidden: _rowHidden(row),
+                    onTap: () => _toggleRowHidden(row),
+                    onFocus: () => setState(() {
+                      _focusedRow = r;
+                      _focusedRowKey = row.key;
+                    }),
+                  ),
+                  if (_rowHidden(row)) ...[
+                    const SizedBox(width: 10),
+                    Flexible(
+                      child: Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text(
+                          key: ValueKey('archive-hidden-${row.key}'),
+                          '${tr('{n} titles', {'n': row.items.length})} · '
+                          '${context.read<AppPreferences?>()?.isTelevision ?? false ? tr('OK shows them') : tr('Tap to show them')}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 13, color: Colors.white60)),
+                    ),
+                    ),
+                  ],
+                ],
+              ],
+            ),
           ),
         ),
+        if (row.collection != null)
+          SizedBox(
+            height: PosterCard.height + 16,
+            child: ListView.builder(
+              controller: _rowScroll(row.key),
+              scrollDirection: Axis.horizontal,
+              // Room above: the focused tile grows and its top edge was cut
+              // by the row (owner photo, 2026-11-11).
+              padding: const EdgeInsets.fromLTRB(_rowPadding, 6, _rowPadding, 0),
+              itemExtentBuilder: _tileExtentBuilder(row),
+              scrollCacheExtent: const ScrollCacheExtent.pixels(_cardExtent * 5),
+              itemCount: row.folders.length,
+              itemBuilder: (_, i) => Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: CollectionTile(
+                  key: ValueKey('collection-tile-${row.key}-$i'),
+                  folder: row.folders[i],
+                  focusNode: _node(row.key, i),
+                  // A phone has no focus: every tile on screen plays.
+                  animate: !(context.read<AppPreferences?>()?.isTelevision ??
+                          false) &&
+                      _narrow,
+                  onTap: () => _openFolder(row, i),
+                  onHold: () => _tileMenu(row),
+                  onFocusGained: () {
+                    _focusedRowKey = row.key;
+                    _lastIndex[row.key] = i;
+                    setState(() {
+                      _focusedRow = r;
+                      _focused = row.items[i];
+                      _focusedFolder = row.folders[i];
+                      _focusedLabel = row.collection!.label;
+                      _focusedFromServer = false;
+                    });
+                    _revealFocusedAfterLayout(row, i);
+                  },
+                ),
+              ),
+            ),
+          )
+        else if (!_rowHidden(row))
         SizedBox(
           height: PosterCard.height + 16,
           child: ListView.builder(
@@ -1844,6 +2133,7 @@ class _ArchiveScreenState extends State<ArchiveScreen>
                       setState(() {
                         _focusedRow = r;
                         _focused = meta;
+                        _focusedFolder = null;
                         _focusedLabel = row.labelAt(i);
                         _focusedFromServer = row.sourceAt(i).server != null;
                       });
@@ -1856,6 +2146,72 @@ class _ArchiveScreenState extends State<ArchiveScreen>
           ),
         ),
       ],
+    );
+  }
+}
+
+/// The eye beside Continue watching / Recently watched: OK (or a tap)
+/// hides or shows the row's titles.
+class _RowEye extends StatefulWidget {
+  const _RowEye({
+    super.key,
+    required this.node,
+    required this.hidden,
+    required this.onTap,
+    required this.onFocus,
+  });
+
+  final FocusNode node;
+  final bool hidden;
+  final VoidCallback onTap;
+  final VoidCallback onFocus;
+
+  @override
+  State<_RowEye> createState() => _RowEyeState();
+}
+
+class _RowEyeState extends State<_RowEye> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      label: widget.hidden ? tr('Show this row') : tr('Hide this row'),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          focusNode: widget.node,
+          focusColor: Colors.transparent,
+          customBorder: const CircleBorder(),
+          onTap: widget.onTap,
+          onFocusChange: (f) {
+            setState(() => _focused = f);
+            if (f) widget.onFocus();
+          },
+          child: Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.black.withValues(alpha: 0.35),
+              border: Border.all(
+                  color: _focused ? scheme.primary : Colors.white24, width: 2),
+            ),
+            child: Icon(
+                widget.hidden
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
+                size: 17,
+                color: _focused
+                    ? scheme.primary
+                    : widget.hidden
+                        ? Colors.white54
+                        : Colors.white),
+          ),
+        ),
+      ),
     );
   }
 }

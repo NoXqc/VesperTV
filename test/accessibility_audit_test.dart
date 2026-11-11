@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nox_iptv/screens/settings/add_playlist_screen.dart';
-import 'package:nox_iptv/screens/settings/general_settings_screen.dart';
 import 'package:nox_iptv/screens/settings/playlist_manager_screen.dart';
 import 'package:nox_iptv/screens/search_screen.dart';
 import 'package:nox_iptv/screens/settings/settings_menu_screen.dart';
@@ -82,7 +81,18 @@ void main() {
     'add playlist': () => const AddPlaylistScreen(),
     'playlist manager': () => const PlaylistManagerScreen(),
     'search': () => const SearchScreen(initialScope: 'TV'),
-    'all general settings': () => const GeneralSettingsScreen(),
+    'settings search': () => const SettingsSearchScreen(),
+    for (final id in [
+      'sources',
+      'appearance',
+      'playback',
+      'sports',
+      'profiles',
+      'devices',
+      'help',
+      'advanced'
+    ])
+      'settings $id': () => SettingsCategoryScreen(categoryId: id),
   };
   for (final scale in [1.3, 2.0]) {
     for (final e in screens.entries) {

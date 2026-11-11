@@ -22,6 +22,8 @@ class RemoteTipsScreen extends StatelessWidget {
     return SettingsScaffold(
       title: tr('Remote tips'),
       body: ListView(
+          // Sized to its rows: a floating panel hugs them.
+          shrinkWrap: true,
         padding: const EdgeInsets.all(16),
         children: [
           Text(tr(

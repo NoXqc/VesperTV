@@ -86,6 +86,7 @@ import 'services/desktop_live_recovery.dart';
 import 'services/desktop_audio.dart';
 import 'services/desktop_stream_setup.dart';
 import 'services/vesper_ai/mcp_bridge.dart';
+import 'services/hub_remote.dart';
 import 'services/vesper_ai/vesper_ai.dart';
 import 'services/vesper_ai/vesper_tools.dart';
 import 'services/vesper_ai/voice_input.dart';
@@ -872,6 +873,7 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         clearHubHistory: _archiveService.clearHistory,
         hub:
             AppVesperHub(navigatorKey: _navigatorKey, archive: _archiveService),
+        archive: _archiveService,
         profiles: AppVesperProfiles(
             navigatorKey: _navigatorKey,
             viewers: _viewerProfileService,
@@ -889,6 +891,8 @@ class _NoxIptvAppState extends State<NoxIptvApp>
         ..onAssist = _openVesper
         ..start();
       McpBridge.instance.attach(_storage);
+      // Manage from phone (Media Hub sources) answers through the same link.
+      HubRemote.instance.attach(_archiveService, _storage);
       _vesperLifecycle = AppLifecycleListener(
         onHide: McpBridge.instance.pause,
         onShow: McpBridge.instance.resume,

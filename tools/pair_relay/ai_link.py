@@ -17,6 +17,8 @@ this relay never sees the viewer's playlists except the answers it carries.
     GET  /mcp/<secret>    a help page in a browser; 405 for MCP clients
     GET  /ai              the phone page (assets/vesper_ai/phone.html copy);
                           its link is in the URL fragment
+    GET  /hub             Manage from phone: the TV's Media Hub sources
+                          (hub.html, JSON-RPC "hub/..." on the same link)
     GET  /api/ai/poll     the TV: X-Vesper-Link; 200 {"id","msg"} or 204
     POST /api/ai/reply    the TV: X-Vesper-Link; {"id","msg"} -> 204
 """
@@ -47,6 +49,14 @@ PROTOCOLS = ("2025-06-18", "2025-03-26", "2024-11-05")
 
 PAGE = os.environ.get(
     "PAIR_AI_PAGE", os.path.join(os.path.dirname(__file__), "ai.html"))
+HUB_PAGE = os.environ.get(
+    "PAIR_HUB_PAGE", os.path.join(os.path.dirname(__file__), "hub.html"))
+
+# The sources page shows each add-on's logo, served by the add-on itself:
+# images from any https host, nothing else beyond the usual policy.
+HUB_CSP = ("default-src 'none'; style-src 'unsafe-inline'; "
+           "script-src 'unsafe-inline'; connect-src 'self'; img-src https: data:; "
+           "form-action 'none'; base-uri 'none'; frame-ancestors 'none'")
 
 INSTRUCTIONS = (
     "VesperTV is a TV app playing the viewer's own IPTV playlists (live "
@@ -254,6 +264,15 @@ def phone_page(h):
     except OSError:
         return h._send(404)
     return h._send(200, body, "text/html; charset=utf-8")
+
+
+def hub_page(h):
+    try:
+        with open(HUB_PAGE, "rb") as f:
+            body = f.read()
+    except OSError:
+        return h._send(404)
+    return h._send(200, body, "text/html; charset=utf-8", csp=HUB_CSP)
 
 
 # -------------------------------------------------------------------- TV

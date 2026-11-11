@@ -3,7 +3,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
-import '../services/storage_service.dart';
+import '../services/storage_service.dart';
+import 'glass_menu.dart';
 
 /// Stable ids; missing rows keep their place for titles that do have them.
 class ArchiveDetailLayout {
@@ -88,8 +89,8 @@ class _DetailLayoutDialogState extends State<_DetailLayoutDialog> {
                     'Choose the order of rows below title details. Saved for this viewer.')),
                 const SizedBox(height: 12),
                 for (var i = 0; i < _order.length; i++)
-                  ListTile(
-                      key: ValueKey(_order[i]),
+                  GlassFocusFrame(key: ValueKey(_order[i]), child: ListTile(
+                      
                       title: Text(ArchiveDetailLayout.label(_order[i])),
                       contentPadding: EdgeInsets.zero,
                       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -109,7 +110,7 @@ class _DetailLayoutDialogState extends State<_DetailLayoutDialog> {
                             onPressed: i == _order.length - 1
                                 ? null
                                 : () => _move(_order[i], 1)),
-                      ])),
+                      ]))),
               ]))),
           actions: [
             TextButton(

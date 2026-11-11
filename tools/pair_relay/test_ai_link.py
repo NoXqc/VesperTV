@@ -157,6 +157,13 @@ class AiLinkTests(unittest.TestCase):
         res = conn.getresponse()
         self.assertEqual(res.status, 200)
         self.assertIn(b"vesper/say", res.read())
+        self.assertNotIn("img-src", res.getheader("Content-Security-Policy"))
+        # Manage from phone: the sources page, with add-on logos allowed.
+        conn.request("GET", "/hub")
+        res = conn.getresponse()
+        self.assertEqual(res.status, 200)
+        self.assertIn(b"hub/list", res.read())
+        self.assertIn("img-src https:", res.getheader("Content-Security-Policy"))
         conn.close()
 
 

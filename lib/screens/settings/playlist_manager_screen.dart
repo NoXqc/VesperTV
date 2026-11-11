@@ -84,6 +84,8 @@ class _PlaylistManagerScreenState extends State<PlaylistManagerScreen> {
               if (!didPop) _backToList();
             },
             child: SettingsScaffold(
+          // A multi-pane tool: the glass panel spans the screen.
+          wide: true,
               title: tr('Playlist Manager'),
               body: LayoutBuilder(builder: (context, constraints) {
                 final wide = constraints.maxWidth >= 760;

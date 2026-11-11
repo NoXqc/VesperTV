@@ -120,6 +120,8 @@ class _DebridSettingsScreenState extends State<DebridSettingsScreen> {
     return SettingsScaffold(
       title: tr('Debrid accounts'),
       body: ListView(
+          // Sized to its rows: a floating panel hugs them.
+          shrinkWrap: true,
         padding: const EdgeInsets.all(16),
         children: [
           Text(

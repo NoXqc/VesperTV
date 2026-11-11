@@ -230,7 +230,7 @@ Future<Map<String, Object?>> _setSubtitles(VesperToolbox box,
   if (channel == null || !_onlineSubtitles(box, channel)) {
     throw VesperToolError('No ${languageName(code)} subtitles in this file'
         '${channel != null && AddonService.supports(channel) ? ', and no '
-            'subtitle add-on is on (Settings > Add-ons)' : ''}.');
+            'subtitle add-on is on (Settings > Playlists & sources > Online subtitles)' : ''}.');
   }
   final match = (await AddonService(storage).search(channel))
       .where((s) => sameTrackLanguage(s.lang, code))

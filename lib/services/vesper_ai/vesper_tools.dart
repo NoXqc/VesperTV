@@ -9,6 +9,7 @@ import '../../l10n/l10n.dart';
 import '../../models/archive_models.dart';
 import '../../models/channel.dart';
 import '../../models/epg_program.dart';
+import '../../models/hub_collection.dart';
 import '../../models/sports.dart';
 import '../../models/viewer_profile.dart';
 import '../../models/xtream_series.dart';
@@ -46,7 +47,9 @@ import '../../widgets/desktop_data_pool_card.dart';
 import '../../widgets/desktop_subtitles.dart';
 
 part 'desktop_player_tools.dart';
+part 'collections_tool.dart';
 part 'game_channel_tool.dart';
+part 'hub_rows_tool.dart';
 part 'media_hub_tool.dart';
 part 'my_groups_tool.dart';
 part 'player_tracks.dart';
@@ -141,10 +144,14 @@ class VesperToolbox {
     this.clearHubHistory,
     this.profiles,
     this.hub,
+    this.archive,
   });
 
   /// Media Hub for the media_hub tool (null = no Media Hub).
   final VesperHub? hub;
+
+  /// The Media Hub's collections for the collections tool (null = none).
+  final ArchiveService? archive;
 
   /// Viewer profiles + parental PIN (null = not available here).
   final VesperProfileControl? profiles;
@@ -1281,7 +1288,7 @@ final List<VesperTool> vesperTools = [
         'of one group with their guide now / next (action channels, e.g. '
         'every "NBA League Pass" channel), or hide / show the groups whose '
         'name contains some words (e.g. hide every group with "Turkish"). '
-        'Hidden groups come back in Settings > Playlists. For single '
+        'Hidden groups come back in Settings > Playlists & sources > Playlist Manager. For single '
         'channels, rules or renames use playlist_editor; for the viewer\'s '
         'own groups (new groups of picked channels) use my_groups.',
     schema: {
@@ -1366,6 +1373,8 @@ final List<VesperTool> vesperTools = [
     },
   ),
   _myGroupsTool,
+  _collectionsTool,
+  _hubRowsTool,
   _playlistEditorTool,
   _settingsTool,
   _profilesTool,

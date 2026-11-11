@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -11,12 +10,10 @@ import 'package:nox_iptv/l10n/l10n.dart';
 import 'package:nox_iptv/models/profile_copy.dart';
 import 'package:nox_iptv/models/sports.dart';
 import 'package:nox_iptv/screens/settings/settings_menu_screen.dart';
-import 'package:nox_iptv/screens/settings/sports_league_visibility_settings_screen.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
 import 'package:nox_iptv/services/sports_service.dart';
 import 'package:nox_iptv/services/storage_service.dart';
-import 'package:nox_iptv/widgets/tv_menu_tile.dart';
-import 'package:nox_iptv/widgets/tv_switch_list_tile.dart';
+import 'package:nox_iptv/widgets/setting_row.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -200,24 +197,21 @@ void main() {
           child: MaterialApp(
               theme: ThemeData.dark(), home: const SettingsMenuScreen())));
       await tester.pumpAndSettle();
-      final category = find.widgetWithText(TvMenuTile, 'Sports Trak');
+      final category = find.widgetWithText(SettingRow, 'Sports Trak');
       await tester.ensureVisible(category);
       await tester.tap(category);
       await tester.pumpAndSettle();
+      // A switch right in the Settings list now (2026-11-10), no page.
       final entry =
-          find.widgetWithText(TvMenuTile, 'Hide leagues with no games');
-      // This destination is below the new quality preference on phones.
+          find.widgetWithText(SettingRow, 'Hide leagues with no games');
       await tester.scrollUntilVisible(entry, 120,
           scrollable: find.byType(Scrollable).last);
       await tester.tap(entry);
       await tester.pumpAndSettle();
-      expect(find.byType(SportsLeagueVisibilitySettingsScreen), findsOneWidget);
-      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-      await tester.pumpAndSettle();
       expect(storage.getSportsHideEmptyLeagues(), true);
-      await tester.binding.handlePopRoute();
+      await tester.tap(entry);
       await tester.pumpAndSettle();
-      expect(find.byType(SportsLeagueVisibilitySettingsScreen), findsNothing);
+      expect(storage.getSportsHideEmptyLeagues(), false);
       expect(tester.takeException(), null);
       await tester.pumpWidget(const SizedBox());
       prefs.dispose();
@@ -233,17 +227,24 @@ void main() {
       tester.view.physicalSize = const Size(390, 760);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
-      await tester.pumpWidget(Provider.value(
-          value: storage,
+      final prefs = AppPreferences(storage);
+      await prefs.init();
+      addTearDown(prefs.dispose);
+      await tester.pumpWidget(MultiProvider(
+          providers: [
+            Provider.value(value: storage),
+            ChangeNotifierProvider.value(value: prefs)
+          ],
           child: MaterialApp(
               theme: ThemeData.dark(),
               home: const MediaQuery(
                   data: MediaQueryData(
                       size: Size(390, 760), textScaler: TextScaler.linear(1.4)),
-                  child: SportsLeagueVisibilitySettingsScreen()))));
+                  child: SettingsCategoryScreen(categoryId: 'sports')))));
       await tester.pumpAndSettle();
-      final toggle = find.byType(TvSwitchListTile);
-      await tester.ensureVisible(toggle);
+      final toggle = find.byKey(const ValueKey('setting-sports_hide_empty'));
+      await tester.scrollUntilVisible(toggle, 120,
+          scrollable: find.byType(Scrollable).last);
       await tester.tap(toggle);
       await tester.pumpAndSettle();
       expect(storage.getSportsHideEmptyLeagues(), true);

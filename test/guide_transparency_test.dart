@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nox_iptv/l10n/l10n.dart';
-import 'package:nox_iptv/screens/settings/guide_settings_screen.dart';
+import 'package:nox_iptv/screens/settings/settings_menu_screen.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
 import 'package:nox_iptv/services/storage_service.dart';
 import 'package:nox_iptv/utils/constants.dart';
+import 'package:nox_iptv/widgets/setting_row.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// Settings > Appearance > Live TV > Guide transparency (a stepper row since
+/// the 2026-11-10 Settings: Left/Right change it by 5, OK lists the values).
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   late StorageService storage;
@@ -29,7 +32,17 @@ void main() {
   });
 
   Widget settings() => ChangeNotifierProvider.value(
-      value: prefs, child: const MaterialApp(home: GuideSettingsScreen()));
+      value: prefs,
+      child: const MaterialApp(
+          home: SettingsCategoryScreen(categoryId: 'appearance')));
+
+  final row = find.widgetWithText(SettingRow, 'Guide transparency');
+
+  Future<void> show(WidgetTester tester) async {
+    await tester.scrollUntilVisible(row, 200,
+        scrollable: find.byType(Scrollable).last);
+    await tester.pumpAndSettle();
+  }
 
   test('existing guide appearance is the default; percentage survives reload',
       () async {
@@ -43,78 +56,86 @@ void main() {
     reloaded.dispose();
   });
 
-  testWidgets('remote arrows and touch set and persist the percentage',
+  testWidgets('remote arrows step it by 5; OK lists the values',
       (tester) async {
     tester.view.physicalSize = const Size(1280, 2000);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     prefs.setGuideFullVideo(true);
     await tester.pumpWidget(settings());
-    expect(find.text('45%'), findsOneWidget);
-    final slider = find.byType(Slider);
-    // The remote reaches the slider through its own focus target (Left/
-    // Right = 5%); Flutter's Slider stays out of D-pad focus.
-    final remote = find.byWidgetPredicate(
-        (w) => w is Focus && w.focusNode?.debugLabel == 'remote-slider');
-    final node = tester.widget<Focus>(remote).focusNode!;
-    node.requestFocus();
+    await show(tester);
+    expect(find.descendant(of: row, matching: find.text('45%')),
+        findsOneWidget);
+    Focus.of(tester.element(find.text('Guide transparency'))).requestFocus();
     await tester.pumpAndSettle();
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pumpAndSettle();
     expect(storage.getGuideTransparency(), 50);
-    expect(find.text('50%'), findsOneWidget);
+    expect(find.descendant(of: row, matching: find.text('50%')),
+        findsOneWidget);
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.pumpAndSettle();
     expect(storage.getGuideTransparency(), 45);
-    // Up / Down leave it (the remote used to be stuck: they changed it).
+    // Up / Down leave it (the remote was once stuck on a slider here).
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pumpAndSettle();
-    expect(node.hasFocus, isFalse);
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
-    await tester.pumpAndSettle();
-    expect(node.hasFocus, isTrue);
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
-    await tester.pumpAndSettle();
-    expect(node.hasFocus, isFalse);
     expect(storage.getGuideTransparency(), 45);
+    expect(
+        FocusManager.instance.primaryFocus?.context
+            ?.findAncestorWidgetOfExactType<SettingRow>()
+            ?.title,
+        isNot('Guide transparency'));
 
-    final rect = tester.getRect(slider);
-    await tester.tapAt(Offset(rect.right - 1, rect.center.dy));
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('100%').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('100%').last);
     await tester.pumpAndSettle();
     expect(storage.getGuideTransparency(), 100);
-    await tester.tapAt(Offset(rect.left + 1, rect.center.dy));
+    // At the ends the arrows stop.
+    Focus.of(tester.element(find.text('Guide transparency'))).requestFocus();
     await tester.pumpAndSettle();
-    expect(storage.getGuideTransparency(), 0);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    expect(storage.getGuideTransparency(), 100);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
-  testWidgets('slider follows the full-video option and keeps its saved value',
+  testWidgets('row follows the full-video option and keeps its saved value',
       (tester) async {
     prefs.setGuideTransparency(65);
     await tester.pumpWidget(settings());
-    expect(find.byType(Slider), findsNothing);
+    expect(row, findsNothing);
     prefs.setGuideFullVideo(true);
     await tester.pumpAndSettle();
-    expect(tester.widget<Slider>(find.byType(Slider)).value, 65);
+    await show(tester);
+    expect(find.descendant(of: row, matching: find.text('65%')),
+        findsOneWidget);
     prefs.setGuideViewMode('live');
     await tester.pumpAndSettle();
-    expect(find.byType(Slider), findsNothing);
+    expect(row, findsNothing);
     prefs.setGuideViewMode('timeline');
     await tester.pumpAndSettle();
-    expect(tester.widget<Slider>(find.byType(Slider)).value, 65);
+    await show(tester);
+    expect(find.descendant(of: row, matching: find.text('65%')),
+        findsOneWidget);
     await tester.pumpWidget(const SizedBox());
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
   for (final saved in [-20, 120]) {
-    testWidgets('out-of-range saved percentage $saved remains a usable slider',
+    testWidgets('out-of-range saved percentage $saved shows in range',
         (tester) async {
       final raw = await SharedPreferences.getInstance();
       await raw.setInt(AppConstants.keyGuideTransparency, saved);
       prefs.setGuideFullVideo(true);
       await tester.pumpWidget(settings());
-      final slider = tester.widget<Slider>(find.byType(Slider));
-      expect(slider.value, saved < 0 ? 0 : 100);
+      await show(tester);
+      expect(
+          find.descendant(
+              of: row, matching: find.text(saved < 0 ? '0%' : '100%')),
+          findsOneWidget);
       prefs.setGuideTransparency(saved);
       expect(
           raw.getInt(AppConstants.keyGuideTransparency), saved < 0 ? 0 : 100);
@@ -123,11 +144,11 @@ void main() {
     }, variant: TargetPlatformVariant.only(TargetPlatform.android));
   }
 
-  testWidgets('Windows keeps its existing guide controls without this slider',
+  testWidgets('Windows keeps its existing guide controls without this row',
       (tester) async {
     prefs.setGuideFullVideo(true);
     await tester.pumpWidget(settings());
-    expect(find.byType(Slider), findsNothing);
+    expect(row, findsNothing);
     expect(find.text('Full-screen video behind the guide'), findsNothing);
     await tester.pumpWidget(const SizedBox());
   }, variant: TargetPlatformVariant.only(TargetPlatform.windows));

@@ -9,6 +9,7 @@ import '../../services/addon_import.dart';
 import '../../services/addon_service.dart';
 import '../../services/archive_service.dart';
 import '../../services/storage_service.dart';
+import '../../widgets/glass_menu.dart';
 import '../../widgets/settings_scaffold.dart';
 
 /// The summary shown after an import ([AddonImportResult]), one line per
@@ -266,7 +267,7 @@ class _StremioImportScreenState extends State<StremioImportScreen> {
         ),
         const SizedBox(height: 8),
         for (final a in _addons)
-          CheckboxListTile(
+          GlassFocusFrame(child: CheckboxListTile(
             value: _picked.contains(a.url),
             title: Text(a.name),
             subtitle: _isUnsupportedAddon(a.url)
@@ -277,7 +278,7 @@ class _StremioImportScreenState extends State<StremioImportScreen> {
                         style: const TextStyle(color: Colors.white54)),
             onChanged: (v) => setState(
                 () => v == true ? _picked.add(a.url) : _picked.remove(a.url)),
-          ),
+          )),
       ],
     );
   }

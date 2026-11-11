@@ -41,13 +41,18 @@ class RefinedFinish extends ThemeExtension<RefinedFinish> {
   static ButtonStyle _button(ButtonStyle? original, ColorScheme scheme) =>
       (original ?? const ButtonStyle()).copyWith(
         backgroundColor: WidgetStateProperty.resolveWith((states) {
+          // A light glass sheen; the gold is the border and text. The old
+          // gold-on-grey fill read as a muddy "pastel selector" (owner,
+          // 2026-11-10, Network folder's From phone).
           if (states.contains(WidgetState.focused) &&
               !states.contains(WidgetState.disabled)) {
-            return Color.alphaBlend(
-                scheme.primaryContainer.withValues(alpha: 0.20),
-                const Color(0xFF17191D));
+            return Colors.white.withValues(alpha: 0.10);
           }
           return original?.backgroundColor?.resolve(states);
+        }),
+        overlayColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.focused)) return Colors.transparent;
+          return original?.overlayColor?.resolve(states);
         }),
       );
 

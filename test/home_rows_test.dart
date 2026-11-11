@@ -4,7 +4,18 @@ import 'package:nox_iptv/services/home_rows.dart';
 void main() {
   test('a new viewer gets every row in the default order', () {
     final rows = HomeRows.parse(null);
-    expect(rows.visible, HomeRowKind.values);
+    // Media Hub collections go under Continue Watching and its rows.
+    expect(rows.visible, [
+      HomeRowKind.games,
+      HomeRowKind.continueWatching,
+      HomeRowKind.newEpisodes,
+      HomeRowKind.watchList,
+      HomeRowKind.collections,
+      HomeRowKind.recentChannels,
+      HomeRowKind.favourites,
+      HomeRowKind.newMovies,
+      HomeRowKind.newShows,
+    ]);
     expect(rows.hidden, isEmpty);
   });
 
@@ -22,6 +33,7 @@ void main() {
     final continueAt = rows.order.indexOf(HomeRowKind.continueWatching);
     expect(rows.order[continueAt + 1], HomeRowKind.newEpisodes);
     expect(rows.order[continueAt + 2], HomeRowKind.watchList);
+    expect(rows.order[continueAt + 3], HomeRowKind.collections);
     expect(HomeRows.parse(rows.encoded).encoded, rows.encoded);
   });
 
@@ -31,6 +43,7 @@ void main() {
       '-continue',
       '-new_episodes',
       '-watchlist',
+      '-collections',
       'recent',
       'favourites',
       'new_movies',
@@ -45,7 +58,8 @@ void main() {
     expect(rows.hidden, {
       HomeRowKind.continueWatching,
       HomeRowKind.newEpisodes,
-      HomeRowKind.watchList
+      HomeRowKind.watchList,
+      HomeRowKind.collections
     });
   });
 }
