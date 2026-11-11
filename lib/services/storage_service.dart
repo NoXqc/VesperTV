@@ -761,6 +761,13 @@ class StorageService {
   Future<void> setHideProfiles(bool value) =>
       _prefs.setBool(_vk(AppConstants.keyHideProfiles), value);
 
+  bool getWallpaperOnProfiles({String? viewerId}) =>
+      _prefs.getBool(
+          _vk(AppConstants.keyWallpaperOnProfiles, viewerId: viewerId)) ??
+      false;
+  Future<void> setWallpaperOnProfiles(bool value) =>
+      _prefs.setBool(_vk(AppConstants.keyWallpaperOnProfiles), value);
+
   bool getHomeMiniPlayer() =>
       _prefs.getBool(_vk(AppConstants.keyHomeMiniPlayer)) ?? true;
   Future<void> setHomeMiniPlayer(bool value) =>
@@ -992,6 +999,12 @@ class StorageService {
   bool getGuideCompact() => _guideBool(AppConstants.keyGuideCompact) ?? false;
   Future<void> setGuideCompact(bool value) =>
       _prefs.setBool(_vk(AppConstants.keyGuideCompact), value);
+  // New with profiles in place: each viewer's own value only (no fallback
+  // to Main's, unlike the guide settings that were shared before).
+  bool getCompactUi() =>
+      _prefs.getBool(_vk(AppConstants.keyCompactUi)) ?? false;
+  Future<void> setCompactUi(bool value) =>
+      _prefs.setBool(_vk(AppConstants.keyCompactUi), value);
   bool getGuideFocusPreview() =>
       _guideBool(AppConstants.keyGuideFocusPreview) ?? false;
   Future<void> setGuideFocusPreview(bool value) =>
@@ -1573,6 +1586,8 @@ class StorageService {
     AppConstants.keyAiDevicePrefix,
     AppConstants.keySportsDbRounds,
     AppConstants.keyNextEpisodes,
+    // Every viewer's copy: the wallpaper file itself never transfers.
+    AppConstants.keyWallpaperOnProfiles,
   ];
 
   static const _goalPhoneCheckpoint = 'vesper_goal_phone_checkpoint';

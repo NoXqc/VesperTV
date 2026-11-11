@@ -39,6 +39,10 @@
 	<string>Vesper turns what you say into a command (the words go to Apple's speech recognition).</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>VesperTV uses your local network to reach your own media server and to copy your setup from a phone or another device on the same Wi-Fi.</string>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

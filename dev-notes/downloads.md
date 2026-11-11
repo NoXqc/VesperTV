@@ -87,3 +87,25 @@ Android 7 (minSdk 24) is untested; any Throwable there is caught and shown as
 6. Season download: episodes queue in order.
 7. Network folder: Test on a Windows share and a NAS; record a live channel
    there; play it back and seek; pull the NAS mid-recording (fallback/retry).
+
+## Copy from the network folder to another device (+702, 2026-11-10)
+Owner: download a few movies/shows with the box overnight, then before a trip copy them onto a tablet to
+watch offline (plane, car). Each device only knows its own `recordings.json`, so the share itself is browsed:
+- **Details file**: a finished download / recording in the network folder gets `dir/.vespertv/<file>.json`
+  (title, show/league, poster or logo, durationSec, kind, date; `RecordingService.detailsOf`). Native writes it
+  when the file finishes (`details` in the pushed item, `NetworkFolder.writeDetails`, Downloader + Recording);
+  Dart backfills older/failed ones after each status read (`_saveMissingDetails`, `RecordingEntry.detailsSaved`)
+  and deletes it with the file.
+- **Listing** (`networkList`, `NetworkFolder.list`): videos in the saved folder and 3 levels of subfolders, with
+  their details. A file named like VesperTV saves (`2026-11-10_Title_<id>.ext`) without details is still being
+  written (or from a box that hasn't opened +702 yet) and is hidden; anything else (put there by hand) shows,
+  titled from its file name (`services/network_files.dart`).
+- **Recordings > On the network folder** (only when a network folder is set up): this device's own network
+  files and ones already copied are left out. OK / hold = **Copy to this device** or **Play from the network
+  folder** (`networkFileMenu`, stable `rec_net_<hash>` channel so resume follows the file).
+- **Copy** = a download whose source is `smb://` (`RecordingService.copyToDevice`, `toDevice: true`: always a
+  local volume, never back to the share): same queue / progress card / resume / space checks; no speed limit or
+  provider-connection rule (`Download.fromNetwork`); a share that goes away is retried ~20 min, then Resume.
+- **Settings > Network folder > Save only**: the tablet browses the folder while its own recordings/downloads
+  stay on it (Save and use it = save there too).
+Not device-tested. `test/network_files_test.dart`.

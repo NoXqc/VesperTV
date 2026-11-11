@@ -1,7 +1,7 @@
 name: nox_iptv
 description: "VesperTV - an M3U/EPG IPTV player for Android phones, boxes, and Firesticks."
 publish_to: 'none'
-version: 1.0.63+701
+version: 1.0.64+710
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -40,6 +40,9 @@ dependencies:
   # either (Android/iOS/macOS keep using its native one, untouched). See
   # main.dart's `databaseFactory` setup.
   sqflite_common_ffi: ^2.3.3
+  # Already pulled in transitively (sqflite_common_ffi, path_provider) —
+  # added explicitly for DesktopRecorder's disk-space call on Windows.
+  ffi: ^2.2.0
   # Windows-only playback — video_player_hdr (used on every other platform,
   # untouched) has no Windows implementation at all. Deliberately only the
   # Windows native-library package below, not macos/linux/android/ios ones

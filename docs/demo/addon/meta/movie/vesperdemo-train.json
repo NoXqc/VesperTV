@@ -1,0 +1,16 @@
+{
+ "meta": {
+  "id": "vesperdemo-train",
+  "type": "movie",
+  "name": "The Great Train Robbery",
+  "poster": "https://vespertv.app/demo/art/train.jpg",
+  "background": "https://vespertv.app/demo/art/bg-train.jpg",
+  "description": "Edwin S. Porter's early western: bandits hold up a train and a posse rides after them.",
+  "releaseInfo": "1903",
+  "runtime": "12 min",
+  "genres": [
+   "Western",
+   "Silent"
+  ]
+ }
+}

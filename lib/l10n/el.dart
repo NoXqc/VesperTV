@@ -47,8 +47,8 @@ const Map<String, String> kEl = {
   "Shorter Timeline rows so more channels fit in the same space.":
       "Πιο χαμηλές γραμμές στο χρονοδιάγραμμα για περισσότερα κανάλια.",
   "Preview on highlight": "Προεπισκόπηση με επισήμανση",
-  "The channel you stop on plays in the preview, without pressing OK. OK again opens it full screen.":
-      "Το κανάλι στο οποίο σταματάτε παίζει στην προεπισκόπηση, χωρίς να πατήσετε OK. Με OK ξανά ανοίγει σε πλήρη οθόνη.",
+  "The channel you stop on plays in the preview and in Home's mini player, without pressing OK. OK again opens it full screen.":
+      "Το κανάλι στο οποίο σταματάτε παίζει στην προεπισκόπηση και στο μίνι player της αρχικής, χωρίς να πατήσετε OK. Με OK ξανά ανοίγει σε πλήρη οθόνη.",
   "Transparent popups": "Διάφανα αναδυόμενα",
   "Reminders and goal alerts lose their background and outline, keeping only the logo and text.":
       "Οι υπενθυμίσεις και οι ειδοποιήσεις γκολ χάνουν φόντο και περίγραμμα, κρατώντας μόνο το λογότυπο και το κείμενο.",
@@ -146,6 +146,9 @@ const Map<String, String> kEl = {
   "Open full Live TV": "Άνοιγμα πλήρους Live TV",
   // Startup profile selector.
   "Launch with profiles selector": "Εκκίνηση με επιλογή προφίλ",
+  'Also behind "Who is watching?"': 'Και πίσω από το «Ποιος παρακολουθεί;»',
+  'Shows while your profile is highlighted. Needs Launch with profiles selector (Settings > Profiles).':
+      'Εμφανίζεται όταν το προφίλ σας είναι επιλεγμένο. Χρειάζεται την Εκκίνηση με επιλογή προφίλ (Ρυθμίσεις > Προφίλ).',
   "Choose a profile after the splash, before the app opens. Applies from the next start.":
       "Επιλέξτε προφίλ μετά την οθόνη εκκίνησης, πριν ανοίξει η εφαρμογή. Ισχύει από την επόμενη εκκίνηση.",
   "Who is watching?": "Ποιος παρακολουθεί;",
@@ -504,6 +507,7 @@ const Map<String, String> kEl = {
   "this team": "αυτή η ομάδα",
   "My Teams": "Οι ομάδες μου",
   "Last channels": "Τελευταία κανάλια",
+  "No other source found for this game.": "Δεν βρέθηκε άλλη πηγή για αυτόν τον αγώνα.",
   "◀ ▶ tabs  ·  OK to watch  ·  Back to close":
       "◀ ▶ καρτέλες  ·  OK για προβολή  ·  Πίσω για κλείσιμο",
   "None of your teams play today.":
@@ -1085,6 +1089,8 @@ const Map<String, String> kEl = {
   "TV Shows order": "Σειρά Σειρών",
   "Move up": "Μετακίνηση πάνω",
   "Move down": "Μετακίνηση κάτω",
+  "Move left": "Μετακίνηση αριστερά",
+  "Move right": "Μετακίνηση δεξιά",
   "Playlist added": "Η λίστα προστέθηκε",
   "This playlist is disabled on this device — enable it in Settings > Playlist Manager to watch.":
       "Αυτή η λίστα είναι ανενεργή σε αυτή τη συσκευή — ενεργοποιήστε την στις Ρυθμίσεις > Διαχείριση λιστών για να τη δείτε.",
@@ -1482,6 +1488,10 @@ const Map<String, String> kEl = {
       "Με την υποστήριξη του Trakt (trakt.tv) και του Simkl (simkl.com).",
   "VesperTV is not affiliated with or endorsed by Trakt or Simkl.":
       "Το VesperTV δεν συνδέεται ούτε εγκρίνεται από το Trakt ή το Simkl.",
+  "Sports data from ESPN and TheSportsDB, skip intro timings from IntroDB. VesperTV is not affiliated with or endorsed by them, or by any league or team shown.":
+      "Αθλητικά δεδομένα από το ESPN και το TheSportsDB, χρόνοι παράλειψης intro από το IntroDB. Το VesperTV δεν συνδέεται ούτε εγκρίνεται από αυτούς ή από οποιοδήποτε πρωτάθλημα ή ομάδα εμφανίζεται.",
+  "The scores provider asked us to slow down. Scores will be back in a few minutes.":
+      "Ο πάροχος των αποτελεσμάτων μάς ζήτησε να επιβραδύνουμε. Τα αποτελέσματα θα επανέλθουν σε λίγα λεπτά.",
   "Trakt & Simkl": "Trakt & Simkl",
   "Track what you watch, lists in the Media Hub":
       "Καταγραφή όσων βλέπετε, λίστες στο Media Hub",
@@ -1728,6 +1738,30 @@ const Map<String, String> kEl = {
   "Recorded": "Εγγεγραμμένα",
   "{used} of {cap} GB used": "{used} από {cap} GB σε χρήση",
   "{size} in the network folder": "{size} στον φάκελο δικτύου",
+  "Copy to this device":
+      "Αντιγραφή σε αυτή τη συσκευή",
+  "{size}, to watch without the network":
+      "{size}, για προβολή χωρίς δίκτυο",
+  "Play from the network folder":
+      "Αναπαραγωγή από τον φάκελο δικτύου",
+  "Copying to this device. It shows under Downloading.":
+      "Αντιγραφή σε αυτή τη συσκευή. Εμφανίζεται στην ενότητα «Γίνεται λήψη».",
+  "On the network folder":
+      "Στον φάκελο δικτύου",
+  "Looking in the network folder…":
+      "Αναζήτηση στον φάκελο δικτύου…",
+  "The network folder can't be reached: {reason}":
+      "Ο φάκελος δικτύου δεν είναι προσβάσιμος: {reason}",
+  "Nothing new there. Downloads and recordings that another device saves there show up here.":
+      "Τίποτα νέο. Οι λήψεις και οι εγγραφές που αποθηκεύει εκεί άλλη συσκευή εμφανίζονται εδώ.",
+  "Save only":
+      "Μόνο αποθήκευση",
+  "Saved. Its files show in Recordings; this device keeps saving to itself.":
+      "Αποθηκεύτηκε. Τα αρχεία του εμφανίζονται στις Εγγραφές· αυτή η συσκευή συνεχίζει να αποθηκεύει στον εαυτό της.",
+  "Taking a tablet on a trip? Set up the same folder on it with Save only, then copy what the TV saved there: Recordings > On the network folder.":
+      "Tablet σε ταξίδι; Ρυθμίστε τον ίδιο φάκελο με Μόνο αποθήκευση και αντιγράψτε ό,τι αποθήκευσε εκεί η TV: Εγγραφές > Στον φάκελο δικτύου.",
+  "The file is no longer in the network folder":
+      "Το αρχείο δεν υπάρχει πια στον φάκελο δικτύου",
   "REC · {size}": "REC · {size}",
   "Waiting for a channel": "Αναμονή για κανάλι",
   "Interrupted · {size}": "Διακόπηκε · {size}",
@@ -1805,8 +1839,8 @@ const Map<String, String> kEl = {
   "Supporting is a thank-you, never a paywall: everyone gets the same app.":
       "Η υποστήριξη είναι ένα ευχαριστώ, ποτέ πληρωμή για πρόσβαση: όλοι έχουν την ίδια εφαρμογή.",
   // Settings > General > Remote tips
-  "Language and clock, what plays when the app starts, Fast startup, clearing your history, and remote tips.":
-      "Γλώσσα και ρολόι, τι παίζει στην εκκίνηση, Γρήγορη εκκίνηση, διαγραφή ιστορικού και συμβουλές τηλεχειριστηρίου.",
+  "Language and clock, what plays when the app starts, Fast startup, your Home wallpaper, clearing your history, and remote tips.":
+      "Γλώσσα και ρολόι, τι παίζει στην εκκίνηση, Γρήγορη εκκίνηση, η ταπετσαρία της αρχικής σας, διαγραφή ιστορικού και συμβουλές τηλεχειριστηρίου.",
   "Remote tips": "Συμβουλές τηλεχειριστηρίου",
   "Every hold menu and shortcut, on your phone":
       "Κάθε μενού παρατεταμένου πατήματος και συντόμευση, στο κινητό σας",
@@ -2035,8 +2069,8 @@ const Map<String, String> kEl = {
   "Hides the profiles row on Home.":
       "Αποκρύπτει τη σειρά προφίλ στην αρχική σελίδα.",
   "Mini player on Home": "Μίνι player στην αρχική",
-  "The live channel you stop on plays at the top right of Home. OK opens it full screen; Play/Pause or hold OK turns it off.":
-      "Το ζωντανό κανάλι όπου σταματάτε παίζει πάνω δεξιά στην αρχική σελίδα. Το OK το ανοίγει σε πλήρη οθόνη· το Αναπαραγωγή/Παύση ή το παρατεταμένο OK το σταματά.",
+  "OK on a live card plays it at the top right of Home, OK again opens it full screen (with Preview on highlight on, the card you stop on plays by itself). Play/Pause or hold OK turns it off.":
+      "Το OK σε μια ζωντανή κάρτα την παίζει πάνω δεξιά στην αρχική, το OK ξανά την ανοίγει σε πλήρη οθόνη (με την Προεπισκόπηση με επισήμανση ενεργή, η κάρτα όπου σταματάτε παίζει μόνη της). Το Αναπαραγωγή/Παύση ή το παρατεταμένο OK τη σταματά.",
   "Stop mini player": "Διακοπή μίνι player",
   "Preferred audio language": "Προτιμώμενη γλώσσα ήχου",
   "Preferred subtitle language": "Προτιμώμενη γλώσσα υποτίτλων",
@@ -3173,4 +3207,80 @@ const Map<String, String> kEl = {
       "Η πληκτρολόγηση διεύθυνσης φακέλου και κωδικού με το τηλεχειριστήριο είναι κουραστική. Σαρώστε αυτόν τον κωδικό με την κάμερα του τηλεφώνου σας και συμπληρώστε τα εκεί — εμφανίζονται εδώ για έλεγχο και αποθήκευση.",
   "Check the details here, then press Save and use it.":
       "Ελέγξτε τα στοιχεία εδώ και πατήστε Αποθήκευση και χρήση.",
+  "Home wallpaper":
+      "Ταπετσαρία αρχικής",
+  "Shows behind Home when the card you are on has no picture of its own, instead of the live channels' colours.":
+      "Εμφανίζεται πίσω από την αρχική όταν η κάρτα που επιλέξατε δεν έχει δική της εικόνα, αντί για τα χρώματα των ζωντανών καναλιών.",
+  "Could not read the picture. Choose a JPEG or PNG under 15 MB.":
+      "Δεν ήταν δυνατή η ανάγνωση της εικόνας. Επιλέξτε JPEG ή PNG κάτω από 15 MB.",
+  "On: your picture shows behind Home.":
+      "Ενεργό: η εικόνα σας εμφανίζεται πίσω από την αρχική.",
+  "A picture of your own behind Home.":
+      "Μια δική σας εικόνα πίσω από την αρχική.",
+  "Hide Downloads":
+      "Απόκρυψη λήψεων",
+  "Removes the Downloads tab.":
+      "Αφαιρεί την καρτέλα Λήψεις.",
+  "Speed, space and where downloads are saved":
+      "Ταχύτητα, χώρος και πού αποθηκεύονται οι λήψεις",
+  "Space for downloads: {gb} GB":
+      "Χώρος για λήψεις: {gb} GB",
+  "{used} used. Downloads stop when this is full or the drive has less than 1 GB left.":
+      "{used} σε χρήση. Οι λήψεις σταματούν όταν γεμίσει ή ο δίσκος έχει λιγότερο από 1 GB ελεύθερο.",
+  "Save downloads to":
+      "Αποθήκευση λήψεων σε",
+  "This computer":
+      "Αυτός ο υπολογιστής",
+  "Download set for {when}. It shows in Downloads.":
+      "Η λήψη ορίστηκε {when}. Εμφανίζεται στις Λήψεις.",
+  "Downloading. It shows in Downloads.":
+      "Γίνεται λήψη. Εμφανίζεται στις Λήψεις.",
+  "VesperTV has to be open then (minimized is fine).":
+      "Το VesperTV πρέπει να είναι ανοιχτό τότε (ελαχιστοποιημένο αρκεί).",
+  // Series recording (2026-11-10).
+  "Record this show":
+      "Εγγραφή αυτής της εκπομπής",
+  "Record series…":
+      "Εγγραφή σειράς…",
+  "Record series":
+      "Εγγραφή σειράς",
+  "Every showing of {title} on this channel":
+      "Κάθε προβολή του {title} σε αυτό το κανάλι",
+  "Every showing of {title} on {channel}":
+      "Κάθε προβολή του {title} στο {channel}",
+  "Stop series recording":
+      "Διακοπή εγγραφής σειράς",
+  "Series recording stopped. Recordings made stay.":
+      "Η εγγραφή σειράς σταμάτησε. Οι εγγραφές που έγιναν μένουν.",
+  "Recordings made stay.":
+      "Οι εγγραφές που έγιναν μένουν.",
+  "Cancels {count} scheduled. Recordings made stay.":
+      "Ακυρώνει {count} προγραμματισμένες. Οι εγγραφές που έγιναν μένουν.",
+  "Every airing":
+      "Κάθε προβολή",
+  "Skip repeats":
+      "Παράλειψη επαναλήψεων",
+  "Not an episode it already has (same guide description)":
+      "Όχι επεισόδιο που υπάρχει ήδη (ίδια περιγραφή στον οδηγό)",
+  "Series recording on. Airings are added as the guide lists them.":
+      "Εγγραφή σειράς ενεργή. Οι προβολές προστίθενται όταν εμφανίζονται στον οδηγό.",
+  "Series recording on: {count} scheduled":
+      "Εγγραφή σειράς ενεργή: {count} προγραμματισμένες",
+  "{count} skipped (no free connection)":
+      "{count} παραλείφθηκαν (καμία ελεύθερη σύνδεση)",
+  "Series recordings":
+      "Εγγραφές σειρών",
+  "Waiting for the guide":
+      "Αναμονή για τον οδηγό",
+  "{count} scheduled":
+      "{count} προγραμματισμένες",
+  "Next: {when}":
+      "Επόμενη: {when}",
+  "No repeats":
+      "Χωρίς επαναλήψεις",
+  // Compact UI (2026-11-10).
+  "Compact UI":
+      "Συμπαγής εμφάνιση",
+  "Smaller tabs, groups and channel rows so more fit on screen. Just for this profile.":
+      "Μικρότερες καρτέλες, ομάδες και σειρές καναλιών, ώστε να χωρούν περισσότερα στην οθόνη. Μόνο για αυτό το προφίλ.",
 };

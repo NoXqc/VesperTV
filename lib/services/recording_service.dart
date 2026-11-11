@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'desktop_recorder.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -10,10 +11,12 @@ import '../models/channel.dart';
 import '../models/epg_program.dart';
 import '../models/playlist_profile.dart';
 import '../models/sports.dart';
+import 'network_files.dart';
 import 'playback_service.dart';
 import 'sports_channel_matcher.dart';
 import 'sports_service.dart';
 import 'programme_reminders.dart' show programmeKey;
+import '../utils/title_search.dart';
 
 /// Sports Trak recording (Android). The list of recordings, the one
 /// auto-recorded team and the settings live in `recordings.json` in app
@@ -29,6 +32,7 @@ class RecordingService extends ChangeNotifier {
       Future<Directory> Function()? supportDirectory,
       DateTime Function()? now})
       : _platformSupported = platformSupported,
+        _desktop = platformSupported == null && Platform.isWindows,
         _supportDirectory = supportDirectory ?? getApplicationSupportDirectory,
         _now = now ?? DateTime.now;
   static final instance = RecordingService._();
@@ -40,19 +44,67 @@ class RecordingService extends ChangeNotifier {
             supportDirectory: () async => directory,
             now: now);
   final bool? _platformSupported;
+
+  /// Downloads run in Dart ([DesktopRecorder]) instead of Android's
+  /// native recorder. Tests (platformSupported set) keep the Android path.
+  final bool _desktop;
   final Future<Directory> Function() _supportDirectory;
   final DateTime Function() _now;
+  /// Recording works here (the programme Record button): Android.
   bool get available => _platformSupported ?? supported;
+
+  /// The service runs: downloads too (Windows has those, not recording).
+  bool get _running => _platformSupported ?? downloadsSupported;
 
   static const _channel = MethodChannel('vespertv/recorder');
 
+  /// Recording (sports games, channels, programmes): Android only.
   static bool get supported => Platform.isAndroid;
+
+  /// Downloads and the network folder: Android, and Windows through
+  /// [DesktopRecorder] (owner, 2026-11-10: Windows up to par).
+  static bool get downloadsSupported =>
+      debugDownloadsSupported ?? (Platform.isAndroid || Platform.isWindows);
+
+  /// Tests: the suite runs on Windows hosts, where downloads are on; the
+  /// screens' tests were tuned without them (test/flutter_test_config.dart).
+  @visibleForTesting
+  static bool? debugDownloadsSupported;
+
+  /// The recorder: Android's native side, or [DesktopRecorder] on
+  /// Windows (same methods and replies, downloads only).
+  Future<T?> _invoke<T>(String method, [Object? args]) async {
+    if (_desktop) {
+      return await DesktopRecorder.instance.invoke(method, _args(args)) as T?;
+    }
+    return _channel.invokeMethod<T>(method, args);
+  }
+
+  Future<List<T>?> _invokeList<T>(String method, [Object? args]) async {
+    if (_desktop) {
+      final r = await DesktopRecorder.instance.invoke(method, _args(args));
+      return r is List ? r.cast<T>() : null;
+    }
+    return _channel.invokeListMethod<T>(method, args);
+  }
+
+  Future<Map<K, V>?> _invokeMap<K, V>(String method, [Object? args]) async {
+    if (_desktop) {
+      final r = await DesktopRecorder.instance.invoke(method, _args(args));
+      return r is Map ? r.cast<K, V>() : null;
+    }
+    return _channel.invokeMapMethod<K, V>(method, args);
+  }
+
+  static Map<String, Object?> _args(Object? a) =>
+      a is Map ? {for (final e in a.entries) '${e.key}': e.value} : const {};
 
   /// Paths in the network folder start with this (NetworkFolder.kt).
   static const networkScheme = 'smb://';
 
   final List<RecordingEntry> _items = [];
   AutoTeam? _autoTeam;
+  final List<SeriesRule> _series = [];
   RecordingSettings settings = const RecordingSettings();
   bool exactSchedule = true;
   File? _file;
@@ -74,8 +126,12 @@ class RecordingService extends ChangeNotifier {
       List.unmodifiable(_items..sort((a, b) => b.startAt.compareTo(a.startAt)));
   AutoTeam? get autoTeam => _autoTeam;
 
+  /// Series recordings (hold OK on a guide programme > Record series),
+  /// oldest first.
+  List<SeriesRule> get series => List.unmodifiable(_series);
+
   Future<void> init() async {
-    if (_ready || !available) return;
+    if (_ready || !_running) return;
     _ready = true;
     try {
       final dir = await _supportDirectory();
@@ -89,6 +145,11 @@ class RecordingService extends ChangeNotifier {
         ]);
         if (m['autoTeam'] case final Map a) {
           _autoTeam = AutoTeam.fromJson(Map<String, dynamic>.from(a));
+        }
+        for (final r in (m['series'] as List? ?? const [])) {
+          if (r is Map) {
+            _series.add(SeriesRule.fromJson(Map<String, dynamic>.from(r)));
+          }
         }
         if (m['settings'] case final Map s) {
           settings = RecordingSettings.fromJson(Map<String, dynamic>.from(s));
@@ -185,6 +246,7 @@ class RecordingService extends ChangeNotifier {
     final data = jsonEncode({
       'items': [for (final r in _items) r.toJson()],
       if (_autoTeam != null) 'autoTeam': _autoTeam!.toJson(),
+      if (_series.isNotEmpty) 'series': [for (final r in _series) r.toJson()],
       'settings': settings.toJson(),
     });
     _saveWrites = _saveWrites.catchError((Object _) {}).then((_) async {
@@ -204,7 +266,7 @@ class RecordingService extends ChangeNotifier {
     final network = settings.network;
     final vols = <RecordingVolume>[];
     try {
-      final list = await _channel.invokeListMethod<Map>('storage') ?? const [];
+      final list = await _invokeList<Map>('storage') ?? const [];
       vols.addAll([
         for (final m in list)
           RecordingVolume(
@@ -233,6 +295,14 @@ class RecordingService extends ChangeNotifier {
   /// the network folder can't be reached as it starts.
   String? _devicePath;
 
+  /// The chosen folder when it's on this device (USB / SD too), else app
+  /// storage: where a copy from the network folder goes.
+  Future<RecordingVolume?> _deviceVolume() async {
+    final vols = (await volumes()).where((v) => !v.network);
+    return vols.where((v) => v.path == settings.folder).firstOrNull ??
+        vols.firstOrNull;
+  }
+
   /// The chosen folder when it's still mounted, else app storage.
   Future<RecordingVolume?> currentVolume() async {
     final vols = await volumes();
@@ -259,9 +329,9 @@ class RecordingService extends ChangeNotifier {
   // ------------------------------------------------------ network folder
 
   Future<void> _sendNetworkFolder() async {
-    if (!available) return;
+    if (!_running) return;
     try {
-      await _channel.invokeMethod('networkFolder', {
+      await _invoke('networkFolder', {
         'config': settings.network == null
             ? null
             : jsonEncode(settings.network!.toJson()),
@@ -277,7 +347,7 @@ class RecordingService extends ChangeNotifier {
   Future<({int? free, int? total, String? error})> testNetworkFolder(
       NetworkFolderConfig config) async {
     try {
-      final r = await _channel.invokeMapMethod<String, dynamic>(
+      final r = await _invokeMap<String, dynamic>(
           'testNetworkFolder', {'config': jsonEncode(config.toJson())});
       if (r?['ok'] == true) {
         return (
@@ -296,7 +366,9 @@ class RecordingService extends ChangeNotifier {
   /// in app storage for one in the network folder (Dart can't read a
   /// network share).
   String statusPathOf(RecordingEntry r) {
-    if (!r.onNetwork) return '${r.path}.status';
+    // Windows keeps them in app storage too: downloads land in the
+    // user's own Videos folder.
+    if (!r.onNetwork && !_desktop) return '${r.path}.status';
     final dir = _file?.parent.path ?? '';
     return '$dir/recording_status/${r.id}.status';
   }
@@ -308,8 +380,7 @@ class RecordingService extends ChangeNotifier {
     if (Channel.isRecordingId(channel.rawId)) {
       if (!channel.url.startsWith(networkScheme)) return null;
       try {
-        return await _channel
-            .invokeMethod<String>('playUrl', {'path': channel.url});
+        return await _invoke<String>('playUrl', {'path': channel.url});
       } catch (_) {
         return null;
       }
@@ -418,15 +489,19 @@ class RecordingService extends ChangeNotifier {
 
   static String _two(int n) => n.toString().padLeft(2, '0');
 
-  RecordingEntry? entryForProgramme(
-          Channel channel, EpgProgram programme) =>
-      _items
-          .where((r) =>
-              r.programmeKey == programmeKey(channel, programme) &&
-              (r.state == RecState.scheduled ||
-                  r.state == RecState.recording ||
-                  r.state == RecState.waiting))
-          .firstOrNull;
+  /// Also asked by every Timeline block to come (its red dot): the key is
+  /// built once, and nothing at all without programme recordings.
+  RecordingEntry? entryForProgramme(Channel channel, EpgProgram programme) {
+    if (_items.isEmpty) return null;
+    final key = programmeKey(channel, programme);
+    return _items
+        .where((r) =>
+            r.programmeKey == key &&
+            (r.state == RecState.scheduled ||
+                r.state == RecState.recording ||
+                r.state == RecState.waiting))
+        .firstOrNull;
+  }
 
   /// Exact XMLTV start/stop, not the Sports overtime margins. Uses the same
   /// native persisted alarm/boot scheduler and device storage limits.
@@ -449,15 +524,39 @@ class RecordingService extends ChangeNotifier {
     if (programmeConflict(channel, programme, maxConnections) != null) {
       throw StateError('Recording connection conflict');
     }
-    if (vol == null ||
-        (vol.free >= 0 && vol.free < settings.minFreeBytes + (256 << 20)) ||
-        (!vol.network && usedBytes >= settings.capGb * 1024 * 1024 * 1024) ||
-        _file == null) {
+    if (!_roomOn(vol) || _file == null) {
       throw StateError('Recording storage unavailable');
     }
+    final entry = _programmeEntry(channel, programme, vol!);
+    _items.add(entry);
+    try {
+      // Unlike older immediate-record paths, don't claim success if persistence
+      // or native scheduling fails. Restore the old native schedule on failure.
+      await _saveChecked();
+      await _push(strict: true);
+    } catch (_) {
+      _items.remove(entry);
+      await _save();
+      await _push();
+      rethrow;
+    }
+    notifyListeners();
+    return entry;
+  }
+
+  /// [vol] can take a new recording: enough free space, the cap not reached.
+  bool _roomOn(RecordingVolume? vol) =>
+      vol != null &&
+      !(vol.free >= 0 && vol.free < settings.minFreeBytes + (256 << 20)) &&
+      !(!vol.network && usedBytes >= settings.capGb * 1024 * 1024 * 1024);
+
+  /// One guide programme as a scheduled channel recording (exact window).
+  RecordingEntry _programmeEntry(
+      Channel channel, EpgProgram programme, RecordingVolume vol,
+      {String seriesId = '', String episode = ''}) {
     final id =
         '${_now().microsecondsSinceEpoch.toRadixString(36)}_${_items.length}';
-    final entry = RecordingEntry(
+    return RecordingEntry(
         id: id,
         title: programme.title,
         league: channel.name,
@@ -474,21 +573,9 @@ class RecordingService extends ChangeNotifier {
             '${vol.path}/${_fileName(programme.title, programme.start.toLocal(), id)}',
         program: programme.title,
         channelLogo: channel.logoUrl,
-        programmeKey: programmeKey(channel, programme));
-    _items.add(entry);
-    try {
-      // Unlike older immediate-record paths, don't claim success if persistence
-      // or native scheduling fails. Restore the old native schedule on failure.
-      await _saveChecked();
-      await _push(strict: true);
-    } catch (_) {
-      _items.remove(entry);
-      await _save();
-      await _push();
-      rethrow;
-    }
-    notifyListeners();
-    return entry;
+        programmeKey: programmeKey(channel, programme),
+        seriesId: seriesId,
+        episode: episode);
   }
 
   /// Maximum overlapping recordings, scoped to one provider account.
@@ -527,17 +614,19 @@ class RecordingService extends ChangeNotifier {
       return;
     }
     _items.remove(entry);
+    final skipped = _skipInSeries(entry);
     try {
       await _saveChecked();
       await _push(strict: true);
     } catch (_) {
       _items.add(entry);
+      skipped?.skipped.remove(entry.programmeKey);
       await _save();
       await _push();
       rethrow;
     }
     // It may have started while its menu was open. Stop that exact ID too.
-    await _channel.invokeMethod<void>('stop', {'id': entry.id});
+    await _invoke<void>('stop', {'id': entry.id});
     notifyListeners();
   }
 
@@ -606,7 +695,7 @@ class RecordingService extends ChangeNotifier {
     final until = DateTime.now().add(timeout);
     while (DateTime.now().isBefore(until)) {
       try {
-        final list = await _channel.invokeListMethod<Map>('active') ?? const [];
+        final list = await _invokeList<Map>('active') ?? const [];
         final mine = list.where((m) => m['id'] == r.id).firstOrNull;
         if (mine != null && ((mine['bytes'] as num?) ?? 0) > 0) return true;
       } catch (_) {}
@@ -632,7 +721,7 @@ class RecordingService extends ChangeNotifier {
         r.state == RecState.queued ||
         (r.isDownload && r.state == RecState.interrupted)) {
       try {
-        await _channel.invokeMethod('stop', {'id': r.id});
+        await _invoke('stop', {'id': r.id});
       } catch (_) {}
       r.state = RecState.stopped;
     } else if (r.state == RecState.scheduled || r.state == RecState.waiting) {
@@ -641,6 +730,7 @@ class RecordingService extends ChangeNotifier {
         r.state = RecState.cancelled;
       } else {
         _items.remove(r);
+        _skipInSeries(r);
       }
     }
     await _save();
@@ -654,9 +744,11 @@ class RecordingService extends ChangeNotifier {
       await stop(r);
     }
     if (r.onNetwork) {
-      try {
-        await _channel.invokeMethod<bool>('deleteFile', {'path': r.path});
-      } catch (_) {}
+      for (final p in [r.path, networkDetailsPath(r.path)]) {
+        try {
+          await _invoke<bool>('deleteFile', {'path': p});
+        } catch (_) {}
+      }
     }
     for (final p in [if (!r.onNetwork) r.path, statusPathOf(r)]) {
       try {
@@ -680,7 +772,7 @@ class RecordingService extends ChangeNotifier {
   /// those already due). Returns false when Android only allowed inexact
   /// alarms.
   Future<bool> _push({bool strict = false}) async {
-    if (!available) return true;
+    if (!_running) return true;
     final now = _now();
     final cap = settings.capGb * 1024 * 1024 * 1024;
     final room = cap - usedBytes;
@@ -729,13 +821,13 @@ class RecordingService extends ChangeNotifier {
               'maxConnections': r.maxConnections,
               'durationSec': r.durationSec,
             },
+            if (r.onNetwork) 'details': jsonEncode(detailsOf(r)),
           },
     ];
     debugPrint('RecordingService: ${due.length} recording(s) sent to the '
         'scheduler');
     try {
-      exactSchedule = await _channel
-              .invokeMethod<bool>('schedule', {'items': jsonEncode(due)}) ??
+      exactSchedule = await _invoke<bool>('schedule', {'items': jsonEncode(due)}) ??
           true;
       _armProgrammeStart();
       return exactSchedule;
@@ -748,10 +840,10 @@ class RecordingService extends ChangeNotifier {
 
   /// Reads each recording's `.status` and the native running list.
   Future<void> refreshStatus() async {
-    if (!available) return;
+    if (!_running) return;
     Set<String> running = const {};
     try {
-      final list = await _channel.invokeListMethod<Map>('active') ?? const [];
+      final list = await _invokeList<Map>('active') ?? const [];
       running = {for (final m in list) m['id'] as String};
     } catch (_) {}
     var changed = false;
@@ -797,6 +889,118 @@ class RecordingService extends ChangeNotifier {
       await _save();
       notifyListeners();
     }
+    unawaited(_saveMissingDetails());
+  }
+
+  // ------------------------------------- the network folder, other devices
+
+  /// What another device browsing the network folder shows for [r]: the
+  /// file's `.vespertv/<name>.json` ([networkDetailsPath]).
+  static Map<String, dynamic> detailsOf(RecordingEntry r) => {
+        'v': 1,
+        'kind': r.isDownload
+            ? 'download'
+            : r.isChannel
+                ? 'channel'
+                : 'game',
+        'title': r.isChannel && r.program.isNotEmpty ? r.program : r.title,
+        if (r.league.isNotEmpty) 'group': r.league,
+        if (r.isChannel && r.channelName.isNotEmpty) 'group': r.channelName,
+        if (r.poster != null) 'poster': r.poster,
+        if (!r.isDownload && (r.logo ?? r.channelLogo) != null)
+          'logo': r.logo ?? r.channelLogo,
+        if (r.durationSec > 0) 'durationSec': r.durationSec,
+        'date': r.gameStart.millisecondsSinceEpoch,
+      };
+
+  bool _savingDetails = false;
+
+  /// Finished files in the network folder without their details file yet
+  /// (saved before details existed, or the native write failed): written
+  /// now, once each.
+  Future<void> _saveMissingDetails() async {
+    if (_savingDetails || !_running) return;
+    _savingDetails = true;
+    var changed = false;
+    try {
+      for (final r in [..._items]) {
+        final finished = r.isDownload
+            ? r.complete
+            : (r.state == RecState.done || r.state == RecState.stopped) &&
+                r.bytes > 0;
+        if (!r.onNetwork || r.detailsSaved || !finished) continue;
+        final ok = await _invoke<bool>('networkWriteText', {
+              'path': networkDetailsPath(r.path),
+              'text': jsonEncode(detailsOf(r)),
+            }) ??
+            false;
+        // The share is away: try again next time.
+        if (!ok) break;
+        r.detailsSaved = true;
+        changed = true;
+      }
+    } catch (e) {
+      debugPrint('RecordingService: details not saved: ${e.runtimeType}');
+    } finally {
+      _savingDetails = false;
+    }
+    if (changed) await _save();
+  }
+
+  /// The network folder's videos ([NetworkFile]), or why it can't be read.
+  Future<({List<NetworkFile> files, String? error})> networkFiles() async {
+    if (!_running || settings.network == null) {
+      return (files: const <NetworkFile>[], error: null);
+    }
+    try {
+      final r = await _invokeMap<String, dynamic>('networkList')
+          .timeout(const Duration(seconds: 60));
+      if (r?['error'] case final String e) {
+        return (files: const <NetworkFile>[], error: e);
+      }
+      final list = jsonDecode('${r?['files'] ?? '[]'}') as List;
+      return (
+        files: [
+          for (final m in list)
+            if (m is Map) NetworkFile.fromJson(m),
+        ].whereType<NetworkFile>().toList(),
+        error: null
+      );
+    } catch (e) {
+      return (files: const <NetworkFile>[], error: '${e.runtimeType}');
+    }
+  }
+
+  /// The share's videos worth offering here: see [networkFilesToShow].
+  List<NetworkFile> networkFilesToOffer(List<NetworkFile> all) =>
+      networkFilesToShow(all, ownPaths: {
+        for (final r in _items)
+          if (r.onNetwork && r.state != RecState.cancelled) r.path
+      }, copiedFrom: {
+        for (final r in _items)
+          if (r.isDownload &&
+              r.url.startsWith(networkScheme) &&
+              r.state != RecState.cancelled)
+            r.url
+      });
+
+  /// Copies [file] from the network folder to this device (never back to
+  /// the share, whatever Save to says): a download like any other, run
+  /// now, one at a time, resumed if the share drops.
+  Future<RecordingEntry?> copyToDevice(NetworkFile file) async {
+    final added = await download([
+      DownloadItem(
+        sourceId: 'net:${file.path}',
+        title: file.title,
+        group: file.group,
+        url: file.path,
+        poster: file.poster,
+        durationSec: file.durationSec,
+        totalBytes: file.size,
+        fileExtension: file.extension,
+      ),
+    ], toDevice: true);
+    return added.firstOrNull;
   }
 
   // --------------------------------------------------- connection check
@@ -830,7 +1034,7 @@ class RecordingService extends ChangeNotifier {
 
   Future<String?> teeUrl(RecordingEntry r) async {
     try {
-      final port = await _channel.invokeMethod<int>('teePort');
+      final port = await _invoke<int>('teePort');
       return port == null ? null : 'http://127.0.0.1:$port/rec/${r.id}.ts';
     } catch (_) {
       return null;
@@ -872,10 +1076,10 @@ class RecordingService extends ChangeNotifier {
   /// Queues [items] (one at a time, in this order) to start at [at], or
   /// now. Titles already downloaded or queued are left as they are.
   Future<List<RecordingEntry>> download(List<DownloadItem> items,
-      {DateTime? at}) async {
-    if (!available) throw UnsupportedError('Downloads require Android');
+      {DateTime? at, bool toDevice = false}) async {
+    if (!_running) throw UnsupportedError('Downloads require Android');
     await init();
-    final vol = await currentVolume();
+    final vol = toDevice ? await _deviceVolume() : await currentVolume();
     final start = at ?? _now();
     final added = <RecordingEntry>[];
     var n = 0;
@@ -974,13 +1178,13 @@ class RecordingService extends ChangeNotifier {
   }
 
   Future<void> _sendPolicy({bool force = false}) async {
-    if (!available) return;
+    if (!_running) return;
     final streams = _streams;
     final key = '${settings.downloadSpeed}|$streams';
     if (!force && key == _sentPolicy) return;
     _sentPolicy = key;
     try {
-      await _channel.invokeMethod(
+      await _invoke(
           'policy', {'speed': settings.downloadSpeed, 'streams': streams});
     } catch (_) {}
   }
@@ -989,7 +1193,7 @@ class RecordingService extends ChangeNotifier {
   /// last free connection lets go of it first (the provider would kick
   /// one of the two). Quick when nothing is downloading from it.
   Future<void> yieldConnection(Channel channel) async {
-    if (!available || channel.playlistId.isEmpty) return;
+    if (!_running || channel.playlistId.isEmpty) return;
     final download = _items
         .where((r) =>
             r.isDownload &&
@@ -1011,11 +1215,264 @@ class RecordingService extends ChangeNotifier {
     _mainAccount = channel.playlistId;
     await _sendPolicy();
     try {
-      await _channel.invokeMethod('yield',
+      await _invoke('yield',
           {'account': channel.playlistId}).timeout(const Duration(seconds: 6));
     } catch (_) {}
     // The provider needs a moment to free the connection.
     await Future<void>.delayed(const Duration(milliseconds: 800));
+  }
+
+  // ------------------------------------------------------------- series
+
+  /// How far ahead a series schedules (the guide rarely reaches further)
+  /// and how many upcoming airings one series holds at a time: a daily
+  /// show on a channel that repeats it all day shouldn't take dozens of
+  /// alarms (Android caps an app's alarms) or the whole recording cap.
+  static const seriesHorizon = Duration(days: 8);
+  static const seriesMaxScheduled = 20;
+
+  /// The series recording [channel] airings of [title], or null.
+  SeriesRule? seriesFor(Channel channel, String title) {
+    final key = seriesTitleKey(title);
+    if (key.isEmpty) return null;
+    return _series
+        .where((r) => r.channelId == channel.id && r.match == key)
+        .firstOrNull;
+  }
+
+  /// The series' airings still to record.
+  int scheduledCount(SeriesRule rule) => _items
+      .where((r) =>
+          r.seriesId == rule.id &&
+          (r.state == RecState.scheduled || r.state == RecState.waiting))
+      .length;
+
+  /// Its next airing to record, or null.
+  RecordingEntry? nextOf(SeriesRule rule) => (_items
+          .where((r) =>
+              r.seriesId == rule.id &&
+              (r.state == RecState.scheduled || r.state == RecState.waiting))
+          .toList()
+        ..sort((a, b) => a.startAt.compareTo(b.startAt)))
+      .firstOrNull;
+
+  /// The viewer cancelled one airing of a series: a later refresh mustn't
+  /// schedule it again. Returns the series, for a rollback.
+  SeriesRule? _skipInSeries(RecordingEntry r) {
+    if (r.seriesId.isEmpty || r.programmeKey.isEmpty) return null;
+    final rule = _series.where((s) => s.id == r.seriesId).firstOrNull;
+    rule?.skipped.add(r.programmeKey);
+    return rule;
+  }
+
+  /// Records every airing of [programme]'s title on [channel]: the ones in
+  /// [upcoming] (the channel's guide, `EpgService.upcomingPrograms`) now,
+  /// later ones whenever [refreshSeries] runs (startup, after each guide
+  /// update). [skipRepeats]: not an episode this series already has
+  /// (same guide description). An airing with no free connection on the
+  /// playlist is skipped (counted in `conflicts`), not forced.
+  Future<({SeriesRule rule, int added, int conflicts})> addSeries(
+      Channel channel, EpgProgram programme, List<EpgProgram> upcoming,
+      {bool skipRepeats = false, int maxConnections = 1}) async {
+    if (!available) throw UnsupportedError('Recording requires Android');
+    await init();
+    final existing = seriesFor(channel, programme.title);
+    if (existing != null) return (rule: existing, added: 0, conflicts: 0);
+    if (!channel.isLive ||
+        channel.transientPlayback ||
+        seriesTitleKey(programme.title).isEmpty ||
+        !['http', 'https'].contains(Uri.tryParse(channel.url)?.scheme)) {
+      throw StateError('Not a live channel programme');
+    }
+    final vol = await currentVolume();
+    if (!_roomOn(vol) || _file == null) {
+      throw StateError('Recording storage unavailable');
+    }
+    final rule = SeriesRule(
+        id: 's${_now().microsecondsSinceEpoch.toRadixString(36)}',
+        title: programme.title.trim(),
+        channelId: channel.id,
+        channelName: channel.name,
+        playlistId: channel.playlistId,
+        channelLogo: channel.logoUrl,
+        skipRepeats: skipRepeats,
+        created: _now());
+    _series.add(rule);
+    final before = List.of(_items);
+    final plan = _planSeries(
+        rule, channel, [programme, ...upcoming], maxConnections, vol);
+    try {
+      await _saveChecked();
+      await _push(strict: true);
+    } catch (_) {
+      _series.remove(rule);
+      _items
+        ..clear()
+        ..addAll(before);
+      await _save();
+      await _push();
+      rethrow;
+    }
+    debugPrint('SeriesRec: "${rule.title}" on ${channel.name}: '
+        '${plan.added} scheduled, ${plan.conflicts} without a free connection');
+    notifyListeners();
+    return (rule: rule, added: plan.added, conflicts: plan.conflicts);
+  }
+
+  /// Stops [rule]: its upcoming airings go, recordings made (or running)
+  /// stay.
+  Future<void> stopSeries(SeriesRule rule) async {
+    await init();
+    _series.remove(rule);
+    _items.removeWhere((r) =>
+        r.seriesId == rule.id &&
+        (r.state == RecState.scheduled || r.state == RecState.waiting));
+    await _save();
+    await _push();
+    notifyListeners();
+  }
+
+  bool _seriesRefreshing = false;
+
+  /// Schedules every series' new airings from the guide and keeps the
+  /// scheduled ones in step with it (a moved airing, a new stream link).
+  /// [channels] by `Channel.id`; a series whose channel isn't there (its
+  /// playlist off or not loaded yet) waits for a later run.
+  Future<void> refreshSeries({
+    required Map<String, Channel> channels,
+    required Future<List<EpgProgram>> Function(Channel channel) programmes,
+    int Function(String playlistId)? maxConnections,
+  }) async {
+    if (!available || _seriesRefreshing) return;
+    await init();
+    if (_series.isEmpty) return;
+    _seriesRefreshing = true;
+    try {
+      final vol = await currentVolume();
+      var changed = false, added = 0, conflicts = 0, waiting = 0;
+      for (final rule in List.of(_series)) {
+        final channel = channels[rule.channelId];
+        if (channel == null) {
+          waiting++;
+          continue;
+        }
+        final list = await programmes(channel);
+        if (!_series.contains(rule)) continue;
+        final plan = _planSeries(rule, channel, list,
+            maxConnections?.call(channel.playlistId) ?? 1, vol);
+        changed |= plan.changed;
+        added += plan.added;
+        conflicts += plan.conflicts;
+      }
+      if (changed) {
+        await _save();
+        await _push();
+        notifyListeners();
+      }
+      debugPrint('SeriesRec: ${_series.length} series, $added added, '
+          '$conflicts without a free connection, '
+          '$waiting channel(s) not loaded');
+    } catch (e) {
+      debugPrint('SeriesRec: refresh failed: $e');
+    } finally {
+      _seriesRefreshing = false;
+    }
+  }
+
+  /// Adds [rule]'s airings from [programmes] (no save / push: callers do
+  /// it once). [vol] null or full = nothing new, existing ones still
+  /// follow the guide.
+  ({bool changed, int added, int conflicts}) _planSeries(
+      SeriesRule rule,
+      Channel channel,
+      List<EpgProgram> programmes,
+      int maxConnections,
+      RecordingVolume? vol) {
+    final now = _now();
+    var changed = false;
+    // One per start time: the held programme is usually in the guide too.
+    final list = {
+      for (final p in programmes) p.start.millisecondsSinceEpoch: p
+    }.values.toList()
+      ..sort((a, b) => a.start.compareTo(b.start));
+    // Cancelled airings are only remembered while they could come back.
+    final before = rule.skipped.length;
+    rule.skipped.removeWhere((k) {
+      final at = int.tryParse(k.substring(k.lastIndexOf('|') + 1));
+      return at == null ||
+          at < now.subtract(const Duration(days: 1)).millisecondsSinceEpoch;
+    });
+    changed |= rule.skipped.length != before;
+    final mine = _items.where((r) => r.seriesId == rule.id).toList();
+    for (final r in mine) {
+      // A failed / missed airing frees its episode for a later repeat.
+      if ((r.state == RecState.failed || r.state == RecState.missed) &&
+          r.episode.isNotEmpty &&
+          rule.episodes.remove(r.episode)) {
+        changed = true;
+      }
+      if (r.state != RecState.scheduled ||
+          !r.startAt.isAfter(now.add(const Duration(minutes: 2)))) {
+        continue;
+      }
+      if (channel.url.isNotEmpty && r.url != channel.url) {
+        r.url = channel.url;
+        changed = true;
+      }
+      final same = list
+          .where((p) => programmeKey(channel, p) == r.programmeKey)
+          .firstOrNull;
+      if (same != null && rule.matches(same.title)) {
+        final stop = same.stop.toLocal();
+        if (stop != r.endAt && stop.isAfter(r.startAt)) {
+          r.endAt = stop;
+          changed = true;
+        }
+      } else if (list.any(
+          (p) => p.start.isBefore(r.endAt) && p.stop.isAfter(r.startAt))) {
+        // The guide now has something else in that slot: the airing moved
+        // (its new time is added below) or was dropped.
+        _items.remove(r);
+        if (r.episode.isNotEmpty) rule.episodes.remove(r.episode);
+        changed = true;
+      }
+    }
+    if (!_roomOn(vol)) {
+      return (changed: changed, added: 0, conflicts: 0);
+    }
+    var scheduled = scheduledCount(rule);
+    var added = 0, conflicts = 0;
+    final horizon = now.add(seriesHorizon);
+    for (final p in list) {
+      if (scheduled >= seriesMaxScheduled || p.start.isAfter(horizon)) break;
+      if (!p.start.isAfter(now.add(const Duration(seconds: 30))) ||
+          !p.stop.isAfter(p.start) ||
+          !rule.matches(p.title)) {
+        continue;
+      }
+      final key = programmeKey(channel, p);
+      if (rule.skipped.contains(key) ||
+          entryForProgramme(channel, p) != null) {
+        continue;
+      }
+      final episode = seriesEpisodeKey(p.description);
+      if (rule.skipRepeats &&
+          episode.isNotEmpty &&
+          rule.episodes.contains(episode)) {
+        continue;
+      }
+      if (programmeConflict(channel, p, maxConnections) != null) {
+        conflicts++;
+        continue;
+      }
+      _items.add(_programmeEntry(channel, p, vol!,
+          seriesId: rule.id, episode: episode));
+      if (episode.isNotEmpty) rule.episodes.add(episode);
+      scheduled++;
+      added++;
+      changed = true;
+    }
+    return (changed: changed, added: added, conflicts: conflicts);
   }
 
   // ---------------------------------------------------------- auto team
@@ -1160,7 +1617,7 @@ class RecordingService extends ChangeNotifier {
   /// "Recording…" notification can show.
   Future<void> askNotifications() async {
     try {
-      await _channel.invokeMethod('askNotifications');
+      await _invoke('askNotifications');
     } catch (_) {}
   }
 }
@@ -1238,6 +1695,9 @@ class RecordingEntry {
     this.headers = const {},
     this.maxConnections = 0,
     this.note = '',
+    this.detailsSaved = false,
+    this.seriesId = '',
+    this.episode = '',
   });
 
   final String id;
@@ -1281,6 +1741,11 @@ class RecordingEntry {
   final String? channelLogo;
   final String programmeKey;
 
+  /// The [SeriesRule] that scheduled it ('' = none) and the airing's
+  /// episode ([seriesEpisodeKey], '' = the guide had no description).
+  final String seriesId;
+  final String episode;
+
   /// '' = a recording, 'download' = a movie / episode download.
   final String kind;
 
@@ -1296,6 +1761,10 @@ class RecordingEntry {
   /// Why a queued download waits: 'queue' (another one first) or
   /// 'connection' (the account's connection is in use).
   String note;
+
+  /// A file in the network folder: its details file for other devices is
+  /// written ([RecordingService.detailsOf]).
+  bool detailsSaved;
 
   bool get isDownload => kind == 'download';
 
@@ -1349,6 +1818,9 @@ class RecordingEntry {
         if (headers.isNotEmpty) 'headers': headers,
         if (maxConnections > 0) 'maxConnections': maxConnections,
         if (note.isNotEmpty) 'note': note,
+        if (detailsSaved) 'detailsSaved': true,
+        if (seriesId.isNotEmpty) 'seriesId': seriesId,
+        if (episode.isNotEmpty) 'episode': episode,
       };
 
   factory RecordingEntry.fromJson(Map<String, dynamic> m) {
@@ -1393,6 +1865,9 @@ class RecordingEntry {
       },
       maxConnections: (m['maxConnections'] as num?)?.toInt() ?? 0,
       note: m['note'] as String? ?? '',
+      detailsSaved: m['detailsSaved'] == true,
+      seriesId: m['seriesId'] as String? ?? '',
+      episode: m['episode'] as String? ?? '',
     );
   }
 }
@@ -1410,6 +1885,7 @@ class DownloadItem {
     this.poster,
     this.durationSec = 0,
     this.totalBytes = 0,
+    this.fileExtension,
   });
 
   /// The title's channel id (IPTV `playlist::xt_vod_…`, Media Hub
@@ -1429,8 +1905,12 @@ class DownloadItem {
   final int durationSec;
   final int totalBytes;
 
+  /// Known from a file name (a copy from the network folder).
+  final String? fileExtension;
+
   /// The file's extension from its link (`.mkv`, `.mp4`…), else `ts`.
   String get extension {
+    if (fileExtension case final String e when e.isNotEmpty) return e;
     final path = Uri.tryParse(url)?.path ?? '';
     final m = RegExp(r'\.([A-Za-z0-9]{2,4})$').firstMatch(path);
     final ext = m?.group(1)?.toLowerCase();
@@ -1500,6 +1980,103 @@ class NetworkFolderConfig {
         user: m['user'] as String? ?? '',
         password: m['password'] as String? ?? '',
         domain: m['domain'] as String? ?? '',
+      );
+}
+
+/// What makes two guide titles the same show for a series recording:
+/// folded (case, accents, punctuation) without the bits guides add to one
+/// airing: "(R)", "[HD]", "New:", "S2 E5".
+String seriesTitleKey(String title) {
+  var t = title
+      .replaceAll(RegExp(r'\([^)]*\)|\[[^\]]*\]'), ' ')
+      .replaceFirst(
+          RegExp(r'^\s*(new|live|premiere|repeat|rerun)\s*[:\-]\s*',
+              caseSensitive: false),
+          '')
+      .replaceAll(
+          RegExp(r'\bs\d{1,3}\s*[,.]?\s*ep?\d{1,4}\b', caseSensitive: false),
+          ' ');
+  t = TitleSearch.fold(t).trim();
+  return t.isEmpty ? TitleSearch.fold(title).trim() : t;
+}
+
+/// One episode for "skip repeats": its guide description, folded (the
+/// same text = the same episode). '' when too short to tell episodes apart.
+String seriesEpisodeKey(String? description) {
+  final d = TitleSearch.fold(description ?? '').trim();
+  if (d.length < 16) return '';
+  return d.length > 120 ? d.substring(0, 120) : d;
+}
+
+/// Records every airing of one show on one channel (hold OK on a guide
+/// programme > Record series). Device-only, in `recordings.json`.
+class SeriesRule {
+  SeriesRule({
+    required this.id,
+    required this.title,
+    required this.channelId,
+    required this.channelName,
+    required this.playlistId,
+    this.channelLogo,
+    this.skipRepeats = false,
+    required this.created,
+    Set<String>? skipped,
+    Set<String>? episodes,
+  })  : skipped = skipped ?? {},
+        episodes = episodes ?? {};
+
+  final String id;
+
+  /// As the guide showed it when the series was set.
+  final String title;
+  final String channelId;
+  final String channelName;
+  final String playlistId;
+  final String? channelLogo;
+  final bool skipRepeats;
+  final DateTime created;
+
+  /// Airings the viewer cancelled (programme keys), not scheduled again.
+  final Set<String> skipped;
+
+  /// Episodes this series has recorded or scheduled ([seriesEpisodeKey]).
+  final Set<String> episodes;
+
+  String get match => seriesTitleKey(title);
+  bool matches(String programmeTitle) =>
+      seriesTitleKey(programmeTitle) == match;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'channelId': channelId,
+        'channelName': channelName,
+        'playlistId': playlistId,
+        if (channelLogo != null) 'channelLogo': channelLogo,
+        'skipRepeats': skipRepeats,
+        'created': created.millisecondsSinceEpoch,
+        if (skipped.isNotEmpty) 'skipped': skipped.toList(),
+        // The latest 300 are plenty to spot a repeat.
+        if (episodes.isNotEmpty)
+          'episodes': episodes
+              .skip(episodes.length > 300 ? episodes.length - 300 : 0)
+              .toList(),
+      };
+
+  factory SeriesRule.fromJson(Map<String, dynamic> m) => SeriesRule(
+        id: m['id'] as String? ?? '',
+        title: m['title'] as String? ?? '',
+        channelId: m['channelId'] as String? ?? '',
+        channelName: m['channelName'] as String? ?? '',
+        playlistId: m['playlistId'] as String? ?? '',
+        channelLogo: m['channelLogo'] as String?,
+        skipRepeats: m['skipRepeats'] == true,
+        created: DateTime.fromMillisecondsSinceEpoch(
+            (m['created'] as num?)?.toInt() ?? 0),
+        skipped: {for (final k in (m['skipped'] as List? ?? const [])) '$k'},
+        episodes: {
+          for (final k in (m['episodes'] as List? ?? const [])) '$k'
+        },
       );
 }
 

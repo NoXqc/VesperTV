@@ -75,6 +75,8 @@ class _RecordingSettingsScreenState extends State<RecordingSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Windows has downloads only: no margins, no USB note.
+    final recording = RecordingService.supported;
     final s = _service.settings;
     final current = _volumes.where((v) => v.path == s.folder).firstOrNull ??
         _volumes.where((v) => !v.network).firstOrNull;
@@ -85,10 +87,11 @@ class _RecordingSettingsScreenState extends State<RecordingSettingsScreen> {
     return withTvThemeIfNeeded(
       context,
       (context) => SettingsScaffold(
-        title: tr('Recordings'),
+        title: recording ? tr('Recordings') : tr('Downloads'),
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            if (recording) ...[
             TvMenuTile(
               autofocus: true,
               icon: Icons.first_page,
@@ -104,19 +107,29 @@ class _RecordingSettingsScreenState extends State<RecordingSettingsScreen> {
               onTap: () =>
                   _set(s.copyWith(minutesAfter: _next(_after, s.minutesAfter))),
             ),
+            ],
             TvMenuTile(
               icon: Icons.storage,
-              title: tr('Space for recordings: {gb} GB', {'gb': s.capGb}),
-              subtitle: tr(
-                  '{used} used. Recording stops when this is full or the storage has less than 1 GB left.',
-                  {'used': _gb(_service.usedBytes)}),
+              title: recording
+                  ? tr('Space for recordings: {gb} GB', {'gb': s.capGb})
+                  : tr('Space for downloads: {gb} GB', {'gb': s.capGb}),
+              subtitle: recording
+                  ? tr(
+                      '{used} used. Recording stops when this is full or the storage has less than 1 GB left.',
+                      {'used': _gb(_service.usedBytes)})
+                  : tr(
+                      '{used} used. Downloads stop when this is full or the drive has less than 1 GB left.',
+                      {'used': _gb(_service.usedBytes)}),
               onTap: () => _set(s.copyWith(capGb: _next(_caps, s.capGb))),
             ),
             const SizedBox(height: 12),
+            if (recording) ...[
             Text(tr('Downloads'),
                 style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 4),
+            ],
             TvMenuTile(
+              autofocus: !recording,
               icon: Icons.speed,
               title: tr('Speed limit: {speed}',
                   {'speed': downloadSpeedLabel(s.downloadSpeed)}),
@@ -134,7 +147,10 @@ class _RecordingSettingsScreenState extends State<RecordingSettingsScreen> {
               onTap: () => _set(s.copyWith(downloadAt: _next(_startTimes, at))),
             ),
             const SizedBox(height: 12),
-            Text(tr('Save recordings and downloads to'),
+            Text(
+                recording
+                    ? tr('Save recordings and downloads to')
+                    : tr('Save downloads to'),
                 style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 4),
             for (final v in _volumes)
@@ -143,16 +159,22 @@ class _RecordingSettingsScreenState extends State<RecordingSettingsScreen> {
                     ? Icons.lan_outlined
                     : v.removable
                         ? Icons.usb
-                        : Icons.phone_android,
+                        : recording
+                            ? Icons.phone_android
+                            : Icons.computer,
                 title: v.network
                     ? tr('Network folder')
                     : v.removable
                         ? tr('USB drive / SD card')
-                        : tr('This device'),
+                        : recording
+                            ? tr('This device')
+                            : tr('This computer'),
                 subtitle: v.network
                     ? s.network?.display ?? ''
-                    : tr('{free} free of {total}',
-                        {'free': _gb(v.free), 'total': _gb(v.total)}),
+                    : recording || v.free < 0
+                        ? tr('{free} free of {total}',
+                            {'free': _gb(v.free), 'total': _gb(v.total)})
+                        : '${v.path}\n${tr('{free} free of {total}', {'free': _gb(v.free), 'total': _gb(v.total)})}',
                 trailing: identical(v, current)
                     ? Icon(Icons.check,
                         color: Theme.of(context).colorScheme.primary)
@@ -167,7 +189,7 @@ class _RecordingSettingsScreenState extends State<RecordingSettingsScreen> {
               subtitle: tr('A shared folder on a computer or NAS (SMB)'),
               onTap: _openNetworkFolder,
             ),
-            if (_volumes.where((v) => !v.network).length < 2)
+            if (recording && _volumes.where((v) => !v.network).length < 2)
               Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Text(

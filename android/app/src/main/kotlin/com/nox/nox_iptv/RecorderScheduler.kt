@@ -209,6 +209,30 @@ class RecorderBridge(private val activity: Activity) {
                         activity.runOnUiThread { result.success(ok) }
                     }.start()
                 }
+                "networkList" -> Thread {
+                    // {"files": [...]} or {"error": "reason in plain words"}.
+                    val r: Map<String, Any> = try {
+                        mapOf("files" to NetworkFolder.list(ctx))
+                    } catch (e: Throwable) {
+                        Log.w(RecorderService.TAG, "list failed: ${e.javaClass.simpleName}")
+                        mapOf("error" to NetworkFolder.describe(e))
+                    }
+                    activity.runOnUiThread { result.success(r) }
+                }.start()
+                "networkWriteText" -> {
+                    val path = call.argument<String>("path") ?: ""
+                    val text = call.argument<String>("text") ?: ""
+                    Thread {
+                        val ok = try {
+                            NetworkFolder.writeText(ctx, path, text)
+                            true
+                        } catch (e: Throwable) {
+                            Log.w(RecorderService.TAG, "write failed: ${e.javaClass.simpleName}")
+                            false
+                        }
+                        activity.runOnUiThread { result.success(ok) }
+                    }.start()
+                }
                 "playUrl" -> result.success(NetworkFolder.playUrl(ctx, call.argument<String>("path") ?: ""))
                 "teePort" -> result.success(LiveTee.port())
                 "storage" -> {

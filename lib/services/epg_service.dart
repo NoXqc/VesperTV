@@ -844,6 +844,25 @@ class EpgService extends ChangeNotifier {
     }
   }
 
+  /// [channelId]'s programmes that haven't started yet, read from the
+  /// database (not the Timeline's lazy cache, which may not hold this row):
+  /// series recording looks for the next airings here. Same clean
+  /// timeline as the guide ([_untangle]), so the start times match.
+  Future<List<EpgProgram>> upcomingPrograms(String channelId) async {
+    final id = normalizeEpgId(channelId);
+    try {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final rows = await _db.programmesFor([id], now);
+      return [
+        for (final p in _untangle(rows[id] ?? const []))
+          if (p.start.millisecondsSinceEpoch > now) p
+      ];
+    } catch (e) {
+      debugPrint('EpgService: upcoming programmes failed: $e');
+      return const [];
+    }
+  }
+
   DateTime? _coverageStamp;
   final Map<int, Future<int>> _airingCounts = {};
 

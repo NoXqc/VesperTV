@@ -1,8 +1,11 @@
 import 'dart:convert';
 import '../models/channel.dart';
+import '../l10n/l10n.dart';
 import '../models/sports.dart';
 import '../utils/channel_name_matching.dart';
 import 'multiview_sports.dart';
+import 'sports_channel_countries.dart';
+import 'sports_channel_matcher.dart';
 import 'sports_networks.dart';
 import 'storage_service.dart';
 
@@ -156,6 +159,33 @@ class SportsChannelLists {
         ])
           ...(sources[key]?['ids'] as List? ?? []).cast<String>(),
       };
+
+  /// Puts each game's added sources ([sourcesFor], at most 8, found in
+  /// [live]) into its [matches] entry (keyed by
+  /// [SportsChannelPicks.eventKey]) and orders it by the viewer's
+  /// preferences: what Sports Trak's cards and the player's left drawer show.
+  void mergeAddedSources(
+      Iterable<SportsGame> games,
+      Map<String, List<ChannelMatch>> matches,
+      List<Channel> live,
+      SportsChannelPicks picks) {
+    SportsCountryPreferences? countries;
+    for (final game in games) {
+      final key = SportsChannelPicks.eventKey(game);
+      final saved = sourcesFor(game, key);
+      if (saved.isEmpty) continue;
+      matches[key] = [
+        for (final c in live.where((c) => saved.contains(c.id)).take(8))
+          ChannelMatch(c, MatchReason.pick,
+              picks.channelIdFor(game) == c.id ? 1000 : 950,
+              detail: tr('Your added source')),
+        for (final m in matches[key] ?? <ChannelMatch>[])
+          if (!saved.contains(m.channel.id)) m,
+      ]..sort((a, b) => b.score.compareTo(a.score));
+      matches[key] = picks.orderMatches(matches[key]!,
+          countries: countries ??= picks.countryPreferences);
+    }
+  }
 }
 
 /// One Channels card: a network and the user's channels of it.

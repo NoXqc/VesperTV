@@ -98,6 +98,53 @@ List<ChannelMatch> distinctCopiesFirst(List<ChannelMatch> sorted, int limit) {
   ];
 }
 
+/// The game [channel] is showing right now, among [games] (live, or about
+/// to start) and their [matches] (keyed by [SportsChannelPicks.eventKey],
+/// added sources merged): the full-screen player's left drawer lists that
+/// game's other sources. An exact listing beats a quality copy (`TSN 1 SD`
+/// while `TSN 1 4K` is listed, [channelCopyKey]), then the user's pick,
+/// guide/name evidence, a live game over one about to start, the score.
+/// A copy is put in the list after the listed one, so the playing source
+/// shows. Null when no game lists the channel.
+({SportsGame game, List<ChannelMatch> sources})? gameOnChannel(Channel channel,
+    Iterable<SportsGame> games, Map<String, List<ChannelMatch>> matches) {
+  final copyKey = channelCopyKey(channel.sourceName);
+  ({SportsGame game, List<ChannelMatch> sources})? best;
+  var bestRank = -1;
+  for (final g in games) {
+    final sources = matches[SportsChannelPicks.eventKey(g)];
+    if (sources == null || sources.isEmpty) continue;
+    var at = sources.indexWhere((m) => m.channel.id == channel.id);
+    final exact = at >= 0;
+    if (!exact && copyKey.isNotEmpty) {
+      at = sources
+          .indexWhere((m) => channelCopyKey(m.channel.sourceName) == copyKey);
+    }
+    if (at < 0) continue;
+    final m = sources[at];
+    final flags = (exact ? 8 : 0) +
+        (m.reason == MatchReason.pick ? 4 : 0) +
+        (m.gameEvidence ? 2 : 0) +
+        (g.state == GameState.live ? 1 : 0);
+    // The flags always outrank the score.
+    final total = flags * 100000 + m.score.clamp(0, 99999);
+    if (total <= bestRank) continue;
+    bestRank = total;
+    best = (
+      game: g,
+      sources: exact
+          ? sources
+          : [
+              ...sources.take(at + 1),
+              ChannelMatch(channel, m.reason, m.score,
+                  detail: m.detail, gameEvidence: m.gameEvidence),
+              ...sources.skip(at + 1),
+            ],
+    );
+  }
+  return best;
+}
+
 class ChannelMatch {
   const ChannelMatch(this.channel, this.reason, this.score,
       {this.detail, this.gameEvidence = false});

@@ -5,6 +5,7 @@ import '../widgets/pin_pad.dart';
 import 'playback_service.dart';
 import 'playlist_manager.dart';
 import 'storage_service.dart';
+import 'home_wallpaper.dart';
 import 'dart:typed_data';
 import 'dart:io';
 import '../models/profile_copy.dart';
@@ -134,6 +135,9 @@ class ViewerProfileService extends ChangeNotifier {
     await _storage.deleteViewerData(id);
     await _storage.deleteCacheFile('recently_played_vp_$id');
     await photos.remove(id);
+    try {
+      await HomeWallpaper.instance.remove(id);
+    } catch (_) {}
     notifyListeners();
     return true;
   }

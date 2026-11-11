@@ -7,6 +7,7 @@ import 'package:nox_iptv/screens/home_screen.dart';
 import 'package:nox_iptv/screens/tv_home_screen.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
 import 'package:nox_iptv/services/archive_service.dart';
+import 'package:nox_iptv/services/back_press_swallow.dart';
 import 'package:nox_iptv/services/epg_service.dart';
 import 'package:nox_iptv/services/home_rows.dart';
 import 'package:nox_iptv/services/playback_service.dart';
@@ -22,7 +23,7 @@ import 'warm_exit_helper.dart';
 void main() {
   for (final startupHome in [false, true]) {
     for (final hidden in [false, true]) {
-      for (final back in ['system', 'key', 'duplicate']) {
+      for (final back in ['system', 'key', 'duplicate', 'held']) {
         testWidgets(
             'Home Back returns to TV without Exit: startup=$startupHome hidden=$hidden, $back',
             (tester) async {
@@ -81,6 +82,25 @@ void main() {
           expect(find.byType(HomeScreen), findsOneWidget);
           if (back == 'system') {
             await tester.binding.handlePopRoute();
+          } else if (back == 'held') {
+            // A long press: Home closes on the key-down; its repeats and
+            // release must be handled here, or Android turns them into a
+            // second Back after the return guard (owner, 2026-11-10).
+            const back = LogicalKeyboardKey.goBack;
+            const physical = PhysicalKeyboardKey.escape;
+            await tester.sendKeyDownEvent(back, physicalKey: physical);
+            await tester.pumpAndSettle();
+            expect(find.byType(HomeScreen), findsNothing);
+            expect(BackPressSwallow.active, isTrue);
+            for (var i = 0; i < 3; i++) {
+              expect(
+                  await tester.sendKeyRepeatEvent(back, physicalKey: physical),
+                  isTrue);
+              await tester.pump(const Duration(milliseconds: 300));
+            }
+            expect(await tester.sendKeyUpEvent(back, physicalKey: physical),
+                isTrue);
+            expect(BackPressSwallow.active, isFalse);
           } else {
             await tester.sendKeyEvent(LogicalKeyboardKey.goBack,
                 physicalKey: PhysicalKeyboardKey.escape);

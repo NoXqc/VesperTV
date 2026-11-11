@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nox_iptv/models/viewer_profile.dart';
@@ -12,6 +14,7 @@ import 'package:nox_iptv/screens/startup_profile_screen.dart';
 import 'package:nox_iptv/services/profile_gate.dart';
 import 'package:nox_iptv/services/app_preferences.dart';
 import 'package:nox_iptv/services/catalog_database.dart';
+import 'package:nox_iptv/services/home_wallpaper.dart';
 import 'package:nox_iptv/services/parental_pin.dart';
 import 'package:nox_iptv/services/playback_service.dart';
 import 'package:nox_iptv/services/playlist_manager.dart';
@@ -115,6 +118,9 @@ class StartupFixture {
   }
 }
 
+Widget wrap(StartupFixture f, HomeWallpaper wallpapers) =>
+    f.wrap(StartupProfileScreen(onSelected: () {}, wallpapers: wallpapers));
+
 Finder card(String id) => find.byKey(ValueKey('startup-profile-$id'));
 ProfileCard profileCard(WidgetTester tester, String id) =>
     tester.widget<ProfileCard>(card(id));
@@ -187,6 +193,52 @@ void main() {
     expect(find.text('Exit VesperTV?'), findsNothing);
     expect(f.launches, 0);
     expect(f.playback.stops, 0);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets("the highlighted viewer's wallpaper shows when they turned it on",
+      (tester) async {
+    final f = StartupFixture();
+    await f.init();
+    addTearDown(f.dispose);
+    final dir = await tester
+        .runAsync(() => Directory.systemTemp.createTemp('wallpaper'));
+    addTearDown(() => dir!.delete(recursive: true));
+    final wallpapers = HomeWallpaper(directory: dir);
+    final pic =
+        Uint8List.fromList(img.encodeJpg(img.Image(width: 16, height: 9)));
+    await tester.runAsync(() async {
+      // Main has a wallpaper but kept the switch off; Viewer 1 turned it on.
+      for (final id in ['main', 'p1']) {
+        final file = await wallpapers.file(id);
+        await file.parent.create(recursive: true);
+        await file.writeAsBytes(pic);
+      }
+    });
+    await f.storage.setActiveViewerId('p1');
+    await f.storage.setWallpaperOnProfiles(true);
+    await f.storage.setActiveViewerId('main');
+    expect(f.storage.getWallpaperOnProfiles(), isFalse);
+    expect(f.storage.getWallpaperOnProfiles(viewerId: 'p1'), isTrue);
+    expect(f.storage.exportForTransfer().keys,
+        isNot(contains(startsWith(AppConstants.keyWallpaperOnProfiles))));
+
+    await tester.runAsync(() async {
+      await tester.pumpWidget(wrap(f, wallpapers));
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    });
+    await tester.pumpAndSettle();
+    expect(profileCard(tester, 'main').focusNode.hasFocus, isTrue);
+    expect(find.byKey(const ValueKey('wallpaper-main')), findsNothing);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    expect(profileCard(tester, 'p1').focusNode.hasFocus, isTrue);
+    expect(find.byKey(const ValueKey('wallpaper-p1')), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('wallpaper-p1')), findsNothing);
     await tester.pumpWidget(const SizedBox());
   });
 

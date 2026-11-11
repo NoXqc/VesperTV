@@ -34,7 +34,23 @@ the old id is a separate app on the phone (its data doesn't carry over).
   encryption question is answered in App Store Connect (the app uses HTTPS and encrypts Sync /
   Transfer data itself). Then add internal testers (App Store Connect users, up to 100, no review);
   they install from the TestFlight app. Builds expire after 90 days.
-- Not tried yet: the first run (secrets not added).
+- First upload 2026-11-11: 1.0.63 (701), run 43036962320. `flutter build ios --config-only` needs
+  `--no-codesign` (it looked for a local certificate; Xcode signs through the API key).
+
+## Up to par with Android (2026-11-11, main 1.0.64 merged)
+
+- Vesper AI drives the iPhone player (`usesMediaKit`, not `isDesktop`, in the AI tools).
+- **Backup & restore:** Documents/VesperTV, visible in Files (Info.plist `UIFileSharingEnabled` +
+  `LSSupportsOpeningDocumentsInPlace`); Restore from a file = Files picker (`file_selector`). No
+  Import from storage (no USB).
+- **Catch-up:** the Windows `DesktopCatchup` already ran on iOS. Added: the Catch-up group
+  (`_showCatchupGroup`, iOS only on media_kit), a **Channel schedule** button in the touch player
+  (`ChannelSchedulePanel`: past = replay, on now = live), and `ClampingScrollPhysics` on the
+  Timeline grid: iOS bouncing sends no OverscrollNotification, so dragging left never reached the past.
+- **Recording: not on iOS** (owner, 2026-11-11: iOS suspends apps off screen; the idea is for a
+  future Apple TV build, and Flutter has no tvOS).
+- Not done: downloads (Windows' `DesktopRecorder` is Windows paths/SMB; iOS would only download
+  while open) and notifications with the app closed.
 
 ## Install from Windows (free Apple ID)
 

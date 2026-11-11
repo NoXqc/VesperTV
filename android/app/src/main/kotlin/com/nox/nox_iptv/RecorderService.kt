@@ -133,6 +133,7 @@ class RecorderService : Service() {
             title = item.optString("title", "Recording"),
             minFreeBytes = item.optLong("minFreeBytes", 1L shl 30),
             maxBytes = item.optLong("maxBytes", 0L),
+            details = item.optString("details", "").ifEmpty { null },
             onDone = { r ->
                 active.remove(r.id)
                 LiveTee.close(r.id)
@@ -276,6 +277,8 @@ class Recording(
     val title: String,
     private val minFreeBytes: Long,
     private val maxBytes: Long,
+    /** Title, teams… written beside the file when it lands in the network folder. */
+    private val details: String? = null,
     private val onDone: (Recording) -> Unit,
 ) {
     /** Where it's written; the device fallback when the network folder fails. */
@@ -370,6 +373,9 @@ class Recording(
         }
         // Nothing ever arrived: not a recording, whatever the reason.
         writeStatus(if (bytes == 0L && state == "done") "failed" else state)
+        if (bytes > 0 && (state == "done" || state == "stopped")) {
+            NetworkFolder.writeDetails(context, target.path, details)
+        }
         onDone(this)
     }
 

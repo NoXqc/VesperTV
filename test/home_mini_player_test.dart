@@ -115,10 +115,13 @@ void main() {
     expect(storage.getHomeMiniPlayer(), isFalse);
   });
 
-  for (final (label, size, on) in [
-    ('rests on a live card', const Size(1920, 1080), true),
-    ('switched off', const Size(1920, 1080), false),
-    ('on a phone', const Size(420, 900), true),
+  // Resting on a card plays it only with Preview on highlight on (owner,
+  // 2026-11-10); Play/Pause works either way.
+  for (final (label, size, on, highlight) in [
+    ('rests on a live card', const Size(1920, 1080), true, true),
+    ('switched off', const Size(1920, 1080), false, true),
+    ('on a phone', const Size(420, 900), true, true),
+    ('Preview on highlight off', const Size(1920, 1080), true, false),
   ]) {
     testWidgets('Home mini player: $label', (tester) async {
       tester.view.physicalSize = size;
@@ -136,6 +139,7 @@ void main() {
       final prefs = AppPreferences(storage);
       await prefs.init();
       prefs.setHomeMiniPlayer(on);
+      prefs.setGuideFocusPreview(highlight);
       final viewers = ViewerProfileService(storage, playlist, playback);
       final epg = EpgService(storage);
       final archive = ArchiveService(storage);
@@ -177,6 +181,36 @@ void main() {
       if (!on || size.width < HomeScreen.miniPlayerMinWidth) {
         expect(playback.plays, isEmpty);
         expect(find.byType(VideoPlayerPane), findsNothing);
+      } else if (!highlight) {
+        // Resting plays nothing, however long.
+        await tester.pump(const Duration(seconds: 2));
+        expect(playback.plays, isEmpty);
+        expect(find.byType(VideoPlayerPane), findsNothing);
+        // OK plays the card in the mini player (not full screen)...
+        await tester.sendKeyEvent(LogicalKeyboardKey.select);
+        await tester.pump();
+        expect(playback.plays, [(second.id, false)]);
+        expect(find.byType(VideoPlayerPane), findsOneWidget);
+        expect(find.byType(HomeScreen), findsOneWidget);
+        // ...moving on doesn't switch it...
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+        await tester.pump(const Duration(seconds: 2));
+        expect(playback.plays, hasLength(1));
+        // ...OK there plays that one...
+        await tester.sendKeyEvent(LogicalKeyboardKey.select);
+        await tester.pump();
+        expect(playback.plays.last.$1, first.id);
+        // ...and Play/Pause turns it off, on any card.
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.pump(const Duration(seconds: 1));
+        await tester.sendKeyEvent(LogicalKeyboardKey.mediaPlayPause);
+        await tester.pump();
+        expect(playback.stops, 1);
+        expect(find.byType(VideoPlayerPane), findsNothing);
+        // With nothing playing, Play/Pause plays the card.
+        await tester.sendKeyEvent(LogicalKeyboardKey.mediaPlayPause);
+        await tester.pump();
+        expect(playback.plays.last.$1, second.id);
       } else {
         expect(playback.plays, [(second.id, false)]);
         expect(find.byType(VideoPlayerPane), findsOneWidget);

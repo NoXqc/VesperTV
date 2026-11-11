@@ -1359,6 +1359,39 @@ const List<SportsLeague> kSportsLeagueBank = [
       region: 'Basketball',
       // TheSportsDB's free key has no basketball tables (empty reply).
       hasStandings: false),
+  // Discord request (Black1914), 2026-11-11: EuroCup and the Basketball
+  // Champions League, same TheSportsDB path as EuroLeague (ids checked
+  // against lookupleague.php). Series phrases are the full names only: a
+  // bare "champions league" would pull in the football competition.
+  SportsLeague(
+      id: 'basketball.eurocup',
+      espnPath: 'basketball/eurocup',
+      sportsDbId: '4547',
+      name: 'EuroCup Basketball',
+      shortName: 'EC',
+      // Greek spellings stay raw (see EuroLeague above); unverified against
+      // a real Greek guide.
+      seriesPhrases: ['eurocup', 'Γιουρόκαπ', 'Γιουροκάπ', 'ΓΙΟΥΡΟΚΑΠ'],
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/w54nor1554757326.png',
+      region: 'Basketball',
+      // TheSportsDB's free key has no basketball tables.
+      hasStandings: false),
+  SportsLeague(
+      id: 'basketball.bcl',
+      espnPath: 'basketball/bcl',
+      sportsDbId: '4548',
+      name: 'Basketball Champions League',
+      shortName: 'BCL',
+      seriesPhrases: [
+        'basketball champions league',
+        'champions league basketball'
+      ],
+      logoUrl:
+          'https://r2.thesportsdb.com/images/media/league/badge/6dfp5j1576751638.png',
+      region: 'Basketball',
+      // TheSportsDB's free key has no basketball tables.
+      hasStandings: false),
   SportsLeague(
       id: 'basketball.gre.1',
       espnPath: 'basketball/gre.1',

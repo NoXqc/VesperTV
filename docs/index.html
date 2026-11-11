@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>VesperTV — Always free, Always open source universal media player for Android TV and Windows</title>
-<meta name="description" content="VesperTV is a free, open-source universal media player for Android TV boxes, Fire Sticks, phones and Windows PCs. Live IPTV from your own Xtream Codes login or M3U playlist, films and series from custom REST add-ons and your own Jellyfin, Emby or Plex server in the Media Hub — plus a real TV guide, favourites, resume and a remote-first interface. GPL-3.0, no ads, no tracking.">
+<title>VesperTV — Always free, Always open source universal media player for Android TV, Windows and Linux</title>
+<meta name="description" content="VesperTV is a free, open-source universal media player for Android TV boxes, Fire Sticks, phones, and Windows and Linux PCs. Live IPTV from your own Xtream Codes login or M3U playlist, films and series from custom REST add-ons and your own Jellyfin, Emby or Plex server in the Media Hub — plus a real TV guide, favourites, resume and a remote-first interface. GPL-3.0, no ads, no tracking.">
 <meta name="theme-color" content="#070608">
 <meta name="color-scheme" content="dark">
 
 <meta property="og:type" content="website">
 <meta property="og:title" content="VesperTV — Always free, Always open source">
-<meta property="og:description" content="A free, open-source universal media player for Android TV boxes, Fire Sticks, phones and Windows PCs. Live IPTV, custom REST add-ons, and your own Jellyfin, Emby or Plex server. You bring the sources; it brings the guide, the favourites and a remote-first interface.">
+<meta property="og:description" content="A free, open-source universal media player for Android TV boxes, Fire Sticks, phones, and Windows and Linux PCs. Live IPTV, custom REST add-ons, and your own Jellyfin, Emby or Plex server. You bring the sources; it brings the guide, the favourites and a remote-first interface.">
 <meta property="og:image" content="assets/shot-live.png">
 <meta name="twitter:card" content="summary_large_image">
 
@@ -473,11 +473,12 @@ h3{ font-size:1.22rem; letter-spacing:-.015em; font-stretch:92%; margin-bottom:9
 }
 .req h3{ display:flex; align-items:center; gap:10px; }
 .req p{ color:var(--ink-2); font-size:.97rem; }
-.req .tag{
+.req .tag, .feat-list .tag{
   font-size:.7rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase;
   color:var(--violet-lift);
   border:1px solid var(--hair-2); border-radius:999px; padding:3px 9px;
 }
+.feat-list .tag{ display:inline-block; font-style:normal; margin-left:6px; vertical-align:2px; white-space:nowrap; }
 
 /* ---- Feature clusters: a spec sheet, laid out like a guide grid ---- */
 .clusters{ display:grid; }
@@ -531,6 +532,7 @@ h3{ font-size:1.22rem; letter-spacing:-.015em; font-stretch:92%; margin-bottom:9
 /* ---- Install ---- */
 .install-grid{ display:grid; gap:18px; grid-template-columns:1fr; }
 @media (min-width:860px){ .install-grid{ grid-template-columns:repeat(2,1fr); } }
+@media (min-width:860px){ .install.wide{ grid-column:1 / -1; } }
 .install{
   display:flex; flex-direction:column;
   background:var(--bg-lift);
@@ -758,7 +760,7 @@ details .ans p + p{ margin-top:12px; }
         <li class="chip">No subscription</li>
       </ul>
 
-      <p class="kicker">Universal media player for Android TV&nbsp;· Fire Stick&nbsp;· Phone&nbsp;· Windows</p>
+      <p class="kicker">Universal media player for Android TV&nbsp;· Fire Stick&nbsp;· Phone&nbsp;· Windows&nbsp;· Linux</p>
 
       <h1>Always free,<span class="grad">Always open source</span></h1>
 
@@ -779,6 +781,10 @@ details .ans p + p{ margin-top:12px; }
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5l7.5-1v7H3zM11.5 4.4L21 3v8.5h-9.5zM3 12.5h7.5v7L3 18.5zM11.5 12.5H21V21l-9.5-1.4z"/></svg>
           Windows 1.0.61 (.zip)
         </a>
+        <a class="btn btn-ghost" href="https://github.com/NoXqc/VesperTV/releases/download/1.0.63/VesperTV-1.0.63-702-linux-x64.tar.gz">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="m7 9 3 3-3 3"/><path d="M12.5 15H17"/></svg>
+          Linux (beta)
+        </a>
         <a class="btn btn-ghost" href="https://github.com/NoXqc/VesperTV">
           <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38l-.01-1.34c-2.23.48-2.7-1.07-2.7-1.07-.36-.93-.89-1.18-.89-1.18-.73-.5.05-.49.05-.49.81.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.67.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.03 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48l-.01 2.2c0 .21.15.46.55.38A8 8 0 0 0 8 0Z"/></svg>
           Read the source
@@ -798,8 +804,9 @@ details .ans p + p{ margin-top:12px; }
 
       <p class="cta-note">
         One universal APK — Android phones and tablets, Android TV boxes and Fire TV
-        sticks. On a PC, grab the Windows zip (Windows 10 or 11, 64-bit; no installer).
-        There is nothing to sign up for.
+        sticks. On a PC, grab the Windows zip (Windows 10 or 11, 64-bit; no installer)
+        or the Linux build (beta, 64-bit; it runs on the Steam Deck too). There is
+        nothing to sign up for.
       </p>
 
       <div class="honest">
@@ -823,7 +830,7 @@ details .ans p + p{ margin-top:12px; }
       <div class="gal-head">
         <div>
           <h2>See it in action</h2>
-          <p>Swipe or drag through the screens — real captures from a Formuler box.</p>
+          <p>Swipe or drag through the screens — real captures from a Formuler box, and the playlist editor in a browser.</p>
         </div>
         <div class="gal-btns">
           <button class="gal-btn" type="button" id="galPrev" aria-label="Previous screenshot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
@@ -832,7 +839,7 @@ details .ans p + p{ margin-top:12px; }
       </div>
     </div>
     <ul class="gal-track" id="galTrack" tabindex="0" role="region" aria-roledescription="carousel" aria-label="VesperTV screenshots">
-        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="1 of 19">
+        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="1 of 25">
           <figure class="shot">
             <div class="shot-frame">
               <img src="assets/shot-add.png?v=3" width="1600" height="900" loading="eager" decoding="async" draggable="false"
@@ -841,79 +848,106 @@ details .ans p + p{ margin-top:12px; }
             <figcaption>Adding a playlist — scan the QR code and type it on your phone, no remote typing</figcaption>
           </figure>
         </li>
-        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="2 of 19">
+        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="2 of 25">
           <figure class="shot">
             <div class="shot-frame">
-              <img src="assets/shot-guide.png" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
-                   alt="VesperTV's timeline guide: a channel list down the left beside a scrolling programme grid showing several hours of schedule, with the focused programme's title, time range and description above it.">
+              <img src="assets/shot-home.jpg?v=9" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+                   alt="VesperTV's Home page: the focused Vesper Shorts channel's logo, programme and description, the channel playing in a small player at the top right, and rows of Recent channels and Favourite channels.">
+            </div>
+            <figcaption>Home — your channels, movies and games in one place, with a small live player</figcaption>
+          </figure>
+        </li>
+        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="3 of 25">
+          <figure class="shot">
+            <div class="shot-frame">
+              <img src="assets/shot-guide.png?v=9" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+                   alt="VesperTV's Timeline guide: the tabs and channel groups on the left, a preview of the playing channel with the focused programme's details, and a schedule grid of the demo channels below.">
             </div>
             <figcaption>Timeline — a full schedule grid, hours at a glance</figcaption>
           </figure>
         </li>
-        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="3 of 19">
+        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="4 of 25">
           <figure class="shot">
             <div class="shot-frame">
-              <img src="assets/shot-full-video-guide.jpg" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
-                   alt="VesperTV's timeline guide over full-screen video: the channel playing fills the screen, with a see-through three-row schedule grid along the bottom and the focused programme's title, time and description in a card at the top right.">
+              <img src="assets/shot-full-video-guide.jpg?v=9" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+                   alt="VesperTV's timeline guide over full-screen video: the channel fills the screen with a see-through schedule grid along the bottom and the focused programme's details at the top right.">
             </div>
             <figcaption>Translucent guide — browse the schedule while the channel keeps playing full screen</figcaption>
           </figure>
         </li>
-        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="4 of 19">
+        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="5 of 25">
           <figure class="shot">
             <div class="shot-frame">
-              <img src="assets/shot-movies.jpg?v=2" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
-                   alt="VesperTV Movies screen: a wide HD backdrop banner for The King's Speech with its clean title and plot, above a row of film posters with rating badges.">
+              <img src="assets/shot-player-options.jpg?v=9" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+                   alt="A film playing full screen with the player options row open at the bottom: Channels, Stream info, Recent, Reload, Subtitles, Audio sync, Buffer, Multiview, Fill and Search.">
             </div>
-            <figcaption>Movies — HD backdrop banners, posters and provider ratings</figcaption>
+            <figcaption>The player — Down opens every option, one row, all on the remote</figcaption>
           </figure>
         </li>
-        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="5 of 19">
+        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="6 of 25">
           <figure class="shot">
             <div class="shot-frame">
-              <img src="assets/shot-show-page.jpg" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
-                   alt="VesperTV's TV show page for Arcane: a large backdrop, the title with rating, year, episode count and genre chips, the plot and cast, Play S1E1 and Favorites buttons, then a row of wide episode cards with titles and running times.">
+              <img src="assets/shot-movies.jpg?v=9" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+                   alt="The Movies tab: a banner for the focused film above a row of posters.">
             </div>
-            <figcaption>TV show page — backdrop, Resume, seasons and episodes with your progress</figcaption>
+            <figcaption>Movies — poster rows under a banner for the focused title</figcaption>
           </figure>
         </li>
-        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="6 of 19">
+        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="7 of 25">
           <figure class="shot">
             <div class="shot-frame">
-              <img src="assets/shot-movie-page.jpg" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
-                   alt="VesperTV's movie page for The King's Speech: a large backdrop, the clean title with rating, year, running time and genre chips, the plot, director and cast, and Play and Favorites buttons.">
+              <img src="assets/shot-show-page.jpg?v=9" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+                   alt="A show page: the title, details and description, Resume and Restart buttons, the season, and a row of episode cards with their progress.">
             </div>
-            <figcaption>Movie page — backdrop, details and Play / Resume where you left off</figcaption>
+            <figcaption>TV show page — Resume, seasons and episodes with your progress</figcaption>
           </figure>
         </li>
-        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="7 of 19">
+        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="8 of 25">
           <figure class="shot">
             <div class="shot-frame">
-              <img src="assets/shot-sports.jpg" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+              <img src="assets/shot-movie-page.jpg?v=9" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+                   alt="A movie page for Tears of Steel: the poster, title, year, running time and genres, the description over a backdrop, and Play, Watch list and Download buttons.">
+            </div>
+            <figcaption>Movie page — backdrop, details, Play, Watch list and Download</figcaption>
+          </figure>
+        </li>
+        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="9 of 25">
+          <figure class="shot">
+            <div class="shot-frame">
+              <img src="assets/shot-sports.jpg?v=11" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
                    alt="VesperTV's Sports screen: league chips and a day strip along the top, a large summary of the Canadiens at Capitals game with its start time and matched channel, and a row of game cards with records and channels.">
             </div>
             <figcaption>Sports — live scores, and the channel each game is on</figcaption>
           </figure>
         </li>
-        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="8 of 19">
+        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="10 of 25">
           <figure class="shot">
             <div class="shot-frame">
-              <img src="assets/shot-my-teams.jpg" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+              <img src="assets/shot-sports-guide.jpg?v=11" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+                   alt="Sports Trak's Guide layout: a game playing in a small player at the top left beside the matchup, start time, records and injuries, and below it the day's NHL games as a list with start times and the channel each one is on.">
+            </div>
+            <figcaption>Sports Trak's Guide layout — the day's games as a list, the channel beside each</figcaption>
+          </figure>
+        </li>
+        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="11 of 25">
+          <figure class="shot">
+            <div class="shot-frame">
+              <img src="assets/shot-my-teams.jpg?v=11" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
                    alt="VesperTV's My Teams screen: followed teams on the left, and the Montreal Canadiens' record, division standing, last result, next two weeks of games with channels, and a mini conference table on the right.">
             </div>
             <figcaption>My Teams — record, standing and the next two weeks, one press from the stream</figcaption>
           </figure>
         </li>
-        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="9 of 19">
+        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="12 of 25">
           <figure class="shot">
             <div class="shot-frame">
-              <img src="assets/shot-live-stats.jpg" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
-                   alt="A live Celtics at Pistons NBA game playing in VesperTV with the sports panel open over it: the score and clock, Watch on US: NBC East and NBC West buttons, each team's top performers, and a player box score with minutes, points and rebounds.">
+              <img src="assets/shot-multiview.jpg?v=10" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+                   alt="Multiview in the 1 + 3 layout: one large screen and three smaller screens on the right, each playing a different channel, the sound on the selected one.">
             </div>
-            <figcaption>Live stats over the game — score, top performers, box score and every channel it's on</figcaption>
+            <figcaption>Multiview 1 + 3 — one big screen, three small, and Swap mode to rotate them</figcaption>
           </figure>
         </li>
-        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="10 of 19">
+        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="13 of 25">
           <figure class="shot">
             <div class="shot-frame">
               <img src="assets/shot-standings.png" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
@@ -922,70 +956,61 @@ details .ans p + p{ margin-top:12px; }
             <figcaption>Standings — hold Select on a team to follow it</figcaption>
           </figure>
         </li>
-        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="11 of 19">
+        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="14 of 25">
           <figure class="shot">
             <div class="shot-frame">
-              <img src="assets/shot-sports-mode-rail.jpg" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+              <img src="assets/shot-sports-mode-rail.jpg?v=11" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
                    alt="Sports Mode home on a TV: a left rail of leagues (NHL, NFL, NCAAF, UFC, CFL) above Live TV, Movies and TV Shows, with the Devils at Avalanche game, its start time and channel, and a My Teams card.">
             </div>
             <figcaption>Sports Mode (beta) — open the app straight into your leagues and teams</figcaption>
           </figure>
         </li>
-        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="12 of 19">
+        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="15 of 25">
           <figure class="shot">
             <div class="shot-frame">
-              <img src="assets/shot-sports-mode-feed.jpg" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+              <img src="assets/shot-sports-mode-feed.jpg?v=11" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
                    alt="Sports Mode with a game playing: a feed of today's games on the left, My Teams first, and the matched channel playing large beside it, with hints for full screen and stats.">
             </div>
             <figcaption>Sports Mode — pick a game from the feed and it plays beside the list</figcaption>
           </figure>
         </li>
-        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="13 of 19">
+        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="16 of 25">
           <figure class="shot">
             <div class="shot-frame">
-              <img src="assets/shot-sports-mode-livetv.jpg" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
-                   alt="Live TV inside Sports Mode: the channel groups down the left, the game summary and a My Teams card on the right.">
+              <img src="assets/shot-sports-mode-livetv.jpg?v=9" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+                   alt="Live TV inside Sports Mode: the channel groups in a panel on the left, the game summary on the right.">
             </div>
             <figcaption>Live TV without leaving Sports Mode</figcaption>
           </figure>
         </li>
-        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="14 of 19">
+        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="17 of 25">
           <figure class="shot">
             <div class="shot-frame">
-              <img src="assets/shot-sports-mode-channels.jpg" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+              <img src="assets/shot-sports-mode-channels.jpg?v=9" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
                    alt="A see-through channel list over Sports Mode showing each channel with what is on now and a progress bar.">
             </div>
             <figcaption>Browse channels over the game page, then OK to watch</figcaption>
           </figure>
         </li>
-        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="15 of 19">
+        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="18 of 25">
           <figure class="shot">
             <div class="shot-frame">
-              <img src="assets/shot-live.png" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
-                   alt="VesperTV's now/next guide: a compact channel list with each row's current programme, and the focused channel's full details underneath.">
+              <img src="assets/shot-live.png?v=9" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+                   alt="VesperTV's now/next guide: the channel list with each channel's current programme, favourite stars and hide buttons, and the focused channel's details over its picture.">
             </div>
             <figcaption>Now/next — a compact list, one programme at a time</figcaption>
           </figure>
         </li>
-        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="16 of 19">
+        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="19 of 25">
           <figure class="shot">
             <div class="shot-frame">
-              <img src="assets/shot-expand-catalog.jpg" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
-                   alt="VesperTV's Expand Catalog screen: a full poster grid for one VOD category, showing many movie posters with rating badges.">
+              <img src="assets/shot-group-menu.png?v=9" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+                   alt="The hold menu on a Movies group: Expand catalog, Add to Favourites, Hide Group, Move Up / Down, Move to Top and Cancel.">
             </div>
-            <figcaption>Expand catalog — a whole category as one full-screen grid</figcaption>
+            <figcaption>Hold Select on a group — expand, favourite, hide or move it</figcaption>
           </figure>
         </li>
-        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="17 of 19">
-          <figure class="shot">
-            <div class="shot-frame">
-              <img src="assets/shot-group-menu.png" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
-                   alt="VesperTV's group menu opened over the movies screen, offering Expand catalog, Remove from Favourites, Hide Group and Cancel.">
-            </div>
-            <figcaption>Hold Select on a group — expand, favourite or hide</figcaption>
-          </figure>
-        </li>
-        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="18 of 19">
+        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="20 of 25">
           <figure class="shot">
             <div class="shot-frame">
               <img src="assets/shot-settings.jpg" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
@@ -994,17 +1019,53 @@ details .ans p + p{ margin-top:12px; }
             <figcaption>Settings — pick a category on the left, see what's inside on the right</figcaption>
           </figure>
         </li>
-        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="19 of 19">
+        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="21 of 25">
           <figure class="shot">
             <div class="shot-frame">
-              <img src="assets/shot-profiles.jpg" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
-                   alt="The Who is watching screen: three profile cards with photos, one locked with a PIN, and Main selected.">
+              <img src="assets/shot-profiles.jpg?v=9" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+                   alt="The Who is watching screen: four profile cards, the photos blurred here, and the Demo profile selected.">
             </div>
             <figcaption>Profiles — a "Who is watching?" screen, each viewer with their own favourites, history and colours</figcaption>
           </figure>
         </li>
+        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="22 of 25">
+          <figure class="shot">
+            <div class="shot-frame">
+              <img src="assets/shot-playlist-editor.jpg" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+                   alt="VesperTV's playlist editor in a web browser: a channel list with renamed channels, guide links, fallback channels and stream test results.">
+            </div>
+            <figcaption>Playlist editor (test flight) — clean up a playlist from your phone or PC</figcaption>
+          </figure>
+        </li>
+        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="23 of 25">
+          <figure class="shot">
+            <div class="shot-frame">
+              <img src="assets/shot-playlist-editor-dupes.jpg" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+                   alt="The playlist editor's Duplicates tab: each channel's copies listed together, the best one kept and the others turned into fallbacks.">
+            </div>
+            <figcaption>Duplicates — keep the best copy of each channel, the others become fallbacks</figcaption>
+          </figure>
+        </li>
+        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="24 of 25">
+          <figure class="shot">
+            <div class="shot-frame">
+              <img src="assets/shot-downloads.jpg" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+                   alt="Recording and download settings: start early and keep-recording margins, space for recordings, a download speed limit, a suggested overnight start time, and where to save: this device or a network folder.">
+            </div>
+            <figcaption>Downloads — overnight, at a polite speed, to the box or a network folder</figcaption>
+          </figure>
+        </li>
+        <li class="gal-item" role="group" aria-roledescription="slide" aria-label="25 of 25">
+          <figure class="shot">
+            <div class="shot-frame">
+              <img src="assets/shot-network-folder.jpg" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+                   alt="The Network folder screen: a shared folder on a computer or NAS, a folder inside it, an optional user name and password, a From phone button, and Test, Save and use it and Save only buttons.">
+            </div>
+            <figcaption>Network folder — record and download to a computer or NAS</figcaption>
+          </figure>
+        </li>
     </ul>
-    <div class="gal-dots" id="galDots"><button class="gal-dot" type="button" aria-label="Go to screenshot 1"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 2"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 3"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 4"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 5"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 6"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 7"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 8"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 9"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 10"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 11"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 12"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 13"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 14"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 15"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 16"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 17"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 18"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 19"></button></div>
+    <div class="gal-dots" id="galDots"><button class="gal-dot" type="button" aria-label="Go to screenshot 1"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 2"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 3"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 4"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 5"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 6"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 7"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 8"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 9"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 10"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 11"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 12"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 13"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 14"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 15"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 16"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 17"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 18"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 19"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 20"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 21"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 22"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 23"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 24"></button><button class="gal-dot" type="button" aria-label="Go to screenshot 25"></button></div>
   </section>
 
   <!-- ==================== REQUIREMENTS ==================== -->
@@ -1016,6 +1077,11 @@ details .ans p + p{ margin-top:12px; }
         <p>
           VesperTV connects to sources you already have. Without one, the app will open,
           look lovely, and show you nothing. Any of these gets you running:
+        </p>
+        <p>
+          No provider yet? <a href="demo/">Try the demo playlist</a>: six channels with a
+          TV guide, films and shows, all free to share (Blender's open movies and
+          public-domain classics).
         </p>
       </div>
 
@@ -1087,6 +1153,10 @@ details .ans p + p{ margin-top:12px; }
               single set of tabs.</span>
             </li>
             <li>
+              <b>Add it from your phone</b>
+              <span>Scan the QR code on the TV and type the server, login or M3U link on your phone instead of with the remote.</span>
+            </li>
+            <li>
               <b>Backup servers</b>
               <span>Give a playlist alternate server addresses. If the main one won't
               answer, VesperTV tries each backup a few seconds apart, remembers which one
@@ -1095,7 +1165,9 @@ details .ans p + p{ margin-top:12px; }
             <li>
               <b>Reconnects mid-stream</b>
               <span>A live channel that drops while you're watching falls back through
-              those same backup servers rather than dumping you out to the menu.</span>
+              those same backup servers, or to another copy of the channel (an FHD or HD copy,
+              or the same channel on another playlist), rather than dumping you out to the menu.
+              A Live buffer hides short server dropouts.</span>
             </li>
             <li>
               <b>Channel pairing across playlists</b>
@@ -1114,6 +1186,10 @@ details .ans p + p{ margin-top:12px; }
               <b>Errors that say something</b>
               <span>A failed connection names the server that failed and gives you a Retry
               action, instead of an empty screen and a shrug.</span>
+            </li>
+            <li>
+              <b>Playlist editor (test flight)</b>
+              <span>Clean up a playlist from your phone or PC: rename channels, change logos, hide lower-quality copies, merge and reorder groups, move or copy channels to another group, set fallback channels and link channels to the guide. Your provider's playlist is never changed, and every change can be undone.</span>
             </li>
           </ul>
 
@@ -1158,13 +1234,21 @@ details .ans p + p{ margin-top:12px; }
               every playlist, so they survive switching providers.</span>
             </li>
             <li>
+              <b>Your own groups and order</b>
+              <span>Move channels into groups you make yourself, keep favourites in your own order, rename channels and sort groups. Recent channels keeps what you just watched.</span>
+            </li>
+            <li>
+              <b>Recording and reminders</b>
+              <span>On Android, record a live channel or a Sports Trak game to the box's storage, a USB drive or a network folder, schedule a show that is on later (hold OK on it in the Timeline guide), record a whole series (every airing, or skipping repeats), or set a reminder for a programme instead. Recordings play from their own Recordings tab.</span>
+            </li>
+            <li>
               <b>Picks up where you left off</b>
               <span>Launch the app and your last channel comes back automatically.</span>
             </li>
             <li>
               <b>Live pill</b>
-              <span>Wander off into the movie catalogue and a floating pill stays on screen
-              to jump you straight back to the live channel you left playing.</span>
+              <span>Optional: wander off into the movie catalogue and a floating pill stays
+              on screen to jump you straight back to the live channel you left playing.</span>
             </li>
           </ul>
         </article>
@@ -1190,7 +1274,8 @@ details .ans p + p{ margin-top:12px; }
             </li>
             <li>
               <b>Catch-up TV</b>
-              <span>On Android, replay earlier programmes from the Timeline guide, start
+              <span>On Android (and on Windows since 1.0.61), replay earlier programmes
+              from the Timeline guide, start
               the current show from the beginning, or pause live TV and carry on later.
               Requires a channel where your provider offers catch-up.
               <a href="remote.html#Live%20TV">Remote controls and setup</a>.</span>
@@ -1206,9 +1291,24 @@ details .ans p + p{ margin-top:12px; }
               the groups list — off unless you ask for it.</span>
             </li>
             <li>
+              <b>Trailers and a Watch list</b>
+              <span>Title pages have a Trailer button (automatic trailers are optional) and a Watch list button that keeps a title for later, on Home.</span>
+            </li>
+            <li>
+              <b>Downloads, for watching offline</b>
+              <span>On Android, download a movie or an episode (or a whole season) to watch
+              without the internet. It suggests tonight at 2:00, at a speed that looks like
+              someone watching, and saves to the box or to a network folder on a computer or
+              NAS, where a tablet can copy it before a trip.</span>
+            </li>
+            <li>
+              <b>Skip intro, Up Next, Notify me</b>
+              <span>Skip intro, recap and credits buttons where the timings are known (Android), the next episode starts by itself, and Notify me on a show tells you when a new episode arrives, even with the app closed.</span>
+            </li>
+            <li>
               <b>Search across everything</b>
-              <span>Search live channels, movies and TV shows all at once, each shown as
-              its own row of results.</span>
+              <span>Search live channels, movies, TV shows and the Media Hub all at once,
+              each shown as its own row of results.</span>
             </li>
             <li>
               <b>Media Hub &amp; Sports Trak</b>
@@ -1238,7 +1338,8 @@ details .ans p + p{ margin-top:12px; }
               <b>Phone, box, stick and PC</b>
               <span>Android phones and tablets, Android TV boxes such as Formuler, and
               Amazon Fire Sticks, all from one universal APK — plus a Windows 10/11 desktop
-              build (64-bit) that runs straight from a zip.</span>
+              build (64-bit) that runs straight from a zip, and a Linux build (beta) that runs
+              on the Steam Deck too.</span>
             </li>
             <li>
               <b>Local catalogue database</b>
@@ -1256,6 +1357,22 @@ details .ans p + p{ margin-top:12px; }
               hardware supports it.</span>
             </li>
             <li>
+              <b>Sound and picture, done right</b>
+              <span>Surround and Dolby Atmos passthrough to your receiver, audio sync up to five seconds either way, subtitles in four sizes, live closed captions, and optional frame-rate and resolution matching (Android).</span>
+            </li>
+            <li>
+              <b>A Home page</b>
+              <span>Continue watching, Recent channels, new episodes, your Watch list and today's games in one place, with a small player for live channels on TV boxes.</span>
+            </li>
+            <li>
+              <b>Rows on your TV's home screen</b>
+              <span>Continue watching and your favourite channels can show up as rows on the Android TV home screen and launchers such as Projectivy.</span>
+            </li>
+            <li>
+              <b>Six languages</b>
+              <span>English, French, Spanish, Italian, Greek and German.</span>
+            </li>
+            <li>
               <b>Updates itself</b>
               <span>A built-in update check tells you when a new release is out and fetches
               it — no reinstalling by hand every time.</span>
@@ -1268,7 +1385,7 @@ details .ans p + p{ margin-top:12px; }
           <div class="cluster-head">
             <p class="step-no">05 / SYNC</p>
             <h3>Your setup on every screen</h3>
-            <p>Coming in an upcoming release. No account, no email, no login.</p>
+            <p>No account, no email, no login — just a code.</p>
           </div>
 
           <ul class="feat-list">
@@ -1309,6 +1426,10 @@ details .ans p + p{ margin-top:12px; }
               account behind it, nobody — including us — can recover it if you lose it and
               every linked device.</span>
             </li>
+            <li>
+              <b>Moving to a new box?</b>
+              <span>Transfer copies your whole setup to another device, over the same Wi-Fi or over the internet with a code, and Backup &amp; restore saves it to a file on the device.</span>
+            </li>
           </ul>
         </article>
 
@@ -1340,7 +1461,7 @@ details .ans p + p{ margin-top:12px; }
           </li>
           <li>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 12.5 5.2 5.2L20 6.9"/></svg>
-            <span><b>Watch without leaving.</b> Play a game in the mini player beside the scores, then OK for full screen. Hold Select in the player's side panel to pull the live stats over the stream.</span>
+            <span><b>Watch without leaving.</b> Play a game in the mini player beside the scores, then OK for full screen. Hold Select in the player's side panel to pull the live stats over the stream. That panel also lists every other channel showing the game you're watching.</span>
           </li>
           <li>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 12.5 5.2 5.2L20 6.9"/></svg>
@@ -1349,6 +1470,10 @@ details .ans p + p{ margin-top:12px; }
           <li>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 12.5 5.2 5.2L20 6.9"/></svg>
             <span><b>My Teams &amp; a favourite league.</b> Follow teams from Standings: their games come first with a star. A favourite league opens Sports Trak already filtered to it.</span>
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 12.5 5.2 5.2L20 6.9"/></svg>
+            <span><b>Reminders, goal alerts, recording.</b> A reminder before kick-off, a goal popup with the scorer for your teams or a single match, phone notifications even with the app closed, and on Android, record the game.</span>
           </li>
           <li>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 12.5 5.2 5.2L20 6.9"/></svg>
@@ -1363,7 +1488,7 @@ details .ans p + p{ margin-top:12px; }
       <div class="shot-stack reveal">
         <figure class="shot">
           <div class="shot-frame">
-            <img src="assets/shot-sports.jpg" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+            <img src="assets/shot-sports.jpg?v=11" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
                  alt="Sports Trak on a TV: today's games as cards with live scores, and the channel each one is on.">
           </div>
           <figcaption>Live scores, and the channel each game is on</figcaption>
@@ -1371,14 +1496,14 @@ details .ans p + p{ margin-top:12px; }
         <div class="shot-pair">
         <figure class="shot shot-sm">
           <div class="shot-frame">
-            <img src="assets/shot-live-stats.jpg" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
-                 alt="Live stats over a playing game: score, top performers and box score.">
+            <img src="assets/shot-sports-guide.jpg?v=11" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+                 alt="Sports Trak's Guide layout: a game card playing in a small player beside the matchup, and the day's games as a list with their channels.">
           </div>
-          <figcaption>Live stats over the stream</figcaption>
+          <figcaption>Guide layout with the small player</figcaption>
         </figure>
         <figure class="shot shot-sm">
           <div class="shot-frame">
-            <img src="assets/shot-my-teams.jpg" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+            <img src="assets/shot-my-teams.jpg?v=11" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
                  alt="My Teams: a followed team's record, standing and upcoming games.">
           </div>
           <figcaption>My Teams</figcaption>
@@ -1431,7 +1556,7 @@ details .ans p + p{ margin-top:12px; }
           the relay does not save conversation history. Your provider or AI app has its own data policies.</p>
         <p style="color:var(--ink-3)">Voice recognition uses the TV or phone speech service and may need
           the internet. Local command parsing does not mean speech stays on the device.
-          Vesper AI is in the Android and Windows releases.</p>
+          Vesper AI is in the Android and Windows releases and the Linux beta.</p>
       </div>
     </div>
   </section>
@@ -1453,6 +1578,10 @@ details .ans p + p{ margin-top:12px; }
           <li>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 12.5 5.2 5.2L20 6.9"/></svg>
             <span><b>REST add-ons.</b> Paste a <code>manifest.json</code> link: its catalogues become rows, or a stream-only add-on plays the popular, new and featured titles it can find. Only direct video links are played.</span>
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 12.5 5.2 5.2L20 6.9"/></svg>
+            <span><b>Choose the file.</b> The source picker fills in as each add-on answers, with format and file size; switch files while watching, and resume on the same one.</span>
           </li>
           <li>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 12.5 5.2 5.2L20 6.9"/></svg>
@@ -1483,10 +1612,10 @@ details .ans p + p{ margin-top:12px; }
       <div class="shot-stack reveal">
         <figure class="shot">
           <div class="shot-frame">
-            <img src="assets/shot-media-hub.jpg" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
-                 alt="The Media Hub on a TV: an HD backdrop, the floating Search and genre bar, and rows of posters from add-ons.">
+            <img src="assets/shot-media-hub.jpg?v=9" width="1600" height="900" loading="lazy" decoding="async" draggable="false"
+                 alt="The Media Hub: a large backdrop and details for the focused film, a floating bar of rows, and rows of posters from an add-on.">
           </div>
-          <figcaption>Media Hub — rows from your add-ons and server</figcaption>
+          <figcaption>Media Hub — rows from your add-ons and your own server</figcaption>
         </figure>
       </div>
     </div>
@@ -1522,6 +1651,14 @@ details .ans p + p{ margin-top:12px; }
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 12.5 5.2 5.2L20 6.9"/></svg>
             <span><b>Touch-first on phones.</b> The same app detects the device and lays itself out properly.</span>
           </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 12.5 5.2 5.2L20 6.9"/></svg>
+            <span><b>The Guide button works.</b> Your remote's Guide or EPG button opens the live guide from anywhere.</span>
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 12.5 5.2 5.2L20 6.9"/></svg>
+            <span><b>Mouse and keyboard on a computer.</b> On Windows and Linux, click to select, hold the button for the hold menus, and Esc goes back.</span>
+          </li>
         </ul>
       </div>
 
@@ -1535,10 +1672,11 @@ details .ans p + p{ margin-top:12px; }
     <div class="wrap">
       <div class="sec-head reveal">
         <span class="eyebrow">Install</span>
-        <h2>Three ways in, five minutes each</h2>
+        <h2>Pick your screen, five minutes each</h2>
         <p>
           VesperTV isn't on the Play Store or the Amazon Appstore — it is sideloaded, the
-          same way you'd install anything else on a stick or a box.
+          same way you'd install anything else on a stick or a box. On a computer it
+          runs from a folder, with no installer.
         </p>
       </div>
 
@@ -1602,13 +1740,32 @@ details .ans p + p{ margin-top:12px; }
           <ol>
             <li>Download the Windows zip below and extract it anywhere.</li>
             <li>Run <code>VesperTV.exe</code> inside the extracted folder (it needs the other files beside it, so keep the folder together) — no installer, no admin rights needed. Works on <b>Windows 10 and 11, 64-bit</b>.</li>
-            <li>To update later, extract a new zip over the old folder and run it again.</li>
+            <li>To update, use <b>Settings → Device &amp; data → Check for Updates</b>, or extract a new zip over the old folder and run it again.</li>
           </ol>
           <div class="spacer"></div>
           <a class="btn btn-ghost btn-sm" style="margin-top:20px; align-self:flex-start"
              href="https://github.com/NoXqc/VesperTV/releases/download/1.0.61/VesperTV-windows-x64.zip">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg>
             Get Windows 1.0.61 (.zip)
+          </a>
+        </article>
+
+        <article class="install wide reveal">
+          <p class="step-no">05 / LINUX (BETA)</p>
+          <h3>Linux &amp; Steam Deck (64-bit)</h3>
+          <ol>
+            <li>Install the system video library once: <code>sudo apt install libmpv2</code> (Ubuntu 24.04+ or Linux Mint 22+).</li>
+            <li>Download the <code>.tar.gz</code> below, extract it, and run <code>./vespertv</code> inside the folder.</li>
+            <li>On a <b>Steam Deck</b>, switch to Desktop Mode and run it inside an Ubuntu 24.04 <a href="https://distrobox.it/">distrobox</a>.</li>
+          </ol>
+          <div class="spacer"></div>
+          <p class="cta-note" style="margin-top:20px">
+            No automatic updates on Linux yet: download the new build when one is out.
+          </p>
+          <a class="btn btn-ghost btn-sm" style="margin-top:12px; align-self:flex-start"
+             href="https://github.com/NoXqc/VesperTV/releases/download/1.0.63/VesperTV-1.0.63-702-linux-x64.tar.gz">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg>
+            Get Linux 1.0.63 (.tar.gz)
           </a>
         </article>
       </div>
@@ -1689,7 +1846,8 @@ details .ans p + p{ margin-top:12px; }
           <summary>Can I add more than one subscription?</summary>
           <div class="ans">
             <p>
-              Yes — go to <b>Settings → Add Playlist</b> and add as many as you have. Every
+              Yes — go to <b>Settings → Playlists &amp; guide → Playlist Manager → Add Playlist</b>
+              and add as many as you have. Every
               playlist you turn on gets merged together into one combined set of channels,
               movies and shows, so you're not switching apps to use a second subscription.
             </p>
@@ -1748,7 +1906,7 @@ details .ans p + p{ margin-top:12px; }
           <div class="ans">
             <p>
               Yes — that's what <b>Hidden Channels</b> is for, found under
-              <b>Settings → Playlist Manager → Hidden Channels</b>. It's separate from
+              <b>Settings → Playlists &amp; guide → Playlist Manager → Hidden Channels</b>. It's separate from
               Group Management above: Group Management hides an entire category, Hidden
               Channels hides individual channels one at a time, without touching the rest
               of that category. Anything hidden this way can always be found again and
@@ -1788,8 +1946,20 @@ details .ans p + p{ margin-top:12px; }
             <p>After updating, run <b>Update Content</b> for your playlists, then
               <b>Settings → Playlists &amp; guide → EPG → Update EPG Now</b> once.
               Your provider decides which channels and how many days are available.
-              Windows catch-up support is not available yet.
+              On Windows (1.0.61), OK on a past programme opens it full screen.
               <a href="remote.html#Live%20TV">See the catch-up remote guide</a>.</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Can I record a show or a game?</summary>
+          <div class="ans">
+            <p>
+              On Android, yes. Hold OK on a live channel and choose <b>Record</b>, or open a channel's schedule and pick <b>Record</b> on an upcoming programme (<b>Remind me</b> sets a reminder instead). In Sports Trak, hold OK on a game to record it until it ends.
+            </p>
+            <p>
+              Recordings are saved on the box or a USB drive (<b>Settings → Device &amp; data → Recordings</b>) and play from the <b>Recordings</b> tab. A recording uses one of your provider's connections, just like watching.
+            </p>
           </div>
         </details>
 
@@ -1813,10 +1983,10 @@ details .ans p + p{ margin-top:12px; }
               underneath it, one programme at a time. <b>Timeline</b> is a fuller schedule
               grid — channels down the left, hours of programming laid out across the top,
               so you can see what's on later this evening at a glance. Switch between them
-              in <b>Settings → Theme → Live TV guide</b>. Pick whichever one you find
+              in <b>Settings → Interface → Guide</b>. Pick whichever one you find
               easier to read; they show the same information. Timeline is the default on new installs, while saved layout choices are kept.
-              Timeline can also run over the picture: turn on <b>Settings → Theme →
-              Full-screen video behind the guide</b> and the channel fills the screen with a
+              Timeline can also run over the picture: turn on <b>Full-screen video behind
+              the guide</b> in the same place and the channel fills the screen with a
               translucent guide on top (Android only for now).
             </p>
           </div>
@@ -1848,7 +2018,7 @@ details .ans p + p{ margin-top:12px; }
               A guide source identifies channels by an internal code, and sometimes that
               code doesn't line up with what your provider calls the same channel —
               resulting in a channel with no schedule showing at all, or someone else's
-              schedule. <b>EPG Matching</b>, under <b>Settings → EPG → EPG Matching</b>,
+              schedule. <b>EPG Matching</b>, under <b>Settings → Playlists &amp; guide → EPG → EPG Matching</b>,
               lets you manually tell VesperTV "this channel's schedule actually comes from
               that guide entry." There's also an <b>Auto-Match</b> button that tries to pair
               everything up automatically first, so you're usually only fixing a handful of
@@ -1866,7 +2036,7 @@ details .ans p + p{ margin-top:12px; }
               If you have more than one playlist active, Channel Pairing lets you link a
               channel on one to its equivalent on another — for example, the same sports
               channel offered by two different providers you're subscribed to. Under
-              <b>Settings → EPG → Channel Pairing</b>, an <b>Auto-Pair</b> button matches
+              <b>Settings → Playlists &amp; guide → EPG → Channel Pairing</b>, an <b>Auto-Pair</b> button matches
               channels with matching names automatically; anything it can't confidently
               match, you can link by hand instead.
             </p>
@@ -2033,10 +2203,19 @@ details .ans p + p{ margin-top:12px; }
           <summary>Can I change how the app looks?</summary>
           <div class="ans">
             <p>
-              Yes — <b>Settings → Theme</b> has a set of colour palettes to pick from, plus
-              the Live TV guide layout choice mentioned above. Purely cosmetic; nothing
+              Yes — <b>Settings → Interface → Theme</b> has a set of colour palettes to pick
+              from, and <b>Guide</b> beside it holds the Live TV guide layout mentioned above. Purely cosmetic; nothing
               about how the app works changes based on which one you pick, so feel free to
               try a few.
+            </p>
+          </div>
+        </details>
+
+        <details>
+          <summary>What's on the Home page?</summary>
+          <div class="ans">
+            <p>
+              Home gathers what you're in the middle of: Continue watching, Recent channels, new episodes of shows you asked to be notified about, your Watch list and today's games. On a TV box, a small player at the top right can play a live channel from Home, and OK opens it full screen. Hold OK on a card to choose and order the rows; the small player can be turned off under <b>Settings → Interface → Tabs</b>.
             </p>
           </div>
         </details>
@@ -2045,7 +2224,7 @@ details .ans p + p{ margin-top:12px; }
           <summary>What are profiles, and the "Who is watching?" screen?</summary>
           <div class="ans">
             <p>
-              A profile is a separate viewer: its own favourites, watch history, Continue Watching, colours and Sports teams. Add and edit them in the profile cards (hold OK on one to edit), and give a profile a PIN to lock it, handy for kids. To get the "Who is watching?" screen every time the app opens, turn on <b>Settings → General → Startup → Launch with profiles selector</b>.
+              A profile is a separate viewer: its own favourites, watch history, Continue Watching, colours and Sports teams. Add and edit them in the profile cards (hold OK on one to edit), and give a profile a PIN to lock it, handy for kids. To get the "Who is watching?" screen every time the app opens, turn on <b>Settings → Playlists &amp; guide → Profiles → Launch with profiles selector</b>.
             </p>
           </div>
         </details>
@@ -2139,6 +2318,10 @@ details .ans p + p{ margin-top:12px; }
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5l7.5-1v7H3zM11.5 4.4L21 3v8.5h-9.5zM3 12.5h7.5v7L3 18.5zM11.5 12.5H21V21l-9.5-1.4z"/></svg>
           Windows 1.0.61 (.zip)
         </a>
+        <a class="btn btn-ghost" href="https://github.com/NoXqc/VesperTV/releases/download/1.0.63/VesperTV-1.0.63-702-linux-x64.tar.gz">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="m7 9 3 3-3 3"/><path d="M12.5 15H17"/></svg>
+          Linux (beta)
+        </a>
         <a class="btn btn-ghost" href="https://github.com/NoXqc/VesperTV">
           <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38l-.01-1.34c-2.23.48-2.7-1.07-2.7-1.07-.36-.93-.89-1.18-.89-1.18-.73-.5.05-.49.05-.49.81.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.67.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.03 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48l-.01 2.2c0 .21.15.46.55.38A8 8 0 0 0 8 0Z"/></svg>
           NoXqc/VesperTV
@@ -2159,9 +2342,7 @@ details .ans p + p{ margin-top:12px; }
         <details>
           <summary>Can I sync devices without creating an account?</summary>
           <div class="ans">
-            <p>Sync is being prepared for an upcoming release; it is not in the current
-              public Android 1.0.56 or Windows 1.0.45 packages. There is no account,
-              email or login: Settings &rarr; Device &amp; data &rarr; Sync &rarr;
+            <p>Yes, since 1.0.57. There is no account, email or login: Settings &rarr; Device &amp; data &rarr; Sync &rarr;
               Set up sync creates a private sync code. Link a device shows a 16-digit
               code and QR that work once, for one device, within 10 minutes. Enter it under I have a code on
               the other device. Your setup is encrypted on the device before upload;
@@ -2239,7 +2420,8 @@ details .ans p + p{ margin-top:12px; }
             </p>
             <p>
               What you connect it to, and whether you're entitled to that content, is
-              between you and your provider.
+              between you and your provider. To try the app first, there is a
+              <a href="demo/">demo playlist</a> of films that are free to share.
             </p>
           </div>
         </details>
@@ -2268,8 +2450,8 @@ details .ans p + p{ margin-top:12px; }
               No analytics, no crash reporting services, no accounts. Your playlist URLs and
               credentials are stored on the device and sent to the provider you entered
               to load your content. If you choose internet Transfer, your setup is encrypted
-              on the device before upload; only someone with the code can open it. Upcoming
-              optional Sync uses the same principle. The relay stores ciphertext, never a
+              on the device before upload; only someone with the code can open it. Optional
+              Sync uses the same principle. The relay stores ciphertext, never a
               readable copy of your setup. The source is public if you'd like to verify it.
             </p>
           </div>
@@ -2284,6 +2466,11 @@ details .ans p + p{ margin-top:12px; }
               adapts its layout to touch or D-pad automatically. It also runs on Windows 10
               and 11 (64-bit): download the zip, extract it and run <code>VesperTV.exe</code>
               — no installer or admin rights, and it opens fullscreen.
+            </p>
+            <p>
+              There is also a <b>Linux</b> build (beta, 64-bit) for Ubuntu 24.04 / Linux Mint 22
+              and later, which also runs on the <b>Steam Deck</b> — see
+              <a href="#install">Install</a>.
             </p>
           </div>
         </details>
@@ -2336,6 +2523,7 @@ details .ans p + p{ margin-top:12px; }
       </a>
       <nav class="foot-links" aria-label="Footer">
         <a href="https://github.com/NoXqc/VesperTV/releases/latest/download/app-release.apk">Download APK</a>
+        <a href="https://github.com/NoXqc/VesperTV/releases/latest">All downloads</a>
         <a href="https://github.com/NoXqc/VesperTV">Source on GitHub</a>
         <a href="https://github.com/NoXqc/VesperTV/blob/main/LICENSE">GPL-3.0 licence</a>
         <a href="https://discord.gg/VPQ849NPV">Discord</a>
@@ -2361,6 +2549,16 @@ details .ans p + p{ margin-top:12px; }
       </p>
       <p>
         This product uses the TMDB API but is not endorsed or certified by TMDB.
+      </p>
+      <p>
+        Sports scores and schedules come from ESPN's public data and
+        <a href="https://www.thesportsdb.com">TheSportsDB</a>, and skip intro timings from
+        <a href="https://introdb.app">IntroDB</a>. VesperTV is not affiliated with or endorsed
+        by ESPN, TheSportsDB, IntroDB, or any league, team or broadcaster shown.
+      </p>
+      <p>
+        The demo playlist shows Blender's open movies (Creative Commons, &copy; Blender
+        Foundation) and public-domain films: <a href="demo/">credits and licences</a>.
       </p>
       <p>
         Watch tracking powered by <a href="https://trakt.tv">Trakt</a> and

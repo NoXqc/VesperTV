@@ -455,6 +455,11 @@ class AppConstants {
 
   /// Home's mini player (top right), per viewer; null = on.
   static const String keyHomeMiniPlayer = 'vesper_home_mini_player';
+
+  /// Per viewer, null = off: Who's watching shows this viewer's Home
+  /// wallpaper while their card is highlighted. Not transferred (the
+  /// wallpaper file never is).
+  static const String keyWallpaperOnProfiles = 'vesper_wallpaper_on_profiles';
   static const String keySportsAddedLeagues = 'vesper_sports_added_leagues';
   static const String keySportsHideScores = 'vesper_sports_hide_scores';
   static const String keySportsMode = 'vesper_sports_mode';
@@ -530,6 +535,10 @@ class AppConstants {
 
   static const String keyGuideExpanded = 'vesper_guide_expanded';
   static const String keyGuideCompact = 'vesper_guide_compact';
+
+  /// Settings > Interface > Tabs > Compact UI: smaller tabs, groups and
+  /// channel rows in the TV home (per viewer, like the guide layout).
+  static const String keyCompactUi = 'vesper_compact_ui';
 
   /// Opt-in: the live channel the remote stops on plays in the preview.
   static const String keyGuideFocusPreview = 'vesper_guide_focus_preview';

@@ -3,6 +3,7 @@ import '../utils/refined_finish.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit_video/media_kit_video.dart'
@@ -12,6 +13,7 @@ import 'package:provider/provider.dart';
 import '../l10n/l10n.dart';
 import '../models/archive_models.dart';
 import '../models/channel.dart';
+import '../models/epg_program.dart';
 import '../models/sports.dart';
 import '../models/viewer_profile.dart';
 import '../models/xtream_series.dart';
@@ -21,6 +23,8 @@ import '../services/desktop_mini_player.dart';
 import '../services/epg_service.dart';
 import '../services/episode_alerts.dart';
 import '../services/home_rows.dart';
+import '../services/home_wallpaper.dart';
+import '../services/logo_colors.dart';
 import '../services/multiview_sports.dart';
 import '../services/playback_service.dart';
 import '../services/playlist_manager.dart';
@@ -90,6 +94,8 @@ class _HomeItem {
     this.tag,
     this.tagHighlight = false,
     this.preview,
+    this.logoUrl,
+    this.programme,
   });
 
   final String key;
@@ -97,6 +103,11 @@ class _HomeItem {
   /// The live channel the mini player plays when the remote stops on this
   /// card (a channel, or a game's first matched channel).
   final Channel? preview;
+
+  /// A live channel's logo and what's on now: the hero shows the logo large
+  /// above the programme, the backdrop glows in the logo's colours.
+  final String? logoUrl;
+  final EpgProgram? programme;
   final String title;
   final String? subtitle;
   final String? imageUrl;
@@ -164,6 +175,15 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _profilesHidden = false;
   Timer? _hubProgressRefresh;
 
+  /// The viewer's Home wallpaper (Settings > Interface > Tabs), if any.
+  Uint8List? _wallpaper;
+
+  Future<void> _loadWallpaper() async {
+    final viewer = context.read<ViewerProfileService>().active.id;
+    final bytes = await HomeWallpaper.instance.load(viewer);
+    if (mounted) setState(() => _wallpaper = bytes);
+  }
+
   // --- Mini player (Settings > Interface > Tabs, per viewer) ---------------
   // The live channel card the remote stops on plays at the top right, by
   // the TV guide's Preview on highlight rules: only after a remote move,
@@ -185,7 +205,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Timer? _miniHistory;
 
   /// Turned off (Play/Pause, Stop, hold OK > Stop mini player): resting on
-  /// a card plays nothing until Play/Pause plays one (owner, 2026-11-09: it
+  /// a card plays nothing until OK or Play/Pause plays one (owner, 2026-11-09: it
   /// came back on the next highlight). Kept for the app run, across Home
   /// visits; a channel playing in it again (back from full screen, from
   /// the TV tab) turns it back on.
@@ -218,6 +238,8 @@ class _HomeScreenState extends State<HomeScreen> {
     _playback = context.read<PlaybackService>()..addListener(_historyChanged);
     _historyLoads = _playback.historyLoads;
     WatchList.instance.changes.addListener(_watchListChanged);
+    HomeWallpaper.instance.changes.addListener(_loadWallpaper);
+    unawaited(_loadWallpaper());
     unawaited(_load(focusFirst: true));
     if (_rowsConfig.visible.contains(HomeRowKind.continueWatching)) {
       unawaited(
@@ -254,6 +276,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // _miniHistory keeps running: the channel plays on behind TV (Back).
     _miniTimer?.cancel();
     WatchList.instance.changes.removeListener(_watchListChanged);
+    HomeWallpaper.instance.changes.removeListener(_loadWallpaper);
     _episodeAlerts?.removeListener(_episodesChanged);
     _hubProgressRefresh?.cancel();
     _pageScroll.dispose();
@@ -612,6 +635,8 @@ class _HomeScreenState extends State<HomeScreen> {
       title: c.name,
       subtitle: now?.title ?? c.group,
       imageUrl: c.logoUrl,
+      logoUrl: c.logoUrl,
+      programme: now,
       live: true,
       preview: c,
       open: (ctx) => _playChannel(ctx, c),
@@ -785,12 +810,19 @@ class _HomeScreenState extends State<HomeScreen> {
     return false;
   }
 
-  /// [item] took the focus: restarts the mini player's wait.
+  /// [item] took the focus: restarts the mini player's wait. Only with
+  /// Settings > Interface > Guide > Preview on highlight on (owner,
+  /// 2026-11-10: a user with it off still got previews while scrolling
+  /// Home); off, OK (or Play/Pause) on a card plays it.
   void _scheduleMini(_HomeItem item) {
     _miniTimer?.cancel();
     _miniTimer = null;
     final channel = item.preview;
-    if (channel == null || !HomeScreen.showsMiniPlayer(context)) return;
+    if (channel == null ||
+        !HomeScreen.showsMiniPlayer(context) ||
+        !context.read<AppPreferences>().guideFocusPreview) {
+      return;
+    }
     final armedAt = DateTime.now();
     if (armedAt.difference(_lastNavKeyAt) > const Duration(milliseconds: 500)) {
       return;
@@ -808,29 +840,32 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Future<void> _miniPlay(Channel channel) async {
+  /// Plays [channel] in the mini player; false when it can't (a recording
+  /// holds the account's only connection, or Home is covered).
+  Future<bool> _miniPlay(Channel channel) async {
     final route = ModalRoute.of(context);
-    if (route != null && !route.isCurrent) return;
+    if (route != null && !route.isCurrent) return false;
     final playback = context.read<PlaybackService>();
     if (usesMediaKitTarget) {
       final mini = DesktopMiniPlayer.instance;
-      if (mini.channel.value?.id == channel.id) return;
+      if (mini.channel.value?.id == channel.id) return true;
       mini.play(channel);
       unawaited(context.read<StorageService>().setLastChannelId(channel.id));
       _recordAfterWatching(playback, channel,
           () => DesktopMiniPlayer.instance.channel.value?.id == channel.id);
-      return;
+      return true;
     }
-    if (playback.liveChannel?.id == channel.id) return;
+    if (playback.liveChannel?.id == channel.id) return true;
     // A recording holds this account's only connection: OK asks Stop
     // recording / Cancel first, a highlight never pops that up.
     final profiles = context.read<PlaylistManager>().profiles;
     if (RecordingService.instance.conflictFor(channel, profiles) != null) {
-      return;
+      return false;
     }
     _recordAfterWatching(
         playback, channel, () => playback.currentChannel?.id == channel.id);
     await playback.play(channel, recordHistory: false);
+    return true;
   }
 
   /// History for a mini player play once it has played [_miniHistoryAfter]
@@ -851,18 +886,18 @@ class _HomeScreenState extends State<HomeScreen> {
     LogicalKeyboardKey.mediaStop,
   };
 
-  /// The remote's Play/Pause, like Sports Trak's hero (owner, 2026-11-09:
-  /// a way to turn the mini player off that isn't Back, which leaves
-  /// Home): on the card the mini player plays, or on a card with no
-  /// channel, it stops it; on another live card it plays that one at once.
-  /// Stop always stops.
+  /// The remote's Play/Pause (owner, 2026-11-09: a way to turn the mini
+  /// player off that isn't Back, which leaves Home): turns it off
+  /// whatever card the remote is on (owner, 2026-11-10: OK plays a card,
+  /// Play/Pause turns it off). With nothing playing, it plays the live card
+  /// the remote is on. Stop always stops.
   void _onPlayKey(LogicalKeyboardKey key) {
     _miniTimer?.cancel();
     _miniTimer = null;
     final card = _inProfiles ? null : _focused?.preview;
     if (key != LogicalKeyboardKey.mediaStop &&
         card != null &&
-        card.id != _miniChannelId()) {
+        _miniChannelId() == null) {
       _miniOff = false;
       unawaited(_miniPlay(card));
     } else {
@@ -882,7 +917,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// Turns the mini player off: its channel stops and highlights stay
-  /// quiet until Play/Pause plays a card ([_miniOff]).
+  /// quiet until OK or Play/Pause plays a card ([_miniOff]).
   Future<void> _stopMini() async {
     _miniOff = true;
     _miniHistory?.cancel();
@@ -916,6 +951,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _open(_HomeItem item) async {
     _miniTimer?.cancel();
+    // OK on a live card plays it in the mini player, OK on the card it
+    // plays opens it full screen, like the TV guide's preview (owner,
+    // 2026-11-10). No mini player (phones, switched off) = full screen.
+    final channel = item.preview;
+    if (channel != null &&
+        HomeScreen.showsMiniPlayer(context) &&
+        _miniChannelId() != channel.id) {
+      _miniOff = false;
+      // A recording on the account's only connection: full screen asks.
+      if (await _miniPlay(channel)) return;
+      if (!mounted) return;
+    }
     if (item.preview == null && item.game == null) await _parkMini();
     if (!mounted) return;
     await item.open(context);
@@ -1111,6 +1158,7 @@ class _HomeScreenState extends State<HomeScreen> {
       for (final c in _rowScrolls.values) {
         if (c.hasClients) c.jumpTo(0);
       }
+      unawaited(_loadWallpaper());
       unawaited(_load());
     }
     setState(() => _switching = false);
@@ -1298,7 +1346,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            _Backdrop(item: focused),
+            _Backdrop(item: focused, wallpaper: _wallpaper),
             AnimatedOpacity(
               opacity: _switching ? 0 : 1,
               duration: const Duration(milliseconds: 220),
@@ -1471,55 +1519,209 @@ class _HomeScreenState extends State<HomeScreen> {
 /// Full-screen art of the focused card, cross-faded, darkened toward the
 /// rows and the left edge so text always reads.
 class _Backdrop extends StatelessWidget {
-  const _Backdrop({required this.item});
+  const _Backdrop({required this.item, this.wallpaper});
   final _HomeItem? item;
+
+  /// The viewer's Home wallpaper: behind any card without art of its own,
+  /// in place of a live channel's glow (owner, 2026-11-10).
+  final Uint8List? wallpaper;
 
   @override
   Widget build(BuildContext context) {
+    final item = this.item;
     final url = item?.backdropUrl;
     final game = item?.game;
-    final width = MediaQuery.sizeOf(context).width;
+    final size = MediaQuery.sizeOf(context);
+    final teamGame = game != null && game.league.kind == SportsKind.team;
+    final art = url != null && url.isNotEmpty;
+    final wall = !teamGame && !art ? wallpaper : null;
+    final glow = !teamGame && !art && wall == null && (item?.live ?? false);
+    final Widget child;
+    if (teamGame) {
+      child = _GameBackdrop(key: ValueKey('game:${game.id}'), game: game);
+    } else if (art) {
+      child = Align(
+        key: ValueKey(url),
+        alignment: Alignment.topRight,
+        child: FractionallySizedBox(
+          widthFactor: 0.75,
+          heightFactor: 0.7,
+          alignment: Alignment.topRight,
+          child: HdNetworkImage(
+            url: url,
+            kind: ImageKind.backdrop,
+            decodeWidth: (size.width * 0.75).round(),
+            errorWidget: (_) => const SizedBox.shrink(),
+          ),
+        ),
+      );
+    } else if (wall != null) {
+      child = Image.memory(
+        wall,
+        key: ValueKey(wall),
+        fit: BoxFit.cover,
+        width: size.width,
+        height: size.height,
+        cacheWidth: HdNetworkImage.screenDecodeWidth(context, size.width),
+        gaplessPlayback: true,
+        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+      );
+    } else if (glow) {
+      // One key for every channel: the glow morphs from one channel's
+      // colours to the next instead of fading out and in.
+      child = _ChannelGlow(key: const ValueKey('glow'), logoUrl: item!.logoUrl);
+    } else {
+      child = const SizedBox.expand(key: ValueKey('none'));
+    }
     return Stack(fit: StackFit.expand, children: [
       AnimatedSwitcher(
         duration: const Duration(milliseconds: 450),
         switchInCurve: Curves.easeOut,
-        child: game != null && game.league.kind == SportsKind.team
-            ? _GameBackdrop(key: ValueKey('game:${game.id}'), game: game)
-            : url == null || url.isEmpty
-                ? const SizedBox.expand(key: ValueKey('none'))
-                : Align(
-                    key: ValueKey(url),
-                    alignment: Alignment.topRight,
-                    child: FractionallySizedBox(
-                      widthFactor: 0.75,
-                      heightFactor: 0.7,
-                      alignment: Alignment.topRight,
-                      child: HdNetworkImage(
-                        url: url,
-                        kind: ImageKind.backdrop,
-                        decodeWidth: (width * 0.75).round(),
-                        errorWidget: (_) => const SizedBox.shrink(),
-                      ),
-                    ),
-                  ),
+        child: child,
       ),
-      const DecoratedBox(
+      if (wall != null) ...const [
+        // The picture stays visible; the hero text and the rows stay
+        // readable over it.
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: [Color(0xB3000000), Color(0x00000000)],
+              stops: [0, 0.6],
+            ),
+          ),
+        ),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0x40000000),
+                Color(0x00000000),
+                Color(0x99000000),
+                Color(0xE6000000)
+              ],
+              stops: [0, 0.25, 0.55, 1],
+            ),
+          ),
+        ),
+      ] else if (glow) ...const [
+        // The glow fills the hero and fades out before the rows.
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0x00000000), Color(0x00000000), Colors.black],
+              stops: [0, 0.3, 0.66],
+            ),
+          ),
+        ),
+      ] else ...const [
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: [Colors.black, Color(0xCC000000), Color(0x33000000)],
+              stops: [0.25, 0.5, 1],
+            ),
+          ),
+        ),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0x66000000), Colors.transparent, Colors.black],
+              stops: [0, 0.3, 0.68],
+            ),
+          ),
+        ),
+      ],
+    ]);
+  }
+}
+
+/// A live channel's banner when there is no wallpaper (owner, 2026-11-10,
+/// from a Discord idea): two soft glows in the logo's own colours
+/// ([LogoColors]) behind the hero, the theme's colour for a black / white
+/// logo. Moving to another channel blends the colours over.
+class _ChannelGlow extends StatefulWidget {
+  const _ChannelGlow({super.key, required this.logoUrl});
+  final String? logoUrl;
+
+  @override
+  State<_ChannelGlow> createState() => _ChannelGlowState();
+}
+
+class _ChannelGlowState extends State<_ChannelGlow> {
+  List<Color>? _colors;
+  String? _url;
+
+  @override
+  void initState() {
+    super.initState();
+    _read();
+  }
+
+  @override
+  void didUpdateWidget(_ChannelGlow old) {
+    super.didUpdateWidget(old);
+    if (old.logoUrl != widget.logoUrl) _read();
+  }
+
+  void _read() {
+    final url = widget.logoUrl;
+    _url = url;
+    if (url == null || url.isEmpty) {
+      _colors = const [];
+      return;
+    }
+    LogoColors.of(url).then((c) {
+      if (mounted && _url == url) setState(() => _colors = c);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = _colors;
+    final accent = Theme.of(context).colorScheme.primary;
+    final first = colors == null
+        ? null
+        : colors.isEmpty
+            ? accent.withValues(alpha: 0.32)
+            : LogoColors.glow(colors.first).withValues(alpha: 0.55);
+    final second = colors == null
+        ? null
+        : colors.length > 1
+            ? LogoColors.glow(colors[1]).withValues(alpha: 0.4)
+            : (colors.isEmpty ? accent : LogoColors.glow(colors.first))
+                .withValues(alpha: 0.18);
+    const duration = Duration(milliseconds: 600);
+    // Nothing known yet (first channel loading): no glow rather than a
+    // flash of the theme colour.
+    Color clear(Color? c) => c ?? const Color(0x00000000);
+    return Stack(fit: StackFit.expand, children: [
+      AnimatedContainer(
+        duration: duration,
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: [Colors.black, Color(0xCC000000), Color(0x33000000)],
-            stops: [0.25, 0.5, 1],
+          gradient: RadialGradient(
+            center: const Alignment(-0.7, -1.0),
+            radius: 1.25,
+            colors: [clear(first), clear(first?.withValues(alpha: 0))],
           ),
         ),
       ),
-      const DecoratedBox(
+      AnimatedContainer(
+        duration: duration,
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0x66000000), Colors.transparent, Colors.black],
-            stops: [0, 0.3, 0.68],
+          gradient: RadialGradient(
+            center: const Alignment(0.45, -1.1),
+            radius: 1.0,
+            colors: [clear(second), clear(second?.withValues(alpha: 0))],
           ),
         ),
       ),
@@ -1553,7 +1755,9 @@ class _Hero extends StatelessWidget {
                 alignment: Alignment.bottomLeft,
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 640),
-                  child: Column(
+                  child: item.live && item.game == null
+                      ? _LiveHero(item: item)
+                      : Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1613,6 +1817,87 @@ class _Hero extends StatelessWidget {
               ),
       ),
     );
+  }
+}
+
+/// The hero for a live channel (owner, 2026-11-10, Discord idea): its logo
+/// large with the LIVE pill, what's on now as the title, the channel and
+/// the programme's times under it, then the guide's description. Sized to
+/// the hero's height (a 1080p TV has ~170 px of it).
+class _LiveHero extends StatelessWidget {
+  const _LiveHero({required this.item});
+  final _HomeItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = item.programme;
+    final logo = item.logoUrl;
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    return LayoutBuilder(builder: (context, box) {
+      final h = box.maxHeight.isFinite ? box.maxHeight : 200.0;
+      final logoH = (h * 0.32).clamp(28.0, 72.0);
+      final title = now?.title ?? item.title;
+      final line = now == null
+          ? item.subtitle
+          : '${item.title}  ·  ${TimeFormat.hm.format(now.start.toLocal())} – '
+              '${TimeFormat.hm.format(now.stop.toLocal())}';
+      final description = now?.description?.trim();
+      // What's left under logo + title + channel line, in 18 px lines.
+      final room = h - logoH - 10 - 32 - 24 - 10;
+      final lines = (room / 18).floor().clamp(0, 3);
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            if (logo != null && logo.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(right: 14),
+                child: ConstrainedBox(
+                  constraints:
+                      BoxConstraints(maxWidth: logoH * 4, maxHeight: logoH),
+                  child: CachedNetworkImage(
+                    imageUrl: logo,
+                    height: logoH,
+                    fit: BoxFit.contain,
+                    alignment: Alignment.centerLeft,
+                    memCacheHeight: (logoH * dpr).round(),
+                    fadeInDuration: const Duration(milliseconds: 200),
+                    errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                  ),
+                ),
+              ),
+            const _LivePill(),
+          ]),
+          const SizedBox(height: 10),
+          Text(title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                  fontSize: 28,
+                  height: 1.1,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white)),
+          if (line != null && line.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(line,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 14, color: Colors.white70)),
+            ),
+          if (lines > 0 && description != null && description.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(description,
+                  maxLines: lines,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontSize: 13, height: 1.35, color: Colors.white70)),
+            ),
+        ],
+      );
+    });
   }
 }
 
@@ -1701,13 +1986,19 @@ class _MiniPlayer extends StatelessWidget {
           // No clip around the video: a clip on a platform view costs weak
           // boxes a lot.
           child: DecoratedBox(
+            // A light frame + soft shadow: the picture stands out from a
+            // wallpaper or a channel glow (owner, 2026-11-10).
             decoration: BoxDecoration(
               color: Colors.black,
-              border: Border.all(color: Colors.white24),
+              border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.7), width: 2),
               borderRadius: BorderRadius.circular(6),
+              boxShadow: const [
+                BoxShadow(color: Color(0x99000000), blurRadius: 14),
+              ],
             ),
             child: Padding(
-              padding: const EdgeInsets.all(1),
+              padding: const EdgeInsets.all(2),
               child: Stack(fit: StackFit.expand, children: [
                 video,
                 if (showName)

@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../l10n/l10n.dart';
 import '../models/channel.dart';
+import '../services/network_files.dart';
 import '../services/recording_service.dart';
 import '../utils/constants.dart';
 import '../utils/time_format.dart';
@@ -35,11 +36,32 @@ class RecordingsScreen extends StatefulWidget {
 class _RecordingsScreenState extends State<RecordingsScreen> {
   final _service = RecordingService.instance;
 
+  /// The network folder's videos (other devices' downloads and
+  /// recordings): copied here for watching offline, or played from there.
+  List<NetworkFile> _netFiles = const [];
+  String? _netError;
+  bool _netLoading = false;
+
   @override
   void initState() {
     super.initState();
     _service.addListener(_changed);
-    unawaited(_service.init().then((_) => _service.refreshStatus()));
+    unawaited(_service.init().then((_) async {
+      await _service.refreshStatus();
+      await _loadNetwork();
+    }));
+  }
+
+  Future<void> _loadNetwork() async {
+    if (_service.settings.network == null) return;
+    setState(() => _netLoading = true);
+    final r = await _service.networkFiles();
+    if (!mounted) return;
+    setState(() {
+      _netLoading = false;
+      _netFiles = r.files;
+      _netError = r.error;
+    });
   }
 
   @override
@@ -77,8 +99,10 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
     );
   }
 
-  Future<void> _push(Channel c) => Navigator.of(context)
-      .push(PlayerPageRoute(builder: (_) => PlayerScreen(channel: c)));
+  Future<void> _push(Channel c) => RecordingService.supported
+      ? Navigator.of(context)
+          .push(PlayerPageRoute(builder: (_) => PlayerScreen(channel: c)))
+      : playDownloadChannel(context, c);
 
   Future<void> _menu(RecordingEntry r) async {
     if (r.isDownload) return downloadMenu(context, r);
@@ -161,6 +185,50 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
     }
   }
 
+  Future<void> _seriesMenu(SeriesRule rule) async {
+    final scheduled = _service.scheduledCount(rule);
+    final action = await showGlassMenu<String>(
+      context: context,
+      builder: (context) => SwallowHeldActivate(
+        child: GlassMenuDialog(
+          title: Text(rule.title, maxLines: 2, overflow: TextOverflow.ellipsis),
+          content: SizedBox(
+            width: 460,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TvMenuTile(
+                  autofocus: true,
+                  icon: Icons.event_busy,
+                  title: tr('Stop series recording'),
+                  subtitle: scheduled == 0
+                      ? tr('Recordings made stay.')
+                      : tr('Cancels {count} scheduled. Recordings made stay.',
+                          {'count': '$scheduled'}),
+                  onTap: () => Navigator.of(context).pop('stop'),
+                ),
+                TvMenuTile(
+                  icon: Icons.close,
+                  title: tr('Close'),
+                  onTap: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (!mounted || action != 'stop') return;
+    await _service.stopSeries(rule);
+  }
+
+  String _seriesStatus(SeriesRule rule) {
+    final next = _service.nextOf(rule);
+    final count = _service.scheduledCount(rule);
+    if (next == null) return tr('Waiting for the guide');
+    return '${tr('{count} scheduled', {'count': '$count'})} · ${tr('Next: {when}', {'when': _when(next)})}';
+  }
+
   static String _size(int bytes) {
     if (bytes >= 1024 * 1024 * 1024) {
       return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
@@ -205,6 +273,8 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
     final downloads = all.where((r) => r.isDownload && finished(r)).toList();
     final done = all.where((r) => !r.isDownload && finished(r)).toList();
     final auto = _service.autoTeam;
+    final series = _service.series;
+    final offered = _service.networkFilesToOffer(_netFiles);
     final networkBytes =
         all.fold<int>(0, (s, r) => r.onNetwork ? s + r.bytes : s);
     var first = true;
@@ -245,10 +315,39 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
       );
     }
 
+    Widget seriesSection() {
+      final autofocus = first;
+      first = false;
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(tr('Series recordings').toUpperCase(),
+                style: const TextStyle(
+                    fontSize: 12,
+                    letterSpacing: 1.2,
+                    color: Colors.white54)),
+            const SizedBox(height: 8),
+            Wrap(children: [
+              for (var i = 0; i < series.length; i++)
+                _SeriesCard(
+                  rule: series[i],
+                  status: _seriesStatus(series[i]),
+                  autofocus: autofocus && i == 0,
+                  onTap: () => _seriesMenu(series[i]),
+                ),
+            ]),
+          ],
+        ),
+      );
+    }
+
     return withTvThemeIfNeeded(
       context,
       (context) => SettingsScaffold(
-        title: tr('Recordings'),
+        // Windows has downloads only.
+        title: RecordingService.supported ? tr('Recordings') : tr('Downloads'),
         body: ListView(
           padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
           children: [
@@ -265,7 +364,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
                       style: const TextStyle(color: Colors.white70)),
                 ]),
               ),
-            if (all.isEmpty)
+            if (all.isEmpty && series.isEmpty && offered.isEmpty && !_netLoading)
               Padding(
                 padding: const EdgeInsets.only(top: 40),
                 child: Text(
@@ -278,8 +377,11 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
             if (now.isNotEmpty) section(tr('Recording now'), now),
             if (downloading.isNotEmpty) section(tr('Downloading'), downloading),
             if (upcoming.isNotEmpty) section(tr('Scheduled'), upcoming),
+            if (series.isNotEmpty) seriesSection(),
             if (downloads.isNotEmpty) section(tr('Downloads'), downloads),
             if (done.isNotEmpty) section(tr('Recorded'), done),
+            if (_service.settings.network != null)
+              _networkSection(offered, autofocus: first),
             if (all.isNotEmpty)
               Text(
                 [
@@ -299,6 +401,70 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
       ),
     );
   }
+
+  /// "Network folder": what other devices saved there. OK = Copy to this
+  /// device / Play from the network folder.
+  Widget _networkSection(List<NetworkFile> files, {required bool autofocus}) {
+    Widget note(String text) => Padding(
+          padding: const EdgeInsets.only(top: 2, bottom: 6),
+          child: Text(text,
+              style: const TextStyle(color: Colors.white38, fontSize: 12)),
+        );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(tr('On the network folder').toUpperCase(),
+              style: const TextStyle(
+                  fontSize: 12, letterSpacing: 1.2, color: Colors.white54)),
+          const SizedBox(height: 8),
+          if (_netLoading && files.isEmpty)
+            note(tr('Looking in the network folder…'))
+          else if (_netError != null)
+            note(tr("The network folder can't be reached: {reason}",
+                {'reason': tr(_netError!)}))
+          else if (files.isEmpty)
+            note(tr(
+                'Nothing new there. Downloads and recordings that another device saves there show up here.'))
+          else
+            Wrap(children: [
+              for (var i = 0; i < files.length; i++)
+                _DownloadCard(
+                  entry: _displayEntry(files[i]),
+                  autofocus: autofocus && i == 0,
+                  status: _size(files[i].size),
+                  icon: Icons.folder_shared_outlined,
+                  onTap: () => networkFileMenu(context, files[i]),
+                  onHold: () => networkFileMenu(context, files[i]),
+                ),
+            ]),
+        ],
+      ),
+    );
+  }
+
+  /// A network file drawn like a download card (poster, title, show).
+  static RecordingEntry _displayEntry(NetworkFile f) => RecordingEntry(
+        id: f.path,
+        title: f.title,
+        league: f.group,
+        gameKey: '',
+        leagueId: '',
+        gameStart: f.modified,
+        startAt: f.modified,
+        endAt: f.modified,
+        channelId: '',
+        channelName: '',
+        playlistId: '',
+        url: '',
+        path: f.path,
+        kind: 'download',
+        poster: f.poster,
+        state: RecState.done,
+        bytes: f.size,
+        totalBytes: f.size,
+      );
 
   String _status(RecordingEntry r) {
     if (r.isDownload) return _downloadStatus(r);
@@ -346,6 +512,7 @@ class _DownloadCard extends StatefulWidget {
     required this.onTap,
     required this.onHold,
     this.autofocus = false,
+    this.icon,
   });
 
   final RecordingEntry entry;
@@ -353,6 +520,9 @@ class _DownloadCard extends StatefulWidget {
   final VoidCallback onTap;
   final VoidCallback onHold;
   final bool autofocus;
+
+  /// Instead of the download state's icon (a file in the network folder).
+  final IconData? icon;
 
   @override
   State<_DownloadCard> createState() => _DownloadCardState();
@@ -502,11 +672,12 @@ class _DownloadCardState extends State<_DownloadCard> {
                           ],
                           Row(children: [
                             Icon(
-                                r.complete
-                                    ? Icons.download_done_rounded
-                                    : active
-                                        ? Icons.downloading_rounded
-                                        : Icons.download_rounded,
+                                widget.icon ??
+                                    (r.complete
+                                        ? Icons.download_done_rounded
+                                        : active
+                                            ? Icons.downloading_rounded
+                                            : Icons.download_rounded),
                                 size: 14,
                                 color: bad ? Colors.redAccent : Colors.white60),
                             const SizedBox(width: 4),
@@ -679,6 +850,12 @@ class _RecordingCardState extends State<_RecordingCard> {
                               color: Colors.white54)),
                     ),
                     const SizedBox(width: 6),
+                    if (r.seriesId.isNotEmpty)
+                      const Padding(
+                        padding: EdgeInsets.only(right: 4),
+                        child: Icon(Icons.event_repeat,
+                            size: 13, color: Colors.white54),
+                      ),
                     if (rec)
                       Container(
                         width: 8,
@@ -704,6 +881,125 @@ class _RecordingCardState extends State<_RecordingCard> {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                             fontSize: 11.5, color: Colors.white54)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One series recording (hold OK on a guide programme > Record series):
+/// same size as a recording card, OK = Stop series recording.
+class _SeriesCard extends StatefulWidget {
+  const _SeriesCard({
+    required this.rule,
+    required this.status,
+    required this.onTap,
+    this.autofocus = false,
+  });
+
+  final SeriesRule rule;
+  final String status;
+  final VoidCallback onTap;
+  final bool autofocus;
+
+  @override
+  State<_SeriesCard> createState() => _SeriesCardState();
+}
+
+class _SeriesCardState extends State<_SeriesCard> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final rule = widget.rule;
+    return Padding(
+      padding: const EdgeInsets.only(right: 12, top: 4, bottom: 8),
+      child: HoldToActivate(
+        onTap: widget.onTap,
+        onHold: widget.onTap,
+        child: InkWell(
+          autofocus: widget.autofocus,
+          borderRadius: BorderRadius.circular(16),
+          onTap: widget.onTap,
+          onLongPress: widget.onTap,
+          onFocusChange: (f) => setState(() => _focused = f),
+          child: AnimatedScale(
+            scale: _focused ? 1.05 : 1.0,
+            duration: const Duration(milliseconds: 140),
+            curve: Curves.easeOut,
+            child: Container(
+              width: _RecordingCard.width,
+              height: _RecordingCard.height,
+              padding: const EdgeInsets.fromLTRB(12, 9, 12, 8),
+              decoration: BoxDecoration(
+                color: _focused ? null : Colors.white.withValues(alpha: 0.07),
+                gradient: _focused ? sportsFocusSheen(scheme) : null,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                    color: _focused ? scheme.primary : Colors.white10,
+                    width: _focused ? 2.5 : 1),
+                boxShadow: _focused
+                    ? [
+                        BoxShadow(
+                            color: scheme.primary.withValues(alpha: 0.35),
+                            blurRadius: 16)
+                      ]
+                    : null,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Flexible(
+                      child: Text(rule.channelName.toUpperCase(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 11,
+                              letterSpacing: 1,
+                              color: Colors.white54)),
+                    ),
+                    const SizedBox(width: 6),
+                    Icon(Icons.event_repeat, size: 15, color: scheme.primary),
+                    if (rule.skipRepeats) ...[
+                      const SizedBox(width: 4),
+                      Text(tr('No repeats'),
+                          style: const TextStyle(
+                              fontSize: 11, color: Colors.white60)),
+                    ],
+                  ]),
+                  const Spacer(),
+                  Row(children: [
+                    SportsLogo(
+                        url: rule.channelLogo,
+                        size: 44,
+                        fallback: rule.channelName.isEmpty
+                            ? 'TV'
+                            : rule.channelName.substring(0, 1),
+                        color: null),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(rule.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 15,
+                              height: 1.2,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white)),
+                    ),
+                  ]),
+                  const Spacer(),
+                  Text(widget.status,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style:
+                          const TextStyle(fontSize: 11.5, color: Colors.white70)),
                 ],
               ),
             ),

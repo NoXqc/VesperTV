@@ -9,14 +9,20 @@ import '../l10n/l10n.dart';
 import '../models/viewer_profile.dart';
 import '../utils/constants.dart';
 import '../services/app_exit.dart';
+import '../services/home_wallpaper.dart';
+import '../services/storage_service.dart';
 import '../services/viewer_profile_service.dart';
 import '../widgets/profile_card.dart';
 
 /// A launch-only gate. The application routes and automatic playback are not
 /// created until [onSelected], after switchTo has applied the selected viewer.
 class StartupProfileScreen extends StatefulWidget {
-  const StartupProfileScreen({super.key, required this.onSelected});
+  const StartupProfileScreen(
+      {super.key, required this.onSelected, this.wallpapers});
   final VoidCallback onSelected;
+
+  /// Tests point this at a temporary folder; [HomeWallpaper.instance].
+  final HomeWallpaper? wallpapers;
 
   @override
   State<StartupProfileScreen> createState() => _StartupProfileScreenState();
@@ -29,6 +35,33 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
   String? _error;
   bool _initialFocus = false;
   int _columns = 1;
+
+  /// Home wallpapers of the viewers who turned on "Also behind Who is
+  /// watching?" (Settings > General > Home wallpaper); the highlighted
+  /// card's shows behind the panel.
+  final _wallpapers = <String, Uint8List>{};
+  String? _focused;
+
+  @override
+  void initState() {
+    super.initState();
+    _focused = context.read<ViewerProfileService>().active.id;
+    _loadWallpapers();
+  }
+
+  Future<void> _loadWallpapers() async {
+    final storage = context.read<StorageService>();
+    final ids = [
+      for (final p in context.read<ViewerProfileService>().profiles)
+        if (storage.getWallpaperOnProfiles(viewerId: p.id)) p.id,
+    ];
+    for (final id in ids) {
+      final bytes =
+          await (widget.wallpapers ?? HomeWallpaper.instance).load(id);
+      if (bytes == null || !mounted) continue;
+      setState(() => _wallpapers[id] = bytes);
+    }
+  }
 
   @override
   void dispose() {
@@ -174,7 +207,12 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
                           label: profile.displayName,
                           focusNode: _nodes[profile.id]!,
                           active: _selected == profile.id,
-                          onFocused: () => _reveal(_nodes[profile.id]!),
+                          onFocused: () {
+                            _reveal(_nodes[profile.id]!);
+                            if (_focused != profile.id) {
+                              setState(() => _focused = profile.id);
+                            }
+                          },
                           onTap: () => _select(profile),
                         ),
                       ),
@@ -205,6 +243,9 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     final motion = Duration(milliseconds: reduceMotion ? 0 : 260);
     final selected = profiles.where((p) => p.id == _selected).firstOrNull;
+    final wallpaperId = _selected ?? _focused;
+    final wallpaper = _wallpapers[wallpaperId];
+    final size = MediaQuery.sizeOf(context);
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -215,6 +256,31 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
         body: Stack(
           fit: StackFit.expand,
           children: [
+            // The highlighted viewer's wallpaper, dimmed so the panel
+            // reads; crossfades as the highlight moves.
+            AnimatedSwitcher(
+              duration: Duration(milliseconds: reduceMotion ? 0 : 450),
+              child: wallpaper == null
+                  ? const SizedBox.expand(key: ValueKey('no-wallpaper'))
+                  : Stack(
+                      key: ValueKey('wallpaper-$wallpaperId'),
+                      fit: StackFit.expand,
+                      children: [
+                        Image.memory(wallpaper,
+                            fit: BoxFit.cover,
+                            cacheWidth: math
+                                .min(
+                                    1920,
+                                    size.width *
+                                        MediaQuery.devicePixelRatioOf(context))
+                                .round(),
+                            gaplessPlayback: true,
+                            errorBuilder: (_, __, ___) =>
+                                const SizedBox.shrink()),
+                        const ColoredBox(color: Color(0x73000000)),
+                      ],
+                    ),
+            ),
             DecoratedBox(
               decoration: BoxDecoration(
                 gradient: RadialGradient(

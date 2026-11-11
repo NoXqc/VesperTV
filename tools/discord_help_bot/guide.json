@@ -27,7 +27,7 @@
     "id": "d8a2383cf606e0bb",
     "category": "Live TV",
     "title": "Catch-up not working",
-    "answer": "If replay channels or past programmes are missing after updating, run Update Content and update your playlists, then Update EPG Now once. Catch-up is available on Android TV, Fire TV and Android phones; Windows support is not available yet. Your provider must offer catch-up for that channel. The provider decides how many days are available; guide data may cover fewer hours, with older hours shown as Catch-up HH:MM blocks. Refreshing cannot add replay support to a channel your provider does not support.",
+    "answer": "If replay channels or past programmes are missing after updating, run Update Content and update your playlists, then Update EPG Now once. Catch-up is available on Android TV, Fire TV and Android phones, and on Windows since 1.0.61. Your provider must offer catch-up for that channel. The provider decides how many days are available; guide data may cover fewer hours, with older hours shown as Catch-up HH:MM blocks. Refreshing cannot add replay support to a channel your provider does not support.",
     "controls": "Update Content → update playlists · Settings → Playlists & guide → EPG → Update EPG Now",
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
@@ -64,10 +64,18 @@
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
   {
+    "id": "d67cd1412cd274f6",
+    "category": "Live TV",
+    "title": "Record a show later, or the whole series",
+    "answer": "Move right in the Timeline guide to a programme that hasn't started and hold OK. Record this show is at the top of the menu: it records from the guide's start to end time, even with the app closed (leave the box powered). A red dot on the programme shows it is set; hold OK on it again to cancel. Record series… records every showing of that title on this channel: Every airing, or Skip repeats (leaves out an episode it already has, judged by the guide's description). New showings are added each time the guide updates, so open VesperTV now and then. A showing that would need a second connection your account doesn't have is skipped. Record series… is also in the menu of a show on now (it records that one at once) or a past one, and in the player's Channel schedule. Stop series recording is in the same menu, or in Recordings.",
+    "controls": "Android · Timeline · Hold OK on a show to come",
+    "url": "https://vespertv.app/remote.html#Live%20TV"
+  },
+  {
     "id": "ad2f3fe6d3ade9fd",
     "category": "Live TV",
     "title": "Channel menu",
-    "answer": "Add to / Remove from Favourites, Hide this channel, Move Up / Down (your own order inside the group or Favourites), Move to group…, Remove from a group, and Record on Android. To reorder Favourites in the list or Timeline guide, hold OK on a channel, choose Move Up / Down, use ↑ / ↓, then OK or Back to finish. Each viewer's manual order is saved across playlists. Sort favourites can temporarily show an alphabetical order without erasing it. Clear the guide's search filter before moving a channel.",
+    "answer": "Add to / Remove from Favourites, Hide this channel, Move Up / Down (your own order inside the group or Favourites), Move to group…, Remove from a group (also a copy the playlist editor put in a group), and on Android Record (until the show ends, or until you stop it) and Record series…. To reorder Favourites in the list or Timeline guide, hold OK on a channel, choose Move Up / Down, use ↑ / ↓, then OK or Back to finish. Each viewer's manual order is saved across playlists. Sort favourites can temporarily show an alphabetical order without erasing it. Clear the guide's search filter before moving a channel.",
     "controls": "Hold OK on a channel",
     "url": "https://vespertv.app/remote.html#Live%20TV"
   },
@@ -347,8 +355,8 @@
     "id": "8b1446377f0dda91",
     "category": "Home",
     "title": "Home mini player",
-    "answer": "Stop on a live channel card (Favourite channels, Recent channels, a game on now) for a moment and it plays in the mini player at the top right of Home. OK on the card opens it full screen with the same stream; Back returns to Home with it still playing. To turn it off without leaving Home, press ⏯ on the card that is playing (or Stop), or hold OK on any card and choose Stop mini player. It then stays off while you browse, until ⏯ on a channel card plays that one right away. A channel already playing when you open Home keeps playing there. Opening a movie or show stops it. Turn it off in Settings > Interface > Tabs > Mini player on Home (per profile); Home then stops the channel as before. TVs, boxes and computers only (not phones).",
-    "controls": "Home · rest on a channel card",
+    "answer": "Press OK on a live channel card (Favourite channels, Recent channels, a game on now) and it plays in the mini player at the top right of Home. OK again on the playing card opens it full screen with the same stream; Back returns to Home with it still playing. With Settings > Interface > Guide > Preview on highlight on, stopping on a card for a moment plays it by itself. To turn it off without leaving Home, press ⏯ (or Stop), or hold OK on any card and choose Stop mini player. It then stays off while you browse, until OK (or ⏯ ) on a channel card plays one again. A channel already playing when you open Home keeps playing there. Opening a movie or show stops it. Turn it off in Settings > Interface > Tabs > Mini player on Home (per profile); Home then stops the channel as before. TVs, boxes and computers only (not phones).",
+    "controls": "Home · OK on a channel card",
     "url": "https://vespertv.app/remote.html#Home"
   },
   {
@@ -459,7 +467,7 @@
     "id": "01e8da6092162e2d",
     "category": "Media Hub",
     "title": "Your source finished fetching it",
-    "answer": "If a title played a short \"being downloaded\" video, press Back and carry on. The poster gets a Ready tag when the full file is there. Optional: add your debrid key in Settings › Media Hub › Debrid accounts for an exact check.",
+    "answer": "If a title played a short \"being downloaded\" video, press Back and carry on. The poster gets a Ready tag when the full file is there.",
     "controls": "Gold Ready tag",
     "url": "https://vespertv.app/remote.html#Media%20Hub"
   },
@@ -736,6 +744,14 @@
     "url": "https://vespertv.app/remote.html#Recordings"
   },
   {
+    "id": "ffaba34d412bc206",
+    "category": "Recordings",
+    "title": "Stop series recording",
+    "answer": "Series recordings show their channel, title, how many showings are scheduled and the next one. Stop series recording cancels the scheduled showings; recordings already made stay. To skip a single showing, cancel it under Scheduled (marked with the repeat icon): the series won't add it back.",
+    "controls": "OK on a series",
+    "url": "https://vespertv.app/remote.html#Recordings"
+  },
+  {
     "id": "64445a41cbb5b9e3",
     "category": "Recordings",
     "title": "Download to watch offline",
@@ -763,7 +779,7 @@
     "id": "cfda7cde95b5bb53",
     "category": "Vesper AI",
     "title": "Vesper AI",
-    "answer": "Vesper AI is the voice and typed-command assistant in Android 1.0.59+. Built-in commands are free, with no AI account or API key. Select the Vesper row in the side menu, the microphone in Search, or Talk to Vesper now in Settings. In the panel, choose Talk, type in Or type here, or choose Talk from my phone. Vesper shortcut in Settings shows or hides the menu shortcut. This is available in Android 1.0.59 and later; the public Windows download remains 1.0.45.",
+    "answer": "Vesper AI is the voice and typed-command assistant in Android 1.0.59+. Built-in commands are free, with no AI account or API key. Select the Vesper row in the side menu, the microphone in Search, or Talk to Vesper now in Settings. In the panel, choose Talk, type in Or type here, or choose Talk from my phone. Vesper shortcut in Settings shows or hides the menu shortcut. This is available in Android 1.0.59 and later, Windows 1.0.61 and the Linux beta.",
     "controls": "Open Vesper AI: menu Vesper · Search microphone · Settings → Vesper AI → Talk to Vesper now",
     "url": "https://vespertv.app/remote.html#Vesper%20AI"
   },
@@ -843,9 +859,17 @@
     "id": "3bfeba4ea77344d2",
     "category": "Vesper AI",
     "title": "Vesper AI limits and Windows",
-    "answer": "Vesper acts on the sources and guide you already have. Its search/play tools cover your IPTV channels, movies and shows; Media Hub search through the AI tools and picking an episode by command are not implemented. A series opens its show page so you can choose the episode. Hidden content, restricted viewer permissions and Hide scores still apply. The public Windows package is 1.0.45 and does not include Vesper AI; the merged Windows code has not had real UI testing, and voice, player controls and now-playing support are not available there yet.",
+    "answer": "Vesper acts on the sources and guide you already have. Its search/play tools cover your IPTV channels, movies and shows; Media Hub search through the AI tools and picking an episode by command are not implemented. A series opens its show page so you can choose the episode. Hidden content, restricted viewer permissions and Hide scores still apply. Windows 1.0.61 and the Linux beta include Vesper AI, but voice, player controls and now-playing support are not available there yet.",
     "controls": "Your IPTV sources and guide · select episodes on the show page",
     "url": "https://vespertv.app/remote.html#Vesper%20AI"
+  },
+  {
+    "id": "7b2c12df5f9339e9",
+    "category": "Settings",
+    "title": "Move or copy channels to a group",
+    "answer": "Open the editor on your phone or PC, tick channels and use the bottom bar. Move to group: the channels leave their group and show only in the group you pick. Copy to group: they stay where they are and also show in the group you pick. The group can be one of your own custom groups (pick one or type a new name) or a group of any playlist. It is applied on the TV at once, without Save to TV. Reset group puts the ticked channels back in their own groups and removes their copies. On the TV, hold OK on a copy and choose Remove from group, or Move Up / Down to place it in the group it was copied into. Search and Multiview follow the group you picked: a channel moved into a hidden group is left out. On a Kids profile, a channel from a group the profile is not allowed to see stays hidden wherever you put it.",
+    "controls": "Settings → Playlists & guide → Playlist editor → Channels",
+    "url": "https://vespertv.app/remote.html#Settings"
   },
   {
     "id": "fb8a10d73d9c9785",
@@ -891,7 +915,7 @@
     "id": "84dcb061f3168727",
     "category": "Sync",
     "title": "Set up sync without an account",
-    "answer": "Sync is planned for an upcoming release; it is not in public Android 1.0.56 or Windows 1.0.45 yet. Open Sync on your first device and choose Set up sync. No account, email or login is needed. Save the recovery code shown once, then choose I saved my recovery code. Your setup is encrypted on the device; the server stores only ciphertext and cannot read it.",
+    "answer": "Open Sync on your first device and choose Set up sync. No account, email or login is needed. Save the recovery code shown once, then choose I saved my recovery code. Your setup is encrypted on the device; the server stores only ciphertext and cannot read it.",
     "controls": "Settings > Device & data > Sync > Set up sync",
     "url": "https://vespertv.app/remote.html#Sync"
   },

@@ -143,7 +143,8 @@ class _PhonePairPanelState extends State<PhonePairPanel> {
     final saves = isKey || widget.kind == PairingKind.poster;
     final isServer = widget.kind == PairingKind.mediaServer;
     final isFolder = widget.kind == PairingKind.networkFolder;
-    final isPhoto = widget.kind == PairingKind.photo;
+    final isPhoto = widget.kind == PairingKind.photo ||
+        widget.kind == PairingKind.wallpaper;
     final wifiOnly = widget.kind.isWifiOnly;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

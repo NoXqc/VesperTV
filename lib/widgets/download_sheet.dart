@@ -5,8 +5,13 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/l10n.dart';
+import '../models/channel.dart';
+import '../screens/desktop_player_screen.dart';
 import '../screens/player_screen.dart';
+import '../services/desktop_mini_player.dart';
+import '../utils/desktop_platform.dart';
 import '../services/device_memory_service.dart';
+import '../services/network_files.dart';
 import '../services/playback_service.dart';
 import '../services/recording_service.dart';
 import '../utils/time_format.dart';
@@ -18,7 +23,7 @@ import 'tv_menu_tile.dart';
 /// Downloads (Android): a movie / episode saved to this device, a USB
 /// drive or the network folder to watch offline. RecordingService does the
 /// work (the recorder's foreground service, one at a time, resumable).
-bool get downloadsAvailable => RecordingService.supported;
+bool get downloadsAvailable => RecordingService.downloadsSupported;
 
 String _size(int bytes) => bytes >= 1024 * 1024 * 1024
     ? '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB'
@@ -82,10 +87,16 @@ Future<bool> confirmDownload(
   await rs.askNotifications();
   if (!context.mounted) return true;
   ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
-    content: Text(later
-        ? tr('Download set for {when}. It shows in Recordings.',
-            {'when': downloadStartLabel(at, now)})
-        : tr('Downloading. It shows in Recordings.')),
+    // Windows' tab is Downloads (no recordings there).
+    content: Text(RecordingService.supported
+        ? (later
+            ? tr('Download set for {when}. It shows in Recordings.',
+                {'when': downloadStartLabel(at, now)})
+            : tr('Downloading. It shows in Recordings.'))
+        : (later
+            ? tr('Download set for {when}. It shows in Downloads.',
+                {'when': downloadStartLabel(at, now)})
+            : tr('Downloading. It shows in Downloads.'))),
     duration: const Duration(seconds: 3),
   ));
   return true;
@@ -145,13 +156,16 @@ class _DownloadSheetState extends State<_DownloadSheet> {
     final items = widget.items;
     final iptv = items.any((i) => i.playlistId.isNotEmpty);
     final vol = widget.volume;
-    final where = vol == null
+    final device = RecordingService.supported
         ? tr('This device')
+        : '${tr('This computer')} (${vol?.path ?? ''})';
+    final where = vol == null
+        ? device
         : vol.network
             ? tr('Network folder')
             : vol.removable
                 ? tr('USB drive / SD card')
-                : tr('This device');
+                : device;
     final free = vol != null && vol.free >= 0
         ? tr('{free} free', {'free': _size(vol.free)})
         : null;
@@ -201,6 +215,12 @@ class _DownloadSheetState extends State<_DownloadSheet> {
                   Text(tr('Best: download overnight.'),
                       style: const TextStyle(
                           fontSize: 14, fontWeight: FontWeight.w700)),
+                  // A computer has no background service: the app runs it.
+                  if (!RecordingService.supported)
+                    Text(
+                        tr('VesperTV has to be open then (minimized is fine).'),
+                        style: const TextStyle(
+                            fontSize: 12.5, color: Colors.white70)),
                   const SizedBox(height: 6),
                   Text(
                     [
@@ -442,10 +462,63 @@ Future<void> downloadMenu(BuildContext context, RecordingEntry r) async {
 
 /// Plays a downloaded file (local, or the network folder through the
 /// recorder's local server — PlaybackService.openUrlFor).
-Future<void> playDownload(BuildContext context, RecordingEntry r) async {
-  final channel = RecordingService.instance.channelFor(r);
+Future<void> playDownload(BuildContext context, RecordingEntry r) =>
+    playDownloadChannel(context, RecordingService.instance.channelFor(r));
+
+/// A download / network folder file full screen: Android's player, or
+/// the computer's own (Windows).
+Future<void> playDownloadChannel(BuildContext context, Channel channel) async {
+  if (usesMediaKit) {
+    DesktopMiniPlayer.instance.clear();
+    await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => DesktopPlayerScreen(channel: channel)));
+    return;
+  }
   await context.read<PlaybackService>().play(channel);
   if (!context.mounted) return;
   await Navigator.of(context)
       .push(PlayerPageRoute(builder: (_) => PlayerScreen(channel: channel)));
+}
+
+/// A video in the network folder that another device saved: copy it to
+/// this device (offline: a trip, the car) or play it from the share.
+Future<void> networkFileMenu(BuildContext context, NetworkFile f) async {
+  final action = await showGlassMenu<String>(
+    context: context,
+    builder: (context) => SwallowHeldActivate(
+      child: GlassMenuDialog(
+        title: Text(f.group.isEmpty ? f.title : '${f.group} · ${f.title}',
+            maxLines: 2, overflow: TextOverflow.ellipsis),
+        content: SizedBox(
+          width: 460,
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            TvMenuTile(
+              autofocus: true,
+              icon: Icons.download_for_offline_outlined,
+              title: tr('Copy to this device'),
+              subtitle: tr('{size}, to watch without the network',
+                  {'size': _size(f.size)}),
+              onTap: () => Navigator.of(context).pop('copy'),
+            ),
+            TvMenuTile(
+              icon: Icons.play_arrow,
+              title: tr('Play from the network folder'),
+              onTap: () => Navigator.of(context).pop('play'),
+            ),
+          ]),
+        ),
+      ),
+    ),
+  );
+  if (!context.mounted) return;
+  switch (action) {
+    case 'copy':
+      await RecordingService.instance.copyToDevice(f);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content:
+              Text(tr('Copying to this device. It shows under Downloading.'))));
+    case 'play':
+      await playDownloadChannel(context, f.toChannel());
+  }
 }

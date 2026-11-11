@@ -46,8 +46,8 @@ const Map<String, String> kFr = {
   "Shorter Timeline rows so more channels fit in the same space.":
       "Lignes de la grille plus courtes pour afficher plus de chaînes.",
   "Preview on highlight": "Aperçu au survol",
-  "The channel you stop on plays in the preview, without pressing OK. OK again opens it full screen.":
-      "La chaîne sur laquelle vous vous arrêtez joue dans l'aperçu, sans appuyer sur OK. OK une deuxième fois l'ouvre en plein écran.",
+  "The channel you stop on plays in the preview and in Home's mini player, without pressing OK. OK again opens it full screen.":
+      "La chaîne sur laquelle vous vous arrêtez joue dans l'aperçu et dans le mini lecteur de l’accueil, sans appuyer sur OK. OK une deuxième fois l'ouvre en plein écran.",
   "Transparent popups": "Fenêtres transparentes",
   "Reminders and goal alerts lose their background and outline, keeping only the logo and text.":
       "Les rappels et alertes de but perdent leur fond et leur contour, il ne reste que le logo et le texte.",
@@ -145,6 +145,9 @@ const Map<String, String> kFr = {
   "Open full Live TV": "Ouvrir Télé en direct complète",
   // Startup profile selector.
   "Launch with profiles selector": "Lancer avec le sélecteur de profils",
+  'Also behind "Who is watching?"': 'Aussi derrière « Qui regarde? »',
+  'Shows while your profile is highlighted. Needs Launch with profiles selector (Settings > Profiles).':
+      "S'affiche quand votre profil est sélectionné. Nécessite Lancer avec le sélecteur de profils (Paramètres > Profils).",
   "Choose a profile after the splash, before the app opens. Applies from the next start.":
       "Choisissez un profil après l’écran de démarrage, avant l’ouverture de l’application. S’applique au prochain démarrage.",
   "Who is watching?": "Qui regarde?",
@@ -516,6 +519,7 @@ const Map<String, String> kFr = {
   'this team': "cette équipe",
   'My Teams': "Mes équipes",
   'Last channels': "Dernières chaînes",
+  'No other source found for this game.': "Aucune autre source trouvée pour ce match.",
   '◀ ▶ tabs  ·  OK to watch  ·  Back to close':
       "◀ ▶ onglets  ·  OK pour regarder  ·  Retour pour fermer",
   'None of your teams play today.':
@@ -1117,6 +1121,8 @@ const Map<String, String> kFr = {
   'TV Shows order': "Ordre Séries",
   'Move up': "Monter",
   'Move down': "Descendre",
+  'Move left': "Déplacer à gauche",
+  'Move right': "Déplacer à droite",
   'Playlist added': "Liste ajoutée",
   'This playlist is disabled on this device — enable it in Settings > Playlist Manager to watch.':
       "Cette liste est désactivée sur cet appareil — activez-la dans Paramètres > Gestion des listes pour regarder.",
@@ -1527,6 +1533,10 @@ const Map<String, String> kFr = {
       "Fourni par Trakt (trakt.tv) et Simkl (simkl.com).",
   'VesperTV is not affiliated with or endorsed by Trakt or Simkl.':
       "VesperTV n'est ni affilié à Trakt ou Simkl, ni approuvé par eux.",
+  'Sports data from ESPN and TheSportsDB, skip intro timings from IntroDB. VesperTV is not affiliated with or endorsed by them, or by any league or team shown.':
+      "Données sportives d'ESPN et de TheSportsDB, repères pour passer l'intro d'IntroDB. VesperTV n'est ni affilié à ces services ni aux ligues ou équipes affichées, ni approuvé par eux.",
+  'The scores provider asked us to slow down. Scores will be back in a few minutes.':
+      "Le fournisseur des scores nous a demandé de ralentir. Les scores reviendront dans quelques minutes.",
   'Trakt & Simkl': 'Trakt et Simkl',
   'Track what you watch, lists in the Media Hub':
       'Suivi de ce que vous regardez, listes dans le Media Hub',
@@ -1781,6 +1791,30 @@ const Map<String, String> kFr = {
   "Recorded": "Enregistrés",
   "{used} of {cap} GB used": "{used} utilisés sur {cap} Go",
   "{size} in the network folder": "{size} dans le dossier réseau",
+  "Copy to this device":
+      "Copier sur cet appareil",
+  "{size}, to watch without the network":
+      "{size}, pour regarder sans réseau",
+  "Play from the network folder":
+      "Lire depuis le dossier réseau",
+  "Copying to this device. It shows under Downloading.":
+      "Copie vers cet appareil. Elle s'affiche sous Téléchargement en cours.",
+  "On the network folder":
+      "Dans le dossier réseau",
+  "Looking in the network folder…":
+      "Recherche dans le dossier réseau…",
+  "The network folder can't be reached: {reason}":
+      "Le dossier réseau est inaccessible : {reason}",
+  "Nothing new there. Downloads and recordings that another device saves there show up here.":
+      "Rien de nouveau. Les téléchargements et enregistrements qu'un autre appareil y enregistre s'affichent ici.",
+  "Save only":
+      "Enregistrer seulement",
+  "Saved. Its files show in Recordings; this device keeps saving to itself.":
+      "Enregistré. Ses fichiers s'affichent dans Enregistrements; cet appareil continue d'enregistrer sur lui-même.",
+  "Taking a tablet on a trip? Set up the same folder on it with Save only, then copy what the TV saved there: Recordings > On the network folder.":
+      "Une tablette en voyage? Configurez-y le même dossier avec Enregistrer seulement, puis copiez ce que la TV y a enregistré : Enregistrements > Dans le dossier réseau.",
+  "The file is no longer in the network folder":
+      "Le fichier n'est plus dans le dossier réseau",
   "REC · {size}": "ENR · {size}",
   "Waiting for a channel": "En attente d'une chaîne",
   "Interrupted · {size}": "Interrompu · {size}",
@@ -1861,8 +1895,8 @@ const Map<String, String> kFr = {
   "Supporting is a thank-you, never a paywall: everyone gets the same app.":
       "Soutenir est un merci, jamais un accès payant : tout le monde a la même application.",
   // Settings > General > Remote tips
-  "Language and clock, what plays when the app starts, Fast startup, clearing your history, and remote tips.":
-      "Langue et horloge, ce qui joue au démarrage, Démarrage rapide, l'effacement de l'historique et les astuces télécommande.",
+  "Language and clock, what plays when the app starts, Fast startup, your Home wallpaper, clearing your history, and remote tips.":
+      "Langue et horloge, ce qui joue au démarrage, Démarrage rapide, votre fond d’écran de l’accueil, l'effacement de l'historique et les astuces télécommande.",
   "Remote tips": "Astuces télécommande",
   "Every hold menu and shortcut, on your phone":
       "Chaque menu « maintenir » et raccourci, sur votre téléphone",
@@ -2089,8 +2123,8 @@ const Map<String, String> kFr = {
   "Hides the profiles row on Home.":
       "Masque la rangée des profils sur l’accueil.",
   "Mini player on Home": "Mini lecteur sur l’accueil",
-  "The live channel you stop on plays at the top right of Home. OK opens it full screen; Play/Pause or hold OK turns it off.":
-      "La chaîne en direct où vous vous arrêtez joue en haut à droite de l’accueil. OK l’ouvre en plein écran; Lecture/Pause ou OK maintenu l’arrête.",
+  "OK on a live card plays it at the top right of Home, OK again opens it full screen (with Preview on highlight on, the card you stop on plays by itself). Play/Pause or hold OK turns it off.":
+      "OK sur une carte en direct la lance en haut à droite de l’accueil, OK une deuxième fois l’ouvre en plein écran (avec Aperçu au survol activé, la carte où vous vous arrêtez joue toute seule). Lecture/Pause ou OK maintenu l’arrête.",
   "Stop mini player": "Arrêter le mini lecteur",
   "Preferred audio language": "Langue audio préférée",
   "Preferred subtitle language": "Langue de sous-titres préférée",
@@ -3224,4 +3258,80 @@ const Map<String, String> kFr = {
       "Taper l'adresse d'un dossier et un mot de passe avec une télécommande, c'est pénible. Scannez ce code avec la caméra de votre téléphone et remplissez-les là-bas — ils apparaissent ici pour que vous les vérifiiez et les enregistriez.",
   "Check the details here, then press Save and use it.":
       "Vérifiez les détails ici, puis appuyez sur Enregistrer et l'utiliser.",
+  "Home wallpaper":
+      "Fond d’écran de l’accueil",
+  "Shows behind Home when the card you are on has no picture of its own, instead of the live channels' colours.":
+      "S’affiche derrière l’accueil quand la carte sélectionnée n’a pas d’image à elle, à la place des couleurs des chaînes en direct.",
+  "Could not read the picture. Choose a JPEG or PNG under 15 MB.":
+      "Impossible de lire l’image. Choisissez un JPEG ou un PNG de moins de 15 Mo.",
+  "On: your picture shows behind Home.":
+      "Activé : votre image s’affiche derrière l’accueil.",
+  "A picture of your own behind Home.":
+      "Une image à vous derrière l’accueil.",
+  "Hide Downloads":
+      "Masquer les téléchargements",
+  "Removes the Downloads tab.":
+      "Retire l’onglet Téléchargements.",
+  "Speed, space and where downloads are saved":
+      "Vitesse, espace et dossier des téléchargements",
+  "Space for downloads: {gb} GB":
+      "Espace pour les téléchargements : {gb} Go",
+  "{used} used. Downloads stop when this is full or the drive has less than 1 GB left.":
+      "{used} utilisés. Les téléchargements s’arrêtent quand c’est plein ou que le disque a moins de 1 Go libre.",
+  "Save downloads to":
+      "Enregistrer les téléchargements dans",
+  "This computer":
+      "Cet ordinateur",
+  "Download set for {when}. It shows in Downloads.":
+      "Téléchargement prévu {when}. Il apparaît dans Téléchargements.",
+  "Downloading. It shows in Downloads.":
+      "Téléchargement en cours. Il apparaît dans Téléchargements.",
+  "VesperTV has to be open then (minimized is fine).":
+      "VesperTV doit alors être ouvert (réduit, ça va).",
+  // Series recording (2026-11-10).
+  "Record this show":
+      "Enregistrer cette émission",
+  "Record series…":
+      "Enregistrer la série…",
+  "Record series":
+      "Enregistrer la série",
+  "Every showing of {title} on this channel":
+      "Chaque diffusion de {title} sur cette chaîne",
+  "Every showing of {title} on {channel}":
+      "Chaque diffusion de {title} sur {channel}",
+  "Stop series recording":
+      "Arrêter l'enregistrement de la série",
+  "Series recording stopped. Recordings made stay.":
+      "Enregistrement de la série arrêté. Les enregistrements faits restent.",
+  "Recordings made stay.":
+      "Les enregistrements faits restent.",
+  "Cancels {count} scheduled. Recordings made stay.":
+      "Annule {count} prévu(s). Les enregistrements faits restent.",
+  "Every airing":
+      "Chaque diffusion",
+  "Skip repeats":
+      "Sauter les reprises",
+  "Not an episode it already has (same guide description)":
+      "Pas un épisode déjà enregistré (même description dans le guide)",
+  "Series recording on. Airings are added as the guide lists them.":
+      "Série enregistrée. Les diffusions s'ajoutent à mesure que le guide les affiche.",
+  "Series recording on: {count} scheduled":
+      "Série enregistrée : {count} prévu(s)",
+  "{count} skipped (no free connection)":
+      "{count} sauté(s) (aucune connexion libre)",
+  "Series recordings":
+      "Séries enregistrées",
+  "Waiting for the guide":
+      "En attente du guide",
+  "{count} scheduled":
+      "{count} prévu(s)",
+  "Next: {when}":
+      "Prochain : {when}",
+  "No repeats":
+      "Sans reprises",
+  // Compact UI (2026-11-10).
+  "Compact UI":
+      "Interface compacte",
+  "Smaller tabs, groups and channel rows so more fit on screen. Just for this profile.":
+      "Onglets, groupes et rangées de chaînes plus petits pour en voir plus à l'écran. Pour ce profil seulement.",
 };

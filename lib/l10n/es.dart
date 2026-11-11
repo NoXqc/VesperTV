@@ -47,8 +47,8 @@ const Map<String, String> kEs = {
   "Shorter Timeline rows so more channels fit in the same space.":
       "Filas más cortas en la línea de tiempo para ver más canales.",
   "Preview on highlight": "Vista previa al resaltar",
-  "The channel you stop on plays in the preview, without pressing OK. OK again opens it full screen.":
-      "El canal en el que te detienes se reproduce en la vista previa, sin pulsar OK. OK otra vez lo abre en pantalla completa.",
+  "The channel you stop on plays in the preview and in Home's mini player, without pressing OK. OK again opens it full screen.":
+      "El canal en el que te detienes se reproduce en la vista previa y en el minirreproductor de Inicio, sin pulsar OK. OK otra vez lo abre en pantalla completa.",
   "Transparent popups": "Ventanas transparentes",
   "Reminders and goal alerts lose their background and outline, keeping only the logo and text.":
       "Los recordatorios y avisos de gol pierden el fondo y el contorno, y conservan solo el logo y el texto.",
@@ -146,6 +146,9 @@ const Map<String, String> kEs = {
   "Open full Live TV": "Abrir TV en vivo completa",
   // Startup profile selector.
   "Launch with profiles selector": "Iniciar con el selector de perfiles",
+  'Also behind "Who is watching?"': 'También detrás de «¿Quién está viendo?»',
+  'Shows while your profile is highlighted. Needs Launch with profiles selector (Settings > Profiles).':
+      'Se muestra mientras tu perfil está resaltado. Requiere Iniciar con el selector de perfiles (Ajustes > Perfiles).',
   "Choose a profile after the splash, before the app opens. Applies from the next start.":
       "Elige un perfil después de la pantalla de inicio, antes de abrir la aplicación. Se aplica en el próximo inicio.",
   "Who is watching?": "¿Quién está viendo?",
@@ -515,6 +518,7 @@ const Map<String, String> kEs = {
   'this team': "este equipo",
   'My Teams': "Mis equipos",
   'Last channels': "Últimos canales",
+  'No other source found for this game.': "No se encontró otra fuente para este partido.",
   '◀ ▶ tabs  ·  OK to watch  ·  Back to close':
       "◀ ▶ pestañas  ·  OK para ver  ·  Atrás para cerrar",
   'None of your teams play today.': "Ninguno de tus equipos juega hoy.",
@@ -1111,6 +1115,8 @@ const Map<String, String> kEs = {
   'TV Shows order': "Orden de series",
   'Move up': "Subir",
   'Move down': "Bajar",
+  'Move left': "Mover a la izquierda",
+  'Move right': "Mover a la derecha",
   'Playlist added': "Lista añadida",
   'This playlist is disabled on this device — enable it in Settings > Playlist Manager to watch.':
       "Esta lista está desactivada en este dispositivo: actívala en Ajustes > Gestor de listas para ver.",
@@ -1520,6 +1526,10 @@ const Map<String, String> kEs = {
       "Con la tecnología de Trakt (trakt.tv) y Simkl (simkl.com).",
   'VesperTV is not affiliated with or endorsed by Trakt or Simkl.':
       "VesperTV no está afiliado ni respaldado por Trakt o Simkl.",
+  'Sports data from ESPN and TheSportsDB, skip intro timings from IntroDB. VesperTV is not affiliated with or endorsed by them, or by any league or team shown.':
+      "Datos deportivos de ESPN y TheSportsDB, tiempos para saltar la intro de IntroDB. VesperTV no está afiliado ni respaldado por ellos, ni por ninguna liga o equipo que se muestre.",
+  'The scores provider asked us to slow down. Scores will be back in a few minutes.':
+      "El proveedor de resultados nos pidió ir más despacio. Los resultados volverán en unos minutos.",
   'Trakt & Simkl': 'Trakt y Simkl',
   'Track what you watch, lists in the Media Hub':
       'Registra lo que ves, listas en el Media Hub',
@@ -1773,6 +1783,30 @@ const Map<String, String> kEs = {
   "Recorded": "Grabados",
   "{used} of {cap} GB used": "{used} usados de {cap} GB",
   "{size} in the network folder": "{size} en la carpeta de red",
+  "Copy to this device":
+      "Copiar a este dispositivo",
+  "{size}, to watch without the network":
+      "{size}, para ver sin red",
+  "Play from the network folder":
+      "Reproducir desde la carpeta de red",
+  "Copying to this device. It shows under Downloading.":
+      "Copiando a este dispositivo. Aparece en Descargando.",
+  "On the network folder":
+      "En la carpeta de red",
+  "Looking in the network folder…":
+      "Buscando en la carpeta de red…",
+  "The network folder can't be reached: {reason}":
+      "No se puede acceder a la carpeta de red: {reason}",
+  "Nothing new there. Downloads and recordings that another device saves there show up here.":
+      "Nada nuevo. Las descargas y grabaciones que otro dispositivo guarde allí aparecen aquí.",
+  "Save only":
+      "Solo guardar",
+  "Saved. Its files show in Recordings; this device keeps saving to itself.":
+      "Guardado. Sus archivos aparecen en Grabaciones; este dispositivo sigue guardando en sí mismo.",
+  "Taking a tablet on a trip? Set up the same folder on it with Save only, then copy what the TV saved there: Recordings > On the network folder.":
+      "¿Una tableta de viaje? Configura en ella la misma carpeta con Solo guardar y copia lo que la TV guardó allí: Grabaciones > En la carpeta de red.",
+  "The file is no longer in the network folder":
+      "El archivo ya no está en la carpeta de red",
   "REC · {size}": "GRAB · {size}",
   "Waiting for a channel": "Esperando un canal",
   "Interrupted · {size}": "Interrumpida · {size}",
@@ -1849,8 +1883,8 @@ const Map<String, String> kEs = {
   "Supporting is a thank-you, never a paywall: everyone gets the same app.":
       "Apoyar es un agradecimiento, nunca un muro de pago: todos tienen la misma aplicación.",
   // Settings > General > Remote tips
-  "Language and clock, what plays when the app starts, Fast startup, clearing your history, and remote tips.":
-      "Idioma y reloj, qué se reproduce al iniciar, Inicio rápido, borrar el historial y trucos del control remoto.",
+  "Language and clock, what plays when the app starts, Fast startup, your Home wallpaper, clearing your history, and remote tips.":
+      "Idioma y reloj, qué se reproduce al iniciar, Inicio rápido, tu fondo de Inicio, borrar el historial y trucos del control remoto.",
   "Remote tips": "Trucos del control",
   "Every hold menu and shortcut, on your phone":
       "Cada menú de mantener pulsado y atajo, en tu teléfono",
@@ -2075,8 +2109,8 @@ const Map<String, String> kEs = {
   "Hide profiles": "Ocultar perfiles",
   "Hides the profiles row on Home.": "Oculta la fila de perfiles en Inicio.",
   "Mini player on Home": "Minirreproductor en Inicio",
-  "The live channel you stop on plays at the top right of Home. OK opens it full screen; Play/Pause or hold OK turns it off.":
-      "El canal en directo en el que te detienes se reproduce arriba a la derecha de Inicio. OK lo abre a pantalla completa; Reproducir/Pausa o mantener OK lo detiene.",
+  "OK on a live card plays it at the top right of Home, OK again opens it full screen (with Preview on highlight on, the card you stop on plays by itself). Play/Pause or hold OK turns it off.":
+      "OK en una tarjeta en directo la reproduce arriba a la derecha de Inicio, OK otra vez la abre a pantalla completa (con Vista previa al resaltar activada, la tarjeta en la que te detienes se reproduce sola). Reproducir/Pausa o mantener OK la detiene.",
   "Stop mini player": "Detener el minirreproductor",
   "Preferred audio language": "Idioma de audio preferido",
   "Preferred subtitle language": "Idioma de subtítulos preferido",
@@ -3211,4 +3245,80 @@ const Map<String, String> kEs = {
       "Escribir la dirección de una carpeta y una contraseña con el mando es pesado. Escanee este código con la cámara del teléfono y rellénelos allí — aparecen aquí para que los revise y guarde.",
   "Check the details here, then press Save and use it.":
       "Revise los datos aquí y pulse Guardar y usarla.",
+  "Home wallpaper":
+      "Fondo de Inicio",
+  "Shows behind Home when the card you are on has no picture of its own, instead of the live channels' colours.":
+      "Se muestra detrás de Inicio cuando la tarjeta seleccionada no tiene imagen propia, en lugar de los colores de los canales en directo.",
+  "Could not read the picture. Choose a JPEG or PNG under 15 MB.":
+      "No se pudo leer la imagen. Elige un JPEG o PNG de menos de 15 MB.",
+  "On: your picture shows behind Home.":
+      "Activado: tu imagen se muestra detrás de Inicio.",
+  "A picture of your own behind Home.":
+      "Una imagen tuya detrás de Inicio.",
+  "Hide Downloads":
+      "Ocultar descargas",
+  "Removes the Downloads tab.":
+      "Quita la pestaña Descargas.",
+  "Speed, space and where downloads are saved":
+      "Velocidad, espacio y dónde se guardan las descargas",
+  "Space for downloads: {gb} GB":
+      "Espacio para descargas: {gb} GB",
+  "{used} used. Downloads stop when this is full or the drive has less than 1 GB left.":
+      "{used} usados. Las descargas se detienen cuando está lleno o al disco le queda menos de 1 GB.",
+  "Save downloads to":
+      "Guardar las descargas en",
+  "This computer":
+      "Este ordenador",
+  "Download set for {when}. It shows in Downloads.":
+      "Descarga programada {when}. Aparece en Descargas.",
+  "Downloading. It shows in Downloads.":
+      "Descargando. Aparece en Descargas.",
+  "VesperTV has to be open then (minimized is fine).":
+      "VesperTV tiene que estar abierto entonces (minimizado vale).",
+  // Series recording (2026-11-10).
+  "Record this show":
+      "Grabar este programa",
+  "Record series…":
+      "Grabar la serie…",
+  "Record series":
+      "Grabar la serie",
+  "Every showing of {title} on this channel":
+      "Cada emisión de {title} en este canal",
+  "Every showing of {title} on {channel}":
+      "Cada emisión de {title} en {channel}",
+  "Stop series recording":
+      "Dejar de grabar la serie",
+  "Series recording stopped. Recordings made stay.":
+      "Grabación de la serie detenida. Las grabaciones hechas se conservan.",
+  "Recordings made stay.":
+      "Las grabaciones hechas se conservan.",
+  "Cancels {count} scheduled. Recordings made stay.":
+      "Cancela {count} programada(s). Las grabaciones hechas se conservan.",
+  "Every airing":
+      "Cada emisión",
+  "Skip repeats":
+      "Omitir repeticiones",
+  "Not an episode it already has (same guide description)":
+      "No un episodio que ya tiene (misma descripción en la guía)",
+  "Series recording on. Airings are added as the guide lists them.":
+      "Grabación de serie activada. Las emisiones se añaden cuando la guía las muestra.",
+  "Series recording on: {count} scheduled":
+      "Grabación de serie activada: {count} programada(s)",
+  "{count} skipped (no free connection)":
+      "{count} omitida(s) (sin conexión libre)",
+  "Series recordings":
+      "Series grabadas",
+  "Waiting for the guide":
+      "Esperando la guía",
+  "{count} scheduled":
+      "{count} programada(s)",
+  "Next: {when}":
+      "Próxima: {when}",
+  "No repeats":
+      "Sin repeticiones",
+  // Compact UI (2026-11-10).
+  "Compact UI":
+      "Interfaz compacta",
+  "Smaller tabs, groups and channel rows so more fit on screen. Just for this profile.":
+      "Pestañas, grupos y filas de canales más pequeños para ver más en pantalla. Solo para este perfil.",
 };

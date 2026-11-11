@@ -139,17 +139,24 @@ class _NetworkFolderScreenState extends State<NetworkFolderScreen> {
     return r.error == null;
   }
 
-  Future<void> _save() async {
+  /// [use]: recordings and downloads go there. Without it (Save only),
+  /// this device keeps saving to itself and only browses the folder
+  /// (Recordings > On the network folder: copy to watch offline).
+  Future<void> _save({bool use = true}) async {
     final config = _config();
     if (config == null) return;
     if (!await _test(config)) return;
     final s = _service.settings;
-    await _service
-        .updateSettings(s.copyWith(network: config, folder: config.base));
+    final wasUsed = s.network != null && s.folder == s.network!.base;
+    await _service.updateSettings(use
+        ? s.copyWith(network: config, folder: config.base)
+        : s.copyWith(network: config, clearFolder: wasUsed));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(
-            tr('Saved. Recordings and downloads go to the network folder.'))));
+        content: Text(use
+            ? tr('Saved. Recordings and downloads go to the network folder.')
+            : tr(
+                'Saved. Its files show in Recordings; this device keeps saving to itself.'))));
     Navigator.of(context).maybePop();
   }
 
@@ -220,6 +227,11 @@ class _NetworkFolderScreenState extends State<NetworkFolderScreen> {
               tr('The user name and password stay on this device. Wi-Fi carries the video twice (in, then to the folder), so a wired connection or overnight downloads work best.'),
               style: const TextStyle(fontSize: 12, color: Colors.white60),
             ),
+            const SizedBox(height: 6),
+            Text(
+              tr('Taking a tablet on a trip? Set up the same folder on it with Save only, then copy what the TV saved there: Recordings > On the network folder.'),
+              style: const TextStyle(fontSize: 12, color: Colors.white60),
+            ),
             const SizedBox(height: 12),
             Align(
               alignment: Alignment.centerLeft,
@@ -256,6 +268,10 @@ class _NetworkFolderScreenState extends State<NetworkFolderScreen> {
                 focusNode: _saveFocus,
                 onPressed: _busy ? null : _save,
                 child: Text(tr('Save and use it')),
+              ),
+              OutlinedButton(
+                onPressed: _busy ? null : () => _save(use: false),
+                child: Text(tr('Save only')),
               ),
               if (saved)
                 TextButton(

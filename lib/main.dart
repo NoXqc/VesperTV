@@ -605,6 +605,43 @@ class _NoxIptvAppState extends State<NoxIptvApp>
     );
   }
 
+  /// Series recordings: new airings from the guide, the scheduled ones kept
+  /// in step with it. At startup, then after each guide update (the
+  /// guide only reaches a few days ahead, so a series fills in as it goes).
+  Future<void> _refreshSeriesRecordings() async {
+    final service = RecordingService.instance;
+    await service.init();
+    if (service.series.isEmpty) return;
+    await _epgService.init();
+    await _playlistManager.ensureLiveChannelsLoaded();
+    final channels = {
+      for (final c in [
+        ..._playlistManager.visibleChannels(category: 'tv'),
+        ..._playlistManager.hiddenLiveChannels(),
+      ])
+        c.id: c,
+    };
+    await service.refreshSeries(
+      channels: channels,
+      programmes: (c) => _epgService.upcomingPrograms(c.epgId),
+      maxConnections: (id) =>
+          _playlistManager.profiles
+              .where((p) => p.id == id)
+              .firstOrNull
+              ?.maxConnections ??
+          1,
+    );
+  }
+
+  DateTime? _seriesGuideStamp;
+
+  void _guideUpdatedForSeries() {
+    final stamp = _epgService.lastUpdated;
+    if (stamp == null || stamp == _seriesGuideStamp) return;
+    _seriesGuideStamp = stamp;
+    unawaited(_refreshSeriesRecordings());
+  }
+
   /// The splash is meant to be *seen*, not just theoretically present —
   /// a boot animation that only flashes for a fraction of a second reads
   /// as broken, not polished. On a normal day (no full sync due),
@@ -1076,11 +1113,21 @@ class _NoxIptvAppState extends State<NoxIptvApp>
           .then((_) => BackupService(_storage).maybeAutoBackup()));
       // Recordings: states of anything that ran while the app was closed,
       // then the auto-recorded team's next games (needs the guide).
-      if (RecordingService.supported) {
+      // Windows: downloads only (DesktopRecorder), resumed here.
+      if (RecordingService.downloadsSupported) {
         unawaited(StartupQuiet.after(const Duration(seconds: 4))
             .then((_) => RecordingService.instance.init()));
+      }
+      if (RecordingService.supported) {
         unawaited(Future<void>.delayed(const Duration(seconds: 60))
             .then((_) => _refreshAutoRecordings()));
+        unawaited(
+            Future<void>.delayed(const Duration(seconds: 75)).then((_) async {
+          if (!mounted) return;
+          _seriesGuideStamp = _epgService.lastUpdated;
+          _epgService.addListener(_guideUpdatedForSeries);
+          await _refreshSeriesRecordings();
+        }));
       }
       unawaited(() async {
         await _playbackService.init();

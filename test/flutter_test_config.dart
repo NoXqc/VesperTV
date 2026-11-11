@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:nox_iptv/services/recording_service.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 /// Runs before every test file (Flutter's per-directory test config).
@@ -12,6 +13,10 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 /// network image threw `databaseFactory not initialized`. Give macOS the FFI
 /// factory so it behaves like the Windows host the tests were tuned on.
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
+  // Downloads run on Windows (DesktopRecorder) and Android, so a Windows
+  // host would show Download buttons the screens' tests never had; the
+  // downloader has its own tests.
+  RecordingService.debugDownloadsSupported = false;
   if (Platform.isMacOS) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;

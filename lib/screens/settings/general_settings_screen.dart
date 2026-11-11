@@ -383,6 +383,14 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                       ]),
                   _section('tabs', Icons.tab_outlined, tr('Tabs'), children: [
                     TvSwitchListTile(
+                      title: Text(tr('Compact UI')),
+                      subtitle: Text(tr(
+                          'Smaller tabs, groups and channel rows so more fit on screen. Just for this profile.')),
+                      value: context.watch<AppPreferences>().compactUi,
+                      onChanged: (v) =>
+                          context.read<AppPreferences>().setCompactUi(v),
+                    ),
+                    TvSwitchListTile(
                       title: Text(tr('Open groups as expanded catalog')),
                       subtitle: Text(tr(
                           'Movies and TV Shows groups open the full poster grid instead of the rows.')),
@@ -408,7 +416,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                     TvSwitchListTile(
                       title: Text(tr('Mini player on Home')),
                       subtitle: Text(tr(
-                          'The live channel you stop on plays at the top right of Home. OK opens it full screen; Play/Pause or hold OK turns it off.')),
+                          'OK on a live card plays it at the top right of Home, OK again opens it full screen (with Preview on highlight on, the card you stop on plays by itself). Play/Pause or hold OK turns it off.')),
                       value: context.watch<AppPreferences>().homeMiniPlayer,
                       onChanged: (v) =>
                           context.read<AppPreferences>().setHomeMiniPlayer(v),
@@ -459,10 +467,14 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                       onChanged: (v) =>
                           context.read<AppPreferences>().setHideArchive(v),
                     ),
-                    if (RecordingService.supported)
+                    if (RecordingService.downloadsSupported)
                       TvSwitchListTile(
-                        title: Text(tr('Hide Recordings')),
-                        subtitle: Text(tr('Removes the Recordings tab.')),
+                        title: Text(RecordingService.supported
+                            ? tr('Hide Recordings')
+                            : tr('Hide Downloads')),
+                        subtitle: Text(RecordingService.supported
+                            ? tr('Removes the Recordings tab.')
+                            : tr('Removes the Downloads tab.')),
                         value: context.watch<AppPreferences>().hideRecordings,
                         onChanged: (v) =>
                             context.read<AppPreferences>().setHideRecordings(v),

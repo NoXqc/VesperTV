@@ -1,0 +1,63 @@
+{
+ "meta": {
+  "id": "vesperdemo-open-movie-collection",
+  "type": "series",
+  "name": "Open Movie Collection",
+  "poster": "https://vespertv.app/demo/art/ed.jpg",
+  "background": "https://vespertv.app/demo/art/bg-ed.jpg",
+  "description": "Blender's open movies, one per episode: the films that started open animation.",
+  "releaseInfo": "2006",
+  "runtime": "11 min",
+  "genres": [
+   "Animation",
+   "Science Fiction"
+  ],
+  "videos": [
+   {
+    "id": "vesperdemo-open-movie-collection-1-1",
+    "title": "Elephants Dream",
+    "season": 1,
+    "episode": 1,
+    "released": "2006-01-01T00:00:00.000Z",
+    "thumbnail": "https://vespertv.app/demo/art/bg-ed.jpg",
+    "overview": "Two men explore a strange, endless machine, and disagree about what it is. The first open movie."
+   },
+   {
+    "id": "vesperdemo-open-movie-collection-1-2",
+    "title": "Big Buck Bunny",
+    "season": 1,
+    "episode": 2,
+    "released": "2008-01-01T00:00:00.000Z",
+    "thumbnail": "https://vespertv.app/demo/art/bg-bbb.jpg",
+    "overview": "A giant, gentle rabbit takes revenge on three bullying rodents in a comedy from the Blender Institute."
+   },
+   {
+    "id": "vesperdemo-open-movie-collection-1-3",
+    "title": "Sintel",
+    "season": 1,
+    "episode": 3,
+    "released": "2010-01-01T00:00:00.000Z",
+    "thumbnail": "https://vespertv.app/demo/art/bg-sintel.jpg",
+    "overview": "A lonely young woman searches the world for the baby dragon she raised and lost."
+   },
+   {
+    "id": "vesperdemo-open-movie-collection-1-4",
+    "title": "Tears of Steel",
+    "season": 1,
+    "episode": 4,
+    "released": "2012-01-01T00:00:00.000Z",
+    "thumbnail": "https://vespertv.app/demo/art/bg-tos.jpg",
+    "overview": "In a future Amsterdam, a group of scientists tries to save the world from robots by restaging a breakup that went wrong."
+   },
+   {
+    "id": "vesperdemo-open-movie-collection-1-5",
+    "title": "Cosmos Laundromat",
+    "season": 1,
+    "episode": 5,
+    "released": "2015-01-01T00:00:00.000Z",
+    "thumbnail": "https://vespertv.app/demo/art/bg-cosmos.jpg",
+    "overview": "On a desolate island, a suicidal sheep meets a mysterious salesman who offers him the gift of a lifetime."
+   }
+  ]
+ }
+}

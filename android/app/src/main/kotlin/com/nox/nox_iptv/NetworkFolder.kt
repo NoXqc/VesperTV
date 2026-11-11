@@ -239,6 +239,134 @@ object NetworkFolder {
         }
     }
 
+    // ------------------------------------------- browsing, details, copying
+
+    private val VIDEO = setOf("mkv", "mp4", "m4v", "avi", "ts", "webm", "mov")
+    const val DETAILS_DIR = ".vespertv"
+
+    /**
+     * The details file of [url] (title, poster…, written by the device that
+     * saved it): `dir/.vespertv/<name>.json` beside the video, so another
+     * device browsing the folder shows a real card.
+     */
+    fun detailsUrl(url: String): String {
+        val slash = url.lastIndexOf('/')
+        return url.substring(0, slash) + "/" + DETAILS_DIR + "/" + url.substring(slash + 1) + ".json"
+    }
+
+    /** Writes [text] to [url] (replacing it), creating its folders. */
+    fun writeText(context: Context, url: String, text: String) {
+        val loc = parse(url) ?: throw java.io.IOException("bad network path")
+        mount(context, loc).use { m ->
+            openForWrite(m.share, loc.path, false).use { f ->
+                f.write(text.toByteArray(Charsets.UTF_8), 0)
+            }
+        }
+    }
+
+    /** Writes [details] beside a finished file; never fails the caller. */
+    fun writeDetails(context: Context, url: String, details: String?) {
+        if (details.isNullOrEmpty() || !isSmb(url)) return
+        try {
+            writeText(context, detailsUrl(url), details)
+        } catch (e: Throwable) {
+            Log.w(TAG, "details not written: ${e.javaClass.simpleName}")
+        }
+    }
+
+    /**
+     * Every video in the saved folder (and its subfolders, 3 deep), as JSON:
+     * `[{path, name, size, modified, details}]`, details = the `.vespertv`
+     * file's text or absent. Throws when the folder can't be reached.
+     */
+    fun list(context: Context): String {
+        val config = load(context) ?: throw java.io.IOException("No network folder")
+        val loc = parse(config.base) ?: throw java.io.IOException("bad network path")
+        val out = org.json.JSONArray()
+        mount(context, loc).use { m ->
+            fun walk(dir: String, url: String, depth: Int) {
+                if (dir.isNotEmpty() && !m.share.folderExists(dir)) return
+                val entries = m.share.list(dir).filter { it.fileName != "." && it.fileName != ".." }
+                val isDir = { e: com.hierynomus.msfscc.fileinformation.FileIdBothDirectoryInformation ->
+                    (e.fileAttributes and FileAttributes.FILE_ATTRIBUTE_DIRECTORY.value) != 0L
+                }
+                val details = HashMap<String, String>()
+                if (entries.any { isDir(it) && it.fileName == DETAILS_DIR }) {
+                    val dd = if (dir.isEmpty()) DETAILS_DIR else "$dir\\$DETAILS_DIR"
+                    for (d in m.share.list(dd)) {
+                        if (!d.fileName.endsWith(".json") || d.endOfFile > 64 * 1024) continue
+                        try {
+                            openForRead(m.share, "$dd\\${d.fileName}").use { f ->
+                                val buf = ByteArray(d.endOfFile.toInt())
+                                var at = 0
+                                while (at < buf.size) {
+                                    val n = f.read(buf, at.toLong(), at, buf.size - at)
+                                    if (n <= 0) break
+                                    at += n
+                                }
+                                details[d.fileName.removeSuffix(".json")] = String(buf, 0, at, Charsets.UTF_8)
+                            }
+                        } catch (_: Exception) {}
+                    }
+                }
+                for (e in entries) {
+                    val name = e.fileName
+                    if (name.startsWith(".")) continue
+                    val childUrl = "$url/$name"
+                    if (isDir(e)) {
+                        if (depth < 3) walk(if (dir.isEmpty()) name else "$dir\\$name", childUrl, depth + 1)
+                        continue
+                    }
+                    if (name.substringAfterLast('.', "").lowercase() !in VIDEO) continue
+                    val o = JSONObject()
+                        .put("path", childUrl)
+                        .put("name", name)
+                        .put("size", e.endOfFile)
+                        .put("modified", e.lastWriteTime.toEpochMillis())
+                    details[name]?.let { o.put("details", it) }
+                    out.put(o)
+                }
+            }
+            walk(loc.path, config.base, 0)
+        }
+        return out.toString()
+    }
+
+    /**
+     * Reads [url] from byte [from] (a copy to this device resuming): the
+     * stream and the file's size. Closing the stream closes the connection.
+     */
+    fun input(context: Context, url: String, from: Long): Pair<java.io.InputStream, Long> {
+        val loc = parse(url) ?: throw java.io.IOException("bad network path")
+        val m = mount(context, loc)
+        try {
+            if (!m.share.fileExists(loc.path)) throw java.io.FileNotFoundException("gone")
+            val f = openForRead(m.share, loc.path)
+            val size = f.fileInformation.standardInformation.endOfFile
+            val stream = object : java.io.InputStream() {
+                var pos = from
+                override fun read(): Int {
+                    val one = ByteArray(1)
+                    return if (read(one, 0, 1) <= 0) -1 else one[0].toInt() and 0xff
+                }
+                override fun read(b: ByteArray, off: Int, len: Int): Int {
+                    if (pos >= size) return -1
+                    val n = f.read(b, pos, off, minOf(len.toLong(), size - pos).toInt())
+                    if (n > 0) pos += n
+                    return n
+                }
+                override fun close() {
+                    try { f.close() } catch (_: Exception) {}
+                    m.close()
+                }
+            }
+            return stream to size
+        } catch (e: Throwable) {
+            m.close()
+            throw e
+        }
+    }
+
     /** Settings' Test button: connect, write a probe, report the space. */
     fun test(context: Context, config: Config): Map<String, Any> = try {
         val loc = parse(config.base) ?: throw java.io.IOException("bad address")

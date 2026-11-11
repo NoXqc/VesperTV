@@ -40,6 +40,9 @@ class AppPreferences extends ChangeNotifier {
   late bool guideExpanded;
   late bool guideCompact;
 
+  /// Smaller tabs, groups and channel rows in the TV home (per viewer).
+  late bool compactUi;
+
   /// Live list / Timeline guide: the channel the remote stops on plays in
   /// the preview (opt-in, per viewer like the other guide settings).
   late bool guideFocusPreview;
@@ -422,6 +425,7 @@ class AppPreferences extends ChangeNotifier {
     guideFullVideo = _storage.getGuideFullVideo();
     guideExpanded = _storage.getGuideExpanded();
     guideCompact = _storage.getGuideCompact();
+    compactUi = _storage.getCompactUi();
     guideFocusPreview = _storage.getGuideFocusPreview();
     expandedBrowse = _storage.getExpandedBrowse();
     wideCards = _storage.getWideCards();
@@ -474,6 +478,7 @@ class AppPreferences extends ChangeNotifier {
     guideFullVideo = _storage.getGuideFullVideo();
     guideExpanded = _storage.getGuideExpanded();
     guideCompact = _storage.getGuideCompact();
+    compactUi = _storage.getCompactUi();
     guideFocusPreview = _storage.getGuideFocusPreview();
     notifyListeners();
   }
@@ -539,6 +544,12 @@ class AppPreferences extends ChangeNotifier {
   void setWideCards(bool value) {
     wideCards = value;
     _storage.setWideCards(value);
+    notifyListeners();
+  }
+
+  void setCompactUi(bool value) {
+    compactUi = value;
+    _storage.setCompactUi(value);
     notifyListeners();
   }
 

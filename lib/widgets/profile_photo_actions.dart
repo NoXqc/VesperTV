@@ -14,11 +14,34 @@ class ProfilePhotoActions extends StatefulWidget {
       required this.onPhoto,
       required this.onRemove,
       this.hasPhoto = false,
-      this.skipNode});
+      this.skipNode,
+      this.kind = PairingKind.photo,
+      this.maxBytes = ProfilePhotos.maxBytes,
+      this.errorText,
+      this.autofocus = false,
+      this.firstFocusNode});
   final Future<void> Function(Uint8List) onPhoto;
   final VoidCallback onRemove;
   final bool hasPhoto;
   final FocusNode? skipNode;
+
+  /// [PairingKind.wallpaper] for Home's wallpaper (16:9 from the phone).
+  final PairingKind kind;
+
+  /// Largest file "Choose a photo" accepts (computers).
+  final int maxBytes;
+
+  /// Translated error, else the profile photo's ("under 2 MB").
+  final String? errorText;
+
+  /// Focus the first button (in a dialog the remote needs a target).
+  final bool autofocus;
+
+  /// The first button's node (focus goes back to it after Remove).
+  final FocusNode? firstFocusNode;
+
+  String get _error =>
+      errorText ?? tr('Could not read photo. Choose a JPEG or PNG under 2 MB.');
   @override
   State<ProfilePhotoActions> createState() => _ProfilePhotoActionsState();
 }
@@ -40,9 +63,8 @@ class _ProfilePhotoActionsState extends State<ProfilePhotoActions> {
       await widget.onPhoto(bytes);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(
-                tr('Could not read photo. Choose a JPEG or PNG under 2 MB.'))));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(widget._error)));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -59,15 +81,14 @@ class _ProfilePhotoActionsState extends State<ProfilePhotoActions> {
             uniformTypeIdentifiers: ['public.jpeg', 'public.png'])
       ]);
       if (file == null) return;
-      if (await file.length() > ProfilePhotos.maxBytes) {
+      if (await file.length() > widget.maxBytes) {
         throw const FormatException('Too large');
       }
       await _accept(await file.readAsBytes());
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(
-                tr('Could not read photo. Choose a JPEG or PNG under 2 MB.'))));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(widget._error)));
       }
     }
   }
@@ -82,7 +103,7 @@ class _ProfilePhotoActionsState extends State<ProfilePhotoActions> {
                     child: SingleChildScrollView(
                         padding: const EdgeInsets.all(24),
                         child: PhonePairPanel(
-                            kind: PairingKind.photo,
+                            kind: widget.kind,
                             toggleFocusNode: node,
                             onResult: (r) => Navigator.pop(ctx, r.photo)))))));
     if (photo != null && mounted) await _accept(photo);
@@ -92,6 +113,8 @@ class _ProfilePhotoActionsState extends State<ProfilePhotoActions> {
   Widget build(BuildContext context) =>
       Wrap(spacing: 12, runSpacing: 8, children: [
         OutlinedButton.icon(
+            autofocus: widget.autofocus,
+            focusNode: widget.firstFocusNode,
             onPressed: _busy ? null : _qr,
             icon: const Icon(Icons.qr_code),
             label: Text(tr('Scan with your phone to add a photo'))),

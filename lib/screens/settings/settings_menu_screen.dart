@@ -45,6 +45,7 @@ import 'sports_phone_notifications_settings_screen.dart';
 import 'sports_odds_settings_screen.dart';
 import 'sports_quality_settings_screen.dart';
 import 'playlist_editor_screen.dart';
+import 'home_wallpaper_screen.dart';
 import 'vesper_ai_settings_screen.dart';
 import '../../utils/app_store.dart';
 import '../../utils/desktop_platform.dart';
@@ -342,12 +343,17 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
         _Category(
           Icons.tune,
           tr('General'),
-          tr('Language and clock, what plays when the app starts, Fast startup, clearing your history, and remote tips.'),
+          tr('Language and clock, what plays when the app starts, Fast startup, your Home wallpaper, clearing your history, and remote tips.'),
           [
             _general('language', Icons.translate, tr('Language'),
                 tr('App language and 24-hour clock')),
             _general('startup', Icons.power_settings_new, tr('Startup'),
                 tr('Resume the last channel, Fast startup')),
+            _Entry(
+                Icons.wallpaper,
+                tr('Home wallpaper'),
+                tr('A picture of your own behind Home.'),
+                (_) => const HomeWallpaperScreen()),
             _general('history', Icons.history, tr('History'),
                 tr('Clear searches, channels, Continue Watching')),
             _Entry(
@@ -389,6 +395,12 @@ class _SettingsMenuScreenState extends State<SettingsMenuScreen> {
                   Icons.fiber_smart_record_outlined,
                   tr('Recordings'),
                   tr('Margins, space and where recordings are saved'),
+                  (_) => const RecordingSettingsScreen())
+            else if (RecordingService.downloadsSupported)
+              _Entry(
+                  Icons.download_outlined,
+                  tr('Downloads'),
+                  tr('Speed, space and where downloads are saved'),
                   (_) => const RecordingSettingsScreen()),
             _Entry(
                 Icons.bug_report_outlined,
@@ -654,7 +666,10 @@ class _Footer extends StatelessWidget {
             '${tr('This product uses the TMDB API but is not endorsed or certified by TMDB.')} '
             // Credit for the watch trackers (Settings > Trakt & Simkl),
             // owner 2026-10-19.
-            '${tr('Watch tracking powered by Trakt and Simkl; VesperTV is not affiliated with or endorsed by either.')}',
+            '${tr('Watch tracking powered by Trakt and Simkl; VesperTV is not affiliated with or endorsed by either.')} '
+            // Sports Trak data credit + non-affiliation (owner, 2026-11-11):
+            // ESPN's public endpoints, TheSportsDB, IntroDB.
+            '${tr('Sports data from ESPN and TheSportsDB, skip intro timings from IntroDB. VesperTV is not affiliated with or endorsed by them, or by any league or team shown.')}',
             style: small,
           ),
         ),

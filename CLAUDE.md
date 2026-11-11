@@ -383,7 +383,75 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
-- **Claude, 2026-11-09 - merged on local main (3f49f15, not pushed/released/built; owner tests later):** QMJHL league
+- **Claude, 2026-11-11 - playlist editor Move / Copy to group (main, uncommitted, not released):** owner: tick
+  several channels in the editor and change their group; Move and Copy clearly different; destination = a custom
+  (own) group or a group of any playlist. Editor Channels bar: Move to group… / Copy to group… / Reset group, applied on
+  the TV at once. `UserGroups` gets `pmoves` + `copies` (`GroupRef`), `PlaylistManager._withPlaced` lists them, sync maps
+  the ids; TV hold OK on a copy = Remove from group / Move Up / Down. Limits revisited the same day: provider groups
+  that receive channels keep their own order (`porder`), Search/Multiview follow the destination's hidden state
+  (`_flatPlaced`), kids profiles can use it but a placement never shows a group their allowlist hides. Not
+  box-tested. `dev-notes/editor-group-move-copy.md`.
+  Same day: the game menu's channel rows name the playlist when the sources span playlists (`sports_screen.dart`).
+- **Claude, 2026-11-11 - EuroCup + Basketball Champions League, ESPN/TheSportsDB/IntroDB credits (main, uncommitted):**
+  Discord request (Black1914). Two bank leagues right after EuroLeague (`basketball.eurocup` TheSportsDB 4547,
+  `basketball.bcl` 4548; no tables, free-key 3 games/day goes through the round fetch; series phrases are the full
+  names, never a bare "champions league" = football). Greek EuroCup spellings are a guess, unverified. TheSportsDB's
+  free key 429s fast (Retry-After 80 s+): probe ids one request at a time. Owner also asked for explicit
+  non-affiliation text: README Credits, site footer and the Settings credits footer (one new `tr()` string, FR/ES/IT/EL/DE)
+  now say ESPN, TheSportsDB, IntroDB and the leagues/teams shown are not affiliated/endorsing. Legal context discussed:
+  public unauthenticated endpoints, called from each device, cached; no 429/Retry-After backoff on the ESPN path yet.
+- **Claude, 2026-11-10 - release 1.0.64 (beta), +710 (latest):** owner said "merge and commit the last branches then
+  cutr". Android only; Windows stays 1.0.61, Linux 1.0.63 (+702). Everything merged to main since 1.0.63: record a show
+  to come + series recording, Compact UI (both below), downloads + network folder (+699..+702), Home live card + wallpaper
+  (+704, +706 mini player keys, +707 wallpaper behind Who's watching), player drawer "This game", phone player in the
+  iPhone's look, QMJHL, event channels sharing one EPG id, hub title pages from a metadata add-on, Vesper audio/subtitle
+  phrases, Back from Home fix. `claude/windows-parity-2` is merged but not shipped (no Windows build). Site/README
+  "Next release" tags removed. Analyze 16, 1779 tests. Notes: dev-notes/releases/1.0.64.md. Next build > 710.
+- **Claude, 2026-11-10 - Compact UI (released in 1.0.64):** Settings > Interface > Tabs > Compact UI (owner: some
+  apps use a smaller UI). Per profile (`vesper_compact_ui` via `_vk`, no fallback to Main's value: a new profile
+  starts off). TV home only: slim top bar, tabs 136 / groups 220 wide, tighter rows + smaller text, Timeline rows 40
+  with one-line titles, channel column 136. Top-level `_compactUi` set each build. `dev-notes/compact-ui.md`.
+- **Claude, 2026-11-10 - record a show to come + series recording (`claude/series-recording`, released in 1.0.64):**
+  owner: no way to record an upcoming programme from Live TV, nor a series. Android only. Timeline hold OK on a
+  future block = **Record this show** (focused, first) + **Record series…** (Every airing / Skip repeats = same guide
+  description); also on a show on now (records it at once), the plain list, and the player's Channel schedule dialog.
+  `SeriesRule` in recordings.json (channel id + `seriesTitleKey`), `RecordingService.addSeries/refreshSeries/stopSeries`,
+  `EpgService.upcomingPrograms`; refresh 75 s after startup + after each guide update (new airings only while the
+  app runs; scheduled ones fire closed). 8 days / 20 airings per series, conflicts skipped, cancelled airings remembered.
+  Red dot on scheduled Timeline blocks, Recordings > Series cards. Not box-tested. `dev-notes/series-recording.md`.
+- **Claude, 2026-11-10 - +707 player drawer "This game" + wallpaper behind Who's watching (main, pushed, not released):**
+  Left in the full-screen live player (`PlayerSidePanel`, Android + Windows) gets a first tab **This game** when the
+  playing channel shows one of the viewer's live / about-to-start games (`gameOnChannel` in sports_channel_matcher:
+  exact channel > quality copy (`channelCopyKey`), then pick > evidence > live > score). Sources = Sports Trak's list
+  (`SportsChannelLists.mergeAddedSources`, shared with `_rematch`), WATCHING tag, OK = switch + save as the game's pick.
+  Panel stays 400 wide (owner: the stats pop-up opens to its right). Test APK +707 on the /dl/ link (owner testing).
+  Home wallpaper page: switch "Also behind \"Who is watching?\"" (per viewer, `keyWallpaperOnProfiles`, not
+  transferred); the startup selector crossfades to the highlighted viewer's wallpaper. Not built yet. Site + README
+  refreshed the same day (Linux card, new screenshots, "Next release" tags: `dev-notes/branding-and-site.md`).
+  Next build > 707.
+- **Claude, 2026-11-10 - Home live channel look + Home wallpaper (test +704, merged to main, not released):** Discord
+  idea (Kal-el23). Focused live card: logo large + LIVE, programme title, channel + times, guide description
+  (`_LiveHero`); glow in the logo's colours (`services/logo_colors.dart`), theme colour for white/grey logos.
+  **Settings > General > Home wallpaper** (per viewer, a file: never transferred; From phone = `PairingKind.wallpaper`,
+  1920x1080 crop in pair.html) supersedes the glow (owner); art and game backdrops keep their own. Mini player got a
+  2 px light frame + shadow. Owner-tested +703/+704 on the Formuler ("Very nice", "Sits nice"). Details:
+  `dev-notes/home-look.md`. **+706 Home mini player keys** (owner, like the guide): OK on a live card = mini player,
+  OK on the playing card = full screen, Play/Pause = off (plays the card only when nothing plays); resting on a card
+  plays only with Preview on highlight on (`_scheduleMini`). No mini player / recording conflict = full screen.
+  Next build > 706.
+- **Claude, 2026-11-10 - +702 (main 75a905f, pushed, not released): copy from the network folder** (owner: box downloads
+  overnight, tablet copies them before a trip). Finished network files get `.vespertv/<file>.json` details; Recordings >
+  On the network folder lists the share; OK = Copy to this device (a download from `smb://`, no speed/connection
+  limit) or Play from it; Settings > Network folder > Save only. Details: dev-notes/downloads.md. Not device-tested;
+  APK `…/dl/767QiZBxaOhL/VesperTV-test-702.apk` (Formuler still unreachable). Next build > 702.
+- **Claude, 2026-11-10 - test +701 (main fec820a, pushed, not released):** owner confirmed the downloads path: Tonight
+  at 2:00 saved 72 Hours (4.46 GB MKV) to the SMB share, played and seeked from it. +701 adds: Recordings download
+  card = the poster's own colours (was the Sports Trak sheen, a flat gold block) + network-folder size in the footer;
+  tennis skips ESPN's summary (HTTP 400) and any 4xx summary isn't retried (stays null: goal alerts rely on it);
+  landscape phone guide + Vesper keyboard inset ported from the iOS branch; built-in audio/subtitle voice phrases
+  (`_tracks`, dev-notes/vesper-ai.md). Analyze 16, 1722 tests. Formuler didn't answer on 10.0.0.46: APK on
+  `pair.vespertv.app/dl/767QiZBxaOhL/VesperTV-test-701.apk`. Next build > 701.
+- **Claude, 2026-11-09 - merged on local main (3f49f15, pushed 2026-11-10, not released):** QMJHL league
   (31d26cc), guide fix below (f1f64f2), `claude/phone-safe-area` (Settings `SafeArea(top: false)`, Android 15 nav
   bar) and `claude/downloads` (entry below). Analyze 16, 1713 tests. Next build > 700.
 - **Claude, 2026-11-09 - event channels sharing one EPG id (f1f64f2):** a provider gives `tsn4mel` to 61 event
@@ -410,8 +478,9 @@ Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, h
   bar: fade instead of the black band, title + clock + compact EPG line, **Sources** for Media Hub (touch had no Right
   key). TV boxes unchanged (remote bar + options row). `test/player_touch_layout_test.dart`. iOS side lives on
   `claude/appstore-build` (`DesktopPlayerScreen` touch layout, PiP, background audio; dev-notes/ios.md there).
-- **Claude, 2026-11-09 - release 1.0.63 (beta), +698 (latest):** owner said "/cutr". Android only; Windows/Linux stay
-  1.0.61 (the Home mini player's Windows path was never run). New version name because the updater compares tag vs
+- **Claude, 2026-11-09 - release 1.0.63 (beta), +698 (latest):** owner said "/cutr". Android +698; Windows stays
+  1.0.61 (the Home mini player's Windows path was never run). **Linux** `VesperTV-1.0.63-702-linux-x64.tar.gz` added
+  2026-11-10 (owner asked; `claude/linux-build` 29347e8 = main 2a70e8e merged, CI build; README points at it). New version name because the updater compares tag vs
   versionName. Includes the +695 batch below (Home mini player, compact Settings, stream language ranking, MKV Atmos
   labels, Vesper AI media_hub tool) plus: Media Hub **largest file = largest with the viewer's language**, alone or among
   others (`ArchivePlaybackPreferences.languageTier` capped at 2) and it wins over Auto-play; Vesper AI `media_hub`

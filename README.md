@@ -16,8 +16,8 @@ No ads, no tracking, no account. VesperTV ships no content: you bring the source
 Built and tested on Android TV boxes (Formuler), Fire TV sticks, phones and Windows. It also runs on
 Linux, including the **Steam Deck**.
 
-> **Android gets new features first.** Windows caught up in **1.0.61**, and 1.0.61 is also the first
-> Linux build (beta).
+> **Android gets new features first.** Windows caught up in **1.0.61**; the Linux build (beta) is on
+> **1.0.63**.
 
 ## Download
 
@@ -29,8 +29,8 @@ Grab the latest release from the [Releases](../../releases) page or
   Later updates install from **Settings > Check for updates**.
 - **Windows 10/11 (64-bit)**: `VesperTV-windows-x64.zip` from the
   [latest release](../../releases/latest) — unzip, then run `VesperTV.exe`.
-- **Linux (beta, x64)**: `VesperTV-1.0.61-683-linux-x64.tar.gz` from the
-  [1.0.61 release](../../releases/tag/1.0.61). **Works on the Steam Deck** (SteamOS) and on
+- **Linux (beta, x64)**: `VesperTV-1.0.63-702-linux-x64.tar.gz` from the
+  [1.0.63 release](../../releases/tag/1.0.63). **Works on the Steam Deck** (SteamOS) and on
   Ubuntu 24.04+ / Linux Mint 22+. It needs the system libmpv (`sudo apt install libmpv2`); on a
   Steam Deck, run it in Desktop Mode inside an Ubuntu 24.04 [distrobox](https://distrobox.it/).
   Extract, then run `./vespertv`. No automatic updates on Linux yet.
@@ -43,14 +43,16 @@ Grab the latest release from the [Releases](../../releases) page or
 ## Screenshots
 
 <p align="center">
+  <img src="docs/assets/shot-home.jpg" width="49%" alt="Home: the focused live channel with its programme, a small live player at the top right, and rows of favourite channels and new movies">
+  <img src="docs/assets/shot-player-options.jpg" width="49%" alt="The full-screen player with its options row: channels, stream info, recent, reload, subtitles, audio sync, buffer, Multiview, fill and search">
   <img src="docs/assets/shot-guide.png" width="49%" alt="Timeline guide">
   <img src="docs/assets/shot-live.png" width="49%" alt="Live guide with now/next details">
   <img src="docs/assets/shot-movies.jpg" width="49%" alt="Movies browse with an HD backdrop banner">
   <img src="docs/assets/shot-show-page.jpg" width="49%" alt="TV show page with seasons and episodes">
   <img src="docs/assets/shot-movie-page.jpg" width="49%" alt="Movie page with backdrop and details">
-  <img src="docs/assets/shot-expand-catalog.jpg" width="49%" alt="Expanded movie catalog">
   <img src="docs/assets/shot-add.png" width="49%" alt="Add Playlist">
   <img src="docs/assets/shot-group-menu.png" width="49%" alt="Hold Select on a group: expand catalog, favourite, hide">
+  <img src="docs/assets/shot-multiview.jpg" width="49%" alt="Multiview 1 + 3: one big screen with the sound, three small ones beside it">
 </p>
 
 ### Sports Mode (beta) and profiles
@@ -70,14 +72,21 @@ Grab the latest release from the [Releases](../../releases) page or
   <img src="docs/assets/shot-playlist-editor-dupes.jpg" width="49%" alt="Playlist editor Duplicates tab: keep the best copy of each channel, the others become fallbacks">
 </p>
 
+### Downloads and the network folder
+
+<p align="center">
+  <img src="docs/assets/shot-downloads.jpg" width="49%" alt="Recording and download settings: margins, space, a download speed limit, a suggested overnight start, and where to save">
+  <img src="docs/assets/shot-network-folder.jpg" width="49%" alt="Network folder: record and download to a shared folder on a computer or NAS">
+</p>
+
 ## Sports Trak
 
 <p align="center">
   <img src="docs/assets/shot-sports.jpg" width="49%" alt="Sports: today's games with live scores and the channel each one is on">
+  <img src="docs/assets/shot-sports-guide.jpg" width="49%" alt="Sports Trak's Guide layout: a game playing beside the matchup, and the day's games as a list with their channels">
   <img src="docs/assets/shot-my-teams.jpg" width="49%" alt="My Teams: record, standing, mini table and the next two weeks of games">
   <img src="docs/assets/shot-standings.png" width="49%" alt="Standings by conference">
   <img src="docs/assets/shot-follow.png" width="49%" alt="Hold OK on a team to follow it">
-  <img src="docs/assets/shot-live-stats.jpg" width="49%" alt="Live stats over the game: score, top performers, box score and the channels it's on">
 </p>
 
 - **Scores & schedule** for NHL, NFL, NBA, MLB, WNBA, college football, MLS, Premier League,
@@ -122,8 +131,9 @@ Grab the latest release from the [Releases](../../releases) page or
 - **Catch-up TV on Android**: replay earlier programmes from the Timeline guide,
   watch from the start, pause/resume live TV and jump back to live — on channels
   where your provider offers catch-up. [Controls and setup](https://vespertv.app/remote.html#Live%20TV)
-- **Recording (Android):** record a live channel or a Sports Trak game, schedule from the
-  Channel schedule (or set a reminder), auto-record a team, to the box's storage or USB/SD.
+- **Recording (Android):** record a live channel or a Sports Trak game, a show that is on later
+  (hold OK on it in the Timeline guide) or a whole **series** (every airing of a show, or
+  skipping repeats), auto-record a team, to the box's storage or USB/SD or a network folder.
 - **Your channels, your way:** favourite channels and groups (across playlists, your own order
   or A-Z), your own groups, move and rename channels, hide groups and channels, sort groups,
   Recent channels, and an opt-in **Recently added** group.
@@ -144,6 +154,8 @@ Grab the latest release from the [Releases](../../releases) page or
   buttons where timings are known (Android).
 - **Multiview:** two, four, or 1 + 3 with Swap mode, with **Live now** (games on right now and
   every channel found for each) and **Sports** shortcuts in the channel picker.
+- **Side panel** (Left in the full-screen live player): Last channels, My Teams and Live now.
+  A **This game** tab lists every other channel showing the game you're watching.
 - Phone picture-in-picture and a touch lock.
 
 ### Movies and TV shows
@@ -154,6 +166,10 @@ Grab the latest release from the [Releases](../../releases) page or
 - **Notify me** on a show: a **New episodes** row on Home and an Android notification, even with
   the app closed.
 - Continue watching, Watch list rows, mark a whole season watched, and the next episode's air date.
+- **Downloads (Android):** download a movie, an episode or a whole season to watch
+  offline. It suggests tonight at 2:00, at a speed that looks like someone watching, and saves to
+  the box or to a **network folder** (a shared folder on a computer or NAS), where a tablet can
+  copy it before a trip.
 
 ### Media Hub
 
@@ -181,7 +197,10 @@ or AI apps. [See below](#vesper-ai).
 - **Viewer profiles** with photos and an optional PIN, and **Kids profiles** limited to the
   groups you allow. Each keeps its own favourites, history, Media Hub, colours and guide layout.
   Optional **Who's watching** at launch.
-- **Home:** Continue watching, Recent channels, New episodes, Watch list and today's games.
+- **Home:** Continue watching, Recent channels, New episodes, Watch list and today's games,
+  with a small player for live channels on TV boxes. A bigger live channel card and your own
+  Home wallpaper (optionally behind Who's watching too). **Compact UI** makes the tabs, groups and
+  channel rows smaller, per profile.
 - **Open on** the tab you choose, resume the last channel, fast startup, and catalog updates on
   your schedule (every hour to every few days), optionally in the background.
 
@@ -197,7 +216,8 @@ or AI apps. [See below](#vesper-ai).
   **Backup & restore** (it can also import M3U files and add-on lists from USB).
 - **Playlist editor (test flight):** clean up your playlists from your phone or PC — rename
   channels, change logos, rules that survive updates (remove `US| ` from every name, hide `PPV`),
-  hide lower-quality copies, rename / merge / reorder groups, fallback channels, link channels to
+  hide lower-quality copies, rename / merge / reorder groups, move or copy channels to another
+  group (yours or any playlist's), fallback channels, link channels to
   the guide, combine playlists, and an optional stream test. Your provider's playlist is never
   changed, and every change can be undone.
 - **From phone:** type keys, links and server logins on your phone instead of the remote.
@@ -279,7 +299,9 @@ development costs, you can [donate on Liberapay](https://liberapay.com/NoXQc/don
 - Watch tracking is powered by [Trakt](https://trakt.tv) and [Simkl](https://simkl.com).
   VesperTV is not affiliated with or endorsed by either.
 - Sports scores and schedules come from ESPN's public data and [TheSportsDB](https://www.thesportsdb.com/).
-- Skip intro / credits timings come from [IntroDB](https://introdb.app).
+  VesperTV is not affiliated with or endorsed by ESPN, TheSportsDB, or any league or team shown.
+- Skip intro / credits timings come from [IntroDB](https://introdb.app); VesperTV is not
+  affiliated with or endorsed by IntroDB.
 - The macOS build was contributed by [gmtherien](https://github.com/gmtherien).
 
 ## License and trademarks

@@ -1,0 +1,16 @@
+{
+ "meta": {
+  "id": "vesperdemo-cosmos",
+  "type": "movie",
+  "name": "Cosmos Laundromat",
+  "poster": "https://vespertv.app/demo/art/cosmos.jpg",
+  "background": "https://vespertv.app/demo/art/bg-cosmos.jpg",
+  "description": "On a desolate island, a suicidal sheep meets a mysterious salesman who offers him the gift of a lifetime.",
+  "releaseInfo": "2015",
+  "runtime": "12 min",
+  "genres": [
+   "Animation",
+   "Drama"
+  ]
+ }
+}

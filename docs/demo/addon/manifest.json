@@ -1,0 +1,36 @@
+{
+ "id": "app.vespertv.demo",
+ "version": "1.0.0",
+ "name": "VesperTV Demo",
+ "description": "Blender's open movies and public-domain films, free to share. Credits: https://vespertv.app/demo/",
+ "logo": "https://vespertv.app/demo/logos/one.png",
+ "resources": [
+  "catalog",
+  "meta",
+  "stream"
+ ],
+ "types": [
+  "movie",
+  "series"
+ ],
+ "idPrefixes": [
+  "vesperdemo-"
+ ],
+ "catalogs": [
+  {
+   "type": "movie",
+   "id": "open-movies",
+   "name": "Open Movies"
+  },
+  {
+   "type": "movie",
+   "id": "silent-classics",
+   "name": "Silent Classics"
+  },
+  {
+   "type": "series",
+   "id": "shows",
+   "name": "Shows"
+  }
+ ]
+}

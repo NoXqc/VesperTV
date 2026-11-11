@@ -212,7 +212,7 @@ class _BackupScreenState extends State<BackupScreen> {
                 enabled: !_busy,
                 onTap: _exportToFile,
               ),
-            if (Platform.isAndroid || Platform.isMacOS)
+            if (Platform.isAndroid || Platform.isMacOS || Platform.isIOS)
               TvMenuTile(
                 icon: Icons.folder_open,
                 title: tr('Restore from a file'),
@@ -221,15 +221,18 @@ class _BackupScreenState extends State<BackupScreen> {
                 enabled: !_busy,
                 onTap: _restoreFromFile,
               ),
-            TvMenuTile(
-              icon: Icons.usb,
-              title: tr('Import from storage'),
-              subtitle: tr(
-                  'Add M3U playlists, Media Hub sources or a backup from USB or external storage'),
-              enabled: !_busy,
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => const StorageImportScreen())),
-            ),
+            // iOS has no USB drives to browse: Restore from a file covers
+            // a backup in Files.
+            if (!Platform.isIOS)
+              TvMenuTile(
+                icon: Icons.usb,
+                title: tr('Import from storage'),
+                subtitle: tr(
+                    'Add M3U playlists, Media Hub sources or a backup from USB or external storage'),
+                enabled: !_busy,
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const StorageImportScreen())),
+              ),
             const Divider(height: 32),
             SectionLabel(tr('Backups')),
             const SizedBox(height: 4),
