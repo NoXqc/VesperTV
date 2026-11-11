@@ -1089,6 +1089,31 @@ void main() {
     await disposePage(tester);
   });
 
+  testWidgets('phone: a held league moves with the touch bar, Done ends it',
+      (tester) async {
+    await prefs.setSportsMode(false);
+    prefs.isTelevision = false;
+    await open(tester, feed: _Feed([]), size: const Size(390, 844));
+    expect(find.byTooltip('Move left'), findsNothing);
+    // The chip row scrolls sideways on a phone.
+    await tester.ensureVisible(find.text('NFL'));
+    await tester.pumpAndSettle();
+    await tester.longPress(find.text('NFL'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Move right'));
+    await tester.pumpAndSettle();
+    final right = List<String>.of(storage.getSportsLeagues()!);
+    await tester.tap(find.byTooltip('Move left'));
+    await tester.pumpAndSettle();
+    final left = storage.getSportsLeagues()!;
+    expect(left.indexOf('nfl'), right.indexOf('nfl') - 1);
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Move left'), findsNothing);
+    expect(tester.takeException(), isNull);
+    await disposePage(tester);
+  });
+
   for (final mode in [false, true]) {
     testWidgets(
         'compact league strip keeps full names in Edit leagues: mode=$mode',

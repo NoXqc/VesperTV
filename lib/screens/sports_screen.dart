@@ -1,4 +1,5 @@
 import '../widgets/glass_menu.dart';
+import '../widgets/gold_tag.dart';
 import '../utils/refined_finish.dart';
 import '../widgets/sports_league_rail.dart';
 import '../widgets/sports_mode_live_panel.dart';
@@ -1315,6 +1316,48 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
     });
   }
 
+  /// A phone has no Left / Right keys: while a league is in move mode
+  /// (hold its chip) this bar moves it and Done ends it (owner, 2026-11-11:
+  /// moving a league on the phone did nothing).
+  Widget _buildTouchMoveBar() {
+    final id = _movingLeague!;
+    final visible = _navigationLeagues;
+    final i = visible.indexWhere((l) => l.id == id);
+    // Sports Mode's rail stands beside the page on a wide screen.
+    final vertical = _modeActive && MediaQuery.sizeOf(context).width >= 800;
+    return SafeArea(
+      top: false,
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.85),
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+        child: Row(children: [
+          IconButton.filledTonal(
+            tooltip: vertical ? tr('Move up') : tr('Move left'),
+            icon: Icon(vertical ? Icons.arrow_upward : Icons.arrow_back),
+            onPressed: i > 0 ? () => _moveLeague(-1) : null,
+          ),
+          Expanded(
+            child: Text(sportsLeagueById(id)?.shortName ?? id,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          ),
+          IconButton.filledTonal(
+            tooltip: vertical ? tr('Move down') : tr('Move right'),
+            icon: Icon(vertical ? Icons.arrow_downward : Icons.arrow_forward),
+            onPressed: i >= 0 && i < visible.length - 1
+                ? () => _moveLeague(1)
+                : null,
+          ),
+          const SizedBox(width: 12),
+          FilledButton(onPressed: _endLeagueMove, child: Text(tr('Done'))),
+        ]),
+      ),
+    );
+  }
+
   Future<void> _openStandings() async {
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (pageContext) => SportsStandingsScreen(
@@ -1618,10 +1661,8 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
         // Compared with what the card shows (its list is also spread by
         // distinctCopiesFirst), not this menu's first row: choosing a first
         // row the card didn't show was never saved, so the card went back.
-        final shown = (gameMatches ?? _matches[_gameKey(game)])
-            ?.firstOrNull
-            ?.channel
-            .id;
+        final shown =
+            (gameMatches ?? _matches[_gameKey(game)])?.firstOrNull?.channel.id;
         if (channel.id != shown) {
           await _picks.pickForGame(game, channel.id);
           unawaited(_rematch());
@@ -2050,6 +2091,9 @@ class _SportsScreenState extends State<SportsScreen> with RouteAware {
             Positioned.fill(child: _TeamGlow(game: hero)),
             Scaffold(
               backgroundColor: Colors.transparent,
+              bottomNavigationBar: _touch && _movingLeague != null
+                  ? _buildTouchMoveBar()
+                  : null,
               body: SafeArea(
                 child: CallbackShortcuts(
                   bindings: _movingLeague != null
@@ -5881,6 +5925,8 @@ class _GameDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final showScore =
         game.state != GameState.pre && !hideScores && !game.isEventOnly;
+    final playlistsMixed =
+        matches.map((m) => m.channel.playlistId).toSet().length > 1;
     return GlassMenuDialog.custom(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 560, maxHeight: 520),
@@ -5998,10 +6044,20 @@ class _GameDialog extends StatelessWidget {
                         titleMaxLines: 2,
                         leading: _ChannelLogo(channel: matches[i].channel),
                         title: matches[i].channel.name,
-                        subtitle: matches[i].detail == null ||
-                                matches[i].reason == MatchReason.name
-                            ? matches[i].reason.label
-                            : '${matches[i].reason.label} · ${matches[i].detail}',
+                        subtitle: [
+                          // Two providers' TSN 1 look alike: name the
+                          // playlist when the sources come from several
+                          // (same rule as the player's "This game" tab).
+                          if (playlistsMixed)
+                            context
+                                .read<PlaylistManager>()
+                                .playlistNameFor(matches[i].channel.playlistId)
+                                .trim(),
+                          matches[i].detail == null ||
+                                  matches[i].reason == MatchReason.name
+                              ? matches[i].reason.label
+                              : '${matches[i].reason.label} · ${matches[i].detail}',
+                        ].where((s) => s.isNotEmpty).join(' · '),
                         onTap: () => Navigator.of(context)
                             .pop(_WatchAction(matches[i].channel)),
                       ),
@@ -6229,92 +6285,207 @@ class _ChannelPickerScreenState extends State<_ChannelPickerScreen> {
     setState(() => _query = q);
   }
 
+  /// The game above the search: both crests, the matchup and its time.
+  Widget _gameHeader(BuildContext context) {
+    final g = widget.game;
+    final status =
+        g.state == GameState.pre ? _timeLabel(g.start) : trSports(g.statusText);
+    Widget crest(String? url, String? fallback) =>
+        SportsLogo(url: url, size: 40, fallback: fallback);
+    return Row(
+      children: [
+        if (g.isEventOnly)
+          crest(g.league.logoUrl, g.league.shortName)
+        else ...[
+          crest(g.first.logoUrl, g.first.abbreviation),
+          const SizedBox(width: 6),
+          crest(g.second.logoUrl, g.second.abbreviation),
+        ],
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(g.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700)),
+              Text('${g.league.shortName}  ·  $status',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white60, fontSize: 12)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  OutlineInputBorder _pill(Color color, [double width = 1]) =>
+      OutlineInputBorder(
+        borderRadius: BorderRadius.circular(24),
+        borderSide: BorderSide(color: color, width: width),
+      );
+
   @override
   Widget build(BuildContext context) {
     final results = widget.matcher.search(_query);
     final epg = context.read<EpgService>();
+    final playlists = context.read<PlaylistManager>();
+    // Two providers' TSN 1 look alike: every row names its playlist as soon
+    // as the viewer has more than one (owner, 2026-11-10).
+    final namePlaylists = playlists.profiles.length > 1;
     return SportsScreenFrame(
         child: withTvThemeIfNeeded(
       context,
       (context) => SettingsScaffold(
-        title: tr('Pick the channel for {title}', {'title': widget.game.title}),
-        body: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                height: 44,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    for (final (i, s) in _suggestions.indexed)
-                      SportsChip(
-                        focusNode: _chipNodes[i],
-                        label: s,
-                        selected: _query == s,
-                        compact: true,
-                        onFocus: () {},
-                        onTap: () => _setQuery(s),
-                      ),
+        title: tr('Pick the channel'),
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: SportsBackdrop(
+                  logoUrl: widget.game.league.logoUrl,
+                  league: widget.game.league),
+            ),
+            Positioned.fill(child: _TeamGlow(game: widget.game)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Hidden while the keyboard is up: chips + field +
+                  // results must still fit above it.
+                  if (MediaQuery.viewInsetsOf(context).bottom == 0) ...[
+                    _gameHeader(context),
+                    const SizedBox(height: 12),
                   ],
-                ),
-              ),
-              const SizedBox(height: 6),
-              // TV: keyboard only on OK, so Down from the chips can pass the
-              // field to the results (Fire OS: the keyboard took the remote
-              // as soon as the field was focused).
-              TvTextFieldGate(
-                focusNode: _fieldNode,
-                builder: (context, readOnly) => TextField(
-                  controller: _controller,
-                  focusNode: _fieldNode,
-                  readOnly: readOnly,
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.search),
-                    hintText: tr('Search channels'),
+                  SizedBox(
+                    height: 44,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: [
+                        for (final (i, s) in _suggestions.indexed)
+                          SportsChip(
+                            focusNode: _chipNodes[i],
+                            label: s,
+                            selected: _query == s,
+                            compact: true,
+                            onFocus: () {},
+                            onTap: () => _setQuery(s),
+                          ),
+                      ],
+                    ),
                   ),
-                  onChanged: (v) => setState(() => _query = v),
-                  // Done / Fire OS Back: on to the results, never nothing.
-                  onSubmitted: (_) {
-                    if (_firstResult.context != null) {
-                      _firstResult.requestFocus();
-                    }
-                  },
-                ),
+                  const SizedBox(height: 8),
+                  // TV: keyboard only on OK, so Down from the chips can pass
+                  // the field to the results (Fire OS: the keyboard took the
+                  // remote as soon as the field was focused).
+                  TvTextFieldGate(
+                    focusNode: _fieldNode,
+                    builder: (context, readOnly) => TextField(
+                      controller: _controller,
+                      focusNode: _fieldNode,
+                      readOnly: readOnly,
+                      style: const TextStyle(fontSize: 15),
+                      decoration: InputDecoration(
+                        isDense: true,
+                        filled: true,
+                        fillColor: Colors.white.withValues(alpha: 0.06),
+                        prefixIcon: const Icon(Icons.search, size: 20),
+                        hintText: tr('Search channels'),
+                        border: _pill(Colors.white24),
+                        enabledBorder: _pill(Colors.white24),
+                        focusedBorder:
+                            _pill(Theme.of(context).colorScheme.primary, 2),
+                      ),
+                      onChanged: (v) => setState(() => _query = v),
+                      // Done / Fire OS Back: on to the results, never nothing.
+                      onSubmitted: (_) {
+                        if (_firstResult.context != null) {
+                          _firstResult.requestFocus();
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Expanded(
+                    // Glass panel: TvMenuTile draws its glass rows inside it,
+                    // like the hold menus.
+                    child: GlassMenuSurface(
+                      radius: 16,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+                            child: Text(
+                                results.isEmpty
+                                    ? tr('No channels match "{query}"',
+                                        {'query': _query})
+                                    : tr('{results}{p} channels', {
+                                        'results': results.length,
+                                        'p': results.length >= 200 ? '+' : ''
+                                      }),
+                                style: const TextStyle(
+                                    color: Colors.white54, fontSize: 12)),
+                          ),
+                          Expanded(
+                            child: ListView.builder(
+                              padding: const EdgeInsets.fromLTRB(6, 0, 6, 8),
+                              itemCount: results.length,
+                              itemBuilder: (context, i) {
+                                final c = results[i];
+                                final now =
+                                    epg.getCurrentProgram(c.epgId)?.title;
+                                final name = namePlaylists
+                                    ? playlists
+                                        .playlistNameFor(c.playlistId)
+                                        .trim()
+                                    : '';
+                                return Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 2),
+                                  child: TvMenuTile(
+                                    focusNode: i == 0 ? _firstResult : null,
+                                    titleMaxLines: 2,
+                                    leading: _ChannelLogo(channel: c),
+                                    title: c.name,
+                                    subtitle: now == null
+                                        ? c.group
+                                        : tr('{group} · Now: {now}',
+                                            {'group': c.group, 'now': now}),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (name.isNotEmpty)
+                                          ConstrainedBox(
+                                            constraints: const BoxConstraints(
+                                                maxWidth: 180),
+                                            child: GoldTag(label: name),
+                                          ),
+                                        const SizedBox(width: 4),
+                                        const Icon(Icons.chevron_right,
+                                            color: Colors.white54),
+                                      ],
+                                    ),
+                                    onTap: () => Navigator.of(context).pop(c),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                  results.isEmpty
-                      ? tr('No channels match "{query}"', {'query': _query})
-                      : tr('{results}{p} channels', {
-                          'results': results.length,
-                          'p': results.length >= 200 ? '+' : ''
-                        }),
-                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
-              const SizedBox(height: 4),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: results.length,
-                  itemBuilder: (context, i) {
-                    final c = results[i];
-                    final now = epg.getCurrentProgram(c.epgId)?.title;
-                    return TvMenuTile(
-                      focusNode: i == 0 ? _firstResult : null,
-                      titleMaxLines: 2,
-                      leading: _ChannelLogo(channel: c),
-                      title: c.name,
-                      subtitle: now == null
-                          ? c.group
-                          : tr('{group} · Now: {now}',
-                              {'group': c.group, 'now': now}),
-                      onTap: () => Navigator.of(context).pop(c),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     ));
