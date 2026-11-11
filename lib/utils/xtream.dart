@@ -14,7 +14,7 @@ class XtreamHelper {
     required String username,
     required String password,
   }) {
-    final base = _normalizeServer(server);
+    final base = normalizeServer(server);
     final user = Uri.encodeQueryComponent(username);
     final pass = Uri.encodeQueryComponent(password);
     return '$base/xmltv.php?username=$user&password=$pass';
@@ -44,10 +44,18 @@ class XtreamHelper {
     );
   }
 
-  static String _normalizeServer(String server) {
+  /// Trims trailing slashes and adds `http://` when the user typed only
+  /// the host (`vpn.example.online`, `host:8080`): without a scheme
+  /// `Uri.parse` sees no host and every request failed with "No host
+  /// specified in URI" (LOG-BP8TW5; other apps accept the bare host).
+  static String normalizeServer(String server) {
     var s = server.trim();
     while (s.endsWith('/')) {
       s = s.substring(0, s.length - 1);
+    }
+    if (s.isNotEmpty &&
+        !RegExp(r'^[a-z][a-z0-9+.-]*://', caseSensitive: false).hasMatch(s)) {
+      s = 'http://$s';
     }
     return s;
   }

@@ -531,7 +531,8 @@ class _AddPlaylistScreenState extends State<AddPlaylistScreen> {
       PlaylistProfile profile;
 
       if (mode == 'xtream') {
-        final server = _xtreamServerController.text.trim();
+        final server =
+            XtreamHelper.normalizeServer(_xtreamServerController.text);
         final username = _xtreamUsernameController.text.trim();
         final password = _xtreamPasswordController.text.trim();
 

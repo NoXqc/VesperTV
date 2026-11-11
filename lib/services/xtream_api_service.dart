@@ -11,6 +11,7 @@ import '../models/xtream_category.dart';
 import '../models/xtream_series.dart';
 import '../models/vod_details.dart';
 import '../l10n/l10n.dart';
+import '../utils/xtream.dart';
 
 /// Talks to a real Xtream Codes ("XC API") panel via `player_api.php`.
 ///
@@ -26,7 +27,7 @@ class XtreamApiService {
     required this.username,
     required this.password,
     required this.playlistId,
-  }) : server = _normalizeServer(server);
+  }) : server = XtreamHelper.normalizeServer(server);
 
   final String server;
   final String username;
@@ -62,14 +63,6 @@ class XtreamApiService {
 
   /// `server_info.timezone` as the provider reports it (log only).
   String? serverTimeZone;
-
-  static String _normalizeServer(String server) {
-    var s = server.trim();
-    while (s.endsWith('/')) {
-      s = s.substring(0, s.length - 1);
-    }
-    return s;
-  }
 
   Uri _apiUri(String action, [Map<String, String>? extra]) {
     return Uri.parse('$server/player_api.php').replace(queryParameters: {
