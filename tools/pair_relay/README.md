@@ -32,6 +32,11 @@ Server half of Add Playlist > **From my phone** when the phone is *not* on the T
   nginx `pairlog` zone). The webhook URL is a secret: `PAIR_LOG_WEBHOOK=` in root-only
   `/etc/pair-relay.env` (`EnvironmentFile`), never in the repo; without it the route answers 503.
 - `pair.html` — copy `assets/pair/pair.html` next to `relay.py` (same file the TV serves).
+- `hub.html` — Settings > Media Hub sources > **Manage from phone** (2026-11-11), served at `/hub`. It
+  sends JSON-RPC `hub/list|set|remove|url|add` to `/mcp/<link>` like the Vesper phone page (`/ai`);
+  the TV answers them in phone-only mode (`McpBridge`, `lib/services/hub_remote.dart`). Its page alone
+  allows `img-src https:` for the add-ons' own logos (`ai_link.HUB_CSP`). Lives only here (the TV never
+  serves it); deploy it next to `relay.py` with `ai_link.py`.
 - `pair-relay.service` — systemd unit (`DynamicUser`, read-only filesystem, 128 MB cap).
 
 ## Local tests (no server access)
