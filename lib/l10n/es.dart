@@ -1115,6 +1115,8 @@ const Map<String, String> kEs = {
   'TV Shows order': "Orden de series",
   'Move up': "Subir",
   'Move down': "Bajar",
+  'Move left': "Mover a la izquierda",
+  'Move right': "Mover a la derecha",
   'Playlist added': "Lista añadida",
   'This playlist is disabled on this device — enable it in Settings > Playlist Manager to watch.':
       "Esta lista está desactivada en este dispositivo: actívala en Ajustes > Gestor de listas para ver.",
@@ -1524,6 +1526,10 @@ const Map<String, String> kEs = {
       "Con la tecnología de Trakt (trakt.tv) y Simkl (simkl.com).",
   'VesperTV is not affiliated with or endorsed by Trakt or Simkl.':
       "VesperTV no está afiliado ni respaldado por Trakt o Simkl.",
+  'Sports data from ESPN and TheSportsDB, skip intro timings from IntroDB. VesperTV is not affiliated with or endorsed by them, or by any league or team shown.':
+      "Datos deportivos de ESPN y TheSportsDB, tiempos para saltar la intro de IntroDB. VesperTV no está afiliado ni respaldado por ellos, ni por ninguna liga o equipo que se muestre.",
+  'The scores provider asked us to slow down. Scores will be back in a few minutes.':
+      "El proveedor de resultados nos pidió ir más despacio. Los resultados volverán en unos minutos.",
   'Trakt & Simkl': 'Trakt y Simkl',
   'Track what you watch, lists in the Media Hub':
       'Registra lo que ves, listas en el Media Hub',

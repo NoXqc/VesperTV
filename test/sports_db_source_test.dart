@@ -160,6 +160,26 @@ void main() {
     expect(g.home.name, 'Rimouski Océanic');
   });
 
+  test('EuroCup and the Basketball Champions League ride TheSportsDB', () {
+    final eurocup = sportsLeagueById('basketball.eurocup')!;
+    final bcl = sportsLeagueById('basketball.bcl')!;
+    expect(eurocup.sportsDbId, '4547');
+    expect(bcl.sportsDbId, '4548');
+    for (final l in [eurocup, bcl]) {
+      expect(l.region, 'Basketball');
+      expect(l.hasStandings, isFalse);
+      expect(kSportsLeagueBank.contains(l), isTrue,
+          reason: 'offered in the league manager');
+    }
+    // A bare "champions league" would match the football competition.
+    expect(bcl.seriesPhrases, isNot(contains('champions league')));
+    final bank = [for (final l in kSportsLeagueBank) l.id];
+    expect(bank.indexOf('basketball.eurocup'),
+        bank.indexOf('basketball.euroleague') + 1);
+    expect(bank.indexOf('basketball.bcl'),
+        bank.indexOf('basketball.eurocup') + 1);
+  });
+
   test('a day at the free-key cap asks for its rounds', () {
     final euroleague = sportsLeagueById('basketball.euroleague')!;
     String day(int n, {String round = '8'}) => jsonEncode({

@@ -1089,6 +1089,8 @@ const Map<String, String> kEl = {
   "TV Shows order": "Σειρά Σειρών",
   "Move up": "Μετακίνηση πάνω",
   "Move down": "Μετακίνηση κάτω",
+  "Move left": "Μετακίνηση αριστερά",
+  "Move right": "Μετακίνηση δεξιά",
   "Playlist added": "Η λίστα προστέθηκε",
   "This playlist is disabled on this device — enable it in Settings > Playlist Manager to watch.":
       "Αυτή η λίστα είναι ανενεργή σε αυτή τη συσκευή — ενεργοποιήστε την στις Ρυθμίσεις > Διαχείριση λιστών για να τη δείτε.",
@@ -1486,6 +1488,10 @@ const Map<String, String> kEl = {
       "Με την υποστήριξη του Trakt (trakt.tv) και του Simkl (simkl.com).",
   "VesperTV is not affiliated with or endorsed by Trakt or Simkl.":
       "Το VesperTV δεν συνδέεται ούτε εγκρίνεται από το Trakt ή το Simkl.",
+  "Sports data from ESPN and TheSportsDB, skip intro timings from IntroDB. VesperTV is not affiliated with or endorsed by them, or by any league or team shown.":
+      "Αθλητικά δεδομένα από το ESPN και το TheSportsDB, χρόνοι παράλειψης intro από το IntroDB. Το VesperTV δεν συνδέεται ούτε εγκρίνεται από αυτούς ή από οποιοδήποτε πρωτάθλημα ή ομάδα εμφανίζεται.",
+  "The scores provider asked us to slow down. Scores will be back in a few minutes.":
+      "Ο πάροχος των αποτελεσμάτων μάς ζήτησε να επιβραδύνουμε. Τα αποτελέσματα θα επανέλθουν σε λίγα λεπτά.",
   "Trakt & Simkl": "Trakt & Simkl",
   "Track what you watch, lists in the Media Hub":
       "Καταγραφή όσων βλέπετε, λίστες στο Media Hub",

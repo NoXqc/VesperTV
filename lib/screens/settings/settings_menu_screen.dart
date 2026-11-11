@@ -663,7 +663,10 @@ class _Footer extends StatelessWidget {
             '${tr('This product uses the TMDB API but is not endorsed or certified by TMDB.')} '
             // Credit for the watch trackers (Settings > Trakt & Simkl),
             // owner 2026-10-19.
-            '${tr('Watch tracking powered by Trakt and Simkl; VesperTV is not affiliated with or endorsed by either.')}',
+            '${tr('Watch tracking powered by Trakt and Simkl; VesperTV is not affiliated with or endorsed by either.')} '
+            // Sports Trak data credit + non-affiliation (owner, 2026-11-11):
+            // ESPN's public endpoints, TheSportsDB, IntroDB.
+            '${tr('Sports data from ESPN and TheSportsDB, skip intro timings from IntroDB. VesperTV is not affiliated with or endorsed by them, or by any league or team shown.')}',
             style: small,
           ),
         ),

@@ -383,6 +383,23 @@ old ~50 s EPG delay is **fixed** by the SQLite EPG store (0.5 s on the Formuler)
 Timeline/Live guide, player secondary row + badges, Multiview, welcome prompt, hide channels, Expand catalog, backup servers, palettes, **viewer profiles** (never rewrite Main's storage keys), **languages** (EN/FR/ES/IT/EL), **Transfer to another device** (Wi-Fi + internet vault, built to grow into cloud sync). Read the file before changing any of these.
 
 ## 13. Status & open items (as of 2026-10-24)
+- **Claude, 2026-11-11 - playlist editor Move / Copy to group (main, uncommitted, not released):** owner: tick
+  several channels in the editor and change their group; Move and Copy clearly different; destination = a custom
+  (own) group or a group of any playlist. Editor Channels bar: Move to group… / Copy to group… / Reset group, applied on
+  the TV at once. `UserGroups` gets `pmoves` + `copies` (`GroupRef`), `PlaylistManager._withPlaced` lists them, sync maps
+  the ids; TV hold OK on a copy = Remove from group / Move Up / Down. Limits revisited the same day: provider groups
+  that receive channels keep their own order (`porder`), Search/Multiview follow the destination's hidden state
+  (`_flatPlaced`), kids profiles can use it but a placement never shows a group their allowlist hides. Not
+  box-tested. `dev-notes/editor-group-move-copy.md`.
+  Same day: the game menu's channel rows name the playlist when the sources span playlists (`sports_screen.dart`).
+- **Claude, 2026-11-11 - EuroCup + Basketball Champions League, ESPN/TheSportsDB/IntroDB credits (main, uncommitted):**
+  Discord request (Black1914). Two bank leagues right after EuroLeague (`basketball.eurocup` TheSportsDB 4547,
+  `basketball.bcl` 4548; no tables, free-key 3 games/day goes through the round fetch; series phrases are the full
+  names, never a bare "champions league" = football). Greek EuroCup spellings are a guess, unverified. TheSportsDB's
+  free key 429s fast (Retry-After 80 s+): probe ids one request at a time. Owner also asked for explicit
+  non-affiliation text: README Credits, site footer and the Settings credits footer (one new `tr()` string, FR/ES/IT/EL/DE)
+  now say ESPN, TheSportsDB, IntroDB and the leagues/teams shown are not affiliated/endorsing. Legal context discussed:
+  public unauthenticated endpoints, called from each device, cached; no 429/Retry-After backoff on the ESPN path yet.
 - **Claude, 2026-11-10 - release 1.0.64 (beta), +710 (latest):** owner said "merge and commit the last branches then
   cutr". Android only; Windows stays 1.0.61, Linux 1.0.63 (+702). Everything merged to main since 1.0.63: record a show
   to come + series recording, Compact UI (both below), downloads + network folder (+699..+702), Home live card + wallpaper
